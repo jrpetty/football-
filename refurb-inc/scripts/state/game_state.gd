@@ -47,6 +47,7 @@ var lots: Dictionary = {}            # id -> lot Dictionary (see LotGenerator)
 var orders: Dictionary = {}          # id -> order Dictionary
 var schedule: Array = []             # [{ "at": minute, "type": String, "data": Dictionary }]
 var seller_state: Dictionary = {}    # seller_id -> { "next_refresh_day": int }
+var contracts: Dictionary = {}       # id -> business contract: an offer, a bulk order or a custom build (see Business)
 
 # --- stats
 var day_stats: Dictionary = {}
@@ -335,6 +336,7 @@ func to_dict() -> Dictionary:
 		"seller_state": seller_state.duplicate(true), "day_stats": day_stats.duplicate(true), "totals": totals.duplicate(true),
 		"stats": stats.duplicate(true),
 		"staff": _int_keyed_out(staff), "candidates": candidates.duplicate(true),
+		"contracts": _int_keyed_out(contracts),
 	}
 
 
@@ -367,6 +369,7 @@ func load_dict(d: Dictionary) -> void:
 	fixtures = d.get("fixtures", {}).duplicate(true)
 	lots = _int_keyed_in(d.get("lots", {}))
 	orders = _int_keyed_in(d.get("orders", {}))
+	contracts = _int_keyed_in(d.get("contracts", {}))
 	schedule = d.get("schedule", []).duplicate(true)
 	seller_state = d.get("seller_state", {}).duplicate(true)
 	day_stats = d.get("day_stats", {}).duplicate(true)
@@ -416,6 +419,8 @@ func export_entity(kind: String, id: Variant) -> Variant:
 			return _public_lot(int(id))
 		"order":
 			return orders[int(id)].duplicate(true) if orders.has(int(id)) else null
+		"contract":
+			return contracts[int(id)].duplicate(true) if contracts.has(int(id)) else null
 		"player":
 			return players[str(id)].duplicate(true) if players.has(str(id)) else null
 		"company":
@@ -472,6 +477,11 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 				orders.erase(int(id))
 			else:
 				orders[int(id)] = v
+		"contract":
+			if v == null:
+				contracts.erase(int(id))
+			else:
+				contracts[int(id)] = v
 		"player":
 			if v != null:
 				players[str(id)] = v

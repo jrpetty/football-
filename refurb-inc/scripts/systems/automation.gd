@@ -703,7 +703,7 @@ func _device_effect(fid: String, dev: String, it: Item) -> void:
 				BusinessStats.on_auto(state, "scan", fid)
 				state.mark("item", it.id)
 		"grader":
-			if u.imaged and u.grade == "" and not u.has_open_faults():
+			if u.imaged and u.grade == "" and not u.has_open_faults() and u.contract == 0:
 				u.grade = Valuation.grade_for(u)
 				u.list_price = Valuation.market_value(u, u.grade)
 				BusinessStats.on_grade(state, u, 0)

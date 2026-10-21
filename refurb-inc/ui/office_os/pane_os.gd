@@ -5,6 +5,7 @@ extends Control
 const APPS := [
 	{"id": "purchasing", "title": "LotFinder — Purchasing", "short": "Purchasing", "colour": Color(0.2, 0.55, 0.95), "glyph": "£", "script": "res://ui/office_os/apps/purchasing_app.gd"},
 	{"id": "flogit", "title": "Flogit Seller Hub", "short": "Flogit", "colour": Color(0.95, 0.35, 0.55), "glyph": "F", "script": "res://ui/office_os/apps/flogit_app.gd"},
+	{"id": "business", "title": "Business Buyers", "short": "Business", "colour": Color(0.16, 0.36, 0.58), "glyph": "◆", "script": "res://ui/office_os/apps/business_app.gd"},
 	{"id": "stock", "title": "Stock", "short": "Stock", "colour": Color(0.3, 0.75, 0.45), "glyph": "▤", "script": "res://ui/office_os/apps/stock_app.gd"},
 	{"id": "shop", "title": "PartsHub — Shop", "short": "Shop", "colour": Color(0.95, 0.6, 0.15), "glyph": "⚙", "script": "res://ui/office_os/apps/shop_app.gd"},
 	{"id": "finance", "title": "Wages & Finance", "short": "Finance", "colour": Color(0.55, 0.45, 0.9), "glyph": "%", "script": "res://ui/office_os/apps/finance_app.gd"},
@@ -44,7 +45,7 @@ func _ready() -> void:
 	grid.columns = 2
 	grid.position = Vector2(20, 30)
 	grid.add_theme_constant_override("h_separation", 6)
-	grid.add_theme_constant_override("v_separation", 18)
+	grid.add_theme_constant_override("v_separation", 14)
 	add_child(grid)
 	for a in APPS:
 		grid.add_child(_desktop_icon(a))

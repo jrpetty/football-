@@ -106,6 +106,17 @@ static func clean_company_name(raw: String) -> String:
 	return out if out != "" else DEFAULT_COMPANY
 
 
+func c_dev_boost(peer: int, _a: Dictionary) -> Dictionary:
+	## Debug builds only (F9 in game): +30 reputation and +£5,000, for trying later-game features quickly.
+	if not OS.is_debug_build():
+		return _fail("")
+	state.add_reputation(30.0)
+	state.add_money(5000, "dev", "Dev boost")
+	state.say("Dev boost: reputation %d, +£5,000 (debug builds only)." % int(state.reputation), "info", peer)
+	business_hourly()
+	return _ok()
+
+
 func c_rename_company(_peer: int, a: Dictionary) -> Dictionary:
 	var name := clean_company_name(str(a.get("name", "")))
 	if name == state.company_name:
@@ -550,6 +561,9 @@ func _on_entered_slot(it: Item, slot_id: String, peer: int) -> void:
 			state.mark("station", sid)
 		state.say("Poured away and washed up." if poured else "Washed up. Your colleagues salute you.", "info", peer)
 		return
+	if sid != "" and state.stations.get(sid, {}).get("type", "") == "build" and it.kind == Item.KIND_UNIT:
+		_auto_link_build(it)
+		return
 	if sid != "" and state.stations.has(sid):
 		var t: String = state.stations[sid].get("type", "")
 		if t in ["rack_test", "rack_image", "robot_repair", "robot_pack"]:
@@ -643,6 +657,7 @@ func _process_machines() -> void:
 					u.log_event(state.minute, ("%s on the network rack" % wipe.get("title", "Wiped")) if not wipe.is_empty() else "Wiped and imaged on the network rack")
 					state.bump_stat("imaged")
 					BusinessStats.on_image(state, u, 0)
+					_check_build_ready(it)
 				"repair":
 					for f in _robot_fixable(sid, u):
 						var pid := Valuation.repair_part_for(u, f)
@@ -661,6 +676,7 @@ func _process_machines() -> void:
 						u.log_event(state.minute, "Repaired by robot: %s" % LotGenerator.fault_text(f))
 						state.bump_stat("repaired")
 					state.mark("company")
+					_check_build_ready(it)
 				"pack":
 					_robot_pack(sid, it)
 					if it.loc.get("t") == "in":
@@ -836,7 +852,11 @@ func _process_jobs() -> void:
 			if by != 0:
 				state.add_xp(player_key(by), "imaging", int(Content.econ("xp", {}).get("image", 4)))
 			st.msg = "IMAGED"
-			state.say("%s %s — ready to grade." % [it.unit.display_name(), "imaged" if wipe.is_empty() else "wiped and reset"], "good")
+			if it.unit.contract != 0:
+				state.say("%s imaged." % it.unit.display_name(), "good")
+			else:
+				state.say("%s %s — ready to grade." % [it.unit.display_name(), "imaged" if wipe.is_empty() else "wiped and reset"], "good")
+			_check_build_ready(it)
 		state.mark("item", it.id)
 		state.mark("station", sid)
 
@@ -881,6 +901,7 @@ func _complete_test(it: Item, by: int) -> void:
 		state.say("%s — PASS%s" % [u.display_name(), "" if u.needs_wipe() else " (no data to wipe — ready to grade)"], "good")
 	else:
 		state.say("%s — %s" % [u.display_name(), lines[0]], "warn")
+	_check_build_ready(it)
 
 
 # ================================================================= repair
@@ -967,6 +988,7 @@ func c_repair(peer: int, a: Dictionary) -> Dictionary:
 			state.mark("company")
 			var left := u.open_faults().size()
 			state.say("Fixed: %s.%s" % [pv.text, "" if left == 0 else " %d more to go." % left], "good", peer)
+			_check_build_ready(it)
 			return _ok()
 	return _fail("Nothing to repair.")
 
@@ -983,6 +1005,8 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 	var u := it.unit
 	if u.grade != "":
 		return _fail("Already graded %s." % UnitData.grade_label(u.grade))
+	if u.contract != 0:
+		return _fail("Reserved for a business order — no grading needed. Test, image and pack it.")
 	if not u.tested:
 		return _fail("Test it before grading.")
 	if not u.has_open_faults() and not u.imaged:
@@ -1000,6 +1024,7 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 	if state.has_perk(gkey, "photo_pro"):
 		u.list_quality = 1.05
 	u.grade = Valuation.grade_for(u)
+	_grading_miss(peer, u)
 	u.list_price = int(round(Valuation.market_value(u, u.grade) * u.list_quality))
 	BusinessStats.on_grade(state, u, peer)
 	u.log_event(state.minute, "Graded %s — suggested price £%d" % [UnitData.grade_label(u.grade), u.list_price])
@@ -1016,6 +1041,30 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 	else:
 		state.say("Grade %s — %s. Suggested £%d." % [UnitData.grade_label(u.grade), u.display_name(), u.list_price], "good", peer)
 	return _ok()
+
+
+func _grading_miss(peer: int, u: UnitData) -> void:
+	## People aren't machines: a green grader now and then overlooks a flaw, so the grade comes out better than the
+	## unit really is. Nobody knows until the buyer opens the box (Flogit review). Grading skill shrinks the chance
+	## to nothing by level 9; Keen eye never misses; the vision grader and robots (peer 0) are exact.
+	if peer == 0 or u.grade in ["", "S"] or u.cosmetic.is_empty():
+		return
+	var key := player_key(peer)
+	if state.has_perk(key, "keen_eye"):
+		return
+	var lvl := state.skill_level(key, "grading")
+	var chance := maxf(0.0, float(Content.econ("grade_miss_base", 0.1)) - float(Content.econ("grade_miss_per_level", 0.012)) * (lvl - 1))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([state.seed_value, u.serial, "grading"])
+	if rng.randf() >= chance:
+		return
+	var worst := Reviews.true_flaw(u)
+	var copy := UnitData.from_dict(u.to_dict())
+	copy.cosmetic.erase(worst)
+	var g := Valuation.grade_for(copy)
+	if int(Business.GRADE_RANK.get(g, 0)) > int(Business.GRADE_RANK.get(u.grade, 0)):
+		u.grade = g
+		u.missed_flaw = worst
 
 
 # ================================================================= sales / listings
@@ -1039,6 +1088,8 @@ func c_list(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Only graded units can be listed.")
 	if u.order_id != 0:
 		return _fail("Already sold.")
+	if want and u.contract != 0:
+		return _fail("Reserved for a business order.")
 	if want and not u.listed:
 		BusinessStats.on_listed(state, u, peer)
 	u.listed = want
@@ -1050,7 +1101,7 @@ func c_list(peer: int, a: Dictionary) -> Dictionary:
 func c_list_all(peer: int, _a: Dictionary) -> Dictionary:
 	var n := 0
 	for it: Item in state.units_in_stock():
-		if it.unit.grade != "" and not it.unit.listed and it.unit.order_id == 0:
+		if it.unit.grade != "" and not it.unit.listed and it.unit.order_id == 0 and it.unit.contract == 0:
 			c_list(peer, {"item": it.id, "listed": true})
 			n += 1
 	state.say("Listed %d unit(s) on Flogit." % n, "info", peer)
@@ -1081,7 +1132,7 @@ func flogit_hourly() -> void:
 	if listed.is_empty():
 		return
 	# Your very first sensibly priced listing always finds a buyer within the hour (teaches the loop).
-	if int(state.totals.get("units_sold", 0)) == 0 and state.orders.is_empty():
+	if int(state.totals.get("units_sold", 0)) == 0 and not state.orders.values().any(func(o): return o.get("channel", "flogit") == "flogit"):
 		for it: Item in listed:
 			var ratio := float(it.unit.list_price) / maxf(float(Valuation.market_value(it.unit, it.unit.grade)), 1.0)
 			if ratio <= float(Content.econ("flogit_first_sale_max_ratio", 1.15)):
@@ -1225,7 +1276,9 @@ func _ship_package(pkg: Item) -> void:
 	var oid := int(pkg.data.get("order_id", 0))
 	var order: Dictionary = state.orders.get(oid, {})
 	var unit_it := state.get_item(int(pkg.data.get("unit", 0)))
-	if not order.is_empty():
+	if not order.is_empty() and order.get("channel", "") == "business":
+		_ship_business(order, pkg, unit_it)
+	elif not order.is_empty():
 		var price := int(order.price)
 		var fee := int(round(price * float(Content.econ("flogit_fee_pct", 0.1))))
 		var post := int(Content.econ("flogit_postage_large" if pkg.data.get("large", false) else "flogit_postage", 9))
@@ -1248,6 +1301,12 @@ func _ship_package(pkg: Item) -> void:
 		state.bump_stat("shipped")
 		state.bump_stat("revenue", price)
 		BusinessStats.on_ship(state, order, unit_it.unit if unit_it else null, fee, post, on_time)
+		# The buyer leaves a review a few working hours after it lands (see _process_reviews).
+		order["rv"] = Reviews.facts(state, order, unit_it.unit if unit_it else null, on_time, state.minute)
+		var delay: Array = Reviews.cfg("delay_hours", [1, 6])
+		var rrng := RandomNumberGenerator.new()
+		rrng.seed = hash([state.seed_value, oid, "review_due"])
+		order["review_due"] = _add_working_minutes(state.minute, rrng.randf_range(float(delay[0]), float(delay[1])) * 60.0)
 	if unit_it:
 		unit_it.unit.shipped = true
 		unit_it.unit.log_event(state.minute, "Shipped to customer")
@@ -1260,6 +1319,8 @@ func _check_deadlines() -> void:
 		var o: Dictionary = state.orders[oid]
 		if o.status in ["shipped", "shipped_late", "cancelled"]:
 			continue
+		if int(o.get("contract", 0)) != 0:
+			continue      # business orders are judged as a whole contract (_check_contracts)
 		if state.minute > float(o.due) and not o.late_flagged:
 			o.late_flagged = true
 			state.add_reputation(float(Content.econ("rep_late", -3.0)))
@@ -1279,6 +1340,472 @@ func _check_deadlines() -> void:
 				state.mark("item", it.id)
 			state.say("Order #%d cancelled — buyer gave up. Reputation hit." % oid, "bad")
 			state.mark("order", oid)
+
+
+# ================================================================= Flogit reviews
+
+func _process_reviews() -> void:
+	## Buyers whose parcel has landed leave their stars and a comment; reviews nudge reputation.
+	for oid in state.orders:
+		var o: Dictionary = state.orders[oid]
+		if not o.has("review_due") or o.has("review") or float(o.review_due) > state.minute:
+			continue
+		var r := Reviews.make(state, o)
+		o["review"] = r
+		o.erase("review_due")
+		state.add_reputation(Reviews.rep_for(int(r.stars)))
+		state.bump_stat("reviews")
+		state.bump_stat("reviews_%d" % int(r.stars))
+		BusinessStats.on_review(state, o, r)
+		state.mark("order", oid)
+		if int(r.stars) >= 5 or int(r.stars) <= 2:
+			state.say("Flogit review %s from %s: “%s”" % [Reviews.stars_text(int(r.stars)), r.buyer, r.text], "good" if int(r.stars) >= 5 else "bad")
+
+
+# ================================================================= business buyers
+
+func _biz_rng() -> RandomNumberGenerator:
+	## Business dice: seeded from the game state, so a run is repeatable, but never drawing on the shared RNG
+	## (lots, faults and Flogit sales roll the same as they always have).
+	var r := RandomNumberGenerator.new()
+	r.seed = hash([state.seed_value, int(state.minute), state.next_id, "business"])
+	return r
+
+
+func business_hourly() -> void:
+	## Enquiries arrive on the hour once reputation is high enough; more often as it grows.
+	if not Business.unlocked(state):
+		return
+	if not state.totals.get("biz_unlocked", false):
+		state.totals["biz_unlocked"] = true
+		state.mark("company")
+		BusinessStats.event(state, "unlock", "Business buyers have started emailing in")
+		state.say("Business buyers have noticed you! Enquiries arrive in the new Business app on the office PC.", "good")
+		_new_offer()
+		return
+	var offers := 0
+	var active := 0
+	for c: Dictionary in state.contracts.values():
+		offers += 1 if c.status == "offer" else 0
+		active += 1 if c.status == "active" else 0
+	if offers >= int(Business.cfg("offers_max", 3)) or active >= int(Business.cfg("active_max", 4)):
+		return
+	var t := clampf((state.reputation - Business.unlock_rep()) / maxf(100.0 - Business.unlock_rep(), 1.0), 0.0, 1.0)
+	var ch: Array = Business.cfg("offer_chance_per_hour", [0.14, 0.32])
+	var rng := _biz_rng()
+	if rng.randf() < lerpf(float(ch[0]), float(ch[1]), t):
+		_new_offer(rng)
+
+
+func _new_offer(rng: RandomNumberGenerator = null) -> Dictionary:
+	var c := Business.make_offer(state, rng if rng else _biz_rng())
+	if c.is_empty():
+		return {}
+	c["id"] = state.make_id()
+	state.contracts[c.id] = c
+	state.mark("contract", c.id)
+	BusinessStats.on_contract(state, c, "offers")
+	state.say("New business enquiry from %s: “%s” — Business app." % [c.buyer, c.subject], "good")
+	return c
+
+
+func c_biz_accept(peer: int, a: Dictionary) -> Dictionary:
+	var c: Dictionary = state.contracts.get(int(a.get("contract", 0)), {})
+	if c.is_empty() or c.status != "offer":
+		return _fail("That enquiry has gone.")
+	var active := state.contracts.values().filter(func(x): return x.status == "active").size()
+	if active >= int(Business.cfg("active_max", 4)):
+		return _fail("You've already got %d business orders on the go — finish one first." % active)
+	c.status = "active"
+	c["accepted"] = state.minute
+	c["accepted_by"] = peer
+	state.mark("contract", c.id)
+	state.bump_stat("contracts_accepted")
+	BusinessStats.on_contract(state, c, "accepted")
+	if c.kind == "build":
+		state.say("Accepted: %s for %s (%s), due %s. Put a %s on the build bench." % [c.name, c.buyer, GameState.format_money(int(c.price)),
+			GameState.format_minute(float(c.due)), Business.chassis_name(c.spec)], "good", peer)
+		# A matching server already sitting on a build bench is reserved for it straight away.
+		for sid in state.stations:
+			if state.stations[sid].get("type", "") == "build":
+				var it := state.station_slot_item(sid, "unit")
+				if it and Business.build_unit(state, c) == null:
+					_auto_link_build(it)
+	else:
+		var n := Business.eligible_units(state, c).size()
+		state.say("Accepted: %s for %s, due %s. %d matching unit%s in stock — allocate them in the Business app." % [Business.title(c), c.buyer,
+			GameState.format_minute(float(c.due)), n, "" if n == 1 else "s"], "good", peer)
+	return _ok()
+
+
+func c_biz_decline(_peer: int, a: Dictionary) -> Dictionary:
+	var c: Dictionary = state.contracts.get(int(a.get("contract", 0)), {})
+	if c.is_empty() or c.status != "offer":
+		return _fail("")
+	c.status = "declined"
+	c["closed"] = state.minute
+	state.mark("contract", c.id)
+	BusinessStats.on_contract(state, c, "declined")
+	return _ok()
+
+
+func _business_order(c: Dictionary, it: Item, price: int) -> Dictionary:
+	## One allocated unit becomes an ordinary order (packed and couriered as usual), tied to its contract.
+	var u := it.unit
+	var order := {
+		"id": state.make_id(), "channel": "business", "contract": int(c.id), "unit": it.id,
+		"model": u.display_name() if c.kind == "bulk" else "Custom build — %s" % c.name, "grade": u.grade, "price": price,
+		"buyer": c.buyer, "message": "", "placed": state.minute, "due": float(c.due), "status": "to_pack",
+		"late_flagged": bool(c.get("late", false)),
+	}
+	state.orders[order.id] = order
+	if u.listed:
+		u.listed = false
+	u.order_id = order.id
+	u.contract = int(c.id)
+	(c.orders as Array).append(order.id)
+	BusinessStats.on_order(state, u)
+	u.log_event(state.minute, "Allocated to %s (business order #%d)" % [c.buyer, order.id])
+	state.bump_stat("sold")
+	state.mark("order", order.id)
+	state.mark("item", it.id)
+	state.mark("contract", c.id)
+	return order
+
+
+func c_biz_allocate(peer: int, a: Dictionary) -> Dictionary:
+	## Fill a bulk order from stock: the listed items, or (auto) the cheapest matching units until it's full.
+	var c: Dictionary = state.contracts.get(int(a.get("contract", 0)), {})
+	if c.is_empty() or c.status != "active" or c.kind != "bulk":
+		return _fail("That order isn't open.")
+	var room := int(c.qty) - Business.allocated(state, c)
+	if room <= 0:
+		return _fail("That order is fully allocated.")
+	var picks: Array = []
+	if a.get("auto", false):
+		picks = Business.eligible_units(state, c).slice(0, room)
+	else:
+		for iid in a.get("items", []):
+			var it := state.get_item(int(iid))
+			if it and it.unit and it.unit.order_id == 0 and it.unit.contract == 0 and Business.unit_fits(c, it.unit) and picks.size() < room:
+				picks.append(it)
+	if picks.is_empty():
+		return _fail("No graded stock matches: %s." % Business.title(c))
+	for it: Item in picks:
+		_business_order(c, it, int(c.unit_price))
+	state.say("Allocated %d unit%s to %s (%d of %d). Pack them before %s." % [picks.size(), "" if picks.size() == 1 else "s", c.buyer,
+		Business.allocated(state, c), int(c.qty), GameState.format_minute(float(c.due))], "good", peer)
+	return _ok()
+
+
+func c_biz_release(peer: int, a: Dictionary) -> Dictionary:
+	## Take a unit back off a business order (only before it's packed), or free a build's reserved server.
+	var c: Dictionary = state.contracts.get(int(a.get("contract", 0)), {})
+	var it := state.get_item(int(a.get("item", 0)))
+	if c.is_empty() or c.status != "active" or it == null or it.unit == null or int(it.unit.contract) != int(c.id):
+		return _fail("")
+	var u := it.unit
+	if u.order_id != 0:
+		var o: Dictionary = state.orders.get(u.order_id, {})
+		if o.get("status", "") != "to_pack":
+			return _fail("Already packed — it's going.")
+		o.status = "cancelled"
+		(c.orders as Array).erase(o.id)
+		state.orders.erase(int(o.id))
+		state.mark("order", int(o.id))
+		u.order_id = 0
+	u.contract = 0
+	if int(c.get("unit", 0)) == it.id:
+		c.unit = 0
+	u.log_event(state.minute, "Released from %s's order" % c.buyer)
+	state.mark("item", it.id)
+	state.mark("contract", c.id)
+	state.say("%s taken off %s's order." % [u.display_name(), c.buyer], "info", peer)
+	return _ok()
+
+
+func _check_contracts() -> void:
+	var finished: Array = []
+	for cid in state.contracts.keys():
+		var c: Dictionary = state.contracts[cid]
+		match str(c.status):
+			"offer":
+				if state.minute > float(c.expires):
+					c.status = "expired"
+					c["closed"] = state.minute
+					state.mark("contract", cid)
+					BusinessStats.on_contract(state, c, "expired")
+					state.say("%s found another supplier (the enquiry lapsed)." % c.buyer, "info")
+			"active":
+				if not c.get("late", false) and state.minute > float(c.due):
+					c.late = true
+					state.add_reputation(float(Business.cfg("rep_late", -5.0)))
+					state.bump_stat("late")
+					BusinessStats.on_contract(state, c, "late")
+					for oid in c.orders:
+						if state.orders.has(int(oid)):
+							state.orders[int(oid)].late_flagged = true
+							state.mark("order", int(oid))
+					state.mark("contract", cid)
+					state.say("%s's order is LATE (%s). Late deliveries lose %d%% of the price." % [c.buyer, Business.title(c),
+						int(float(Business.cfg("late_pay_cut", 0.15)) * 100)], "bad")
+				elif c.get("late", false) and state.minute > _add_working_minutes(float(c.due), float(Business.cfg("cancel_after_hours", 16)) * 60.0):
+					_cancel_contract(c)
+			_:
+				finished.append(c)
+	# Keep the last few finished contracts for the Business app's history (Insights keeps the totals).
+	if finished.size() > 40:
+		finished.sort_custom(func(x, y): return float(x.get("closed", x.get("offered", 0.0))) < float(y.get("closed", y.get("offered", 0.0))))
+		for i in finished.size() - 40:
+			state.contracts.erase(int(finished[i].id))
+			state.mark("contract", int(finished[i].id))
+
+
+func _cancel_contract(c: Dictionary) -> void:
+	## Two working days late: the buyer gives up. Unpacked units go back into stock; packed parcels still ship.
+	c.status = "cancelled"
+	c["closed"] = state.minute
+	for oid in c.orders:
+		var o: Dictionary = state.orders.get(int(oid), {})
+		if o.get("status", "") == "to_pack":
+			o.status = "cancelled"
+			state.mark("order", int(oid))
+			var it := state.get_item(int(o.get("unit", 0)))
+			if it and it.unit:
+				it.unit.order_id = 0
+				it.unit.contract = 0
+				it.unit.log_event(state.minute, "Business order cancelled by %s" % c.buyer)
+				state.mark("item", it.id)
+	var unit := state.get_item(int(c.get("unit", 0)))
+	if unit and unit.unit and unit.unit.order_id == 0:
+		unit.unit.contract = 0
+		state.mark("item", unit.id)
+	state.add_reputation(float(Business.cfg("rep_cancel", -8.0)))
+	state.bump_stat("missed")
+	BusinessStats.on_contract(state, c, "cancelled")
+	state.mark("contract", c.id)
+	state.say("%s has cancelled their order (%s) — far too late. Reputation hit." % [c.buyer, Business.title(c)], "bad")
+
+
+func _ship_business(order: Dictionary, pkg: Item, unit_it: Item) -> void:
+	## A business order's unit has gone with the courier: paid per unit (no marketplace fee), less the late
+	## deduction if the contract is overdue. The contract completes when its last unit ships.
+	var oid := int(order.id)
+	var c: Dictionary = state.contracts.get(int(order.get("contract", 0)), {})
+	var on_time := state.minute <= float(order.due)
+	var price := int(order.price)
+	if not on_time:
+		price = int(round(price * (1.0 - float(Business.cfg("late_pay_cut", 0.15)))))
+	var post := int(Content.econ("flogit_postage_large" if pkg.data.get("large", false) else "flogit_postage", 9))
+	state.add_money(price, "sales", "%s — %s (business #%d)" % [order.buyer, order.model, oid])
+	state.add_money(-post, "postage", "Courier #%d" % oid)
+	order.status = "shipped" if on_time else "shipped_late"
+	order["shipped"] = state.minute
+	order["paid"] = price
+	state.mark("order", oid)
+	var packer := int(pkg.data.get("packer", 0))
+	if packer != 0:
+		state.add_xp(player_key(packer), "sales", int(Content.econ("xp", {}).get("ship", 5)))
+	state.totals["units_sold"] = int(state.totals.get("units_sold", 0)) + 1
+	state.totals["revenue"] = int(state.totals.get("revenue", 0)) + price
+	state.bump_stat("shipped")
+	state.bump_stat("revenue", price)
+	state.bump_stat("biz_revenue", price)
+	state.bump_stat("biz_units")
+	var rec := order.duplicate()
+	rec.price = price
+	BusinessStats.on_ship(state, rec, unit_it.unit if unit_it else null, 0, post, on_time)
+	if c.is_empty():
+		return
+	c.shipped = int(c.get("shipped", 0)) + 1
+	c.revenue = int(c.get("revenue", 0)) + price
+	state.mark("contract", c.id)
+	if c.kind == "build":
+		state.bump_stat("builds_shipped")
+	var target := int(c.qty) if c.kind == "bulk" else 1
+	if c.status == "active" and int(c.shipped) >= target:
+		c.status = "complete_late" if c.get("late", false) else "complete"
+		c["closed"] = state.minute
+		if not c.get("late", false):
+			state.add_reputation(float(Business.cfg("rep_complete", {}).get(str(c.kind), 3.0)))
+		state.bump_stat("contracts_done")
+		if c.kind == "bulk" and int(c.qty) >= 20 and not c.get("late", false):
+			state.bump_stat("big_contracts")
+		BusinessStats.on_contract(state, c, "complete")
+		state.say("✔ %s's order delivered%s — %s in total." % [c.buyer, " (late)" if c.get("late", false) else " on time", GameState.format_money(int(c.revenue))],
+			"good" if not c.get("late", false) else "warn")
+
+
+# ================================================================= custom builds (build bench)
+
+func _build_contract(u: UnitData) -> Dictionary:
+	var c: Dictionary = state.contracts.get(int(u.contract), {}) if u else {}
+	return c if not c.is_empty() and c.kind == "build" and c.status == "active" else {}
+
+
+func link_build(it: Item, c: Dictionary) -> void:
+	var u := it.unit
+	u.contract = int(c.id)
+	if u.listed:
+		u.listed = false
+	c.unit = it.id
+	u.log_event(state.minute, "Reserved for %s's %s" % [c.buyer, c.name])
+	state.mark("item", it.id)
+	state.mark("contract", c.id)
+
+
+func _auto_link_build(it: Item) -> void:
+	## A server put on the build bench is reserved for the earliest-due build that needs that chassis.
+	if it.unit == null or it.unit.contract != 0 or it.unit.order_id != 0 or it.unit.hw_type() != "server":
+		return
+	var best := {}
+	for c: Dictionary in state.contracts.values():
+		if c.kind != "build" or c.status != "active" or not it.unit.model_id in c.spec.chassis:
+			continue
+		if Business.build_unit(state, c) != null:
+			continue
+		if best.is_empty() or float(c.due) < float(best.due):
+			best = c
+	if not best.is_empty():
+		link_build(it, best)
+		state.say("%s reserved for %s's %s. Hold [E] to build it up." % [it.unit.display_name(), best.buyer, best.name], "info")
+
+
+func _hardware_changed(u: UnitData) -> void:
+	## New parts mean a fresh test and image before it goes anywhere.
+	if u.tested or u.imaged or u.grade != "":
+		u.tested = false
+		u.imaged = false
+		u.test_report = {}
+		u.grade = ""
+		u.listed = false
+		u.missed_flaw = ""
+		u.log_event(state.minute, "Hardware changed — needs a fresh test and image")
+
+
+func c_build(peer: int, a: Dictionary) -> Dictionary:
+	var sid: String = a.get("station", "")
+	if state.stations.get(sid, {}).get("type") != "build":
+		return _fail("")
+	var it := state.station_slot_item(sid, "unit")
+	match str(a.get("act", "step")):
+		"chassis":
+			if it != null:
+				return _fail("The bench is in use.")
+			var plan := ServerBuild.chassis_plan(state)
+			if plan.is_empty():
+				return _fail("No barebones chassis in the bins — order one from PartsHub (Server build tab).")
+			var pid: String = plan.part
+			state.parts[pid] = int(state.parts.get(pid, 0)) - 1
+			if int(state.parts[pid]) <= 0:
+				state.parts.erase(pid)
+			var unit := state.new_item(Item.KIND_UNIT)
+			var u := UnitData.new()
+			u.model_id = str(plan.model)
+			u.serial = "%s-NEW%05d" % [str(LotGenerator.SERIAL_PREFIX.get(str(u.model().get("maker", "")), "SRV")), unit.id]
+			u.battery_pct = 100
+			u.cpu_id = ""
+			u.set_layout({"cpus": 0, "dimms": [], "drives": [], "psus": 0, "raid": false})
+			u.cost = int(Content.part(pid).get("price", 0))
+			u.received = state.minute
+			u.seller_name = "PartsHub (new)"
+			u.log_event(state.minute, "Unboxed a new barebones chassis")
+			unit.unit = u
+			state.set_loc(unit, {"t": "slot", "slot": "%s:unit" % sid})
+			var c: Dictionary = state.contracts.get(int(plan.get("contract", 0)), {})
+			if not c.is_empty():
+				link_build(unit, c)
+			state.mark("company")
+			state.add_xp(player_key(peer), "repair", int(Content.econ("xp", {}).get("build", 4)))
+			state.say("Unboxed a barebones %s%s." % [u.display_name(), (" for %s" % c.buyer) if not c.is_empty() else ""], "good", peer)
+			return _ok()
+		"step":
+			if it == null or it.unit == null:
+				return _fail("Put a server on the bench.")
+			var u := it.unit
+			var c := _build_contract(u)
+			if c.is_empty():
+				return _fail("This server isn't reserved for a custom build.")
+			var step := ServerBuild.next_step(state, peer, u, c.spec)
+			if step.has("blocked"):
+				return _fail(str(step.blocked))
+			if step.get("done", false):
+				return _fail("Build complete — test it and image it.")
+			var money := ServerBuild.apply_step(state, u, step)
+			BusinessStats.on_build_part(state, u, int(money.spent), int(money.back), peer)
+			_hardware_changed(u)
+			u.log_event(state.minute, "Build: %s" % step.text)
+			state.add_xp(player_key(peer), "repair", int(Content.econ("xp", {}).get("build", 4)))
+			state.bump_stat("build_steps")
+			state.mark("item", it.id)
+			state.mark("company")
+			if ServerBuild.complete(u, c.spec):
+				state.say("Build complete: %s for %s. Now test it, wipe & image it, and it's ready to pack." % [c.name, c.buyer], "good", peer)
+			else:
+				var pr := ServerBuild.progress(u, c.spec)
+				state.say("%s (%d of %d done)" % [step.text, int(pr[0]), int(pr[1])], "info", peer)
+			return _ok()
+	return _fail("")
+
+
+func _check_build_ready(it: Item) -> void:
+	## A reserved server that meets the spec, has passed its test and been imaged gets its order — ready to pack.
+	if it == null or it.unit == null:
+		return
+	var u := it.unit
+	if u.contract == 0 or u.order_id != 0:
+		return
+	var c := _build_contract(u)
+	if c.is_empty() or not ServerBuild.complete(u, c.spec) or not u.tested or not u.imaged or u.has_open_faults():
+		return
+	_business_order(c, it, int(c.price))
+	state.say("%s for %s is built, tested and imaged — pack it and get it on the OUTGOING shelf by %s." % [c.name, c.buyer,
+		GameState.format_minute(float(c.due))], "good")
+
+
+# ================================================================= upgrade to sell
+
+func c_upgrade(peer: int, a: Dictionary) -> Dictionary:
+	## Fit more RAM or a bigger drive from the bins (repair bench or build bench). The listing follows the value.
+	var sid: String = a.get("station", "")
+	if not str(state.stations.get(sid, {}).get("type", "")) in ["repair", "build"]:
+		return _fail("")
+	var it := state.station_slot_item(sid, "unit")
+	if it == null or it.unit == null:
+		return _fail("Nothing on the bench.")
+	var u := it.unit
+	var why := Upgrades.blocked_reason(u)
+	if why != "":
+		return _fail(why)
+	var pick := {}
+	for o: Dictionary in Upgrades.options(state, peer, u):
+		if o.key == str(a.get("key", "")):
+			pick = o
+	if pick.is_empty():
+		return _fail("That upgrade isn't possible any more.")
+	var grade := u.grade if u.grade != "" else Valuation.predicted_grade(u)
+	var old_guide := Valuation.market_value(u, grade)
+	state.parts[pick.part] = int(state.parts.get(pick.part, 0)) - 1
+	if int(state.parts[pick.part]) <= 0:
+		state.parts.erase(pick.part)
+	if pick.pull != "":
+		ServerBuild._return_part(state, pick.pull)
+	u.set_layout(pick.layout)
+	var new_guide := Valuation.market_value(u, grade)
+	if u.grade != "":
+		u.list_price = maxi(1, u.list_price + int(round((new_guide - old_guide) * u.list_quality)))
+	u.upgrades += 1
+	u.log_event(state.minute, "Upgraded: %s (%s) — guide £%d → £%d" % [pick.text, pick.part_name, old_guide, new_guide])
+	if pick.kind == "storage" and u.imaged:
+		u.log_event(state.minute, "PaneOS image cloned onto the new drive")
+	BusinessStats.on_upgrade(state, u, pick, peer)
+	state.bump_stat("upgrades")
+	state.add_xp(player_key(peer), "repair", int(Content.econ("xp", {}).get("upgrade", 4)))
+	state.mark("item", it.id)
+	state.mark("company")
+	var listing := (" Listing now £%d." % u.list_price) if u.listed else ""
+	state.say("Upgraded: %s — value %s£%d.%s" % [pick.text, "+" if new_guide >= old_guide else "-", absi(new_guide - old_guide), listing], "good", peer)
+	return _ok()
 
 
 # ================================================================= purchasing
@@ -1722,9 +2249,12 @@ func _process_minute_events() -> void:
 	if hour != state.last_flogit_hour:
 		state.last_flogit_hour = hour
 		flogit_hourly()
+		business_hourly()
 	_process_jobs()
 	_process_machines()
 	_check_deadlines()
+	_check_contracts()
+	_process_reviews()
 
 
 func end_day() -> void:
@@ -1799,6 +2329,7 @@ func start_next_day() -> void:
 	state.minute = start
 	_process_jobs()
 	_check_deadlines()
+	_check_contracts()
 	state.day_stats = _blank_day_stats()
 	state.last_flogit_hour = int(state.minute / 60.0)
 	state.day_running = true

@@ -14,6 +14,17 @@ static func a_grade_value(u: UnitData) -> float:
 		v += (u.ram_gb - int(m.ref_ram)) / float(m.get("ram_step_gb", 8)) * 14.0
 	if m.has("ref_storage"):
 		v += (u.storage_gb - int(m.ref_storage)) / float(m.get("storage_step_gb", 256)) * 12.0
+	if not u.hw.is_empty():
+		# Part-built kit: empty CPU sockets, missing PSUs and no RAID card all knock the value down.
+		var sockets := maxi(int(m.get("cpu_count", 1)), 1)
+		var cpus := mini(int(u.hw.get("cpus", sockets)), sockets)
+		if cpus < sockets:
+			v *= 0.35 + 0.65 * float(cpus) / sockets
+		var psu_gap := int(m.get("psu_bays", 1)) - int(u.hw.get("psus", int(m.get("psu_bays", 1))))
+		if m.get("type", "") == "server" and psu_gap > 0:
+			v -= psu_gap * float(Content.part(str(m.get("psu_part", ""))).get("price", 40))
+		if m.get("raid_slot", false) and not u.hw.get("raid", true):
+			v -= float(Content.part("raid_card_12g").get("price", 45))
 	return maxf(v, 25.0)
 
 

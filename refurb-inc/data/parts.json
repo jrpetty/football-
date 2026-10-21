@@ -1,5 +1,5 @@
 {
-  "_comment": "Spare parts. 'fits' matches a model field: battery_part/keycap_part ids, ram_type, storage_type. repair_level = minimum player repair skill. repair_secs = hold time at the repair bench at skill level 1.",
+  "_comment": "Spare parts. 'fits' matches a model field: battery_part/keycap_part ids, ram_type, storage_type. repair_level = minimum player repair skill. repair_secs = hold time at the repair bench at skill level 1. Server builds: category cpu (cpu = the CPU id it is), raid, chassis (model = the empty server it unboxes into).",
   "parts": [
     {
       "id": "bat_corvex_prospect",
@@ -556,6 +556,113 @@
       "price": 45,
       "repair_level": 3,
       "repair_secs": 12.0
+    },
+    {
+      "id": "cpu_vortex_x3_2234",
+      "name": "Vortex X3-2234 CPU (4C/8T, 3.6 GHz)",
+      "category": "cpu",
+      "cpu": "vortex_x3_2234",
+      "price": 45,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "cpu_vortex_x7_4214",
+      "name": "Vortex X7-4214 CPU (12C/24T, 2.2 GHz)",
+      "category": "cpu",
+      "cpu": "vortex_x7_4214",
+      "price": 38,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "cpu_vortex_x9_6248",
+      "name": "Vortex X9-6248 CPU (20C/40T, 2.5 GHz)",
+      "category": "cpu",
+      "cpu": "vortex_x9_6248",
+      "price": 85,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "cpu_vortex_x9_6338",
+      "name": "Vortex X9-6338 CPU (32C/64T, 2.0 GHz)",
+      "category": "cpu",
+      "cpu": "vortex_x9_6338",
+      "price": 190,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "cpu_arcturo_titan_7302",
+      "name": "Arcturo Titan 7302 CPU (16C/32T, 3.0 GHz)",
+      "category": "cpu",
+      "cpu": "arcturo_a9_titan_7302",
+      "price": 70,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "cpu_arcturo_titan_7543",
+      "name": "Arcturo Titan 7543 CPU (32C/64T, 2.8 GHz)",
+      "category": "cpu",
+      "cpu": "arcturo_a9_titan_7543",
+      "price": 240,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "raid_card_12g",
+      "name": "RAID controller — 12Gb/s SAS, 2GB cache + battery",
+      "category": "raid",
+      "price": 45,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "chassis_keystone_micro_4",
+      "name": "Barebones chassis — Halden Keystone Micro 4 (4 bays)",
+      "category": "chassis",
+      "model": "halden_keystone_micro_4",
+      "price": 80,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "chassis_bastion_t5",
+      "name": "Barebones chassis — Northstar Bastion T5 (tower, 8 bays)",
+      "category": "chassis",
+      "model": "northstar_bastion_t5",
+      "price": 170,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "chassis_rampart_1100",
+      "name": "Barebones chassis — Corvex Rampart 1100 (1U, 4 bays, rails)",
+      "category": "chassis",
+      "model": "corvex_rampart_1100",
+      "price": 160,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "chassis_rampart_2200",
+      "name": "Barebones chassis — Corvex Rampart 2200 (2U, 8 bays, rails)",
+      "category": "chassis",
+      "model": "corvex_rampart_2200",
+      "price": 230,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "chassis_vault_s316",
+      "name": "Barebones chassis — Northstar Vault S316 (3U, 16 bays, rails)",
+      "category": "chassis",
+      "model": "northstar_vault_s316",
+      "price": 290,
+      "repair_level": 1,
+      "repair_secs": 3.0
     }
   ]
 }

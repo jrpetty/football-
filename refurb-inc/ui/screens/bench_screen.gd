@@ -96,19 +96,21 @@ func _draw_diag(u: UnitData, p: float) -> void:
 				_t(Vector2(x2, 98 + 22 * i), str(inv[i]), 14, Color.WHITE)
 		_footer_bar(p)
 		return
-	var cpus := int(m.get("cpu_count", 1))
-	var drives := int(m.get("drive_count", 1))
+	var lay := u.layout()
+	var cpus := int(lay.cpus)
+	var drives: Array = lay.drives
 	if p > 0.12:
 		_t(Vector2(x2, 98), ("%d× " % cpus if cpus > 1 else "") + u.cpu_name(), 14, Color.WHITE)
 	if p > 0.25:
 		_t(Vector2(x2, 120), "%d GB DDR4%s" % [u.ram_gb, " ECC" if m.get("ram_type") == "ddr4_rdimm" else ""], 14, Color.WHITE)
 	if p > 0.4:
-		var per := UnitData.storage_text(u.storage_gb / maxi(drives, 1))
-		_t(Vector2(x2, 142), ("%d× %s %s" % [drives, per, u.storage_label()]) if drives > 1 else ("%s %s" % [per, u.storage_label()]), 14, Color.WHITE)
+		var stor := ("%s %s" % [UnitData.drives_text(drives), u.storage_label()]) if not drives.is_empty() else ("%s %s" % [UnitData.storage_text(u.storage_gb), u.storage_label()])
+		_t(Vector2(x2, 142), stor, 14, Color.WHITE)
 	if p > 0.55:
 		var extra := "Battery: %d%% design capacity" % u.battery_pct
 		if u.hw_type() == "server":
-			extra = "BMC: online · PSUs: 2 detected" if "rack" in m.get("tags", []) else "BMC: online · PSU: 1 detected"
+			var n_psu := int(lay.psus)
+			extra = "BMC: online · %d PSU%s detected%s" % [n_psu, "" if n_psu == 1 else "s", " · RAID ready" if lay.raid else ""]
 		elif u.hw_type() == "desktop":
 			extra = "PSU: %s" % Content.part(m.get("psu_part", "")).get("name", "detected")
 		_t(Vector2(x2, 164), extra, 14, Color.WHITE)

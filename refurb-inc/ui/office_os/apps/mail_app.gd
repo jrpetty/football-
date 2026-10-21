@@ -29,7 +29,19 @@ func _mails() -> Array:
 		return []
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var out: Array = d.get("mail", []) if d is Dictionary else []
-	return out.filter(func(m): return int(m.get("day", 0)) <= Game.state.day_index())
+	out = out.filter(func(m): return int(m.get("day", 0)) <= Game.state.day_index())
+	# Business buyers email in (newest first): enquiries to answer, then orders on the go and recent ones.
+	var biz: Array = []
+	var cs: Array = Game.state.contracts.values()
+	cs.sort_custom(func(a, b): return float(a.get("offered", 0.0)) > float(b.get("offered", 0.0)))
+	for c: Dictionary in cs.slice(0, 12):
+		var tag: String = {"offer": "● NEW ENQUIRY  ", "active": "▶ ON THE GO  "}.get(str(c.get("status", "")), "")
+		biz.append({"from": tag + str(c.get("buyer", "")), "subject": str(c.get("subject", "")), "body": str(c.get("body", "")), "contract": int(c.id)})
+	if Game.state.totals.get("biz_unlocked", false):
+		var w: Dictionary = Business.cfg("welcome", {})
+		if not w.is_empty():
+			biz.append(w)
+	return biz + out
 
 
 func refresh() -> void:
@@ -65,3 +77,18 @@ func refresh() -> void:
 	_view.add_child(l("From: " + m.get("from", ""), 16, SUB))
 	_view.add_child(HSeparator.new())
 	_view.add_child(para(String(m.get("body", "")).replace("{company}", Game.state.company_name), 19, INK, 760))
+	if m.has("contract"):
+		var c: Dictionary = Game.state.contracts.get(int(m.contract), {})
+		if c.is_empty():
+			return
+		_view.add_child(HSeparator.new())
+		_view.add_child(l("%s · %s · due %s" % [Business.title(c), GameState.format_money(Business.value(c)), GameState.format_minute(float(c.due))], 18, SUB))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		_view.add_child(row)
+		if c.status == "offer":
+			row.add_child(button("Accept", func(): Game.request("biz_accept", {"contract": int(c.id)}), GREEN))
+			row.add_child(button("Decline", func(): Game.request("biz_decline", {"contract": int(c.id)}), Color(0.55, 0.57, 0.6)))
+		else:
+			row.add_child(l(Business.status_text(c), 17, GREEN if c.status in ["active", "complete"] else AMBER))
+		row.add_child(button("Open in Business", func(): if os: os.open_app("business")))

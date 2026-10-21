@@ -50,6 +50,22 @@
       "idle_frac": 0.1
     },
     {
+      "id": "build_bench",
+      "name": "Server build bench",
+      "scene": "res://scenes/stations/build_bench.tscn",
+      "footprint": [
+        1.65,
+        0.8
+      ],
+      "height": 1.9,
+      "price": 680,
+      "power_kw": 0.35,
+      "desc": "Custom server builds for business buyers: put a server or a barebones chassis on it and fit CPUs, memory, drives, PSUs and a RAID card from the bins (the screen ticks off the customer's spec). Also fits RAM and SSD upgrades.",
+      "back": 0.4,
+      "front": 1.1,
+      "idle_frac": 0.1
+    },
+    {
       "id": "grading_desk",
       "name": "Grading desk",
       "scene": "res://scenes/stations/grading_desk.tscn",

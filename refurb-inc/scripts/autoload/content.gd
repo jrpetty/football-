@@ -27,6 +27,9 @@ var building_order: Array = []     # ids by tier
 var fixtures: Dictionary = {}      # id -> Dictionary
 var skills_data: Dictionary = {}   # data/skills.json (levels, speed curve, perks)
 var perks: Dictionary = {}         # perk id -> Dictionary
+var business: Dictionary = {}      # data/business.json (business buyers: tuning, buyers, request templates)
+var biz_requests: Dictionary = {}  # request template id -> Dictionary
+var reviews: Dictionary = {}       # data/reviews.json (Flogit review scoring + comments)
 
 var errors: PackedStringArray = []
 
@@ -63,6 +66,9 @@ func reload() -> void:
 	fixtures = _index(_load("fixtures.json").get("fixtures", []))
 	skills_data = _load("skills.json")
 	perks = _index(skills_data.get("perks", []))
+	business = _load("business.json")
+	biz_requests = _index(business.get("requests", []))
+	reviews = _load("reviews.json")
 	_validate()
 	for e in errors:
 		push_error("[Content] " + e)
@@ -128,6 +134,48 @@ func _validate() -> void:
 		var p: String = f.get("part", "")
 		if not p in ["battery", "keys", "ram", "storage", "screen", "psu", "fan", "board", "server_ear"] and not parts.has(p):
 			errors.append("Fault %s references unknown part %s" % [f.id, p])
+	for p: Dictionary in parts.values():
+		if p.get("category") == "cpu" and not cpus.has(p.get("cpu", "")):
+			errors.append("CPU part %s references unknown CPU %s" % [p.id, p.get("cpu", "")])
+		if p.get("category") == "chassis" and not models.has(p.get("model", "")):
+			errors.append("Chassis part %s references unknown model %s" % [p.id, p.get("model", "")])
+	_validate_business()
+
+
+func _validate_business() -> void:
+	for b: Dictionary in business.get("buyers", []):
+		for rid in b.get("requests", []):
+			if not biz_requests.has(rid):
+				errors.append("Business buyer %s references unknown request %s" % [b.get("id", "?"), rid])
+	for r: Dictionary in biz_requests.values():
+		match str(r.get("kind", "")):
+			"bulk":
+				if not r.get("type", "") in HW_TYPES:
+					errors.append("Business request %s has unknown type %s" % [r.id, r.get("type", "")])
+			"build":
+				for mid in r.get("chassis", []):
+					var m := model(mid)
+					if m.get("type", "") != "server":
+						errors.append("Build request %s: chassis %s is not a server" % [r.id, mid])
+						continue
+					for c in r.get("cpu_ids", []):
+						if not c in m.get("cpu_options", []):
+							errors.append("Build request %s: CPU %s doesn't fit %s" % [r.id, c, mid])
+					if int(r.get("cpus", 1)) > int(m.get("cpu_count", 1)):
+						errors.append("Build request %s: %s has only %d socket(s)" % [r.id, mid, int(m.get("cpu_count", 1))])
+					var bays := int(m.get("drive_bays", m.get("drive_count", 1)))
+					for n in r.get("drives", []):
+						if int(n) > bays:
+							errors.append("Build request %s: %s has only %d drive bays" % [r.id, mid, bays])
+					if int(r.get("psus", 1)) > int(m.get("psu_bays", 1)):
+						errors.append("Build request %s: %s has only %d PSU bay(s)" % [r.id, mid, int(m.get("psu_bays", 1))])
+					if r.get("raid", false) and not m.get("raid_slot", false):
+						errors.append("Build request %s: %s takes no RAID controller" % [r.id, mid])
+			_:
+				errors.append("Business request %s has unknown kind" % r.get("id", "?"))
+	for cat in ["overgraded", "late", "very_late", "fast", "bargain", "pricey", "battery", "great", "good", "ok", "poor", "spares"]:
+		if (reviews.get("comments", {}).get(cat, []) as Array).is_empty():
+			errors.append("reviews.json has no comments for %s" % cat)
 
 
 # ---------------------------------------------------------------- lookups
