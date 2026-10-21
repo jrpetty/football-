@@ -284,7 +284,10 @@ func _refresh_orders() -> void:
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
 		p.add_child(v)
-		v.add_child(UiStyle.label("#%d %s (%s)" % [int(o.id), o.model, UnitData.grade_label(o.grade)], 14, UiStyle.TEXT))
+		var head := "#%d %s (%s)" % [int(o.id), o.model, UnitData.grade_label(o.grade)]
+		if o.get("channel", "") == "business":
+			head = "#%d %s%s — %s" % [int(o.id), o.model, (" (%s)" % UnitData.grade_label(o.grade)) if str(o.grade) != "" else "", o.buyer]
+		v.add_child(UiStyle.label(head, 14, UiStyle.TEXT))
 		var st := "PACKED — to courier shelf" if o.status == "packed" else "To pack"
 		v.add_child(UiStyle.label("%s · due %s" % [st, GameState.format_minute(float(o.due))], 13, UiStyle.BAD if late else UiStyle.MUTED))
 		orders_box.add_child(p)

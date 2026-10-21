@@ -20,9 +20,9 @@ func build() -> void:
 	var tag := l("   Sell it. Ship it. Sorted.", 18, Color(1, 1, 1, 0.85))
 	tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bh.add_child(tag)
-	var stars := clampi(int(round(Game.state.reputation / 20.0)), 0, 5)
-	bh.add_child(l("Seller rating " + "★".repeat(stars) + "☆".repeat(5 - stars), 20, FLOGIT_YEL))
-	add_child(tabs(["Ready to list", "Live listings", "Orders"], func(i):
+	_badge = l("", 20, FLOGIT_YEL)
+	bh.add_child(_badge)
+	add_child(tabs(["Ready to list", "Live listings", "Orders", "Reviews"], func(i):
 		_tab = i
 		refresh()))
 	var sl := scroll_list()
@@ -30,16 +30,27 @@ func build() -> void:
 	_list = sl[1]
 
 
+var _badge: Label
+
+
 func refresh() -> void:
 	clear(_list)
+	# Seller badge: average review stars (the reputation-based rating until the first review lands).
+	var rs := Reviews.summary(Game.state)
+	if int(rs.count) > 0:
+		_badge.text = "★ %.1f  ·  %d review%s" % [float(rs.avg), int(rs.count), "" if int(rs.count) == 1 else "s"]
+	else:
+		var stars := clampi(int(round(Game.state.reputation / 20.0)), 0, 5)
+		_badge.text = "Seller rating " + "★".repeat(stars) + "☆".repeat(5 - stars)
 	match _tab:
 		0: _ready_to_list()
 		1: _live()
 		2: _orders()
+		3: _reviews(rs)
 
 
 func _ready_to_list() -> void:
-	var units := Game.state.units_in_stock().filter(func(i): return i.unit.grade != "" and not i.unit.listed and i.unit.order_id == 0)
+	var units := Game.state.units_in_stock().filter(func(i): return i.unit.grade != "" and not i.unit.listed and i.unit.order_id == 0 and i.unit.contract == 0)
 	var top := HBoxContainer.new()
 	_list.add_child(top)
 	var info := para("Prices start at the market guide for the grade. Under-price to sell fast; over-price and it sits. Fee %d%% + £%d courier per sale." % [int(float(Content.econ("flogit_fee_pct", 0.1)) * 100), int(Content.econ("flogit_postage", 9))], 16, SUB, 800)
@@ -95,8 +106,62 @@ func _unit_row(it: Item, live: bool) -> Control:
 	return c
 
 
+func _reviews(rs: Dictionary) -> void:
+	## Every delivered order gets stars and a comment a few working hours after the courier takes it.
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 18)
+	_list.add_child(top)
+	var badge := card()
+	var bv := VBoxContainer.new()
+	badge.add_child(bv)
+	bv.add_child(l("%.1f" % float(rs.avg) if int(rs.count) > 0 else "—", 44, FLOGIT_PINK))
+	bv.add_child(l(Reviews.stars_text(int(round(float(rs.avg)))), 22, FLOGIT_YEL.darkened(0.15)))
+	bv.add_child(l("%d review%s" % [int(rs.count), "" if int(rs.count) == 1 else "s"], 15, SUB))
+	top.add_child(badge)
+	var dist := VBoxContainer.new()
+	dist.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dist.add_theme_constant_override("separation", 4)
+	top.add_child(dist)
+	for s in range(5, 0, -1):
+		var n := int(rs.dist[s - 1])
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 10)
+		h.add_child(l("%d ★" % s, 16, INK))
+		var m := InsightsUI._Meter.new()
+		m.frac = float(n) / maxf(float(rs.count), 1.0)
+		m.colour = FLOGIT_YEL.darkened(0.1) if s >= 4 else (AMBER if s == 3 else RED)
+		m.custom_minimum_size = Vector2(320, 14)
+		m.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(m)
+		h.add_child(l(str(n), 15, SUB))
+		dist.add_child(h)
+	dist.add_child(para("Buyers judge the grade (a flaw the listing didn't mention is a one-star job), how fast it was dispatched, the price against the guide, and tired batteries. Good reviews nudge your reputation up; bad ones knock it down.", 14, SUB, 600))
+	var reviewed: Array = Game.state.orders.values().filter(func(o): return not o.get("review", {}).is_empty())
+	reviewed.sort_custom(func(a, b): return float(a.review.at) > float(b.review.at))
+	if reviewed.is_empty():
+		_list.add_child(para("No reviews yet — they arrive a few working hours after the courier collects an order.", 18, SUB, 800))
+		return
+	for o in reviewed.slice(0, 40):
+		var r: Dictionary = o.review
+		var c := card()
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 14)
+		c.add_child(h)
+		var stars := l(Reviews.stars_text(int(r.stars)), 22, FLOGIT_YEL.darkened(0.15) if int(r.stars) >= 4 else (AMBER if int(r.stars) == 3 else RED))
+		stars.custom_minimum_size.x = 130
+		h.add_child(stars)
+		var v := VBoxContainer.new()
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(v)
+		var quote := para("“%s”" % r.text, 18, INK, 600)
+		v.add_child(quote)
+		v.add_child(l("%s · %s (%s) · £%d · %s" % [r.buyer, o.model, UnitData.grade_label(str(r.grade)), int(o.price), GameState.format_minute(float(r.at))], 14, SUB))
+		h.add_child(pill(" %s " % Reviews.reason_label(str(r.reason)), GREEN if int(r.stars) >= 4 else (AMBER if int(r.stars) == 3 else RED), Color.WHITE, 13))
+		_list.add_child(c)
+
+
 func _orders() -> void:
-	var orders := Game.state.orders.values()
+	var orders := Game.state.orders.values().filter(func(o): return o.get("channel", "flogit") == "flogit")
 	orders.sort_custom(func(a, b): return float(a.placed) > float(b.placed))
 	if orders.is_empty():
 		_list.add_child(para("No orders yet. List some stock!", 19))
@@ -129,5 +194,9 @@ func _orders() -> void:
 			"cancelled":
 				txt = "Cancelled by buyer"
 				col = RED
+		if not o.get("review", {}).is_empty():
+			txt += "  ·  " + Reviews.stars_text(int(o.review.stars))
+		elif o.has("review_due"):
+			txt += "  ·  review pending"
 		h.add_child(l(txt, 17, col))
 		_list.add_child(c)

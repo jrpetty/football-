@@ -305,7 +305,62 @@ static func _customers(st: GameState) -> Dictionary:
 		"repeat_orders_pct": _pct(repeat_orders, total_orders), "avg_spend": _avg(spent, rows.size()),
 		"avg_orders": _avg(total_orders, rows.size()), "top": rows.slice(0, 12),
 		"top_share_pct": _pct(int(rows[0].spent), spent) if not rows.is_empty() else 0.0,
+		"reviews": _reviews(st), "business": _business(st),
 	}
+
+
+static func _reviews(st: GameState) -> Dictionary:
+	## Flogit reviews: average stars, the spread, why people gave the stars they did, and the latest comments.
+	var recs: Array = st.stats.get("reviews", [])
+	var dist := [0, 0, 0, 0, 0]
+	var total := 0
+	var reasons := {}
+	for r: Dictionary in recs:
+		var s := clampi(int(r.stars), 1, 5)
+		dist[s - 1] += 1
+		total += s
+		var k := str(r.get("reason", ""))
+		if not reasons.has(k):
+			reasons[k] = {"key": Reviews.reason_label(k), "id": k, "count": 0, "stars": 0}
+		reasons[k].count += 1
+		reasons[k].stars += s
+	var rows: Array = []
+	for k in reasons:
+		var g: Dictionary = reasons[k]
+		rows.append({"key": g.key, "id": g.id, "count": int(g.count), "avg": _avg(g.stars, int(g.count))})
+	rows.sort_custom(func(a, b): return int(a.count) > int(b.count))
+	var recent: Array = recs.slice(maxi(recs.size() - 12, 0))
+	recent.reverse()
+	var n := recs.size()
+	return {"count": n, "avg": _avg(total, n), "dist": dist, "five_pct": _pct(dist[4], n), "low_pct": _pct(dist[0] + dist[1], n),
+		"reasons": rows, "recent": recent, "overgraded": int(reasons.get("overgraded", {}).get("count", 0)),
+		"late": int(reasons.get("late", {}).get("count", 0)) + int(reasons.get("very_late", {}).get("count", 0))}
+
+
+static func _business(st: GameState) -> Dictionary:
+	## Business buyers: enquiries, what you took on, how it went, and the money.
+	var b: Dictionary = st.stats.get("business", {})
+	var active := 0
+	var active_value := 0
+	var rows: Array = []
+	for c: Dictionary in st.contracts.values():
+		if c.get("status", "") == "active":
+			active += 1
+			active_value += Business.value(c)
+		if c.get("status", "") in ["active", "complete", "complete_late", "cancelled"]:
+			rows.append({"buyer": str(c.buyer), "order": Business.title(c), "kind": str(c.kind), "value": Business.value(c),
+				"paid": int(c.get("revenue", 0)), "status": Business.status_text(c), "state": str(c.status),
+				"at": float(c.get("closed", c.get("accepted", c.get("offered", 0.0))))})
+	rows.sort_custom(func(x, y): return float(x.at) > float(y.at))
+	var accepted := int(b.get("accepted", 0))
+	var done := int(b.get("complete", 0))
+	return {"offers": int(b.get("offers", 0)), "accepted": accepted, "declined": int(b.get("declined", 0)),
+		"expired": int(b.get("expired", 0)), "complete": done, "on_time": int(b.get("on_time", 0)),
+		"late": int(b.get("late", 0)), "cancelled": int(b.get("cancelled", 0)), "revenue": int(b.get("revenue", 0)),
+		"units": int(b.get("units", 0)), "builds": int(b.get("builds", 0)), "build_parts": int(b.get("build_parts", 0)),
+		"accept_pct": _pct(accepted, int(b.get("offers", 0))), "on_time_pct": _pct(int(b.get("on_time", 0)), done),
+		"active": active, "active_value": active_value, "rows": rows.slice(0, 15),
+		"unlocked": Business.unlocked(st), "unlock_rep": Business.unlock_rep()}
 
 
 # ================================================================= purchasing
@@ -453,8 +508,11 @@ static func _quality(st: GameState) -> Dictionary:
 	for m: Dictionary in s.models.values():
 		batt_sum += float(m.battery)
 		cos_sum += float(m.cosmetic)
+	var up: Dictionary = s.get("upgrades", {})
 	return {"models": models, "cosmetic": cosmetic, "battery": battery, "tested": tested_total,
-		"avg_battery": _avg(batt_sum, tested_total), "avg_cosmetic": _avg(cos_sum, tested_total)}
+		"avg_battery": _avg(batt_sum, tested_total), "avg_cosmetic": _avg(cos_sum, tested_total),
+		"upgrades": {"count": int(up.get("count", 0)), "ram": int(up.get("ram", 0)), "storage": int(up.get("storage", 0)),
+			"spent": int(up.get("spent", 0)), "gain": int(up.get("gain", 0))}}
 
 
 # ================================================================= stock
@@ -1038,6 +1096,14 @@ static func _insights(st: GameState, r: Dictionary) -> Array:
 	var fin: Dictionary = r.finance
 	var pr: Dictionary = r.pricing
 	# Urgent first.
+	var rv: Dictionary = r.customers.get("reviews", {})
+	if int(rv.get("overgraded", 0)) > 0:
+		out.append(_ins("warn", "Buyers say the grade didn't match", "%d Flogit review%s complained about a flaw the grade didn't mention. Green graders miss flaws now and then — Grading skill (and the Keen eye perk) cuts that to nothing; the vision grader never misses." % [int(rv.overgraded), "" if int(rv.overgraded) == 1 else "s"]))
+	if int(rv.get("count", 0)) >= 10 and float(rv.get("avg", 0.0)) >= 4.5:
+		out.append(_ins("good", "Buyers love you: %.1f★ average" % float(rv.avg), "%.0f%% of %d reviews are five stars. Every good review nudges your reputation up." % [float(rv.five_pct), int(rv.count)]))
+	var bz: Dictionary = r.customers.get("business", {})
+	if int(bz.get("offers", 0)) >= 4 and float(bz.get("accept_pct", 0.0)) < 30.0:
+		out.append(_ins("tip", "Business enquiries are going begging", "You've taken on %d of %d business enquiries. Bulk orders pay a fixed price per unit with no marketplace fee, and custom builds pay the best margins in the trade." % [int(bz.accepted), int(bz.offers)]))
 	if int(r.orders.overdue) > 0:
 		out.append(_ins("warn", "%d order(s) overdue" % int(r.orders.overdue), "Late orders cost reputation and buyers cancel after two working days. Pack and ship them first."))
 	for c: Dictionary in stock.consumables:

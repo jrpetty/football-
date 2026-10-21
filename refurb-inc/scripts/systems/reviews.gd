@@ -91,7 +91,8 @@ static func make(st: GameState, order: Dictionary) -> Dictionary:
 	if "overgraded" in neg:
 		stars = mini(stars, 2)
 	var reason := ""
-	if stars <= 3:
+	if stars <= 3 or (stars == 4 and pos.is_empty() and not neg.is_empty()):
+		# Happy enough to give four stars can still come with a grumble ("bit steep, but it works").
 		reason = neg[0] if not neg.is_empty() else ("ok" if stars == 3 else "poor")
 	else:
 		reason = pos[0] if not pos.is_empty() else ("great" if stars == 5 else "good")

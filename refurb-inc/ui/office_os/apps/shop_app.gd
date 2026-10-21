@@ -6,7 +6,7 @@ var _list: VBoxContainer
 var _filter := ""
 var _qty := {}
 
-const PART_TABS := [["Equipment", ""], ["Batteries", "battery"], ["Memory & storage", "ramstorage"], ["Keyboards & small parts", "small"], ["Screens & L2", "l2"], ["Board-level (L3)", "l3"]]
+const PART_TABS := [["Equipment", ""], ["Batteries", "battery"], ["Memory & storage", "ramstorage"], ["Keyboards & small parts", "small"], ["Screens & L2", "l2"], ["Board-level (L3)", "l3"], ["Server build", "build"]]
 
 
 func build() -> void:
@@ -48,11 +48,12 @@ func refresh() -> void:
 			"small": ok = c in ["keys", "fan"]
 			"l2": ok = lvl == 2
 			"l3": ok = lvl == 3
+			"build": ok = c in ["cpu", "raid", "chassis"] or str(p.get("fits_ram_type", "")) == "ddr4_rdimm" 				or str(p.get("fits_storage_type", "")) in ["sas_caddy", "sata_hdd"] or String(p.id).begins_with("psu_server")
 		if not ok:
 			continue
 		if _filter != "" and not _filter in String(p.name).to_lower() and not _fits_filter(p):
 			continue
-		var desc := "Repair level %d · %s" % [lvl, _fits_text(p)]
+		var desc := ("For custom builds · %s" % _fits_text(p)) if c in ["cpu", "raid", "chassis"] else "Repair level %d · %s" % [lvl, _fits_text(p)]
 		_row(p.id, p.name, int(p.price), desc, "%d in bins" % int(Game.state.parts.get(p.id, 0)))
 
 
@@ -65,13 +66,17 @@ func _fits_text(p: Dictionary) -> String:
 	for m: Dictionary in Content.models.values():
 		var match_ := false
 		match p.category:
-			"battery": match_ = m.battery_part == p.id
-			"keys": match_ = m.keycap_part == p.id
-			"ram": match_ = m.ram_type == p.get("fits_ram_type", "")
-			"storage": match_ = m.storage_type == p.get("fits_storage_type", "")
+			"battery": match_ = m.get("battery_part", "") == p.id
+			"keys": match_ = m.get("keycap_part", "") == p.id
+			"ram": match_ = m.get("ram_type", "") == p.get("fits_ram_type", "")
+			"storage": match_ = m.get("storage_type", "") == p.get("fits_storage_type", "")
+			"cpu": match_ = str(p.get("cpu", "")) in m.get("cpu_options", [])
+			"raid": match_ = bool(m.get("raid_slot", false))
 			_: match_ = false
 		if match_:
 			fits.append(Content.model_display_name(m.id))
+	if p.category == "chassis":
+		return "New and empty: CPUs, memory, drives, PSUs and RAID card fitted at the build bench"
 	if fits.is_empty():
 		return "Universal / see listing"
 	return "Fits " + ", ".join(fits)

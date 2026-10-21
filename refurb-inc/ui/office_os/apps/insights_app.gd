@@ -312,10 +312,67 @@ func _page_customers() -> void:
 	if int(c.unique) == 0:
 		_empty("No customers yet.")
 		return
-	var v := _section("Top customers", "By total spend.")
+	var v := _section("Top customers", "By total spend (Flogit buyers and business customers).")
 	_table(v, ["Buyer", "Orders", "Spent", "Your profit", "First order", "Last order", "Late"],
 		c.top.map(func(x): return [x.key, str(x.orders), _m(x.spent), _mc(x.profit), "Day %d" % (int(x.first) + 1),
 			"Day %d" % (int(x.last) + 1), [str(x.late), RED] if int(x.late) > 0 else "0"]))
+	_customer_reviews(c.get("reviews", {}))
+	_customer_business(c.get("business", {}))
+
+
+func _customer_reviews(rv: Dictionary) -> void:
+	if rv.is_empty():
+		return
+	var v := _section("Flogit reviews", "Buyers leave stars and a comment a few working hours after delivery. Good reviews nudge reputation up, bad ones knock it down.")
+	if int(rv.count) == 0:
+		_note(v, "No reviews yet.")
+		return
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 24)
+	v.add_child(h)
+	var left := VBoxContainer.new()
+	left.add_child(l("%.1f ★" % float(rv.avg), 40, AMBER))
+	left.add_child(l("%d reviews · %s five-star · %s one or two" % [int(rv.count), _p(rv.five_pct), _p(rv.low_pct)], 14, SUB))
+	h.add_child(left)
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(right)
+	var top := 1.0
+	for n in rv.dist:
+		top = maxf(top, float(n))
+	for s in range(5, 0, -1):
+		_meter_row(right, "%d star%s" % [s, "" if s == 1 else "s"], float(rv.dist[s - 1]) / top, str(int(rv.dist[s - 1])), GREEN if s >= 4 else (AMBER if s == 3 else RED))
+	var w := _section("Why buyers gave those stars", "The main reason behind each review.")
+	_table(w, ["Reason", "Reviews", "Avg stars"], (rv.reasons as Array).map(func(x): return [x.key, str(x.count),
+		["%.1f" % float(x.avg), GREEN if float(x.avg) >= 4.0 else (AMBER if float(x.avg) >= 3.0 else RED)]]))
+	var r := _section("Latest reviews")
+	_table(r, ["Stars", "Comment", "Buyer", "Bought"], (rv.recent as Array).map(func(x): return [
+		[Reviews.stars_text(int(x.stars)), GREEN if int(x.stars) >= 4 else (AMBER if int(x.stars) == 3 else RED)],
+		"“%s”" % x.text, x.buyer, "%s (%s)" % [x.model, UnitData.grade_label(str(x.grade))]]), true, 1, [0, 2, 3])
+
+
+func _customer_business(bz: Dictionary) -> void:
+	if bz.is_empty():
+		return
+	var v := _section("Business buyers", "Bulk orders and custom server builds (the Business app). Fixed prices, no marketplace fee.")
+	if not bz.get("unlocked", false) and int(bz.offers) == 0:
+		_note(v, "Business buyers start emailing at reputation %d." % int(bz.unlock_rep))
+		return
+	var g := GridContainer.new()
+	g.columns = 4
+	g.add_theme_constant_override("h_separation", 24)
+	v.add_child(g)
+	for kv in [["Enquiries", str(bz.offers)], ["Taken on", "%d (%s)" % [int(bz.accepted), _p(bz.accept_pct)]],
+			["Delivered", "%d · %s on time" % [int(bz.complete), _p(bz.on_time_pct)]], ["Cancelled on you", str(bz.cancelled)],
+			["Business revenue", _m(bz.revenue)], ["Units supplied", str(bz.units)], ["Custom builds shipped", str(bz.builds)],
+			["On the go now", "%d · %s" % [int(bz.active), _m(bz.active_value)]]]:
+		var c := VBoxContainer.new()
+		c.add_child(l(kv[0], 14, SUB))
+		c.add_child(l(kv[1], 20))
+		g.add_child(c)
+	if not (bz.rows as Array).is_empty():
+		_table(v, ["Buyer", "Order", "Value", "Paid", "Status"], (bz.rows as Array).map(func(x): return [x.buyer, x.order, _m(x.value),
+			_m(x.paid) if int(x.paid) > 0 else "—", [x.status, GREEN if x.state == "complete" else (RED if x.state == "cancelled" else (BLUE if x.state == "active" else AMBER))]]), true, 1, [0, 4])
 
 
 # ================================================================= Purchasing
@@ -398,6 +455,11 @@ func _page_quality() -> void:
 	for b: Dictionary in q.battery:
 		_meter_row(v, b.key, float(b.pct) / bt, "%s  ·  %d units" % [_p(b.pct), b.count], CASH_COL)
 	_note(v, "Below 80% caps a unit at grade B; a new battery restores it to 100%.")
+	var up: Dictionary = q.get("upgrades", {})
+	if int(up.get("count", 0)) > 0:
+		v = _section("Upgrade to sell", "RAM and storage fitted at the repair or build bench before sale.")
+		_table(v, ["Upgrades", "Memory", "Storage", "Parts spent (net)", "Value added", "Return"],
+			[[str(up.count), str(up.ram), str(up.storage), _m(up.spent), _m(up.gain), _mc(int(up.gain) - int(up.spent))]], false)
 
 
 # ================================================================= Stock
