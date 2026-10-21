@@ -8,6 +8,7 @@ extends Node
 const SHOT_RECORDS := "user://shot_challenge_records.json"
 
 var _only: Array = []
+var _bg: ColorRect
 
 
 func _ready() -> void:
@@ -19,10 +20,10 @@ func _ready() -> void:
 	var real := Challenges.records_path
 	Challenges.records_path = SHOT_RECORDS
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SHOT_RECORDS))
-	var bg := ColorRect.new()
-	bg.color = Color(0.16, 0.18, 0.2)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	_bg = ColorRect.new()
+	_bg.color = Color(0.16, 0.18, 0.2)
+	_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_bg)
 	_company()
 	if _want("staff") or _want("insights") or _want("skills"):
 		await _office_shots()
@@ -34,6 +35,8 @@ func _ready() -> void:
 		await _challenges_shot()
 	if _want("results"):
 		await _results_shot()
+	if _only.has("night"):           # 3D (slow on the software renderer): only when asked for
+		await _night_shot()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SHOT_RECORDS))
 	Challenges.records_path = real
 	get_tree().quit()
@@ -195,6 +198,29 @@ func _challenges_shot() -> void:
 	await get_tree().create_timer(0.4).timeout
 	await _save("challenges_menu")
 	cl.queue_free()
+
+
+func _night_shot() -> void:
+	## The garage at 21:30 on a night shift: dark sky, lights on inside, yard floodlights. (Pass --only night.)
+	_bg.visible = false
+	Game.new_game(5151)
+	Game.state.cash = 30000
+	Game.sim.execute(1, "shop_buy", {"id": "night_shift_licence"})
+	var level: Node = load(load("res://scripts/game_root.gd").level_path("garage")).instantiate()
+	add_child(level)
+	await get_tree().create_timer(0.5).timeout
+	Game.sim.advance_minutes(GameState.MIN_PER_DAY)
+	Game.sim.execute(1, "overtime", {"choice": "night"})
+	Game.sim.advance_minutes(4.5 * 60.0)
+	await get_tree().create_timer(1.0).timeout
+	var cam := Camera3D.new()
+	cam.fov = 62
+	level.add_child(cam)
+	cam.current = true
+	cam.global_position = Vector3(1.8, 1.9, 14.6)
+	cam.look_at(Vector3(-0.6, 1.2, 2.0))
+	await _save("night_garage")
+	level.queue_free()
 
 
 func _results_shot() -> void:
