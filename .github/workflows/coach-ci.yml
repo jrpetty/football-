@@ -1,0 +1,34 @@
+name: Sightline coach CI
+
+# Typecheck, test and build the coach package whenever it changes. Tests run
+# the whole engine on synthetic frames, so no Electron binary is needed.
+on:
+  push:
+    paths: ['coach/**', '.github/workflows/coach-ci.yml']
+  pull_request:
+    paths: ['coach/**', '.github/workflows/coach-ci.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: coach
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coach/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx vite build
+      - run: npm run profile:check -- src/profiles/*.json

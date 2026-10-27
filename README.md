@@ -148,3 +148,11 @@ src/
 
 *Built for coaches and analysts. Swap in your own squad, footage and matches
 from the **Squad**, **Matches**, **Video** and **Data** screens.*
+
+---
+
+## Also in this repository
+
+- **`predictor/`** — the Premier League match predictor, published under `/predictor/`.
+- **`coach/`** — *Sightline*, a separate desktop app: a screen-only, local-first AI
+  gameplay coach (Electron + TypeScript). See [`coach/README.md`](coach/README.md).
