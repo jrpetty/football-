@@ -87,6 +87,45 @@ Legend:
 ### Documentation
 - ☑ README, plan.md, TODO.md, POLICY_REGISTRY.md, docs/QA.md, docs/PRIVACY_AND_INTEGRITY.md.
 
+## v3 delivery
+
+### Downloadable app
+- ◐ Windows installer: electron-builder NSIS x64, built by the `coach-windows.yml` workflow on `windows-latest` and uploaded as an artifact. *Packaging was verified locally with a Linux build: the packaged app runs, and the native voice, speech recognition and IPC all work in it. The Windows build result is in GitHub Actions.*
+- ☐ Code signing (removes the SmartScreen warning).
+
+### Anti-cheat
+- ☑ By design: a separate process, OS window capture, standard global hotkeys; no injection, overlay, input, driver or admin rights. Documented in docs/ANTI_CHEAT.md.
+- ☐ Tested on Windows with RICOCHET (MW4) and AoE IV running. It cannot be tested here.
+
+### Talking and listening
+- ☑ Natural neural voices on this computer:
+  - Jenny (Piper) and 9 Kokoro voices;
+  - pinned and checksum-verified downloads, unpacked in a worker thread;
+  - sentence-by-sentence playback with the next sentence prepared ahead;
+  - a system-voice fallback;
+  - a speed measured on the user's PC.
+
+  *Verified in the packaged Electron app: synthesis runs at about 0.19× real time on the build machine.*
+- ☑ Configurable global keys (talk toggle, mark moment, stop), validated so a bare letter cannot fire while typing in chat. Conflicts with other programs are reported.
+- ☑ Speech recognition in the packaged app transcribes a test recording exactly. Both models are pre-loaded so the first use is quick.
+
+### Understanding the screen
+- ☑ Every vision answer names the screen (name, kind, summary).
+- ☑ Menus, loading screens and scoreboards are remembered as 64-bit fingerprints (~200 bytes each, at most 400 per game), then recognised locally with no request. They are re-checked once a minute.
+- ◐ Questions asked during capture include the current screen; mark-a-moment plus a policy-gated post-match review. *The pipeline is tested with fakes; real Claude answers are untested (no key).*
+- ◐ Game knowledge base: web research is structured into 10 sections, cited and dated, stored gzip-compressed, and fed to prompts within budgets (about 14k characters for vision, 60k for answers). *The structuring and validation are tested; real research calls are untested.*
+
+### Games
+- ☑ Packs for Call of Duty: Modern Warfare 4 and Age of Empires IV, from launch-week research (marked unverified where sources were thin), with policy entries:
+  - live tips only in campaigns, against AI, or against bots;
+  - online modes post-match only.
+- ◐ HUD reading for both games. *No live captures yet; the HUD layout in MW4 is configurable.*
+- ☐ Mistake rules for MW4 beyond the death map, once real sessions show what is reliably visible.
+
+### Experience
+- ☑ First-run setup (connect Claude with a key test, game, voice, keys). Decisions tab, game-knowledge panel, screen name on the live dashboard.
+- ☑ Fixed: switching tabs crashed the page. Newer Chromium returns a Promise from `scrollTo`, which React took for an effect cleanup.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

@@ -7,8 +7,8 @@
 | Pixels of a window or screen the player picked | Yes | OS/Chromium display capture. Single-use consent in `electron/consent.ts` and `electron/main.ts`. A whole-screen share is warned about, in the picker and for the whole session |
 | Game process memory, files, modules, handles | **No** | No such API is used or exposed. The renderer is sandboxed and has no Node |
 | Renderer network access | **No** | Every `http(s)`/`ws(s)` request from the page is cancelled in `hardenSession()`; the CSP is `connect-src 'self'` |
-| Network from the main process | **Only if the player opts in** | Two services, both off by default: (1) cloud features, which call `api.anthropic.com` with the player's own key, with a fixed `baseURL`; (2) a one-time speech-model download from GitHub releases, checked against a pinned SHA-256 |
-| Keyboard/mouse input, automation, aiming | **No** | No input API is used. The two global shortcuts only stop capture (Ctrl+Shift+F12) and toggle push-to-talk (Ctrl+Shift+F11) |
+| Network from the main process | **Only if the player opts in** | Two services, both off by default: (1) cloud features, which call `api.anthropic.com` with the player's own key, with a fixed `baseURL`; (2) one-time model downloads (speech recognition and natural voices) from GitHub releases, each checked against a pinned SHA-256 |
+| Keyboard/mouse input, automation, aiming | **No** | No input API is used. Three global keys (you choose them) only toggle talking, mark a moment, and stop capture. See [ANTI_CHEAT.md](ANTI_CHEAT.md) |
 | Drawing over the game | **No** | The app has one normal window. Nothing is ever composited onto other windows |
 | Camera | **No** | The permission handler refuses it |
 | Microphone | **Only with voice input on, and only while talking** | Permission is granted for audio-only requests, and only while `voiceInput` is on. The stream closes when recording stops (at most 15 s) |
@@ -23,6 +23,11 @@
 | Push-to-talk audio (opt-in) | Renderer memory → main → local recogniser (worker thread) | Discarded after transcription. Never stored or sent |
 | Questions and digests sent to Claude (opt-in) | Main process → Anthropic API | Not stored by Sightline beyond the in-memory conversation |
 | Session timeline, conversation | Renderer memory | Until the next session, a game change, or app close |
+| Marked moments (the mark key) | A downscaled screenshot in renderer memory, plus your note | This session only: never written to disk. Deletable one by one; sent to Anthropic only when you ask for a review |
+| A question asked during capture (cloud on) | The current screen, downscaled, sent with the question to Anthropic | Not stored by Sightline |
+| Learned screens (menus, loading screens, scoreboards) | `userData/knowledge/<pack>.screens.json`: a 64-bit fingerprint, name and one-line summary per screen (~200 bytes each, at most 400). No images | Until "Forget everything" or deleting that game's data |
+| Game knowledge base (when you build one) | `userData/knowledge/<pack>.kb.gz`, gzip-compressed JSON of public web research, with sources | Until deleted on the Ask screen |
+| Neural voice and speech models | `userData/models/…`, downloaded once on request, checksum-verified | Until removed in Settings |
 | Settings, cloud settings | `userData/settings.json`, `userData/cloud.json` | Until changed. There is no key in these files |
 | API key | `userData` key file, encrypted with OS `safeStorage`. If the OS cannot encrypt, it is held in memory for the session only | Until removed in Settings |
 | Match records, pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |

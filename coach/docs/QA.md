@@ -83,7 +83,7 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 6.2 | Ask an open question with no key ("Should I play 4-3-3?"). | It explains that open questions need cloud features. No error. |
 | 6.3 | With a key and cloud on, ask the same open question. | The answer is marked "AI-phrased" and shows the model used and its estimated cost. It cites only recorded numbers. |
 | 6.4 | Settings → Voice input → on → **Download speech model**. | The progress bar fills, then shows "Speech model installed". |
-| 6.5 | Click the top-bar **Talk** button (or press Ctrl+Shift+F11), ask a question and click again. | The OS microphone indicator is on **only** while recording. The text is transcribed and answered. |
+| 6.5 | Click the top-bar **Talk** button (or press your talk key, F8 by default, with the game focused), ask a question and press again. | The OS microphone indicator is on **only** while recording. The text is transcribed and answered. |
 | 6.6 | Turn voice input off, then try to use the microphone (Talk button hidden, shortcut pressed). | The microphone is refused, with a message pointing to Settings. |
 
 ## 7. Cloud vision (key required)
@@ -109,7 +109,34 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 8.7 | Settings → **Forget everything…** → Delete everything. | All player data is gone; settings are kept. |
 | 8.8 | Ask → Context: save notes with memory off. | Save is disabled, with an explanation. |
 
-## 9. Accessibility and layout
+## 9. Installer, first run, voice and keys
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 9.1 | Download the installer artifact from the **Sightline coach Windows installer** workflow and run it. | SmartScreen warns about an unknown publisher (unsigned). The install finishes with Start-menu and desktop shortcuts, and the app opens. |
+| 9.2 | First launch. | The setup opens: Welcome → Connect Claude → Your game → Voice → Ready. **Skip setup** closes it, and it does not return. |
+| 9.3 | Connect Claude with a valid key → **Save & test**. | "✓ Connected", and cloud features switch on. An invalid key gives a clear error. |
+| 9.4 | Voice step → **Download** (Jenny), then **Hear it**. | Progress reaches 100% and a natural British voice speaks. Settings → Coach voice shows "Fast on this PC" after a few phrases. |
+| 9.5 | Settings → Coach voice → download Kokoro → pick Emma, George and so on. | Each voice previews on click. If the PC is slow, a warning suggests Jenny. |
+| 9.6 | Settings → Keyboard → click the talk key and press **F7**. | The keycap shows F7. With a game focused, F7 starts and stops talking. A key already used by another program shows a warning. |
+| 9.7 | Try to bind a bare letter (e.g. **A**). | Refused, with an explanation (it would trigger while typing in chat). |
+| 9.8 | With voice input on and the model installed, restart the app and press the talk key at once. | The first question is transcribed without a long pause (the model is pre-loaded). |
+
+## 10. Screen understanding, questions and decisions (key required)
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 10.1 | MW4 or AoE IV with cloud on: go through main menu → lobby → loading → match. | The status strip's **Screen** shows sensible names ("Main menu", "Loadout editor", "Loading screen", "In match"). |
+| 10.2 | Go back to a menu seen before. | **Screen** shows "· known", and the vision call count does not increase while you stay there (it rechecks once a minute). |
+| 10.3 | In a campaign or bot match, press the talk key and ask "What should I do here?". | Claude answers about what is actually on screen, and it is spoken. |
+| 10.4 | In online multiplayer, ask the same question. | Marked **Held**, then answered after the match. |
+| 10.5 | Press the mark key during a fight, then the talk key, and say what you were thinking. | A chime and a "Moment marked" toast. The Decisions tab shows a thumbnail with your note. |
+| 10.6 | During online play, open Decisions and try **Review this decision**. | Disabled: "Moment reviews open after the match in this mode". |
+| 10.7 | After the match, **Review this decision**. | A spoken and written review: what was happening, whether it was sound, what to try next. |
+| 10.8 | Ask → Game knowledge → **Build game knowledge**. | Progress stages appear. A few minutes later it shows items, sources, the game version, and a small compressed size. Browsing shows sections such as maps and roster. |
+| 10.9 | Close and reopen the app. | Marked moments are gone (memory only); learned screens and the knowledge base remain. |
+
+## 11. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is
