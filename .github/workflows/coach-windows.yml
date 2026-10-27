@@ -5,6 +5,8 @@ name: Sightline coach Windows installer
 # coach-v0.2.0 also attaches the installer to a GitHub release.
 on:
   push:
+    # Listing tags alone would stop branch pushes from triggering the build.
+    branches: ['**']
     paths: ['coach/**', '.github/workflows/coach-windows.yml']
     tags: ['coach-v*']
   workflow_dispatch:

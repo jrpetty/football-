@@ -50,7 +50,10 @@ export function App() {
   const [setupOpen, setSetupOpen] = useState(() => !new URLSearchParams(location.search).has('nosetup'))
   const mainRef = useRef<HTMLElement>(null)
   // Each section opens at its top.
-  useEffect(() => mainRef.current?.scrollTo(0, 0), [tab, state.phase])
+  useEffect(() => {
+    // Braces matter: newer Chromium returns a Promise from scrollTo, which React would take for a cleanup function.
+    mainRef.current?.scrollTo(0, 0)
+  }, [tab, state.phase])
 
   const refreshCloud = useCallback(() => void bridge.cloudStatus().then(setCloud).catch(() => undefined), [bridge])
 
