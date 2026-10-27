@@ -4,68 +4,86 @@
 
 | Capability | Status | Enforced by |
 | --- | --- | --- |
-| Pixels of a window or screen the player picked | Yes | OS/Chromium display capture; single-use consent in `electron/consent.ts` and `electron/main.ts` |
-| Game process memory, files, modules, handles | **No** | No such API is used or exposed; the renderer is sandboxed with no Node |
-| Network (upload, telemetry, cloud AI, cloud TTS) | **No** | Every `http(s)`/`ws(s)` request is cancelled in `hardenSession()`; CSP `connect-src 'self'` |
-| Keyboard/mouse input, automation, aiming | **No** | No input API is used. The single global shortcut (Ctrl+Shift+F12) only stops capture |
-| Drawing over the game | **No** | The app has one normal window; nothing is ever composited onto other windows |
-| Camera / microphone | **No** | Permission handler refuses every request except display capture |
-| Hidden information (fog of war, enemy positions off-screen) | **No** | Only profile-declared HUD regions are read; the profile schema has no way to describe hidden state |
+| Pixels of a window or screen the player picked | Yes | OS/Chromium display capture. Single-use consent in `electron/consent.ts` and `electron/main.ts`. A whole-screen share is warned about, in the picker and for the whole session |
+| Game process memory, files, modules, handles | **No** | No such API is used or exposed. The renderer is sandboxed and has no Node |
+| Renderer network access | **No** | Every `http(s)`/`ws(s)` request from the page is cancelled in `hardenSession()`; the CSP is `connect-src 'self'` |
+| Network from the main process | **Only if the player opts in** | Two services, both off by default: (1) cloud features, which call `api.anthropic.com` with the player's own key, with a fixed `baseURL`; (2) a one-time speech-model download from GitHub releases, checked against a pinned SHA-256 |
+| Keyboard/mouse input, automation, aiming | **No** | No input API is used. The two global shortcuts only stop capture (Ctrl+Shift+F12) and toggle push-to-talk (Ctrl+Shift+F11) |
+| Drawing over the game | **No** | The app has one normal window. Nothing is ever composited onto other windows |
+| Camera | **No** | The permission handler refuses it |
+| Microphone | **Only with voice input on, and only while talking** | Permission is granted for audio-only requests, and only while `voiceInput` is on. The stream closes when recording stops (at most 15 s) |
+| Hidden information (fog of war, enemy positions off-screen) | **No** | Only what is on screen is read. The vision prompt and the validator accept only the pack's declared, visible fields |
 
 ## Data lifecycle
 
 | Data | Where | How long |
 | --- | --- | --- |
 | Captured frames | Video element → ImageBitmap → worker → discarded | Milliseconds. At most 2 in flight; dropped (and `close()`d) when analysis falls behind |
-| Alignment-check still | Canvas in the app window | Only while that panel is open; cleared on close |
-| Picker thumbnails | Renderer memory, in the picker only | Until the picker closes |
-| Session timeline (events, inferences, decisions) | Renderer memory | Until the next session starts or the app closes |
-| Settings | `userData/settings.json` | Until changed |
-| Tendency counts (opt-in, off by default) | `userData/tendencies/<profile>.json` | Until “Forget saved tendencies”. Counts only: no timestamps, images, audio or text |
+| Sampled frames for cloud vision (opt-in) | Downscaled JPEG (or only the pack's HUD crops) → main process → Anthropic API | Not stored by Sightline. Anthropic's API data policy applies to the request |
+| Push-to-talk audio (opt-in) | Renderer memory → main → local recogniser (worker thread) | Discarded after transcription. Never stored or sent |
+| Questions and digests sent to Claude (opt-in) | Main process → Anthropic API | Not stored by Sightline beyond the in-memory conversation |
+| Session timeline, conversation | Renderer memory | Until the next session, a game change, or app close |
+| Settings, cloud settings | `userData/settings.json`, `userData/cloud.json` | Until changed. There is no key in these files |
+| API key | `userData` key file, encrypted with OS `safeStorage`. If the OS cannot encrypt, it is held in memory for the session only | Until removed in Settings |
+| Match records, pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |
+| Research briefs (when the player runs research) | `userData/research/<pack>.json`, plain JSON. Public web guidance about the game, not player data | Until deleted |
 
-Stored files are written atomically and validated on read. Profile ids are
-pattern-checked, which prevents path traversal. Main refuses to save
-tendencies unless the stored setting says the player opted in, whatever the
-renderer asks.
+- Stored files are written atomically and validated on read.
+- Pack ids are pattern-checked, which prevents path traversal.
+- The main process refuses to save player data unless the stored setting
+  says the player opted in, whatever the renderer asks.
 
 ## Competitive integrity policy
 
-1. **Live tactical tips exist only in Training mode.**
-2. Training mode stays live only when the profile marks the selected game
-   mode as one of:
-   - **single-player and non-competitive**; or
-   - **`liveCoaching.status: "approved"`, with a `source` (the publisher's
-     policy) and a `reviewedAt` date.** The profile validator rejects
-     "approved" without both.
-3. In every other case, including "not sure what I'm playing", the governor
-   runs **competitive-safe**:
-   - Live tips are converted to *queued* notes for the reflective review.
-   - Reflective speech happens only at a visible round or match end, or one
-     the player marks by hand.
-   - Speech still playing when the next round visibly starts is cancelled.
-4. A profile can mark a mode `prohibited`, which blocks live tips even for
-   single-player play.
-5. OS screen-capture permission is **not** publisher permission. The app says
-   so on the Privacy screen.
+1. **When the coach may speak is decided by the policy registry**
+   ([POLICY_REGISTRY.md](../POLICY_REGISTRY.md)), per game and mode, and it
+   fails closed:
+   - an unknown game or mode, "not sure", or a stale review → post-match
+     review only;
+   - tournament play → nothing at all.
+2. **Live tips exist only in Training mode**, and only where the resolved
+   policy includes live play. Today that means:
+   - offline play against the CPU/AI in the FC and AoE II packs, which is
+     Sightline's internal policy and needs sign-off;
+   - a declared offline single-player mode of an unlisted game;
+   - the fictional Synthetic Arena.
+3. **VALORANT is post-match only in every mode.**
+4. Everywhere else:
+   - live tips become notes for the review;
+   - reflective speech happens only at a visible (or player-marked) round or
+     match end;
+   - speech still playing when the next round starts is cut off;
+   - answers to the player's own questions are held until the match ends.
+5. The OS's permission to capture the screen is **not** the publisher's
+   permission. The app says so on the Policy & privacy screen.
 
 ### What we have not verified
 
-- No real game's publisher policy has been researched. The only bundled
-  profile is the fictional Synthetic Arena. Each real profile must cite the
-  publisher's rules for every mode it marks as approved.
-- Anti-cheat compatibility is unknown. Sightline uses the same OS capture
-  path as streaming and recording software and never interacts with game
-  processes. Whether any particular anti-cheat or tournament ruleset permits
-  a coaching app at all is a per-title, per-event question.
-- Some games block capture (protected or excluded windows produce black
-  frames) or use exclusive fullscreen. The coach then reports "Cannot read
-  the HUD" and infers nothing. It does not try to work around the block.
+- **Publisher policies.** No publisher has been asked. Several registry
+  entries rest on search excerpts or on Sightline's own judgement; each needs
+  human review before release.
+- **Anti-cheat compatibility.** Sightline uses the same OS capture path as
+  streaming and recording software and never interacts with game processes.
+  Whether a given anti-cheat or tournament ruleset permits a coaching app at
+  all is a per-title, per-event question.
+- **Blocked capture.** Some games block capture (protected or excluded
+  windows give black frames) or use exclusive fullscreen. The coach then
+  reports that it cannot see, and infers nothing. It does not try to work
+  around the block.
 
 ## Honesty in what it says
 
-- It reasons only about visible events, and records the pixel evidence for
-  each ("Defeat banner appeared · visual confidence 92%").
-- An unknown signal is unknown, not zero. Episodes it could not observe
-  properly are excluded from evidence.
-- Claims are graded. Wording strength follows the grade, and templates never
-  use causal or absolute words. A test enforces this.
+- It reasons only about visible events and records the evidence for each,
+  for example "scoreboard 1–1 → 1–2" or "goal replay on screen · confidence
+  91%".
+- An unknown value is unknown, not zero. Readings expire, and a stale state
+  stops all inference.
+- **A vision model's answer is an observation, not a fact.** It is validated
+  against the pack, carries a confidence, and needs confirmation where it
+  matters: a goal needs a scoreboard change read twice, or once with high
+  confidence.
+- **Claims are graded,** with counterexamples shown. Wording strength follows
+  the grade, and templates never use causal or absolute words; a test
+  enforces this.
+- **AI-phrased answers are labelled,** and are built only from the recorded
+  numbers.

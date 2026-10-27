@@ -1,0 +1,118 @@
+# Manual QA guide
+
+Run this guide on **Windows 11** before each release; also run it on macOS
+where possible. Automated tests cover the engine, policy, storage and cloud
+gate (`npm test`), but they cannot cover these:
+- real capture;
+- real voices and microphones;
+- a real API key;
+- real games.
+
+Record each result as Pass, Fail or N/A, together with the build, the OS
+version and the GPU.
+
+**Setup:**
+```bash
+cd coach
+npm install
+npm start
+```
+
+Use a fresh user profile for steps 1–3. The data folder is
+`%APPDATA%/sightline-coach`. Deleting it resets the app.
+
+## 1. Capture consent
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 1.1 | Launch. Do nothing. | The pill reads "Not capturing. Nothing is being watched." The window title has no ● and no capture is running. |
+| 1.2 | Coach → **Choose the game window** → Cancel in the picker. | Nothing starts and no error is shown. |
+| 1.3 | Choose the game window, select **Windows**, pick the game, then **Share**. | Capture starts. The pill turns red and shows the window name. The OS title bar reads "● Capturing … — Sightline Coach". |
+| 1.4 | In the picker, switch to **Screens**. | A warning explains that a whole screen shows notifications and other apps, and recommends the game window. |
+| 1.5 | Share a whole screen. | The live dashboard shows the same whole-screen warning for the whole session. |
+| 1.6 | Start a share, then close the game window. | Capture stops by itself and the pill returns to "Not capturing". |
+| 1.7 | Minimise the shared game window for 10 s. | A warning says the window stopped sending pictures, or that the capture is black or frozen. "Seeing" turns **Stale** and no mistakes or events are inferred during that time. Restore the window: it recovers. |
+| 1.8 | Change the game's resolution or window size mid-session. | The session continues. A notice may appear and the state goes stale briefly. Nothing crashes. |
+| 1.9 | With HDR on in Windows, share an HDR game. | Note whether the picture looks washed out or black. If the black-frame warning appears, record it: HDR capture is a known risk. |
+| 1.10 | Share a protected or DRM window, such as a streaming app. | A black-capture warning appears and nothing is inferred. |
+
+## 2. Stop capture
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 2.1 | While capturing, click **Stop capture**. | Capture ends within 1 s, speech stops, the microphone (if open) closes, and the pill returns to idle. The OS screen-sharing indicator disappears. |
+| 2.2 | While capturing with the game focused, press **Ctrl+Shift+F12**. | The same as 2.1, without switching to the app. |
+| 2.3 | Stop during a spoken message. | The speech is cut off immediately. |
+| 2.4 | After stopping, check the data folder. | No image, video or audio files. Besides `settings.json` and `cloud.json`: with memory on, `history/`, `tendencies/` and `notes/` JSON files, encrypted (`"enc": "safeStorage"`) where the OS supports it; `research/` holds plain-JSON research briefs only if you ran research. |
+
+## 3. Speech (TTS) and mute
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 3.1 | Settings → Voice output → **Play sample**. | A local voice speaks. If no local voice is installed, a warning explains how to add one, and messages appear as text only. |
+| 3.2 | Click **Voice on** in the top bar to toggle it to **Muted** while a message plays. | Speech stops immediately. New messages still appear as captions, marked "Muted"/"Shown, not spoken". |
+| 3.3 | Run a demo in Training mode (Arena simulation, *Practice* mode). | Tips are short, spaced by at least the cooldown, never repeated within a few minutes, and each has a caption with "Based on: …". |
+| 3.4 | Click **Quiet** while a message plays. | Only the current speech stops; the mode is unchanged. |
+
+## 4. Stale-state suppression
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 4.1 | AoE II (with a key): open a menu or pause screen that hides the top bar for 30 s. | The values expire from "What I can see" and the state turns Stale with a reason. No housed or idle mistake is counted during that time. |
+| 4.2 | With cloud vision on, disconnect the network for 30 s. | A "Cloud vision: …" warning appears once, sampling backs off, and no new events arrive. Reconnect: it resumes. |
+| 4.3 | Arena simulation: drag another window over the shared game window (window capture usually still sees the game; screen capture does not). | With a screen share, "Cannot read the HUD" appears and nothing is inferred while it is covered. |
+
+## 5. Competitive-safe and policy gating
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 5.1 | Choose VALORANT in the generic pack ("Any other game" → VALORANT) in any mode, including offline. | The policy badge reads "post-match review only". In Training mode a downgrade notice explains why. Nothing is spoken during play. |
+| 5.2 | EA FC → *Ultimate Team: Rivals / Champions*, Training mode. Run the FC replay demo with that mode selected. | Nothing during play. One post-match summary at full time naming the hot spot ("…inside the box, left side…"). |
+| 5.3 | EA FC → *Kick-Off vs CPU*, Training mode, FC replay. | Brief training tips during play are possible; the status reads "brief live tips are on". |
+| 5.4 | AoE II → *Ranked 1v1*, Training mode, AoE replay. | The mistakes are counted live on the dashboard but **not spoken** until the match ends. |
+| 5.5 | Turn on **Tournament or event play** on the Coach screen, then run any demo. | The policy badge reads "coaching disabled". While capturing, nothing is spoken or shown as coaching; a question asked during capture is marked "Not delivered". |
+| 5.6 | During restricted play (5.2), ask "Where do I concede the most?". | The answer is marked **Held** ("Held until the match ends: …") and delivered after full time as "Earlier you asked: …". |
+| 5.7 | Policy & privacy → Policy registry. | Every entry shows its status, basis, sources (with verification type) and review date. |
+| 5.8 | Leave the mode as "Not sure (treated as competitive)". | Post-match review only. |
+
+## 6. Ask the coach and voice input
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 6.1 | After an FC replay, ask "Where do I concede the most?" with no key. | An exact local answer with counts ("Of 4 goals you conceded I saw, 4 could be placed…"), marked "Answered on this computer". |
+| 6.2 | Ask an open question with no key ("Should I play 4-3-3?"). | It explains that open questions need cloud features. No error. |
+| 6.3 | With a key and cloud on, ask the same open question. | The answer is marked "AI-phrased" and shows the model used and its estimated cost. It cites only recorded numbers. |
+| 6.4 | Settings → Voice input → on → **Download speech model**. | The progress bar fills, then shows "Speech model installed". |
+| 6.5 | Click the top-bar **Talk** button (or press Ctrl+Shift+F11), ask a question and click again. | The OS microphone indicator is on **only** while recording. The text is transcribed and answered. |
+| 6.6 | Turn voice input off, then try to use the microphone (Talk button hidden, shortcut pressed). | The microphone is refused, with a message pointing to Settings. |
+
+## 7. Cloud vision (key required)
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 7.1 | Settings → paste an invalid key. | Rejected with "That does not look like an Anthropic API key". |
+| 7.2 | Paste a valid key. | Shows `sk-ant-…1234` and "saved, encrypted by your OS". The key file in the data folder is not readable text. |
+| 7.3 | Turn on cloud vision, pick Haiku, play 10 minutes of FC Kick-Off. | The status strip shows frames sent, latency and spend. The scoreboard tracks the real score. Goals appear in the zone maps after replays. |
+| 7.4 | Set the cap to $0.50 and use Opus. | When the cap is reached, a warning appears and calls stop for the session. |
+| 7.5 | Remove the key. | Cloud calls stop and the status reads Off. |
+
+## 8. Memory, data deletion and export
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 8.1 | With memory **off**, finish a replay, then open History. | "Only this session's matches are shown and nothing is kept". After a restart, history is empty. |
+| 8.2 | Turn memory on and finish two FC replays. | History shows 2 matches, a stats trend, and combined zones. "Last session" says what was saved. |
+| 8.3 | In Insights → a pattern, click **That's wrong**. | The pattern is greyed out and marked "You marked this wrong", and is never used for coaching. **Restore** undoes it. |
+| 8.4 | Click **Delete its history** on a pattern. | It disappears and does not return after a restart. |
+| 8.5 | History → **Export everything (JSON)**. | A JSON file downloads containing matches, patterns, notes and research, and no API key. |
+| 8.6 | History → **Delete EA SPORTS FC data…** → Delete. | FC history, patterns, notes and research are gone; other games are untouched. |
+| 8.7 | Settings → **Forget everything…** → Delete everything. | All player data is gone; settings are kept. |
+| 8.8 | Ask → Context: save notes with memory off. | Save is disabled, with an explanation. |
+
+## 9. Accessibility and layout
+
+- Every control is reachable by keyboard, with a visible focus ring.
+- Screen readers announce capture-state changes (the pill is
+  `role="status"`), and captions use `aria-live`.
+- No horizontal scrolling at window widths of 1024, 1280 and 1440 px.
+- With reduced motion turned on in the OS, there is no pulsing or animation.

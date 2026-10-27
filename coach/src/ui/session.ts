@@ -594,11 +594,13 @@ export class CoachSession {
   private async relayVision(frameAt: number, jpeg: ArrayBuffer): Promise<void> {
     const profile = this.profile
     const settings = this.settings
-    if (!profile || !settings || !this.worker) return
+    const worker = this.worker
+    if (!profile || !settings || !worker) return
     const r = await this.bridge
       .analyzeFrame({ profileId: profile.id, jpeg, context: this.contextFor(profile, settings) })
       .catch((err: unknown) => ({ ok: false as const, error: String(err) }))
-    if (!this.worker || !this.source) return
+    // The session may have stopped (or a new one started) while the request was out.
+    if (this.worker !== worker || !this.source) return
     const arrivedAt = this.source.now()
     if (r.ok) {
       this.set({ visionCostUsd: this.state.visionCostUsd + r.costUsd })

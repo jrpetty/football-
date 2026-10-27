@@ -1,5 +1,8 @@
 # Sightline: plan (v2)
 
+> Status: implemented. What is verified, and what is not, is tracked in
+> [TODO.md](TODO.md).
+
 **Product:** a screen-only AI gameplay coach. Windows 11 first; the
 architecture is portable to macOS and Linux.
 
@@ -52,9 +55,9 @@ Player picks a window (consent token, single use)       electron/consent.ts, mai
       ├─ pixel recognisers (pack signals) → Observations  src/core/detectors, tracker, observations.ts
       └─ VisionSampler decides when to sample a JPEG ──┐  src/core/vision/sampler.ts
   renderer ──IPC──► main: CloudVision (Anthropic SDK) ◄┘  electron/cloud/*.ts (key in OS keychain via safeStorage)
-      ◄── validated Observations (never trusted raw)     src/core/vision/validate.ts
+      ◄── validated Observations (never trusted raw)     src/core/vision/contract.ts
   → VisibleStateFuser (TTL expiry, conflicts, stale)       src/core/visibleState.ts
-  → EventTimeline (append-only) + phase→boundary detector src/core/engine.ts, src/core/boundaries.ts
+  → EventTimeline (append-only) + phase→boundary detector src/core/engine.ts, src/core/analyses/boundaries.ts
   → Analyses:                                             src/core/analyses/*
        episodes/patterns (v1) · zone heatmaps · sustained-condition mistakes
        · score-change goals · match stat records
@@ -62,10 +65,10 @@ Player picks a window (consent token, single use)       electron/consent.ts, mai
        dismiss/dispute/delete/export, encrypted at rest)
   → PolicyRegistry → PolicyStatus (fail closed)           src/core/policy/registry.ts + src/policy/registry.json
   → Governor (category × delivery window × status × mode) src/core/policy/governor.ts
-  → Planner → CoachingMessage (templates; optional AI      src/core/planner.ts, src/core/language.ts
-       rendering of post-match summaries only)
+  → Planner → CoachingMessage (templates; spoken coaching   src/core/planner.ts, src/core/language.ts
+       is never AI-generated)
   → Speech: priority queue, pre-emption, expiry, captions src/speech/speech.ts
-  → Ask the coach: text or push-to-talk (local STT) →     src/speech/stt.ts, src/core/qa/*.ts
+  → Ask the coach: text or push-to-talk (local STT) →     src/speech/recorder.ts, electron/stt/*, src/core/qa/ask.ts
        local answers for known intents, Claude for open questions, deferred during
        restricted play
   → UI: live dashboard, heatmaps, mistakes, patterns, review, history, policy, settings
@@ -147,9 +150,12 @@ policy.
 ### Ask the coach
 
 - **Input.** Typed, or push-to-talk: the microphone is used only while the
-  button or key is held or toggled. Transcription runs locally through a
-  pluggable `SpeechToText` engine, a Whisper model via transformers.js
-  downloaded once on explicit opt-in.
+  button or key is held or toggled. Transcription runs locally in a worker
+  thread of the main process: sherpa-onnx (WASM) with the Moonshine tiny
+  English model, downloaded once on explicit opt-in from GitHub releases and
+  checked against a pinned SHA-256. Hugging Face and the jsdelivr CDN were
+  unreachable from the build environment, which ruled out transformers.js
+  with Whisper.
 - **Local answers.** Known intents are answered from structured data without
   any API: where do I concede or die most, my mistakes, how am I doing, what
   patterns do you see.

@@ -1,5 +1,10 @@
 # Sightline architecture
 
+> This document describes the v1 pixel pipeline and the Electron security
+> model; both are still in place. The v2 additions are described in
+> [plan.md](../plan.md#architecture-v2): observations, visible-state fusion,
+> cloud vision, analyses, the policy registry, Q&A and local speech input.
+
 Sightline is a screen-only gameplay coach. It turns the pixels of a window the
 player chose to share into structured, visible events. It learns which visible
 responses tend to go well or badly, and it speaks short, evidence-graded

@@ -1,71 +1,98 @@
 # TODO: outcome-based delivery items
 
-Legend: ☑ done and verified (test or recorded run) · ◐ implemented, not
-verifiable in the build environment · ☐ not started
+Legend:
+- ☑ done and verified (automated test, or a recorded browser/Electron run);
+- ◐ implemented, but not verifiable in the build environment (reason given);
+- ☐ not started.
 
-## v1 foundation (done)
+## v1 foundation
 
-- ☑ The player picks a window; capture needs a single-use consent token; Stop capture works and is always visible.
-- ☑ A bounded, drop-oldest frame queue; frames are never persisted.
+- ☑ The player picks a window. Capture needs a single-use consent token, and Stop capture is always visible and works. *Electron smoke run: capture without consent is denied; consent is single-use; the title shows ●; Stop restores it.*
+- ☑ A bounded, drop-oldest frame queue. Frames are never persisted.
 - ☑ Pixel recognisers that report "can't read" instead of guessing.
-- ☑ Episode evidence grading; no causal language (guardrail test).
+- ☑ Episode evidence grading, with no causal language (guardrail test).
 - ☑ Local TTS: local voices only, interruptible, expiring.
-- ☑ The renderer has no network access and no Node; display capture is the only permission.
+- ☑ The renderer has no network access and no Node. The camera is refused; the microphone is allowed only with voice input on. *Electron smoke run.*
 
 ## v2 delivery
 
 ### Safety and policy
-- ☐ A typed `PolicyStatus` registry with sources, review dates, staleness downgrade and a tournament override. *Outcome:* an unknown, stale or tournament scope never yields live output.
-- ☐ A governor keyed on category × delivery window × status × user mode. *Outcome:* competitive-safe and post-match-only scopes block every live message (tested matrix).
-- ☐ VALORANT registered `post_match_only` with a Riot source. *Outcome:* no live output is possible for VALORANT in any mode.
-- ☐ Questions asked during restricted play are deferred to the end of the match.
+- ☑ A typed `PolicyStatus` registry with sources, review dates, staleness downgrade and a tournament override. *Outcome:* an unknown, stale or tournament scope never yields live output (`test/policy.test.ts`).
+- ☑ A governor keyed on category × delivery window × status × user mode. *Outcome:* competitive-safe and post-match-only scopes block every live message (exhaustive 1,000-case matrix).
+- ☑ VALORANT registered `post_match_only`, citing Riot's third-party application policy. *Outcome:* no live output is possible for VALORANT in any mode, including offline practice.
+- ☑ Questions asked during restricted play are held, then delivered at match end as "Earlier you asked: …". This is shown as **Held** in the conversation.
+- ◐ Registry entries reviewed by a person. *The Riot and EA sources are search excerpts (the pages could not be fetched from the build environment). The FC and AoE offline entries, and the default offline entry, are internal judgements needing product/legal sign-off. See POLICY_REGISTRY.md.*
 
 ### Seeing more games
-- ☐ Domain types: `Observation`, `VisibleState`, `CoachingMessage`, `PatternRecord`, `PolicyStatus`.
-- ☐ The visible-state fuser handles TTL expiry, conflicts and staleness (paused capture, target change, black or frozen frames).
-- ☐ Frame-health monitor: black, frozen and resolution change.
-- ☐ Pack schema v2: vision schema, zones, mistake rules, knowledge, modes, window-title hints.
-- ☐ Packs: generic, EA SPORTS FC, Age of Empires II DE; the synthetic arena migrated.
-- ◐ Cloud vision: opt-in, key in safeStorage, structured output, a validator, a sampler (interval, change detection, one in flight, backoff), and a cost estimate and cap. *Verified with a fake client; real API calls are untested here (no key).*
-- ☐ Game suggestion from the window title (and optional vision identify), confirmed by the player.
+- ☑ Domain types: `Observation`, `VisibleState`, `CoachingMessage`, `PatternRecord`, `PolicyStatus`.
+- ☑ The visible-state fuser handles TTL expiry, ignores late arrivals, flags conflicts, and marks state stale.
+- ☑ Frame-health monitor: black, frozen and resolution change. Track mute (a minimised or protected window) is reported as a capture problem.
+- ☑ Pack schema v2: vision schema, zones, heatmaps, mistake rules, score rules, match stats, player context, knowledge, modes, window-title hints, fail-closed conditions.
+- ☑ Packs: generic, EA SPORTS FC, Age of Empires II DE. The synthetic arena is migrated.
+- ◐ Cloud vision:
+  - opt-in;
+  - the key in `safeStorage`;
+  - structured output and a validator;
+  - a sampler: interval, change detection, one request in flight, backoff;
+  - a cost estimate and a session cap.
+
+  *Verified with a fake client and through Electron IPC refusals: no key, cloud off, bad key. Real API calls are untested: no key in the build environment.*
+- ☑ Pack suggestion from the window title in the picker, confirmed by the player.
+- ◐ Real-game recognition accuracy for FC and AoE II. *It depends on the vision model reading real screens. The synthetic replays prove the pipeline, not the recogniser.*
 
 ### Analyses players asked for
-- ☐ FC: goals detected from scoreboard changes; conceded-goal zones and build-up type; sampled turnovers by zone; stats-screen match records (possession, shots, pass accuracy).
-- ☐ AoE2: housed time, idle villagers, floating resources, age-up times versus the player's targets.
-- ☐ Generic: deaths by minimap area, deaths early in a round, results over time.
-- ☐ Heatmap and trend views; cross-match history (opt-in).
+- ☑ FC:
+  - goals from scoreboard changes (a misread is not a goal);
+  - conceded and scored zones and build-up type, from replays;
+  - turnovers by zone (sampled);
+  - stats-screen match records;
+  - two quick goals by the same side are both placed.
+- ☑ AoE2: housed time, idle villagers, floating resources, and Feudal/Castle timing against the player's targets. Nothing is inferred when the numbers are unreadable.
+- ◐ Generic: deaths by minimap area, results over time. *In the generic pack schema; there is no replay fixture or test yet.*
+- ☑ Heatmaps (FC pitch and goal area), mistake panels, stat trends and cross-match history (opt-in). *Recorded browser run with the FC and AoE replays.*
+- ☐ AoE timing in game time. *Mistake durations are measured in real capture time; AoE II game time runs about 1.7× faster.*
 
 ### Coaching and conversation
-- ☐ The planner produces `CoachingMessage`s with category, evidence summary, delivery and suppression reasons, and expiry.
-- ☐ Live training tips from mistake rules (single-player only) and pattern cues.
-- ☐ Ask the coach: local intents (concede and death zones, mistakes, summary, patterns) without an API; Claude for open questions with a structured digest.
-- ◐ Push-to-talk with local Whisper STT (opt-in model download). *Recorder and pipeline tested with a fake engine; the model download is untested here.*
-- ☐ Player notes and goals that feed the planner, Q&A and summaries.
-- ◐ Game research brief (Claude + web search, cited, dated, cached, deletable).
-- ☐ Speech priority with pre-emption, a stop-speaking control, and a caption for every message.
+- ☑ The planner produces `CoachingMessage`s with category, evidence summary, delivery and suppression reasons, and expiry.
+- ☑ Live training tips from mistake rules (offline vs AI only) and from pattern cues.
+- ☑ Ask the coach:
+  - without an API: local intents (concede/death zones, turnovers, mistakes, summary, patterns, stats), with correct small-sample wording;
+  - with an API: Claude answers open questions from a structured digest.
+- ◐ Push-to-talk with local STT (sherpa-onnx + Moonshine tiny). *Recognition is verified on a real recording (shell test with `SIGHTLINE_STT_ARCHIVE`). The microphone permission gate is verified in Electron. The in-app download and the real-microphone round trip are untested here: there is no microphone.*
+- ☑ Player notes and goals, saved when opted in and included in the Claude digest.
+- ◐ Game research brief (Claude with web search; cited, dated, cached, deletable). *Fake client only.*
+- ☑ Speech priority with pre-emption, a Quiet control, and a caption for every message.
 
 ### Memory and privacy
-- ☐ Long-term `PatternRecord`s: view, dismiss, mark wrong, restore, delete, export; 30-day half-life decay; segmentation by game, mode and pack major version.
-- ☐ Match history: view, delete, export.
-- ☐ Player data encrypted at rest with safeStorage when available; the UI states which.
+- ☑ Long-term `PatternRecord`s:
+  - view with supporting and counter instances;
+  - mark wrong, dismiss, restore, delete;
+  - 30-day half-life decay;
+  - segmented by game, mode and pack major version;
+  - reviewable between sessions.
+- ☑ Match history: view, delete per match, delete per game, export everything.
+- ☑ Player data is encrypted at rest with `safeStorage` when available, and the UI states which. *Under Xvfb the OS store is unavailable, and the app correctly reports "without encryption".*
 
 ### Experience
-- ☐ UI v2:
-  - a live dashboard (state, freshness, policy badge, captions);
-  - an FC pitch heatmap and an AoE economy panel;
-  - the Ask panel with mic;
-  - patterns and history management;
-  - cloud settings with a disclosure and cost meter;
+- ☑ UI v2:
+  - setup with pack cards, mode, player context and a policy panel;
+  - a live dashboard with status strip, captions, FC scoreboard and zone maps, the AoE economy panel, mistakes and the visible-state table with freshness;
+  - Ask with suggestions and a mic;
+  - Insights, History, Timeline and Settings (cloud, memory, voice input);
   - the policy registry viewer;
-  - a warning on whole-screen capture.
-- ☐ A synthetic replay fixture for FC and AoE observation streams, so the full pipeline is demoable without a key or a game.
+  - a whole-screen warning;
+  - no horizontal overflow at 1024–1440 px.
+- ☑ Synthetic replay fixtures for the FC and AoE observation streams, labelled as simulations, so the full pipeline can be demoed without a key or a game.
 
 ### Documentation
-- ☐ README, plan.md, TODO.md, POLICY_REGISTRY.md, docs/QA.md.
+- ☑ README, plan.md, TODO.md, POLICY_REGISTRY.md, docs/QA.md, docs/PRIVACY_AND_INTEGRITY.md.
 
 ## Later (P2+)
-- ☐ Native `GraphicsCapturePicker` module (Windows OS picker).
-- ☐ Windows hardware validation pass (HDR, exclusive fullscreen, capture-excluded windows, DPI).
-- ☐ Signed profile and registry updates if remote updates are ever added.
-- ☐ Local OCR and a local vision model to reduce cloud dependence.
+- ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
+- ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).
+- ☐ Human review of every policy registry entry. Ask EA and World's Edge for their positions.
+- ☐ A generic-pack replay fixture and tests (deaths by minimap area).
+- ☐ Measure mistake durations in game time where the HUD shows a clock.
+- ☐ Signed pack and registry updates, if remote updates are ever added.
+- ☐ Local OCR and a local vision model to reduce cloud dependence and cost.
 - ☐ More packs (AoE IV, Rocket League offline, fighting-game training mode), each with a policy review.

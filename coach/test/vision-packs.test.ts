@@ -169,3 +169,11 @@ test('fusion: values expire, late arrivals do not overwrite, and disagreeing sou
   assert.equal(f.snapshot(11_000).stale, true)
   assert.equal(f.get('health', 11_000), null, 'nothing is readable while the capture is untrusted')
 })
+
+test('packs are suggested from the window title, and only suggested', async () => {
+  const { suggestProfile } = await import('../src/core/profile/schema.ts')
+  const { BUILT_IN_PROFILES } = await import('../src/profiles/index.ts')
+  assert.equal(suggestProfile(BUILT_IN_PROFILES, 'EA SPORTS FC™ 26')?.id, 'ea-fc')
+  assert.equal(suggestProfile(BUILT_IN_PROFILES, 'Age of Empires II: Definitive Edition')?.id, 'aoe2-de')
+  assert.equal(suggestProfile(BUILT_IN_PROFILES, 'Untitled - Notepad'), null)
+})

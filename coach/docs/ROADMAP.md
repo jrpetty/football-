@@ -1,4 +1,7 @@
-# Implementation plan, status and open questions
+# Implementation plan, status and open questions (v1)
+
+> Historical: this is the v1 MVP plan. Current status is in
+> [TODO.md](../TODO.md), and the v2 plan is in [plan.md](../plan.md).
 
 ## MVP task list
 
