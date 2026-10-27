@@ -57,6 +57,17 @@ test('FC: goals come from scoreboard changes, a misread is not a goal, and repla
   assert.equal(matches[0].stats.passAccuracyPct, 74)
 })
 
+test('FC: two goals by the same side close together are both placed (banner dedupe resets on a score change)', () => {
+  // A shorter replay squeezes goals closer together than the 40 s banner window.
+  const replay = fcMatchReplay({ seed: 1, realMinutes: 4 })
+  const engine = engineFor(fc, settings({ profileId: 'ea-fc', profileModeId: 'kickoff-vs-cpu', mode: 'silent' }))
+  play(engine, replay)
+  const conceded = engine.report().heatmaps.find((h) => h.spec.id === 'conceded')!
+  assert.equal(conceded.total, 4)
+  assert.equal(conceded.located, 4)
+  assert.equal(conceded.cells['box-left'], 3)
+})
+
 test('FC: online modes never speak during play; the post-match summary names the hot spot', () => {
   const engine = engineFor(fc, settings({ profileId: 'ea-fc', profileModeId: 'division-rivals', mode: 'training' }))
   const { entries, utterances } = play(engine, fcMatchReplay({ seed: 3 }))

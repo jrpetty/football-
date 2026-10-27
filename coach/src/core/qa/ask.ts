@@ -104,9 +104,13 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
 function heatmapAnswer(h: HeatmapResult): string {
   const sampled = h.spec.sampled ? ' These come from sampled frames, so some are missed.' : ''
   if (h.total === 0) return `I have not seen any ${h.spec.phrase} yet this session.`
-  if (h.located < 2) return `I saw ${h.total} ${h.spec.phrase}, but could place only ${h.located} on the pitch or map, which is too few to say where.${sampled}`
   const ranked = Object.entries(h.cells).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])
   const label = (id: string) => h.zoneSet.cells.find((c) => c.id === id)?.label ?? id
+  if (h.located === 0) return `${h.spec.label}: I saw ${h.total === 1 ? 'one' : h.total}, but could not place ${h.total === 1 ? 'it' : 'any of them'}.${sampled}`
+  if (h.located === 1) {
+    const unplaced = h.total - 1
+    return `${h.spec.label}: so far just one I could place, ${label(ranked[0][0])}${unplaced ? ` (${unplaced} more I could not place)` : ''}. One is not a pattern yet.${sampled}`
+  }
   const [first, second] = ranked
   let text = `Of ${h.total} ${h.spec.phrase} I saw, ${h.located} could be placed. Most came from ${label(first[0])}: ${first[1]}.`
   if (second) text += ` Next, ${label(second[0])}: ${second[1]}.`

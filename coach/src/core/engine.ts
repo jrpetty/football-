@@ -48,6 +48,8 @@ import { VisibleStateFuser } from './visibleState.ts'
 
 /** The core pixel HUD must be unreadable this long before the coach says it cannot see. */
 const HUD_LOST_AFTER_MS = 3000
+/** Banner and replay sightings this close to a score change belong to that goal. */
+const SAME_GOAL_MS = 10_000
 
 export type PlayerContext = Readonly<Record<string, string | number>>
 
@@ -394,9 +396,13 @@ export class CoachEngine {
     this.visible = this.fuser.snapshot(now)
     const derived: GameEvent[] = []
     if (this.profile.vision) derived.push(...this.phases.update(this.visible))
-    for (const tracker of this.scores) {
+    for (const [i, tracker] of this.scores.entries()) {
       const u = tracker.update(this.visible, now)
       derived.push(...u.events)
+      // A confirmed score change is a new goal: sightings from well before it belonged to an
+      // earlier goal, so they must not swallow this goal's banner or replay as a repeat.
+      const confirm = this.profile.scoreRules?.[i].confirmEvent
+      if (confirm && u.events.length) this.forgetSightings(confirm, Math.min(...u.events.map((e) => e.at)) - SAME_GOAL_MS)
       for (const n of u.notices) out.entries.push(notice(now, 'info', n))
       for (const a of u.amendments) this.heatmaps.amend(a.uid, a.zone, a.attributes)
     }
@@ -414,6 +420,10 @@ export class CoachEngine {
       }
     }
     this.handleEvents([...events, ...derived].sort((a, b) => a.at - b.at), now, out)
+  }
+
+  private forgetSightings(eventType: string, before: number): void {
+    for (const [key, at] of this.lastVisionEventAt) if (key.split('|')[0] === eventType && at < before) this.lastVisionEventAt.delete(key)
   }
 
   private handleEvents(events: GameEvent[], now: number, out: EngineOutput): void {

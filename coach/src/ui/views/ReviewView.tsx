@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { TimelineEntry } from '../../core/types.ts'
 import { GradeBadge } from '../components/common.tsx'
-import { clock, DECISION_TEXT, pct, timelineKind, type TimelineKind } from '../format.ts'
+import { CATEGORY_TEXT, clock, DECISION_TEXT, pct, timelineKind, WINDOW_TEXT, type TimelineKind } from '../format.ts'
 import type { SessionState } from '../session.ts'
 
 const FILTERS: readonly { id: TimelineKind | 'all'; label: string }[] = [
@@ -32,7 +32,7 @@ export function ReviewView({ state }: { state: SessionState }) {
     () => [...state.timeline].reverse().filter((e) => filter === 'all' || timelineKind(e) === filter),
     [state.timeline, filter],
   )
-  const summary = [...state.timeline].reverse().find((e) => e.type === 'message' && e.message.kind === 'match-summary')
+  const summary = [...state.timeline].reverse().find((e) => e.type === 'message' && e.message.category === 'post_event' && e.decision.decision !== 'suppressed')
 
   return (
     <div className="page">
@@ -47,7 +47,7 @@ export function ReviewView({ state }: { state: SessionState }) {
       {summary && summary.type === 'message' ? (
         <section className="message-card" aria-label="Match summary">
           <div className="meta">
-            <span className="badge neutral">Match summary</span>
+            <span className="badge neutral">Latest review</span>
             <span>{DECISION_TEXT[summary.decision.decision]}</span>
           </div>
           <div className="quote">{summary.message.text}</div>
@@ -109,9 +109,11 @@ function body(e: TimelineEntry) {
           <div className="tl-title">
             <span>{e.event.label}</span>
             {e.event.manual ? <span className="badge neutral">marked by you</span> : null}
+            {e.event.source === 'vision-model' ? <span className="badge info">vision model</span> : null}
           </div>
           <div className="tl-detail">
-            {e.event.evidence} · visual confidence {pct(e.event.confidence)}
+            {e.event.evidence}
+            {e.event.zone ? ` · zone ${e.event.zone}` : ''} · confidence {pct(e.event.confidence)}
           </div>
         </>
       )
@@ -139,10 +141,13 @@ function body(e: TimelineEntry) {
       return (
         <>
           <div className="tl-title">
+            <span className="badge neutral">{CATEGORY_TEXT[e.message.category]}</span>
+            {e.message.author === 'ai' ? <span className="badge info">AI-phrased</span> : null}
             <span>“{e.message.text}”</span>
           </div>
+          <div className="tl-detail">Based on: {e.message.evidenceSummary}</div>
           <div className="why">
-            <b>{DECISION_TEXT[e.decision.decision]}:</b> {e.decision.reasons.join('; ')}.
+            <b>{DECISION_TEXT[e.decision.decision]}</b> ({WINDOW_TEXT[e.decision.window].toLowerCase()}): {e.decision.reasons.join('; ')}.
           </div>
         </>
       )

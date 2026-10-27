@@ -4,9 +4,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { CaptureSource, SightlineBridge } from '../../../shared/bridge.ts'
-import { Modal, Segmented } from './common.tsx'
+import { Modal, Notice, Segmented } from './common.tsx'
 
-export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: string) => void; onCancel: () => void }) {
+export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: string, name: string) => void; onCancel: () => void }) {
   const [sources, setSources] = useState<CaptureSource[] | null>(null)
   const [kind, setKind] = useState<'window' | 'screen'>('window')
   const [selected, setSelected] = useState<string | null>(null)
@@ -47,6 +47,12 @@ export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: stri
           Refresh
         </button>
       </div>
+      {kind === 'screen' && (
+        <Notice level="warning">
+          A whole screen shows everything on it — notifications, chats, other apps — and the game may not fill it. Share the game
+          window instead whenever you can.
+        </Notice>
+      )}
       {error ? <p className="muted">Could not list windows: {error}</p> : null}
       {sources === null ? (
         <p className="muted">Looking for windows…</p>
@@ -62,7 +68,7 @@ export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: stri
               aria-checked={selected === s.id}
               className="source"
               onClick={() => setSelected(s.id)}
-              onDoubleClick={() => props.onPick(s.id)}
+              onDoubleClick={() => props.onPick(s.id, s.name)}
             >
               {s.thumbnail ? <img src={s.thumbnail} alt="" /> : <div className="thumb" />}
               <span className="name" title={s.name}>
@@ -79,7 +85,7 @@ export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: stri
         <button type="button" className="btn ghost" onClick={props.onCancel}>
           Cancel
         </button>
-        <button type="button" className="btn primary" disabled={!choice} onClick={() => choice && props.onPick(choice.id)}>
+        <button type="button" className="btn primary" disabled={!choice} onClick={() => choice && props.onPick(choice.id, choice.name)}>
           {choice ? `Share “${truncate(choice.name, 32)}”` : 'Share'}
         </button>
       </div>

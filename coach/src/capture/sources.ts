@@ -8,9 +8,12 @@
 // or sent anywhere else.
 //
 // SimulatedSource renders the Synthetic Arena HUD for development and demos.
+// ReplaySource plays a synthetic vision replay (an FC match or an AoE II game):
+// the observations a cloud recogniser would have produced, with no frames at all.
 
 import { scriptMatch, renderHud, stateAt, type PlayerTendencies } from '../sim/syntheticArena.ts'
-import type { Frame } from '../core/types.ts'
+import type { VisionReplay } from '../sim/visionReplay.ts'
+import type { Frame, Observation } from '../core/types.ts'
 
 export interface FrameSink {
   /** Whether the worker can take another frame (flow control). */
@@ -19,11 +22,19 @@ export interface FrameSink {
   pixels(frame: Frame): void
   /** Counts a frame skipped at the source because analysis was busy. */
   skipped(): void
+  /** Observations from a synthetic vision replay. */
+  observations(obs: Observation[], now: number): void
+  /** The capture cannot currently be trusted (or recovered, with null). */
+  problem(reason: string | null): void
 }
 
+/** What the player shared, as the platform reports it. */
+export type Surface = 'window' | 'monitor' | 'browser' | 'unknown'
+
 export interface FrameSource {
-  readonly kind: 'screen' | 'simulation'
+  readonly kind: 'screen' | 'simulation' | 'replay'
   readonly label: string
+  readonly surface: Surface
   /** The clock frame timestamps are on (used to expire stale speech). */
   now(): number
   /** A one-off still for the in-app alignment check. Not retained by the source. */
@@ -42,6 +53,7 @@ export const DEFAULT_CAPTURE: CaptureOptions = { fps: 5, analysisWidth: 960 }
 export class ScreenCaptureSource implements FrameSource {
   readonly kind = 'screen'
   readonly label: string
+  readonly surface: Surface
   private readonly stream: MediaStream
   private readonly video: HTMLVideoElement
   private timer: ReturnType<typeof setInterval> | null = null
@@ -50,15 +62,22 @@ export class ScreenCaptureSource implements FrameSource {
   private constructor(stream: MediaStream, video: HTMLVideoElement) {
     this.stream = stream
     this.video = video
-    this.label = stream.getVideoTracks()[0]?.label || 'Shared screen'
+    const track = stream.getVideoTracks()[0]
+    this.label = track?.label || 'Shared screen'
+    const surface = (track?.getSettings() as { displaySurface?: string } | undefined)?.displaySurface
+    this.surface = surface === 'window' || surface === 'monitor' || surface === 'browser' ? surface : 'unknown'
   }
 
   /** Ask the platform for a capture stream. Rejects if the player cancels or permission is denied. */
   static async start(sink: FrameSink, onEnded: () => void, opts: CaptureOptions = DEFAULT_CAPTURE): Promise<ScreenCaptureSource> {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: opts.fps, max: Math.max(opts.fps, 10) } },
+    // Hint the picker towards a window: a whole display also shows notifications and other apps.
+    const request = {
+      video: { frameRate: { ideal: opts.fps, max: Math.max(opts.fps, 10) }, displaySurface: 'window' },
       audio: false,
-    })
+      selfBrowserSurface: 'exclude',
+      surfaceSwitching: 'exclude',
+    }
+    const stream = await navigator.mediaDevices.getDisplayMedia(request as DisplayMediaStreamOptions)
     const video = document.createElement('video')
     video.muted = true
     video.playsInline = true
@@ -66,7 +85,15 @@ export class ScreenCaptureSource implements FrameSource {
     await video.play()
     const source = new ScreenCaptureSource(stream, video)
     // The OS or browser can end the share (e.g. the window closed, or "Stop sharing").
-    for (const track of stream.getTracks()) track.addEventListener('ended', () => { source.stop(); onEnded() })
+    for (const track of stream.getTracks()) {
+      track.addEventListener('ended', () => {
+        source.stop()
+        onEnded()
+      })
+      // Muted: the OS stopped delivering frames (window minimised, hidden or protected).
+      track.addEventListener('mute', () => sink.problem('The shared window stopped sending pictures (minimised, hidden, or protected by the game).'))
+      track.addEventListener('unmute', () => sink.problem(null))
+    }
     source.timer = setInterval(() => void source.sample(sink, opts), 1000 / opts.fps)
     return source
   }
@@ -107,6 +134,7 @@ export class ScreenCaptureSource implements FrameSource {
 export class SimulatedSource implements FrameSource {
   readonly kind = 'simulation'
   readonly label = 'Synthetic Arena (simulation, not a real game)'
+  readonly surface = 'unknown'
   private readonly timer: ReturnType<typeof setInterval>
   private readonly startedAt = performance.now()
   private readonly speed: number
@@ -142,6 +170,47 @@ export class SimulatedSource implements FrameSource {
   async still(): Promise<ImageBitmap | null> {
     const f = renderHud(stateAt(this.keyframes, this.now()), 640, 360, this.now())
     return createImageBitmap(new ImageData(new Uint8ClampedArray(f.data), f.width, f.height))
+  }
+
+  stop(): void {
+    if (this.ended) return
+    this.ended = true
+    clearInterval(this.timer)
+  }
+}
+
+export class ReplaySource implements FrameSource {
+  readonly kind = 'replay'
+  readonly label: string
+  readonly surface = 'unknown'
+  private readonly timer: ReturnType<typeof setInterval>
+  private readonly startedAt = performance.now()
+  private readonly speed: number
+  private next = 0
+  private ended = false
+
+  constructor(sink: FrameSink, onEnded: () => void, replay: VisionReplay, opts: { speed?: number; label: string }) {
+    this.speed = opts.speed ?? 1
+    this.label = opts.label
+    const batches = [...replay.batches].sort((a, b) => a.arrivesAt - b.arrivesAt)
+    this.timer = setInterval(() => {
+      const t = this.now()
+      const due: Observation[] = []
+      while (this.next < batches.length && batches[this.next].arrivesAt <= t) due.push(...batches[this.next++].observations)
+      if (due.length) sink.observations(due, t)
+      if (this.next >= batches.length && t > replay.endsAt + 2000) {
+        this.stop()
+        onEnded()
+      }
+    }, 100)
+  }
+
+  now(): number {
+    return (performance.now() - this.startedAt) * this.speed
+  }
+
+  async still(): Promise<ImageBitmap | null> {
+    return null
   }
 
   stop(): void {

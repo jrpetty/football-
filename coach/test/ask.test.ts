@@ -4,7 +4,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { BANNED_CLAIMS } from '../src/core/profile/schema.ts'
 import { answerLocally, buildDigest, classify } from '../src/core/qa/ask.ts'
-import { toPatternRecords } from '../src/core/memory/records.ts'
+import { storedInsights, toPatternRecords } from '../src/core/memory/records.ts'
+import { setVerdict } from '../src/core/patterns.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
 import { aoe2GameReplay, fcMatchReplay } from '../src/sim/visionReplay.ts'
 import { arena, engineFor, settings } from './helpers.ts'
@@ -91,4 +92,26 @@ test('an answer during restricted play is held, then delivered when the match en
 
   const practice = engineFor(fc, settings({ profileId: 'ea-fc', profileModeId: 'kickoff-vs-cpu', mode: 'training' }))
   assert.equal(practice.answer('where do I concede', 'Here is the answer.', 'template', 1000).utterances.length, 1, 'answered at once where live coaching is allowed')
+})
+
+test('a single located event is reported as one, not as a pattern', () => {
+  const engine = engineFor(fc, settings({ profileId: 'ea-fc', profileModeId: 'kickoff-vs-cpu', mode: 'silent' }))
+  let now = 0
+  // Stop the replay shortly after the first conceded goal and its replay.
+  for (const b of fcMatchReplay({ seed: 3 }).batches.filter((b) => b.frameAt < 75_000)) engine.ingestObservations(b.observations, (now = Math.max(now, b.arrivesAt)))
+  const answer = answerLocally({ kind: 'heatmap', heatmapId: 'conceded' }, fc, engine.report(), [])!
+  assert.equal(answer, 'Where you concede from: so far just one I could place, inside the box, left side. One is not a pattern yet.')
+})
+
+test('stored patterns can be reviewed between sessions, with the same grading and the player\'s verdict', () => {
+  const engine = engineFor(arena, settings({ mode: 'silent' }))
+  for (const f of simulateFrames({ rounds: 12, seed: 7, fps: 5 })) engine.processFrame(f)
+  const now = new Date('2026-10-28T12:00:00Z')
+  const snapshot = engine.snapshot(now)
+  const live = engine.insights().map((i) => [i.insight.episodeId, i.insight.grade])
+  const stored = storedInsights(arena, snapshot, 'ranked', now).map((i) => [i.insight.episodeId, i.insight.grade])
+  assert.deepEqual(stored, live)
+  assert.deepEqual(storedInsights(arena, snapshot, 'practice', now), [], 'other modes are separate segments')
+  const disputed = storedInsights(arena, setVerdict(snapshot, 'low-health', 'disputed', now), 'ranked', now)
+  assert.equal(disputed.find((i) => i.insight.episodeId === 'low-health')?.verdict, 'disputed')
 })
