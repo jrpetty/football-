@@ -201,3 +201,19 @@ test('over-long messages are refused rather than truncated', () => {
   assert.equal(g.decide(msg('training', 0, { text: long }), 0, 'during_play').record.decision, 'suppressed')
 })
 
+
+test('Modern Warfare 4 and Age of Empires IV: live tips only without other players; everything online is post-match', async () => {
+  const { builtInProfile } = await import('../src/profiles/index.ts')
+  const mw4 = builtInProfile('cod-mw4')
+  const aoe4 = builtInProfile('aoe4')
+  const { policyFor } = await import('./helpers.ts')
+  for (const mode of ['campaign', 'private-bots']) assert.ok(policyFor(mw4, mode).scope.has('live'), `MW4 ${mode} allows live tips`)
+  for (const mode of ['multiplayer', 'ranked', 'dmz', 'warzone', null]) {
+    const p = policyFor(mw4, mode)
+    assert.equal(p.scope.has('live'), false, `MW4 ${mode} never live`)
+    assert.ok(p.scope.has('post_match'), `MW4 ${mode} post-match review`)
+  }
+  for (const mode of ['campaign', 'art-of-war', 'skirmish-vs-ai', 'crucible']) assert.ok(policyFor(aoe4, mode).scope.has('live'))
+  for (const mode of ['ranked-1v1', 'ranked-team', 'quick-match', 'custom-lobby']) assert.equal(policyFor(aoe4, mode).scope.has('live'), false)
+  assert.equal(policyFor(mw4, 'campaign', { tournament: true }).status, 'disabled')
+})

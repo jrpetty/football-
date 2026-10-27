@@ -1,0 +1,924 @@
+{
+  "schemaVersion": 2,
+  "id": "cod-mw4",
+  "version": "1.0.0",
+  "name": "Call of Duty: Modern Warfare 4",
+  "depth": "pack",
+  "game": {
+    "title": "Call of Duty: Modern Warfare 4",
+    "publisher": "Activision (developed by Infinity Ward)",
+    "patch": "launch (Oct 23, 2026), pre-Season 1",
+    "languages": [
+      "en"
+    ]
+  },
+  "validation": {
+    "status": "unverified",
+    "notes": "Built from launch-week research. HUD positions are configurable in the game and were not checked against live captures; the recogniser reads what it can and leaves the rest out."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": null,
+    "notes": "Borderless windowed mode captures most reliably. For the death map, set the minimap to fixed (not rotating) in the game's HUD settings.",
+    "windowTitleHints": [
+      "Modern Warfare 4",
+      "Call of Duty"
+    ]
+  },
+  "modes": [
+    {
+      "id": "campaign",
+      "label": "Campaign (single-player)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "private-bots",
+      "label": "Private match vs bots only (no other players)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "multiplayer",
+      "label": "Multiplayer (core, Ground War, Gunfight, party modes)",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "ranked",
+      "label": "Ranked Play",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "dmz",
+      "label": "DMZ",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "warzone",
+      "label": "Warzone",
+      "multiplayer": true,
+      "competitive": true
+    }
+  ],
+  "playerContext": [
+    {
+      "id": "primaryWeapon",
+      "label": "Your usual primary weapon (optional)",
+      "kind": "text",
+      "default": "",
+      "help": "Helps the coach talk about ranges and engagements that suit your loadout."
+    },
+    {
+      "id": "minimapFixed",
+      "label": "Your minimap",
+      "kind": "choice",
+      "options": [
+        "fixed",
+        "rotating"
+      ],
+      "default": "fixed",
+      "help": "Death areas are only meaningful with a fixed (north-up) minimap."
+    }
+  ],
+  "signals": [],
+  "events": [],
+  "vision": {
+    "purpose": "Call of Duty: Modern Warfare 4 (Multiplayer, DMZ or Campaign). Read the team scores and match timer if shown, the player's own kills and deaths only if shown (scoreboard or end-of-match screen), and what screen this is (lobby, loadout editor, map vote, loading, in match, killcam, scoreboard, after-action report). Detect when the player's own character dies (death screen, killcam of the player, respawn prompt) and, from the kill card or killfeed, what killed them. Detect the player's own kills only from a clear kill marker or a killfeed line with the player's name. The HUD can be moved (HUD bounds) and the minimap can be square or round, fixed or rotating; read what is there, guess nothing.",
+    "sampleIntervalMs": 2500,
+    "maxLatencyMs": 9000,
+    "maxWidth": 1280,
+    "state": [
+      {
+        "key": "playerScore",
+        "label": "Your team's score",
+        "type": "number",
+        "min": 0,
+        "max": 100000,
+        "ttlMs": 15000,
+        "description": "The player's team score on the HUD or scoreboard. Omit if you cannot tell which side is the player's."
+      },
+      {
+        "key": "opponentScore",
+        "label": "Enemy score",
+        "type": "number",
+        "min": 0,
+        "max": 100000,
+        "ttlMs": 15000,
+        "description": "The enemy team score."
+      },
+      {
+        "key": "matchTimeLeftSec",
+        "label": "Time left (s)",
+        "type": "number",
+        "min": 0,
+        "max": 7200,
+        "ttlMs": 10000,
+        "description": "The match timer converted to seconds, if shown."
+      },
+      {
+        "key": "kills",
+        "label": "Kills",
+        "type": "number",
+        "min": 0,
+        "max": 1000,
+        "ttlMs": 20000,
+        "description": "The player's own kill count, only if shown (scoreboard, after-action report)."
+      },
+      {
+        "key": "deaths",
+        "label": "Deaths",
+        "type": "number",
+        "min": 0,
+        "max": 1000,
+        "ttlMs": 20000,
+        "description": "The player's own death count, only if shown."
+      },
+      {
+        "key": "streak",
+        "label": "Current kill streak",
+        "type": "number",
+        "min": 0,
+        "max": 100,
+        "ttlMs": 15000,
+        "description": "The player's current streak counter on the scorestreak widget, if a number is shown."
+      },
+      {
+        "key": "mapName",
+        "label": "Map",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The map name, from a loading screen, map vote or scoreboard header."
+      },
+      {
+        "key": "modeName",
+        "label": "Mode",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The game mode name (e.g. Domination, Hardpoint), from a loading screen or scoreboard."
+      }
+    ],
+    "events": [
+      {
+        "type": "death",
+        "label": "You died",
+        "category": "outcome",
+        "description": "The player's own character is visibly dead in this frame: death screen, killcam showing the player being killed, or respawn prompt.",
+        "zoneSet": "minimap",
+        "attributes": [
+          {
+            "key": "killedBy",
+            "options": [
+              "assault_rifle",
+              "smg",
+              "shotgun",
+              "lmg",
+              "marksman",
+              "sniper",
+              "pistol",
+              "launcher",
+              "killstreak",
+              "equipment",
+              "melee",
+              "unknown"
+            ],
+            "description": "The weapon class or source that killed the player, from the kill card or killfeed."
+          },
+          {
+            "key": "engagement",
+            "options": [
+              "front",
+              "side",
+              "behind",
+              "explosive",
+              "unknown"
+            ],
+            "description": "Only from the killcam or a damage indicator: where the shot came from relative to where the player was looking."
+          }
+        ],
+        "dedupeMs": 7000
+      },
+      {
+        "type": "kill",
+        "label": "You got a kill",
+        "category": "action",
+        "description": "A kill marker (e.g. '+100' with an elimination) or a killfeed line naming the player as the killer.",
+        "dedupeMs": 2500
+      },
+      {
+        "type": "streak_earned",
+        "label": "Killstreak earned",
+        "category": "action",
+        "description": "A banner shows the player earned a killstreak.",
+        "dedupeMs": 10000
+      }
+    ]
+  },
+  "zones": [
+    {
+      "id": "minimap",
+      "label": "Minimap area",
+      "rows": 3,
+      "cols": 3,
+      "cells": [
+        {
+          "id": "nw",
+          "label": "the north-west of the map"
+        },
+        {
+          "id": "n",
+          "label": "the north of the map"
+        },
+        {
+          "id": "ne",
+          "label": "the north-east of the map"
+        },
+        {
+          "id": "w",
+          "label": "the west of the map"
+        },
+        {
+          "id": "c",
+          "label": "the middle of the map"
+        },
+        {
+          "id": "e",
+          "label": "the east of the map"
+        },
+        {
+          "id": "sw",
+          "label": "the south-west of the map"
+        },
+        {
+          "id": "s",
+          "label": "the south of the map"
+        },
+        {
+          "id": "se",
+          "label": "the south-east of the map"
+        }
+      ],
+      "description": "Divide the visible minimap into a 3x3 grid as drawn on screen (top = north on a fixed minimap). Use the player's own arrow at the moment of death. If the minimap is not visible or is rotating, give no zone."
+    }
+  ],
+  "heatmaps": [
+    {
+      "id": "deaths",
+      "label": "Where you die",
+      "eventType": "death",
+      "zoneSet": "minimap",
+      "minEvents": 5,
+      "phrase": "your deaths",
+      "sampled": true,
+      "breakdown": {
+        "attribute": "killedBy",
+        "label": "What killed you"
+      },
+      "tags": [
+        "deaths",
+        "positioning"
+      ]
+    }
+  ],
+  "matchStats": {
+    "keys": [
+      {
+        "key": "kills",
+        "label": "Kills",
+        "better": "higher"
+      },
+      {
+        "key": "deaths",
+        "label": "Deaths",
+        "better": "lower"
+      },
+      {
+        "key": "playerScore",
+        "label": "Team score",
+        "better": "higher"
+      }
+    ]
+  },
+  "mistakes": [],
+  "episodes": [],
+  "liveCues": [],
+  "liveFreshnessMs": 6000,
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "trade-and-reposition",
+        "title": "Reposition after a kill",
+        "summary": "Staying in the same spot after a kill gives the enemy a known place to challenge. A short move to new cover after each fight resets the angle in your favour.",
+        "good": [
+          "Move a few metres to new cover after a kill",
+          "Reload behind cover"
+        ],
+        "bad": [
+          "Holding the same angle after it was revealed",
+          "Reloading in the open"
+        ],
+        "tags": [
+          "positioning",
+          "engagements"
+        ]
+      },
+      {
+        "id": "minimap-habits",
+        "title": "Use the minimap",
+        "summary": "Red dots on the minimap and the UAV show where fights are. Glancing at it between fights avoids running into crossfires.",
+        "good": [
+          "Check the minimap after every engagement",
+          "Move toward your team's side of a fight"
+        ],
+        "bad": [
+          "Running across open lanes the enemy controls"
+        ],
+        "tags": [
+          "awareness",
+          "minimap"
+        ]
+      },
+      {
+        "id": "engagement-range",
+        "title": "Fight at your weapon's range",
+        "summary": "SMGs and shotguns win close; assault rifles mid; snipers and marksman rifles long. Choosing routes that keep fights at your range wins more of them.",
+        "good": [
+          "Take routes that suit your loadout"
+        ],
+        "bad": [
+          "Challenging a sniper lane with an SMG"
+        ],
+        "tags": [
+          "loadout",
+          "engagements"
+        ]
+      },
+      {
+        "id": "objective-play",
+        "title": "Play the objective",
+        "summary": "Objective actions build your streak too (Smart Streaks) and win matches. Capturing and holding often matters more than chasing kills.",
+        "good": [
+          "Capture and hold in Domination and Hardpoint"
+        ],
+        "bad": [
+          "Ignoring the objective while the score slips"
+        ],
+        "tags": [
+          "objective",
+          "streaks"
+        ]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Positions of enemies that are not visible on the player's own screen",
+      "Exploits, glitches, or anything against Activision's rules",
+      "Anything that automates input or aiming"
+    ],
+    "terminology": {
+      "UAV": "reveals enemies on the minimap",
+      "pre-aim": "aiming where an enemy will appear before they do",
+      "trade": "killing the enemy who just killed a teammate"
+    },
+    "referenceCheckedAt": "2026-10-27",
+    "reference": [
+      {
+        "id": "overview",
+        "items": [
+          {
+            "name": "Release",
+            "detail": "Released Oct 23, 2026 by Infinity Ward and Activision on PS5, Xbox Series X|S, PC and Nintendo Switch 2; announced May 2026."
+          },
+          {
+            "name": "Season 1",
+            "detail": "Season 1 and the Warzone integration arrive Nov 6, 2026."
+          },
+          {
+            "name": "PC requirements",
+            "detail": "TPM 2.0 and Secure Boot are required for online play (RICOCHET Anti-Cheat)."
+          },
+          {
+            "name": "No Zombies",
+            "detail": "Three modes: Campaign, Multiplayer and DMZ; there is no Zombies mode."
+          }
+        ]
+      },
+      {
+        "id": "modes",
+        "items": [
+          {
+            "name": "Respawn modes",
+            "detail": "Team Deathmatch, Domination, Hardpoint, Kill Confirmed and Free-for-All, each also in Hardcore."
+          },
+          {
+            "name": "New respawn modes",
+            "detail": "Counter Attack, Inflation (cash drops; richest team wins) and Hijack."
+          },
+          {
+            "name": "Round-based",
+            "detail": "Search & Destroy, Gunfight (2v2) and Gunfight 10v10."
+          },
+          {
+            "name": "Ground War",
+            "detail": "32v32, including Combat Outpost."
+          },
+          {
+            "name": "Party",
+            "detail": "Gun Game and Drop Zone; Shipment, Possession and Infected added in launch week."
+          },
+          {
+            "name": "DMZ",
+            "detail": "Hajin Exclusion Zone; 20 squads of up to 3 players."
+          },
+          {
+            "name": "Campaign",
+            "detail": "A joint Korean and US Marine squad in Seoul."
+          },
+          {
+            "name": "Ranked Play",
+            "detail": "Start date not confirmed at launch (unverified)."
+          }
+        ]
+      },
+      {
+        "id": "maps",
+        "items": [
+          {
+            "name": "Cachette",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Coal",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Lithium",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Lotus",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Mumbai",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Munition",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Nautical",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Reactor U92",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Rooftops",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Sentry",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Silkworm",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Transit 213",
+            "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
+          },
+          {
+            "name": "Imjin Farmland",
+            "detail": "Ground War 32v32 map."
+          },
+          {
+            "name": "Wolves Stadium",
+            "detail": "Ground War 32v32 map."
+          },
+          {
+            "name": "Forest",
+            "detail": "Ground War 32v32 map."
+          },
+          {
+            "name": "Cafe",
+            "detail": "Gunfight 2v2 map."
+          },
+          {
+            "name": "Library",
+            "detail": "Gunfight 2v2 map."
+          },
+          {
+            "name": "NYC",
+            "detail": "Gunfight 2v2 map."
+          },
+          {
+            "name": "Smuggler",
+            "detail": "Gunfight 2v2 map."
+          },
+          {
+            "name": "Kill Block",
+            "detail": "Modular map for 3v3 and 10v10 Gunfight with hundreds of configurations."
+          }
+        ]
+      },
+      {
+        "id": "screens",
+        "items": [
+          {
+            "name": "Main menu",
+            "detail": "Campaign, Multiplayer and DMZ (layout unverified)."
+          },
+          {
+            "name": "Map vote",
+            "detail": "Map voting is back in multiplayer lobbies."
+          },
+          {
+            "name": "Create-a-Class",
+            "detail": "Unlocks at level 4: primary, secondary, three perks (one per slot), lethal, tactical, field upgrade and up to three streaks."
+          },
+          {
+            "name": "Killcam",
+            "detail": "After a death: replays the kill from the enemy's view and shows a kill card with their weapon."
+          },
+          {
+            "name": "Theater",
+            "detail": "Theater mode is available to watch matches back."
+          }
+        ]
+      },
+      {
+        "id": "hud",
+        "items": [
+          {
+            "name": "Minimap",
+            "detail": "Square or round, rotating or fixed (HUD settings); red dots on the minimap are back."
+          },
+          {
+            "name": "HUD bounds",
+            "detail": "A setting moves HUD elements toward the centre; killfeed duration, compass and stamina bar are configurable."
+          },
+          {
+            "name": "Hipfire",
+            "detail": "No hipfire bloom."
+          }
+        ]
+      },
+      {
+        "id": "roster",
+        "items": [
+          {
+            "name": "Han 86",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "M4",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Hyeon Burst",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Patriot XMR",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Kastov 762",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Oden",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Axion",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Cronen Squall",
+            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "ISO Nightshade",
+            "detail": "SMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "VEL 46",
+            "detail": "SMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Wz.55 Striga",
+            "detail": "SMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "PPSh-41",
+            "detail": "SMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "X-58 Nyx",
+            "detail": "SMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Rezi 12",
+            "detail": "Shotgun (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Warlord",
+            "detail": "Shotgun (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Finn LMG",
+            "detail": "LMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Type 73",
+            "detail": "LMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "APOC-338",
+            "detail": "LMG (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "MAR-9",
+            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Oris 8.6",
+            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Mosin-Nagant",
+            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "KG-7 Vulcan",
+            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Astaroth .57",
+            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Signal 50",
+            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "SANG 9mm",
+            "detail": "Pistol (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Krait P68",
+            "detail": "Pistol (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": ".50 GS",
+            "detail": "Pistol (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "Mojave .357",
+            "detail": "Pistol (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "PILA",
+            "detail": "Launcher (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "RPG-8",
+            "detail": "Launcher (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "JOKR",
+            "detail": "Launcher (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "PM-40 Anvil",
+            "detail": "Launcher (launch roster; spellings vary between sources)."
+          },
+          {
+            "name": "UAV",
+            "detail": "Killstreak, 4 kills (launch cost)."
+          },
+          {
+            "name": "Bomb Glider",
+            "detail": "Killstreak, 4 kills (launch cost)."
+          },
+          {
+            "name": "Care Package",
+            "detail": "Killstreak, 4 kills (launch cost)."
+          },
+          {
+            "name": "Impact Warhead",
+            "detail": "Killstreak, 4 kills (launch cost)."
+          },
+          {
+            "name": "Artillery Beacon",
+            "detail": "Killstreak, 6 kills (launch cost)."
+          },
+          {
+            "name": "Crossfire",
+            "detail": "Killstreak, 6 kills (launch cost)."
+          },
+          {
+            "name": "Combat Drone",
+            "detail": "Killstreak, 6 kills (launch cost)."
+          },
+          {
+            "name": "Counter UAV",
+            "detail": "Killstreak, 6 kills (launch cost)."
+          },
+          {
+            "name": "Wheelson",
+            "detail": "Killstreak, 8 kills (launch cost)."
+          },
+          {
+            "name": "Missile Salvo",
+            "detail": "Killstreak, 8 kills (launch cost)."
+          },
+          {
+            "name": "Railgun Sentry",
+            "detail": "Killstreak, 8 kills (launch cost)."
+          },
+          {
+            "name": "Attack Helicopter",
+            "detail": "Killstreak, 10 kills (launch cost)."
+          },
+          {
+            "name": "Deathstalker",
+            "detail": "Killstreak, 10 kills (launch cost)."
+          },
+          {
+            "name": "Advanced UAV",
+            "detail": "Killstreak, 10 kills (launch cost)."
+          },
+          {
+            "name": "Argonaut",
+            "detail": "Killstreak, 10 kills (launch cost)."
+          },
+          {
+            "name": "Gunship",
+            "detail": "Killstreak, 12 kills (launch cost)."
+          },
+          {
+            "name": "Air Lockdown",
+            "detail": "Killstreak, 12 kills (launch cost)."
+          },
+          {
+            "name": "Tactical Nuke",
+            "detail": "Killstreak at 30 kills."
+          },
+          {
+            "name": "Quick Fix",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "Overkill",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "High Alert",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "Ghost",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "Resupply",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "Kill Chain",
+            "detail": "Perk, slot 1."
+          },
+          {
+            "name": "Hardline",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Blood Rush",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Bomb Squad",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Fast Hands",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Ninja",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Birdseye",
+            "detail": "Perk, slot 2."
+          },
+          {
+            "name": "Lethal Reach",
+            "detail": "Perk, slot 3."
+          },
+          {
+            "name": "Combat Grid",
+            "detail": "Perk, slot 3."
+          },
+          {
+            "name": "Battle Hardened",
+            "detail": "Perk, slot 3."
+          },
+          {
+            "name": "Scavenger",
+            "detail": "Perk, slot 3."
+          },
+          {
+            "name": "Tracker",
+            "detail": "Perk, slot 3."
+          },
+          {
+            "name": "Cold-Blooded",
+            "detail": "Perk, slot 3."
+          }
+        ]
+      },
+      {
+        "id": "mechanics",
+        "items": [
+          {
+            "name": "Movement",
+            "detail": "Omnimovement and wall-jumping are removed; new supine slide, mantle slide, pipe climbing and hanging; slide-cancel stays. In the beta, tactical sprint moved into the Blood Rush perk (launch status unverified)."
+          },
+          {
+            "name": "Smart Streaks",
+            "detail": "Objective actions (captures, holding a Hardpoint, plants) add to the killstreak meter."
+          },
+          {
+            "name": "Perks",
+            "detail": "Three perks, one from each slot of six."
+          },
+          {
+            "name": "Prestige",
+            "detail": "Classic Prestige with 55 ranks, plus an alternative path that keeps your unlocks."
+          }
+        ]
+      },
+      {
+        "id": "strategy",
+        "items": [
+          {
+            "name": "Lanes and sightlines",
+            "detail": "General Call of Duty map design (not checked per map): most core maps have three lanes; controlling the middle and avoiding long open sightlines with short-range weapons wins engagements."
+          },
+          {
+            "name": "Objective play",
+            "detail": "Smart Streaks reward capturing and holding; objective modes are won by holding points, not kills alone."
+          }
+        ]
+      },
+      {
+        "id": "mistakes",
+        "items": [
+          {
+            "name": "Dying in the same area repeatedly",
+            "detail": "Visible as deaths clustering on one part of the minimap; change route or approach."
+          },
+          {
+            "name": "Reloading in the open",
+            "detail": "Killcams show the player reloading without cover."
+          },
+          {
+            "name": "Fighting at the wrong range",
+            "detail": "Kill cards show the player losing to weapons that suit that distance."
+          }
+        ]
+      },
+      {
+        "id": "glossary",
+        "items": [
+          {
+            "name": "Spawn flip",
+            "detail": "Spawns switching sides when one team pushes too far."
+          },
+          {
+            "name": "Head glitch",
+            "detail": "Cover that shows only the player's head over it."
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Frames are sampled every 2–3 seconds, so fast deaths and kills can be missed; deaths are mostly caught on the killcam or death screen.",
+    "Death areas need a visible, fixed minimap; they are approximate.",
+    "Map, weapon and perk lists come from launch-week research; check them after patches.",
+    "Live tips only in the campaign and private matches with bots; everything online is reviewed after the match."
+  ],
+  "failClosed": [
+    "No cloud vision: this pack cannot read the game.",
+    "Unclear whether the player or a teammate died: the event is not recorded."
+  ]
+}

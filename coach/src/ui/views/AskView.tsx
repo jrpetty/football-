@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import type { SightlineBridge } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
+import { KnowledgePanel } from '../components/KnowledgePanel.tsx'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
 import type { Tab } from '../App.tsx'
@@ -14,12 +16,13 @@ interface Props {
   profile: GameProfile
   settings: CoachSettings
   cloud: CloudStatus
+  bridge: SightlineBridge
   onTab: (t: Tab) => void
 }
 
 const cloudReady = (c: CloudStatus) => c.available && c.settings.enabled && c.key.set
 
-export function AskView({ state, session, profile, settings, cloud, onTab }: Props) {
+export function AskView({ state, session, profile, settings, cloud, bridge, onTab }: Props) {
   return (
     <div className="page">
       <div>
@@ -59,6 +62,7 @@ export function AskView({ state, session, profile, settings, cloud, onTab }: Pro
         </section>
 
         <div className="ask-side">
+          <KnowledgePanel bridge={bridge} profile={profile} cloud={cloud} />
           <NotesPanel state={state} session={session} profile={profile} settings={settings} />
           <ResearchPanel state={state} session={session} profile={profile} cloud={cloud} />
         </div>

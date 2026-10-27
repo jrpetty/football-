@@ -7,8 +7,12 @@
       "id": "valorant/all",
       "publisher": "Riot Games",
       "game": "VALORANT",
-      "gameIds": ["valorant"],
-      "modes": ["*"],
+      "gameIds": [
+        "valorant"
+      ],
+      "modes": [
+        "*"
+      ],
       "status": "post_match_only",
       "basis": "publisher",
       "sources": [
@@ -27,8 +31,12 @@
       "id": "league-of-legends/all",
       "publisher": "Riot Games",
       "game": "League of Legends",
-      "gameIds": ["league-of-legends"],
-      "modes": ["*"],
+      "gameIds": [
+        "league-of-legends"
+      ],
+      "modes": [
+        "*"
+      ],
       "status": "post_match_only",
       "basis": "publisher",
       "sources": [
@@ -47,8 +55,13 @@
       "id": "ea-fc/offline-vs-cpu",
       "publisher": "Electronic Arts",
       "game": "EA SPORTS FC",
-      "gameIds": ["ea-fc"],
-      "modes": ["kickoff-vs-cpu", "career-mode"],
+      "gameIds": [
+        "ea-fc"
+      ],
+      "modes": [
+        "kickoff-vs-cpu",
+        "career-mode"
+      ],
       "status": "noncompetitive_only",
       "basis": "internal",
       "sources": [],
@@ -61,8 +74,12 @@
       "id": "ea-fc/all-other-modes",
       "publisher": "Electronic Arts",
       "game": "EA SPORTS FC",
-      "gameIds": ["ea-fc"],
-      "modes": ["*"],
+      "gameIds": [
+        "ea-fc"
+      ],
+      "modes": [
+        "*"
+      ],
       "status": "needs_publisher_review",
       "basis": "publisher",
       "sources": [
@@ -81,8 +98,13 @@
       "id": "aoe2-de/offline-vs-ai",
       "publisher": "Xbox Game Studios / World's Edge",
       "game": "Age of Empires II: Definitive Edition",
-      "gameIds": ["aoe2-de"],
-      "modes": ["campaign", "skirmish-vs-ai"],
+      "gameIds": [
+        "aoe2-de"
+      ],
+      "modes": [
+        "campaign",
+        "skirmish-vs-ai"
+      ],
       "status": "noncompetitive_only",
       "basis": "internal",
       "sources": [],
@@ -95,8 +117,12 @@
       "id": "aoe2-de/all-other-modes",
       "publisher": "Xbox Game Studios / World's Edge",
       "game": "Age of Empires II: Definitive Edition",
-      "gameIds": ["aoe2-de"],
-      "modes": ["*"],
+      "gameIds": [
+        "aoe2-de"
+      ],
+      "modes": [
+        "*"
+      ],
       "status": "needs_publisher_review",
       "basis": "publisher",
       "sources": [
@@ -115,10 +141,18 @@
       "id": "synthetic-arena/practice",
       "publisher": "Sightline (fictional demo game)",
       "game": "Synthetic Arena",
-      "gameIds": ["synthetic-arena"],
-      "modes": ["practice"],
+      "gameIds": [
+        "synthetic-arena"
+      ],
+      "modes": [
+        "practice"
+      ],
       "status": "approved_for_scope",
-      "scope": ["live", "round_break", "post_match"],
+      "scope": [
+        "live",
+        "round_break",
+        "post_match"
+      ],
       "basis": "internal",
       "sources": [],
       "rationale": "Fictional game drawn by the built-in simulator; Sightline is its 'publisher'.",
@@ -130,10 +164,17 @@
       "id": "synthetic-arena/ranked",
       "publisher": "Sightline (fictional demo game)",
       "game": "Synthetic Arena",
-      "gameIds": ["synthetic-arena"],
-      "modes": ["ranked"],
+      "gameIds": [
+        "synthetic-arena"
+      ],
+      "modes": [
+        "ranked"
+      ],
       "status": "approved_for_scope",
-      "scope": ["round_break", "post_match"],
+      "scope": [
+        "round_break",
+        "post_match"
+      ],
       "basis": "internal",
       "sources": [],
       "rationale": "Fictional. Demonstrates a competitive mode where only reflective notes between rounds and after the match are approved.",
@@ -145,8 +186,12 @@
       "id": "synthetic-arena/casual",
       "publisher": "Sightline (fictional demo game)",
       "game": "Synthetic Arena",
-      "gameIds": ["synthetic-arena"],
-      "modes": ["casual"],
+      "gameIds": [
+        "synthetic-arena"
+      ],
+      "modes": [
+        "casual"
+      ],
       "status": "needs_publisher_review",
       "basis": "internal",
       "sources": [],
@@ -156,10 +201,112 @@
       "notes": ""
     },
     {
+      "id": "cod-mw4/offline",
+      "publisher": "Activision",
+      "game": "Call of Duty: Modern Warfare 4",
+      "gameIds": [
+        "cod-mw4"
+      ],
+      "modes": [
+        "campaign",
+        "private-bots"
+      ],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Single-player campaign and private matches against bots only: no other players are affected. This is Sightline's internal judgement, not Activision approval.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": "If a private match includes other players, choose Multiplayer instead."
+    },
+    {
+      "id": "cod-mw4/online",
+      "publisher": "Activision",
+      "game": "Call of Duty: Modern Warfare 4",
+      "gameIds": [
+        "cod-mw4"
+      ],
+      "modes": [
+        "*"
+      ],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://support.activision.com/articles/call-of-duty-security-and-enforcement-policy",
+          "title": "Call of Duty Security and Enforcement Policy",
+          "excerpt": "we look for attempts to manipulate the game, to reveal information that should not be known, or to take automated actions with superhuman speed or accuracy.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://support.activision.com/black-ops-4/articles/call-of-duty-black-ops-4-security-enforcement-policy",
+          "title": "Black Ops 4 Security Enforcement Policy (older title-specific wording)",
+          "excerpt": "Any user who utilizes unauthorized third-party software to gain an unfair advantage, manipulate stats, and/or manipulate game data is subject to penalty.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Multiplayer, Ranked Play, DMZ and Warzone: post-match review only. Activision's policy on third-party software is broad and no statement on screen-only coaching tools was found; live advice could be read as an unfair advantage."
+    },
+    {
+      "id": "aoe4/offline-vs-ai",
+      "publisher": "Xbox Game Studios / World's Edge",
+      "game": "Age of Empires IV",
+      "gameIds": [
+        "aoe4"
+      ],
+      "modes": [
+        "campaign",
+        "art-of-war",
+        "skirmish-vs-ai",
+        "crucible"
+      ],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Single-player campaigns, Art of War, The Crucible and skirmish against the AI: no other players are affected. Sightline's internal judgement, not Microsoft or World's Edge approval.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": ""
+    },
+    {
+      "id": "aoe4/all-other-modes",
+      "publisher": "Xbox Game Studios / World's Edge",
+      "game": "Age of Empires IV",
+      "gameIds": [
+        "aoe4"
+      ],
+      "modes": [
+        "*"
+      ],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://www.xbox.com/en-US/legal/community-standards",
+          "title": "Xbox Community Standards",
+          "excerpt": "Cheating, tampering, and the use of exploits is never acceptable in the XBOX community",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://www.microsoft.com/en-us/servicesagreement",
+          "title": "Microsoft Services Agreement",
+          "excerpt": "may automatically check your device for unauthorized hardware or software that enables cheating or tampering",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Ranked, Quick Match and lobbies with other players: post-match review only. The game is reported to close when some prohibited tools are running (e.g. a trainer overlay); Sightline never injects into or overlays the game."
+    },
+    {
       "id": "default/offline-single-player",
       "publisher": "(any)",
       "game": "Any game without its own entry",
-      "gameIds": ["*"],
+      "gameIds": [
+        "*"
+      ],
       "modes": [],
       "modeClass": "offline-single-player",
       "status": "noncompetitive_only",

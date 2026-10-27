@@ -321,7 +321,7 @@ function LastSession({ state, onTab }: { state: SessionState; onTab: (t: Tab) =>
 
 // --- During capture -------------------------------------------------------------------
 
-function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud }: Props) {
+function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud, info }: Props) {
   const [aligning, setAligning] = useState(false)
   const st = state.status
   const report = state.report?.profileId === profile.id ? state.report : null
@@ -388,6 +388,9 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
         ) : (
           <StatusItem label="Frames" value={st ? `${st.framesProcessed} · ${st.analysisMs.toFixed(1)} ms` : '0'} />
         )}
+        {st?.vision.screen ? (
+          <StatusItem label="Screen" value={`${st.vision.screen.name}${st.vision.screen.from === 'memory' ? ' · known' : ''}`} tone={st.vision.screen.kind === 'gameplay' ? 'live' : 'info'} />
+        ) : null}
         <StatusItem label="Time" value={state.startedAt ? clock(now - state.clockOrigin) : '0:00'} />
       </div>
 
@@ -495,6 +498,27 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                     </li>
                   ))}
               </ol>
+            )}
+          </section>
+
+          <section className="panel" aria-labelledby="mom-h">
+            <div className="panel-head">
+              <h2 id="mom-h">Decisions to review</h2>
+              <span className="muted small">{state.moments.length}</span>
+            </div>
+            <button type="button" className="btn mark-btn" onClick={() => void session.markMoment()}>
+              ◆ Mark this moment {info?.markShortcut ? <kbd className="kbd-inline">{info.markShortcut}</kbd> : null}
+            </button>
+            {state.moments.length ? (
+              <div className="moment-strip">
+                {state.moments.slice(-4).map((m) =>
+                  m.imageUrl ? <img key={m.id} src={m.imageUrl} alt="Marked moment" /> : <span key={m.id} className="moment-dot" title={m.note ?? 'Marked moment'} />,
+                )}
+              </div>
+            ) : (
+              <p className="muted small" style={{ marginBottom: 0 }}>
+                Mark a fight, a build or a rotation; after the match the coach reviews what was on screen.
+              </p>
             )}
           </section>
 

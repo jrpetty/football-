@@ -1,0 +1,753 @@
+{
+  "schemaVersion": 2,
+  "id": "aoe4",
+  "version": "1.0.0",
+  "name": "Age of Empires IV",
+  "depth": "pack",
+  "game": {
+    "title": "Age of Empires IV",
+    "publisher": "Xbox Game Studios / World's Edge (developed by Relic)",
+    "patch": "Update 17.0 (October 2026)",
+    "languages": [
+      "en"
+    ]
+  },
+  "validation": {
+    "status": "unverified",
+    "notes": "Reads the resource panel, population, idle villagers, age and clock through cloud vision. Not yet checked against live captures at every UI scale; values the recogniser cannot read are left out, never guessed."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": null,
+    "notes": "Use the default HUD at a UI scale where resource numbers are legible. Borderless window mode captures most reliably.",
+    "windowTitleHints": [
+      "Age of Empires IV"
+    ]
+  },
+  "modes": [
+    {
+      "id": "campaign",
+      "label": "Campaign / Historical Battles (single-player)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "art-of-war",
+      "label": "Art of War challenges (single-player)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "skirmish-vs-ai",
+      "label": "Skirmish vs AI (single-player)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "crucible",
+      "label": "The Crucible (single-player)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "ranked-1v1",
+      "label": "Ranked 1v1",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "ranked-team",
+      "label": "Ranked team game",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "quick-match",
+      "label": "Quick Match (unranked: Empire Wars, Nomad, FFA)",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "custom-lobby",
+      "label": "Custom lobby with other players",
+      "multiplayer": true,
+      "competitive": false
+    }
+  ],
+  "playerContext": [
+    {
+      "id": "civ",
+      "label": "Your civilisation (optional)",
+      "kind": "text",
+      "default": "",
+      "help": "Helps the coach judge build orders and timings for your civ."
+    },
+    {
+      "id": "feudalTargetSec",
+      "label": "Your Feudal Age target (game seconds)",
+      "kind": "number",
+      "default": 330,
+      "help": "When you aim to have reached the Feudal Age. 330 s (5:30) is a common starting point; good players are often near 4:00–5:00."
+    },
+    {
+      "id": "castleTargetSec",
+      "label": "Your Castle Age target (game seconds)",
+      "kind": "number",
+      "default": 840,
+      "help": "When you aim to have reached the Castle Age. 840 s (14:00) is only a starting point; set your own."
+    }
+  ],
+  "signals": [],
+  "events": [],
+  "vision": {
+    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens.",
+    "sampleIntervalMs": 4000,
+    "maxLatencyMs": 12000,
+    "maxWidth": 1280,
+    "state": [
+      {
+        "key": "food",
+        "label": "Food",
+        "type": "number",
+        "min": 0,
+        "max": 1000000,
+        "ttlMs": 12000,
+        "description": "Food stockpile in the resource panel."
+      },
+      {
+        "key": "wood",
+        "label": "Wood",
+        "type": "number",
+        "min": 0,
+        "max": 1000000,
+        "ttlMs": 12000,
+        "description": "Wood stockpile in the resource panel."
+      },
+      {
+        "key": "gold",
+        "label": "Gold",
+        "type": "number",
+        "min": 0,
+        "max": 1000000,
+        "ttlMs": 12000,
+        "description": "Gold stockpile in the resource panel."
+      },
+      {
+        "key": "stone",
+        "label": "Stone",
+        "type": "number",
+        "min": 0,
+        "max": 1000000,
+        "ttlMs": 12000,
+        "description": "Stone stockpile in the resource panel."
+      },
+      {
+        "key": "population",
+        "label": "Population",
+        "type": "number",
+        "min": 0,
+        "max": 1000,
+        "ttlMs": 12000,
+        "description": "Current population (the first number of 'current/max')."
+      },
+      {
+        "key": "populationCap",
+        "label": "Population cap",
+        "type": "number",
+        "min": 0,
+        "max": 1000,
+        "ttlMs": 12000,
+        "description": "Current maximum population (the second number of 'current/max')."
+      },
+      {
+        "key": "idleVillagers",
+        "label": "Idle villagers",
+        "type": "number",
+        "min": 0,
+        "max": 500,
+        "ttlMs": 12000,
+        "description": "Idle villager count shown on the idle villager indicator, only if a number is shown."
+      },
+      {
+        "key": "age",
+        "label": "Age",
+        "type": "enum",
+        "options": [
+          "dark",
+          "feudal",
+          "castle",
+          "imperial"
+        ],
+        "ttlMs": 30000,
+        "description": "The age the player is currently in (I = dark, II = feudal, III = castle, IV = imperial)."
+      },
+      {
+        "key": "gameTimeSec",
+        "label": "Game time (s)",
+        "type": "number",
+        "min": 0,
+        "max": 36000,
+        "ttlMs": 12000,
+        "description": "The in-game clock converted to seconds."
+      }
+    ],
+    "events": [
+      {
+        "type": "landmark_destroyed",
+        "label": "A landmark was destroyed",
+        "category": "outcome",
+        "description": "A notification or banner shows one of the player's own landmarks was destroyed.",
+        "dedupeMs": 20000
+      },
+      {
+        "type": "under_attack",
+        "label": "Under attack alert",
+        "category": "context",
+        "description": "An on-screen alert says the player's units or buildings are under attack.",
+        "dedupeMs": 15000
+      }
+    ]
+  },
+  "mistakes": [
+    {
+      "id": "housed",
+      "label": "Housed",
+      "when": [
+        {
+          "key": "population",
+          "op": ">=",
+          "ref": "populationCap"
+        },
+        {
+          "key": "populationCap",
+          "op": "<",
+          "value": 200
+        }
+      ],
+      "forMs": 10000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "You're housed. Build a house.",
+      "summary": "Housed {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "economy",
+        "population",
+        "houses"
+      ]
+    },
+    {
+      "id": "idle-villagers",
+      "label": "Idle villagers",
+      "when": [
+        {
+          "key": "idleVillagers",
+          "op": ">",
+          "value": 0
+        }
+      ],
+      "forMs": 15000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Idle villagers. Put them to work.",
+      "summary": "Villagers sat idle {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "economy",
+        "villagers",
+        "idle"
+      ]
+    },
+    {
+      "id": "floating-resources",
+      "label": "Floating resources",
+      "when": [
+        {
+          "sum": [
+            "food",
+            "wood",
+            "gold",
+            "stone"
+          ],
+          "op": ">",
+          "value": 1500
+        }
+      ],
+      "forMs": 45000,
+      "minGameTimeSec": 480,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Big bank. Spend those resources.",
+      "summary": "Banked over 1500 unspent resources {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": [
+        "economy",
+        "spending"
+      ]
+    },
+    {
+      "id": "late-feudal",
+      "label": "Behind your Feudal Age target",
+      "when": [
+        {
+          "key": "age",
+          "op": "==",
+          "value": "dark"
+        },
+        {
+          "key": "gameTimeSec",
+          "op": ">",
+          "contextValue": "feudalTargetSec"
+        }
+      ],
+      "forMs": 0,
+      "oncePerMatch": true,
+      "liveTip": "Past your Feudal target time.",
+      "summary": "Still in the Dark Age after your Feudal Age target time.",
+      "severity": "medium",
+      "tags": [
+        "age-up",
+        "build-order",
+        "timings"
+      ]
+    },
+    {
+      "id": "late-castle",
+      "label": "Behind your Castle Age target",
+      "when": [
+        {
+          "key": "age",
+          "op": "!=",
+          "value": "castle"
+        },
+        {
+          "key": "age",
+          "op": "!=",
+          "value": "imperial"
+        },
+        {
+          "key": "gameTimeSec",
+          "op": ">",
+          "contextValue": "castleTargetSec"
+        }
+      ],
+      "forMs": 0,
+      "oncePerMatch": true,
+      "liveTip": "Past your Castle target time.",
+      "summary": "Not yet in the Castle Age at your Castle Age target time.",
+      "severity": "medium",
+      "tags": [
+        "age-up",
+        "timings"
+      ]
+    }
+  ],
+  "episodes": [],
+  "liveCues": [],
+  "liveFreshnessMs": 12000,
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "constant-villagers",
+        "title": "Keep villagers coming",
+        "summary": "Continuous villager production from the Town Center is the backbone of the economy. Every gap of 20 seconds is one villager you will never get back.",
+        "good": [
+          "Queue villagers without gaps",
+          "Rally new villagers straight onto a resource"
+        ],
+        "bad": [
+          "Town Center standing idle",
+          "Losing production while housed"
+        ],
+        "tags": [
+          "economy",
+          "villagers"
+        ]
+      },
+      {
+        "id": "houses-ahead",
+        "title": "Build houses before the cap",
+        "summary": "Reaching the population cap stops all production. A house adds 10 population (5 for the Malians, who build them for half the cost; the Mongols need none).",
+        "good": [
+          "Start a house a few population before the cap"
+        ],
+        "bad": [
+          "Hitting the cap and only then building"
+        ],
+        "tags": [
+          "population",
+          "houses"
+        ]
+      },
+      {
+        "id": "landmark-timing",
+        "title": "Age up on time, with the economy behind it",
+        "summary": "You age up by building a landmark. Hitting your target time matters, but aging with too few villagers leaves you weak in the next age.",
+        "good": [
+          "Plan the landmark and its villagers early",
+          "Keep producing villagers while the landmark builds"
+        ],
+        "bad": [
+          "Pulling every villager off resources to build",
+          "Aging with a thin economy"
+        ],
+        "tags": [
+          "age-up",
+          "timings",
+          "landmarks"
+        ]
+      },
+      {
+        "id": "spend-resources",
+        "title": "Spend what you gather",
+        "summary": "Unspent resources do nothing. A large bank usually means a missing production building, upgrade or Town Center.",
+        "good": [
+          "Add production when resources pile up",
+          "Research economy upgrades"
+        ],
+        "bad": [
+          "Thousands banked mid-game"
+        ],
+        "tags": [
+          "economy",
+          "spending"
+        ]
+      },
+      {
+        "id": "scout-and-react",
+        "title": "Scout, then react",
+        "summary": "Knowing what the opponent is building lets you choose the right units and defences instead of guessing.",
+        "good": [
+          "Scout early and again at each age-up",
+          "Build counter units to what you saw"
+        ],
+        "bad": [
+          "Massing one unit type without scouting"
+        ],
+        "tags": [
+          "scouting",
+          "army"
+        ]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Anything about the opponent that is not visible on the player's own screen (fog of war, hidden armies)",
+      "Exploits, bugs or tools against the game's rules"
+    ],
+    "terminology": {
+      "housed": "at the population cap, unable to make units",
+      "floating": "holding a large unspent bank of resources",
+      "TC": "Town Center",
+      "eco": "economy"
+    },
+    "referenceCheckedAt": "2026-10-27",
+    "reference": [
+      {
+        "id": "overview",
+        "items": [
+          {
+            "name": "Version",
+            "detail": "Update 17.0 shipped alongside the Raiders of the North expansion (preview posted Oct 22, 2026); it breaks older saves and replays and adds pause in single-player."
+          },
+          {
+            "name": "Raiders of the North",
+            "detail": "Expansion adding the Vikings and Scots plus Crucible missions with co-op; released Oct 29, 2026 (unverified whether full or variant civilisations)."
+          },
+          {
+            "name": "Recent expansions",
+            "detail": "Yue Fei's Legacy (May 7, 2026: Jin Dynasty), Dynasties of the East (Nov 4, 2025: four variant civs and The Crucible), Knights of Cross and Rose (Apr 8, 2025), The Sultans Ascend (Nov 14, 2023)."
+          },
+          {
+            "name": "Ranked season",
+            "detail": "Season 14 runs Sep 1 to Nov 30, 2026 according to AoE4World (unverified officially)."
+          }
+        ]
+      },
+      {
+        "id": "modes",
+        "items": [
+          {
+            "name": "Ranked 1v1 and Team Ranked",
+            "detail": "Matchmade ranked play; new players play 5 placement matches."
+          },
+          {
+            "name": "Quick Match",
+            "detail": "Unranked matchmaking including Empire Wars, Nomad and an 8-player free-for-all."
+          },
+          {
+            "name": "Empire Wars",
+            "detail": "Starts with a developed economy, skipping the opening build order."
+          },
+          {
+            "name": "Nomad",
+            "detail": "No starting Town Center; villagers start scattered and must found a base."
+          },
+          {
+            "name": "Single-player",
+            "detail": "Campaigns, Historical Battles, Art of War challenges (bronze/silver/gold medals; the first is Early Economy), The Crucible, and skirmish against the AI."
+          }
+        ]
+      },
+      {
+        "id": "maps",
+        "items": [
+          {
+            "name": "Ranked map pool",
+            "detail": "Rotates automatically every month since patch 16.3 (July 2026), mixing open, closed, hybrid and naval maps; read the map name from the loading screen."
+          },
+          {
+            "name": "Maps seen in past pools",
+            "detail": "Dry Arabia, Sunkenlands, Rocky River, Archipelago, Socotra, Four Lakes, Golden Pit, Prairie, Hedgemaze, King of the Hill."
+          }
+        ]
+      },
+      {
+        "id": "screens",
+        "items": [
+          {
+            "name": "Loading screen",
+            "detail": "Shows the map name and the civilisations of each player."
+          },
+          {
+            "name": "Post-game summary",
+            "detail": "Victory or defeat screen, then a summary scoring Economy, Military, Technology and Society (community analysis, unverified)."
+          },
+          {
+            "name": "Main menu",
+            "detail": "Entry to Single Player, Multiplayer (Ranked, Quick Match, Custom), profile and settings."
+          }
+        ]
+      },
+      {
+        "id": "hud",
+        "items": [
+          {
+            "name": "Resources",
+            "detail": "Bottom left in the default layout: food, wood, gold and stone, each with the number of villagers gathering it; hovering shows income per minute."
+          },
+          {
+            "name": "Minimap",
+            "detail": "Lower left of the screen."
+          },
+          {
+            "name": "Idle villagers",
+            "detail": "Period cycles idle economy units; Ctrl+Period selects all idle villagers (2021 defaults)."
+          },
+          {
+            "name": "Population",
+            "detail": "Shown as current/maximum; exact position unverified."
+          }
+        ]
+      },
+      {
+        "id": "roster",
+        "items": [
+          {
+            "name": "English",
+            "detail": "Base game. Strong defensive economy and longbowmen."
+          },
+          {
+            "name": "French",
+            "detail": "Base game. Cavalry-focused, strong early trade and royal knights."
+          },
+          {
+            "name": "Holy Roman Empire",
+            "detail": "Base game. Prelates inspire villagers; strong infantry."
+          },
+          {
+            "name": "Mongols",
+            "detail": "Base game. Nomadic; can pack up buildings; no houses needed."
+          },
+          {
+            "name": "Rus",
+            "detail": "Base game. Earn gold from hunting; wooden fortresses."
+          },
+          {
+            "name": "Chinese",
+            "detail": "Base game. Dynasties; tax collection; strong siege."
+          },
+          {
+            "name": "Delhi Sultanate",
+            "detail": "Base game. Free technologies that take longer to research; war elephants."
+          },
+          {
+            "name": "Abbasid Dynasty",
+            "detail": "Base game. House of Wisdom instead of landmarks for age-up wings."
+          },
+          {
+            "name": "Ottomans",
+            "detail": "Free Anniversary update. Military schools produce units for free over time; Janissaries."
+          },
+          {
+            "name": "Malians",
+            "detail": "Free Anniversary update. Pit mines; cheap houses that give 5 population."
+          },
+          {
+            "name": "Japanese",
+            "detail": "The Sultans Ascend. Farmhouses instead of houses; samurai and onna-musha."
+          },
+          {
+            "name": "Byzantines",
+            "detail": "The Sultans Ascend. Olive oil resource; mercenaries; cisterns."
+          },
+          {
+            "name": "Ayyubids",
+            "detail": "Variant of the Abbasid Dynasty (The Sultans Ascend)."
+          },
+          {
+            "name": "Jeanne d'Arc",
+            "detail": "Variant of the French with a hero unit (The Sultans Ascend)."
+          },
+          {
+            "name": "Order of the Dragon",
+            "detail": "Variant of the Holy Roman Empire; Gilded Villagers cost 20% more and train in 23 s (The Sultans Ascend)."
+          },
+          {
+            "name": "Zhu Xi's Legacy",
+            "detail": "Variant of the Chinese (The Sultans Ascend)."
+          },
+          {
+            "name": "Knights Templar",
+            "detail": "Variant of the French (Knights of Cross and Rose)."
+          },
+          {
+            "name": "House of Lancaster",
+            "detail": "Variant of the English (Knights of Cross and Rose)."
+          },
+          {
+            "name": "Golden Horde",
+            "detail": "Variant of the Mongols (Dynasties of the East); starts with 200/200/150/50 stone."
+          },
+          {
+            "name": "Macedonian Dynasty",
+            "detail": "Variant of the Byzantines (Dynasties of the East)."
+          },
+          {
+            "name": "Sengoku Daimyo",
+            "detail": "Variant of the Japanese (Dynasties of the East)."
+          },
+          {
+            "name": "Tughlaq Dynasty",
+            "detail": "Variant of the Delhi Sultanate (Dynasties of the East)."
+          },
+          {
+            "name": "Jin Dynasty",
+            "detail": "Variant of the Chinese (Yue Fei's Legacy, May 2026)."
+          },
+          {
+            "name": "Vikings",
+            "detail": "Raiders of the North (Oct 2026): Longhouse and Sagas mechanics; population cap can reach 210, or 220 with a cathedral technology."
+          },
+          {
+            "name": "Scots",
+            "detail": "Raiders of the North (Oct 2026): a defensive civilisation."
+          }
+        ]
+      },
+      {
+        "id": "mechanics",
+        "items": [
+          {
+            "name": "Villager",
+            "detail": "Costs 50 food and 1 population; trains in 20 seconds at the Town Center."
+          },
+          {
+            "name": "Standard start",
+            "detail": "6 villagers and 1 scout; generally 200 food, 150 wood, 100 gold (varies by civilisation)."
+          },
+          {
+            "name": "Houses and population",
+            "detail": "A house adds 10 population; the population cap is 200 for most civilisations."
+          },
+          {
+            "name": "Ages and landmarks",
+            "detail": "Four ages (I Dark, II Feudal, III Castle, IV Imperial). Villagers build one of two landmarks per age to advance; each landmark gives a bonus."
+          },
+          {
+            "name": "Feudal Age cost",
+            "detail": "About 400 food and 200 gold (unverified; varies by civilisation)."
+          },
+          {
+            "name": "Typical Feudal timing",
+            "detail": "Usually started a bit after 4:00; a consistent fast Feudal lands near 5:00 (community consensus)."
+          }
+        ]
+      },
+      {
+        "id": "strategy",
+        "items": [
+          {
+            "name": "Economy first",
+            "detail": "Keep villager production continuous through the Castle Age; add Town Centers when you can afford them safely."
+          },
+          {
+            "name": "Scouting",
+            "detail": "Scout the opponent's base early and after each age-up to choose the right units."
+          },
+          {
+            "name": "Counter units",
+            "detail": "Spearmen beat cavalry, horsemen beat archers, archers beat spearmen, and men-at-arms and siege break defences."
+          }
+        ]
+      },
+      {
+        "id": "mistakes",
+        "items": [
+          {
+            "name": "Gaps in villager production",
+            "detail": "Visible as an idle Town Center or a villager count that stalls."
+          },
+          {
+            "name": "Idle villagers",
+            "detail": "The idle villager indicator shows a number; set rally points onto resources."
+          },
+          {
+            "name": "Floating resources",
+            "detail": "The resource panel shows thousands banked; spend on production, upgrades or another Town Center."
+          },
+          {
+            "name": "Aging up too thin",
+            "detail": "Reaching the next age with few villagers and no army to protect them."
+          },
+          {
+            "name": "Being housed",
+            "detail": "Population equals the cap and production stops until a house finishes."
+          }
+        ]
+      },
+      {
+        "id": "glossary",
+        "items": [
+          {
+            "name": "Boom",
+            "detail": "Investing heavily in economy and extra Town Centers before building an army."
+          },
+          {
+            "name": "Fast castle",
+            "detail": "Rushing to the Castle Age with a minimal army."
+          },
+          {
+            "name": "Tower rush",
+            "detail": "Building towers near the opponent's resources early."
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Reads only what the HUD shows; nothing hidden by the fog of war.",
+    "Frames are sampled every few seconds, so very short idle periods can be missed.",
+    "HUD positions and the civilisation list are researched, not yet checked against live captures at every UI scale.",
+    "Mistake durations are measured in real time on your screen."
+  ],
+  "failClosed": [
+    "No cloud vision: this pack cannot read the game.",
+    "Numbers that cannot be read are left out, so no mistake is counted while the HUD is hidden or blurry."
+  ]
+}
