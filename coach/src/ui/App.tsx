@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { PlatformInfo } from '../../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudStatus } from '../../shared/cloud.ts'
 import { effectiveMode } from '../core/policy/governor.ts'
@@ -45,6 +45,9 @@ export function App() {
   const [tab, setTab] = useState<Tab>('coach')
   const [picking, setPicking] = useState(false)
   const [suggestion, setSuggestion] = useState<{ profile: GameProfile; window: string } | null>(null)
+  const mainRef = useRef<HTMLElement>(null)
+  // Each section opens at its top.
+  useEffect(() => mainRef.current?.scrollTo(0, 0), [tab, state.phase])
 
   const refreshCloud = useCallback(() => void bridge.cloudStatus().then(setCloud).catch(() => undefined), [bridge])
 
@@ -224,7 +227,7 @@ export function App() {
           </div>
         </nav>
 
-        <main>
+        <main ref={mainRef}>
           {state.talkError && (
             <div className="toast" role="alert">
               {state.talkError}

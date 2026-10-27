@@ -172,7 +172,7 @@ select {
 
 .body {
   display: grid;
-  grid-template-columns: 210px 1fr;
+  grid-template-columns: 210px minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -1042,6 +1042,32 @@ textarea::placeholder {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.topbar-policy .badge {
+  white-space: nowrap;
+}
+
+.topbar > .btn {
+  flex-shrink: 0;
+}
+
+.capture-pill {
+  flex: 0 1 auto;
+}
+
+@media (max-width: 1400px) {
+  .topbar-policy > .muted {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .topbar-policy {
+    display: none;
+  }
 }
 
 .nav .count.live {
