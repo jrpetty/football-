@@ -14,10 +14,16 @@ export function SourcePicker(props: { bridge: SightlineBridge; onPick: (id: stri
 
   const refresh = useCallback(() => {
     setError(null)
-    props.bridge
-      .listSources()
-      .then(setSources)
-      .catch((e: unknown) => setError(String(e)))
+    // The OS capturer can come back empty the first time it is asked; try a couple more times before showing nothing.
+    const attempt = (left: number): void =>
+      void props.bridge
+        .listSources()
+        .then((list) => {
+          if (list.length === 0 && left > 0) setTimeout(() => attempt(left - 1), 800)
+          else setSources(list)
+        })
+        .catch((e: unknown) => setError(String(e)))
+    attempt(2)
   }, [props.bridge])
   useEffect(refresh, [refresh])
 

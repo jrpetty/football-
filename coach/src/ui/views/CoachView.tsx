@@ -376,7 +376,7 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
       <div className="status-strip" role="status">
         <StatusItem label="Moment" value={st ? WINDOW_TEXT[st.window] : '—'} tone={st?.window === 'during_play' ? 'live' : 'info'} />
         <StatusItem label="Policy" value={st ? <PolicyBadge policy={{ status: st.policy.status, scope: st.policy.scope }} /> : '—'} />
-        <StatusItem label="Seeing" value={st ? (st.visible.stale ? 'Stale — not inferring' : `Fresh · ${pct(st.visible.confidence)}`) : 'Starting…'} tone={st?.visible.stale ? 'warn' : 'ok'} />
+        <StatusItem label="Seeing" value={!st ? 'Starting…' : st.visible.stale ? 'Stale — not inferring' : Object.keys(st.visible.values).length === 0 ? 'Nothing read yet' : `Fresh · ${pct(st.visible.confidence)}`} tone={st?.visible.stale ? 'warn' : 'ok'} />
         {st?.vision.enabled ? (
           <StatusItem
             label="Cloud vision"

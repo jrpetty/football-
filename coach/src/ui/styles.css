@@ -2708,3 +2708,24 @@ kbd {
   flex-direction: column;
   gap: 4px;
 }
+
+/* The top bar must never widen the page: everything in it can shrink. */
+.app {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.topbar {
+  min-width: 0;
+}
+
+@media (max-width: 1440px) {
+  .btn.stop .kbd-inline {
+    display: none;
+  }
+}
+
+@media (max-width: 1320px) {
+  .topbar-policy .badge.neutral {
+    display: none;
+  }
+}
