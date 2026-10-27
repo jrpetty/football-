@@ -10,6 +10,7 @@
 // structurally before the engine sees them. Pack text that the coach can speak
 // is checked for causal or absolute claims.
 
+import { KB_LIMITS, KNOWLEDGE_SECTIONS, type KnowledgeSection } from '../knowledge/base.ts'
 import type { BoundaryKind, EventCategory, GamePhase, HsvRange, NormRect, RoundResult } from '../types.ts'
 
 export const PROFILE_SCHEMA_VERSION = 2
@@ -330,6 +331,10 @@ export interface GameProfile {
     /** Advice categories the coach must never give for this game. */
     readonly prohibitedAdvice: readonly string[]
     readonly terminology: Readonly<Record<string, string>>
+    /** Curated reference knowledge (modes, maps, screens, HUD, roster…), dated; see src/core/knowledge/base.ts. */
+    readonly reference?: readonly KnowledgeSection[]
+    /** When the reference was last checked against the game. */
+    readonly referenceCheckedAt?: string
   }
   readonly limitations: readonly string[]
   /** Conditions under which the pack stops inferring (shown to the player). */
@@ -859,6 +864,21 @@ export function validateProfile(input: unknown): ValidationResult {
     })
     c.arr(knowledge.prohibitedAdvice, 'knowledge.prohibitedAdvice').forEach((x, i) => c.str(x, `knowledge.prohibitedAdvice[${i}]`, { max: 300 }))
     c.obj(knowledge.terminology, 'knowledge.terminology')
+    if (knowledge.reference !== undefined) {
+      c.arr(knowledge.reference, 'knowledge.reference').forEach((sec, i) => {
+        const path = `knowledge.reference[${i}]`
+        const o = c.obj(sec, path)
+        if (!o) return
+        if (!KNOWLEDGE_SECTIONS.some((k) => k.id === o.id)) c.errors.push(`${path}.id: one of ${KNOWLEDGE_SECTIONS.map((k) => k.id).join(', ')}`)
+        c.arr(o.items, `${path}.items`).forEach((it, j) => {
+          const io = c.obj(it, `${path}.items[${j}]`)
+          if (!io) return
+          c.str(io.name, `${path}.items[${j}].name`, { max: KB_LIMITS.name })
+          c.str(io.detail, `${path}.items[${j}].detail`, { max: KB_LIMITS.detail })
+        })
+      })
+      c.str(knowledge.referenceCheckedAt, 'knowledge.referenceCheckedAt', { optional: true, max: 40 })
+    }
   }
 
   c.arr(p.limitations, 'limitations').forEach((l, i) => c.str(l, `limitations[${i}]`, { max: 500 }))

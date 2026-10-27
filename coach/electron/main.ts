@@ -33,11 +33,15 @@ import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
 import type { CloudStatus } from '../shared/cloud.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
-import type { CoachSettings } from '../src/core/settings.ts'
+import type { CoachSettings, Hotkeys } from '../src/core/settings.ts'
 import { BUILT_IN_PROFILES } from '../src/profiles/index.ts'
 import { KeyStore, type Cipher } from './cloud/keystore.ts'
 import { CloudService } from './cloud/service.ts'
 import { CaptureConsent, isSourceId } from './consent.ts'
+import type { PromptExtras } from '../src/core/vision/contract.ts'
+import { screensForPrompt } from '../src/core/vision/screens.ts'
+import { knowledgeStats, knowledgeText, type KnowledgeBase } from '../src/core/knowledge/base.ts'
+import type { KnowledgeStatus } from '../shared/bridge.ts'
 import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
 import { ASR_MODEL, isInstalled, installModel, removeModel, TTS_MODELS } from './models.ts'
@@ -47,10 +51,11 @@ import { isProfileId, Storage } from './storage.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? null
-const STOP_SHORTCUT = 'CommandOrControl+Shift+F12'
-const TALK_SHORTCUT = 'CommandOrControl+Shift+F11'
 const APP_TITLE = 'Sightline Coach'
 const MAX_JPEG_BYTES = 3 * 1024 * 1024
+/** Knowledge in the recogniser's prompt (sent every few seconds, cached) and in answers (rarer, can be much larger). */
+const VISION_KNOWLEDGE_CHARS = 14_000
+const ANSWER_KNOWLEDGE_CHARS = 60_000
 
 const consent = new CaptureConsent()
 /** The sources last shown in the picker. Only these can be chosen. */
@@ -70,7 +75,27 @@ const ttsModels: Record<TtsModelKey, ModelState> = {
 /** Measured synthesis speed per model (compute seconds per second of speech), smoothed. */
 const ttsRtf: Partial<Record<TtsModelKey, number>> = {}
 let win: BrowserWindow | null = null
-const shortcuts = { stop: false, talk: false }
+/** Global keys currently registered (accelerator), or null when the OS refused one (another app owns it). */
+const shortcuts: Record<keyof Hotkeys, string | null> = { talk: null, mark: null, stop: null }
+const shortcutErrors: string[] = []
+
+/** (Re-)register the player's global keys. They work while the game has focus; the OS gives them to Sightline only. */
+function registerShortcuts(keys: Hotkeys): void {
+  globalShortcut.unregisterAll()
+  shortcutErrors.length = 0
+  const actions: Record<keyof Hotkeys, string> = { talk: CHANNELS.pushToTalk, mark: CHANNELS.markMoment, stop: CHANNELS.stopRequested }
+  for (const name of ['stop', 'talk', 'mark'] as const) {
+    const accel = keys[name]
+    let ok = false
+    try {
+      ok = globalShortcut.register(accel, () => win?.webContents.send(actions[name]))
+    } catch {
+      ok = false
+    }
+    shortcuts[name] = ok ? accel : null
+    if (!ok) shortcutErrors.push(`${shortcutLabel(accel)} is already used by another program; choose a different ${name} key.`)
+  }
+}
 
 /** macOS 15+ has a system picker that Electron can show (ScreenCaptureKit). */
 function hasSystemPicker(): boolean {
@@ -196,14 +221,80 @@ function shortcutLabel(accel: string): string {
   return accel.replace('CommandOrControl', process.platform === 'darwin' ? 'Cmd' : 'Ctrl')
 }
 
+/** Background knowledge and learned screens for prompts, built once per pack (they change rarely, so the prompt stays cacheable). */
+const promptCache = new Map<string, string>()
+const building = new Map<string, { stage: string; error: string | null }>()
+const lastBuildCost = new Map<string, number>()
+
+async function visionExtras(profile: GameProfile): Promise<PromptExtras> {
+  const key = `vision:${profile.id}`
+  let knowledge = promptCache.get(key)
+  if (knowledge === undefined) {
+    const kb = await storage.loadKnowledge(profile.id)
+    // A compact slice for the recogniser (it runs every few seconds): how to recognise screens and the HUD, and the names of things.
+    knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
+    promptCache.set(key, knowledge)
+  }
+  const screensKey = `screens:${profile.id}`
+  let screens = promptCache.get(screensKey)
+  if (screens === undefined) {
+    screens = screensForPrompt(await storage.loadScreens(profile.id))
+    promptCache.set(screensKey, screens)
+  }
+  return { knowledge, screens }
+}
+
+async function answerKnowledge(profile: GameProfile): Promise<string> {
+  const key = `answer:${profile.id}`
+  let text = promptCache.get(key)
+  if (text === undefined) {
+    const kb = await storage.loadKnowledge(profile.id)
+    text = knowledgeText(knowledgeSources(profile, kb), { budget: ANSWER_KNOWLEDGE_CHARS })
+    const screens = screensForPrompt(await storage.loadScreens(profile.id), 40)
+    if (screens) text += `\n## Screens seen in this player's games\n${screens}`
+    promptCache.set(key, text)
+  }
+  return text
+}
+
+function knowledgeSources(profile: GameProfile, kb: KnowledgeBase | null) {
+  return [
+    { label: 'pack', sections: profile.knowledge.reference ?? [] },
+    ...(kb ? [{ label: 'research', sections: kb.sections }] : []),
+  ]
+}
+
+async function knowledgeStatus(id: unknown): Promise<KnowledgeStatus> {
+  const profileId = typeof id === 'string' ? id : ''
+  const kb = await storage.loadKnowledge(profileId)
+  const b = building.get(profileId)
+  return {
+    building: !!b && b.stage !== 'Failed',
+    stage: b?.stage ?? null,
+    error: b?.error ?? null,
+    knowledge: kb
+      ? { gameVersion: kb.gameVersion, createdAt: kb.createdAt, model: kb.model, ...knowledgeStats(kb), sources: kb.sources.length, bytes: await storage.knowledgeBytes(profileId), costUsd: lastBuildCost.get(profileId) ?? null, sectionsList: kb.sections.map((s) => ({ id: s.id, items: s.items.slice(0, 200) })) }
+      : null,
+    screens: (await storage.loadScreens(profileId))?.screens.length ?? 0,
+  }
+}
+
+function isJpeg(v: unknown): v is ArrayBuffer {
+  if (!(v instanceof ArrayBuffer) || v.byteLength < 4 || v.byteLength > MAX_JPEG_BYTES) return false
+  const b = new Uint8Array(v, 0, 3)
+  return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
+}
+
 function registerIpc(): void {
   handle(CHANNELS.info, (): PlatformInfo => ({
     shell: 'electron',
     platform: process.platform,
     appVersion: app.getVersion(),
     systemPicker: hasSystemPicker(),
-    stopShortcut: shortcuts.stop ? shortcutLabel(STOP_SHORTCUT) : null,
-    talkShortcut: shortcuts.talk ? shortcutLabel(TALK_SHORTCUT) : null,
+    stopShortcut: shortcuts.stop ? shortcutLabel(shortcuts.stop) : null,
+    talkShortcut: shortcuts.talk ? shortcutLabel(shortcuts.talk) : null,
+    markShortcut: shortcuts.mark ? shortcutLabel(shortcuts.mark) : null,
+    shortcutErrors: [...shortcutErrors],
   }))
 
   // --- Capture -------------------------------------------------------------------------
@@ -240,7 +331,12 @@ function registerIpc(): void {
 
   // --- Settings and player data ---------------------------------------------------------
   handle(CHANNELS.loadSettings, async () => (settings = await storage.loadSettings()))
-  handle(CHANNELS.saveSettings, async (s) => (settings = await storage.saveSettings(s)))
+  handle(CHANNELS.saveSettings, async (s) => {
+    const before = settings?.hotkeys
+    settings = await storage.saveSettings(s)
+    if (JSON.stringify(before) !== JSON.stringify(settings.hotkeys)) registerShortcuts(settings.hotkeys)
+    return settings
+  })
   handle(CHANNELS.loadTendencies, (id) => storage.loadTendencies(id))
   handle(CHANNELS.saveTendencies, (snap) => storage.saveTendencies(snap))
   handle(CHANNELS.setPatternVerdict, (id, ep, v) => storage.setPatternVerdict(id, ep, v))
@@ -269,6 +365,7 @@ function registerIpc(): void {
     return cloudStatus()
   })
   handle(CHANNELS.resetCloudSession, () => cloud.resetSession())
+  handle(CHANNELS.testCloud, () => cloud.testKey())
   handle(CHANNELS.analyzeFrame, async (req) => {
     const r = req as { profileId?: unknown; jpeg?: unknown; context?: unknown } | null
     const profile = await resolveProfile(r?.profileId)
@@ -276,14 +373,52 @@ function registerIpc(): void {
     if (!(r?.jpeg instanceof ArrayBuffer) || r.jpeg.byteLength === 0 || r.jpeg.byteLength > MAX_JPEG_BYTES) {
       return { ok: false, error: 'Invalid frame.', fatal: true }
     }
-    return cloud.analyzeFrame(profile, { base64: Buffer.from(r.jpeg).toString('base64'), mediaType: 'image/jpeg' }, sanitizeContext(r.context))
+    return cloud.analyzeFrame(profile, { base64: Buffer.from(r.jpeg).toString('base64'), mediaType: 'image/jpeg' }, sanitizeContext(r.context), await visionExtras(profile))
   })
   handle(CHANNELS.ask, async (req) => {
-    const r = req as { profileId?: unknown; question?: unknown; digest?: unknown } | null
+    const r = req as { profileId?: unknown; question?: unknown; digest?: unknown; image?: unknown; review?: unknown } | null
     const profile = await resolveProfile(r?.profileId)
     if (!profile) return { ok: false, error: 'Unknown pack.', fatal: true }
     if (typeof r?.question !== 'string' || !r.question.trim() || typeof r.digest !== 'string') return { ok: false, error: 'Invalid question.', fatal: true }
-    return cloud.ask(profile, r.question.slice(0, 1000), r.digest.slice(0, 40_000))
+    let image: { base64: string } | undefined
+    if (r.image !== undefined && r.image !== null) {
+      if (!isJpeg(r.image)) return { ok: false, error: 'Invalid screen image.', fatal: true }
+      image = { base64: Buffer.from(r.image).toString('base64') }
+    }
+    return cloud.ask(profile, r.question.slice(0, 1000), r.digest.slice(0, 40_000), { image, review: r.review === true, knowledge: await answerKnowledge(profile) })
+  })
+
+  // --- Game knowledge: learned screens, and the researched knowledge base ------------------------
+  handle(CHANNELS.loadScreens, (id) => storage.loadScreens(id))
+  handle(CHANNELS.saveScreens, async (catalog) => {
+    const ok = await storage.saveScreens(catalog)
+    if (ok) promptCache.clear()
+    return ok
+  })
+  handle(CHANNELS.knowledgeStatus, async (id) => knowledgeStatus(id))
+  handle(CHANNELS.buildKnowledge, async (req) => {
+    const r = req as { profileId?: unknown; focus?: unknown } | null
+    const profile = await resolveProfile(r?.profileId)
+    if (!profile) throw new Error('Unknown pack.')
+    if (building.has(profile.id)) return knowledgeStatus(profile.id)
+    building.set(profile.id, { stage: 'Starting', error: null })
+    void cloud
+      .buildKnowledge(profile, typeof r?.focus === 'string' ? r.focus.slice(0, 300) : '', (stage) => building.set(profile.id, { stage, error: null }))
+      .then(async (result) => {
+        if (result.ok) {
+          await storage.saveKnowledge(result.knowledge)
+          promptCache.clear()
+          building.delete(profile.id)
+          lastBuildCost.set(profile.id, result.costUsd)
+        } else building.set(profile.id, { stage: 'Failed', error: result.error })
+      })
+      .catch((e: unknown) => building.set(profile.id, { stage: 'Failed', error: e instanceof Error ? e.message : String(e) }))
+    return knowledgeStatus(profile.id)
+  })
+  handle(CHANNELS.deleteKnowledge, async (id) => {
+    await storage.deleteKnowledge(id)
+    promptCache.clear()
+    return knowledgeStatus(id)
   })
   handle(CHANNELS.research, async (req) => {
     const r = req as { profileId?: unknown; gameTitle?: unknown; focus?: unknown } | null
@@ -395,8 +530,7 @@ if (!app.requestSingleInstanceLock()) {
     createWindow()
 
     // Global keys, so the player never has to alt-tab out of a game.
-    shortcuts.stop = globalShortcut.register(STOP_SHORTCUT, () => win?.webContents.send(CHANNELS.stopRequested))
-    shortcuts.talk = globalShortcut.register(TALK_SHORTCUT, () => win?.webContents.send(CHANNELS.pushToTalk))
+    registerShortcuts(settings.hotkeys)
   })
 
   app.on('will-quit', () => {

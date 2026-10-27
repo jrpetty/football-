@@ -9,7 +9,7 @@ import type { FromWorker, ToWorker } from '../src/worker/protocol.ts'
 import { arena, policyFor, settings } from './helpers.ts'
 
 function start(): Extract<ToWorker, { type: 'start' }> {
-  return { type: 'start', profile: arena, settings: settings(), policy: policyFor(arena, 'ranked'), history: null, matchHistory: [], context: {}, vision: { enabled: false, intervalMs: 3000 }, now: 0 }
+  return { type: 'start', profile: arena, settings: settings(), policy: policyFor(arena, 'ranked'), history: null, matchHistory: [], context: {}, vision: { enabled: false, intervalMs: 3000 }, screens: null, now: 0 }
 }
 
 test('the queue drops and releases the oldest items beyond capacity', () => {
@@ -110,4 +110,53 @@ test('with cloud vision on, frames are sampled, answers validated, and only decl
   for (t = 20_000; t <= 40_000; t += 1000) host.handle({ type: 'pixels', frame: frame(t, (t / 1000) % 200) })
   assert.equal(posted.filter((m) => m.type === 'vision-frame').length, before)
   assert.ok(posted.some((m) => m.type === 'output' && m.entries.some((e) => e.type === 'notice' && /spend cap/.test(e.text))))
+})
+
+// --- Screen memory ------------------------------------------------------------------------------
+
+test('a menu learned once is recognised locally afterwards: no request, phase from memory', async () => {
+  const { builtInProfile } = await import('../src/profiles/index.ts')
+  const aoe = builtInProfile('aoe2-de')
+  const posted: FromWorker[] = []
+  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => fn(), now: () => 0, encodeJpeg: async () => new ArrayBuffer(16), decode: () => { throw new Error('unused') } })
+  host.handle({ ...start(), profile: aoe, settings: settings({ profileId: 'aoe2-de', profileModeId: 'skirmish-vs-ai' }), policy: policyFor(aoe, 'skirmish-vs-ai'), vision: { enabled: true, intervalMs: 3000 } })
+  // A "menu": left half bright, right half dark, with a stripe that moves a little (animation).
+  const menu = (ts: number) => {
+    const w = 96, h = 54, data = new Uint8ClampedArray(w * h * 4)
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, v = x < w / 2 ? 200 - y : 30 + ((x + ts / 1000) % 7)
+      data[i] = data[i + 1] = data[i + 2] = v; data[i + 3] = 255
+    }
+    return { width: w, height: h, data, timestamp: ts }
+  }
+  host.handle({ type: 'pixels', frame: menu(0) })
+  await new Promise((r) => setTimeout(r, 0))
+  const sent = posted.filter((m) => m.type === 'vision-frame')
+  assert.equal(sent.length, 1)
+  host.handle({ type: 'vision-result', frameAt: 0, arrivedAt: 1500, error: null,
+    response: { phase: 'menu', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, unreadable: '', state: [], events: [],
+      screen: { name: 'Skirmish setup', kind: 'menu', summary: 'Choose civilisation, map and AI difficulty before a game against the AI.' } } })
+  const saved = posted.find((m) => m.type === 'screens') as Extract<FromWorker, { type: 'screens' }> | undefined
+  assert.ok(saved, 'the new screen is handed to the renderer to save')
+  assert.equal(saved!.catalog.screens[0].name, 'Skirmish setup')
+  assert.match(saved!.catalog.screens[0].h, /^[0-9a-f]{16}$/)
+  assert.ok(JSON.stringify(saved!.catalog).length < 400, 'a screen costs a few hundred bytes, no image')
+
+  // The same menu later: recognised from memory, nothing sent.
+  for (let t = 4000; t <= 30_000; t += 4000) host.handle({ type: 'pixels', frame: menu(t) })
+  await new Promise((r) => setTimeout(r, 0))
+  assert.deepEqual(posted.filter((m) => m.type === 'vision-frame').map((m) => (m as { frameAt: number }).frameAt), [0], 'no further requests for a known menu')
+  const status = posted.filter((m) => m.type === 'output' && m.status).at(-1) as Extract<FromWorker, { type: 'output' }>
+  assert.equal(status.status!.vision.screen?.name, 'Skirmish setup')
+  assert.equal(status.status!.vision.screen?.from, 'memory')
+  const s = status.status!.vision.sampler
+  assert.ok(s.knownScreens >= 1 && s.knownScreens + s.skippedUnchanged >= 6, 'every later frame was handled without a request')
+  assert.equal(status.status!.visible.phase, 'menu')
+
+  // Snapshots for questions and marked moments come from the latest frame.
+  host.handle({ type: 'snapshot', requestId: 7, maxWidth: 1280 })
+  await new Promise((r) => setTimeout(r, 0))
+  const snap = posted.find((m) => m.type === 'snapshot') as Extract<FromWorker, { type: 'snapshot' }>
+  assert.equal(snap.requestId, 7)
+  assert.ok(snap.jpeg && snap.width === 96)
 })

@@ -10,6 +10,7 @@
 
 import { STANDARD_STATE_KEYS, type GameProfile, type VisionStateSpec } from '../profile/schema.ts'
 import type { GamePhase, Observation } from '../types.ts'
+import { SCREEN_KINDS } from './screens.ts'
 
 export const PHASES: readonly GamePhase[] = ['menu', 'round', 'combat', 'round_end', 'match_end', 'unknown']
 export const OUTCOMES = ['success', 'failure', 'unknown'] as const
@@ -30,10 +31,18 @@ export interface VisionResponse {
   }[]
   /** What could not be read, in a few words (for diagnostics). */
   readonly unreadable: string
+  /** What screen this is (menu, loading, scoreboard, gameplay…), so new menus are understood and remembered. */
+  readonly screen?: { readonly name: string; readonly kind: string; readonly summary: string } | null
+}
+
+/** Extra, slowly changing context for the recogniser: the game knowledge base and the screens already learned. */
+export interface PromptExtras {
+  readonly knowledge?: string
+  readonly screens?: string
 }
 
 /** The fixed part of the prompt: cacheable, one per pack. */
-export function visionSystemPrompt(profile: GameProfile): string {
+export function visionSystemPrompt(profile: GameProfile, extras: PromptExtras = {}): string {
   const v = profile.vision
   if (!v) throw new Error(`${profile.id} has no vision schema`)
   const zones = new Map((profile.zones ?? []).map((z) => [z.id, z]))
@@ -65,6 +74,14 @@ export function visionSystemPrompt(profile: GameProfile): string {
   } else lines.push('', 'Event types: none for this game; always return an empty events list.')
   if (v.crops?.length) lines.push('', `The image is a vertical stack of crops, top to bottom: ${v.crops.map((c) => c.label).join(', ')}.`)
   lines.push('', 'For every event, "evidence" names the visible cue in a few words (e.g. "GOAL graphic", "replay of shot from left of box").')
+  lines.push(
+    '',
+    'screen: always say what screen this is. name: what the game calls it, or a short plain name (e.g. "Main menu", "Loadout editor", "Post-match scoreboard", "Loading screen", "In match"). ' +
+      `kind: one of ${SCREEN_KINDS.join(', ')}. summary: one sentence — for a menu, what it is for and the key options or information on it; for gameplay, what is happening. ` +
+      'If it matches a known screen below, reuse that exact name.',
+  )
+  if (extras.screens) lines.push('', 'Screens already known in this game:', extras.screens)
+  if (extras.knowledge) lines.push('', 'Game reference (background knowledge to help you recognise what you see; never report anything that is not visible in this frame):', extras.knowledge)
   return lines.join('\n')
 }
 

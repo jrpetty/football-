@@ -9,6 +9,9 @@
 //   history/<pack>.json      opt-in match records             │ encrypted with
 //   notes/<pack>.json        opt-in notes and goals           ┘ safeStorage when available
 //   research/<pack>.json     cited research briefs (public web content)
+//   knowledge/<pack>.kb.gz   game knowledge base built by research (gzip JSON; public web content)
+//   knowledge/<pack>.screens.json  screens learned from the player's screen: 64-bit
+//                            fingerprints + names (no images); deleted with player data
 //
 // Inputs come from the renderer and are re-validated here.
 
@@ -18,6 +21,9 @@ import { isMatchRecord, type MatchRecord } from '../src/core/analyses/matchRecor
 import { deletePattern, migrateSnapshot, setVerdict, type PatternSnapshot, type PatternVerdict } from '../src/core/patterns.ts'
 import { DEFAULT_SETTINGS, sanitizeSettings, type CoachSettings } from '../src/core/settings.ts'
 import { MODELS } from '../src/core/vision/cost.ts'
+import { isScreenCatalog, type ScreenCatalog } from '../src/core/vision/screens.ts'
+import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
+import { gunzipSync, gzipSync } from 'node:zlib'
 import type { Cipher } from './cloud/keystore.ts'
 import { DEFAULT_CLOUD, type CloudSettings, type ResearchBrief } from '../shared/cloud.ts'
 
@@ -49,7 +55,7 @@ export class Storage {
   }
 
   async init(): Promise<void> {
-    for (const d of ['profiles', 'tendencies', 'history', 'notes', 'research']) await mkdir(join(this.root, d), { recursive: true })
+    for (const d of ['profiles', 'tendencies', 'history', 'notes', 'research', 'knowledge']) await mkdir(join(this.root, d), { recursive: true })
   }
 
   // --- Settings ------------------------------------------------------------------------
@@ -148,6 +154,11 @@ export class Storage {
 
   /** Delete long-term player data for one pack, or for every pack when null. */
   async forgetPlayerData(profileId: unknown): Promise<void> {
+    if (profileId === null) {
+      for (const name of await readdir(join(this.root, 'knowledge')).catch(() => [] as string[])) {
+        if (name.endsWith('.screens.json')) await rm(join(this.root, 'knowledge', name), { force: true })
+      }
+    } else if (isProfileId(profileId)) await rm(this.screensPath(profileId), { force: true })
     for (const dir of ['tendencies', 'history', 'notes']) {
       if (profileId === null) {
         await rm(join(this.root, dir), { recursive: true, force: true })
@@ -187,6 +198,60 @@ export class Storage {
 
   async deleteResearch(profileId: unknown): Promise<void> {
     if (isProfileId(profileId)) await rm(this.path('research', profileId), { force: true })
+  }
+
+  // --- Game knowledge: learned screens and the researched knowledge base ---------------------
+
+  async loadScreens(profileId: unknown): Promise<ScreenCatalog | null> {
+    if (!isProfileId(profileId)) return null
+    const v = await this.readJson(this.screensPath(profileId))
+    return isScreenCatalog(v) && v.packId === profileId ? v : null
+  }
+
+  async saveScreens(catalog: unknown): Promise<boolean> {
+    if (!isScreenCatalog(catalog) || !isProfileId(catalog.packId)) return false
+    // Compact on disk: one line, no indentation (≈200 bytes per screen).
+    const path = this.screensPath(catalog.packId)
+    const tmp = `${path}.${process.pid}.tmp`
+    await writeFile(tmp, JSON.stringify(catalog), 'utf8')
+    await rename(tmp, path)
+    return true
+  }
+
+  async loadKnowledge(profileId: unknown): Promise<KnowledgeBase | null> {
+    if (!isProfileId(profileId)) return null
+    try {
+      const v = JSON.parse(gunzipSync(await readFile(this.knowledgePath(profileId))).toString('utf8'))
+      return isKnowledgeBase(v) && v.packId === profileId ? v : null
+    } catch {
+      return null
+    }
+  }
+
+  /** Stored gzip-compressed: a large knowledge base shrinks to a fraction of its size. */
+  async saveKnowledge(kb: KnowledgeBase): Promise<void> {
+    if (!isKnowledgeBase(kb) || !isProfileId(kb.packId)) throw new Error('Invalid knowledge base')
+    const path = this.knowledgePath(kb.packId)
+    const tmp = `${path}.${process.pid}.tmp`
+    await writeFile(tmp, gzipSync(Buffer.from(JSON.stringify(kb), 'utf8'), { level: 9 }))
+    await rename(tmp, path)
+  }
+
+  async deleteKnowledge(profileId: unknown): Promise<void> {
+    if (isProfileId(profileId)) await rm(this.knowledgePath(profileId), { force: true })
+  }
+
+  async knowledgeBytes(profileId: unknown): Promise<number> {
+    if (!isProfileId(profileId)) return 0
+    return (await stat(this.knowledgePath(profileId)).catch(() => null))?.size ?? 0
+  }
+
+  private screensPath(profileId: string): string {
+    return join(this.root, 'knowledge', `${profileId}.screens.json`)
+  }
+
+  private knowledgePath(profileId: string): string {
+    return join(this.root, 'knowledge', `${profileId}.kb.gz`)
   }
 
   // --- User packs --------------------------------------------------------------------------

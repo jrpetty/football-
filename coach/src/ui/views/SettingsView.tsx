@@ -9,6 +9,8 @@ import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
+import { HotkeyField } from '../components/HotkeyField.tsx'
+import type { Hotkeys } from '../../core/settings.ts'
 import { usd } from '../format.ts'
 import type { CoachSession } from '../session.ts'
 
@@ -41,6 +43,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} />
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
+      <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
 
       <VoicePanel settings={settings} onSettings={onSettings} session={session} bridge={bridge} info={info} />
 
@@ -330,6 +333,44 @@ function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: Coa
       ) : settings.voiceInput && !desktop ? (
         <Notice level="info">Voice input needs the desktop app.</Notice>
       ) : null}
+    </section>
+  )
+}
+
+// --- Keyboard -----------------------------------------------------------------------------
+
+function KeyboardPanel({ settings, onSettings, info }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; info: PlatformInfo | null }) {
+  const keys = settings.hotkeys
+  const set = (name: keyof Hotkeys) => (accel: string) => onSettings({ hotkeys: { ...keys, [name]: accel } })
+  const taken = (name: keyof Hotkeys) => (Object.keys(keys) as (keyof Hotkeys)[]).filter((k) => k !== name).map((k) => keys[k])
+  const desktop = info?.shell === 'electron'
+  return (
+    <section className="panel" aria-labelledby="keys">
+      <div className="panel-head">
+        <h2 id="keys">Keyboard</h2>
+        <span className="muted small">These keys work while the game has focus — no alt-tabbing.</span>
+      </div>
+      <div className="hotkeys">
+        <HotkeyField
+          label="Talk to the coach"
+          hint={settings.voiceInput ? 'Press once to start talking, again to send.' : 'Turn on voice input above to use it.'}
+          value={keys.talk}
+          taken={taken('talk')}
+          onChange={set('talk')}
+        />
+        <HotkeyField label="Mark this moment" hint="Saves the current screen (in memory) so you can ask about that decision after the match." value={keys.mark} taken={taken('mark')} onChange={set('mark')} />
+        <HotkeyField label="Stop capture" hint="Stops watching immediately." value={keys.stop} taken={taken('stop')} onChange={set('stop')} />
+      </div>
+      {info?.shortcutErrors.map((e) => (
+        <Notice key={e} level="warning">
+          {e}
+        </Notice>
+      ))}
+      <p className="muted small" style={{ marginBottom: 0 }}>
+        {desktop
+          ? 'While Sightline runs, the game will not receive these keys, so pick ones your game does not use.'
+          : 'Global keys need the desktop app.'}
+      </p>
     </section>
   )
 }

@@ -16,6 +16,8 @@ export interface SamplerStats {
   readonly sent: number
   readonly skippedUnchanged: number
   readonly errors: number
+  /** Frames recognised locally as an already-known screen (no request sent). */
+  readonly knownScreens: number
   readonly inFlight: boolean
   readonly backoffUntil: number
 }
@@ -31,6 +33,7 @@ export class VisionSampler {
   private skippedUnchanged = 0
   private errors = 0
   private paused = false
+  private knownScreens = 0
 
   constructor(cfg: SamplerConfig) {
     this.cfg = cfg
@@ -55,6 +58,13 @@ export class VisionSampler {
     this.sent++
   }
 
+  /** The frame was a screen already in memory: treat the interval as used, but send nothing. */
+  handledLocally(now: number, grid: Float32Array): void {
+    this.lastSentAt = now
+    this.lastGrid = grid
+    this.knownScreens++
+  }
+
   done(now: number, ok: boolean, retryAfterMs?: number): void {
     this.inFlight = false
     if (ok) {
@@ -73,7 +83,7 @@ export class VisionSampler {
   }
 
   get stats(): SamplerStats {
-    return { sent: this.sent, skippedUnchanged: this.skippedUnchanged, errors: this.errors, inFlight: this.inFlight, backoffUntil: this.backoffUntil }
+    return { sent: this.sent, skippedUnchanged: this.skippedUnchanged, errors: this.errors, knownScreens: this.knownScreens, inFlight: this.inFlight, backoffUntil: this.backoffUntil }
   }
 }
 

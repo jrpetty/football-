@@ -12,6 +12,7 @@ import type { QueueStats } from '../core/queue.ts'
 import type { CoachSettings } from '../core/settings.ts'
 import type { Frame, Observation, RoundResult, TimelineEntry, Utterance } from '../core/types.ts'
 import type { SamplerStats } from '../core/vision/sampler.ts'
+import type { ScreenCatalog, ScreenInfo } from '../core/vision/screens.ts'
 
 export interface VisionConfig {
   readonly enabled: boolean
@@ -28,8 +29,12 @@ export type ToWorker =
       readonly matchHistory: readonly MatchRecord[]
       readonly context: Readonly<Record<string, string | number>>
       readonly vision: VisionConfig
+      /** Screens learned in earlier sessions (menus etc.), recognised locally without a request. */
+      readonly screens: ScreenCatalog | null
       readonly now: number
     }
+  /** Encode the latest frame (whole, downscaled) for a question about the screen or a marked moment. */
+  | { readonly type: 'snapshot'; readonly requestId: number; readonly maxWidth: number }
   /** A captured video frame. Transferred, then closed by the worker. */
   | { readonly type: 'bitmap'; readonly bitmap: ImageBitmap; readonly timestamp: number }
   /** An already-decoded frame (the pixel simulator). Its buffer is transferred. */
@@ -68,6 +73,9 @@ export interface VisionStatus {
   readonly dropped: number
   /** Mean recognition latency (frame capture → answer), ms. */
   readonly latencyMs: number
+  /** What screen is showing, as last recognised (from memory or by the model). */
+  readonly screen: (ScreenInfo & { readonly from: 'memory' | 'model'; readonly at: number }) | null
+  readonly knownScreens: number
 }
 
 export interface WorkerStatus extends EngineStatus {
@@ -92,5 +100,8 @@ export type FromWorker =
     }
   /** A sampled frame for the vision recogniser (cloud vision on). */
   | { readonly type: 'vision-frame'; readonly frameAt: number; readonly jpeg: ArrayBuffer }
+  /** The screen catalog changed (a new menu was learned): the renderer saves it. */
+  | { readonly type: 'screens'; readonly catalog: ScreenCatalog }
+  | { readonly type: 'snapshot'; readonly requestId: number; readonly jpeg: ArrayBuffer | null; readonly frameAt: number; readonly width: number; readonly height: number }
   | { readonly type: 'stopped'; readonly snapshot: PatternSnapshot; readonly insights: InsightView[]; readonly report: SessionReport }
   | { readonly type: 'error'; readonly message: string }

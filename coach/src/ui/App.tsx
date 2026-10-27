@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS, MODE_INFO, sanitizeSettings, type CoachSettings } fro
 import { getBridge } from '../platform/bridge.ts'
 import { BUILT_IN_PROFILES } from '../profiles/index.ts'
 import { MicIcon } from './components/common.tsx'
+import { Onboarding } from './components/Onboarding.tsx'
 import { SourcePicker } from './components/SourcePicker.tsx'
 import { PolicyBadge } from './components/viz.tsx'
 import { policyFor } from './policy.ts'
@@ -45,6 +46,7 @@ export function App() {
   const [tab, setTab] = useState<Tab>('coach')
   const [picking, setPicking] = useState(false)
   const [suggestion, setSuggestion] = useState<{ profile: GameProfile; window: string } | null>(null)
+  const [setupOpen, setSetupOpen] = useState(() => !new URLSearchParams(location.search).has('nosetup'))
   const mainRef = useRef<HTMLElement>(null)
   // Each section opens at its top.
   useEffect(() => mainRef.current?.scrollTo(0, 0), [tab, state.phase])
@@ -77,6 +79,14 @@ export function App() {
   // Global shortcuts: stop capture; push-to-talk.
   useEffect(() => bridge.onStopRequested(() => void session.stop()), [bridge, session])
   useEffect(() => bridge.onPushToTalk(() => void session.toggleTalk(cloud)), [bridge, session, cloud])
+  useEffect(() => bridge.onMarkMoment(() => void session.markMoment()), [bridge, session])
+  // Keys are re-registered by the shell when they change; show what it actually got.
+  const hotkeysKey = JSON.stringify(settings.hotkeys)
+  useEffect(() => {
+    if (!loaded) return
+    const t = setTimeout(() => void bridge.info().then(setInfo), 400)
+    return () => clearTimeout(t)
+  }, [bridge, loaded, hotkeysKey])
 
   // Spend changes while cloud vision runs.
   useEffect(() => {
@@ -288,6 +298,19 @@ export function App() {
         </main>
       </div>
 
+      {loaded && setupOpen && !settings.onboarded && (
+        <Onboarding
+          bridge={bridge}
+          session={session}
+          info={info}
+          cloud={cloud}
+          onCloud={setCloud}
+          settings={settings}
+          onSettings={updateSettings}
+          profiles={catalog.profiles}
+          onDone={() => setSetupOpen(false)}
+        />
+      )}
       {picking && <SourcePicker bridge={bridge} onCancel={() => setPicking(false)} onPick={(id, name) => void onPicked(id, name)} />}
     </div>
   )

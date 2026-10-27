@@ -209,3 +209,13 @@ test('a corrupted voice archive is refused before anything is written', async ()
   await assert.rejects(unpackArchive(Buffer.from('not an archive'), root, TTS_MODELS.kokoro), /checksum/)
   assert.equal(await isInstalled(root, TTS_MODELS.kokoro), false)
 })
+
+test('global keys: only safe accelerators, one job per key', async () => {
+  const { isValidHotkey, DEFAULT_HOTKEYS } = await import('../src/core/settings.ts')
+  for (const ok of ['F8', 'F24', 'Alt+Q', 'Ctrl+Shift+F11', 'CommandOrControl+Shift+F12', 'numadd']) assert.ok(isValidHotkey(ok), ok)
+  // A bare letter would fire while typing in game chat; unknown modifiers and keys are refused.
+  for (const bad of ['A', 'Space', 'Meta+A', 'Ctrl+Ctrl+A', 'F25', '', 'Alt+Q; rm -rf', 42]) assert.ok(!isValidHotkey(bad), String(bad))
+  assert.deepEqual(sanitizeSettings({ hotkeys: { talk: 'F9', mark: 'F9', stop: 'F10' } }).hotkeys, DEFAULT_HOTKEYS, 'duplicates are refused')
+  assert.deepEqual(sanitizeSettings({ hotkeys: { talk: 'Alt+T', mark: 'F7', stop: 'F12' } }).hotkeys, { talk: 'Alt+T', mark: 'F7', stop: 'F12' })
+  assert.equal(DEFAULT_SETTINGS.onboarded, false)
+})

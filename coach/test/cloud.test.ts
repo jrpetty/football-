@@ -76,7 +76,7 @@ test('the validator survives garbage', () => {
 
 test('the structured-output schema uses the pack enums', () => {
   const schema = visionSchema(fc)
-  assert.ok(schema.safeParse({ phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, state: [], events: [], unreadable: '' }).success)
+  assert.ok(schema.safeParse({ phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, state: [], events: [], unreadable: '', screen: null }).success)
   assert.ok(!schema.safeParse({ phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, state: [{ key: 'xray', value: '1', confidence: 1 }], events: [], unreadable: '' }).success)
 })
 
@@ -237,4 +237,16 @@ test('the API key is stored only encrypted, never in plaintext, and only its las
   assert.ok(!(await readdir(dir)).includes('other.bin'), 'no plaintext fallback file')
   await ks.set(null)
   assert.ok(!(await readdir(dir)).includes('secret.bin'))
+})
+
+test('the key check is a free model listing, works with cloud features off, and reports a rejected key', async () => {
+  let listed = 0
+  const good = { models: { list: async () => ((listed++), { data: [{ id: 'claude-opus-5-5' }, { id: 'claude-haiku-5-5' }] }) }, beta: {} } as unknown as CloudClient
+  const s = new CloudService(() => 'sk-ant-test-0000', () => ({ ...DEFAULT_CLOUD, enabled: false }), () => good)
+  assert.deepEqual(await s.testKey(), { ok: true, models: ['claude-opus-5-5', 'claude-haiku-5-5'] })
+  assert.equal(listed, 1)
+  assert.equal(s.spend.usd, 0, 'listing models costs nothing')
+  assert.deepEqual(await new CloudService(() => null, () => DEFAULT_CLOUD, () => good).testKey(), { ok: false, error: 'No API key is set.' })
+  const bad = { models: { list: async () => { throw new Error('boom') } }, beta: {} } as unknown as CloudClient
+  assert.deepEqual(await new CloudService(() => 'sk-ant-x', () => DEFAULT_CLOUD, () => bad).testKey(), { ok: false, error: 'boom' })
 })

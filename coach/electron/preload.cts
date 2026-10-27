@@ -56,6 +56,13 @@ const bridge: SightlineBridge = {
   synthesize: (req) => invoke('sightline:synthesize', req),
   onStopRequested: (cb) => listen('sightline:stop-requested', cb),
   onPushToTalk: (cb) => listen('sightline:push-to-talk', cb),
+  onMarkMoment: (cb) => listen('sightline:mark-moment', cb),
+  testCloud: () => invoke('sightline:test-cloud'),
+  loadScreens: (id) => invoke('sightline:load-screens', id),
+  saveScreens: (c) => invoke('sightline:save-screens', c),
+  knowledgeStatus: (id) => invoke('sightline:knowledge-status', id),
+  buildKnowledge: (req) => invoke('sightline:build-knowledge', req),
+  deleteKnowledge: (id) => invoke('sightline:delete-knowledge', id),
 }
 
 contextBridge.exposeInMainWorld('sightline', bridge)

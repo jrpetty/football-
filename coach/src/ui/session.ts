@@ -27,6 +27,10 @@ const MAX_IN_FLIGHT = 2
 const TIMELINE_CAP = 1500
 const CAPTIONS_CAP = 40
 const CONVERSATION_CAP = 60
+/** Marked moments kept per session (each is a ~100 KB screenshot in memory). */
+const MOMENTS_CAP = 24
+/** A voice question this soon after marking a moment becomes that moment's note. */
+const MOMENT_NOTE_WINDOW_MS = 20_000
 
 export type Phase = 'idle' | 'starting' | 'capturing'
 export type SourceChoice = 'screen' | 'simulation' | 'replay-fc' | 'replay-aoe'
@@ -61,6 +65,20 @@ export interface QaEntry {
   readonly topic: string | null
 }
 
+/** A moment the player marked during play, to ask about after the match. Kept in memory only. */
+export interface Moment {
+  readonly id: string
+  /** Source-clock time. */
+  readonly at: number
+  readonly markedAt: string
+  /** Object URL of the downscaled screenshot (this session only; never written to disk). */
+  readonly imageUrl: string | null
+  readonly context: { readonly score: { player: number; opponent: number } | null; readonly screen: string | null; readonly phase: string | null }
+  /** What the player said about it (a voice question right after marking). */
+  readonly note: string | null
+  readonly review: { readonly status: 'idle' | 'reviewing' | 'done' | 'error'; readonly text: string | null; readonly costUsd: number }
+}
+
 export interface SessionState {
   readonly phase: Phase
   readonly source: { readonly kind: FrameSource['kind']; readonly label: string; readonly surface: Surface } | null
@@ -90,6 +108,9 @@ export interface SessionState {
   readonly conversation: readonly QaEntry[]
   readonly talk: 'idle' | 'recording' | 'transcribing'
   readonly talkError: string | null
+  readonly moments: readonly Moment[]
+  /** A short confirmation (e.g. "Moment marked"), cleared after a few seconds. */
+  readonly toast: string | null
 }
 
 const INITIAL: SessionState = {
@@ -115,6 +136,8 @@ const INITIAL: SessionState = {
   conversation: [],
   talk: 'idle',
   talkError: null,
+  moments: [],
+  toast: null,
 }
 
 type Mutable<T> = { -readonly [K in keyof T]?: T[K] }
@@ -133,6 +156,11 @@ export class CoachSession {
   private settings: CoachSettings | null = null
   private profile: GameProfile | null = null
   private recorder: PushToTalkRecorder | null = null
+  private snapshotSeq = 0
+  private readonly snapshots = new Map<number, (s: { jpeg: ArrayBuffer; frameAt: number } | null) => void>()
+  /** Screenshots of marked moments, by moment id (memory only). */
+  private readonly momentImages = new Map<string, ArrayBuffer>()
+  private toastTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(bridge: SightlineBridge) {
     this.bridge = bridge
@@ -272,6 +300,9 @@ export class CoachSession {
     }
     if (vision.enabled) await this.bridge.resetCloudSession().catch(() => undefined)
 
+    const screens = vision.enabled ? await this.bridge.loadScreens(profile.id).catch(() => null) : null
+    this.clearMoments()
+
     const worker = new Worker(new URL('../worker/pipeline.worker.ts', import.meta.url), { type: 'module' })
     worker.onmessage = (e: MessageEvent<FromWorker>) => this.onWorker(e.data)
     worker.onerror = (e) => this.set({ error: `Analysis stopped: ${e.message}` })
@@ -286,6 +317,7 @@ export class CoachSession {
       matchHistory: settings.saveTendencies ? this.state.history : [],
       context,
       vision,
+      screens,
       now: 0,
     })
 
@@ -440,7 +472,11 @@ export class CoachSession {
         notes: this.state.notes,
         research: this.state.research,
       })
-      const r = await this.bridge.ask({ profileId: profile.id, question: q, digest }).catch((err: unknown) => ({ ok: false as const, error: String(err) }))
+      // Asking during play: Claude sees the screen too, so "what should I do here?" can be answered.
+      const shot = this.state.source?.kind === 'screen' ? await this.snapshot(1280) : null
+      const r = await this.bridge
+        .ask({ profileId: profile.id, question: q, digest, ...(shot ? { image: shot.jpeg } : {}) })
+        .catch((err: unknown) => ({ ok: false as const, error: String(err) }))
       if (!r.ok) {
         this.patchQa(id, { status: 'error', note: r.error })
         return
@@ -448,7 +484,7 @@ export class CoachSession {
       text = r.text
       author = 'ai'
       costUsd = r.costUsd
-      note = `Phrased by ${cloud.settings.answerModel} from this session's recorded data${history.length ? ' and your match history' : ''}.`
+      note = `Answered by ${cloud.settings.answerModel} from ${shot ? 'your screen and ' : ''}this session's recorded data${history.length ? ' and your match history' : ''}.`
     } else {
       text =
         'I can answer questions about where you concede or lose the ball, your mistakes, patterns, statistics and how a match went from what I recorded. ' +
@@ -482,7 +518,10 @@ export class CoachSession {
         }
         const text = (await this.bridge.transcribe(pcm)).trim()
         this.set({ talk: 'idle', talkError: text ? null : 'I did not catch that. Try again a little closer to the microphone.' })
-        if (text) await this.ask(text, 'voice', cloud)
+        if (text) {
+          this.noteOnRecentMoment(text)
+          await this.ask(text, 'voice', cloud)
+        }
       } catch (err) {
         this.set({ talk: 'idle', talkError: err instanceof Error ? err.message : String(err) })
       }
@@ -511,6 +550,148 @@ export class CoachSession {
     this.set({ conversation: [] })
   }
 
+  // --- Marked moments ------------------------------------------------------------------
+
+  /** Bookmark the current screen to ask about after the match (the "mark" key). */
+  async markMoment(): Promise<void> {
+    if (!this.worker || !this.source) {
+      this.flash('Start capture to mark moments.')
+      return
+    }
+    const at = this.source.now()
+    const shot = this.state.source?.kind === 'screen' ? await this.snapshot(1024) : null
+    const id = uid('moment')
+    if (shot) this.momentImages.set(id, shot.jpeg)
+    const st = this.state.status
+    const moment: Moment = {
+      id,
+      at,
+      markedAt: new Date().toISOString(),
+      imageUrl: shot ? URL.createObjectURL(new Blob([shot.jpeg], { type: 'image/jpeg' })) : null,
+      context: { score: st?.score ?? null, screen: st?.vision.screen?.name ?? null, phase: st?.visible.phase ?? null },
+      note: null,
+      review: { status: 'idle', text: null, costUsd: 0 },
+    }
+    let moments = [...this.state.moments, moment]
+    while (moments.length > MOMENTS_CAP) {
+      this.dropMomentImage(moments[0])
+      moments = moments.slice(1)
+    }
+    this.set({
+      moments,
+      timeline: [...this.state.timeline, { type: 'notice', at, level: 'info', text: 'You marked this moment. Review it after the match.' }],
+    })
+    this.flash(`Moment marked${this.settings?.voiceInput ? ' — press your talk key to add what you were thinking' : ''}.`)
+    chime()
+  }
+
+  /**
+   * Ask Claude to review a marked moment: the screenshot, the player's note and
+   * the session data. During restricted play this waits until the match ends.
+   */
+  async reviewMoment(id: string, cloud: CloudStatus): Promise<void> {
+    const profile = this.profile
+    const settings = this.settings
+    const m = this.state.moments.find((x) => x.id === id)
+    if (!profile || !settings || !m || m.review.status === 'reviewing') return
+    const blocked = this.reviewBlocked()
+    if (blocked) {
+      this.flash(blocked)
+      return
+    }
+    if (!(cloud.available && cloud.settings.enabled && cloud.key.set)) {
+      this.patchMoment(id, { review: { status: 'error', text: 'Reviewing a moment needs cloud features (Settings).', costUsd: 0 } })
+      return
+    }
+    this.patchMoment(id, { review: { status: 'reviewing', text: null, costUsd: 0 } })
+    const report = this.state.report?.profileId === profile.id ? this.state.report : emptyReport(profile)
+    const policy = policyFor(profile, settings)
+    const digest = buildDigest({
+      profile,
+      modeLabel: profile.modes.find((x) => x.id === settings.profileModeId)?.label ?? null,
+      policyLine: `${statusLabel(policy.status)}. ${policy.reasons[0] ?? ''}`,
+      report,
+      history: settings.saveTendencies ? this.state.history : [],
+      notes: this.state.notes,
+      research: this.state.research,
+    })
+    const ctx = [
+      m.context.score ? `Score at the time: ${m.context.score.player}-${m.context.score.opponent}.` : '',
+      m.context.screen ? `Screen: ${m.context.screen}.` : '',
+      m.note ? `The player said: "${m.note}".` : 'The player did not add a note; work out the decision from the screen.',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    const image = this.momentImages.get(id)
+    const r = await this.bridge
+      .ask({ profileId: profile.id, question: ctx, digest, review: true, ...(image ? { image } : {}) })
+      .catch((err: unknown) => ({ ok: false as const, error: String(err) }))
+    if (!r.ok) {
+      this.patchMoment(id, { review: { status: 'error', text: r.error, costUsd: 0 } })
+      return
+    }
+    this.patchMoment(id, { review: { status: 'done', text: r.text, costUsd: r.costUsd } })
+    if (!settings.muted) this.speech.enqueue({ id: `review-${id}`, text: r.text, category: 'post_event', priority: 'normal', expiresAt: null })
+  }
+
+  /** Why a moment cannot be reviewed right now (restricted live play), or null. */
+  reviewBlocked(): string | null {
+    const st = this.state.status
+    if (!this.worker || !st) return null
+    if (st.window === 'during_play' && !st.policy.scope.includes('live')) return 'Moment reviews open after the match in this mode, so they never coach you mid-game where that is not allowed.'
+    if (st.window === 'round_break' && !st.policy.scope.includes('round_break') && !st.policy.scope.includes('live')) return 'Moment reviews open after the match in this mode.'
+    return null
+  }
+
+  deleteMoment(id: string): void {
+    const m = this.state.moments.find((x) => x.id === id)
+    if (m) this.dropMomentImage(m)
+    this.set({ moments: this.state.moments.filter((x) => x.id !== id) })
+  }
+
+  clearMoments(): void {
+    for (const m of this.state.moments) this.dropMomentImage(m)
+    if (this.state.moments.length) this.set({ moments: [] })
+  }
+
+  private dropMomentImage(m: Moment): void {
+    if (m.imageUrl) URL.revokeObjectURL(m.imageUrl)
+    this.momentImages.delete(m.id)
+  }
+
+  private noteOnRecentMoment(text: string): void {
+    const last = this.state.moments.at(-1)
+    if (!last || last.note || !this.source || this.source.now() - last.at > MOMENT_NOTE_WINDOW_MS) return
+    this.patchMoment(last.id, { note: text.slice(0, 300) })
+  }
+
+  private patchMoment(id: string, patch: Partial<Moment>): void {
+    this.set({ moments: this.state.moments.map((m) => (m.id === id ? { ...m, ...patch } : m)) })
+  }
+
+  /** The latest captured frame as a JPEG (whole screen, downscaled), or null (no frames, e.g. a replay). */
+  private snapshot(maxWidth: number): Promise<{ jpeg: ArrayBuffer; frameAt: number } | null> {
+    if (!this.worker) return Promise.resolve(null)
+    const requestId = ++this.snapshotSeq
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.snapshots.delete(requestId)
+        resolve(null)
+      }, 3000)
+      this.snapshots.set(requestId, (s) => {
+        clearTimeout(timer)
+        resolve(s)
+      })
+      this.post({ type: 'snapshot', requestId, maxWidth })
+    })
+  }
+
+  private flash(text: string): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer)
+    this.set({ toast: text })
+    this.toastTimer = setTimeout(() => this.set({ toast: null }), 4000)
+  }
+
   private pushQa(e: QaEntry): void {
     this.set({ conversation: [...this.state.conversation, e].slice(-CONVERSATION_CAP) })
   }
@@ -533,6 +714,15 @@ export class CoachSession {
       case 'vision-frame':
         void this.relayVision(msg.frameAt, msg.jpeg)
         return
+      case 'screens':
+        void this.bridge.saveScreens(msg.catalog).catch(() => false)
+        return
+      case 'snapshot': {
+        const resolve = this.snapshots.get(msg.requestId)
+        this.snapshots.delete(msg.requestId)
+        resolve?.(msg.jpeg ? { jpeg: msg.jpeg, frameAt: msg.frameAt } : null)
+        return
+      }
       case 'stopped':
         return
       case 'output':
@@ -644,4 +834,26 @@ function settleAnswer(conversation: readonly QaEntry[], message: CoachingMessage
 
 export function emptyReport(profile: GameProfile): SessionReport {
   return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], mistakes: [], insights: [], matches: [] }
+}
+
+/** A soft two-note chime confirming a marked moment (no speech, so it never talks over the game). */
+function chime(): void {
+  try {
+    const ctx = new AudioContext()
+    const t = ctx.currentTime
+    for (const [i, f] of [660, 880].entries()) {
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.frequency.value = f
+      g.gain.setValueAtTime(0.0001, t + i * 0.09)
+      g.gain.exponentialRampToValueAtTime(0.12, t + i * 0.09 + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.18)
+      o.connect(g).connect(ctx.destination)
+      o.start(t + i * 0.09)
+      o.stop(t + i * 0.09 + 0.2)
+    }
+    setTimeout(() => void ctx.close(), 600)
+  } catch {
+    // no audio device: the on-screen confirmation is enough
+  }
 }

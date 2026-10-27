@@ -30,7 +30,36 @@ export interface CoachSettings {
   readonly context: Readonly<Record<string, Readonly<Record<string, string | number>>>>
   readonly profileId: string | null
   readonly profileModeId: string | null
+  /** Global keys (work while the game has focus): toggle talking, mark a moment to review, stop capture. */
+  readonly hotkeys: Hotkeys
+  /** The first-run setup was completed or skipped. */
+  readonly onboarded: boolean
 }
+
+export interface Hotkeys {
+  readonly talk: string
+  readonly mark: string
+  readonly stop: string
+}
+
+/**
+ * Accelerators accepted for global keys: optional modifiers plus one key.
+ * Letters, digits and other everyday keys need a modifier so typing in a game
+ * chat cannot trigger them; F-keys and a few rarely used keys may stand alone.
+ */
+const SOLO_KEYS = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scrolllock|Insert|Home|End|PageUp|PageDown|num[0-9]|numadd|numsub|nummult|numdiv|numdec)$/
+const MOD_KEYS = /^([A-Z0-9]|Space|Tab|Backspace|Delete|Up|Down|Left|Right|Plus|-|=|\[|\]|;|'|,|\.|\/|`)$/
+export function isValidHotkey(accel: unknown): accel is string {
+  if (typeof accel !== 'string' || accel.length > 40) return false
+  const parts = accel.split('+')
+  const key = parts.pop()!
+  const mods = parts
+  const allowed = ['CommandOrControl', 'Ctrl', 'Alt', 'Shift']
+  if (new Set(mods).size !== mods.length || !mods.every((m) => allowed.includes(m))) return false
+  return SOLO_KEYS.test(key) || (mods.length > 0 && MOD_KEYS.test(key))
+}
+
+export const DEFAULT_HOTKEYS: Hotkeys = { talk: 'F8', mark: 'F9', stop: 'CommandOrControl+Shift+F12' }
 
 export const COACHING_MODES: readonly CoachingMode[] = ['silent', 'post-round', 'post-match', 'training', 'competitive-safe']
 export const TONES: readonly CoachTone[] = ['gentle', 'direct', 'analytical', 'high-energy']
@@ -51,6 +80,8 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   context: {},
   profileId: null,
   profileModeId: null,
+  hotkeys: DEFAULT_HOTKEYS,
+  onboarded: false,
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -90,7 +121,20 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     context: sanitizeContext(o.context, base.context),
     profileId: id(o.profileId, base.profileId),
     profileModeId: id(o.profileModeId, base.profileModeId),
+    hotkeys: sanitizeHotkeys(o.hotkeys, base.hotkeys),
+    onboarded: typeof o.onboarded === 'boolean' ? o.onboarded : base.onboarded,
   }
+}
+
+function sanitizeHotkeys(v: unknown, base: Hotkeys): Hotkeys {
+  const o = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>
+  const out = {
+    talk: isValidHotkey(o.talk) ? o.talk : base.talk,
+    mark: isValidHotkey(o.mark) ? o.mark : base.mark,
+    stop: isValidHotkey(o.stop) ? o.stop : base.stop,
+  }
+  // One key, one job.
+  return new Set(Object.values(out)).size === 3 ? out : base
 }
 
 /** Player context: small maps of short strings or finite numbers, by pack id. */

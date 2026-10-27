@@ -41,4 +41,11 @@ export const CHANNELS = {
   synthesize: 'sightline:synthesize',
   stopRequested: 'sightline:stop-requested',
   pushToTalk: 'sightline:push-to-talk',
+  markMoment: 'sightline:mark-moment',
+  loadScreens: 'sightline:load-screens',
+  saveScreens: 'sightline:save-screens',
+  knowledgeStatus: 'sightline:knowledge-status',
+  buildKnowledge: 'sightline:build-knowledge',
+  deleteKnowledge: 'sightline:delete-knowledge',
+  testCloud: 'sightline:test-cloud',
 } as const

@@ -70,11 +70,12 @@ const NO_TTS: TtsStatus = {
   },
   realTimeFactor: {},
 }
+const NO_KNOWLEDGE = { building: false, stage: null, error: null, knowledge: null, screens: 0 }
 const desktopOnly = { ok: false as const, error: 'Cloud features need the desktop app (your API key never touches a web page).', fatal: true }
 
 export const browserBridge: SightlineBridge = {
   async info() {
-    return { shell: 'browser', platform: navigator.platform || 'web', appVersion: 'dev', systemPicker: true, stopShortcut: null, talkShortcut: null }
+    return { shell: 'browser', platform: navigator.platform || 'web', appVersion: 'dev', systemPicker: true, stopShortcut: null, talkShortcut: null, markShortcut: null, shortcutErrors: [] }
   },
   async listSources() {
     return []
@@ -208,6 +209,27 @@ export const browserBridge: SightlineBridge = {
   },
   onPushToTalk() {
     return () => {}
+  },
+  onMarkMoment() {
+    return () => {}
+  },
+  async loadScreens() {
+    return null
+  },
+  async saveScreens() {
+    return false
+  },
+  async knowledgeStatus() {
+    return NO_KNOWLEDGE
+  },
+  async buildKnowledge() {
+    return { ...NO_KNOWLEDGE, error: 'Building game knowledge needs the desktop app and an API key.' }
+  },
+  async deleteKnowledge() {
+    return NO_KNOWLEDGE
+  },
+  async testCloud() {
+    return { ok: false as const, error: 'Cloud features need the desktop app.' }
   },
 }
 

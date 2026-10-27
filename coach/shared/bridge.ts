@@ -11,6 +11,28 @@ import type { CoachSettings } from '../src/core/settings.ts'
 import type { VisionResponse } from '../src/core/vision/contract.ts'
 import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './cloud.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
+import type { ScreenCatalog } from '../src/core/vision/screens.ts'
+import type { KnowledgeItem, KnowledgeSectionId } from '../src/core/knowledge/base.ts'
+
+export interface KnowledgeStatus {
+  readonly building: boolean
+  readonly stage: string | null
+  readonly error: string | null
+  readonly knowledge: {
+    readonly gameVersion: string
+    readonly createdAt: string
+    readonly model: string
+    readonly items: number
+    readonly sections: number
+    readonly sources: number
+    /** Size on disk (compressed). */
+    readonly bytes: number
+    readonly costUsd: number | null
+    readonly sectionsList: readonly { readonly id: KnowledgeSectionId; readonly items: readonly KnowledgeItem[] }[]
+  } | null
+  /** Screens (menus, loading, scoreboards…) learned for this game. */
+  readonly screens: number
+}
 
 export interface CaptureSource {
   readonly id: string
@@ -30,6 +52,10 @@ export interface PlatformInfo {
   readonly stopShortcut: string | null
   /** The global push-to-talk shortcut, if one is registered. */
   readonly talkShortcut: string | null
+  /** The global "mark this moment" shortcut, if one is registered. */
+  readonly markShortcut: string | null
+  /** Keys the OS refused (another program owns them). */
+  readonly shortcutErrors: readonly string[]
 }
 
 export interface PlayerNotes {
@@ -82,11 +108,22 @@ export interface SightlineBridge {
   setCloudSettings(settings: Partial<CloudSettings>): Promise<CloudStatus>
   setApiKey(key: string | null): Promise<CloudStatus>
   resetCloudSession(): Promise<void>
+  /** Check the saved key with a free call; lists the models it can use. */
+  testCloud(): Promise<{ ok: true; models: string[] } | { ok: false; error: string }>
   analyzeFrame(req: { profileId: string; jpeg: ArrayBuffer; context: Record<string, string | number> }): Promise<CloudResult<{ response: VisionResponse }>>
-  ask(req: { profileId: string; question: string; digest: string }): Promise<CloudResult<{ text: string }>>
+  /** `image`: the current screen (the player asked about it) or a marked moment (`review`). */
+  ask(req: { profileId: string; question: string; digest: string; image?: ArrayBuffer; review?: boolean }): Promise<CloudResult<{ text: string }>>
   research(req: { profileId: string; gameTitle: string; focus: string }): Promise<CloudResult<{ brief: ResearchBrief }>>
   loadResearch(profileId: string): Promise<ResearchBrief | null>
   deleteResearch(profileId: string): Promise<void>
+
+  // Game knowledge: screens learned from play, and a researched knowledge base.
+  loadScreens(profileId: string): Promise<ScreenCatalog | null>
+  saveScreens(catalog: ScreenCatalog): Promise<boolean>
+  knowledgeStatus(profileId: string): Promise<KnowledgeStatus>
+  /** Starts building in the background; poll knowledgeStatus for progress. */
+  buildKnowledge(req: { profileId: string; focus: string }): Promise<KnowledgeStatus>
+  deleteKnowledge(profileId: string): Promise<KnowledgeStatus>
 
   // Voice input (opt-in): local speech recognition; the model is downloaded once on request.
   voiceStatus(): Promise<VoiceModelStatus>
@@ -105,6 +142,8 @@ export interface SightlineBridge {
   onStopRequested(cb: () => void): () => void
   /** The global push-to-talk shortcut was pressed (toggle). Returns an unsubscribe function. */
   onPushToTalk(cb: () => void): () => void
+  /** The global "mark this moment" shortcut was pressed. Returns an unsubscribe function. */
+  onMarkMoment(cb: () => void): () => void
 }
 
 declare global {

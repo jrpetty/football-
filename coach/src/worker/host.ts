@@ -11,10 +11,13 @@ import type { GameProfile } from '../core/profile/schema.ts'
 import type { Frame, TimelineEntry } from '../core/types.ts'
 import { validateVisionResponse } from '../core/vision/contract.ts'
 import { VisionSampler } from '../core/vision/sampler.ts'
+import { cleanScreen, dHash, ScreenMemory, type ScreenInfo } from '../core/vision/screens.ts'
 import type { FromWorker, ToWorker, VisionConfig, VisionStatus } from './protocol.ts'
 
 /** At most this many frames wait for analysis; older ones are dropped. */
 export const QUEUE_CAPACITY = 2
+/** A screen recognised from memory is confirmed by the model again after this long. */
+const SCREEN_RECHECK_MS = 60_000
 /** For captured frames (several a second), send a full report at least this often, even without new events. Other outputs always carry one. */
 const REPORT_EVERY = 10
 
@@ -24,8 +27,8 @@ export interface HostDeps {
   post(msg: FromWorker, transfer?: Transferable[]): void
   /** Decode a bitmap into RGBA pixels. Must not keep the bitmap. */
   decode(bitmap: ImageBitmap, timestamp: number): Frame
-  /** Encode a frame (or the pack's crops) as a downscaled JPEG. */
-  encodeJpeg(frame: Frame, profile: GameProfile): Promise<ArrayBuffer>
+  /** Encode a frame (or the pack's crops) as a downscaled JPEG; `full` ignores the crops. */
+  encodeJpeg(frame: Frame, profile: GameProfile, full?: { maxWidth: number }): Promise<ArrayBuffer>
   /** Schedule the queue to drain (setTimeout in a worker; synchronous in tests). */
   schedule(fn: () => void): void
   now(): number
@@ -45,6 +48,13 @@ export class PipelineHost {
   private visionDropped = 0
   private latencies: number[] = []
   private outputs = 0
+  private screens: ScreenMemory | null = null
+  /** Fingerprints of frames sent to the model, by capture time, to learn the screen from the answer. */
+  private readonly sentHashes = new Map<number, string>()
+  /** When each known screen was last confirmed by the model (it is re-checked now and then). */
+  private readonly confirmed = new Map<string, number>()
+  private screen: VisionStatus['screen'] = null
+  private lastFrame: Frame | null = null
 
   constructor(deps: HostDeps) {
     this.deps = deps
@@ -68,6 +78,9 @@ export class PipelineHost {
       case 'start': {
         this.queue.clear()
         this.profile = msg.profile
+        this.screens = new ScreenMemory(msg.profile.id, msg.screens)
+        this.screen = null
+        this.lastFrame = null
         this.engine = new CoachEngine(msg.profile, msg.settings, {
           policy: msg.policy,
           history: msg.history,
@@ -91,6 +104,8 @@ export class PipelineHost {
         return
       case 'vision-result':
         return this.visionResult(msg)
+      case 'snapshot':
+        return this.snapshot(msg.requestId, msg.maxWidth)
       case 'vision-config':
         this.configureVision(msg.vision)
         if (this.engine) this.emit({ entries: [], utterances: [], cancel: [], matches: [] }, true)
@@ -113,6 +128,7 @@ export class PipelineHost {
         const engine = this.engine
         this.engine = null
         this.sampler = null
+        this.lastFrame = null
         const out = engine.stop(msg.now)
         this.deps.post({ type: 'output', ...out, status: null, report: engine.report(), frameDone: false })
         this.deps.post({ type: 'stopped', snapshot: engine.snapshot(new Date()), insights: engine.insights(), report: engine.report() })
@@ -146,10 +162,39 @@ export class PipelineHost {
     }
     this.visionLastError = null
     this.latencies = [...this.latencies.slice(-19), msg.arrivedAt - msg.frameAt]
+    this.learnScreen(msg.frameAt, msg.arrivedAt, (msg.response as { screen?: unknown } | null)?.screen)
     const { observations, stats } = validateVisionResponse(msg.response, this.profile, msg.frameAt, msg.arrivedAt, `v${msg.frameAt}`)
     this.visionAccepted += stats.accepted
     this.visionDropped += stats.dropped.length
     this.emit(this.engine.ingestObservations(observations, msg.arrivedAt), true)
+  }
+
+  /** Remember what the model said this frame's screen was (menus etc.; gameplay is never cached). */
+  private learnScreen(frameAt: number, arrivedAt: number, raw: unknown): void {
+    const info: ScreenInfo | null = cleanScreen(raw)
+    const hash = this.sentHashes.get(frameAt)
+    this.sentHashes.delete(frameAt)
+    if (!info) return
+    this.screen = { ...info, from: 'model', at: arrivedAt }
+    if (!hash || !this.screens) return
+    const learned = this.screens.learn(hash, info, new Date())
+    if (learned) {
+      this.confirmed.set(learned.entry.h, frameAt)
+      this.deps.post({ type: 'screens', catalog: this.screens.catalog })
+    }
+  }
+
+  private snapshot(requestId: number, maxWidth: number): void {
+    const frame = this.lastFrame
+    if (!frame || !this.profile) {
+      this.deps.post({ type: 'snapshot', requestId, jpeg: null, frameAt: 0, width: 0, height: 0 })
+      return
+    }
+    const width = Math.min(maxWidth, frame.width)
+    this.deps
+      .encodeJpeg(frame, this.profile, { maxWidth: width })
+      .then((jpeg) => this.deps.post({ type: 'snapshot', requestId, jpeg, frameAt: frame.timestamp, width, height: Math.round((frame.height * width) / frame.width) }, [jpeg]))
+      .catch(() => this.deps.post({ type: 'snapshot', requestId, jpeg: null, frameAt: 0, width: 0, height: 0 }))
   }
 
   private scheduleDrain(): void {
@@ -180,6 +225,7 @@ export class PipelineHost {
         }
       } else frame = next.frame
       const out = this.engine.processFrame(frame)
+      this.lastFrame = frame
       this.maybeSample(frame)
       this.timings = [...this.timings.slice(-19), this.deps.now() - started]
       this.emit(out, true, true)
@@ -191,6 +237,27 @@ export class PipelineHost {
     if (!this.sampler || !this.profile?.vision || !this.vision.enabled) return
     const grid = sampleGrid(frame)
     if (!this.sampler.shouldSample(frame.timestamp, grid)) return
+    // A menu or loading screen seen before is recognised here, for free — re-checked by the model once a minute.
+    const hash = dHash(frame)
+    const known = this.screens?.match(hash)
+    if (known && frame.timestamp - (this.confirmed.get(known.h) ?? -Infinity) < SCREEN_RECHECK_MS) {
+      this.sampler.handledLocally(frame.timestamp, grid)
+      this.screens!.seen(known, new Date())
+      this.screen = { name: known.name, kind: known.kind, summary: known.summary, from: 'memory', at: frame.timestamp }
+      const phase = known.kind === 'menu' || known.kind === 'loading' ? 'menu' : null
+      if (phase && this.engine && this.profile) {
+        this.emit(
+          this.engine.ingestObservations(
+            [{ id: `screen-${frame.timestamp}`, timestampMs: frame.timestamp, gameProfileId: this.profile.id, sourceRegion: 'full-frame', kind: 'state', eventType: 'phase', value: phase, confidence: 0.75, freshnessMs: 0, evidence: [`known screen: ${known.name}`], source: 'derived' }],
+            frame.timestamp,
+          ),
+          true,
+        )
+      }
+      return
+    }
+    this.sentHashes.set(frame.timestamp, hash)
+    if (this.sentHashes.size > 8) this.sentHashes.delete(this.sentHashes.keys().next().value!)
     this.sampler.sending(frame.timestamp, grid)
     this.deps
       .encodeJpeg(frame, this.profile)
@@ -217,11 +284,13 @@ export class PipelineHost {
   private visionStatus(): VisionStatus {
     return {
       enabled: this.vision.enabled && !!this.profile?.vision,
-      sampler: this.sampler?.stats ?? { sent: 0, skippedUnchanged: 0, errors: 0, inFlight: false, backoffUntil: 0 },
+      sampler: this.sampler?.stats ?? { sent: 0, skippedUnchanged: 0, errors: 0, knownScreens: 0, inFlight: false, backoffUntil: 0 },
       lastError: this.visionLastError,
       accepted: this.visionAccepted,
       dropped: this.visionDropped,
       latencyMs: mean(this.latencies),
+      screen: this.screen,
+      knownScreens: this.screens?.catalog.screens.length ?? 0,
     }
   }
 }
