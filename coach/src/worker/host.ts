@@ -101,6 +101,9 @@ export class PipelineHost {
       case 'capture-problem':
         if (this.engine) this.emit({ entries: this.engine.setCaptureProblem(msg.reason, msg.now), utterances: [], cancel: [], matches: [] }, true)
         return
+      case 'answer':
+        if (this.engine) this.emit(this.engine.answer(msg.question, msg.text, msg.author, msg.now), true)
+        return
       case 'boundary':
         if (this.engine) this.emit(this.engine.manualBoundary(msg.kind, msg.result, msg.now), true)
         return
