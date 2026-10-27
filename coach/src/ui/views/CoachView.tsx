@@ -321,7 +321,7 @@ function LastSession({ state, onTab }: { state: SessionState; onTab: (t: Tab) =>
 
 // --- During capture -------------------------------------------------------------------
 
-function LiveView({ state, session, settings, onSettings, profile, effective, cloud }: Props) {
+function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud }: Props) {
   const [aligning, setAligning] = useState(false)
   const st = state.status
   const report = state.report?.profileId === profile.id ? state.report : null
@@ -339,7 +339,12 @@ function LiveView({ state, session, settings, onSettings, profile, effective, cl
         <div>
           <h1>{profile.game.title}</h1>
           <p className="lede">
-            {MODE_INFO[effective.mode].label} · {effective.liveActive ? 'live tips allowed here' : 'no live tips here — notes come at breaks or after the match'}
+            {MODE_INFO[effective.mode].label} ·{' '}
+            {effective.liveActive
+              ? 'brief live tips are on'
+              : policy.scope.has('live')
+                ? 'quiet during play — switch to Training coach for brief live tips'
+                : 'this game and mode allow no live tips — notes come at breaks or after the match'}
           </p>
         </div>
         <div className="btn-row">

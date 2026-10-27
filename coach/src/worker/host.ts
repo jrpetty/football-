@@ -15,7 +15,7 @@ import type { FromWorker, ToWorker, VisionConfig, VisionStatus } from './protoco
 
 /** At most this many frames wait for analysis; older ones are dropped. */
 export const QUEUE_CAPACITY = 2
-/** Send a full report to the UI at least this often (outputs), even without new events. */
+/** For captured frames (several a second), send a full report at least this often, even without new events. Other outputs always carry one. */
 const REPORT_EVERY = 10
 
 type Pending = { kind: 'bitmap'; bitmap: ImageBitmap; timestamp: number } | { kind: 'pixels'; frame: Frame }
@@ -209,7 +209,7 @@ export class PipelineHost {
       type: 'output',
       ...out,
       status: withStatus && engine ? { ...engine.status, queue: this.queue.stats, analysisMs: mean(this.timings), vision: this.visionStatus() } : null,
-      report: engine && (changed || this.outputs % REPORT_EVERY === 0) ? engine.report() : null,
+      report: engine && (changed || !frameDone || this.outputs % REPORT_EVERY === 0) ? engine.report() : null,
       frameDone,
     })
   }

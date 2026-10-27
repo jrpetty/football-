@@ -164,11 +164,14 @@ export class CoachSession {
 
   /** Called when the selected pack or settings change. Loads opt-in data when the pack changes. */
   async select(profile: GameProfile, settings: CoachSettings): Promise<void> {
-    const changedPack = this.profile?.id !== profile.id
+    const changedPack = this.profile !== null && this.profile.id !== profile.id
     const changedOptIn = this.settings?.saveTendencies !== settings.saveTendencies
+    const first = this.profile === null
     this.profile = profile
     this.settings = settings
-    if (changedPack || changedOptIn) await this.reloadPlayerData()
+    // Questions are about one game; a new game starts a new conversation.
+    if (changedPack && this.state.phase === 'idle') this.set({ conversation: [] })
+    if (first || changedPack || changedOptIn) await this.reloadPlayerData()
   }
 
   async reloadPlayerData(): Promise<void> {
@@ -242,8 +245,9 @@ export class CoachSession {
     if (this.state.phase !== 'idle') return
     this.profile = profile
     this.settings = settings
+    const samePack = this.state.profileId === profile.id
     this.set({ phase: 'starting', error: null })
-    if (this.state.profileId !== profile.id) await this.reloadPlayerData()
+    if (!samePack) await this.reloadPlayerData()
     this.set({
       ...INITIAL,
       phase: 'starting',
@@ -252,7 +256,7 @@ export class CoachSession {
       snapshot: this.state.snapshot,
       notes: this.state.notes,
       research: this.state.research,
-      conversation: this.state.conversation,
+      conversation: samePack ? this.state.conversation : [],
     })
     this.speech.configure(settings.voice)
 

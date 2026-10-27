@@ -2208,3 +2208,4 @@ textarea::placeholder {
   align-items: flex-start;
   gap: 8px;
 }
+.scope-chips { margin-bottom: 8px; }
