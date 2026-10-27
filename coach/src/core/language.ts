@@ -123,7 +123,7 @@ export interface MatchRecord {
 
 const CLOSING: Record<CoachTone, { withLines: string; withoutLines: string }> = {
   gentle: { withLines: 'Good session. Pick one thing to try next time.', withoutLines: 'Good session.' },
-  direct: { withLines: 'Pick one of these and work on it next match.', withoutLines: 'More rounds will sharpen the picture.' },
+  direct: { withLines: 'Pick one thing and work on it next match.', withoutLines: 'More rounds will sharpen the picture.' },
   analytical: {
     withLines: 'These are associations in what was visible, not proof of cause.',
     withoutLines: 'Sample sizes are still too small for conclusions.',
