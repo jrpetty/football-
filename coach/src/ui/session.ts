@@ -15,7 +15,8 @@ import { statusLabel } from '../core/policy/registry.ts'
 import type { CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
-import { aoe2GameReplay, fcMatchReplay } from '../sim/visionReplay.ts'
+import { aoe2GameReplay, aoe4GameReplay, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
+import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder } from '../speech/recorder.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
@@ -33,7 +34,7 @@ const MOMENTS_CAP = 24
 const MOMENT_NOTE_WINDOW_MS = 20_000
 
 export type Phase = 'idle' | 'starting' | 'capturing'
-export type SourceChoice = 'screen' | 'simulation' | 'replay-fc' | 'replay-aoe'
+export type SourceChoice = 'screen' | 'simulation' | 'replay-fc' | 'replay-aoe' | 'replay-mw4' | 'replay-aoe4'
 
 export type SpeechState = 'waiting' | 'speaking' | 'finished' | 'interrupted' | 'expired' | 'unavailable' | 'shown'
 
@@ -111,7 +112,19 @@ export interface SessionState {
   readonly moments: readonly Moment[]
   /** A short confirmation (e.g. "Moment marked"), cleared after a few seconds. */
   readonly toast: string | null
+  /** The coach's review of the session (built on request). */
+  readonly review: ReviewState
 }
+
+export interface ReviewState {
+  readonly status: 'idle' | 'working' | 'ready'
+  readonly review: MatchReview | null
+  /** Why Claude's review is not shown (the local one is). */
+  readonly note: string | null
+  readonly costUsd: number
+}
+
+const NO_REVIEW: ReviewState = { status: 'idle', review: null, note: null, costUsd: 0 }
 
 const INITIAL: SessionState = {
   phase: 'idle',
@@ -138,6 +151,7 @@ const INITIAL: SessionState = {
   talkError: null,
   moments: [],
   toast: null,
+  review: NO_REVIEW,
 }
 
 type Mutable<T> = { -readonly [K in keyof T]?: T[K] }
@@ -217,7 +231,7 @@ export class CoachSession {
       this.bridge.loadResearch(id).catch(() => null),
     ])
     if (this.profile?.id !== id) return
-    this.set({ profileId: id, history, snapshot, notes, research, ...(this.state.report?.profileId !== id ? { report: null } : {}) })
+    this.set({ profileId: id, history, snapshot, notes, research, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
   }
 
   async saveNotes(notes: PlayerNotes): Promise<boolean> {
@@ -368,6 +382,10 @@ export class CoachSession {
         return new ReplaySource(sink, onEnded, fcMatchReplay({ seed, realMinutes: 4 }), { speed, label: 'EA SPORTS FC — synthetic replay (not a real match)' })
       case 'replay-aoe':
         return new ReplaySource(sink, onEnded, aoe2GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires II — synthetic replay (not a real game)' })
+      case 'replay-mw4':
+        return new ReplaySource(sink, onEnded, mw4MatchReplay({ seed, realMinutes: 4 }), { speed, label: 'Modern Warfare 4 — synthetic replay (not a real match)' })
+      case 'replay-aoe4':
+        return new ReplaySource(sink, onEnded, aoe4GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires IV — synthetic replay (not a real game)' })
     }
   }
 
@@ -632,6 +650,55 @@ export class CoachSession {
     }
     this.patchMoment(id, { review: { status: 'done', text: r.text, costUsd: r.costUsd } })
     if (!settings.muted) this.speech.enqueue({ id: `review-${id}`, text: r.text, category: 'post_event', priority: 'normal', expiresAt: null })
+  }
+
+  /**
+   * The coach's review of this session: built on this computer from the
+   * findings and the playbook straight away; when cloud features are on and
+   * the player asks for it, Claude writes a deeper one from the same data.
+   */
+  async reviewSession(cloud: CloudStatus, opts: { deep: boolean }): Promise<void> {
+    const profile = this.profile
+    const settings = this.settings
+    if (!profile || !settings || this.state.review.status === 'working') return
+    const blocked = this.reviewBlocked()
+    if (blocked) {
+      this.flash(blocked)
+      return
+    }
+    const report = this.state.report?.profileId === profile.id ? this.state.report : emptyReport(profile)
+    const local = localReview(profile, report)
+    const canDeep = cloud.available && cloud.settings.enabled && cloud.key.set
+    if (!opts.deep || !canDeep) {
+      this.set({ review: { status: 'ready', review: local, note: opts.deep ? 'Claude reviews need cloud features (Settings); this one was built on this computer.' : null, costUsd: 0 } })
+      return
+    }
+    this.set({ review: { status: 'working', review: local, note: null, costUsd: 0 } })
+    const policy = policyFor(profile, settings)
+    const digest = buildDigest({
+      profile,
+      modeLabel: profile.modes.find((x) => x.id === settings.profileModeId)?.label ?? null,
+      policyLine: `${statusLabel(policy.status)}. ${policy.reasons[0] ?? ''}`,
+      report,
+      history: settings.saveTendencies ? this.state.history : [],
+      notes: this.state.notes,
+      research: this.state.research,
+    })
+    const r = await this.bridge.reviewMatch({ profileId: profile.id, digest }).catch((err: unknown) => ({ ok: false as const, error: String(err) }))
+    if (this.profile?.id !== profile.id) return
+    this.set({
+      review: r.ok
+        ? { status: 'ready', review: r.review, note: null, costUsd: r.costUsd }
+        : { status: 'ready', review: local, note: `Claude's review failed (${r.error}); this one was built on this computer.`, costUsd: 0 },
+    })
+  }
+
+  /** Read the review aloud (replacing anything the coach is saying). */
+  readReview(): void {
+    const r = this.state.review.review
+    if (!r || this.settings?.muted) return
+    this.speech.stopAll()
+    this.speech.enqueue({ id: uid('review'), text: reviewSpeech(r), category: 'post_event', priority: 'normal', expiresAt: null })
   }
 
   /** Why a moment cannot be reviewed right now (restricted live play), or null. */

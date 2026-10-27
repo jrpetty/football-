@@ -9,6 +9,7 @@ import type { MatchRecord } from '../src/core/analyses/matchRecorder.ts'
 import type { PatternSnapshot, PatternVerdict } from '../src/core/patterns.ts'
 import type { CoachSettings } from '../src/core/settings.ts'
 import type { VisionResponse } from '../src/core/vision/contract.ts'
+import type { MatchReview } from '../src/core/review.ts'
 import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './cloud.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
@@ -113,6 +114,8 @@ export interface SightlineBridge {
   analyzeFrame(req: { profileId: string; jpeg: ArrayBuffer; context: Record<string, string | number> }): Promise<CloudResult<{ response: VisionResponse }>>
   /** `image`: the current screen (the player asked about it) or a marked moment (`review`). */
   ask(req: { profileId: string; question: string; digest: string; image?: ArrayBuffer; review?: boolean }): Promise<CloudResult<{ text: string }>>
+  /** A coach's review of the session (Claude), validated in the main process. */
+  reviewMatch(req: { profileId: string; digest: string }): Promise<CloudResult<{ review: MatchReview }>>
   research(req: { profileId: string; gameTitle: string; focus: string }): Promise<CloudResult<{ brief: ResearchBrief }>>
   loadResearch(profileId: string): Promise<ResearchBrief | null>
   deleteResearch(profileId: string): Promise<void>

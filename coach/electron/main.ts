@@ -33,6 +33,7 @@ import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
 import type { CloudStatus } from '../shared/cloud.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
+import { validateReview } from '../src/core/review.ts'
 import type { CoachSettings, Hotkeys } from '../src/core/settings.ts'
 import { BUILT_IN_PROFILES } from '../src/profiles/index.ts'
 import { KeyStore, type Cipher } from './cloud/keystore.ts'
@@ -400,6 +401,17 @@ function registerIpc(): void {
       image = { base64: Buffer.from(r.image).toString('base64') }
     }
     return cloud.ask(profile, r.question.slice(0, 1000), r.digest.slice(0, 40_000), { image, review: r.review === true, knowledge: await answerKnowledge(profile) })
+  })
+
+  handle(CHANNELS.reviewMatch, async (req) => {
+    const r = req as { profileId?: unknown; digest?: unknown } | null
+    const profile = await resolveProfile(r?.profileId)
+    if (!profile) return { ok: false, error: 'Unknown pack.', fatal: true }
+    if (typeof r?.digest !== 'string') return { ok: false, error: 'Invalid session data.', fatal: true }
+    const res = await cloud.reviewMatch(profile, r.digest.slice(0, 40_000), await answerKnowledge(profile))
+    if (!res.ok) return res
+    const review = validateReview(profile, res.review)
+    return review ? { ok: true, costUsd: res.costUsd, review } : { ok: false, error: 'The review did not pass the checks (size, wording or playbook links).' }
   })
 
   // --- Game knowledge: learned screens, and the researched knowledge base ------------------------

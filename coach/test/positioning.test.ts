@@ -218,3 +218,33 @@ test('FC: conceded goals can be read for the first defensive mistake, linked to 
   assert.equal(top.statement, '3 of your 5 goals conceded came from an unmarked far-post runner.')
   assert.equal(top.playbook, 'back-post-coverage')
 })
+
+// --- The coach's review -----------------------------------------------------------------------
+
+test('review: built locally from the findings, three focus points with fixes, read aloud without causal words', async () => {
+  const { localReview, reviewSpeech } = await import('../src/core/review.ts')
+  const engine = engineFor(mw4, settings({ profileId: 'cod-mw4', profileModeId: 'multiplayer', mode: 'post-match' }))
+  play(engine, mw4MatchReplay({ seed: 2 }))
+  const r = localReview(mw4, engine.report())!
+  assert.equal(r.author, 'local')
+  assert.match(r.headline, /^Main thing to work on: 8 of your 12 deaths came while you were in the open\./)
+  assert.ok(r.focus.length >= 2 && r.focus.length <= 3)
+  assert.equal(r.focus[0].fix, fix(mw4, 'fight-from-cover'))
+  assert.equal(new Set(r.focus.map((f) => f.playbook)).size, r.focus.length, 'each playbook entry once')
+  assert.ok(r.strengths.some((s) => /close range/.test(s)))
+  const spoken = reviewSpeech(r)
+  assert.doesNotMatch(spoken, BANNED_CLAIMS)
+  assert.ok(spoken.split(/\s+/).length < 160, `${spoken.split(/\s+/).length} words`)
+})
+
+test('review: nothing to say gives null; a model review is checked for size, wording and playbook links', async () => {
+  const { localReview, validateReview } = await import('../src/core/review.ts')
+  const engine = engineFor(mw4, settings({ profileId: 'cod-mw4', profileModeId: 'multiplayer', mode: 'post-match' }))
+  assert.equal(localReview(mw4, engine.report()), null)
+  const good = { headline: 'Most deaths came in the open.', strengths: [], focus: [{ evidence: '8 of 12 deaths in the open.', principle: 'Fight from cover.', fix: 'Take fights from cover.', drill: null, playbook: 'fight-from-cover' }], nextMatch: 'Cover first.' }
+  assert.equal(validateReview(mw4, good)?.author, 'ai')
+  assert.equal(validateReview(mw4, { ...good, focus: [{ ...good.focus[0], playbook: 'made-up' }] })?.focus[0].playbook, null)
+  assert.equal(validateReview(mw4, { ...good, headline: 'You died because you were in the open.' }), null)
+  assert.equal(validateReview(mw4, { ...good, headline: 'x'.repeat(500) }), null)
+  assert.equal(validateReview(mw4, null), null)
+})

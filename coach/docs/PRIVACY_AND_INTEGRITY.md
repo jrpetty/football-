@@ -22,6 +22,7 @@
 | Sampled frames for cloud vision (opt-in) | Downscaled JPEG (or only the pack's HUD crops) → main process → Anthropic API | Not stored by Sightline. Anthropic's API data policy applies to the request |
 | Push-to-talk audio (opt-in) | Renderer memory → main → local recogniser (worker thread) | Discarded after transcription. Never stored or sent |
 | Questions and digests sent to Claude (opt-in) | Main process → Anthropic API | Not stored by Sightline beyond the in-memory conversation |
+| The coach's review | Built in renderer memory from the session's counts. **Deeper review with Claude** sends the same structured digest (no images) when you click it | Until the next session or a game change |
 | Session timeline, conversation | Renderer memory | Until the next session, a game change, or app close |
 | Marked moments (the mark key) | A downscaled screenshot in renderer memory, plus your note | This session only: never written to disk. Deletable one by one; sent to Anthropic only when you ask for a review |
 | A question asked during capture (cloud on) | The current screen, downscaled, sent with the question to Anthropic | Not stored by Sightline |
@@ -30,7 +31,7 @@
 | Neural voice and speech models | `userData/models/…`, downloaded once on request, checksum-verified | Until removed in Settings |
 | Settings, cloud settings | `userData/settings.json`, `userData/cloud.json` | Until changed. There is no key in these files |
 | API key | `userData` key file, encrypted with OS `safeStorage`. If the OS cannot encrypt, it is held in memory for the session only | Until removed in Settings |
-| Match records, pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |
+| Match records (including per-match fight-factor counts and benchmark readings: numbers only), pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |
 | Research briefs (when the player runs research) | `userData/research/<pack>.json`, plain JSON. Public web guidance about the game, not player data | Until deleted |
 
 - Stored files are written atomically and validated on read.

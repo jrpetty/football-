@@ -48,9 +48,9 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
     ? estimatePerHour(cloud.settings.visionModel, profile.vision!.sampleIntervalMs, profile.vision!.maxWidth, Math.round((profile.vision!.maxWidth * 9) / 16))
     : 0
 
-  const demo = (kind: SourceChoice, packId: string, speed: number) => {
+  const demo = (kind: SourceChoice, packId: string, speed: number, preferMode?: string) => {
     const pack = builtInProfile(packId)
-    const modeId = pack.modes.some((m) => m.id === settings.profileModeId) ? settings.profileModeId : pack.modes[0].id
+    const modeId = pack.modes.some((m) => m.id === settings.profileModeId) ? settings.profileModeId : (preferMode ?? pack.modes[0].id)
     const next = { ...settings, profileId: pack.id, profileModeId: modeId }
     if (pack.id !== profile.id || modeId !== settings.profileModeId) onSettings({ profileId: pack.id, profileModeId: modeId })
     void session.start(kind, pack, next, cloud, { speed })
@@ -275,6 +275,12 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
           </button>
           <button type="button" className="btn" onClick={() => demo('replay-aoe', 'aoe2-de', 2)} disabled={state.phase === 'starting'}>
             🏰 Age of Empires II replay
+          </button>
+          <button type="button" className="btn" onClick={() => demo('replay-mw4', 'cod-mw4', 2, 'private-bots')} disabled={state.phase === 'starting'}>
+            🎖️ Modern Warfare 4 replay
+          </button>
+          <button type="button" className="btn" onClick={() => demo('replay-aoe4', 'aoe4', 2, 'skirmish-vs-ai')} disabled={state.phase === 'starting'}>
+            🛡️ Age of Empires IV replay
           </button>
           <button type="button" className="btn" onClick={() => demo('simulation', 'synthetic-arena', 2)} disabled={state.phase === 'starting'}>
             🎯 Arena simulation

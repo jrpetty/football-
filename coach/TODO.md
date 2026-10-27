@@ -126,6 +126,19 @@ Legend:
 - ☑ First-run setup (connect Claude with a key test, game, voice, keys). Decisions tab, game-knowledge panel, screen name on the live dashboard.
 - ☑ Fixed: switching tabs crashed the page. Newer Chromium returns a Promise from `scrollTo`, which React took for an effect cleanup.
 
+## v4 delivery
+
+### Advice that is actually useful
+- ☑ Fight factors: deaths (and kills, where the player's view shows it) tagged with the visible circumstances of the fight; fights won and lost compared by value, avoidable circumstances counted as a share of deaths, and timing (died within 8 s of your own kill). Graded with Wilson intervals; untagged fights counted, never guessed. *Tested on a synthetic MW4 match with ground truth (`test/positioning.test.ts`).*
+- ☑ Benchmarks: a visible number against an explainable curve at checkpoints of the game clock (AoE IV villagers against one Town Center that never stops), with the gap in minutes and a strong-player reference. *Synthetic AoE IV game.*
+- ☑ Playbooks researched from pro, coach, official, guide and forum sources (MW4 30, AoE IV 26, FC 27 25 entries), validated (sources, no causal or absolute words), linked from findings, mistakes, zone breakdowns and stat warnings. Each fix is said once per summary.
+- ☑ FC 27: conceded goals read for the first defensive mistake in the replay; pass accuracy against a 75% warning line.
+- ☑ The coach's review (local, from findings and the playbook) with "Read it to me"; Insights panels for fights, benchmarks and the playbook. *Recorded browser run of the MW4 and AoE IV demos.*
+- ◐ Claude's deeper review (structured output, validated for size, wording and playbook links). *Validator tested; real API calls untested (no key).*
+- ◐ Research quality. *Page fetches were blocked in the build environment, so the playbooks come from search-result summaries; no Reddit threads could be read; pro sources are limited (Scump's course outline, Rambo, RBLZ_Levyfinn, Tekkz/RedLac, a VortiX tip). Entries marked as rules of thumb say so.*
+- ◐ Killcam reading accuracy. *Depends on the vision model on real MW4 killcams; untested without captures.*
+- ☐ Watch pro VODs (Valdemar, Beastyqt, CDL) to attribute more advice directly and check the AoE IV villager reference per civilisation.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

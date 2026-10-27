@@ -136,7 +136,20 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 10.8 | Ask → Game knowledge → **Build game knowledge**. | Progress stages appear. A few minutes later it shows items, sources, the game version, and a small compressed size. Browsing shows sections such as maps and roster. |
 | 10.9 | Close and reopen the app. | Marked moments are gone (memory only); learned screens and the knowledge base remain. |
 
-## 11. Accessibility and layout
+## 11. Positioning, benchmarks and the coach's review
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 11.1 | Coach → **Modern Warfare 4 replay** (synthetic). Let it finish, then Insights → **Review this session**. | A headline with a count, a "Good:" line, and up to three numbered items, each with a fix and a link into the playbook. **How your fights go** shows cards per factor with lost/won bars; "not readable" counts appear. |
+| 11.2 | Click **What to do →** on a finding. | The matching playbook entry opens and scrolls into view, marked **From your games**, with sources and their kind (Pro, Coach, Official, Guide, Forum). |
+| 11.3 | **Read it to me**. | The review is spoken once; nothing else talks over it. |
+| 11.4 | Coach → **Age of Empires IV replay**, then Insights. | **Against the clock** shows the dashed expected curve, your readings (red where behind), the strong-player reference rings, and "At 10:00 you had 28 villagers…". |
+| 11.5 | MW4 private match with bots only, Training mode, cloud on: die in the open several times. | Once the pattern is moderately clear, one short spoken tip ("Fight from cover, not the open."), at most once per match. |
+| 11.6 | MW4 online multiplayer, same play. | Nothing during play; the post-match summary leads with how fights were lost, each with its fix. |
+| 11.7 | With cloud on, **Deeper review with Claude**. | A review marked as written by the model with its cost; counts match the panels below. If it fails, the local review stays with a note. |
+| 11.8 | Real MW4 killcams: compare 10 deaths' tags (Timeline, event details) with what the killcam showed. | Most tags match; unclear killcams are "unknown", not guessed. Record the agreement rate. |
+
+## 12. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is

@@ -171,6 +171,9 @@ export const browserBridge: SightlineBridge = {
   async ask() {
     return desktopOnly
   },
+  async reviewMatch() {
+    return desktopOnly
+  },
   async research() {
     return desktopOnly
   },

@@ -7,6 +7,9 @@
   keyboard.
 - It tells you where things go wrong: where you die or concede, when you're
   housed or idle, which habits cost you.
+- It reads how you lose fights (in the open, sprinting, out-ranged, alone,
+  from below) and turns each finding into a fix from a playbook researched
+  from pro players, coaches, official guides and forums.
 - You can mark a moment mid-game and ask about that decision after the match.
 
 It works by looking at the screen, never by touching the game:
@@ -15,12 +18,12 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v3, Windows-first.
+> **Status:** v4, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
 > - Age of Empires IV;
-> - EA SPORTS FC;
+> - EA SPORTS FC (FC 27);
 > - Age of Empires II: DE;
 > - a generic pack where Claude works out any other game;
 > - a synthetic demo.
@@ -103,14 +106,34 @@ Then press **Choose the game window**, play, and listen.
     Claude researches on the web. It is stored compressed and fed to Claude
     within size budgets, so cost stays bounded.
 - **Analyses that matter.**
-  - **MW4:** where you die (minimap areas), what kills you (weapon class),
-    kills, deaths and score trends.
-  - **AoE IV and AoE II:** housed time, idle villagers, floating resources,
-    and age-up timing against your targets.
-  - **EA FC:** where you concede and score and how, where you lose the ball,
-    and stats trends.
+  - **MW4 positioning and gunfights:** every death is read from the
+    killcam for cover, movement, range, height, nearby teammates, reloading
+    and how many enemies; every kill for range, movement and height. The
+    coach compares fights won and lost ("You lost 6 of 7 fights at long
+    range"), counts avoidable circumstances ("8 of your 12 deaths came while
+    you were in the open"), and notices deaths seconds after your own kill.
+    Killcams are reconstructions, so findings are "likely", and unreadable
+    ones are counted, never guessed. Plus where you die and what kills you.
+  - **AoE IV:** your villager count against one Town Center that never stops
+    (21 at 5:00, 36 at 10:00) with a strong-player reference; housed time,
+    idle villagers, floating resources, age-up timing.
+  - **AoE II:** housed time, idle villagers, floating resources, and age-up
+    timing against your targets.
+  - **EA FC 27:** where you concede and score and how, the first defensive
+    mistake in each goal replay (a defender pulled out of the line, an
+    unmarked far-post runner, an open cutback lane…), where you lose the
+    ball, and stats against warning lines.
   - **Patterns** like "deaths after pushing alone": graded, with
     counterexamples.
+- **Advice that comes with a fix.** Each pack has a playbook (MW4 30
+  entries, AoE IV 26, FC 27 25) of what good players do, what it looks like
+  on screen, the fix and a drill, with its sources (pro, coach, official,
+  guide, forum). Every finding the coach speaks carries its fix, once.
+- **The coach's review.** After a session, Insights gives a headline, what
+  went well, and the three things most worth working on, each with the
+  count, the principle, the fix and a drill. It is built on your PC; with
+  cloud features on, Claude can write a deeper one from the same data.
+  "Read it to me" speaks it.
 - **Talks with you.**
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a
@@ -170,7 +193,8 @@ coach/
                    local speech recognition and neural voices (worker threads)
   shared/          bridge contract, IPC channels, cloud and voice types
   src/core/        engine: observations, visible-state fusion, frame health, analyses, evidence,
-                   pattern memory, policy, planner, Q&A, vision contract/sampler/screens, knowledge base
+                   pattern memory, policy, planner, Q&A, vision contract/sampler/screens, knowledge base,
+                   fight factors, benchmarks, the coach's review
   src/policy/      registry.json (publisher-policy records)
   src/profiles/    game packs (JSON, validated at load)
   src/worker/      analysis worker (frame queue, screen memory, vision relay, snapshots)

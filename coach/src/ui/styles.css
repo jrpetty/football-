@@ -2729,3 +2729,374 @@ kbd {
     display: none;
   }
 }
+
+/* --- v4: coach's review, fights, benchmarks, playbook ---------------------------- */
+
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.review-panel {
+  border-color: rgba(90, 209, 184, 0.35);
+  background: linear-gradient(180deg, rgba(90, 209, 184, 0.06), transparent 160px), var(--panel);
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-headline {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.review-strengths {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.review-strengths li::marker {
+  content: '✓  ';
+  color: var(--accent);
+}
+
+.review-focus {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.focus-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+}
+
+.focus-item p {
+  margin: 0 0 6px;
+}
+
+.focus-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.focus-evidence {
+  font-weight: 600;
+}
+
+.focus-fix {
+  padding: 6px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 6px 6px 0;
+  font-size: 13.5px;
+}
+
+.focus-fix .label,
+.focus-item .label,
+.play .label {
+  display: inline;
+  margin: 0 6px 0 0;
+}
+
+.review-next {
+  margin: 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.factors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+
+.factor {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.factor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.factor-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.factor-rows {
+  display: grid;
+  gap: 5px;
+}
+
+.factor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5em) minmax(0, 1fr) 4.2em;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.factor-row.weakness {
+  background: var(--warn-soft);
+}
+
+.factor-row.strength {
+  background: var(--accent-soft);
+}
+
+.factor-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.factor-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--panel-2);
+}
+
+.factor-bar .lost,
+.key.lost {
+  background: var(--live);
+}
+
+.factor-bar .won,
+.key.won {
+  background: var(--accent);
+}
+
+.factor-n {
+  text-align: right;
+  color: var(--text-2);
+}
+
+.factor-finding {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.factor-legend,
+.bench-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.bench-title {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.bench {
+  margin: 0;
+}
+
+.bench svg {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  display: block;
+}
+
+.bench .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.bench .axis {
+  fill: var(--text-3);
+  font-size: 11px;
+}
+
+.bench .expected {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.bench .ref {
+  fill: none;
+  stroke: var(--info);
+  stroke-width: 2;
+}
+
+.bench .gap {
+  stroke: var(--live);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+
+.bench .actual {
+  fill: var(--text);
+}
+
+.bench .actual.behind {
+  fill: var(--live);
+}
+
+.key.expected {
+  background: var(--accent);
+}
+
+.key.actual {
+  background: var(--text);
+  border-radius: 50%;
+}
+
+.key.ref {
+  border: 2px solid var(--info);
+  border-radius: 50%;
+}
+
+.playbook {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.play {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  scroll-margin-top: 80px;
+}
+
+.play.linked {
+  border-color: rgba(242, 184, 75, 0.45);
+}
+
+.play summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.play-title {
+  font-weight: 600;
+}
+
+.play-fix {
+  flex-basis: 100%;
+}
+
+.play[open] .play-fix {
+  display: none;
+}
+
+.play-principle {
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.play ul.good,
+.play ul.bad {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.play ul.good li::marker {
+  content: '✓  ';
+  color: var(--accent);
+}
+
+.play ul.bad li::marker {
+  content: '✕  ';
+  color: var(--live);
+}
+
+.sources {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.badge.kind-pro {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge.kind-official {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.badge.kind-coach {
+  background: rgba(186, 140, 255, 0.14);
+  color: #c4a3ff;
+}
+
+.badge.kind-guide,
+.badge.kind-forum {
+  background: var(--panel-2);
+  color: var(--text-2);
+}

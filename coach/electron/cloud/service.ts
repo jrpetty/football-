@@ -158,6 +158,44 @@ export class CloudService {
     }
   }
 
+  /**
+   * A coach's review of the session from the digest and the pack's playbook:
+   * headline, strengths, up to three things to work on (evidence, principle,
+   * fix, drill). Structured output; the caller validates it again.
+   */
+  async reviewMatch(profile: GameProfile, digest: string, knowledge: string): Promise<CloudResult<{ review: unknown }>> {
+    const ready = this.ready()
+    if (!ready.ok) return ready
+    const model = this.getSettings().answerModel
+    try {
+      const msg = await ready.client.beta.messages.parse({
+        model,
+        max_tokens: 16_000,
+        ...fallbackParams(model),
+        output_config: { effort: 'medium', format: betaZodOutputFormat(reviewSchema) },
+        system: [{ type: 'text', text: answerSystemPrompt(profile, knowledge, true), cache_control: { type: 'ephemeral' } }],
+        messages: [
+          {
+            role: 'user',
+            content:
+              `Session data (JSON, from what was visible on screen):\n${digest}\n\n` +
+              'Write the coach\'s review of this session as structured output, not as speech. ' +
+              'headline: one sentence naming the single most important thing, with its count. ' +
+              'strengths: up to two things that went well, each with the count that shows it (empty if none). ' +
+              'focus: up to three things to work on, most important first, only where the data shows them; evidence quotes the counts exactly; principle says what good players do instead; fix is one imperative sentence; drill is a short practice idea or null; playbook is the matching playbook entry id or null. ' +
+              'nextMatch: one sentence to carry into the next match. Fight details read from killcams or replays are probable, not certain: say "likely" where it matters. No causal claims.',
+          },
+        ],
+      })
+      const costUsd = this.charge(model, msg.usage)
+      if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to review this session.' }
+      if (!msg.parsed_output) return { ok: false, error: 'The review did not match the expected shape.' }
+      return { ok: true, costUsd, review: msg.parsed_output }
+    } catch (err) {
+      return describeError(err)
+    }
+  }
+
   /** Research a game on the web: fundamentals, common mistakes, what good looks like, dated patch notes, with sources. */
   async research(gameTitle: string, focus: string): Promise<CloudResult<{ brief: ResearchBrief }>> {
     const ready = this.ready()
@@ -348,6 +386,21 @@ export function visionSchema(profile: GameProfile) {
     screen: z.object({ name: z.string(), kind: z.enum(SCREEN_KINDS as unknown as [string, ...string[]]), summary: z.string() }).nullable(),
   })
 }
+
+const reviewSchema = z.object({
+  headline: z.string(),
+  strengths: z.array(z.string()),
+  focus: z.array(
+    z.object({
+      evidence: z.string(),
+      principle: z.string(),
+      fix: z.string(),
+      drill: z.string().nullable(),
+      playbook: z.string().nullable(),
+    }),
+  ),
+  nextMatch: z.string(),
+})
 
 function knowledgeSchema(group: readonly KnowledgeSectionId[]) {
   return z.object({

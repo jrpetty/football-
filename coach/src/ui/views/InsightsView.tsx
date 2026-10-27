@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import type { CloudStatus } from '../../../shared/cloud.ts'
 import { storedInsights, toPatternRecords } from '../../core/memory/records.ts'
 import { mistakeLine } from '../../core/language.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
@@ -6,6 +7,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { PatternRecord } from '../../core/types.ts'
 import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
+import { BenchmarkChart, FactorCard, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -14,9 +16,10 @@ interface Props {
   session: CoachSession
   profile: GameProfile
   settings: CoachSettings
+  cloud: CloudStatus
 }
 
-export function InsightsView({ state, session, profile, settings }: Props) {
+export function InsightsView({ state, session, profile, settings, cloud }: Props) {
   const report = state.report?.profileId === profile.id ? state.report : null
   const now = useMemo(() => new Date(), [state.snapshot, report])
   const mode = settings.profileModeId
@@ -28,6 +31,27 @@ export function InsightsView({ state, session, profile, settings }: Props) {
   // While a session runs, its insights already include the stored history.
   const patterns = report ? sessionRecords : storedRecords
   const canEdit = settings.saveTendencies && !!state.snapshot
+  const book = useMemo(() => new Map((profile.knowledge.playbook ?? []).map((e) => [e.id, e])), [profile])
+  const [openPlay, setOpenPlay] = useState<string | null>(null)
+  const showPlay = (id: string) => {
+    setOpenPlay(id)
+    requestAnimationFrame(() => document.getElementById(`pb-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+  // Playbook entries the findings point to: shown first and marked.
+  const linked = useMemo(() => {
+    const ids = new Set<string>()
+    for (const f of report?.factors ?? []) for (const x of f.findings) if (x.playbook) ids.add(x.playbook)
+    for (const b of report?.benchmarks ?? []) if (b.worst && b.spec.playbook) ids.add(b.spec.playbook)
+    for (const m of report?.mistakes ?? []) if (m.totals.count && m.spec.playbook) ids.add(m.spec.playbook)
+    for (const f of state.review.review?.focus ?? []) if (f.playbook) ids.add(f.playbook)
+    return ids
+  }, [report, state.review.review])
+  const seenFights = (report?.factors ?? []).filter((f) => f.taggedLosses + f.taggedWins + f.untagged > 0)
+  const fights = seenFights.filter((f) => f.taggedLosses + f.taggedWins > 0)
+  const unread = seenFights.filter((f) => f.taggedLosses + f.taggedWins === 0)
+  const benches = (report?.benchmarks ?? []).filter((b) => b.points.length > 0)
+  const deep = cloud.available && cloud.settings.enabled && cloud.key.set
+  const capturing = state.phase !== 'idle'
 
   return (
     <div className="page">
@@ -42,6 +66,77 @@ export function InsightsView({ state, session, profile, settings }: Props) {
       {!report && !state.snapshot ? (
         <Notice level="info">No data yet for this game. Play a session (or a demo replay from the Coach tab) and come back.</Notice>
       ) : null}
+
+      {report && (
+        <section className="panel review-panel" aria-labelledby="review-h">
+          <div className="panel-head">
+            <h2 id="review-h">Coach’s review</h2>
+            <div className="btn-row">
+              <button type="button" className="btn sm" onClick={() => void session.reviewSession(cloud, { deep: false })} disabled={state.review.status === 'working'}>
+                {state.review.review ? 'Rebuild' : 'Review this session'}
+              </button>
+              {deep ? (
+                <button type="button" className="btn sm primary" onClick={() => void session.reviewSession(cloud, { deep: true })} disabled={state.review.status === 'working'}>
+                  {state.review.status === 'working' ? 'Claude is reviewing…' : 'Deeper review with Claude'}
+                </button>
+              ) : null}
+              {state.review.review ? (
+                <button type="button" className="btn sm ghost" onClick={() => session.readReview()} disabled={settings.muted}>
+                  🔊 Read it to me
+                </button>
+              ) : null}
+            </div>
+          </div>
+          {state.review.review ? (
+            <>
+              <ReviewCard review={state.review.review} book={book} onPlaybook={showPlay} />
+              <p className="muted small">
+                {state.review.review.author === 'ai'
+                  ? `Written by ${cloud.settings.answerModel} from this session's counts and the playbook${state.review.costUsd ? ` · $${state.review.costUsd.toFixed(3)}` : ''}. Check it against the numbers below.`
+                  : 'Built on this computer from the counts below and the playbook.'}
+                {state.review.note ? ` ${state.review.note}` : ''}
+              </p>
+            </>
+          ) : state.review.status === 'ready' ? (
+            <div className="empty small">Not enough yet for a review: the coach needs a few deaths, goals or readings it could see clearly.</div>
+          ) : (
+            <p className="muted small">
+              The three things most worth working on, each with what was counted, what good players do instead, the fix and a drill.
+              {capturing ? ' In online modes it opens after the match.' : ''}
+            </p>
+          )}
+        </section>
+      )}
+
+      {seenFights.length > 0 && (
+        <section className="panel" aria-labelledby="fights-h">
+          <div className="panel-head">
+            <h2 id="fights-h">How your fights go</h2>
+            <span className="muted small">Read from killcams and replays · likely, not certain · unreadable ones are counted, not guessed</span>
+          </div>
+          <div className="factors">
+            {fights.map((f) => (
+              <FactorCard key={f.spec.id} result={f} onPlaybook={showPlay} />
+            ))}
+          </div>
+          {unread.length ? <p className="muted small">Not readable yet: {unread.map((f) => f.spec.label.toLowerCase()).join(', ')}.</p> : null}
+        </section>
+      )}
+
+      {benches.length > 0 && (
+        <section className="panel" aria-labelledby="bench-h">
+          <div className="panel-head">
+            <h2 id="bench-h">Against the clock</h2>
+            <span className="muted small">Your readings at each checkpoint against a simple, explainable curve</span>
+          </div>
+          {benches.map((b) => (
+            <div key={b.spec.id}>
+              <h3 className="bench-title">{b.spec.label}</h3>
+              <BenchmarkChart result={b} />
+            </div>
+          ))}
+        </section>
+      )}
 
       {report && report.heatmaps.length > 0 && (
         <section className="panel" aria-labelledby="zones-h">
@@ -121,7 +216,17 @@ export function InsightsView({ state, session, profile, settings }: Props) {
         )}
       </section>
 
-      {profile.knowledge.concepts.length > 0 && (
+      {book.size > 0 && (
+        <section className="panel" aria-labelledby="pb-h">
+          <div className="panel-head">
+            <h2 id="pb-h">Playbook: what good players do</h2>
+            <span className="muted small">From pro players, coaches, official guides and forums · general guidance, not a reading of your games</span>
+          </div>
+          <Playbook profile={profile} linked={linked} open={openPlay} onToggle={setOpenPlay} />
+        </section>
+      )}
+
+      {book.size === 0 && profile.knowledge.concepts.length > 0 && (
         <section className="panel" aria-labelledby="con-h">
           <div className="panel-head">
             <h2 id="con-h">What good looks like</h2>

@@ -250,3 +250,19 @@ test('the key check is a free model listing, works with cloud features off, and 
   const bad = { models: { list: async () => { throw new Error('boom') } }, beta: {} } as unknown as CloudClient
   assert.deepEqual(await new CloudService(() => 'sk-ant-x', () => DEFAULT_CLOUD, () => bad).testKey(), { ok: false, error: 'boom' })
 })
+
+test("the coach's review: structured output with the playbook in the cached system prompt", async () => {
+  const mw4 = builtInProfile('cod-mw4')
+  const review = { headline: 'Most deaths came in the open.', strengths: [], focus: [{ evidence: '8 of 12 deaths in the open.', principle: 'Fight from cover.', fix: 'Take fights from cover.', drill: null, playbook: 'fight-from-cover' }], nextMatch: 'Cover first.' }
+  const { client, calls } = fakeClient({ parse: () => ({ usage, stop_reason: 'end_turn', parsed_output: review }) })
+  const svc = new CloudService(() => 'sk-ant-test-0000000000000000000000', () => ({ ...DEFAULT_CLOUD, enabled: true }), () => client)
+  const r = await svc.reviewMatch(mw4, '{"session":{}}', '')
+  assert.ok(r.ok)
+  assert.deepEqual(r.review, review)
+  const req = calls[0] as { system: { text: string; cache_control?: unknown }[]; output_config: { format?: unknown; effort: string }; messages: { content: string }[] }
+  assert.ok(req.system[0].cache_control)
+  assert.match(req.system[0].text, /Coaching playbook/)
+  assert.match(req.system[0].text, /\[fight-from-cover\] Fight from cover/)
+  assert.ok(req.output_config.format, 'structured output')
+  assert.match(req.messages[0].content, /probable, not certain/)
+})

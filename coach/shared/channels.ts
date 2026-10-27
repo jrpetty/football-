@@ -48,4 +48,5 @@ export const CHANNELS = {
   buildKnowledge: 'sightline:build-knowledge',
   deleteKnowledge: 'sightline:delete-knowledge',
   testCloud: 'sightline:test-cloud',
+  reviewMatch: 'sightline:review-match',
 } as const
