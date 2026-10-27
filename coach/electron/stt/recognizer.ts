@@ -6,7 +6,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { parentPort, Worker } from 'node:worker_threads'
-import { VOICE_MODEL } from './model.ts'
+import { ASR_MODEL } from '../models.ts'
 
 const require = createRequire(import.meta.url)
 
@@ -88,7 +88,7 @@ export class RecognizerThread {
   private readonly dir: string
 
   constructor(modelRoot: string) {
-    this.dir = join(modelRoot, 'models', VOICE_MODEL.id)
+    this.dir = join(modelRoot, 'models', ASR_MODEL.id)
   }
 
   transcribe(samples: Float32Array): Promise<string> {

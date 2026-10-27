@@ -10,6 +10,7 @@ import type { PatternSnapshot, PatternVerdict } from '../src/core/patterns.ts'
 import type { CoachSettings } from '../src/core/settings.ts'
 import type { VisionResponse } from '../src/core/vision/contract.ts'
 import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './cloud.ts'
+import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 
 export interface CaptureSource {
   readonly id: string
@@ -93,6 +94,12 @@ export interface SightlineBridge {
   removeVoiceModel(): Promise<VoiceModelStatus>
   /** 16 kHz mono PCM in [-1, 1]; returns the recognised text. */
   transcribe(pcm: Float32Array): Promise<string>
+
+  // Neural voices (local): downloaded once on request, then synthesised on this computer.
+  ttsStatus(): Promise<TtsStatus>
+  installTts(model: TtsModelKey): Promise<TtsStatus>
+  removeTts(model: TtsModelKey): Promise<TtsStatus>
+  synthesize(req: { voice: string; text: string; speed: number }): Promise<SynthResult>
 
   /** The global stop shortcut was pressed. Returns an unsubscribe function. */
   onStopRequested(cb: () => void): () => void

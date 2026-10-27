@@ -50,6 +50,10 @@ const bridge: SightlineBridge = {
   installVoiceModel: () => invoke('sightline:install-voice-model'),
   removeVoiceModel: () => invoke('sightline:remove-voice-model'),
   transcribe: (pcm) => invoke('sightline:transcribe', pcm),
+  ttsStatus: () => invoke('sightline:tts-status'),
+  installTts: (key) => invoke('sightline:install-tts', key),
+  removeTts: (key) => invoke('sightline:remove-tts', key),
+  synthesize: (req) => invoke('sightline:synthesize', req),
   onStopRequested: (cb) => listen('sightline:stop-requested', cb),
   onPushToTalk: (cb) => listen('sightline:push-to-talk', cb),
 }

@@ -35,6 +35,10 @@ export const CHANNELS = {
   installVoiceModel: 'sightline:install-voice-model',
   removeVoiceModel: 'sightline:remove-voice-model',
   transcribe: 'sightline:transcribe',
+  ttsStatus: 'sightline:tts-status',
+  installTts: 'sightline:install-tts',
+  removeTts: 'sightline:remove-tts',
+  synthesize: 'sightline:synthesize',
   stopRequested: 'sightline:stop-requested',
   pushToTalk: 'sightline:push-to-talk',
 } as const

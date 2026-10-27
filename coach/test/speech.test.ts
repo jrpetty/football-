@@ -88,3 +88,71 @@ test('a high-priority tip pre-empts lower-priority speech; the backlog drops the
   c.enqueue(u('c', null, 'normal'))
   assert.ok(log.includes('expired a'), 'the low-priority item was dropped first')
 })
+
+// --- Neural voice -----------------------------------------------------------------------
+
+import { NeuralPlayer, sentences, type AudioOut } from '../src/speech/neural.ts'
+
+function neuralSetup(fail = false) {
+  const requests: string[] = []
+  const playing: { text: string; end: () => void; stopped: boolean }[] = []
+  const out: AudioOut = {
+    play(samples, _sr, _vol, ended) {
+      const p = { text: String(samples[0]), end: ended, stopped: false }
+      playing.push(p)
+      return { stop: () => void (p.stopped = true) }
+    },
+  }
+  const texts: string[] = []
+  const player = new NeuralPlayer(async ({ text }) => {
+    requests.push(text)
+    if (fail) throw new Error('not installed')
+    texts.push(text)
+    return { samples: new Float32Array([texts.length]), sampleRate: 22050 }
+  }, out)
+  return { player, requests, playing }
+}
+
+const tick = () => new Promise((r) => setTimeout(r, 0))
+
+test('neural speech is split into sentences and the next is prepared while one plays', async () => {
+  assert.deepEqual(sentences('Housed. Build a house now!  Then scout?'), ['Housed.', 'Build a house now!', 'Then scout?'])
+  assert.ok(sentences('x'.repeat(900)).every((s) => s.length <= 400))
+  const { player, requests, playing } = neuralSetup()
+  let outcome = ''
+  player.speak('One. Two. Three.', 'neural:jenny', 1, 1, (o) => (outcome = o))
+  await tick()
+  assert.equal(playing.length, 1)
+  assert.deepEqual(requests, ['One.', 'Two.'], 'the second sentence is synthesised during the first')
+  playing[0].end()
+  await tick()
+  playing[1].end()
+  await tick()
+  playing[2].end()
+  await tick()
+  assert.equal(outcome, 'finished')
+})
+
+test('the controller uses the neural voice, cancels it, and falls back to a system voice when it fails', async () => {
+  const ok = neuralSetup()
+  const spoken: unknown[] = []
+  const synth: Synth = { speak: (x) => void spoken.push(x), cancel: () => {}, getVoices: () => [{ voiceURI: 'local', localService: true, default: true } as SpeechSynthesisVoice] }
+  const make = (text: string) => ({ text, onend: null, onerror: null }) as unknown as SpeechSynthesisUtterance
+  const log: string[] = []
+  const c = new SpeechController(synth, make, { onEnd: (id, o) => log.push(`${o} ${id}`) }, ok.player)
+  c.configure({ voiceURI: 'neural:jenny', rate: 1, volume: 1 })
+  c.enqueue(u('a'))
+  await tick()
+  assert.equal(ok.playing.length, 1)
+  assert.equal(spoken.length, 0, 'the system voice is not used')
+  c.stopAll()
+  assert.equal(ok.playing[0].stopped, true)
+  assert.deepEqual(log, ['interrupted a'])
+
+  const bad = neuralSetup(true)
+  const c2 = new SpeechController(synth, make, {}, bad.player)
+  c2.configure({ voiceURI: 'neural:kokoro:emma', rate: 1, volume: 1 })
+  c2.enqueue(u('b'))
+  await tick()
+  assert.equal(spoken.length, 1, 'fell back to the local system voice')
+})

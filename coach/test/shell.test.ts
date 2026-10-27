@@ -162,11 +162,11 @@ test('the tar reader extracts regular files and refuses paths outside the target
 // when SIGHTLINE_STT_ARCHIVE points at a downloaded copy.
 const archive = process.env.SIGHTLINE_STT_ARCHIVE
 test('local speech recognition transcribes a test recording', { skip: !archive || !existsSync(archive) ? 'set SIGHTLINE_STT_ARCHIVE to the model archive to run' : false }, async () => {
-  const { installFromFile, isInstalled } = await import('../electron/stt/model.ts')
+  const { ASR_MODEL, installFromFile, isInstalled } = await import('../electron/models.ts')
   const { RecognizerThread } = await import('../electron/stt/recognizer.ts')
   const root = await mkdtemp(join(tmpdir(), 'stt-'))
-  await installFromFile(archive!, root)
-  assert.equal(await isInstalled(root), true)
+  await installFromFile(archive!, root, ASR_MODEL)
+  assert.equal(await isInstalled(root, ASR_MODEL), true)
   assert.deepEqual((await readdir(join(root, 'models', 'moonshine-tiny-en-int8'))).sort(), ['LICENSE', 'cached_decode.int8.onnx', 'encode.int8.onnx', 'preprocess.onnx', 'tokens.txt', 'uncached_decode.int8.onnx'])
 
   // A test recording shipped inside the archive (16 kHz mono PCM WAV).
@@ -180,4 +180,32 @@ test('local speech recognition transcribes a test recording', { skip: !archive |
   } finally {
     rec.close()
   }
+})
+
+// Real neural voice: install the Jenny archive and synthesise in the worker
+// thread. Runs when SIGHTLINE_TTS_ARCHIVE points at a downloaded copy.
+const ttsArchive = process.env.SIGHTLINE_TTS_ARCHIVE
+test('the neural voice installs from its pinned archive and speaks', { skip: !ttsArchive || !existsSync(ttsArchive) ? 'set SIGHTLINE_TTS_ARCHIVE to the Jenny voice archive to run' : false }, async () => {
+  const { TTS_MODELS, installFromFile, isInstalled } = await import('../electron/models.ts')
+  const { TtsThread } = await import('../electron/tts/engine.ts')
+  const root = await mkdtemp(join(tmpdir(), 'tts-'))
+  await installFromFile(ttsArchive!, root, TTS_MODELS.jenny)
+  assert.equal(await isInstalled(root, TTS_MODELS.jenny), true)
+  const tts = new TtsThread(root)
+  try {
+    const { result } = await tts.synthesize('jenny', 'Build a house before you hit the cap.', 0, 1)
+    const seconds = result.samples.length / result.sampleRate
+    assert.equal(result.sampleRate, 22050)
+    assert.ok(seconds > 1 && seconds < 6, `plausible length: ${seconds}s`)
+    assert.ok(Math.max(...result.samples.slice(0, 50_000).map(Math.abs)) > 0.05, 'not silence')
+  } finally {
+    tts.close()
+  }
+})
+
+test('a corrupted voice archive is refused before anything is written', async () => {
+  const { TTS_MODELS, unpackArchive, isInstalled } = await import('../electron/models.ts')
+  const root = await mkdtemp(join(tmpdir(), 'tts-bad-'))
+  await assert.rejects(unpackArchive(Buffer.from('not an archive'), root, TTS_MODELS.kokoro), /checksum/)
+  assert.equal(await isInstalled(root, TTS_MODELS.kokoro), false)
 })

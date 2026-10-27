@@ -6,9 +6,9 @@ import { COOLDOWN_RANGE, VERBOSITIES, type CoachSettings } from '../../core/sett
 import type { Verbosity } from '../../core/types.ts'
 import { estimatePerHour, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
 import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
-import type { LocalVoice } from '../../speech/speech.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
+import { VoicePanel } from '../components/VoicePanel.tsx'
 import { usd } from '../format.ts'
 import type { CoachSession } from '../session.ts'
 
@@ -31,15 +31,6 @@ interface Props {
 }
 
 export function SettingsView({ settings, onSettings, session, info, catalog, bridge, cloud, onCloud, profile }: Props) {
-  const [voices, setVoices] = useState<LocalVoice[]>(() => session.speech.localVoices())
-  useEffect(() => {
-    if (!('speechSynthesis' in window)) return
-    const update = () => setVoices(session.speech.localVoices())
-    window.speechSynthesis.addEventListener('voiceschanged', update)
-    update()
-    return () => window.speechSynthesis.removeEventListener('voiceschanged', update)
-  }, [session])
-
   return (
     <div className="page">
       <div>
@@ -51,50 +42,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
 
-      <section className="panel" aria-labelledby="voice">
-        <div className="panel-head">
-          <h2 id="voice">Voice output</h2>
-          <span className="muted small">Local voices only; text never leaves this computer.</span>
-        </div>
-        {voices.length === 0 ? (
-          <Notice level="warning">
-            No local text-to-speech voice was found. Messages will appear as text only. On Windows, add a voice under Settings →
-            Time & language → Speech.
-          </Notice>
-        ) : null}
-        <div className="grid-2">
-          <div className="field">
-            <label htmlFor="voice-select">Voice</label>
-            <select id="voice-select" value={settings.voice.voiceURI ?? ''} onChange={(e) => onSettings({ voice: { ...settings.voice, voiceURI: e.target.value || null } })}>
-              <option value="">System default</option>
-              {voices.map((v) => (
-                <option key={v.voiceURI} value={v.voiceURI}>
-                  {v.name} ({v.lang})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <span className="label">Try it</span>
-            <div className="btn-row">
-              <button type="button" className="btn" disabled={voices.length === 0} onClick={() => session.speech.speakTest('Low health. Patch up first.')}>
-                Play sample
-              </button>
-              <button type="button" className="btn ghost" onClick={() => session.quiet()}>
-                Stop
-              </button>
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="rate">Speed: {settings.voice.rate.toFixed(2)}×</label>
-            <input id="rate" type="range" min={0.5} max={2} step={0.05} value={settings.voice.rate} onChange={(e) => onSettings({ voice: { ...settings.voice, rate: Number(e.target.value) } })} />
-          </div>
-          <div className="field">
-            <label htmlFor="volume">Volume: {Math.round(settings.voice.volume * 100)}%</label>
-            <input id="volume" type="range" min={0} max={1} step={0.05} value={settings.voice.volume} onChange={(e) => onSettings({ voice: { ...settings.voice, volume: Number(e.target.value) } })} />
-          </div>
-        </div>
-      </section>
+      <VoicePanel settings={settings} onSettings={onSettings} session={session} bridge={bridge} info={info} />
 
       <section className="panel" aria-labelledby="delivery">
         <div className="panel-head">

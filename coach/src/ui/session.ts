@@ -17,6 +17,7 @@ import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, Tim
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, fcMatchReplay } from '../sim/visionReplay.ts'
 import { PushToTalkRecorder } from '../speech/recorder.ts'
+import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
 import type { FromWorker, ToWorker, WorkerStatus } from '../worker/protocol.ts'
 import { policyFor } from './policy.ts'
@@ -135,10 +136,13 @@ export class CoachSession {
 
   constructor(bridge: SightlineBridge) {
     this.bridge = bridge
-    this.speech = createBrowserSpeech({
-      onStart: (id) => this.updateSpeech(id, 'speaking'),
-      onEnd: (id, outcome) => this.updateSpeech(id, outcome === 'error' ? 'unavailable' : outcome),
-    })
+    this.speech = createBrowserSpeech(
+      {
+        onStart: (id) => this.updateSpeech(id, 'speaking'),
+        onEnd: (id, outcome) => this.updateSpeech(id, outcome === 'error' ? 'unavailable' : outcome),
+      },
+      new NeuralPlayer((req) => bridge.synthesize(req)),
+    )
   }
 
   // --- React integration --------------------------------------------------------

@@ -38,7 +38,10 @@ import { BUILT_IN_PROFILES } from '../src/profiles/index.ts'
 import { KeyStore, type Cipher } from './cloud/keystore.ts'
 import { CloudService } from './cloud/service.ts'
 import { CaptureConsent, isSourceId } from './consent.ts'
-import { isInstalled, installModel, removeModel, VOICE_MODEL, type ModelStatus } from './stt/model.ts'
+import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
+import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
+import { ASR_MODEL, isInstalled, installModel, removeModel, TTS_MODELS } from './models.ts'
+import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
 
@@ -58,7 +61,14 @@ let cloud: CloudService
 let cloudSettings = { enabled: false, visionModel: 'claude-opus-5-5', answerModel: 'claude-opus-5-5', sessionCapUsd: 2 }
 let settings: CoachSettings | null = null
 let recognizer: RecognizerThread | null = null
-let modelStatus: ModelStatus = { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(VOICE_MODEL.archiveBytes / 1e6) }
+let modelStatus: ModelStatus = { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(ASR_MODEL.archiveBytes / 1e6) }
+let tts: TtsThread | null = null
+const ttsModels: Record<TtsModelKey, ModelState> = {
+  jenny: { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(TTS_MODELS.jenny.archiveBytes / 1e6) },
+  kokoro: { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(TTS_MODELS.kokoro.archiveBytes / 1e6) },
+}
+/** Measured synthesis speed per model (compute seconds per second of speech), smoothed. */
+const ttsRtf: Partial<Record<TtsModelKey, number>> = {}
 let win: BrowserWindow | null = null
 const shortcuts = { stop: false, talk: false }
 
@@ -291,7 +301,7 @@ function registerIpc(): void {
     if (!settings?.voiceInput) return { ...modelStatus, error: 'Turn on voice input first.' }
     if (modelStatus.installing || modelStatus.installed) return modelStatus
     modelStatus = { ...modelStatus, installing: true, progress: 0, error: null }
-    void installModel(app.getPath('userData'), (p) => (modelStatus = { ...modelStatus, progress: p }))
+    void installModel(app.getPath('userData'), ASR_MODEL, (p) => (modelStatus = { ...modelStatus, progress: p }))
       .then(() => (modelStatus = { ...modelStatus, installed: true, installing: false, progress: 1 }))
       .catch((e: unknown) => (modelStatus = { ...modelStatus, installing: false, error: e instanceof Error ? e.message : String(e) }))
     return modelStatus
@@ -299,7 +309,7 @@ function registerIpc(): void {
   handle(CHANNELS.removeVoiceModel, async () => {
     recognizer?.close()
     recognizer = null
-    await removeModel(app.getPath('userData'))
+    await removeModel(app.getPath('userData'), ASR_MODEL)
     modelStatus = { ...modelStatus, installed: false, progress: 0 }
     return modelStatus
   })
@@ -309,6 +319,47 @@ function registerIpc(): void {
     if (!(pcm instanceof Float32Array) || pcm.length === 0 || pcm.length > SAMPLE_RATE * MAX_SECONDS) throw new Error('Invalid audio.')
     recognizer ??= new RecognizerThread(app.getPath('userData'))
     return recognizer.transcribe(pcm)
+  })
+
+  // --- Neural voices (local text-to-speech) ----------------------------------------------------
+  const ttsStatus = (): TtsStatus => ({ available: true, models: { ...ttsModels }, realTimeFactor: { ...ttsRtf } })
+  const isTtsKey = (k: unknown): k is TtsModelKey => k === 'jenny' || k === 'kokoro'
+  handle(CHANNELS.ttsStatus, () => ttsStatus())
+  handle(CHANNELS.installTts, async (key) => {
+    if (!isTtsKey(key)) throw new Error('Unknown voice model')
+    const m = ttsModels[key]
+    if (m.installing || m.installed) return ttsStatus()
+    ttsModels[key] = { ...m, installing: true, progress: 0, error: null }
+    void installModel(app.getPath('userData'), TTS_MODELS[key], (p) => (ttsModels[key] = { ...ttsModels[key], progress: p }))
+      .then(() => (ttsModels[key] = { ...ttsModels[key], installed: true, installing: false, progress: 1 }))
+      .catch((e: unknown) => (ttsModels[key] = { ...ttsModels[key], installing: false, error: e instanceof Error ? e.message : String(e) }))
+    return ttsStatus()
+  })
+  handle(CHANNELS.removeTts, async (key) => {
+    if (!isTtsKey(key)) throw new Error('Unknown voice model')
+    tts?.close()
+    tts = null
+    await removeModel(app.getPath('userData'), TTS_MODELS[key])
+    ttsModels[key] = { ...ttsModels[key], installed: false, progress: 0 }
+    delete ttsRtf[key]
+    return ttsStatus()
+  })
+  handle(CHANNELS.synthesize, async (req) => {
+    const r = req as { voice?: unknown; text?: unknown; speed?: unknown } | null
+    const voice = NEURAL_VOICES.find((v) => v.id === r?.voice)
+    if (!voice) throw new Error('Unknown voice')
+    if (!ttsModels[voice.model].installed) throw new Error('That voice is not installed.')
+    const text = typeof r?.text === 'string' ? r.text.trim().slice(0, MAX_SYNTH_CHARS) : ''
+    if (!text) throw new Error('Nothing to say.')
+    const speed = typeof r?.speed === 'number' && Number.isFinite(r.speed) ? Math.min(2, Math.max(0.5, r.speed)) : 1
+    tts ??= new TtsThread(app.getPath('userData'))
+    const { result, ms } = await tts.synthesize(voice.model, text, voice.sid, speed)
+    const seconds = result.samples.length / result.sampleRate
+    if (seconds > 0.5) {
+      const rtf = ms / 1000 / seconds
+      ttsRtf[voice.model] = ttsRtf[voice.model] === undefined ? rtf : ttsRtf[voice.model]! * 0.7 + rtf * 0.3
+    }
+    return result
   })
 }
 
@@ -335,7 +386,8 @@ if (!app.requestSingleInstanceLock()) {
     keys = new KeyStore(join(root, 'secret.bin'), cipher)
     await keys.load()
     cloud = new CloudService(() => keys.get(), () => cloudSettings)
-    modelStatus = { ...modelStatus, installed: await isInstalled(root) }
+    modelStatus = { ...modelStatus, installed: await isInstalled(root, ASR_MODEL) }
+    for (const key of ['jenny', 'kokoro'] as const) ttsModels[key] = { ...ttsModels[key], installed: await isInstalled(root, TTS_MODELS[key]) }
 
     if (!DEV_URL) Menu.setApplicationMenu(null)
     hardenSession()
@@ -350,6 +402,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('will-quit', () => {
     globalShortcut.unregisterAll()
     recognizer?.close()
+    tts?.close()
   })
   app.on('window-all-closed', () => app.quit())
 }

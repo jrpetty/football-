@@ -5,6 +5,7 @@
 
 import type { PlayerNotes, SightlineBridge, VoiceModelStatus } from '../../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudStatus } from '../../shared/cloud.ts'
+import type { TtsStatus } from '../../shared/voices.ts'
 import { isMatchRecord, type MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { deletePattern, migrateSnapshot, setVerdict } from '../core/patterns.ts'
 import { sanitizeSettings } from '../core/settings.ts'
@@ -61,6 +62,14 @@ const CLOUD_UNAVAILABLE: CloudStatus = {
 }
 
 const NO_VOICE: VoiceModelStatus = { installed: false, installing: false, progress: 0, error: 'Voice input needs the desktop app.', sizeMb: 108 }
+const NO_TTS: TtsStatus = {
+  available: false,
+  models: {
+    jenny: { installed: false, installing: false, progress: 0, error: null, sizeMb: 67 },
+    kokoro: { installed: false, installing: false, progress: 0, error: null, sizeMb: 103 },
+  },
+  realTimeFactor: {},
+}
 const desktopOnly = { ok: false as const, error: 'Cloud features need the desktop app (your API key never touches a web page).', fatal: true }
 
 export const browserBridge: SightlineBridge = {
@@ -180,6 +189,18 @@ export const browserBridge: SightlineBridge = {
   },
   async transcribe() {
     throw new Error('Voice input needs the desktop app.')
+  },
+  async ttsStatus() {
+    return NO_TTS
+  },
+  async installTts() {
+    return NO_TTS
+  },
+  async removeTts() {
+    return NO_TTS
+  },
+  async synthesize() {
+    throw new Error('Neural voices need the desktop app.')
   },
 
   onStopRequested() {

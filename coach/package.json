@@ -20,6 +20,7 @@
     "react-dom": "^18.3.1",
     "seek-bzip": "^2.0.0",
     "sherpa-onnx": "^1.13.8",
+    "sherpa-onnx-node": "1.13.8",
     "zod": "^3.25.76"
   },
   "devDependencies": {
