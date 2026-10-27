@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -100,7 +100,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens.",
+    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villagers (the worker counts beside each resource plus idle, only if all are readable), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens.",
     "sampleIntervalMs": 4000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
@@ -167,6 +167,15 @@
         "max": 500,
         "ttlMs": 12000,
         "description": "Idle villager count shown on the idle villager indicator, only if a number is shown."
+      },
+      {
+        "key": "villagers",
+        "label": "Villagers",
+        "type": "number",
+        "min": 0,
+        "max": 250,
+        "ttlMs": 12000,
+        "description": "Total villagers: the sum of the worker counts shown beside each resource plus idle villagers. Only if every count is readable; otherwise omit."
       },
       {
         "key": "age",
@@ -236,7 +245,8 @@
         "economy",
         "population",
         "houses"
-      ]
+      ],
+      "playbook": "never-housed"
     },
     {
       "id": "idle-villagers",
@@ -260,7 +270,8 @@
         "economy",
         "villagers",
         "idle"
-      ]
+      ],
+      "playbook": "idle-villagers-zero"
     },
     {
       "id": "floating-resources",
@@ -289,7 +300,8 @@
       "tags": [
         "economy",
         "spending"
-      ]
+      ],
+      "playbook": "float-threshold"
     },
     {
       "id": "late-feudal",
@@ -315,7 +327,8 @@
         "age-up",
         "build-order",
         "timings"
-      ]
+      ],
+      "playbook": "feudal-on-time"
     },
     {
       "id": "late-castle",
@@ -738,16 +751,936 @@
           }
         ]
       }
+    ],
+    "playbook": [
+      {
+        "id": "tc-never-idle",
+        "title": "Never stop villager production",
+        "principle": "Every second a Town Center is idle is a villager you never get back, and the loss compounds. Guides and coaches name macro as the biggest gap between Gold or Platinum and Diamond players.",
+        "good": [
+          "One or two villagers queued at every check",
+          "Production carries on through age-ups and fights"
+        ],
+        "bad": [
+          "Town Center idle while you place buildings or fight",
+          "Five villagers queued, locking resources"
+        ],
+        "signals": [
+          "Villager count behind the one-Town-Center curve (21 at 5:00, 36 at 10:00)",
+          "Total villagers flat between checks"
+        ],
+        "fix": "Queue one or two villagers every time you check a Town Center, never more than three.",
+        "sources": [
+          {
+            "url": "https://gamerblurb.com/articles/age-of-empires-iv-how-many-villagers-should-you-make",
+            "title": "How many villagers should you make, GamerBlurb",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4-coach.com",
+            "title": "Macro Coach (idle Town Center benchmarks)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://aoedb.net/aoe4/mastering-economy-management/",
+            "title": "Mastering economy management, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoedb.net/aoe4/fix-villager-idling-problem/",
+            "title": "Fixing idle villagers, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=6MrURTs8V7o",
+            "title": "Macro and micro fundamentals 2026 (community video)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "economy",
+          "villagers"
+        ],
+        "drill": "Against the AI, play one Town Center with one goal: 36 villagers at 10:00."
+      },
+      {
+        "id": "idle-villagers-zero",
+        "title": "Zero idle villagers",
+        "principle": "Idle villagers are invisible lost income, usually after a resource runs dry, a building finishes or a raid.",
+        "good": [
+          "Idle icon at zero most of the time",
+          "Idle villagers back to work within about 10 seconds"
+        ],
+        "bad": [
+          "Builders left idle after a house",
+          "Villagers still garrisoned long after a raid"
+        ],
+        "signals": [
+          "Idle villager count above zero for more than 15 seconds"
+        ],
+        "fix": "Bind select idle villager to an easy key and press it after every build and every fight.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/fix-villager-idling-problem/",
+            "title": "Fixing idle villagers, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4academix.com/en/hotkeys",
+            "title": "Hotkey guide (quoting VortiX), Academix",
+            "kind": "coach"
+          },
+          {
+            "url": "https://news.xbox.com/en-us/2021/10/22/age-of-empires-iv-hotkeys-revealed/",
+            "title": "Age of Empires IV hotkeys (Xbox Wire)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "economy",
+          "villagers",
+          "hotkeys"
+        ]
+      },
+      {
+        "id": "never-housed",
+        "title": "Build houses ahead of time",
+        "principle": "Hitting the population cap stops every production queue at once. Houses are cheap insurance.",
+        "good": [
+          "Cap 5 to 15 above your population",
+          "Two houses at a time from late Feudal"
+        ],
+        "bad": [
+          "Population at cap for 20 seconds or more",
+          "Starting a house only after hitting the cap"
+        ],
+        "signals": [
+          "Population equal to the cap while queues are full"
+        ],
+        "fix": "Start a house when you are within 5 of the cap, within 10 once you have two Town Centers.",
+        "sources": [
+          {
+            "url": "https://www.youtube.com/watch?v=6MrURTs8V7o",
+            "title": "Macro and micro fundamentals 2026 (community video)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "economy",
+          "population"
+        ]
+      },
+      {
+        "id": "feudal-on-time",
+        "title": "Hit your opening's Feudal timing",
+        "principle": "A build order is a timing contract. Missing it by 30 seconds or more means the economy leaked somewhere.",
+        "good": [
+          "Feudal within 15 seconds of the build target",
+          "Villager split matching the build"
+        ],
+        "bad": [
+          "Feudal at 6:00 or later on a standard build",
+          "Gold or wood never set up"
+        ],
+        "signals": [
+          "Age icon changes late; food reached 400 but gold sat below 200"
+        ],
+        "fix": "Pick one build per civilisation and play it against the AI until you land within 15 seconds three times in a row.",
+        "sources": [
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1015.html",
+            "title": "Abbasid two Town Center build, aoeinfo",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1017.html",
+            "title": "English opening build, aoeinfo",
+            "kind": "guide"
+          },
+          {
+            "url": "https://metaaoe.app/en/aoe4-build-orders/",
+            "title": "AoE4 build orders, MetaAoE",
+            "kind": "guide"
+          },
+          {
+            "url": "https://guildorder.com/games/aoe4/guides/opening-builds-by-civ",
+            "title": "Opening builds by civilisation, Guild Order",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "build-order",
+          "timings"
+        ],
+        "drill": "Run the opening 20 or more times against the AI, then review the replay."
+      },
+      {
+        "id": "fast-castle-window",
+        "title": "Fast castle needs a payoff and safety",
+        "principle": "A fast castle (about 7:30 to 9:30) buys strong units and techs but leaves you exposed in Feudal. It works when you scouted no early aggression or can hold it cheaply.",
+        "good": [
+          "A planned unit or tech spike after Castle",
+          "Spearmen or a tower if Feudal pressure was scouted"
+        ],
+        "bad": [
+          "Clicking Castle with no production planned",
+          "Fast castle into a scouted early stable with no spears"
+        ],
+        "signals": [
+          "Little or no army near 8:00 while enemy units show on the minimap"
+        ],
+        "fix": "Before clicking Castle, decide your first two units or techs, and add spears if you saw a stable.",
+        "sources": [
+          {
+            "url": "https://www.youtube.com/watch?v=0_DcTxTqB7I",
+            "title": "Japanese fast castle build (aoe4guides video)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/castle-heavy-units-are-too-strong-compared-to-feudal-units/209600",
+            "title": "Castle units vs Feudal units thread, official forums",
+            "kind": "forum"
+          },
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1015.html",
+            "title": "Abbasid two Town Center build, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "timings",
+          "strategy"
+        ]
+      },
+      {
+        "id": "second-tc-timing",
+        "title": "Expand when it is safe",
+        "principle": "A second Town Center is the strongest economic investment, but against early pressure the wood is better spent on army. In Update 17.0 a Town Center takes 165 seconds to build.",
+        "good": [
+          "Second Town Center around 5:00 to 5:40 after scouting no early military",
+          "A third once you control the map"
+        ],
+        "bad": [
+          "Never expanding when not under pressure",
+          "Two Town Centers into a scouted rush"
+        ],
+        "signals": [
+          "One Town Center past 12:00; villagers well below the strong-player curve"
+        ],
+        "fix": "If your scout at about 4:30 shows no military buildings, start a second Town Center before 6:00.",
+        "sources": [
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1015.html",
+            "title": "Abbasid two Town Center build, aoeinfo",
+            "kind": "guide"
+          },
+          {
+            "url": "https://steamcommunity.com/app/1466860/discussions/0/4637114422843692970",
+            "title": "One vs two Town Centers, Steam discussions",
+            "kind": "forum"
+          },
+          {
+            "url": "https://www.ageofempires.com/news/age-of-empires-iv-update-17-0/",
+            "title": "Update 17.0 notes (official)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "economy",
+          "expansion"
+        ]
+      },
+      {
+        "id": "resource-balance",
+        "title": "Match villagers to what you spend",
+        "principle": "Your villager split should follow your unit and tech plan. Gold-heavy units such as knights and men-at-arms need far more on gold.",
+        "good": [
+          "About 40% on gold for a gold-heavy army",
+          "More on wood while expanding and farming"
+        ],
+        "bad": [
+          "25 on food and 3 on gold while making knights",
+          "Mining stone with no plan for it"
+        ],
+        "signals": [
+          "One resource climbing for two minutes while another sits near zero"
+        ],
+        "fix": "Every minute, move three to five villagers from the biggest bank to the smallest.",
+        "sources": [
+          {
+            "url": "https://guildorder.com/games/aoe4/guides/eco-routing-by-age",
+            "title": "Economy by age, Guild Order",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoedb.net/aoe4/mastering-economy-management/",
+            "title": "Mastering economy management, AoEDB",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "economy",
+          "balance"
+        ]
+      },
+      {
+        "id": "float-threshold",
+        "title": "Spend down your banks",
+        "principle": "Unspent resources are an army you do not have. A bank of 1,000 or more of one resource usually means a missed timing.",
+        "good": [
+          "Under about 500 of each resource outside planned saves",
+          "Production added as income grows"
+        ],
+        "bad": [
+          "1,000 or more banked",
+          "1,500 food with idle production"
+        ],
+        "signals": [
+          "A resource above 1,000 for a minute or more"
+        ],
+        "fix": "Add a production building or a tech, sell at the market, or move villagers off that resource.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/mastering-economy-management/",
+            "title": "Mastering economy management, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://jeu.video/en/guide/age-of-empires-iv-resources-priorities",
+            "title": "Resource priorities, jeu.video",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoedb.net/aoe4/beginner-guide/",
+            "title": "Beginner guide, AoEDB",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "economy",
+          "spending"
+        ]
+      },
+      {
+        "id": "farm-transition",
+        "title": "Move to farms before food runs dry",
+        "principle": "Sheep, berries and deer near the Town Center run out in Feudal. A late switch to farms means idle villagers and a food crash; farms near the Town Center are also safe from raids.",
+        "good": [
+          "Farms built as each early food source empties",
+          "Horticulture researched (+10% food gathering)"
+        ],
+        "bad": [
+          "Villagers walking to far deer under raid pressure",
+          "Many idle villagers when the sheep run out"
+        ],
+        "signals": [
+          "Idle spike and flat food around 6 to 10 minutes"
+        ],
+        "fix": "Bank wood for farms one or two minutes before sheep and berries run out.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Early_Economy_(Age_of_Empires_IV)",
+            "title": "Early economy, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Horticulture",
+            "title": "Horticulture, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "economy",
+          "food"
+        ]
+      },
+      {
+        "id": "scout-and-sheep",
+        "title": "The early scout pays twice",
+        "principle": "The scout brings sheep home for food, then finds information. With Professional Scouts it can carry carcasses, moving 55% slower while carrying.",
+        "good": [
+          "Sheep pushed to the Town Center early",
+          "Enemy gold and military buildings checked"
+        ],
+        "bad": [
+          "Scout idle at home",
+          "Scout lost to the enemy Town Center"
+        ],
+        "signals": [
+          "No fog cleared in the enemy half by 3:00"
+        ],
+        "fix": "Scout path: sheep, then enemy gold and production, then home.",
+        "sources": [
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1002.html",
+            "title": "Beginner habits, aoeinfo",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Early_Economy_(Age_of_Empires_IV)",
+            "title": "Early economy, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "scouting"
+        ]
+      },
+      {
+        "id": "scout-cadence",
+        "title": "Scout what changes your decisions",
+        "principle": "The enemy's age-up landmark, military buildings, second Town Center and blacksmith decide your next three minutes. Scout before committing and before every age-up.",
+        "good": [
+          "Checks at 2 to 3 minutes, at enemy Feudal, then every 2 to 3 minutes",
+          "Units or outposts on attack paths"
+        ],
+        "bad": [
+          "Learning the enemy army only when it arrives"
+        ],
+        "signals": [
+          "No friendly units in enemy territory for three minutes or more"
+        ],
+        "fix": "Put a scout, horseman or outpost on the attack paths and check the enemy base at each timing.",
+        "sources": [
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1002.html",
+            "title": "Beginner habits, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "scouting"
+        ]
+      },
+      {
+        "id": "counter-core",
+        "title": "Build counters before the threat arrives",
+        "principle": "Age of Empires IV runs on counters: spears beat cavalry, archers beat spears and light infantry, horsemen beat ranged units and siege, crossbows and handcannons beat men-at-arms and knights, mangonels punish massed ranged units, springalds beat siege.",
+        "good": [
+          "Composition changed within one production cycle of scouting"
+        ],
+        "bad": [
+          "Archers into men-at-arms",
+          "Knights into spears"
+        ],
+        "signals": [
+          "Lopsided losses after a fight"
+        ],
+        "fix": "Name the enemy's main unit and queue its counter.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/counters/",
+            "title": "Unit counters, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoedb.net/aoe4/mastering-siege-warfare/",
+            "title": "Mastering siege warfare, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Counter",
+            "title": "Counters, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "army",
+          "counters"
+        ]
+      },
+      {
+        "id": "blacksmith-timing",
+        "title": "Upgrades are army supply",
+        "principle": "A +1 upgrade multiplies every unit of that line, and armies that skip upgrades lose even trades.",
+        "good": [
+          "First upgrade for your main line once you commit to it",
+          "Upgrades matched to the opponent"
+        ],
+        "bad": [
+          "A 20-minute game with no blacksmith",
+          "Upgrading a line you then abandon"
+        ],
+        "signals": [
+          "Gold floating while the army fights"
+        ],
+        "fix": "Build a blacksmith as Feudal completes and research +1 for your main unit line.",
+        "sources": [
+          {
+            "url": "https://aoe4academix.com/en/hotkeys",
+            "title": "Hotkey guide (quoting VortiX), Academix",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "army",
+          "upgrades"
+        ]
+      },
+      {
+        "id": "army-between",
+        "title": "Park the army between the threat and your economy",
+        "principle": "Keep the army on the enemy's likely path to your exposed gold and wood, close enough to your defences to fall back.",
+        "good": [
+          "Army at the forward gold, a chokepoint or a sacred site",
+          "Reinforcements rallied there"
+        ],
+        "bad": [
+          "Army idle in base while forward villagers die",
+          "Army deep in enemy land for no reason"
+        ],
+        "signals": [
+          "Enemy units at your resources while your army is far away"
+        ],
+        "fix": "Rally production to a forward position and park the army there between attacks.",
+        "sources": [
+          {
+            "url": "https://forums.ageofempires.com/t/you-dont-have-to-hold-on-to-sacred-sites/273581",
+            "title": "Sacred sites thread, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "army",
+          "positioning"
+        ]
+      },
+      {
+        "id": "attack-with-purpose",
+        "title": "Attack with a goal and an exit",
+        "principle": "Attack a specific resource or objective, and retreat from fights you are losing instead of trading everything.",
+        "good": [
+          "Raid, kill villagers, leave before the counter-army arrives",
+          "Fighting with a numbers or upgrade edge"
+        ],
+        "bad": [
+          "Chasing a fleeing army under their Town Center",
+          "Fighting at a supply disadvantage"
+        ],
+        "signals": [
+          "Your army supply dropping sharply near enemy buildings"
+        ],
+        "fix": "Before you move out, decide the target and when you will leave.",
+        "sources": [
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1002.html",
+            "title": "Beginner habits, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "army",
+          "decisions"
+        ]
+      },
+      {
+        "id": "no-fight-into-defenses",
+        "title": "Do not fight under enemy Town Centers, towers or keeps",
+        "principle": "Defensive buildings add free damage, and garrisoned villagers add arrows. Lure the army out, or bring siege.",
+        "good": [
+          "Disengaging when the enemy runs under their Town Center",
+          "Rams or a bombard before engaging a keep"
+        ],
+        "bad": [
+          "Attack-moving into a keep",
+          "Diving a Town Center with archers"
+        ],
+        "signals": [
+          "Your army fighting inside enemy building range while your population drops"
+        ],
+        "fix": "Stop at the edge of building range and pull back unless you have siege.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Town_Center_(Age_of_Empires_IV)",
+            "title": "Town Center, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ageofempires.com/news/age-of-empires-iv-update-17-0/",
+            "title": "Update 17.0 notes (official)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "army",
+          "decisions"
+        ]
+      },
+      {
+        "id": "defend-under-your-tc",
+        "title": "Defend on your terms at home",
+        "principle": "When outnumbered, fight under your Town Center, towers or keep. Garrisoned villagers add arrows, but ringing everyone in for minutes costs economy.",
+        "good": [
+          "Pulling back to your defences",
+          "Garrisoning only villagers in danger"
+        ],
+        "bad": [
+          "Meeting a bigger army in the open",
+          "All villagers garrisoned for minutes"
+        ],
+        "signals": [
+          "Many idle or garrisoned villagers for more than 30 seconds"
+        ],
+        "fix": "Retreat to your defences, then send villagers back to work the moment the threat leaves.",
+        "sources": [
+          {
+            "url": "https://news.xbox.com/en-us/2021/10/22/age-of-empires-iv-hotkeys-revealed/",
+            "title": "Age of Empires IV hotkeys (Xbox Wire)",
+            "kind": "official"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Town_Center_(Age_of_Empires_IV)",
+            "title": "Town Center, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.reddit.com/r/aoe4/comments/prr8up/",
+            "title": "Town bell discussion, r/aoe4",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "defence",
+          "economy"
+        ]
+      },
+      {
+        "id": "raid-protection",
+        "title": "Protect villagers cheaply",
+        "principle": "Raids win through idle and dead villagers, not building damage. Outposts, a few spears and a quick reaction beat full garrisons.",
+        "good": [
+          "Outposts or towers at the forward gold",
+          "A small home guard near exposed resources"
+        ],
+        "bad": [
+          "Losing five or more villagers to four horsemen",
+          "Garrisoning everything for one horseman"
+        ],
+        "signals": [
+          "Villager count dropping while production is running"
+        ],
+        "fix": "Build an outpost at every resource line away from the Town Center and keep a small home guard.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Town_Center_(Age_of_Empires_IV)",
+            "title": "Town Center, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defence",
+          "economy"
+        ]
+      },
+      {
+        "id": "concave-and-chokes",
+        "title": "Shape the fight",
+        "principle": "A wider front lets more of your units fight. Fight bigger armies at chokepoints, and spread ranged units against mangonels.",
+        "good": [
+          "Ranged units behind spears",
+          "Spread formation against mangonels",
+          "Engaging from two angles"
+        ],
+        "bad": [
+          "A single line through a choke into a concave",
+          "Clumped archers under mangonel fire"
+        ],
+        "signals": [
+          "Heavy losses in a fight at a choke"
+        ],
+        "fix": "Spread out before engaging and approach from two angles.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/mastering-siege-warfare/",
+            "title": "Mastering siege warfare, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=FdJFDsXr4ws",
+            "title": "Ultimate micro guide (community video)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "army",
+          "micro"
+        ]
+      },
+      {
+        "id": "siege-usage",
+        "title": "Siege with an escort and a purpose",
+        "principle": "Rams are for buildings and die to melee units. Mangonels punish clumps. Springalds counter siege. Cavalry is the best answer to siege.",
+        "good": [
+          "Mangonels aimed at the middle of clumps, then pulled back",
+          "Rams escorted by spears and archers"
+        ],
+        "bad": [
+          "Unescorted mangonels",
+          "Siege attack-moved into a cavalry army"
+        ],
+        "signals": [
+          "Siege ahead of your army on the minimap"
+        ],
+        "fix": "Keep siege behind the front line with an escort assigned.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/mastering-siege-warfare/",
+            "title": "Mastering siege warfare, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Mangonel_(Age_of_Empires_IV)",
+            "title": "Mangonel, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "army",
+          "siege"
+        ]
+      },
+      {
+        "id": "sacred-sites",
+        "title": "Sacred sites: gold and a win condition",
+        "principle": "A held sacred site gives gold, and holding all of them starts a victory timer that forces the opponent to move out.",
+        "good": [
+          "Monks escorted by a squad",
+          "Contesting the opponent's countdown"
+        ],
+        "bad": [
+          "Ignoring the timer",
+          "Unescorted monks"
+        ],
+        "signals": [
+          "The sacred site countdown on screen"
+        ],
+        "fix": "Escort the monk and leave a squad at captured sites.",
+        "sources": [
+          {
+            "url": "https://forums.ageofempires.com/t/you-dont-have-to-hold-on-to-sacred-sites/273581",
+            "title": "Sacred sites thread, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "objectives"
+        ]
+      },
+      {
+        "id": "boom-vs-pressure",
+        "title": "Choose boom or pressure from the scout",
+        "principle": "Boom when the opponent is passive; pressure punishes greedy builds in Feudal. Turn successful pressure into an expansion or an age-up.",
+        "good": [
+          "Aggression that does damage and buys a safe expansion",
+          "Booming behind cheap defence"
+        ],
+        "bad": [
+          "Aggression with no damage and no expansion",
+          "Booming blind into a scouted rush"
+        ],
+        "signals": [
+          "Army supply high while villagers stay flat"
+        ],
+        "fix": "After each attack, turn the advantage into a Town Center or an age-up.",
+        "sources": [
+          {
+            "url": "https://forums.ageofempires.com/t/castle-heavy-units-are-too-strong-compared-to-feudal-units/209600",
+            "title": "Castle units vs Feudal units thread, official forums",
+            "kind": "forum"
+          },
+          {
+            "url": "https://steamcommunity.com/app/1466860/discussions/0/4637114422843692970",
+            "title": "One vs two Town Centers, Steam discussions",
+            "kind": "forum"
+          },
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1015.html",
+            "title": "Abbasid two Town Center build, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "strategy"
+        ]
+      },
+      {
+        "id": "production-scaling",
+        "title": "Grow production with income",
+        "principle": "More income needs more production buildings, or the resources float.",
+        "good": [
+          "Production buildings added as income grows",
+          "Queues kept running"
+        ],
+        "bad": [
+          "80 villagers and one barracks"
+        ],
+        "signals": [
+          "Food or gold above 1,000 while the army does not grow"
+        ],
+        "fix": "Add a production building whenever a bank passes 1,000.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/mastering-economy-management/",
+            "title": "Mastering economy management, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://jeu.video/en/guide/age-of-empires-iv-resources-priorities",
+            "title": "Resource priorities, jeu.video",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "economy",
+          "army"
+        ]
+      },
+      {
+        "id": "hotkey-foundation",
+        "title": "Control groups and hotkeys",
+        "principle": "Speed comes from keyboard habits, not from clicking faster.",
+        "good": [
+          "All Town Centers on one key, cycled",
+          "Army on a control group",
+          "Idle villager key within easy reach (VortiX)"
+        ],
+        "bad": [
+          "Clicking the Town Center on screen",
+          "No control groups"
+        ],
+        "signals": [
+          "Slow reactions to idle villagers or raids"
+        ],
+        "fix": "Set keys for your Town Centers, army and idle villagers before your next ranked game.",
+        "sources": [
+          {
+            "url": "https://aoe4academix.com/en/hotkeys",
+            "title": "Hotkey guide (quoting VortiX), Academix",
+            "kind": "coach"
+          },
+          {
+            "url": "https://news.xbox.com/en-us/2021/10/22/age-of-empires-iv-hotkeys-revealed/",
+            "title": "Age of Empires IV hotkeys (Xbox Wire)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "hotkeys",
+          "habits"
+        ]
+      },
+      {
+        "id": "camera-cycle",
+        "title": "Run a macro loop",
+        "principle": "A fixed check loop stops things being forgotten: Town Center queues, idle villagers, houses, banks, minimap.",
+        "good": [
+          "A check every 30 seconds or so"
+        ],
+        "bad": [
+          "Watching the army for two minutes straight"
+        ],
+        "signals": [
+          "Gaps in villager production during fights"
+        ],
+        "fix": "Before each army command, tap your Town Center key and queue a villager.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/fix-villager-idling-problem/",
+            "title": "Fixing idle villagers, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1002.html",
+            "title": "Beginner habits, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "habits"
+        ]
+      },
+      {
+        "id": "practice-protocol",
+        "title": "Practise builds against the AI, then review",
+        "principle": "Repeat an opening 20 or more times against the AI, then review replays for leaks. The AI is for macro practice, not strategy practice.",
+        "good": [
+          "Two or three openings per civilisation with timings written down"
+        ],
+        "bad": [
+          "Learning builds in ranked"
+        ],
+        "signals": [
+          "Feudal time varying a lot between games"
+        ],
+        "fix": "Play five games against the AI for every new build before taking it to ranked.",
+        "sources": [
+          {
+            "url": "https://guildorder.com/games/aoe4/guides/opening-builds-by-civ",
+            "title": "Opening builds by civilisation, Guild Order",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/channel/UCyzgM7IMV8AXN8suRSyNhiQ",
+            "title": "Valdemar (pro player and coach), YouTube",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "practice"
+        ]
+      }
     ]
   },
   "limitations": [
     "Reads only what the HUD shows; nothing hidden by the fog of war.",
     "Frames are sampled every few seconds, so very short idle periods can be missed.",
     "HUD positions and the civilisation list are researched, not yet checked against live captures at every UI scale.",
-    "Mistake durations are measured in real time on your screen."
+    "Mistake durations are measured in real time on your screen.",
+    "The villager curve assumes a 20-second villager and the usual six-villager start; some civilisations differ, and villagers lost to raids also show as a gap."
   ],
   "failClosed": [
     "No cloud vision: this pack cannot read the game.",
     "Numbers that cannot be read are left out, so no mistake is counted while the HUD is hidden or blurry."
+  ],
+  "benchmarks": [
+    {
+      "id": "villager-curve",
+      "label": "Villagers against the clock",
+      "key": "villagers",
+      "timeKey": "gameTimeSec",
+      "expected": {
+        "start": 6,
+        "perMinute": 3,
+        "cap": 120
+      },
+      "checkpointsSec": [
+        300,
+        600,
+        900,
+        1200
+      ],
+      "tolerance": 0.15,
+      "noun": "villagers",
+      "expectedPhrase": "one Town Center that never stops",
+      "gapPhrase": "of villager production",
+      "reference": [
+        {
+          "atSec": 600,
+          "value": 45,
+          "label": "strong players on two or three Town Centers"
+        },
+        {
+          "atSec": 900,
+          "value": 75,
+          "label": "strong players on two or three Town Centers"
+        },
+        {
+          "atSec": 1200,
+          "value": 110,
+          "label": "strong players on two or three Town Centers"
+        }
+      ],
+      "playbook": "tc-never-idle"
+    }
   ]
 }

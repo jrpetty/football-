@@ -20,6 +20,8 @@ import {
   type RoundRecord,
 } from './language.ts'
 import type { HeatmapResult } from './analyses/heatmap.ts'
+import type { FactorFinding, FactorResult } from './analyses/factors.ts'
+import type { BenchmarkResult } from './analyses/benchmarks.ts'
 import type { MatchRecord } from './analyses/matchRecorder.ts'
 import type { MistakeTotals } from './analyses/mistakes.ts'
 import type { EpisodeSpec, GameProfile, LiveCueSpec, MistakeSpec } from './profile/schema.ts'
@@ -77,6 +79,8 @@ export interface ReviewInputs {
   readonly profile: GameProfile
   readonly insights: readonly Insight[]
   readonly heatmaps: readonly HeatmapResult[]
+  readonly factors: readonly FactorResult[]
+  readonly benchmarks: readonly BenchmarkResult[]
   readonly mistakes: Readonly<Record<string, MistakeTotals>>
   /** Mistake ids or episode ids queued from live play since the last review. */
   readonly queuedTopics: readonly string[]
@@ -105,9 +109,61 @@ function heatmapLines(i: ReviewInputs, max: number): { lines: string[]; topics: 
     .sort((a, b) => order(a) - order(b))
     .slice(0, max)
   return {
-    lines: ranked.map((h) => heatmapLine(i.tone, h.spec, h.claim!, h.topBreakdown)),
+    lines: ranked.map((h) =>
+      [heatmapLine(i.tone, h.spec, h.claim!, h.topBreakdown), adviceFor(i.profile, (h.topBreakdown && h.spec.breakdown?.playbook?.[h.topBreakdown.value]) || null)]
+        .filter(Boolean)
+        .join(' '),
+    ),
     topics: ranked.map((h) => `zone:${h.spec.id}:${h.claim!.cell}`),
     best: ranked[0]?.claim!.grade ?? null,
+  }
+}
+
+/** Each playbook fix once: a later line that repeats one keeps its finding and drops the repeat. */
+function withoutRepeatedAdvice(profile: GameProfile, lines: readonly string[]): string[] {
+  const fixes = (profile.knowledge.playbook ?? []).map((p) => p.fix)
+  const said = new Set<string>()
+  return lines.map((line) => {
+    let out = line
+    for (const f of fixes) {
+      if (!out.includes(f)) continue
+      if (said.has(f)) out = out.replace(` ${f}`, '').replace(f, '').trim()
+      else said.add(f)
+    }
+    return out
+  })
+}
+
+/** The pack's fix for a finding, so a count always comes with what to do about it. */
+export function adviceFor(profile: GameProfile, playbookId: string | null): string | null {
+  return playbookId ? (profile.knowledge.playbook?.find((p) => p.id === playbookId)?.fix ?? null) : null
+}
+
+/** Fight-factor findings, weaknesses first, each with the playbook's fix. */
+export function factorFindings(factors: readonly FactorResult[], minGrade: EvidenceGrade): FactorFinding[] {
+  return factors
+    .flatMap((f) => f.findings)
+    .filter((f) => gradeAtLeast(f.grade, minGrade))
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'weakness' ? -1 : 1) || GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade] || b.count / b.of - a.count / a.of)
+}
+
+function factorLines(i: ReviewInputs, max: number): { lines: string[]; topics: string[]; best: EvidenceGrade | null; strength: string | null } {
+  const all = factorFindings(i.factors, i.minGrade)
+  const weak = all.filter((f) => f.kind === 'weakness').slice(0, max)
+  const strength = all.find((f) => f.kind === 'strength' && gradeAtLeast(f.grade, 'moderate'))
+  return {
+    lines: weak.map((f) => [f.statement, adviceFor(i.profile, f.playbook)].filter(Boolean).join(' ')),
+    topics: weak.map((f) => `factor:${f.factorId}:${f.value}`),
+    best: weak[0]?.grade ?? null,
+    strength: strength ? `Good: ${strength.statement[0].toLowerCase()}${strength.statement.slice(1)}` : null,
+  }
+}
+
+function benchmarkLines(i: ReviewInputs, max: number): { lines: string[]; topics: string[] } {
+  const behind = i.benchmarks.filter((b) => b.worst).slice(0, max)
+  return {
+    lines: behind.map((b) => [b.worst!.statement, adviceFor(i.profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')),
+    topics: behind.map((b) => `benchmark:${b.spec.id}`),
   }
 }
 
@@ -118,7 +174,10 @@ function mistakeLines(i: ReviewInputs, onlyQueued: boolean, max: number): { line
     .filter((m) => !onlyQueued || i.queuedTopics.includes(`mistake:${m.id}`))
     .sort((a, b) => severity[b.severity] - severity[a.severity] || (i.mistakes[b.id].totalMs - i.mistakes[a.id].totalMs))
     .slice(0, max)
-  return { lines: specs.map((m) => mistakeLine(m.summary, i.mistakes[m.id])), topics: specs.map((m) => `mistake:${m.id}`) }
+  return {
+    lines: specs.map((m) => [mistakeLine(m.summary, i.mistakes[m.id]), adviceFor(i.profile, m.playbook ?? null)].filter(Boolean).join(' ')),
+    topics: specs.map((m) => `mistake:${m.id}`),
+  }
 }
 
 /** A short reflective note at a visible round/half end, or null when there is nothing worth saying. */
@@ -162,19 +221,22 @@ export interface SummaryInputs extends ReviewInputs {
 
 /** The post-match summary. Always produced when the match had content; the governor decides delivery. */
 export function matchSummaryMessage(i: SummaryInputs, now: number): NewMessage {
-  const ins = insightLines({ ...i, reviewLines: i.limit }, () => true)
-  const zones = heatmapLines(i, Math.max(1, i.limit - ins.lines.length))
+  const facts = factorLines(i, i.limit)
+  const bench = benchmarkLines(i, 1)
+  const ins = insightLines({ ...i, reviewLines: Math.max(0, i.limit - facts.lines.length) }, () => true)
+  const zones = heatmapLines(i, Math.max(1, i.limit - ins.lines.length - facts.lines.length))
   const mis = mistakeLines(i, false, 2)
   const stats = statLines(i)
-  const lines = [...zones.lines, ...mis.lines, ...ins.lines, ...stats]
-  const opening = i.score ? [scoreLine(i.score)] : []
-  const best = [ins.best, zones.best].filter((g): g is EvidenceGrade => !!g).sort((a, b) => GRADE_ORDER[b] - GRADE_ORDER[a])[0]
+  // Most actionable first: how fights are lost, the economy against its benchmark, where things happen, then the rest.
+  const lines = withoutRepeatedAdvice(i.profile, [...facts.lines, ...bench.lines, ...zones.lines, ...mis.lines, ...ins.lines, ...stats])
+  const opening = [...(i.score ? [scoreLine(i.score)] : []), ...(facts.strength ? [facts.strength] : [])]
+  const best = [ins.best, zones.best, facts.best].filter((g): g is EvidenceGrade => !!g).sort((a, b) => GRADE_ORDER[b] - GRADE_ORDER[a])[0]
   return {
     category: 'post_event',
     text: matchSummaryText(i.tone, i.rounds, lines, opening),
     confidence: 1,
     grade: best ?? 'insufficient',
-    evidenceSummary: `${[...ins.topics, ...zones.topics, ...mis.topics].join(', ') || 'no repeated patterns'}`,
+    evidenceSummary: `${[...facts.topics, ...bench.topics, ...ins.topics, ...zones.topics, ...mis.topics].join(', ') || 'no repeated patterns'}`,
     topic: 'match-summary',
     priority: 'normal',
     createdAt: now,
@@ -184,19 +246,28 @@ export function matchSummaryMessage(i: SummaryInputs, now: number): NewMessage {
   }
 }
 
-/** At most two statistics, those that moved most against the player's recent matches (opt-in history). */
+/**
+ * At most two statistics: those that moved most against the player's recent
+ * matches (opt-in history), and any on the wrong side of the pack's warning
+ * line, which comes with its fix. One line per statistic.
+ */
 function statLines(i: SummaryInputs): string[] {
   const specs = i.profile.matchStats?.keys ?? []
   const rows = specs
-    .filter((s) => i.stats[s.key] !== undefined)
+    .filter((s) => i.stats[s.key] !== undefined && s.better !== 'neutral')
     .map((s) => {
-      const past = i.history.map((m) => m.stats[s.key]).filter((v): v is number => typeof v === 'number').slice(-5)
+      const v = i.stats[s.key]
+      const past = i.history.map((m) => m.stats[s.key]).filter((x): x is number => typeof x === 'number').slice(-5)
       const avg = past.length >= 2 ? past.reduce((a, b) => a + b, 0) / past.length : null
-      const change = avg === null ? 0 : Math.abs(i.stats[s.key] - avg) / Math.max(1, Math.abs(avg))
-      return { line: statLine(s.label, i.stats[s.key], s.unit, s.better, avg), change, better: s.better, hasHistory: avg !== null }
+      const change = avg === null ? 0 : Math.abs(v - avg) / Math.max(1, Math.abs(avg))
+      const warned = !!s.warn && (s.better === 'higher' ? v < s.warn.at : v > s.warn.at)
+      const unit = s.unit ?? ''
+      const head = avg !== null ? statLine(s.label, v, s.unit, s.better, avg) : `${s.label} ${Math.round(v * 100) / 100}${unit}.`
+      const warning = warned ? ` That is ${s.better === 'higher' ? 'under' : 'over'} ${s.warn!.at}${unit}, ${s.warn!.note}. ${adviceFor(i.profile, s.warn!.playbook ?? null) ?? ''}` : ''
+      return { line: `${head}${warning}`.trim(), rank: (warned ? 10 : 0) + change, show: warned || avg !== null }
     })
     // A number with nothing to compare it with is not coaching; the stats are in the written review.
-    .filter((r) => r.better !== 'neutral' && r.hasHistory)
-    .sort((a, b) => b.change - a.change)
+    .filter((r) => r.show)
+    .sort((a, b) => b.rank - a.rank)
   return rows.slice(0, 2).map((r) => r.line)
 }

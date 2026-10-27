@@ -82,7 +82,7 @@
       "eventType": "death",
       "zoneSet": "minimap",
       "minEvents": 5,
-      "phrase": "your deaths",
+      "phrase": "deaths",
       "sampled": true,
       "breakdown": { "attribute": "context", "label": "With or without teammates" },
       "tags": ["deaths", "positioning"]

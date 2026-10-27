@@ -19,7 +19,10 @@ import { z } from 'zod/v4'
 import { costOf, modelPrice, type Usage } from '../../src/core/vision/cost.ts'
 import { PHASES, visionSystemPrompt, visionUserText, type PromptExtras, type VisionResponse } from '../../src/core/vision/contract.ts'
 import { SCREEN_KINDS } from '../../src/core/vision/screens.ts'
-import { cleanKnowledge, KNOWLEDGE_SECTIONS, type KnowledgeBase, type KnowledgeSectionId } from '../../src/core/knowledge/base.ts'
+import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, type KnowledgeSectionId } from '../../src/core/knowledge/base.ts'
+
+/** Prompt budget for the pack's coaching playbook in answers and reviews. */
+const PLAYBOOK_CHARS = 24_000
 import type { GameProfile } from '../../src/core/profile/schema.ts'
 import type { CloudResult, CloudSettings, ResearchBrief } from '../../shared/cloud.ts'
 
@@ -382,10 +385,14 @@ function answerSystemPrompt(profile: GameProfile, knowledge: string, review: boo
     review
       ? 'For a marked moment: say briefly what was happening on screen, what decision the player appears to be making, whether it looks sound, one better option if there is one, and what to watch for next time. Base it only on what is visible and in the data; say so when the screen cannot tell.'
       : 'If an image of the screen is attached, the player is asking about it: read it carefully (menus, HUD, numbers, the situation) and answer from it. Tell the player what to do when they ask, as clear, practical advice.',
-    'You only know what the session data shows: events read from the player\'s screen, counts, zones (approximate), mistakes, graded patterns, match statistics, the player\'s own notes, and an optional research brief.',
+    'You only know what the session data shows: events read from the player\'s screen, counts, zones (approximate), fight circumstances read from killcams or replays (probable, not certain; untagged ones are counted, not guessed), benchmarks against the clock, mistakes, graded patterns, match statistics, the player\'s own notes, and an optional research brief.',
+    'When the data shows a weakness, coach it with the matching playbook entry: what good players do instead, the fix, and the drill if there is one. Prefer the playbook over generic tips, and do not present playbook knowledge as something you saw.',
     'Rules: separate what you saw this session ("In this session I saw…") from general advice ("Generally…"). Quote counts exactly as given. Never invent statistics, positions or opponent information. Patterns are associations, never causes: do not say "because" or "caused". If the data cannot answer the question, say so briefly and suggest what to watch next time.',
     profile.knowledge.prohibitedAdvice.length ? `Never give: ${profile.knowledge.prohibitedAdvice.join('; ')}.` : '',
     concepts ? `Coaching concepts for this game (general knowledge, not observations):\n${concepts}` : '',
+    profile.knowledge.playbook?.length
+      ? `Coaching playbook: how good players and coaches judge play in this game, with fixes (general knowledge from pro, coach and guide sources; not observations):\n${playbookText(profile.knowledge.playbook, PLAYBOOK_CHARS)}`
+      : '',
     knowledge ? `Game reference (background knowledge, may be out of date; not observations):\n${knowledge}` : '',
   ]
     .filter(Boolean)

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "cod-mw4",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Call of Duty: Modern Warfare 4",
   "depth": "pack",
   "game": {
@@ -86,7 +86,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "Call of Duty: Modern Warfare 4 (Multiplayer, DMZ or Campaign). Read the team scores and match timer if shown, the player's own kills and deaths only if shown (scoreboard or end-of-match screen), and what screen this is (lobby, loadout editor, map vote, loading, in match, killcam, scoreboard, after-action report). Detect when the player's own character dies (death screen, killcam of the player, respawn prompt) and, from the kill card or killfeed, what killed them. Detect the player's own kills only from a clear kill marker or a killfeed line with the player's name. The HUD can be moved (HUD bounds) and the minimap can be square or round, fixed or rotating; read what is there, guess nothing.",
+    "purpose": "Call of Duty: Modern Warfare 4 (Multiplayer, DMZ or Campaign). Read the team scores and match timer if shown, the player's own kills and deaths only if shown (scoreboard or end-of-match screen), and what screen this is (lobby, loadout editor, map vote, loading, in match, killcam, scoreboard, after-action report). Detect when the player's own character dies (death screen, killcam of the player, respawn prompt) and, from the kill card or killfeed, what killed them. Detect the player's own kills only from a clear kill marker or a killfeed line with the player's name. The HUD can be moved (HUD bounds) and the minimap can be square or round, fixed or rotating; read what is there, guess nothing. On a killcam of the player's death, also read the fight: how exposed the player was, what they were doing, the range, who was higher, whether friendly dots were near on the death-screen minimap, and how many enemies engaged. Give unknown for anything not clearly visible.",
     "sampleIntervalMs": 2500,
     "maxLatencyMs": 9000,
     "maxWidth": 1280,
@@ -196,6 +196,77 @@
               "unknown"
             ],
             "description": "Only from the killcam or a damage indicator: where the shot came from relative to where the player was looking."
+          },
+          {
+            "key": "exposure",
+            "options": [
+              "in_open",
+              "partial_cover",
+              "behind_cover",
+              "unknown"
+            ],
+            "description": "From the killcam: how much of the player's body the killer could see. in_open = nothing between them; partial_cover = edge of cover or head glitch."
+          },
+          {
+            "key": "movement",
+            "options": [
+              "sprinting",
+              "sliding_or_jumping",
+              "walking",
+              "aiming_still",
+              "mantling",
+              "unknown"
+            ],
+            "description": "From the killcam: what the player was doing when the first shot landed. sprinting = gun lowered in a sprint pose; aiming_still = aiming down sights and not moving."
+          },
+          {
+            "key": "range",
+            "options": [
+              "close",
+              "mid",
+              "long",
+              "unknown"
+            ],
+            "description": "Distance between killer and player in the killcam: close under ~10 m, mid ~10-30 m, long beyond."
+          },
+          {
+            "key": "height",
+            "options": [
+              "you_lower",
+              "level",
+              "you_higher",
+              "unknown"
+            ],
+            "description": "From the killcam, relative to the player: you_lower = the killer was clearly higher than the player; you_higher = the killer was clearly lower."
+          },
+          {
+            "key": "support",
+            "options": [
+              "alone",
+              "teammate_near",
+              "unknown"
+            ],
+            "description": "From the death screen minimap: a friendly dot within a short sprint of the player, or none. unknown if the minimap is not visible."
+          },
+          {
+            "key": "action",
+            "options": [
+              "reloading",
+              "using_equipment",
+              "firing",
+              "not_firing",
+              "unknown"
+            ],
+            "description": "From the killcam or the HUD at death: reload animation or empty magazine, throwing equipment, firing, or not firing."
+          },
+          {
+            "key": "opponents",
+            "options": [
+              "one",
+              "several",
+              "unknown"
+            ],
+            "description": "From the killcam or damage indicators: one enemy engaged the player, or two or more."
           }
         ],
         "dedupeMs": 7000
@@ -205,7 +276,41 @@
         "label": "You got a kill",
         "category": "action",
         "description": "A kill marker (e.g. '+100' with an elimination) or a killfeed line naming the player as the killer.",
-        "dedupeMs": 2500
+        "dedupeMs": 2500,
+        "attributes": [
+          {
+            "key": "range",
+            "options": [
+              "close",
+              "mid",
+              "long",
+              "unknown"
+            ],
+            "description": "Distance to the enemy the player just killed, from the frame: close under ~10 m, mid ~10-30 m, long beyond. unknown if the target is not visible."
+          },
+          {
+            "key": "movement",
+            "options": [
+              "sprinting",
+              "sliding_or_jumping",
+              "walking",
+              "aiming_still",
+              "mantling",
+              "unknown"
+            ],
+            "description": "What the player was doing at the kill, from their own view: scope up and still = aiming_still."
+          },
+          {
+            "key": "height",
+            "options": [
+              "you_lower",
+              "level",
+              "you_higher",
+              "unknown"
+            ],
+            "description": "Relative to the player: you_higher = the player looks down at the enemy; you_lower = the player looks up at them."
+          }
+        ]
       },
       {
         "type": "streak_earned",
@@ -270,7 +375,7 @@
       "eventType": "death",
       "zoneSet": "minimap",
       "minEvents": 5,
-      "phrase": "your deaths",
+      "phrase": "deaths",
       "sampled": true,
       "breakdown": {
         "attribute": "killedBy",
@@ -909,16 +1014,1349 @@
           }
         ]
       }
+    ],
+    "playbook": [
+      {
+        "id": "fight-from-cover",
+        "title": "Fight from cover",
+        "principle": "Start every gunfight with most of your body behind something solid and a way out. Before each move, know where your next cover is if you get shot.",
+        "good": [
+          "Shooting from a wall edge or doorframe",
+          "Crossing open ground only at full speed",
+          "Knowing your fallback spot"
+        ],
+        "bad": [
+          "Standing in the middle of a street or courtyard",
+          "Taking a fight with no cover in reach"
+        ],
+        "signals": [
+          "Killcam: your whole body visible, nothing between you and the killer"
+        ],
+        "fix": "Take fights only from the edge of cover you can step back behind.",
+        "sources": [
+          {
+            "url": "https://knockoutsf.com/call-of-duty-tips/",
+            "title": "Call of Duty tips, Knockoutsf",
+            "kind": "guide"
+          },
+          {
+            "url": "https://eliteteddy.com/mastering-the-mini-map-in-call-of-duty/",
+            "title": "Mastering the minimap, EliteTeddy",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.lineups.com/esports/advanced-game-play-tips-for-call-of-duty/",
+            "title": "Advanced Call of Duty tips, Lineups",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "cover"
+        ],
+        "drill": "Private match: walk each map and name the next cover from every lane."
+      },
+      {
+        "id": "cross-lanes-fast",
+        "title": "Cross sightlines quickly, and rarely",
+        "principle": "Long lanes are where held angles live. Cross them at the narrowest point, at full speed, ideally while your team draws attention or smoke covers you.",
+        "good": [
+          "Sprinting or sliding across the narrowest gap",
+          "Crossing right after a teammate fires",
+          "Using different crossings"
+        ],
+        "bad": [
+          "Walking or aiming down sights across an open lane",
+          "Stopping mid-lane",
+          "The same crossing every life"
+        ],
+        "signals": [
+          "Killcam: long-range kill, you mid-lane side-on, the killer still"
+        ],
+        "fix": "Cross lanes fast at the narrowest point, or take a route that avoids the lane.",
+        "sources": [
+          {
+            "url": "https://www.essentiallysports.com/call-of-duty-league-how-pros-play-search-and-destroy-esports-news/",
+            "title": "How pros play Search and Destroy, EssentiallySports",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-guides-modes-search-destroy",
+            "title": "Official Search and Destroy guide (MW III)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "lanes"
+        ]
+      },
+      {
+        "id": "hold-vs-push",
+        "title": "Know whether you are holding or pushing",
+        "principle": "A player holding a pre-aimed angle usually beats the player walking into it. Hold an angle the enemy must cross, or push only with information, numbers, utility or timing on your side.",
+        "good": [
+          "Holding a lane the enemy must use",
+          "Pushing right after a kill, a trade or a UAV",
+          "Utility thrown before the push"
+        ],
+        "bad": [
+          "Walking into a held angle with no information",
+          "Holding an angle nobody needs to cross"
+        ],
+        "signals": [
+          "Killcam: the killer stationary and already aimed where you appeared"
+        ],
+        "fix": "Push only with information, a numbers advantage or utility; otherwise hold.",
+        "sources": [
+          {
+            "url": "https://dignitas.gg/articles/positioning-and-movement-101-the-dos-and-don-ts-of-peeking-and-holding-angles",
+            "title": "Peeking and holding angles, Dignitas (cross-game)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "angles"
+        ]
+      },
+      {
+        "id": "head-glitch-high-ground",
+        "title": "Use head glitches and high ground; avoid fighting into them",
+        "principle": "Cover that hides your body but lets you shoot over it, or a higher position, makes you a much smaller target. Challenging those spots head-on from low, open ground is a losing trade.",
+        "good": [
+          "Ledges, boxes and sills that show only your head",
+          "Making enemies look up at you"
+        ],
+        "bad": [
+          "Standing in the open below someone who shows only their head",
+          "Re-challenging the same head glitch"
+        ],
+        "signals": [
+          "Killcam: the killer looks down at you, or only their head and gun clear the cover"
+        ],
+        "fix": "Do not fight into a head glitch from the open: flank it, throw utility, or take another route.",
+        "sources": [
+          {
+            "url": "https://gamefaqs.gamespot.com/boards/951944-call-of-duty-modern-warfare-2/61582759",
+            "title": "What is a head glitch, GameFAQs",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "height"
+        ]
+      },
+      {
+        "id": "vary-the-peek",
+        "title": "Do not peek the same angle twice the same way",
+        "principle": "After a failed or spotted peek, the enemy pre-aims that spot. Change position, height or timing, or reset.",
+        "good": [
+          "Wide swing, crouch peek or a different door after a failed peek",
+          "One quick look per peek"
+        ],
+        "bad": [
+          "Re-peeking the same edge at the same height within seconds",
+          "Dying twice to the same player at the same spot"
+        ],
+        "signals": [
+          "Two deaths in a row to the same killer at the same spot"
+        ],
+        "fix": "After one peek, change the angle, height or timing, or leave.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-guides-modes-search-destroy",
+            "title": "Official Search and Destroy guide (MW III)",
+            "kind": "official"
+          },
+          {
+            "url": "https://simpleboost.com/guides/call-of-duty/warzone-advanced-movement-techniques/",
+            "title": "Advanced movement techniques, SimpleBoost",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dignitas.gg/articles/positioning-and-movement-101-the-dos-and-don-ts-of-peeking-and-holding-angles",
+            "title": "Peeking and holding angles, Dignitas (cross-game)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "peeking"
+        ]
+      },
+      {
+        "id": "reposition-after-kill",
+        "title": "Move after you get a kill",
+        "principle": "A kill gives away your position: a red dot if you are unsuppressed, plus a killcam for the player you killed. The next enemy comes to that spot.",
+        "good": [
+          "Stepping back or shifting a few metres after the kill",
+          "Reloading behind cover",
+          "Pre-aiming where the next enemy will swing from"
+        ],
+        "bad": [
+          "Staying on the same angle and dying to the teammate of the player you killed"
+        ],
+        "signals": [
+          "Dying a few seconds after your own kill, at the same spot"
+        ],
+        "fix": "After every kill, move, reload in cover, then aim at the next likely entrance.",
+        "sources": [
+          {
+            "url": "https://ggclan.com/news/how-to-improve-at-call-of-duty-pro-habits-rank-up",
+            "title": "Pro habits, GG Clan (coaching service)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.techradar.com/how-to/call-of-duty-modern-warfare-gunfight-mode-essential-gunfight-tips-and-tricks",
+            "title": "Gunfight tips, TechRadar",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.mw4.games/encyclopedia/minimap/",
+            "title": "Minimap, mw4.games",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "trading"
+        ]
+      },
+      {
+        "id": "trade-spacing",
+        "title": "Play within trading distance",
+        "principle": "Stay close enough that a teammate can kill your killer straight away, but far enough apart that one spray or grenade does not get you both.",
+        "good": [
+          "A teammate covering your angle a few seconds behind",
+          "Trading kills",
+          "Never the lone player on a flank"
+        ],
+        "bad": [
+          "Far from every friendly dot",
+          "Stacked on a teammate and both killed together"
+        ],
+        "signals": [
+          "Death screen: no friendly dots near you on the minimap"
+        ],
+        "fix": "Stay one short sprint from a teammate who covers a different angle.",
+        "sources": [
+          {
+            "url": "https://knockoutsf.com/call-of-duty-tips/",
+            "title": "Call of Duty tips, Knockoutsf",
+            "kind": "guide"
+          },
+          {
+            "url": "https://prosettings.net/blog/cs2-clutch-tips/",
+            "title": "Clutch tips, ProSettings (cross-game)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "team"
+        ]
+      },
+      {
+        "id": "no-sprint-into-contact",
+        "title": "Do not sprint into likely contact",
+        "principle": "After sprinting there is a delay before you can fire, longer after tactical sprint. A pre-aimed enemy wins that window, so slow down near corners and doorways with your gun up.",
+        "good": [
+          "Releasing sprint before corners and doorways",
+          "Entering with the gun already up"
+        ],
+        "bad": [
+          "Rounding corners at full tactical sprint",
+          "Dying before the gun comes up"
+        ],
+        "signals": [
+          "Killcam: your gun lowered in a sprint pose when the first shot lands"
+        ],
+        "fix": "Stop sprinting before any corner or doorway that could hold an enemy.",
+        "sources": [
+          {
+            "url": "https://techyorker.com/5-ways-to-master-modern-warfare-4-multiplayer-from-day-one/",
+            "title": "MW4 day-one habits, Techyorker",
+            "kind": "guide"
+          },
+          {
+            "url": "https://mitchcactus.co/blog/call-of-duty/bo7-sprinting-vs-ads-timing/",
+            "title": "Sprinting vs ADS timing, MitchCactus",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "movement"
+        ]
+      },
+      {
+        "id": "reload-discipline",
+        "title": "Reload behind cover, not in the open",
+        "principle": "A magazine usually holds more than one kill, so reloading after every burst wastes your safest moments. Reload when you are out of sight.",
+        "good": [
+          "Checking ammo, stepping behind cover, then reloading",
+          "Switching to the sidearm if caught empty"
+        ],
+        "bad": [
+          "Reloading in the open right after a kill",
+          "A reload interrupted by the next enemy"
+        ],
+        "signals": [
+          "Killcam or HUD: reload animation or an empty magazine at the moment of death"
+        ],
+        "fix": "Reload only behind cover, or finish the fight with your pistol.",
+        "sources": [
+          {
+            "url": "https://www.lineups.com/esports/advanced-game-play-tips-for-call-of-duty/",
+            "title": "Advanced Call of Duty tips, Lineups",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.techradar.com/how-to/call-of-duty-modern-warfare-gunfight-mode-essential-gunfight-tips-and-tricks",
+            "title": "Gunfight tips, TechRadar",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "habits"
+        ]
+      },
+      {
+        "id": "pre-aim-centering",
+        "title": "Pre-aim common angles at head height",
+        "principle": "Keep your crosshair where enemies will appear, at head height, so a fight needs only a small correction. Scump teaches this as centering.",
+        "good": [
+          "Crosshair leading around corners at head height",
+          "Clearing one angle at a time"
+        ],
+        "bad": [
+          "Crosshair on the floor or a wall when you round a corner",
+          "Late flicks"
+        ],
+        "signals": [
+          "Killcam: you aimed away from where the killer appeared and turned only after being hit"
+        ],
+        "fix": "Before every corner, put your crosshair at head height where the enemy would appear.",
+        "sources": [
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "aim"
+        ],
+        "drill": "Private match: walk each map pre-aiming every doorway."
+      },
+      {
+        "id": "info-peeks",
+        "title": "Peek cheaply for information",
+        "principle": "When you do not know if an angle is held, use a short jiggle, a mantle you can abort, or a quick slide peek before you commit. MW4 lets you steer and abort mantles.",
+        "good": [
+          "A quick jiggle, then a committed swing",
+          "Aborting a mantle when you see an enemy",
+          "Utility before the peek"
+        ],
+        "bad": [
+          "A slow, wide peek into a held angle",
+          "Committing to a full mantle in the open"
+        ],
+        "signals": [
+          "Killcam: you died mid-mantle or during a slow, wide strafe into a lane"
+        ],
+        "fix": "Jiggle or abort the mantle to get information, then commit once you know.",
+        "sources": [
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.callofduty.com/blog/2026/08/call-of-duty-modern-warfare-4-next-highlights-multiplayer-gameplay-systems",
+            "title": "MW4 multiplayer gameplay systems (official blog)",
+            "kind": "official"
+          },
+          {
+            "url": "https://simpleboost.com/guides/call-of-duty/warzone-advanced-movement-techniques/",
+            "title": "Advanced movement techniques, SimpleBoost",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dignitas.gg/articles/positioning-and-movement-101-the-dos-and-don-ts-of-peeking-and-holding-angles",
+            "title": "Peeking and holding angles, Dignitas (cross-game)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "peeking",
+          "movement"
+        ]
+      },
+      {
+        "id": "minimap-red-dots",
+        "title": "Read the minimap every few seconds",
+        "principle": "In MW4, red dots show when an enemy fires an unsuppressed weapon or your UAV is up. Firing unsuppressed puts you on their minimap too.",
+        "good": [
+          "Glancing at the map every few seconds",
+          "Moving toward red dots from an unexpected angle",
+          "A suppressor when you want to stay hidden"
+        ],
+        "bad": [
+          "Dying to an enemy who showed as a dot seconds earlier",
+          "Firing unsuppressed from one spot and getting flanked"
+        ],
+        "signals": [
+          "Death screen: a red dot near the killer before you died"
+        ],
+        "fix": "Check the minimap before every corner and face red dots before they reach you.",
+        "sources": [
+          {
+            "url": "https://www.mw4.games/encyclopedia/minimap/",
+            "title": "Minimap, mw4.games",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.dexerto.com/call-of-duty/modern-warfare-4-multiplayer-keeps-beloved-features-like-classic-minimap-prestige-3369045/",
+            "title": "MW4 keeps the classic minimap, Dexerto",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.gamespot.com/articles/call-of-duty-modern-warfare-4-tips-for-multiplayer/",
+            "title": "MW4 multiplayer tips, GameSpot",
+            "kind": "guide"
+          },
+          {
+            "url": "https://eliteteddy.com/mastering-the-mini-map-in-call-of-duty/",
+            "title": "Mastering the minimap, EliteTeddy",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "awareness",
+          "minimap"
+        ]
+      },
+      {
+        "id": "play-the-uav",
+        "title": "Play around UAVs",
+        "principle": "With your UAV up, push with the information. With theirs up, assume you are seen unless you run Ghost, so stay near teammates and cover.",
+        "good": [
+          "Pushing the moment your UAV goes up",
+          "Playing near teammates under an enemy UAV",
+          "Shooting it down"
+        ],
+        "bad": [
+          "Holding a lonely flank under an enemy UAV without Ghost"
+        ],
+        "signals": [
+          "An enemy UAV shortly before death, killer from behind or the side"
+        ],
+        "fix": "Under an enemy UAV, stay near teammates and cover or run Ghost; under yours, push.",
+        "sources": [
+          {
+            "url": "https://dotesports.com/call-of-duty/guides/best-mw4-perks",
+            "title": "Best MW4 perks, Dot Esports",
+            "kind": "guide"
+          },
+          {
+            "url": "https://mobalytics.gg/gamebase/guides/mw4-perks-tier-list-loadouts",
+            "title": "MW4 perks, Mobalytics",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "awareness",
+          "streaks"
+        ]
+      },
+      {
+        "id": "spawn-awareness",
+        "title": "Know where they will spawn",
+        "principle": "Spawns depend on where both teams are. Pushing too deep, spreading out or wiping the enemy can flip spawns behind you.",
+        "good": [
+          "Knowing the current enemy spawn",
+          "Holding angles that face it",
+          "Expecting a flip after a big push"
+        ],
+        "bad": [
+          "Chasing deep into their side",
+          "Getting shot in the back by freshly spawned enemies"
+        ],
+        "signals": [
+          "Killcam: the killer behind you, on the side your team held, early in their life"
+        ],
+        "fix": "After a wipe or a deep push, turn around, regroup and expect the spawns to flip.",
+        "sources": [
+          {
+            "url": "https://mitchcactus.co/blog/call-of-duty/bo7-how-spawns-work/",
+            "title": "How spawns work, MitchCactus",
+            "kind": "guide"
+          },
+          {
+            "url": "https://charlieintel.com/tips-tricks-to-help-you-dominate-in-black-ops-4-domination/51799/",
+            "title": "Domination tips, Charlie INTEL",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.charlieintel.com/modern-warfare-2-cdl-expert-reveals-pro-tips-to-dominate-ranked-play-hardpoint/232537/",
+            "title": "Rambo (CDL coach) on Ranked Hardpoint, Charlie INTEL",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "spawns"
+        ]
+      },
+      {
+        "id": "power-positions",
+        "title": "Take power positions as a team",
+        "principle": "Rambo: Call of Duty is a game of positional warfare. Positions that see the most lanes and the enemy spawn exits create favourable fights.",
+        "good": [
+          "Overlapping lanes toward the enemy spawn",
+          "A power spot held with a teammate"
+        ],
+        "bad": [
+          "Alone in a power spot with no trade",
+          "Leaving a power spot to chase kills"
+        ],
+        "signals": [
+          "Killcam: crossfire from two directions on a spot your team held"
+        ],
+        "fix": "Learn two or three power positions per map and take them with a teammate.",
+        "sources": [
+          {
+            "url": "https://www.charlieintel.com/modern-warfare-2-cdl-expert-reveals-pro-tips-to-dominate-ranked-play-hardpoint/232537/",
+            "title": "Rambo (CDL coach) on Ranked Hardpoint, Charlie INTEL",
+            "kind": "pro"
+          },
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "team"
+        ]
+      },
+      {
+        "id": "rotate-with-team",
+        "title": "Move with your team",
+        "principle": "Solo rotations get isolated and lose fights one against two. Moving together lets you trade and take objectives.",
+        "good": [
+          "Rotating with at least one teammate",
+          "Arriving at a new objective together"
+        ],
+        "bad": [
+          "Arriving first and alone",
+          "Dying before teammates get there"
+        ],
+        "signals": [
+          "Death screen: no friendly dots nearby; several enemies in the killcam"
+        ],
+        "fix": "Wait a second for a teammate before you enter a new area.",
+        "sources": [
+          {
+            "url": "https://knockoutsf.com/call-of-duty-tips/",
+            "title": "Call of Duty tips, Knockoutsf",
+            "kind": "guide"
+          },
+          {
+            "url": "https://prosettings.net/blog/cs2-clutch-tips/",
+            "title": "Clutch tips, ProSettings (cross-game)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "positioning",
+          "team"
+        ]
+      },
+      {
+        "id": "range-vs-weapon",
+        "title": "Fight at your weapon's range",
+        "principle": "SMGs and shotguns win close, assault rifles win mid range, snipers and marksman rifles win long. Damage drops with distance, so fights outside your range are uphill.",
+        "good": [
+          "SMG on short, close routes",
+          "Assault rifle holding mid lanes",
+          "Sniper holding long sightlines"
+        ],
+        "bad": [
+          "SMG fights across a long lane",
+          "A long gun in a cramped room against a shotgun"
+        ],
+        "signals": [
+          "Killcam: the killer far away while you hold an SMG, or close while you hold a sniper"
+        ],
+        "fix": "Pick routes that keep fights at the range your weapon is built for.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/blog/2020/11/Black-Ops-Cold-War-Weapon-Overview",
+            "title": "Official weapon class overview (Cold War)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "range"
+        ]
+      },
+      {
+        "id": "first-shot-advantage",
+        "title": "Shoot first, be ready first",
+        "principle": "Whoever lands the first shot usually wins. Arriving pre-aimed, gun up and not sprinting decides most duels.",
+        "good": [
+          "Seeing the enemy first through minimap or audio",
+          "Pre-aimed and firing on sight"
+        ],
+        "bad": [
+          "Reacting to being shot",
+          "Taking damage before your first shot"
+        ],
+        "signals": [
+          "Killcam: the killer fires first and keeps firing; your shots start late"
+        ],
+        "fix": "Arrive at likely contact pre-aimed, slower and with the gun up.",
+        "sources": [
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://techyorker.com/5-ways-to-master-modern-warfare-4-multiplayer-from-day-one/",
+            "title": "MW4 day-one habits, Techyorker",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "gunfights"
+        ]
+      },
+      {
+        "id": "ads-and-hipfire-mw4",
+        "title": "Hipfire close, aim at range, strafe",
+        "principle": "MW4 removed hipfire bloom, so at point-blank range hipfire can beat a slow aim-down-sights. At range, aim before the peek and strafe while aimed.",
+        "good": [
+          "Hipfiring a sliding enemy at a corner",
+          "Aiming before peeking a mid lane",
+          "Strafing while firing"
+        ],
+        "bad": [
+          "Aiming down sights at point blank and losing the race",
+          "Standing still while aimed in a long lane"
+        ],
+        "signals": [
+          "Killcam: you scoped in at point blank, or stood still while the killer strafed"
+        ],
+        "fix": "Hipfire within a few metres; otherwise aim before the peek and keep strafing.",
+        "sources": [
+          {
+            "url": "https://www.gamespot.com/articles/call-of-duty-modern-warfare-4-tips-for-multiplayer/",
+            "title": "MW4 multiplayer tips, GameSpot",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.callofduty.com/blog/2026/08/call-of-duty-modern-warfare-4-next-highlights-multiplayer-gameplay-systems",
+            "title": "MW4 multiplayer gameplay systems (official blog)",
+            "kind": "official"
+          },
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "aim"
+        ]
+      },
+      {
+        "id": "disengage",
+        "title": "Know when to leave a fight",
+        "principle": "When you are hurt, outnumbered, out of range or empty, breaking line of sight beats finishing the fight.",
+        "good": [
+          "Stepping back to heal after taking damage",
+          "Changing route after losing a long duel"
+        ],
+        "bad": [
+          "Re-peeking at low health",
+          "Chasing a damaged enemy into their team"
+        ],
+        "signals": [
+          "Killcam: low health at the start; chasing toward enemy teammates"
+        ],
+        "fix": "When hurt or outnumbered, break line of sight and reset.",
+        "sources": [
+          {
+            "url": "https://www.techradar.com/how-to/call-of-duty-modern-warfare-gunfight-mode-essential-gunfight-tips-and-tricks",
+            "title": "Gunfight tips, TechRadar",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "decisions"
+        ]
+      },
+      {
+        "id": "isolate-1vx",
+        "title": "Turn one-against-many into one-against-one",
+        "principle": "When outnumbered, never let two enemies see you at once. Use spots where the second enemy must come through a door or around a corner.",
+        "good": [
+          "Fighting one enemy at a time",
+          "Moving between kills"
+        ],
+        "bad": [
+          "Swinging into two enemies at once",
+          "Holding a spot two angles can see"
+        ],
+        "signals": [
+          "Killcam: two or more enemies in view, often a crossfire"
+        ],
+        "fix": "Pick spots where only one enemy can see you at a time, and move after each kill.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-guides-modes-search-destroy",
+            "title": "Official Search and Destroy guide (MW III)",
+            "kind": "official"
+          },
+          {
+            "url": "https://prosettings.net/blog/cs2-clutch-tips/",
+            "title": "Clutch tips, ProSettings (cross-game)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "decisions"
+        ]
+      },
+      {
+        "id": "outnumbered-no-swing",
+        "title": "Do not swing when you are behind on numbers",
+        "principle": "Swinging one against two in the open wins only when the enemies misplay. Wait for a teammate, utility or a better angle.",
+        "good": [
+          "Checking friendly dots before you swing",
+          "Waiting for a trade partner"
+        ],
+        "bad": [
+          "Swinging alone into several red dots"
+        ],
+        "signals": [
+          "Several red dots near you before death; two damage sources"
+        ],
+        "fix": "When several enemies are near, wait for a teammate before you fight.",
+        "sources": [
+          {
+            "url": "https://prosettings.net/blog/cs2-clutch-tips/",
+            "title": "Clutch tips, ProSettings (cross-game)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://techyorker.com/5-ways-to-master-modern-warfare-4-multiplayer-from-day-one/",
+            "title": "MW4 day-one habits, Techyorker",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "gunfights",
+          "decisions"
+        ]
+      },
+      {
+        "id": "hp-rotate-early",
+        "title": "Hardpoint: rotate before the hill moves",
+        "principle": "Hills follow a fixed order, so the next one is predictable. Rotating early wins the first fights on the next hill.",
+        "good": [
+          "Some of the team leaving about 20 seconds early to set up",
+          "Fighting for the old hill only when it is worth it"
+        ],
+        "bad": [
+          "Everyone dying on the old hill, then running to the new one alone"
+        ],
+        "signals": [
+          "Death just after a hill change, at the new hill, with enemies already set up"
+        ],
+        "fix": "Learn the hill order and leave about 20 seconds early to set up on the next hill.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-modes-guides-hardpoint",
+            "title": "Official Hardpoint guide (MW III)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.rankkd.com/guides-tools/call-of-duty-modern-warfare-4/guides/hardpoint-tips",
+            "title": "MW4 Hardpoint tips, rankkd",
+            "kind": "guide"
+          },
+          {
+            "url": "https://cod-esports.fandom.com/wiki/Game_Modes/Hardpoint",
+            "title": "Hardpoint, CoD Esports Wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "modes",
+          "hardpoint"
+        ]
+      },
+      {
+        "id": "hp-break-and-spawns",
+        "title": "Hardpoint: break from every lane, then control spawns",
+        "principle": "Rambo: hit the hill from every lane to get the break, then push between the hill and their spawn so they run through your positions.",
+        "good": [
+          "Attacking the hill from several lanes at once",
+          "Holding between their spawn and the hill after the break"
+        ],
+        "bad": [
+          "Trickling in one by one through the same door",
+          "Everyone sitting on the hill"
+        ],
+        "signals": [
+          "Died entering the hill alone, or on the hill to an enemy outside it"
+        ],
+        "fix": "Attack with teammates from different lanes, then hold between their spawn and the hill.",
+        "sources": [
+          {
+            "url": "https://www.charlieintel.com/modern-warfare-2-cdl-expert-reveals-pro-tips-to-dominate-ranked-play-hardpoint/232537/",
+            "title": "Rambo (CDL coach) on Ranked Hardpoint, Charlie INTEL",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=Gs173c1oi4U",
+            "title": "FaZe coach Crowder on Hardpoint (video)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "modes",
+          "hardpoint"
+        ]
+      },
+      {
+        "id": "dom-b-and-spawns",
+        "title": "Domination: take B, hold two flags, keep spawns stable",
+        "principle": "B is the key flag and two of three is usually enough. Pushing onto their home flag flips spawns and puts enemies behind you.",
+        "good": [
+          "Taking B together",
+          "Someone covering home",
+          "Flipping spawns on purpose only after winning a big fight"
+        ],
+        "bad": [
+          "Three players running for their home flag",
+          "Chasing into their spawn and getting flanked"
+        ],
+        "signals": [
+          "Died near the enemy home flag, or from behind on the side your team held"
+        ],
+        "fix": "Hold B and your home flag; push their flag only right after winning a big fight.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-modes-guides-domination",
+            "title": "Official Domination guide (MW III)",
+            "kind": "official"
+          },
+          {
+            "url": "https://charlieintel.com/tips-tricks-to-help-you-dominate-in-black-ops-4-domination/51799/",
+            "title": "Domination tips, Charlie INTEL",
+            "kind": "guide"
+          },
+          {
+            "url": "https://mitchcactus.co/blog/call-of-duty/bo7-how-spawns-work/",
+            "title": "How spawns work, MitchCactus",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "modes",
+          "domination"
+        ]
+      },
+      {
+        "id": "snd-first-blood-patience",
+        "title": "Search and Destroy: avoid giving first blood",
+        "principle": "In the 2020 CDL season, teams with first blood won 69% of rounds. One life per round means using the clock instead of rushing into a spectate.",
+        "good": [
+          "Safe early angles",
+          "Trading teammates",
+          "Using the time to gather information"
+        ],
+        "bad": [
+          "Dry-peeking a common opening angle",
+          "Sprinting into a lane in the first seconds"
+        ],
+        "signals": [
+          "First death of the round, in the opening seconds, at a common angle"
+        ],
+        "fix": "Do not take the first fight of a round without information or a trade partner.",
+        "sources": [
+          {
+            "url": "https://callofdutyleague.com/en-us/videos/yyy_N11JuTeTkyo",
+            "title": "CDL: first blood statistics",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.callofduty.com/guides/blackops6/modes/call-of-duty-guides-black-ops-6-multiplayer-mode-guide-search-and-destroy",
+            "title": "Official Search and Destroy guide (BO6)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.essentiallysports.com/call-of-duty-league-how-pros-play-search-and-destroy-esports-news/",
+            "title": "How pros play Search and Destroy, EssentiallySports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "modes",
+          "search-and-destroy"
+        ]
+      },
+      {
+        "id": "snd-info-and-vary",
+        "title": "Search and Destroy: share information and vary your play",
+        "principle": "Dead players should call enemy positions. Change routes and holds each round; the enemy remembers where you were.",
+        "good": [
+          "Calling positions after dying",
+          "Changing your hold each round",
+          "Smoke to cross long lanes"
+        ],
+        "bad": [
+          "The same route every round",
+          "Holding the spot where you got a multi-kill last round"
+        ],
+        "signals": [
+          "Died in the same spot as a previous round, to the same player"
+        ],
+        "fix": "Change your route or hold every round, and call what you saw when you die.",
+        "sources": [
+          {
+            "url": "https://www.callofduty.com/guides/multiplayer-modes/call-of-duty-modern-warfare-iii-play-guides-modes-search-destroy",
+            "title": "Official Search and Destroy guide (MW III)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.essentiallysports.com/call-of-duty-league-how-pros-play-search-and-destroy-esports-news/",
+            "title": "How pros play Search and Destroy, EssentiallySports",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "modes",
+          "search-and-destroy"
+        ]
+      },
+      {
+        "id": "killcam-diagnosis",
+        "title": "Read the killcam for the reason, not the excuse",
+        "principle": "The killcam shows what the killer saw: whether you were in the open, sprinting, reloading, outnumbered, out of range or below them. Killcams are reconstructions and can be slightly off, so treat each read as probable.",
+        "good": [
+          "Naming one cause per death",
+          "Looking for the same cause across deaths"
+        ],
+        "bad": [
+          "Blaming lag or luck",
+          "Skipping the killcam every time"
+        ],
+        "signals": [
+          "Your body in the open, a sprint pose, a reload, two enemies, the killer above you"
+        ],
+        "fix": "Watch each killcam for one thing you could have done differently.",
+        "sources": [
+          {
+            "url": "https://callofduty.fandom.com/wiki/KillCam",
+            "title": "KillCam, Call of Duty wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://gamefaqs.gamespot.com/boards/669288-call-of-duty-black-ops-ii/65467498",
+            "title": "Killcam accuracy, GameFAQs",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "review"
+        ]
+      },
+      {
+        "id": "death-review-habit",
+        "title": "Review your deaths and fix the most common one",
+        "principle": "The cause you see most often is your current limit. Review deaths one at a time and work on one area.",
+        "good": [
+          "Tagging each death by cause after a match",
+          "Practising the most common cause next session"
+        ],
+        "bad": [
+          "Trying to fix everything at once"
+        ],
+        "signals": [
+          "The same cause in most deaths of a match"
+        ],
+        "fix": "After each match, pick the most common cause of death and practise only that.",
+        "sources": [
+          {
+            "url": "https://aimlabs.com/courses/2JAzsJnLAYMidV3PYDT1oj",
+            "title": "Scump Teaches Pro Call of Duty Fundamentals (Aim Labs course)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://ggclan.com/news/how-to-improve-at-call-of-duty-pro-habits-rank-up",
+            "title": "Pro habits, GG Clan (coaching service)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.dexerto.com/call-of-duty/modern-warfare-4-multiplayer-keeps-beloved-features-like-classic-minimap-prestige-3369045/",
+            "title": "MW4 keeps the classic minimap, Dexerto",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "review",
+          "habits"
+        ],
+        "drill": "Theater mode: watch your deaths at half speed."
+      },
+      {
+        "id": "map-walk-and-mobility",
+        "title": "Learn the maps and the movement offline",
+        "principle": "Positioning starts with knowing each map's lanes, spawns, power spots and hill order. MW4's movement (steerable, abortable mantles, the long slide) needs practice outside real matches.",
+        "good": [
+          "Walking each map in a private match",
+          "Running the mobility course"
+        ],
+        "bad": [
+          "Learning maps only by dying on them"
+        ],
+        "signals": [
+          "Deaths in the same lanes across several matches on one map"
+        ],
+        "fix": "Walk each map in a private match and practise movement in the mobility course.",
+        "sources": [
+          {
+            "url": "https://www.gamespot.com/articles/call-of-duty-modern-warfare-4-tips-for-multiplayer/",
+            "title": "MW4 multiplayer tips, GameSpot",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.callofduty.com/blog/2026/08/call-of-duty-modern-warfare-4-next-highlights-multiplayer-gameplay-systems",
+            "title": "MW4 multiplayer gameplay systems (official blog)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.callofduty.com/blog/2026/10/call-of-duty-modern-warfare-4-ready-for-launch-maps-modes",
+            "title": "MW4 launch maps and modes (official blog)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "practice",
+          "maps"
+        ],
+        "drill": "Private match: name the lanes, power spots and spawns, pre-aiming every doorway."
+      }
     ]
   },
   "limitations": [
     "Frames are sampled every 2–3 seconds, so fast deaths and kills can be missed; deaths are mostly caught on the killcam or death screen.",
     "Death areas need a visible, fixed minimap; they are approximate.",
     "Map, weapon and perk lists come from launch-week research; check them after patches.",
-    "Live tips only in the campaign and private matches with bots; everything online is reviewed after the match."
+    "Live tips only in the campaign and private matches with bots; everything online is reviewed after the match.",
+    "Fight details (cover, movement, range, height, support) are read from the killcam, which is a reconstruction and can be slightly off; findings are probable, not certain, and untagged deaths are counted, never guessed.",
+    "Kills are tagged only with what the player's own view shows (range, movement, height)."
   ],
   "failClosed": [
     "No cloud vision: this pack cannot read the game.",
     "Unclear whether the player or a teammate died: the event is not recorded."
+  ],
+  "factors": [
+    {
+      "id": "exposure",
+      "label": "Cover when you died",
+      "attribute": "exposure",
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "in_open",
+          "label": "In the open",
+          "phrase": "while you were in the open",
+          "avoidable": true,
+          "playbook": "fight-from-cover",
+          "liveTip": "Fight from cover, not the open."
+        },
+        {
+          "value": "partial_cover",
+          "label": "Partly covered",
+          "phrase": "from the edge of cover"
+        },
+        {
+          "value": "behind_cover",
+          "label": "Behind cover",
+          "phrase": "while you were behind cover"
+        }
+      ]
+    },
+    {
+      "id": "movement",
+      "label": "What you were doing",
+      "attribute": "movement",
+      "lossEvent": "death",
+      "winEvent": "kill",
+      "minEvents": 5,
+      "values": [
+        {
+          "value": "sprinting",
+          "label": "Sprinting",
+          "phrase": "while sprinting",
+          "avoidable": true,
+          "playbook": "no-sprint-into-contact",
+          "liveTip": "Stop sprinting before corners."
+        },
+        {
+          "value": "sliding_or_jumping",
+          "label": "Sliding or jumping",
+          "phrase": "while sliding or jumping",
+          "playbook": "info-peeks"
+        },
+        {
+          "value": "walking",
+          "label": "Walking",
+          "phrase": "while walking"
+        },
+        {
+          "value": "aiming_still",
+          "label": "Aiming, standing still",
+          "phrase": "while aiming and standing still",
+          "playbook": "ads-and-hipfire-mw4"
+        },
+        {
+          "value": "mantling",
+          "label": "Mantling",
+          "phrase": "while mantling",
+          "avoidable": true,
+          "playbook": "info-peeks",
+          "liveTip": "Abort the mantle if you see someone."
+        }
+      ]
+    },
+    {
+      "id": "range",
+      "label": "Range",
+      "attribute": "range",
+      "lossEvent": "death",
+      "winEvent": "kill",
+      "minEvents": 6,
+      "values": [
+        {
+          "value": "close",
+          "label": "Close",
+          "phrase": "at close range",
+          "playbook": "range-vs-weapon"
+        },
+        {
+          "value": "mid",
+          "label": "Mid",
+          "phrase": "at mid range",
+          "playbook": "range-vs-weapon"
+        },
+        {
+          "value": "long",
+          "label": "Long",
+          "phrase": "at long range",
+          "playbook": "range-vs-weapon"
+        }
+      ]
+    },
+    {
+      "id": "height",
+      "label": "Height",
+      "attribute": "height",
+      "lossEvent": "death",
+      "winEvent": "kill",
+      "minEvents": 5,
+      "values": [
+        {
+          "value": "you_lower",
+          "label": "You lower",
+          "phrase": "from lower ground",
+          "avoidable": true,
+          "playbook": "head-glitch-high-ground",
+          "liveTip": "Do not fight up into high ground."
+        },
+        {
+          "value": "level",
+          "label": "Level",
+          "phrase": "on level ground"
+        },
+        {
+          "value": "you_higher",
+          "label": "You higher",
+          "phrase": "from higher ground",
+          "playbook": "head-glitch-high-ground"
+        }
+      ]
+    },
+    {
+      "id": "support",
+      "label": "Teammates nearby",
+      "attribute": "support",
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "alone",
+          "label": "Alone",
+          "phrase": "with no teammate nearby",
+          "avoidable": true,
+          "playbook": "trade-spacing",
+          "liveTip": "Stay near a teammate who can trade."
+        },
+        {
+          "value": "teammate_near",
+          "label": "Teammate near",
+          "phrase": "with a teammate nearby"
+        }
+      ]
+    },
+    {
+      "id": "action",
+      "label": "Your gun at the time",
+      "attribute": "action",
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "reloading",
+          "label": "Reloading",
+          "phrase": "while you were reloading",
+          "avoidable": true,
+          "playbook": "reload-discipline",
+          "liveTip": "Reload behind cover."
+        },
+        {
+          "value": "using_equipment",
+          "label": "Using equipment",
+          "phrase": "while using equipment"
+        },
+        {
+          "value": "firing",
+          "label": "Firing",
+          "phrase": "while you were firing"
+        },
+        {
+          "value": "not_firing",
+          "label": "Not firing",
+          "phrase": "before you fired",
+          "avoidable": true,
+          "playbook": "pre-aim-centering"
+        }
+      ]
+    },
+    {
+      "id": "opponents",
+      "label": "Enemies in the fight",
+      "attribute": "opponents",
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "one",
+          "label": "One",
+          "phrase": "in a one-on-one"
+        },
+        {
+          "value": "several",
+          "label": "Two or more",
+          "phrase": "against two or more enemies",
+          "avoidable": true,
+          "playbook": "isolate-1vx",
+          "liveTip": "Wait for a teammate when outnumbered."
+        }
+      ]
+    },
+    {
+      "id": "engagement",
+      "label": "Where the shots came from",
+      "attribute": "engagement",
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "front",
+          "label": "In front",
+          "phrase": "from someone in front of you",
+          "playbook": "first-shot-advantage"
+        },
+        {
+          "value": "side",
+          "label": "From the side",
+          "phrase": "from your side",
+          "avoidable": true,
+          "playbook": "minimap-red-dots"
+        },
+        {
+          "value": "behind",
+          "label": "From behind",
+          "phrase": "from behind you",
+          "avoidable": true,
+          "playbook": "spawn-awareness",
+          "liveTip": "Check the minimap; watch your back."
+        },
+        {
+          "value": "explosive",
+          "label": "Explosive",
+          "phrase": "from explosives"
+        }
+      ]
+    },
+    {
+      "id": "after-kill",
+      "label": "Right after your own kill",
+      "afterEvent": {
+        "event": "kill",
+        "withinMs": 8000
+      },
+      "lossEvent": "death",
+      "minEvents": 4,
+      "values": [
+        {
+          "value": "yes",
+          "label": "Within 8 s of a kill",
+          "phrase": "within a few seconds of your own kill",
+          "avoidable": true,
+          "playbook": "reposition-after-kill",
+          "liveTip": "Move after every kill."
+        },
+        {
+          "value": "no",
+          "label": "Not right after a kill",
+          "phrase": "not right after a kill"
+        }
+      ]
+    }
   ]
 }

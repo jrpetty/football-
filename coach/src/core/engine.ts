@@ -11,6 +11,8 @@
 // the same in the Web Worker, in Node tests and on synthetic input. It never
 // keeps a frame after processFrame returns.
 
+import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
+import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -104,6 +106,8 @@ export interface SessionReport {
   readonly record: RoundRecord
   readonly score: { readonly player: number; readonly opponent: number } | null
   readonly heatmaps: readonly HeatmapResult[]
+  readonly factors: readonly FactorResult[]
+  readonly benchmarks: readonly BenchmarkResult[]
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
@@ -129,6 +133,10 @@ export class CoachEngine {
   private readonly scores: ScoreTracker[]
   private readonly phases: PhaseBoundaryDetector
   private readonly recorder: MatchRecorder
+  private readonly factors: FactorAnalyzer
+  private readonly benchmarks: BenchmarkTracker
+  /** Factor tips already given this match (once each). */
+  private factorTipsGiven = new Set<string>()
 
   private readonly episodeSpecs: ReadonlyMap<string, EpisodeSpec>
   private readonly mistakeSpecs: ReadonlyMap<string, MistakeSpec>
@@ -179,6 +187,8 @@ export class CoachEngine {
     this.scores = (profile.scoreRules ?? []).map((r) => new ScoreTracker(r, sideOf(this.context[r.sideContext])))
     this.phases = new PhaseBoundaryDetector()
     this.recorder = new MatchRecorder(profile.matchStats)
+    this.factors = new FactorAnalyzer(profile.factors ?? [])
+    this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
 
     this.episodeSpecs = new Map(profile.episodes.map((e) => [e.id, e]))
     this.mistakeSpecs = new Map((profile.mistakes ?? []).map((m) => [m.id, m]))
@@ -373,6 +383,8 @@ export class CoachEngine {
       record: { ...this.record },
       score: this.scores[0]?.score ?? null,
       heatmaps: this.heatmaps.results('session'),
+      factors: this.factors.results('session'),
+      benchmarks: this.benchmarks.results(),
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -404,10 +416,14 @@ export class CoachEngine {
       const confirm = this.profile.scoreRules?.[i].confirmEvent
       if (confirm && u.events.length) this.forgetSightings(confirm, Math.min(...u.events.map((e) => e.at)) - SAME_GOAL_MS)
       for (const n of u.notices) out.entries.push(notice(now, 'info', n))
-      for (const a of u.amendments) this.heatmaps.amend(a.uid, a.zone, a.attributes)
+      for (const a of u.amendments) {
+        this.heatmaps.amend(a.uid, a.zone, a.attributes)
+        this.factors.amend(a.uid, a.attributes)
+      }
     }
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
+    this.benchmarks.observe(this.visible)
 
     // Vision sightings of goals enrich (or wait for) scoreboard goals.
     for (const ev of events) {
@@ -415,6 +431,7 @@ export class CoachEngine {
         if (rule.confirmEvent !== ev.ruleId) continue
         for (const a of this.scores[i].sighting(ev)) {
           this.heatmaps.amend(a.uid, a.zone, a.attributes)
+          this.factors.amend(a.uid, a.attributes)
           out.entries.push(notice(ev.at, 'info', `Goal details added from a replay: ${a.zone ? this.zoneLabel(a.zone) : 'location unclear'}.`))
         }
       }
@@ -430,8 +447,10 @@ export class CoachEngine {
     for (const ev of events) {
       out.entries.push({ type: 'event', at: ev.at, event: ev })
       this.heatmaps.record(ev)
+      this.factors.record(ev)
       if (ev.category !== 'boundary') this.matchHasData = true
     }
+    if (events.some((ev) => (this.profile.factors ?? []).some((f) => f.lossEvent === ev.ruleId))) this.maybeFactorTip(now, out)
 
     const visible = (key: string) => this.signals.get(key)?.known === true || this.fuser.get(key, now) !== null
     for (const ep of this.evaluator.update(now, events, visible)) this.recordEpisode(ep, out)
@@ -545,6 +564,8 @@ export class CoachEngine {
       rounds: { ...this.record },
       mistakes: this.mistakes.totals('match', now),
       heatmaps: this.heatmaps.results('match'),
+      factors: this.factors.matchCounts(),
+      benchmarks: this.benchmarks.results(),
       endedManually: end.manual,
     })
     if (this.matchHasData) {
@@ -569,8 +590,45 @@ export class CoachEngine {
     this.round = { index: 0, active: false }
     this.matchHasData = false
     this.heatmaps.newMatch()
+    this.factors.newMatch()
+    this.benchmarks.newMatch()
+    this.factorTipsGiven = new Set()
     this.mistakes.newMatch()
     for (const s of this.scores) s.newMatch()
+  }
+
+  /**
+   * A short live tip once an avoidable pattern in this match is moderately
+   * clear (e.g. dying in the open). Training mode only, where policy allows
+   * live tips; elsewhere the governor holds it for the review.
+   */
+  private maybeFactorTip(now: number, out: EngineOutput): void {
+    for (const res of this.factors.results('match')) {
+      for (const f of res.findings) {
+        if (f.kind !== 'weakness' || !f.liveTip || f.grade === 'weak') continue
+        const topic = `factor:${f.factorId}:${f.value}`
+        if (this.factorTipsGiven.has(topic)) continue
+        this.factorTipsGiven.add(topic)
+        this.decide(
+          {
+            category: 'training',
+            text: f.liveTip,
+            confidence: 0.8,
+            grade: f.grade,
+            evidenceSummary: f.statement,
+            topic,
+            priority: 'normal',
+            createdAt: now,
+            basedOnObservationAt: now,
+            expiresAtMs: now + 20_000,
+            author: 'template',
+          },
+          now,
+          out,
+        )
+        return
+      }
+    }
   }
 
   /** Insights the coach may use: the player has not dismissed or disputed them. */
@@ -584,6 +642,8 @@ export class CoachEngine {
       profile: this.profile,
       insights: this.usableInsights(),
       heatmaps: this.heatmaps.results(scope),
+      factors: this.factors.results(scope),
+      benchmarks: scope === 'match' ? this.benchmarks.results() : [],
       mistakes: this.mistakes.totals(scope, this.lastT),
       queuedTopics: this.governor.takeQueuedTopics(),
       reviewLines,

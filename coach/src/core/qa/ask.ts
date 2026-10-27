@@ -12,10 +12,13 @@ import type { MatchRecord } from '../analyses/matchRecorder.ts'
 import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
 import type { GameProfile } from '../profile/schema.ts'
+import { adviceFor, factorFindings } from '../planner.ts'
 
 export type Intent =
   | { readonly kind: 'heatmap'; readonly heatmapId: string }
   | { readonly kind: 'mistakes' }
+  | { readonly kind: 'fights' }
+  | { readonly kind: 'benchmark' }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
@@ -30,6 +33,8 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
+  if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
   for (const [re, ids] of HEATMAP_WORDS) {
     const id = ids.find((x) => heatmaps.has(x))
@@ -49,12 +54,24 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
       const h = report.heatmaps.find((x) => x.spec.id === intent.heatmapId)
       return h ? heatmapAnswer(h) : null
     }
+    case 'fights':
+      return fightsAnswer(profile, report)
+    case 'benchmark': {
+      const behind = report.benchmarks.filter((b) => b.worst)
+      if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
+      const met = report.benchmarks.filter((b) => b.points.length)
+      if (met.length) return met.map((b) => `${b.spec.label}: on track at ${b.points.length} of ${b.points.length} checkpoints I could read.`).join(' ')
+      return 'I have not read enough of the clock and your numbers yet to compare them with the benchmark. Keep the resource panel and the clock visible.'
+    }
     case 'mistakes': {
+      const fights = factorFindings(report.factors, 'moderate').filter((f) => f.kind === 'weakness').slice(0, 1)
       const lines = report.mistakes
         .filter((m) => m.totals.count > 0)
         .sort((a, b) => b.totals.totalMs - a.totals.totalMs)
         .slice(0, 3)
-        .map((m) => mistakeLine(m.spec.summary, m.totals))
+        .map((m) => [mistakeLine(m.spec.summary, m.totals), adviceFor(profile, m.spec.playbook ?? null)].filter(Boolean).join(' '))
+      lines.unshift(...fights.map((f) => [f.statement, adviceFor(profile, f.playbook)].filter(Boolean).join(' ')))
+      for (const b of report.benchmarks.filter((x) => x.worst).slice(0, 1)) lines.push([b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' '))
       const pattern = report.insights.find((i) => i.verdict === null && (i.insight.grade === 'moderate' || i.insight.grade === 'strong'))
       if (pattern) lines.push(pattern.statement)
       const claims = report.heatmaps.filter((h) => h.claim && h.claim.grade !== 'weak').slice(0, 1).map(heatmapAnswer)
@@ -99,6 +116,21 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'open':
       return null
   }
+}
+
+/** How fights are being lost, from killcam/replay tags, with the fixes. */
+function fightsAnswer(profile: GameProfile, report: SessionReport): string {
+  const tagged = Math.max(0, ...report.factors.map((f) => f.taggedLosses))
+  const all = Math.max(0, ...report.factors.map((f) => f.taggedLosses + f.untagged))
+  const weak = factorFindings(report.factors, 'weak').filter((f) => f.kind === 'weakness')
+  const strong = factorFindings(report.factors, 'moderate').find((f) => f.kind === 'strength')
+  if (!weak.length) {
+    if (all === 0) return 'I have not seen a death or a conceded goal I could read yet this session.'
+    return `I could read the details of ${tagged} of ${all} so far, which is not enough to call a pattern. I read them from killcams and replays, so let those play out when you can.`
+  }
+  const lines = weak.slice(0, 2).map((f) => `${f.grade === 'weak' ? 'Early sign: ' : ''}${f.statement} ${adviceFor(profile, f.playbook) ?? ''}`.trim())
+  if (strong) lines.push(`On the plus side: ${strong.statement[0].toLowerCase()}${strong.statement.slice(1)}`)
+  return `${lines.join(' ')} These are read from killcams and replays, so treat them as likely rather than certain.`
 }
 
 function heatmapAnswer(h: HeatmapResult): string {
@@ -152,6 +184,23 @@ export function buildDigest(i: DigestInputs): string {
           byZone: Object.fromEntries(Object.entries(h.cells).filter(([, n]) => n > 0).map(([id, n]) => [h.zoneSet.cells.find((c) => c.id === id)?.label ?? id, n])),
           howCreated: h.breakdown,
           claimGrade: h.claim?.grade ?? 'none',
+        })),
+      fights: i.report.factors
+        .filter((f) => f.taggedLosses + f.taggedWins + f.untagged > 0)
+        .map((f) => ({
+          factor: f.spec.label,
+          readFrom: 'killcam or replay (probable, not certain)',
+          byValue: Object.fromEntries(f.rows.filter((r) => r.losses + r.wins > 0).map((r) => [r.label, f.spec.winEvent ? { lost: r.losses, won: r.wins } : { [f.spec.lossNoun ?? 'deaths']: r.losses }])),
+          notReadable: f.untagged,
+          findings: f.findings.map((x) => ({ kind: x.kind, grade: x.grade, statement: x.statement, playbook: x.playbook })),
+        })),
+      benchmarks: i.report.benchmarks
+        .filter((b) => b.points.length > 0)
+        .map((b) => ({
+          benchmark: b.spec.label,
+          expected: `${b.spec.expectedPhrase}: ${b.spec.expected.start} + ${b.spec.expected.perMinute}/min`,
+          points: b.points.map((pt) => ({ atSec: pt.atSec, actual: pt.actual, expected: pt.expected, behind: pt.behind })),
+          reference: b.spec.reference ?? [],
         })),
       mistakes: i.report.mistakes.filter((m) => m.totals.count > 0).map((m) => ({ mistake: m.spec.label, times: m.totals.count, total: formatDuration(m.totals.totalMs) })),
       patterns: i.report.insights

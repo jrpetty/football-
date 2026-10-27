@@ -6,6 +6,8 @@
 // background knowledge for recognising and explaining what is on screen. It
 // is never treated as an observation.
 
+import type { PlaybookEntry } from '../profile/schema.ts'
+
 export const KNOWLEDGE_SECTIONS = [
   { id: 'overview', title: 'Overview and current version' },
   { id: 'modes', title: 'Modes' },
@@ -155,4 +157,26 @@ export function knowledgeText(
 export function knowledgeStats(kb: Pick<KnowledgeBase, 'sections'> | null): { items: number; sections: number } {
   if (!kb) return { items: 0, sections: 0 }
   return { items: kb.sections.reduce((n, s) => n + s.items.length, 0), sections: kb.sections.filter((s) => s.items.length).length }
+}
+
+/**
+ * The pack's coaching playbook as compact prompt text: how good players and
+ * coaches judge play, what it looks like on screen, and the fix. Entries are
+ * kept whole; the budget drops later entries, never half an entry.
+ */
+export function playbookText(entries: readonly PlaybookEntry[], budget: number): string {
+  const out: string[] = []
+  let used = 0
+  for (const p of entries) {
+    const kinds = [...new Set(p.sources.map((s) => s.kind))].join('/')
+    const block = [
+      `- [${p.id}] ${p.title}: ${p.principle}`,
+      `  Good: ${p.good.join('; ')}. Poor: ${p.bad.join('; ')}.`,
+      `  On screen: ${p.signals.join('; ')}. Fix: ${p.fix}${p.drill ? ` Drill: ${p.drill}` : ''} (sources: ${kinds})`,
+    ].join('\n')
+    if (used + block.length + 1 > budget) break
+    out.push(block)
+    used += block.length + 1
+  }
+  return out.join('\n')
 }

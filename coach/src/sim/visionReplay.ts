@@ -210,3 +210,134 @@ export function aoe2GameReplay(opts: { seed: number; startAt?: number; intervalM
     endsAt: start + (samples + 5) * interval,
   }
 }
+
+type Tags = Record<string, string>
+
+/**
+ * A Call of Duty: Modern Warfare 4 Hardpoint match (~10 minutes compressed
+ * into `realMinutes`). Every death and kill carries the fight details a
+ * vision model would read from the killcam or the player's own view. The
+ * scripted player dies in the open a lot, loses long-range fights, wins close
+ * ones, and five times dies within seconds of their own kill.
+ */
+export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number } = { seed: 1 }): VisionReplay {
+  const rnd = mulberry32(opts.seed)
+  const b = new Builder('cod-mw4', rnd)
+  const interval = opts.intervalMs ?? 2500
+  const start = opts.startAt ?? 0
+  const samples = Math.round(((opts.realMinutes ?? 6) * 60_000) / interval)
+
+  const deaths: Tags[] = [
+    { exposure: 'in_open', range: 'long', movement: 'walking', support: 'alone', engagement: 'front', killedBy: 'assault_rifle' },
+    { exposure: 'in_open', range: 'long', movement: 'sprinting', support: 'alone', engagement: 'side', killedBy: 'sniper' },
+    { exposure: 'partial_cover', range: 'mid', movement: 'aiming_still', support: 'teammate_near', engagement: 'front', killedBy: 'assault_rifle' },
+    { exposure: 'in_open', range: 'long', movement: 'sprinting', support: 'alone', engagement: 'front', killedBy: 'assault_rifle' },
+    { exposure: 'in_open', range: 'mid', movement: 'walking', support: 'unknown', engagement: 'behind', killedBy: 'smg', action: 'reloading' },
+    { exposure: 'behind_cover', range: 'close', movement: 'aiming_still', support: 'teammate_near', engagement: 'front', killedBy: 'shotgun' },
+    { exposure: 'in_open', range: 'long', movement: 'sprinting', support: 'alone', engagement: 'front', killedBy: 'marksman' },
+    { exposure: 'partial_cover', range: 'mid', movement: 'unknown', support: 'alone', engagement: 'front', killedBy: 'assault_rifle' },
+    { exposure: 'in_open', range: 'long', movement: 'walking', support: 'alone', engagement: 'side', killedBy: 'assault_rifle' },
+    { exposure: 'unknown', range: 'unknown', movement: 'unknown', support: 'unknown', engagement: 'unknown', killedBy: 'unknown' },
+    { exposure: 'in_open', range: 'long', movement: 'sprinting', support: 'alone', engagement: 'front', killedBy: 'sniper' },
+    { exposure: 'partial_cover', range: 'mid', movement: 'aiming_still', support: 'teammate_near', engagement: 'front', killedBy: 'lmg' },
+    { exposure: 'in_open', range: 'close', movement: 'walking', support: 'teammate_near', engagement: 'front', killedBy: 'smg' },
+  ]
+  const kills: Tags[] = [
+    ...Array.from({ length: 8 }, () => ({ range: 'close', movement: 'walking' })),
+    ...Array.from({ length: 5 }, () => ({ range: 'mid', movement: 'aiming_still' })),
+    { range: 'long', movement: 'aiming_still' },
+  ]
+  // Sample index → fight. Deaths at 5 s after a kill: indices k and k + 2.
+  const fights = new Map<number, { type: 'death' | 'kill'; tags: Tags }>()
+  let k = 0
+  let d = 0
+  const afterKill = new Set([1, 3, 6, 8, 11, 12]) // deaths that come right after a kill
+  for (let i = 4; i < samples - 4 && (k < kills.length || d < deaths.length); i += 5) {
+    if (k < kills.length && (d >= deaths.length || k <= d)) {
+      fights.set(i, { type: 'kill', tags: kills[k++] })
+      if (afterKill.has(d) && d < deaths.length) fights.set(i + 2, { type: 'death', tags: deaths[d++] })
+    } else if (d < deaths.length) {
+      fights.set(i, { type: 'death', tags: deaths[d++] })
+    }
+  }
+
+  let player = 0
+  let enemy = 0
+  for (let i = 0; i <= samples + 4; i++) {
+    const t = start + i * interval
+    if (i > samples) {
+      b.batch(t, { phase: 'match_end', visibleOutcome: player >= enemy ? 'success' : 'failure', playerScore: player, opponentScore: enemy })
+      continue
+    }
+    player += rnd() < 0.3 ? 1 : 0
+    enemy += rnd() < 0.36 ? 1 : 0
+    const f = fights.get(i)
+    b.batch(
+      t,
+      { phase: 'round', playerScore: player, opponentScore: enemy, matchTimeLeftSec: Math.max(0, 600 - Math.round((i / samples) * 600)), mapName: 'Synthetic Yard', modeName: 'Hardpoint' },
+      f ? [{ type: f.type, ...(f.type === 'death' ? { zone: ['n', 'c', 'e', 'c', 'w'][i % 5] } : {}), attributes: f.tags, evidence: f.type === 'death' ? 'killcam' : 'kill marker' }] : [],
+    )
+  }
+  const tagged = (key: string, value: string, list: Tags[]) => list.filter((x) => x[key] === value).length
+  return {
+    profileId: 'cod-mw4',
+    batches: b.batches,
+    truth: {
+      deaths: deaths.length,
+      kills: kills.length,
+      inOpen: tagged('exposure', 'in_open', deaths),
+      exposureKnown: deaths.filter((x) => x.exposure !== 'unknown').length,
+      longLost: tagged('range', 'long', deaths),
+      longWon: tagged('range', 'long', kills),
+      closeWon: tagged('range', 'close', kills),
+      closeLost: tagged('range', 'close', deaths),
+      afterKill: afterKill.size,
+    },
+    endsAt: start + (samples + 5) * interval,
+  }
+}
+
+/**
+ * An Age of Empires IV game (~16 game minutes compressed into `realMinutes`).
+ * The scripted player's villager count falls behind the one-Town-Center curve
+ * after the Feudal Age (a long idle Town Center), and recovers a little.
+ */
+export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number } = { seed: 1 }): VisionReplay {
+  const rnd = mulberry32(opts.seed)
+  const b = new Builder('aoe4', rnd)
+  const interval = opts.intervalMs ?? 4000
+  const start = opts.startAt ?? 0
+  const samples = Math.round(((opts.realMinutes ?? 5) * 60_000) / interval)
+  const gameSecAt = (i: number) => Math.round((i / samples) * 960)
+  // Villagers: on the curve until 4:00, then 150 s with no production, then back to 3 a minute.
+  const villagersAt = (sec: number) => (sec <= 240 ? 6 + Math.floor(sec / 20) : sec <= 390 ? 18 : 18 + Math.floor((sec - 390) / 20))
+  for (let i = 0; i <= samples + 4; i++) {
+    const t = start + i * interval
+    if (i > samples) {
+      b.batch(t, { phase: 'match_end', visibleOutcome: 'failure' })
+      continue
+    }
+    const sec = gameSecAt(i)
+    const vills = villagersAt(sec)
+    b.batch(t, {
+      phase: 'round',
+      food: 150 + Math.round(rnd() * 200),
+      wood: 100 + Math.round(rnd() * 200),
+      gold: 50 + Math.round(rnd() * 150),
+      stone: 0,
+      villagers: vills,
+      idleVillagers: 0,
+      population: vills + Math.floor(sec / 120),
+      populationCap: vills + Math.floor(sec / 120) + 8,
+      age: sec < 270 ? 'dark' : 'feudal',
+      gameTimeSec: sec,
+    })
+  }
+  return {
+    profileId: 'aoe4',
+    batches: b.batches,
+    // Expected on the curve: 21 at 5:00, 36 at 10:00, 51 at 15:00.
+    truth: { at300: villagersAt(300), at600: villagersAt(600), at900: villagersAt(900), gapAt600: 36 - villagersAt(600) },
+    endsAt: start + (samples + 5) * interval,
+  }
+}

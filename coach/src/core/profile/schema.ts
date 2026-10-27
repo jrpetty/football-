@@ -215,7 +215,12 @@ export interface HeatmapSpec {
   readonly phrase: string
   /** True when the events come from sampled frames and some are missed. */
   readonly sampled: boolean
-  readonly breakdown?: { readonly attribute: string; readonly label: string }
+  readonly breakdown?: {
+    readonly attribute: string
+    readonly label: string
+    /** Playbook entry per breakdown value, so the most common one comes with its fix. */
+    readonly playbook?: Readonly<Record<string, string>>
+  }
   readonly tags: readonly string[]
 }
 
@@ -249,6 +254,8 @@ export interface MistakeSpec {
   readonly tags: readonly string[]
   /** Fire at most once per match (e.g. a late age-up). */
   readonly oncePerMatch?: boolean
+  /** The playbook entry with the principle and the fix. */
+  readonly playbook?: string
 }
 
 export interface ScoreRule {
@@ -264,7 +271,98 @@ export interface ScoreRule {
 }
 
 export interface MatchStatSpec {
-  readonly keys: readonly { readonly key: string; readonly label: string; readonly unit?: string; readonly better: 'higher' | 'lower' | 'neutral' }[]
+  readonly keys: readonly {
+    readonly key: string
+    readonly label: string
+    readonly unit?: string
+    readonly better: 'higher' | 'lower' | 'neutral'
+    /** A line on the wrong side of which the stat is worth a remark even without history (e.g. pass accuracy under 75%). */
+    readonly warn?: { readonly at: number; readonly note: string; readonly playbook?: string }
+  }[]
+}
+
+/**
+ * A factor: a visible circumstance of a fight, read from the killcam or the
+ * screen and attached to death (loss) and kill (win) events as an attribute
+ * (range, cover, movement…). The analysis compares fights won and lost by
+ * factor, and counts how often an avoidable circumstance came before a death.
+ */
+export interface FactorValueSpec {
+  readonly value: string
+  readonly label: string
+  /** Completes "{k} of your {n} deaths came …" or "You lost {k} of {n} fights …", e.g. "while you were in the open". */
+  readonly phrase: string
+  /** A circumstance the player can change (in the open, reloading, alone…): worth flagging on its own. */
+  readonly avoidable?: boolean
+  /** The playbook entry with the principle and the fix. */
+  readonly playbook?: string
+  /** Spoken during play where policy allows, once the evidence is moderate. ≤ 8 words. */
+  readonly liveTip?: string
+}
+
+export interface FactorSpec {
+  readonly id: string
+  readonly label: string
+  /** The event attribute holding the value. Either this or `afterEvent`. */
+  readonly attribute?: string
+  /**
+   * Instead of an attribute, timing: value "yes" when this event (e.g. the
+   * player's own kill) came within `withinMs` before the loss, else "no".
+   * Timing is read from event times, so it does not depend on the killcam.
+   */
+  readonly afterEvent?: { readonly event: string; readonly withinMs: number }
+  /** Event that is a lost fight (e.g. "death"), or a score rule's event whose confirm event carries the attribute. */
+  readonly lossEvent: string
+  /** Plural noun for loss events in share statements, e.g. "goals conceded" (default "deaths"). */
+  readonly lossNoun?: string
+  /** Event that is a won fight (e.g. "kill"), when the same attribute is read on it too. */
+  readonly winEvent?: string
+  /** No claim below this many tagged events. */
+  readonly minEvents: number
+  readonly values: readonly FactorValueSpec[]
+}
+
+/**
+ * A benchmark: a visible number compared, at checkpoints of the game clock,
+ * with a simple expected curve (e.g. villagers from one Town Center that
+ * never stops: start + perMinute × minutes, up to a cap).
+ */
+export interface BenchmarkSpec {
+  readonly id: string
+  readonly label: string
+  /** State key holding the number (e.g. "villagers"). */
+  readonly key: string
+  /** State key holding the game clock in seconds. */
+  readonly timeKey: string
+  readonly expected: { readonly start: number; readonly perMinute: number; readonly cap?: number }
+  readonly checkpointsSec: readonly number[]
+  /** Flag a checkpoint when the reading is below expected by more than this fraction. */
+  readonly tolerance: number
+  /** Plural noun for the number, e.g. "villagers". */
+  readonly noun: string
+  /** What the expected curve represents, e.g. "a Town Center that never stops". */
+  readonly expectedPhrase: string
+  /** What one unit of shortfall means in time, e.g. "of idle Town Center time" (uses perMinute). */
+  readonly gapPhrase?: string
+  /** What strong players reach, for context (sourced in the playbook entry). */
+  readonly reference?: readonly { readonly atSec: number; readonly value: number; readonly label: string }[]
+  readonly playbook?: string
+}
+
+/** A coaching principle as good players and coaches teach it, with the fix and its sources. */
+export interface PlaybookEntry {
+  readonly id: string
+  readonly title: string
+  readonly principle: string
+  readonly good: readonly string[]
+  readonly bad: readonly string[]
+  /** How it shows on screen (what the coach can see). */
+  readonly signals: readonly string[]
+  /** One plain, imperative sentence. */
+  readonly fix: string
+  readonly drill?: string
+  readonly sources: readonly { readonly url: string; readonly title: string; readonly kind: 'pro' | 'coach' | 'guide' | 'forum' | 'official' }[]
+  readonly tags: readonly string[]
 }
 
 export interface PlayerContextSpec {
@@ -324,6 +422,8 @@ export interface GameProfile {
   readonly mistakes?: readonly MistakeSpec[]
   readonly scoreRules?: readonly ScoreRule[]
   readonly matchStats?: MatchStatSpec
+  readonly factors?: readonly FactorSpec[]
+  readonly benchmarks?: readonly BenchmarkSpec[]
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -331,6 +431,8 @@ export interface GameProfile {
     /** Advice categories the coach must never give for this game. */
     readonly prohibitedAdvice: readonly string[]
     readonly terminology: Readonly<Record<string, string>>
+    /** How good players and coaches judge play, with fixes and sources. */
+    readonly playbook?: readonly PlaybookEntry[]
     /** Curated reference knowledge (modes, maps, screens, HUD, roster…), dated; see src/core/knowledge/base.ts. */
     readonly reference?: readonly KnowledgeSection[]
     /** When the reference was last checked against the game. */
@@ -689,8 +791,12 @@ export function validateProfile(input: unknown): ValidationResult {
     }
   }
 
-  // Score rules may create events too.
+  /** Links to playbook entries, checked once the playbook is read. */
+  const playbookRefs: [string, unknown][] = []
+
+  // Score rules may create events too (with the attributes of their confirm event).
   const derivedEvents = new Set<string>()
+  const derivedAttributes = new Map<string, Set<string>>()
   c.arr(p.scoreRules, 'scoreRules', true).forEach((r, i) => {
     const path = `scoreRules[${i}]`
     const o = c.obj(r, path)
@@ -701,12 +807,15 @@ export function validateProfile(input: unknown): ValidationResult {
     }
     const side = c.str(o.sideContext, `${path}.sideContext`)
     if (side && !contextIds.has(side)) c.errors.push(`${path}.sideContext: unknown player context "${side}"`)
-    for (const k of ['forEvent', 'againstEvent'] as const) {
-      const id = c.str(o[k], `${path}.${k}`, { pattern: ID })
-      if (id) derivedEvents.add(id)
-    }
     const confirm = c.str(o.confirmEvent, `${path}.confirmEvent`, { optional: true })
     if (confirm && !visionEvents.has(confirm)) c.errors.push(`${path}.confirmEvent: unknown vision event "${confirm}"`)
+    for (const k of ['forEvent', 'againstEvent'] as const) {
+      const id = c.str(o[k], `${path}.${k}`, { pattern: ID })
+      if (id) {
+        derivedEvents.add(id)
+        derivedAttributes.set(id, visionEvents.get(confirm ?? '')?.attributes ?? new Set())
+      }
+    }
     c.num(o.confirmWindowMs, `${path}.confirmWindowMs`, 1000, 120_000, true)
   })
 
@@ -764,6 +873,8 @@ export function validateProfile(input: unknown): ValidationResult {
       if (b) {
         c.str(b.attribute, `${path}.breakdown.attribute`)
         c.str(b.label, `${path}.breakdown.label`, { max: 80 })
+        const links = b.playbook === undefined ? null : c.obj(b.playbook, `${path}.breakdown.playbook`)
+        for (const [value, id] of Object.entries(links ?? {})) playbookRefs.push([`${path}.breakdown.playbook.${value}`, id])
       }
     }
   })
@@ -778,10 +889,130 @@ export function validateProfile(input: unknown): ValidationResult {
         if (key && !visionStateKeys.has(key)) c.errors.push(`matchStats.keys[${i}].key: unknown state key "${key}"`)
         c.str(o.label, `matchStats.keys[${i}].label`, { max: 80 })
         c.oneOf(o.better, `matchStats.keys[${i}].better`, ['higher', 'lower', 'neutral'] as const)
+        const w = o.warn === undefined ? null : c.obj(o.warn, `matchStats.keys[${i}].warn`)
+        if (w) {
+          if (o.better === 'neutral') c.errors.push(`matchStats.keys[${i}].warn: needs better "higher" or "lower"`)
+          c.num(w.at, `matchStats.keys[${i}].warn.at`, -1e6, 1e6)
+          c.str(w.note, `matchStats.keys[${i}].warn.note`, { max: 120, spoken: true })
+          if (w.playbook !== undefined) playbookRefs.push([`matchStats.keys[${i}].warn.playbook`, w.playbook])
+        }
       })
     }
   }
   c.num(p.liveFreshnessMs, 'liveFreshnessMs', 500, 60_000, true)
+
+  // Playbook (validated first: factors and benchmarks refer to it).
+  const playbookIds = new Set<string>()
+  const knowledgeObj = (p.knowledge && typeof p.knowledge === 'object' ? p.knowledge : {}) as Obj
+  if (knowledgeObj.playbook !== undefined) {
+    c.arr(knowledgeObj.playbook, 'knowledge.playbook').forEach((e, i) => {
+      const path = `knowledge.playbook[${i}]`
+      const o = c.obj(e, path)
+      if (!o) return
+      const id = c.str(o.id, `${path}.id`, { pattern: ID })
+      if (id) {
+        if (playbookIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+        playbookIds.add(id)
+      }
+      c.str(o.title, `${path}.title`, { max: 100 })
+      c.str(o.principle, `${path}.principle`, { max: 600, spoken: true })
+      c.str(o.fix, `${path}.fix`, { max: 240, spoken: true })
+      c.str(o.drill, `${path}.drill`, { optional: true, max: 400 })
+      for (const f of ['good', 'bad', 'signals', 'tags'] as const) c.arr(o[f], `${path}.${f}`).forEach((x, j) => c.str(x, `${path}.${f}[${j}]`, { max: 300, spoken: f !== 'tags' }))
+      c.arr(o.sources, `${path}.sources`).forEach((s, j) => {
+        const so = c.obj(s, `${path}.sources[${j}]`)
+        if (!so) return
+        c.str(so.url, `${path}.sources[${j}].url`, { pattern: /^https:\/\/\S+$/, max: 500 })
+        c.str(so.title, `${path}.sources[${j}].title`, { max: 200 })
+        c.oneOf(so.kind, `${path}.sources[${j}].kind`, ['pro', 'coach', 'guide', 'forum', 'official'] as const)
+      })
+    })
+  }
+
+  for (const [path, id] of playbookRefs) {
+    if (typeof id !== 'string' || !playbookIds.has(id)) c.errors.push(`${path}: unknown playbook entry "${String(id)}"`)
+  }
+  if (Array.isArray(p.mistakes)) {
+    p.mistakes.forEach((m, i) => {
+      const pb = m && typeof m === 'object' ? (m as Obj).playbook : undefined
+      if (pb === undefined) return
+      const id = c.str(pb, `mistakes[${i}].playbook`)
+      if (id && !playbookIds.has(id)) c.errors.push(`mistakes[${i}].playbook: unknown playbook entry "${id}"`)
+    })
+  }
+
+  // Factors: attributes of fights, compared between losses and wins.
+  c.arr(p.factors, 'factors', true).forEach((f, i) => {
+    const path = `factors[${i}]`
+    const o = c.obj(f, path)
+    if (!o) return
+    c.str(o.id, `${path}.id`, { pattern: ID })
+    c.str(o.label, `${path}.label`, { max: 80 })
+    const after = o.afterEvent === undefined ? null : c.obj(o.afterEvent, `${path}.afterEvent`)
+    const attribute = after ? null : c.str(o.attribute, `${path}.attribute`)
+    if (after) {
+      if (o.attribute !== undefined) c.errors.push(`${path}: give either attribute or afterEvent, not both`)
+      const ae = c.str(after.event, `${path}.afterEvent.event`)
+      if (ae && !visionEvents.has(ae)) c.errors.push(`${path}.afterEvent.event: unknown vision event "${ae}"`)
+      c.num(after.withinMs, `${path}.afterEvent.withinMs`, 500, 120_000)
+    }
+    c.num(o.minEvents, `${path}.minEvents`, 2, 100)
+    c.str(o.lossNoun, `${path}.lossNoun`, { optional: true, max: 40 })
+    for (const k of ['lossEvent', 'winEvent'] as const) {
+      if (k === 'winEvent' && o.winEvent === undefined) continue
+      const ev = c.str(o[k], `${path}.${k}`)
+      const attrs = ev ? (visionEvents.get(ev)?.attributes ?? derivedAttributes.get(ev)) : undefined
+      if (ev && !attrs) c.errors.push(`${path}.${k}: unknown vision or score event "${ev}"`)
+      else if (attrs && attribute && !attrs.has(attribute)) c.errors.push(`${path}.${k}: event "${ev}" has no attribute "${attribute}"`)
+    }
+    c.arr(o.values, `${path}.values`).forEach((v, j) => {
+      const vp = `${path}.values[${j}]`
+      const vo = c.obj(v, vp)
+      if (!vo) return
+      const value = c.str(vo.value, `${vp}.value`)
+      if (after && value && value !== 'yes' && value !== 'no') c.errors.push(`${vp}.value: an afterEvent factor has the values "yes" and "no"`)
+      c.str(vo.label, `${vp}.label`, { max: 80 })
+      c.str(vo.phrase, `${vp}.phrase`, { max: 120, spoken: true })
+      if (vo.avoidable !== undefined) c.bool(vo.avoidable, `${vp}.avoidable`)
+      const pb = c.str(vo.playbook, `${vp}.playbook`, { optional: true })
+      if (pb && !playbookIds.has(pb)) c.errors.push(`${vp}.playbook: unknown playbook entry "${pb}"`)
+      const tip = c.str(vo.liveTip, `${vp}.liveTip`, { optional: true, max: 80, spoken: true })
+      if (tip && tip.split(/\s+/).length > 8) c.errors.push(`${vp}.liveTip: keep live tips to 8 words or fewer`)
+    })
+  })
+
+  // Benchmarks: a visible number against an expected curve.
+  c.arr(p.benchmarks, 'benchmarks', true).forEach((b, i) => {
+    const path = `benchmarks[${i}]`
+    const o = c.obj(b, path)
+    if (!o) return
+    c.str(o.id, `${path}.id`, { pattern: ID })
+    c.str(o.label, `${path}.label`, { max: 80 })
+    for (const k of ['key', 'timeKey'] as const) {
+      const key = c.str(o[k], `${path}.${k}`)
+      if (key && !visionStateKeys.has(key)) c.errors.push(`${path}.${k}: unknown state key "${key}"`)
+    }
+    const e = c.obj(o.expected, `${path}.expected`)
+    if (e) {
+      c.num(e.start, `${path}.expected.start`, 0, 1e6)
+      c.num(e.perMinute, `${path}.expected.perMinute`, 0, 1e6)
+      c.num(e.cap, `${path}.expected.cap`, 0, 1e6, true)
+    }
+    c.arr(o.checkpointsSec, `${path}.checkpointsSec`).forEach((x, j) => c.num(x, `${path}.checkpointsSec[${j}]`, 1, 36_000))
+    c.num(o.tolerance, `${path}.tolerance`, 0, 0.9)
+    c.str(o.noun, `${path}.noun`, { max: 40 })
+    c.str(o.expectedPhrase, `${path}.expectedPhrase`, { max: 120, spoken: true })
+    c.str(o.gapPhrase, `${path}.gapPhrase`, { optional: true, max: 80, spoken: true })
+    c.arr(o.reference, `${path}.reference`, true).forEach((r, j) => {
+      const ro = c.obj(r, `${path}.reference[${j}]`)
+      if (!ro) return
+      c.num(ro.atSec, `${path}.reference[${j}].atSec`, 1, 36_000)
+      c.num(ro.value, `${path}.reference[${j}].value`, 0, 1e6)
+      c.str(ro.label, `${path}.reference[${j}].label`, { max: 80 })
+    })
+    const pb = c.str(o.playbook, `${path}.playbook`, { optional: true })
+    if (pb && !playbookIds.has(pb)) c.errors.push(`${path}.playbook: unknown playbook entry "${pb}"`)
+  })
 
   // Episodes.
   const episodeResponses = new Map<string, Set<string>>()

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
   "id": "ea-fc",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "EA SPORTS FC (broadcast camera)",
   "depth": "pack",
   "game": {
     "title": "EA SPORTS FC",
     "publisher": "Electronic Arts",
-    "patch": "FC 24-26 broadcast HUD (unverified)",
+    "patch": "FC 27 (launched 25 Sep 2026); broadcast HUD unverified",
     "languages": [
       "en"
     ]
@@ -87,7 +87,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "EA SPORTS FC match on the broadcast camera. Read the scoreboard (top-left: home abbreviation, home score, away score, away abbreviation, match clock). Recognise goals (goal celebration, GOAL graphic, or a goal replay marked REPLAY), clear losses of possession by the player's team, and the end-of-match statistics screen. The player's side and team are given in the context; left and right on the pitch are always from the perspective of the team defending that goal, looking out at the pitch.",
+    "purpose": "EA SPORTS FC match on the broadcast camera. Read the scoreboard (top-left: home abbreviation, home score, away score, away abbreviation, match clock). Recognise goals (goal celebration, GOAL graphic, or a goal replay marked REPLAY), clear losses of possession by the player's team, and the end-of-match statistics screen. The player's side and team are given in the context; left and right on the pitch are always from the perspective of the team defending that goal, looking out at the pitch. For a goal against the player, also name the first defensive mistake the replay shows, if any.",
     "sampleIntervalMs": 2500,
     "maxLatencyMs": 8000,
     "maxWidth": 1024,
@@ -197,6 +197,21 @@
               "unknown"
             ],
             "description": "How the chance was created, only if visible in the replay."
+          },
+          {
+            "key": "defending",
+            "options": [
+              "defender_pulled_out",
+              "back_post_unmarked",
+              "cutback_lane_open",
+              "beaten_one_on_one",
+              "line_broken",
+              "fullback_played_onside",
+              "turnover_own_third",
+              "none_visible",
+              "unknown"
+            ],
+            "description": "Only for goals against the player, from the replay: the first defensive mistake visible (not the finish). none_visible if the defending looked sound; unknown if the replay does not show it."
           }
         ],
         "dedupeMs": 40000,
@@ -328,7 +343,15 @@
       "sampled": false,
       "breakdown": {
         "attribute": "buildUp",
-        "label": "How they were created"
+        "label": "How they were created",
+        "playbook": {
+          "cross": "back-post-coverage",
+          "cutback": "block-the-cutback-lane",
+          "through_ball": "read-through-balls",
+          "counter_attack": "build-out-triangles",
+          "set_piece": "corners-aerial",
+          "dribble": "jockey-before-tackle"
+        }
       },
       "tags": [
         "defending",
@@ -364,7 +387,12 @@
       "sampled": true,
       "breakdown": {
         "attribute": "cause",
-        "label": "How possession was lost"
+        "label": "How possession was lost",
+        "playbook": {
+          "misplaced_pass": "no-forced-forward-passes",
+          "intercepted": "no-forced-forward-passes",
+          "tackled": "safe-vs-risky-zones"
+        }
       },
       "tags": [
         "passing",
@@ -395,7 +423,12 @@
         "key": "passAccuracyPct",
         "label": "Pass accuracy",
         "unit": "%",
-        "better": "higher"
+        "better": "higher",
+        "warn": {
+          "at": 75,
+          "note": "a common warning line",
+          "playbook": "no-forced-forward-passes"
+        }
       },
       {
         "key": "expectedGoals",
@@ -543,7 +576,920 @@
     "terminology": {
       "goal_conceded": "goal conceded",
       "turnover": "lost possession"
-    }
+    },
+    "playbook": [
+      {
+        "id": "jockey-before-tackle",
+        "title": "Jockey first, tackle second",
+        "principle": "Jockey to stay goal-side and slow the attacker, and tackle only when the ball is exposed after a heavy touch or a skill move. FC 27 made jockeying faster, so containing works better than diving in.",
+        "good": [
+          "About a metre of space, goal-side, steering the attacker to the touchline or a covering teammate",
+          "Tackling after a heavy touch"
+        ],
+        "bad": [
+          "Diving in early",
+          "Biting on fake shots",
+          "Several tackle attempts in a row"
+        ],
+        "signals": [
+          "Replay: your defender lunges and the attacker goes past him"
+        ],
+        "fix": "Hold jockey and tackle only when the ball comes away from the attacker's feet.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://liquidfc.gg/ea-fc-27/defend-tips",
+            "title": "FC 27 defending tips, LiquidFC",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.operationsports.com/getting-destroyed-on-defense-in-ea-fc-27-heres-what-you-need-to-change/",
+            "title": "Getting destroyed on defence in FC 27, Operation Sports",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.g2a.com/news/features/guide/how-to-defend-in-ea-fc-27-manual-defending-jockeying-tackling-pressing/",
+            "title": "Manual defending in FC 27, G2A News",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "1v1"
+        ],
+        "drill": "Practice Arena: 1v1 defending."
+      },
+      {
+        "id": "switch-before-the-pass",
+        "title": "Switch to the receiver before the pass",
+        "principle": "In FC 27, AI defenders reach less far for interceptions than a defender you control. Take the defender who will face the threat before the ball arrives.",
+        "good": [
+          "Flicking the right stick to the defender in the target lane",
+          "Already controlling him when the through ball is struck"
+        ],
+        "bad": [
+          "Cycling the switch button after the pass",
+          "Switching while the ball is in the air"
+        ],
+        "signals": [
+          "Replay: your controlled player arrives late; an AI defender stands still as the ball goes past"
+        ],
+        "fix": "Pick the next defender with the right stick as the passer shapes to play.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://nealguides.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, NealGuides",
+            "kind": "coach"
+          },
+          {
+            "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+            "title": "Defending tips from RBLZ_Levyfinn (World Championship runner-up)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-how-to-defend-manual-defending-guide",
+            "title": "Manual defending guide, Timesaver",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "switching"
+        ]
+      },
+      {
+        "id": "control-the-cdm",
+        "title": "Defend with the midfield, keep the centre-backs as the safety net",
+        "principle": "Run back and press with the defensive midfielder first and leave the back line in shape. Take a centre-back only once the midfield screen is beaten.",
+        "good": [
+          "Defensive midfielder between the ball and the striker's lane",
+          "Teammate contain used with the midfielder"
+        ],
+        "bad": [
+          "Controlling a centre-back at halfway",
+          "Contain with your main defender, dragging him out"
+        ],
+        "signals": [
+          "Replay: your controlled centre-back 20 m or more ahead of the line when the move starts"
+        ],
+        "fix": "Defend through midfield with the defensive midfielder and take a centre-back only in the final third.",
+        "sources": [
+          {
+            "url": "https://nealguides.com/how-to-defend-in-fc-26-my-top-5-defending-tips-to-concede-less-goals/",
+            "title": "How to defend in FC 26, NealGuides",
+            "kind": "coach"
+          },
+          {
+            "url": "https://nealguides.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, NealGuides",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/ea-sports-fc-26-tips-tricks",
+            "title": "FC 26 pro tips, Red Bull",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.operationsports.com/getting-destroyed-on-defense-in-ea-fc-27-heres-what-you-need-to-change/",
+            "title": "Getting destroyed on defence in FC 27, Operation Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "shape"
+        ]
+      },
+      {
+        "id": "dont-break-the-line",
+        "title": "Do not pull centre-backs out of the line",
+        "principle": "Taking a centre-back out of the line opens a gap the AI does not cover and invites balls in behind.",
+        "good": [
+          "Centre-backs level with each other",
+          "Midfielders stepping out to the ball carrier"
+        ],
+        "bad": [
+          "A centre-back chasing a dropping striker",
+          "A centre-back pulled wide to a winger"
+        ],
+        "signals": [
+          "Replay: a wide gap between the centre-backs with the scorer running through it"
+        ],
+        "fix": "Let a midfielder engage a dropping forward and keep the centre-back in the line.",
+        "sources": [
+          {
+            "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+            "title": "Defending tips from RBLZ_Levyfinn (World Championship runner-up)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/ea-sports-fc-26-tips-tricks",
+            "title": "FC 26 pro tips, Red Bull",
+            "kind": "pro"
+          },
+          {
+            "url": "https://fifauteam.com/defend-fc-27/",
+            "title": "How to defend in FC 27, FIFA UTeam",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 tactics, FIFPlay",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "shape"
+        ]
+      },
+      {
+        "id": "press-dont-spam",
+        "title": "Tap the press, do not hold it",
+        "principle": "Holding second-man press drags AI teammates out of shape. In FC 27, Team Press does nothing in your defensive third.",
+        "good": [
+          "Short taps to force a backward pass",
+          "Pressing from midfield"
+        ],
+        "bad": [
+          "Holding contain for the whole possession",
+          "Relying on Team Press near your own box"
+        ],
+        "signals": [
+          "A simple one-two beats two of your players at once"
+        ],
+        "fix": "Tap to press briefly, then release and recover your shape.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-closed-beta-feedback-update",
+            "title": "FC 27 closed beta feedback update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-how-to-defend-manual-defending-guide",
+            "title": "Manual defending guide, Timesaver",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.operationsports.com/getting-destroyed-on-defense-in-ea-fc-27-heres-what-you-need-to-change/",
+            "title": "Getting destroyed on defence in FC 27, Operation Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "pressing"
+        ]
+      },
+      {
+        "id": "block-the-cutback-lane",
+        "title": "Protect the penalty spot and the edge of the box",
+        "principle": "Cutbacks beat defenders who chase the ball toward the byline. Block the pass back inside and accept a cross from a poor angle.",
+        "good": [
+          "Controlled defender between the byline carrier and the penalty spot",
+          "A midfielder recovering to the edge of the box"
+        ],
+        "bad": [
+          "Sprinting at the winger",
+          "Every defender collapsing onto the six-yard line"
+        ],
+        "signals": [
+          "Replay: scorer unmarked 10 to 18 m out after a pass back from the byline"
+        ],
+        "fix": "Switch to the player covering the penalty-spot lane, not the one chasing the winger.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifauteam.com/defend-fc-27/",
+            "title": "How to defend in FC 27, FIFA UTeam",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ea.com/discussions/fc-26-ultimate-team-en/defending-in-eafc26/12704245",
+            "title": "Defending in FC 26 thread, EA Forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "defending",
+          "box"
+        ]
+      },
+      {
+        "id": "back-post-coverage",
+        "title": "Watch the far-post runner on crosses",
+        "principle": "FC 27 crosses land in space more often, so far-post runs are more dangerous. Choose your aerial defender before the cross is struck.",
+        "good": [
+          "Controlling the far-side centre-back or full-back as the winger shapes to cross",
+          "Goal-side of the runner"
+        ],
+        "bad": [
+          "Cycling defenders while the ball is in the air",
+          "Far-side full-back tucked too narrow"
+        ],
+        "signals": [
+          "Replay: header or volley at the far post with no defender within about 2 m"
+        ],
+        "fix": "Take the far-post defender before the cross and stand goal-side of the runner.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.dtgre.com/2026/09/ea-fc-27-corner-defending-player-switching-guide.html",
+            "title": "Corner defending and switching, DTG",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.operationsports.com/getting-destroyed-on-defense-in-ea-fc-27-heres-what-you-need-to-change/",
+            "title": "Getting destroyed on defence in FC 27, Operation Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "crosses"
+        ],
+        "drill": "Practice Arena: defending crosses."
+      },
+      {
+        "id": "line-height-tuning",
+        "title": "Set the line height for your recovery pace",
+        "principle": "Tekkz and RedLac run a line height around 61 to 65, and usage data clusters near 60. If you keep getting beaten in behind, guides suggest 45 to 55, or quicker centre-backs.",
+        "good": [
+          "Line height matched to your centre-backs' pace",
+          "Lowering the line after conceding in behind"
+        ],
+        "bad": [
+          "A line above 70 with slow centre-backs"
+        ],
+        "signals": [
+          "Two or more goals from balls over the top, scorer starting near halfway"
+        ],
+        "fix": "After conceding in behind twice, drop the line 5 to 10 points or play a quicker centre-back.",
+        "sources": [
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best FC 27 custom tactics with Tekkz and RedLac, Red Bull",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/4-2-1-3/",
+            "title": "4-2-1-3 tactics and usage data, FUT.GG",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-closed-beta-feedback-update",
+            "title": "FC 27 closed beta feedback update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, FIFPlay",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "tactics",
+          "defending"
+        ]
+      },
+      {
+        "id": "read-through-balls",
+        "title": "Read and cut off through balls",
+        "principle": "FC 27 through balls follow the passer's aim closely, so they are easier to read but punish late reactions. A shoulder challenge can push a runner off the ball.",
+        "good": [
+          "Controlled defender on the runner's inside shoulder",
+          "Defensive midfielder in the central lane"
+        ],
+        "bad": [
+          "An unmarked runner splitting the line",
+          "Defender facing the ball instead of the runner"
+        ],
+        "signals": [
+          "Replay: one-on-one with your keeper after a through ball, scorer starting beside your last defender"
+        ],
+        "fix": "Before the pass, take the defender nearest the runner and match the run on his inside shoulder.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.operationsports.com/getting-destroyed-on-defense-in-ea-fc-27-heres-what-you-need-to-change/",
+            "title": "Getting destroyed on defence in FC 27, Operation Sports",
+            "kind": "guide"
+          },
+          {
+            "url": "https://nealguides.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, NealGuides",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "defending",
+          "through-balls"
+        ]
+      },
+      {
+        "id": "fullback-discipline",
+        "title": "Watch full-backs that drop early",
+        "principle": "Full-backs dropping early and playing attackers onside is a widely reported FC 27 issue that EA has reportedly put under review.",
+        "good": [
+          "Full-back level with the centre-backs",
+          "Taking the full-back yourself when the ball goes wide"
+        ],
+        "bad": [
+          "A full-back 3 to 5 m deeper than the line, playing the scorer onside"
+        ],
+        "signals": [
+          "Replay: the offside line set by a full-back, not a centre-back"
+        ],
+        "fix": "Take the full-back yourself and step him up to the line when the ball is central.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-launch-feedback-update",
+            "title": "FC 27 launch feedback update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-launch-feedback-update-manual-defending-verdicts",
+            "title": "Launch feedback update summary, Timesaver",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "shape"
+        ]
+      },
+      {
+        "id": "corners-aerial",
+        "title": "Defend corners with your best header",
+        "principle": "Pick one aerial defender early instead of switching once the ball is in the air.",
+        "good": [
+          "Your tallest centre-back under control before the kick"
+        ],
+        "bad": [
+          "Switching mid-flight"
+        ],
+        "signals": [
+          "Corner goal with your controlled player outside the six-yard box"
+        ],
+        "fix": "Select your strongest header before the corner is taken.",
+        "sources": [
+          {
+            "url": "https://www.dtgre.com/2026/09/ea-fc-27-corner-defending-player-switching-guide.html",
+            "title": "Corner defending and switching, DTG",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "set-pieces"
+        ]
+      },
+      {
+        "id": "no-forced-forward-passes",
+        "title": "Do not pass into pressure",
+        "principle": "A ground pass is easy to intercept when a defender stands in the lane. Against a compact block, forcing the ball forward hands it back.",
+        "good": [
+          "Waiting for a runner who can actually receive",
+          "Moving the ball sideways or back to reset"
+        ],
+        "bad": [
+          "Vertical passes into a marked striker",
+          "Passing while sprinting"
+        ],
+        "signals": [
+          "Interceptions in midfield with the interceptor standing in the passing lane"
+        ],
+        "fix": "Pass forward only when the lane is clear; otherwise recycle it back.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-passing-tips/",
+            "title": "FC 27 passing tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.u4gm.com/fc-27/blog-fut-27-how-to-beat-high-pressing-and-build-attacks-under-pressure",
+            "title": "Beating a high press, U4GM",
+            "kind": "guide"
+          },
+          {
+            "url": "https://athlonsports.com/sports-video-games/ea-fc-27-gameplay-tips",
+            "title": "FC 27 gameplay tips, Athlon Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "possession",
+          "passing"
+        ]
+      },
+      {
+        "id": "lofted-pass-risk",
+        "title": "Limit lofted passes in build-up",
+        "principle": "Lofted passes hang in the air and give defenders time to recover. Use them to switch play or beat a high line, not to circulate.",
+        "good": [
+          "A lofted switch into space",
+          "A lofted through ball over a high line"
+        ],
+        "bad": [
+          "Lofted passes to a tightly marked midfielder"
+        ],
+        "signals": [
+          "The receiver loses the header or duel straight after a lofted pass"
+        ],
+        "fix": "Play on the ground unless the receiver is in clear space or the ball goes over a high line.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-passing-tips/",
+            "title": "FC 27 passing tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://athlonsports.com/sports-video-games/ea-fc-27-gameplay-tips",
+            "title": "FC 27 gameplay tips, Athlon Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "possession",
+          "passing"
+        ]
+      },
+      {
+        "id": "through-ball-discipline",
+        "title": "Aim through balls, do not spam them",
+        "principle": "FC 27 removed most through-ball assistance, so a badly aimed ball gets intercepted.",
+        "good": [
+          "Aiming at the space ahead of a runner who has started moving",
+          "Diagonal through balls"
+        ],
+        "bad": [
+          "Through balls into crowded areas",
+          "Releasing before the runner moves"
+        ],
+        "signals": [
+          "Through ball intercepted with the runner still level or behind"
+        ],
+        "fix": "Release the through ball after the runner's first steps, into the space ahead of him.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-passing-tips/",
+            "title": "FC 27 passing tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://athlonsports.com/sports-video-games/ea-fc-27-gameplay-tips",
+            "title": "FC 27 gameplay tips, Athlon Sports",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "possession",
+          "passing"
+        ]
+      },
+      {
+        "id": "build-out-triangles",
+        "title": "Play out with a safety option",
+        "principle": "Keep one safe pass back or sideways at all times; Short or Balanced build-up keeps more short options available.",
+        "good": [
+          "Centre-back, defensive midfielder and full-back in a triangle",
+          "Switching sides through the centre-backs"
+        ],
+        "bad": [
+          "Every midfielder running forward, leaving only a long ball",
+          "Driven passes across your own box"
+        ],
+        "signals": [
+          "Ball lost in your own half, then a shot against within about 10 seconds"
+        ],
+        "fix": "Before receiving, check for a second option and use the centre-back to switch sides.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 tactics, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best FC 27 custom tactics with Tekkz and RedLac, Red Bull",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.u4gm.com/fc-27/blog-fut-27-how-to-beat-high-pressing-and-build-attacks-under-pressure",
+            "title": "Beating a high press, U4GM",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "possession",
+          "build-up"
+        ]
+      },
+      {
+        "id": "safe-vs-risky-zones",
+        "title": "Match risk to the zone",
+        "principle": "In your own third, a turnover becomes a shot straight away, so keep it simple there. Take risks in the final third. This is a coaching rule of thumb, not a measured statistic.",
+        "good": [
+          "Simple passes in your own half",
+          "Creative passes in the final third"
+        ],
+        "bad": [
+          "Skill moves or driven passes near your own box"
+        ],
+        "signals": [
+          "A goal against that starts with a turnover in your own third"
+        ],
+        "fix": "Keep it simple in your own third and take risks only in the opponent's third.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-passing-tips/",
+            "title": "FC 27 passing tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 tactics, FIFPlay",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "possession",
+          "decisions"
+        ]
+      },
+      {
+        "id": "create-cutbacks",
+        "title": "Get to the byline and pull it back",
+        "principle": "Analytics research links cutbacks and passes from the area just outside the box with foot shots, which are higher quality than headers. A cutback lands behind defenders who are running back toward goal.",
+        "good": [
+          "Winger reaching the byline",
+          "A runner arriving late at the penalty spot"
+        ],
+        "bad": [
+          "Crossing high to a lone striker",
+          "Shooting from tight angles"
+        ],
+        "signals": [
+          "Many crosses, few headers on target"
+        ],
+        "fix": "At the byline, pass back to the late runner instead of crossing high.",
+        "sources": [
+          {
+            "url": "https://repository.mdx.ac.uk/item/832y5",
+            "title": "Zone 14 and cutback analysis (Middlesex University)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://cambiodejuegoenglish.beehiiv.com/p/analyzing-crosses-in-liga-mx",
+            "title": "Analysing crosses in Liga MX, Cambio de Juego",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "chances"
+        ]
+      },
+      {
+        "id": "width-and-switch",
+        "title": "Use width and switch play",
+        "principle": "When the middle is blocked, switching sides stretches a compact defence.",
+        "good": [
+          "The ball reaching the far side within two or three passes"
+        ],
+        "bad": [
+          "Every attack through the middle"
+        ],
+        "signals": [
+          "High possession, few shots, turnovers in central areas"
+        ],
+        "fix": "After two blocked central passes, switch to the far side.",
+        "sources": [
+          {
+            "url": "https://www.u4gm.com/fc-27/blog-fut-27-how-to-beat-high-pressing-and-build-attacks-under-pressure",
+            "title": "Beating a high press, U4GM",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 tactics, FIFPlay",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "build-up"
+        ]
+      },
+      {
+        "id": "shot-selection",
+        "title": "Low driven inside the box, finesse from an angle with space",
+        "principle": "Guides rate the low driven shot as the most reliable finish inside the box. Finesse works best from an angle with space, on the stronger foot.",
+        "good": [
+          "Low driven across the keeper",
+          "Finesse to the far post with space"
+        ],
+        "bad": [
+          "Long shots under pressure"
+        ],
+        "signals": [
+          "Many shots, low expected goals per shot, many blocked shots"
+        ],
+        "fix": "Work the ball into the box before shooting, and shoot from range only when unpressured.",
+        "sources": [
+          {
+            "url": "https://whatsgaming.net/blog/fc-27-shooting-guide-best-techniques-controls-and-tips-and-the-near-post-finish-ea-admits-is-strong",
+            "title": "FC 27 shooting guide, WhatsGaming",
+            "kind": "guide"
+          },
+          {
+            "url": "https://futfilters.com/blog/fc-27-shooting-guide-every-shot-type-controls-shot-assistance-1v1-finishing",
+            "title": "FC 27 shooting guide, FUTFilters",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-shooting-and-finishing-tips/",
+            "title": "FC 27 shooting tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/ea-fc-27-guide-tips",
+            "title": "FC 27 tips from a pro, Red Bull",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "finishing"
+        ],
+        "drill": "Skill Games: shooting."
+      },
+      {
+        "id": "patience-in-possession",
+        "title": "Be patient in possession",
+        "principle": "Hold the ball until a runner is really available. FC 27 lets you trigger curved runs, but they stop after a short distance.",
+        "good": [
+          "Circulating the ball, then a well-timed pass into space"
+        ],
+        "bad": [
+          "Going direct straight after every recovery"
+        ],
+        "signals": [
+          "Low possession with low pass accuracy"
+        ],
+        "fix": "Recycle the ball until a runner is moving into space.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.u4gm.com/fc-27/blog-fut-27-how-to-beat-high-pressing-and-build-attacks-under-pressure",
+            "title": "Beating a high press, U4GM",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/ea-fc-27-guide-tips",
+            "title": "FC 27 tips from a pro, Red Bull",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "possession"
+        ]
+      },
+      {
+        "id": "aimed-crosses",
+        "title": "Aim crosses into space",
+        "principle": "FC 27 crosses depend on your aim and power and land in space more often than on a player.",
+        "good": [
+          "Crosses aimed ahead of a runner already moving"
+        ],
+        "bad": [
+          "Crosses into a crowd with no aim"
+        ],
+        "signals": [
+          "Crosses landing with no attacker near the ball"
+        ],
+        "fix": "Aim crosses at the runner's path, not where he is now.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "FC 27 Pitch Notes: gameplay deep dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "crosses"
+        ]
+      },
+      {
+        "id": "replay-diagnosis",
+        "title": "Find the first mistake in the goal replay",
+        "principle": "A conceded goal usually starts with one defensive mistake well before the finish: a defender pulled out, an unmarked far-post runner, a cutback lane left open, a line broken, a full-back playing someone onside, or a turnover in your own third.",
+        "good": [
+          "Naming the first mistake, not the finish"
+        ],
+        "bad": [
+          "Blaming the keeper or the finish every time"
+        ],
+        "signals": [
+          "The same first mistake behind several goals"
+        ],
+        "fix": "Watch each goal replay for the first defensive mistake, not the shot.",
+        "sources": [
+          {
+            "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+            "title": "Defending tips from RBLZ_Levyfinn (World Championship runner-up)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, FIFPlay",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "review",
+          "defending"
+        ]
+      },
+      {
+        "id": "stats-benchmarks",
+        "title": "Read the match stats against simple lines",
+        "principle": "Useful warning lines: pass accuracy under 75%, under about a third of shots on target, and expected goals per shot under about 0.10. These are coaching rules of thumb drawn from real-football averages, not FC data. Judge trends over ten matches.",
+        "good": [
+          "Tracking pass accuracy and shot quality over ten matches"
+        ],
+        "bad": [
+          "Judging yourself on one match"
+        ],
+        "signals": [
+          "Pass accuracy under 75%; many shots with few on target"
+        ],
+        "fix": "Track your pass accuracy and shots on target over ten matches, not one.",
+        "sources": [
+          {
+            "url": "https://theanalyst.com/competition/premier-league/stats",
+            "title": "Premier League stats, Opta Analyst",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "review",
+          "stats"
+        ]
+      },
+      {
+        "id": "skill-games-and-arena",
+        "title": "Short, focused practice blocks",
+        "principle": "FC 27 Skill Games cover passing and defending, and the Practice Arena lets you add defenders for one-on-one practice. Ten to fifteen minutes on one theme works better than long unfocused sessions.",
+        "good": [
+          "A ten-minute block on jockey and tackle timing, then through-ball aiming"
+        ],
+        "bad": [
+          "Practising everything at once"
+        ],
+        "signals": [
+          "The same conceded-goal pattern across several matches"
+        ],
+        "fix": "Before each session, spend ten minutes on your most common conceded-goal pattern.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/which-fc27-mode-is-right-for-you",
+            "title": "Which FC 27 mode is right for you (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.ludo.guide/guide/ea-sports-fc-27/utilizing-the-practice-arena",
+            "title": "Using the Practice Arena, Ludo Guide",
+            "kind": "guide"
+          },
+          {
+            "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+            "title": "Defending tips from RBLZ_Levyfinn (World Championship runner-up)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "practice"
+        ]
+      },
+      {
+        "id": "defending-settings",
+        "title": "Defending settings to check",
+        "principle": "Guides disagree on settings: most suggest Tactical Defending and right-stick switching, and some suggest Auto Switching Move Assist set to None. EA has reportedly said manual defending will not be retuned, so adapting pays off.",
+        "good": [
+          "Testing one setting at a time over five matches"
+        ],
+        "bad": [
+          "Changing several settings at once"
+        ],
+        "signals": [
+          "Late switching in goal replays"
+        ],
+        "fix": "Change one defending setting at a time and keep it for five matches.",
+        "sources": [
+          {
+            "url": "https://nealguides.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, NealGuides",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 defending tips, FIFPlay",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.g2a.com/news/features/guide/how-to-defend-in-ea-fc-27-manual-defending-jockeying-tackling-pressing/",
+            "title": "Manual defending in FC 27, G2A News",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ea.com/discussions/fc-27-feedback-en/fc-27-defending-%E2%80%93-please-bring-back-ai-defending-and-legacy-defending/13767076",
+            "title": "FC 27 defending feedback thread, EA Forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "settings"
+        ]
+      }
+    ]
   },
   "limitations": [
     "Frames are sampled about every 2.5 seconds, so many turnovers are missed; turnover maps show a sample, not every lost ball.",
@@ -554,5 +1500,71 @@
   "failClosed": [
     "Scoreboard unreadable: no goals are counted from score changes.",
     "Non-broadcast camera, menus or replays of other matches: no zones are recorded."
+  ],
+  "factors": [
+    {
+      "id": "conceded-mistake",
+      "label": "First defensive mistake",
+      "attribute": "defending",
+      "lossEvent": "goal_conceded",
+      "lossNoun": "goals conceded",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "defender_pulled_out",
+          "label": "Defender pulled out of the line",
+          "phrase": "after a defender was pulled out of the line",
+          "avoidable": true,
+          "playbook": "dont-break-the-line"
+        },
+        {
+          "value": "back_post_unmarked",
+          "label": "Far-post runner unmarked",
+          "phrase": "from an unmarked far-post runner",
+          "avoidable": true,
+          "playbook": "back-post-coverage"
+        },
+        {
+          "value": "cutback_lane_open",
+          "label": "Cutback lane open",
+          "phrase": "from a cutback into an open lane",
+          "avoidable": true,
+          "playbook": "block-the-cutback-lane"
+        },
+        {
+          "value": "beaten_one_on_one",
+          "label": "Beaten one-on-one",
+          "phrase": "after a defender was beaten one-on-one",
+          "avoidable": true,
+          "playbook": "jockey-before-tackle"
+        },
+        {
+          "value": "line_broken",
+          "label": "Line broken by a pass",
+          "phrase": "after a pass broke your line",
+          "avoidable": true,
+          "playbook": "read-through-balls"
+        },
+        {
+          "value": "fullback_played_onside",
+          "label": "Full-back played them onside",
+          "phrase": "with a full-back playing the scorer onside",
+          "avoidable": true,
+          "playbook": "fullback-discipline"
+        },
+        {
+          "value": "turnover_own_third",
+          "label": "Turnover in your own third",
+          "phrase": "after losing the ball in your own third",
+          "avoidable": true,
+          "playbook": "safe-vs-risky-zones"
+        },
+        {
+          "value": "none_visible",
+          "label": "No clear mistake",
+          "phrase": "with no clear defensive mistake"
+        }
+      ]
+    }
   ]
 }

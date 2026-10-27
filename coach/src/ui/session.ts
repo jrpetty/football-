@@ -833,7 +833,7 @@ function settleAnswer(conversation: readonly QaEntry[], message: CoachingMessage
 }
 
 export function emptyReport(profile: GameProfile): SessionReport {
-  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], mistakes: [], insights: [], matches: [] }
+  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], mistakes: [], insights: [], matches: [] }
 }
 
 /** A soft two-note chime confirming a marked moment (no speech, so it never talks over the game). */

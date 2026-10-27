@@ -5,6 +5,7 @@
 import type { MatchStatSpec } from '../profile/schema.ts'
 import type { RoundResult, VisibleState } from '../types.ts'
 import type { HeatmapResult } from './heatmap.ts'
+import type { BenchmarkResult } from './benchmarks.ts'
 import type { MistakeTotals } from './mistakes.ts'
 
 export const MATCH_RECORD_SCHEMA = 1
@@ -25,6 +26,10 @@ export interface MatchRecord {
   readonly stats: Readonly<Record<string, number>>
   readonly mistakes: Readonly<Record<string, { readonly count: number; readonly totalSec: number }>>
   readonly zones: Readonly<Record<string, Readonly<Record<string, number>>>>
+  /** Fight factors: factor → value → [losses, wins]. */
+  readonly factors?: Readonly<Record<string, Readonly<Record<string, readonly [number, number]>>>>
+  /** Benchmark readings at checkpoints: id → points. */
+  readonly benchmarks?: Readonly<Record<string, readonly { readonly atSec: number; readonly actual: number; readonly expected: number }[]>>
   /** True when the match was ended by the player (stop or "match over"), not seen on screen. */
   readonly endedManually: boolean
 }
@@ -63,6 +68,8 @@ export class MatchRecorder {
     rounds: MatchRecord['rounds']
     mistakes: Record<string, MistakeTotals>
     heatmaps: readonly HeatmapResult[]
+    factors?: Record<string, Record<string, [number, number]>>
+    benchmarks?: readonly BenchmarkResult[]
     endedManually: boolean
   }): MatchRecord {
     const record: MatchRecord = {
@@ -83,6 +90,10 @@ export class MatchRecorder {
           .map(([k, t]) => [k, { count: t.count, totalSec: Math.round(t.totalMs / 1000) }]),
       ),
       zones: Object.fromEntries(input.heatmaps.filter((h) => h.total > 0).map((h) => [h.spec.id, { ...h.cells }])),
+      ...(input.factors && Object.keys(input.factors).length ? { factors: input.factors } : {}),
+      ...(input.benchmarks?.some((b) => b.points.length)
+        ? { benchmarks: Object.fromEntries(input.benchmarks.filter((b) => b.points.length).map((b) => [b.spec.id, b.points.map(({ atSec, actual, expected }) => ({ atSec, actual, expected }))])) }
+        : {}),
       endedManually: input.endedManually,
     }
     this.stats = new Map()
@@ -102,6 +113,24 @@ export function isMatchRecord(v: unknown): v is MatchRecord {
     typeof o.endedAt === 'string' &&
     typeof o.stats === 'object' &&
     o.stats !== null &&
-    Object.values(o.stats as object).every((x) => typeof x === 'number' && Number.isFinite(x))
+    Object.values(o.stats as object).every((x) => typeof x === 'number' && Number.isFinite(x)) &&
+    (o.factors === undefined || isFactorCounts(o.factors)) &&
+    (o.benchmarks === undefined || isBenchmarkPoints(o.benchmarks))
+  )
+}
+
+const count = (x: unknown) => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < 1e6
+
+function isFactorCounts(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
+  return Object.values(v).every(
+    (values) => typeof values === 'object' && values !== null && Object.values(values).every((p) => Array.isArray(p) && p.length === 2 && p.every(count)),
+  )
+}
+
+function isBenchmarkPoints(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
+  return Object.values(v).every(
+    (points) => Array.isArray(points) && points.length <= 50 && points.every((p) => typeof p === 'object' && p !== null && ['atSec', 'actual', 'expected'].every((k) => typeof (p as Record<string, unknown>)[k] === 'number')),
   )
 }
