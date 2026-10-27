@@ -15,7 +15,7 @@ const require = createRequire(import.meta.url)
 interface SherpaNode {
   OfflineTts: new (config: unknown) => {
     readonly sampleRate: number
-    generate(req: { text: string; sid: number; speed: number }): { samples: Float32Array; sampleRate: number }
+    generate(req: { text: string; sid: number; speed: number; enableExternalBuffer?: boolean }): { samples: Float32Array; sampleRate: number }
   }
 }
 
@@ -35,9 +35,9 @@ export function createTts(root: string, key: TtsModelKey) {
   const tts = new sherpa.OfflineTts({ model: { ...model, numThreads: threads(), debug: false, provider: 'cpu' }, maxNumSentences: 1 })
   return {
     synthesize(text: string, sid: number, speed: number): SynthResult {
-      const out = tts.generate({ text: text.slice(0, MAX_SYNTH_CHARS), sid, speed })
-      // Copy out of the addon's external buffer so it can be transferred between threads.
-      return { samples: new Float32Array(out.samples), sampleRate: out.sampleRate }
+      // Electron's V8 memory cage forbids external buffers, so ask the addon for an ordinary copy.
+      const out = tts.generate({ text: text.slice(0, MAX_SYNTH_CHARS), sid, speed, enableExternalBuffer: false })
+      return { samples: out.samples, sampleRate: out.sampleRate }
     },
   }
 }

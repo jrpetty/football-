@@ -285,6 +285,19 @@ function isJpeg(v: unknown): v is ArrayBuffer {
   return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
 }
 
+/** Load the chosen neural voice in the background, so the first thing the coach says is not delayed by model loading. */
+function warmVoice(): void {
+  // The recogniser too, so the first question is answered without a model-loading pause.
+  if (settings?.voiceInput && modelStatus.installed && !recognizer) {
+    recognizer = new RecognizerThread(app.getPath('userData'))
+    void recognizer.transcribe(new Float32Array(1600)).catch(() => undefined)
+  }
+  const voice = NEURAL_VOICES.find((v) => v.id === settings?.voice.voiceURI)
+  if (!voice || !ttsModels[voice.model].installed) return
+  tts ??= new TtsThread(app.getPath('userData'))
+  void tts.synthesize(voice.model, 'Ready.', voice.sid, 1).catch(() => undefined)
+}
+
 function registerIpc(): void {
   handle(CHANNELS.info, (): PlatformInfo => ({
     shell: 'electron',
@@ -332,9 +345,10 @@ function registerIpc(): void {
   // --- Settings and player data ---------------------------------------------------------
   handle(CHANNELS.loadSettings, async () => (settings = await storage.loadSettings()))
   handle(CHANNELS.saveSettings, async (s) => {
-    const before = settings?.hotkeys
+    const before = settings
     settings = await storage.saveSettings(s)
-    if (JSON.stringify(before) !== JSON.stringify(settings.hotkeys)) registerShortcuts(settings.hotkeys)
+    if (JSON.stringify(before?.hotkeys) !== JSON.stringify(settings.hotkeys)) registerShortcuts(settings.hotkeys)
+    if (before?.voice.voiceURI !== settings.voice.voiceURI || before?.voiceInput !== settings.voiceInput) warmVoice()
     return settings
   })
   handle(CHANNELS.loadTendencies, (id) => storage.loadTendencies(id))
@@ -437,7 +451,10 @@ function registerIpc(): void {
     if (modelStatus.installing || modelStatus.installed) return modelStatus
     modelStatus = { ...modelStatus, installing: true, progress: 0, error: null }
     void installModel(app.getPath('userData'), ASR_MODEL, (p) => (modelStatus = { ...modelStatus, progress: p }))
-      .then(() => (modelStatus = { ...modelStatus, installed: true, installing: false, progress: 1 }))
+      .then(() => {
+        modelStatus = { ...modelStatus, installed: true, installing: false, progress: 1 }
+        warmVoice()
+      })
       .catch((e: unknown) => (modelStatus = { ...modelStatus, installing: false, error: e instanceof Error ? e.message : String(e) }))
     return modelStatus
   })
@@ -531,6 +548,7 @@ if (!app.requestSingleInstanceLock()) {
 
     // Global keys, so the player never has to alt-tab out of a game.
     registerShortcuts(settings.hotkeys)
+    warmVoice()
   })
 
   app.on('will-quit', () => {

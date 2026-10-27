@@ -1,0 +1,49 @@
+name: Sightline coach Windows installer
+
+# Builds the Windows installer (NSIS .exe) on a Windows runner whenever the
+# coach changes, and uploads it as a workflow artifact. Pushing a tag such as
+# coach-v0.2.0 also attaches the installer to a GitHub release.
+on:
+  push:
+    paths: ['coach/**', '.github/workflows/coach-windows.yml']
+    tags: ['coach-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: coach
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coach/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Build installer
+        run: npm run dist:win
+        env:
+          # No code-signing certificate is configured: the installer is unsigned.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Check the packaged app contains the Windows voice engine
+        shell: bash
+        run: test -f release/win-unpacked/resources/app/node_modules/sherpa-onnx-win-x64/sherpa-onnx.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sightline-Coach-Windows
+          path: coach/release/*.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/coach-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: coach/release/*.exe
