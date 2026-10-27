@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 2,
+  "id": "aoe2-de",
+  "version": "1.0.0",
+  "name": "Age of Empires II: Definitive Edition",
+  "depth": "pack",
+  "game": { "title": "Age of Empires II: Definitive Edition", "publisher": "Xbox Game Studios / World's Edge", "patch": "current default HUD (unverified)", "languages": ["en"] },
+  "validation": {
+    "status": "unverified",
+    "notes": "Reads the standard resource panel, population, idle villager count, age and game clock. Not yet checked against live captures at every UI scale; values the recogniser cannot read are left out, never guessed."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": null,
+    "notes": "Use the default HUD at a UI scale where the resource numbers are legible. Mods that change the HUD may stop the reading.",
+    "windowTitleHints": ["Age of Empires II"]
+  },
+  "modes": [
+    { "id": "campaign", "label": "Campaign / scenarios (single-player)", "multiplayer": false, "competitive": false },
+    { "id": "skirmish-vs-ai", "label": "Skirmish vs AI (single-player)", "multiplayer": false, "competitive": false },
+    { "id": "ranked-1v1", "label": "Ranked 1v1", "multiplayer": true, "competitive": true },
+    { "id": "ranked-team", "label": "Ranked team game", "multiplayer": true, "competitive": true },
+    { "id": "lobby-unranked", "label": "Unranked lobby", "multiplayer": true, "competitive": false }
+  ],
+  "playerContext": [
+    { "id": "feudalTargetSec", "label": "Your Feudal Age target (game seconds)", "kind": "number", "default": 660, "help": "When you aim to have reached the Feudal Age. 660 s (11:00) is only a starting point; set your own." },
+    { "id": "castleTargetSec", "label": "Your Castle Age target (game seconds)", "kind": "number", "default": 1260, "help": "When you aim to have reached the Castle Age. 1260 s (21:00) is only a starting point; set your own." }
+  ],
+  "signals": [],
+  "events": [],
+  "vision": {
+    "purpose": "Age of Empires II: Definitive Edition. Read the top resource panel (food, wood, gold, stone stockpiles), the population as current/maximum, the idle villager count if shown, the current age, and the in-game clock. Report only numbers you can actually read; leave out anything hidden, cut off or illegible. Report phase 'match_end' on a victory/defeat or post-game statistics screen and 'menu' in menus or lobbies.",
+    "sampleIntervalMs": 4000,
+    "maxLatencyMs": 12000,
+    "maxWidth": 1280,
+    "state": [
+      { "key": "food", "label": "Food", "type": "number", "min": 0, "max": 1000000, "ttlMs": 12000, "description": "Food stockpile in the resource panel." },
+      { "key": "wood", "label": "Wood", "type": "number", "min": 0, "max": 1000000, "ttlMs": 12000, "description": "Wood stockpile in the resource panel." },
+      { "key": "gold", "label": "Gold", "type": "number", "min": 0, "max": 1000000, "ttlMs": 12000, "description": "Gold stockpile in the resource panel." },
+      { "key": "stone", "label": "Stone", "type": "number", "min": 0, "max": 1000000, "ttlMs": 12000, "description": "Stone stockpile in the resource panel." },
+      { "key": "population", "label": "Population", "type": "number", "min": 0, "max": 1000, "ttlMs": 12000, "description": "Current population (the first number of 'current/max')." },
+      { "key": "populationCap", "label": "Population cap", "type": "number", "min": 0, "max": 1000, "ttlMs": 12000, "description": "Current maximum population (the second number of 'current/max')." },
+      { "key": "idleVillagers", "label": "Idle villagers", "type": "number", "min": 0, "max": 500, "ttlMs": 12000, "description": "The idle villager count shown by the idle villager button, only if a number is shown." },
+      { "key": "age", "label": "Age", "type": "enum", "options": ["dark", "feudal", "castle", "imperial"], "ttlMs": 30000, "description": "The age the player is currently in (not the one being researched)." },
+      { "key": "gameTimeSec", "label": "Game time (s)", "type": "number", "min": 0, "max": 36000, "ttlMs": 12000, "description": "The in-game clock converted to seconds." }
+    ],
+    "events": []
+  },
+  "mistakes": [
+    {
+      "id": "housed",
+      "label": "Housed",
+      "when": [
+        { "key": "population", "op": ">=", "ref": "populationCap" },
+        { "key": "populationCap", "op": "<", "value": 200 }
+      ],
+      "forMs": 10000,
+      "phases": ["round", "combat"],
+      "liveTip": "You're housed. Build a house.",
+      "summary": "Housed {count} times, {total} in total.",
+      "severity": "high",
+      "tags": ["economy", "population", "houses"]
+    },
+    {
+      "id": "idle-villagers",
+      "label": "Idle villagers",
+      "when": [{ "key": "idleVillagers", "op": ">", "value": 0 }],
+      "forMs": 20000,
+      "phases": ["round", "combat"],
+      "liveTip": "Idle villagers. Put them to work.",
+      "summary": "Villagers sat idle {count} times, {total} in total.",
+      "severity": "high",
+      "tags": ["economy", "villagers", "idle"]
+    },
+    {
+      "id": "floating-resources",
+      "label": "Floating resources",
+      "when": [{ "sum": ["food", "wood", "gold", "stone"], "op": ">", "value": 1500 }],
+      "forMs": 60000,
+      "minGameTimeSec": 600,
+      "phases": ["round", "combat"],
+      "liveTip": "Big bank. Spend those resources.",
+      "summary": "Banked over 1500 unspent resources {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": ["economy", "spending"]
+    },
+    {
+      "id": "late-feudal",
+      "label": "Behind your Feudal Age target",
+      "when": [
+        { "key": "age", "op": "==", "value": "dark" },
+        { "key": "gameTimeSec", "op": ">", "contextValue": "feudalTargetSec" }
+      ],
+      "forMs": 0,
+      "oncePerMatch": true,
+      "liveTip": "Past your Feudal target time.",
+      "summary": "Still in the Dark Age after your Feudal Age target time.",
+      "severity": "medium",
+      "tags": ["age-up", "build-order", "timings"]
+    },
+    {
+      "id": "late-castle",
+      "label": "Behind your Castle Age target",
+      "when": [
+        { "key": "age", "op": "!=", "value": "castle" },
+        { "key": "age", "op": "!=", "value": "imperial" },
+        { "key": "gameTimeSec", "op": ">", "contextValue": "castleTargetSec" }
+      ],
+      "forMs": 0,
+      "oncePerMatch": true,
+      "liveTip": "Past your Castle target time.",
+      "summary": "Not yet in the Castle Age at your Castle Age target time.",
+      "severity": "medium",
+      "tags": ["age-up", "build-order", "timings"]
+    }
+  ],
+  "episodes": [],
+  "liveCues": [],
+  "liveFreshnessMs": 12000,
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "constant-villagers",
+        "title": "Keep villager production constant",
+        "summary": "In the Dark and Feudal Ages, a Town Center that keeps producing villagers is the backbone of the economy. Gaps in production add up over a game.",
+        "good": ["Queue villagers continuously early on", "Add Town Centers in the Castle Age when the economy allows"],
+        "bad": ["Town Center standing idle", "Losing villager production while being housed"],
+        "tags": ["economy", "villagers"]
+      },
+      {
+        "id": "stay-ahead-on-houses",
+        "title": "Stay ahead on houses",
+        "summary": "Being housed stops all unit production. Building houses before reaching the cap keeps production flowing.",
+        "good": ["Build a house a few population before the cap"],
+        "bad": ["Reaching the cap and then building a house"],
+        "tags": ["population", "houses", "economy"]
+      },
+      {
+        "id": "no-idle-villagers",
+        "title": "No idle villagers",
+        "summary": "Idle villagers gather nothing. The idle villager button finds them quickly.",
+        "good": ["Check the idle villager button regularly", "Set gather points for new villagers"],
+        "bad": ["Villagers idle after finishing a building"],
+        "tags": ["villagers", "idle", "economy"]
+      },
+      {
+        "id": "spend-resources",
+        "title": "Spend what you gather",
+        "summary": "A large unspent bank is economy that is not working for you yet. Converting it into production, upgrades or more Town Centers usually matters more than saving.",
+        "good": ["Add production buildings when resources pile up", "Research economy upgrades"],
+        "bad": ["Thousands of resources sitting unused"],
+        "tags": ["economy", "spending"]
+      },
+      {
+        "id": "economy-upgrades",
+        "title": "Economy upgrades",
+        "summary": "Gathering upgrades such as Double-Bit Axe, Horse Collar and Wheelbarrow raise income for every villager.",
+        "good": ["Research gathering upgrades when villagers on that resource justify it"],
+        "bad": ["Skipping economy upgrades for long periods"],
+        "tags": ["economy", "upgrades"]
+      },
+      {
+        "id": "age-up-timings",
+        "title": "Age-up timings",
+        "summary": "Reaching each age close to your planned time keeps your build order on track. Consistent timings are a good measure of improvement.",
+        "good": ["Pick a target time and compare against it each game"],
+        "bad": ["Drifting further behind target every game"],
+        "tags": ["age-up", "timings", "build-order"]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Anything about opponents hidden by the fog of war",
+      "Exploits or anything against the game's rules",
+      "Live instructions during ranked or multiplayer games"
+    ],
+    "terminology": { "housed": "housed", "tc": "Town Center" }
+  },
+  "limitations": [
+    "Reads only what the HUD shows: resources, population, idle villagers, age and clock. It cannot see Town Center queues, unit counts or anything under the fog of war.",
+    "Frames are sampled about every 4 seconds; short idle periods may be missed.",
+    "UI scale, mods and colour settings can make numbers unreadable; unreadable values are left out, which pauses mistake timers."
+  ],
+  "failClosed": [
+    "Resource or population numbers unreadable: no housed, idle or floating-resource mistakes are counted.",
+    "Game clock unreadable: no age-up timing checks."
+  ]
+}

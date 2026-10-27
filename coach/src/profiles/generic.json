@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 2,
+  "id": "generic",
+  "version": "1.0.0",
+  "name": "Any game (generic)",
+  "depth": "generic",
+  "game": { "title": "Any game", "patch": "any", "languages": ["en"] },
+  "validation": {
+    "status": "unverified",
+    "notes": "Works on many games at a shallow level using the cloud vision recogniser. It knows nothing game-specific: it reads phases, deaths, results, visible scores and minimap areas only."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": null,
+    "notes": "Capture the game window, not the whole desktop, so notifications and other apps stay out of the frames."
+  },
+  "modes": [
+    { "id": "offline-single-player", "label": "Offline single-player (vs AI, story, practice)", "multiplayer": false, "competitive": false },
+    { "id": "multiplayer-casual", "label": "Online / multiplayer (casual)", "multiplayer": true, "competitive": false },
+    { "id": "multiplayer-ranked", "label": "Ranked / competitive multiplayer", "multiplayer": true, "competitive": true }
+  ],
+  "signals": [],
+  "events": [],
+  "episodes": [],
+  "liveCues": [],
+  "vision": {
+    "purpose": "This can be any video game. Report only what is plainly visible: the game phase, whether the player's own character visibly died or was eliminated (death screen, respawn timer, kill-cam of the player), visible round or match result banners, numbers on a visible scoreboard, the player's visible health bar, and, if a minimap is visible, which part of the minimap the player's marker was in at death. Never guess positions of anything not drawn on screen.",
+    "sampleIntervalMs": 3000,
+    "maxLatencyMs": 10000,
+    "maxWidth": 1024,
+    "state": [
+      { "key": "playerScore", "label": "Player/team score", "type": "number", "min": 0, "max": 100000, "ttlMs": 15000, "description": "The player's (or player's team's) score on a visible scoreboard. Omit if you cannot tell which side is the player's." },
+      { "key": "opponentScore", "label": "Opponent score", "type": "number", "min": 0, "max": 100000, "ttlMs": 15000, "description": "The opposing side's score on a visible scoreboard." },
+      { "key": "kills", "label": "Kills", "type": "number", "min": 0, "max": 10000, "ttlMs": 15000, "description": "The player's own kill count, only if shown on the HUD or scoreboard." },
+      { "key": "deaths", "label": "Deaths", "type": "number", "min": 0, "max": 10000, "ttlMs": 15000, "description": "The player's own death count, only if shown on the HUD or scoreboard." }
+    ],
+    "events": [
+      {
+        "type": "death",
+        "label": "Player died",
+        "category": "outcome",
+        "description": "The player's own character is visibly dead or eliminated in this frame (death screen, respawn countdown, 'eliminated' banner, kill-cam focused on the player).",
+        "zoneSet": "minimap",
+        "attributes": [
+          { "key": "context", "options": ["alone", "with_teammates", "unknown"], "description": "Whether teammates were visibly close to the player just before death (only if visible)." }
+        ],
+        "dedupeMs": 8000
+      },
+      {
+        "type": "kill",
+        "label": "Player got a kill",
+        "category": "action",
+        "description": "A kill-feed entry or banner shows the player eliminated an opponent in this frame.",
+        "dedupeMs": 3000
+      }
+    ]
+  },
+  "zones": [
+    {
+      "id": "minimap",
+      "label": "Minimap area",
+      "rows": 3,
+      "cols": 3,
+      "cells": [
+        { "id": "nw", "label": "the north-west of the map" },
+        { "id": "n", "label": "the north of the map" },
+        { "id": "ne", "label": "the north-east of the map" },
+        { "id": "w", "label": "the west of the map" },
+        { "id": "c", "label": "the middle of the map" },
+        { "id": "e", "label": "the east of the map" },
+        { "id": "sw", "label": "the south-west of the map" },
+        { "id": "s", "label": "the south of the map" },
+        { "id": "se", "label": "the south-east of the map" }
+      ],
+      "description": "Divide the visible minimap into a 3x3 grid as drawn on screen (top = north). Use the player's own marker position. If no minimap is visible, give no zone."
+    }
+  ],
+  "heatmaps": [
+    {
+      "id": "deaths",
+      "label": "Where you die",
+      "eventType": "death",
+      "zoneSet": "minimap",
+      "minEvents": 5,
+      "phrase": "your deaths",
+      "sampled": true,
+      "breakdown": { "attribute": "context", "label": "With or without teammates" },
+      "tags": ["deaths", "positioning"]
+    }
+  ],
+  "liveFreshnessMs": 8000,
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "review-death-areas",
+        "title": "Deaths that cluster in one area",
+        "summary": "When most deaths happen in the same part of the map, that area is worth reviewing: how you enter it, with whom, and what you can see before you commit.",
+        "good": ["Approach a risky area with teammates or information"],
+        "bad": ["Repeating the same route into the same area alone"],
+        "tags": ["deaths", "positioning"]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Anything about opponents that is not visible on the player's own screen",
+      "Exploits, glitches or anything against the game's rules",
+      "Game-specific tactics the generic pack has no knowledge of"
+    ],
+    "terminology": {}
+  },
+  "limitations": [
+    "Generic: no knowledge of this game's rules, maps or meta. Advice is limited to patterns in visible deaths, results and scores.",
+    "Frames are sampled every few seconds, so quick deaths and kills can be missed.",
+    "Minimap areas are approximate and only available when a minimap is on screen."
+  ],
+  "failClosed": [
+    "No cloud vision: the generic pack sees nothing (it has no pixel rules).",
+    "Unclear whether the player or a teammate died: the event is not recorded."
+  ]
+}

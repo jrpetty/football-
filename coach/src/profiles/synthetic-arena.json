@@ -1,43 +1,48 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "synthetic-arena",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "Synthetic Arena (reference)",
+  "depth": "pack",
   "game": {
     "title": "Synthetic Arena",
     "publisher": "Built-in simulator",
-    "patch": "n/a"
+    "patch": "n/a",
+    "languages": [
+      "en"
+    ]
   },
   "validation": {
     "status": "reference",
     "notes": "A fictional game drawn by the built-in simulator. It exists to test the pipeline end to end and to show how a real profile is written. It does not describe any real game.",
     "validatedAt": "2026-10-27"
   },
+  "health": "healthy",
   "capture": {
     "aspectRatio": 1.7778,
-    "notes": "Capture the game's client area at 16:9 (borderless or fullscreen). Window captures that include a title bar shift every region."
+    "notes": "Capture the game's client area at 16:9 (borderless or fullscreen). Window captures that include a title bar shift every region.",
+    "windowTitleHints": [
+      "Synthetic Arena"
+    ]
   },
   "modes": [
     {
       "id": "practice",
       "label": "Practice range (single-player)",
       "multiplayer": false,
-      "competitive": false,
-      "liveCoaching": { "status": "not-reviewed", "note": "Single-player and non-competitive, so live tips need no publisher approval." }
+      "competitive": false
     },
     {
       "id": "casual",
       "label": "Casual (multiplayer)",
       "multiplayer": true,
-      "competitive": false,
-      "liveCoaching": { "status": "not-reviewed", "note": "Other players are present; live tips stay off without documented approval." }
+      "competitive": false
     },
     {
       "id": "ranked",
       "label": "Ranked (competitive multiplayer)",
       "multiplayer": true,
-      "competitive": true,
-      "liveCoaching": { "status": "not-reviewed", "note": "Competitive: reflective feedback only." }
+      "competitive": true
     }
   ],
   "signals": [
@@ -45,19 +50,68 @@
       "id": "health",
       "label": "Health bar",
       "kind": "bar",
-      "region": { "x": 0.03, "y": 0.9, "w": 0.25, "h": 0.04 },
+      "region": {
+        "x": 0.03,
+        "y": 0.9,
+        "w": 0.25,
+        "h": 0.04
+      },
       "axis": "horizontal",
       "fillFrom": "start",
-      "fill": { "h": [95, 145], "s": [0.45, 1], "v": [0.45, 1] },
-      "track": { "h": [0, 360], "s": [0, 0.2], "v": [0.08, 0.32] },
+      "fill": {
+        "h": [
+          95,
+          145
+        ],
+        "s": [
+          0.45,
+          1
+        ],
+        "v": [
+          0.45,
+          1
+        ]
+      },
+      "track": {
+        "h": [
+          0,
+          360
+        ],
+        "s": [
+          0,
+          0.2
+        ],
+        "v": [
+          0.08,
+          0.32
+        ]
+      },
       "smoothing": 3
     },
     {
       "id": "ability-ready",
       "label": "Escape ability icon",
       "kind": "coverage",
-      "region": { "x": 0.3, "y": 0.88, "w": 0.04, "h": 0.07 },
-      "color": { "h": [175, 205], "s": [0.5, 1], "v": [0.6, 1] },
+      "region": {
+        "x": 0.3,
+        "y": 0.88,
+        "w": 0.04,
+        "h": 0.07
+      },
+      "color": {
+        "h": [
+          175,
+          205
+        ],
+        "s": [
+          0.5,
+          1
+        ],
+        "v": [
+          0.6,
+          1
+        ]
+      },
       "on": 0.5,
       "off": 0.2
     },
@@ -65,8 +119,26 @@
       "id": "round-live",
       "label": "Round timer",
       "kind": "coverage",
-      "region": { "x": 0.46, "y": 0.02, "w": 0.08, "h": 0.04 },
-      "color": { "h": [0, 360], "s": [0, 0.12], "v": [0.85, 1] },
+      "region": {
+        "x": 0.46,
+        "y": 0.02,
+        "w": 0.08,
+        "h": 0.04
+      },
+      "color": {
+        "h": [
+          0,
+          360
+        ],
+        "s": [
+          0,
+          0.12
+        ],
+        "v": [
+          0.85,
+          1
+        ]
+      },
       "on": 0.6,
       "off": 0.3
     },
@@ -74,8 +146,26 @@
       "id": "eliminated-banner",
       "label": "Eliminated banner",
       "kind": "coverage",
-      "region": { "x": 0.3, "y": 0.45, "w": 0.4, "h": 0.1 },
-      "color": { "h": [350, 10], "s": [0.6, 1], "v": [0.55, 1] },
+      "region": {
+        "x": 0.3,
+        "y": 0.45,
+        "w": 0.4,
+        "h": 0.1
+      },
+      "color": {
+        "h": [
+          350,
+          10
+        ],
+        "s": [
+          0.6,
+          1
+        ],
+        "v": [
+          0.55,
+          1
+        ]
+      },
       "on": 0.4,
       "off": 0.2
     },
@@ -83,8 +173,26 @@
       "id": "victory-banner",
       "label": "Victory banner",
       "kind": "coverage",
-      "region": { "x": 0.25, "y": 0.12, "w": 0.5, "h": 0.1 },
-      "color": { "h": [38, 56], "s": [0.6, 1], "v": [0.7, 1] },
+      "region": {
+        "x": 0.25,
+        "y": 0.12,
+        "w": 0.5,
+        "h": 0.1
+      },
+      "color": {
+        "h": [
+          38,
+          56
+        ],
+        "s": [
+          0.6,
+          1
+        ],
+        "v": [
+          0.7,
+          1
+        ]
+      },
       "on": 0.4,
       "off": 0.2
     },
@@ -92,8 +200,26 @@
       "id": "defeat-banner",
       "label": "Defeat banner",
       "kind": "coverage",
-      "region": { "x": 0.25, "y": 0.12, "w": 0.5, "h": 0.1 },
-      "color": { "h": [265, 295], "s": [0.45, 1], "v": [0.45, 1] },
+      "region": {
+        "x": 0.25,
+        "y": 0.12,
+        "w": 0.5,
+        "h": 0.1
+      },
+      "color": {
+        "h": [
+          265,
+          295
+        ],
+        "s": [
+          0.45,
+          1
+        ],
+        "v": [
+          0.45,
+          1
+        ]
+      },
       "on": 0.4,
       "off": 0.2
     },
@@ -101,22 +227,114 @@
       "id": "match-banner",
       "label": "Match complete banner",
       "kind": "coverage",
-      "region": { "x": 0.1, "y": 0.3, "w": 0.8, "h": 0.1 },
-      "color": { "h": [210, 230], "s": [0.6, 1], "v": [0.6, 1] },
+      "region": {
+        "x": 0.1,
+        "y": 0.3,
+        "w": 0.8,
+        "h": 0.1
+      },
+      "color": {
+        "h": [
+          210,
+          230
+        ],
+        "s": [
+          0.6,
+          1
+        ],
+        "v": [
+          0.6,
+          1
+        ]
+      },
       "on": 0.4,
       "off": 0.2
     }
   ],
   "events": [
-    { "id": "health-low", "label": "Health got low", "category": "context", "signal": "health", "type": "below", "value": 0.3, "rearm": 0.5 },
-    { "id": "heavy-hit", "label": "Took a heavy hit", "category": "context", "signal": "health", "type": "drop", "delta": 0.25, "withinMs": 1000, "cooldownMs": 1500 },
-    { "id": "healed", "label": "Healed", "category": "action", "signal": "health", "type": "rise", "delta": 0.2, "withinMs": 1500, "cooldownMs": 1500 },
-    { "id": "ability-used", "label": "Used escape ability", "category": "action", "signal": "ability-ready", "type": "becomes-false", "minHoldMs": 200 },
-    { "id": "eliminated", "label": "Eliminated", "category": "outcome", "signal": "eliminated-banner", "type": "becomes-true", "minHoldMs": 200 },
-    { "id": "round-start", "label": "Round started", "category": "boundary", "signal": "round-live", "type": "becomes-true", "minHoldMs": 300, "boundary": "round-start" },
-    { "id": "round-won", "label": "Round won", "category": "boundary", "signal": "victory-banner", "type": "becomes-true", "minHoldMs": 300, "boundary": "round-end", "result": "win" },
-    { "id": "round-lost", "label": "Round lost", "category": "boundary", "signal": "defeat-banner", "type": "becomes-true", "minHoldMs": 300, "boundary": "round-end", "result": "loss" },
-    { "id": "match-end", "label": "Match complete", "category": "boundary", "signal": "match-banner", "type": "becomes-true", "minHoldMs": 300, "boundary": "match-end" }
+    {
+      "id": "health-low",
+      "label": "Health got low",
+      "category": "context",
+      "signal": "health",
+      "type": "below",
+      "value": 0.3,
+      "rearm": 0.5
+    },
+    {
+      "id": "heavy-hit",
+      "label": "Took a heavy hit",
+      "category": "context",
+      "signal": "health",
+      "type": "drop",
+      "delta": 0.25,
+      "withinMs": 1000,
+      "cooldownMs": 1500
+    },
+    {
+      "id": "healed",
+      "label": "Healed",
+      "category": "action",
+      "signal": "health",
+      "type": "rise",
+      "delta": 0.2,
+      "withinMs": 1500,
+      "cooldownMs": 1500
+    },
+    {
+      "id": "ability-used",
+      "label": "Used escape ability",
+      "category": "action",
+      "signal": "ability-ready",
+      "type": "becomes-false",
+      "minHoldMs": 200
+    },
+    {
+      "id": "eliminated",
+      "label": "Eliminated",
+      "category": "outcome",
+      "signal": "eliminated-banner",
+      "type": "becomes-true",
+      "minHoldMs": 200
+    },
+    {
+      "id": "round-start",
+      "label": "Round started",
+      "category": "boundary",
+      "signal": "round-live",
+      "type": "becomes-true",
+      "minHoldMs": 300,
+      "boundary": "round-start"
+    },
+    {
+      "id": "round-won",
+      "label": "Round won",
+      "category": "boundary",
+      "signal": "victory-banner",
+      "type": "becomes-true",
+      "minHoldMs": 300,
+      "boundary": "round-end",
+      "result": "win"
+    },
+    {
+      "id": "round-lost",
+      "label": "Round lost",
+      "category": "boundary",
+      "signal": "defeat-banner",
+      "type": "becomes-true",
+      "minHoldMs": 300,
+      "boundary": "round-end",
+      "result": "loss"
+    },
+    {
+      "id": "match-end",
+      "label": "Match complete",
+      "category": "boundary",
+      "signal": "match-banner",
+      "type": "becomes-true",
+      "minHoldMs": 300,
+      "boundary": "match-end"
+    }
   ],
   "episodes": [
     {
@@ -124,30 +342,118 @@
       "label": "Low health",
       "trigger": "health-low",
       "windowMs": 6000,
-      "responses": [{ "id": "healed", "event": "healed", "label": "patched up", "phrase": "you patched up first" }],
-      "noResponse": { "label": "kept fighting", "phrase": "you kept fighting" },
-      "negativeOutcomes": ["eliminated"],
-      "visibility": ["health"],
-      "phrases": { "trigger": "your health got low", "negative": "you were eliminated", "negativeShort": "eliminated" }
+      "responses": [
+        {
+          "id": "healed",
+          "event": "healed",
+          "label": "patched up",
+          "phrase": "you patched up first"
+        }
+      ],
+      "noResponse": {
+        "label": "kept fighting",
+        "phrase": "you kept fighting"
+      },
+      "negativeOutcomes": [
+        "eliminated"
+      ],
+      "visibility": [
+        "health"
+      ],
+      "phrases": {
+        "trigger": "your health got low",
+        "negative": "you were eliminated",
+        "negativeShort": "eliminated"
+      }
     },
     {
       "id": "heavy-hit",
       "label": "Heavy hit",
       "trigger": "heavy-hit",
       "windowMs": 5000,
-      "responses": [{ "id": "ability", "event": "ability-used", "label": "used escape", "phrase": "you used your escape ability" }],
-      "noResponse": { "label": "stayed in", "phrase": "you stayed in the fight" },
-      "negativeOutcomes": ["eliminated"],
-      "visibility": ["health"],
-      "phrases": { "trigger": "you took a heavy hit", "negative": "you were eliminated", "negativeShort": "eliminated" }
+      "responses": [
+        {
+          "id": "ability",
+          "event": "ability-used",
+          "label": "used escape",
+          "phrase": "you used your escape ability"
+        }
+      ],
+      "noResponse": {
+        "label": "stayed in",
+        "phrase": "you stayed in the fight"
+      },
+      "negativeOutcomes": [
+        "eliminated"
+      ],
+      "visibility": [
+        "health"
+      ],
+      "phrases": {
+        "trigger": "you took a heavy hit",
+        "negative": "you were eliminated",
+        "negativeShort": "eliminated"
+      }
     }
   ],
   "liveCues": [
-    { "id": "low-health-heal", "trigger": "health-low", "episode": "low-health", "recommend": "healed", "imperative": "patch up first", "maxAgeMs": 2000 }
+    {
+      "id": "low-health-heal",
+      "trigger": "health-low",
+      "episode": "low-health",
+      "recommend": "healed",
+      "imperative": "patch up first",
+      "maxAgeMs": 2000
+    }
   ],
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "heal-before-reengaging",
+        "title": "Heal before re-engaging",
+        "summary": "At low health, any further exchange is risky. Recovering first gives the next fight a better start.",
+        "good": [
+          "Break line of sight and heal when health drops low"
+        ],
+        "bad": [
+          "Taking another fight at low health"
+        ],
+        "tags": [
+          "health",
+          "survival"
+        ]
+      },
+      {
+        "id": "save-escape",
+        "title": "Use the escape ability to reset fights",
+        "summary": "The escape ability can turn a lost exchange into a reset. Holding it too long wastes it.",
+        "good": [
+          "Escape after a heavy hit you cannot win back"
+        ],
+        "bad": [
+          "Dying with the escape ability ready"
+        ],
+        "tags": [
+          "ability",
+          "survival"
+        ]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Anything about opponents that is not visible on screen"
+    ],
+    "terminology": {
+      "health": "health",
+      "eliminated": "eliminated"
+    }
+  },
   "limitations": [
     "Reads only the health bar, the escape-ability icon, and full-screen banners. Positions, enemies, and the minimap are not observed.",
     "An elimination is only recognised from the banner, so eliminations hidden by another menu are missed.",
     "Healing is inferred from the health bar rising; any other source of health looks identical."
+  ],
+  "failClosed": [
+    "Health bar unreadable for more than 40% of a situation: that situation is not counted.",
+    "Banner colours not matched (menus, other UI): no round results are inferred."
   ]
 }

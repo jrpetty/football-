@@ -25,6 +25,8 @@ export interface LocalVoice {
   readonly isDefault: boolean
 }
 
+const RANK: Record<Utterance['priority'], number> = { low: 0, normal: 1, high: 2 }
+
 /** Waiting utterances beyond this are dropped: a backlog of advice is noise. */
 const MAX_WAITING = 2
 
@@ -34,7 +36,7 @@ export class SpeechController {
   private readonly events: SpeechEvents
   private voice: CoachSettings['voice'] = { voiceURI: null, rate: 1, volume: 0.8 }
   private waiting: Utterance[] = []
-  private current: { id: string; u: SpeechSynthesisUtterance } | null = null
+  private current: { id: string; u: SpeechSynthesisUtterance; priority: Utterance['priority'] } | null = null
   private clock: () => number = () => performance.now()
 
   constructor(synth: Synth | null, makeUtterance: (text: string) => SpeechSynthesisUtterance, events: SpeechEvents = {}) {
@@ -68,10 +70,23 @@ export class SpeechController {
     this.clock = clock
   }
 
+  /**
+   * Queue an utterance. Higher priority goes first; a high-priority message
+   * interrupts lower-priority speech already playing (a fresh live tip beats
+   * an old note). When the backlog is full, the lowest-priority, oldest
+   * message is dropped.
+   */
   enqueue(u: Utterance): void {
     this.waiting.push(u)
-    while (this.waiting.length > MAX_WAITING) this.events.onEnd?.(this.waiting.shift()!.id, 'expired')
-    this.pump()
+    this.waiting.sort((a, b) => RANK[b.priority] - RANK[a.priority])
+    while (this.waiting.length > MAX_WAITING) {
+      // Drop the oldest of the least important: stale advice is worth least.
+      const lowest = Math.min(...this.waiting.map((w) => RANK[w.priority]))
+      const i = this.waiting.findIndex((w) => RANK[w.priority] === lowest)
+      this.events.onEnd?.(this.waiting.splice(i, 1)[0].id, 'expired')
+    }
+    if (this.current && RANK[u.priority] > RANK[this.current.priority] && u.priority === 'high') this.interruptCurrent()
+    else this.pump()
   }
 
   /** Drop specific utterances (e.g. reflective speech when a new round starts). */
@@ -93,7 +108,7 @@ export class SpeechController {
   }
 
   speakTest(text: string): void {
-    this.enqueue({ id: `test-${Date.now()}`, text, kind: 'round-review', expiresAt: null })
+    this.enqueue({ id: `test-${Date.now()}`, text, category: 'descriptive', priority: 'normal', expiresAt: null })
   }
 
   private interruptCurrent(): void {
@@ -135,7 +150,7 @@ export class SpeechController {
     }
     u.onend = () => finish('finished')
     u.onerror = () => finish('error')
-    this.current = { id, u }
+    this.current = { id, u, priority: next.priority }
     this.events.onStart?.(id)
     this.synth.speak(u)
   }

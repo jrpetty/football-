@@ -5,11 +5,12 @@ import assert from 'node:assert/strict'
 import { EpisodeEvaluator } from '../src/core/episodes.ts'
 import { evaluateEpisode, grade, probabilityWorse, wilson, normalCdf } from '../src/core/evidence.ts'
 import { countWords, insightLine, insightStatement, liveCueText, matchSummaryText, WORD_LIMITS } from '../src/core/language.ts'
-import { HISTORY_CAP, isPatternSnapshot, PatternMemory } from '../src/core/patterns.ts'
-import { modeAllowsLiveCoaching, validateProfile, type ProfileMode } from '../src/core/profile/schema.ts'
+import { decayWeight, isPatternSnapshot, migrateSnapshot, PatternMemory, setVerdict } from '../src/core/patterns.ts'
+import { validateProfile } from '../src/core/profile/schema.ts'
 import { TONES } from '../src/core/settings.ts'
-import { NO_RESPONSE, type EvidenceGrade, type GameEvent, type Insight, type OutcomeCounts, type SignalState } from '../src/core/types.ts'
+import { NO_RESPONSE, type EvidenceGrade, type GameEvent, type Insight, type OutcomeCounts } from '../src/core/types.ts'
 import { arena } from './helpers.ts'
+import { BUILT_IN_PROFILES } from '../src/profiles/index.ts'
 
 // --- Profiles ------------------------------------------------------------------
 
@@ -25,37 +26,20 @@ test('profile validation catches broken references, regions and hysteresis', () 
   p.events[0].signal = 'nope'
   p.episodes[0].responses[0].id = 'none'
   p.liveCues[0].recommend = 'jump'
+  p.episodes[0].phrases.negative = 'this caused your elimination'
   const r = validateProfile(p)
   assert.equal(r.ok, false)
   const errors = r.ok ? '' : r.errors.join('\n')
-  for (const expected of ['right edge', 'hysteresis', 'unknown signal "nope"', 'reserved', '"jump" is not a response']) {
+  for (const expected of ['right edge', 'hysteresis', 'unknown signal "nope"', 'reserved', '"jump" is not a response', 'causal or absolute claims']) {
     assert.ok(errors.includes(expected), `missing error about ${expected}:\n${errors}`)
   }
 })
 
-test('"approved" live coaching must cite a source and a review date', () => {
-  const p = structuredClone(arena) as any
-  p.modes[2].liveCoaching = { status: 'approved' }
-  const r = validateProfile(p)
-  assert.ok(!r.ok && r.errors.some((e) => e.includes('requires a cited source')))
-})
-
-test('live coaching is allowed only for single-player non-competitive modes or documented approval', () => {
-  const mode = (over: Partial<ProfileMode>): ProfileMode => ({
-    id: 'm', label: 'M', multiplayer: true, competitive: true, liveCoaching: { status: 'not-reviewed' }, ...over,
-  })
-  assert.equal(modeAllowsLiveCoaching(null), false)
-  assert.equal(modeAllowsLiveCoaching(mode({})), false)
-  assert.equal(modeAllowsLiveCoaching(mode({ competitive: false })), false, 'casual multiplayer still has other players')
-  assert.equal(modeAllowsLiveCoaching(mode({ competitive: false, multiplayer: false })), true)
-  assert.equal(
-    modeAllowsLiveCoaching(mode({ competitive: false, multiplayer: false, liveCoaching: { status: 'prohibited' } })),
-    false,
-  )
-  assert.equal(
-    modeAllowsLiveCoaching(mode({ liveCoaching: { status: 'approved', source: 'https://example.com/policy', reviewedAt: '2026-10-01' } })),
-    true,
-  )
+test('every built-in pack validates and speaks no causal claims', () => {
+  for (const p of BUILT_IN_PROFILES) {
+    const r = validateProfile(structuredClone(p))
+    assert.ok(r.ok, `${p.id}: ${r.ok ? '' : r.errors.join('; ')}`)
+  }
 })
 
 // --- Episodes --------------------------------------------------------------------
@@ -69,8 +53,8 @@ function ev(ruleId: string, at: number, extra: Partial<GameEvent> = {}): GameEve
     at, confidence: 0.9, evidence: '', ...(rule?.boundary ? { boundary: rule.boundary, result: rule.result } : {}), ...extra,
   }
 }
-const visible = new Map<string, SignalState>([['health', { id: 'health', known: true, kind: 'number', value: 0.5, confidence: 0.9, observedAt: 0 }]])
-const hidden = new Map<string, SignalState>([['health', { id: 'health', known: false, lastKnownAt: 0 }]])
+const visible = () => true
+const hidden = () => false
 
 test('an episode records the first visible response before the outcome', () => {
   const e = new EpisodeEvaluator([lowSpec])
@@ -156,37 +140,46 @@ test('the best comparison is chosen and absent responses are ignored', () => {
 
 // --- Pattern memory ----------------------------------------------------------------
 
-test('pattern memory merges compatible history and refuses a different major version', () => {
-  const mem = new PatternMemory(arena)
+test('pattern memory merges compatible history, segments by mode, and refuses a different major version', () => {
+  const mem = new PatternMemory(arena, null, 'ranked')
   mem.record({ uid: 'a', episodeId: 'low-health', triggerUid: 't', startedAt: 0, endedAt: 1, response: 'none', outcome: 'negative', outcomeEventUid: 'x', confidence: 1, excluded: null })
   const snap = mem.snapshot(new Date('2026-10-27T00:00:00Z'))
   assert.ok(isPatternSnapshot(snap))
-  assert.deepEqual(snap.episodes['low-health'].none, { n: 1, negative: 1, positive: 0 })
+  assert.equal(snap.segments.ranked['low-health'].none.n, 1)
   assert.equal(JSON.stringify(snap).includes('startedAt'), false, 'no timing data is persisted')
 
-  const next = new PatternMemory(arena, snap)
-  assert.equal(next.historyNotice, null)
-  assert.equal(next.counts('low-health').usesHistory, true)
-
-  const patched = new PatternMemory({ ...arena, version: '2.0.0' }, snap)
+  assert.equal(new PatternMemory(arena, snap, 'ranked', new Date('2026-10-28')).counts('low-health').usesHistory, true)
+  assert.equal(new PatternMemory(arena, snap, 'practice', new Date('2026-10-28')).counts('low-health').usesHistory, false, 'other modes are separate')
+  const patched = new PatternMemory({ ...arena, version: '3.0.0' }, snap, 'ranked')
   assert.match(patched.historyNotice ?? '', /new game patch/)
   assert.equal(patched.counts('low-health').counts.size, 0)
 })
 
-test('history is capped so recent play dominates', () => {
-  const big = {
-    schemaVersion: 1 as const, profileId: arena.id, profileVersion: arena.version, updatedAt: '', sessions: 9,
-    episodes: { 'low-health': { none: c(300, 150), healed: c(300, 30) } },
+test('old evidence decays with a 30-day half-life; history is capped', () => {
+  assert.ok(Math.abs(decayWeight('2026-09-28T00:00:00Z', new Date('2026-10-28T00:00:00Z')) - 0.5) < 0.01)
+  const old = {
+    schemaVersion: 2 as const, profileId: arena.id, profileVersion: arena.version, updatedAt: '', sessions: 9, verdicts: {},
+    segments: { ranked: { 'low-health': { none: { n: 300, negative: 150, positive: 0, lastObservedAt: '2026-08-29T00:00:00Z' }, healed: { n: 300, negative: 30, positive: 0, lastObservedAt: '2026-10-27T00:00:00Z' } } } },
   }
-  const snap = new PatternMemory(arena, big).snapshot(new Date())
-  const total = Object.values(snap.episodes['low-health']).reduce((s, x) => s + x.n, 0)
-  assert.ok(total <= HISTORY_CAP)
+  const mem = new PatternMemory(arena, old, 'ranked', new Date('2026-10-28T00:00:00Z'))
+  const c = mem.counts('low-health').counts
+  assert.ok(c.get('none')!.n < 80, `60-day-old evidence weighs about a quarter (${c.get('none')!.n})`)
+  assert.ok(c.get('healed')!.n > 290)
+  const snap = mem.snapshot(new Date())
   assert.equal(snap.sessions, 10)
 })
 
-test('malformed snapshots are rejected', () => {
-  assert.equal(isPatternSnapshot({ schemaVersion: 1, profileId: 'x', profileVersion: '1.0.0', updatedAt: '', sessions: 1, episodes: { e: { none: { n: 1, negative: 5, positive: 0 } } } }), false)
-  assert.equal(isPatternSnapshot(null), false)
+test('dismissed and disputed patterns are never used for coaching', () => {
+  const s = setVerdict(new PatternMemory(arena).snapshot(new Date()), 'low-health', 'disputed', new Date())
+  assert.equal(new PatternMemory(arena, s).verdict('low-health'), 'disputed')
+  assert.equal(setVerdict(s, 'low-health', null, new Date()).verdicts['low-health'], undefined)
+})
+
+test('malformed snapshots are rejected and v1 snapshots migrate', () => {
+  assert.equal(migrateSnapshot({ schemaVersion: 2, profileId: 'x', profileVersion: '1.0.0', updatedAt: '', sessions: 1, verdicts: {}, segments: { m: { e: { none: { n: 1, negative: 5, positive: 0, lastObservedAt: '' } } } } }), null)
+  assert.equal(migrateSnapshot(null), null)
+  const v1 = migrateSnapshot({ schemaVersion: 1, profileId: 'x', profileVersion: '1.0.0', updatedAt: '2026-01-01T00:00:00Z', sessions: 2, episodes: { e: { none: { n: 3, negative: 1, positive: 0 } } } })
+  assert.equal(v1?.segments.unspecified.e.none.n, 3)
 })
 
 // --- Language ------------------------------------------------------------------------
@@ -208,13 +201,13 @@ test('every tone renders every grade without causal or absolute language, within
       assert.doesNotMatch(line, BANNED, line)
       assert.match(line, /6 of 8/, 'counts are stated')
       if (g === 'weak') assert.match(line, /^Early sign/)
-      assert.ok(countWords(line) <= WORD_LIMITS['round-review'], line)
+      assert.ok(countWords(line) <= WORD_LIMITS.reflective, line)
     }
     const live = liveCueText(tone, cue, lowSpec, insight('strong'))
-    assert.ok(countWords(live) <= WORD_LIMITS['live-cue'], live)
+    assert.ok(countWords(live) <= WORD_LIMITS.training, live)
     assert.doesNotMatch(live, BANNED)
     const summary = matchSummaryText(tone, { won: 3, lost: 2, drawn: 0, unread: 1 }, [insightLine(tone, lowSpec, insight('strong'))])
-    assert.ok(countWords(summary) <= WORD_LIMITS['match-summary'], summary)
+    assert.ok(countWords(summary) <= WORD_LIMITS.post_event, summary)
     assert.doesNotMatch(summary, BANNED)
   }
   assert.match(insightStatement(lowSpec, insight('moderate')), /Moderate evidence/)

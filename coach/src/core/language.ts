@@ -3,10 +3,18 @@
 // the wording strength is tied to the evidence grade. Templates never use
 // causal or absolute language ("caused", "because", "always", "definitely").
 
-import type { EpisodeSpec, GameProfile, LiveCueSpec } from './profile/schema.ts'
+import type { EpisodeSpec, LiveCueSpec } from './profile/schema.ts'
 import { NO_RESPONSE, type CoachTone, type Episode, type EvidenceGrade, type Insight, type RoundResult } from './types.ts'
 
-export const WORD_LIMITS = { 'live-cue': 12, 'round-review': 45, 'match-summary': 90 } as const
+/** Maximum words per message, by category. Live tips are short by construction. */
+export const WORD_LIMITS = {
+  training: 14,
+  live_tactical: 14,
+  descriptive: 25,
+  reflective: 45,
+  post_event: 110,
+  answer: 140,
+} as const
 
 const GRADE_LABEL: Record<EvidenceGrade, string> = {
   insufficient: 'Not enough',
@@ -111,10 +119,10 @@ const RESULT_LINE: Record<CoachTone, Partial<Record<RoundResult, string>>> = {
 }
 
 export function roundReviewText(tone: CoachTone, result: RoundResult, lines: readonly string[]): string {
-  return fitWords([RESULT_LINE[tone][result] ?? '', ...lines], WORD_LIMITS['round-review'])
+  return fitWords([RESULT_LINE[tone][result] ?? '', ...lines], WORD_LIMITS.reflective)
 }
 
-export interface MatchRecord {
+export interface RoundRecord {
   won: number
   lost: number
   drawn: number
@@ -131,34 +139,38 @@ const CLOSING: Record<CoachTone, { withLines: string; withoutLines: string }> = 
   'high-energy': { withLines: 'Great session. Let’s run it back!', withoutLines: 'Let’s run it back!' },
 }
 
-export function matchSummaryText(tone: CoachTone, record: MatchRecord, lines: readonly string[]): string {
+export function matchSummaryText(tone: CoachTone, record: RoundRecord, lines: readonly string[], opening: readonly string[] = []): string {
   const seen = record.won + record.lost + record.drawn
-  const parts: string[] = ['Match summary.']
-  if (seen > 0) {
-    parts.push(
-      `You won ${record.won} of ${seen} round${seen === 1 ? '' : 's'} I could read` +
-        (record.drawn ? `, with ${record.drawn} drawn.` : '.'),
-    )
+  const parts: string[] = ['Match summary.', ...opening]
+  // With a final score, round tallies add nothing (football halves are not "rounds").
+  if (opening.length === 0) {
+    if (seen + record.unread === 1 && seen === 1) {
+      parts.push(`Result: ${record.won ? 'a win' : record.lost ? 'a loss' : 'a draw'}.`)
+    } else if (seen > 0) {
+      parts.push(
+        `You won ${record.won} of ${seen} round${seen === 1 ? '' : 's'} I could read` + (record.drawn ? `, with ${record.drawn} drawn.` : '.'),
+      )
+      // Only worth saying when some results were read; a game without visible round results is not "unread".
+      if (record.unread > 0) parts.push(`I could not read the result of ${record.unread} round${record.unread === 1 ? '' : 's'}.`)
+    }
   }
-  if (record.unread > 0) parts.push(`I could not read the result of ${record.unread} round${record.unread === 1 ? '' : 's'}.`)
   if (lines.length === 0) {
     parts.push('I did not see enough repeated situations to call a pattern yet.')
-    return fitWords([...parts, CLOSING[tone].withoutLines], WORD_LIMITS['match-summary'])
+    return fitWords([...parts, CLOSING[tone].withoutLines], WORD_LIMITS.post_event)
   }
   // The closing goes after the first detail line so the word cap trims extra detail, not the sign-off.
-  return fitWords([...parts, lines[0], CLOSING[tone].withLines, ...lines.slice(1)], WORD_LIMITS['match-summary'])
+  return fitWords([...parts, lines[0], CLOSING[tone].withLines, ...lines.slice(1)], WORD_LIMITS.post_event)
 }
 
 /** One-line description of an episode for the timeline. */
-export function episodeSummary(spec: EpisodeSpec, ep: Episode, profile: Pick<GameProfile, 'events'>): string {
+export function episodeSummary(spec: EpisodeSpec, ep: Episode, triggerLabel: string): string {
   const outcome =
     ep.outcome === 'negative'
       ? spec.phrases.negativeShort
       : ep.outcome === 'positive'
         ? 'positive outcome'
         : 'no visible outcome in the window'
-  const trigger = profile.events.find((e) => e.id === spec.trigger)?.label ?? spec.trigger
-  return `${trigger} → ${responseLabel(spec, ep.response)} → ${outcome}`
+  return `${triggerLabel} → ${responseLabel(spec, ep.response)} → ${outcome}`
 }
 
 /** Join whole sentences until the next one would exceed the word limit. Never cuts mid-sentence. */
@@ -186,4 +198,77 @@ function cap(s: string): string {
 
 function lowerFirst(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1)
+}
+
+// --- v2: zones, mistakes, scores and statistics -------------------------------------------
+
+/** "box-left" style ids and "through_ball" style values, for speech. */
+export function humanize(value: string): string {
+  return value.replaceAll('_', ' ').replaceAll('-', ' ')
+}
+
+/** A spatial claim, worded by grade and tone. Zones are always described as approximate where sampled. */
+export function heatmapLine(
+  tone: CoachTone,
+  h: { phrase: string; label: string; sampled: boolean },
+  claim: { grade: EvidenceGrade; cellLabel: string; count: number; located: number },
+  topBreakdown: { value: string; count: number } | null,
+): string {
+  const sampled = h.sampled ? ' (from sampled frames)' : ''
+  const how = topBreakdown ? ` Most often: ${humanize(topBreakdown.value)}, ${topBreakdown.count} times.` : ''
+  const k = claim.count
+  const n = claim.located
+  let body: string
+  switch (tone) {
+    case 'gentle':
+      body = `Something to look at: ${k} of the ${n} ${h.phrase} came from ${claim.cellLabel}${sampled}.`
+      break
+    case 'direct':
+      body = `${k} of the ${n} ${h.phrase} came from ${claim.cellLabel}${sampled}.`
+      break
+    case 'analytical':
+      body = `${h.label}: ${claim.cellLabel}, ${k} of ${n} (${Math.round((k / n) * 100)}%)${sampled}. ${GRADE_LABEL[claim.grade]} evidence.`
+      break
+    case 'high-energy':
+      body = `Hot spot: ${k} of ${n} ${h.phrase} came from ${claim.cellLabel}${sampled}!`
+      break
+  }
+  return claim.grade === 'weak' ? `Early sign, not settled yet: ${lowerFirst(body)}${how}` : `${body}${how}`
+}
+
+export function formatDuration(ms: number): string {
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${s} seconds`
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  return r ? `${m} min ${r} s` : `${m} min`
+}
+
+/** Fill a pack's mistake summary template. */
+export function mistakeLine(template: string, totals: { count: number; totalMs: number }): string {
+  return template
+    .replaceAll('{count} times', totals.count === 1 ? 'once' : totals.count === 2 ? 'twice' : `${totals.count} times`)
+    .replaceAll('{count}', String(totals.count))
+    .replaceAll('{total}', formatDuration(totals.totalMs))
+}
+
+export function scoreLine(score: { player: number; opponent: number }): string {
+  const result = score.player > score.opponent ? 'a win' : score.player < score.opponent ? 'a loss' : 'a draw'
+  return `Final score ${score.player}–${score.opponent}, ${result}.`
+}
+
+/** "Pass accuracy 78%, down from your recent 84%." */
+export function statLine(
+  label: string,
+  value: number,
+  unit: string | undefined,
+  better: 'higher' | 'lower' | 'neutral',
+  recentAverage: number | null,
+): string {
+  const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unit ?? ''}`
+  if (recentAverage === null || better === 'neutral') return `${label} ${fmt(value)}.`
+  const diff = value - recentAverage
+  if (Math.abs(diff) < Math.max(1, Math.abs(recentAverage) * 0.03)) return `${label} ${fmt(value)}, in line with your recent ${fmt(recentAverage)}.`
+  const direction = diff > 0 ? 'up' : 'down'
+  return `${label} ${fmt(value)}, ${direction} from your recent ${fmt(recentAverage)}.`
 }

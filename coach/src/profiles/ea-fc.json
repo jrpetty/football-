@@ -1,0 +1,558 @@
+{
+  "schemaVersion": 2,
+  "id": "ea-fc",
+  "version": "1.0.0",
+  "name": "EA SPORTS FC (broadcast camera)",
+  "depth": "pack",
+  "game": {
+    "title": "EA SPORTS FC",
+    "publisher": "Electronic Arts",
+    "patch": "FC 24-26 broadcast HUD (unverified)",
+    "languages": [
+      "en"
+    ]
+  },
+  "validation": {
+    "status": "unverified",
+    "notes": "Written from general knowledge of the default broadcast scoreboard and match-facts screen. Not yet checked against live captures of the current edition; scoreboard reading and zone estimates must be validated before this pack is marked community or verified."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": 1.7778,
+    "notes": "Use the default broadcast (or tele-broadcast) camera with the scoreboard visible. Other cameras reduce zone accuracy.",
+    "windowTitleHints": [
+      "EA SPORTS FC",
+      "\\bFC ?2[4-9]\\b",
+      "\\bFIFA ?2[0-3]\\b"
+    ]
+  },
+  "modes": [
+    {
+      "id": "kickoff-vs-cpu",
+      "label": "Kick-Off vs CPU (offline)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "career-mode",
+      "label": "Career Mode (offline)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "squad-battles",
+      "label": "Ultimate Team: Squad Battles (vs CPU, ranked rewards)",
+      "multiplayer": false,
+      "competitive": true
+    },
+    {
+      "id": "division-rivals",
+      "label": "Ultimate Team: Rivals / Champions (online)",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "online-seasons",
+      "label": "Online Seasons / Clubs (online)",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "online-friendly",
+      "label": "Online friendly / co-op",
+      "multiplayer": true,
+      "competitive": false
+    }
+  ],
+  "playerContext": [
+    {
+      "id": "side",
+      "label": "Your side on the scoreboard",
+      "kind": "choice",
+      "options": [
+        "home",
+        "away"
+      ],
+      "default": "home",
+      "help": "The home team is shown on the left of the scoreboard."
+    },
+    {
+      "id": "teamName",
+      "label": "Your team (as shown on the scoreboard)",
+      "kind": "text",
+      "default": "",
+      "help": "Optional: the 3-letter abbreviation, so the recogniser can tell your goals from the opponent's."
+    }
+  ],
+  "signals": [],
+  "events": [],
+  "vision": {
+    "purpose": "EA SPORTS FC match on the broadcast camera. Read the scoreboard (top-left: home abbreviation, home score, away score, away abbreviation, match clock). Recognise goals (goal celebration, GOAL graphic, or a goal replay marked REPLAY), clear losses of possession by the player's team, and the end-of-match statistics screen. The player's side and team are given in the context; left and right on the pitch are always from the perspective of the team defending that goal, looking out at the pitch.",
+    "sampleIntervalMs": 2500,
+    "maxLatencyMs": 8000,
+    "maxWidth": 1024,
+    "state": [
+      {
+        "key": "homeScore",
+        "label": "Home score",
+        "type": "number",
+        "min": 0,
+        "max": 30,
+        "ttlMs": 20000,
+        "description": "Home team goals on the scoreboard (left number)."
+      },
+      {
+        "key": "awayScore",
+        "label": "Away score",
+        "type": "number",
+        "min": 0,
+        "max": 30,
+        "ttlMs": 20000,
+        "description": "Away team goals on the scoreboard (right number)."
+      },
+      {
+        "key": "matchMinute",
+        "label": "Match minute",
+        "type": "number",
+        "min": 0,
+        "max": 130,
+        "ttlMs": 10000,
+        "description": "The minute shown on the match clock."
+      },
+      {
+        "key": "possessionPct",
+        "label": "Possession %",
+        "type": "number",
+        "min": 0,
+        "max": 100,
+        "ttlMs": 60000,
+        "description": "Only on a statistics screen: the player's team's possession percentage."
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "type": "number",
+        "min": 0,
+        "max": 100,
+        "ttlMs": 60000,
+        "description": "Only on a statistics screen: the player's team's shots."
+      },
+      {
+        "key": "shotsOnTarget",
+        "label": "Shots on target",
+        "type": "number",
+        "min": 0,
+        "max": 100,
+        "ttlMs": 60000,
+        "description": "Only on a statistics screen: the player's team's shots on target."
+      },
+      {
+        "key": "passAccuracyPct",
+        "label": "Pass accuracy %",
+        "type": "number",
+        "min": 0,
+        "max": 100,
+        "ttlMs": 60000,
+        "description": "Only on a statistics screen: the player's team's pass accuracy percentage."
+      },
+      {
+        "key": "expectedGoals",
+        "label": "Expected goals (xG)",
+        "type": "number",
+        "min": 0,
+        "max": 20,
+        "ttlMs": 60000,
+        "description": "Only on a statistics screen, and only if xG is shown: the player's team's expected goals."
+      }
+    ],
+    "events": [
+      {
+        "type": "goal",
+        "label": "Goal (seen)",
+        "category": "context",
+        "description": "A goal is being celebrated, a GOAL graphic is shown, or a goal replay is playing. Report who scored relative to the player, where the final shot was taken from (zone in the goal area of the goal it went into), and how the goal was created if it is visible.",
+        "zoneSet": "goal-area",
+        "attributes": [
+          {
+            "key": "scorer",
+            "options": [
+              "player",
+              "opponent",
+              "unknown"
+            ],
+            "description": "Whether the player's team or the opponent scored."
+          },
+          {
+            "key": "buildUp",
+            "options": [
+              "cross",
+              "cutback",
+              "through_ball",
+              "long_shot",
+              "set_piece",
+              "counter_attack",
+              "dribble",
+              "rebound",
+              "other",
+              "unknown"
+            ],
+            "description": "How the chance was created, only if visible in the replay."
+          }
+        ],
+        "dedupeMs": 40000,
+        "dedupeBy": [
+          "scorer"
+        ]
+      },
+      {
+        "type": "turnover",
+        "label": "Lost possession",
+        "category": "context",
+        "description": "In this frame the player's team clearly loses the ball to the opponent (interception, tackle, or a misplaced pass reaching an opponent).",
+        "zoneSet": "pitch",
+        "attributes": [
+          {
+            "key": "cause",
+            "options": [
+              "misplaced_pass",
+              "intercepted",
+              "tackled",
+              "other"
+            ],
+            "description": "How possession was lost, if visible."
+          }
+        ],
+        "dedupeMs": 4000
+      }
+    ]
+  },
+  "zones": [
+    {
+      "id": "goal-area",
+      "label": "Where the goal came from",
+      "rows": 2,
+      "cols": 3,
+      "cells": [
+        {
+          "id": "box-left",
+          "label": "inside the box, left side"
+        },
+        {
+          "id": "box-centre",
+          "label": "inside the box, central"
+        },
+        {
+          "id": "box-right",
+          "label": "inside the box, right side"
+        },
+        {
+          "id": "outside-left",
+          "label": "outside the box, left side"
+        },
+        {
+          "id": "outside-centre",
+          "label": "outside the box, central"
+        },
+        {
+          "id": "outside-right",
+          "label": "outside the box, right side"
+        }
+      ],
+      "description": "Where the final shot was taken from, relative to the goal it went into. Left and right are from the defending goalkeeper's point of view, looking out at the pitch. 'Inside the box' means the penalty area."
+    },
+    {
+      "id": "pitch",
+      "label": "Pitch third",
+      "rows": 3,
+      "cols": 3,
+      "cells": [
+        {
+          "id": "def-left",
+          "label": "your defensive third, left side"
+        },
+        {
+          "id": "def-centre",
+          "label": "your defensive third, centre"
+        },
+        {
+          "id": "def-right",
+          "label": "your defensive third, right side"
+        },
+        {
+          "id": "mid-left",
+          "label": "midfield, left side"
+        },
+        {
+          "id": "mid-centre",
+          "label": "midfield, centre"
+        },
+        {
+          "id": "mid-right",
+          "label": "midfield, right side"
+        },
+        {
+          "id": "att-left",
+          "label": "your attacking third, left side"
+        },
+        {
+          "id": "att-centre",
+          "label": "your attacking third, centre"
+        },
+        {
+          "id": "att-right",
+          "label": "your attacking third, right side"
+        }
+      ],
+      "description": "Thirds of the pitch relative to the player's team: defensive third is nearest the player's own goal. Left and right are from the player's team's attacking direction."
+    }
+  ],
+  "scoreRules": [
+    {
+      "homeKey": "homeScore",
+      "awayKey": "awayScore",
+      "sideContext": "side",
+      "forEvent": "goal_scored",
+      "againstEvent": "goal_conceded",
+      "confirmEvent": "goal",
+      "confirmWindowMs": 45000
+    }
+  ],
+  "heatmaps": [
+    {
+      "id": "conceded",
+      "label": "Where you concede from",
+      "eventType": "goal_conceded",
+      "zoneSet": "goal-area",
+      "minEvents": 3,
+      "phrase": "goals you conceded",
+      "sampled": false,
+      "breakdown": {
+        "attribute": "buildUp",
+        "label": "How they were created"
+      },
+      "tags": [
+        "defending",
+        "conceding",
+        "goals"
+      ]
+    },
+    {
+      "id": "scored",
+      "label": "Where you score from",
+      "eventType": "goal_scored",
+      "zoneSet": "goal-area",
+      "minEvents": 3,
+      "phrase": "goals you scored",
+      "sampled": false,
+      "breakdown": {
+        "attribute": "buildUp",
+        "label": "How they were created"
+      },
+      "tags": [
+        "attacking",
+        "finishing",
+        "goals"
+      ]
+    },
+    {
+      "id": "turnovers",
+      "label": "Where you lose the ball",
+      "eventType": "turnover",
+      "zoneSet": "pitch",
+      "minEvents": 6,
+      "phrase": "times you lost the ball",
+      "sampled": true,
+      "breakdown": {
+        "attribute": "cause",
+        "label": "How possession was lost"
+      },
+      "tags": [
+        "passing",
+        "possession",
+        "turnovers"
+      ]
+    }
+  ],
+  "matchStats": {
+    "keys": [
+      {
+        "key": "possessionPct",
+        "label": "Possession",
+        "unit": "%",
+        "better": "neutral"
+      },
+      {
+        "key": "shots",
+        "label": "Shots",
+        "better": "higher"
+      },
+      {
+        "key": "shotsOnTarget",
+        "label": "Shots on target",
+        "better": "higher"
+      },
+      {
+        "key": "passAccuracyPct",
+        "label": "Pass accuracy",
+        "unit": "%",
+        "better": "higher"
+      },
+      {
+        "key": "expectedGoals",
+        "label": "xG",
+        "better": "higher"
+      }
+    ]
+  },
+  "episodes": [
+    {
+      "id": "turnover-danger",
+      "label": "Losing the ball",
+      "trigger": "turnover",
+      "windowMs": 20000,
+      "responses": [
+        {
+          "id": "own-third",
+          "triggerZones": [
+            "def-left",
+            "def-centre",
+            "def-right"
+          ],
+          "label": "lost in your own third",
+          "phrase": "it was in your own third"
+        }
+      ],
+      "noResponse": {
+        "label": "lost further up",
+        "phrase": "it was further up the pitch"
+      },
+      "negativeOutcomes": [
+        "goal_conceded"
+      ],
+      "visibility": [
+        "homeScore",
+        "awayScore"
+      ],
+      "phrases": {
+        "trigger": "you lost the ball",
+        "negative": "you conceded within 20 seconds",
+        "negativeShort": "conceded soon after"
+      }
+    }
+  ],
+  "liveCues": [],
+  "liveFreshnessMs": 6000,
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "defensive-shape",
+        "title": "Hold your defensive shape",
+        "summary": "Many goals come from defenders pulled out of position. Containing the ball carrier while your line stays compact usually concedes fewer clear chances than chasing.",
+        "good": [
+          "Jockey and contain the ball carrier",
+          "Switch to the defender covering the passing lane",
+          "Keep the back line compact"
+        ],
+        "bad": [
+          "Pulling a centre-back out to press high",
+          "Sprinting at the ball carrier and getting beaten",
+          "Leaving the space behind a full-back open"
+        ],
+        "tags": [
+          "defending",
+          "conceding"
+        ]
+      },
+      {
+        "id": "wide-deliveries",
+        "title": "Covering crosses and cutbacks",
+        "summary": "When the ball goes wide, the most dangerous space is often the penalty spot area for a cutback, not just the near post.",
+        "good": [
+          "Track runners into the box",
+          "Cover the cutback zone when the ball reaches the byline"
+        ],
+        "bad": [
+          "Ball-watching while a runner arrives unmarked",
+          "Every defender drawn to the near post"
+        ],
+        "tags": [
+          "defending",
+          "conceding",
+          "crosses"
+        ]
+      },
+      {
+        "id": "safe-in-own-third",
+        "title": "Lower risk near your own goal",
+        "summary": "Losing the ball in your own third gives the opponent a short route to goal. Simple passes or clearances under pressure reduce that risk.",
+        "good": [
+          "Simple passes when pressed near your box",
+          "Clearing when no safe pass is on"
+        ],
+        "bad": [
+          "Risky passes across your own box",
+          "Dribbling out of defence under pressure"
+        ],
+        "tags": [
+          "passing",
+          "turnovers",
+          "possession"
+        ]
+      },
+      {
+        "id": "patient-build-up",
+        "title": "Patient build-up",
+        "summary": "Recycling the ball when forward options are covered keeps possession and pass accuracy higher than forcing passes into crowded areas.",
+        "good": [
+          "Switch play to the open side",
+          "Recycle to a centre-back to reset"
+        ],
+        "bad": [
+          "Forcing through balls into crowded areas",
+          "Long passes under pressure"
+        ],
+        "tags": [
+          "passing",
+          "possession",
+          "attacking"
+        ]
+      },
+      {
+        "id": "shot-selection",
+        "title": "Shot selection",
+        "summary": "Shots from inside the box with space convert far more often than speculative long shots.",
+        "good": [
+          "Work the ball into the box",
+          "Shoot when you have a clear sight of goal"
+        ],
+        "bad": [
+          "Long shots under pressure",
+          "Shooting from tight angles when a pass is on"
+        ],
+        "tags": [
+          "attacking",
+          "finishing"
+        ]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Exploits, glitches, or anything against EA's rules",
+      "Anything about the opponent that is not visible on the player's own screen",
+      "Live instructions during online or competitive matches"
+    ],
+    "terminology": {
+      "goal_conceded": "goal conceded",
+      "turnover": "lost possession"
+    }
+  },
+  "limitations": [
+    "Frames are sampled about every 2.5 seconds, so many turnovers are missed; turnover maps show a sample, not every lost ball.",
+    "Goal locations come from replays on the broadcast camera and are approximate (six zones).",
+    "Goals are counted from scoreboard changes; if the scoreboard cannot be read, goals may be missed.",
+    "Pass accuracy and possession come from the statistics screen, so they are only known if that screen is shown."
+  ],
+  "failClosed": [
+    "Scoreboard unreadable: no goals are counted from score changes.",
+    "Non-broadcast camera, menus or replays of other matches: no zones are recorded."
+  ]
+}

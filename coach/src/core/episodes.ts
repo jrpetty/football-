@@ -9,7 +9,7 @@
 // still open when the session stops.
 
 import type { EpisodeSpec } from './profile/schema.ts'
-import { NO_RESPONSE, type Episode, type EpisodeExclusion, type GameEvent, type SignalState } from './types.ts'
+import { NO_RESPONSE, type Episode, type EpisodeExclusion, type GameEvent } from './types.ts'
 
 /** Excluded when the relevant HUD was unreadable for more than this share of the episode. */
 const MAX_UNREADABLE_SHARE = 0.4
@@ -32,13 +32,16 @@ export class EpisodeEvaluator {
     this.specs = specs
   }
 
-  /** Feed the events detected at time `t` (in order) plus the current signal states. */
-  update(t: number, events: readonly GameEvent[], signals: ReadonlyMap<string, SignalState>): Episode[] {
+  /**
+   * Feed the events detected up to time `t` (in order) and a visibility check
+   * for state keys (pixel signals or fused vision state).
+   */
+  update(t: number, events: readonly GameEvent[], visible: (key: string) => boolean): Episode[] {
     const closed: Episode[] = []
 
     for (const ep of this.open) {
       const dt = Math.max(0, t - ep.lastT)
-      if (ep.spec.visibility.some((id) => !signals.get(id)?.known)) ep.unreadableMs += dt
+      if (ep.spec.visibility.some((id) => !visible(id))) ep.unreadableMs += dt
       ep.lastT = t
     }
 
@@ -52,7 +55,7 @@ export class EpisodeEvaluator {
         else if (ep.spec.positiveOutcomes?.includes(ev.ruleId)) closed.push(this.close(ep, t, 'positive', ev, null))
         else if (ev.boundary) closed.push(this.close(ep, t, 'neutral', null, 'truncated-by-boundary'))
         else if (ep.response === null) {
-          const r = ep.spec.responses.find((x) => x.event === ev.ruleId)
+          const r = ep.spec.responses.find((x) => x.event !== undefined && x.event === ev.ruleId)
           if (r) {
             ep.response = r.id
             ep.responseConfidence = ev.confidence
@@ -70,8 +73,20 @@ export class EpisodeEvaluator {
     for (const ev of events) {
       for (const spec of this.specs) {
         if (spec.trigger !== ev.ruleId) continue
+        if (spec.triggerWhere && ev.attributes?.[spec.triggerWhere.attribute] !== spec.triggerWhere.equals) continue
         if (this.open.some((o) => o.spec.id === spec.id)) continue
-        this.open.push({ spec, trigger: ev, response: null, responseConfidence: 1, unreadableMs: 0, lastT: t })
+        // A response can be a property of the trigger itself: where it happened.
+        const byZone = spec.responses.find((r) => r.triggerZones && ev.zone !== undefined && r.triggerZones.includes(ev.zone))
+        const zoneBased = spec.responses.some((r) => r.triggerZones)
+        if (zoneBased && ev.zone === undefined) continue // unlocated: cannot say which group it belongs to
+        this.open.push({
+          spec,
+          trigger: ev,
+          response: byZone ? byZone.id : zoneBased ? NO_RESPONSE : null,
+          responseConfidence: ev.confidence,
+          unreadableMs: 0,
+          lastT: t,
+        })
       }
     }
     return closed

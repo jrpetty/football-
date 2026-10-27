@@ -1,33 +1,27 @@
-// Game profiles: the maintained, per-game knowledge package. A profile says
-// where visible HUD elements are, how to read them, which visible transitions
-// count as events, which sequences are worth learning from, and — crucially —
-// what each game mode permits in terms of live coaching.
+// Game packs (profiles): the maintained, per-game knowledge package. A pack
+// says what is visible and how to read it:
+// - pixel regions (signals/events), for HUDs with stable colours;
+// - a vision schema, for the optional cloud vision recogniser;
+// - zones, heatmaps, mistake rules, score rules and match stats, for analysis;
+// - modes (policy lives in the registry, keyed by game and mode), coaching
+//   knowledge, and known limitations.
 //
-// Profiles are data (JSON) and may come from users, so they are validated
-// structurally before the engine sees them.
+// Packs are data (JSON) and may come from users, so they are validated
+// structurally before the engine sees them. Pack text that the coach can speak
+// is checked for causal or absolute claims.
 
-import type { EventCategory, BoundaryKind, RoundResult, HsvRange, NormRect } from '../types.ts'
+import type { BoundaryKind, EventCategory, GamePhase, HsvRange, NormRect, RoundResult } from '../types.ts'
 
-export const PROFILE_SCHEMA_VERSION = 1
-
-export type LiveCoachingStatus = 'not-reviewed' | 'prohibited' | 'approved'
+export const PROFILE_SCHEMA_VERSION = 2
 
 export interface ProfileMode {
   readonly id: string
   readonly label: string
   readonly multiplayer: boolean
   readonly competitive: boolean
-  /**
-   * Whether the publisher permits live tactical coaching in this mode.
-   * 'approved' requires a cited source; OS capture permission is not publisher permission.
-   */
-  readonly liveCoaching: {
-    readonly status: LiveCoachingStatus
-    readonly source?: string
-    readonly reviewedAt?: string
-    readonly note?: string
-  }
 }
+
+// --- Pixel recognition (v1) -------------------------------------------------------------
 
 interface SignalBase {
   readonly id: string
@@ -104,9 +98,14 @@ export interface EdgeRule extends EventRuleBase {
 
 export type EventRuleSpec = ChangeRule | CrossRule | EdgeRule
 
+// --- Episodes and live cues -----------------------------------------------------------
+
 export interface EpisodeResponseSpec {
   readonly id: string
-  readonly event: string
+  /** The response is a visible event after the trigger… */
+  readonly event?: string
+  /** …or a property of the trigger itself (its zone), for "where did it start" comparisons. */
+  readonly triggerZones?: readonly string[]
   /** Short label, e.g. "patched up". */
   readonly label: string
   /** Past-tense clause, e.g. "you patched up first". */
@@ -117,12 +116,14 @@ export interface EpisodeSpec {
   readonly id: string
   readonly label: string
   readonly trigger: string
+  /** Only triggers with this attribute value open an episode (e.g. team = "player"). */
+  readonly triggerWhere?: { readonly attribute: string; readonly equals: string | number | boolean }
   readonly windowMs: number
   readonly responses: readonly EpisodeResponseSpec[]
   readonly noResponse: { readonly label: string; readonly phrase: string }
   readonly negativeOutcomes: readonly string[]
   readonly positiveOutcomes?: readonly string[]
-  /** Signals that must stay readable for the episode to count as evidence. */
+  /** State keys (pixel signals or vision state) that must stay readable for the episode to count. */
   readonly visibility: readonly string[]
   readonly phrases: {
     /** e.g. "your health got low" */
@@ -139,10 +140,148 @@ export interface LiveCueSpec {
   readonly trigger: string
   readonly episode: string
   readonly recommend: string
-  /** Imperative, ≤ 6 words, e.g. "patch up first". */
+  /** Imperative, 6 words or fewer, e.g. "patch up first". */
   readonly imperative: string
-  /** Do not speak a cue about an event older than this. */
+  /** Do not speak a cue about a moment older than this. */
   readonly maxAgeMs: number
+}
+
+// --- Vision recognition (v2) -------------------------------------------------------------
+
+export type VisionValueType = 'number' | 'string' | 'boolean' | 'enum'
+
+export interface VisionStateSpec {
+  readonly key: string
+  readonly label: string
+  readonly type: VisionValueType
+  readonly options?: readonly string[]
+  readonly min?: number
+  readonly max?: number
+  /** How long a reading stays valid. */
+  readonly ttlMs: number
+  /** Instruction to the recogniser: where it is on screen and how to read it. */
+  readonly description: string
+}
+
+export interface VisionEventSpec {
+  readonly type: string
+  readonly label: string
+  readonly category: EventCategory
+  readonly description: string
+  /** Zone set the recogniser should place this event in, if any. */
+  readonly zoneSet?: string
+  readonly attributes?: readonly { readonly key: string; readonly options: readonly string[]; readonly description: string }[]
+  /** Repeated sightings within this window are the same event (banners persist)… */
+  readonly dedupeMs: number
+  /** …unless these attributes differ (e.g. a goal by the other team is a different goal). */
+  readonly dedupeBy?: readonly string[]
+}
+
+export interface VisionSpec {
+  /** What the recogniser should pay attention to, in one paragraph. */
+  readonly purpose: string
+  readonly sampleIntervalMs: number
+  /** Longest acceptable recognition latency; older observations are not used for live coaching. */
+  readonly maxLatencyMs: number
+  readonly maxWidth: number
+  /** When present, only these regions are sent (less data, more privacy). */
+  readonly crops?: readonly { readonly id: string; readonly label: string; readonly region: NormRect }[]
+  readonly state: readonly VisionStateSpec[]
+  readonly events: readonly VisionEventSpec[]
+}
+
+// --- Analyses (v2) ----------------------------------------------------------------------
+
+export interface ZoneSet {
+  readonly id: string
+  readonly label: string
+  readonly rows: number
+  readonly cols: number
+  /** Row-major; rows × cols cells. Labels read naturally after "from", e.g. "your box, left side". */
+  readonly cells: readonly { readonly id: string; readonly label: string }[]
+  /** How the recogniser should map the screen to these cells. */
+  readonly description: string
+}
+
+export interface HeatmapSpec {
+  readonly id: string
+  readonly label: string
+  readonly eventType: string
+  readonly zoneSet: string
+  /** No spatial claim below this many located events. */
+  readonly minEvents: number
+  /** Plural noun phrase, e.g. "goals you conceded". */
+  readonly phrase: string
+  /** True when the events come from sampled frames and some are missed. */
+  readonly sampled: boolean
+  readonly breakdown?: { readonly attribute: string; readonly label: string }
+  readonly tags: readonly string[]
+}
+
+export type ConditionOp = '>' | '>=' | '<' | '<=' | '==' | '!='
+
+export interface Condition {
+  /** State key, or omit and use `sum`. */
+  readonly key?: string
+  readonly sum?: readonly string[]
+  readonly op: ConditionOp
+  readonly value?: number | string | boolean
+  /** Compare with another state key instead of a constant. */
+  readonly ref?: string
+  /** Compare with a player-context value instead (e.g. a target time). */
+  readonly contextValue?: string
+}
+
+export interface MistakeSpec {
+  readonly id: string
+  readonly label: string
+  /** All conditions must hold (on fresh, visible state) for `forMs` before it counts. */
+  readonly when: readonly Condition[]
+  readonly forMs: number
+  readonly minGameTimeSec?: number
+  readonly phases?: readonly GamePhase[]
+  /** Spoken during play where policy allows, ≤ 8 words. */
+  readonly liveTip?: string
+  /** Post-match line; placeholders {count} and {total}. */
+  readonly summary: string
+  readonly severity: 'low' | 'medium' | 'high'
+  readonly tags: readonly string[]
+  /** Fire at most once per match (e.g. a late age-up). */
+  readonly oncePerMatch?: boolean
+}
+
+export interface ScoreRule {
+  readonly homeKey: string
+  readonly awayKey: string
+  /** Player-context id holding "home" or "away". */
+  readonly sideContext: string
+  readonly forEvent: string
+  readonly againstEvent: string
+  /** Vision event that, if seen near a score change, adds its zone and attributes. */
+  readonly confirmEvent?: string
+  readonly confirmWindowMs?: number
+}
+
+export interface MatchStatSpec {
+  readonly keys: readonly { readonly key: string; readonly label: string; readonly unit?: string; readonly better: 'higher' | 'lower' | 'neutral' }[]
+}
+
+export interface PlayerContextSpec {
+  readonly id: string
+  readonly label: string
+  readonly kind: 'choice' | 'number' | 'text'
+  readonly options?: readonly string[]
+  readonly default: string | number
+  readonly help: string
+}
+
+export interface CoachingConcept {
+  readonly id: string
+  readonly title: string
+  readonly summary: string
+  readonly good: readonly string[]
+  readonly bad: readonly string[]
+  readonly tags: readonly string[]
 }
 
 export interface GameProfile {
@@ -151,30 +290,67 @@ export interface GameProfile {
   /** Semver. A major bump means older long-term tendencies are not merged. */
   readonly version: string
   readonly name: string
-  readonly game: { readonly title: string; readonly publisher?: string; readonly patch: string }
+  readonly depth: 'pack' | 'generic'
+  readonly game: {
+    readonly title: string
+    readonly publisher?: string
+    /** The patch / release the pack was checked against, or "any" for generic. */
+    readonly patch: string
+    readonly languages: readonly string[]
+  }
   readonly validation: {
-    readonly status: 'reference' | 'community' | 'verified'
+    readonly status: 'reference' | 'community' | 'verified' | 'unverified'
     readonly notes: string
     readonly validatedAt?: string
   }
-  readonly capture: { readonly aspectRatio: number; readonly notes: string }
+  readonly health: 'healthy' | 'degraded' | 'experimental'
+  readonly capture: {
+    /** Expected aspect ratio, or null when any is fine. */
+    readonly aspectRatio: number | null
+    readonly notes: string
+    /** Regular expressions matched against the OS window title, to suggest this pack. */
+    readonly windowTitleHints?: readonly string[]
+  }
   readonly modes: readonly ProfileMode[]
+  readonly playerContext?: readonly PlayerContextSpec[]
   readonly signals: readonly SignalSpec[]
   readonly events: readonly EventRuleSpec[]
   readonly episodes: readonly EpisodeSpec[]
   readonly liveCues: readonly LiveCueSpec[]
+  readonly vision?: VisionSpec
+  readonly zones?: readonly ZoneSet[]
+  readonly heatmaps?: readonly HeatmapSpec[]
+  readonly mistakes?: readonly MistakeSpec[]
+  readonly scoreRules?: readonly ScoreRule[]
+  readonly matchStats?: MatchStatSpec
+  /** Live tips about vision-derived moments older than this are not spoken. */
+  readonly liveFreshnessMs?: number
+  readonly knowledge: {
+    readonly concepts: readonly CoachingConcept[]
+    /** Advice categories the coach must never give for this game. */
+    readonly prohibitedAdvice: readonly string[]
+    readonly terminology: Readonly<Record<string, string>>
+  }
   readonly limitations: readonly string[]
+  /** Conditions under which the pack stops inferring (shown to the player). */
+  readonly failClosed: readonly string[]
 }
 
-// --- Validation ---------------------------------------------------------------
+// --- Validation ------------------------------------------------------------------------------
 
 export type ValidationResult = { ok: true; profile: GameProfile } | { ok: false; errors: string[] }
 
-const ID = /^[a-z0-9][a-z0-9-]{0,63}$/
+const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const SEMVER = /^\d+\.\d+\.\d+$/
-const CATEGORIES: readonly EventCategory[] = ['context', 'action', 'outcome', 'boundary']
+const CATEGORIES: readonly EventCategory[] = ['context', 'action', 'outcome', 'boundary', 'mistake']
 const BOUNDARIES: readonly BoundaryKind[] = ['round-start', 'round-end', 'match-end']
 const RESULTS: readonly RoundResult[] = ['win', 'loss', 'draw', 'unknown']
+const PHASES: readonly GamePhase[] = ['menu', 'round', 'combat', 'round_end', 'match_end', 'unknown']
+const OPS: readonly ConditionOp[] = ['>', '>=', '<', '<=', '==', '!=']
+/** Words the coach must never say: they claim causation or certainty. */
+export const BANNED_CLAIMS = /\b(caused|causes|causing|because|definitely|always|never fails|guarantee[sd]?|proves?|certainly)\b/i
+/** State keys every vision response may report, whatever the pack. */
+export const STANDARD_STATE_KEYS = ['phase', 'visibleOutcome', 'visibleHealth', 'visibleObjective'] as const
 
 type Obj = Record<string, unknown>
 
@@ -189,7 +365,8 @@ class Checker {
     return v as Obj
   }
 
-  arr(v: unknown, path: string): unknown[] {
+  arr(v: unknown, path: string, optional = false): unknown[] {
+    if (v === undefined && optional) return []
     if (!Array.isArray(v)) {
       this.errors.push(`${path}: expected an array`)
       return []
@@ -197,7 +374,7 @@ class Checker {
     return v
   }
 
-  str(v: unknown, path: string, opts: { pattern?: RegExp; optional?: boolean; max?: number } = {}): string | null {
+  str(v: unknown, path: string, opts: { pattern?: RegExp; optional?: boolean; max?: number; spoken?: boolean } = {}): string | null {
     if (v === undefined && opts.optional) return null
     if (typeof v !== 'string' || v.length === 0) {
       this.errors.push(`${path}: expected a non-empty string`)
@@ -205,6 +382,7 @@ class Checker {
     }
     if (v.length > (opts.max ?? 500)) this.errors.push(`${path}: too long`)
     if (opts.pattern && !opts.pattern.test(v)) this.errors.push(`${path}: "${v}" has an invalid format`)
+    if (opts.spoken && BANNED_CLAIMS.test(v)) this.errors.push(`${path}: spoken text must not make causal or absolute claims ("${v}")`)
     return v
   }
 
@@ -263,6 +441,18 @@ class Checker {
     const q = this.num(a[1], `${path}[1]`, lo, hi)
     if (!wraps && p !== null && q !== null && p > q) this.errors.push(`${path}: min is greater than max`)
   }
+
+  ids(list: unknown[], path: string, field = 'id'): Set<string> {
+    const out = new Set<string>()
+    list.forEach((item, i) => {
+      const id = (item as Obj | null)?.[field]
+      if (typeof id === 'string') {
+        if (out.has(id)) this.errors.push(`${path}[${i}].${field}: duplicate "${id}"`)
+        out.add(id)
+      }
+    })
+    return out
+  }
 }
 
 export function validateProfile(input: unknown): ValidationResult {
@@ -270,70 +460,76 @@ export function validateProfile(input: unknown): ValidationResult {
   const p = c.obj(input, 'profile')
   if (!p) return { ok: false, errors: c.errors }
 
-  if (p.schemaVersion !== PROFILE_SCHEMA_VERSION) {
-    c.errors.push(`schemaVersion: expected ${PROFILE_SCHEMA_VERSION}`)
-  }
+  if (p.schemaVersion !== PROFILE_SCHEMA_VERSION) c.errors.push(`schemaVersion: expected ${PROFILE_SCHEMA_VERSION}`)
   c.str(p.id, 'id', { pattern: ID })
   c.str(p.version, 'version', { pattern: SEMVER })
   c.str(p.name, 'name', { max: 80 })
+  c.oneOf(p.depth, 'depth', ['pack', 'generic'] as const)
+  c.oneOf(p.health, 'health', ['healthy', 'degraded', 'experimental'] as const)
 
   const game = c.obj(p.game, 'game')
   if (game) {
     c.str(game.title, 'game.title', { max: 120 })
     c.str(game.publisher, 'game.publisher', { optional: true, max: 120 })
     c.str(game.patch, 'game.patch', { max: 60 })
+    if (c.arr(game.languages, 'game.languages').length === 0) c.errors.push('game.languages: at least one language')
   }
   const validation = c.obj(p.validation, 'validation')
   if (validation) {
-    c.oneOf(validation.status, 'validation.status', ['reference', 'community', 'verified'] as const)
+    c.oneOf(validation.status, 'validation.status', ['reference', 'community', 'verified', 'unverified'] as const)
     c.str(validation.notes, 'validation.notes', { max: 2000 })
     c.str(validation.validatedAt, 'validation.validatedAt', { optional: true, max: 40 })
   }
   const capture = c.obj(p.capture, 'capture')
   if (capture) {
-    c.num(capture.aspectRatio, 'capture.aspectRatio', 0.5, 4)
+    if (capture.aspectRatio !== null) c.num(capture.aspectRatio, 'capture.aspectRatio', 0.5, 4)
     c.str(capture.notes, 'capture.notes', { max: 1000 })
+    c.arr(capture.windowTitleHints, 'capture.windowTitleHints', true).forEach((h, i) => {
+      const s = c.str(h, `capture.windowTitleHints[${i}]`, { max: 200 })
+      if (s) {
+        try {
+          new RegExp(s, 'i')
+        } catch {
+          c.errors.push(`capture.windowTitleHints[${i}]: not a valid regular expression`)
+        }
+      }
+    })
   }
 
-  // Modes and the competitive-integrity rule.
   const modes = c.arr(p.modes, 'modes')
   if (modes.length === 0) c.errors.push('modes: at least one mode is required')
-  const modeIds = new Set<string>()
+  c.ids(modes, 'modes')
   modes.forEach((m, i) => {
-    const path = `modes[${i}]`
-    const o = c.obj(m, path)
+    const o = c.obj(m, `modes[${i}]`)
     if (!o) return
-    const id = c.str(o.id, `${path}.id`, { pattern: ID })
-    if (id) {
-      if (modeIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
-      modeIds.add(id)
-    }
-    c.str(o.label, `${path}.label`, { max: 80 })
-    c.bool(o.multiplayer, `${path}.multiplayer`)
-    c.bool(o.competitive, `${path}.competitive`)
-    const lc = c.obj(o.liveCoaching, `${path}.liveCoaching`)
-    if (lc) {
-      const status = c.oneOf(lc.status, `${path}.liveCoaching.status`, ['not-reviewed', 'prohibited', 'approved'] as const)
-      const source = c.str(lc.source, `${path}.liveCoaching.source`, { optional: true, max: 500 })
-      const reviewedAt = c.str(lc.reviewedAt, `${path}.liveCoaching.reviewedAt`, { optional: true, max: 40 })
-      c.str(lc.note, `${path}.liveCoaching.note`, { optional: true, max: 1000 })
-      if (status === 'approved' && (!source || !reviewedAt)) {
-        c.errors.push(`${path}.liveCoaching: "approved" requires a cited source and a reviewedAt date`)
-      }
-    }
+    c.str(o.id, `modes[${i}].id`, { pattern: ID })
+    c.str(o.label, `modes[${i}].label`, { max: 80 })
+    c.bool(o.multiplayer, `modes[${i}].multiplayer`)
+    c.bool(o.competitive, `modes[${i}].competitive`)
   })
 
-  // Signals.
-  const signalIds = new Set<string>()
-  c.arr(p.signals, 'signals').forEach((s, i) => {
+  const contextIds = new Set<string>()
+  c.arr(p.playerContext, 'playerContext', true).forEach((x, i) => {
+    const path = `playerContext[${i}]`
+    const o = c.obj(x, path)
+    if (!o) return
+    const id = c.str(o.id, `${path}.id`, { pattern: /^[a-zA-Z][a-zA-Z0-9]{0,40}$/ })
+    if (id) contextIds.add(id)
+    c.str(o.label, `${path}.label`, { max: 80 })
+    const kind = c.oneOf(o.kind, `${path}.kind`, ['choice', 'number', 'text'] as const)
+    if (kind === 'choice' && c.arr(o.options, `${path}.options`).length < 2) c.errors.push(`${path}.options: at least two`)
+    if (typeof o.default !== 'string' && typeof o.default !== 'number') c.errors.push(`${path}.default: required`)
+    c.str(o.help, `${path}.help`, { max: 300 })
+  })
+
+  // Pixel signals.
+  const signals = c.arr(p.signals, 'signals')
+  const signalIds = c.ids(signals, 'signals')
+  signals.forEach((s, i) => {
     const path = `signals[${i}]`
     const o = c.obj(s, path)
     if (!o) return
-    const id = c.str(o.id, `${path}.id`, { pattern: ID })
-    if (id) {
-      if (signalIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
-      signalIds.add(id)
-    }
+    c.str(o.id, `${path}.id`, { pattern: ID })
     c.str(o.label, `${path}.label`, { max: 80 })
     c.rect(o.region, `${path}.region`)
     c.num(o.minConfidence, `${path}.minConfidence`, 0, 1, true)
@@ -367,17 +563,14 @@ export function validateProfile(input: unknown): ValidationResult {
     }
   })
 
-  // Events.
-  const eventIds = new Set<string>()
-  c.arr(p.events, 'events').forEach((e, i) => {
+  // Pixel event rules.
+  const events = c.arr(p.events, 'events')
+  const eventIds = c.ids(events, 'events')
+  events.forEach((e, i) => {
     const path = `events[${i}]`
     const o = c.obj(e, path)
     if (!o) return
-    const id = c.str(o.id, `${path}.id`, { pattern: ID })
-    if (id) {
-      if (eventIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
-      eventIds.add(id)
-    }
+    c.str(o.id, `${path}.id`, { pattern: ID })
     c.str(o.label, `${path}.label`, { max: 80 })
     const category = c.oneOf(o.category, `${path}.category`, CATEGORIES)
     const signal = c.str(o.signal, `${path}.signal`)
@@ -404,6 +597,187 @@ export function validateProfile(input: unknown): ValidationResult {
     }
   })
 
+  // Zones (needed before vision events and heatmaps).
+  const zoneSets = new Map<string, Set<string>>()
+  c.arr(p.zones, 'zones', true).forEach((z, i) => {
+    const path = `zones[${i}]`
+    const o = c.obj(z, path)
+    if (!o) return
+    const id = c.str(o.id, `${path}.id`, { pattern: ID })
+    c.str(o.label, `${path}.label`, { max: 80 })
+    c.str(o.description, `${path}.description`, { max: 1500 })
+    const rows = c.num(o.rows, `${path}.rows`, 1, 12)
+    const cols = c.num(o.cols, `${path}.cols`, 1, 12)
+    const cells = c.arr(o.cells, `${path}.cells`)
+    if (rows !== null && cols !== null && cells.length !== rows * cols) c.errors.push(`${path}.cells: expected ${rows * cols} cells`)
+    const cellIds = c.ids(cells, `${path}.cells`)
+    cells.forEach((cell, j) => {
+      const co = c.obj(cell, `${path}.cells[${j}]`)
+      if (!co) return
+      c.str(co.id, `${path}.cells[${j}].id`, { pattern: ID })
+      c.str(co.label, `${path}.cells[${j}].label`, { max: 80, spoken: true })
+    })
+    if (id) zoneSets.set(id, cellIds)
+  })
+
+  // Vision schema.
+  const visionStateKeys = new Set<string>(STANDARD_STATE_KEYS)
+  const visionEvents = new Map<string, { attributes: Set<string>; zoneSet: string | null }>()
+  if (p.vision !== undefined) {
+    const v = c.obj(p.vision, 'vision')
+    if (v) {
+      c.str(v.purpose, 'vision.purpose', { max: 2000 })
+      c.num(v.sampleIntervalMs, 'vision.sampleIntervalMs', 1000, 60_000)
+      c.num(v.maxLatencyMs, 'vision.maxLatencyMs', 1000, 60_000)
+      c.num(v.maxWidth, 'vision.maxWidth', 320, 1920)
+      c.arr(v.crops, 'vision.crops', true).forEach((cr, i) => {
+        const o = c.obj(cr, `vision.crops[${i}]`)
+        if (!o) return
+        c.str(o.id, `vision.crops[${i}].id`, { pattern: ID })
+        c.str(o.label, `vision.crops[${i}].label`, { max: 80 })
+        c.rect(o.region, `vision.crops[${i}].region`)
+      })
+      const state = c.arr(v.state, 'vision.state')
+      c.ids(state, 'vision.state', 'key')
+      state.forEach((s, i) => {
+        const path = `vision.state[${i}]`
+        const o = c.obj(s, path)
+        if (!o) return
+        const key = c.str(o.key, `${path}.key`, { pattern: /^[a-zA-Z][a-zA-Z0-9]{0,40}$/ })
+        if (key && (STANDARD_STATE_KEYS as readonly string[]).includes(key)) c.errors.push(`${path}.key: "${key}" is a standard key`)
+        if (key) visionStateKeys.add(key)
+        c.str(o.label, `${path}.label`, { max: 80 })
+        const type = c.oneOf(o.type, `${path}.type`, ['number', 'string', 'boolean', 'enum'] as const)
+        if (type === 'enum' && c.arr(o.options, `${path}.options`).length < 2) c.errors.push(`${path}.options: an enum needs options`)
+        c.num(o.min, `${path}.min`, -1e9, 1e9, true)
+        c.num(o.max, `${path}.max`, -1e9, 1e9, true)
+        c.num(o.ttlMs, `${path}.ttlMs`, 500, 600_000)
+        c.str(o.description, `${path}.description`, { max: 600 })
+      })
+      const vEvents = c.arr(v.events, 'vision.events')
+      c.ids(vEvents, 'vision.events', 'type')
+      vEvents.forEach((e, i) => {
+        const path = `vision.events[${i}]`
+        const o = c.obj(e, path)
+        if (!o) return
+        const type = c.str(o.type, `${path}.type`, { pattern: ID })
+        c.str(o.label, `${path}.label`, { max: 80 })
+        c.oneOf(o.category, `${path}.category`, CATEGORIES)
+        c.str(o.description, `${path}.description`, { max: 600 })
+        c.num(o.dedupeMs, `${path}.dedupeMs`, 0, 600_000)
+        const zs = c.str(o.zoneSet, `${path}.zoneSet`, { optional: true })
+        if (zs && !zoneSets.has(zs)) c.errors.push(`${path}.zoneSet: unknown zone set "${zs}"`)
+        const attrs = new Set<string>()
+        c.arr(o.attributes, `${path}.attributes`, true).forEach((a, j) => {
+          const ao = c.obj(a, `${path}.attributes[${j}]`)
+          if (!ao) return
+          const k = c.str(ao.key, `${path}.attributes[${j}].key`, { pattern: /^[a-zA-Z][a-zA-Z0-9]{0,40}$/ })
+          if (k) attrs.add(k)
+          if (c.arr(ao.options, `${path}.attributes[${j}].options`).length < 2) c.errors.push(`${path}.attributes[${j}].options: at least two`)
+          c.str(ao.description, `${path}.attributes[${j}].description`, { max: 300 })
+        })
+        for (const [j, k] of c.arr(o.dedupeBy, `${path}.dedupeBy`, true).entries()) {
+          if (typeof k !== 'string' || !attrs.has(k)) c.errors.push(`${path}.dedupeBy[${j}]: not an attribute of this event`)
+        }
+        if (type) visionEvents.set(type, { attributes: attrs, zoneSet: zs })
+      })
+    }
+  }
+
+  // Score rules may create events too.
+  const derivedEvents = new Set<string>()
+  c.arr(p.scoreRules, 'scoreRules', true).forEach((r, i) => {
+    const path = `scoreRules[${i}]`
+    const o = c.obj(r, path)
+    if (!o) return
+    for (const k of ['homeKey', 'awayKey'] as const) {
+      const key = c.str(o[k], `${path}.${k}`)
+      if (key && !visionStateKeys.has(key)) c.errors.push(`${path}.${k}: unknown state key "${key}"`)
+    }
+    const side = c.str(o.sideContext, `${path}.sideContext`)
+    if (side && !contextIds.has(side)) c.errors.push(`${path}.sideContext: unknown player context "${side}"`)
+    for (const k of ['forEvent', 'againstEvent'] as const) {
+      const id = c.str(o[k], `${path}.${k}`, { pattern: ID })
+      if (id) derivedEvents.add(id)
+    }
+    const confirm = c.str(o.confirmEvent, `${path}.confirmEvent`, { optional: true })
+    if (confirm && !visionEvents.has(confirm)) c.errors.push(`${path}.confirmEvent: unknown vision event "${confirm}"`)
+    c.num(o.confirmWindowMs, `${path}.confirmWindowMs`, 1000, 120_000, true)
+  })
+
+  // Mistake rules create events (category "mistake").
+  c.arr(p.mistakes, 'mistakes', true).forEach((m, i) => {
+    const path = `mistakes[${i}]`
+    const o = c.obj(m, path)
+    if (!o) return
+    const id = c.str(o.id, `${path}.id`, { pattern: ID })
+    if (id) derivedEvents.add(id)
+    c.str(o.label, `${path}.label`, { max: 80 })
+    c.num(o.forMs, `${path}.forMs`, 0, 3_600_000)
+    c.num(o.minGameTimeSec, `${path}.minGameTimeSec`, 0, 36_000, true)
+    c.arr(o.phases, `${path}.phases`, true).forEach((ph, j) => c.oneOf(ph, `${path}.phases[${j}]`, PHASES))
+    const tip = c.str(o.liveTip, `${path}.liveTip`, { optional: true, max: 80, spoken: true })
+    if (tip && tip.split(/\s+/).length > 8) c.errors.push(`${path}.liveTip: keep live tips to 8 words or fewer`)
+    const summary = c.str(o.summary, `${path}.summary`, { max: 200, spoken: true })
+    if (summary && /\{(?!count\}|total\})[^}]*\}/.test(summary)) c.errors.push(`${path}.summary: only {count} and {total} placeholders`)
+    c.oneOf(o.severity, `${path}.severity`, ['low', 'medium', 'high'] as const)
+    c.arr(o.tags, `${path}.tags`)
+    const when = c.arr(o.when, `${path}.when`)
+    if (when.length === 0) c.errors.push(`${path}.when: at least one condition`)
+    when.forEach((w, j) => {
+      const wp = `${path}.when[${j}]`
+      const wo = c.obj(w, wp)
+      if (!wo) return
+      c.oneOf(wo.op, `${wp}.op`, OPS)
+      const keys = [wo.key, wo.ref, ...(Array.isArray(wo.sum) ? wo.sum : [])].filter((k) => k !== undefined)
+      if (wo.key === undefined && wo.sum === undefined) c.errors.push(`${wp}: needs "key" or "sum"`)
+      for (const k of keys) if (typeof k !== 'string' || !visionStateKeys.has(k)) c.errors.push(`${wp}: unknown state key "${String(k)}"`)
+      const comparands = [wo.value !== undefined, wo.ref !== undefined, wo.contextValue !== undefined].filter(Boolean).length
+      if (comparands !== 1) c.errors.push(`${wp}: exactly one of value, ref, contextValue`)
+      if (typeof wo.contextValue === 'string' && !contextIds.has(wo.contextValue)) c.errors.push(`${wp}.contextValue: unknown player context`)
+    })
+  })
+
+  const allEvents = new Set([...eventIds, ...visionEvents.keys(), ...derivedEvents])
+
+  c.arr(p.heatmaps, 'heatmaps', true).forEach((h, i) => {
+    const path = `heatmaps[${i}]`
+    const o = c.obj(h, path)
+    if (!o) return
+    c.str(o.id, `${path}.id`, { pattern: ID })
+    c.str(o.label, `${path}.label`, { max: 80 })
+    const ev = c.str(o.eventType, `${path}.eventType`)
+    if (ev && !allEvents.has(ev)) c.errors.push(`${path}.eventType: unknown event "${ev}"`)
+    const zs = c.str(o.zoneSet, `${path}.zoneSet`)
+    if (zs && !zoneSets.has(zs)) c.errors.push(`${path}.zoneSet: unknown zone set "${zs}"`)
+    c.num(o.minEvents, `${path}.minEvents`, 2, 1000)
+    c.str(o.phrase, `${path}.phrase`, { max: 80, spoken: true })
+    c.bool(o.sampled, `${path}.sampled`)
+    c.arr(o.tags, `${path}.tags`)
+    if (o.breakdown !== undefined) {
+      const b = c.obj(o.breakdown, `${path}.breakdown`)
+      if (b) {
+        c.str(b.attribute, `${path}.breakdown.attribute`)
+        c.str(b.label, `${path}.breakdown.label`, { max: 80 })
+      }
+    }
+  })
+
+  if (p.matchStats !== undefined) {
+    const ms = c.obj(p.matchStats, 'matchStats')
+    if (ms) {
+      c.arr(ms.keys, 'matchStats.keys').forEach((k, i) => {
+        const o = c.obj(k, `matchStats.keys[${i}]`)
+        if (!o) return
+        const key = c.str(o.key, `matchStats.keys[${i}].key`)
+        if (key && !visionStateKeys.has(key)) c.errors.push(`matchStats.keys[${i}].key: unknown state key "${key}"`)
+        c.str(o.label, `matchStats.keys[${i}].label`, { max: 80 })
+        c.oneOf(o.better, `matchStats.keys[${i}].better`, ['higher', 'lower', 'neutral'] as const)
+      })
+    }
+  }
+  c.num(p.liveFreshnessMs, 'liveFreshnessMs', 500, 60_000, true)
+
   // Episodes.
   const episodeResponses = new Map<string, Set<string>>()
   c.arr(p.episodes, 'episodes').forEach((ep, i) => {
@@ -413,7 +787,7 @@ export function validateProfile(input: unknown): ValidationResult {
     const id = c.str(o.id, `${path}.id`, { pattern: ID })
     c.str(o.label, `${path}.label`, { max: 80 })
     const trigger = c.str(o.trigger, `${path}.trigger`)
-    if (trigger && !eventIds.has(trigger)) c.errors.push(`${path}.trigger: unknown event "${trigger}"`)
+    if (trigger && !allEvents.has(trigger)) c.errors.push(`${path}.trigger: unknown event "${trigger}"`)
     c.num(o.windowMs, `${path}.windowMs`, 250, 120_000)
     const responses = new Set<string>()
     c.arr(o.responses, `${path}.responses`).forEach((r, j) => {
@@ -423,66 +797,99 @@ export function validateProfile(input: unknown): ValidationResult {
       const rid = c.str(ro.id, `${rp}.id`, { pattern: ID })
       if (rid === 'none') c.errors.push(`${rp}.id: "none" is reserved for "no visible response"`)
       if (rid) responses.add(rid)
-      const ev = c.str(ro.event, `${rp}.event`)
-      if (ev && !eventIds.has(ev)) c.errors.push(`${rp}.event: unknown event "${ev}"`)
-      c.str(ro.label, `${rp}.label`, { max: 60 })
-      c.str(ro.phrase, `${rp}.phrase`, { max: 120 })
+      if ((ro.event === undefined) === (ro.triggerZones === undefined)) c.errors.push(`${rp}: exactly one of "event" or "triggerZones"`)
+      if (ro.event !== undefined) {
+        const ev = c.str(ro.event, `${rp}.event`)
+        if (ev && !allEvents.has(ev)) c.errors.push(`${rp}.event: unknown event "${ev}"`)
+      } else c.arr(ro.triggerZones, `${rp}.triggerZones`)
+      c.str(ro.label, `${rp}.label`, { max: 60, spoken: true })
+      c.str(ro.phrase, `${rp}.phrase`, { max: 120, spoken: true })
     })
     const nr = c.obj(o.noResponse, `${path}.noResponse`)
     if (nr) {
-      c.str(nr.label, `${path}.noResponse.label`, { max: 60 })
-      c.str(nr.phrase, `${path}.noResponse.phrase`, { max: 120 })
+      c.str(nr.label, `${path}.noResponse.label`, { max: 60, spoken: true })
+      c.str(nr.phrase, `${path}.noResponse.phrase`, { max: 120, spoken: true })
     }
     const neg = c.arr(o.negativeOutcomes, `${path}.negativeOutcomes`)
     if (neg.length === 0) c.errors.push(`${path}.negativeOutcomes: at least one outcome event is required`)
-    const pos = o.positiveOutcomes === undefined ? [] : c.arr(o.positiveOutcomes, `${path}.positiveOutcomes`)
+    const pos = c.arr(o.positiveOutcomes, `${path}.positiveOutcomes`, true)
     for (const ev of [...neg, ...pos]) {
-      if (typeof ev !== 'string' || !eventIds.has(ev)) c.errors.push(`${path}: unknown outcome event "${String(ev)}"`)
+      if (typeof ev !== 'string' || !allEvents.has(ev)) c.errors.push(`${path}: unknown outcome event "${String(ev)}"`)
     }
     for (const s of c.arr(o.visibility, `${path}.visibility`)) {
-      if (typeof s !== 'string' || !signalIds.has(s)) c.errors.push(`${path}.visibility: unknown signal "${String(s)}"`)
+      if (typeof s !== 'string' || (!signalIds.has(s) && !visionStateKeys.has(s))) c.errors.push(`${path}.visibility: unknown signal or state "${String(s)}"`)
     }
     const ph = c.obj(o.phrases, `${path}.phrases`)
     if (ph) {
-      c.str(ph.trigger, `${path}.phrases.trigger`, { max: 120 })
-      c.str(ph.negative, `${path}.phrases.negative`, { max: 120 })
-      c.str(ph.negativeShort, `${path}.phrases.negativeShort`, { max: 60 })
+      c.str(ph.trigger, `${path}.phrases.trigger`, { max: 120, spoken: true })
+      c.str(ph.negative, `${path}.phrases.negative`, { max: 120, spoken: true })
+      c.str(ph.negativeShort, `${path}.phrases.negativeShort`, { max: 60, spoken: true })
     }
     if (id) episodeResponses.set(id, responses)
   })
 
-  // Live cues.
   c.arr(p.liveCues, 'liveCues').forEach((lc, i) => {
     const path = `liveCues[${i}]`
     const o = c.obj(lc, path)
     if (!o) return
     c.str(o.id, `${path}.id`, { pattern: ID })
     const trigger = c.str(o.trigger, `${path}.trigger`)
-    if (trigger && !eventIds.has(trigger)) c.errors.push(`${path}.trigger: unknown event "${trigger}"`)
+    if (trigger && !allEvents.has(trigger)) c.errors.push(`${path}.trigger: unknown event "${trigger}"`)
     const episode = c.str(o.episode, `${path}.episode`)
     const recommend = c.str(o.recommend, `${path}.recommend`)
     if (episode && !episodeResponses.has(episode)) c.errors.push(`${path}.episode: unknown episode "${episode}"`)
     else if (episode && recommend && !episodeResponses.get(episode)!.has(recommend)) {
       c.errors.push(`${path}.recommend: "${recommend}" is not a response of episode "${episode}"`)
     }
-    const imperative = c.str(o.imperative, `${path}.imperative`, { max: 60 })
+    const imperative = c.str(o.imperative, `${path}.imperative`, { max: 60, spoken: true })
     if (imperative && imperative.split(/\s+/).length > 6) c.errors.push(`${path}.imperative: keep live cues to 6 words or fewer`)
-    c.num(o.maxAgeMs, `${path}.maxAgeMs`, 100, 10_000)
+    c.num(o.maxAgeMs, `${path}.maxAgeMs`, 100, 30_000)
   })
 
+  const knowledge = c.obj(p.knowledge, 'knowledge')
+  if (knowledge) {
+    c.arr(knowledge.concepts, 'knowledge.concepts').forEach((k, i) => {
+      const path = `knowledge.concepts[${i}]`
+      const o = c.obj(k, path)
+      if (!o) return
+      c.str(o.id, `${path}.id`, { pattern: ID })
+      c.str(o.title, `${path}.title`, { max: 100 })
+      c.str(o.summary, `${path}.summary`, { max: 600, spoken: true })
+      for (const f of ['good', 'bad', 'tags'] as const) c.arr(o[f], `${path}.${f}`).forEach((x, j) => c.str(x, `${path}.${f}[${j}]`, { max: 300, spoken: true }))
+    })
+    c.arr(knowledge.prohibitedAdvice, 'knowledge.prohibitedAdvice').forEach((x, i) => c.str(x, `knowledge.prohibitedAdvice[${i}]`, { max: 300 }))
+    c.obj(knowledge.terminology, 'knowledge.terminology')
+  }
+
   c.arr(p.limitations, 'limitations').forEach((l, i) => c.str(l, `limitations[${i}]`, { max: 500 }))
+  c.arr(p.failClosed, 'failClosed').forEach((l, i) => c.str(l, `failClosed[${i}]`, { max: 300 }))
 
   return c.errors.length ? { ok: false, errors: c.errors } : { ok: true, profile: input as GameProfile }
 }
 
-/** Live tactical coaching is permitted only for non-competitive modes or modes with documented approval. */
-export function modeAllowsLiveCoaching(mode: ProfileMode | null): boolean {
-  if (!mode) return false
-  if (mode.liveCoaching.status === 'prohibited') return false
-  if (!mode.competitive && !mode.multiplayer) return true
-  return mode.liveCoaching.status === 'approved' && !!mode.liveCoaching.source && !!mode.liveCoaching.reviewedAt
-}
-
 export function majorVersion(version: string): number {
   return Number.parseInt(version.split('.')[0] ?? '0', 10)
+}
+
+/** Suggest a pack from the OS window title. A suggestion only: the player confirms. */
+export function suggestProfile(profiles: readonly GameProfile[], windowTitle: string): GameProfile | null {
+  for (const p of profiles) {
+    for (const hint of p.capture.windowTitleHints ?? []) {
+      if (new RegExp(hint, 'i').test(windowTitle)) return p
+    }
+  }
+  return null
+}
+
+/** Every event type a pack can produce, with its label and category. */
+export function eventCatalog(p: GameProfile): Map<string, { label: string; category: EventCategory }> {
+  const out = new Map<string, { label: string; category: EventCategory }>()
+  for (const e of p.events) out.set(e.id, { label: e.label, category: e.category })
+  for (const e of p.vision?.events ?? []) out.set(e.type, { label: e.label, category: e.category })
+  for (const r of p.scoreRules ?? []) {
+    out.set(r.forEvent, { label: 'Goal scored', category: 'outcome' })
+    out.set(r.againstEvent, { label: 'Goal conceded', category: 'outcome' })
+  }
+  for (const m of p.mistakes ?? []) out.set(m.id, { label: m.label, category: 'mistake' })
+  return out
 }

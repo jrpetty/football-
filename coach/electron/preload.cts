@@ -1,29 +1,57 @@
 // The only bridge between the sandboxed renderer and the main process. It
-// exposes a fixed, narrow API (see shared/bridge.ts) — no Node, no filesystem,
-// no shell, no process access. Channel names repeat shared/channels.ts because
-// a sandboxed preload cannot import local modules.
+// exposes a fixed, narrow API (see shared/bridge.ts): no Node, no filesystem,
+// no shell, no process access, and never the API key. Channel names repeat
+// shared/channels.ts because a sandboxed preload cannot import local modules.
 
 // A sandboxed preload must be CommonJS.
 const { contextBridge, ipcRenderer } = require('electron') as typeof import('electron')
 import type { SightlineBridge } from '../shared/bridge.ts'
 
+const invoke = (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args)
+const listen = (channel: string, cb: () => void) => {
+  const listener = () => cb()
+  ipcRenderer.on(channel, listener)
+  return () => {
+    ipcRenderer.removeListener(channel, listener)
+  }
+}
+
 const bridge: SightlineBridge = {
-  info: () => ipcRenderer.invoke('sightline:info'),
-  listSources: () => ipcRenderer.invoke('sightline:list-sources'),
-  chooseSource: (id) => ipcRenderer.invoke('sightline:choose-source', id),
+  info: () => invoke('sightline:info'),
+  listSources: () => invoke('sightline:list-sources'),
+  chooseSource: (id) => invoke('sightline:choose-source', id),
   setCaptureState: (active, label) => ipcRenderer.send('sightline:capture-state', active, label),
-  loadSettings: () => ipcRenderer.invoke('sightline:load-settings'),
-  saveSettings: (s) => ipcRenderer.invoke('sightline:save-settings', s),
-  loadTendencies: (id) => ipcRenderer.invoke('sightline:load-tendencies', id),
-  saveTendencies: (snap) => ipcRenderer.invoke('sightline:save-tendencies', snap),
-  forgetTendencies: (id) => ipcRenderer.invoke('sightline:forget-tendencies', id),
-  listUserProfiles: () => ipcRenderer.invoke('sightline:list-user-profiles'),
-  openProfilesFolder: () => ipcRenderer.invoke('sightline:open-profiles-folder'),
-  onStopRequested: (cb) => {
-    const listener = () => cb()
-    ipcRenderer.on('sightline:stop-requested', listener)
-    return () => ipcRenderer.removeListener('sightline:stop-requested', listener)
-  },
+  loadSettings: () => invoke('sightline:load-settings'),
+  saveSettings: (s) => invoke('sightline:save-settings', s),
+  loadTendencies: (id) => invoke('sightline:load-tendencies', id),
+  saveTendencies: (snap) => invoke('sightline:save-tendencies', snap),
+  setPatternVerdict: (id, ep, v) => invoke('sightline:set-pattern-verdict', id, ep, v),
+  deletePattern: (id, ep) => invoke('sightline:delete-pattern', id, ep),
+  loadMatches: (id) => invoke('sightline:load-matches', id),
+  saveMatch: (r) => invoke('sightline:save-match', r),
+  deleteMatch: (id, m) => invoke('sightline:delete-match', id, m),
+  loadNotes: (id) => invoke('sightline:load-notes', id),
+  saveNotes: (id, n) => invoke('sightline:save-notes', id, n),
+  forgetPlayerData: (id) => invoke('sightline:forget-player-data', id),
+  exportPlayerData: () => invoke('sightline:export-player-data'),
+  storageInfo: () => invoke('sightline:storage-info'),
+  listUserProfiles: () => invoke('sightline:list-user-profiles'),
+  openProfilesFolder: () => invoke('sightline:open-profiles-folder'),
+  cloudStatus: () => invoke('sightline:cloud-status'),
+  setCloudSettings: (s) => invoke('sightline:set-cloud-settings', s),
+  setApiKey: (k) => invoke('sightline:set-api-key', k),
+  resetCloudSession: () => invoke('sightline:reset-cloud-session'),
+  analyzeFrame: (req) => invoke('sightline:analyze-frame', req),
+  ask: (req) => invoke('sightline:ask', req),
+  research: (req) => invoke('sightline:research', req),
+  loadResearch: (id) => invoke('sightline:load-research', id),
+  deleteResearch: (id) => invoke('sightline:delete-research', id),
+  voiceStatus: () => invoke('sightline:voice-status'),
+  installVoiceModel: () => invoke('sightline:install-voice-model'),
+  removeVoiceModel: () => invoke('sightline:remove-voice-model'),
+  transcribe: (pcm) => invoke('sightline:transcribe', pcm),
+  onStopRequested: (cb) => listen('sightline:stop-requested', cb),
+  onPushToTalk: (cb) => listen('sightline:push-to-talk', cb),
 }
 
 contextBridge.exposeInMainWorld('sightline', bridge)

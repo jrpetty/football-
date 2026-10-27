@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "reviewMaxAgeDays": 180,
+  "note": "Live-coaching policy status by game and mode. This is a maintained record, not legal advice. Every entry must be re-reviewed by a person before release and at least every reviewMaxAgeDays; stale entries are automatically treated as needs_publisher_review. Tournament and event rules are a separate, stricter layer (the in-app tournament switch disables all coaching output).",
+  "entries": [
+    {
+      "id": "valorant/all",
+      "publisher": "Riot Games",
+      "game": "VALORANT",
+      "gameIds": ["valorant"],
+      "modes": ["*"],
+      "status": "post_match_only",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://support.riotgames.com/en-us/valorant/account/third-party-applications",
+          "title": "Riot's Stance (VALORANT, third-party applications)",
+          "excerpt": "Unacceptable: applications that provide a measurable player advantage, such as exposing information that's intentionally obfuscated, taking actions on your behalf (botting or scripting), drawing conclusions for you during gameplay, and altering your field of intelligence. Riot wants players to review and analyze their games after playing rather than receive real-time analysis.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; direct page fetch failed from the build environment - a person must confirm the wording)",
+      "notes": "No live output in any mode, including the practice range. Post-match review only."
+    },
+    {
+      "id": "league-of-legends/all",
+      "publisher": "Riot Games",
+      "game": "League of Legends",
+      "gameIds": ["league-of-legends"],
+      "modes": ["*"],
+      "status": "post_match_only",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/225266848",
+          "title": "Third Party Applications (League of Legends)",
+          "excerpt": "The same Riot list of unacceptable features (including drawing conclusions for you during gameplay) appears on Riot's support pages for League of Legends.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "No game pack ships for this title; the generic pack would run post-match only."
+    },
+    {
+      "id": "ea-fc/offline-vs-cpu",
+      "publisher": "Electronic Arts",
+      "game": "EA SPORTS FC",
+      "gameIds": ["ea-fc"],
+      "modes": ["kickoff-vs-cpu", "career-mode"],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Offline modes against the CPU with no other players and no ranked rewards. EA has not been asked; this is Sightline's internal judgement that live training tips here cannot disadvantage another player. It is not EA approval.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": "If the selected mode is wrong (e.g. actually online), the player bears the risk; the UI asks them to confirm the mode."
+    },
+    {
+      "id": "ea-fc/all-other-modes",
+      "publisher": "Electronic Arts",
+      "game": "EA SPORTS FC",
+      "gameIds": ["ea-fc"],
+      "modes": ["*"],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://help.ea.com/help/ea-sports-fc/fc-mobile-know-the-rules",
+          "title": "How to play by the rules in EA SPORTS FC Mobile",
+          "excerpt": "EA lists bots, exploits, cheats and specialized software among prohibited conduct that gives an unfair advantage. No statement about screen-only coaching tools was found, and the console/PC user agreement text was not reviewed.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Online, Ultimate Team (including Squad Battles, which has ranked rewards), Clubs and co-op: fail closed to post-match review until EA's position is documented."
+    },
+    {
+      "id": "aoe2-de/offline-vs-ai",
+      "publisher": "Xbox Game Studios / World's Edge",
+      "game": "Age of Empires II: Definitive Edition",
+      "gameIds": ["aoe2-de"],
+      "modes": ["campaign", "skirmish-vs-ai"],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Single-player campaign and skirmish against the AI. No other players are affected. This is Sightline's internal judgement, not Microsoft or World's Edge approval.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": ""
+    },
+    {
+      "id": "aoe2-de/all-other-modes",
+      "publisher": "Xbox Game Studios / World's Edge",
+      "game": "Age of Empires II: Definitive Edition",
+      "gameIds": ["aoe2-de"],
+      "modes": ["*"],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://www.thegamer.com/age-of-empires-2-de-capture-age/",
+          "title": "Capture Age partnership (spectating overlay) - secondary source",
+          "excerpt": "World's Edge partnered with Capture Age, a tournament spectating overlay. No official statement on coaching or analysis tools in ranked or multiplayer play was found.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Ranked and unranked multiplayer: fail closed to post-match review."
+    },
+    {
+      "id": "synthetic-arena/practice",
+      "publisher": "Sightline (fictional demo game)",
+      "game": "Synthetic Arena",
+      "gameIds": ["synthetic-arena"],
+      "modes": ["practice"],
+      "status": "approved_for_scope",
+      "scope": ["live", "round_break", "post_match"],
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Fictional game drawn by the built-in simulator; Sightline is its 'publisher'.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build",
+      "notes": "Demonstrates live training tips."
+    },
+    {
+      "id": "synthetic-arena/ranked",
+      "publisher": "Sightline (fictional demo game)",
+      "game": "Synthetic Arena",
+      "gameIds": ["synthetic-arena"],
+      "modes": ["ranked"],
+      "status": "approved_for_scope",
+      "scope": ["round_break", "post_match"],
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Fictional. Demonstrates a competitive mode where only reflective notes between rounds and after the match are approved.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build",
+      "notes": ""
+    },
+    {
+      "id": "synthetic-arena/casual",
+      "publisher": "Sightline (fictional demo game)",
+      "game": "Synthetic Arena",
+      "gameIds": ["synthetic-arena"],
+      "modes": ["casual"],
+      "status": "needs_publisher_review",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Fictional. Demonstrates fail-closed behaviour for an unreviewed multiplayer mode.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build",
+      "notes": ""
+    },
+    {
+      "id": "default/offline-single-player",
+      "publisher": "(any)",
+      "game": "Any game without its own entry",
+      "gameIds": ["*"],
+      "modes": [],
+      "modeClass": "offline-single-player",
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "When the player declares an offline, single-player, non-competitive mode of a game with no registry entry, live training tips cannot disadvantage another player. Internal judgement, not publisher approval; a game-specific entry always takes precedence.",
+      "reviewedAt": "2026-10-27",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": "Any multiplayer or competitive mode of an unlisted game resolves to needs_publisher_review."
+    }
+  ]
+}

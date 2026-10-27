@@ -18,8 +18,16 @@ export interface CoachSettings {
     /** 0–1 */
     readonly volume: number
   }
-  /** Opt-in: keep structured tendency counts between sessions. Never frames. */
+  /** Opt-in: keep structured tendency counts, match history and notes between sessions. Never frames. */
   readonly saveTendencies: boolean
+  /** Opt-in: push-to-talk questions, recognised locally. Enables the microphone only while talking. */
+  readonly voiceInput: boolean
+  /** Tournament / event play: all coaching output is disabled (event rules can be stricter than publishers'). */
+  readonly tournament: boolean
+  /** For the generic pack: which game this is (a policy registry id such as "valorant"), or null if unlisted. */
+  readonly gameId: string | null
+  /** Pack-defined player context (e.g. which side of the scoreboard is yours), by pack id. */
+  readonly context: Readonly<Record<string, Readonly<Record<string, string | number>>>>
   readonly profileId: string | null
   readonly profileModeId: string | null
 }
@@ -37,6 +45,10 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   muted: false,
   voice: { voiceURI: null, rate: 1, volume: 0.8 },
   saveTendencies: false,
+  voiceInput: false,
+  tournament: false,
+  gameId: null,
+  context: {},
   profileId: null,
   profileModeId: null,
 }
@@ -72,9 +84,30 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
       volume: num(voice.volume, 0, 1, base.voice.volume),
     },
     saveTendencies: typeof o.saveTendencies === 'boolean' ? o.saveTendencies : base.saveTendencies,
+    voiceInput: typeof o.voiceInput === 'boolean' ? o.voiceInput : base.voiceInput,
+    tournament: typeof o.tournament === 'boolean' ? o.tournament : base.tournament,
+    gameId: id(o.gameId, base.gameId),
+    context: sanitizeContext(o.context, base.context),
     profileId: id(o.profileId, base.profileId),
     profileModeId: id(o.profileModeId, base.profileModeId),
   }
+}
+
+/** Player context: small maps of short strings or finite numbers, by pack id. */
+function sanitizeContext(v: unknown, base: CoachSettings['context']): CoachSettings['context'] {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return base
+  const out: Record<string, Record<string, string | number>> = {}
+  for (const [pack, values] of Object.entries(v).slice(0, 50)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof values !== 'object' || values === null) continue
+    const clean: Record<string, string | number> = {}
+    for (const [k, x] of Object.entries(values).slice(0, 20)) {
+      if (!/^[a-zA-Z][a-zA-Z0-9]{0,40}$/.test(k)) continue
+      if (typeof x === 'number' && Number.isFinite(x)) clean[k] = x
+      else if (typeof x === 'string' && x.length <= 80) clean[k] = x
+    }
+    out[pack] = clean
+  }
+  return out
 }
 
 export const MODE_INFO: Record<CoachingMode, { label: string; summary: string; live: boolean }> = {

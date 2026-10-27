@@ -5,8 +5,12 @@ import assert from 'node:assert/strict'
 import { BoundedFrameQueue } from '../src/core/queue.ts'
 import { renderHud, simulateFrames } from '../src/sim/syntheticArena.ts'
 import { PipelineHost, QUEUE_CAPACITY } from '../src/worker/host.ts'
-import type { FromWorker } from '../src/worker/protocol.ts'
-import { arena, settings } from './helpers.ts'
+import type { FromWorker, ToWorker } from '../src/worker/protocol.ts'
+import { arena, policyFor, settings } from './helpers.ts'
+
+function start(): Extract<ToWorker, { type: 'start' }> {
+  return { type: 'start', profile: arena, settings: settings(), policy: policyFor(arena, 'ranked'), history: null, matchHistory: [], context: {}, vision: { enabled: false, intervalMs: 3000 }, now: 0 }
+}
 
 test('the queue drops and releases the oldest items beyond capacity', () => {
   const released: number[] = []
@@ -33,9 +37,9 @@ test('every bitmap is closed, whether analysed or dropped, and bursts are bounde
     post: (m) => posted.push(m),
     schedule: (fn) => tasks.push(fn),
     now: () => 0,
-    decode: (_b, t) => renderHud({ health: 1, abilityReady: true, roundLive: true, eliminated: false, banner: null }, 256, 144, t),
+    encodeJpeg: async () => new ArrayBuffer(8), decode: (_b, t) => renderHud({ health: 1, abilityReady: true, roundLive: true, eliminated: false, banner: null }, 256, 144, t),
   })
-  host.handle({ type: 'start', profile: arena, settings: settings(), history: null, now: 0 })
+  host.handle(start())
   const bitmaps = Array.from({ length: 6 }, () => fakeBitmap(closed))
   bitmaps.forEach((bitmap, i) => host.handle({ type: 'bitmap', bitmap, timestamp: i * 100 }))
   for (const t of tasks.splice(0)) t()
@@ -49,8 +53,8 @@ test('every bitmap is closed, whether analysed or dropped, and bursts are bounde
 test('frames after stop are ignored, and stop returns a snapshot', () => {
   const posted: FromWorker[] = []
   const closed = new Set<object>()
-  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => fn(), now: () => 0, decode: () => { throw new Error('unused') } })
-  host.handle({ type: 'start', profile: arena, settings: settings(), history: null, now: 0 })
+  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => fn(), now: () => 0, encodeJpeg: async () => new ArrayBuffer(8), decode: () => { throw new Error('unused') } })
+  host.handle(start())
   for (const frame of simulateFrames({ rounds: 1, seed: 1, fps: 4 })) host.handle({ type: 'pixels', frame })
   host.handle({ type: 'stop', now: 1e6 })
   const stopped = posted.find((m) => m.type === 'stopped')
@@ -63,11 +67,47 @@ test('frames after stop are ignored, and stop returns a snapshot', () => {
 test('engine errors are reported, not thrown across the worker boundary', () => {
   const posted: FromWorker[] = []
   const tasks: (() => void)[] = []
-  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => tasks.push(fn), now: () => 0, decode: () => { throw new Error('decode failed') } })
-  host.handle({ type: 'start', profile: arena, settings: settings(), history: null, now: 0 })
+  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => tasks.push(fn), now: () => 0, encodeJpeg: async () => new ArrayBuffer(8), decode: () => { throw new Error('decode failed') } })
+  host.handle(start())
   host.handle({ type: 'bitmap', bitmap: fakeBitmap(new Set()), timestamp: 0 })
   // Runs later, as setTimeout would in the worker: errors must not escape.
   assert.doesNotThrow(() => tasks.forEach((t) => t()))
   assert.ok(posted.some((m) => m.type === 'error' && /decode failed/.test(m.message)))
   assert.ok(posted.some((m) => m.type === 'output' && m.frameDone), 'flow control is released')
+})
+
+test('with cloud vision on, frames are sampled, answers validated, and only declared observations reach the engine', async () => {
+  const { builtInProfile } = await import('../src/profiles/index.ts')
+  const aoe = builtInProfile('aoe2-de')
+  const posted: FromWorker[] = []
+  let t = 0
+  const host = new PipelineHost({
+    post: (m) => posted.push(m), schedule: (fn) => fn(), now: () => 0, encodeJpeg: async () => new ArrayBuffer(16),
+    decode: () => { throw new Error('unused') },
+  })
+  host.handle({ ...start(), profile: aoe, settings: settings({ profileId: 'aoe2-de', profileModeId: 'skirmish-vs-ai', mode: 'training' }), policy: policyFor(aoe, 'skirmish-vs-ai'), vision: { enabled: true, intervalMs: 3000 } })
+  const frame = (ts: number, shade: number) => ({ width: 64, height: 36, data: new Uint8ClampedArray(64 * 36 * 4).fill(shade), timestamp: ts })
+  for (; t <= 9000; t += 500) host.handle({ type: 'pixels', frame: frame(t, 40 + (t % 3000 === 0 ? t / 100 : 0)) })
+  await new Promise((r) => setTimeout(r, 0))
+  const frames = posted.filter((m) => m.type === 'vision-frame')
+  assert.equal(frames.length, 1, 'one request in flight at a time')
+  const first = frames[0] as Extract<FromWorker, { type: 'vision-frame' }>
+  host.handle({
+    type: 'vision-result', frameAt: first.frameAt, arrivedAt: first.frameAt + 1500, error: null,
+    response: { phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, unreadable: '',
+      state: [{ key: 'population', value: '30', confidence: 0.9 }, { key: 'populationCap', value: '30', confidence: 0.9 }, { key: 'enemyArmy', value: '40', confidence: 0.9 }],
+      events: [] },
+  })
+  const status = posted.filter((m) => m.type === 'output' && m.status).at(-1) as Extract<FromWorker, { type: 'output' }>
+  assert.equal(status.status!.visible.values.population.value, 30)
+  assert.equal(status.status!.visible.values.enemyArmy, undefined)
+  assert.equal(status.status!.vision.dropped, 1)
+  assert.equal(status.status!.vision.latencyMs, 1500)
+
+  // A fatal error (no key, spend cap) pauses sampling and is reported once.
+  host.handle({ type: 'vision-result', frameAt: 9000, arrivedAt: 9100, error: 'Session spend cap reached', response: null, fatal: true })
+  const before = posted.filter((m) => m.type === 'vision-frame').length
+  for (t = 20_000; t <= 40_000; t += 1000) host.handle({ type: 'pixels', frame: frame(t, (t / 1000) % 200) })
+  assert.equal(posted.filter((m) => m.type === 'vision-frame').length, before)
+  assert.ok(posted.some((m) => m.type === 'output' && m.entries.some((e) => e.type === 'notice' && /spend cap/.test(e.text))))
 })

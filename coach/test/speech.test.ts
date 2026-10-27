@@ -26,7 +26,7 @@ function setup(voices: Partial<SpeechSynthesisVoice>[]) {
   return { c, spoken, log, cancels: () => cancels, setNow: (t: number) => (now = t) }
 }
 
-const u = (id: string, expiresAt: number | null = null): Utterance => ({ id, text: id, kind: 'round-review', expiresAt })
+const u = (id: string, expiresAt: number | null = null, priority: Utterance['priority'] = 'normal'): Utterance => ({ id, text: id, category: 'reflective', priority, expiresAt })
 
 test('only local voices are offered or used', () => {
   const { c, spoken } = setup([
@@ -75,4 +75,16 @@ test('the waiting backlog is bounded', () => {
   const { c, log } = setup([{ voiceURI: 'v', localService: true, default: true }])
   for (const id of ['a', 'b', 'c', 'd']) c.enqueue(u(id))
   assert.ok(log.includes('expired b'))
+})
+
+test('a high-priority tip pre-empts lower-priority speech; the backlog drops the least important', () => {
+  const { c, spoken, log } = setup([{ voiceURI: 'v', localService: true, default: true }])
+  c.enqueue(u('note', null, 'low'))
+  c.enqueue(u('tip', null, 'high'))
+  assert.ok(log.includes('interrupted note'))
+  assert.equal(spoken.at(-1)!.text, 'tip')
+  c.enqueue(u('a', null, 'low'))
+  c.enqueue(u('b', null, 'normal'))
+  c.enqueue(u('c', null, 'normal'))
+  assert.ok(log.includes('expired a'), 'the low-priority item was dropped first')
 })
