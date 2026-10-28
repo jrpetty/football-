@@ -60,15 +60,19 @@
       ],
       "modes": [
         "kickoff-vs-cpu",
-        "career-mode"
+        "career-mode",
+        "career-player",
+        "practice-arena",
+        "kickoff-house-rules",
+        "tournaments"
       ],
       "status": "noncompetitive_only",
       "basis": "internal",
       "sources": [],
-      "rationale": "Offline modes against the CPU with no other players and no ranked rewards. EA has not been asked; this is Sightline's internal judgement that live training tips here cannot disadvantage another player. It is not EA approval.",
-      "reviewedAt": "2026-10-27",
+      "rationale": "Offline modes against the CPU (Kick-Off, House Rules, offline Tournaments, Manager and Player Career, the Practice Arena) with no other players, no ranked ladder and no Ultimate Team rewards. EA has not been asked; this is Sightline's internal judgement that live training tips here cannot disadvantage another player. It is not EA approval.",
+      "reviewedAt": "2026-10-28",
       "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
-      "notes": "If the selected mode is wrong (e.g. actually online), the player bears the risk; the UI asks them to confirm the mode."
+      "notes": "Ultimate Team modes against the AI (Squad Battles, Single Player Draft, Moments, Live Events vs AI) stay post-match: they are online-connected, earn rewards, and Squad Battles is ranked on a weekly leaderboard. If the selected mode is wrong (e.g. actually online), the player bears the risk; the UI asks them to confirm the mode."
     },
     {
       "id": "ea-fc/all-other-modes",
@@ -88,11 +92,35 @@
           "title": "How to play by the rules in EA SPORTS FC Mobile",
           "excerpt": "EA lists bots, exploits, cheats and specialized software among prohibited conduct that gives an unfair advantage. No statement about screen-only coaching tools was found, and the console/PC user agreement text was not reviewed.",
           "verification": "search-excerpt"
+        },
+        {
+          "url": "https://tos.ea.com/legalapp/WEBTERMS/US/en/PC/11072022",
+          "title": "Electronic Arts User Agreement (PC, 2022 version)",
+          "excerpt": "The 2022 PC User Agreement describes prohibited third-party programs as ones EA believes enable or facilitate cheating, modify the game interface or experience in unauthorised ways, or intercept or collect information from the game.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://help.ea.com/en/articles/ea-sports-fc/fc-rules/",
+          "title": "How to play EA SPORTS FC by the rules (EA Help)",
+          "excerpt": "EA's FC rules page covers cheating, exploits and third-party coin buying; bans can cover all FC online play. It advises against third-party apps that can expose login details.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-27-official-rules",
+          "title": "EA SPORTS FC Pro 27 Official Rules (EA)",
+          "excerpt": "FC Pro 27 rules list using cheats, hacks or other third-party \"helper\" applications as a violation; an appointed human coach may be present.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://www.ea.com/news/introducing-ea-javelin-anticheat",
+          "title": "Introducing EA Javelin Anticheat (EA)",
+          "excerpt": "EA Javelin Anticheat runs on PC and shuts the game down when it detects software on its denylist.",
+          "verification": "search-excerpt"
         }
       ],
-      "reviewedAt": "2026-10-27",
+      "reviewedAt": "2026-10-28",
       "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
-      "notes": "Online, Ultimate Team (including Squad Battles, which has ranked rewards), Clubs and co-op: fail closed to post-match review until EA's position is documented."
+      "notes": "Online, Ultimate Team (including Squad Battles, Drafts and Live Events against the AI, which earn rewards), Rush, Clubs, co-op and The Grounds: post-match review only until EA's position is documented. Division Rivals feeds FC Pro qualification, whose rules ban helper applications."
     },
     {
       "id": "aoe2-de/offline-vs-ai",

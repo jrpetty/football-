@@ -145,6 +145,8 @@ export interface PitchReport {
   readonly live: PitchLive | null
   readonly match: PitchMatchRecord | null
   readonly insights: readonly PitchInsight[]
+  /** What to change in the game's radar settings so it reads well (null: nothing). */
+  readonly hint: string | null
 }
 
 /** The current map: where the player is, what was learned about it, and what that says. */
@@ -316,6 +318,19 @@ export class CoachEngine {
   }
 
   /** The team colours the player set for the radar (null: the game's default colours). */
+  /** Radar colour settings that make the radar hard or impossible to read. */
+  private radarHint(): string | null {
+    const spec = this.profile.pitch
+    const v = (k: string | undefined) => (k ? String(this.context[k] ?? 'default') : 'default')
+    const ours = v(spec?.oursColourKey)
+    const theirs = v(spec?.theirsColourKey)
+    if (ours === 'black' || theirs === 'black') return 'Black radar dots cannot be told from the dark radar. In Settings > Game Settings > Visual, set User and Opponent Radar Colour to two other colours, such as Blue and Red.'
+    if (ours !== 'default' && ours === theirs) return 'Both teams have the same radar colour, so they cannot be told apart. Set the Opponent Radar Colour to a different one.'
+    if (ours === 'default' || theirs === 'default')
+      return 'Radar colours are at Default (kit colours), so similar kits can look the same and your team is worked out from the goals. Set User and Opponent Radar Colour to two strong colours, such as Blue and Red, and choose the same here.'
+    return null
+  }
+
   private radarColours(): { ours: RadarColour | null; theirs: RadarColour | null } {
     const spec = this.profile.pitch
     const pick = (k: string | undefined) => {
@@ -903,7 +918,7 @@ export class CoachEngine {
     const match = this.pitch.snapshot()
     const past = this.matchHistory.flatMap((m) => (m.pitch ? [m.pitch] : []))
     const all = [...past, ...(match ? [match] : [])]
-    const report: PitchReport = { live: this.pitch.status(t), match, insights: pitchInsights(all, null) }
+    const report: PitchReport = { live: this.pitch.status(t), match, insights: pitchInsights(all, null, 8, this.profile.knowledge.formations), hint: this.radarHint() }
     this.pitchCache = { at: t, report }
     return report
   }

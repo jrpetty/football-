@@ -13,6 +13,8 @@
 
 import type { NormRect } from '../types.ts'
 import { PITCH_LENGTH as L, PITCH_WIDTH as WD, readRadar, type RadarBall, type RadarColour } from './radar.ts'
+import { assign } from './assign.ts'
+import { formationOf } from './formations.ts'
 
 export type Side = 'ours' | 'theirs'
 type Label = 'A' | 'B'
@@ -43,6 +45,10 @@ export interface ShapeStats {
   readonly compact: number
   /** Outfield players between the ball and their own goal. */
   readonly behindBall: number
+  /** Back line to midfield line (metres); older records do not have it. */
+  readonly gap?: number
+  /** Share of frames with an outfield player within 5 m of the ball (pressure, as analysts count it). */
+  readonly press?: number
   /** Back-line heights, frames per 5 m from the goal line. */
   readonly lineHist: readonly number[]
   /** Average positions of the ten outfield players, and the formation they make (e.g. "4-4-2"). */
@@ -494,7 +500,10 @@ function dist3(a: readonly number[], b: readonly number[]): number {
 }
 
 /** A team's shape on one frame, own goal at x = 0: outfield players only (the deepest player is the goalkeeper). */
-export function teamMetrics(players: readonly P[], ball: P | null): { line: number; backLine: number; length: number; width: number; compact: number; behindBall: number; outfield: P[] } | null {
+export function teamMetrics(
+  players: readonly P[],
+  ball: P | null,
+): { line: number; backLine: number; length: number; width: number; compact: number; behindBall: number; gap: number; near: number; outfield: P[] } | null {
   if (players.length < 8) return null
   const sorted = [...players].sort((a, b) => a[0] - b[0])
   // The goalkeeper: the deepest, when well behind the next.
@@ -503,6 +512,10 @@ export function teamMetrics(players: readonly P[], ball: P | null): { line: numb
   const ys = outfield.map((p) => p[1])
   const cx = xs.reduce((s, v) => s + v, 0) / xs.length
   const cy = ys.reduce((s, v) => s + v, 0) / ys.length
+  // The back line ends at the biggest step after the third to fifth deepest player; the next three are the midfield line.
+  let k = 3
+  for (const j of [4, 5]) if (j < xs.length && xs[j] - xs[j - 1] > xs[k] - xs[k - 1]) k = j
+  const mean = (a: readonly number[]) => a.reduce((s, v) => s + v, 0) / Math.max(1, a.length)
   return {
     line: xs[0],
     backLine: xs.slice(0, 4).reduce((s, v) => s + v, 0) / Math.min(4, xs.length),
@@ -510,6 +523,8 @@ export function teamMetrics(players: readonly P[], ball: P | null): { line: numb
     width: Math.max(...ys) - Math.min(...ys),
     compact: outfield.reduce((s, p) => s + Math.hypot(p[0] - cx, p[1] - cy), 0) / outfield.length,
     behindBall: ball ? outfield.filter((p) => p[0] < ball[0]).length : 0,
+    gap: xs.length > k ? mean(xs.slice(k, k + 3)) - mean(xs.slice(0, k)) : 0,
+    near: ball ? Math.min(...outfield.map((p) => Math.hypot(p[0] - ball[0], p[1] - ball[1]))) : Infinity,
     outfield,
   }
 }
@@ -517,7 +532,9 @@ export function teamMetrics(players: readonly P[], ball: P | null): { line: numb
 /** Averages of a team's shape over frames (own goal at x = 0), with the average formation. */
 export function shapeStats(frames: readonly { players: readonly P[]; ball: P | null }[]): ShapeStats | null {
   let n = 0
-  const sum = { line: 0, backLine: 0, length: 0, width: 0, compact: 0, behindBall: 0 }
+  const sum = { line: 0, backLine: 0, length: 0, width: 0, compact: 0, behindBall: 0, gap: 0 }
+  let withBall = 0
+  let pressed = 0
   const hist = new Array(21).fill(0)
   let slots: [number, number][] | null = null
   const acc: [number, number, number][] = []
@@ -531,6 +548,11 @@ export function shapeStats(frames: readonly { players: readonly P[]; ball: P | n
     sum.width += m.width
     sum.compact += m.compact
     sum.behindBall += m.behindBall
+    sum.gap += m.gap
+    if (Number.isFinite(m.near)) {
+      withBall++
+      if (m.near <= 5) pressed++
+    }
     hist[Math.min(20, Math.max(0, Math.floor(m.line / 5)))]++
     // The average formation: frames with all ten outfield players, each matched to the nearest slot.
     if (m.outfield.length !== 10) continue
@@ -557,70 +579,12 @@ export function shapeStats(frames: readonly { players: readonly P[]; ball: P | n
     width: round1(sum.width / n),
     compact: round1(sum.compact / n),
     behindBall: round1(sum.behindBall / n),
+    gap: round1(sum.gap / n),
+    press: withBall ? Math.round((100 * pressed) / withBall) / 100 : 0,
     lineHist: hist,
     slots: avg,
     formation: formationOf(avg),
   }
-}
-
-/** The formation the average positions make: outfield players in lines across the pitch, back to front. */
-export function formationOf(slots: readonly P[]): string {
-  if (slots.length !== 10) return ''
-  const xs = slots.map((p) => p[0]).sort((a, b) => a - b)
-  const lines: number[] = [1]
-  for (let i = 1; i < xs.length; i++) {
-    if (xs[i] - xs[i - 1] > 5.5) lines.push(1)
-    else lines[lines.length - 1]++
-  }
-  return lines.length >= 2 && lines.length <= 5 ? lines.join('-') : ''
-}
-
-/** Assignment with the least total cost (Hungarian method), rows to columns; square matrices. */
-export function assign(cost: readonly (readonly number[])[]): number[] {
-  const n = cost.length
-  const u = new Array(n + 1).fill(0)
-  const v = new Array(n + 1).fill(0)
-  const p = new Array(n + 1).fill(0)
-  const way = new Array(n + 1).fill(0)
-  for (let i = 1; i <= n; i++) {
-    p[0] = i
-    let j0 = 0
-    const minv = new Array(n + 1).fill(Infinity)
-    const used = new Array(n + 1).fill(false)
-    do {
-      used[j0] = true
-      const i0 = p[j0]
-      let delta = Infinity
-      let j1 = 0
-      for (let j = 1; j <= n; j++) {
-        if (used[j]) continue
-        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j]
-        if (cur < minv[j]) {
-          minv[j] = cur
-          way[j] = j0
-        }
-        if (minv[j] < delta) {
-          delta = minv[j]
-          j1 = j
-        }
-      }
-      for (let j = 0; j <= n; j++) {
-        if (used[j]) {
-          u[p[j]] += delta
-          v[j] -= delta
-        } else minv[j] -= delta
-      }
-      j0 = j1
-    } while (p[j0] !== 0)
-    do {
-      const j1 = way[j0]
-      p[j0] = p[j1]
-      j0 = j1
-    } while (j0)
-  }
-  const out = new Array(n).fill(0)
-  for (let j = 1; j <= n; j++) if (p[j]) out[p[j] - 1] = j - 1
-  return out
 }
 
 /** Checks a stored pitch record's shape and size (renderer input is untrusted on the way to disk). */
@@ -635,6 +599,7 @@ export function isPitchRecord(v: unknown): v is PitchMatchRecord {
     (!!x &&
       typeof x === 'object' &&
       ['frames', 'line', 'backLine', 'length', 'width', 'compact', 'behindBall'].every((k) => num((x as Record<string, unknown>)[k])) &&
+      ['gap', 'press'].every((k) => (x as Record<string, unknown>)[k] === undefined || num((x as Record<string, unknown>)[k])) &&
       Array.isArray((x as ShapeStats).lineHist) &&
       (x as ShapeStats).lineHist.length <= 21 &&
       pts((x as ShapeStats).slots, 10) &&

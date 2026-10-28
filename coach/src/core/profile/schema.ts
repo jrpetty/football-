@@ -500,6 +500,29 @@ export interface ArsenalItem {
   readonly unverified?: boolean
 }
 
+/** A formation and how it is set up (football): what it looks like on the radar, where it is weak, how to beat it. */
+export interface FormationEntry {
+  readonly id: string
+  readonly name: string
+  /** The shape(s), e.g. "4-3-1-2" or "5-3-2 / 5-2-1-2"; matched against the shape read from the radar. */
+  readonly formation: string
+  readonly buildUp?: string
+  readonly defensiveApproach?: string
+  /** The in-game line height (1 to 100), or a range such as "61-65". */
+  readonly lineHeight?: number | string
+  readonly roles?: string
+  /** Who uses it (pros, share of squads). */
+  readonly who?: string
+  /** How it shows on the radar. */
+  readonly radarLook?: string
+  readonly strengths: readonly string[]
+  readonly weaknesses: readonly string[]
+  /** How to play against it. */
+  readonly counters: readonly string[]
+  readonly sources: readonly { readonly url: string; readonly title: string; readonly kind: 'pro' | 'coach' | 'guide' | 'forum' | 'official' }[]
+  readonly unverified?: boolean
+}
+
 /**
  * Where the player is, read from the screen (shooters): which keys carry the
  * map, the area (callout), its height, where a killer shot from, and the
@@ -762,6 +785,8 @@ export interface GameProfile {
     readonly maps?: readonly GameMap[]
     /** Weapons, equipment, perks, field upgrades and killstreaks: how each works, its range and counters. */
     readonly arsenal?: readonly ArsenalItem[]
+    /** Formations and tactics (football): radar look, weaknesses, counters. */
+    readonly formations?: readonly FormationEntry[]
     /** Curated reference knowledge (modes, maps, screens, HUD, roster…), dated; see src/core/knowledge/base.ts. */
     readonly reference?: readonly KnowledgeSection[]
     /** When the reference was last checked against the game. */
@@ -1543,6 +1568,32 @@ export function validateProfile(input: unknown): ValidationResult {
           if (o && typeof o === 'object') for (const [slot, v] of Object.entries(o)) if (/^[A-C]$/.test(slot)) known(v, `${path}.objectives.${k}.${slot}`)
         }
       }
+    })
+  }
+  if (kn.formations !== undefined) {
+    const ids = new Set<string>()
+    c.arr(kn.formations, 'knowledge.formations').forEach((x, i) => {
+      const path = `knowledge.formations[${i}]`
+      const f = c.obj(x, path)
+      if (!f) return
+      const id = c.str(f.id, `${path}.id`, { pattern: ID })
+      if (id && ids.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+      if (id) ids.add(id)
+      c.str(f.name, `${path}.name`, { max: 80 })
+      const shape = c.str(f.formation, `${path}.formation`, { max: 60 })
+      if (shape && !/\d(?:-\d){2,4}/.test(shape)) c.errors.push(`${path}.formation: name a shape such as 4-4-2`)
+      for (const k of ['buildUp', 'defensiveApproach'] as const) c.str(f[k], `${path}.${k}`, { optional: true, max: 40 })
+      if (typeof f.lineHeight === 'string') c.str(f.lineHeight, `${path}.lineHeight`, { pattern: /^\d{1,3}(?:-\d{1,3})?$/, max: 7 })
+      else c.num(f.lineHeight, `${path}.lineHeight`, 1, 100, true)
+      for (const k of ['roles', 'who', 'radarLook'] as const) c.str(f[k], `${path}.${k}`, { optional: true, max: 600 })
+      for (const k of ['strengths', 'weaknesses', 'counters'] as const) c.arr(f[k], `${path}.${k}`).forEach((v, j) => c.str(v, `${path}.${k}[${j}]`, { max: 300, spoken: true }))
+      c.arr(f.sources, `${path}.sources`, true).forEach((s, j) => {
+        const so = c.obj(s, `${path}.sources[${j}]`)
+        if (!so) return
+        c.str(so.url, `${path}.sources[${j}].url`, { pattern: /^https:\/\/\S+$/, max: 500 })
+        c.str(so.title, `${path}.sources[${j}].title`, { max: 200 })
+        c.oneOf(so.kind, `${path}.sources[${j}].kind`, ['pro', 'coach', 'guide', 'forum', 'official'] as const)
+      })
     })
   }
   if (kn.arsenal !== undefined) {

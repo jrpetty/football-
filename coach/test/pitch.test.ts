@@ -157,7 +157,7 @@ test('a match on the radar: ends, possession, shapes and formations, turnovers, 
   const against = r.goals.filter((g) => !g.for)
   assert.ok(against.filter((g) => g.defending && g.defending.behindBall <= 4).length >= 3, JSON.stringify(against.map((g) => g.defending)))
   const lines = pitchInsights([r])
-  assert.ok(lines.some((l) => l.id === 'behind-ball' && l.playbook === 'dont-break-the-line'), lines.map((l) => l.id).join(', '))
+  assert.ok(lines.some((l) => l.id === 'behind-ball' && l.playbook === 'rest-defence-plus-one'), lines.map((l) => l.id).join(', '))
   assert.ok(lines.some((l) => l.id === 'possession'))
 })
 

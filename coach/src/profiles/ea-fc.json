@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "ea-fc",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": "EA SPORTS FC (broadcast camera)",
   "depth": "pack",
   "game": {
@@ -35,31 +35,133 @@
     },
     {
       "id": "career-mode",
-      "label": "Career Mode (offline)",
+      "label": "Manager Career (offline)",
       "multiplayer": false,
       "competitive": false
     },
     {
       "id": "squad-battles",
-      "label": "Ultimate Team: Squad Battles (vs CPU, ranked rewards)",
+      "label": "Ultimate Team: Squad Battles (vs CPU, ranked)",
       "multiplayer": false,
       "competitive": true
     },
     {
       "id": "division-rivals",
-      "label": "Ultimate Team: Rivals / Champions (online)",
+      "label": "Ultimate Team: Division Rivals",
       "multiplayer": true,
       "competitive": true
     },
     {
       "id": "online-seasons",
-      "label": "Online Seasons / Clubs (online)",
+      "label": "Online Seasons",
       "multiplayer": true,
       "competitive": true
     },
     {
       "id": "online-friendly",
-      "label": "Online friendly / co-op",
+      "label": "Online Friendlies",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "fut-champions",
+      "label": "Ultimate Team: Champions (Finals)",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "fut-rush",
+      "label": "Ultimate Team: Rush",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "fut-draft-online",
+      "label": "Ultimate Team: Online Draft",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "fut-draft-single",
+      "label": "Ultimate Team: Single Player Draft",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "fut-live-events",
+      "label": "Ultimate Team: Live Events (online)",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "fut-live-events-ai",
+      "label": "Ultimate Team: Live Events vs AI / Moments",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "fut-friendlies",
+      "label": "Ultimate Team: Friendlies",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "career-player",
+      "label": "Player Career",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "practice-arena",
+      "label": "Career Practice Arena / Training",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "kickoff-house-rules",
+      "label": "Kick-Off: House Rules",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "tournaments",
+      "label": "Tournaments (offline)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "co-op-seasons",
+      "label": "Co-Op Seasons",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "clubs-league",
+      "label": "Clubs: Leagues and Playoffs",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "clubs-tournaments",
+      "label": "Clubs: Club Tournaments and Live Tournaments",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "clubs-drop-in",
+      "label": "Clubs: Stadium Drop-In (11v11)",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "clubs-rush",
+      "label": "Clubs: Rush Stadium / Rush small-sided",
+      "multiplayer": true,
+      "competitive": false
+    },
+    {
+      "id": "grounds",
+      "label": "The Grounds (open-world hub)",
       "multiplayer": true,
       "competitive": false
     }
@@ -94,11 +196,11 @@
         "green",
         "purple",
         "orange",
-        "yellow",
-        "white"
+        "white",
+        "black"
       ],
       "default": "default",
-      "help": "The colour of your team's dots on the radar, as set in the game (Settings: User Radar Colour). Set it and the opponent's to two different colours (not black) so the coach reads every player; left at Default, it works out which team is yours from the first goal."
+      "help": "Your team's dots on the radar (Settings > Game Settings > Visual: User Radar Colour). Set yours and the opponent's to two different strong colours, Blue and Red work best. At Default the radar uses kit colours, so similar kits can look the same; Black cannot be told from the dark radar."
     },
     {
       "id": "opponentRadarColour",
@@ -111,11 +213,11 @@
         "green",
         "purple",
         "orange",
-        "yellow",
-        "white"
+        "white",
+        "black"
       ],
       "default": "default",
-      "help": "The colour of the opponent's dots on the radar (Settings: Opponent Radar Colour)."
+      "help": "The opponent's dots on the radar (Opponent Radar Colour). Pick a colour far from yours: Red against Blue, or Orange against Purple."
     }
   ],
   "signals": [],
@@ -652,7 +754,7 @@
           "Several tackle attempts in a row"
         ],
         "signals": [
-          "Replay: your defender lunges and the attacker goes past him"
+          "Replay: your defender lunges and the attacker goes past them"
         ],
         "fix": "Hold jockey and tackle only when the ball comes away from the attacker's feet.",
         "sources": [
@@ -689,7 +791,7 @@
         "principle": "In FC 27, AI defenders reach less far for interceptions than a defender you control. Take the defender who will face the threat before the ball arrives.",
         "good": [
           "Flicking the right stick to the defender in the target lane",
-          "Already controlling him when the through ball is struck"
+          "Already controlling them when the through ball is struck"
         ],
         "bad": [
           "Cycling the switch button after the pass",
@@ -736,7 +838,7 @@
         ],
         "bad": [
           "Controlling a centre-back at halfway",
-          "Contain with your main defender, dragging him out"
+          "Contain with your main defender, dragging them out"
         ],
         "signals": [
           "Replay: your controlled centre-back 20 m or more ahead of the line when the move starts"
@@ -989,7 +1091,7 @@
         "signals": [
           "Replay: one-on-one with your keeper after a through ball, scorer starting beside your last defender"
         ],
-        "fix": "Before the pass, take the defender nearest the runner and match the run on his inside shoulder.",
+        "fix": "Before the pass, take the defender nearest the runner and match the run on their inside shoulder.",
         "sources": [
           {
             "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
@@ -1026,7 +1128,7 @@
         "signals": [
           "Replay: the offside line set by a full-back, not a centre-back"
         ],
-        "fix": "Take the full-back yourself and step him up to the line when the ball is central.",
+        "fix": "Take the full-back yourself and step them up to the line when the ball is central.",
         "sources": [
           {
             "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-launch-feedback-update",
@@ -1155,7 +1257,7 @@
         "signals": [
           "Through ball intercepted with the runner still level or behind"
         ],
-        "fix": "Release the through ball after the runner's first steps, into the space ahead of him.",
+        "fix": "Release the through ball after the runner's first steps, into the space ahead of them.",
         "sources": [
           {
             "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
@@ -1404,7 +1506,7 @@
         "signals": [
           "Crosses landing with no attacker near the ball"
         ],
-        "fix": "Aim crosses at the runner's path, not where he is now.",
+        "fix": "Aim crosses at the runner's path, not where they are now.",
         "sources": [
           {
             "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
@@ -1548,6 +1650,1263 @@
         "tags": [
           "settings"
         ]
+      },
+      {
+        "id": "compact-block-distances",
+        "title": "Keep the lines close when defending",
+        "principle": "When you defend, keep your back line and your midfield close together and keep the whole team short. Elite teams defend with roughly 10 metres between the back line and midfield. A short block leaves little room between the lines for passes into feet.",
+        "why": "A Bundesliga tracking study (153 games, 2020/21) found defending teams averaged about 10 m between the defensive and midfield lines and a surface area near 790 square metres. A systematic review puts team length at roughly 31 to 46 m across phases. In FC 27 the AI no longer auto-tackles (EA deep dive), so a shape that blocks lanes matters more: AI players still screen passes even when they will not win the ball.",
+        "good": [
+          "Back-line and midfield markers moving up and down together",
+          "A gap between the lines of about 10 to 15 metres",
+          "Team length under about 40 metres with the ball in your half"
+        ],
+        "bad": [
+          "Midfielders left high after losing the ball while the back four drops",
+          "An empty band between the lines where their number 10 can receive"
+        ],
+        "signals": [
+          "Radar, out of possession: the gap between your deepest defenders and your nearest midfielders is more than about 15 m, roughly a seventh of the radar's length.",
+          "Radar: your outfield markers span more than about 45 m from front to back while the opponent has the ball in your half.",
+          "Stats screen: many shots conceded from just outside your box."
+        ],
+        "fix": "When the ball is in your half, pull your midfield back until it sits about ten to fifteen metres in front of your defenders.",
+        "drill": "Kick-Off vs CPU: for one half, pause each time the opponent crosses halfway and check the gap between your back line and midfield on the radar.",
+        "sources": [
+          {
+            "url": "https://www.researchgate.net/publication/370827756_Is_a_compact_organization_important_for_defensive_success_in_elite_soccer_-_Analysis_based_on_player_tracking_data",
+            "title": "Is a compact organisation important for defensive success in elite soccer? (Bundesliga tracking study)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8805357/",
+            "title": "Reference values for collective tactical behaviours in professional football: a systematic review (PMC)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/low-block-football-tactics-explained-simeone-dyche-mourinho/",
+            "title": "The low block: football tactics explained (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "defending",
+          "shape",
+          "compactness",
+          "radar"
+        ]
+      },
+      {
+        "id": "press-on-triggers",
+        "title": "Press on a trigger, not all the time",
+        "principle": "Step up to press when there is a clear cue: a back pass, a poor first touch, a receiver facing their own goal, or the ball going out to the touchline. Otherwise hold your shape. In FC 27, Team Press does nothing in your own defensive third, so press higher up.",
+        "why": "Coaching material splits pressing into the trap, the shape that channels the ball, and the trigger, the moment to commit. Common triggers are a sideways or backward pass, a receiver with their back to goal and a poor first touch. EA's closed-beta update removed Team Press in your defensive third, and AI teammates now contain from slightly further away, so the user chooses the moment.",
+        "good": [
+          "Pressing as the ball travels back to a centre-back or keeper",
+          "Closing a winger against the touchline with two players",
+          "Holding position when the receiver faces forward with space"
+        ],
+        "bad": [
+          "Chasing every pass with one player",
+          "Pressing a player who faces forward with two passing options"
+        ],
+        "signals": [
+          "Radar: the ball moves back toward their goal while your nearest marker is more than about 10 m away and closes late.",
+          "Radar: an opponent on the touchline with one of your markers near them while the second stays more than about 15 m away.",
+          "Stats screen: few tackles and interceptions, with a long Ball Recovery Time."
+        ],
+        "fix": "Press when the ball goes backwards or to the touchline, and hold your shape when the receiver faces forward.",
+        "drill": "Kick-Off vs CPU: press only on a back pass or a touchline ball for one half and compare Ball Recovery Time with a normal half.",
+        "sources": [
+          {
+            "url": "https://fussballcoach.substack.com/p/the-6-most-important-pressing-triggers",
+            "title": "The 6 most important pressing triggers (Fussballcoach newsletter)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.footballparadise.com/en/glossary/pressing-trigger",
+            "title": "Pressing trigger (Football Paradise glossary)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-closed-beta-feedback-update",
+            "title": "FC 27 Closed Beta Feedback Update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "defending",
+          "pressing",
+          "triggers"
+        ]
+      },
+      {
+        "id": "shift-as-a-unit",
+        "title": "Slide across with the ball",
+        "principle": "When the ball goes to one flank, your back line and midfield should slide toward it together. The far full-back tucks in toward the centre-backs. The space you give up is the far touchline, which is the hardest place to reach with one pass.",
+        "why": "Coaching guidance on low and mid blocks stresses short distances within and between lines, which means shifting together toward the ball. If the far full-back stays wide, the gap to the nearest centre-back opens a channel through the middle. FIFA's World Cup 2022 analysis ties mid-block success to compactness.",
+        "good": [
+          "Four defenders spread across about 30 to 35 metres, shifted toward the ball",
+          "Far full-back level with the far post area"
+        ],
+        "bad": [
+          "Back four still spread across the full width while the ball is on one wing",
+          "A gap of 15 metres or more between a full-back and the nearest centre-back"
+        ],
+        "signals": [
+          "Radar, ball on one wing: your four defenders span more than about 45 m across the pitch, roughly two thirds of the radar's height.",
+          "Radar: more than about 15 m between a centre-back and the next defender on the ball side."
+        ],
+        "fix": "When the ball goes wide, slide the whole back line toward it and keep the far full-back narrow.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/in-focus-defending-in-a-low-block/",
+            "title": "In Focus: Defending in a low block (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.fifatrainingcentre.com/en/fwc2022/technical-and-tactical-analysis/controlling-the-game-without-the-ball--the-mid-block-and-compactness.php",
+            "title": "Controlling the game without the ball: the mid-block and compactness (FIFA Training Centre)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8805357/",
+            "title": "Reference values for collective tactical behaviours in professional football: a systematic review (PMC)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "shape",
+          "shifting"
+        ]
+      },
+      {
+        "id": "track-blind-side-runners",
+        "title": "Track runners from midfield",
+        "principle": "Late runners from midfield arrive in the box after your defenders have picked up the strikers. A midfielder must follow that run, or a defender must take it over. FC 27 attackers read space and curve their runs, so blind-side runs are common.",
+        "why": "EA says FC 27 AI attackers weigh space, defensive shape and the offside line and curve their runs in. Roles such as Box Crasher and Shadow Striker exist to make late runs. Your AI midfielders hold shape but may not follow a runner into the box, so a manual switch is often needed.",
+        "good": [
+          "A midfielder following a runner all the way into the box",
+          "Switching to the midfielder nearest the runner as they start"
+        ],
+        "bad": [
+          "Only defenders in the box while an opponent arrives untracked from deep",
+          "Watching the ball while a runner passes behind your midfield"
+        ],
+        "signals": [
+          "Radar: an opponent crosses your midfield line toward the box and none of your markers is within about 3 m of them for two seconds or more.",
+          "Goal replay: the scorer started level with your midfielders and arrived unmarked."
+        ],
+        "fix": "When a midfielder runs past your midfield line, switch to your nearest midfielder and follow them into the box.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-player-roles-explained-all-37-role-familiarity",
+            "title": "FC 27 Player Roles explained (Timesaver)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/zonal-marking-football-tactics-explained-mourinho-conte-simeone/",
+            "title": "Zonal marking: football tactics explained (Coaches' Voice)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "defending",
+          "marking",
+          "runners"
+        ]
+      },
+      {
+        "id": "fill-the-box-zones",
+        "title": "Cover the near post, the far post and the spot",
+        "principle": "When the ball is wide near your box, you need bodies in three places: the near post, the far post and the penalty spot. Do not let every defender collapse onto the near post. FC 27 crosses land in space more often, so the far post and the spot are danger zones.",
+        "why": "StatsBomb data show almost all headers come from the central part of the box, and foot shots there convert about twice as often as headers. EA's deep dive says FC 27 crosses are delivered into space more often, with aim and power deciding where they land. Covering three zones takes away both the header and the cutback.",
+        "good": [
+          "One defender near each post area and a midfielder near the penalty spot"
+        ],
+        "bad": [
+          "Three or more of your players within a few metres of the near post",
+          "Nobody of yours between the six-yard box and the penalty spot"
+        ],
+        "signals": [
+          "Radar, ball wide in your final third: three or more of your markers bunched within about 5 m of the near post, with an opponent free at the far post.",
+          "Radar: an opponent near your penalty spot, about 11 m out, with none of your markers near them."
+        ],
+        "fix": "When the ball is wide near your box, put a defender on each post area and a midfielder on the penalty spot.",
+        "sources": [
+          {
+            "url": "https://blogarchive.statsbomb.com/articles/soccer/how-do-headers-compare-to-shots/",
+            "title": "How do headers compare to shots? (StatsBomb)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/in-focus-attacking-in-the-final-third-crossing-and-finishing/",
+            "title": "In Focus: Attacking in the final third, crossing and finishing (Coaches' Voice)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "defending",
+          "crosses",
+          "box"
+        ]
+      },
+      {
+        "id": "rest-defence-plus-one",
+        "title": "Leave enough players behind the ball",
+        "principle": "While you attack, keep a rest defence of one more player behind the ball than they have forwards up the pitch. Against two strikers that usually means two centre-backs and a holding midfielder. Then one lost pass does not become three against two.",
+        "why": "Coaches' Voice describes rest defence as the players around and below the ball ready to stop counters, most often on a plus-one basis. A JSSM study found fast regains after losing the ball are the main success factor in defensive transition, which needs players close to the ball. FC 27 AI defenders will not win the ball back for you.",
+        "good": [
+          "Two centre-backs plus one midfielder in your half when you attack their final third",
+          "Only one full-back joining the attack at a time"
+        ],
+        "bad": [
+          "Both full-backs and both central midfielders in their half at once",
+          "Two of your players against three of theirs after a turnover"
+        ],
+        "signals": [
+          "Radar, your attack in their final third: fewer of your markers in your own half than their forwards plus one.",
+          "Radar: both of your full-backs in the opponent's final third at the same moment.",
+          "Goal replay: the counter started with your defenders outnumbered near halfway."
+        ],
+        "fix": "Before a full-back goes forward, check the radar that you still have one more defender back than they have forwards.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/rest-defence-explained/",
+            "title": "What is rest defence? (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://jssm.org/jssm-22-707.xml-abst",
+            "title": "Success factors in defensive transition / rest defence (Journal of Sports Science and Medicine)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifatrainingcentre.com/en/game/tournaments/olympic-football-tournament/moft/rest-defence.php",
+            "title": "Rest defence (FIFA Training Centre, Olympic tournament analysis)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "defending",
+          "transition",
+          "rest-defence"
+        ]
+      },
+      {
+        "id": "counter-attack-window",
+        "title": "Go forward fast when they are caught upfield",
+        "principle": "When you win the ball and the opponent has players committed forward, play forward into space within a few seconds. The chance closes once their midfield recovers. If they already have six or more players behind the ball, slow down and keep it.",
+        "why": "Rest-defence research shows counters are stopped by quick regains and numbers behind the ball, so the attacking side's best chance is in the first seconds. Many FC 27 lobbies defend at 95 depth (Timesaver), which leaves large space behind once a pass escapes the press. Lobbed and driven lobs reach runners quickly (FIFPlay).",
+        "good": [
+          "First pass forward or into the channel within about three seconds",
+          "A runner already moving as the ball is won"
+        ],
+        "bad": [
+          "Turning back to a centre-back when only three opponents are goal-side",
+          "Dribbling sideways while their midfield recovers"
+        ],
+        "signals": [
+          "Radar, as you win the ball: four or fewer opponent markers between the ball and their goal means a counter is on.",
+          "Radar: their deepest defender is near halfway and your striker is level with them."
+        ],
+        "fix": "When you win the ball with four or fewer opponents goal-side, play forward within three seconds.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/rest-defence-explained/",
+            "title": "What is rest defence? (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-95-depth-offside-trap-how-to-beat-it",
+            "title": "FC 27 95 depth offside trap: how to beat it (Timesaver)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-lob-pass/",
+            "title": "FC 27 Lob Pass types (FIFPlay)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "transition",
+          "counter-attack"
+        ]
+      },
+      {
+        "id": "overload-to-isolate",
+        "title": "Overload one side, then attack the other",
+        "principle": "Draw their midfield and full-back to one side with short passes and extra bodies, then switch fast to your free winger or full-back on the far side. The aim is a one against one, or two against one, before they can slide across.",
+        "why": "Coaches' Voice notes that a few attackers can pin several defenders and create an overload elsewhere. A switch only pays when their block is squeezed onto one side; played too early it moves the ball into a defended area. FC 27 lob types (FIFPlay) reach the far flank quickly.",
+        "good": [
+          "Four or five of your players on one side, then a quick switch",
+          "A winger holding the far touchline while the ball is on the other side"
+        ],
+        "bad": [
+          "Switching before their block has shifted",
+          "All your attackers on the same side as the ball"
+        ],
+        "signals": [
+          "Radar: their defenders packed within about 25 m of the ball-side touchline and your far winger has nobody within about 10 m of them.",
+          "Radar: your far-side wide player has drifted inside, so nobody of yours holds the far touchline."
+        ],
+        "fix": "Pull them to one side with short passes, then switch to the free winger on the far touchline.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/formations-football-tactics-explained-best-most-used/",
+            "title": "Formations: football tactics explained (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-lob-pass/",
+            "title": "FC 27 Lob Pass types (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 Tactics Guide (FIFPlay)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "overload",
+          "switch",
+          "width"
+        ]
+      },
+      {
+        "id": "third-man-runs",
+        "title": "Use the third man to beat a press",
+        "principle": "When the only pass is into a marked player, play it with a third player already running into the space behind their marker. The lay-off finds the runner facing forward. FC 27's Pass and Follow and curved runs make this easier to set up.",
+        "why": "Coaches' Voice explains the third-man run: draw an opponent to the ball, exchange two passes, and release a third player into the space left behind, turning two against two into an overload. FC 27 adds Pass and Follow (L1 plus R1 plus Cross, or LB plus RB plus A) and the Triggered Curved Run (FUT.GG).",
+        "good": [
+          "Pass into the striker, who lays it off to an arriving midfielder",
+          "The runner moving before the second pass"
+        ],
+        "bad": [
+          "Passing into a marked striker with no runner near them",
+          "Starting the run after the lay-off"
+        ],
+        "signals": [
+          "Radar: your striker has an opponent within about 2 m and no other marker of yours is moving into the space within about 10 m of them.",
+          "Stats screen: many passes intercepted in the middle third."
+        ],
+        "fix": "Before you pass into a marked player, trigger a run from a third player into the space behind their marker.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/third-man-runs-football-tactics-explained-gasperini-guardiola/",
+            "title": "Third-man runs: football tactics explained (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.fut.gg/news/how-to-do-triggered-curved-runs-and-pass-follow-runs-in-fc-27/",
+            "title": "How to do Triggered Curved Runs and Pass & Follow Runs in FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "combination",
+          "runs"
+        ]
+      },
+      {
+        "id": "beat-the-high-line",
+        "title": "Beat a very high line in behind",
+        "principle": "Against a very high line, the space is behind the defenders, not in front of them. Play a lobbed or driven ball into the channel as your runner starts level with the last defender. Curved runs help your forward stay onside and then bend in behind.",
+        "why": "Many FC 27 lobbies use the Aggressive approach, whose default line height is 95 (FIFA Ultimate Team guide). Timesaver says the depth slider acts more literally, manual runs stop after a capped distance and through balls are less assisted, so timing the pass and the run is the counter. EA has announced no change.",
+        "good": [
+          "Lobbed through pass (L1 plus Triangle, or LB plus Y) into the channel",
+          "Runner starting level with the last defender"
+        ],
+        "bad": [
+          "Short passes into a crowded midfield against a high press",
+          "Releasing the ball after the runner has crossed the line"
+        ],
+        "signals": [
+          "Radar: their deepest defender is within about 10 m of halfway, over 40 m from their own goal, while their keeper stays near their box.",
+          "Stats screen: many offsides against you.",
+          "Radar: your striker is already a couple of metres beyond their last defender when you pass."
+        ],
+        "fix": "When their last defender is near halfway, play the ball over the top as your striker starts level with them.",
+        "sources": [
+          {
+            "url": "https://timesaver.gg/blog/fc-27-95-depth-offside-trap-how-to-beat-it",
+            "title": "FC 27 95 depth offside trap: how to beat it (Timesaver)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-tactics/",
+            "title": "FC 27 Tactics (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-lob-pass/",
+            "title": "FC 27 Lob Pass types (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fut.gg/news/how-to-do-triggered-curved-runs-and-pass-follow-runs-in-fc-27/",
+            "title": "How to do Triggered Curved Runs and Pass & Follow Runs in FC 27 (FUT.GG)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "high-line",
+          "through-balls",
+          "meta"
+        ]
+      },
+      {
+        "id": "long-shot-discipline",
+        "title": "Shoot from distance only with a clear lane",
+        "principle": "A shot from outside the box is worth only a few hundredths of a goal on average, and a blocked one can start a counter. Shoot from range only when nobody stands between you and the goal and you are not under pressure. Otherwise work it into the box.",
+        "why": "xG explainers put the average shot from outside the box near 0.036 xG and edge-of-box shots at roughly 0.05 to 0.10, against 0.3 or more inside the six-yard box. Power shots have a slow wind-up; guides advise creating space first and avoiding them in a crowded box.",
+        "good": [
+          "Power or finesse shot from range with no defender in the lane",
+          "Passing into the box instead of shooting through bodies"
+        ],
+        "bad": [
+          "Shooting from 25 m with two defenders in the lane",
+          "Long shots when you lead and could keep the ball"
+        ],
+        "signals": [
+          "Radar at the shot: the ball is more than about 22 m from goal with two or more opponents between it and the goal.",
+          "Stats screen: many shots but expected goals per shot under about 0.08, with many blocked."
+        ],
+        "fix": "From outside the box, shoot only when no defender stands in the line to goal.",
+        "sources": [
+          {
+            "url": "https://www.americansocceranalysis.com/explainers",
+            "title": "Expected goals explainers (American Soccer Analysis)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fantasyfootballscout.co.uk/2019/06/14/expected-goals-part-one-what-is-xg-and-how-is-it-measured/",
+            "title": "Expected goals part one: what is xG and how is it measured (Fantasy Football Scout)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-power-shot/",
+            "title": "FC 27 Power Shot (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://games.gg/ea-sports-fc-27/guides/ea-fc-27-shooting-guide/",
+            "title": "EA FC 27 Shooting Guide (games.gg)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "shooting",
+          "decisions"
+        ]
+      },
+      {
+        "id": "check-the-near-post",
+        "title": "Check the near post before you shoot",
+        "principle": "In FC 27 a low driven shot inside the near post is a strong option when the keeper leaves a gap there, for example after stepping toward the far post. Look at the keeper before you pick the far corner every time.",
+        "why": "EA's launch updates say feedback suggests low driven shots, particularly toward the near post, can be stronger than other options; EA is broadly happy with the shooting and goalkeeping balance and is monitoring. It is part of the current balance, not an exploit, and may change in a later update.",
+        "good": [
+          "Low driven shot inside the near post when the keeper steps across",
+          "Varying near and far post"
+        ],
+        "bad": [
+          "Aiming every finish at the far corner",
+          "Shooting low driven into a keeper standing on the near post"
+        ],
+        "signals": [
+          "Radar: your shooter is in the box at an angle and the keeper sits nearer the far post than the near post.",
+          "Goal replays: nearly all your goals go far post while saves pile up from the same angle."
+        ],
+        "fix": "At an angle in the box, look at the keeper and take the low driven shot near post when they have stepped toward the far post.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-launch-feedback-update",
+            "title": "FC 27 Launch Feedback Update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-gameplay-developer-launch-update",
+            "title": "FC 27 Gameplay Developer Launch Update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-low-driven-shot/",
+            "title": "FC 27 Low Driven Shot (FIFPlay)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "shooting",
+          "finishing"
+        ]
+      },
+      {
+        "id": "cross-into-numbers",
+        "title": "Cross when you have numbers in the box",
+        "principle": "Before you cross, count. Cross when two of your attackers are in or arriving in the box. If the box is full of defenders, cut back or keep the ball. Use a ground cross for a late runner and a driven cross for the far post.",
+        "why": "StatsBomb data show headers convert at about half the rate of foot shots from the same central areas. FC 27 crosses drop into the space you aim at rather than homing on a player (EA), so a cross into a crowded box is low value. Ground and driven ground crosses keep the finish on the foot.",
+        "good": [
+          "A ground cross (Square twice, or X twice) to a runner arriving at the near post",
+          "Crossing when two attackers attack different zones"
+        ],
+        "bad": [
+          "A high cross into three defenders and one attacker",
+          "Crossing from deep with nobody yet in the box"
+        ],
+        "signals": [
+          "Radar, wide player in the final third: one of your markers in the box against three or more of theirs.",
+          "Radar: two or more of your markers arriving in the box on different lines: a good moment to deliver.",
+          "Stats screen: many crosses, few shots on target."
+        ],
+        "fix": "Cross only when two of your attackers are in or arriving in the box; otherwise cut back or keep the ball.",
+        "sources": [
+          {
+            "url": "https://blogarchive.statsbomb.com/articles/soccer/how-do-headers-compare-to-shots/",
+            "title": "How do headers compare to shots? (StatsBomb)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://driffle.com/blog/ea-fc-27-controls-guide-ps-xbox-pc/",
+            "title": "FC 27 Controls guide for PS5, Xbox and PC (Driffle)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/in-focus-attacking-in-the-final-third-crossing-and-finishing/",
+            "title": "In Focus: Attacking in the final third, crossing and finishing (Coaches' Voice)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "crosses",
+          "box"
+        ]
+      },
+      {
+        "id": "overlap-and-underlap",
+        "title": "Make two against one on the flank",
+        "principle": "Get a second player beyond or inside your winger so their full-back faces two. An overlap runs outside the winger; an underlap runs inside them. Whichever way the full-back turns, one of your players is free. Send only one full-back at a time.",
+        "why": "Two-against-one combinations beat a single defender without relying on a dribble. FC 27 lets you trigger the run with L1 or LB, a Triggered Curved Run, or Pass and Follow (FUT.GG). Coaches' Voice defines overlaps and underlaps as runs around or inside the ball carrier.",
+        "good": [
+          "A full-back running outside the winger as they carry inside",
+          "A central midfielder underlapping into the channel"
+        ],
+        "bad": [
+          "A winger alone against two defenders",
+          "Both full-backs overlapping at once"
+        ],
+        "signals": [
+          "Radar: your winger and one other marker are both near their full-back, with no second defender within about 10 m.",
+          "Radar: your winger alone against two defenders on the flank."
+        ],
+        "fix": "When your winger faces one defender, send a second player past them on the outside or the inside.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/glossary-football-tactics-coaching/",
+            "title": "Glossary: football tactics and coaching definitions (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://www.fut.gg/news/how-to-do-triggered-curved-runs-and-pass-follow-runs-in-fc-27/",
+            "title": "How to do Triggered Curved Runs and Pass & Follow Runs in FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "wide-play",
+          "combination"
+        ]
+      },
+      {
+        "id": "corner-attack-routine",
+        "title": "Plan the corner before you take it",
+        "principle": "In FC 27 your attackers do not move to the best spot for you. Pick a target zone, deliver, then use Avoidance to slip your marker and Shielding to hold the spot before the header. If the box is crowded, take it short.",
+        "why": "EA's deep dive gives a brief window after delivery to control attackers in the box. Avoidance (hold R1 or RB) gets through crowds and Shielding (hold L2 or LT) holds position (FUT.GG). Set-piece tactics on D-pad Up let you add or remove runners and send players near or far post (Pro Clubs HQ).",
+        "good": [
+          "Delivering to the zone your best header starts closest to",
+          "A short corner when they pack the box"
+        ],
+        "bad": [
+          "Delivering, then waiting for the AI to attack the ball",
+          "The same cross into the same crowd every time"
+        ],
+        "signals": [
+          "Radar at a corner: eight or more opponent markers in the box against four of yours suggests a short corner.",
+          "Stats screen: many corners and no shots from them."
+        ],
+        "fix": "Choose a zone before the corner, then use Avoidance and Shielding to get your best header there.",
+        "drill": "Kick-Off vs CPU: take ten corners to the same zone, five with Avoidance and five without, and count headers on target.",
+        "sources": [
+          {
+            "url": "https://www.fut.gg/news/how-to-use-avoidance-and-shielding-in-fc-27-corner-kicks/",
+            "title": "How to use Avoidance and Shielding in FC 27 corner kicks (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://proclubshq.com/blog/fc27-control-changes/",
+            "title": "FC 27 Control Changes (Pro Clubs HQ)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "set-pieces",
+          "corners",
+          "attacking"
+        ]
+      },
+      {
+        "id": "corner-counter-cover",
+        "title": "Keep cover back at your corners",
+        "principle": "When you take a corner, keep at least two players back and one on the edge of the box for the clearance. A cleared corner against a team with a fast forward left up can become a goal against within seconds.",
+        "why": "The rest-defence idea applies at set pieces too: Coaches' Voice describes the rest-defence unit outnumbering the opponents' forwards by one. FC 27 set-piece tactics let you add or remove runners, so you choose how many go forward (Pro Clubs HQ).",
+        "good": [
+          "Two defenders near halfway against one forward",
+          "One midfielder on the edge of the box"
+        ],
+        "bad": [
+          "Everyone in the box except the keeper",
+          "Nobody on the edge to win the clearance"
+        ],
+        "signals": [
+          "Radar at your corner: fewer of your markers in your own half than their forwards plus one.",
+          "Radar: none of your markers on the edge of their box, outside the area, when the corner is struck."
+        ],
+        "fix": "Before a corner, use set-piece tactics to keep two defenders back and one player on the edge of the box.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/rest-defence-explained/",
+            "title": "What is rest defence? (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://proclubshq.com/blog/fc27-control-changes/",
+            "title": "FC 27 Control Changes (Pro Clubs HQ)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/us-en/ea-fc-27-most-exciting-improvements",
+            "title": "The most exciting improvements in EA FC 27 (Red Bull)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "set-pieces",
+          "corners",
+          "rest-defence"
+        ]
+      },
+      {
+        "id": "free-kick-choice",
+        "title": "Shoot direct only when the angle is there",
+        "principle": "Take a direct free kick when you are central and close enough for your taker to get over or round the wall. From wide or deep, a cross or a short routine is usually better. Change your power with the distance instead of using the same amount every time.",
+        "why": "Guides describe FC 27 free kicks as the FC 24 framework: place the reticle, drag a marker across the ball for spin and lift, then hold for power. EA names Free Kick Accuracy, Curve and Shot Power as the taker attributes. Operation Sports says the common mistake is using the same power from every distance.",
+        "good": [
+          "Your best Free Kick Accuracy and Curve player on central free kicks",
+          "Crossing from wide free kicks into a planned zone"
+        ],
+        "bad": [
+          "Shooting from wide angles into the wall",
+          "Full power from every distance"
+        ],
+        "signals": [
+          "Free kick taken from a wide angle that hits the wall or goes wide.",
+          "Shot sails over the bar after holding most of the power bar from close range."
+        ],
+        "fix": "Shoot direct only from central positions near the box, and set the power to match the distance.",
+        "sources": [
+          {
+            "url": "https://games.gg/ea-sports-fc-27/guides/free-kicks-scoring-techniques/",
+            "title": "EA FC 27 Free Kicks Guide (games.gg)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://help.ea.com/en/articles/ea-sports-fc/free-kicks/",
+            "title": "How to take free kicks in EA SPORTS FC (EA Help)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.operationsports.com/score-from-every-distance-with-this-ea-fc-27-free-kick-techniques/",
+            "title": "Score from every distance with these EA FC 27 free kick techniques (Operation Sports)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "set-pieces",
+          "free-kicks"
+        ]
+      },
+      {
+        "id": "penalty-routine",
+        "title": "Pick your spot early on penalties",
+        "principle": "Choose your spot before the run-up, aim low toward a corner and keep the power to around half the bar. Vary your side across matches. Composure and the Penalties attribute matter more than Finishing.",
+        "why": "An FC 27 guide advises a low corner, no more than about half the bar and committing before the run-up, and says Composure and Penalties matter more than Finishing. Earlier-edition guides add that varying height, side and power keeps keepers guessing.",
+        "good": [
+          "Low to a corner with moderate power",
+          "Choosing a taker with high Composure and Penalties"
+        ],
+        "bad": [
+          "Holding the power bar near full",
+          "Going to the same side every time"
+        ],
+        "signals": [
+          "A penalty missed high after a nearly full power bar.",
+          "Your last few penalties all went to the same side."
+        ],
+        "fix": "Pick a low corner before the run-up and stop the power bar around halfway.",
+        "sources": [
+          {
+            "url": "https://elocarry.net/blog/ea-fc-27/free-kicks-guide/",
+            "title": "EA FC 27 Free Kicks Guide, incl. penalties (Elocarry)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.teamgullit.com/ea-fc-27/set-pieces",
+            "title": "EA FC 27 set pieces (Team Gullit)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.wepc.com/gaming/ea-sports-fc-24-penalties/",
+            "title": "EA Sports FC 24: how to take penalties (WePC)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "set-pieces",
+          "penalties"
+        ]
+      },
+      {
+        "id": "keep-it-when-leading",
+        "title": "Keep the ball when you are ahead late",
+        "principle": "When you lead late on, possession is your defence. Circulate in midfield and your own half, take the safe pass, and when you do go forward take the ball toward their corner flag. Avoid long shots and risky through balls that hand it back.",
+        "why": "Each lost ball late on is a chance for them, and with FC 27's weaker AI defending, long spells without the ball are harder to survive. Guides advise slowing the tempo and protecting the ball when leading.",
+        "good": [
+          "Short passes and switches with no forward risk",
+          "Shielding the ball near their corner flag in the last minutes"
+        ],
+        "bad": [
+          "Through balls into a crowded box at 85 minutes when one goal up",
+          "Long shots with time running down"
+        ],
+        "signals": [
+          "Score clock shows you ahead after about 75 minutes, and the radar shows the ball in your final third with only one of your markers near it.",
+          "Stats screen: your possession falls in the second half while you lead."
+        ],
+        "fix": "When you lead late, keep the ball in midfield and take it to their corner rather than forcing a forward pass.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-tactics/",
+            "title": "FC 27 Tactics Guide (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/ea-fc-27-guide-tips",
+            "title": "EA FC 27 guide and tips (Red Bull)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "game-management",
+          "possession"
+        ]
+      },
+      {
+        "id": "change-shape-by-scoreline",
+        "title": "Change the plan with the score and the clock",
+        "principle": "Have three saved tactics ready: normal, protecting a lead, and chasing. D-pad Left opens My Tactics and D-pad Right opens Tactical Focus. Protect a late lead by dropping the line and adding a holding player. Chase by adding a striker and pushing the line up.",
+        "why": "FC 27 keeps up to five saved custom tactics on D-pad Left and Tactical Focus (Default, Attacking, Defending) on D-pad Right, which shifts build-up and compatible role focuses without editing the saved tactic. Line height bands: Deep 1-30, High 61-90, Aggressive 91-100.",
+        "good": [
+          "Switching to a lead-protection tactic around 80 minutes when ahead",
+          "Adding a striker and Attacking focus when behind late"
+        ],
+        "bad": [
+          "Same tactic for 90 minutes whatever the score",
+          "Pushing the line to 95 with slow centre-backs while protecting a lead"
+        ],
+        "signals": [
+          "Score clock: behind after about 70 minutes, and the radar shows your deepest defender still within about 30 m of your own goal.",
+          "Score clock: ahead after about 80 minutes with both of your full-backs in the opponent's half."
+        ],
+        "fix": "Save a lead tactic and a chasing tactic, and switch with D-pad Left when the score and the clock call for it.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/able/news/pitch-notes-d-pad-tactics",
+            "title": "Pitch Notes: D-Pad Tactics (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-tactics/",
+            "title": "FC 27 Tactics (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best EA FC 27 custom tactics from pro players (Red Bull)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "tactics",
+          "game-management"
+        ]
+      },
+      {
+        "id": "roles-match-the-plan",
+        "title": "Pick roles that fit the shape you want",
+        "principle": "Player roles decide where your AI players go. If both full-backs are attacking wingbacks and both central midfielders are box-to-box, nobody stays back. Pair each attacking role with a holding or defend-focus role.",
+        "why": "In FC IQ a Role sets positioning and off-ball decisions and a Focus tilts it. Pro setups pair a Holding midfielder with Box-to-Box players and keep full-backs on Fullback; FUT.GG reports about seven in ten pros use the Defend focus for 4-4-1-1 full-backs.",
+        "good": [
+          "A Holding midfielder next to a Box-to-Box or Deep-Lying Playmaker",
+          "One attacking full-back and one defend-focus full-back"
+        ],
+        "bad": [
+          "Two Attacking Wingbacks with no holding midfielder",
+          "Every central player on an attacking focus"
+        ],
+        "signals": [
+          "Radar, as you lose the ball: both full-backs and both central midfielders are ahead of the ball.",
+          "Radar in possession: nobody of yours between your centre-backs and the ball, about 15 to 25 m ahead of them."
+        ],
+        "fix": "Give every attacking role a partner on the same side with a holding or defend focus.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-player-roles/",
+            "title": "FC 27 Player Roles (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/4-4-1-1/",
+            "title": "Best 4-4-1-1 Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://timesaver.gg/blog/fc-27-player-roles-explained-all-37-role-familiarity",
+            "title": "FC 27 Player Roles explained (Timesaver)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "tactics",
+          "roles"
+        ]
+      },
+      {
+        "id": "stamina-and-subs",
+        "title": "Substitute tired pressers in time",
+        "principle": "Pressing, sprinting and a very high line drain stamina. Tired players recover slowly and lose duels. Plan changes for wide players and pressing midfielders around 60 to 70 minutes, earlier if their indicator has faded.",
+        "why": "The Aggressive defensive approach costs extra stamina (FIFA Ultimate Team guide). Player Indicator Fade, on by default, dims the indicator as stamina drops (EA Accessibility), and the Player Name Bar shows a stamina bar. The 60 to 70 minute window is a coaching rule of thumb, not EA data.",
+        "good": [
+          "Planned changes for pressing players before 70 minutes",
+          "Checking the name-bar stamina before set pieces late on"
+        ],
+        "bad": [
+          "Keeping an exhausted full-back on against a fresh winger",
+          "Saving all substitutions for injuries"
+        ],
+        "signals": [
+          "The indicator above a pressing player has faded, or their name-bar stamina is low.",
+          "Radar: one of your markers trails the rest of the back line by 5 m or more on recovery runs late in the match."
+        ],
+        "fix": "Around 60 to 70 minutes, replace the wide players and midfielders whose stamina bars are lowest.",
+        "sources": [
+          {
+            "url": "https://www.ea.com/able/resources/ea-sports-fc/fc-27",
+            "title": "EA SPORTS FC 27 Accessibility Resources (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-tactics/",
+            "title": "FC 27 Tactics (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-player-name-bar/",
+            "title": "FC 27 Player Name Bar (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "game-management",
+          "stamina",
+          "substitutions"
+        ]
+      },
+      {
+        "id": "skills-in-space-only",
+        "title": "Use skill moves in space, not into a crowd",
+        "principle": "Skill moves work when one defender faces you and the next cover is far away. Into a compact block they mostly lose the ball. In FC 27, simple moves such as a ball roll, a drag back or a lane change are often enough against a defender who lunges.",
+        "why": "Guides note that simple direction changes beat users now that AI teammates do not auto-tackle, while many users jockey well, so a skill into a set defender rarely works. Moves are limited by the player's Skill Moves stars, and tiers differ between guides.",
+        "good": [
+          "A ball roll or lane change when one defender commits",
+          "Passing when two defenders close in"
+        ],
+        "bad": [
+          "Chaining skills into three defenders",
+          "Using a 5-star move when a simple touch would do"
+        ],
+        "signals": [
+          "Radar: your dribbler has one opponent within about 3 m and the next nearest is more than about 10 m away: a good moment for a move.",
+          "Radar: two or more opponents within about 5 m of your dribbler: pass instead."
+        ],
+        "fix": "Try a skill move only when one defender faces you and the next one is at least ten metres away.",
+        "sources": [
+          {
+            "url": "https://realsport101.com/article/fc-27-skill-moves-guide-new-skills-meta-techniques",
+            "title": "FC 27 Skill Moves Guide (RealSport101)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://keymap.io/controls/ea-sports-fc-27/skill-moves/",
+            "title": "FC 27 Skill Moves: all 109 moves by star rating (Keymap)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "attacking",
+          "dribbling",
+          "skill-moves"
+        ]
+      },
+      {
+        "id": "goalkeeper-rush-timing",
+        "title": "Rush the keeper only when the ball runs loose",
+        "principle": "Bringing your keeper out, by holding Triangle or Y, works when a clean-through attacker takes a heavy touch or the ball runs ahead of them. If they have it close and are still outside the box, stay big on the line. A Sweeper Keeper role helps behind a high line.",
+        "why": "Sweeper Keeper comes off the line to clear balls behind a high line, and the Rush Out PlayStyle speeds a keeper leaving their goal (FUT.GG, EA). A rush against a close-control attacker invites a chip or a round-the-keeper finish.",
+        "good": [
+          "Rushing when the ball runs several metres ahead of the attacker",
+          "Holding the line when the attacker has close control"
+        ],
+        "bad": [
+          "Rushing early against a striker with the ball at their feet",
+          "Leaving the keeper on the line when the ball is rolling free in the box"
+        ],
+        "signals": [
+          "Radar: an attacker is through with no defender within about 5 m and the ball several metres ahead of them: rush.",
+          "Radar: the attacker is still outside your box with the ball close and a defender within about 3 m: stay."
+        ],
+        "fix": "Rush the keeper only when the ball runs ahead of a clean-through attacker; otherwise hold the line.",
+        "sources": [
+          {
+            "url": "https://www.fut.gg/roles/gk/",
+            "title": "GK Roles and Focus, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/what-are-playstyles",
+            "title": "PlayStyles: everything you need to know (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 Defending Tips (FIFPlay)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "goalkeeping"
+        ]
+      },
+      {
+        "id": "counter-press-then-recover",
+        "title": "Counter-press for a few seconds, then drop",
+        "principle": "After losing the ball high up, the two nearest players should press at once for a few seconds while the rest cover. If the ball escapes, stop pressing and get back into shape. A long chase pulls players out of position.",
+        "why": "Coaches' Voice says counter-pressing relies on immediacy and on players already being close together when the ball is lost. A JSSM study found quick regains are the top success factor in defensive transition. In FC 27, Team Press does nothing once the ball reaches your own third.",
+        "good": [
+          "The nearest two players closing the ball within two seconds",
+          "Dropping back as soon as the ball passes your midfield"
+        ],
+        "bad": [
+          "One player chasing alone",
+          "Your midfield still chasing in their half after the ball has gone past"
+        ],
+        "signals": [
+          "Radar, after losing the ball in their half: none of your markers gets within about 5 m of the ball within two seconds.",
+          "Radar: your markers still chasing in their half while the ball has passed your midfield line."
+        ],
+        "fix": "When you lose it high, press with the nearest two players at once and drop back as soon as the ball gets past them.",
+        "sources": [
+          {
+            "url": "https://learning.coachesvoice.com/cv/in-focus-counter-pressing-1/",
+            "title": "In Focus: Counter-pressing (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://jssm.org/jssm-22-707.xml-abst",
+            "title": "Success factors in defensive transition / rest defence (Journal of Sports Science and Medicine)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-closed-beta-feedback-update",
+            "title": "FC 27 Closed Beta Feedback Update (EA)",
+            "kind": "official"
+          },
+          {
+            "url": "https://blogarchive.statsbomb.com/articles/soccer/how-statsbomb-data-helps-measure-counter-pressing/",
+            "title": "How StatsBomb data helps measure counter-pressing (StatsBomb)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "defending",
+          "transition",
+          "pressing"
+        ]
+      },
+      {
+        "id": "delay-when-outnumbered",
+        "title": "Delay when they break with more players",
+        "principle": "If they counter three against two, do not dive in. Jockey, back off toward your box and block the pass to the free runner. Every second you delay lets your midfielders get back. Use a professional foul only as a last resort, outside the box.",
+        "why": "FIFPlay's FC 27 defending tips advise delaying a counter so teammates can recover. FC 27 jockeying is faster than in FC 26 and manual standing tackles reach further, but a missed tackle leaves a large gap behind (games.gg).",
+        "good": [
+          "Jockeying backwards while showing the attacker toward the touchline",
+          "Standing in the passing lane to the free runner"
+        ],
+        "bad": [
+          "Lunging at the ball carrier with two attackers free beside them",
+          "Sliding in from behind outside the box"
+        ],
+        "signals": [
+          "Radar: three opponents ahead of the ball against two of your markers near your box.",
+          "Goal replay: your defender lunged while two attackers were free beside them."
+        ],
+        "fix": "When they break three against two, jockey backwards and block the pass to the free man until help arrives.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 Defending Tips (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://games.gg/ea-sports-fc-27/guides/ea-fc-27-defending-guide/",
+            "title": "EA FC 27 Defending Guide (games.gg)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+            "title": "Pitch Notes: FC 27 Gameplay Deep Dive (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "defending",
+          "transition",
+          "1v1"
+        ]
+      },
+      {
+        "id": "defend-the-wide-overload",
+        "title": "Match their numbers on the flank",
+        "principle": "When two attackers go at your full-back, they cannot win alone. Bring your wide midfielder or a central midfielder back to make it two against two, and show the ball carrier outside. Do not pull a centre-back wide to help.",
+        "why": "Overlaps and underlaps create two against one on the flank. FC 27 AI teammates hold shape rather than tracking aggressively, so the user often has to switch to the wide midfielder and run them back. Pulling a centre-back wide opens the middle (see the dont-break-the-line entry).",
+        "good": [
+          "Wide midfielder tracking the overlapping full-back",
+          "Full-back showing the winger down the line"
+        ],
+        "bad": [
+          "Full-back left against two",
+          "A centre-back dragged out to the touchline"
+        ],
+        "signals": [
+          "Radar: two opponent markers against one of yours on a flank in your half, with your nearest midfielder more than about 15 m away.",
+          "Goal replay: a cross from a flank where your full-back faced two players."
+        ],
+        "fix": "When two attackers face your full-back, switch to your nearest wide midfielder and run them back to make it two against two.",
+        "sources": [
+          {
+            "url": "https://www.fifplay.com/fc-27-defending-tips/",
+            "title": "FC 27 Defending Tips (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/glossary-football-tactics-coaching/",
+            "title": "Glossary: football tactics and coaching definitions (Coaches' Voice)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+            "title": "EA FC defending tips (RBLZ Gaming)",
+            "kind": "pro"
+          }
+        ],
+        "tags": [
+          "defending",
+          "wide-play",
+          "shape"
+        ]
+      },
+      {
+        "id": "scan-the-radar",
+        "title": "Check the radar before you receive",
+        "principle": "Glance at the radar just before the ball reaches your player. Look for a teammate alone on the far side or a runner behind the press. Many turnovers under pressure happen while a free teammate is off camera.",
+        "why": "The camera shows only part of the pitch; the radar shows every player. An FC 25 guide calls the radar the easiest way to find the teammate the opponent has forgotten when pressed, and an EA forum user calls it essential even in co-op.",
+        "good": [
+          "Knowing the free option before the first touch",
+          "Playing a switch to a free teammate seen on the radar"
+        ],
+        "bad": [
+          "Receiving with your eyes only on the ball",
+          "Forcing a pass into the pressure side"
+        ],
+        "signals": [
+          "Radar: when you lost the ball under pressure, one of your markers stood on the far side with no opponent within about 10 m.",
+          "Stats screen: low pass accuracy with most losses in the middle third."
+        ],
+        "fix": "As the pass comes to you, glance at the radar for the free teammate before your first touch.",
+        "drill": "Kick-Off vs CPU: before each first touch for ten minutes, say aloud where the free teammate is on the radar.",
+        "sources": [
+          {
+            "url": "https://www.iggm.com/news/fc-25-how-to-break-pressure-and-pass-ball-successfully-5-tips",
+            "title": "FC 25: how to break pressure and pass successfully, incl. using the radar (IGGM)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ea.com/discussions/fc-26-general-discussion-it/migliore-visuale-quale-telecamera-usate/13048323/replies/13120018",
+            "title": "Migliore visuale: radar reply (EA Forums, FC 26, Italian)",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "possession",
+          "awareness",
+          "radar"
+        ]
+      },
+      {
+        "id": "one-change-at-half-time",
+        "title": "Make one change at half-time from the stats",
+        "principle": "At half-time, read three things: shots and expected goals for each side, possession, and where you lose the ball. Then change one thing only: line height, build-up style, a role focus or a player. Several changes at once hide what worked.",
+        "why": "Match Facts show possession, shots, expected goals, passes, tackles and interceptions, with heat maps of where possession was won and lost (FIFA Ultimate Team guide). One change at a time lets the next half tell you whether it helped.",
+        "good": [
+          "Dropping the line five points after two chances conceded in behind",
+          "Switching build-up to Short Passing after many long-ball turnovers"
+        ],
+        "bad": [
+          "Changing formation, roles and line height together",
+          "Changing nothing despite a clear pattern"
+        ],
+        "signals": [
+          "Half-time stats: the opponent's expected goals are higher than yours from fewer shots, a sign of big chances conceded.",
+          "Possession heat map: most of your losses come in your own half."
+        ],
+        "fix": "At half-time, pick the one problem the stats show most clearly and change one setting for it.",
+        "sources": [
+          {
+            "url": "https://fifauteam.com/fc-27-stats/",
+            "title": "FC 27 Stats: Match Facts and Performance (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-tactics/",
+            "title": "FC 27 Tactics (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.ea.com/able/news/pitch-notes-d-pad-tactics",
+            "title": "Pitch Notes: D-Pad Tactics (EA)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "review",
+          "tactics",
+          "stats"
+        ]
+      },
+      {
+        "id": "tilt-reset",
+        "title": "Reset after a bad goal or a loss",
+        "principle": "After conceding a sloppy goal or losing a match, take a breath before the next action or game. Frustrated players rush passes, foul more and shoot from poor positions. Set a stop rule, such as three losses in a row, and keep it.",
+        "why": "Pro guides to Champions weekends advise spreading matches out and reviewing losses rather than playing on while frustrated. The stop rule is a coaching rule of thumb.",
+        "good": [
+          "A short pause and one deep breath after conceding",
+          "Stopping after three straight losses"
+        ],
+        "bad": [
+          "Queuing the next match straight after a frustrating loss",
+          "Trying a long shot straight after conceding"
+        ],
+        "signals": [
+          "Stats screen: pass accuracy and shots on target both drop sharply in the half after you concede.",
+          "Several fouls or cards in the minutes after a goal against.",
+          "Results: three or more losses in a row."
+        ],
+        "fix": "After three losses in a row, stop for at least fifteen minutes and review one replay before you play again.",
+        "sources": [
+          {
+            "url": "https://www.redbull.com/us-en/fc-27-fut-champions-guide-rewards-schedule-tips",
+            "title": "FC 27 FUT Champions guide, rewards, schedule and tips (Red Bull)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.teamgullit.com/ea-fc-27/common-mistakes",
+            "title": "EA FC 27 common mistakes (Team Gullit)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "mental",
+          "tilt"
+        ]
       }
     ],
     "reference": [
@@ -1600,7 +2959,7 @@
           },
           {
             "name": "Patch history: Live Update #1 (14-15 Oct 2026)",
-            "detail": "Server-side fix with no download (restart the game). It closed the deep free-kick exploit used in Rivals and Champions before Champions Finals. EA acknowledged the exploit on 13 Oct. A separate report of a goalkeeper scoring from free kicks in his own box surfaced around 13 Oct; its fix status is unclear. [Unverified]"
+            "detail": "Server-side fix with no download (restart the game). It closed the deep free-kick exploit used in Rivals and Champions before Champions Finals. EA acknowledged the exploit on 13 Oct. A separate report of a goalkeeper scoring from free kicks in their own box surfaced around 13 Oct; its fix status is unclear. [Unverified]"
           },
           {
             "name": "Patch history: TU 1.1.0 (27 Oct 2026)",
@@ -1641,6 +3000,34 @@
           {
             "name": "Scope note on verification",
             "detail": "Much FC 27 detail comes from third-party guides (FUT.GG, FIFPlay, NealGuides, timesaver.gg, Dexerto and others) because ea.com could not be fetched directly. Items marked [Unverified] conflict between sources or rest on a single source. Exact button inputs and reward numbers should be confirmed in-game."
+          },
+          {
+            "name": "Game identity",
+            "detail": "EA SPORTS FC 27, the fourth EA SPORTS FC title, published by Electronic Arts. Worldwide release Friday 25 Sep 2026; Ultimate Edition early access from 18 Sep; Web App 16 Sep and Companion App 17 Sep; 10-hour EA Play trial. Platforms as in the existing pack (PS5, Xbox Series X|S, PC, Switch 2 and others)."
+          },
+          {
+            "name": "TU 1.1.0 timing and scope",
+            "detail": "Latest download is Title Update 1.1.0, live 27 Oct 2026 (about 11:16 CET per one guide), described as 150-plus fixes and quality-of-life changes with no balance or tuning changes. Gameplay tuning is the launch build plus TU 1.0.1's Authentic-only jockey change and Live Update #1 (free-kick exploit fix, 14-15 Oct)."
+          },
+          {
+            "name": "EA's stated patch stance",
+            "detail": "In its closed-beta update EA said that, unlike previous FC titles, it does not plan significant gameplay balance changes in early title updates. Its 30 Sep and 13 Oct updates repeat that an item on the watch list does not mean a change is coming."
+          },
+          {
+            "name": "EA watch list (13 Oct 2026)",
+            "detail": "Full-backs dropping too deep and keeping attackers onside; kick-off goals; near-post low driven shots; interceptions by players with low defensive attributes; foul calls after some challenges. Manual defending: data shows a learning curve, no change planned."
+          },
+          {
+            "name": "9 Oct fix",
+            "detail": "A server-side fix on 9 Oct tuned FUT Champions matchmaking after the first Finals weekend. It was not a defending change, despite some reports."
+          },
+          {
+            "name": "Closed-beta changes: full list",
+            "detail": "Lower depth settings retreat earlier; Team Press off in your defensive third and weaker from defenders; shoulder-challenge spam slows the defender; challenges from behind less reliable; Bruiser+ slightly reduced; triggered runs capped; Player Lock carrier no longer dribbles by itself; dinked pass removed from the Ground Pass input."
+          },
+          {
+            "name": "What changes the screen",
+            "detail": "Radar 2D/3D/Off and its colours, Score Clock and Dropdown toggles, Player Indicator size/fade/colours (custom per player in FC 27), Player Name Bar, HyperMotion Insight Overlays, Scrolling Line Ups, High Contrast Gameplay and colour-blind filters. Any of these can break vision assumptions."
           }
         ]
       },
@@ -1782,6 +3169,38 @@
           {
             "name": "FC Pro Open Ladder entry",
             "detail": "Esports qualification runs through Ultimate Team. Reach Division 5 or above in Division Rivals to become eligible for the in-game FC Pro Open Ladder (FC 27 window was 21 Sep to 3 Oct 2026)."
+          },
+          {
+            "name": "Ultimate Team Draft",
+            "detail": "Entry 15,000 coins, 300 FC Points or a Draft Token. Pick a squad from five formation options, then play up to four matches until you lose. Online Draft vs people; Single Player Draft vs CPU-controlled real clubs (difficulty changes coins per match only). Rewards at the end; reward tables are community-tracked."
+          },
+          {
+            "name": "Rush (FC 27)",
+            "detail": "5v5 available in Ultimate Team, Clubs, Kick-Off and Career. FUT Rush uses AI keepers. Pitch 63.7 x 46.6 m. Four Quick Chat categories with four messages each. Leaving early: matchmaking penalties of 15 minutes to 1 hour, removed by completing matches. Blue cards and run-up penalties were FC 25 rules; FC 27 carry-over not confirmed."
+          },
+          {
+            "name": "Kick-Off match types",
+            "detail": "Classic Match, Rush, House Rules, licensed competition matches, Cup Finals, Home & Away and Best Of series. House Rules include Survival, Mystery Ball, Headers & Volleys and No Rules; Long Range and King of the Hill appear in events and Club Tournaments."
+          },
+          {
+            "name": "House Rules details",
+            "detail": "Survival: after each goal a random outfield player of the scoring team is removed. Mystery Ball: when the ball goes out it can return as one of five Mystery Ball types with temporary boosts. Normal positional coaching may not apply in these."
+          },
+          {
+            "name": "Clubs competitions in FC 27",
+            "detail": "Reached through the Clubhouse. Leagues: points from wins and draws, promotion and relegation, divisions reset each season, then Playoffs. Club Tournaments: 11v11 with varied rounds, rewards and House Rules (King of the Hill, Survival, Long Range, No Rules). Live Tournaments rotate rules. Stadium Drop-In is matchmade 11v11. Rush Stadium and an in-world Rush pitch."
+          },
+          {
+            "name": "The Grounds activities",
+            "detail": "1v1 to 4v4 pitches, Rush small-sided, Kickabouts and minigames across Parkside, Montclair and Zeiza around the Terrace, up to 100 players. Small-sided matches leave the open world for matchmaking."
+          },
+          {
+            "name": "Manager Career additions",
+            "detail": "Tactical Visions set a baseline playstyle template; coaches hired per position group boost that system. Practice Arena runs 11v11 starting XI vs reserves using your sliders, the best offline sandbox for this pack's drills."
+          },
+          {
+            "name": "FC 27 Lite",
+            "detail": "Free client: Kick-Off, Learn to Play, Online Friendlies, Online Seasons; no Ultimate Team, Manager Career or The Grounds."
           }
         ]
       },
@@ -1953,6 +3372,166 @@
           {
             "name": "Pass Receiver Lock indicator",
             "detail": "When Pass Receiver Lock is on, control locks onto the intended receiver. Most guides set it to Late, so the lock engages after the kick and you can control the passer longer."
+          },
+          {
+            "name": "Radar: Where and what",
+            "detail": "Small top-down pitch map, usually bottom centre, showing all 22 players and the ball. Settings: Game Settings > Visual > Radar (2D / 3D / Off), User Radar Colour, Opponent Radar Colour. Position and size are not adjustable."
+          },
+          {
+            "name": "Radar: Default view",
+            "detail": "EA's FIFA 22 settings page names 2D as the default; no FC 26 or FC 27 page states one. Ask the player to confirm 2D."
+          },
+          {
+            "name": "Radar: Colour values",
+            "detail": "Default, Red, Blue, Green, Purple, Orange, White, Black for each team. Default follows normal kit colours, ignoring High Contrast kit colours (FC 26 report). Recommend fixed contrasting colours such as Blue for you and Red or Orange for the opponent."
+          },
+          {
+            "name": "Radar: Direction",
+            "detail": "Goals sit left and right; teams change ends at half-time, so your attacking direction on the radar flips. Re-detect each half from your keeper's marker."
+          },
+          {
+            "name": "Radar: Reading distances",
+            "detail": "Assume 105 x 68 m. 10 m is about a tenth of the radar length; the penalty area is about a sixth. Use 2D; 3D is perspective-distorted."
+          },
+          {
+            "name": "Radar: Unverified details",
+            "detail": "How the ball and the controlled player are drawn, which pitch lines are shown, and whether the radar hides at set pieces and replays are not documented. Validate on live captures."
+          },
+          {
+            "name": "Radar: Known complaints",
+            "detail": "FC 26 Clubs players report the radar can look too transparent and dark indicator colours blend into the pitch; there is no opacity option."
+          },
+          {
+            "name": "Radar: position",
+            "detail": "default: Bottom centre of the screen, below the action, drawn as a small landscape pitch. This is the long-standing FIFA/FC layout seen in footage; no EA page states the position.. movable: No option to move or resize the radar appears in any FC 25, FC 26 or FC 27 settings list found (FIFPlay, FIFA Ultimate Team guide, EA Accessibility pages)."
+          },
+          {
+            "name": "Radar: shape",
+            "detail": "2D: a flat rectangle in pitch proportions (a real 105 x 68 m pitch is about 1.54:1), goals at the left and right ends. 3D: the same pitch drawn tilted in perspective, so the far touchline is shorter than the near one and distances are compressed toward the top. Use 2D for any distance measurement. (Unverified.)"
+          },
+          {
+            "name": "Radar: views",
+            "detail": "2D: Top-down flat radar. EA's FIFA 22 PC settings page describes '2D or 3D top down viewing angles' and names 2D as the default. Recommended for the coach: positions map linearly to the pitch. 3D: Tilted perspective radar (EA: radar appearance can be set as 2D or 3D depending on preference)."
+          },
+          {
+            "name": "Radar: views (2)",
+            "detail": "Distances are not linear; the coach should ask the player to switch to 2D or apply a perspective correction. Off: Hides the radar. Listed for FC 25 and FC 26 by FIFPlay and for FC 27 by the FIFA Ultimate Team settings guide. With the radar off, every radar-based signal in this pack fails closed."
+          },
+          {
+            "name": "Radar: default",
+            "detail": "2D is the documented default in FIFA 22 (EA Accessibility). No FC 26 or FC 27 source names the default; assume 2D but check on first run. (Unverified.)"
+          },
+          {
+            "name": "Radar: menu path",
+            "detail": "allPlatforms: Main menu > Settings (gear icon, top right) > Game Settings > Visual tab > Radar section: Radar (2D / 3D / Off), User Radar Colour, Opponent Radar Colour. The Visual tab also holds the Overlays section (Score Clock, Score Clock Dropdown, HyperMotion Insight Overlays, Scrolling Line Ups) and the indicator options.."
+          },
+          {
+            "name": "Radar: menu path (2)",
+            "detail": "ps5: Use R1 / L1 to move between the Game Settings tabs to reach Visual.. xbox: Use RB / LB to move between the Game Settings tabs to reach Visual.. pc: Same menus; tab-switch keys on keyboard were not confirmed (controller bumpers work).."
+          },
+          {
+            "name": "Radar: menu path (3)",
+            "detail": "inMatch: Pause > Settings > Game Settings > Visual reaches the same options during a match (MagicGameWorld reports the score clock option can be changed from the pause menu).. accessibilityFilter: FC 27 adds an Accessibility filter in the Settings menu that narrows the list to accessibility-relevant options, with icons marking settings that may help (EA FC 27 Accessibility page)."
+          },
+          {
+            "name": "Radar: colours",
+            "detail": "userRadarColour: Changes the colour of the radar icons for your own team (EA FC 26 Accessibility page wording).. opponentRadarColour: Changes the colour of the radar icons for the opposing team.. values: Default, Red, Blue, Green, Purple, Orange, White, Black."
+          },
+          {
+            "name": "Radar: colours (2)",
+            "detail": "valuesSource: Exact list on EA's FIFA 20 and FIFA 22 settings pages and FIFPlay FC 24; the FIFA Ultimate Team FC 27 guide lists the same values as User/Opponent Radar Indicator Colour. EA's FC 26 page shows 'User Radar Colour' set to Default on the Visual Settings screen.. defaultLooksLike: Default follows each team's normal kit colour."
+          },
+          {
+            "name": "Radar: colours (3)",
+            "detail": "An FC 26 player using High Contrast Mode reports the radar 'takes the colour of the standard kit, not the high contrast one', and that a team in a dark kit forced them to change the radar colour manually before each match. So with Default, two dark kits (or two white kits) can look alike on the radar.."
+          },
+          {
+            "name": "Radar: colours (4)",
+            "detail": "highContrastInteraction: High Contrast Mode (FC 26 and FC 27) recolours players, keepers, referee and ball on the pitch, but per the same report the radar ignores those colours. Unconfirmed whether FC 27 fixed this.. recommendation: Ask the player to set fixed, contrasting colours, for example User Radar Colour Blue and Opponent Radar Colour Red or Orange."
+          },
+          {
+            "name": "Radar: colours (5)",
+            "detail": "Avoid White and Black for teams (white may be confused with the ball; black and dark colours blend into the radar background, as an FC 26 forum post reports for dark indicator colours), and avoid Green on a green pitch. Record the choice in player context so the coach knows which colour is 'you'."
+          },
+          {
+            "name": "Radar: ball",
+            "detail": "Not documented by EA. Expect a small, light (white) marker smaller than the player markers. Confirm on live captures; if the player chooses White for a team the ball may be hard to separate. (Unverified.)"
+          },
+          {
+            "name": "Radar: controlled player",
+            "detail": "Not documented. Expect the user-controlled player's marker to be highlighted in the player-indicator colour rather than the team colour. FC 27 adds custom per-player indicator colours (Player Indicator Colours: Default or Custom), so the coach must not hard-code the highlight colour. In couch co-op several markers may be highlighted. (Unverified.)"
+          },
+          {
+            "name": "Radar: numbers and names",
+            "detail": "No source mentions shirt numbers or names on the radar. Treat markers as anonymous: identify roles from position (deepest marker near a goal line is the keeper, and so on). (Unverified.)"
+          },
+          {
+            "name": "Radar: pitch markings",
+            "detail": "Not documented for FC 27. Expect the pitch outline, halfway line, centre circle and both penalty areas drawn as light lines on a darker, semi-transparent pitch. Calibrate scale from the outline, not from guessed markings. (Unverified.)"
+          },
+          {
+            "name": "Radar: transparency",
+            "detail": "No transparency or opacity option exists in the FC 25, FC 26 or FC 27 settings lists found. An FC 26 Clubs player reports the mini-map 'can become too transparent', making positions hard to read, and that darker individual indicator colours blend into the pitch; they ask EA for an opacity option. No EA reply or change was found."
+          },
+          {
+            "name": "Radar: visibility",
+            "detail": "replays: Expected hidden during goal replays, instant replays and cutscenes, along with the score clock and indicators. Do not read radar positions from replay frames.. setPieces: Expected visible at corners, free kicks and throw-ins; not confirmed. FC 27 corners move the camera to the box for the positioning window (Red Bull), which may change what the HUD shows.."
+          },
+          {
+            "name": "Radar: visibility (2)",
+            "detail": "penalties: Not confirmed; treat penalty frames as having no radar.. menus: Hidden in pause, half-time and full-time screens."
+          },
+          {
+            "name": "Radar: modes",
+            "detail": "Radar is a global Game Setting, so it applies to 11v11 matches in every mode that uses the normal match HUD (Kick-Off, Career, Ultimate Team, Online Seasons, Clubs). Clubs players rely on it heavily (FC 26 forum). Whether Rush (5v5) and The Grounds small-sided pitches show a radar was not confirmed. (Unverified.)"
+          },
+          {
+            "name": "Radar: orientation",
+            "detail": "The radar shows the pitch the same way round as the main side-on camera: goals at the left and right ends. Teams change ends at half-time (and for the second period of extra time), so your attacking direction on the radar flips each half. No FC setting was found that fixes your team to attack one way in 11v11."
+          },
+          {
+            "name": "Radar: orientation (2)",
+            "detail": "Infer direction each half from where your goalkeeper's marker sits, or from which half your team occupies at kick-off. On vertical cameras the radar orientation was not checked. )"
+          },
+          {
+            "name": "Radar: accessibility",
+            "detail": "User Radar Colour and Opponent Radar Colour (Default plus 7 colours) are the radar's only colour controls. High Contrast Mode / High Contrast Gameplay: colours for home players, home keeper, away players, away keeper, ball and referee, a pitch-saturation slider, and where to apply the colours (Can I Play That? FC 26; returns in FC 27)."
+          },
+          {
+            "name": "Radar: accessibility (2)",
+            "detail": "The radar reportedly keeps Default kit colours regardless. Colour-blind filters: Protanopia, Deuteranopia, Tritanopia with an intensity slider (one walkthrough: 0-10, default 6). A filter changes every on-screen colour, including radar markers, so calibrate colours after the player turns one on. FC 27: Player Indicator Colours can be Default or Custom (pick a colour per team member)."
+          },
+          {
+            "name": "Radar: accessibility (3)",
+            "detail": "This changes the controlled-player highlight. Accessibility filter in the FC 27 Settings menu."
+          },
+          {
+            "name": "Radar: score clock",
+            "detail": "position: Top-left of the screen: home team short name, home score, away score, away short name, then the match clock in minutes, with an added-time badge late in each half.. options: Visual > Overlays: Score Clock On (default) / Off and Score Clock Dropdown On (default) / Off. When Off, these elements are hidden during gameplay (EA Accessibility FC 26 and FC 27).."
+          },
+          {
+            "name": "Radar: score clock (2)",
+            "detail": "dropdown: The Score Clock Dropdown is a panel that drops below the score clock for in-match information (for example events and stat graphics). Its exact contents in FC 27 were not confirmed.. risk: MagicGameWorld reports the Score Clock can end up switched off by default or after an update."
+          },
+          {
+            "name": "Radar: score clock (3)",
+            "detail": "If it is off, the score and minute cannot be read: fail closed and ask the player to turn it back on.. styles: Licensed competitions may use their own broadcast-style score bug; FC 27 specifics were not found."
+          },
+          {
+            "name": "Radar: reading guide",
+            "detail": "Calibrate once per session: find the radar rectangle near the bottom centre, measure its outline in pixels, and map it to a 105 x 68 m pitch (assumption; FC pitch size is not published). 5 m deep) is about one sixth of it; the radar's height is the pitch width (68 m). Team identity: use the colours the player set (recommended fixed User and Opponent colours)."
+          },
+          {
+            "name": "Radar: reading guide (2)",
+            "detail": "With Default colours, sample each team's colour at kick-off and re-check after half-time. Direction: at each kick-off note which end your goalkeeper's marker is at; your team attacks the other end until half-time, then reverse. Ignore radar frames during replays, menus, set-piece cut-ins and goal celebrations. Prefer 2D. If the player uses 3D, request 2D or treat distances as approximate."
+          },
+          {
+            "name": "Radar: reading guide (3)",
+            "detail": "Markers are anonymous: assign roles by position (keeper, back line, midfield, forwards) using sorted x-positions."
+          },
+          {
+            "name": "Radar: known issues",
+            "detail": "Default radar colours ignore High Contrast kit colours (FC 26 report). Radar can look too transparent with dark indicator colours (FC 26 Clubs report). No opacity, size or position option."
           }
         ]
       },
@@ -2118,6 +3697,66 @@
           {
             "name": "Skill moves: practical use in FC 27",
             "detail": "With AI defenders no longer auto-tackling, simple direction changes (drag back, ball roll, stop-and-go, lane change) beat lunging users. Many users now jockey well, so do not spam skills into a set defender: use them when the defender commits. Practise in Training before using them online."
+          },
+          {
+            "name": "Role: Goalkeeper",
+            "detail": "Goalkeeper: stays on the line. Sweeper Keeper: sweeps behind a high line. Ball-Playing Keeper: extra passer in build-up."
+          },
+          {
+            "name": "Role: Centre-back",
+            "detail": "Defender: holds the line. Stopper: steps out to engage dropping forwards. Ball-Playing Defender: progresses the ball. Wide Back: back-three centre-back who covers wide (Support focus)."
+          },
+          {
+            "name": "Role: Full-back",
+            "detail": "Fullback (balanced default), Falseback (tucks into midfield), Wingback (width), Attacking Wingback (overlaps, Support/Attack), Inverted Wingback (moves into the half-space)."
+          },
+          {
+            "name": "Role: Defensive midfield",
+            "detail": "Holding: screens the back line (Defend or Roaming). Centre-Half: drops between centre-backs in build-up. Deep-Lying Playmaker: dictates from deep (Build-Up or Roaming)."
+          },
+          {
+            "name": "Role: Central midfield",
+            "detail": "Box-to-Box: both boxes. Holding and Deep-Lying Playmaker also available. Playmaker: drifts to receive. Half-Winger: drifts wide into the half-space. Box Crasher: late runs into the box."
+          },
+          {
+            "name": "Role: Wide midfield and wingers",
+            "detail": "Winger: holds the touchline and crosses. Wide Midfielder: stays wide, links and defends, rarely attacks. Wide Playmaker: drifts inside to create. Inside Forward: cuts inside to shoot."
+          },
+          {
+            "name": "Role: Attacking midfield",
+            "detail": "Playmaker, Shadow Striker (second-striker runs; usual pro pick), Half-Winger, Classic 10 (central creator)."
+          },
+          {
+            "name": "Role: Striker",
+            "detail": "Advanced Forward (runs in behind; most used), Poacher (box), False 9 (drops to link; Attack or Build-Up focus), Target Forward (hold-up and aerial; FC 27 presence not confirmed by FC 27 sources)."
+          },
+          {
+            "name": "Role: Familiarity",
+            "detail": "Role+ and Role++ mark suited players. In FC 27 every special item gets Role++ in all roles of its primary and secondary positions. EA has not published numeric effects. Counts: 37 position-role slots, about 30 role names (FUT.GG counts 31)."
+          },
+          {
+            "name": "Formation: Available formations",
+            "detail": "FIFPlay counts 44. Back four: 4-1-2-1-2 Narrow/Wide, 4-1-3-2, 4-1-4-1, 4-2-1-3, 4-2-2-2, 4-2-3-1 Narrow/Wide, 4-2-4, 4-3-1-2, 4-3-2-1, 4-3-3 variants, 4-4-1-1, 4-4-2, 4-5-1. Back three: 3-1-4-2, 3-4-1-2, 3-4-2-1, 3-4-3, 3-5-2. Back five: 5-2-1-2, 5-2-3, 5-3-2, 5-4-1."
+          },
+          {
+            "name": "Formation: Meta by usage (FUT.GG, Oct 2026)",
+            "detail": "Pros: 4-3-1-2 31-43%, 4-2-1-3 16-17%, 4-1-2-1-2 Narrow 11%, 4-4-1-1 5%. Community: 4-2-1-3 25-29%, 4-3-1-2 25%, 4-4-1-1 13%, 4-2-3-1 Wide 5%. Different pages and dates give different shares."
+          },
+          {
+            "name": "Formation: 4-3-1-2 on the radar",
+            "detail": "Central diamond of three CMs and a CAM, two strikers close together, width only from full-backs. Weak against wide overloads and quick switches."
+          },
+          {
+            "name": "Formation: 4-2-1-3 on the radar",
+            "detail": "Two holding markers just ahead of the back four, three forwards spread across the front line. Weak against central diamonds and overlapping full-backs."
+          },
+          {
+            "name": "Formation: 4-4-1-1 on the radar",
+            "detail": "Two flat banks of four close together, a second striker just behind the striker. Solid against counters; can be passive."
+          },
+          {
+            "name": "Formation: Back five on the radar",
+            "detail": "Five markers across the width of the box when defending; wing-backs push level with midfield in possession. Strongest protection of the box per guides, rarely used online."
           }
         ]
       },
@@ -2291,6 +3930,74 @@
           {
             "name": "Visual settings that help",
             "detail": "2D radar with team-coloured dots, Player Name Large indicator, Next Player Switch Indicator on, camera shake off, Power Shot Zoom off. Path: Settings > Game Settings > R1/RB to Visual Settings."
+          },
+          {
+            "name": "Skill moves: Pad mapping",
+            "detail": "Inputs are the same on PlayStation and Xbox apart from labels: L1=LB, R1=RB, L2=LT, R2=RT, R3=right stick click, Cross=A, Circle=B, Square=X, Triangle=Y. RS = right stick, LS = left stick. Star tiers for some moves differ between guides."
+          },
+          {
+            "name": "Skill moves: 1 star",
+            "detail": "Ball Juggle (standing): hold L2 / LT, tap R1 / RB. Directional Nutmeg: hold L1+R1 / LB+RB, move RS. Giant Fake Shot (new, one source): L2 / LT + fake shot while standing. Kneel Header: 1 star with Trickster per one source, 5 star per others."
+          },
+          {
+            "name": "Skill moves: 2 star",
+            "detail": "Body Feint: flick RS left or right (direction label disputed). Stepover: rotate RS from up to left or right. Reverse Stepover: rotate RS from left or right to up. Ball Roll: hold RS left or right. Feint Forward and Turn: flick RS down twice. Drag Back: L1+R1 / LB+RB + flick LS down (some list L2 + hold RS down). Stop and Go, Drag to Drag (inputs not confirmed)."
+          },
+          {
+            "name": "Skill moves: 3 star",
+            "detail": "Heel Flick: flick RS up then down. Roulette: rotate RS from down round to left or right. Fake Left and Go Right: rotate RS left, down, right (mirror for the other side). Heel Chop (running): L2 / LT with fake shot, then LS direction. Foot to Foot, Lateral Heel to Heel (inputs not confirmed). Fake Turn (new; 3 or 4 star)."
+          },
+          {
+            "name": "Skill moves: 4 star",
+            "detail": "Ball Hop (standing): hold L1 / LB, press R3. Lane Change: hold L1 / LB, hold RS left or right. Simple Rainbow: flick RS down, up, up. Spin: hold R1 / RB, rotate RS 270 degrees (disputed). Fake Pass (standing): R2 / RT + Square or Circle (X or B), then Cross / A. Three Touch Roulette: hold L2 / LT, flick RS down then left or right (4 or 5 star). Flair Roulette, Ball Roll Spin (new)."
+          },
+          {
+            "name": "Skill moves: 5 star",
+            "detail": "Elastico: rotate RS right, down, left. Reverse Elastico: left, down, right. Advanced Rainbow: flick RS down, hold up, flick up. Tornado Spin: hold L1 / LB, flick RS up then left or right. Ball Roll and Flick (running): hold RS left or right, then flick RS up. Heel Flick Turn: hold L2+R1 / LT+RB, flick RS up then down. Stepover Combo (new; 4 or 5 star)."
+          },
+          {
+            "name": "Skill moves: 5 star, new or unconfirmed inputs",
+            "detail": "First Time Spin, Alternate Elastico Chop and Running Fake Drag (Keymap lists them at 5 star; inputs not confirmed). Kneel Header (5 star in most lists). Sombrero flicks while juggling: hold L2+R1 / LT+RB with LS direction (Driffle). TU 1.0.1 fixed 5-star moves not working in street matches."
+          },
+          {
+            "name": "Skill moves: Which moves matter",
+            "detail": "Most useful competitively: ball roll, drag back, lane change, heel chop, stepover and roulette. Use them against one committed defender with space behind them; pass into crowds."
+          },
+          {
+            "name": "Set pieces: Corner sequence",
+            "detail": "1) Aim and deliver. 2) Camera turns to the box for a brief window: move your attacker with Avoidance (hold R1 / RB) and hold the spot with Shielding (hold L2 / LT). 3) Time the header or volley. Attackers no longer auto-position."
+          },
+          {
+            "name": "Set pieces: Corner tactics",
+            "detail": "D-pad Up (moved from D-pad Down): add or remove runners, near or far post. FC 26's Edge of Box Run and Crowd the Goalkeeper were replaced by adding or removing players."
+          },
+          {
+            "name": "Set pieces: Defending corners",
+            "detail": "Select your best header before delivery and use Avoidance to beat screens. Keep the six-yard box and the penalty spot covered; FC 27 crosses land in space more often."
+          },
+          {
+            "name": "Set pieces: Free kick mechanics",
+            "detail": "Place the reticle on goal, drag the marker across the ball to set spin and lift, then hold for power (framework from FC 24). Dead-centre plus high power gives a knuckleball; striking high on the ball keeps it flat. High Shot Power needs less of the bar."
+          },
+          {
+            "name": "Set pieces: Free kick takers",
+            "detail": "EA names Free Kick Accuracy, Curve and Shot Power. One guide recommends assigning a left-footed and a right-footed taker for each side. Vary power with distance."
+          },
+          {
+            "name": "Set pieces: Free kick tactics",
+            "detail": "D-pad Up: add or remove runners, send players near or far post, choose zonal or player marking. Use the indirect routine from wide positions."
+          },
+          {
+            "name": "Set pieces: Penalties",
+            "detail": "Guide advice: choose a low corner, use about half the power bar, commit before the run-up. Composure and Penalties matter more than Finishing. Practise in Skill Games (Precision Penalty) and the Training Centre."
+          },
+          {
+            "name": "Set pieces: Throw-ins",
+            "detail": "FC 27 adds Shielding and Avoidance for throw-in receivers."
+          },
+          {
+            "name": "Set pieces: Exploits to ignore",
+            "detail": "A deep free-kick exploit was fixed server-side by Live Update #1 (14-15 Oct). A goalkeeper scoring from free kicks in their own box was reported. Never advise either."
           }
         ]
       },
@@ -2307,7 +4014,7 @@
           },
           {
             "name": "Tekkz 4-3-1-2 / 4-4-1-1",
-            "detail": "FUTSettings lists Tekkz in a 4-3-1-2 with Counter build-up, Balanced approach, line 60, Sweeper Keeper, Fullbacks, Defenders, Box-to-Box CMs, Shadow Striker and two Advanced Forwards. Red Bull quotes him recommending a 4-4-1-1 with adjusted roles. The sources conflict. [Unverified]"
+            "detail": "FUTSettings lists Tekkz in a 4-3-1-2 with Counter build-up, Balanced approach, line 60, Sweeper Keeper, Fullbacks, Defenders, Box-to-Box CMs, Shadow Striker and two Advanced Forwards. Red Bull quotes them recommending a 4-4-1-1 with adjusted roles. The sources conflict. [Unverified]"
           },
           {
             "name": "RedLac's 4-3-1-2 (Red Bull)",
@@ -2392,6 +4099,34 @@
           {
             "name": "Rush and small-sided play",
             "detail": "Spacing matters more than skill: keep one player back, use quick one-twos, and exploit the AI GK with low driven shots. Rush-specific rules can be checked in the in-game tutorial. [Unverified]"
+          },
+          {
+            "name": "Tactics: Team tactics in FC IQ",
+            "detail": "Two team settings: Build-Up Style (Short Passing, Balanced, Counter) and Defensive Approach with Line Height (Deep 1-30, Balanced up to 60, High 61-90, Aggressive 91-100). Everything else comes from each player's Role and Focus."
+          },
+          {
+            "name": "Tactics: Defaults",
+            "detail": "Deep 25, Balanced 50, High 70, Aggressive 95 (FIFA Ultimate Team guide). Most pros run Balanced at 60; Red Bull quotes Tekkz and RedLac at 61-65; Boosting Market says 44% of pro squads now push the line to High."
+          },
+          {
+            "name": "Tactics: Depth tuning in FC 27",
+            "detail": "Closed-beta change: at low depth defenders retreat earlier and hold conservative positions. At 95 the line pushes as high as possible and presses at once after losing the ball."
+          },
+          {
+            "name": "Tactics: Set-piece tactics",
+            "detail": "D-pad Up at corners and free kicks: add or remove runners, near or far post, zonal or player marking. Plan rest defence here too."
+          },
+          {
+            "name": "Tactics: Tactical Focus vs My Tactics",
+            "detail": "Tactical Focus (D-pad Right) temporarily shifts build-up, approach and compatible role focuses. My Tactics (D-pad Left) swaps whole saved tactics including formation and roles. Both take a moment to apply."
+          },
+          {
+            "name": "Tactics: Choosing build-up",
+            "detail": "Short Passing suits a 4-4-1-1 built for central combinations (Tekkz); Balanced suits most 4-3-1-2 and 4-2-1-3 builds; Counter suits two fast strikers against high lines."
+          },
+          {
+            "name": "Tactics: Line height and pace",
+            "detail": "Higher lines need fast centre-backs and a Sweeper Keeper. Guides suggest 50-55 while learning manual defending and about 40-50 to protect a lead."
           }
         ]
       },
@@ -2678,12 +4413,232 @@
           {
             "name": "FC Pro",
             "detail": "EA's official esports circuit (Open, World Championship)."
+          },
+          {
+            "name": "Radar",
+            "detail": "The in-match mini-map showing players and the ball (also called the mini-map)."
+          },
+          {
+            "name": "2D radar",
+            "detail": "Flat top-down radar; distances map linearly to the pitch."
+          },
+          {
+            "name": "3D radar",
+            "detail": "Tilted perspective radar; distances are compressed toward the far side."
+          },
+          {
+            "name": "User Radar Colour",
+            "detail": "Setting for your team's radar markers (Default plus seven colours)."
+          },
+          {
+            "name": "Opponent Radar Colour",
+            "detail": "Setting for the opponent's radar markers."
+          },
+          {
+            "name": "Score Clock",
+            "detail": "The top-left score and time display; can be switched off."
+          },
+          {
+            "name": "Score Clock Dropdown",
+            "detail": "Information panel that drops below the score clock; can be switched off."
+          },
+          {
+            "name": "Next Player Switch Indicator",
+            "detail": "Marker above the defender L1 / LB will switch to."
+          },
+          {
+            "name": "Player Name Bar",
+            "detail": "Bottom-screen bar with the controlled player's name and stamina, with optional PlayStyles+, skill stars and footedness."
+          },
+          {
+            "name": "High Contrast Gameplay",
+            "detail": "Accessibility mode that recolours players, keepers, referee and ball for visibility."
+          },
+          {
+            "name": "Line height (metres)",
+            "detail": "Distance from your goal line to your deepest outfield player; in FC also the 1-100 depth slider."
+          },
+          {
+            "name": "Low block",
+            "detail": "Defending deep, roughly within 25-35 m of your own goal."
+          },
+          {
+            "name": "Mid block",
+            "detail": "Defending with the line roughly 35-45 m from goal, engaging in midfield."
+          },
+          {
+            "name": "High block / high press",
+            "detail": "Defending with a high line, often 50 m or more from goal, pressing early."
+          },
+          {
+            "name": "Compactness",
+            "detail": "Short distances within and between lines when defending."
+          },
+          {
+            "name": "Team length",
+            "detail": "Distance between the deepest and most advanced outfield player."
+          },
+          {
+            "name": "Team width",
+            "detail": "Distance between the two widest outfield players."
+          },
+          {
+            "name": "Rest defence",
+            "detail": "Players kept behind the ball while attacking to stop counters, usually one more than their forwards."
+          },
+          {
+            "name": "Counter-press",
+            "detail": "Pressing straight after losing the ball to win it back quickly."
+          },
+          {
+            "name": "Pressing trigger",
+            "detail": "A cue to press: back pass, poor touch, ball to the touchline, receiver facing their own goal."
+          },
+          {
+            "name": "PPDA",
+            "detail": "Passes allowed per defensive action; lower means more intense pressing."
+          },
+          {
+            "name": "Ball Recovery Time",
+            "detail": "Seconds taken to win the ball back after losing it; on the FC Match Facts summary."
+          },
+          {
+            "name": "Half-space",
+            "detail": "Vertical channel between the touchline lane and the centre."
+          },
+          {
+            "name": "Zone 14",
+            "detail": "Central area just outside the penalty box."
+          },
+          {
+            "name": "Overload",
+            "detail": "More of your players than theirs in one area."
+          },
+          {
+            "name": "Isolation",
+            "detail": "A one against one created on the far side after an overload."
+          },
+          {
+            "name": "Overlap",
+            "detail": "A run around the outside of the ball carrier."
+          },
+          {
+            "name": "Underlap",
+            "detail": "A run inside the ball carrier, between them and the centre."
+          },
+          {
+            "name": "Third-man run",
+            "detail": "A run by a third player into space created by a two-player exchange."
+          },
+          {
+            "name": "Blind-side run",
+            "detail": "A run behind a defender's back, out of their view."
+          },
+          {
+            "name": "Cutback",
+            "detail": "A pass pulled back from near the byline to a player arriving in the box."
+          },
+          {
+            "name": "Box occupancy",
+            "detail": "How many attackers or defenders are in the key box zones when the ball arrives."
+          },
+          {
+            "name": "Switch of play",
+            "detail": "A pass moving the ball quickly to the opposite flank."
+          },
+          {
+            "name": "Transition",
+            "detail": "The seconds after the ball changes hands."
+          },
+          {
+            "name": "Second ball",
+            "detail": "The loose ball after a header, clearance or block."
+          },
+          {
+            "name": "xG per shot",
+            "detail": "Average expected goals per shot; a measure of chance quality."
+          },
+          {
+            "name": "Big chance",
+            "detail": "A shot with a high scoring probability, such as a tap-in or a one-on-one."
+          },
+          {
+            "name": "Player Lock",
+            "detail": "FC mechanic to control an off-ball player; tuned in FC 27."
+          },
+          {
+            "name": "Ground Cross",
+            "detail": "Cross along the ground (Square twice / X twice)."
+          },
+          {
+            "name": "Lobbed Through Pass",
+            "detail": "Through ball over the line (L1+Triangle / LB+Y)."
+          },
+          {
+            "name": "Tactical Focus",
+            "detail": "D-pad Right: Default, Attacking or Defending focus without editing the tactic."
+          },
+          {
+            "name": "My Tactics",
+            "detail": "D-pad Left: switch between up to five saved custom tactics."
+          },
+          {
+            "name": "Tactical Vision",
+            "detail": "Manager Career template for a team's playstyle."
+          },
+          {
+            "name": "House Rules",
+            "detail": "Kick-Off and event rule variants such as Survival and Mystery Ball."
+          },
+          {
+            "name": "Survival",
+            "detail": "House Rule where a scoring team loses an outfield player after each goal."
+          },
+          {
+            "name": "Mystery Ball",
+            "detail": "House Rule where the ball returns with one of five temporary effects."
+          },
+          {
+            "name": "Kickabout",
+            "detail": "Casual small-sided game in The Grounds."
+          },
+          {
+            "name": "Drop-In",
+            "detail": "Matchmade Clubs game joined as an individual."
+          },
+          {
+            "name": "EA Javelin",
+            "detail": "EA's PC anticheat that blocks denylisted software."
+          },
+          {
+            "name": "Offside trap",
+            "detail": "Stepping the back line up together to leave attackers offside; strong with 95 depth, beaten by well-timed runs."
+          },
+          {
+            "name": "Knuckleball",
+            "detail": "Free kick struck dead-centre with high power so it dips and moves unpredictably."
+          },
+          {
+            "name": "Line-breaking pass",
+            "detail": "A pass that travels past an opposition line of players to a teammate behind it."
+          },
+          {
+            "name": "Pinning",
+            "detail": "Keeping defenders occupied with forwards so they cannot help elsewhere."
+          },
+          {
+            "name": "Rest attack",
+            "detail": "Players the defending team leaves high to threaten a counter."
+          },
+          {
+            "name": "95 depth",
+            "detail": "Aggressive defensive approach at its default line height; the FC 27 high-line meta."
           }
         ]
       }
     ],
     "referenceCheckedAt": "2026-10-28",
-    "referenceVersion": "FC 27, Title Update 1.1.0 (console build 1.07), as of 2026-10-28",
+    "referenceVersion": "FC 27, Title Update 1.1.0 (27 Oct 2026; no gameplay tuning), as of 2026-10-28",
     "referenceSources": [
       {
         "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
@@ -2924,6 +4879,595 @@
       {
         "url": "https://www.thespike.gg/fifa/ea-fc-27/career-mode",
         "title": "The Spike: FC 27 Career Mode guide"
+      },
+      {
+        "url": "https://www.ea.com/able/resources/ea-sports-fc/fc-27",
+        "title": "EA SPORTS FC 27 Accessibility Resources (EA, official)"
+      },
+      {
+        "url": "https://www.ea.com/able/resources/ea-sports-fc/fc-26",
+        "title": "EA SPORTS FC 26 Accessibility Resources (EA, official)"
+      },
+      {
+        "url": "https://www.ea.com/able/resources/fifa/fifa-22/pc/game-settings",
+        "title": "FIFA 22 PC game settings (EA Accessibility, official): radar 2D default"
+      },
+      {
+        "url": "https://ea.com/able/resources/fifa/fifa-20/pc/game-settings",
+        "title": "FIFA 20 PC game settings (EA Accessibility, official): radar colour values"
+      },
+      {
+        "url": "https://forums.ea.com/discussions/fc-26-general-discussion-es/accesibilidad-radar-modo-alto-contraste/13457833",
+        "title": "Accesibilidad: radar y modo alto contraste (EA Forums, FC 26, Spanish)"
+      },
+      {
+        "url": "https://forums.ea.com/discussions/fc-26-feedback-en/please-improve-mini-map-visibility-and-customization-in-clubs/13697620",
+        "title": "Please improve mini-map visibility and customisation in Clubs (EA Forums, FC 26)"
+      },
+      {
+        "url": "https://forums.ea.com/discussions/fc-26-general-discussion-it/migliore-visuale-quale-telecamera-usate/13048323/replies/13120018",
+        "title": "Migliore visuale: quale telecamera usate? radar reply (EA Forums, FC 26, Italian)"
+      },
+      {
+        "url": "https://www.ea.com/able/news/pitch-notes-d-pad-tactics",
+        "title": "Pitch Notes: D-Pad Tactics (EA, official)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-gameplay-developer-launch-update",
+        "title": "FC 27 Gameplay Developer Launch Update (EA)"
+      },
+      {
+        "url": "https://help.ea.com/en/articles/ea-sports-fc/free-kicks/",
+        "title": "How to take free kicks in EA SPORTS FC (EA Help)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/what-are-playstyles",
+        "title": "PlayStyles: everything you need to know (EA)"
+      },
+      {
+        "url": "https://tos.ea.com/legalapp/WEBTERMS/US/en/PC/11072022",
+        "title": "Electronic Arts User Agreement (PC, 2022 version)"
+      },
+      {
+        "url": "https://tos.ea.com/legalapp/webterms/US/en/PC2/",
+        "title": "EA User Agreement (current PC2 page)"
+      },
+      {
+        "url": "https://tos.ea.com/legalapp/WEBTERMS/US/en/PC/09082020",
+        "title": "EA User Agreement (PC, 2020 version)"
+      },
+      {
+        "url": "https://help.ea.com/en/articles/ea-sports-fc/fc-rules/",
+        "title": "How to play EA SPORTS FC by the rules (EA Help)"
+      },
+      {
+        "url": "https://www.ea.com/en-au/commitments/positive-play/charter",
+        "title": "EA Positive Play Charter"
+      },
+      {
+        "url": "https://help.ea.com/en-ca/help/pc/ea-anticheat",
+        "title": "EA anticheat (EA Help)"
+      },
+      {
+        "url": "https://www.ea.com/news/introducing-ea-javelin-anticheat",
+        "title": "Introducing EA Javelin Anticheat (EA)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-pro/ea-sports-fc-pro-27-official-rules",
+        "title": "EA SPORTS FC Pro 27 Official Rules (EA)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-pro/uefa-eeuro-2026-official-rules",
+        "title": "UEFA eEURO 2026 Official Rules (EA FC Pro)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/title-update-v1-0-3",
+        "title": "FC 27 Title Update v1.0.3 (EA)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-editions-and-release-dates",
+        "title": "FC 27 editions and release dates (EA)"
+      },
+      {
+        "url": "https://www.ea.com/en/games/ea-sports-fc/fc-27/news/which-fc27-mode-is-right-for-you",
+        "title": "Which FC 27 mode is right for you? (EA)"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/features/fc-27-modes",
+        "title": "FC 27 modes (EA)"
+      },
+      {
+        "url": "https://help.ea.com/en/articles/ea-sports-fc/how-to-shoot/",
+        "title": "How to shoot in EA SPORTS FC (EA Help)"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-accessibility-settings/",
+        "title": "FC 27 Accessibility Settings (FIFA Ultimate Team guide)"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-game-settings/",
+        "title": "FC 27 Game Settings (FIFA Ultimate Team guide)"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-26-game-settings/",
+        "title": "FC 26 Game Settings (FIFPlay): Visual tab, Overlays, Radar 2D/3D/Off"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-25-game-settings/",
+        "title": "FC 25 Game Settings (FIFPlay): radar toggle and colours"
+      },
+      {
+        "url": "https://caniplaythat.com/2025/07/23/ea-sports-fc-26-high-contrast-mode-and-more-accessibility-detailed/",
+        "title": "EA Sports FC 26 High Contrast Mode and accessibility detailed (Can I Play That?)"
+      },
+      {
+        "url": "https://caniplaythat.com/2026/09/24/ea-sports-fc-27-adds-new-accessibility-features/",
+        "title": "EA Sports FC 27 adds new accessibility features (Can I Play That?)"
+      },
+      {
+        "url": "https://www.magicgameworld.com/?p=128863",
+        "title": "EA FC 26: Scoreboard/Timer not showing, visual fix (MagicGameWorld)"
+      },
+      {
+        "url": "https://nerdschalk.com/how-to-turn-scrolling-line-ups-on-or-off-in-ea-sports-fc-27/",
+        "title": "How to turn Scrolling Line Ups on or off in EA SPORTS FC 27 (Nerdschalk)"
+      },
+      {
+        "url": "https://www.iggm.com/news/fc-25-how-to-break-pressure-and-pass-ball-successfully-5-tips",
+        "title": "FC 25: how to break pressure and pass successfully, 5 tips incl. using the radar (IGGM)"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-player-name-bar/",
+        "title": "FC 27 Player Name Bar (FIFA Ultimate Team guide)"
+      },
+      {
+        "url": "https://www.sportsdunia.com/esports/ea-fc-27-best-settings",
+        "title": "EA FC 27 best settings (SportsDunia)"
+      },
+      {
+        "url": "https://games.gg/ea-sports-fc-27/guides/ea-fc-27-defending-guide/",
+        "title": "EA FC 27 Defending Guide (games.gg)"
+      },
+      {
+        "url": "https://games.gg/ea-sports-fc-27/guides/free-kicks-scoring-techniques/",
+        "title": "EA FC 27 Free Kicks Guide (games.gg)"
+      },
+      {
+        "url": "https://www.magicgameworld.com/?p=128938",
+        "title": "EA FC 26: How to turn off HyperMotion overlays (MagicGameWorld)"
+      },
+      {
+        "url": "https://proleague.de/en/news/the-best-settings-for-ea-sports-fc-26",
+        "title": "The best settings for EA SPORTS FC 26 (Pro League)"
+      },
+      {
+        "url": "https://fifauteam.com/fc-26-stats-match-facts-performance/",
+        "title": "FC 26 Stats: Match Facts and Performance (FIFA Ultimate Team guide)"
+      },
+      {
+        "url": "https://www.bundesliga.com/en/bundesliga/news/new-match-facts-aws-keeper-efficiency-xsaves-ball-recovery-time-23071",
+        "title": "Bundesliga Match Facts: Ball Recovery Time (Bundesliga.com)"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/",
+        "title": "Best EA FC 27 Tactics & Formations (FUT.GG)"
+      },
+      {
+        "url": "https://boostingmarket.com/blogs/fc-27-best-formations-tactics/",
+        "title": "FC 27 Best Formations and Custom Tactics (Boosting Market)"
+      },
+      {
+        "url": "https://www.easysbc.io/news/fc-27-4312-custom-tactics/",
+        "title": "Best FC 27 4-3-1-2 Custom Tactics (EasySBC)"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-tactics/",
+        "title": "FC 27 Tactics (FIFA Ultimate Team guide)"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-lob-pass/",
+        "title": "FC 27 Lob Pass types (FIFPlay)"
+      },
+      {
+        "url": "https://www.keengamer.com/articles/guides/ea-sports-fc-27-best-meta-tactics-and-formations/",
+        "title": "EA Sports FC 27: best meta tactics and formations (KeenGamer)"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-4-1-1/",
+        "title": "Best 4-4-1-1 Custom Tactics, EA FC 27 (FUT.GG)"
+      },
+      {
+        "url": "https://www.easysbc.io/news/fc-27-best-4411-tactics-player-roles/",
+        "title": "Best FC 27 4-4-1-1 Tactics & Player Roles (EasySBC)"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-1-2-1-2-narrow/",
+        "title": "Best 4-1-2-1-2 Narrow Custom Tactics, EA FC 27 (FUT.GG)"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-4-2/",
+        "title": "Best 4-4-2 Custom Tactics, EA FC 27 (FUT.GG)"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-2-3-1-wide/",
+        "title": "Best 4-2-3-1 Wide Custom Tactics, EA FC 27 (FUT.GG)"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-best-defensive-formations/",
+        "title": "Best Defensive Formations in FC 27 (FIFPlay)"
+      },
+      {
+        "url": "https://learning.coachesvoice.com/cv/low-block-football-tactics-explained-simeone-dyche-mourinho/",
+        "title": "The low block: football tactics explained (Coaches' Voice)"
+      },
+      {
+        "url": "https://www.researchgate.net/publication/370827756_Is_a_compact_organization_important_for_defensive_success_in_elite_soccer_-_Analysis_based_on_player_tracking_data",
+        "title": "Is a compact organisation important for defensive success in elite soccer? (Bundesliga tracking study)"
+      },
+      {
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8805357/",
+        "title": "Reference values for collective tactical behaviours in professional football: a systematic review (PMC)"
+      },
+      {
+        "url": "https://fussballcoach.substack.com/p/the-6-most-important-pressing-triggers",
+        "title": "The 6 most important pressing triggers (Fussballcoach newsletter)"
+      },
+      {
+        "url": "https://www.footballparadise.com/en/glossary/pressing-trigger",
+        "title": "Pressing trigger (Football Paradise glossary)"
+      },
+      {
+        "url": "https://learning.coachesvoice.com/cv/in-focus-defending-in-a-low-block/",
+        "title": "In Focus: Defending in a low block (Coaches' Voice)"
+      }
+    ],
+    "formations": [
+      {
+        "id": "pro-4312-balanced",
+        "name": "Pro 4-3-1-2 (Balanced, line 60)",
+        "formation": "4-3-1-2",
+        "buildUp": "Balanced",
+        "defensiveApproach": "Balanced",
+        "lineHeight": 60,
+        "roles": "GK Ball-Playing Keeper or Sweeper Keeper; LB/RB Fullback (Balanced); CBs Defender (Defend); CMs Holding in the middle (77% of pros per one guide) with two Box-to-Box; CAM Shadow Striker; two STs Advanced Forward.",
+        "who": "Most-used pro shape: 31% of pro squads on FUT.GG's overview (43% on its formation page). Vejrgang's listed setup matches it (FUTSettings). RedLac recommends a 4-3-1-2 in Red Bull's guide.",
+        "radarLook": "No wide players: in possession you see a central diamond of four markers plus two strikers close together; full-back markers provide all the width. Out of possession a narrow back four with three midfielders close in front.",
+        "strengths": [
+          "Central overload and quick striker-CAM triangles",
+          "Two strikers occupy both centre-backs",
+          "Holding CM screens the back four"
+        ],
+        "weaknesses": [
+          "No natural width; full-backs isolated against wingers",
+          "Long switches find their far full-back alone",
+          "Full-backs who push on leave the channels open"
+        ],
+        "counters": [
+          "Hold width on both touchlines and switch early before their midfield slides",
+          "Overlap your full-back to make two against one on their full-back",
+          "Keep two holding players so their striker-CAM triangle meets numbers",
+          "Cross early to the far post while their narrow back line is shifting"
+        ],
+        "sources": [
+          {
+            "url": "https://www.fut.gg/tactics/",
+            "title": "Best EA FC 27 Tactics & Formations (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/4-3-1-2/",
+            "title": "Best 4-3-1-2 Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best EA FC 27 custom tactics from pro players (Red Bull)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://futsettings.com/players/andersvejrgang",
+            "title": "Anders Vejrgang settings and tactics (FUTSettings)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://boostingmarket.com/blogs/fc-27-best-formations-tactics/",
+            "title": "FC 27 Best Formations and Custom Tactics (Boosting Market)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "pro-4312-counter",
+        "name": "4-3-1-2 Counter (line 60)",
+        "formation": "4-3-1-2",
+        "buildUp": "Counter",
+        "defensiveApproach": "Balanced",
+        "lineHeight": 60,
+        "roles": "Sweeper Keeper, Fullbacks, Defenders, Box-to-Box CMs, Shadow Striker, two Advanced Forwards (FUTSettings listing for Tekkz).",
+        "who": "FUTSettings lists Tekkz with this; Red Bull quotes Tekkz recommending a 4-4-1-1. Sources conflict.",
+        "radarLook": "Strikers start high on the last line; after a regain the two striker markers sprint beyond the line at once.",
+        "strengths": [
+          "Fast vertical attacks after regains",
+          "Strikers stretch a high line"
+        ],
+        "weaknesses": [
+          "Gives the ball back quickly",
+          "Midfield can be outnumbered if both CMs join"
+        ],
+        "counters": [
+          "Keep a rest defence of two centre-backs plus a holding midfielder",
+          "Drop your line to about 55-60 so their runners have less space",
+          "Keep the ball longer to tire their pressing strikers"
+        ],
+        "sources": [
+          {
+            "url": "https://futsettings.com/players/tekkz",
+            "title": "Tekkz settings and tactics (FUTSettings)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best EA FC 27 custom tactics from pro players (Red Bull)",
+            "kind": "pro"
+          }
+        ],
+        "unverified": true
+      },
+      {
+        "id": "aggressive-95-trap",
+        "name": "Aggressive 95 depth high line (any shape, often 4-3-1-2)",
+        "formation": "4-3-1-2 / 4-2-1-3",
+        "buildUp": "Balanced",
+        "defensiveApproach": "Aggressive",
+        "lineHeight": 95,
+        "roles": "Needs fast centre-backs and a Sweeper Keeper; Shadow Striker CAM in the EasySBC version.",
+        "who": "Widespread in lobbies about two weeks after launch (Timesaver); EasySBC's 12 Oct 4-3-1-2 build uses it and warns the space behind is the risk. Boosting Market: 44% of pro squads now push the line High vs 30% of the community.",
+        "radarLook": "Their deepest defender marker sits near halfway, often 45-55 m from their goal; their keeper marker stays near the box. The whole team is squeezed into about 30-35 m.",
+        "strengths": [
+          "Immediate press after losing the ball",
+          "Offside trap catches flat runs",
+          "Squeezes space between the lines"
+        ],
+        "weaknesses": [
+          "Huge space behind the line",
+          "Stamina drain",
+          "Slow centre-backs are exposed to balls over the top"
+        ],
+        "counters": [
+          "Lobbed through ball (L1+Triangle / LB+Y) into the channel as your runner starts level with the last defender",
+          "Triggered Curved Run to stay onside and bend in behind",
+          "Short triangles to draw the press, then a driven pass into midfield",
+          "Switch play to the far side when they squeeze one flank",
+          "Pick quick forwards; use a midfielder with Long Ball Pass"
+        ],
+        "sources": [
+          {
+            "url": "https://timesaver.gg/blog/fc-27-95-depth-offside-trap-how-to-beat-it",
+            "title": "FC 27 95 depth offside trap: how to beat it (Timesaver)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.easysbc.io/news/fc-27-4312-custom-tactics/",
+            "title": "Best FC 27 4-3-1-2 Custom Tactics (EasySBC)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://boostingmarket.com/blogs/fc-27-best-formations-tactics/",
+            "title": "FC 27 Best Formations and Custom Tactics (Boosting Market)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://fifauteam.com/fc-27-tactics/",
+            "title": "FC 27 Tactics (FIFA Ultimate Team guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-lob-pass/",
+            "title": "FC 27 Lob Pass types (FIFPlay)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "community-4213",
+        "name": "4-2-1-3 (Balanced, line 60)",
+        "formation": "4-2-1-3",
+        "buildUp": "Balanced",
+        "defensiveApproach": "Balanced",
+        "lineHeight": 60,
+        "roles": "CDMs Deep-Lying Playmaker plus Holding; CAM Playmaker or Shadow Striker; LW/RW Inside Forward; ST Advanced Forward; Fullbacks; Defenders.",
+        "who": "Most-used community formation (about 25-29% of squads on FUT.GG in October); 16-17% of pros.",
+        "radarLook": "Two midfield markers sit just in front of the back four; three forwards spread across the front line with the wide forwards starting near the touchlines and cutting inside.",
+        "strengths": [
+          "Two holding midfielders cover for weak AI defending",
+          "Width from the front three",
+          "Inside forwards attack the half-spaces"
+        ],
+        "weaknesses": [
+          "Only one central creator; can be outnumbered by a diamond",
+          "Wide forwards may not track full-backs"
+        ],
+        "counters": [
+          "Overload the centre with a 4-3-1-2 or 4-1-2-1-2 so their two CDMs face three or four",
+          "Attack with overlapping full-backs when their wide forwards do not track",
+          "Use runs from your wingers when their full-back steps toward the ball (FUT.GG tip)"
+        ],
+        "sources": [
+          {
+            "url": "https://www.fut.gg/tactics/4-2-1-3/",
+            "title": "Best 4-2-1-3 Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/",
+            "title": "Best EA FC 27 Tactics & Formations (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.keengamer.com/articles/guides/ea-sports-fc-27-best-meta-tactics-and-formations/",
+            "title": "EA Sports FC 27: best meta tactics and formations (KeenGamer)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "tekkz-4411",
+        "name": "Tekkz 4-4-1-1 (Short Passing, line 61-65)",
+        "formation": "4-4-1-1",
+        "buildUp": "Short Passing",
+        "defensiveApproach": "Balanced / High",
+        "lineHeight": "61-65",
+        "roles": "Red Bull lists a Deep-Lying Playmaker pair, a Playmaker CAM, Inside Forwards wide and an Advanced Forward, adjusted to keep play central. About 70% of pros use Defend focus for 4-4-1-1 full-backs (FUT.GG).",
+        "who": "Recommended by Tekkz in Red Bull's guide; about 13% of community squads and 5% of pros on FUT.GG.",
+        "radarLook": "Two banks of four close together out of possession, with a second striker just behind the striker.",
+        "strengths": [
+          "Two banks of four are hard to counter",
+          "Second striker links play",
+          "Safe against fast breaks"
+        ],
+        "weaknesses": [
+          "Can be passive if the line is low",
+          "Striker isolated if the second striker drops too deep"
+        ],
+        "counters": [
+          "Draw their banks to one side and switch",
+          "Run a midfielder beyond their second striker into the space between their lines",
+          "Shoot from the edge only with a clear lane; play cutbacks instead"
+        ],
+        "sources": [
+          {
+            "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+            "title": "Best EA FC 27 custom tactics from pro players (Red Bull)",
+            "kind": "pro"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/4-4-1-1/",
+            "title": "Best 4-4-1-1 Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.easysbc.io/news/fc-27-best-4411-tactics-player-roles/",
+            "title": "Best FC 27 4-4-1-1 Tactics & Player Roles (EasySBC)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "narrow-41212",
+        "name": "4-1-2-1-2 Narrow (diamond)",
+        "formation": "4-1-2-1-2 (Narrow)",
+        "buildUp": "Balanced",
+        "defensiveApproach": "Balanced",
+        "lineHeight": 60,
+        "roles": "CDM Holding; two CMs Box-to-Box or Playmaker; CAM Shadow Striker; two STs.",
+        "who": "About 11% of pros (FUT.GG); some guides called it the most meta shape at the start of the game.",
+        "radarLook": "A central diamond of four midfield markers with nobody near the touchlines except full-backs.",
+        "strengths": [
+          "Central combinations",
+          "Numbers around the ball in midfield"
+        ],
+        "weaknesses": [
+          "Flanks wide open",
+          "Single holding midfielder can be bypassed"
+        ],
+        "counters": [
+          "Two wide players holding the touchlines, then switch",
+          "Overlaps against isolated full-backs",
+          "Early crosses to the far post"
+        ],
+        "sources": [
+          {
+            "url": "https://www.fut.gg/tactics/4-1-2-1-2-narrow/",
+            "title": "Best 4-1-2-1-2 Narrow Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fut.gg/tactics/",
+            "title": "Best EA FC 27 Tactics & Formations (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.keengamer.com/articles/guides/ea-sports-fc-27-best-meta-tactics-and-formations/",
+            "title": "EA Sports FC 27: best meta tactics and formations (KeenGamer)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "flat-442",
+        "name": "4-4-2 Flat (line 55)",
+        "formation": "4-4-2",
+        "buildUp": "Balanced",
+        "defensiveApproach": "Balanced",
+        "lineHeight": 55,
+        "roles": "Two CMs (Holding plus Box-to-Box), wide midfielders, two strikers.",
+        "who": "FUT.GG's preferred 4-4-2 line height is 55; suggested while learning FC 27's manual defending.",
+        "radarLook": "Two flat lines of four with two strikers; even spacing across the width.",
+        "strengths": [
+          "Simple, balanced coverage",
+          "Two strikers press centre-backs"
+        ],
+        "weaknesses": [
+          "Only two central midfielders; outnumbered by diamonds and 4-2-1-3"
+        ],
+        "counters": [
+          "Overload the middle with a third central player",
+          "Play between their lines once their CMs are pulled wide"
+        ],
+        "sources": [
+          {
+            "url": "https://www.fut.gg/tactics/4-4-2/",
+            "title": "Best 4-4-2 Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          }
+        ],
+        "unverified": false
+      },
+      {
+        "id": "lead-protection-4231w",
+        "name": "4-2-3-1 Wide / back five to protect a lead",
+        "formation": "4-2-3-1 (Wide) or 5-3-2 / 5-2-1-2",
+        "buildUp": "Short Passing or Balanced",
+        "defensiveApproach": "Deep or Balanced",
+        "lineHeight": "40-55",
+        "roles": "Two Holding CDMs; full-backs on Defend focus; wide players on Wide Midfielder.",
+        "who": "Guide advice for late leads; 4-2-3-1 Wide is about 5% of community squads (FUT.GG). Back-five shapes are the strongest defensive shapes per guides but rarely used.",
+        "radarLook": "A deep line of four or five markers inside about 30-35 m of their own goal with a second line close in front.",
+        "strengths": [
+          "Protects the box and half-spaces",
+          "Extra cover against crosses"
+        ],
+        "weaknesses": [
+          "Invites pressure; few outlets"
+        ],
+        "counters": [
+          "Patient circulation, cutbacks and near-post low driven shots",
+          "Shots from range only with a clear lane",
+          "Treat corners as chances with the new manual positioning"
+        ],
+        "sources": [
+          {
+            "url": "https://www.fut.gg/tactics/4-2-3-1-wide/",
+            "title": "Best 4-2-3-1 Wide Custom Tactics, EA FC 27 (FUT.GG)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.fifplay.com/fc-27-best-defensive-formations/",
+            "title": "Best Defensive Formations in FC 27 (FIFPlay)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://learning.coachesvoice.com/cv/low-block-football-tactics-explained-simeone-dyche-mourinho/",
+            "title": "The low block: football tactics explained (Coaches' Voice)",
+            "kind": "coach"
+          }
+        ],
+        "unverified": true
       }
     ]
   },
@@ -2931,11 +5475,16 @@
     "Frames are sampled about every 2.5 seconds, so many turnovers are missed; turnover maps show a sample, not every lost ball.",
     "Goal locations come from replays on the broadcast camera and are approximate (six zones).",
     "Goals are counted from scoreboard changes; if the scoreboard cannot be read, goals may be missed.",
-    "Pass accuracy and possession come from the statistics screen, so they are only known if that screen is shown."
+    "Pass accuracy and possession come from the statistics screen, so they are only known if that screen is shown.",
+    "The radar is read from the screen in 2D only; with the 3D radar the positions are skewed, so nothing is measured. With the radar Off there is no pitch analysis.",
+    "How FC draws the ball and the player you control on the radar is not documented; reading is tuned on simulated radars and has not been checked on real captures.",
+    "Distances assume a 105 x 68 m pitch (EA does not publish FC pitch sizes); Rush is played on a smaller pitch and is not measured."
   ],
   "failClosed": [
     "Scoreboard unreadable: no goals are counted from score changes.",
-    "Non-broadcast camera, menus or replays of other matches: no zones are recorded."
+    "Non-broadcast camera, menus or replays of other matches: no zones are recorded.",
+    "No pitch outline on the radar, a radar hidden for a replay or set piece, or more dots than two teams have: that moment is skipped.",
+    "Radar colours left at Default with similar kits, or set to Black: the two teams cannot be told apart, so no team shapes are recorded."
   ],
   "factors": [
     {
