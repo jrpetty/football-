@@ -1,6 +1,7 @@
 // Display helpers for the UI.
 
 import type { DeliveryDecision, EvidenceGrade, TimelineEntry } from '../core/types.ts'
+import { servedPrice } from '../core/vision/cost.ts'
 
 /** Session-relative clock, m:ss. */
 export function clock(ms: number): string {
@@ -92,4 +93,30 @@ export function formatMs(ms: number): string {
   if (ms < 10_000) return `${(ms / 1000).toFixed(ms % 1000 ? 1 : 0)} s`
   const s = Math.round(ms / 1000)
   return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}`
+}
+
+/** Small amounts with enough digits to compare: "$0.012", "$0.00034"; else as usd(). */
+export function usdFine(v: number): string {
+  if (v <= 0) return '$0'
+  if (v < 0.00001) return '<$0.00001'
+  return v < 0.1 ? `$${Number(v.toPrecision(2))}` : `$${v.toFixed(2)}`
+}
+
+/** "$1.20–$1.45", or one figure when both ends round the same. */
+export function usdRange(low: number, high: number): string {
+  const a = usd(low)
+  const b = usd(high)
+  return a === b ? a : `${a}–${b}`
+}
+
+/** 950, 12K, 1.4M. */
+export function compact(n: number): string {
+  if (n < 1000) return String(Math.round(n))
+  if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}K`
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+}
+
+/** "Claude Opus 5.5" for any model id the app prices, else the id. */
+export function modelName(id: string): string {
+  return (servedPrice(id)?.label ?? id).replace(/ \(.*\)$/, '')
 }

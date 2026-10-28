@@ -187,6 +187,12 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.20 | After the match: Insights → The map, learned from watching. | The map drawn with the areas you visited, your routes, a red arrow for the held angle, rings on power positions; 3D lifts upper floors; the table lists time, kills, deaths. |
 | 13.21 | Ask "is the M4 good?", "best M4 build?", "what does Ghost do?", "power positions on Rooftops?". | Answers from the pack in plain words; the build only for the second question. |
 | 13.22 | MW4 ranked or public match. | Nothing about the map or the held angle during play; Insights says it opens after the match. |
+| 13.23 | Cloud on, play 5 minutes of any game, then open Usage & cost. | This session, Today and This month match each other and the top-bar chip; the chart shows today in Screen reading; Where it went lists the game and the model that served the calls. |
+| 13.24 | Compare with the Anthropic Console (Usage and Cost pages) for the same day. | Token counts match the Console; cost within a few percent (list prices, no account discounts). Note any difference. |
+| 13.25 | Play 20 or more looks of a game, then look at What playing costs. | That game's row says "Your N looks" and its figures match the measured cost per look; other models still say "List prices". |
+| 13.26 | Set a monthly budget just above this month's spend, Stop at budget on, then ask a question. | A warning at 80% (page, chip, Coach screen during capture); at the budget the call is refused with "Monthly budget … reached". With stop off, calls go on with a warning. |
+| 13.27 | Run Research and Build game knowledge. | The estimate shows before each run; the real cost shows after (toast, Last build) and is recorded under Research and Knowledge building. |
+| 13.28 | Forget the usage history. | The history and charts empty; this session's total and cap are unchanged. |
 
 ## 14. Accessibility and layout
 

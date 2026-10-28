@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v9, Windows-first.
+> **Status:** v10, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -287,26 +287,60 @@ hide. Details, and per-game notes for RICOCHET (MW4) and AoE IV, are in
 
 ## Cost
 
-Your Anthropic account pays for:
-- cloud vision (choose the model; Settings shows an estimate per hour);
-- answers;
-- knowledge building.
+Your Anthropic account pays for cloud vision, answers, reviews, research and
+knowledge building. **Usage & cost** (in the side bar) shows:
+- what you have spent this session, today, in the last 7 days, this month
+  (with a projection to the month's end) and in all;
+- a 30-day chart by feature, and where the month went by feature, model and
+  game, with token counts;
+- what playing each game costs per look, per hour and per typical match, at
+  your settings, with each model;
+- what an answer, a review, a research run and a knowledge build cost,
+  before you run them;
+- the session cap and a monthly budget (warn from 80%, optionally stop);
+- the prices used and the date they were checked.
 
-A per-session spending cap (default $2) stops all calls when reached. Known
-menus cost nothing after the first time. Claude Opus 5.5 is the default
-because it reads busy screens best; Claude Haiku 5.5 is a small fraction of
-the cost.
+How it is counted: every reply carries its exact token counts (input, cache
+reads and writes, output with thinking, web searches). The app multiplies
+them by the list price of the model that actually served the reply. If a
+request falls back to another model, that model's price is used. Haiku's
+higher rate above 100K-token prompts and $10 per 1,000 web searches are
+included. Only the numbers are kept, on this computer, for 400 days.
 
-Cost follows the refresh time you choose. At a look every 3 seconds, a
-rough estimate is $18 per hour on Opus 5.5, $11 on Sonnet 5.5 and about
-$0.55 on Haiku 5.5, counting the reference sent with each look but not
-thinking (Opus 5.5 always thinks a little). A look every second costs about
-three times that. During live play the screen keeps changing, so few looks
-are skipped. Settings shows the estimate for your settings and, after a
-few looks, what the session actually cost per look (from the API's own
-token counts). The default $2 cap lasts about 7 minutes on Opus at 3
-seconds: raise it in Settings (up to $20), or pick Sonnet for long
-sessions.
+Taxes, credits and discounts are not included. The Console's bill is the
+final word.
+
+Estimates at the packs' default settings, at list prices, from no thinking
+to a little (still screens are skipped, so real play usually costs less):
+
+| Game (default look) | Opus 5.5 | Sonnet 5.5 | Haiku 5.5 |
+| --- | --- | --- | --- |
+| Modern Warfare 4 (2.5 s), per hour | $20–27 | $11–13 | $0.56–0.67 |
+| Modern Warfare 4, 10-minute match | $3.40–4.60 | $1.89–2.25 | $0.09–0.11 |
+| Age of Empires IV (3 s), per hour | $18–24 | $11–13 | $0.55–0.64 |
+| Age of Empires IV, 30-minute game | $9.30–12.30 | $5.55–6.45 | $0.28–0.32 |
+| EA SPORTS FC (2.5 s), per hour | $17–24 | $9–11 | $0.46–0.57 |
+
+Each look writes about 350 tokens, so output is most of the cost on Opus and
+Sonnet. After 20 looks of a game with a model, the app shows what those
+looks actually cost instead of the estimate.
+
+Other jobs:
+
+| Job | Opus 5.5 | Sonnet 5.5 |
+| --- | --- | --- |
+| Answer | $0.03–0.16 | $0.01–0.08 |
+| Review | $0.11–0.22 | $0.06–0.11 |
+| Research | $0.17–0.72 | $0.10–0.42 |
+| Knowledge build | $1.50–4.40 | $0.85–2.40 |
+
+On Haiku, an answer costs under a cent. Research and knowledge building need
+Opus or Sonnet.
+
+The per-session cap (default $2) stops all calls when it is reached. On Opus,
+Modern Warfare 4 reaches it in about 5 minutes. Raise it on the Usage & cost
+page (up to $20), or pick Sonnet or Haiku for long sessions. Known menus cost
+nothing after the first time.
 
 ## Layout
 

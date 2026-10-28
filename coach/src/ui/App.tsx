@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { PlatformInfo } from '../../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudStatus } from '../../shared/cloud.ts'
+import { spendAlerts } from '../core/estimate.ts'
 import { effectiveMode } from '../core/policy/governor.ts'
 import { suggestProfile, validateProfile, type GameProfile } from '../core/profile/schema.ts'
 import { DEFAULT_SETTINGS, MODE_INFO, sanitizeSettings, type CoachSettings } from '../core/settings.ts'
+import type { UsageSummary } from '../core/usage.ts'
 import { getBridge } from '../platform/bridge.ts'
 import { BUILT_IN_PROFILES } from '../profiles/index.ts'
 import { MicIcon } from './components/common.tsx'
@@ -20,8 +22,10 @@ import { MomentsView } from './views/MomentsView.tsx'
 import { PrivacyView } from './views/PrivacyView.tsx'
 import { ReviewView } from './views/ReviewView.tsx'
 import { SettingsView } from './views/SettingsView.tsx'
+import { UsageView } from './views/UsageView.tsx'
+import { usd } from './format.ts'
 
-export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'history' | 'review' | 'settings' | 'privacy'
+export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
 
 export interface ProfileCatalog {
   readonly profiles: readonly GameProfile[]
@@ -43,6 +47,7 @@ export function App() {
   const [loaded, setLoaded] = useState(false)
   const [info, setInfo] = useState<PlatformInfo | null>(null)
   const [cloud, setCloud] = useState<CloudStatus>(NO_CLOUD)
+  const [usage, setUsage] = useState<UsageSummary | null>(null)
   const [catalog, setCatalog] = useState<ProfileCatalog>({ profiles: BUILT_IN_PROFILES, rejected: [] })
   const [tab, setTab] = useState<Tab>('coach')
   const [picking, setPicking] = useState(false)
@@ -56,6 +61,7 @@ export function App() {
   }, [tab, state.phase])
 
   const refreshCloud = useCallback(() => void bridge.cloudStatus().then(setCloud).catch(() => undefined), [bridge])
+  const refreshUsage = useCallback(() => void bridge.usageSummary().then(setUsage).catch(() => undefined), [bridge])
 
   useEffect(() => {
     void bridge.info().then(setInfo)
@@ -92,12 +98,19 @@ export function App() {
     return () => clearTimeout(t)
   }, [bridge, loaded, hotkeysKey])
 
-  // Spend changes while cloud vision runs.
+  // Spend changes while cloud vision runs, and with each answer, review or research run.
+  const cloudOn = cloud.available && cloud.settings.enabled
   useEffect(() => {
-    if (!capturing || !cloud.available) return
-    const t = setInterval(refreshCloud, 5000)
+    if (!cloudOn) return
+    const t = setInterval(refreshCloud, capturing ? 5000 : 15_000)
     return () => clearInterval(t)
-  }, [capturing, cloud.available, refreshCloud])
+  }, [capturing, cloudOn, refreshCloud])
+  // The usage history follows each new call (and opens fresh on its page).
+  useEffect(refreshUsage, [refreshUsage, cloud.spend.calls, cloud.settings.monthlyBudgetUsd])
+  useEffect(() => {
+    if (tab === 'usage') refreshUsage()
+  }, [tab, refreshUsage])
+  const alerts = spendAlerts(cloud.spend, cloud.settings)
 
   const profile = catalog.profiles.find((p) => p.id === settings.profileId) ?? catalog.profiles[0]
   const policy = useMemo(() => policyFor(profile, settings), [profile, settings])
@@ -174,6 +187,27 @@ export function App() {
           </span>
         </div>
         <div className="spacer" />
+        {cloudOn || cloud.spend.calls > 0 ? (
+          <button
+            type="button"
+            className={`spend-chip${alerts.some((a) => a.level === 'stop') ? ' stop' : alerts.length ? ' warn' : ''}`}
+            onClick={() => setTab('usage')}
+            title={[
+              `This session: ${usd(cloud.spend.usd)} of the ${usd(cloud.settings.sessionCapUsd)} cap, ${cloud.spend.calls} calls`,
+              cloud.spend.monthUsd !== undefined ? `This month: ${usd(cloud.spend.monthUsd)}${cloud.settings.monthlyBudgetUsd ? ` of ${usd(cloud.settings.monthlyBudgetUsd)}` : ''}` : null,
+              cloud.spend.ratePerHour ? `Now about ${usd(cloud.spend.ratePerHour)} an hour` : null,
+              ...alerts.map((a) => a.text),
+              'Estimates from token counts and list prices. Click for Usage & cost.',
+            ]
+              .filter(Boolean)
+              .join('\n')}
+          >
+            {alerts.length ? <span aria-hidden="true">⚠</span> : null}
+            <b>{usd(cloud.spend.usd)}</b>
+            <span className="muted">session</span>
+            {capturing && cloud.spend.ratePerHour ? <span className="muted">· {usd(cloud.spend.ratePerHour)}/h</span> : null}
+          </button>
+        ) : null}
         {settings.voiceInput && (
           <button
             type="button"
@@ -229,6 +263,7 @@ export function App() {
               ['ask', 'Ask the coach', state.conversation.length || null],
               ['history', 'History', state.history.length || null],
               ['review', 'Session timeline', state.timeline.filter((e) => e.type === 'message').length || null],
+              ['usage', 'Usage & cost', null],
               ['settings', 'Settings', null],
               ['privacy', 'Policy & privacy', null],
             ] as const
@@ -301,6 +336,7 @@ export function App() {
               policy={policy}
               effective={effective}
               cloud={cloud}
+              usage={usage}
               info={info}
               onStart={start}
               onTab={setTab}
@@ -311,6 +347,19 @@ export function App() {
           {tab === 'ask' && <AskView state={state} session={session} profile={profile} settings={settings} cloud={cloud} bridge={bridge} onTab={setTab} />}
           {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} bridge={bridge} onTab={setTab} />}
           {tab === 'review' && <ReviewView state={state} />}
+          {tab === 'usage' && (
+            <UsageView
+              summary={usage}
+              cloud={cloud}
+              onCloud={setCloud}
+              bridge={bridge}
+              settings={settings}
+              profile={profile}
+              catalog={catalog}
+              capturing={capturing}
+              onForgot={refreshUsage}
+            />
+          )}
           {tab === 'settings' && (
             <SettingsView
               settings={settings}
@@ -322,6 +371,8 @@ export function App() {
               cloud={cloud}
               onCloud={setCloud}
               profile={profile}
+              usage={usage}
+              onUsage={() => setTab('usage')}
             />
           )}
           {tab === 'privacy' && <PrivacyView profile={profile} policy={policy} info={info} />}

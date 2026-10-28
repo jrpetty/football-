@@ -193,6 +193,31 @@ Legend:
 - ◐ Recognising the area, height, killer's spot and weapon from real frames. *Untested without captures; "look" cues are inferred from names and official descriptions.*
 - ◐ Equipment, field upgrade and streak numbers (damage, radius, durations) are not published; marked as unknown rather than guessed.
 
+## v10 delivery
+
+- ☑ Pricing corrected:
+  - the model that served each reply is billed (a fallback at its own price);
+  - web searches at $10 per 1,000;
+  - Haiku 5.5's higher rate above 100K-token prompts;
+  - 1-hour cache writes;
+  - image tokens per 28×28 patch.
+
+  *Tested per model (`test/usage.test.ts`).*
+- ☑ A usage history kept across sessions: numbers only, by day, feature, model and game, for 400 days. It gives today, the last 7 days, this month with a projection, all time, and a 30-day history. *Tested, including reading back a damaged file.*
+- ☑ The Usage & cost page:
+  - figures, with session-cap and monthly-budget meters;
+  - the spending rate now, and minutes left to the cap;
+  - a 30-day chart by feature with a table view;
+  - where the month went by feature, model and game;
+  - what playing costs per game and per model (per look, per hour, per typical match);
+  - job costs;
+  - limits and prices.
+
+  *Browser run with a month of generated usage.*
+- ☑ Estimates switch to what the player's own looks cost once there are 20 of a game with a model. The Coach screen, the refresh control, Settings and onboarding all show the same figures. Research and knowledge building show their cost before they run, and the real cost after.
+- ☑ A monthly budget: warn from 80%, optionally stop all cloud calls. A spend chip in the top bar; warnings on the Coach screen during capture. *Service stop at the budget tested with a fake client.*
+- ◐ Token assumptions for estimates have not been measured on real calls: 350 written tokens per look, the thinking allowance, and the job sizes. *No API key in the build environment. The measured figures replace them as the player plays; compare a session with the Console's usage page.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

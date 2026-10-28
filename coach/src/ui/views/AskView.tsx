@@ -7,7 +7,8 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { Tab } from '../App.tsx'
 import { AskBox, Conversation } from '../components/ask.tsx'
 import { Notice } from '../components/common.tsx'
-import { dateShort } from '../format.ts'
+import { jobEstimate } from '../../core/vision/cost.ts'
+import { dateShort, modelName, usdRange } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 
 interface Props {
@@ -141,6 +142,7 @@ function ResearchPanel({ state, session, profile, cloud }: { state: SessionState
           {state.researching ? 'Researching…' : r ? 'Refresh' : 'Research'}
         </button>
       </form>
+      {cloudReady(cloud) ? <ResearchCost model={cloud.settings.answerModel} /> : null}
       {error ? <Notice level="error">{error}</Notice> : null}
       {r ? (
         <div className="brief">
@@ -207,4 +209,16 @@ function Prose({ text }: { text: string }) {
 
 function inline(s: string): ReactNode[] {
   return s.split(/(\*\*[^*]+\*\*)/g).map((part, i) => (part.startsWith('**') && part.endsWith('**') ? <b key={i}>{part.slice(2, -2)}</b> : part))
+}
+
+/** What one research run costs with the answers model, before it runs. */
+function ResearchCost({ model }: { model: string }) {
+  const est = jobEstimate(model, 'research')
+  return (
+    <p className="muted small">
+      {est
+        ? `About ${usdRange(est.low, est.high)} a run with ${modelName(model)} (estimate: web searches plus the pages they return). The real cost shows when it finishes.`
+        : `Research needs Opus or Sonnet as the answers model (Settings); ${modelName(model)} cannot search with filtering.`}
+    </p>
+  )
 }

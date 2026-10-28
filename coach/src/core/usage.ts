@@ -127,6 +127,10 @@ export interface UsageSummary {
   readonly byPack: readonly { readonly pack: string; readonly counts: UsageCounts }[]
   /** Screen reading: what one look actually cost, by game and model (all time). */
   readonly looks: readonly LookAverage[]
+  /** Calls by feature and model, all time (for what one answer or review costs on average). */
+  readonly perFeatureModel: readonly { readonly feature: UsageFeature; readonly model: string; readonly counts: UsageCounts }[]
+  /** The first day with any use, or null. */
+  readonly since: string | null
 }
 
 function parse(key: string): { feature: UsageFeature; model: string; pack: string } {
@@ -145,10 +149,15 @@ export function summarizeUsage(ledger: UsageLedger, now: Date): UsageSummary {
   const byModel = new Map<string, UsageCounts>()
   const byPack = new Map<string, UsageCounts>()
   const looks = new Map<string, UsageCounts>()
+  const perFeatureModel = new Map<string, UsageCounts>()
+  let since: string | null = null
   for (const [day, rows] of Object.entries(ledger.days)) {
     for (const [key, c] of Object.entries(rows)) {
       const k = parse(key)
+      if (c.calls > 0 && (since === null || day < since)) since = day
       add(totals.allTime, c)
+      const fm = `${k.feature}|${k.model}`
+      add(perFeatureModel.get(fm) ?? (perFeatureModel.set(fm, emptyCounts()), perFeatureModel.get(fm)!), c)
       if (day === today) add(totals.today, c)
       if (week.has(day)) add(totals.last7, c)
       if (day.startsWith(month)) {
@@ -190,11 +199,26 @@ export function summarizeUsage(ledger: UsageLedger, now: Date): UsageSummary {
         const per = (v: number) => Math.round(v / c.calls)
         return { pack, model, looks: c.calls, usdPerLook: c.usd / c.calls, input: per(c.input), cached: per(c.cacheRead + c.cacheWrite), output: per(c.output), thinking: per(c.thinking) }
       }),
+    perFeatureModel: sorted(perFeatureModel).map(([k, counts]) => {
+      const [feature, model] = k.split('|')
+      return { feature: feature as UsageFeature, model, counts }
+    }),
+    since,
   }
 }
 
+/** What one call of a feature has cost on average with a model (all time), once there are a few. */
+export function averageCall(summary: Pick<UsageSummary, 'perFeatureModel'> | null | undefined, feature: UsageFeature, model: string, min = 3): { readonly calls: number; readonly usd: number } | null {
+  const f = summary?.perFeatureModel.filter((x) => x.feature === feature && x.model.startsWith(model)) ?? []
+  const calls = f.reduce((n, x) => n + x.counts.calls, 0)
+  return calls >= min ? { calls, usd: f.reduce((n, x) => n + x.counts.usd, 0) / calls } : null
+}
+
+/** Looks of a game with a model before their measured average replaces the estimate. */
+export const MEASURED_MIN_LOOKS = 20
+
 /** The measured average look for a game and model, once there are enough looks to trust it. */
-export function measuredLook(summary: Pick<UsageSummary, 'looks'> | null | undefined, pack: string, model: string, min = 20): LookAverage | null {
+export function measuredLook(summary: Pick<UsageSummary, 'looks'> | null | undefined, pack: string, model: string, min = MEASURED_MIN_LOOKS): LookAverage | null {
   const l = summary?.looks.find((x) => x.pack === pack && x.model.startsWith(model))
   return l && l.looks >= min ? l : null
 }

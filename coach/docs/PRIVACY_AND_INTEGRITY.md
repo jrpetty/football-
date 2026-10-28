@@ -32,6 +32,7 @@
 | Settings, cloud settings | `userData/settings.json`, `userData/cloud.json` | Until changed. There is no key in these files |
 | API key | `userData` key file, encrypted with OS `safeStorage`. If the OS cannot encrypt, it is held in memory for the session only | Until removed in Settings |
 | Match records (including per-match fight-factor counts and benchmark readings: numbers only), pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |
+| Usage history (cloud calls only) | `userData/usage.json`, plain JSON: per day, feature, model and game, the number of calls, token counts and estimated USD. No prompts, screens or answers | 400 days, kept whatever the memory setting (it is a spending record); cleared with "Forget the usage history" on the Usage & cost page |
 | Research briefs (when the player runs research) | `userData/research/<pack>.json`, plain JSON. Public web guidance about the game, not player data | Until deleted |
 
 - Stored files are written atomically and validated on read.

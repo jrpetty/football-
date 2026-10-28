@@ -7,7 +7,8 @@ import type { KnowledgeStatus, SightlineBridge } from '../../../shared/bridge.ts
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import { KNOWLEDGE_SECTIONS, knowledgeStats } from '../../core/knowledge/base.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
-import { dateShort, usd } from '../format.ts'
+import { jobEstimate } from '../../core/vision/cost.ts'
+import { dateShort, modelName, usd, usdRange } from '../format.ts'
 import { Notice } from './common.tsx'
 
 export function KnowledgePanel({ bridge, profile, cloud }: { bridge: SightlineBridge; profile: GameProfile; cloud: CloudStatus }) {
@@ -24,6 +25,7 @@ export function KnowledgePanel({ bridge, profile, cloud }: { bridge: SightlineBr
   const ready = cloud.available && cloud.settings.enabled && cloud.key.set
   const pack = knowledgeStats({ sections: profile.knowledge.reference ?? [] })
   const kb = status?.knowledge
+  const est = jobEstimate(cloud.settings.answerModel, 'knowledge')
   return (
     <section className="panel" aria-labelledby="kb-h">
       <div className="panel-head">
@@ -75,7 +77,7 @@ export function KnowledgePanel({ bridge, profile, cloud }: { bridge: SightlineBr
       )}
       <p className="muted small">
         {ready
-          ? 'Claude searches official sites, patch notes, wikis and guides. A one-off cost, typically $1–4 with Opus (less with Sonnet). Rebuild after big patches.'
+          ? `Claude searches official sites, patch notes, wikis and guides. A one-off cost: ${est ? `about ${usdRange(est.low, est.high)} with ${modelName(cloud.settings.answerModel)} (estimate)` : `it needs Opus or Sonnet as the answers model, not ${modelName(cloud.settings.answerModel)}`}. Rebuild after big patches.`
           : 'Needs Claude connected (Settings).'}
         {kb?.costUsd ? ` Last build: ${usd(kb.costUsd)}.` : ''}
       </p>

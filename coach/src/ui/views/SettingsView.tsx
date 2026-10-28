@@ -4,14 +4,16 @@ import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { COOLDOWN_RANGE, LEARNING_MIN_GAMES, learningPrefsFor, VERBOSITIES, VISION_LIMITS, visionPrefsFor, type CoachSettings, type LearningPrefs, type VisionPrefs } from '../../core/settings.ts'
 import type { Verbosity } from '../../core/types.ts'
-import { cachedPromptTokens, estimatePerHour, modelPrice, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
+import { playEstimate } from '../../core/estimate.ts'
+import type { UsageSummary } from '../../core/usage.ts'
+import { modelPrice, MODELS } from '../../core/vision/cost.ts'
 import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
 import { HotkeyField } from '../components/HotkeyField.tsx'
 import type { Hotkeys } from '../../core/settings.ts'
-import { usd } from '../format.ts'
+import { usd, usdFine, usdRange } from '../format.ts'
 import type { CoachSession } from '../session.ts'
 
 const VERBOSITY_TEXT: Record<Verbosity, string> = {
@@ -30,9 +32,11 @@ interface Props {
   cloud: CloudStatus
   onCloud: (c: CloudStatus) => void
   profile: GameProfile
+  usage: UsageSummary | null
+  onUsage: () => void
 }
 
-export function SettingsView({ settings, onSettings, session, info, catalog, bridge, cloud, onCloud, profile }: Props) {
+export function SettingsView({ settings, onSettings, session, info, catalog, bridge, cloud, onCloud, profile, usage, onUsage }: Props) {
   return (
     <div className="page">
       <div>
@@ -40,8 +44,8 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
         <p className="lede">How the coach sounds, when it may speak, how it sees, what it remembers, and how you talk to it.</p>
       </div>
 
-      <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} />
-      {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} /> : null}
+      <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} usage={usage} onUsage={onUsage} />
+      {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} usage={usage} /> : null}
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
@@ -135,7 +139,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
 
 // --- Cloud (Anthropic API) ----------------------------------------------------------------
 
-function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile; settings: CoachSettings }) {
+function CloudPanel({ bridge, cloud, onCloud, profile, settings, usage, onUsage }: { bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile; settings: CoachSettings; usage: UsageSummary | null; onUsage: () => void }) {
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
   const apply = (p: Promise<CloudStatus>) =>
@@ -143,8 +147,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: Sig
       setError(null)
       onCloud(c)
     }).catch((e: unknown) => setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e)))
-  const v = profile.vision ? visionPrefsFor(profile, settings) : null
-  const height = v ? Math.round((v.maxWidth * 9) / 16) : 0
+  const est = playEstimate(profile, settings, cloud.settings, usage)
 
   return (
     <section className="panel" aria-labelledby="cloud">
@@ -208,10 +211,15 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: Sig
                   </option>
                 ))}
               </select>
-              {v ? (
+              {est ? (
                 <span className="muted small">
-                  {profile.game.title}: one look every {(v.intervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, height, cachedPromptTokens(profile)))}/hour
-                  before thinking (estimate; see Screen reading below for what this session measured). Haiku is far cheaper; Opus reads busy screens best.
+                  {profile.game.title}: one look every {(est.intervalMs / 1000).toFixed(1)} s ≈ {usdRange(est.perHour.low, est.perHour.high)}/hour
+                  {est.measured ? ` (measured from your ${est.measured.looks.toLocaleString()} looks)` : ' (estimate)'}. With each model:{' '}
+                  {MODELS.map((m) => {
+                    const e = playEstimate(profile, settings, cloud.settings, usage, m.id)!
+                    return `${m.label.split(' (')[0].replace('Claude ', '')} ${usdRange(e.perHour.low, e.perHour.high)}`
+                  }).join(' · ')}
+                  . Haiku is far cheaper; Opus reads busy screens best.
                 </span>
               ) : null}
             </div>
@@ -229,8 +237,12 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: Sig
               <label htmlFor="cap">Spending cap per session: {usd(cloud.settings.sessionCapUsd)}</label>
               <input id="cap" type="range" min={0.5} max={20} step={0.5} value={cloud.settings.sessionCapUsd} onChange={(e) => void apply(bridge.setCloudSettings({ sessionCapUsd: Number(e.target.value) }))} />
               <span className="muted small">
-                All cloud calls stop for the session at the cap. This session: {usd(cloud.spend.usd)} over {cloud.spend.calls} calls (estimated).{' '}
-                <span title={PRICING_URL}>Prices: anthropic.com/pricing</span>
+                All cloud calls stop for the session at the cap. This session: {usd(cloud.spend.usd)} over {cloud.spend.calls} calls (estimated). A monthly budget, the
+                history and the prices are in{' '}
+                <button type="button" className="link-btn" onClick={onUsage}>
+                  Usage & cost
+                </button>
+                .
               </span>
             </div>
           </div>
@@ -246,7 +258,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: Sig
 const WIDTH_LABEL: Record<number, string> = { 768: 'Low', 1024: 'Medium', 1280: 'High', 1600: 'Max' }
 
 /** How often and how sharply the coach looks at this game's screen, chosen by the player; and what it costs, measured. */
-function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile }) {
+function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, profile, usage }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile; usage: UsageSummary | null }) {
   const pack = profile.vision!
   const v = visionPrefsFor(profile, settings)
   const own = settings.vision[profile.id] ?? {}
@@ -262,9 +274,8 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
     if (!Object.keys(rest).length) delete next[profile.id]
     onSettings({ vision: next })
   }
-  const height = Math.round((v.maxWidth * 9) / 16)
   const model = cloud.settings.visionModel
-  const estimate = estimatePerHour(model, v.intervalMs, v.maxWidth, height, cachedPromptTokens(profile))
+  const est = playEstimate(profile, settings, cloud.settings, usage)!
   const used = cloud.spend.vision
   const measured = used && used.calls >= 5 ? used : null
   const per = (n: number) => Math.round(n / (measured?.calls ?? 1))
@@ -354,11 +365,19 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
       </div>
       <div className="cost-box">
         <div>
-          <span className="label">Estimate</span> ≈ {usd(estimate)}/hour with {modelPrice(model).label.replace(/ \(.*\)$/, '')}, before thinking.
+          <span className="label">Estimate</span> {usdFine(est.listPerLook.low)}–{usdFine(est.listPerLook.high)} a look ≈ {usdRange(est.listPerHour.low, est.listPerHour.high)}/hour with{' '}
+          {modelPrice(model).label.replace(/ \(.*\)$/, '')} at list prices (from no thinking to a little), about {usdRange(est.listPerMatch.low, est.listPerMatch.high)} for a typical{' '}
+          {est.matchMinutes}-minute match. Still screens are skipped, so real play usually costs less.
         </div>
+        {est.measured ? (
+          <div>
+            <span className="label">Measured, all your games</span> {est.measured.looks.toLocaleString()} looks of {profile.game.title} with this model, {usdFine(est.measured.usdPerLook)} each ≈{' '}
+            {usd(est.measured.perHour)}/hour at this refresh.
+          </div>
+        ) : null}
         {measured ? (
           <div>
-            <span className="label">Measured this session</span> {measured.calls} looks, {usd(measured.usd / measured.calls)} each ≈ {usd((measured.usd / measured.calls) * perHour)}/hour at this
+            <span className="label">Measured this session</span> {measured.calls} looks, {usdFine(measured.usd / measured.calls)} each ≈ {usd((measured.usd / measured.calls) * perHour)}/hour at this
             refresh. Per look: {per(measured.input).toLocaleString()} tokens of image and question, {per(measured.cacheRead + measured.cacheWrite).toLocaleString()} of
             cached reference, {per(measured.output).toLocaleString()} written{measured.thinking ? ` (${per(measured.thinking).toLocaleString()} of them thinking)` : ''}.
           </div>

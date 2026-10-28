@@ -368,10 +368,10 @@ export class CloudService {
     const s = this.getSettings()
     if (!s.enabled) return { ok: false, error: 'Cloud features are switched off.', fatal: true }
     if (this.spentUsd >= s.sessionCapUsd) {
-      return { ok: false, error: `Session spend cap of $${s.sessionCapUsd.toFixed(2)} reached; cloud calls are paused until the next session.`, fatal: true }
+      return { ok: false, error: `Session spend cap of $${s.sessionCapUsd.toFixed(2)} reached; cloud calls are paused until the next session (or raise the cap on the Usage & cost page).`, fatal: true }
     }
     if (s.stopAtBudget && s.monthlyBudgetUsd > 0 && this.monthSpend() >= s.monthlyBudgetUsd) {
-      return { ok: false, error: `Monthly budget of $${s.monthlyBudgetUsd.toFixed(2)} reached; cloud calls are paused until next month (or raise it in Settings).`, fatal: true }
+      return { ok: false, error: `Monthly budget of $${s.monthlyBudgetUsd.toFixed(2)} reached; cloud calls are paused until next month (or raise it on the Usage & cost page).`, fatal: true }
     }
     const key = this.getKey()
     if (!key) return { ok: false, error: 'No API key is set.', fatal: true }

@@ -2,14 +2,16 @@
 // Haiku's long-prompt rate, web searches, the model that actually served a
 // call), image tokens per 28×28 patch, the usage history kept across
 // sessions, the measured cost of a look, the spending rate and the monthly
-// budget.
+// budget; what playing a game and running each job is expected to cost; and
+// the warnings near the cap and the budget.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CloudService, type CloudClient } from '../electron/cloud/service.ts'
 import { DEFAULT_CLOUD } from '../shared/cloud.ts'
-import { cleanLedger, dayOf, emptyLedger, measuredLook, recordCall, summarizeUsage, type UsageCall } from '../src/core/usage.ts'
-import { costOf, estimateRange, imageTokens, servedPrice } from '../src/core/vision/cost.ts'
+import { minutesToCap, playEstimate, spendAlerts } from '../src/core/estimate.ts'
+import { averageCall, cleanLedger, dayOf, emptyLedger, measuredLook, recordCall, summarizeUsage, type UsageCall } from '../src/core/usage.ts'
+import { costOf, estimateRange, imageTokens, jobEstimate, servedPrice } from '../src/core/vision/cost.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
 
 const M = 1_000_000
@@ -143,4 +145,63 @@ test('the service bills the model that served each call, records it, measures th
   cloud = { ...cloud, stopAtBudget: false }
   assert.ok((await svc.analyzeFrame(mw4, img, {})).ok, 'warn only: calls go on')
   assert.equal(svc.spend.monthUsd, 5)
+})
+
+test('what playing costs per game: list-price range until enough looks are measured, then the measured figure; per match adds one cache fill', () => {
+  const mw4 = builtInProfile('cod-mw4')
+  const cloud = { visionModel: 'claude-sonnet-5-5', visionThinking: 'auto' as const }
+  const settings = { vision: { 'cod-mw4': { intervalMs: 2000 } } }
+  const est = playEstimate(mw4, settings, cloud, null)!
+  assert.equal(est.looksPerHour, 1800)
+  assert.equal(est.measured, null)
+  assert.ok(est.perHour.high > est.perHour.low)
+  assert.equal(est.matchMinutes, 10)
+  const fill = costOf('claude-sonnet-5-5', { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 8000 })
+  close(est.perMatch.low, est.perHour.low / 6 + fill)
+  // 25 measured looks at $0.01 each.
+  const l = emptyLedger()
+  for (let i = 0; i < 25; i++) recordCall(l, call('2026-10-28T15:00:00', { usd: 0.01 }))
+  const s = summarizeUsage(l, new Date('2026-10-28T18:00:00'))
+  const m = playEstimate(mw4, settings, cloud, s)!
+  close(m.measured!.usdPerLook, 0.01)
+  close(m.perHour.low, 18)
+  close(m.perHour.high, 18)
+  close(m.perMatch.low, 3)
+  close(m.listPerMatch.low, est.perMatch.low)
+  // Another model has no measurement yet.
+  assert.equal(playEstimate(mw4, settings, cloud, s, 'claude-opus-5-5')!.measured, null)
+  assert.equal(playEstimate(builtInProfile('generic'), settings, cloud, s)?.matchMinutes ?? 20, 20)
+  assert.equal(s.since, '2026-10-28')
+})
+
+test('jobs are estimated before they run; web-search jobs need Opus or Sonnet; answers average from history', () => {
+  const k = jobEstimate('claude-opus-5-5', 'knowledge')!
+  assert.ok(k.low > 1 && k.high < 5 && k.high > k.low, `${k.low}–${k.high}`)
+  assert.ok(jobEstimate('claude-sonnet-5-5', 'knowledge')!.high < k.high)
+  assert.equal(jobEstimate('claude-haiku-5-5', 'research'), null)
+  assert.ok(jobEstimate('claude-haiku-5-5', 'answer')!.high < 0.01)
+  const l = emptyLedger()
+  recordCall(l, call('2026-10-20T15:00:00', { feature: 'answer', model: 'claude-opus-5-5', usd: 0.04 }))
+  recordCall(l, call('2026-10-21T15:00:00', { feature: 'answer', model: 'claude-opus-5-5', usd: 0.06 }))
+  const s = summarizeUsage(l, new Date('2026-10-28T18:00:00'))
+  assert.equal(averageCall(s, 'answer', 'claude-opus-5-5'), null, 'too few')
+  recordCall(l, call('2026-10-22T15:00:00', { feature: 'answer', model: 'claude-opus-5-5', usd: 0.08 }))
+  const a = averageCall(summarizeUsage(l, new Date('2026-10-28T18:00:00')), 'answer', 'claude-opus-5-5')!
+  assert.equal(a.calls, 3)
+  close(a.usd, 0.06)
+})
+
+test('spending alerts: warn from 80% of the session cap or monthly budget, stop at the cap, stop at the budget only when asked', () => {
+  const on = { enabled: true, sessionCapUsd: 5, monthlyBudgetUsd: 20, stopAtBudget: false }
+  assert.deepEqual(spendAlerts({ usd: 1, monthUsd: 2 }, on), [])
+  assert.deepEqual(spendAlerts({ usd: 4.2, monthUsd: 2 }, on).map((a) => a.level), ['warn'])
+  assert.match(spendAlerts({ usd: 1, monthUsd: 17 }, on)[0].text, /85% of this month’s \$20\.00 budget/)
+  assert.deepEqual(spendAlerts({ usd: 1, monthUsd: 21 }, on).map((a) => a.level), ['warn'])
+  assert.deepEqual(spendAlerts({ usd: 1, monthUsd: 21 }, { ...on, stopAtBudget: true }).map((a) => a.level), ['stop'])
+  assert.deepEqual(spendAlerts({ usd: 5, monthUsd: 21 }, { ...on, stopAtBudget: true }).map((a) => a.level), ['stop', 'stop'])
+  assert.match(spendAlerts({ usd: 5 }, on)[0].text, /cap of \$5\.00 is reached/)
+  assert.deepEqual(spendAlerts({ usd: 9, monthUsd: 99 }, { ...on, enabled: false }), [])
+  assert.deepEqual(spendAlerts({ usd: 1, monthUsd: 99 }, { ...on, monthlyBudgetUsd: 0 }), [])
+  close(minutesToCap({ usd: 2, ratePerHour: 6 }, 5)!, 30)
+  assert.equal(minutesToCap({ usd: 2, ratePerHour: null }, 5), null)
 })

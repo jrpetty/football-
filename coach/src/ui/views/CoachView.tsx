@@ -6,7 +6,9 @@ import type { ResolvedPolicy } from '../../core/policy/registry.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { COACHING_MODES, MODE_INFO, TONE_INFO, TONES, visionPrefsFor, type CoachSettings } from '../../core/settings.ts'
 import type { SignalState } from '../../core/types.ts'
-import { cachedPromptTokens, estimatePerHour, modelPrice } from '../../core/vision/cost.ts'
+import { playEstimate, spendAlerts } from '../../core/estimate.ts'
+import type { UsageSummary } from '../../core/usage.ts'
+import { modelPrice } from '../../core/vision/cost.ts'
 import { builtInProfile } from '../../profiles/index.ts'
 import type { ProfileCatalog, Tab } from '../App.tsx'
 import { AlignmentCheck } from '../components/AlignmentCheck.tsx'
@@ -17,7 +19,7 @@ import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
 import { WhereYouAre } from '../components/MapView.tsx'
-import { CATEGORY_TEXT, clock, formatMs, pct, usd, WINDOW_TEXT } from '../format.ts'
+import { CATEGORY_TEXT, clock, formatMs, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
 
@@ -31,6 +33,7 @@ interface Props {
   policy: ResolvedPolicy
   effective: EffectiveMode
   cloud: CloudStatus
+  usage: UsageSummary | null
   info: PlatformInfo | null
   onStart: (kind: SourceChoice, speed?: number) => void
   onTab: (t: Tab) => void
@@ -44,16 +47,11 @@ const cloudReady = (c: CloudStatus) => c.available && c.settings.enabled && c.ke
 
 // --- Before capture -------------------------------------------------------------------
 
-function SetupView({ state, session, settings, onSettings, catalog, profile, policy, effective, cloud, onStart, onTab }: Props) {
+function SetupView({ state, session, settings, onSettings, catalog, profile, policy, effective, cloud, usage, onStart, onTab }: Props) {
   const mode = profile.modes.find((m) => m.id === settings.profileModeId) ?? null
   const context = settings.context[profile.id] ?? {}
   const visionPack = !!profile.vision
-  const est = visionPack
-    ? (() => {
-        const v = visionPrefsFor(profile, settings)
-        return estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(profile))
-      })()
-    : 0
+  const est = playEstimate(profile, settings, cloud.settings, usage)
 
   const demo = (kind: SourceChoice, packId: string, speed: number, preferMode?: string) => {
     const pack = builtInProfile(packId)
@@ -237,11 +235,17 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
                   <span className="badge ok">Cloud vision on</span> Every {formatMs(visionPrefsFor(profile, settings).intervalMs)}, one{' '}
                   {profile.vision!.crops?.length ? 'set of HUD crops' : 'downscaled frame'} goes to {modelPrice(cloud.settings.visionModel).label.split(' (')[0]} with your key.
                 </p>
-                <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} />
-                <p className="muted small">
-                  About {usd(est)} per hour of play (estimate). Session cap {usd(cloud.settings.sessionCapUsd)}. Faster looks catch more in
-                  shooters and football; detail and more in Settings → Screen reading.
-                </p>
+                <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} usage={usage} />
+                {est ? (
+                  <p className="muted small">
+                    About {usdRange(est.perHour.low, est.perHour.high)} per hour of play and {usdRange(est.perMatch.low, est.perMatch.high)} for a typical {est.matchMinutes}-minute match
+                    {est.measured ? `, measured from your ${est.measured.looks.toLocaleString()} looks` : ' (estimate from list prices)'}. Session cap {usd(cloud.settings.sessionCapUsd)}.
+                    Faster looks catch more in shooters and football; detail and more in Settings → Screen reading.{' '}
+                    <button type="button" className="link-btn" onClick={() => onTab('usage')}>
+                      Usage & cost
+                    </button>
+                  </p>
+                ) : null}
               </>
             ) : (
               <>
@@ -336,7 +340,7 @@ function LastSession({ state, onTab }: { state: SessionState; onTab: (t: Tab) =>
 
 // --- During capture -------------------------------------------------------------------
 
-function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud, info }: Props) {
+function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud, usage, info, onTab }: Props) {
   const [aligning, setAligning] = useState(false)
   const st = state.status
   const report = state.report?.profileId === profile.id ? state.report : null
@@ -369,7 +373,7 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
             </button>
           ) : null}
           {cloudReady(cloud) && state.status?.vision.enabled ? (
-            <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} vision={state.status.vision} compact />
+            <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} vision={state.status.vision} usage={usage} compact />
           ) : null}
           <select aria-label="Coaching mode" value={settings.mode} onChange={(e) => onSettings({ mode: e.target.value as CoachSettings['mode'] })}>
             {COACHING_MODES.map((m) => (
@@ -382,6 +386,14 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
       </div>
 
       {state.error ? <Notice level="error">{state.error}</Notice> : null}
+      {spendAlerts(cloud.spend, cloud.settings).map((a) => (
+        <Notice key={a.text} level={a.level === 'stop' ? 'error' : 'warning'}>
+          {a.text}{' '}
+          <button type="button" className="link-btn" onClick={() => onTab('usage')}>
+            Usage & cost
+          </button>
+        </Notice>
+      ))}
       {state.source?.surface === 'monitor' ? (
         <Notice level="warning">You are sharing a whole screen. Everything on it is analysed (notifications, other apps). Stop and share the game window for better privacy and accuracy.</Notice>
       ) : null}

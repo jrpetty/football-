@@ -290,6 +290,7 @@ export class CoachSession {
       const r = await this.bridge.research({ profileId: profile.id, gameTitle: profile.game.title, focus })
       if (!r.ok) return r.error
       if (this.profile?.id === profile.id) this.set({ research: r.brief })
+      this.flash(`Research done: ${r.costUsd < 0.01 ? 'under $0.01' : `$${r.costUsd.toFixed(2)}`} (estimate).`)
       return null
     } catch (err) {
       return String(err)

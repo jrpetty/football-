@@ -8,7 +8,8 @@ import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { TtsStatus } from '../../../shared/voices.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
-import { estimatePerHour, MODELS } from '../../core/vision/cost.ts'
+import { estimateRange, MODELS } from '../../core/vision/cost.ts'
+import { usdRange } from '../format.ts'
 import type { CoachSession } from '../session.ts'
 import { HotkeyField } from './HotkeyField.tsx'
 import { Notice, Switch } from './common.tsx'
@@ -156,13 +157,16 @@ function ConnectStep({ bridge, cloud, onCloud, desktop }: Props & { desktop: boo
         <div className="field" style={{ marginTop: 14 }}>
           <label htmlFor="ob-model">Model for reading the screen</label>
           <select id="ob-model" value={cloud.settings.visionModel} onChange={(e) => void bridge.setCloudSettings({ visionModel: e.target.value, answerModel: e.target.value }).then(onCloud)}>
-            {MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label} — about ${estimatePerHour(m.id, 3000, 1024, 576).toFixed(2)}/hour
-              </option>
-            ))}
+            {MODELS.map((m) => {
+              const r = estimateRange(m.id, { intervalMs: 3000, width: 1024, height: 576, cachedTokens: 5000, thinkingOff: false })
+              return (
+                <option key={m.id} value={m.id}>
+                  {m.label} — about {usdRange(r.low, r.high)}/hour
+                </option>
+              )
+            })}
           </select>
-          <span className="muted small">Estimates for one look every 3 s. Unchanged screens are skipped, and a spending cap per session protects you (Settings).</span>
+          <span className="muted small">Estimates at list prices for one look every 3 s. Unchanged screens are skipped, a spending cap per session protects you, and Usage & cost shows what you actually spend.</span>
         </div>
       ) : null}
     </div>

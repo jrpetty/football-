@@ -39,7 +39,7 @@ export const MODELS: readonly ModelPrice[] = [
 ]
 
 /** Models a request can be served by after a server-side fallback (not selectable). */
-const FALLBACK_PRICES: readonly ModelPrice[] = [
+export const FALLBACK_PRICES: readonly ModelPrice[] = [
   { id: 'claude-opus-5', label: 'Claude Opus 5', input: 5, output: 25, cacheRead: 0.5, fallbacks: false },
   { id: 'claude-opus-4-8', label: 'Claude Opus 4.8', input: 5, output: 25, cacheRead: 0.5, fallbacks: false },
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', input: 2, output: 10, cacheRead: 0.2, fallbacks: false },
@@ -141,4 +141,56 @@ export function estimateRange(
   const perLook = lookCost(model, { imageTokens: img, cachedTokens: opts.cachedTokens })
   const withThinking = lookCost(model, { imageTokens: img, cachedTokens: opts.cachedTokens, outputTokens: LOOK_OUTPUT_TOKENS + thinkingAllowance(model, opts.thinkingOff) })
   return { low: perLook * looksPerHour, high: withThinking * looksPerHour, perLook, looksPerHour }
+}
+
+// --- Other jobs ----------------------------------------------------------------------------
+
+export type CloudJob = 'answer' | 'review' | 'research' | 'knowledge'
+
+interface JobTokens {
+  readonly input: number
+  readonly cacheWrite?: number
+  readonly cacheRead?: number
+  readonly output: number
+  readonly searches?: number
+}
+
+/**
+ * Assumed token counts for one run of each job, at its lighter and heavier
+ * end, for an estimate before it runs (each run's real cost is recorded).
+ * Answers: the question, the session digest and sometimes the screen, with the
+ * game reference cached between questions, and a short answer with some
+ * thinking. Reviews: the same with a longer, structured answer. Research: up
+ * to four turns with web search, whose results count as input. Knowledge:
+ * web research with search and fetch over up to eight turns, then four
+ * structuring calls over the cached notes.
+ */
+const JOB_TOKENS: Readonly<Record<CloudJob, { readonly low: JobTokens; readonly high: JobTokens }>> = {
+  answer: { low: { input: 4_000, cacheRead: 12_000, output: 400 }, high: { input: 9_000, cacheWrite: 15_000, output: 2_500 } },
+  review: { low: { input: 5_000, cacheWrite: 12_000, output: 1_500 }, high: { input: 12_000, cacheWrite: 15_000, output: 5_000 } },
+  research: { low: { input: 25_000, output: 2_000, searches: 3 }, high: { input: 120_000, output: 6_000, searches: 12 } },
+  knowledge: {
+    low: { input: 150_000, cacheWrite: 30_000, cacheRead: 90_000, output: 30_000, searches: 15 },
+    high: { input: 600_000, cacheWrite: 30_000, cacheRead: 90_000, output: 70_000, searches: 40 },
+  },
+}
+
+/** Jobs that search the web need Opus or Sonnet. */
+export function jobAvailable(model: string, job: CloudJob): boolean {
+  return !((job === 'research' || job === 'knowledge') && model.startsWith('claude-haiku'))
+}
+
+/** A rough range for one run of a job with a model (null where the model cannot run it). */
+export function jobEstimate(model: string, job: CloudJob): { readonly low: number; readonly high: number } | null {
+  if (!jobAvailable(model, job)) return null
+  const at = (t: JobTokens) =>
+    costOf(model, {
+      input_tokens: t.input,
+      output_tokens: t.output,
+      cache_creation_input_tokens: t.cacheWrite ?? 0,
+      cache_read_input_tokens: t.cacheRead ?? 0,
+      server_tool_use: { web_search_requests: t.searches ?? 0 },
+    })
+  const r = JOB_TOKENS[job]
+  return { low: at(r.low), high: at(r.high) }
 }
