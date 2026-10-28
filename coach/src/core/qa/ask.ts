@@ -22,7 +22,7 @@ export type Intent =
   | { readonly kind: 'benchmark' }
   | { readonly kind: 'intel' }
   | { readonly kind: 'learned' }
-  | { readonly kind: 'arsenal'; readonly itemId: string }
+  | { readonly kind: 'arsenal'; readonly itemId: string; readonly build?: boolean }
   | { readonly kind: 'map'; readonly mapName: string | null }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
@@ -40,7 +40,8 @@ export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
   // A weapon, perk, piece of equipment or streak named in the question: how it works, its range, how to beat it.
   const item = arsenalItemIn(q, profile)
-  if (item && /\b(how|what|good|best|counter|beat|range|work|use|using|vs|versus|should|ttk|build|loadout|attachments?|stats|damage|strong|weak|meta|explain|tell me|about|kill me|killing me|deal with|stop)\b/.test(q)) return { kind: 'arsenal', itemId: item.id }
+  if (item && /\b(how|what|good|best|counter|beat|range|work|use|using|vs|versus|should|ttk|build|loadout|attachments?|stats|damage|strong|weak|meta|explain|tell me|about|kill me|killing me|deal with|stop)\b/.test(q))
+    return { kind: 'arsenal', itemId: item.id, ...(/\b(build|loadout|attachments?|class|setup|gunsmith)\b/.test(q) ? { build: true } : {}) }
   // The map: where I am, callouts, power positions, angles, routes, objectives.
   const map = mapNamedIn(q, profile)
   if (profile.positioning && (map || /\b(callouts?|power positions?|head ?glitch\w*|sightlines?|angles?|routes?|rotat\w+|lanes?|this map|the map|where am i|which spot|best spots?|hardpoint (?:order|rotation)|flags?|bomb sites?|spawns?)\b/.test(q)))
@@ -78,7 +79,7 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'learned':
       return learnedAnswer(profile, report, history)
     case 'arsenal':
-      return arsenalAnswer(profile, report, intent.itemId)
+      return arsenalAnswer(profile, report, intent.itemId, intent.build === true)
     case 'map':
       return mapAnswer(profile, report, intent.mapName)
     case 'benchmark': {
@@ -313,7 +314,8 @@ function arsenalItemIn(q: string, profile: GameProfile): ArsenalItem | null {
   for (const item of profile.knowledge.arsenal ?? []) {
     for (const n of [item.name, ...(item.aliases ?? [])]) {
       const k = n.toLowerCase()
-      if (k.length < 3 || (best && k.length <= best.len)) continue
+      // Short names count when they carry a digit (M4); otherwise three letters or more.
+      if ((k.length < 3 && !/\d/.test(k)) || k.length < 2 || (best && k.length <= best.len)) continue
       if (new RegExp(`(^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-z0-9])`).test(q)) best = { item, len: k.length }
     }
   }
@@ -325,18 +327,25 @@ function mapNamedIn(q: string, profile: GameProfile): GameMap | null {
   return null
 }
 
-function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string): string | null {
+function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string, build: boolean): string | null {
   const i = profile.knowledge.arsenal?.find((x) => x.id === id)
   if (!i) return null
   const what = [i.class?.replace(/_/g, ' '), i.slot, i.cost].filter(Boolean).join(', ')
+  const said = (t: string) => i.summary.toLowerCase().includes(t.toLowerCase().slice(0, 40))
   const parts = [`${i.name}${what ? ` (${what})` : ''}: ${i.summary}`]
   if (i.bestRange) parts.push(`Best at ${i.bestRange} range.`)
-  const nums = Object.entries(i.stats ?? {}).flatMap(([k, v]) => (STAT_WORDS[k] ? [STAT_WORDS[k](v)] : []))
+  // Numbers the summary did not already say.
+  const nums = Object.entries(i.stats ?? {}).flatMap(([k, v]) => (STAT_WORDS[k] && !(k === 'magazine' && /magazine/i.test(i.summary)) ? [STAT_WORDS[k](v)] : []))
   if (nums.length) parts.push(`${nums.join(', ')}.`)
-  if (i.strengths?.length) parts.push(`Strong: ${i.strengths.slice(0, 2).join('; ')}.`)
+  const strong = (i.strengths ?? []).filter((x) => !said(x)).slice(0, 2)
+  if (strong.length) parts.push(`Strong: ${strong.join('; ')}.`)
   if (i.weaknesses?.length) parts.push(`Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`)
   if (i.counters?.length) parts.push(`To beat it: ${i.counters.slice(0, 2).join('; ')}.`)
-  if (i.tips?.length) parts.push(`Tip: ${i.tips[0]}`)
+  // The build only when asked about builds; otherwise a tip on using it.
+  const meta = (i.tips ?? []).find((t) => /^meta build/i.test(t))
+  const tip = (i.tips ?? []).find((t) => !/^meta build/i.test(t))
+  if (build && meta) parts.push(`${meta}.`)
+  else if (tip) parts.push(`Tip: ${/[.!?]$/.test(tip) ? tip : `${tip}.`}`)
   // The player's own record with it on this map, when there is one.
   const mine = report.map?.model?.weapons.find((w) => w.name.toLowerCase() === i.name.toLowerCase())
   if (mine) parts.push(`Your record with it on ${report.map!.model!.map}: ${mine.kills} kills, ${mine.deaths} deaths.`)

@@ -210,7 +210,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: Sig
               </select>
               {v ? (
                 <span className="muted small">
-                  {profile.game.title}: one look every {(v.intervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster)))}/hour
+                  {profile.game.title}: one look every {(v.intervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, height, cachedPromptTokens(profile)))}/hour
                   before thinking (estimate; see Screen reading below for what this session measured). Haiku is far cheaper; Opus reads busy screens best.
                 </span>
               ) : null}
@@ -264,7 +264,7 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
   }
   const height = Math.round((v.maxWidth * 9) / 16)
   const model = cloud.settings.visionModel
-  const estimate = estimatePerHour(model, v.intervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster))
+  const estimate = estimatePerHour(model, v.intervalMs, v.maxWidth, height, cachedPromptTokens(profile))
   const used = cloud.spend.vision
   const measured = used && used.calls >= 5 ? used : null
   const per = (n: number) => Math.round(n / (measured?.calls ?? 1))

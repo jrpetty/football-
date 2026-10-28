@@ -490,6 +490,8 @@ export interface ArsenalItem {
   readonly tips?: readonly string[]
   /** On-screen recognition cues. */
   readonly look?: string
+  /** Where the numbers came from and what is uncertain (shown, not spoken). */
+  readonly notes?: string
   readonly unverified?: boolean
 }
 
@@ -1504,6 +1506,7 @@ export function validateProfile(input: unknown): ValidationResult {
       c.str(a.summary, `${path}.summary`, { max: 900 })
       for (const k of ['class', 'slot', 'cost'] as const) c.str(a[k], `${path}.${k}`, { optional: true, max: 60 })
       c.str(a.look, `${path}.look`, { optional: true, max: 400 })
+      c.str(a.notes, `${path}.notes`, { optional: true, max: 400 })
       for (const k of ['strengths', 'weaknesses', 'counters', 'tips'] as const) c.arr(a[k], `${path}.${k}`, true).forEach((v, j) => c.str(v, `${path}.${k}[${j}]`, { max: 400 }))
     })
   }

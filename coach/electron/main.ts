@@ -65,7 +65,7 @@ const ANSWER_ROSTER_CHARS = 100_000
 /** One map's callouts and how they look, with each look (shooters). */
 const VISION_MAP_CHARS = 9_000
 /** Weapon, equipment and streak names with how to tell them apart, with each look. */
-const VISION_ARSENAL_CHARS = 9_000
+const VISION_ARSENAL_CHARS = 11_000
 /** How every weapon, perk and streak works, for answers. */
 const ANSWER_ARSENAL_CHARS = 60_000
 /** Every map in short (the current map in full goes in the digest), for answers. */
@@ -259,7 +259,7 @@ async function visionExtras(profile: GameProfile, context: Readonly<Record<strin
     knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
     // Strategy games: the exact unit and building names to report, and how to tell them apart.
     if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision', ages: profile.intel?.ages, ...(matchup ? { factions: matchup } : {}) })}`
-    if (maps.length) knowledge += `\n${map ? mapText(map, { budget: VISION_MAP_CHARS, detail: 'vision' }) : mapsIndexText(maps, { budget: 4000, detail: 'vision' })}`
+    if (maps.length) knowledge += `\n${map ? mapText(map, { budget: VISION_MAP_CHARS, detail: 'vision' }) : mapsIndexText(maps, { budget: 4600, detail: 'vision' })}`
     if (profile.knowledge.arsenal?.length) knowledge += `\n${arsenalText(profile.knowledge.arsenal, { budget: VISION_ARSENAL_CHARS, detail: 'vision' })}`
     promptCache.set(key, knowledge)
   }

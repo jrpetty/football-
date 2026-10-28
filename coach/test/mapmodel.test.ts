@@ -195,6 +195,7 @@ test('questions: a weapon or perk by name, the map, where you are', async () => 
   mw4.knowledge.maps = [yard]
   const p = mw4 as unknown as Parameters<typeof classify>[1]
   assert.deepEqual(classify('how do I beat the Rezi 12?', p), { kind: 'arsenal', itemId: 'rezi-12' })
+  assert.deepEqual(classify('best rezi 12 build?', p), { kind: 'arsenal', itemId: 'rezi-12', build: true })
   assert.deepEqual(classify('what does ghost do', p), { kind: 'arsenal', itemId: 'ghost' })
   assert.deepEqual(classify('power positions on yard?', p), { kind: 'map', mapName: 'Yard' })
   assert.deepEqual(classify('where am i?', p), { kind: 'map', mapName: null })
@@ -219,4 +220,36 @@ test('deaths just after respawning are spawn deaths, with where; the median time
   const m = mapModelFrom([r], [yard], 'Yard')!
   assert.equal(m.medianLifeSec, 10)
   assert.ok(mapLines(m, 10).some((l) => l.startsWith("3 deaths came within 15 s of the one before, mostly at Alley: they are holding your spawn's exits.")), mapLines(m, 10).join(' | '))
+})
+
+test('the MW4 pack’s researched data: every launch weapon with its range, the gear, the maps with callouts and links', async () => {
+  const { demoMapFrom, mw4MatchReplay } = await import('../src/sim/visionReplay.ts')
+  const { engineFor, settings } = await import('./helpers.ts')
+  const { classify, answerLocally } = await import('../src/core/qa/ask.ts')
+  const mw4 = builtInProfile('cod-mw4')
+  const a = mw4.knowledge.arsenal!
+  const weapons = a.filter((x) => x.category === 'weapon')
+  assert.ok(weapons.length >= 33, `${weapons.length} weapons`)
+  for (const name of ['M4', 'HAN 86', 'VEL 46', 'Rezi 12', 'KG-7 Vulcan', 'PILA']) assert.ok(weapons.some((w) => w.name === name && w.bestRange), name)
+  for (const cat of ['lethal', 'tactical', 'perk', 'field_upgrade', 'killstreak'] as const) assert.ok(a.filter((x) => x.category === cat).length >= 8, cat)
+  assert.match(a.find((x) => x.name === 'UAV')!.cost ?? '', /5 kills/)
+  const maps = mw4.knowledge.maps!
+  assert.ok(maps.length >= 20)
+  assert.ok(maps.filter((m) => m.type === 'core').every((m) => m.callouts.length >= 6 && (m.connections?.length ?? 0) >= 4), 'core maps can be drawn')
+  // Each look about Cachette carries its callouts; the demo walks it and the model names its areas.
+  const demo = maps.filter((m) => m.type === 'core').map(demoMapFrom).find((m) => !!m)!
+  const e = engineFor(mw4, settings({ profileId: 'cod-mw4', profileModeId: 'private-bots', mode: 'training' }))
+  let now = 0
+  for (const b of mw4MatchReplay({ seed: 4, map: demo }).batches) e.ingestObservations(b.observations, (now = Math.max(now, b.arrivesAt)))
+  const r = e.report()
+  assert.equal(r.map!.model!.reference?.name, demo.name)
+  assert.ok(r.map!.model!.areas.filter((x) => x.visits).every((x) => x.ref), 'every visited area is one of the pack’s callouts')
+  assert.match(r.map!.lines[0], new RegExp(`^Most deaths at ${demo.heldAt} \\(\\d+ of \\d+\\), \\d+ of them shot from ${demo.heldFrom}\\.$`))
+  // Answers from the arsenal, in words.
+  assert.equal(classify('is the M4 good?', mw4).kind, 'arsenal')
+  const m4 = answerLocally(classify('is the M4 good?', mw4), mw4, r, [])!
+  assert.match(m4, /^M4 \(assault rifle\): Full-auto assault rifle, 30-round magazine\./)
+  assert.match(m4, /Best at mid-long range\. 810 rounds a minute/)
+  assert.doesNotMatch(m4, /Meta build/, 'the build only when asked')
+  assert.match(answerLocally(classify('best M4 build?', mw4), mw4, r, [])!, /Meta build: /)
 })

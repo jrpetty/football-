@@ -39,7 +39,7 @@ export function RefreshControl({
     else next[profile.id] = ms === packDefault ? rest : { ...rest, intervalMs: ms }
     onSettings({ vision: next })
   }
-  const est = estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(!!profile.knowledge.roster))
+  const est = estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(profile))
   // Replies slower than the interval times the looks allowed at once: the coach cannot keep that pace.
   const slow = vision?.enabled && vision.latencyMs > 0 && vision.latencyMs > v.intervalMs * v.maxInFlight
   return (

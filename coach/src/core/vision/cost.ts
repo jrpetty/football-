@@ -48,15 +48,19 @@ export function imageTokens(width: number, height: number): number {
 
 /**
  * Cached system-prompt tokens per frame: the pack's screen and HUD notes, plus
- * the roster of unit and building names for strategy packs (about four
- * characters per token).
+ * the roster of unit and building names for strategy packs, or the arsenal and
+ * the current map's callouts for shooters (about four characters per token).
  */
-export function cachedPromptTokens(hasRoster: boolean): number {
-  return hasRoster ? 15_000 : 5_000
+export function cachedPromptTokens(pack: { readonly knowledge: { readonly roster?: unknown; readonly arsenal?: readonly unknown[]; readonly maps?: readonly unknown[] } }): number {
+  const k = pack.knowledge
+  if (k.roster) return 15_000
+  // An arsenal and the current map's callouts: about 25,000 characters with the screen notes.
+  if (k.arsenal?.length || k.maps?.length) return 8_000
+  return 5_000
 }
 
 /** Rough USD per hour of play at a sampling interval, with the system prompt read from the cache. */
-export function estimatePerHour(model: string, intervalMs: number, imageWidth: number, imageHeight: number, cachedTokens = cachedPromptTokens(false)): number {
+export function estimatePerHour(model: string, intervalMs: number, imageWidth: number, imageHeight: number, cachedTokens = 5_000): number {
   const perCall = costOf(model, {
     input_tokens: imageTokens(imageWidth, imageHeight) + 150,
     cache_read_input_tokens: cachedTokens,

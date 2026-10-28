@@ -548,9 +548,10 @@ export class CoachEngine {
     if (events.some((ev) => (this.profile.factors ?? []).some((f) => f.lossEvent === ev.ruleId))) this.maybeFactorTip(now, out)
     if (this.settings.commentary) {
       for (const ev of events) {
-        const line = eventLine(this.profile, ev)
-        // Where it happened on the map, and where the killer shot from, when the screen showed it.
+        // Where it happened on the map, and where the killer shot from, when the screen showed it
+        // (then the named area replaces the rough minimap zone).
         const p = placedDeaths.get(ev.uid)
+        const line = eventLine(this.profile, p?.area ? { ...ev, zone: undefined } : ev)
         const from = p?.killerSpot ? (p.killerSpot === p.area ? ', shot from inside it' : `, shot from ${p.killerSpot}`) : ''
         const where = p?.area ? ` At ${p.area}${from}.` : ''
         if (line) this.comment(`${line}${where}`, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)

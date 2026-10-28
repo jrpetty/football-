@@ -105,6 +105,7 @@ export function ArsenalPanel({
                     </p>
                   ) : null}
                   {i.look ? <p className="muted">On screen: {i.look}</p> : null}
+                  {i.notes ? <p className="muted">Notes: {i.notes}</p> : null}
                 </div>
               ) : null}
             </li>

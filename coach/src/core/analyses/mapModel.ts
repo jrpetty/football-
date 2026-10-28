@@ -430,7 +430,7 @@ export function mapLines(m: MapModel, max = 6): string[] {
   }
   const held = m.sightlines.find((s) => s.n >= 2 && s.to !== worst?.name)
   if (held) out.push(`${held.from} → ${held.to} killed you ${held.n} times: that angle is held. Check it first, smoke it, or cross somewhere else.`)
-  const best = [...m.areas].filter((a) => a.kills >= 3 && a.kills > a.deaths).sort((a, b) => b.kills - b.deaths - (a.kills - a.deaths))[0]
+  const best = [...m.areas].filter((a) => a.kills >= 3 && a.kills >= 1.5 * a.deaths && a.name !== worst?.name).sort((a, b) => b.kills - b.deaths - (a.kills - a.deaths))[0]
   if (best) out.push(`Your best area: ${best.name} (${best.kills} kills, ${best.deaths} deaths).`)
   const hot = [...m.areas].filter((a) => a.enemies >= 3).sort((a, b) => b.enemies - a.enemies)[0]
   if (hot) out.push(`Enemies show up most at ${hot.name} (${hot.enemies} sightings).`)

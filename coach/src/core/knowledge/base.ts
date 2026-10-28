@@ -325,11 +325,16 @@ export function arsenalText(items: readonly ArsenalItem[], opts: { readonly budg
   for (const cat of Object.keys(CATEGORY_TITLE) as ArsenalItem['category'][]) {
     const list = items.filter((i) => i.category === cat)
     if (!list.length) continue
+    // The recogniser cannot see perks or field upgrades being chosen: their names are enough.
+    if (opts.detail === 'vision' && (cat === 'perk' || cat === 'field_upgrade' || cat === 'wildcard')) {
+      if (!b.push(`${CATEGORY_TITLE[cat]}: ${list.map((i) => i.name).join(', ')}`)) return b.text()
+      continue
+    }
     b.push(`### ${CATEGORY_TITLE[cat]}`)
     for (const i of list) {
       const tag = [i.class?.replace(/_/g, ' '), i.slot, i.cost, i.bestRange ? `best ${i.bestRange}` : null].filter(Boolean).join(', ')
       let line = `- ${i.name}${tag ? ` (${tag})` : ''}`
-      if (opts.detail === 'vision') line += i.look ? `: ${i.look}` : ''
+      if (opts.detail === 'vision') line += i.look ? `: ${i.look.length > 150 ? `${i.look.slice(0, 149).replace(/\s+\S*$/, '')}…` : i.look}` : ''
       else {
         const stats = i.stats ? Object.entries(i.stats).map(([k, v]) => `${k} ${v}`).join(', ') : ''
         line += `: ${i.summary}${stats ? ` [${stats}]` : ''}`

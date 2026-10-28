@@ -51,7 +51,7 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
   const est = visionPack
     ? (() => {
         const v = visionPrefsFor(profile, settings)
-        return estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(!!profile.knowledge.roster))
+        return estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(profile))
       })()
     : 0
 
