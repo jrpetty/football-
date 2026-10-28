@@ -287,6 +287,8 @@ Legend:
 - ☑ Grenades from Game State Integration: carried, thrown and held at death by kind, times flashed blind and for how long, times caught fire; lines on throwing what you carry (overall or by side), full buys without a smoke or flash, flashes and fire, each with its playbook entry (`test/cs2.test.ts`). The weapon list from the game now replaces the last one, so a thrown last grenade is no longer counted as held.
 - ◐ Lineups are not checked in the game here: 86 are marked unverified, and Cache's grenade collision changed twice in 2026. *QA 14.1–14.3.*
 - ◐ The 34% accurate-speed line, throw speeds and flash and HE falloff are from CS:GO's code; CS2 may differ.
+- ☑ MW4 pack v1.6.0: the map list checked against the launch blog, the wiki and Shipment's 27 Oct release (23 maps, none missing; the solo Mobility Course is not a match map), 253 callouts (from 167): Hajin rebuilt from the game's own tac-map data (48 places with their squares), Wolves Stadium 3 → 14, Kill Block 6 → 18, Coal, Mumbai, Cachette, Rooftops and the Gunfight maps deeper; every existing callout name kept.
+- ◐ MW4 core-map callouts still come from rough reads of the tac-maps: the official callout labels could not be fetched here. Thin maps: Reactor U92, Shipment (6), Transit 213 (7), Library, NYC (5). Hardpoint orders rest on one site and disagree with another on Cachette, Reactor U92 and Silkworm.
 
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.

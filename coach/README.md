@@ -104,7 +104,7 @@ Then press **Choose the game window**, play, and listen.
       magazine, best range, community time-to-kill where published,
       strengths, weaknesses, how to beat each and its meta build; 11
       lethals, 9 tacticals, 18 perks, 12 field upgrades and 18 killstreaks
-      with how each works and how to counter it; 23 maps with 167 named
+      with how each works and how to counter it; all 23 maps in the game on 28 Oct 2026 (12 core and Shipment, Kill Block, 4 Gunfight, 3 Ground War, Hajin for DMZ and Zodiac for Warzone) with 253 named
       areas (callouts), links, power positions, sightlines and Hardpoint
       rotations; movement, mechanics and every mode's rules.
     - AoE IV covers all 25 civilisations, landmarks and economy numbers.
