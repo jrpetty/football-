@@ -14,6 +14,7 @@
 // placed on the map. Only the screen's pixels are read.
 
 import type { Frame } from '../types.ts'
+import { alignSteps, anchorWindow, locateWindow, usable, type Alignment, type OfficialMap, type PieceImage } from './official.ts'
 
 /** Working size of one minimap window, px. Map coordinates are in these pixels. */
 export const MM = 96
@@ -22,6 +23,8 @@ const HALF = MM / 2
 export const CANVAS = 1024
 /** Weight at which a painted pixel stops averaging (so it can still change). */
 const WEIGHT_CAP = 24
+/** How much match a pixel away from the predicted spot costs while following (see searchNear). */
+const PRIOR = 0.006
 /** The player's arrow, left out: radius around the centre, px. */
 const ARROW_R = 8
 
@@ -95,7 +98,9 @@ export function readWindow(frame: Frame, region: MinimapRegion): MinimapWindow {
 /** Builds the window from MM×MM RGB values (0..255). */
 export function prepareWindow(rgb: Float32Array, round: boolean): MinimapWindow {
   const lum = new Float32Array(MM * MM)
-  const icon = new Uint8Array(MM * MM)
+  // Pixels in an icon's colour (enemy red, teammate blue, objective yellow, green); only small,
+  // compact blobs of them are icons. Walls, hatching and textures in the same colours are map.
+  const tinted = new Uint8Array(MM * MM)
   const red = new Uint8Array(MM * MM)
   for (let p = 0; p < MM * MM; p++) {
     const r = rgb[p * 3]
@@ -104,9 +109,15 @@ export function prepareWindow(rgb: Float32Array, round: boolean): MinimapWindow 
     lum[p] = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     const max = Math.max(r, g, b)
     const min = Math.min(r, g, b)
-    if (max > 70 && (max - min) / max > 0.38) icon[p] = 1
-    if (r >= 130 && r > 1.7 * g && r > 1.7 * b) red[p] = 1
+    if (max <= 70 || (max - min) / max <= 0.38) continue
+    const isRed = r >= 130 && g < 0.5 * r && b < 0.5 * r
+    const isBlue = b >= 110 && b > 1.35 * r && b - r > 60
+    const isYellow = r >= 150 && g >= 130 && b < 0.55 * g
+    const isGreen = g >= 120 && g > 1.4 * r && g > 1.2 * b
+    if (isRed || isBlue || isYellow || isGreen) tinted[p] = 1
+    if (isRed) red[p] = 1
   }
+  const icon = smallBlobs(tinted, 80, 14)
   const mask = new Uint8Array(MM * MM)
   const rr = (HALF - 3) * (HALF - 3)
   let valid = 0
@@ -140,10 +151,51 @@ export function prepareWindow(rgb: Float32Array, round: boolean): MinimapWindow 
       const dx = j - HALF + 0.5
       if (dx * dx + dy * dy > mr * mr) continue
       const p = i * MM + j
-      if (lum[p] >= 0.7 && !icon[p]) marker++
+      if (lum[p] >= 0.7 && !tinted[p]) marker++
     }
   }
   return { lum, mask, valid, contrast, enemies: blobs(red), marker }
+}
+
+/** The pixels of connected blobs no bigger than `maxSize` pixels and `maxSide` across. */
+function smallBlobs(m: Uint8Array, maxSize: number, maxSide: number): Uint8Array {
+  const out = new Uint8Array(MM * MM)
+  const seen = new Uint8Array(MM * MM)
+  const stack: number[] = []
+  const members: number[] = []
+  for (let p = 0; p < MM * MM; p++) {
+    if (!m[p] || seen[p]) continue
+    members.length = 0
+    let x0 = MM
+    let x1 = -1
+    let y0 = MM
+    let y1 = -1
+    stack.push(p)
+    seen[p] = 1
+    while (stack.length) {
+      const q = stack.pop()!
+      members.push(q)
+      const qi = (q / MM) | 0
+      const qj = q % MM
+      if (qj < x0) x0 = qj
+      if (qj > x1) x1 = qj
+      if (qi < y0) y0 = qi
+      if (qi > y1) y1 = qi
+      for (let a = -1; a <= 1; a++)
+        for (let c = -1; c <= 1; c++) {
+          const i = qi + a
+          const j = qj + c
+          if (i < 0 || j < 0 || i >= MM || j >= MM) continue
+          const r = i * MM + j
+          if (m[r] && !seen[r]) {
+            seen[r] = 1
+            stack.push(r)
+          }
+        }
+    }
+    if (members.length <= maxSize && x1 - x0 < maxSide && y1 - y0 < maxSide) for (const q of members) out[q] = 1
+  }
+  return out
 }
 
 /** Centres of red blobs (enemy pings) outside the arrow, as offsets from the centre. */
@@ -298,27 +350,42 @@ export class MapPiece {
     return (sab - (sa * sb) / n) / Math.sqrt(va * vb)
   }
 
-  /** The best match within `r` px of (px, py): coarse every 2 px, then to the pixel. */
+  /**
+   * The best match within `r` px of the predicted spot (px, py): coarse every 2 px, then to the
+   * pixel. Near-ties go to the prediction: along a straight wall with little else in view every
+   * spot matches about as well, and the player keeps moving the way they were.
+   */
   searchNear(w: MinimapWindow, px: number, py: number, r: number, minOverlap = 0.45): { x: number; y: number; ncc: number } {
     let best = { x: px, y: py, ncc: -1 }
+    let bestV = -Infinity
     const rr = r * r
     for (let dy = -r; dy <= r; dy += 2) {
       for (let dx = -r; dx <= r; dx += 2) {
         if (dx * dx + dy * dy > rr) continue
         const s = this.score(w, px + dx, py + dy, 2, minOverlap)
-        if (s > best.ncc) best = { x: px + dx, y: py + dy, ncc: s }
+        const v = s - PRIOR * Math.hypot(dx, dy)
+        if (s > -1 && v > bestV) {
+          best = { x: px + dx, y: py + dy, ncc: s }
+          bestV = v
+        }
       }
     }
-    return this.refine(w, best, 1, minOverlap)
+    return this.refine(w, best, 1, minOverlap, { x: px, y: py })
   }
 
-  private refine(w: MinimapWindow, at: { x: number; y: number; ncc: number }, r: number, minOverlap: number): { x: number; y: number; ncc: number } {
+  private refine(w: MinimapWindow, at: { x: number; y: number; ncc: number }, r: number, minOverlap: number, prior?: { x: number; y: number }): { x: number; y: number; ncc: number } {
+    const cost = (x: number, y: number) => (prior ? PRIOR * Math.hypot(x - prior.x, y - prior.y) : 0)
     let best = { ...at, ncc: this.score(w, at.x, at.y, 1, minOverlap) }
+    let bestV = best.ncc - cost(at.x, at.y)
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (!dx && !dy) continue
         const s = this.score(w, at.x + dx, at.y + dy, 1, minOverlap)
-        if (s > best.ncc) best = { x: at.x + dx, y: at.y + dy, ncc: s }
+        const v = s - cost(at.x + dx, at.y + dy)
+        if (v > bestV) {
+          best = { x: at.x + dx, y: at.y + dy, ncc: s }
+          bestV = v
+        }
       }
     }
     return best
@@ -395,6 +462,10 @@ export interface StoredMosaic {
   readonly callouts: Readonly<Record<string, { readonly piece: number; readonly x: number; readonly y: number; readonly n: number }>>
   /** Heights the player was seen at, per 8-px cell ("piece:cx:cy" → underground, ground, upper, roof). */
   readonly heights: Readonly<Record<string, readonly [number, number, number, number]>>
+  /** Pieces placed on the official overhead map (stitched pixels → its pixels), by piece id. */
+  readonly aligned?: Readonly<Record<string, Alignment>>
+  /** The size of the official image those placements refer to. */
+  readonly alignedTo?: { readonly w: number; readonly h: number }
 }
 
 /** Thresholds: keep tracking; accept a re-find; join two pieces. */
@@ -403,6 +474,12 @@ const FIND = 0.75
 const JOIN = 0.75
 /** Failed re-finds (with a readable minimap) before a new piece starts. */
 const NEW_AFTER = 3
+/** How far (stitched px) the official map may move a tracked spot. */
+const ANCHOR_REACH = 4
+/** Recent minimap views kept for points not placed yet (about 9 KB each). */
+const MAX_VIEWS = 240
+/** Frames a placement from one window must be borne out by before it is shown. */
+const CONFIRM_FRAMES = 3
 /** A piece is kept only once this much has been seen on it (a still screen never grows). */
 const KEEP_AREA = MM * MM * 1.6
 const MAX_TRAIL = 30_000
@@ -427,22 +504,56 @@ export class MinimapMosaic {
 
   /** Follow only windows with the player's arrow at the centre (not a death screen or a scene that slides like a map). */
   needMarker = true
+  /** The official overhead map, when the player has it: pieces are placed on it, and re-finds are checked against it. */
+  private official: OfficialMap | null = null
+  private aligned = new Map<number, Alignment>()
+  private alignedArea = new Map<number, number>()
+  /**
+   * Pieces placed from one window, not yet shown: the next frames must pin down on the official
+   * map where the placement says (a boundary wall beside hatched ground can look like a hatched
+   * building's wall), else the placement is dropped.
+   */
+  private provisional = new Map<number, { ok: number; bad: number }>()
+  /** How often each placed piece's frames pin down on the official map (decaying counts). */
+  private anchored = new Map<number, { ok: number; n: number }>()
+  /**
+   * The minimap at recent points on pieces not placed yet (in memory only): once the piece is
+   * placed, each of those points is pinned down on the official map too.
+   */
+  private unplacedViews: { point: TrackPoint; img: PieceImage }[] = []
+  private job: { piece: number; area: number; it: Generator<void, Alignment | null> } | null = null
 
   constructor(map: string, stored?: StoredMosaic | null) {
     this.map = map
     if (stored) this.load(stored)
   }
 
+  /** Use the official overhead map (or stop using it). Placements made against another size are scaled. */
+  setOfficial(off: OfficialMap | null, stored?: StoredMosaic | null): void {
+    this.official = off
+    this.job = null
+    const to = stored?.alignedTo
+    if (off && to && (to.w !== off.srcW || to.h !== off.srcH)) {
+      const kx = off.srcW / to.w
+      for (const [id, a] of this.aligned) this.aligned.set(id, { ...a, s: a.s * kx, tx: a.tx * kx, ty: a.ty * (off.srcH / to.h) })
+    }
+  }
+
   /** Follows one window. */
   track(w: MinimapWindow, t: number): { state: TrackState; point: TrackPoint | null } {
     this.frames++
     const out = this.step(w, t)
+    if (this.official) this.alignWork(2)
     this.last = { state: out.state, ncc: out.point?.ncc ?? 0, at: t }
     if (out.point) {
       const prev = this.trail[this.trail.length - 1]
       if (!prev || out.point.jump || prev.piece !== out.point.piece || Math.hypot(prev.x - out.point.x, prev.y - out.point.y) >= 1 || t - prev.t >= 1000) {
         this.trail.push(out.point)
         if (this.trail.length > MAX_TRAIL) this.trail.splice(0, this.trail.length - MAX_TRAIL)
+        if (this.official && !this.alignmentFor(out.point.piece)) {
+          this.unplacedViews.push({ point: out.point, img: windowImage(w, Math.round(out.point.x) - HALF, Math.round(out.point.y) - HALF) })
+          if (this.unplacedViews.length > MAX_VIEWS) this.unplacedViews.shift()
+        }
       }
     }
     return out
@@ -465,16 +576,22 @@ export class MinimapMosaic {
       const piece = this.pieces.get(c.piece)!
       const m = piece.searchNear(w, px, py, r)
       if (m.ncc >= KEEP) {
-        const moved = m.x !== c.x || m.y !== c.y
         // Further than anyone moves between two frames: the view cut to somewhere else nearby (a killcam).
         const cut = Math.hypot(m.x - px, m.y - py) > 14 + dt / 100
+        // On a piece placed on the official map, the spot is taken from it (no drift).
+        const at = this.official && !cut ? this.anchor(w, c.piece, m.x, m.y) : null
+        const x = at?.x ?? m.x
+        const y = at?.y ?? m.y
+        const moved = Math.round(x) !== Math.round(c.x) || Math.round(y) !== Math.round(c.y)
         if (moved || this.frames % 5 === 0) {
-          piece.paint(w, m.x, m.y)
+          piece.paint(w, Math.round(x), Math.round(y))
           this.dirty = true
         }
-        this.cur = { piece: c.piece, x: m.x, y: m.y, vx: 0.6 * c.vx + (0.4 * (m.x - c.x)) / dt, vy: 0.6 * c.vy + (0.4 * (m.y - c.y)) / dt, t }
+        this.cur = { piece: c.piece, x, y, vx: 0.6 * c.vx + (0.4 * (x - c.x)) / dt, vy: 0.6 * c.vy + (0.4 * (y - c.y)) / dt, t }
         this.failures = 0
-        if (this.pieces.size > 1 && this.frames % 15 === 0) this.tryJoin(w)
+        // With the official map, pieces are placed on it instead of joined by look (a map with two
+        // identical wings would join the wrong way).
+        if (!this.official && this.pieces.size > 1 && this.frames % 15 === 0) this.tryJoin(w)
         return { state: 'tracking', point: this.point(t, m.ncc, cut) }
       }
       this.cur = null
@@ -485,20 +602,36 @@ export class MinimapMosaic {
       return { state: 'lost', point: null }
     }
     const found = this.findAnywhere(w, FIND)
-    if (found) {
+    if (found && this.official && !this.confirmOnOfficial(w, found)) {
+      this.failures++
+      if (this.failures < NEW_AFTER) return { state: 'lost', point: null }
+    } else if (found) {
       const piece = this.pieces.get(found.piece)!
-      piece.paint(w, found.x, found.y)
+      const at = this.official ? this.anchor(w, found.piece, found.x, found.y) : null
+      const x = at?.x ?? found.x
+      const y = at?.y ?? found.y
+      piece.paint(w, Math.round(x), Math.round(y))
       this.dirty = true
-      this.cur = { piece: found.piece, x: found.x, y: found.y, vx: 0, vy: 0, t }
+      this.cur = { piece: found.piece, x, y, vx: 0, vy: 0, t }
       this.failures = 0
       return { state: 'found', point: this.point(t, found.ncc, true) }
     }
     this.failures++
     if (this.failures < NEW_AFTER) return { state: 'lost', point: null }
-    // Unexplored ground: a new piece, joined to the rest later.
+    // Unexplored ground (or a place that could be either of two): a new piece, joined to the rest
+    // later, or placed straight on the official map when the window is found there for certain.
     const p = this.newPiece()
     p.paint(w, CANVAS / 2, CANVAS / 2)
     this.dirty = true
+    if (this.official) {
+      const s = this.knownScale()
+      const at = s ? locateWindow(windowImage(w, CANVAS / 2 - HALF, CANVAS / 2 - HALF), this.official, s) : null
+        if (at && at.unique && s) {
+        this.aligned.set(p.id, { s, tx: at.x - s * (CANVAS / 2 - HALF), ty: at.y - s * (CANVAS / 2 - HALF), ncc: at.ncc, coverage: 1, margin: at.margin })
+        this.alignedArea.set(p.id, 0)
+        this.provisional.set(p.id, { ok: 0, bad: 0 })
+      }
+    }
     this.cur = { piece: p.id, x: CANVAS / 2, y: CANVAS / 2, vx: 0, vy: 0, t }
     this.failures = 0
     return { state: 'new', point: this.point(t, 1, true) }
@@ -512,7 +645,8 @@ export class MinimapMosaic {
       const m = p.searchAll(w)
       if (m && (!best || m.ncc > best.ncc)) best = { piece: p.id, ...m }
     }
-    if (!best || best.ncc < min || (best.margin < 0.08 && best.ncc < 0.85)) return null
+    // A clear winner only: on a symmetric map the mirror-image spot can match nearly as well.
+    if (!best || best.ncc < min || best.margin < 0.06) return null
     return best
   }
 
@@ -524,7 +658,10 @@ export class MinimapMosaic {
     const a = this.pieces.get(c.piece)!
     const b = this.pieces.get(other.piece)!
     // The smaller piece goes into the larger.
-    const [from, into, dx, dy] = a.area <= b.area ? [a, b, other.x - c.x, other.y - c.y] : [b, a, c.x - other.x, c.y - other.y]
+    // Whole pixels (a spot pinned on the official map can fall between two).
+    const cx = Math.round(c.x)
+    const cy = Math.round(c.y)
+    const [from, into, dx, dy] = a.area <= b.area ? [a, b, other.x - cx, other.y - cy] : [b, a, cx - other.x, cy - other.y]
     into.absorb(from, dx, dy)
     this.pieces.delete(from.id)
     this.joined.set(from.id, [into.id, dx, dy])
@@ -629,10 +766,153 @@ export class MinimapMosaic {
       const [id, cx, cy] = k.split(':')
       this.heights.set(`${map(Number(id))}:${cx}:${cy}`, v)
     }
+    for (const [id, a] of other.aligned) if (!other.provisional.has(id)) this.aligned.set(map(id), a)
     if (other.cur) this.cur = { ...other.cur, piece: map(other.cur.piece) }
     this.dirty = true
     other.pieces = new Map()
     other.cur = null
+  }
+
+  /**
+   * A re-find on a piece placed on the official map: the window must also be on the official map
+   * where the placement puts it, and nowhere else nearly as well. On a piece not placed yet, the
+   * window must at least be unique on the official map.
+   */
+  private confirmOnOfficial(w: MinimapWindow, found: { piece: number; x: number; y: number }): boolean {
+    const off = this.official!
+    const s = this.knownScale()
+    if (!s) return true
+    const at = locateWindow(windowImage(w, found.x - HALF, found.y - HALF), off, s)
+    if (!at || !at.unique) return false
+    const a = this.placement(found.piece)
+    if (!a) return true
+    const X = a.s * (found.x - HALF) + a.tx
+    const Y = a.s * (found.y - HALF) + a.ty
+    // The unique official spot must be where this piece's placement says (within a few minimap pixels).
+    return Math.hypot(at.x - X, at.y - Y) <= 6 * s
+  }
+
+  /**
+   * Where a window matched at (x, y) on a piece really is, from the official map: the piece's
+   * placement predicts the spot, and the official map pins it down within a few pixels.
+   */
+  private anchor(w: MinimapWindow, piece: number, x: number, y: number): { x: number; y: number } | null {
+    const a = this.placement(piece)
+    if (!a) return null
+    const X = a.s * (x - HALF) + a.tx
+    const Y = a.s * (y - HALF) + a.ty
+    const at = anchorWindow(windowImage(w, x - HALF, y - HALF), this.official!, a.s, X, Y, ANCHOR_REACH * a.s)
+    const rate = this.anchored.get(piece) ?? { ok: 0, n: 0 }
+    this.anchored.set(piece, { ok: rate.ok * 0.95 + (at ? 1 : 0), n: rate.n * 0.95 + 1 })
+    const check = this.provisional.get(piece)
+    if (check) {
+      if (at) check.ok++
+      else check.bad++
+      if (check.ok >= CONFIRM_FRAMES) {
+        this.provisional.delete(piece)
+        this.pinDown(piece)
+      }
+      else if (check.bad >= 2) {
+        this.unplace(piece)
+        return null
+      }
+    }
+    if (!at) return null
+    return { x: (at.x - a.tx) / a.s + HALF, y: (at.y - a.ty) / a.s + HALF }
+  }
+
+  /** Pins down on the official map the points recorded on a piece before it was placed. */
+  private pinDown(piece: number): void {
+    const a = this.alignmentFor(piece)
+    const mine = this.unplacedViews.filter((v) => v.point.piece === piece)
+    if (!a || !mine.length) return
+    this.unplacedViews = this.unplacedViews.filter((v) => v.point.piece !== piece)
+    const moved = new Map<TrackPoint, TrackPoint>()
+    for (const v of mine) {
+      const X = a.s * (v.point.x - HALF) + a.tx
+      const Y = a.s * (v.point.y - HALF) + a.ty
+      // Further than while following: the piece may have drifted a little before it was placed.
+      const at = anchorWindow(v.img, this.official!, a.s, X, Y, 1.5 * ANCHOR_REACH * a.s)
+      if (at) moved.set(v.point, { ...v.point, x: v.point.x + (at.x - X) / a.s, y: v.point.y + (at.y - Y) / a.s })
+    }
+    const oldest = mine[0].point.t
+    for (let i = this.trail.length - 1; i >= 0 && this.trail[i].t >= oldest; i--) {
+      const m = moved.get(this.trail[i])
+      if (m) this.trail[i] = m
+    }
+    this.dirty = true
+  }
+
+  private unplace(piece: number): void {
+    this.aligned.delete(piece)
+    this.alignedArea.delete(piece)
+    this.provisional.delete(piece)
+    this.anchored.delete(piece)
+    this.dirty = true
+  }
+
+  /** Advances the placement of pieces on the official map by a few steps (it is spread over frames). */
+  private alignWork(steps: number): void {
+    const off = this.official!
+    if (!this.job) {
+      const need = [...this.pieces.values()]
+        .filter((p) => p.area >= MM * MM * 1.2)
+        .filter((p) => {
+          const a = this.aligned.get(p.id)
+          if (!a) return true
+          // A placement the frames keep pinning down is kept: fitting the grown piece again would
+          // move every point already placed by it.
+          const rate = this.anchored.get(p.id)
+          const holding = !!rate && rate.n >= 8 && rate.ok >= rate.n * 0.5
+          return !a.manual && !holding && p.area >= (this.alignedArea.get(p.id) ?? 0) * 1.4
+        })
+        .sort((a, b) => (b.id === this.cur?.piece ? 1 : 0) - (a.id === this.cur?.piece ? 1 : 0) || b.area - a.area)[0]
+      if (!need) return
+      this.job = { piece: need.id, area: need.area, it: alignSteps(pieceImage(need), off, { scale: this.knownScale() ?? undefined }) }
+    }
+    for (let i = 0; i < steps; i++) {
+      const r = this.job.it.next()
+      if (!r.done) continue
+      const piece = this.job.piece
+      // A worse fit never replaces a good one, but the whole piece outranks the one window it was
+      // first placed by, and a window placement the whole piece does not bear out is dropped.
+      const prev = this.aligned.get(piece)
+      if (usable(r.value) && (!usable(prev) || !this.alignedArea.get(piece) || r.value.ncc >= prev.ncc - 0.05)) {
+        this.aligned.set(piece, r.value)
+        this.provisional.delete(piece)
+        this.anchored.delete(piece)
+        this.pinDown(piece)
+      } else if (this.provisional.has(piece)) this.unplace(piece)
+      if (this.aligned.has(piece)) this.alignedArea.set(piece, this.job.area)
+      this.dirty = true
+      this.job = null
+      return
+    }
+  }
+
+  /** The scale found so far (official pixels per stitched pixel), the middle of the placements. */
+  knownScale(): number | null {
+    const ss = [...this.aligned].filter(([id, a]) => usable(a) && !this.provisional.has(id)).map(([, a]) => a.s).sort((a, b) => a - b)
+    return ss.length ? ss[ss.length >> 1] : null
+  }
+
+  /** The placement on the official map of a piece (or of a piece joined into it), once it is certain. */
+  alignmentFor(piece: number): Alignment | null {
+    return this.placement(piece, true)
+  }
+
+  private placement(piece: number, certain = false): Alignment | null {
+    const a = this.aligned.get(piece)
+    if (usable(a)) return certain && this.provisional.has(piece) ? null : a
+    for (const [id] of this.joined) {
+      if (this.resolve(id, 0, 0).piece !== piece) continue
+      const b = this.aligned.get(id)
+      if (!usable(b) || (certain && this.provisional.has(id))) continue
+      const r = this.resolve(id, 0, 0)
+      // x_id = x_piece − (r.x − 0): the joined piece's origin lies at r on this one.
+      return { ...b, tx: b.tx - b.s * r.x, ty: b.ty - b.s * r.y }
+    }
+    return null
   }
 
   /** Where a callout was read, resolved, if it has been. */
@@ -685,7 +965,23 @@ export class MinimapMosaic {
           return [`${r.piece}:${Math.floor(r.x / CELL)}:${Math.floor(r.y / CELL)}`, v] as const
         }),
       ),
+      ...(this.aligned.size
+        ? {
+            aligned: Object.fromEntries([...this.aligned].filter(([id]) => !this.provisional.has(id) && (kept.has(id) || resolvedKept(id))).map(([id, a]) => [String(id), a])),
+            ...(this.official ? { alignedTo: { w: this.official.srcW, h: this.official.srcH } } : this.alignedTo ? { alignedTo: this.alignedTo } : {}),
+          }
+        : {}),
     }
+  }
+
+  private alignedTo: { w: number; h: number } | null = null
+
+  /** Places a piece on the official map by hand (the overhead view's Adjust). */
+  setAlignment(piece: number, a: Alignment): void {
+    this.aligned.set(piece, a)
+    this.provisional.delete(piece)
+    this.anchored.delete(piece)
+    this.dirty = true
   }
 
   private load(s: StoredMosaic): void {
@@ -716,7 +1012,31 @@ export class MinimapMosaic {
     this.nextId = Math.max(s.nextId, ...[...this.pieces.keys()].map((k) => k + 1), 1)
     for (const [n, c] of Object.entries(s.callouts)) this.callouts.set(n, { ...c })
     for (const [k, v] of Object.entries(s.heights)) this.heights.set(k, [v[0], v[1], v[2], v[3]])
+    for (const [id, a] of Object.entries(s.aligned ?? {})) this.aligned.set(Number(id), a)
+    this.alignedTo = s.alignedTo ?? null
   }
+}
+
+/** A piece as an image for placing it on the official map. */
+function pieceImage(p: MapPiece): PieceImage {
+  const w = p.maxX - p.minX + 1
+  const h = p.maxY - p.minY + 1
+  const lum = new Uint8Array(w * h)
+  const weight = new Uint8Array(w * h)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const o = (p.minY + y) * CANVAS + p.minX + x
+      weight[y * w + x] = p.weight[o]
+      lum[y * w + x] = Math.round(Math.max(0, Math.min(1, p.mean[o])) * 255)
+    }
+  return { x0: p.minX, y0: p.minY, w, h, lum, weight }
+}
+
+/** One window as an image, its top-left at (x0, y0) on its piece. */
+function windowImage(w: MinimapWindow, x0: number, y0: number): PieceImage {
+  const lum = new Uint8Array(MM * MM)
+  for (let i = 0; i < MM * MM; i++) lum[i] = Math.round(Math.max(0, Math.min(1, w.lum[i])) * 255)
+  return { x0, y0, w: MM, h: MM, lum, weight: w.mask }
 }
 
 // --- Encoding ----------------------------------------------------------------------------------
@@ -753,5 +1073,20 @@ export function cleanMosaic(raw: unknown): StoredMosaic | null {
     nextId: s.nextId,
     callouts: s.callouts && typeof s.callouts === 'object' ? s.callouts : {},
     heights: s.heights && typeof s.heights === 'object' ? s.heights : {},
+    ...cleanAligned(s),
   }
+}
+
+function cleanAligned(s: Partial<StoredMosaic>): Pick<StoredMosaic, 'aligned' | 'alignedTo'> {
+  const fin = (v: unknown) => typeof v === 'number' && Number.isFinite(v)
+  const aligned: Record<string, Alignment> = {}
+  for (const [id, a] of Object.entries(s.aligned && typeof s.aligned === 'object' ? s.aligned : {})) {
+    if (!/^\d{1,6}$/.test(id) || !a || typeof a !== 'object') continue
+    const o = a as unknown as Record<string, unknown>
+    if (![o.s, o.tx, o.ty, o.ncc, o.coverage].every(fin) || (o.s as number) <= 0) continue
+    aligned[id] = { s: o.s as number, tx: o.tx as number, ty: o.ty as number, ncc: o.ncc as number, coverage: o.coverage as number, ...(fin(o.margin) ? { margin: o.margin as number } : {}), ...(o.manual === true ? { manual: true } : {}) }
+  }
+  const to = s.alignedTo
+  const alignedTo = to && fin(to.w) && fin(to.h) && to.w > 0 && to.h > 0 ? { w: to.w, h: to.h } : undefined
+  return Object.keys(aligned).length ? { aligned, ...(alignedTo ? { alignedTo } : {}) } : {}
 }
