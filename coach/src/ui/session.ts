@@ -192,6 +192,7 @@ export class CoachSession {
   private toastTimer: ReturnType<typeof setTimeout> | null = null
   /** What the current (or last) session watched: only real play's maps are saved. */
   private sourceKind: string | null = null
+  private readonly mosaicSavedAt = new Map<string, number>()
 
   constructor(bridge: SightlineBridge) {
     this.bridge = bridge
@@ -313,6 +314,15 @@ export class CoachSession {
     } finally {
       this.set({ researching: false })
     }
+  }
+
+  /** Forgets a map stitched from the minimap (not during capture: the session still holds it). */
+  async forgetMosaic(map: string): Promise<void> {
+    if (!this.profile || this.state.phase !== 'idle') return
+    await this.bridge.deleteMosaic(this.profile.id, map).catch(() => undefined)
+    const next = { ...this.state.mosaics }
+    delete next[map.toLowerCase()]
+    this.set({ mosaics: next })
   }
 
   async deleteResearch(): Promise<void> {
@@ -876,8 +886,14 @@ export class CoachSession {
         // The source is already gone when the last map of a session arrives.
         const real = this.sourceKind === 'screen'
         const shown: ShownMosaic = real ? msg.mosaic : { ...msg.mosaic, synthetic: true }
-        this.set({ mosaics: { ...this.state.mosaics, [msg.mosaic.map.toLowerCase()]: shown } })
-        if (real && this.profile) void this.bridge.saveMosaic(this.profile.id, msg.mosaic).catch(() => false)
+        const key = msg.mosaic.map.toLowerCase()
+        this.set({ mosaics: { ...this.state.mosaics, [key]: shown } })
+        // On disk at most every 30 s while playing, and always the last one of a session.
+        const now = Date.now()
+        if (real && this.profile && (!this.source || now - (this.mosaicSavedAt.get(key) ?? 0) >= 30_000)) {
+          this.mosaicSavedAt.set(key, now)
+          void this.bridge.saveMosaic(this.profile.id, msg.mosaic).catch(() => false)
+        }
         return
       }
       case 'snapshot': {

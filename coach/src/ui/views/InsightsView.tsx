@@ -153,9 +153,9 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
         <section className="panel" aria-labelledby="map-h">
           <div className="panel-head">
             <h2 id="map-h">The map, learned from watching</h2>
-            <span className="muted small">Where you went, fought and died, and where they shot from: named by each look, placed by your own view</span>
+            <span className="muted small">Stitched from your own minimap: where you went, fought and died, and where they shot from</span>
           </div>
-          <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} />
+          <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} mosaics={state.mosaics} />
         </section>
       )}
 

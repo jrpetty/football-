@@ -1,14 +1,21 @@
-// The map, as learned from watching: areas placed from the pack's rough
-// layout and pulled together by the routes the player actually took, sized by
-// time spent, coloured by kills against deaths, with the angles that killed
-// them drawn as red arrows. "3D" lifts each area to its height layer
-// (underground, ground, upper floor, roof) in an isometric view.
+// The map, as learned from watching. With a fixed minimap: the map stitched
+// from the player's own minimap, overhead and in 3D, with every death, kill
+// and killer pinned to the spot (see MapOverhead and MapScene3D). By name:
+// areas placed from the pack's rough layout and pulled together by the
+// routes the player actually took, sized by time spent, coloured by kills
+// against deaths, with the angles that killed them drawn as red arrows; "3D"
+// lifts each area to its height layer in an isometric view.
 
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import type { MapReport } from '../../core/engine.ts'
-import { layoutMap, mapLines, mapModelFrom, mapsPlayed, type MapMatchRecord, type MapModel } from '../../core/analyses/mapModel.ts'
+import { findMap, layoutMap, mapLines, mapModelFrom, mapsPlayed, type MapMatchRecord, type MapModel } from '../../core/analyses/mapModel.ts'
+import type { MatchPins } from '../../core/map/locator.ts'
+import { mapInsights, mapLayers, resolvePoint } from '../../core/map/view.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
+import { gameClock } from '../format.ts'
+import type { ShownMosaic } from '../session.ts'
 import { Segmented } from './common.tsx'
+import { LAYERS, MapOverhead, type Layer } from './MapOverhead.tsx'
 
 const W = 640
 const H = 420
@@ -23,17 +30,33 @@ function project(x: number, y: number, z: number, iso: boolean): [number, number
 }
 
 /** The learned map for one map (with a picker when several were played). */
-export function MapPanel({ profile, records, live }: { profile: GameProfile; records: readonly MapMatchRecord[]; live?: MapReport | null }) {
+export function MapPanel({
+  profile,
+  records,
+  live,
+  mosaics,
+}: {
+  profile: GameProfile
+  records: readonly MapMatchRecord[]
+  live?: MapReport | null
+  /** Maps stitched from the minimap, by map name (lower case). */
+  mosaics?: Readonly<Record<string, ShownMosaic>>
+}) {
   const played = useMemo(() => mapsPlayed(records, profile.knowledge.maps), [records, profile])
   const names = useMemo(() => {
     const out = played.map((p) => p.name)
+    for (const m of Object.values(mosaics ?? {})) {
+      const n = findMap(profile.knowledge.maps, m.map)?.name ?? m.map
+      if (!out.includes(n)) out.unshift(n)
+    }
     for (const m of profile.knowledge.maps ?? []) if (!out.includes(m.name)) out.push(m.name)
     return out
-  }, [played, profile])
+  }, [played, profile, mosaics])
   const [chosen, setChosen] = useState<string | null>(null)
-  const name = chosen ?? live?.model?.map ?? played[0]?.name ?? names[0] ?? null
+  const name = chosen ?? live?.model?.map ?? live?.minimap?.map ?? played[0]?.name ?? names[0] ?? null
   const model = useMemo(() => (name ? (live?.model?.map === name ? live.model : mapModelFrom(records, profile.knowledge.maps, name)) : null), [name, live, records, profile])
   if (!names.length) return <p className="muted small">No map seen yet. With cloud vision on, the coach reads the map name and where you are on it each look.</p>
+  const stitched = name ? stitchedFor(mosaics, profile, name) : null
   return (
     <div className="map-panel">
       <div className="learned-filters">
@@ -42,17 +65,264 @@ export function MapPanel({ profile, records, live }: { profile: GameProfile; rec
           <select value={name ?? ''} onChange={(e) => setChosen(e.target.value)}>
             {names.map((n) => {
               const p = played.find((x) => x.name === n)
+              const has = !!stitchedFor(mosaics, profile, n)
               return (
                 <option key={n} value={n}>
                   {n}
                   {p ? ` (${p.matches} ${p.matches === 1 ? 'game' : 'games'})` : ''}
+                  {has ? ' · mapped' : ''}
                 </option>
               )
             })}
           </select>
         </label>
       </div>
-      {model ? <MapModelView model={model} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} /> : null}
+      {name && stitched ? (
+        <StitchedMap key={name} name={name} mosaic={stitched} profile={profile} records={records} live={live?.minimap?.map && sameMap(profile, live.minimap.map, name) ? live : null} />
+      ) : name ? (
+        <p className="muted small map-howto">
+          No overhead map of {name} yet. Play it with your minimap set to <b>fixed</b> (north up) and cloud vision on: the coach stitches the map from your minimap as you move,
+          and pins where you die to the spot. Until then, the areas below are a sketch from the pack and your routes.
+        </p>
+      ) : null}
+      {model ? (
+        stitched ? (
+          <details className="map-areas">
+            <summary className="small">Areas and routes, by name</summary>
+            <MapModelView model={model} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
+          </details>
+        ) : (
+          <MapModelView model={model} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
+        )
+      ) : null}
+    </div>
+  )
+}
+
+function sameMap(profile: GameProfile, a: string, b: string): boolean {
+  const n = (x: string) => (findMap(profile.knowledge.maps, x)?.name ?? x).toLowerCase()
+  return n(a) === n(b)
+}
+
+function stitchedFor(mosaics: Readonly<Record<string, ShownMosaic>> | undefined, profile: GameProfile, name: string): ShownMosaic | null {
+  if (!mosaics) return null
+  return Object.values(mosaics).find((m) => sameMap(profile, m.map, name) && m.pieces.length > 0) ?? null
+}
+
+const Scene3D = lazy(() => import('./MapScene3D.tsx'))
+
+const DEFAULT_LAYERS: readonly Layer[] = ['deaths', 'kills', 'killers', 'paths', 'heat', 'callouts']
+
+/** The overhead and 3D maps stitched from the minimap, with this map's matches on them. */
+function StitchedMap({ name, mosaic, profile, records, live }: { name: string; mosaic: ShownMosaic; profile: GameProfile; records: readonly MapMatchRecord[]; live: MapReport | null }) {
+  // The matches on this map with pins (oldest first), then the one being played.
+  // While playing, the live pins are taken again only when something was added (not on every report).
+  const livePins = live?.pins && sameMap(profile, live.pins.map, name) ? live.pins : null
+  const liveKey = livePins ? `${livePins.pins.length}:${Math.floor(livePins.trail.length / 20)}:${Object.keys(livePins.enemies).length}` : ''
+  const matches = useMemo(() => {
+    const out: MatchPins[] = records.filter((r) => r.pins && sameMap(profile, r.map, name)).map((r) => r.pins!)
+    if (livePins) out.push(livePins)
+    return out
+  }, [records, liveKey, profile, name])
+  const layers = useMemo(() => mapLayers(mosaic, matches), [mosaic, matches])
+  const [view, setView] = useState<'overhead' | '3d'>('overhead')
+  const [scope, setScope] = useState<'last' | 'all'>(live?.pins ? 'last' : 'all')
+  const [show, setShow] = useState<ReadonlySet<Layer>>(() => new Set(DEFAULT_LAYERS))
+  const [playT, setPlayT] = useState<number | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const focus = scope === 'last' && matches.length ? matches.length - 1 : null
+  const here = useMemo(() => {
+    const h = live?.minimap?.here
+    if (!h || !layers || (live?.minimap?.ageMs ?? Infinity) > 5000) return null
+    const r = resolvePoint(mosaic, h.piece, h.x, h.y)
+    return r.piece === layers.image.piece ? { x: r.x - layers.image.x0, y: r.y - layers.image.y0 } : null
+  }, [live, layers, mosaic])
+  // Playback of one match.
+  const endT = useMemo(() => {
+    if (!layers || focus === null) return 0
+    const ts = [...layers.pins.filter((p) => p.match === focus).map((p) => p.t), ...layers.paths.filter((p) => p.match === focus).flatMap((p) => p.points.map((q) => q[2]))]
+    return ts.length ? Math.max(...ts) : 0
+  }, [layers, focus])
+  useEffect(() => {
+    if (!playing) return
+    let raf = 0
+    let last = performance.now()
+    const step = (now: number) => {
+      const dt = (now - last) / 1000
+      last = now
+      setPlayT((t) => {
+        const next = (t ?? 0) + dt * Math.max(8, endT / 40)
+        if (next >= endT) {
+          setPlaying(false)
+          return endT
+        }
+        return next
+      })
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [playing, endT])
+  useEffect(() => {
+    setPlayT(null)
+    setPlaying(false)
+  }, [scope, view])
+  if (!layers) return null
+  const inScope = layers.pins.filter((p) => focus === null || p.match === focus)
+  const deaths = inScope.filter((p) => p.kind === 'death')
+  const kills = inScope.filter((p) => p.kind === 'kill')
+  const killcam = deaths.filter((p) => p.killer?.from === 'killcam').length
+  const label = `${name}, stitched from your minimap`
+  const toggle = (l: Layer) => {
+    const next = new Set(show)
+    if (next.has(l)) next.delete(l)
+    else next.add(l)
+    setShow(next)
+  }
+  return (
+    <div className="stitched">
+      <div className="stitched-bar">
+        <Segmented
+          label="View"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'overhead', label: 'Overhead' },
+            { value: '3d', label: '3D' },
+          ]}
+        />
+        {matches.length ? (
+          <Segmented
+            label="Matches"
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: 'last', label: live?.pins ? 'This match' : 'Last match' },
+              { value: 'all', label: `All ${matches.length} ${matches.length === 1 ? 'match' : 'matches'}` },
+            ]}
+          />
+        ) : null}
+        <div className="layer-chips" role="group" aria-label="Show on the map">
+          {LAYERS.map((l) => (
+            <button key={l.id} type="button" className={`chip ${l.id}`} aria-pressed={show.has(l.id)} onClick={() => toggle(l.id)}>
+              <span className="chip-mark" aria-hidden="true" />
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'overhead' ? (
+        <MapOverhead layers={layers} show={show} here={here} focus={focus} playT={playT} label={label} />
+      ) : (
+        <Suspense fallback={<p className="muted small">Loading 3D…</p>}>
+          <Scene3D layers={layers} show={show} here={here} focus={focus} label={label} />
+        </Suspense>
+      )}
+      {view === 'overhead' && focus !== null && endT > 0 ? (
+        <div className="playback">
+          <button
+            type="button"
+            className="btn sm"
+            onClick={() => {
+              if (playing) setPlaying(false)
+              else {
+                if (playT === null || playT >= endT) setPlayT(0)
+                setPlaying(true)
+              }
+            }}
+          >
+            {playing ? 'Pause' : playT === null ? 'Play the match' : 'Play'}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={Math.ceil(endT)}
+            step={1}
+            value={Math.round(playT ?? endT)}
+            aria-label="Match time"
+            onChange={(e) => {
+              setPlaying(false)
+              setPlayT(Number(e.target.value))
+            }}
+          />
+          <span className="small mono">
+            {gameClock(playT ?? endT)} / {gameClock(endT)}
+          </span>
+          {playT !== null ? (
+            <button type="button" className="btn sm ghost" onClick={() => setPlayT(null)}>
+              Show all
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {(() => {
+        const lines = mapInsights(layers, focus)
+        return lines.length ? (
+          <ul className="small map-insights">
+            {lines.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        ) : null
+      })()}
+      <div className="stitched-legend small">
+        <span>
+          <i className="lg death" aria-hidden="true" /> death
+        </span>
+        <span>
+          <i className="lg kill" aria-hidden="true" /> kill
+        </span>
+        <span>
+          <i className="lg killer" aria-hidden="true" /> killer and line of fire (dashed: roughly, from the callout)
+        </span>
+        <span>
+          <i className="lg path" aria-hidden="true" /> your path
+        </span>
+        <span>
+          <i className="lg enemy" aria-hidden="true" /> enemy pings
+        </span>
+        {here ? (
+          <span>
+            <i className="lg here" aria-hidden="true" /> you, now
+          </span>
+        ) : null}
+      </div>
+      <p className="muted small">
+        {mosaic.synthetic ? 'A synthetic map from the demo (not saved). ' : ''}
+        Stitched from your minimap{layers.matches ? ` over ${layers.matches} ${layers.matches === 1 ? 'match' : 'matches'}` : ''}: {deaths.length} deaths and {kills.length} kills
+        placed{deaths.length ? `, ${killcam} killers seen on the killcam’s minimap` : ''}. Where you died is where your own minimap was just before it cut away.
+        {mosaic.pieces.length > 1 ? ` ${mosaic.pieces.length - 1} more piece${mosaic.pieces.length > 2 ? 's' : ''} of this map not joined yet (walk between them).` : ''}
+      </p>
+      {deaths.length ? (
+        <details className="map-deaths">
+          <summary className="small">Every death on this map ({deaths.length})</summary>
+          <table className="table small">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Where</th>
+                <th>Killer</th>
+                <th>Weapon</th>
+                <th>Range</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deaths.map((d, i) => (
+                <tr key={`${d.match}-${d.t}-${i}`}>
+                  <td className="mono">
+                    {matches.length > 1 && focus === null ? `#${d.match + 1} ` : ''}
+                    {gameClock(d.t)}
+                  </td>
+                  <td>{d.area ?? '—'}</td>
+                  <td>{d.killer ? `${d.killer.spot ?? 'seen'}${d.killer.from === 'killcam' ? ' (killcam)' : ' (roughly)'}` : '—'}</td>
+                  <td>{d.weapon ?? '—'}</td>
+                  <td>{d.range ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ) : null}
     </div>
   )
 }
@@ -242,15 +512,25 @@ function MapReference({ model }: { model: MapModel }) {
   )
 }
 
-/** The live card: where the player is now and what is known about it. */
-export function WhereYouAre({ report }: { report: MapReport }) {
+/** The live card: where the player is now and what is known about it, with the stitched map around them. */
+export function WhereYouAre({ report, mosaics }: { report: MapReport; mosaics?: Readonly<Record<string, ShownMosaic>> }) {
   const p = report.position
-  if (!p.map && !p.area) return <p className="muted small">The map and where you are show here once a look has read them.</p>
+  const mm = report.minimap
+  const mosaic = mm?.map ? (Object.values(mosaics ?? {}).find((m) => m.map.toLowerCase() === mm.map!.toLowerCase()) ?? null) : null
+  const layers = useMemo(() => (mosaic ? mapLayers(mosaic, report.pins ? [report.pins] : []) : null), [mosaic, report.pins])
+  const here = useMemo(() => {
+    if (!mm?.here || !layers || !mosaic || mm.ageMs > 5000) return null
+    const r = resolvePoint(mosaic, mm.here.piece, mm.here.x, mm.here.y)
+    return r.piece === layers.image.piece ? { x: r.x - layers.image.x0, y: r.y - layers.image.y0 } : null
+  }, [mm, layers, mosaic])
+  const show = useMemo(() => new Set<Layer>(['deaths', 'kills', 'killers', 'paths']), [])
+  if (!p.map && !p.area && !mm?.map) return <p className="muted small">The map and where you are show here once a look has read them.</p>
   const area = report.model?.areas.find((a) => a.name === p.area)
   const from = report.model?.sightlines.find((s) => s.to === p.area)
   const fresh = p.ageMs < 20_000
   return (
     <div className="where">
+      {layers ? <MapOverhead layers={layers} show={show} here={here} focus={0} compact label={`Where you are on ${mosaic!.map}`} /> : null}
       <p className="where-now">
         {p.area && fresh ? (
           <>
@@ -262,6 +542,7 @@ export function WhereYouAre({ report }: { report: MapReport }) {
         )}
         {p.map ? <span className="muted"> · {p.map}</span> : null}
       </p>
+      {mm ? <p className="small muted">{minimapLine(mm)}</p> : null}
       {area && fresh && (area.deaths || area.kills) ? (
         <p className="small">
           Here before: {area.kills} kills, {area.deaths} deaths
@@ -271,4 +552,12 @@ export function WhereYouAre({ report }: { report: MapReport }) {
       {area?.ref?.use && fresh ? <p className="small muted">{area.ref.use}</p> : null}
     </div>
   )
+}
+
+/** How the minimap is being followed, in a few words. */
+function minimapLine(mm: NonNullable<MapReport['minimap']>): string {
+  if (!mm.enabled) return mm.reason === 'rotating' ? 'Your minimap rotates: deaths are placed by area. Set it to fixed (north up) for a stitched map and exact spots.' : 'The minimap is not being followed.'
+  if (mm.state === 'tracking' || mm.state === 'found' || mm.state === 'new') return `Following your minimap (match ${Math.round(mm.ncc * 100)}%)${mm.map ? '' : ': waiting for the map’s name'}.`
+  if (mm.ageMs < 10_000) return 'Minimap out of view for a moment (a killcam, a menu).'
+  return 'No minimap found where it should be. If your HUD is moved or scaled, align the minimap in Settings.'
 }

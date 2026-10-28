@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
@@ -11,9 +11,10 @@ import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
+import { MinimapAlign } from '../components/MinimapAlign.tsx'
 import { HotkeyField } from '../components/HotkeyField.tsx'
 import type { Hotkeys } from '../../core/settings.ts'
-import { usd, usdFine, usdRange } from '../format.ts'
+import { dateShort, usd, usdFine, usdRange } from '../format.ts'
 import type { CoachSession } from '../session.ts'
 
 const VERBOSITY_TEXT: Record<Verbosity, string> = {
@@ -47,6 +48,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} usage={usage} onUsage={onUsage} />
       {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} usage={usage} /> : null}
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
+      {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
@@ -390,6 +392,97 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
           </button>
         ) : null}
       </div>
+    </section>
+  )
+}
+
+// --- The minimap: where it is, and the maps stitched from it --------------------------------------
+
+function MinimapPanel({ settings, onSettings, session, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile }) {
+  const state = useSyncExternalStore(session.subscribe, session.getState)
+  const spec = profile.positioning!.minimap!
+  const own = settings.minimap[profile.id]
+  const box = own ?? spec.region
+  const [aligning, setAligning] = useState(false)
+  const [confirm, setConfirm] = useState<string | null>(null)
+  const fixedKey = spec.fixedContextKey
+  const rotating = fixedKey ? settings.context[profile.id]?.[fixedKey] === 'rotating' : false
+  const maps = Object.values(state.mosaics)
+    .filter((m) => !m.synthetic)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const setBox = (b: typeof box | null) => {
+    const next = { ...settings.minimap }
+    if (b) next[profile.id] = b
+    else delete next[profile.id]
+    onSettings({ minimap: next })
+  }
+  return (
+    <section className="panel" aria-labelledby="minimap-h">
+      <div className="panel-head">
+        <h2 id="minimap-h">Minimap: {profile.game.title}</h2>
+        <span className={`badge ${rotating ? 'warn' : 'ok'}`}>{rotating ? 'Rotating: not stitched' : 'Fixed: stitched'}</span>
+      </div>
+      <p className="small" style={{ marginTop: 0 }}>
+        With a fixed (north-up) minimap the coach stitches each map from your minimap as you move, then pins where you die, get kills and where killers were to the spot,
+        overhead and in 3D (Insights → The map). Only your screen’s pixels are read. Set fixed or rotating on the Coach screen.
+      </p>
+      <div className="grid-2">
+        <div className="field">
+          <span className="label">Where your minimap is</span>
+          <span className="small">
+            {own ? 'Your alignment' : 'The game’s default'}: {Math.round(box.x * 1000) / 10}% from the left, {Math.round(box.y * 1000) / 10}% from the top,{' '}
+            {Math.round(box.w * 1000) / 10}% wide{box.round ? ', round' : ''}.
+          </span>
+          <div className="btn-row">
+            <button type="button" className="btn sm" disabled={state.phase !== 'capturing'} onClick={() => setAligning(true)}>
+              Align on the screen…
+            </button>
+            {own ? (
+              <button type="button" className="btn sm ghost" onClick={() => setBox(null)}>
+                Use the game’s default
+              </button>
+            ) : null}
+          </div>
+          <span className="muted small">{state.phase === 'capturing' ? 'Shows a still of the capture with the box.' : 'Start capture (or the demo) to align it on a still.'}</span>
+        </div>
+        <div className="field">
+          <span className="label">Maps learned ({maps.length})</span>
+          {maps.length ? (
+            <ul className="plain small map-list">
+              {maps.map((m) => (
+                <li key={m.map}>
+                  <b>{m.map}</b> <span className="muted">· {Object.keys(m.callouts).length} callouts placed · updated {dateShort(m.updatedAt)}</span>{' '}
+                  {confirm === m.map ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn sm danger"
+                        onClick={() => {
+                          void session.forgetMosaic(m.map)
+                          setConfirm(null)
+                        }}
+                      >
+                        Forget it
+                      </button>{' '}
+                      <button type="button" className="btn sm ghost" onClick={() => setConfirm(null)}>
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn sm ghost danger" disabled={state.phase !== 'idle'} onClick={() => setConfirm(m.map)}>
+                      Forget…
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="muted small">None yet. Play a match with a fixed minimap.</span>
+          )}
+          <span className="muted small">Kept on this computer: the minimap’s picture of each map, and callouts and heights placed on it. Deleted with “Forget everything”.</span>
+        </div>
+      </div>
+      {aligning ? <MinimapAlign session={session} initial={box} packDefault={spec.region} onSave={setBox} onClose={() => setAligning(false)} /> : null}
     </section>
   )
 }

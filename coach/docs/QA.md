@@ -193,6 +193,13 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.26 | Set a monthly budget just above this month's spend, Stop at budget on, then ask a question. | A warning at 80% (page, chip, Coach screen during capture); at the budget the call is refused with "Monthly budget … reached". With stop off, calls go on with a warning. |
 | 13.27 | Run Research and Build game knowledge. | The estimate shows before each run; the real cost shows after (toast, Last build) and is recorded under Research and Knowledge building. |
 | 13.28 | Forget the usage history. | The history and charts empty; this session's total and cap are unchanged. |
+| 13.29 | MW4 vs bots, minimap set to fixed. Start capture, then Settings → Minimap → Align on the screen. | The box sits on the minimap with "Your arrow is at the centre". If not, drag it onto the minimap and save. Note the position your HUD needs. |
+| 13.30 | Play a match on one map with cloud vision on; walk most of it. | Coach → Where you are shows the map stitched around you, your dot moving with you. After the match, Insights → The map → Overhead shows the map, recognisably the game's minimap. |
+| 13.31 | Die several times; look at the pins after the match. | Each death is where you were when you died (within a few steps). Killers are where the killcam ended (solid line), or roughly at the callout (dashed). Hover shows the time, area, weapon and range. |
+| 13.32 | Play the same map again, spawning on the other side. | It finds you on the saved map, or starts a piece that joins up as you cross known ground. The map grows; "Matches" shows both. |
+| 13.33 | 3D view of the map. | Buildings stand where the minimap shows them. Upper floors and roofs where you were seen are higher. Beams on deaths, arcs from killers, labels. Orbits smoothly; no errors. |
+| 13.34 | Set the minimap to rotating on the Coach screen. | Nothing is stitched. Where you are says to set it to fixed; deaths are placed by area. |
+| 13.35 | Ranked match. | No live mini-map during play; the map and its pins appear after the match. |
 
 ## 14. Accessibility and layout
 

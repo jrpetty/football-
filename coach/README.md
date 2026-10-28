@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v10, Windows-first.
+> **Status:** v11, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -119,6 +119,41 @@ Then press **Choose the game window**, play, and listen.
     you were in the open"), and notices deaths seconds after your own kill.
     Killcams are reconstructions, so findings are "likely", and unreadable
     ones are counted, never guessed. Plus where you die and what kills you.
+  - **MW4: the real map, stitched from your minimap, with every death
+    pinned to the spot.** With a fixed (north-up) minimap, each frame's
+    minimap is a window onto the same overhead map. The coach matches each
+    window against what it has stitched so far, which follows you to about
+    a pixel, then paints the window in. The map grows as you play and is
+    kept for your next match on it.
+    - After a respawn it finds you again on the known map. A spawn on
+      unexplored ground starts a new piece, which joins the rest once you
+      walk onto ground already seen.
+    - Only windows with your arrow at the centre are used, so death screens
+      and menus are never stitched.
+    - Each death is pinned where your own minimap was just before it cut
+      away. Each killer is placed where the killcam's minimap ended, or
+      roughly at the callout the killcam named.
+    - Also on the map: your kills, your path life by life, enemy pings, and
+      callouts and heights where they were read.
+
+    In Insights → The map:
+    - **Overhead:** a tactical map with glowing walls. Zoom, pan, hover a
+      marker for details, toggle the layers, and play a match back.
+    - **3D:** structures stand up from the minimap's own shapes, and upper
+      floors and roofs are raised where you were seen. Red beams mark
+      deaths, amber arcs with tracers show the line of fire, and your
+      trails and callout labels sit on top. You can orbit the view.
+    - **What it says:** "Most deaths in one spot: 4 of 11 near Courtyard,
+      3 of them shot from the north-east. Pre-aim or smoke the north-east
+      before you cross it." It also says where your kills cluster, where
+      enemy pings show up, and when deaths come soon after spawning.
+
+    During play where live tips are allowed, the Coach screen shows a live
+    mini-map centred on you. Settings → Minimap aligns the minimap box on a
+    still (it checks your arrow is at the centre) and forgets a map. With a
+    rotating minimap, deaths are placed by area only. The MW4 demo draws a
+    synthetic minimap, so you can watch a map being built. Tested on
+    synthetic maps; not yet checked on real MW4 minimaps.
   - **MW4: knows where you are, and learns the map by watching.** Each look
     names the area you are in (a callout of the current map, from your own
     view: buildings, signs, objectives, minimap) and your height (ground,
@@ -352,7 +387,8 @@ coach/
   shared/          bridge contract, IPC channels, cloud and voice types
   src/core/        engine: observations, visible-state fusion, frame health, analyses, evidence,
                    pattern memory, policy, planner, Q&A, vision contract/sampler/screens, knowledge base,
-                   fight factors, benchmarks, the coach's review
+                   fight factors, benchmarks, the coach's review; map/: the map stitched from the
+                   minimap, pins on it, what the map views draw
   src/policy/      registry.json (publisher-policy records)
   src/profiles/    game packs (JSON, validated at load)
   src/worker/      analysis worker (frame queue, screen memory, vision relay, snapshots)

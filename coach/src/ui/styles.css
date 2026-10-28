@@ -3726,3 +3726,279 @@ td > .swatch {
 .num-table td.nowrap {
   white-space: nowrap;
 }
+
+/* --- The map stitched from the minimap ------------------------------------------------------ */
+
+.stitched {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stitched-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.layer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.chip[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.chip-mark {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--text-3);
+}
+.chip.deaths .chip-mark {
+  background: #ff5c5c;
+  border-radius: 50%;
+}
+.chip.kills .chip-mark {
+  background: #5ad1b8;
+  transform: rotate(45deg);
+}
+.chip.killers .chip-mark {
+  background: #f2b84b;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border-radius: 0;
+}
+.chip.paths .chip-mark {
+  height: 2px;
+  width: 12px;
+  background: #79a8ff;
+}
+.chip.enemies .chip-mark {
+  background: #d55181;
+  border-radius: 50%;
+  width: 7px;
+  height: 7px;
+}
+.chip.heat .chip-mark {
+  background: radial-gradient(circle, rgba(255, 92, 92, 0.9), rgba(255, 92, 92, 0));
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+}
+.chip.callouts .chip-mark {
+  background: none;
+  width: auto;
+  height: auto;
+}
+.chip.callouts .chip-mark::before {
+  content: 'Aa';
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.overhead {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #070b12;
+  box-shadow: inset 0 0 60px rgba(90, 209, 184, 0.05);
+}
+.overhead canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.overhead canvas:active {
+  cursor: grabbing;
+}
+.overhead.compact {
+  margin-bottom: 10px;
+}
+.overhead-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+.overhead-zoom .btn {
+  background: rgba(7, 11, 18, 0.75);
+  backdrop-filter: blur(4px);
+}
+.overhead-tip {
+  position: absolute;
+  z-index: 3;
+  min-width: 150px;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: rgba(18, 23, 34, 0.96);
+  box-shadow: var(--shadow);
+  font-size: 12.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.overhead-tip.left {
+  transform: translateX(-100%);
+}
+.scene3d {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #070b12;
+}
+.scene3d-canvas {
+  position: relative;
+}
+.scene3d-canvas canvas {
+  display: block;
+  cursor: grab;
+}
+.scene-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.label3d {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(7, 11, 18, 0.78);
+  border: 1px solid rgba(90, 209, 184, 0.35);
+  color: #e7ecf5;
+  font: 600 11px var(--font);
+  white-space: nowrap;
+}
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.playback input[type='range'] {
+  flex: 1;
+}
+.stitched-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--text-2);
+}
+.stitched-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lg {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+.lg.death {
+  border-radius: 50%;
+  background: #ff5c5c;
+  box-shadow: inset 0 0 0 2px #070b12;
+}
+.lg.kill {
+  background: #5ad1b8;
+  transform: rotate(45deg) scale(0.8);
+}
+.lg.killer {
+  background: #f2b84b;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.lg.path {
+  height: 2px;
+  width: 14px;
+  background: #79a8ff;
+}
+.lg.enemy {
+  border-radius: 50%;
+  background: #d55181;
+  width: 7px;
+  height: 7px;
+}
+.lg.here {
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+}
+.map-howto {
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+.map-areas > summary,
+.map-deaths > summary {
+  cursor: pointer;
+  margin: 6px 0;
+}
+.map-insights {
+  margin: 0;
+  padding-left: 18px;
+}
+.map-insights li + li {
+  margin-top: 3px;
+}
+.align-stage {
+  position: relative;
+  max-width: 100%;
+  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  user-select: none;
+}
+.align-stage canvas {
+  display: block;
+}
+.align-box {
+  position: absolute;
+  border: 2px solid var(--warn);
+  box-shadow: 0 0 0 9999px rgba(7, 11, 18, 0.45);
+  cursor: move;
+  touch-action: none;
+}
+.align-box.ok {
+  border-color: var(--accent);
+}
+.align-box.round {
+  border-radius: 50%;
+}
+.align-centre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 1px dashed rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+}
+.align-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  cursor: nwse-resize;
+}
+.map-list li + li {
+  margin-top: 6px;
+}

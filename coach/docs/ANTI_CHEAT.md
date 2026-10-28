@@ -48,6 +48,10 @@ gives an unfair edge. Sightline settles that with its
   - Activision publishes no statement either allowing or banning coaching tools.
   - Overlays and recording tools that *hook* the game are reported to cause
     crashes. Sightline doesn't hook.
+  - The map stitched from the minimap uses only the minimap's pixels in the
+    captured frame: what the game already shows you. Enemy pings are those
+    the minimap shows, kept as places, never predicted. In online and ranked
+    play the map and its pins appear only after the match.
   - Capture works best in **borderless windowed** mode.
 - **Age of Empires IV** has been reported to close when certain tools are
   running (for example a trainer's overlay process).

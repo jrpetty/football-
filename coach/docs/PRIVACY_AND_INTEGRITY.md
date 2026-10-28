@@ -32,6 +32,7 @@
 | Settings, cloud settings | `userData/settings.json`, `userData/cloud.json` | Until changed. There is no key in these files |
 | API key | `userData` key file, encrypted with OS `safeStorage`. If the OS cannot encrypt, it is held in memory for the session only | Until removed in Settings |
 | Match records (including per-match fight-factor counts and benchmark readings: numbers only), pattern counts, notes (opt-in, off by default) | `userData/history/`, `tendencies/`, `notes/`, encrypted with `safeStorage` where available (the UI says which) | Until deleted per game, per pattern or per match, or with "Forget everything". Exportable as JSON |
+| Maps stitched from the minimap (packs with a minimap) | `userData/knowledge/<pack>.maps/<map>.json.gz`: the minimap's own picture of each map (grey levels), and the callouts and heights placed on it. No frames, no other part of the screen. Demo maps are never saved | Until "Forget everything", forgetting that game's data, or forgetting the map in Settings → Minimap |
 | Usage history (cloud calls only) | `userData/usage.json`, plain JSON: per day, feature, model and game, the number of calls, token counts and estimated USD. No prompts, screens or answers | 400 days, kept whatever the memory setting (it is a spending record); cleared with "Forget the usage history" on the Usage & cost page |
 | Research briefs (when the player runs research) | `userData/research/<pack>.json`, plain JSON. Public web guidance about the game, not player data | Until deleted |
 

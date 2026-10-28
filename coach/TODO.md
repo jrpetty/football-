@@ -218,6 +218,33 @@ Legend:
 - ☑ A monthly budget: warn from 80%, optionally stop all cloud calls. A spend chip in the top bar; warnings on the Coach screen during capture. *Service stop at the budget tested with a fake client.*
 - ◐ Token assumptions for estimates have not been measured on real calls: 350 written tokens per look, the thinking allowance, and the job sizes. *No API key in the build environment. The measured figures replace them as the player plays; compare a session with the Console's usage page.*
 
+## v11 delivery
+
+- ☑ The map stitched from a fixed minimap:
+  - each frame's minimap matched against what is stitched so far, about a pixel;
+  - the player found again after a respawn;
+  - new pieces on unexplored ground, joined when the player walks onto known ground;
+  - only windows with the player's arrow at the centre (no death screens or menus);
+  - kept per map between matches, gzip, and handed over every few seconds.
+
+  *Tested on a synthetic tac-map with ground truth: 95% of positions within 2.5 px; re-find, new piece and join, save and load (`test/minimap.test.ts`).*
+- ☑ Pins on the stitched map:
+  - deaths where the player's own minimap cut away;
+  - killers where the killcam's minimap ended, else at the callout the killcam named;
+  - kills, and the path life by life without the killcams;
+  - enemy pings, and callouts and heights where they were read (callouts only once the player is settled in the area).
+
+  *The MW4 demo end to end through the engine: every death pinned, median error under 1 px (`test/mapstitch.test.ts`).*
+- ☑ Insights → The map:
+  - Overhead: zoom, pan, hover, layers, match playback, deaths table.
+  - 3D in three.js, loaded on demand: height field from the minimap's shapes plus learned heights, death beams, killer arcs with tracers, trails, labels, bloom, orbit.
+  - Coaching lines from the pins: the spot and the direction of fire, kill clusters, enemy pings, spawn deaths (`test/mapview.test.ts`).
+
+  *Browser run of the demo, including WebGL.*
+- ☑ A live mini-map on the Coach screen (where live tips are allowed). Settings → Minimap: align the box on a still, with the arrow check; forget a learned map. A rotating minimap falls back to areas.
+- ◐ Real MW4 minimaps: where the minimap sits by default, its zoom, whether the arrow passes the brightness check, whether killcams show the killer's minimap, and whether the minimap's lighter shapes really are buildings (for the 3D). *No captures in the build environment; the defaults are guesses to check with the alignment tool.*
+- ◐ Maps whose minimap zooms (vehicles, Ground War) or rotates are not stitched.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

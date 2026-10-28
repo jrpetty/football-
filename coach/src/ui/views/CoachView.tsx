@@ -479,7 +479,7 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                 <h2 id="where-h">Where you are</h2>
                 <span className="muted small">From your own view, each look</span>
               </div>
-              <WhereYouAre report={state.report.map} />
+              <WhereYouAre report={state.report.map} mosaics={state.mosaics} />
             </section>
           ) : null}
 

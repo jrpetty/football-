@@ -78,8 +78,8 @@ interface RawEvent {
 const GAP_MS = 1600
 /** How far back from the killcam frame the cut-away is looked for. */
 const LOOK_BACK_MS = 8000
-/** Saved at most this often while playing. */
-const SAVE_EVERY_MS = 20_000
+/** Handed over (to show and save) at most this often while playing. */
+const SAVE_EVERY_MS = 6000
 const MAX_PINGS = 6000
 
 const key = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
