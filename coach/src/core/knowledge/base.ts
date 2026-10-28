@@ -186,7 +186,7 @@ export function playbookText(entries: readonly PlaybookEntry[], budget: number):
  * to report and how to tell units and buildings apart. For answers: also
  * counters, civilisations' bonuses and how to play against them.
  */
-export function rosterText(roster: Roster, opts: { readonly budget: number; readonly detail: 'vision' | 'answer' }): string {
+export function rosterText(roster: Roster, opts: { readonly budget: number; readonly detail: 'vision' | 'answer'; readonly ages?: readonly string[] }): string {
   const out: string[] = []
   let used = 0
   const push = (line: string) => {
@@ -198,16 +198,22 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   const unitName = new Map(roster.units.map((u) => [u.id, u.name]))
   const factionName = new Map(roster.factions.map((f) => [f.id, f.name]))
   const names = (ids: readonly string[]) => ids.map((id) => unitName.get(id) ?? id).join(', ')
+  const ageName = (n: number) => {
+    const a = opts.ages?.[n - 1]
+    return a ? `${a[0].toUpperCase()}${a.slice(1)} Age` : `age ${n}`
+  }
+  const age = (n: number | undefined) => (n ? ` · ${ageName(n)}` : '')
   push(`## Roster (${roster.patch}, checked ${roster.checkedAt}); report these exact names`)
+  if (opts.detail === 'answer') push('Ages matter: a unit or building marked with an age is not available before it, so never expect or suggest it earlier.')
   push('### Buildings')
   for (const b of roster.buildings) {
-    if (!push(`- ${b.name}${b.factions?.length ? ` (${b.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''}: makes ${names(b.produces) || 'no units'}${b.look ? `. Looks: ${b.look}` : ''}${opts.detail === 'answer' && b.signals ? `. Means: ${b.signals}` : ''}`)) break
+    if (!push(`- ${b.name}${b.factions?.length ? ` (${b.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''}${age(b.age)}: makes ${names(b.produces) || 'no units'}${b.look ? `. Looks: ${b.look}` : ''}${opts.detail === 'answer' && b.signals ? `. Means: ${b.signals}` : ''}`)) break
   }
   push('### Units')
   for (const u of roster.units) {
     const who = u.factions?.length ? ` (${u.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''
     const answer = opts.detail === 'answer' ? `; beats ${names(u.counters)}; beaten by ${names(u.counteredBy)}${u.why ? `. ${u.why}` : ''}` : ''
-    if (!push(`- ${u.name}${who} [${u.classes.join(' ')}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
+    if (!push(`- ${u.name}${who} [${u.classes.join(' ')}${age(u.age)}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
   }
   push('### Civilisations')
   for (const f of roster.factions) {

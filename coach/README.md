@@ -159,7 +159,13 @@ Then press **Choose the game window**, play, and listen.
   bonuses are in the pack, including upcoming ones. When your screen shows
   their buildings or army, the coach works out what those buildings can make
   for that civilisation, and which of your units beat them (for your own
-  civilisation). Nothing in the fog of war is guessed.
+  civilisation). Ages are respected: a unit is expected only once they can
+  have reached its age (Wynguard Footmen need the Imperial Age), answers are
+  ones you can build at your age (with the better later one marked, e.g.
+  "Arbalétriers from the Castle Age"), and their age-ups are announced with
+  what becomes possible. Their age comes from the screen when it shows it,
+  else a lower bound from what they have fielded, else yours (said as an
+  assumption). Nothing in the fog of war is guessed.
 - **Talks with you.**
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a

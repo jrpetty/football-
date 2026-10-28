@@ -303,6 +303,8 @@ function domain(url: string): string {
 
 // --- Scouting intel -------------------------------------------------------------------------------
 
+const AGE_WORD: Record<number, string> = { 1: 'Dark', 2: 'Feudal', 3: 'Castle', 4: 'Imperial' }
+
 /** The opponent as far as the player's screen showed it: civilisation, buildings, army, what they can make, and answers. */
 export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: GameProfile }) {
   const faction = intel.faction ? profile.knowledge.roster?.factions.find((f) => f.id === intel.faction!.id) : undefined
@@ -326,6 +328,14 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
       ) : (
         <p className="muted small">Their civilisation is read from the loading screen.</p>
       )}
+      {intel.opponentAge ? (
+        <p className="small">
+          <span className="label">Their age</span> {intel.opponentAge.name}{' '}
+          <span className="muted">
+            {intel.opponentAge.basis === 'seen' ? '(seen on screen)' : intel.opponentAge.basis === 'fielded' ? '(at least: from what they have)' : '(assumed: same as yours)'}
+          </span>
+        </p>
+      ) : null}
       <div className="grid-2">
         <div>
           <div className="label">Buildings seen</div>
@@ -341,9 +351,18 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
           ) : (
             <p className="muted small">None yet: scout their base.</p>
           )}
-          {intel.likely.length ? (
+          {intel.likely.some((l) => !l.later) ? (
             <p className="small">
-              <span className="label">They can also make</span> {intel.likely.map((l) => l.name).join(', ')}
+              <span className="label">They can also make</span> {intel.likely.filter((l) => !l.later).map((l) => l.name).join(', ')}
+            </p>
+          ) : null}
+          {intel.likely.some((l) => l.later) ? (
+            <p className="small muted">
+              <span className="label">Later</span>{' '}
+              {intel.likely
+                .filter((l) => l.later)
+                .map((l) => `${l.name}${l.age ? ` (${AGE_WORD[l.age] ?? `age ${l.age}`})` : ''}`)
+                .join(', ')}
             </p>
           ) : null}
         </div>

@@ -69,3 +69,43 @@ test('scouting intel in ranked: kept for after the match, nothing spoken during 
   assert.ok(utterances.every((u) => u.category === 'post_event'))
   assert.equal(engine.report().intel?.faction?.name, 'English')
 })
+
+test('ages: units are expected only from their age, answers only from the player\'s age, and age-ups are announced', async () => {
+  const { IntelTracker } = await import('../src/core/analyses/intel.ts')
+  const fv = (value: string) => ({ value, confidence: 0.9, observedAt: 10, source: 'vision-model' as const, conflicted: false })
+  const st = (v: Record<string, string>) =>
+    ({ timestampMs: 0, phase: 'round', stale: false, staleReasons: [], activeSignals: [], values: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fv(x)])) }) as never
+  const unit = (id: string) => roster.units.find((u) => u.id === id)!
+  // The data: Wynguard units are Imperial (Wynguard Palace landmark), Longbowmen Feudal, Arbaletriers Castle.
+  assert.equal(unit('wynguard-footman').age, 4)
+  assert.equal(unit('wynguard-ranger').age, 4)
+  assert.equal(unit('longbowman').age, 2)
+
+  // English player in Feudal: Wynguard Footmen are never suggested (Imperial, and a landmark unit).
+  const english = new IntelTracker(roster, aoe4.intel!, 'English')
+  english.update(st({ age: 'feudal', opponentCiv: 'French', enemyUnits: '6 Royal Knights' }), 20)
+  for (const c of english.report().counters) assert.ok(!c.build.some((b) => /Wynguard/.test(b)), c.build.join(', '))
+
+  // Facing English in Feudal: their Barracks means Spearmen or Men-at-Arms, never Wynguard Footmen; the Imperial units are "later".
+  const french = new IntelTracker(roster, aoe4.intel!, 'French')
+  const news = french.update(st({ age: 'feudal', opponentAge: 'feudal', opponentCiv: 'English', enemyBuildings: 'Barracks, Archery Range' }), 20)
+  assert.ok(news.some((n) => n.text === 'Opponent: English. Watch for Longbowman (Feudal), King (Feudal) and Wynguard Footman (Imperial).'), news.map((n) => n.text).join(' | '))
+  for (const n of news) if (n.kind === 'building') assert.doesNotMatch(n.text, /Wynguard|Handcannon/, n.text)
+  const r = french.report()
+  assert.equal(r.opponentAge?.basis, 'seen')
+  assert.ok(r.likely.filter((l) => !l.later).every((l) => (l.age ?? 1) <= 2), JSON.stringify(r.likely))
+  assert.ok(r.likely.some((l) => l.later && l.name === 'Handcannoneer'))
+
+  // Answers at the player's age now, the better later answer marked with its age.
+  const made = french.update(st({ age: 'feudal', enemyUnits: '5 Men-at-Arms' }), 30)
+  assert.ok(made.some((n) => n.text === "They're making Men-at-Arms. Royal Knights beat them. Arbalétriers from the Castle Age."), made.map((n) => n.text).join(' | '))
+
+  // Their age-up, seen on screen, says what becomes possible.
+  const up = french.update(st({ age: 'feudal', opponentAge: 'castle' }), 40)
+  assert.ok(up.some((n) => n.kind === 'age' && /^They reached the Castle Age\. Now possible: /.test(n.text)), up.map((n) => n.text).join(' | '))
+
+  // Without their age on screen: what they field sets a lower bound (a Castle building means at least Castle).
+  const bound = new IntelTracker(roster, aoe4.intel!, 'French')
+  bound.update(st({ age: 'feudal', enemyBuildings: 'Siege Workshop' }), 20)
+  assert.deepEqual([bound.report().opponentAge?.name, bound.report().opponentAge?.basis], ['Castle Age', 'fielded'])
+})

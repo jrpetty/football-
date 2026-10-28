@@ -168,6 +168,7 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.2 | Same with a ranked game. | The timeline says once that commentary cannot speak during play here; nothing is spoken until the match summary. |
 | 13.3 | AoE IV: let the loading screen show; then scout the enemy base with your scout. | "Opponent: <civ>. Watch for <unique units>." then "They have a Stable: expect …". Coach view → Their side lists the buildings, what they can make and the answers. |
 | 13.4 | Set your civilisation in setup (e.g. English) and meet enemy Spearmen. | The answer names Longbowmen rather than Archers. |
+| 13.4b | Feudal Age against English: scout their Barracks. | Spearmen or Men-at-Arms expected, never Wynguard Footmen (Imperial). When their age-up notice shows, "They reached the Castle Age. Now possible: …". |
 | 13.5 | Ask "what are they making?" | A local answer from what was seen; nothing invented when nothing was scouted. |
 
 ## 14. Accessibility and layout

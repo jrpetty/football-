@@ -239,7 +239,7 @@ async function visionExtras(profile: GameProfile): Promise<PromptExtras> {
     // A compact slice for the recogniser (it runs every few seconds): how to recognise screens and the HUD, and the names of things.
     knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
     // Strategy games: the exact unit and building names to report, and how to tell them apart.
-    if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision' })}`
+    if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision', ages: profile.intel?.ages })}`
     promptCache.set(key, knowledge)
   }
   const screensKey = `screens:${profile.id}`
@@ -257,7 +257,7 @@ async function answerKnowledge(profile: GameProfile): Promise<string> {
   if (text === undefined) {
     const kb = await storage.loadKnowledge(profile.id)
     text = knowledgeText(knowledgeSources(profile, kb), { budget: ANSWER_KNOWLEDGE_CHARS })
-    if (profile.knowledge.roster) text += `\n${rosterText(profile.knowledge.roster, { budget: ANSWER_ROSTER_CHARS, detail: 'answer' })}`
+    if (profile.knowledge.roster) text += `\n${rosterText(profile.knowledge.roster, { budget: ANSWER_ROSTER_CHARS, detail: 'answer', ages: profile.intel?.ages })}`
     const screens = screensForPrompt(await storage.loadScreens(profile.id), 40)
     if (screens) text += `\n## Screens seen in this player's games\n${screens}`
     promptCache.set(key, text)

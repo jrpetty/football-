@@ -401,6 +401,8 @@ export interface RosterBuilding {
   readonly name: string
   readonly aliases?: readonly string[]
   readonly produces: readonly string[]
+  /** The age (1 = first) from which it can be built. */
+  readonly age?: number
   /** What seeing it tells you about the opponent's plan. */
   readonly signals?: string
   readonly look?: string
@@ -524,7 +526,18 @@ export interface GameProfile {
    * opponent's faction, and the enemy buildings and units visible on the
    * player's screen (names from the roster, with counts).
    */
-  readonly intel?: { readonly factionKey: string; readonly buildingsKey: string; readonly unitsKey: string; readonly playerFactionContext?: string }
+  readonly intel?: {
+    readonly factionKey: string
+    readonly buildingsKey: string
+    readonly unitsKey: string
+    readonly playerFactionContext?: string
+    /** Age names in order (the roster's ages are 1-based positions in this list), e.g. dark, feudal, castle, imperial. */
+    readonly ages?: readonly string[]
+    /** State key with the opponent's age, when the screen shows it (age-up notice, player list, their landmark). */
+    readonly opponentAgeKey?: string
+    /** State key with the player's own age. */
+    readonly playerAgeKey?: string
+  }
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -1114,6 +1127,12 @@ export function validateProfile(input: unknown): ValidationResult {
         const key = c.str(it[k], `intel.${k}`)
         if (key && !visionStateKeys.has(key)) c.errors.push(`intel.${k}: unknown state key "${key}"`)
       }
+      for (const k of ['opponentAgeKey', 'playerAgeKey'] as const) {
+        const key = c.str(it[k], `intel.${k}`, { optional: true })
+        if (key && !visionStateKeys.has(key)) c.errors.push(`intel.${k}: unknown state key "${key}"`)
+        if (key && it.ages === undefined) c.errors.push(`intel.${k}: needs intel.ages`)
+      }
+      c.arr(it.ages, 'intel.ages', true).forEach((a, i) => c.str(a, `intel.ages[${i}]`, { max: 40 }))
       const pc = c.str(it.playerFactionContext, 'intel.playerFactionContext', { optional: true })
       if (pc && !contextIds.has(pc)) c.errors.push(`intel.playerFactionContext: unknown player context "${pc}"`)
     }

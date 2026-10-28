@@ -132,9 +132,13 @@ function intelAnswer(report: SessionReport): string {
   }
   const parts: string[] = []
   if (i.faction) parts.push(`They are ${i.faction.name}${i.faction.status === 'upcoming' ? ' (not released yet, so details are thin)' : ''}.`)
+  if (i.opponentAge) parts.push(i.opponentAge.basis === 'seen' ? `They are in the ${i.opponentAge.name}.` : i.opponentAge.basis === 'fielded' ? `They are at least in the ${i.opponentAge.name}.` : `I have not seen their age; assuming the ${i.opponentAge.name}, like you.`)
   if (i.buildings.length) parts.push(`I saw ${i.buildings.slice(0, 4).map((b) => (b.count > 1 ? `${b.count} ${b.name}s` : `a ${b.name}`)).join(', ')}.`)
   if (i.units.length) parts.push(`Units seen: ${i.units.slice(0, 4).map((u) => `${u.name} (up to ${u.count})`).join(', ')}.`)
-  if (i.likely.length) parts.push(`Those buildings can also make ${i.likely.slice(0, 4).map((l) => l.name).join(', ')}.`)
+  const now = i.likely.filter((l) => !l.later)
+  const later = i.likely.filter((l) => l.later)
+  if (now.length) parts.push(`Those buildings can also make ${now.slice(0, 4).map((l) => l.name).join(', ')}.`)
+  if (later.length) parts.push(`Not yet: ${later.slice(0, 3).map((l) => l.name).join(', ')}.`)
   for (const c of i.counters.slice(0, 2)) if (c.build.length) parts.push(`Against ${c.against}: ${c.build.join(' or ')}.`)
   return parts.join(' ')
 }

@@ -254,6 +254,19 @@
         "ttlMs": 8000,
         "maxLength": 240,
         "description": "Enemy (not the player's) military units visible in this frame, as 'count Name' using the roster's unit names, comma-separated (e.g. '8 Knight, 5 Crossbowman'). Count only what you can see; omit if none."
+      },
+      {
+        "key": "opponentAge",
+        "label": "Opponent's age",
+        "type": "enum",
+        "options": [
+          "dark",
+          "feudal",
+          "castle",
+          "imperial"
+        ],
+        "ttlMs": 600000,
+        "description": "The opponent's current age, only if this frame shows it: an '<player> has advanced to the … Age' notification about the opponent, the age shown for them in the player list or scoreboard, or a scouted age-up landmark of theirs that is finished. Omit otherwise; never guess from the clock."
       }
     ],
     "events": [
@@ -9336,6 +9349,7 @@
             "mounted-villager",
             "emissary"
           ],
+          "age": 1,
           "signals": "2+ TCs early = boom (punish with Feudal aggression). 1 TC + no military = fast Castle. TC build time 150 s (165 s in 17.0).",
           "look": "Large central hall with flag; capital TC is larger. A second one far from start = expansion."
         },
@@ -9374,6 +9388,7 @@
             "gallowglass",
             "cateran"
           ],
+          "age": 1,
           "signals": "Dark Age barracks = early spear/MAA pressure or tower/rush defence. 2+ barracks = infantry all-in (MAA + rams likely).",
           "look": "Wooden hall with weapon racks/training yard, banners; architecture varies by civ."
         },
@@ -9415,6 +9430,7 @@
             "bogmadr",
             "tanegashima-ashigaru"
           ],
+          "age": 2,
           "signals": "Feudal range = archer play (make horsemen/MAA). 2-3 ranges = mass archers; in Castle expect crossbows.",
           "look": "Building with target butts/straw targets and bow racks."
         },
@@ -9453,6 +9469,7 @@
             "raider-elephant",
             "border-reiver"
           ],
+          "age": 2,
           "signals": "Feudal stable = horseman raids (spears at resources) or early knights for Rus/French. 2+ stables in Castle = knight/lancer push.",
           "look": "Long low stable with horse stalls, troughs and hay."
         },
@@ -9477,12 +9494,14 @@
             "tower-of-the-sultan",
             "ballista-elephant"
           ],
+          "age": 3,
           "signals": "Workshop soon after Castle = siege push incoming (mangonels vs your ranged, trebs vs keeps). Keep cavalry to dive siege.",
           "look": "Large open timber workshop with crane/scaffold and siege parts lying around."
         },
         {
           "id": "blacksmith",
           "name": "Blacksmith",
+          "age": 2,
           "signals": "Early blacksmith = upgrades for a long fight or Siege Engineering (Feudal rams). Smoke = research in progress.",
           "look": "Forge with chimney smoke and anvil; small building.",
           "produces": []
@@ -9500,12 +9519,14 @@
             "warship",
             "longship"
           ],
+          "age": 1,
           "signals": "Several docks early = water map fight; you must contest with archer/springald ships or lose fish eco.",
           "look": "Wooden pier building on the shoreline with boats moored."
         },
         {
           "id": "university",
           "name": "University / Madrasa",
+          "age": 4,
           "signals": "Imperial techs: Chemistry (gunpowder), Biology (cav HP), Elite Army Tactics (melee infantry). Expect late upgrades to their main unit.",
           "look": "Large stone academic building; Madrasa variant for Abbasid/Ayyubid/Delhi/Malians/Tughlaq.",
           "produces": []
@@ -9518,6 +9539,7 @@
             "warrior-monk",
             "volur"
           ],
+          "age": 3,
           "signals": "Monastery early in Castle = relic gold + conversion vs your expensive units; scout relics and hunt monks with horsemen.",
           "look": "Church-like building with bell tower; relics glow when garrisoned."
         },
@@ -9530,6 +9552,7 @@
             "dervish",
             "healer-elephant"
           ],
+          "age": 1,
           "signals": "Same as monastery for Islamic civs: relic income, healing, conversion. Delhi builds it in Dark Age for Scholars.",
           "look": "Domed building with minaret."
         },
@@ -9539,6 +9562,7 @@
           "produces": [
             "trader"
           ],
+          "age": 2,
           "signals": "Market + traders = trade gold (raid route). Market early = resource selling to tech up quickly.",
           "look": "Open stalls with awnings and goods/carts."
         },
@@ -9558,12 +9582,14 @@
             "counterweight-trebuchet",
             "bombard"
           ],
+          "age": 3,
           "signals": "Keep (900 stone) = defensive/turtle or forward territory grab; bring trebuchets/bombards, not rams alone into its fire.",
           "look": "Massive stone tower/castle; English and some others can train units from it."
         },
         {
           "id": "outpost",
           "name": "Outpost / Tower",
+          "age": 1,
           "signals": "Forward outposts/towers near your resources = tower rush; pull villagers to kill builders, then spear/MAA; rams later.",
           "look": "Small wooden or stone watchtower; arrowslits added in Feudal.",
           "produces": []
@@ -9571,6 +9597,7 @@
         {
           "id": "stone-wall",
           "name": "Stone Wall",
+          "age": 2,
           "signals": "Walling = turtle/boom or fast Castle; prepare rams (+300 vs walls), siege towers, trebuchets or go elsewhere.",
           "look": "Thick grey stone walls with towers and gates; palisade is thin wooden stakes.",
           "produces": []
@@ -10627,6 +10654,14 @@
     "factionKey": "opponentCiv",
     "buildingsKey": "enemyBuildings",
     "unitsKey": "enemyUnits",
-    "playerFactionContext": "civ"
+    "playerFactionContext": "civ",
+    "ages": [
+      "dark",
+      "feudal",
+      "castle",
+      "imperial"
+    ],
+    "opponentAgeKey": "opponentAge",
+    "playerAgeKey": "age"
   }
 }
