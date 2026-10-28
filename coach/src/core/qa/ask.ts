@@ -280,7 +280,7 @@ export function buildDigest(i: DigestInputs): string {
           benchmark: b.spec.label,
           expected: `${b.spec.expectedPhrase}: ${b.spec.expected.start} + ${b.spec.expected.perMinute}/min`,
           points: b.points.map((pt) => ({ atSec: pt.atSec, actual: pt.actual, expected: pt.expected, behind: pt.behind })),
-          reference: b.spec.reference ?? [],
+          readFrom: 'the screen near each checkpoint; only numbers read at least twice and agreeing are kept',
         })),
       mistakes: i.report.mistakes.filter((m) => m.totals.count > 0).map((m) => ({ mistake: m.spec.label, times: m.totals.count, total: formatDuration(m.totals.totalMs) })),
       patterns: i.report.insights

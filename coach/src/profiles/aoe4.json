@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -126,7 +126,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villagers (the worker counts beside each resource plus idle, only if all are readable), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen. When enemy buildings or units are visible (scouting, fights, their base), list them with the roster's exact names and counts; never list anything in the fog of war.",
+    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villager count only where the HUD shows it as one number (never added up from the worker counts beside each resource, which leave out villagers building, walking or carrying), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen. When enemy buildings or units are visible (scouting, fights, their base), list them with the roster's exact names and counts; never list anything in the fog of war.",
     "sampleIntervalMs": 3000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
@@ -201,7 +201,7 @@
         "min": 0,
         "max": 250,
         "ttlMs": 12000,
-        "description": "Total villagers: the sum of the worker counts shown beside each resource plus idle villagers. Only if every count is readable; otherwise omit."
+        "description": "Total villagers, only from one number the screen shows as the villager total (a villager count on the HUD where your layout shows one, or a scoreboard or statistics screen). Never add up the worker counts beside each resource: villagers building, walking or carrying are in none of them. Omit unless that one number is clearly readable."
       },
       {
         "key": "age",
@@ -422,7 +422,7 @@
         "round",
         "combat"
       ],
-      "liveTip": "You're housed. Build a house.",
+      "liveTip": "You're housed. Add population space.",
       "summary": "Housed {count} times, {total} in total.",
       "severity": "high",
       "tags": [
@@ -458,9 +458,14 @@
       "playbook": "idle-villagers-zero"
     },
     {
-      "id": "floating-resources",
-      "label": "Floating resources",
+      "id": "floating-dark",
+      "label": "Floating resources (Dark Age)",
       "when": [
+        {
+          "key": "age",
+          "op": "==",
+          "value": "dark"
+        },
         {
           "sum": [
             "food",
@@ -469,7 +474,42 @@
             "stone"
           ],
           "op": ">",
-          "value": 1500
+          "value": 1000
+        }
+      ],
+      "forMs": 45000,
+      "minGameTimeSec": 240,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Big bank. Spend those resources.",
+      "summary": "Banked over 1000 unspent resources in the Dark Age (the Feudal Age costs 600) {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": [
+        "economy",
+        "spending"
+      ],
+      "playbook": "float-threshold"
+    },
+    {
+      "id": "floating-resources",
+      "label": "Floating resources (Feudal Age)",
+      "when": [
+        {
+          "key": "age",
+          "op": "==",
+          "value": "feudal"
+        },
+        {
+          "sum": [
+            "food",
+            "wood",
+            "gold",
+            "stone"
+          ],
+          "op": ">",
+          "value": 2200
         }
       ],
       "forMs": 45000,
@@ -479,7 +519,77 @@
         "combat"
       ],
       "liveTip": "Big bank. Spend those resources.",
-      "summary": "Banked over 1500 unspent resources {count} times, {total} in total.",
+      "summary": "Banked over 2200 unspent resources in the Feudal Age (the Castle Age costs 1,800) {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": [
+        "economy",
+        "spending"
+      ],
+      "playbook": "float-threshold"
+    },
+    {
+      "id": "floating-castle",
+      "label": "Floating resources (Castle Age)",
+      "when": [
+        {
+          "key": "age",
+          "op": "==",
+          "value": "castle"
+        },
+        {
+          "sum": [
+            "food",
+            "wood",
+            "gold",
+            "stone"
+          ],
+          "op": ">",
+          "value": 4000
+        }
+      ],
+      "forMs": 45000,
+      "minGameTimeSec": 480,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Big bank. Spend those resources.",
+      "summary": "Banked over 4000 unspent resources in the Castle Age (the Imperial Age costs 3,600) {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": [
+        "economy",
+        "spending"
+      ],
+      "playbook": "float-threshold"
+    },
+    {
+      "id": "floating-imperial",
+      "label": "Floating resources (Imperial Age)",
+      "when": [
+        {
+          "key": "age",
+          "op": "==",
+          "value": "imperial"
+        },
+        {
+          "sum": [
+            "food",
+            "wood",
+            "gold",
+            "stone"
+          ],
+          "op": ">",
+          "value": 3000
+        }
+      ],
+      "forMs": 45000,
+      "minGameTimeSec": 480,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Big bank. Spend those resources.",
+      "summary": "Banked over 3000 unspent resources in the Imperial Age {count} times, {total} in total.",
       "severity": "medium",
       "tags": [
         "economy",
@@ -603,7 +713,7 @@
       {
         "id": "spend-resources",
         "title": "Spend what you gather",
-        "summary": "Unspent resources do nothing. A large bank usually means a missing production building, upgrade or Town Center.",
+        "summary": "Unspent resources do nothing. A large bank usually means a missing production building or upgrade.",
         "good": [
           "Add production when resources pile up",
           "Research economy upgrades"
@@ -652,7 +762,8 @@
     ],
     "prohibitedAdvice": [
       "Anything about the opponent that is not visible on the player's own screen (fog of war, hidden armies)",
-      "Exploits, bugs or tools against the game's rules"
+      "Exploits, bugs or tools against the game's rules",
+      "Telling the player to build more Town Centers, or judging their villager count against two- or three-Town-Center play: the coach measures one Town Center that never stops"
     ],
     "terminology": {
       "housed": "at the population cap, unable to make units",
@@ -898,7 +1009,7 @@
         "items": [
           {
             "name": "Economy first",
-            "detail": "Keep villager production continuous through the Castle Age; add Town Centers when you can afford them safely."
+            "detail": "Keep villager production continuous through the Castle Age."
           },
           {
             "name": "Scouting",
@@ -923,7 +1034,7 @@
           },
           {
             "name": "Floating resources",
-            "detail": "The resource panel shows thousands banked; spend on production, upgrades or another Town Center."
+            "detail": "The resource panel shows thousands banked; spend on production buildings, units and upgrades."
           },
           {
             "name": "Aging up too thin",
@@ -1058,7 +1169,7 @@
         "signals": [
           "Population equal to the cap while queues are full"
         ],
-        "fix": "Start a house when you are within 5 of the cap, within 10 once you have two Town Centers.",
+        "fix": "Start a house when you are within 5 of the cap, within 10 once several buildings are producing.",
         "sources": [
           {
             "url": "https://www.youtube.com/watch?v=6MrURTs8V7o",
@@ -1155,20 +1266,20 @@
       },
       {
         "id": "second-tc-timing",
-        "title": "Expand when it is safe",
-        "principle": "A second Town Center is the strongest economic investment, but against early pressure the wood is better spent on army. In Update 17.0 a Town Center takes 165 seconds to build.",
+        "title": "Extra Town Centers are optional",
+        "principle": "A second Town Center can pay off when nothing threatens you, but it costs 400 wood and 300 stone and takes 165 seconds to build (Update 17.0), and a greedy expansion into pressure loses games. One Town Center that keeps producing is a sound plan at every level.",
         "good": [
-          "Second Town Center around 5:00 to 5:40 after scouting no early military",
-          "A third once you control the map"
+          "One Town Center producing villagers all game",
+          "An extra Town Center only behind a scout that shows no pressure, and only if you can defend it"
         ],
         "bad": [
-          "Never expanding when not under pressure",
-          "Two Town Centers into a scouted rush"
+          "Expanding into a scouted rush",
+          "An idle Town Center, however many you have"
         ],
         "signals": [
-          "One Town Center past 12:00; villagers well below the strong-player curve"
+          "A new Town Center going up while enemy military is on the map"
         ],
-        "fix": "If your scout at about 4:30 shows no military buildings, start a second Town Center before 6:00.",
+        "fix": "Keep your Town Center producing first; add another only when your scout shows no pressure and you can defend it.",
         "sources": [
           {
             "url": "https://aoe4.aoeinfo.net/en/item/1015.html",
@@ -1197,7 +1308,7 @@
         "principle": "Your villager split should follow your unit and tech plan. Gold-heavy units such as knights and men-at-arms need far more on gold.",
         "good": [
           "About 40% on gold for a gold-heavy army",
-          "More on wood while expanding and farming"
+          "More on wood while building farms and production"
         ],
         "bad": [
           "25 on food and 3 on gold while making knights",
@@ -1689,7 +1800,7 @@
         "signals": [
           "Army supply high while villagers stay flat"
         ],
-        "fix": "After each attack, turn the advantage into a Town Center or an age-up.",
+        "fix": "After each attack, turn the advantage into an age-up or more production.",
         "sources": [
           {
             "url": "https://forums.ageofempires.com/t/castle-heavy-units-are-too-strong-compared-to-feudal-units/209600",
@@ -2657,7 +2768,7 @@
                     "Take map control/relic routes and deer.",
                     "Consider early pressure on farms outside TC range."
                   ],
-                  "punish": "Slower, defensive start: grab map, take more resources, or go 2TC yourself; avoid fighting near their TC."
+                  "punish": "Slower, defensive start: grab map, take more resources and keep your Town Center producing; avoid fighting near their TC."
                 }
               ],
               "playAs": [
@@ -2883,7 +2994,7 @@
                     "Spearman/camel units vs knights.",
                     "Siege to break keeps."
                   ],
-                  "punish": "Mixed comp is expensive in gold; trade efficiently and out-boom; raid their gold."
+                  "punish": "Mixed comp is expensive in gold; trade efficiently, keep villagers coming and raid their gold."
                 }
               ],
               "playAs": [
@@ -3425,7 +3536,7 @@
               "playAs": [
                 "Royal Institute for upgrades and power; Guild Hall for longer/trade games.",
                 "Royal Knight + Arbaletrier + springald/mangonel; keep knights raiding.",
-                "Keep TCs working constantly (work rate bonus) and expand to 3 TCs."
+                "Keep the Town Center working constantly (work rate bonus)."
               ],
               "powerSpikes": [
                 "Arbaletrier+knight Castle push",
@@ -3590,7 +3701,7 @@
             "Fast Castle Regnitz Cathedral + relic collection for gold",
             "Late game Man-at-Arms/Landsknecht + Burgrave Palace batches, relic towers"
           ],
-          "howToPlayAgainst": "Harass Prelates and inspired villagers; keep map control for relics in Castle. Use Crossbows/Handcannons vs Men-at-Arms, Archers/Horsemen vs Landsknechts. Avoid assaulting relic-boosted towers/keeps; out-boom or out-raid instead.",
+          "howToPlayAgainst": "Harass Prelates and inspired villagers; keep map control for relics in Castle. Use Crossbows/Handcannons vs Men-at-Arms, Archers/Horsemen vs Landsknechts. Avoid assaulting relic-boosted towers/keeps; out-produce or out-raid instead.",
           "sources": [
             {
               "url": "https://www.ageofempires.com/games/age-of-empires-iv/civilizations/holy-roman-empire/",
@@ -3792,7 +3903,7 @@
                   "response": [
                     "Pressure the landmark and gold.",
                     "Get monks/army to contest relics.",
-                    "Out-boom with 2nd TC if you can't hit."
+                    "If you cannot hit them, keep your Town Center producing and spend on economy upgrades."
                   ],
                   "punish": "Weakest 6:00-9:00: tower at gold slows them but your Feudal army can still hurt; deny relics."
                 },
@@ -3824,7 +3935,7 @@
                     "Out-eco with 2nd TC or FC.",
                     "Take map control and relics early."
                   ],
-                  "punish": "Towers cost stone/wood and give no eco: skip attacking into them, take relic spots and extra resources, out-boom or FC first."
+                  "punish": "Towers cost stone/wood and give no eco: skip attacking into them, take relic spots and extra resources, out-produce them or go to Castle first."
                 }
               ],
               "playAs": [
@@ -4189,7 +4300,7 @@
                     "Out-eco with 2nd TC or FC.",
                     "Raid hunting vils away from Kremlin."
                   ],
-                  "punish": "Kremlin gives no eco: take more map/resources, out-boom, or pressure their other resources."
+                  "punish": "Kremlin gives no eco: take more map/resources, out-produce them, or pressure their other resources."
                 },
                 {
                   "id": "golden-gate-eco",
@@ -4223,7 +4334,7 @@
               ],
               "playAs": [
                 "Scout-hunt deer, place hunting cabins at good forests; bounty gives gold.",
-                "Kremlin for safety vs aggression; Golden Gate for 2TC/FC eco.",
+                "Kremlin for safety vs aggression; Golden Gate for economy or a fast Castle.",
                 "Keep gold vils low early; bounty supplies gold for age-up."
               ],
               "powerSpikes": [
@@ -4331,7 +4442,7 @@
               ],
               "playAs": [
                 "Keep hunting with scouts; use Early Knights for map control.",
-                "Golden Gate for 2TC/FC; Kremlin for safety/archer push.",
+                "Golden Gate for economy or a fast Castle; Kremlin for safety/archer push.",
                 "Wooden Fortress at gold and forward positions."
               ],
               "powerSpikes": [
@@ -4760,7 +4871,7 @@
                 }
               ],
               "playAs": [
-                "Pick the opening from scouting: tower rush vs exposed resources, horsemen vs greedy, 2TC vs passive.",
+                "Pick the opening from scouting: tower rush vs exposed resources, horsemen vs greedy, a safe economy vs passive.",
                 "Ovoo on stone early: stone pays for double production and advanced techs.",
                 "No houses needed - put all wood into units/TCs; keep Khan alive for arrows/scouting."
               ],
@@ -5291,7 +5402,7 @@
               ],
               "playAs": [
                 "Get an Imperial Official early: tax + supervision boost.",
-                "Choose dynasty plan: Song for eco/2TC; fast aggro for pressure.",
+                "Choose dynasty plan: Song for economy; fast aggro for pressure.",
                 "Use fast building (+100%) for instant landmarks and drop-sites."
               ],
               "powerSpikes": [
@@ -5362,7 +5473,7 @@
                   "response": [
                     "Pressure outside Barbican range.",
                     "Raid other resources.",
-                    "Out-boom with 2nd TC."
+                    "Keep your Town Center producing and spend on economy upgrades."
                   ],
                   "punish": "FC with little army: hit unguarded resources; avoid Barbican range."
                 },
@@ -5398,7 +5509,7 @@
                 }
               ],
               "playAs": [
-                "Zhuge Nu + spears for pressure; Song 2TC for eco.",
+                "Zhuge Nu + spears for pressure; Song for economy.",
                 "Keep Imperial Officials collecting tax."
               ],
               "powerSpikes": [
@@ -6341,7 +6452,7 @@
               ],
               "playAs": [
                 "Pack buildings around House of Wisdom for Golden Age tiers.",
-                "Economic Wing 2TC as default; Military Wing when expecting early aggression.",
+                "Economic Wing for economy; Military Wing when expecting early aggression.",
                 "Berries + orchard mill; deer/sheep (no boar)."
               ],
               "powerSpikes": [
@@ -6448,7 +6559,7 @@
                 }
               ],
               "playAs": [
-                "Camel archers or spear/archer push; 2TC behind.",
+                "Camel archers or spear/archer push, with villagers still coming behind it.",
                 "Golden Age: keep building near House of Wisdom."
               ],
               "powerSpikes": [
@@ -6851,12 +6962,12 @@
                     "TC defense.",
                     "Palisade."
                   ],
-                  "punish": "Early Donso delays their Pit Mine/eco: defend under TC, then out-boom or go Feudal archers."
+                  "punish": "Early Donso delays their Pit Mine/eco: defend under TC, then out-produce them or go Feudal archers."
                 }
               ],
               "playAs": [
                 "Pit Mine early on gold; cattle from mills; no boar.",
-                "Choose: Pit Mine + cows vs 2TC."
+                "Keep the Town Center producing; add military as soon as you scout aggression."
               ],
               "powerSpikes": [
                 "Pit Mine infinite gold"
@@ -7833,7 +7944,7 @@
                     "Garrison TC if overwhelmed.",
                     "Get archer once Feudal."
                   ],
-                  "punish": "Aggressive opener means weaker eco: out-boom then hit them first in Feudal."
+                  "punish": "Aggressive opener means weaker eco: hold, keep villagers coming, then hit them first in Feudal."
                 }
               ],
               "playAs": [
@@ -8488,7 +8599,7 @@
               "playAs": [
                 "Use bannermen auras; protect them in fights.",
                 "Forge research early; Japanese blacksmith techs are key.",
-                "Kura for eco; plan 2TC or FC based on opponent's aggression."
+                "Kura for eco; choose a fast Castle or a Feudal army by what you scout."
               ],
               "powerSpikes": [
                 "Bannerman-buffed Feudal infantry"
@@ -8852,7 +8963,7 @@
                     "Keep vills grouped.",
                     "Raid back with horseman."
                   ],
-                  "punish": "Weaker eco wing: survive raids then out-boom."
+                  "punish": "Weaker eco wing: survive raids, then out-produce them."
                 }
               ],
               "playAs": [
@@ -9579,7 +9690,7 @@
                     "Take map gold/relics.",
                     "Raid away from the palace."
                   ],
-                  "punish": "A defensive pick gives up map: out-expand and starve them."
+                  "punish": "A defensive pick gives up map: take the map's resources and starve them."
                 }
               ],
               "playAs": [
@@ -9817,7 +9928,7 @@
               "playAs": [
                 "Prelate inspires vills; keep it working.",
                 "Fewer but stronger vills: protect them, do not lose any.",
-                "Aachen for eco/2TC, Meinwerk for a Feudal timing with cheaper blacksmith techs."
+                "Aachen for eco, Meinwerk for a Feudal timing with cheaper blacksmith techs."
               ],
               "powerSpikes": [
                 "Fast Aachen Feudal"
@@ -10089,7 +10200,7 @@
                     "Take the rest of the map.",
                     "Raid far-away resources."
                   ],
-                  "punish": "Defensive pick gives up map: out-expand."
+                  "punish": "Defensive pick gives up map: take the map's resources."
                 }
               ],
               "playAs": [
@@ -10317,7 +10428,7 @@
               ],
               "playAs": [
                 "Officials collect taxes; keep them working near TC/landmark.",
-                "Plan dynasty: Song (2TC/eco) vs fast Castle.",
+                "Plan dynasty: Song (economy) vs fast Castle.",
                 "Jiangnan Tower is the near-default Feudal pick."
               ],
               "powerSpikes": [
@@ -10979,7 +11090,7 @@
                     "Siege the keep from range.",
                     "Raid manors elsewhere."
                   ],
-                  "punish": "Defensive landmark: out-expand and raid."
+                  "punish": "Defensive landmark: take the map and raid."
                 },
                 {
                   "id": "kings-college-tech",
@@ -11081,7 +11192,7 @@
                     "Take the rest of the map.",
                     "Raid manors far from it."
                   ],
-                  "punish": "A defensive pick gives up map control: out-expand and starve them."
+                  "punish": "A defensive pick gives up map control: take the map's resources and starve them."
                 }
               ],
               "playAs": [
@@ -11417,7 +11528,7 @@
                     "Do not fight inside Fortress range (+15% ranged range aura)",
                     "Use the stone investment window to push their army or eco."
                   ],
-                  "punish": "Fortress costs 350g/650s: hit them before it finishes or out-boom them."
+                  "punish": "Fortress costs 350g/650s: hit them before it finishes or out-produce them."
                 }
               ],
               "playAs": [
@@ -12940,7 +13051,7 @@
                     "Watch for stealthed units near eco (detection rules unverified)",
                     "Hit their eco while Shinobi roam."
                   ],
-                  "punish": "Military landmark with weaker eco: out-boom or counter-pressure."
+                  "punish": "Military landmark with weaker eco: out-produce them or counter-pressure."
                 },
                 {
                   "id": "dark-age-naginata",
@@ -13250,7 +13361,7 @@
                     "Culverin vs their bombards.",
                     "Bypass and raid."
                   ],
-                  "punish": "Static defense: out-expand them."
+                  "punish": "Static defence: take the map's resources."
                 }
               ],
               "playAs": [
@@ -13468,7 +13579,7 @@
                   "response": [
                     "Pressure before the 2nd TC.",
                     "Tower your gold.",
-                    "Out-boom only if safe."
+                    "Keep your villagers coming and take the map while they sit back."
                   ],
                   "punish": "2TC + fort is thin army: hit early Feudal."
                 },
@@ -13560,7 +13671,7 @@
                     "Bring battering-ram only with superior army.",
                     "Contest other resources."
                   ],
-                  "punish": "Fort is a big investment: out-boom."
+                  "punish": "Fort is a big investment: out-produce them."
                 },
                 {
                   "id": "worker-elephant-eco",
@@ -13683,7 +13794,7 @@
                     "Take the rest of the map's resources.",
                     "Raid unwalled lines with horseman."
                   ],
-                  "punish": "Turtling cedes map control: expand and out-eco them."
+                  "punish": "Turtling cedes map control: take the map and out-gather them."
                 },
                 {
                   "id": "house-of-learning-tech",
@@ -14913,7 +15024,7 @@
                     "Take other resources.",
                     "Crossbowman vs Gallowglass."
                   ],
-                  "punish": "Turtling cedes map: expand (unverified)."
+                  "punish": "Turtling cedes map: take its resources (unverified)."
                 }
               ],
               "playAs": [
@@ -20129,7 +20240,7 @@
         },
         {
           "if": "1 TC, no military buildings, early Castle landmark (fast Castle)",
-          "build": "Feudal aggression: horsemen/archer raids, MAA + rams, or take map control and boom",
+          "build": "Feudal aggression: horsemen/archer raids, MAA + rams, or take map control and keep villagers coming",
           "why": "A fast Castle player is under-armed for 3-5 minutes; punish eco or take free resources.",
           "avoid": "Passive play that lets them hit Castle units first"
         },
@@ -20137,7 +20248,7 @@
           "if": "2-3 TCs and few military (boom)",
           "build": "Early pressure: horsemen raids, archer+spear push, Feudal rams",
           "why": "TCs cost 400W 300S and 150 s (165 s in 17.0); damage before payback wins.",
-          "avoid": "Matching boom with no army"
+          "avoid": "Greeding with no army yourself"
         },
         {
           "if": "Mass archer ships on water",
@@ -20211,24 +20322,8 @@
       "noun": "villagers",
       "expectedPhrase": "one Town Center that never stops",
       "gapPhrase": "of villager production",
-      "reference": [
-        {
-          "atSec": 600,
-          "value": 45,
-          "label": "strong players on two or three Town Centers"
-        },
-        {
-          "atSec": 900,
-          "value": 75,
-          "label": "strong players on two or three Town Centers"
-        },
-        {
-          "atSec": 1200,
-          "value": 110,
-          "label": "strong players on two or three Town Centers"
-        }
-      ],
-      "playbook": "tc-never-idle"
+      "playbook": "tc-never-idle",
+      "atMostKey": "population"
     }
   ],
   "battles": {

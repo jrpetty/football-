@@ -338,6 +338,8 @@ export interface BenchmarkSpec {
   readonly key: string
   /** State key holding the game clock in seconds. */
   readonly timeKey: string
+  /** State key the number can never exceed (villagers ≤ population): a larger reading is a misread. */
+  readonly atMostKey?: string
   readonly expected: { readonly start: number; readonly perMinute: number; readonly cap?: number }
   readonly checkpointsSec: readonly number[]
   /** Flag a checkpoint when the reading is below expected by more than this fraction. */
@@ -348,8 +350,6 @@ export interface BenchmarkSpec {
   readonly expectedPhrase: string
   /** What one unit of shortfall means in time, e.g. "of idle Town Center time" (uses perMinute). */
   readonly gapPhrase?: string
-  /** What strong players reach, for context (sourced in the playbook entry). */
-  readonly reference?: readonly { readonly atSec: number; readonly value: number; readonly label: string }[]
   readonly playbook?: string
 }
 
@@ -1933,8 +1933,8 @@ export function validateProfile(input: unknown): ValidationResult {
     if (!o) return
     c.str(o.id, `${path}.id`, { pattern: ID })
     c.str(o.label, `${path}.label`, { max: 80 })
-    for (const k of ['key', 'timeKey'] as const) {
-      const key = c.str(o[k], `${path}.${k}`)
+    for (const k of ['key', 'timeKey', 'atMostKey'] as const) {
+      const key = c.str(o[k], `${path}.${k}`, { optional: k === 'atMostKey' })
       if (key && !visionStateKeys.has(key)) c.errors.push(`${path}.${k}: unknown state key "${key}"`)
     }
     const e = c.obj(o.expected, `${path}.expected`)
@@ -1948,13 +1948,6 @@ export function validateProfile(input: unknown): ValidationResult {
     c.str(o.noun, `${path}.noun`, { max: 40 })
     c.str(o.expectedPhrase, `${path}.expectedPhrase`, { max: 120, spoken: true })
     c.str(o.gapPhrase, `${path}.gapPhrase`, { optional: true, max: 80, spoken: true })
-    c.arr(o.reference, `${path}.reference`, true).forEach((r, j) => {
-      const ro = c.obj(r, `${path}.reference[${j}]`)
-      if (!ro) return
-      c.num(ro.atSec, `${path}.reference[${j}].atSec`, 1, 36_000)
-      c.num(ro.value, `${path}.reference[${j}].value`, 0, 1e6)
-      c.str(ro.label, `${path}.reference[${j}].label`, { max: 80 })
-    })
     const pb = c.str(o.playbook, `${path}.playbook`, { optional: true })
     if (pb && !playbookIds.has(pb)) c.errors.push(`${path}.playbook: unknown playbook entry "${pb}"`)
   })

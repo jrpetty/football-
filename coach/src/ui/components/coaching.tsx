@@ -169,8 +169,7 @@ export function BattleLog({ battles, profile }: { battles: readonly BattleRecord
 export function BenchmarkChart({ result }: { result: BenchmarkResult }) {
   const s = result.spec
   const end = Math.max(...s.checkpointsSec, ...result.points.map((p) => p.atSec)) + 60
-  const refs = s.reference ?? []
-  const top = Math.max(expectedAt(s, end), ...refs.map((r) => r.value), ...result.points.map((p) => p.actual)) * 1.1
+  const top = Math.max(expectedAt(s, end), ...result.points.map((p) => p.actual)) * 1.1
   const W = 560
   const H = 220
   const pad = { l: 36, r: 12, t: 12, b: 26 }
@@ -197,11 +196,6 @@ export function BenchmarkChart({ result }: { result: BenchmarkResult }) {
           </text>
         ))}
         <path className="expected" d={curve} />
-        {refs.map((r) => (
-          <circle key={r.atSec} className="ref" cx={x(r.atSec)} cy={y(r.value)} r={4.5}>
-            <title>{`${r.label}: about ${r.value} at ${gameClock(r.atSec)}`}</title>
-          </circle>
-        ))}
         {result.points.map((p) => (
           <g key={p.atSec}>
             <line className="gap" x1={x(p.atSec)} x2={x(p.atSec)} y1={y(p.actual)} y2={y(p.expected)} />
@@ -213,11 +207,6 @@ export function BenchmarkChart({ result }: { result: BenchmarkResult }) {
       </svg>
       <figcaption className="bench-legend small muted">
         <span className="key expected" /> {s.expectedPhrase} <span className="key actual" /> you
-        {refs.length ? (
-          <>
-            <span className="key ref" /> {refs[0].label}
-          </>
-        ) : null}
       </figcaption>
       {result.worst ? <p className="small">{result.worst.statement}</p> : result.points.length ? <p className="small">On track at every checkpoint read.</p> : null}
     </figure>

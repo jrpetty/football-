@@ -130,14 +130,14 @@ Legend:
 
 ### Advice that is actually useful
 - ☑ Fight factors: deaths (and kills, where the player's view shows it) tagged with the visible circumstances of the fight; fights won and lost compared by value, avoidable circumstances counted as a share of deaths, and timing (died within 8 s of your own kill). Graded with Wilson intervals; untagged fights counted, never guessed. *Tested on a synthetic MW4 match with ground truth (`test/positioning.test.ts`).*
-- ☑ Benchmarks: a visible number against an explainable curve at checkpoints of the game clock (AoE IV villagers against one Town Center that never stops), with the gap in minutes and a strong-player reference. *Synthetic AoE IV game.*
+- ☑ Benchmarks: a visible number against an explainable curve at checkpoints of the game clock (AoE IV villagers against one Town Center that never stops), with the gap in minutes. *Synthetic AoE IV game.* (The strong-player reference was removed in v15.)
 - ☑ Playbooks researched from pro, coach, official, guide and forum sources (MW4 30, AoE IV 26, FC 27 25 entries), validated (sources, no causal or absolute words), linked from findings, mistakes, zone breakdowns and stat warnings. Each fix is said once per summary.
 - ☑ FC 27: conceded goals read for the first defensive mistake in the replay; pass accuracy against a 75% warning line.
 - ☑ The coach's review (local, from findings and the playbook) with "Read it to me"; Insights panels for fights, benchmarks and the playbook. *Recorded browser run of the MW4 and AoE IV demos.*
 - ◐ Claude's deeper review (structured output, validated for size, wording and playbook links). *Validator tested; real API calls untested (no key).*
 - ◐ Research quality. *Page fetches were blocked in the build environment, so the playbooks come from search-result summaries; no Reddit threads could be read; pro sources are limited (Scump's course outline, Rambo, RBLZ_Levyfinn, Tekkz/RedLac, a VortiX tip). Entries marked as rules of thumb say so.*
 - ◐ Killcam reading accuracy. *Depends on the vision model on real MW4 killcams; untested without captures.*
-- ☐ Watch pro VODs (Valdemar, Beastyqt, CDL) to attribute more advice directly and check the AoE IV villager reference per civilisation.
+- ☐ Watch pro VODs (Valdemar, Beastyqt, CDL) to attribute more advice directly and check the one-Town-Center villager curve per civilisation (Order of the Dragon villagers take 23 s).
 
 ## v5 delivery
 
@@ -292,6 +292,20 @@ Legend:
   *The nav floors line up with the game's own radar overviews (checked by eye on Dust II, Mirage and Nuke: the area outlines trace the overview's walkable shapes). Placing your own minimap in real play still needs the game's overview imported: the minimap is the game's art, the drawing is not.*
 - ☑ MW4 pack v1.6.0: the map list checked against the launch blog, the wiki and Shipment's 27 Oct release (23 maps, none missing; the solo Mobility Course is not a match map), 253 callouts (from 167): Hajin rebuilt from the game's own tac-map data (48 places with their squares), Wolves Stadium 3 → 14, Kill Block 6 → 18, Coal, Mumbai, Cachette, Rooftops and the Gunfight maps deeper; every existing callout name kept.
 - ◐ MW4 core-map callouts still come from rough reads of the tac-maps: the official callout labels could not be fetched here. Thin maps: Reactor U92, Shipment (6), Transit 213 (7), Library, NYC (5). Hardpoint orders rest on one site and disagree with another on Cachette, Reactor U92 and Silkworm.
+
+## v15 delivery
+
+- ☑ AoE IV villager count fixed. The count was too low (about 27 at 13–15 minutes when it was not): it had been added up from the worker numbers beside each resource, which leave out villagers building, walking or carrying. Now:
+  - only the one villager total the screen shows counts;
+  - a checkpoint is stated only when two or more separate readings agree (one reading lingering on screen counts once);
+  - a reading above population is thrown out (`test/positioning.test.ts`).
+- ☑ AoE IV: no two- or three-Town-Center talk.
+  - Removed: the strong-player reference ("about 45 at 10:00"), the "add a Town Center" lines, "out-boom" and "out-expand", and the "2TC" plans offered to you (Rus, Chinese, Zhu Xi, Abbasid, Malians, Japanese, Order of the Dragon).
+  - Added: "build more Town Centers" is prohibited advice. A second Town Center is described as optional.
+  - Kept: reading the opponent's second Town Center when scouted.
+  - The benchmark reference feature itself was removed from the schema, the chart and the answers.
+- ☑ AoE IV floating judged by age, against what the next age costs: over 1,000 in the Dark Age, 2,200 in Feudal, 4,000 in Castle and 3,000 in Imperial. The housed tip says "add population space" (Japanese Farmhouses, Malian houses).
+- ◐ Where AoE IV shows the total villager count on the HUD is not confirmed here: the official forums could not be reached. Waiting on a screenshot from a real game. *QA 15.1.*
 
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.

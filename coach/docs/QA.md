@@ -143,7 +143,7 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 11.1 | Coach → **Modern Warfare 4 replay** (synthetic). Let it finish, then Insights → **Review this session**. | A headline with a count, a "Good:" line, and up to three numbered items, each with a fix and a link into the playbook. **How your fights go** shows cards per factor with lost/won bars; "not readable" counts appear. |
 | 11.2 | Click **What to do →** on a finding. | The matching playbook entry opens and scrolls into view, marked **From your games**, with sources and their kind (Pro, Coach, Official, Guide, Forum). |
 | 11.3 | **Read it to me**. | The review is spoken once; nothing else talks over it. |
-| 11.4 | Coach → **Age of Empires IV replay**, then Insights. | **Against the clock** shows the dashed expected curve, your readings (red where behind), the strong-player reference rings, and "At 10:00 you had 28 villagers…". |
+| 11.4 | Coach → **Age of Empires IV replay**, then Insights. | **Against the clock** shows the dashed expected curve and your readings (red where behind). It says "At 10:00 you had 28 villagers; one Town Center that never stops has 36 by then…", with nothing about two or three Town Centers. |
 | 11.5 | MW4 private match with bots only, Training mode, cloud on: die in the open several times. | Once the pattern is moderately clear, one short spoken tip ("Fight from cover, not the open."), at most once per match. |
 | 11.6 | MW4 online multiplayer, same play. | Nothing during play; the post-match summary leads with how fights were lost, each with its fix. |
 | 11.7 | With cloud on, **Deeper review with Claude**. | A review marked as written by the model with its cost; counts match the panels below. If it fails, the local review stays with a note. |
@@ -215,6 +215,11 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.48 | CS2 Practice with bots, capture on, Game data on. Get kills, die flashed once and once while reloading. | Coach → Rounds: each round with your buy, kills, death. Insights after the match: the round strip, the money chart, and deaths flashed and reloading counted under the factors. |
 | 13.49 | CS2: Radar Is Rotating: No, Radar Centers The Player: Yes, Radar Map Zoom 0.5. Export the map's radar overview from the game files and import it in Settings → Official overhead maps. | The overview is kept; the preview shows the pack's callouts labelled where they are (on maps with callout positions). Play: the stitched radar is placed on it; deaths pinned on the overview. Note any wrong placement. |
 | 13.50 | CS2 Premier or Competitive match with capture on. | No live tips, no live rounds strip during the match ("open after the match"); everything appears after it. |
+
+## 14. CS2 grenades, layouts and guns
+
+| # | Steps | Expected |
+|---|---|---|
 | 14.1 | CS2: Insights → Grenade lineups. Pick each map, then T, CT, and each grenade type; pick an execute. | Lineups drawn from where they are thrown to where they land (solid for Valve's, dashed for the rest); the execute's grenades numbered in order. With the map's overview imported, they sit on it. Note any that land in the wrong place. |
 | 14.2 | In Practice, throw five Valve lineups (marked Valve) and five researched ones, following Stand, Aim and Throw. | Each lands where the coach says. Note the ones that do not (map, name, where it went). |
 | 14.3 | Ask: "what smokes for an A execute on Mirage?", "where do I throw the Xbox smoke?", "how long does a smoke last?", "how many body shots does the M4A1-S need?" | Each answered from the pack: the execute in order; the lineup with stand, aim and throw; about 18 s of cover; 4 up close, 5 at 20 m. |
@@ -223,7 +228,15 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 14.7 | Play a CS2 Practice match with Radar Is Rotating: No and no overview imported, then import the overview and play again. | First match: the stitched radar on its own (no placement on the drawing); the areas list on the real map by callout. After importing: the minimap placed on the game's overview. |
 | 14.5 | Insights → Arsenal → AK-47, then Compare guns. | The damage table (142 to the head at 5 m, 110 through a helmet, 4 body hits through kevlar) and the compare table sort by each column. |
 
-## 14. Accessibility and layout
+## 15. AoE IV readings
+
+| # | Steps | Expected |
+|---|---|---|
+| 15.1 | Play an AoE IV game against the AI with capture on. At 5, 10 and 15 minutes, note your real villager count (the HUD's villager total, or the post-game statistics). | Insights → Against the clock shows the same numbers, give or take one, or no point at all where the count was not clearly read. Note any point more than one off, with its time and what the HUD showed. |
+| 15.2 | In the same game, get housed once, leave a villager idle, and bank 2,500 resources in Feudal. | Housed, idle villagers and floating (Feudal) each counted once. Floating is not flagged with 1,500 banked in Feudal, or 3,000 in Castle. |
+| 15.3 | Ask: "how many villagers should I have at 10 minutes?" and "should I go 3 TC?" | 36 against one Town Center that never stops, and no advice to add Town Centers. |
+
+## 16. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is

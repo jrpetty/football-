@@ -264,10 +264,16 @@ Then press **Choose the game window**, play, and listen.
     fix, with the reasoning behind it (arrow ranges, bonus damage, armor
     math, Update 17.0 changes).
   - **AoE IV economy:** your villager count against one Town Center that
-    never stops (21 at 5:00, 36 at 10:00) with a strong-player reference;
-    housed time, idle villagers, floating resources, age-up timing. The
-    map and your opponent's civilisation are read from the loading screen
-    and kept for the review.
+    never stops (21 at 5:00, 36 at 10:00). There is no comparison with two-
+    or three-Town-Center play, and no advice to build more Town Centers.
+    The count is taken only from the one villager total the screen shows,
+    never added up from the workers beside each resource (that leaves out
+    villagers building, walking or carrying). A checkpoint is stated only
+    when at least two separate readings agree, and a reading above your
+    population is thrown out. Also covered: housed time, idle villagers,
+    floating resources judged against what the next age costs, and age-up
+    timing. The map and your opponent's civilisation are read from the
+    loading screen and kept for the review.
   - **AoE II:** housed time, idle villagers, floating resources, and age-up
     timing against your targets.
   - **EA FC 27:** where you concede and score and how, the first defensive

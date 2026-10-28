@@ -6,11 +6,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { CoachEngine } from '../src/core/engine.ts'
 import { FactorAnalyzer, factorResult, historyFactors } from '../src/core/analyses/factors.ts'
-import { benchmarkResult, expectedAt } from '../src/core/analyses/benchmarks.ts'
+import { BenchmarkTracker, agreed, benchmarkResult, expectedAt } from '../src/core/analyses/benchmarks.ts'
 import { playbookText } from '../src/core/knowledge/base.ts'
 import { answerLocally, buildDigest, classify } from '../src/core/qa/ask.ts'
 import { BANNED_CLAIMS, validateProfile, type FactorSpec, type GameProfile } from '../src/core/profile/schema.ts'
-import type { GameEvent, TimelineEntry, Utterance } from '../src/core/types.ts'
+import type { GameEvent, TimelineEntry, Utterance, VisibleState } from '../src/core/types.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
 import { aoe4GameReplay, mw4MatchReplay, type VisionReplay } from '../src/sim/visionReplay.ts'
 import { engineFor, settings } from './helpers.ts'
@@ -155,7 +155,7 @@ test('factors: history sums matches and keeps the same grading', () => {
 
 // --- Benchmarks -------------------------------------------------------------------------------
 
-test('AoE4: villagers are checked against one Town Center that never stops, with a reference and the fix', () => {
+test('AoE4: villagers are checked against one Town Center that never stops, with the fix (no two- or three-Town-Center talk)', () => {
   const replay = aoe4GameReplay({ seed: 4 })
   const engine = engineFor(aoe4, settings({ profileId: 'aoe4', profileModeId: 'ranked-1v1', mode: 'post-match' }))
   const { utterances } = play(engine, replay)
@@ -165,8 +165,9 @@ test('AoE4: villagers are checked against one Town Center that never stops, with
   assert.deepEqual(b.points.map((p) => p.behind), [false, true, true])
   assert.equal(
     b.worst!.statement,
-    `At 10:00 you had ${t.at600} villagers; one Town Center that never stops has 36 by then. That is about 3 minutes of villager production. For reference, strong players on two or three Town Centers: about 45.`,
+    `At 10:00 you had ${t.at600} villagers; one Town Center that never stops has 36 by then. That is about 3 minutes of villager production.`,
   )
+  assert.doesNotMatch(utterances.map((u) => u.text).join(' '), /two or three Town Centers|second Town Center|third Town Center/i)
   assert.ok(utterances[0].text.includes('At 10:00 you had 28 villagers'), utterances[0].text)
   assert.ok(utterances[0].text.includes(fix(aoe4, 'tc-never-idle')))
 })
@@ -179,6 +180,67 @@ test('benchmarks: the curve, its cap, and readings far from a checkpoint', () =>
   const r = benchmarkResult(s, [{ atSec: 300, actual: 21 }])
   assert.equal(r.worst, null)
   assert.equal(r.met, 1)
+})
+
+const at = (observedAt: number, values: Record<string, number>): VisibleState => ({
+  timestampMs: observedAt,
+  phase: 'round',
+  values: Object.fromEntries(Object.entries(values).map(([k, value]) => [k, { value, confidence: 0.9, observedAt, source: 'vision-model' as const, conflicted: false }])),
+  activeSignals: [],
+  confidence: 0.9,
+  stale: false,
+  staleReasons: [],
+})
+
+test('benchmarks: one reading is never stated; readings must agree, count once, and be possible', () => {
+  const spec = aoe4.benchmarks![0]
+  assert.equal(agreed([{ value: 27, dist: 0 }]), null)
+  assert.equal(agreed([{ value: 27, dist: 4 }, { value: 41, dist: 1 }]), null, 'two readings that disagree')
+  assert.equal(agreed([{ value: 35, dist: 9 }, { value: 36, dist: 2 }, { value: 12, dist: 0 }]), 36, 'the outlier is dropped')
+
+  const t = new BenchmarkTracker([spec])
+  // A single misread (the sum of the per-resource worker counts) lingering in the state for several ticks.
+  const misread = at(1000, { villagers: 27, population: 52, gameTimeSec: 598 })
+  for (let i = 0; i < 4; i++) t.observe(misread)
+  assert.equal(t.takeFresh().length, 0)
+  assert.equal(t.results()[0].points.length, 0)
+  // More villagers than population is impossible: ignored.
+  t.observe(at(2000, { villagers: 61, population: 52, gameTimeSec: 601 }))
+  t.observe(at(3000, { villagers: 61, population: 52, gameTimeSec: 604 }))
+  assert.equal(t.results()[0].points.length, 0)
+  // Two fresh readings of the one villager count that agree: stated once.
+  t.observe(at(4000, { villagers: 36, population: 52, gameTimeSec: 607 }))
+  t.observe(at(5000, { villagers: 37, population: 53, gameTimeSec: 610 }))
+  const [p] = t.results()[0].points
+  assert.deepEqual([p.atSec, p.actual, p.behind], [600, 36, false])
+  assert.equal(t.takeFresh().length, 1)
+  t.observe(at(6000, { villagers: 37, population: 53, gameTimeSec: 612 }))
+  assert.equal(t.takeFresh().length, 0)
+})
+
+test('AoE4: floating is judged against what the age costs, and no advice asks for more Town Centers', () => {
+  const floats = aoe4.mistakes!.filter((m) => m.id.startsWith('floating'))
+  const bank = (id: string) => (floats.find((m) => m.id === id)!.when.find((c) => 'sum' in c)! as { value: number }).value
+  const age = (id: string) => (floats.find((m) => m.id === id)!.when.find((c) => 'key' in c && c.key === 'age')! as { value: string }).value
+  assert.deepEqual(floats.map((m) => [age(m.id), bank(m.id)]), [['dark', 1000], ['feudal', 2200], ['castle', 4000], ['imperial', 3000]])
+  // Each age's bank is above what the next age costs (Feudal 600, Castle 1,800, Imperial 3,600).
+  assert.ok(bank('floating-dark') > 600 && bank('floating-resources') > 1800 && bank('floating-castle') > 3600)
+  // What the coach tells the player to do (not what it says about the opponent's build).
+  const k = aoe4.knowledge
+  const factions = k.roster!.factions
+  const plans = factions.flatMap((f) => f.agePlans ?? [])
+  const advice = [
+    ...plans.flatMap((a) => a.playAs ?? []),
+    ...factions.map((f) => f.howToPlayAgainst ?? ''),
+    ...k.concepts.map((c) => c.summary),
+    ...k.playbook!.flatMap((e) => [e.fix, ...e.good]),
+    ...(k.reference ?? []).flatMap((r) => r.items.map((i) => i.detail)),
+    ...aoe4.mistakes!.map((m) => m.summary),
+  ]
+  const responses = plans.flatMap((a) => a.theirMoves.flatMap((m) => [m.punish ?? '', ...(m.response ?? [])]))
+  for (const t of advice) assert.doesNotMatch(t, /\b[23] ?TCs?\b|another Town Cent|two or three Town|For reference, strong players/i, t)
+  for (const t of [...advice, ...responses]) assert.doesNotMatch(t, /out-?boom|out-?expand|go [23] ?TC/i, t)
+  assert.equal(aoe4.benchmarks![0].atMostKey, 'population')
 })
 
 // --- Packs and playbooks ----------------------------------------------------------------------

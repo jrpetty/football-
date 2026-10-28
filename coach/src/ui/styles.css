@@ -2978,12 +2978,6 @@ kbd {
   stroke-dasharray: 6 4;
 }
 
-.bench .ref {
-  fill: none;
-  stroke: var(--info);
-  stroke-width: 2;
-}
-
 .bench .gap {
   stroke: var(--live);
   stroke-width: 1.5;
@@ -3004,11 +2998,6 @@ kbd {
 
 .key.actual {
   background: var(--text);
-  border-radius: 50%;
-}
-
-.key.ref {
-  border: 2px solid var(--info);
   border-radius: 50%;
 }
 

@@ -3,13 +3,30 @@
 // give (e.g. one Town Center that never stops making villagers). The result
 // is concrete — "at 8:00 you had 24; a Town Center that never stops has 30 by
 // then, about 2 minutes of idle production" — and only uses readings that
-// were actually visible near each checkpoint.
+// were actually visible near each checkpoint, that agree with each other (one
+// misread number is never stated as fact), and that are possible (never more
+// villagers than population).
 
 import type { BenchmarkSpec } from '../profile/schema.ts'
 import type { VisibleState } from '../types.ts'
 
 /** A reading counts for a checkpoint when the game clock was within this many seconds of it. */
 export const CHECKPOINT_WINDOW_SEC = 30
+/** A checkpoint is stated only when at least this many of its readings agree. */
+export const MIN_AGREEING = 2
+
+type Reading = { value: number; dist: number }
+
+/** The agreed value of a checkpoint's readings (the one closest in time among those near their median), or null. */
+export function agreed(readings: readonly Reading[]): number | null {
+  if (readings.length < MIN_AGREEING) return null
+  const sorted = [...readings].map((r) => r.value).sort((a, b) => a - b)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  const slack = Math.max(2, Math.round(median * 0.1))
+  const near = readings.filter((r) => Math.abs(r.value - median) <= slack)
+  if (near.length < MIN_AGREEING) return null
+  return [...near].sort((a, b) => a.dist - b.dist)[0].value
+}
 
 export interface BenchmarkPoint {
   readonly atSec: number
@@ -35,12 +52,15 @@ export function expectedAt(spec: BenchmarkSpec, sec: number): number {
 
 export class BenchmarkTracker {
   private readonly specs: readonly BenchmarkSpec[]
-  /** Best reading per spec and checkpoint: the one closest in game time. */
-  private readings = new Map<string, Map<number, { value: number; dist: number }>>()
-  /** Checkpoints read for the first time since the last take (for commentary). */
+  /** Readings per spec and checkpoint (up to a dozen each). */
+  private readings = new Map<string, Map<number, Reading[]>>()
+  /** Checkpoints agreed for the first time since the last take (for commentary). */
   private fresh: { spec: BenchmarkSpec; atSec: number; actual: number }[] = []
+  private stated = new Set<string>()
+  /** When each spec's number was last read, so one reading lingering in the state counts once. */
+  private lastRead = new Map<string, number>()
   /** The last match's readings, shown until the next match has some of its own. */
-  private previous = new Map<string, Map<number, { value: number; dist: number }>>()
+  private previous = new Map<string, Map<number, Reading[]>>()
 
   constructor(specs: readonly BenchmarkSpec[]) {
     this.specs = specs
@@ -52,14 +72,25 @@ export class BenchmarkTracker {
       const v = state.values[spec.key]
       const t = state.values[spec.timeKey]
       if (!v || !t || typeof v.value !== 'number' || typeof t.value !== 'number' || v.conflicted || t.conflicted) continue
+      // An impossible reading (more villagers than population) is a misread.
+      const cap = spec.atMostKey ? state.values[spec.atMostKey] : undefined
+      if (cap && typeof cap.value === 'number' && !cap.conflicted && v.value > cap.value) continue
+      if (v.observedAt <= (this.lastRead.get(spec.id) ?? -Infinity)) continue
+      this.lastRead.set(spec.id, v.observedAt)
       for (const cp of spec.checkpointsSec) {
         const dist = Math.abs(t.value - cp)
         if (dist > CHECKPOINT_WINDOW_SEC) continue
         let m = this.readings.get(spec.id)
         if (!m) this.readings.set(spec.id, (m = new Map()))
-        const cur = m.get(cp)
-        if (!cur) this.fresh.push({ spec, atSec: cp, actual: v.value })
-        if (!cur || dist < cur.dist) m.set(cp, { value: v.value, dist })
+        const list = m.get(cp) ?? []
+        if (list.length < 12) list.push({ value: v.value, dist })
+        m.set(cp, list)
+        const k = `${spec.id}@${cp}`
+        const value = agreed(list)
+        if (value !== null && !this.stated.has(k)) {
+          this.stated.add(k)
+          this.fresh.push({ spec, atSec: cp, actual: value })
+        }
       }
     }
   }
@@ -73,6 +104,8 @@ export class BenchmarkTracker {
 
   newMatch(): void {
     this.fresh = []
+    this.stated = new Set()
+    this.lastRead = new Map()
     if (this.readings.size) this.previous = this.readings
     this.readings = new Map()
   }
@@ -80,7 +113,15 @@ export class BenchmarkTracker {
   /** This match's comparison, or the last match's while this one has no readings yet. */
   results(): BenchmarkResult[] {
     const source = this.readings.size ? this.readings : this.previous
-    return this.specs.map((spec) => benchmarkResult(spec, [...(source.get(spec.id) ?? new Map())].map(([atSec, r]) => ({ atSec, actual: r.value }))))
+    return this.specs.map((spec) =>
+      benchmarkResult(
+        spec,
+        [...(source.get(spec.id) ?? new Map<number, Reading[]>())].flatMap(([atSec, list]) => {
+          const actual = agreed(list)
+          return actual === null ? [] : [{ atSec, actual }]
+        }),
+      ),
+    )
   }
 }
 
@@ -113,7 +154,5 @@ export function benchmarkStatement(spec: BenchmarkSpec, p: BenchmarkPoint): stri
     const amount = minutes >= 1.5 ? `about ${Math.round(minutes)} minutes` : minutes >= 0.75 ? 'about a minute' : `about ${Math.round(minutes * 60)} seconds`
     s += ` That is ${amount} ${spec.gapPhrase}.`
   }
-  const ref = spec.reference?.filter((r) => Math.abs(r.atSec - p.atSec) <= 90).sort((a, b) => Math.abs(a.atSec - p.atSec) - Math.abs(b.atSec - p.atSec))[0]
-  if (ref) s += ` For reference, ${ref.label}: about ${ref.value}.`
   return s
 }
