@@ -156,7 +156,12 @@ test('the stitched minimap is placed on the official map while playing: scale an
   // The placements are kept with the map.
   const saved = cleanMosaic(JSON.parse(JSON.stringify(r.mosaic.save())))!
   assert.ok(saved.aligned && Object.keys(saved.aligned).length >= 1)
-  assert.deepEqual(saved.alignedTo, { w: size, h: size })
+  assert.deepEqual(saved.alignedTo, { w: size, h: size, id: off.id })
+  // Placements made on another picture are not carried over to a new one.
+  const again = new MinimapMosaic('Synthetic', saved)
+  assert.ok(again.alignmentFor(Number(Object.keys(saved.aligned!)[0])))
+  again.setOfficial(analyzeOfficial(officialImage(size, 6), size, size))
+  assert.equal(again.alignmentFor(Number(Object.keys(saved.aligned!)[0])), null)
 })
 
 test('two identical wings: a respawn in the other wing is never put in the wrong one', () => {

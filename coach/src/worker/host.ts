@@ -6,6 +6,7 @@
 
 import { CoachEngine, type EngineOutput } from '../core/engine.ts'
 import { sampleGrid } from '../core/frameHealth.ts'
+import { analyzeOfficial } from '../core/map/official.ts'
 import { BoundedFrameQueue } from '../core/queue.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
 import type { Frame, TimelineEntry } from '../core/types.ts'
@@ -122,6 +123,10 @@ export class PipelineHost {
         return
       case 'boundary':
         if (this.engine) this.emit(this.engine.manualBoundary(msg.kind, msg.result, msg.now), true)
+        return
+      case 'official':
+        // A few hundred milliseconds for a large image, once per map; frames wait in the queue meanwhile.
+        this.engine?.setOfficial(msg.map, msg.image ? analyzeOfficial(msg.image.data, msg.image.width, msg.image.height) : null)
         return
       case 'stop': {
         this.queue.clear()

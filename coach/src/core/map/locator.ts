@@ -12,6 +12,7 @@
 
 import type { VisibleState } from '../types.ts'
 import { CELL, MinimapMosaic, readWindow, type MinimapRegion, type StoredMosaic, type TrackPoint, type TrackState } from './minimap.ts'
+import type { OfficialMap } from './official.ts'
 
 export interface MinimapSpec {
   /** Where the minimap usually is (normalised to the captured frame). */
@@ -63,6 +64,8 @@ export interface LocatorStatus {
   readonly seen: number
   readonly pieces: number
   readonly here: { readonly piece: number; readonly x: number; readonly y: number } | null
+  /** On the official overhead map: whether one is in use, and the share of this match's path placed on it. */
+  readonly official: { readonly placed: number } | null
 }
 
 interface RawEvent {
@@ -98,6 +101,8 @@ export class MinimapLocator {
   private lastFrameAt = 0
   private lastSaveAt = 0
   private lastMapRead = -Infinity
+  /** Official overhead maps, by map name. */
+  private readonly officials = new Map<string, OfficialMap>()
 
   constructor(spec: MinimapSpec, opts: { readonly stored?: readonly StoredMosaic[]; readonly region?: MinimapRegion | null; readonly fixed?: boolean } = {}) {
     this.spec = spec
@@ -176,7 +181,15 @@ export class MinimapLocator {
       this.pending = null
     }
     if (prev) this.stored.set(key(prev.map), prev.save())
+    next.setOfficial(this.officials.get(key(name)) ?? null)
     this.mosaic = next
+  }
+
+  /** The official overhead map of a map (null: none). Used from the next frame. */
+  setOfficial(name: string, off: OfficialMap | null): void {
+    if (off) this.officials.set(key(name), off)
+    else this.officials.delete(key(name))
+    if (this.mosaic && key(this.mosaic.map) === key(name)) this.mosaic.setOfficial(off)
   }
 
   /** A death or kill (at the time of the frame it was read from). */
@@ -256,7 +269,7 @@ export class MinimapLocator {
 
   status(now: number): LocatorStatus {
     const m = this.active
-    if (!this.fixed) return { enabled: false, reason: 'rotating', map: this.mosaic?.map ?? null, state: 'off', ncc: 0, ageMs: Infinity, seen: 0, pieces: 0, here: null }
+    if (!this.fixed) return { enabled: false, reason: 'rotating', map: this.mosaic?.map ?? null, state: 'off', ncc: 0, ageMs: Infinity, seen: 0, pieces: 0, here: null, official: null }
     return {
       enabled: true,
       reason: null,
@@ -267,7 +280,18 @@ export class MinimapLocator {
       seen: m?.seenArea ?? 0,
       pieces: m?.pieceCount ?? 0,
       here: this.mosaic?.here() ?? null,
+      official: this.mosaic?.hasOfficial ? { placed: this.placedShare(this.mosaic) } : null,
     }
+  }
+
+  private placedShare(m: MinimapMosaic): number {
+    let n = 0
+    let placed = 0
+    for (let i = m.trail.length - 1; i >= 0 && m.trail[i].t >= this.matchStart && n < 2000; i--) {
+      n++
+      if (m.alignmentFor(m.resolve(m.trail[i].piece, 0, 0).piece)) placed++
+    }
+    return n ? placed / n : 0
   }
 
   /** The stitched map to save, when it changed (at most every 20 s unless forced). */

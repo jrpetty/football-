@@ -15,6 +15,17 @@ import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
 import type { StoredMosaic } from '../src/core/map/minimap.ts'
+
+/** An official overhead map image kept for a map. */
+export interface OverheadInfo {
+  readonly mapId: string
+  readonly bytes: number
+  readonly savedAt: string
+}
+
+export type OverheadFetch =
+  | { readonly ok: true; readonly page: string; readonly candidates: readonly { readonly url: string; readonly bytes: Uint8Array }[] }
+  | { readonly ok: false; readonly error: string }
 import type { KnowledgeItem, KnowledgeSectionId } from '../src/core/knowledge/base.ts'
 
 export interface KnowledgeStatus {
@@ -133,6 +144,19 @@ export interface SightlineBridge {
   loadMosaics(profileId: string): Promise<StoredMosaic[]>
   saveMosaic(profileId: string, mosaic: StoredMosaic): Promise<boolean>
   deleteMosaic(profileId: string, map: string): Promise<void>
+  /**
+   * Official overhead maps (the game's own tactical map images), kept per map on this computer
+   * once the player imports or downloads them; never bundled with the app.
+   */
+  listOverheads(profileId: string): Promise<OverheadInfo[]>
+  loadOverhead(profileId: string, mapId: string): Promise<Uint8Array | null>
+  /** A PNG (the renderer re-encodes whatever was imported). */
+  saveOverhead(profileId: string, mapId: string, png: Uint8Array): Promise<boolean>
+  deleteOverhead(profileId: string, mapId: string): Promise<void>
+  /** Fetches the map's official guide page (from the pack) and the images on it that may be its overhead map. */
+  fetchOverhead(profileId: string, mapId: string): Promise<OverheadFetch>
+  /** Opens the map's official guide page in the browser. */
+  openOverheadPage(profileId: string, mapId: string): Promise<boolean>
   knowledgeStatus(profileId: string): Promise<KnowledgeStatus>
   /** Starts building in the background; poll knowledgeStatus for progress. */
   buildKnowledge(req: { profileId: string; focus: string }): Promise<KnowledgeStatus>

@@ -459,6 +459,11 @@ export interface GameMap {
   readonly weaponFit?: string
   readonly mistakes?: readonly string[]
   readonly sources?: readonly { readonly url: string; readonly title: string }[]
+  /**
+   * Where the map's overhead (tactical) map is published: the page the player can download or
+   * save it from. The image itself is never bundled.
+   */
+  readonly overhead?: { readonly page: string; readonly source: 'official' | 'community' }
 }
 
 export const ARSENAL_CATEGORIES = ['weapon', 'lethal', 'tactical', 'perk', 'field_upgrade', 'killstreak', 'wildcard'] as const
@@ -1471,6 +1476,14 @@ export function validateProfile(input: unknown): ValidationResult {
       if (id) mapIds.add(id)
       c.str(m.name, `${path}.name`, { max: 60 })
       for (const k of ['type', 'size', 'setting', 'layout', 'spawns', 'weaponFit'] as const) c.str(m[k], `${path}.${k}`, { optional: true, max: 700 })
+      if (m.overhead !== undefined) {
+        const o = c.obj(m.overhead, `${path}.overhead`)
+        if (o) {
+          const page = c.str(o.page, `${path}.overhead.page`, { max: 300 })
+          if (page && !/^https:\/\/[^\s/]+\/\S*$/.test(page)) c.errors.push(`${path}.overhead.page: must be an https URL`)
+          c.oneOf(o.source, `${path}.overhead.source`, ['official', 'community'] as const)
+        }
+      }
       const names = new Set<string>()
       c.arr(m.callouts, `${path}.callouts`).forEach((y, j) => {
         const cp = `${path}.callouts[${j}]`

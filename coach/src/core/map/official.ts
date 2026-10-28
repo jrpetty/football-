@@ -38,6 +38,8 @@ interface Level {
 }
 
 export interface OfficialMap {
+  /** A fingerprint of the picture (placements made on another picture do not carry over). */
+  readonly id: string
   /** The image as given. */
   readonly srcW: number
   readonly srcH: number
@@ -187,6 +189,7 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
   const levels: Level[] = [{ w, h, v: lum }]
   for (let l = 1; l <= 3; l++) levels.push(half(levels[l - 1]))
   return {
+    id: fingerprint(srcW, srcH, levels[3]),
     srcW,
     srcH,
     w,
@@ -199,6 +202,19 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
     score,
     levels,
   }
+}
+
+/** FNV-1a over the image's size and its smallest level, coarsely quantised (the same file gives the same id). */
+function fingerprint(srcW: number, srcH: number, lv: Level): string {
+  let h = 0x811c9dc5
+  const add = (v: number) => {
+    h ^= v & 0xff
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  for (const v of [srcW, srcW >> 8, srcH, srcH >> 8]) add(v)
+  for (const v of [lv.w, lv.h]) add(v)
+  for (let i = 0; i < lv.v.length; i++) add(Math.round(lv.v[i] * 15))
+  return h.toString(16).padStart(8, '0')
 }
 
 function dilate(m: Uint8Array, w: number, h: number, r: number): Uint8Array {

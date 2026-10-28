@@ -4,7 +4,7 @@
 // (match history, stored patterns, notes, research) and the "ask the coach"
 // conversation. React reads one immutable state object (useSyncExternalStore).
 
-import type { PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
+import type { OverheadInfo, PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
 import type { CloudStatus, ResearchBrief } from '../../shared/cloud.ts'
 import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
@@ -24,6 +24,8 @@ import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
 import type { FromWorker, ToWorker, VisionConfig, WorkerStatus } from '../worker/protocol.ts'
 import type { StoredMosaic } from '../core/map/minimap.ts'
+import { findMap } from '../core/analyses/mapModel.ts'
+import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE, type DecodedImage, type OverheadAnalysis } from './overhead.ts'
 import { policyFor } from './policy.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
@@ -110,6 +112,10 @@ export interface SessionState {
   readonly researching: boolean
   /** Maps stitched from the minimap, by map name (lower case). A demo's are synthetic and never saved. */
   readonly mosaics: Readonly<Record<string, ShownMosaic>>
+  /** Official overhead map images kept for this game, by map id. */
+  readonly overheads: Readonly<Record<string, OverheadInfo>>
+  /** The map whose official image is being imported or downloaded. */
+  readonly overheadBusy: string | null
 
   readonly conversation: readonly QaEntry[]
   readonly talk: 'idle' | 'recording' | 'transcribing'
@@ -159,6 +165,8 @@ const INITIAL: SessionState = {
   research: null,
   researching: false,
   mosaics: {},
+  overheads: {},
+  overheadBusy: null,
   conversation: [],
   talk: 'idle',
   talkError: null,
@@ -244,16 +252,161 @@ export class CoachSession {
     const profile = this.profile
     if (!profile) return
     const id = profile.id
-    const [history, snapshot, notes, research, stitched] = await Promise.all([
+    const [history, snapshot, notes, research, stitched, kept] = await Promise.all([
       this.bridge.loadMatches(id).catch(() => []),
       this.bridge.loadTendencies(id).catch(() => null),
       this.bridge.loadNotes(id).catch(() => null),
       this.bridge.loadResearch(id).catch(() => null),
       profile.positioning?.minimap ? this.bridge.loadMosaics(id).catch(() => []) : Promise.resolve([]),
+      profile.knowledge.maps?.length ? this.bridge.listOverheads(id).catch(() => []) : Promise.resolve([]),
     ])
     if (this.profile?.id !== id) return
     const mosaics = Object.fromEntries(stitched.map((m) => [m.map.toLowerCase(), m]))
-    this.set({ profileId: id, history, snapshot, notes, research, mosaics, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
+    const overheads = Object.fromEntries(kept.map((o) => [o.mapId, o]))
+    this.set({ profileId: id, history, snapshot, notes, research, mosaics, overheads, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
+  }
+
+  // --- Official overhead maps ------------------------------------------------------------------
+
+  private overheadCache = new Map<string, { savedAt: string; png: Promise<Uint8Array | null>; url: Promise<string | null>; analysis?: Promise<OverheadAnalysis | null> }>()
+
+  /**
+   * Imports official overhead map images the player picked or dropped. `mapId`: all for that map;
+   * else each file's name says which map it is. Each must look like a tactical map.
+   */
+  async importOverheads(files: readonly File[], mapId?: string): Promise<{ name: string; ok: boolean; message: string }[]> {
+    const profile = this.profile
+    const maps = profile?.knowledge.maps ?? []
+    if (!profile || !maps.length) return files.map((f) => ({ name: f.name, ok: false, message: 'This game has no maps to import for.' }))
+    const out: { name: string; ok: boolean; message: string }[] = []
+    for (const f of files.slice(0, 40)) {
+      const id = mapId ?? mapForFile(f.name, maps)
+      const map = maps.find((m) => m.id === id)
+      if (!map) {
+        out.push({ name: f.name, ok: false, message: 'Which map is it? Name the file after the map (e.g. "cachette.png"), or import it from that map\'s row.' })
+        continue
+      }
+      if (f.size > 40 * 1024 * 1024) {
+        out.push({ name: f.name, ok: false, message: 'Too large (over 40 MB).' })
+        continue
+      }
+      this.set({ overheadBusy: map.id })
+      try {
+        const img = await decodeImage(f)
+        out.push({ name: f.name, ...(await this.keepOverhead(map.id, map.name, img)) })
+      } catch {
+        out.push({ name: f.name, ok: false, message: 'Not an image this app can read (PNG, JPEG or WebP).' })
+      } finally {
+        this.set({ overheadBusy: null })
+      }
+    }
+    return out
+  }
+
+  /** Downloads a map's official overhead map from its official page (desktop app). Returns what happened. */
+  async downloadOverhead(mapId: string): Promise<{ ok: boolean; message: string }> {
+    const profile = this.profile
+    const map = profile?.knowledge.maps?.find((m) => m.id === mapId)
+    if (!profile || !map || this.state.overheadBusy) return { ok: false, message: 'Busy.' }
+    this.set({ overheadBusy: mapId })
+    try {
+      const r = await this.bridge.fetchOverhead(profile.id, mapId).catch((e: unknown) => ({ ok: false as const, error: String(e) }))
+      if (!r.ok) return { ok: false, message: r.error }
+      // The image on the page that is most like a tactical map.
+      let best: { img: DecodedImage; score: number } | null = null
+      for (const c of r.candidates) {
+        try {
+          const img = await decodeImage(c.bytes)
+          const a = await analyzeOverhead(img)
+          if (a.score >= MIN_OVERHEAD_SCORE && (!best || a.score > best.score)) best = { img, score: a.score }
+        } catch {
+          // Not an image: the next one.
+        }
+      }
+      if (!best) return { ok: false, message: `None of the ${r.candidates.length} image${r.candidates.length === 1 ? '' : 's'} on the official page is an overhead map. Open the page, save the map image and import it.` }
+      return await this.keepOverhead(map.id, map.name, best.img)
+    } finally {
+      this.set({ overheadBusy: null })
+    }
+  }
+
+  private async keepOverhead(mapId: string, name: string, img: DecodedImage): Promise<{ ok: boolean; message: string }> {
+    const profile = this.profile!
+    const a = await analyzeOverhead(img)
+    if (a.score < MIN_OVERHEAD_SCORE) {
+      return { ok: false, message: `This does not look like ${name}'s overhead map (${Math.round(a.score * 100)}% like a tactical map; a screenshot of the game is not one). Use the official tac map image.` }
+    }
+    const png = await encodePng(img)
+    if (!(await this.bridge.saveOverhead(profile.id, mapId, png).catch(() => false))) return { ok: false, message: 'Could not save the image.' }
+    const info: OverheadInfo = { mapId, bytes: png.byteLength, savedAt: new Date().toISOString() }
+    this.set({ overheads: { ...this.state.overheads, [mapId]: info } })
+    this.syncOfficial(this.state.report?.map?.minimap?.map ?? null)
+    return { ok: true, message: `${name}: official overhead map kept (${img.width}×${img.height}, ${Math.round(a.playable * 100)}% of it in bounds).` }
+  }
+
+  async removeOverhead(mapId: string): Promise<void> {
+    if (!this.profile) return
+    await this.bridge.deleteOverhead(this.profile.id, mapId).catch(() => undefined)
+    const next = { ...this.state.overheads }
+    delete next[mapId]
+    this.set({ overheads: next })
+    this.syncOfficial(this.state.report?.map?.minimap?.map ?? null)
+  }
+
+  async openOverheadPage(mapId: string): Promise<boolean> {
+    return this.profile ? this.bridge.openOverheadPage(this.profile.id, mapId).catch(() => false) : false
+  }
+
+  private overheadEntry(mapId: string) {
+    const info = this.state.overheads[mapId]
+    const profile = this.profile
+    if (!info || !profile) return null
+    const hit = this.overheadCache.get(mapId)
+    if (hit?.savedAt === info.savedAt) return hit
+    if (hit) void hit.url.then((u) => u && URL.revokeObjectURL(u))
+    const png = this.bridge.loadOverhead(profile.id, mapId).catch(() => null)
+    const url = png.then((b) => (b ? URL.createObjectURL(new Blob([b as Uint8Array<ArrayBuffer>], { type: 'image/png' })) : null))
+    const entry: { savedAt: string; png: Promise<Uint8Array | null>; url: Promise<string | null>; analysis?: Promise<OverheadAnalysis | null> } = { savedAt: info.savedAt, png, url }
+    this.overheadCache.set(mapId, entry)
+    return entry
+  }
+
+  /** A map's official overhead map picture (an object URL), for thumbnails. */
+  overheadPicture(mapId: string): Promise<string | null> {
+    return this.overheadEntry(mapId)?.url ?? Promise.resolve(null)
+  }
+
+  /** A map's official overhead map for the views: the picture (an object URL) and its analysis. */
+  async overhead(mapId: string): Promise<{ url: string; analysis: OverheadAnalysis } | null> {
+    const e = this.overheadEntry(mapId)
+    if (!e) return null
+    e.analysis ??= e.png.then(async (b) => (b ? analyzeOverhead(await decodeImage(b)) : null)).catch(() => null)
+    const [url, analysis] = await Promise.all([e.url, e.analysis])
+    return url && analysis ? { url, analysis } : null
+  }
+
+  /** What official image the worker has for each map (by map name), so it is sent once. */
+  private officialSent = new Map<string, string>()
+
+  /** Gives the worker the official overhead map of the map being played (real play only). */
+  private syncOfficial(mapName: string | null): void {
+    const profile = this.profile
+    if (!mapName || !profile || !this.worker || this.sourceKind !== 'screen') return
+    const game = findMap(profile.knowledge.maps, mapName)
+    const info = game ? this.state.overheads[game.id] : undefined
+    const k = mapName.toLowerCase()
+    const tag = info?.savedAt ?? ''
+    if ((this.officialSent.get(k) ?? '') === tag) return
+    this.officialSent.set(k, tag)
+    const worker = this.worker
+    if (!info || !game) return this.post({ type: 'official', map: mapName, image: null })
+    void (async () => {
+      const png = await this.bridge.loadOverhead(profile.id, game.id).catch(() => null)
+      const img = png ? await decodeImage(png).catch(() => null) : null
+      if (this.worker !== worker) return
+      if (!img) return this.post({ type: 'official', map: mapName, image: null })
+      this.post({ type: 'official', map: mapName, image: img }, [img.data.buffer])
+    })()
   }
 
   async saveNotes(notes: PlayerNotes): Promise<boolean> {
@@ -371,6 +524,7 @@ export class CoachSession {
     worker.onerror = (e) => this.set({ error: `Analysis stopped: ${e.message}` })
     this.worker = worker
     this.inFlight = 0
+    this.officialSent.clear()
     this.post({
       type: 'start',
       profile,
@@ -912,6 +1066,7 @@ export class CoachSession {
     const patch: Mutable<SessionState> = {}
     if (msg.status) patch.status = msg.status
     if (msg.report) patch.report = msg.report
+    if (msg.report?.map?.minimap?.map) this.syncOfficial(msg.report.map.minimap.map)
     if (msg.entries.length) {
       const timeline = [...this.state.timeline, ...msg.entries]
       patch.timeline = timeline.length > TIMELINE_CAP ? timeline.slice(-TIMELINE_CAP) : timeline

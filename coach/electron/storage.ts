@@ -15,6 +15,9 @@
 //   knowledge/<pack>.maps/<map>.json.gz  maps stitched from the player's minimap (the
 //                            minimap's picture of the map, callouts and heights; no
 //                            frames); deleted with player data
+//   knowledge/<pack>.official/<map>.png  official overhead map images the player imported
+//                            or downloaded (the game's published tactical maps; public
+//                            content, never bundled); removed per map
 //
 // Inputs come from the renderer and are re-validated here.
 
@@ -34,6 +37,11 @@ import { DEFAULT_CLOUD, type CloudSettings, type ResearchBrief } from '../shared
 
 /** A stitched map, as JSON, at most this long (a large map is about 1 MB). */
 const MAX_MOSAIC_CHARS = 6_000_000
+/** An official overhead map image (a 2048 px tactical map is 2–6 MB as PNG). */
+const MAX_OVERHEAD_BYTES = 30 * 1024 * 1024
+const MAP_ID = /^[a-z0-9][a-z0-9-]{0,47}$/
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+const isPng = (b: Uint8Array) => b.byteLength > 64 && PNG_SIGNATURE.every((v, i) => b[i] === v)
 const PROFILE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const MAX_PROFILE_BYTES = 512 * 1024
 const MAX_PROFILES = 50
@@ -298,6 +306,45 @@ export class Storage {
 
   async deleteMosaic(profileId: unknown, map: unknown): Promise<void> {
     if (isProfileId(profileId) && typeof map === 'string' && map.trim()) await rm(this.mosaicPath(profileId, map), { force: true })
+  }
+
+  // --- Official overhead maps (images the player imported or downloaded) -----------------
+
+  async listOverheads(profileId: unknown): Promise<{ mapId: string; bytes: number; savedAt: string }[]> {
+    if (!isProfileId(profileId)) return []
+    const out: { mapId: string; bytes: number; savedAt: string }[] = []
+    for (const name of (await readdir(this.officialDir(profileId)).catch(() => [] as string[])).slice(0, 120)) {
+      const mapId = name.endsWith('.png') ? name.slice(0, -4) : ''
+      if (!MAP_ID.test(mapId)) continue
+      const st = await stat(join(this.officialDir(profileId), name)).catch(() => null)
+      if (st?.isFile()) out.push({ mapId, bytes: st.size, savedAt: st.mtime.toISOString() })
+    }
+    return out
+  }
+
+  async loadOverhead(profileId: unknown, mapId: unknown): Promise<Uint8Array | null> {
+    if (!isProfileId(profileId) || typeof mapId !== 'string' || !MAP_ID.test(mapId)) return null
+    const buf = await readFile(join(this.officialDir(profileId), `${mapId}.png`)).catch(() => null)
+    return buf && isPng(buf) ? new Uint8Array(buf) : null
+  }
+
+  async saveOverhead(profileId: unknown, mapId: unknown, png: unknown): Promise<boolean> {
+    if (!isProfileId(profileId) || typeof mapId !== 'string' || !MAP_ID.test(mapId) || !(png instanceof Uint8Array)) return false
+    if (png.byteLength > MAX_OVERHEAD_BYTES || !isPng(png)) return false
+    await mkdir(this.officialDir(profileId), { recursive: true })
+    const path = join(this.officialDir(profileId), `${mapId}.png`)
+    const tmp = `${path}.${process.pid}.tmp`
+    await writeFile(tmp, png)
+    await rename(tmp, path)
+    return true
+  }
+
+  async deleteOverhead(profileId: unknown, mapId: unknown): Promise<void> {
+    if (isProfileId(profileId) && typeof mapId === 'string' && MAP_ID.test(mapId)) await rm(join(this.officialDir(profileId), `${mapId}.png`), { force: true })
+  }
+
+  private officialDir(profileId: string): string {
+    return join(this.root, 'knowledge', `${profileId}.official`)
   }
 
   private mapsDir(profileId: string): string {

@@ -72,6 +72,7 @@ const NO_TTS: TtsStatus = {
   realTimeFactor: {},
 }
 const previewMosaics = new Map<string, Map<string, StoredMosaic>>()
+const previewOverheads = new Map<string, Map<string, { png: Uint8Array; savedAt: string }>>()
 
 const NO_KNOWLEDGE = { building: false, stage: null, error: null, knowledge: null, screens: 0 }
 const desktopOnly = { ok: false as const, error: 'Cloud features need the desktop app (your API key never touches a web page).', fatal: true }
@@ -241,6 +242,28 @@ export const browserBridge: SightlineBridge = {
   },
   async deleteMosaic(profileId: string, map: string) {
     previewMosaics.get(profileId)?.delete(map.toLowerCase())
+  },
+  // Official overhead maps: for this page only; downloading needs the desktop app.
+  async listOverheads(profileId: string) {
+    return [...(previewOverheads.get(profileId) ?? [])].map(([mapId, v]) => ({ mapId, bytes: v.png.byteLength, savedAt: v.savedAt }))
+  },
+  async loadOverhead(profileId: string, mapId: string) {
+    return previewOverheads.get(profileId)?.get(mapId)?.png ?? null
+  },
+  async saveOverhead(profileId: string, mapId: string, png: Uint8Array) {
+    const m = previewOverheads.get(profileId) ?? new Map<string, { png: Uint8Array; savedAt: string }>()
+    m.set(mapId, { png, savedAt: new Date().toISOString() })
+    previewOverheads.set(profileId, m)
+    return true
+  },
+  async deleteOverhead(profileId: string, mapId: string) {
+    previewOverheads.get(profileId)?.delete(mapId)
+  },
+  async fetchOverhead() {
+    return { ok: false as const, error: 'Downloading needs the desktop app. Open the official page, save the overhead map image, and import it here.' }
+  },
+  async openOverheadPage() {
+    return false
   },
   async knowledgeStatus() {
     return NO_KNOWLEDGE

@@ -20,6 +20,7 @@ import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analys
 import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type MapPosition } from './analyses/mapModel.ts'
 import { MinimapLocator, type LocatorStatus, type MatchPins } from './map/locator.ts'
 import type { StoredMosaic } from './map/minimap.ts'
+import type { OfficialMap } from './map/official.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -862,6 +863,11 @@ export class CoachEngine {
   }
 
   /** The stitched map to save, when it changed (throttled unless forced). */
+  /** The official overhead map of a map (null: none). */
+  setOfficial(map: string, off: OfficialMap | null): void {
+    this.locator?.setOfficial(map, off)
+  }
+
   takeMosaic(now: number, force = false): StoredMosaic | null {
     return this.locator?.takeSave(now, force) ?? null
   }

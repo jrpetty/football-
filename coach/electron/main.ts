@@ -48,6 +48,7 @@ import type { KnowledgeStatus } from '../shared/bridge.ts'
 import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
 import { ASR_MODEL, isInstalled, installModel, removeModel, TTS_MODELS } from './models.ts'
+import { fetchOverhead, overheadPage } from './overhead.ts'
 import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
@@ -466,6 +467,22 @@ function registerIpc(): void {
   handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
   handle(CHANNELS.saveMosaic, (id, m) => storage.saveMosaic(id, m))
   handle(CHANNELS.deleteMosaic, (id, map) => storage.deleteMosaic(id, map))
+  // Official overhead maps: kept on this computer, fetched only when the player asks.
+  handle(CHANNELS.listOverheads, (id) => storage.listOverheads(id))
+  handle(CHANNELS.loadOverhead, (id, mapId) => storage.loadOverhead(id, mapId))
+  handle(CHANNELS.saveOverhead, (id, mapId, png) => storage.saveOverhead(id, mapId, png))
+  handle(CHANNELS.deleteOverhead, (id, mapId) => storage.deleteOverhead(id, mapId))
+  handle(CHANNELS.fetchOverhead, async (id, mapId) => {
+    const page = overheadPage(await resolveProfile(id), mapId)
+    if (!page) return { ok: false, error: 'This map has no official page to download from. Import an image instead.' }
+    return fetchOverhead(page)
+  })
+  handle(CHANNELS.openOverheadPage, async (id, mapId) => {
+    const page = overheadPage(await resolveProfile(id), mapId)
+    if (!page) return false
+    await shell.openExternal(page.url.toString())
+    return true
+  })
   handle(CHANNELS.saveScreens, async (catalog) => {
     const ok = await storage.saveScreens(catalog)
     if (ok) promptCache.clear()

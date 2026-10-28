@@ -70,6 +70,11 @@ export type ToWorker =
   | { readonly type: 'answer'; readonly question: string; readonly text: string; readonly author: 'template' | 'ai'; readonly now: number }
   | { readonly type: 'boundary'; readonly kind: 'round-end' | 'match-end'; readonly result: RoundResult; readonly now: number }
   | { readonly type: 'stop'; readonly now: number }
+  /**
+   * The official overhead map of a map (null: none), as RGBA (transferred): the stitched minimap
+   * is placed on it from the next frame.
+   */
+  | { readonly type: 'official'; readonly map: string; readonly image: { readonly data: Uint8ClampedArray; readonly width: number; readonly height: number } | null }
 
 export interface VisionStatus {
   readonly enabled: boolean

@@ -12,6 +12,7 @@ import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
 import { MinimapAlign } from '../components/MinimapAlign.tsx'
+import { OfficialMapsPanel } from '../components/OfficialMapsPanel.tsx'
 import { HotkeyField } from '../components/HotkeyField.tsx'
 import type { Hotkeys } from '../../core/settings.ts'
 import { dateShort, usd, usdFine, usdRange } from '../format.ts'
@@ -49,6 +50,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} usage={usage} /> : null}
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
+      {profile.positioning?.minimap && profile.knowledge.maps?.length ? <OfficialMapsPanel session={session} profile={profile} info={info} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />

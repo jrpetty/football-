@@ -465,7 +465,7 @@ export interface StoredMosaic {
   /** Pieces placed on the official overhead map (stitched pixels → its pixels), by piece id. */
   readonly aligned?: Readonly<Record<string, Alignment>>
   /** The size of the official image those placements refer to. */
-  readonly alignedTo?: { readonly w: number; readonly h: number }
+  readonly alignedTo?: { readonly w: number; readonly h: number; readonly id?: string }
 }
 
 /** Thresholds: keep tracking; accept a re-find; join two pieces. */
@@ -529,14 +529,26 @@ export class MinimapMosaic {
   }
 
   /** Use the official overhead map (or stop using it). Placements made against another size are scaled. */
-  setOfficial(off: OfficialMap | null, stored?: StoredMosaic | null): void {
+  setOfficial(off: OfficialMap | null): void {
+    if (off === this.official) return
     this.official = off
     this.job = null
-    const to = stored?.alignedTo
-    if (off && to && (to.w !== off.srcW || to.h !== off.srcH)) {
-      const kx = off.srcW / to.w
-      for (const [id, a] of this.aligned) this.aligned.set(id, { ...a, s: a.s * kx, tx: a.tx * kx, ty: a.ty * (off.srcH / to.h) })
+    const to = this.alignedTo
+    if (!off) return
+    if (to && ((to.id && to.id !== off.id) || to.w !== off.srcW || to.h !== off.srcH)) {
+      // Another picture: everything is placed again on it (placing takes about a second a piece).
+      this.aligned.clear()
+      this.alignedArea.clear()
+      this.provisional.clear()
+      this.anchored.clear()
     }
+    this.alignedTo = { w: off.srcW, h: off.srcH, id: off.id }
+    this.dirty = true
+  }
+
+  /** Whether an official map is in use. */
+  get hasOfficial(): boolean {
+    return !!this.official
   }
 
   /** Follows one window. */
@@ -968,13 +980,13 @@ export class MinimapMosaic {
       ...(this.aligned.size
         ? {
             aligned: Object.fromEntries([...this.aligned].filter(([id]) => !this.provisional.has(id) && (kept.has(id) || resolvedKept(id))).map(([id, a]) => [String(id), a])),
-            ...(this.official ? { alignedTo: { w: this.official.srcW, h: this.official.srcH } } : this.alignedTo ? { alignedTo: this.alignedTo } : {}),
+            ...(this.alignedTo ? { alignedTo: this.alignedTo } : {}),
           }
         : {}),
     }
   }
 
-  private alignedTo: { w: number; h: number } | null = null
+  private alignedTo: { w: number; h: number; id?: string } | null = null
 
   /** Places a piece on the official map by hand (the overhead view's Adjust). */
   setAlignment(piece: number, a: Alignment): void {
@@ -1087,6 +1099,7 @@ function cleanAligned(s: Partial<StoredMosaic>): Pick<StoredMosaic, 'aligned' | 
     aligned[id] = { s: o.s as number, tx: o.tx as number, ty: o.ty as number, ncc: o.ncc as number, coverage: o.coverage as number, ...(fin(o.margin) ? { margin: o.margin as number } : {}), ...(o.manual === true ? { manual: true } : {}) }
   }
   const to = s.alignedTo
-  const alignedTo = to && fin(to.w) && fin(to.h) && to.w > 0 && to.h > 0 ? { w: to.w, h: to.h } : undefined
+  const id = to && typeof to.id === 'string' && /^[0-9a-f]{8}$/.test(to.id) ? to.id : undefined
+  const alignedTo = to && fin(to.w) && fin(to.h) && to.w > 0 && to.h > 0 ? { w: to.w, h: to.h, ...(id ? { id } : {}) } : undefined
   return Object.keys(aligned).length ? { aligned, ...(alignedTo ? { alignedTo } : {}) } : {}
 }
