@@ -1,0 +1,1874 @@
+package com.jrpetty.mcassistant.entity.goal;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.Job;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.LadderBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+
+/**
+ * Building from blueprints, placed block-by-block (bottom-up) from what the
+ * assistant actually carries — nothing is conjured. Structural blocks come
+ * from any building material in its pack (planks, logs, cobble, stone,
+ * dirt); functional parts (furnaces, chests, crafting tables, ladders,
+ * torches) are real items it must have crafted or been given first.
+ *
+ * Blueprints (each on a 5x5 or 3x3 footprint, door facing the assistant):
+ *   wall, platform, shelter               — structure only
+ *   smeltery  — 3 furnaces along the back, 2 chests, crafting table, torch
+ *   storage   — 4 chests lining the walls, torch
+ *   workshop  — crafting table + furnace + chest, torch
+ *   watchtower — 3x3 tower with a ladder shaft up to a walled platform
+ */
+public class BuildGoal extends Goal {
+
+    public static final Set<String> STRUCTURES = Set.of(
+        "wall", "platform", "shelter", "smeltery", "storage", "workshop", "watchtower",
+        "house", "room", "pen", "fortify", "lighthouse", "column", "well", "hall",
+        "market", "chapel", "gateway", "granary", "barracks", "monument", "guesthouse",
+        // the crafts' buildings and the amenities: missing here, a village's builder was told
+        // "I can build: ..." and the café, the shop and the smithy never went up
+        "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2",
+        // [dining] the restaurant: its dining room, its kitchen behind the pass (entity/DiningPlaces)
+        "restaurant",
+        // the Village Storehouse laid into a storehouse shed built before there were units
+        "storehouse",
+        // what the later ages add: a fountain on the square, a manor house, a bell tower
+        "fountain", "manor", "belltower",
+        // the leader's hall, the best and biggest in the town, and the courtyard before the board
+        "townhall", "court",
+        // the schoolhouse, once there are children to fill it (School)
+        "school",
+        // [civic-land] a knight's manor on the land the town granted it, or the grander hall it paid for (KnightManors)
+        "knightmanor", "knighthall",
+        // the bank: a counter, a vault behind bars, the ledger on a lectern (entity/Bank)
+        "bank",
+        // the park among the homes, with its fountain and benches (entity/Park)
+        "park",
+        // [flats] the Iron Age's blocks of flats (entity/Flats)
+        "flats",
+
+        // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
+        "museum",
+        // [fleet] the auction house, the market day's auction under a roof (entity/Auctions)
+        "auction",
+        // [econ-housing] the villa a well-off household has built for itself (HousingMarket)
+        "villa",
+        // the stable, once the village has horses (Stables)
+        "stable",
+        // [batchA] the infirmary, its beds for the sick and the hurt (entity/Infirmary, Health)
+        "infirmary",
+        // [batchC] the football pitch (entity/Pitch) and the watch's archery range (entity/Archery)
+        "pitch", "range",
+        // [batchD] the open-air stage where the town's players put on its stories (Theatre)
+        "theatre",
+        // [culture-wonders] the theatre under a roof (Theatre); the town's own wonders, raised in stages (TownWonders)
+        "playhouse", "minster", "belfry", "amphitheatre",
+        // [batchE] the town's look: the windmill, the bakery, the inn, the orchard and the allotments (TownLook)
+        "windmill", "bakery", "inn", "orchard", "allotments",
+        // [batchF] the post office (Post), and the statue the town's own fund pays for (PublicFund)
+        "postoffice", "statue",
+        // [econ-store] the town store, once the town has outgrown its little shop (Store)
+        "store",
+        // [war-prep] the armoury and the training yard, on a war footing (entity/WarWorks)
+        "armoury", "trainingyard",
+        // [disasters] the fire station, its buckets on a rack and its fire bell (entity/FireSafety)
+        "firestation",
+        // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
+        "lodge",
+        // [fireworks] the powder hut, the fireworks maker's: stone, out at the edge of the town (entity/FireworksMaker)
+        "powderhut",
+        // [cartographer] the map room: the cartographer's table, its lectern, its chests and its map wall (Cartographers)
+        "maproom",
+        // [library] the town library, its real books on its shelves (entity/Library)
+        "townlibrary",
+        // [fletcher] the fletcher's hut, its table and its sifting floor (entity/Fletchers)
+        "fletcher",
+        // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
+        "golemyard",
+        // [police] the watch house: the front desk, the notice board of the wanted, the records and the cells (entity/WatchHouse)
+        "watchhouse",
+        // [war-after] the stockade: a pen of fences and a lean-to for the prisoners of war the cells will not take (entity/Prisoners)
+        "stockade",
+        // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
+        "tradingpost",
+        // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
+        "divershed",
+        // [perks] the wonders of the world, one of each in the world, the first town to raise it keeping it (entity/Wonders)
+        "greatforge", "skygarden", "clockworkgate", "colossus", "grandbazaar", "arena", "grandlibrary", "cathedral",
+        "greatlighthouse", "observatory",
+        // [redstone] the redstone engineer's workshop: its bench, its lectern of plans, its chests of parts (entity/Engineers)
+        "redstoneworks",
+        // [roles-b] the beekeeper's apiary and honey house, and the enchanter's tower (entity/Apiary, CraftScale)
+        "apiary", "enchanter",
+        // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
+        "huntlodge", "barn",
+        // [roles-e] the wheelwright's shed: its bench, grindstone and anvil, where the wagons are built (entity/Wheelwrights)
+        "wheelwright",
+        // [tech-tree] the scholars' academy, and what the inventions let a town raise (entity/InventionWorks)
+        "academy", "watermill", "aqueduct", "clocktower", "foundry",
+        // [trade-world] the harbour office on the bank and the lighthouse beside it (entity/Harbours)
+        "harbour", "seamark");
+
+    /** Half the width of a structure's footprint: the meeting hall, the market, the
+     *  barracks, the chapel's length and the gateway's step are seven across, the rest
+     *  five or less. The ground work and the stocking read it. */
+    public static int halfOf(String structure) {
+        if (Blueprints.has(structure)) {
+            int[] g = Blueprints.groundHalf(structure);
+            return Math.max(g[0], g[1]);
+        }
+        return switch (structure) {
+            case "hall", "market", "barracks", "chapel", "gateway" -> 3;
+            default -> 2;
+        };
+    }
+
+    /** What goes in a blueprint cell. */
+    public enum Part { BLOCK, FURNACE, CHEST, CRAFTING_TABLE, TORCH, LADDER, FENCE, GATE, WINDOW, BED, OBSIDIAN,
+        /** Not a part: something natural in the building's way that comes down first (leaves). */
+        CLEAR,
+        /** The finishing: a door, a lantern, water in a well, hay, barrels, flowers, a rug, an anvil,
+         *  a cauldron, a bell. Each is put in if the village has it, and left out if not. */
+        DOOR, LANTERN, WATER, HAY, BARREL, FLOWER, CARPET, ANVIL, CAULDRON, BELL,
+        /** The furniture of the crafts' buildings: put in if the village has it (or can make it). */
+        BOOKSHELF, LECTERN, ENCHANTING, BREWING, SMOKER, LOOM, GRINDSTONE,
+        /** A tavern's hearth fire and its note blocks. */
+        CAMPFIRE, NOTE_BLOCK,
+        /** A storehouse unit: twenty-seven laid in a cube join into the Village Storehouse. */
+        STOREHOUSE,
+        /** [cartographer] The map room's cartography table (Cartographers). */
+        CARTOGRAPHY }
+
+    /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
+    public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
+        Placement(BlockPos pos, Part part) { this(pos, part, Blueprints.Style.GENERIC, Blueprints.Way.UP); }
+        Placement at(BlockPos where) { return new Placement(where, part, style, way); }
+    }
+
+    private final AssistantEntity assistant;
+    @Nullable private Job job;
+    private final List<Placement> plan = new ArrayList<>();
+    private Direction facing = Direction.NORTH;
+    private int cursor;
+    private int placed;
+    /** What we set out to build, kept so the finish can report it. */
+    @Nullable private String building;
+    /** The beds a new house gets laid free, wool or none: a town of eight stood a week at eight folk with
+     *  five houses up and their twelve beds unmade, and no child was born for want of one. */
+    public static final int FREE_BEDS = 2;
+    /** The bed being laid now is one of those. */
+    private boolean freeBedNow;
+    /** Toward the next block, in hundredths of a tick (a hundred a tick; buildPaceHundredths a block). */
+    private int workTicks;
+    private int stuckTicks;
+    /** Ticks spent waiting for the builder's own feet to move off a cell. */
+    private int standTicks;
+    /** Cells put off to the end of the plan because the builder stood in them, and how often. */
+    private final java.util.Map<Long, Integer> putOff = new java.util.HashMap<>();
+    /** The nearest the builder has got to the cell it is walking to. */
+    private double nearest = Double.MAX_VALUE;
+    /** Cells given up on since the last block went down. */
+    private int skipped;
+    /** Cells given up on the way through (out of reach, or stood in once too often): each gets one
+     *  more look when the rest is down. A frame a block short, a floor with a hole, is no building. */
+    private final java.util.List<Placement> missed = new java.util.ArrayList<>();
+    private boolean lastLook;
+    private int myGen;
+    private int perimeterRadius = 5; // fortify ring radius (overridable for a big compound)
+    /** [integrity] The anchor of the town's building this is (an anchored settler's build): the gate (TownBlocks)
+     *  lets it set its own building's cells and nobody else's. Null for a hired hand's build. */
+    @Nullable private BlockPos ownAnchor;
+    /** What the builder said as it stopped (buildNowForTests reports it). */
+    @Nullable private String lastWords;
+    /** [build-world] Tests: every cell within the builder's reach and no pace kept (buildNowForTests). */
+    private static boolean handsForTests;
+    /** [build-world] Tests: what the builder is handed for the cell it comes to (buildNowForTests). */
+    @Nullable private static java.util.function.BiConsumer<AssistantEntity, Placement> stockForTests;
+
+    /**
+     * [build-world] Tests: a building put up now by this builder through its own goal, as a town's builder puts one up
+     * (its plan, its ground work, its order, each block out of its pack and laid as tick lays it), with every cell
+     * within its reach and no pace kept. {@code stock} fills its pack: once with null before it starts, and then with
+     * the cell it is about to lay. What it said as it stopped.
+     */
+    public static String buildNowForTests(AssistantEntity builder, String structure, BlockPos anchor, Direction facing,
+                                          java.util.function.BiConsumer<AssistantEntity, Placement> stock) {
+        builder.clearQueue();
+        builder.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt(structure, anchor, facing, 0));
+        stock.accept(builder, null);
+        BuildGoal g = new BuildGoal(builder);
+        handsForTests = true;
+        stockForTests = stock;
+        try {
+            g.start();
+            for (int guard = 0; g.job != null && guard < 400000; guard++) g.tick();
+        } finally {
+            handsForTests = false;
+            stockForTests = null;
+        }
+        return g.lastWords == null ? "" : g.lastWords;
+    }
+
+    public BuildGoal(AssistantEntity assistant) {
+        this.assistant = assistant;
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+    }
+
+    /**
+     * Is this something to build a wall out of?
+     *
+     * <p>This was a list of six items, which meant a crew standing on a pile
+     * of deepslate, bricks, sandstone or wool it had just made could not put a
+     * single one of them in a wall — it would go and cut more oak instead. The
+     * question is now asked of the block itself: does it stack, stay put and
+     * fill its own cube, and does it have no better job to be doing? Every
+     * brick, tile, plank and stone the game has answers yes, including ones
+     * added by other mods, and sand answers no because a sand wall arrives on
+     * the floor.
+     */
+    public static boolean isBuildingBlock(ItemStack s) {
+        if (s.isEmpty() || !(s.getItem() instanceof BlockItem)) return false;
+        return com.jrpetty.mcassistant.BlockLore.structural(s);
+    }
+
+    /**
+     * What a blueprint is made of, counted from the blueprint itself — so the
+     * people who stock a build do it from the same drawing the builder works
+     * from, and cannot drift out of step with it. (The hand-kept tallies had
+     * no ladders for the watchtower and lighthouse, no fences for the pen, and
+     * said ninety blocks for a wall that wants three hundred.)
+     */
+    public static Map<Part, Integer> partCounts(String structure, int perimeterRadius) {
+        List<Placement> cells = new ArrayList<>();
+        layout(structure, new BlockPos(0, 64, 0), Direction.NORTH, true,
+            Math.max(4, Math.min(16, perimeterRadius)), cells);
+        Map<Part, Integer> counts = new EnumMap<>(Part.class);
+        for (Placement p : cells) counts.merge(p.part(), 1, Integer::sum);
+        return counts;
+    }
+
+    /** How many blocks of each style a building wants (its drawing's count), for the stocking. */
+    public static Map<Blueprints.Style, Integer> styleCounts(String structure) {
+        return Blueprints.has(structure) ? Blueprints.styleCounts(structure) : Map.of();
+    }
+
+    /** Every block of a building, laid out at an anchor facing a way: for the showcase and the tests. */
+    public static List<Placement> plan(String structure, BlockPos anchor, Direction facing, int radius) {
+        List<Placement> out = new ArrayList<>();
+        layout(structure, anchor, facing, true, Math.max(4, Math.min(16, radius)), out);
+        return out;
+    }
+
+    /**
+     * Put a whole building up at once, out of a chosen palette and not out of anybody's
+     * pack: the showcase (/village showcase), where every building a village can raise is
+     * set out to be looked at. Returns how many blocks went down.
+     */
+    public static int stamp(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor,
+                            Direction facing, int radius, java.util.function.Function<Placement, BlockState> palette) {
+        clearWildPlants(level, structure, anchor, facing, radius);        // [econ-store] no grass growing on its floor
+        return stampOnly(level, structure, anchor, facing, radius, palette, p -> true);
+    }
+
+    /**
+     * [econ-store] What grows wild (grass, ferns, flowers, a dead bush) inside a building's footprint, in the cells its
+     * drawing leaves empty, taken up: set down over a savanna's grass, the store had tall grass and ferns standing
+     * on its shop floor and among its stockroom's chests. Without telling the neighbours (the building is about to be
+     * set down round it, as stampOnly sets it). Returns how many came up.
+     */
+    public static int clearWildPlants(net.minecraft.world.level.Level level, String structure, BlockPos anchor, Direction facing, int radius) {
+        java.util.Set<BlockPos> planned = new java.util.HashSet<>();
+        int top = 5;
+        for (Placement p : plan(structure, anchor, facing, radius)) {
+            planned.add(p.pos());
+            top = Math.max(top, p.pos().getY() - anchor.getY());
+        }
+        int[] g = footprint(structure);
+        Direction right = facing.getClockWise();
+        int n = 0;
+        for (int dx = -g[0]; dx <= g[0]; dx++) {
+            for (int dz = -g[1]; dz <= g[1]; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos c = cell(anchor, right, facing, dx, dz).above(dy);
+                    if (planned.contains(c) || !level.isLoaded(c) || !isWildPlant(level.getBlockState(c))) continue;
+                    level.setBlock(c, Blocks.AIR.defaultBlockState(), 2 | 16);
+                    n++;
+                }
+            }
+        }
+        return n;
+    }
+
+    /** [build-world] The world's own ground standing where a building's room is to be (a bank, a hummock, a drift of
+     *  snow packed hard): what its builder digs out, as a park's is dug (ParkGround.cuts). */
+    private static boolean groundInside(BlockState st) {
+        return com.jrpetty.mcassistant.entity.Terraform.earth(st) && !st.is(Blocks.BEDROCK);
+    }
+
+    /** [econ-store] Something growing wild that a building's floor is no place for: grass, ferns, a flower, a dead bush. */
+    public static boolean isWildPlant(BlockState st) {
+        return st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN) || st.is(Blocks.LARGE_FERN)
+            || st.is(Blocks.DEAD_BUSH) || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS) || st.is(Blocks.SUNFLOWER)
+            || st.is(Blocks.LILAC) || st.is(Blocks.ROSE_BUSH) || st.is(Blocks.PEONY) || st.is(Blocks.PINK_PETALS);
+    }
+
+    /** As stamp, but only the placements chosen (a storey at a time, the missing cells...). */
+    public static int stampOnly(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor, Direction facing,
+                                int radius, java.util.function.Function<Placement, BlockState> palette,
+                                java.util.function.Predicate<Placement> only) {
+        List<Placement> whole = plan(structure, anchor, facing, radius);
+        List<Placement> cells = new java.util.ArrayList<>(whole);
+        cells.removeIf(only.negate());
+        cells.sort(java.util.Comparator.comparingInt((Placement p) -> finishing(p) ? 1 : 0)
+            .thenComparingInt(p -> p.pos().getY()));
+        int n = 0;
+        for (Placement p : cells) {
+            BlockState st = palette.apply(p);
+            if (st == null) continue;
+            BlockPos pos = p.pos();
+            if (p.part() == Part.BED) {
+                Direction lie = p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
+                BlockState bed = st.setValue(net.minecraft.world.level.block.BedBlock.FACING, lie);
+                level.setBlock(pos, bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                    net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2 | 16);
+                level.setBlock(pos.relative(lie), bed.setValue(net.minecraft.world.level.block.BedBlock.PART,
+                    net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2 | 16);
+                n += 2;
+                continue;
+            }
+            if (p.part() == Part.FURNACE || p.part() == Part.CHEST || p.part() == Part.LADDER) {
+                Direction d = p.way() == Blueprints.Way.UP || p.way() == Blueprints.Way.FRONT
+                    ? facing.getOpposite() : Blueprints.world(p.way(), facing);
+                st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+            } else {
+                st = orient(st, p, facing, level, pos);
+            }
+            if (p.part() == Part.DOOR) {
+                hangDoor(level, pos, st);
+            } else {
+                level.setBlock(pos, st, 2 | 16);
+            }
+            n++;
+        }
+        // Now everything is in place, join the panes and the fences up.
+        for (Placement p : cells) {
+            BlockState st = level.getBlockState(p.pos());
+            BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, p.pos());
+            if (joined != st) level.setBlock(p.pos(), joined, 2 | 16);
+        }
+        // [build-world] And the ones they stand beside, laid in an earlier batch; the roof's corners turned, the doors
+        // hung from their walls (settle).
+        settle(level, cells, whole);
+        return n;
+    }
+
+    /** The item a part is placed from, for the people stocking a build. */
+    public static Predicate<ItemStack> itemForPart(Part part) {
+        return itemFor(part);
+    }
+
+    /** Parts placed from any matching item (block taken from the item itself). */
+    private static boolean isBlockPart(Part part) {
+        return part == Part.BLOCK || part == Part.FENCE || part == Part.GATE || part == Part.WINDOW
+            || part == Part.OBSIDIAN || part == Part.DOOR || part == Part.LANTERN || part == Part.HAY
+            || part == Part.BARREL || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL
+            || part == Part.CAULDRON || part == Part.BELL || isFurniture(part);
+    }
+
+    /** The crafts' furniture: a bookshelf, a lectern, an enchanting table, a brewing stand,
+     *  a smoker, a loom, a grindstone. */
+    public static boolean isFurniture(Part part) {
+        return part == Part.BOOKSHELF || part == Part.LECTERN || part == Part.ENCHANTING || part == Part.BREWING
+            || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE || part == Part.CAMPFIRE
+            || part == Part.NOTE_BLOCK
+            || part == Part.CARTOGRAPHY;                                    // [cartographer] the map room's table
+    }
+
+    /** Decorative parts skipped (not blocked-on) when we lack the item. */
+    private static boolean isDecorative(Part part) {
+        // A bed is skipped, not blocked on: wool takes a rancher or a lucky
+        // hunt, and a house with no bed is still a house. It gets one the next
+        // time a house goes up with wool in the stores.
+        return part == Part.TORCH || part == Part.WINDOW || part == Part.BED || part == Part.DOOR
+            || part == Part.LANTERN || part == Part.WATER || part == Part.HAY || part == Part.BARREL
+            || part == Part.FLOWER || part == Part.CARPET || part == Part.ANVIL || part == Part.CAULDRON
+            || part == Part.BELL || isFurniture(part);
+    }
+
+    /** Things that hang from, stand on or lie on something else go in last, when it is there. [build-world] A ladder
+     *  too: laid before the wall it leans on, it came down the moment the earth in that wall's cell was dug out (the
+     *  wall's turn came after it, row by row, at two of the four turns of a lot), and the loft had no way up. */
+    private static boolean finishing(Placement p) {
+        return p.part() == Part.LANTERN || p.part() == Part.TORCH || p.part() == Part.FLOWER
+            || p.part() == Part.CARPET || p.part() == Part.WATER || p.part() == Part.BELL || p.part() == Part.LADDER;
+    }
+
+    private static Predicate<ItemStack> itemFor(Part part) {
+        return switch (part) {
+            case BLOCK -> BuildGoal::isBuildingBlock;
+            case FURNACE -> s -> s.is(Items.FURNACE);
+            case CHEST -> s -> s.is(Items.CHEST);
+            case CRAFTING_TABLE -> s -> s.is(Items.CRAFTING_TABLE);
+            case TORCH -> s -> s.is(Items.TORCH);
+            case LADDER -> s -> s.is(Items.LADDER);
+            case FENCE -> s -> s.is(ItemTags.FENCES);
+            case GATE -> s -> s.is(ItemTags.FENCE_GATES);
+            case WINDOW -> s -> s.is(Items.GLASS) || s.is(Items.GLASS_PANE);
+            case BED -> s -> s.is(ItemTags.BEDS);
+            case OBSIDIAN -> s -> s.is(Items.OBSIDIAN);
+            case CLEAR -> s -> false;
+            case DOOR -> s -> s.is(ItemTags.WOODEN_DOORS);
+            case LANTERN -> s -> s.is(Items.LANTERN) || s.is(Items.SOUL_LANTERN);
+            case WATER -> s -> s.is(Items.WATER_BUCKET);
+            case HAY -> s -> s.is(Items.HAY_BLOCK);
+            case BARREL -> s -> s.is(Items.BARREL);
+            case FLOWER -> s -> s.is(ItemTags.SMALL_FLOWERS);
+            case CARPET -> s -> s.is(ItemTags.WOOL_CARPETS);
+            case ANVIL -> s -> s.is(ItemTags.ANVIL);
+            case CAULDRON -> s -> s.is(Items.CAULDRON);
+            case BELL -> s -> s.is(Items.BELL);
+            case BOOKSHELF -> s -> s.is(Items.BOOKSHELF);
+            case LECTERN -> s -> s.is(Items.LECTERN);
+            case ENCHANTING -> s -> s.is(Items.ENCHANTING_TABLE);
+            case BREWING -> s -> s.is(Items.BREWING_STAND);
+            case SMOKER -> s -> s.is(Items.SMOKER);
+            case LOOM -> s -> s.is(Items.LOOM);
+            case GRINDSTONE -> s -> s.is(Items.GRINDSTONE);
+            case CAMPFIRE -> s -> s.is(Items.CAMPFIRE);
+            case NOTE_BLOCK -> s -> s.is(Items.NOTE_BLOCK);
+            case STOREHOUSE -> s -> s.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get());
+            case CARTOGRAPHY -> s -> s.is(Items.CARTOGRAPHY_TABLE);           // [cartographer]
+        };
+    }
+
+    private static String craftHint(Part part) {
+        return switch (part) {
+            case FURNACE -> "furnace (\"craft a furnace\" — 8 cobblestone)";
+            case CHEST -> "chest (\"craft a chest\" — 8 planks)";
+            case CRAFTING_TABLE -> "crafting table (\"craft a crafting table\")";
+            case LADDER -> "ladders (\"craft ladders\" — 7 sticks makes 3)";
+            case TORCH -> "torches";
+            case BLOCK -> "building blocks";
+            case FENCE -> "fences (\"craft fences\")";
+            case GATE -> "a fence gate (\"craft a fence gate\")";
+            case WINDOW -> "glass";
+            case BED -> "a bed (\"craft a bed\" — 3 wool, 3 planks)";
+            case OBSIDIAN -> "obsidian";
+            case CLEAR -> "nothing";
+            case DOOR -> "a door";
+            case LANTERN -> "a lantern";
+            case WATER -> "a bucket of water";
+            case HAY -> "hay";
+            case BARREL -> "a barrel";
+            case FLOWER -> "flowers";
+            case CARPET -> "a rug";
+            case ANVIL -> "an anvil";
+            case CAULDRON -> "a cauldron";
+            case BELL -> "a bell";
+            case BOOKSHELF -> "bookshelves";
+            case LECTERN -> "a lectern";
+            case ENCHANTING -> "an enchanting table";
+            case BREWING -> "a brewing stand";
+            case SMOKER -> "a smoker";
+            case LOOM -> "a loom";
+            case GRINDSTONE -> "a grindstone";
+            case CAMPFIRE -> "a fire for the hearth";
+            case NOTE_BLOCK -> "note blocks";
+            case STOREHOUSE -> "storehouse units (six planks and four sticks each)";
+            case CARTOGRAPHY -> "a cartography table (two paper and four planks)";   // [cartographer]
+        };
+    }
+
+    @Override
+    public boolean canUse() {
+        Job j = assistant.peekJob();
+        return j != null && j.type() == Job.Type.BUILD && assistant.getTarget() == null;
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return job != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
+    }
+
+    @Override
+    public void start() {
+        this.job = assistant.peekJob();
+        this.myGen = assistant.taskGen();
+        this.cursor = 0;
+        this.placed = 0;
+        this.workTicks = 0;
+        this.stuckTicks = 0;
+        this.standTicks = 0;
+        this.putOff.clear();
+        this.missed.clear();
+        this.lastLook = false;
+        this.nearest = Double.MAX_VALUE;
+        this.skipped = 0;
+        this.perimeterRadius = 5;
+        this.plan.clear();
+        this.ownAnchor = null;
+
+        // arg is "structure" or, for the anchored homestead builds, an encoded
+        // "structure|x,y,z,facing[,radius]" so the compound is placed on a fixed
+        // grid around home rather than wherever the bot happens to be standing.
+        String rawArg = job != null ? job.arg() : null;
+        String structure = rawArg;
+        BlockPos anchor = null;
+        // captured below, once the encoded form has been split
+        Direction anchorFacing = null;
+        if (rawArg != null && rawArg.indexOf('|') >= 0) {
+            String[] head = rawArg.split("\\|", 2);
+            structure = head[0];
+            String[] p = head[1].split(",");
+            try {
+                anchor = new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                anchorFacing = Direction.byName(p[3]);
+                if (p.length > 4) this.perimeterRadius = Math.max(4, Math.min(16, Integer.parseInt(p[4])));
+            } catch (Exception e) { anchor = null; anchorFacing = null; }
+        }
+        this.building = structure;
+        if (structure == null || !STRUCTURES.contains(structure)) {
+            finish("I can build: " + String.join(", ", STRUCTURES) + ".");
+            return;
+        }
+        boolean centered = anchor != null;
+        if (centered && assistant.isSettler()) this.ownAnchor = anchor.immutable();      // [integrity]
+        this.facing = centered && anchorFacing != null ? anchorFacing
+            : Direction.fromYRot(assistant.getYRot());
+        // Anchored: build centered on the given spot. Otherwise fortify rings the
+        // base (home if set) and everything else builds in front of the bot.
+        BlockPos base = centered ? anchor
+            : ("fortify".equals(structure) && assistant.getHome() != null
+                ? assistant.getHome() : assistant.feetPos());
+        // [styles] A town's builder builds its theme's own design of it, where the theme has one (Themes.design).
+        String drawing = centered && assistant.isSettler() && assistant.ownerId() != null
+            ? com.jrpetty.mcassistant.entity.Themes.design(assistant.ownerId(), structure) : structure;
+        layout(drawing, base, facing, centered, perimeterRadius, plan);
+        // A village with its storehouse standing (raised on an earlier run of this building, or
+        // anywhere on its square) lays no second one: the cube's cells are left be.
+        if (assistant.isSettler() && assistant.ownerId() != null
+                && com.jrpetty.mcassistant.entity.Storehouses.stands(assistant.ownerId())) {
+            plan.removeIf(p -> p.part() == Part.STOREHOUSE);
+        }
+        // A settlement's builders level and clear the ground they build on; a hired
+        // assistant building beside a player's own trees and terraces does not.
+        if (centered && assistant.isSettler()) {
+            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, drawing);
+        }
+        // What is in the way comes down first; then bottom-up, so nothing floats while we work;
+        // and the lanterns, flowers and rugs last, when what they hang from or stand on is there.
+        // Within a layer, row by row and back along the next (a big building walked cell by
+        // cell in order of distance had the builder crossing it and back for every block).
+        this.plan.sort(java.util.Comparator
+            .comparingInt((Placement p) -> p.part() == Part.CLEAR ? 0 : finishing(p) ? 2 : 1)
+            // [districts] (A park's ground is cut from the top down, so no sand is left to fall into the cut: ParkGround.)
+            .thenComparingInt((Placement p) -> com.jrpetty.mcassistant.entity.ParkGround.digging(p) ? -p.pos().getY() : p.pos().getY())
+            .thenComparingInt((Placement p) -> p.pos().getZ())
+            .thenComparingInt(p -> (p.pos().getZ() & 1) == 0 ? p.pos().getX() : -p.pos().getX()));
+
+        // Tally what's still needed vs what we carry — no cheating: every
+        // furnace/chest/table/ladder is a real item from the pack.
+        Map<Part, Integer> pending = new EnumMap<>(Part.class);
+        for (Placement p : plan) {
+            // Clearing takes nothing out of the pack. A plant to be cleared stands in a soft cell, and counted
+            // here it asked for "7 nothing" that no stores could ever hold: no house was built for sixty days.
+            if (p.part() == Part.CLEAR) continue;
+            BlockState there = assistant.level().getBlockState(p.pos());
+            if (soft(there) || wrongHere(there, p)) {                        // [integrity] a foreign block in its cell is work too
+                pending.merge(p.part(), 1, Integer::sum);
+            }
+        }
+        int totalPending = pending.values().stream().mapToInt(Integer::intValue).sum();
+        if (totalPending == 0) {
+            // Every cell is already filled: the last run finished the work and
+            // was cut off before it could say so. It counts.
+            if (structure != null) assistant.noteBuilt(structure);
+            finish("Looks already built.");
+            return;
+        }
+        List<String> missing = new ArrayList<>();
+        for (Map.Entry<Part, Integer> e : pending.entrySet()) {
+            Part part = e.getKey();
+            if (isDecorative(part)) continue; // torches/windows: skipped if absent
+            int have = assistant.countMatching(itemFor(part));
+            if (part == Part.BLOCK) {
+                if (have == 0) missing.add(e.getValue() + " building blocks (planks/cobble/dirt)");
+            } else if (part == Part.FENCE) {
+                if (have == 0) missing.add(e.getValue() + " " + craftHint(part));
+            } else if (have < e.getValue()) {
+                missing.add((e.getValue() - have) + " " + craftHint(part));
+            }
+        }
+        if (!missing.isEmpty()) {
+            finish("Before I can build the " + structure + " I still need: " + String.join(", ", missing) + ".");
+            return;
+        }
+        assistant.say("fortify".equals(structure)
+            ? "Fortifying the base — walling a perimeter, " + totalPending + " blocks to place."
+            : "Building a " + structure + " — " + totalPending + " parts to place.");
+    }
+
+    /**
+     * The ground is not always level. A building is laid out at one height, and
+     * the ground under its footprint is whatever the world made: a column that
+     * stops short of the floor is built up to it (so nothing hangs over a drop),
+     * and natural leaves in the space it will occupy come down first. Together
+     * they are what lets a village raise its storehouse on a hillside instead of
+     * waiting for the one flat acre the world may not have made.
+     */
+    private void addTerrainWork(BlockPos base, String structure) {
+        int[] g = footprint(structure);
+        java.util.Set<BlockPos> taken = new java.util.HashSet<>();
+        for (Placement p : plan) taken.add(p.pos());
+        // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
+        for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
+        }
+        Direction right = facing.getClockWise();
+        int top = lotTop(structure);
+        for (BlockPos c : treeOnLot(assistant.level(), structure, base, facing)) plan.add(new Placement(c, Part.CLEAR));
+        // [econ-store] And what grows wild inside its walls, in the cells the drawing leaves empty: grass and ferns
+        // stood on the floor of every building put up over a meadow (a part's own cell is laid over them anyway).
+        for (int dx = -g[0]; dx <= g[0]; dx++) {
+            for (int dz = -g[1]; dz <= g[1]; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
+                    if (taken.contains(c)) continue;
+                    BlockState there = assistant.level().getBlockState(c);
+                    if (isWildPlant(there) || there.is(Blocks.SNOW)) plan.add(new Placement(c, Part.CLEAR));
+                    // [build-world] And the ground itself where it rises above the floor inside the walls (a bank, a
+                    // hummock, a drift of snow): dug out, or the room was built round it, earth on its floor.
+                    else if (groundInside(there)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
+                }
+            }
+        }
+        // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
+        // (entity/ParkGround): a lawn on a hillside is no lawn, and its fountain's water ran out under it.
+        if (com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
+            com.jrpetty.mcassistant.entity.ParkGround.addTo(assistant.level(), base, facing, plan);
+        }
+    }
+
+    /**
+     * A wall round a village is three blocks high above the GROUND, wherever the ground is.
+     * The blueprint is drawn at one height: on a hillside half the ring would be buried in the
+     * slope and the rest hang in the air over the valley, which keeps out nothing. Each
+     * column is lifted or dropped to stand on the ground it is at.
+     */
+    private void followTheGround(BlockPos base) {
+        List<Placement> moved = new ArrayList<>(plan.size());
+        Map<Long, Integer> ground = new java.util.HashMap<>();
+        Map<Long, Boolean> fits = new java.util.HashMap<>();
+        Map<Long, Integer> beds = new java.util.HashMap<>();
+        java.util.Set<Long> footed = new java.util.HashSet<>();
+        for (Placement p : plan) {
+            int x = p.pos().getX();
+            int z = p.pos().getZ();
+            long key = BlockPos.asLong(x, 0, z);
+            int g = ground.computeIfAbsent(key,
+                k -> assistant.level().hasChunk(x >> 4, z >> 4) ? groundTop(assistant.level(), x, z) : base.getY());
+            // The ring is laid out before anybody looks at what stands on it. Thirteen
+            // blocks out from the heart it crosses houses, fields and ponds: a wall through
+            // a house fills its rooms, across a field it buries the crop. It goes round them.
+            if (!fits.computeIfAbsent(key, k -> wallFits(assistant.level(), x, z, g))) {
+                // Except water: a pond or a river on the line gets a footing of stone up from
+                // its bed, and the wall stands on it. The long game's wall had two whole sides
+                // missing where the ring ran into a lake, and no gate or post on either.
+                int bed = beds.computeIfAbsent(key, k -> wetBed(assistant.level(), x, z, g));
+                if (bed == Integer.MIN_VALUE) continue;
+                if (footed.add(key)) {
+                    for (int y = bed; y < g; y++) {
+                        moved.add(new Placement(new BlockPos(x, y, z), Part.BLOCK, Blueprints.Style.FOUNDATION, Blueprints.Way.UP));
+                    }
+                }
+            }
+            moved.add(p.at(new BlockPos(x, g + (p.pos().getY() - base.getY()), z)));
+        }
+        plan.clear();
+        plan.addAll(moved);
+    }
+
+    /**
+     * Where a wall column over water would stand its footing: the lowest water cell above a firm
+     * bed, if the water is no more than six deep (the builder's reach) and nothing stands over it.
+     * Integer.MIN_VALUE where it is not water, too deep, or lava.
+     */
+    static int wetBed(net.minecraft.world.level.Level level, int x, int z, int g) {
+        if (!level.hasChunk(x >> 4, z >> 4)) return Integer.MIN_VALUE;
+        BlockPos top = new BlockPos(x, g - 1, z);
+        if (!level.getFluidState(top).is(net.minecraft.tags.FluidTags.WATER)) return Integer.MIN_VALUE;
+        for (int dy = 0; dy <= 4; dy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, g + dy, z));
+            if (!st.isAir() && !(soft(st) && st.getFluidState().isEmpty())) return Integer.MIN_VALUE;
+        }
+        int y = g - 1;
+        while (y > g - 7 && level.getFluidState(new BlockPos(x, y - 1, z)).is(net.minecraft.tags.FluidTags.WATER)) y--;
+        BlockState under = level.getBlockState(new BlockPos(x, y - 1, z));
+        if (!under.getFluidState().isEmpty() || !under.isSolid()) return Integer.MIN_VALUE;   // deeper than six, or no bed
+        return y;
+    }
+
+    /**
+     * Ground a building may go up over: anything the game lets you place a block into
+     * (grass, snow) and the flowers a gardener plants by its door, which are not.
+     */
+    public static boolean soft(BlockState st) {
+        return st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
+    }
+
+    /**
+     * [tidy] Bare ground the world made (grass, dirt, podzol, mycelium, moss, a worn path) where the drawing wants a
+     * block laid: no floor of a building (Floors, the tidy crew's round; the builder takes it out and lays the drawing's
+     * block in its place: [integrity] wrongHere). A grass block is no soft cell, so it used to count as built: every
+     * house on a meadow kept its grass for a floor, and the tall grass and flowers came up through it again.
+     */
+    public static boolean earthUnderfoot(Placement p, BlockState st) {
+        return p.part() == Part.BLOCK && p.style() != Blueprints.Style.SOIL && bareEarth(st);
+    }
+
+    /** [tidy] Ground grass grows on, or will: no floor of a building. */
+    public static boolean bareEarth(BlockState st) {
+        return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
+            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.MOSS_BLOCK) || st.is(Blocks.DIRT_PATH);
+    }
+
+    /** May the wall stand on this column: open ground the world made, not a floor, a
+     *  field, a path, water, or anything somebody has put up there? */
+    public static boolean wallFits(net.minecraft.world.level.Level level, int x, int z, int g) {
+        if (!level.hasChunk(x >> 4, z >> 4)) return false;
+        BlockState ground = level.getBlockState(new BlockPos(x, g - 1, z));
+        if (!ground.getFluidState().isEmpty()) return false;                     // a pond, a river
+        if (ground.is(Blocks.FARMLAND) || ground.is(Blocks.DIRT_PATH)) return false;
+        if (ground.is(net.minecraft.tags.BlockTags.PLANKS) || ground.is(Blocks.COBBLESTONE)
+            || ground.is(net.minecraft.tags.BlockTags.SLABS) || ground.is(net.minecraft.tags.BlockTags.STAIRS)
+            || ground.hasBlockEntity()) {
+            return false;                                                         // somebody's floor
+        }
+        for (int dy = 0; dy <= 4; dy++) {
+            BlockState st = level.getBlockState(new BlockPos(x, g + dy, z));
+            if (st.isAir() || isNaturalLeaves(st)) continue;
+            if (soft(st) && st.getFluidState().isEmpty()) continue;   // grass, flowers, snow
+            return false;                                                         // a crop, a fence, a wall
+        }
+        return true;
+    }
+
+    /** Leaves nobody placed: a tree's own, which rot and are in the way. */
+    private static boolean isNaturalLeaves(BlockState st) {
+        return st.is(net.minecraft.tags.BlockTags.LEAVES)
+            && !(st.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
+                && st.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT));
+    }
+
+    /** Is this log part of a growing tree — has a tree's own leaves within three
+     *  blocks — rather than somebody's wall? Only a tree's is ever taken down. */
+    public static boolean isTreeLog(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (!level.getBlockState(pos).is(net.minecraft.tags.BlockTags.LOGS)) return false;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = -3; dy <= 3; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    if (isNaturalLeaves(level.getBlockState(pos.offset(dx, dy, dz)))) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * [pics-fix] How high over its floor a building's lot is cleared of a tree: the whole of its drawing and two over
+     * it. (It was twelve for every drawing, so a manor's ridge at thirteen, or a lighthouse's lamp room, could go up
+     * into a crown that was left standing.)
+     */
+    public static int lotTop(String structure) {
+        if (!Blueprints.has(structure)) return 5;
+        int h = 0;
+        for (Blueprints.Cell c : Blueprints.cells(structure)) h = Math.max(h, c.h());
+        return Math.max(12, h + 2);
+    }
+
+    /**
+     * [pics-fix] What of a tree stands on a building's lot, to come down before it goes up: its own leaves and its trunk,
+     * over the whole drawing and a block round it, from the floor up (lotTop). The builders' ground work
+     * (addTerrainWork) takes these down one by one; a building raised at once (AdminTools.raise) takes them all down
+     * first. Bottom first.
+     */
+    public static List<BlockPos> treeOnLot(net.minecraft.world.level.Level level, String structure, BlockPos base, Direction facing) {
+        int[] g = footprint(structure);
+        int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
+        Direction right = facing.getClockWise();
+        int top = lotTop(structure);
+        List<BlockPos> out = new ArrayList<>();
+        for (int dy = 0; dy <= top; dy++) {
+            for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
+                for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
+                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
+                    if (level.isLoaded(c) && isInTheWay(level, c, level.getBlockState(c))) out.add(c);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Is this something the ground work takes down: a tree's leaves or trunk? */
+    private static boolean isInTheWay(net.minecraft.world.level.Level level, BlockPos pos, BlockState st) {
+        return isNaturalLeaves(st) || (st.is(net.minecraft.tags.BlockTags.LOGS) && isTreeLog(level, pos));
+    }
+
+    /** The height of the ground at a column — the first free block above it — seeing
+     *  through a tree's trunk: a tree standing on a lot is something to fell, not a
+     *  five-block cliff. */
+    public static int groundTop(net.minecraft.world.level.Level level, int x, int z) {
+        int h = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        while (h > level.getMinBuildHeight() + 1 && isTreeLog(level, new BlockPos(x, h - 1, z))) h--;
+        return h;
+    }
+
+    /**
+     * The cells under a building's footprint that the ground does not reach: the
+     * columns between the top of the ground and the floor level. Counted by the
+     * people who stock a build as well as by the builder, so the two cannot
+     * disagree about how much stone a hillside takes.
+     */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor) {
+        return fillCells(level, anchor, 2);
+    }
+
+    /** Half the width and half the depth of a building's footing (its drawing's, or the old square). */
+    public static int[] footprint(String structure) {
+        if (Blueprints.has(structure)) return Blueprints.groundHalf(structure);
+        int h = halfOf(structure);
+        return new int[]{ h, h };
+    }
+
+    /** As fillCells, for a footprint {@code hw} across and {@code hd} deep, turned to face {@code facing}. */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, Direction facing,
+                                           int hw, int hd) {
+        boolean turned = facing.getAxis() == Direction.Axis.X;
+        int wx = turned ? hd : hw, wz = turned ? hw : hd;
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -wx; dx <= wx; dx++) {
+            for (int dz = -wz; dz <= wz; dz++) {
+                int x = anchor.getX() + dx;
+                int z = anchor.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int top = groundTop(level, x, z);
+                for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
+                    out.add(new BlockPos(x, y, z));
+                }
+            }
+        }
+        return out;
+    }
+
+    /** As above, for a footprint {@code half} blocks each side of the middle. */
+    public static List<BlockPos> fillCells(net.minecraft.world.level.Level level, BlockPos anchor, int half) {
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -half; dx <= half; dx++) {
+            for (int dz = -half; dz <= half; dz++) {
+                int x = anchor.getX() + dx;
+                int z = anchor.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int top = groundTop(level, x, z);
+                for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
+                    out.add(new BlockPos(x, y, z));
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public void stop() {
+        this.job = null;
+        assistant.getNavigation().stop();
+    }
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
+    private void finish(String message) {
+        this.lastWords = message;
+        if (assistant.isSettler()) {
+            LOG.info("[MCA-BUILD] tick {}: the {} (builder at {}, {} placed): {}", assistant.level().getGameTime(),
+                building, assistant.blockPosition().toShortString(), placed, message);
+        }
+        assistant.say(message);
+        assistant.noteJobOutcome(placed > 0);
+        assistant.pollJob();
+        this.job = null;
+        assistant.getNavigation().stop();
+    }
+
+    @Override
+    public void tick() {
+        if (job == null) return;
+
+        // Advance to the next cell that still needs its part.
+        Placement target = null;
+        while (cursor < plan.size()) {
+            Placement p = plan.get(cursor);
+            BlockState st = assistant.level().getBlockState(p.pos());
+            // (A cell was marked for clearing when the plan was made, while the tree still had
+            // its leaves; by the time its turn comes the leaves round a trunk may be gone,
+            // so it is only asked whether there is still a trunk or a leaf there.)
+            if (p.part() == Part.CLEAR) {
+                if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
+                if (st.is(Blocks.SNOW) && p.style() == Blueprints.Style.GENERIC) { target = p; break; }   // [build-world] a drift on its floor
+                // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
+                if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
+            } else if (wrongHere(st, p) && mayHere(p)) {
+                // [integrity] Something that is no part of the building in one of its cells (a block of earth where its
+                // wall goes, a fence post, a lantern): it comes out, and the drawing's block goes in. Passed over as
+                // "filled", it stood there for good, and the building was never what it was drawn to be.
+                target = p;
+                break;
+            } else if (soft(st)) {
+                if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
+                    target = p;
+                    break;
+                }
+                // The builder is standing in it. Step aside and come back to this cell: it used
+                // to be skipped for good, which left holes in the floor where the builder had
+                // stood while it filled the low side of a hillside.
+                BlockPos at = p.pos();
+                if (assistant.getNavigation().isDone()) {
+                    int side = (standTicks / 25) % 4;
+                    int ox = side == 0 ? 3 : side == 2 ? -3 : 0;
+                    int oz = side == 1 ? 3 : side == 3 ? -3 : 0;
+                    assistant.getNavigation().moveTo(at.getX() + 0.5 + ox, at.getY() + 1, at.getZ() + 0.5 + oz, 1.1D);
+                }
+                if (++standTicks > 100) {
+                    // A village's builder that can't walk out of the cell (on a dais between a
+                    // frame's posts) is set down beside it, and the cell is laid after all: one
+                    // skipped for good left the gateway a block short of its ten obsidian.
+                    if (assistant.isSettler() && assistant.putBeside(at)
+                            && !assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(at))) {
+                        standTicks = 0;
+                        return;
+                    }
+                    // Put off to the end, when the rest is down and there is somewhere else to
+                    // stand — not skipped: skipped, the gateway's tenth obsidian went back to the
+                    // stores and the frame stood a block short.
+                    if (putOff.merge(at.asLong(), 1, Integer::sum) <= 3) plan.add(p);
+                    else missed.add(p);
+                    cursor++;                                                  // not for ever
+                    standTicks = 0;
+                }
+                return;
+            }
+            cursor++;
+            stuckTicks = 0;
+            standTicks = 0;
+            nearest = Double.MAX_VALUE;
+        }
+        if (target == null && !lastLook && !missed.isEmpty()) {
+            // A last look round: what was missed on the way through, now that the rest is
+            // down, there is somewhere else to stand, and the builder may be set down nearer.
+            lastLook = true;
+            plan.addAll(missed);
+            missed.clear();
+            standTicks = 0;
+            stuckTicks = 0;
+            nearest = Double.MAX_VALUE;
+            return;
+        }
+        if (target == null) {
+            // [build-world] Its blocks made to fit one another now it is all down: the corners of its roof, the joins of
+            // its panes and fences, its doors hung from their walls (laid as the builder came to them, the last of each
+            // knew nothing of the neighbours laid after it).
+            if (placed > 0) settle(assistant.level(), plan);
+            // Only a building that actually has parts in the ground goes on the
+            // village's list. A run that could not reach a single cell used to
+            // walk off the end of its plan and report "Done" all the same.
+            if (building != null && placed > 0) assistant.noteBuilt(building);
+            else if (building != null) assistant.noteBuildAbandoned(building);   // not one block went down: not this ground
+            finish(placed > 0 ? "Done — placed " + placed + " parts."
+                : "Could not get at any of it — I'll try again.");
+            return;
+        }
+
+        if (stockForTests != null) stockForTests.accept(assistant, target);    // [build-world] tests: the cell's makings to hand
+        BlockPos pos = target.pos();
+        double distSq = assistant.getEyePosition().distanceToSqr(
+            pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        assistant.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        double reach2 = AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH;
+        boolean inReach = handsForTests || distSq <= reach2;                    // [build-world] tests: every cell to hand
+        if (!inReach && assistant.isSettler()) {
+            // A village's builder works off its scaffolding: a roof or a tower top within arm's
+            // length across is within its reach, however high. Walking for every block of a roof
+            // nine up it could never stand next to, a hall took most of a day.
+            double hx = assistant.getX() - (pos.getX() + 0.5), hz = assistant.getZ() - (pos.getZ() + 0.5);
+            double up = pos.getY() - assistant.getY();
+            inReach = hx * hx + hz * hz <= reach2 && up <= 24 && up >= -6;
+        }
+
+        if (!inReach) {
+            if (assistant.getNavigation().isDone()) {
+                assistant.getNavigation().moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 1.1D);
+            }
+            // Stuck is NOT GETTING NEARER, not "has been walking a while": a lot on
+            // the far side of a hill is a long walk, and counting the walk as stuck
+            // skipped cell after cell of the building before the builder arrived —
+            // and, when it never could arrive, spent ten thousand ticks doing it.
+            if (distSq < nearest - 1.0) {
+                nearest = distSq;
+                stuckTicks = 0;
+            } else if (++stuckTicks > (assistant.getNavigation().isDone() ? 100 : 300)) {
+                // (A route that goes round a hill takes the builder away from the
+                // cell before it brings it back, so one still being followed gets longer.)
+                // A settler with no way to the ground it was given — a river between, a cliff —
+                // is set down beside it, as a hand that cannot reach its plot is. Only when that
+                // too is impossible is the cell given up.
+                if (assistant.isSettler() && assistant.putBeside(pos)) {
+                    stuckTicks = 0;
+                    nearest = Double.MAX_VALUE;
+                    return;
+                }
+                if (!lastLook) missed.add(target);
+                cursor++; // can't get there — skip that cell
+                stuckTicks = 0;
+                nearest = Double.MAX_VALUE;
+                if (++skipped >= 3 && placed == 0 && building != null) {
+                    // Three cells in a row out of reach and nothing standing: the
+                    // ground is at fault, not the cells. Let the village choose another.
+                    assistant.noteBuildAbandoned(building);
+                    finish("I can't get to the ground for it — I'll look for another lot.");
+                }
+            }
+            return;
+        }
+
+        // [integrity] The gate: this building's own cells and open ground, never another's, nor a doorway or a road.
+        if (!mayHere(target)) {
+            cursor++;
+            return;
+        }
+
+        // A block about every third of a second: quicker for a practised builder and in a happy
+        // village, slower in a sad one. Counted in hundredths of a tick (buildPaceHundredths), and
+        // what is over carried to the next block, so a pace of 5.4 lays five blocks in 27 ticks:
+        // in whole ticks most of a builder's levels changed nothing at all.
+        workTicks += 100;
+        int pace = assistant.buildPaceHundredths();
+        if (handsForTests) workTicks = pace;                                    // [build-world] tests: no pace kept
+        if (workTicks < pace) {
+            return;
+        }
+        workTicks = Math.min(99, workTicks - pace);
+
+        BlockState state;
+        Part part = target.part();
+        // [integrity] A foreign block in the cell comes out first, into the pack (what a chest held with it).
+        if (part != Part.CLEAR && wrongHere(assistant.level().getBlockState(pos), target)) {
+            takeOut(pos);
+        }
+        if (part == Part.CLEAR) {
+            // Taken down like anybody would: what it gives goes in the pack (a tree's
+            // trunk is wood the village wants), not on the floor to rot.
+            BlockState there = assistant.level().getBlockState(pos);
+            if (assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+                for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(
+                        there, server, pos, null, assistant, assistant.getMainHandItem())) {
+                    ItemStack left = assistant.insertItem(drop);
+                    if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(server, pos, left);
+                }
+            }
+            assistant.level().destroyBlock(pos, false, assistant);
+            assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            cursor++;
+            return;
+        }
+        if (part == Part.WATER) {
+            // Water for a well: a bucket of it poured in, the bucket kept.
+            // [districts] Into a park's fountain only where it will stay: a floor under it, a wall round it (entity/ParkGround).
+            if (!com.jrpetty.mcassistant.entity.ParkGround.mayPour(assistant.level(), building, pos)) { cursor++; return; }
+            if (assistant.removeMatching(itemFor(part), 1) < 1) { cursor++; return; }
+            ItemStack left = assistant.insertItem(new ItemStack(Items.BUCKET));
+            if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), pos, left);
+            assistant.level().setBlockAndUpdate(pos, Blocks.WATER.defaultBlockState());
+            assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            placed++;
+            cursor++;
+            return;
+        }
+        if (part == Part.BLOCK && target.style() != Blueprints.Style.GENERIC) {
+            // What the drawing wants here, if the builder has it; any building block if not.
+            state = takeStyled(target.style());
+            if (state == null) {
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
+                return;
+            }
+            state = orient(state, target, pos);
+        } else if (part == Part.LANTERN) {
+            // A lantern if the village has made one; a torch until it can (a lantern is eight iron
+            // nuggets and a torch, the smith's: Masonry), and nothing where a torch would not hold.
+            state = takeBlockMatching(itemFor(part));
+            if (state != null) {
+                state = orient(state, target, pos);
+            } else {
+                state = com.jrpetty.mcassistant.entity.Masonry.torchFor(assistant.level(), pos);
+                if (state != null && assistant.removeMatching(s -> s.is(Items.TORCH), 1) < 1) state = null;
+            }
+            if (state == null) { cursor++; return; }
+        } else if (part == Part.WINDOW) {
+            state = takeBlockMatching(target.style() == Blueprints.Style.GLASS ? Blueprints_GLASS : Blueprints_PANE);
+            if (state == null) state = takeBlockMatching(itemFor(part));
+            if (state == null) { cursor++; return; }             // no glass: the window stays open
+            state = orient(state, target, pos);
+        } else if (isBlockPart(part)) {
+            state = takeBlockMatching(itemFor(part));
+            if (state == null) {
+                if (isDecorative(part)) { cursor++; return; } // no glass: skip the window
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
+                return;
+            }
+            state = orient(state, target, pos);
+        } else if (part == Part.BED) {
+            // Only spent once it will fit: a bed taken out of the pack for a head cell that was
+            // blocked used to vanish. And the bed it carries, in its own colour (not always red).
+            BlockPos head = pos.relative(bedHead(target));
+            if (!assistant.level().getBlockState(head).canBeReplaced()
+                    || !assistant.level().getBlockState(head.below()).isSolid()) { cursor++; return; }
+            ItemStack bedItem = ItemStack.EMPTY;
+            for (int tries = 0; tries < 2 && bedItem.isEmpty(); tries++) {
+                for (ItemStack st : assistant.getInventoryItems()) {
+                    if (st.is(ItemTags.BEDS)) { bedItem = st; break; }
+                }
+                // None in the pack: one of the founders' beds comes in from the camp, now it will be laid.
+                if (bedItem.isEmpty() && (tries > 0 || !assistant.bedFromTheCamp())) break;
+            }
+            // None to be had: a new house gets its first two beds all the same (FREE_BEDS), so it can take
+            // folk in the day it goes up rather than wait a week on wool. Past those, Grow.furnish brings
+            // one later, made of the stores' wool.
+            freeBedNow = bedItem.isEmpty() && assistant.isSettler() && homeForFreeBeds(building) && bedsLaidHere() < FREE_BEDS;
+            if (bedItem.isEmpty() && !freeBedNow) { cursor++; return; }
+            net.minecraft.world.item.Item kind = freeBedNow ? Items.WHITE_BED : bedItem.getItem();
+            if (!freeBedNow && assistant.removeMatching(st -> st.is(kind), 1) < 1) { cursor++; return; }
+            state = net.minecraft.world.level.block.Block.byItem(kind) instanceof net.minecraft.world.level.block.BedBlock bb
+                ? bb.defaultBlockState() : Blocks.RED_BED.defaultBlockState();
+        } else {
+            if (assistant.removeMatching(itemFor(part), 1) < 1) {
+                if (isDecorative(part)) { cursor++; return; } // no torches: skip, keep building
+                finish("Ran out of " + craftHint(part) + " — placed " + placed + " parts so far.");
+                return;
+            }
+            state = stateFor(part, target.way());
+        }
+        if (part == Part.BED) {
+            // A bed is TWO cells, which no other part is. If the second cell
+            // is not free the whole thing is skipped rather than half a bed
+            // being left in the wall — and the item is already spent, so the
+            // next house gets it instead.
+            if (!layBed(pos, state, bedHead(target))) { cursor++; return; }
+        } else if (part == Part.DOOR) {
+            if (!hangDoor(assistant.level(), pos, state)) { cursor++; return; }
+        } else if (part == Part.STOREHOUSE) {
+            // One unit of the storehouse laid; the last of the twenty-seven joins them, its door
+            // toward the building's own door.
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(
+                Blueprints.world(Blueprints.Way.FRONT, facing));
+            try {
+                assistant.level().setBlockAndUpdate(pos, state);
+            } finally {
+                com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+            }
+        } else {
+            assistant.level().setBlockAndUpdate(pos, state);
+            // What a settlement builds is the settlement's: the furnaces of its smeltery carry
+            // its name. Its stores are the Village Storehouse alone: a chest or a barrel in a
+            // building is furniture, not one more place for the village's goods to scatter to.
+            if (assistant.isSettler() && part == Part.FURNACE && !"guesthouse".equals(building)) {
+                com.jrpetty.mcassistant.entity.ZoneChests.mark(assistant.level(), pos);
+            }
+        }
+        assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        placed++;
+        assistant.note(AssistantEntity.Deed.BLOCKS_BUILT, 1);
+        skipped = 0;
+        nearest = Double.MAX_VALUE;
+        assistant.noteBuildProgress();
+        cursor++;
+    }
+
+    /** [integrity] May this builder set this cell (TownBlocks)? A hired hand's build is not the town's to gate. */
+    private boolean mayHere(Placement p) {
+        BlockPos pos = p.pos();
+        if (ownAnchor == null || !assistant.isSettler()) return true;
+        com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.get(assistant.ownerId());
+        if (v == null) return true;
+        // A park's ground work is the ground cut level (the gate's TERRAFORM), which may take a bank of earth off the
+        // street beside it as well as its own lot: asked as a building's own work, the high side was left standing
+        // three blocks over the lawn wherever a street ran past the park.
+        if (com.jrpetty.mcassistant.entity.ParkGround.digging(p) && com.jrpetty.mcassistant.entity.TownBlocks.allows(assistant.level(), v, pos,
+                com.jrpetty.mcassistant.entity.TownBlocks.Why.TERRAFORM)) return true;
+        return com.jrpetty.mcassistant.entity.TownBlocks.mayBuild(assistant.level(), v, pos, ownAnchor,
+            com.jrpetty.mcassistant.entity.TownBlocks.Why.BUILD);
+    }
+
+    /**
+     * [integrity] Is what stands in this cell of a town's building something that must come out for the drawing's
+     * block to go in: a thing of another kind altogether (a fence, a lantern, a sign, a field's crop, earth where
+     * a wall or a floor goes), not merely the right part in another shape or wood? Only for the town's own
+     * anchored builds; never a block with something kept in it, and never a door or a bed half (two-block parts
+     * are put right by the survey, Restore).
+     */
+    private boolean wrongHere(BlockState st, Placement p) {
+        if (ownAnchor == null || !assistant.isSettler() || p.part() == Part.CLEAR || p.part() == Part.STOREHOUSE) return false;
+        if (soft(st) || st.hasBlockEntity()) return false;
+        if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;
+        if (com.jrpetty.mcassistant.entity.ParkGround.digging(p)) return false;
+        if (com.jrpetty.mcassistant.entity.TownBlocks.fitting(st)) return false;
+        return com.jrpetty.mcassistant.entity.Restore.judge(st, p) == com.jrpetty.mcassistant.entity.Restore.Kind.WRONG;
+    }
+
+    /** [integrity] Take what stands in a cell out, like anybody would: what it gives into the pack, the rest dropped. */
+    private void takeOut(BlockPos pos) {
+        BlockState there = assistant.level().getBlockState(pos);
+        if (assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(there, server, pos, null, assistant, assistant.getMainHandItem())) {
+                ItemStack left = assistant.insertItem(drop);
+                if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(server, pos, left);
+            }
+        }
+        assistant.level().setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+    }
+
+    /** Lay a bed foot-first into the room, head against the wall behind it.
+     *  Somewhere to sleep is what turns a shell into a house, and it is how
+     *  anybody living here skips a night. */
+    private Direction bedHead(Placement p) {
+        return p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
+    }
+
+    /** A home folk sleep in: a house of either kind, or a manor. */
+    private static boolean homeForFreeBeds(@Nullable String structure) {
+        return structure != null && (structure.startsWith("house") || structure.equals("manor"));
+    }
+
+    /** Beds already laid in what is being built (its plan's bed cells), whatever they were made of. */
+    private int bedsLaidHere() {
+        int n = 0;
+        for (Placement p : plan) {
+            if (p.part() == Part.BED && assistant.level().getBlockState(p.pos()).getBlock() instanceof net.minecraft.world.level.block.BedBlock) n++;
+        }
+        return n;
+    }
+
+    private boolean layBed(BlockPos foot, BlockState carried, Direction lie) {
+        BlockPos head = foot.relative(lie);
+        if (!assistant.level().getBlockState(head).canBeReplaced()) return false;
+        if (!assistant.level().getBlockState(head.below()).isSolid()) return false;
+        BlockState bed = carried.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+            ? carried : Blocks.RED_BED.defaultBlockState();
+        bed = bed.setValue(net.minecraft.world.level.block.BedBlock.FACING, lie);
+        assistant.level().setBlockAndUpdate(foot, bed.setValue(
+            net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        assistant.level().setBlockAndUpdate(head, bed.setValue(
+            net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+        return true;
+    }
+
+    private BlockState stateFor(Part part, Blueprints.Way way) {
+        Direction toDoor = way == Blueprints.Way.UP || way == Blueprints.Way.FRONT ? facing.getOpposite()
+            : Blueprints.world(way, facing);       // face the entrance (or the way the drawing says)
+        return switch (part) {
+            // Block-from-item parts are placed inline via takeBlockMatching, never here.
+            case BLOCK, FENCE, GATE, WINDOW, OBSIDIAN -> Blocks.COBBLESTONE.defaultBlockState();
+            case FURNACE -> Blocks.FURNACE.defaultBlockState().setValue(AbstractFurnaceBlock.FACING, toDoor);
+            case CHEST -> Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, toDoor);
+            case CRAFTING_TABLE -> Blocks.CRAFTING_TABLE.defaultBlockState();
+            case TORCH -> Blocks.TORCH.defaultBlockState();
+            case LADDER -> Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, toDoor);
+            // Beds are laid by layBed, which needs two cells; this is only the
+            // fallback the switch demands.
+            case BED -> Blocks.RED_BED.defaultBlockState();
+            case CLEAR -> Blocks.AIR.defaultBlockState();
+            // The finishing is placed from the item itself (isBlockPart); this is the switch's fallback.
+            case DOOR -> Blocks.OAK_DOOR.defaultBlockState();
+            case LANTERN -> Blocks.LANTERN.defaultBlockState();
+            case WATER -> Blocks.WATER.defaultBlockState();
+            case HAY -> Blocks.HAY_BLOCK.defaultBlockState();
+            case BARREL -> Blocks.BARREL.defaultBlockState();
+            case FLOWER -> Blocks.POPPY.defaultBlockState();
+            case CARPET -> Blocks.RED_CARPET.defaultBlockState();
+            case ANVIL -> Blocks.ANVIL.defaultBlockState();
+            case CAULDRON -> Blocks.CAULDRON.defaultBlockState();
+            case BELL -> Blocks.BELL.defaultBlockState();
+            case BOOKSHELF -> Blocks.BOOKSHELF.defaultBlockState();
+            case LECTERN -> Blocks.LECTERN.defaultBlockState();
+            case ENCHANTING -> Blocks.ENCHANTING_TABLE.defaultBlockState();
+            case BREWING -> Blocks.BREWING_STAND.defaultBlockState();
+            case SMOKER -> Blocks.SMOKER.defaultBlockState();
+            case LOOM -> Blocks.LOOM.defaultBlockState();
+            case GRINDSTONE -> Blocks.GRINDSTONE.defaultBlockState();
+            case CAMPFIRE -> Blocks.CAMPFIRE.defaultBlockState();
+            case NOTE_BLOCK -> Blocks.NOTE_BLOCK.defaultBlockState();
+            case STOREHOUSE -> com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+            case CARTOGRAPHY -> Blocks.CARTOGRAPHY_TABLE.defaultBlockState();    // [cartographer]
+        };
+    }
+
+    // ------------------------------ the right material, set the right way ----------------
+
+    static final Predicate<ItemStack> Blueprints_PANE = s -> {
+        String p = path(s);
+        return p.endsWith("glass_pane");
+    };
+    static final Predicate<ItemStack> Blueprints_GLASS = s -> {
+        String p = path(s);
+        return p.equals("glass") || (p.endsWith("_stained_glass")) || p.equals("tinted_glass");
+    };
+
+    private static String path(ItemStack s) {
+        return s.isEmpty() ? "" : net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+    }
+
+    /** Stone of the kind a footing or a wall is made of: cobble, stone, stone bricks and their kin. */
+    public static boolean isStoneLike(ItemStack s) {
+        if (!isBuildingBlock(s)) return false;
+        String p = path(s);
+        return p.contains("cobble") || p.contains("stone_brick") || p.equals("stone") || p.equals("smooth_stone")
+            || p.contains("deepslate") || p.contains("andesite") || p.contains("diorite") || p.contains("granite")
+            || p.contains("tuff") || p.contains("blackstone") || p.equals("mud_bricks") || p.contains("sandstone");
+    }
+
+    /** Stone that has been worked: cut, polished, smoothed, chiselled, or fired into brick. */
+    public static boolean isDressed(ItemStack s) {
+        String p = path(s);
+        return p.contains("brick") || p.contains("tiles") || p.startsWith("polished") || p.startsWith("smooth")
+            || p.startsWith("chiseled") || p.startsWith("cut_");
+    }
+
+    /** Rough stone, as it comes out of the ground: what a footing is laid in, leaving the dressed
+     *  stone for the courses that show. */
+    public static boolean isRoughStone(ItemStack s) {
+        return isStoneLike(s) && !isDressed(s);
+    }
+
+    /** Is this style part of a roof? Nothing precious goes up there (Masonry.fitForARoof). */
+    public static boolean isRoof(Blueprints.Style style) {
+        return style == Blueprints.Style.ROOF_STAIR || style == Blueprints.Style.ROOF_STAIR_TOP
+            || style == Blueprints.Style.ROOF_SLAB || style == Blueprints.Style.ROOF_SLAB_TOP
+            || style == Blueprints.Style.ROOF_BLOCK;
+    }
+
+    private static boolean isSoil(ItemStack s) {
+        return s.is(Items.DIRT) || s.is(Items.GRASS_BLOCK) || s.is(Items.COARSE_DIRT) || s.is(Items.ROOTED_DIRT)
+            || s.is(Items.PODZOL) || s.is(Items.MUD) || s.is(Items.MYCELIUM);
+    }
+
+    /** What a builder looks for first for a block of this style. */
+    public static Predicate<ItemStack> preferred(Blueprints.Style style) {
+        return switch (style) {
+            // Rough stone in the footing first: the stone bricks the masons cut are for the courses
+            // that show (a footing laid of them left the walls above in cobble).
+            case FOUNDATION, WALL_LOW -> BuildGoal::isRoughStone;
+            case MASONRY -> s -> isStoneLike(s) && (path(s).contains("brick") || path(s).startsWith("polished"));
+            case BRICK -> s -> s.is(Items.BRICKS);
+            case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.PLANKS);
+            case POST, BEAM_ACROSS, BEAM_ALONG -> s -> s.is(ItemTags.LOGS);
+            case ROOF_STAIR, ROOF_STAIR_TOP -> s -> s.is(ItemTags.WOODEN_STAIRS);
+            case ROOF_SLAB, ROOF_SLAB_TOP -> s -> s.is(ItemTags.WOODEN_SLABS);
+            case STONE_SLAB -> s -> s.is(ItemTags.SLABS) && !s.is(ItemTags.WOODEN_SLABS);
+            case STONE_STAIR -> s -> s.is(ItemTags.STAIRS) && !s.is(ItemTags.WOODEN_STAIRS);
+            case SOIL -> BuildGoal::isSoil;
+            case PANE -> Blueprints_PANE;
+            case GLASS -> Blueprints_GLASS;
+            default -> BuildGoal::isBuildingBlock;
+        };
+    }
+
+    /** What will do instead: the next best thing, and then any building block that is not earth. */
+    private static Predicate<ItemStack> secondBest(Blueprints.Style style) {
+        return switch (style) {
+            case MASONRY, BRICK, FOUNDATION, WALL_LOW -> BuildGoal::isStoneLike;
+            case ROOF_STAIR, ROOF_STAIR_TOP, ROOF_SLAB, ROOF_SLAB_TOP, POST, BEAM_ACROSS, BEAM_ALONG -> s -> s.is(ItemTags.PLANKS);
+            case STONE_SLAB, STONE_STAIR -> BuildGoal::isStoneLike;
+            case FLOOR, WALL, ROOF_BLOCK -> s -> s.is(ItemTags.LOGS);
+            default -> s -> false;
+        };
+    }
+
+    @Nullable
+    private BlockState takeStyled(Blueprints.Style style) {
+        // [styles] Down the tiers (tiers()): the town's own look, the builder's own order, the theme's stand-ins for the
+        // town's age, and (a young town) any proper block; never a forbidden one, nor rough fill once the town is past it.
+        for (Predicate<ItemStack> tier : tiers(assistant.ownerId(), style)) {
+            BlockState st = tier == null ? takeSpoil() : takeBlockMatching(tier);
+            if (st != null) return st;
+        }
+        return null;
+    }
+
+    /**
+     * [styles] The tiers a builder goes down for a block of this kind, in order, each taken cheapest first: the
+     * village's own look first (Palettes: its wood and its stone for this part, best first); what the drawing wants of
+     * any make (preferred); the next best thing (secondBest); the theme's stand-ins for the town's age (Materials); and,
+     * in a young town (or for a part no list governs), any building block that is not earth, then any at all (null:
+     * the builder's own spoil, for earth). Whatever a roof falls back on, it is never iron or anything else precious: a
+     * roof of the village's iron is its tools and armour gone (Masonry.fitForARoof). No wall of it either, nor of the
+     * Nether's or the End's stone, nor (from the Iron Age) of earth, gravel or sand (Materials).
+     */
+    public static List<Predicate<ItemStack>> tiers(@Nullable java.util.UUID town, Blueprints.Style style) {
+        Predicate<ItemStack> fit = isRoof(style) ? com.jrpetty.mcassistant.entity.Masonry::fitForARoof
+            : s -> !com.jrpetty.mcassistant.entity.Palettes.precious(s);
+        List<Predicate<ItemStack>> out = new ArrayList<>();
+        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(town, style)) {
+            out.add(s -> s.is(it) && fit.test(s));
+        }
+        Predicate<ItemStack> ok = fit.and(s -> com.jrpetty.mcassistant.entity.Materials.suitable(town, style, s));
+        out.add(preferred(style).and(ok));
+        out.add(secondBest(style).and(ok));
+        for (Predicate<ItemStack> p : com.jrpetty.mcassistant.entity.Materials.fallback(town, style)) {
+            out.add(p.and(ok));
+        }
+        if (com.jrpetty.mcassistant.entity.Materials.anyGoes(town, style)) {
+            if (style == Blueprints.Style.SOIL) out.add(null);
+            else out.add(s -> isBuildingBlock(s) && !isSoil(s) && ok.test(s));
+            // [integrity] Earth only where earth goes (a flower box, a fill under the floor): short of anything else the
+            // builder runs out, and the next load brings the right thing.
+            if (earthWill(style)) out.add(s -> isBuildingBlock(s) && ok.test(s));
+        }
+        return out;
+    }
+
+    /** [styles] Tests: what a builder of this town carrying these would lay in a block of this kind (null: nothing, it waits). */
+    @Nullable
+    public static net.minecraft.world.item.Item choose(@Nullable java.util.UUID town, Blueprints.Style style, List<ItemStack> held) {
+        for (Predicate<ItemStack> tier : tiers(town, style)) {
+            if (tier == null) continue;
+            ItemStack best = null;
+            int bestCost = Integer.MAX_VALUE;
+            for (ItemStack s : held) {
+                if (s.isEmpty() || !tier.test(s) || !(s.getItem() instanceof BlockItem)) continue;
+                int cost = blockCost(s);
+                if (cost < bestCost) { best = s; bestCost = cost; }
+                if (cost == 0) break;
+            }
+            if (best != null) return best.getItem();
+        }
+        return null;
+    }
+
+    /** [integrity] May this style of cell be laid in earth: a flower box's soil, a fill under the floor, a hired hand's plain block. */
+    private static boolean earthWill(Blueprints.Style style) {
+        return style == Blueprints.Style.SOIL || style == Blueprints.Style.GENERIC;
+    }
+
+    /** Set a block the way the drawing has it: stairs facing and the right way up, logs lying the
+     *  right way, slabs high or low, a lantern hung, a barrel standing, panes and fences joined up. */
+    private BlockState orient(BlockState st, Placement p, BlockPos pos) {
+        return orient(st, p, facing, assistant.level(), pos);
+    }
+
+    public static BlockState orient(BlockState st, Placement p, Direction facing,
+                                    net.minecraft.world.level.LevelAccessor level, BlockPos pos) {
+        Blueprints.Style style = p.style();
+        Direction way = Blueprints.world(p.way(), facing);
+        // [build-world] A furnace's mouth, a chest's lid and a ladder's rungs to the front (or the way the drawing says),
+        // here as well as where the builder lays them: the repairs, a renovation's and a player's hand on a marked cell
+        // laid them through here, and a chest mended into a house at a turn of the lot opened onto its wall.
+        if ((p.part() == Part.FURNACE || p.part() == Part.CHEST || p.part() == Part.LADDER)
+                && st.hasProperty(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING)) {
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING,
+                p.way() == Blueprints.Way.UP || p.way() == Blueprints.Way.FRONT ? facing.getOpposite() : way);
+        }
+        if (st.hasProperty(net.minecraft.world.level.block.StairBlock.FACING) && st.getBlock() instanceof net.minecraft.world.level.block.StairBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = st.setValue(net.minecraft.world.level.block.StairBlock.FACING, d)
+                .setValue(net.minecraft.world.level.block.StairBlock.HALF,
+                    style == Blueprints.Style.ROOF_STAIR_TOP ? net.minecraft.world.level.block.state.properties.Half.TOP
+                        : net.minecraft.world.level.block.state.properties.Half.BOTTOM);
+            // [build-world] Its corner worked out from the stairs beside it, as the game does for a stair a player sets:
+            // laid as it came out of the pack, the last stair of every hip and every corner of the eaves stood straight,
+            // a notch in the roof at each corner. (The stairs laid after it turn their neighbours as they go down.)
+            st = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, pos);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.SlabBlock) {
+            st = st.setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+                style == Blueprints.Style.ROOF_SLAB_TOP ? net.minecraft.world.level.block.state.properties.SlabType.TOP
+                    : net.minecraft.world.level.block.state.properties.SlabType.BOTTOM);
+        }
+        if (st.hasProperty(net.minecraft.world.level.block.RotatedPillarBlock.AXIS)) {
+            Direction.Axis axis = switch (style) {
+                case BEAM_ACROSS -> facing.getClockWise().getAxis();
+                case BEAM_ALONG -> facing.getAxis();
+                default -> Direction.Axis.Y;
+            };
+            st = st.setValue(net.minecraft.world.level.block.RotatedPillarBlock.AXIS, axis);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock) {
+            st = st.setValue(net.minecraft.world.level.block.LanternBlock.HANGING, style == Blueprints.Style.HANGING);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BarrelBlock) {
+            st = st.setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.AnvilBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.LecternBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.LoomBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.SmokerBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing.getOpposite();
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.GrindstoneBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing.getOpposite();
+            st = st.setValue(net.minecraft.world.level.block.GrindstoneBlock.FACING, d)
+                .setValue(net.minecraft.world.level.block.GrindstoneBlock.FACE,
+                    net.minecraft.world.level.block.state.properties.AttachFace.FLOOR);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.BellBlock) {
+            Direction d = way.getAxis().isHorizontal() ? way : facing;
+            st = hangBell(st.setValue(net.minecraft.world.level.block.BellBlock.FACING, d), level, pos, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock && st.hasProperty(net.minecraft.world.level.block.CampfireBlock.FACING)) {
+            // [build-world] Its logs laid across the way in, whichever way the lot faces (it was always north).
+            st = st.setValue(net.minecraft.world.level.block.CampfireBlock.FACING, way.getAxis().isHorizontal() ? way : facing.getOpposite());
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.WallBlock) {
+            st = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, pos);
+        }
+        return st;
+    }
+
+    /**
+     * [build-world] A bell stood on the floor if there is one under it, else hung from the beam over it, else between
+     * the posts either side of it, else from the one post beside it: a bell set standing in a belfry's open frame
+     * came down at the first knock it was given.
+     */
+    static BlockState hangBell(BlockState st, net.minecraft.world.level.LevelAccessor level, BlockPos pos, Direction d) {
+        var BELL = net.minecraft.world.level.block.BellBlock.ATTACHMENT;
+        var FACING = net.minecraft.world.level.block.BellBlock.FACING;
+        BlockPos under = pos.below();
+        if (level.getBlockState(under).isFaceSturdy(level, under, Direction.UP)) {
+            return st.setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.FLOOR);
+        }
+        if (net.minecraft.world.level.block.Block.canSupportCenter(level, pos.above(), Direction.DOWN)) {
+            return st.setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.CEILING);
+        }
+        for (Direction a : new Direction[]{ d.getClockWise(), d }) {
+            boolean one = sturdyFace(level, pos.relative(a), a.getOpposite()), other = sturdyFace(level, pos.relative(a.getOpposite()), a);
+            if (one && other) return st.setValue(FACING, a).setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.DOUBLE_WALL);
+        }
+        for (Direction a : Direction.Plane.HORIZONTAL) {
+            if (sturdyFace(level, pos.relative(a), a.getOpposite())) {
+                return st.setValue(FACING, a).setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.SINGLE_WALL);
+            }
+        }
+        return st;
+    }
+
+    private static boolean sturdyFace(net.minecraft.world.level.LevelAccessor level, BlockPos at, Direction face) {
+        return level.getBlockState(at).isFaceSturdy(level, at, face);
+    }
+
+    /**
+     * [build-world] The side a door hangs from, as the game hangs one a player sets: the side with the wall beside it;
+     * beside another door, its far side, so the two open as a pair. Every door the builders hung was hinged on its
+     * left whatever stood there, and a pair of doors hung from the same side opened into one another.
+     */
+    public static net.minecraft.world.level.block.state.properties.DoorHingeSide hinge(
+            net.minecraft.world.level.BlockGetter level, BlockPos lower, Direction facing) {
+        Direction left = facing.getCounterClockWise(), right = facing.getClockWise();
+        boolean leftDoor = lowerDoor(level.getBlockState(lower.relative(left)));
+        boolean rightDoor = lowerDoor(level.getBlockState(lower.relative(right)));
+        if (leftDoor != rightDoor) {
+            return leftDoor ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+                : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+        }
+        int lean = (full(level, lower.relative(right)) ? 1 : 0) + (full(level, lower.above().relative(right)) ? 1 : 0)
+            - (full(level, lower.relative(left)) ? 1 : 0) - (full(level, lower.above().relative(left)) ? 1 : 0);
+        return lean > 0 ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+            : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+    }
+
+    private static boolean lowerDoor(BlockState s) {
+        return s.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+            && s.getValue(net.minecraft.world.level.block.DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+    }
+
+    private static boolean full(net.minecraft.world.level.BlockGetter level, BlockPos at) {
+        return level.getBlockState(at).isCollisionShapeFullBlock(level, at);
+    }
+
+    /**
+     * [build-world] A building's blocks made to fit one another once it is all down, as the game fits a block a player
+     * sets: every stair's corner, every pane's, fence's, wall's and bar's joins worked out afresh from the neighbours it
+     * has now (and theirs), and every door hung from the side its wall is on. Laid a storey or a batch at a time, without
+     * the neighbours told, the panes laid first stood unjoined to the ones laid after and the hips of a roof stood
+     * straight; and a door hung before the wall beside it was up could only guess its side.
+     */
+    public static void settle(net.minecraft.world.level.Level level, java.util.Collection<Placement> cells) {
+        settle(level, cells, cells);
+    }
+
+    /** As settle, the doors of the whole building beside these cells hung afresh too (one laid in an earlier batch, its
+     *  pair in this one: hung before its pair was there, it hung from the side the pair came to). */
+    public static void settle(net.minecraft.world.level.Level level, java.util.Collection<Placement> cells,
+                              java.util.Collection<Placement> whole) {
+        java.util.Set<BlockPos> look = new java.util.HashSet<>();
+        for (Placement p : cells) {
+            look.add(p.pos());
+            for (Direction d : Direction.values()) look.add(p.pos().relative(d));
+        }
+        for (BlockPos at : look) {
+            if (!level.isLoaded(at)) continue;
+            BlockState st = level.getBlockState(at);
+            if (!fitsNeighbours(st)) continue;
+            BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, at);
+            if (joined != st && !joined.isAir()) level.setBlock(at, joined, 2 | 16);
+        }
+        for (Placement p : whole) {
+            if (p.part() != Part.DOOR || !look.contains(p.pos()) || !level.isLoaded(p.pos())) continue;
+            BlockState st = level.getBlockState(p.pos());
+            if (!lowerDoor(st)) continue;
+            var side = hinge(level, p.pos(), st.getValue(net.minecraft.world.level.block.DoorBlock.FACING));
+            if (st.getValue(net.minecraft.world.level.block.DoorBlock.HINGE) == side) continue;
+            level.setBlock(p.pos(), st.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, side), 2 | 16);
+            BlockState up = level.getBlockState(p.pos().above());
+            if (up.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                level.setBlock(p.pos().above(), up.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, side), 2 | 16);
+            }
+        }
+    }
+
+    /** [build-world] A block whose shape is its neighbours' business: a stair's corner, a pane's or a fence's joins. */
+    public static boolean fitsNeighbours(BlockState st) {
+        net.minecraft.world.level.block.Block b = st.getBlock();
+        return b instanceof net.minecraft.world.level.block.StairBlock || b instanceof net.minecraft.world.level.block.CrossCollisionBlock
+            || b instanceof net.minecraft.world.level.block.WallBlock || b instanceof net.minecraft.world.level.block.FenceGateBlock;
+    }
+
+    /** A door is two blocks: the lower half here, the upper above it. */
+    public static boolean hangDoor(net.minecraft.world.level.Level level, BlockPos lower, BlockState st) {
+        if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            level.setBlockAndUpdate(lower, st);
+            return true;
+        }
+        if (!level.getBlockState(lower.above()).canBeReplaced()) return false;
+        // [build-world] Hung from the side its wall is on (and settle looks again once the wall beside it is all up).
+        st = st.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, hinge(level, lower, st.getValue(net.minecraft.world.level.block.DoorBlock.FACING)));
+        level.setBlock(lower, st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2 | 16);
+        level.setBlock(lower.above(), st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
+        level.blockUpdated(lower, st.getBlock());
+        return true;
+    }
+
+    /** What a block costs the village to spend on a wall: stone and the like are
+     *  free for the digging, planks are the tools and chests of the day after,
+     *  and logs are the planks. A builder spends the cheapest it has, so a
+     *  village short of trees does not wall itself in with the last of its wood
+     *  and then stand about with no pickaxe. */
+    public static int blockCost(ItemStack s) {
+        if (s.is(net.minecraft.tags.ItemTags.LOGS)) return 2;
+        if (s.is(net.minecraft.tags.ItemTags.PLANKS)) return 1;
+        return 0;
+    }
+
+    /** Consume one matching BlockItem from the pack; its block is what we place. */
+    /**
+     * Earth for a fill out of the builder's own spoil: what it dug here and had no room in its pack for, lying where
+     * it fell. (A builder whose pack was full to the last slot, its keepsake in it, let a park's bank fall on the
+     * grass as it cut it, then filled the hollow with the fountain's stone and built the fountain of earth.)
+     */
+    @Nullable
+    private BlockState takeSpoil() {
+        for (net.minecraft.world.entity.item.ItemEntity e : assistant.level().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, assistant.getBoundingBox().inflate(16.0, 6.0, 16.0),
+                e -> e.isAlive() && isSoil(e.getItem()) && e.getItem().getItem() instanceof BlockItem)) {
+            ItemStack s = e.getItem();
+            BlockState state = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
+            ItemStack left = s.copy();
+            left.shrink(1);
+            if (left.isEmpty()) e.discard(); else e.setItem(left);
+            return state;
+        }
+        return null;
+    }
+
+    @Nullable
+    private BlockState takeBlockMatching(Predicate<ItemStack> pred) {
+        var inv = assistant.getInventoryItems();
+        int best = -1;
+        int bestCost = Integer.MAX_VALUE;
+        for (int i = 0; i < inv.size(); i++) {
+            ItemStack s = inv.get(i);
+            if (s.isEmpty() || !pred.test(s) || !(s.getItem() instanceof BlockItem)) continue;
+            int cost = blockCost(s);
+            if (cost < bestCost) { best = i; bestCost = cost; }
+            if (cost == 0) break;
+        }
+        if (best < 0) return null;
+        ItemStack s = inv.get(best);
+        BlockState state = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
+        s.shrink(1);
+        if (s.isEmpty()) inv.set(best, ItemStack.EMPTY);
+        return state;
+    }
+
+    // ------------------------------ blueprints ------------------------------
+
+    private static void layout(String structure, BlockPos feet, Direction facing,
+                               boolean centered, int perimeterRadius, List<Placement> out) {
+        Direction right = facing.getClockWise();
+        if (Blueprints.has(structure)) {
+            // Drawn: every block where the drawing has it. Built in front of a hired hand
+            // that was told to build one where it stands.
+            int[] half = Blueprints.fullHalf(structure);
+            BlockPos center = centered ? feet : feet.relative(facing, half[1] + 2);
+            for (Blueprints.Cell c : Blueprints.cells(structure)) {
+                out.add(new Placement(cell(center, right, facing, c.dx(), c.dz()).above(c.h()),
+                    c.key().part(), c.key().style(), c.key().way()));
+            }
+            return;
+        }
+        switch (structure) {
+            case "platform" -> {
+                BlockPos center = centered ? feet : feet.relative(facing, 3);
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        out.add(new Placement(cell(center, right, facing, dx, dz).below(), Part.BLOCK));
+                    }
+                }
+            }
+            case "wall" -> {
+                BlockPos base = centered ? feet : feet.relative(facing, 2);
+                for (int w = -2; w <= 2; w++) {
+                    for (int h = 0; h <= 2; h++) {
+                        out.add(new Placement(base.relative(right, w).above(h), Part.BLOCK));
+                    }
+                }
+            }
+            case "room" -> {
+                BlockPos center = centered ? feet : feet.relative(facing, 4);
+                shell(out, center, right, facing);       // walls + roof
+                floor(out, center, right, facing, 2);     // a proper floor
+                out.add(new Placement(cell(center, right, facing, 0, 0), Part.TORCH));
+            }
+            case "pen" -> {
+                BlockPos center = centered ? feet : feet.relative(facing, 5);
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dz = -3; dz <= 3; dz++) {
+                        if (Math.abs(dx) != 3 && Math.abs(dz) != 3) continue; // perimeter only
+                        BlockPos col = cell(center, right, facing, dx, dz);
+                        boolean isGate = dx == 0 && dz == -3;
+                        out.add(new Placement(col, isGate ? Part.GATE : Part.FENCE));
+                    }
+                }
+            }
+            case "fortify" -> {
+                // A defensive perimeter wall around the base, 3 blocks high, with
+                // a one-wide chokepoint doorway on the side we're facing and a
+                // torch on each corner so nothing spawns along it. `feet` here is
+                // the center (home if set) — the ring is built around it. The
+                // radius widens for a whole compound (perimeterRadius from the job).
+                // A village's wall rings its square and opens onto each of the four avenues
+                // (village/TownPlan): a gate five wide on every side, with a pillar and a lantern
+                // either side of it; battlements along the top; a squat tower at each corner.
+                // A hired hand's wall round a homestead keeps its one doorway at the front.
+                int r = perimeterRadius;
+                boolean town = r >= 12;
+                int gate = town ? com.jrpetty.mcassistant.village.TownPlan.AVENUE : 0;
+                Blueprints.Style stone = Blueprints.Style.MASONRY;
+                for (int dx = -r; dx <= r; dx++) {
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (Math.abs(dx) != r && Math.abs(dz) != r) continue; // perimeter only
+                        boolean corner = Math.abs(dx) == r && Math.abs(dz) == r;
+                        int along = Math.abs(dx) == r ? dz : dx;
+                        if (town ? Math.abs(along) <= gate && !corner : (dx == 0 && dz == -r)) continue;   // the gates
+                        BlockPos col = cell(feet, right, facing, dx, dz);
+                        boolean pillar = town && Math.abs(along) == gate + 1 && !corner;
+                        int top = corner ? 4 : pillar ? 4 : 2;
+                        for (int h = 0; h <= top; h++) {
+                            out.add(new Placement(col.above(h), Part.BLOCK, stone, Blueprints.Way.UP));
+                        }
+                        if (corner || pillar) {
+                            out.add(new Placement(col.above(top + 1), Part.LANTERN, Blueprints.Style.NONE, Blueprints.Way.UP));
+                        } else if (town && Math.floorMod(along, 2) == 0) {
+                            out.add(new Placement(col.above(3), Part.BLOCK, Blueprints.Style.STONE_SLAB, Blueprints.Way.UP));
+                        }
+                    }
+                }
+                if (!town) {
+                    for (int sx = -1; sx <= 1; sx += 2) {
+                        for (int sz = -1; sz <= 1; sz += 2) {
+                            out.add(new Placement(
+                                cell(feet, right, facing, sx * r, sz * r).above(3), Part.TORCH));
+                        }
+                    }
+                }
+            }
+            case "column" -> {
+                // A simple marker pillar with a torch on top — cheap, and handy as
+                // a beacon it can build anywhere to mark a spot.
+                BlockPos base = centered ? feet : feet.relative(facing, 2);
+                for (int h = 0; h <= 4; h++) out.add(new Placement(base.above(h), Part.BLOCK));
+                out.add(new Placement(base.above(5), Part.TORCH));
+            }
+            default -> { }
+        }
+    }
+
+    /** 5x5 hollow room: walls 3 high with a doorway facing the assistant, flat roof. */
+    private static void shell(List<Placement> out, BlockPos center, Direction right, Direction facing) {
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+                BlockPos col = cell(center, right, facing, dx, dz);
+                if (edge) {
+                    boolean isDoor = dx == 0 && dz == -2;
+                    for (int h = 0; h <= 2; h++) {
+                        if (isDoor && h <= 1) continue;
+                        out.add(new Placement(col.above(h), Part.BLOCK));
+                    }
+                }
+                out.add(new Placement(col.above(3), Part.BLOCK)); // roof
+                // A raised middle to the roof, so it reads as a building and not a crate.
+                if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) out.add(new Placement(col.above(4), Part.BLOCK));
+            }
+        }
+    }
+
+    /** A solid floor under a radius x radius footprint. */
+    private static void floor(List<Placement> out, BlockPos center, Direction right, Direction facing, int radius) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                out.add(new Placement(cell(center, right, facing, dx, dz).below(), Part.BLOCK));
+            }
+        }
+    }
+
+    private static BlockPos cell(BlockPos center, Direction right, Direction facing, int dx, int dz) {
+        return center.relative(right, dx).relative(facing, dz);
+    }
+}

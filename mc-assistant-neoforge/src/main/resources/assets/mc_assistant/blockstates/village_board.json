@@ -1,0 +1,195 @@
+{
+ "multipart": [
+  {
+   "when": {
+    "facing": "south"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/panel"
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "col": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_left"
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "col": "9"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_right"
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "row": "4"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_top"
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "row": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_bottom"
+   }
+  },
+  {
+   "when": {
+    "facing": "west"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/panel",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "col": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_left",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "col": "9"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_right",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "row": "4"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_top",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "row": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_bottom",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "north"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/panel",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "col": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_left",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "col": "9"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_right",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "row": "4"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_top",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "row": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_bottom",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "east"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/panel",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "col": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_left",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "col": "9"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_right",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "row": "4"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_top",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "row": "0"
+   },
+   "apply": {
+    "model": "mc_assistant:block/village_board/frame_bottom",
+    "y": 270
+   }
+  }
+ ]
+}

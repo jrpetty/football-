@@ -1,0 +1,449 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.entity.goal.Blueprints;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * A way in at every door. A building is laid out at one height and the ground in front of its door
+ * is whatever the world made, so now and then a door opened onto a bank of earth a block high, or
+ * onto a drop two blocks down that nobody could step up out of, and the house stood empty with its
+ * folk outside it. On its rounds of the streets (TownWork) the town looks at its buildings' doors one
+ * by one, and where the way in is not one a folk can walk, a hand comes and makes it so: earth in
+ * the doorway dug out, a doorstep laid level with the door, and from there a step at a time (cut
+ * into a bank, or built up out of a hollow) until the way meets the ground. Only the ground the
+ * world made is dug, never anything built and nothing under a roof (a porch is the building's own);
+ * every block laid comes out of the stores, and what is dug goes into them.
+ */
+public final class DoorWays {
+
+    private DoorWays() {}
+
+    /** How far out from a door the way is made, at most. */
+    public static final int MOST_STEPS = 6;
+    /** How deep a hollow is built up under a step, at most. */
+    public static final int MOST_FILL = 4;
+    /** Buildings looked at in one visit. */
+    private static final int LOOK = 6;
+    /** Cells mended at one door in one visit. */
+    private static final int BUDGET = 8;
+
+    private static final Map<UUID, Integer> CURSOR = new ConcurrentHashMap<>();
+
+    /** A door's lower half, and the way out of it. */
+    public record Door(BlockPos pos, Direction out) {}
+
+    /** One thing to do for a door's way: dig out a cell, or lay a block in one. No place: the way runs
+     *  into something built, and is not the town's to make. */
+    public record Fix(@Nullable BlockPos pos, boolean dig, boolean top) {
+        public Fix(@Nullable BlockPos pos, boolean dig) {
+            this(pos, dig, false);
+        }
+    }
+
+    private static final Fix BLOCKED = new Fix(null, true);
+
+    /** One visit (TownWork.tick): the next doors whose way in is not walkable, mended by a hand at them. */
+    public static void tick(ServerLevel level, Villages.Village v) {
+        List<Ledger.Building> all = Ledger.buildings(v.id());
+        if (all.isEmpty()) return;
+        int cursor = CURSOR.getOrDefault(v.id(), 0);
+        for (int looked = 0; looked < Math.min(LOOK, all.size()); looked++) {
+            Ledger.Building b = all.get(Math.floorMod(cursor, all.size()));
+            for (Door d : doorsOf(level, b)) {
+                if (mend(level, v, d, BUDGET) != 0) {      // work done here, or a hand on its way: back next visit
+                    CURSOR.put(v.id(), cursor);
+                    return;
+                }
+                if (approach(level, v, d, BUDGET) != 0) {  // [paths] then the path from it to the street, paved and lit
+                    CURSOR.put(v.id(), cursor);
+                    return;
+                }
+            }
+            cursor++;
+        }
+        CURSOR.put(v.id(), cursor);
+    }
+
+    /**
+     * Mend the way in at one door, up to so many cells: 1 if something was done, 0 if the way is
+     * walkable already (or cannot be made so without breaking what somebody built), -1 if it waits
+     * for a hand to come to it.
+     */
+    public static int mend(ServerLevel level, Villages.Village v, Door d, int budget) {
+        int done = 0;
+        for (int i = 0; i < budget; i++) {
+            Fix fix = next(level, d);
+            if (fix == null || fix.pos() == null) return done > 0 ? 1 : 0;
+            if (!TownJobs.atWork(level, v, "streets", fix.pos(), "clearing the way to a door")) return done > 0 ? 1 : -1;
+            if (fix.dig()) {
+                BlockState there = level.getBlockState(fix.pos());
+                for (ItemStack drop : Block.getDrops(there, level, fix.pos(), null)) TownWork.give(level, v, drop);
+                level.destroyBlock(fix.pos(), false);
+            } else {
+                // [paths] The top of a step (the block a folk treads on) in cobblestone, like the doorstep: a step of
+                // bare earth is a scar the rain and the sweepers argue over. Earth only under it, out of sight.
+                BlockState lay = takeFill(level, v, fix.pos().getY() == d.pos().getY() - 1 || fix.top());
+                if (lay == null) return done > 0 ? 1 : 0;         // nothing in the stores to lay: another day
+                level.setBlockAndUpdate(fix.pos(), lay);
+            }
+            done++;
+        }
+        return 1;
+    }
+
+    /** A block out of the stores to lay under a step: cobblestone for the doorstep, earth or stone below. */
+    @Nullable
+    static BlockState takeFill(ServerLevel level, Villages.Village v, boolean doorstep) {
+        if (doorstep && TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
+        if (TownWork.take(level, v, s -> s.is(Items.DIRT), 1)) return Blocks.DIRT.defaultBlockState();
+        if (TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
+        if (TownWork.take(level, v, s -> s.is(Items.COBBLED_DEEPSLATE), 1)) return Blocks.COBBLED_DEEPSLATE.defaultBlockState();
+        return null;
+    }
+
+    /** Every door of a building, each with its side away from the middle of the building. */
+    public static List<Door> doorsOf(Level level, Ledger.Building b) {
+        List<Door> out = new ArrayList<>();
+        int half;
+        try {
+            int[] h = Blueprints.has(b.structure()) ? Blueprints.fullHalf(b.structure()) : BuildGoal.footprint(b.structure());
+            half = Math.max(h[0], h[1]) + 1;
+        } catch (RuntimeException e) {
+            half = 6;
+        }
+        BlockPos a = b.anchor();
+        if (!level.hasChunk(a.getX() >> 4, a.getZ() >> 4)) return out;
+        for (BlockPos p : BlockPos.betweenClosed(a.offset(-half, -2, -half), a.offset(half, 14, half))) {
+            BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof DoorBlock) || st.getValue(DoorBlock.HALF) != DoubleBlockHalf.LOWER) continue;
+            Direction f = st.getValue(DoorBlock.FACING);
+            Direction side = flat(p.relative(f), a) >= flat(p.relative(f.getOpposite()), a) ? f : f.getOpposite();
+            out.add(new Door(p.immutable(), side));
+        }
+        return out;
+    }
+
+    private static double flat(BlockPos p, BlockPos a) {
+        double dx = p.getX() - a.getX(), dz = p.getZ() - a.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    /**
+     * The first thing to do to make the way in at this door walkable: null when it is walkable, BLOCKED
+     * when it runs into something built. Walked out from the door: the doorstep level with the door, its
+     * floor under it and two blocks of room over it; then a step at a time toward the ground's own
+     * height, never more than one up or down, until it meets the ground.
+     */
+    @Nullable
+    public static Fix next(Level level, Door d) {
+        BlockPos door = d.pos();
+        Direction out = d.out();
+        int walk = door.getY();
+        BlockPos prev = door;
+        for (int k = 1; k <= MOST_STEPS; k++) {
+            BlockPos col = door.relative(out, k);
+            if (!level.hasChunk(col.getX() >> 4, col.getZ() >> 4)) return null;
+            int want;
+            if (k == 1) {
+                want = walk;
+            } else {
+                int ground = standNear(level, col, walk);
+                // Met: the ground here is a step from the last one at most, with room to stand on it.
+                if (Math.abs(ground - walk) <= 1 && (ground <= walk || passable(level, prev.atY(walk + 2)))) return null;
+                want = ground > walk ? walk + 1 : walk - 1;
+                // [build-world] No headroom to step up from the last step (a lamp hung over the doorstep, a porch's eaves):
+                // the bank is cut down level instead, a way into it. Stepped up, the way was "something built" and never
+                // made, and the inn's door opened onto a bank of earth two high.
+                if (want > walk) {
+                    BlockPos over = prev.atY(walk + 2);
+                    if (!passable(level, over) && !diggable(level, over, level.getBlockState(over))) want = walk;
+                }
+            }
+            BlockPos feet = col.atY(want);
+            boolean roofed = roofed(level, col, want);
+            // Room to rise onto it from the last step.
+            if (want > walk) {
+                Fix f = clear(level, prev.atY(walk + 2), roofed(level, prev, walk));
+                if (f != null) return f;
+            }
+            // Room to stand on it: two blocks clear, top down. [build-world] The doorstep's own earth is dug out even
+            // under the eaves: it is the lot's ground at the door, no porch's floor, and left there it shut the door of
+            // every building whose roof overhangs its step on a hummock.
+            for (BlockPos cell : new BlockPos[] { feet.above(), feet }) {
+                Fix f = clear(level, cell, roofed && k > 1);
+                if (f != null) return f;
+            }
+            // Something under it to stand on: a hollow built up from its bottom.
+            if (!solid(level, feet.below())) {
+                if (roofed) return BLOCKED;
+                int bottom = feet.getY() - 1;
+                while (bottom > feet.getY() - 1 - MOST_FILL && !solid(level, feet.atY(bottom - 1))) bottom--;
+                if (!solid(level, feet.atY(bottom - 1))) return BLOCKED;      // too deep a hole to build up
+                BlockState there = level.getBlockState(feet.atY(bottom));
+                if (!there.canBeReplaced() || there.getFluidState().is(FluidTags.LAVA)) return BLOCKED;
+                return new Fix(feet.atY(bottom), false, bottom == feet.getY() - 1);   // [paths] the top of the fill: trodden on
+            }
+            walk = want;
+            prev = col;
+        }
+        return null;
+    }
+
+    /**
+     * The height a folk would stand at in this column, near this one: the highest place three up to six
+     * down with something under it and two blocks of room over it. Well above when the column is solid
+     * that high (a bank to cut steps into), well below when there is nothing to stand on (a drop).
+     */
+    private static int standNear(Level level, BlockPos col, int walk) {
+        for (int y = walk + 3; y >= walk - 6; y--) {
+            if (solid(level, col.atY(y - 1)) && room(level, col.atY(y))) return y;
+        }
+        return solid(level, col.atY(walk)) ? walk + 10 : walk - 10;
+    }
+
+    /** A roof over this spot (a porch's, an arcade's, a room's): something built within eight over it. */
+    private static boolean roofed(Level level, BlockPos col, int walk) {
+        for (int y = walk + 2; y <= walk + 9; y++) {
+            BlockPos p = col.atY(y);
+            BlockState st = level.getBlockState(p);
+            if (!spans(st.getCollisionShape(level, p)) || diggable(level, p, st)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    /** [build-world] Does this shape cover its cell from side to side, as a roof does (a block, a slab, a stair)? A lamp
+     *  hung over a doorstep is no roof, and the earth in the doorway under it was left there for good. */
+    private static boolean spans(net.minecraft.world.phys.shapes.VoxelShape shape) {
+        if (shape.isEmpty()) return false;
+        var box = shape.bounds();
+        return box.getXsize() >= 0.99 && box.getZsize() >= 0.99;
+    }
+
+    /** What is in this cell that must come out for a folk to walk through it: null when it is clear;
+     *  BLOCKED when it is something built, or anything under a roof. */
+    @Nullable
+    private static Fix clear(Level level, BlockPos cell, boolean roofed) {
+        if (passable(level, cell)) return null;
+        if (!roofed && diggable(level, cell, level.getBlockState(cell))) return new Fix(cell, true);
+        return BLOCKED;
+    }
+
+    /** Ground the world made, a tree's leaves or trunk, snow, a worn path: what the town may dig out of a
+     *  doorway. Never a field, nor the cobblestone somebody laid. */
+    static boolean diggable(Level level, BlockPos pos, BlockState st) {
+        if (st.hasBlockEntity() || st.is(Blocks.FARMLAND)) return false;
+        if (st.is(Blocks.DIRT_PATH)) return true;
+        if (st.is(BlockTags.LEAVES)) return true;
+        if (st.is(BlockTags.LOGS)) return BuildGoal.isTreeLog(level, pos);
+        if (st.is(Blocks.SNOW_BLOCK) || st.is(Blocks.SNOW)) return true;
+        return MineStairs.ground(st) && !st.is(Blocks.COBBLESTONE) && !st.is(Blocks.COBBLED_DEEPSLATE)
+            && !st.is(Blocks.MOSSY_COBBLESTONE);
+    }
+
+    private static boolean passable(Level level, BlockPos p) {
+        BlockState st = level.getBlockState(p);
+        return st.getCollisionShape(level, p).isEmpty() && !st.getFluidState().is(FluidTags.LAVA);
+    }
+
+    private static boolean room(Level level, BlockPos feet) {
+        return passable(level, feet) && passable(level, feet.above());
+    }
+
+    private static boolean solid(Level level, BlockPos p) {
+        return !level.getBlockState(p).getCollisionShape(level, p).isEmpty();
+    }
+
+    // ------------------------------------------------------------------ [paths] the path to the street
+
+    /** How far out of a door the street may be for a path to be laid to it. */
+    public static final int MOST_PATH = 8;
+
+    /**
+     * [paths] The path from a door to its street, once the way in is walkable (mend): straight out of the door to the first
+     * block of a street or the square, laid in what that street is laid in (a worn path, or the stones of a paved one), the
+     * grass and flowers off it, a stray block in the two places before the door taken away, and a lamp by it where it
+     * meets the street if the way is dark (the town's post and lantern from the Iron Age, a torch on a post before). One
+     * piece of work at a time, by hand (TownJobs), out of the stores: 1 if something was done, 0 if there is nothing to do
+     * (or nothing the town can do: a door with no street straight out of it), -1 if it waits for a hand.
+     */
+    public static int approach(ServerLevel level, Villages.Village v, Door d, int budget) {
+        if (!Footways.live()) return 0;
+        List<BlockPos> way = pathTo(v, d);
+        if (way == null) return 0;
+        int done = 0;
+        BlockPos street = d.pos().relative(d.out(), way.size() + 1);
+        BlockState streetTop = streetTop(level, street);
+        for (int k = 0; k < way.size() && done < budget; k++) {
+            BlockPos col = way.get(k);
+            BlockPos feet = Footways.standNear(level, col.atY(d.pos().getY()), 1, MOST_STEPS);
+            if (feet == null) return done > 0 ? 1 : 0;
+            // The two places before the door: a stray block in them taken away.
+            if (k < 2) {
+                for (BlockPos c : new BlockPos[]{ feet, feet.above() }) {
+                    BlockState st = level.getBlockState(c);
+                    if (Footways.passable(level, c) || !Footways.stray(level, v, c, st)) continue;
+                    if (!TownBlocks.mayBreak(level, v, c, TownBlocks.Why.DOORWAY)) continue;
+                    if (!TownJobs.atWork(level, v, "streets", c, "clearing the way to a door")) return done > 0 ? 1 : -1;
+                    for (ItemStack drop : Block.getDrops(st, level, c, null)) TownWork.give(level, v, drop);
+                    level.destroyBlock(c, false);
+                    TownBlocks.traced(v, c, TownBlocks.Why.DOORWAY);
+                    done++;
+                }
+            }
+            // The grass and flowers off the path, and the earth under it worn or paved.
+            BlockState plant = level.getBlockState(feet);
+            BlockPos floor = feet.below();
+            BlockState ground = level.getBlockState(floor);
+            if (!TownWork.earth(ground) || !TownBlocks.mayPlace(level, v, floor, TownBlocks.Why.DOORWAY)) continue;
+            BlockState lay = Blocks.DIRT_PATH.defaultBlockState();
+            if (streetTop != null && !streetTop.is(Blocks.DIRT_PATH) && TownWork.take(level, v, s -> s.is(streetTop.getBlock().asItem()), 1)) lay = streetTop;
+            if (!TownJobs.atWork(level, v, "streets", floor, "laying the path to a door")) {
+                if (!lay.is(Blocks.DIRT_PATH)) TownWork.give(level, v, new ItemStack(lay.getBlock().asItem()));
+                return done > 0 ? 1 : -1;
+            }
+            if (!plant.isAir() && plant.canBeReplaced() && plant.getFluidState().isEmpty()) level.removeBlock(feet, false);
+            level.setBlockAndUpdate(floor, lay);
+            TownBlocks.traced(v, floor, TownBlocks.Why.DOORWAY);
+            done++;
+        }
+        if (done > 0) return 1;
+        return light(level, v, d, way);
+    }
+
+    /** The places straight out of a door up to its street (the street's own first block not among them); null if no street
+     *  begins within MOST_PATH, or another building stands in the way. */
+    @Nullable
+    static List<BlockPos> pathTo(Villages.Village v, Door d) {
+        List<BlockPos> way = new ArrayList<>();
+        for (int k = 1; k <= MOST_PATH; k++) {
+            BlockPos p = d.pos().relative(d.out(), k);
+            if (Footways.street(v, p.getX(), p.getZ()) || Footways.square(v, p.getX(), p.getZ())) return way;
+            way.add(p);
+        }
+        return null;
+    }
+
+    /** What the street at this place is laid in: its top block (a worn path, cobbles, bricks); null if it is not laid. */
+    @Nullable
+    private static BlockState streetTop(Level level, BlockPos street) {
+        BlockPos feet = Footways.standNear(level, street, 3, 6);
+        if (feet == null) return null;
+        BlockState top = level.getBlockState(feet.below());
+        if (top.is(Blocks.DIRT_PATH) || top.is(Blocks.COBBLESTONE) || top.is(Blocks.STONE_BRICKS) || top.is(Blocks.GRAVEL)
+            || top.is(Blocks.MOSSY_COBBLESTONE) || top.is(Blocks.POLISHED_ANDESITE) || top.is(Blocks.BRICKS)) return top;
+        return null;
+    }
+
+    /** The light a path wants, in the dark of night: as much as a torch gives a few blocks off. */
+    public static final int LIT = 8;
+
+    /** Is this path lit: its doorstep and its end both in the light of a lamp? */
+    public static boolean lit(Level level, Door d, List<BlockPos> way) {
+        BlockPos first = d.pos().relative(d.out()), last = way.isEmpty() ? first : way.get(way.size() - 1);
+        for (BlockPos p : new BlockPos[]{ first, last }) {
+            BlockPos feet = Footways.standNear(level, p.atY(d.pos().getY()), 1, MOST_STEPS);
+            if (feet == null) feet = p.atY(d.pos().getY());
+            if (level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, feet) < LIT) return false;
+        }
+        return true;
+    }
+
+    /** A lamp beside a dark path, by the street end of it on the lot's own ground: 1 if one went up, -1 waiting for a hand. */
+    private static int light(ServerLevel level, Villages.Village v, Door d, List<BlockPos> way) {
+        if (lit(level, d, way)) return 0;
+        Direction right = d.out().getClockWise();
+        List<BlockPos> spots = new ArrayList<>();
+        for (int k = way.size() - 1; k >= 0; k--) {
+            spots.add(way.get(k).relative(right));
+            spots.add(way.get(k).relative(right.getOpposite()));
+        }
+        for (BlockPos col : spots) {
+            if (Footways.builtOn(v, col.getX(), col.getZ()) || Footways.street(v, col.getX(), col.getZ())
+                || Footways.square(v, col.getX(), col.getZ())) continue;
+            BlockPos feet = Footways.standNear(level, col.atY(d.pos().getY()), 1, MOST_STEPS);
+            if (feet == null || !level.getBlockState(feet).isAir() || !level.getBlockState(feet.above()).isAir()
+                || !level.getBlockState(feet.above(2)).isAir()) continue;
+            BlockState under = level.getBlockState(feet.below());
+            if (!under.isFaceSturdy(level, feet.below(), Direction.UP) || under.is(Blocks.FARMLAND)) continue;
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, feet, feet.above(), feet.above(2))) continue;
+            boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();
+            if (iron && !Masonry.canLight(level, v)) iron = false;
+            if (!iron && Market.stock(level, v.id(), s -> s.is(Items.TORCH)) == 0) return 0;
+            if (!TownJobs.atWork(level, v, "streets", feet, "putting up a lamp by a door")) return -1;
+            Block lamp = iron ? Masonry.light(level, v) : null;
+            if (lamp == null && !TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) return 0;
+            if (!TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
+                    && !TownWork.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 1)) {
+                if (lamp != null) Masonry.unlight(level, v, lamp); else TownWork.give(level, v, new ItemStack(Items.TORCH));
+                return 0;
+            }
+            Block post = HouseSigns.fenceOf(v.id());
+            level.setBlockAndUpdate(feet, post.defaultBlockState());
+            if (lamp != null) {
+                level.setBlockAndUpdate(feet.above(), post.defaultBlockState());
+                level.setBlockAndUpdate(feet.above(2), lamp.defaultBlockState());
+            } else {
+                level.setBlockAndUpdate(feet.above(), Blocks.TORCH.defaultBlockState());
+            }
+            TownBlocks.traced(v, feet, TownBlocks.Why.LAMP);
+            return 1;
+        }
+        return 0;
+    }
+
+    /** Is the way in at this door one a folk can walk? */
+    public static boolean walkable(Level level, Door d) {
+        return next(level, d) == null;
+    }
+
+    /** Tests: the way straight out of a door to its street. */
+    @Nullable
+    public static List<BlockPos> pathToForTests(Villages.Village v, Door d) {
+        return pathTo(v, d);
+    }
+
+    /** [build-world] Tests: the way in at a door made now, as mend makes it, of cobblestone and earth from nowhere
+     *  (no town, no stores, no hand). How many cells it took; -1 if the way runs into something built. */
+    public static int mendForTests(Level level, Door d) {
+        for (int n = 0; n < 64; n++) {
+            Fix fix = next(level, d);
+            if (fix == null) return n;
+            if (fix.pos() == null) return -1;
+            if (fix.dig()) level.destroyBlock(fix.pos(), false);
+            else level.setBlockAndUpdate(fix.pos(), (fix.pos().getY() == d.pos().getY() - 1 || fix.top()
+                ? Blocks.COBBLESTONE : Blocks.DIRT).defaultBlockState());
+        }
+        return 64;
+    }
+
+    /** Tests: is this bare earth, not a path? */
+    public static boolean earthForTests(BlockState st) {
+        return TownWork.earth(st);
+    }
+
+    public static void resetForTests() {
+        CURSOR.clear();
+    }
+}

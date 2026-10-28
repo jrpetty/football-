@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    " F ",
+    " D ",
+    "PPP"
+  ],
+  "key": {
+    "F": {
+      "item": "minecraft:lily_of_the_valley"
+    },
+    "D": {
+      "item": "minecraft:dirt"
+    },
+    "P": {
+      "tag": "minecraft:planks"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:window_box",
+    "count": 1,
+    "components": {
+      "minecraft:block_state": {
+        "flower": "lily_of_the_valley"
+      }
+    }
+  }
+}

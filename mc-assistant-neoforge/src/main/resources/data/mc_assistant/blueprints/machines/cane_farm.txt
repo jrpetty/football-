@@ -1,0 +1,71 @@
+# [redstone] The automatic sugar cane farm: eight canes in a row, harvested by the game's own redstone.
+#
+# The cane stands on mud (a soil the game lets cane grow on, and lower than a whole block), with water
+# beside it. Behind each cane, at its second block, a piston faces it; on the piston an observer watches
+# the cane's third block. When a cane grows that tall the observer pulses into the redstone along the
+# back, the block under the redstone powers the pistons, and the piston breaks the cane's second block:
+# its drop is pushed forward onto the slab row, and the third block, left standing on nothing, falls
+# onto the mud. A hopper under every mud block and every slab picks the drops up through them (neither
+# is a whole block, so a hopper beneath still reaches what lies on them) and passes them along to the
+# chest at the right-hand end. The bottom cane is never touched, so it grows again.
+#
+# Rows run from the back (top) to the front (bottom), as in the buildings' drawings. Each "key" says what
+# a mark is: the block, its state (a way such as "front" or "right" is turned with the farm), and, where
+# it matters, the stage it is built in: the frame first, then the hoppers and pistons, the redstone and
+# the observers after those, and the cane last of all, so nothing fires half built. "casing" is the
+# engineer's stone (stone bricks, or what the stores have); "." is cleared to air.
+name cane_farm
+key # casing
+key = casing_slab type=bottom
+key g glass or=casing
+key m mud
+key ~ water
+key H hopper facing=right
+key h hopper facing=back
+key C chest facing=front
+key P piston facing=front
+key O observer facing=front
+key r redstone_wire
+key S sugar_cane
+layer -2
+##########
+##########
+##########
+##########
+##########
+layer -1
+##########
+##########
+#HHHHHHHHC
+#hhhhhhhh#
+##########
+layer 0
+##########
+#~~~~~~~~#
+#mmmmmmmm.
+#========#
+#gggggggg#
+layer 1
+##########
+#........#
+#SSSSSSSS#
+#........#
+#gggggggg#
+layer 2
+##########
+#PPPPPPPP#
+#........#
+#........#
+#gggggggg#
+layer 3
+#rrrrrrrr#
+#OOOOOOOO#
+#........#
+#........#
+#........#
+layer 4
+==========
+==========
+#........#
+#........#
+#........#

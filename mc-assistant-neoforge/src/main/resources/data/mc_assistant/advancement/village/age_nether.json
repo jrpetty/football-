@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/age_diamond",
+  "display": {
+    "icon": {
+      "id": "minecraft:obsidian"
+    },
+    "title": {
+      "text": "The Nether Age"
+    },
+    "description": {
+      "text": "A town you founded, or are a citizen of, comes to the Nether Age"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

@@ -1,0 +1,52 @@
+{
+ "parent": "block/block",
+ "textures": {
+  "particle": "mc_assistant:block/storehouse/unit_side",
+  "north": "mc_assistant:block/storehouse/front_11",
+  "south": "mc_assistant:block/storehouse/bottom",
+  "west": "mc_assistant:block/storehouse/bottom",
+  "east": "mc_assistant:block/storehouse/bottom",
+  "up": "mc_assistant:block/storehouse/bottom",
+  "down": "mc_assistant:block/storehouse/bottom"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    16,
+    16,
+    16
+   ],
+   "faces": {
+    "north": {
+     "texture": "#north",
+     "cullface": "north"
+    },
+    "south": {
+     "texture": "#south",
+     "cullface": "south"
+    },
+    "west": {
+     "texture": "#west",
+     "cullface": "west"
+    },
+    "east": {
+     "texture": "#east",
+     "cullface": "east"
+    },
+    "up": {
+     "texture": "#up",
+     "cullface": "up"
+    },
+    "down": {
+     "texture": "#down",
+     "cullface": "down"
+    }
+   }
+  }
+ ]
+}

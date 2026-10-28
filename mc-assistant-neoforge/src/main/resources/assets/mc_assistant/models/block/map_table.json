@@ -1,0 +1,375 @@
+{
+  "__comment": "[borders-map] The war room's map table: a broad table on four legs, the region's map spread on it, a rolled map beside.",
+  "parent": "minecraft:block/block",
+  "textures": {
+    "top": "mc_assistant:block/map_table_top",
+    "side": "mc_assistant:block/map_table_side",
+    "leg": "mc_assistant:block/map_table_leg",
+    "particle": "mc_assistant:block/map_table_side"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        12,
+        0
+      ],
+      "to": [
+        16,
+        15,
+        16
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#top"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side"
+        },
+        "north": {
+          "uv": [
+            0,
+            1,
+            16,
+            4
+          ],
+          "texture": "#side"
+        },
+        "south": {
+          "uv": [
+            0,
+            1,
+            16,
+            4
+          ],
+          "texture": "#side"
+        },
+        "east": {
+          "uv": [
+            0,
+            1,
+            16,
+            4
+          ],
+          "texture": "#side"
+        },
+        "west": {
+          "uv": [
+            0,
+            1,
+            16,
+            4
+          ],
+          "texture": "#side"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        0,
+        1
+      ],
+      "to": [
+        4,
+        12,
+        4
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "south": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "east": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "down": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        0,
+        1
+      ],
+      "to": [
+        15,
+        12,
+        4
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "south": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "east": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "down": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        0,
+        12
+      ],
+      "to": [
+        4,
+        12,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "south": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "east": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "down": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        0,
+        12
+      ],
+      "to": [
+        15,
+        12,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "south": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "east": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        },
+        "down": {
+          "uv": [
+            0,
+            4,
+            3,
+            16
+          ],
+          "texture": "#leg"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        15,
+        11
+      ],
+      "to": [
+        9,
+        16.5,
+        12.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            7,
+            1
+          ],
+          "texture": "#top"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            7,
+            1
+          ],
+          "texture": "#top"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            7,
+            1
+          ],
+          "texture": "#top"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            7,
+            1
+          ],
+          "texture": "#top"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            7,
+            1
+          ],
+          "texture": "#top"
+        }
+      }
+    }
+  ]
+}

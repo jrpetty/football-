@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "mc_assistant:item/longbow_pulling_0"
+  }
+}

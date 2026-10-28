@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "mc_assistant:block/assistant_spawner_top",
+    "bottom": "mc_assistant:block/assistant_spawner_bottom",
+    "side": "mc_assistant:block/assistant_spawner_side",
+    "particle": "mc_assistant:block/assistant_spawner_side"
+  }
+}

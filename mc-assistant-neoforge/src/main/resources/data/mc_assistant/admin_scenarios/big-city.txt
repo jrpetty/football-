@@ -1,0 +1,9 @@
+# [admin] A city of five hundred: founded here in the Iron Age, walled, and its buildings put up.
+# Several minutes: the founding brings five hundred folk in over time, then everything is built a building a tick.
+say Founding a city of five hundred; this takes several minutes.
+village admin world found 500 iron
+waitfor 450
+village admin ages set iron none
+village admin build walls
+village admin build all
+say The city stands: /village admin inspect town for its numbers.

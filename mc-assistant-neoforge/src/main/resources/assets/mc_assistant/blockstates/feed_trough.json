@@ -1,0 +1,32 @@
+{
+ "variants": {
+  "axis=x,feed=0": {
+   "model": "mc_assistant:block/feed_trough_0"
+  },
+  "axis=x,feed=1": {
+   "model": "mc_assistant:block/feed_trough_1"
+  },
+  "axis=x,feed=2": {
+   "model": "mc_assistant:block/feed_trough_2"
+  },
+  "axis=x,feed=3": {
+   "model": "mc_assistant:block/feed_trough_3"
+  },
+  "axis=z,feed=0": {
+   "model": "mc_assistant:block/feed_trough_0",
+   "y": 90
+  },
+  "axis=z,feed=1": {
+   "model": "mc_assistant:block/feed_trough_1",
+   "y": 90
+  },
+  "axis=z,feed=2": {
+   "model": "mc_assistant:block/feed_trough_2",
+   "y": 90
+  },
+  "axis=z,feed=3": {
+   "model": "mc_assistant:block/feed_trough_3",
+   "y": 90
+  }
+ }
+}

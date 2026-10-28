@@ -1,0 +1,45 @@
+# [redstone] The auto-smelter: four furnaces fed and emptied by hoppers alone.
+#
+# Over the furnaces stand two great chests of ore, each over a pair of hoppers, and every hopper drops what
+# it takes from the chest above it into the top of its own furnace, where the ore goes; so all four
+# furnaces are fed at once, not the first one only (a line of hoppers handing ore along fills the first
+# furnace and starves the rest). Behind them, two great chests of fuel (the kelp diver's dried kelp
+# blocks, or coal) stand over a hopper behind each furnace, which pushes the fuel into the furnace's back,
+# where its fuel goes. What each furnace makes, the hopper under it takes from the bottom, and the hoppers
+# under the row pass it along to the chest at the right-hand end. A smelter's day, done by the game.
+#
+# "A" and "B" are the two halves of a great chest (its right and left hand, as the game names them).
+name smelter
+key # casing
+key Z bricks or=casing
+key A chest facing=front type=right
+key B chest facing=front type=left
+key K chest facing=front
+key U furnace facing=front
+key H hopper facing=right
+key v hopper facing=down
+key b hopper facing=front
+layer -2
+#####
+#####
+#####
+layer -1
+#####
+#####
+HHHHK
+layer 0
+ZZZZZ
+bbbbZ
+UUUU.
+layer 1
+ZZZZZ
+ABABZ
+vvvvZ
+layer 2
+ZZZZZ
+....Z
+ABABZ
+layer 3
+ZZZZZ
+.....
+.....

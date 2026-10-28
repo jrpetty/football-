@@ -1,0 +1,45 @@
+{
+  "_comment": "Task menu presets — edit freely and restart the bot. Single task: label + action + args. Multi-step job: label + steps (array of {action, args}), run in order; saying 'stop' cancels the rest. Valid actions: gather, hunt, eat, build, craft, smelt, farm, give, follow, come, guard, attack, deposit, drop, equip, goto, status, inventory, stop.",
+  "presets": [
+    { "label": "Get logs (16)", "action": "gather", "args": { "resource": "wood", "amount": 16 } },
+    { "label": "Get stone (16)", "action": "gather", "args": { "resource": "stone", "amount": 16 } },
+    { "label": "Get iron (8)", "action": "gather", "args": { "resource": "iron", "amount": 8 } },
+    { "label": "Bring me logs (8)", "action": "gather", "args": { "resource": "wood", "amount": 8, "deliver": true } },
+    { "label": "Hunt some food", "action": "hunt", "args": {} },
+    { "label": "Cook my meat", "action": "smelt", "args": { "item": "meat", "amount": 8 } },
+    { "label": "Harvest & replant crops", "action": "farm", "args": {} },
+    { "label": "Follow me", "action": "follow", "args": {} },
+    { "label": "Guard me", "action": "guard", "args": {} },
+    { "label": "Build a shelter", "action": "build", "args": { "structure": "house" } },
+    { "label": "Craft a crafting table", "action": "craft", "args": { "item": "crafting_table" } },
+    { "label": "Craft a stone pickaxe", "action": "craft", "args": { "item": "stone_pickaxe" } },
+    {
+      "label": "Full wood run (chop, plank, stash)",
+      "steps": [
+        { "action": "gather", "args": { "resource": "wood", "amount": 16 } },
+        { "action": "craft", "args": { "item": "planks", "amount": 32 } },
+        { "action": "deposit", "args": {} }
+      ]
+    },
+    {
+      "label": "Iron run (mine, smelt, deliver)",
+      "steps": [
+        { "action": "gather", "args": { "resource": "iron", "amount": 8 } },
+        { "action": "smelt", "args": { "item": "iron", "amount": 8 } },
+        { "action": "give", "args": { "item": "iron_ingot" } }
+      ]
+    },
+    { "label": "Hand over the loot", "action": "give", "args": {} },
+    { "label": "Stash loot in a chest", "action": "deposit", "args": {} },
+    { "label": "Go home", "action": "gowaypoint", "args": { "name": "home" } },
+    { "label": "Patrol the base", "action": "patrol", "args": {} },
+    { "label": "Fish for food", "action": "fish", "args": { "amount": 3 } },
+    { "label": "Branch mine here (24)", "action": "mine", "args": { "length": 24 } },
+    { "label": "Breed the animals", "action": "breed", "args": {} },
+    { "label": "Scout ahead (100)", "action": "scout", "args": { "distance": 100 } },
+    { "label": "Enchant my best gear", "action": "enchant", "args": {} },
+    { "label": "Sleep", "action": "sleep", "args": {} },
+    { "label": "Status report", "action": "status", "args": {} },
+    { "label": "Stop", "action": "stop", "args": {} }
+  ]
+}

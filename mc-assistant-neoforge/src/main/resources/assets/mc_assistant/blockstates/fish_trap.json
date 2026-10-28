@@ -1,0 +1,94 @@
+{
+ "variants": {
+  "catch=0,facing=north,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_0"
+  },
+  "catch=0,facing=north,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_0"
+  },
+  "catch=1,facing=north,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_1"
+  },
+  "catch=1,facing=north,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_1"
+  },
+  "catch=2,facing=north,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_2"
+  },
+  "catch=2,facing=north,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_2"
+  },
+  "catch=0,facing=east,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 90
+  },
+  "catch=0,facing=east,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 90
+  },
+  "catch=1,facing=east,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 90
+  },
+  "catch=1,facing=east,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 90
+  },
+  "catch=2,facing=east,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 90
+  },
+  "catch=2,facing=east,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 90
+  },
+  "catch=0,facing=south,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 180
+  },
+  "catch=0,facing=south,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 180
+  },
+  "catch=1,facing=south,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 180
+  },
+  "catch=1,facing=south,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 180
+  },
+  "catch=2,facing=south,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 180
+  },
+  "catch=2,facing=south,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 180
+  },
+  "catch=0,facing=west,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 270
+  },
+  "catch=0,facing=west,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_0",
+   "y": 270
+  },
+  "catch=1,facing=west,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 270
+  },
+  "catch=1,facing=west,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_1",
+   "y": 270
+  },
+  "catch=2,facing=west,waterlogged=false": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 270
+  },
+  "catch=2,facing=west,waterlogged=true": {
+   "model": "mc_assistant:block/fish_trap_2",
+   "y": 270
+  }
+ }
+}
