@@ -47,6 +47,10 @@ export interface MapMatchRecord {
   readonly weapons: Readonly<Record<string, Readonly<Record<string, WeaponRangeStat>>>>
   /** What killed the player (weapon class) at each range: range → class → deaths. */
   readonly deathsBy: Readonly<Record<string, Readonly<Record<string, number>>>>
+  /** Deaths soon after the previous one (just after respawning), by where they happened ("?" when not placed). */
+  readonly spawnDeaths?: Readonly<Record<string, number>>
+  /** Seconds between deaths (each life after the first death), at most 60 kept. */
+  readonly lives?: readonly number[]
 }
 
 /** Where the player is right now. */
@@ -63,6 +67,8 @@ const MAX_AREAS = 80
 const MAX_GAP_MS = 15_000
 /** A death is placed where the player was if their own view placed them this recently. */
 const PLACE_DEATH_MS = 12_000
+/** A death this soon after the previous one came right after respawning. */
+const SPAWN_DEATH_MS = 15_000
 const ELEVATION_SET = new Set<string>(['underground', 'ground', 'upper', 'roof'])
 
 const sep = '→'
@@ -104,6 +110,9 @@ export class MapTracker {
   private lastRead = new Map<string, number>()
   /** Deaths this match from each killer spot to each area (for live tips). */
   private matchSightlines = new Map<string, number>()
+  private spawnDeaths = new Map<string, number>()
+  private lives: number[] = []
+  private lastDeathAt: number | null = null
 
   constructor(spec: PositioningSpec, maps: readonly GameMap[] | undefined) {
     this.spec = spec
@@ -171,6 +180,12 @@ export class MapTracker {
       return null
     }
     if (placed) this.area(placed).deaths++
+    if (this.lastDeathAt !== null) {
+      const life = ev.at - this.lastDeathAt
+      if (life > 0 && this.lives.length < 60) this.lives.push(Math.round(life / 1000))
+      if (life > 0 && life <= SPAWN_DEATH_MS) this.spawnDeaths.set(placed ?? '?', (this.spawnDeaths.get(placed ?? '?') ?? 0) + 1)
+    }
+    this.lastDeathAt = ev.at
     const by = this.spec.killedByAttribute ? ev.attributes?.[this.spec.killedByAttribute] : undefined
     if (typeof range === 'string' && range !== 'unknown' && typeof by === 'string' && by !== 'unknown') {
       let m = this.deathsBy.get(range)
@@ -203,6 +218,8 @@ export class MapTracker {
             killerWeapons: Object.fromEntries(this.killerWeapons),
             weapons: Object.fromEntries([...this.weapons].map(([w, m]) => [w, Object.fromEntries([...m].map(([r, s]) => [r, { ...s }]))])),
             deathsBy: Object.fromEntries([...this.deathsBy].map(([r, m]) => [r, Object.fromEntries(m)])),
+            ...(this.spawnDeaths.size ? { spawnDeaths: Object.fromEntries(this.spawnDeaths) } : {}),
+            ...(this.lives.length ? { lives: [...this.lives] } : {}),
           }
         : null
     this.newMatch()
@@ -217,6 +234,9 @@ export class MapTracker {
     this.weapons = new Map()
     this.deathsBy = new Map()
     this.matchSightlines = new Map()
+    this.spawnDeaths = new Map()
+    this.lives = []
+    this.lastDeathAt = null
     this.here = null
   }
 
@@ -224,6 +244,8 @@ export class MapTracker {
   snapshot(): MapMatchRecord | null {
     if (!this.mapName || this.empty) return null
     return {
+      spawnDeaths: Object.fromEntries(this.spawnDeaths),
+      lives: [...this.lives],
       map: this.mapName,
       areas: Object.fromEntries([...this.areas].map(([k, v]) => [k, { ...v, elevations: { ...v.elevations } }])),
       routes: Object.fromEntries(this.routes),
@@ -286,6 +308,10 @@ export interface MapModel {
   readonly killerWeapons: readonly { readonly name: string; readonly n: number }[]
   readonly weapons: readonly { readonly name: string; readonly byRange: Readonly<Record<string, WeaponRangeStat>>; readonly kills: number; readonly deaths: number }[]
   readonly deathsBy: Readonly<Record<string, Readonly<Record<string, number>>>>
+  /** Deaths just after respawning, by where ("?" when not placed), most first. */
+  readonly spawnDeaths: readonly { readonly area: string; readonly n: number }[]
+  /** Median seconds between deaths, when there were a few. */
+  readonly medianLifeSec: number | null
 }
 
 const ELEV_ORDER: readonly Elevation[] = ['underground', 'ground', 'upper', 'roof']
@@ -306,7 +332,11 @@ export function mapModelFrom(records: readonly MapMatchRecord[], maps: readonly 
   const killerWeapons = new Map<string, number>()
   const weapons = new Map<string, Map<string, WeaponRangeStat>>()
   const deathsBy = new Map<string, Map<string, number>>()
+  const spawnDeaths = new Map<string, number>()
+  const lives: number[] = []
   for (const r of recs) {
+    addInto(spawnDeaths, r.spawnDeaths ?? {})
+    lives.push(...(r.lives ?? []))
     for (const [name, a] of Object.entries(r.areas)) {
       const cur = areas.get(name) ?? { visits: 0, seconds: 0, deaths: 0, kills: 0, enemies: 0, elev: new Set<Elevation>() }
       cur.visits += a.visits
@@ -366,6 +396,8 @@ export function mapModelFrom(records: readonly MapMatchRecord[], maps: readonly 
       })
       .sort((a, b) => b.kills + b.deaths - (a.kills + a.deaths)),
     deathsBy: Object.fromEntries([...deathsBy].map(([r, m]) => [r, Object.fromEntries(m)])),
+    spawnDeaths: [...spawnDeaths].map(([area, n]) => ({ area, n })).sort((a, b) => b.n - a.n),
+    medianLifeSec: lives.length >= 3 ? [...lives].sort((a, b) => a - b)[lives.length >> 1] : null,
   }
 }
 
@@ -407,8 +439,16 @@ export function mapLines(m: MapModel, max = 6): string[] {
     const a = m.areas.find((x) => x.name === pp.callout)
     if (time > 120 && a) out.push(`Power position ${pp.callout}: ${pp.why}${/[.!?]$/.test(pp.why) ? '' : '.'} You spent ${Math.round((100 * a.seconds) / time)}% of your time there.`)
   }
+  const quick = m.spawnDeaths.reduce((s, x) => s + x.n, 0)
+  if (quick >= 3) {
+    const at = m.spawnDeaths.find((x) => x.area !== '?' && x.n >= 2)
+    out.push(
+      `${quick} deaths came within 15 s of the one before${at ? `, mostly at ${at.area}` : ''}: they are holding your spawn's exits. Check the exits, wait for a teammate, or take another way out.`,
+    )
+  }
   const route = m.routes[0]
   if (route && route.n >= 3) out.push(`Your most used route: ${route.from} → ${route.to} (${route.n} times).`)
+  if (m.medianLifeSec !== null) out.push(`Median time between deaths: ${m.medianLifeSec} s.`)
   return out.slice(0, max)
 }
 

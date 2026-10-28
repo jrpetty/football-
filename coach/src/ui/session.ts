@@ -15,7 +15,7 @@ import { statusLabel } from '../core/policy/registry.ts'
 import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
-import { aoe2GameReplay, aoe4GameReplay, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
+import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
 import { tone } from './tones.ts'
@@ -404,7 +404,15 @@ export class CoachSession {
       case 'replay-aoe':
         return new ReplaySource(sink, onEnded, aoe2GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires II — synthetic replay (not a real game)' })
       case 'replay-mw4':
-        return new ReplaySource(sink, onEnded, mw4MatchReplay({ seed, realMinutes: 4 }), { speed, label: 'Modern Warfare 4 — synthetic replay (not a real match)' })
+      {
+        // A real map from the pack (a core map with links and a power position), walked by a synthetic player.
+        const maps = this.profile?.knowledge.maps ?? []
+        const map = maps.filter((m) => m.type === 'core').map(demoMapFrom).find((m) => !!m) ?? null
+        return new ReplaySource(sink, onEnded, mw4MatchReplay({ seed, realMinutes: 4, map }), {
+          speed,
+          label: `Modern Warfare 4${map ? ` on ${map.name}` : ''} — synthetic replay (not a real match)`,
+        })
+      }
       case 'replay-aoe4':
         return new ReplaySource(sink, onEnded, aoe4GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires IV — synthetic replay (not a real game)' })
     }

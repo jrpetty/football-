@@ -397,7 +397,7 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
       f ? [{ type: f.type, ...(f.type === 'death' ? { zone: ['n', 'c', 'e', 'c', 'w'][i % 5] } : {}), attributes: f.tags, evidence: f.type === 'death' ? 'killcam' : 'kill marker' }] : [],
       {
         // The weapon in hand (the sidearm now and then), and the enemy's killstreaks as they come.
-        ownWeapon: i % 7 === 6 ? 'Renetti' : 'MCW',
+        ownWeapon: i % 7 === 6 ? 'SANG 9mm' : 'M4',
         ...(i % 23 === 11 ? { enemyStreaks: i % 46 === 11 ? 'UAV' : 'UAV, Cluster Strike' } : {}),
         ...positionAt(i),
       },

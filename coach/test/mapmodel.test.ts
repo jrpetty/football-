@@ -204,3 +204,19 @@ test('questions: a weapon or perk by name, the map, where you are', async () => 
   assert.match(answerLocally(classify('power positions on yard?', p), p, report, [])!, /^Power positions on Yard: Clock Tower \(sees all of Market from above\)\. Hardpoint order: Market, Garage, Clock Tower\.$/)
   assert.match(answerLocally(classify('where am i?', p), p, report, [])!, /^I have not seen enough of this map yet/)
 })
+
+test('deaths just after respawning are spawn deaths, with where; the median time between deaths', () => {
+  const t = new MapTracker(spec, [yard])
+  t.observe(visible({ mapName: 'Yard', location: 'Alley' }, 0))
+  const deaths = [30_000, 40_000, 50_000, 110_000, 120_000]
+  for (const at of deaths) {
+    t.observe(visible({ location: 'Alley' }, at - 2000))
+    t.event(ev('death', at, { range: 'close', killedBy: 'smg' }), visible({}, at))
+  }
+  const r = t.finish()!
+  assert.deepEqual(r.spawnDeaths, { Alley: 3 })
+  assert.deepEqual(r.lives, [10, 10, 60, 10])
+  const m = mapModelFrom([r], [yard], 'Yard')!
+  assert.equal(m.medianLifeSec, 10)
+  assert.ok(mapLines(m, 10).some((l) => l.startsWith("3 deaths came within 15 s of the one before, mostly at Alley: they are holding your spawn's exits.")), mapLines(m, 10).join(' | '))
+})

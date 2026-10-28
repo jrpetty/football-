@@ -186,7 +186,7 @@ test('MW4 and FC learn too: what kills you on a map, your weapons, how they scor
   const lm = learnedFrom(mw, mw4, { map: 'Synthetic Yard' })!
   const lines = [...learnedLines(lm, 'them'), ...learnedLines(lm, 'you')]
   assert.ok(lines.some((l) => /^What killed you: assault rifle \d+/.test(l)), lines.join(' | '))
-  assert.ok(lines.some((l) => /^Your weapons \(kills–deaths\): MCW \d+–\d+/.test(l)), lines.join(' | '))
+  assert.ok(lines.some((l) => /^Your weapons \(kills–deaths\): M4 \d+–\d+/.test(l)), lines.join(' | '))
   const fcs: MatchRecord[] = []
   for (const seed of [4, 5]) fcs.push(...play(engineFor(fc, settings({ profileId: 'ea-fc', profileModeId: 'kickoff-vs-cpu', mode: 'training' }), { matchHistory: [...fcs] }), fcMatchReplay({ seed })).matches)
   const lf = learnedFrom(fcs, fc, { opponent: 'Northbridge FC' })!
