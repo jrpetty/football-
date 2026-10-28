@@ -465,7 +465,7 @@ function PastBadge({ past }: { past: PastSeen | null }) {
   if (!past) return null
   return (
     <span className={`badge ${past.seen ? 'ok' : 'neutral'} past`} title="From your saved games against this civilisation: in how many its tell-tale signs were on your screen">
-      {past.seen ? `Met in ${past.seen} of your ${past.of} ${past.of === 1 ? 'game' : 'games'}` : `Not in your last ${past.of} ${past.of === 1 ? 'game' : 'games'}`}
+      {past.of === 1 ? (past.seen ? 'Met in your last game' : 'Not in your last game') : past.seen ? `Met in ${past.seen} of your last ${past.of} games` : `Not in your last ${past.of} games`}
     </span>
   )
 }
@@ -557,7 +557,7 @@ function LearnedTrackView({ t }: { t: LearnedTrack }) {
         <ol className="build-order">
           {order.map((o) => (
             <li key={o.name}>
-              <span>{o.name}</span> <span className="muted">{clock(o.atSec)}</span>
+              <span>{t.kind === 'age' ? o.name[0].toUpperCase() + o.name.slice(1) : o.name}</span> <span className="muted">{clock(o.atSec)}</span>
             </li>
           ))}
         </ol>

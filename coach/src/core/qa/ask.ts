@@ -311,7 +311,7 @@ function learnedAnswer(profile: GameProfile, report: SessionReport, history: rea
     return 'I have no past games to learn from yet. Turn on "Remember my games" in Settings and play a few: I learn their usual builds and armies, and yours, from what your screen shows.'
   }
   const lines = [...learnedLines(l, 'them', 3), ...learnedLines(l, 'you', 3)]
-  const games = `${l.matches} ${l.matches === 1 ? 'game' : 'games'}`
+  const games = l.matches === 1 ? 'game' : `${l.matches} games`
   const record = l.won + l.lost ? ` You won ${l.won} of ${l.won + l.lost} with a result read.` : ''
   if (!lines.length) return `From your last ${games}${l.filterText ? ` ${l.filterText}` : ''}, I have not seen enough on screen to see a pattern yet.${record}`
   return `From your last ${games}${l.filterText ? ` ${l.filterText}` : ''} (as first seen on your screen): ${lines.join(' ')}${record}`

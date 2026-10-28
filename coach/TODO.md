@@ -172,6 +172,15 @@ Legend:
 - ◐ Plan research: from search summaries and community guides for the current patch; the upcoming civs' plans are marked "(unverified)" and need a check at release.
 - ◐ Cue reading (a tower at your gold, a second Town Center) from real frames. *Untested without captures.*
 
+## v8 delivery
+
+- ☑ Screen reading set by the player for each game: refresh time (1–20 s), looks at once (auto or 1–4), detail (768–1600 px); applied mid-capture. *Settings sanitised and tested; sampler reconfigured live.*
+- ☑ Thinking off for screen readings (Sonnet 5.5 and Haiku 5.5); matchup-only reference once the opponent's civilisation is read (about 70% less text per look); measured cost per look from the API's token counts.
+- ☑ Learning across games for AoE IV, AoE II, MW4 and FC: what each side was seen doing (first-seen order, army mix, tallies, results), filed by opponent, civilisation, map, mode or formation; recalled at the start of the next game of that kind where live coaching is allowed; linked to the civilisation plans; answers, digest, Insights panel. *Tested with each game's demo played several times (`test/learning.test.ts`).*
+- ☑ Readings from one match no longer carry into the next (map, opponent).
+- ◐ New readings from real frames: your army, the opponent's AoE II civilisation and army, your MW4 weapon and enemy killstreaks, the FC opponent and formation. *Untested without captures.*
+- ◐ How much thinking costs on Opus 5.5 at low effort, and whether thinking off loses accuracy on Sonnet or Haiku. *Measure on a real session with the new cost breakdown.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

@@ -799,7 +799,7 @@ export class CoachEngine {
       if (!l) continue
       const lines = [...learnedLines(l, 'them', 2), ...learnedLines(l, 'you', 3).slice(-1)]
       if (!lines.length) continue
-      const games = `${l.matches} ${l.matches === 1 ? 'game' : 'games'}`
+      const games = l.matches === 1 ? 'game' : `${l.matches} games`
       out.push({ news: { kind: 'history', id: `${id}:${value}`, text: `Your last ${games} ${l.filterText}: ${lines.join(' ')}` }, at: now })
     }
     return out

@@ -174,6 +174,12 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.7 | Set your civilisation, then age up. | "<Age> as <civ>: …" is said once per age; Their side shows "Your plan" for your current age, and their power spikes and weak windows. |
 | 13.8 | Ask "what's their plan?" and "what should I do this age?" | The answer names the read (with evidence) or says nothing has been scouted that supports one, then your plan for this age. |
 | 13.9 | Settings → model estimate; play 5 minutes of AoE IV. | Frames about every 3 seconds; Settings spend grows by roughly the estimate; at the cap all calls stop with a notice. |
+| 13.10 | Settings → Screen reading (MW4): Fast · 1 s, during a bot match. | Looks about every second from then on (Session timeline, Cloud vision counts); estimate about 3× the 3-second figure; "Reset to game defaults" goes back to 2.5 s. |
+| 13.11 | Same, after 5+ looks. | "Measured this session" shows the cost per look, per hour at this refresh, and tokens per look (image and question, cached reference, written, thinking). |
+| 13.12 | Sonnet 5.5 for vision, thinking Off; play 5 minutes. | No errors; measured thinking tokens near zero; compare the readings with a game on Brief. |
+| 13.13 | AoE IV vs the AI, memory on: play two games against the same civilisation. | Second game, once their civilisation is read: "Your last game against …" on the timeline (spoken with commentary on); Their side plan cards show "Met in your last game"; Insights → What the coach has learned shows their order, armies and yours. |
+| 13.14 | Same in ranked. | Nothing recalled during play; Insights shows it after the match. |
+| 13.15 | MW4 vs bots, two matches on one map; FC vs CPU, two matches against one team. | Insights shows what killed you, your weapons' kills and deaths (MW4); how they scored and how you lost the ball (FC). |
 
 ## 14. Accessibility and layout
 
