@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v13, Windows-first.
+> **Status:** v14, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -109,13 +109,35 @@ Then press **Choose the game window**, play, and listen.
       rotations; movement, mechanics and every mode's rules.
     - AoE IV covers all 25 civilisations, landmarks and economy numbers.
     - Counter-Strike 2 (game files of 22 Oct 2026, Premier Season Five):
-      all 44 weapons and pieces of equipment with price, kill reward,
-      damage, armour penetration, fire rate, magazine, one-tap range and
-      how to beat each; the 10 Active Duty and reserve maps with 258
-      callouts, links, power positions, sightlines, bomb sites and the
-      game's own radar coordinates; the economy (loss bonus, rewards,
-      plant bonus), timings, HUD, 13 modes, 51 playbook entries and 309
-      reference items.
+      - **Guns:** all 34, with the numbers worked out from the game's own
+        weapon file: damage at 5–50 m to the head (with and without a
+        helmet), body (with and without kevlar), stomach and legs, hits and
+        time to kill, how far one headshot kills through a helmet, how far
+        the first shot stays on a head standing and crouched (scoped for
+        sniper rifles), how far it misses while running, armour
+        penetration, speed and reload. The AK-47's 4 body hits through
+        kevlar (0.30 s) and helmet one-tap to about 69 m, the M4A4's 5 and
+        no helmet one-tap, the M4A1-S's 4 up close and 5 at 20 m match the
+        well-known figures. A sortable table puts every gun side by side.
+      - **Grenades:** smoke, flash, HE, molotov, incendiary and decoy,
+        each with how it works (fuses, fire spread and duration, how
+        smoke puts out fire, flash strength, HE damage through armour),
+        how to use it and the usual mistakes, throwing (jump-throws, the
+        three throw strengths, the line-up reticle), team utility and the
+        utility patches since 2023. Details that rest only on CS:GO's
+        code or a single guide (50 of 236, spray patterns included) are
+        marked unverified, with the reason.
+      - **Maps:** the seven Active Duty maps (Ancient, Anubis, Cache,
+        Dust II, Inferno, Mirage, Nuke) with 186 callouts placed on the
+        game's radar overview, links, power positions, sightlines, bomb
+        sites and the radar coordinates; and **227 grenade lineups**: 44
+        from Valve's own guide in the game files with the exact spot to
+        stand and where it lands, and 183 from lineup guides (where to
+        stand and aim, the throw, what it does), plus 38 executes and
+        retakes that put them in order. 86 are marked unverified, each
+        with the reason (often: the aim is not described in words).
+      - The economy (loss bonus, rewards, plant bonus), timings, HUD, 13
+        modes, 51 playbook entries and 426 reference items.
     - FC 27 (Title Update 1.1.0): 23 modes, the radar and HUD, FC IQ
       roles and tactics, skill moves, set pieces, 13 formations with how
       each looks on the radar, its weak spots and how to beat it, 55
@@ -298,16 +320,29 @@ Then press **Choose the game window**, play, and listen.
       the radar. A death the game reported gets the screen's details added,
       never counted twice.
     - **Rounds and economy** (Insights): a round strip (won or lost, your
-      buy, kills, death), your money against what you carried in, and
-      lines on forcing ("you force-bought 5 times and lost 4; 3 times you
-      could not buy the round after"), pistol rounds, early deaths, dying
-      with grenades unused, and each side.
+      buy, kills, death, grenades thrown of those carried), your money
+      against what you carried in, and lines on forcing ("you force-bought
+      5 times and lost 4; 3 times you could not buy the round after"),
+      pistol rounds, early deaths and each side.
+    - **Your grenades, from the game's data:** what you carried each round
+      by kind, what you threw, what was still in your hands when you died,
+      how often you were flashed blind (and for how long) and caught fire.
+      Lines such as "As T you threw 3 of the 8 grenades you carried; 2 were
+      still in your hands when you died (1 smoke, 1 flash)", full buys
+      without a smoke or a flash, being flashed and standing in fire, each
+      linked to its playbook entry. Whose flash it was is not in the data.
+    - **Grenade lineups** (Insights): each map's lineups drawn from where
+      they are thrown to where they land, on the game's overview once you
+      import it (else on a sketch of the callouts), filtered by side and
+      grenade; pick an execute or retake to see its grenades numbered in
+      throw order. Ask "what smokes for an A execute on Mirage?" or "where
+      do I throw the Xbox smoke?" and the coach answers from them.
     - **The radar stitched, with deaths pinned to the spot,** as for MW4
       (Radar Is Rotating: No). The game's own radar overview can be the
       official map: export it from the game files and import it (the app
       does not ship Valve's images); on it every callout is labelled where
-      it is. The lower levels of Nuke, Vertigo and Train are kept as their
-      own piece of the map. Measured on the ten real overviews with a
+      it is. Nuke's lower level is kept as its own piece of the map.
+      Measured on the real overviews with a
       simulated radar (30 runs): no point placed in the wrong spot, 95%
       within 0.6% of the map's width in 29 runs (2.6% once, on Nuke), and
       68–93% of points placed while playing (17% once, on Cache: unclear

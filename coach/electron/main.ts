@@ -75,6 +75,8 @@ const VISION_ARSENAL_CHARS = 11_000
 const ANSWER_ARSENAL_CHARS = 60_000
 /** Every map in short (the current map in full goes in the digest), for answers. */
 const ANSWER_MAPS_CHARS = 20_000
+/** The one map a question names, in full (callouts, lineups, executes). */
+const ANSWER_MAP_CHARS = 14_000
 
 const consent = new CaptureConsent()
 /** The sources last shown in the picker. Only these can be chosen. */
@@ -453,7 +455,12 @@ function registerIpc(): void {
       if (!isJpeg(r.image)) return { ok: false, error: 'Invalid screen image.', fatal: true }
       image = { base64: Buffer.from(r.image).toString('base64') }
     }
-    return cloud.ask(profile, r.question.slice(0, 1000), r.digest.slice(0, 40_000), { image, review: r.review === true, knowledge: await answerKnowledge(profile) })
+    // A map named in the question: its callouts, lineups and executes travel with the question
+    // (not in the cached knowledge, so the cache still holds).
+    const q = r.question.slice(0, 1000)
+    const named = (profile.knowledge.maps ?? []).find((m) => [m.name, ...(m.aliases ?? [])].some((n) => n.length >= 4 && new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(q)))
+    const digest = named ? `${mapText(named, { budget: ANSWER_MAP_CHARS, detail: 'answer' })}\n\n${r.digest}`.slice(0, 40_000 + ANSWER_MAP_CHARS) : r.digest.slice(0, 40_000)
+    return cloud.ask(profile, q, digest, { image, review: r.review === true, knowledge: await answerKnowledge(profile) })
   })
 
   handle(CHANNELS.reviewMatch, async (req) => {

@@ -275,6 +275,19 @@ Legend:
 - ◐ Real FC radar captures: how FC draws the ball and the controlled player, the lines, and the radar at set pieces are undocumented; the default box is an estimate. *QA 13.43–13.46.*
 - ◐ Real CS2: the radar's look in game (the player's arrow, icons, the lower-level switch) and Game State Integration against a live client are untested here. *QA 13.47–13.50.*
 
+## v14 delivery
+
+- ☑ CS2 pack v1.1.0 on the seven Active Duty maps only (Ancient, Anubis, Cache, Dust II, Inferno, Mirage, Nuke); Overpass, Train and Vertigo left out. Callout spots on the overview for Mirage and Nuke read off the game's radar images and checked against Valve's retake spawns and plant spots.
+- ☑ Gun numbers from the game's weapon file for all 34 guns: damage by distance, body part and armour; hits and time to kill; helmet and bare one-tap range; accurate range standing, crouched and scoped; the miss while running; armour penetration, speed, reload (`test/ballistics.test.ts`). The arsenal shows a table per gun and every gun side by side; answers say them.
+
+  *Checked against the well-known counts: AK-47 4 body hits through kevlar (0.30 s), 3 to the stomach, helmet one-tap to about 69 m; M4A4 5 and no helmet one-tap; M4A1-S 4 up close, 5 at 20 m; AWP one chest hit, two to the legs; SG 553 helmet one-tap at any range; AK-47 accurate to 21.4 m standing, 27.7 m crouched.*
+- ☑ Grenade mechanics (108 details on the six grenades and 11 spray patterns in the arsenal; throwing, team utility, gun mechanics and 29 patches in the reference), each with its source; those resting only on CS:GO's code or a single guide marked unverified with the reason.
+- ☑ 227 grenade lineups: 44 of Valve's own from the game files with exact spots (one of Valve's 45, Anubis "A Main", left out: its landing in the file is nowhere near A Main), 183 researched, 38 executes and retakes (`test/utility.test.ts`). Insights → Grenade lineups draws them on the overview; questions about lineups, executes and retakes are answered from them; the named map's lineups go to the cloud with a question.
+- ☑ Researched practice positions (setpos/setang) and aim angles that came from a cheat client's copy of a lineup site were removed; the 61 aims that were only an angle are marked unverified, with the reason.
+- ☑ Grenades from Game State Integration: carried, thrown and held at death by kind, times flashed blind and for how long, times caught fire; lines on throwing what you carry (overall or by side), full buys without a smoke or flash, flashes and fire, each with its playbook entry (`test/cs2.test.ts`). The weapon list from the game now replaces the last one, so a thrown last grenade is no longer counted as held.
+- ◐ Lineups are not checked in the game here: 86 are marked unverified, and Cache's grenade collision changed twice in 2026. *QA 14.1–14.3.*
+- ◐ The 34% accurate-speed line, throw speeds and flash and HE falloff are from CS:GO's code; CS2 may differ.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

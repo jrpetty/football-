@@ -8,13 +8,29 @@
 // events: the player's kills (with headshots) and deaths (with whether they
 // were flashed or reloading), and the bomb. Round by round it keeps the
 // player's economy: money at the start, what they spent, the buy it made, kills,
-// damage, whether and when they died with grenades unused, and the result.
+// damage, whether and when they died with grenades unused, and the result; and
+// their grenades: what they carried, what they threw (a grenade that left
+// their hands while alive), what they still held at death, and how often they
+// were flashed blind or caught fire.
 
 import type { ArsenalItem, GameMap } from '../profile/schema.ts'
 import type { Observation } from '../types.ts'
 
 export type Side = 'CT' | 'T'
 export type BuyType = 'pistol' | 'eco' | 'force' | 'full'
+/** Grenade kinds as the coach counts them (fire = a molotov or an incendiary). */
+export const GRENADE_KINDS = ['smoke', 'flash', 'he', 'fire', 'decoy'] as const
+export type GrenadeKind = (typeof GRENADE_KINDS)[number]
+export type GrenadeCounts = Readonly<Partial<Record<GrenadeKind, number>>>
+const NADE_KIND: Readonly<Record<string, GrenadeKind>> = {
+  weapon_smokegrenade: 'smoke',
+  weapon_flashbang: 'flash',
+  weapon_hegrenade: 'he',
+  weapon_molotov: 'fire',
+  weapon_incgrenade: 'fire',
+  weapon_decoy: 'decoy',
+}
+export const countNades = (c: GrenadeCounts | null | undefined): number => (c ? GRENADE_KINDS.reduce((n, k) => n + (c[k] ?? 0), 0) : 0)
 
 export interface Cs2Round {
   /** 1-based round of the match. */
@@ -37,6 +53,17 @@ export interface Cs2Round {
   readonly blindAtDeath: boolean | null
   /** Grenades still held when the player died. */
   readonly utilityAtDeath: number | null
+  /** Grenades carried this round (the most held at once while alive, so after buying). */
+  readonly nades?: GrenadeCounts | null
+  /** Grenades that left the player's hands while alive in the round (thrown; a dropped one counts too). */
+  readonly thrown?: GrenadeCounts
+  /** Grenades held at death, by kind. */
+  readonly nadesAtDeath?: GrenadeCounts | null
+  /** Times flashed blind (white-out at BLIND_AT or more) while alive, and the seconds spent blind. */
+  readonly flashed?: number
+  readonly blindSeconds?: number
+  /** Times the player caught fire. */
+  readonly burned?: number
   readonly result: 'won' | 'lost' | null
   /** How the round ended (elimination, bomb, defuse, time). */
   readonly reason: string | null
@@ -65,6 +92,8 @@ export interface GsiStatus {
   readonly side: Side | null
   readonly money: number | null
   readonly score: { readonly ours: number; readonly theirs: number } | null
+  /** Grenades held now (the player's own state only). */
+  readonly nades?: GrenadeCounts | null
 }
 
 /** Full buy: a rifle with armour and helmet (T: AK-47 $2,700 + $1,000; CT: M4 $2,900 + $1,000), with the starting pistol. */
@@ -84,6 +113,11 @@ function merge(into: Obj, from: Obj, depth = 0): Obj {
   if (depth > 6) return into
   for (const [k, v] of Object.entries(from)) {
     if (k === 'previously' || k === 'added' || k === 'auth') continue
+    // The weapon list comes whole: a grenade thrown or a gun dropped is simply missing from it.
+    if (k === 'weapons') {
+      into[k] = v
+      continue
+    }
     const o = obj(v)
     const cur = obj(into[k])
     into[k] = o && cur ? merge({ ...cur }, o, depth + 1) : v
@@ -121,7 +155,7 @@ export class Cs2Gsi {
   private seq = 0
   private lastAt: number | null = null
   // The player's own last state, and when the round went live.
-  private self: { health: number; kills: number; hs: number; flashed: number; reloading: boolean; grenades: number; t: number } | null = null
+  private self: { health: number; kills: number; hs: number; flashed: number; burning: number; reloading: boolean; grenades: number; nades: GrenadeCounts; t: number } | null = null
   private liveAt: number | null = null
   private roundsList: Cs2Round[] = []
   private cur: (Omit<Cs2Round, 'n'> & { n: number }) | null = null
@@ -210,11 +244,18 @@ export class Cs2Gsi {
       const name = str(active?.name)
       if (name && str(active?.type) !== 'Knife' && str(active?.type) !== 'C4') state('ownWeapon', this.weaponName(name), 'player.weapons')
       const grenades = weapons.filter((w) => str(w.type) === 'Grenade').reduce((n, w) => n + Math.max(1, num(w.ammo_reserve) ?? 1), 0)
+      const nades: Partial<Record<GrenadeKind, number>> = {}
+      for (const w of weapons) {
+        const kind = NADE_KIND[str(w.name) ?? '']
+        if (kind) nades[kind] = (nades[kind] ?? 0) + Math.max(1, num(w.ammo_reserve) ?? 1)
+      }
       const kills = num(pstate.round_kills) ?? 0
       const hs = num(pstate.round_killhs) ?? 0
       const flashed = num(pstate.flashed) ?? 0
+      const burning = num(pstate.burning) ?? 0
       const reloading = str(active?.state) === 'reloading'
       const prev = this.self
+      this.utility(prev, nades, health, flashed, burning, rphase, now)
       // Kills this round going up: each one is a kill (round_kills resets to 0 each round).
       if (prev && kills > prev.kills && kills - prev.kills <= 5) {
         const newHs = Math.max(0, hs - prev.hs)
@@ -225,10 +266,10 @@ export class Cs2Gsi {
         const blind = Math.max(prev.flashed, flashed) >= BLIND_AT
         event('death', { blind: blind ? 'blind' : 'clear', ...(prev.reloading || reloading ? { action: 'reloading' } : {}) }, 'player.state.health')
         if (this.cur && !this.cur.died) {
-          this.cur = { ...this.cur, died: true, diedAt: this.liveAt !== null ? Math.round((now - this.liveAt) / 100) / 10 : null, blindAtDeath: blind, utilityAtDeath: prev.grenades }
+          this.cur = { ...this.cur, died: true, diedAt: this.liveAt !== null ? Math.round((now - this.liveAt) / 100) / 10 : null, blindAtDeath: blind, utilityAtDeath: prev.grenades, nadesAtDeath: prev.nades }
         }
       }
-      this.self = { health: health ?? prev?.health ?? 100, kills, hs, flashed, reloading, grenades, t: now }
+      this.self = { health: health ?? prev?.health ?? 100, kills, hs, flashed, burning, reloading, grenades, nades, t: now }
       // Match stats as a fallback count.
       const ms = obj(player!.match_stats)
       const mk = num(ms?.kills)
@@ -244,7 +285,7 @@ export class Cs2Gsi {
     if (!own && player && this.self && this.self.health > 0 && mphase === 'live' && rphase === 'live') {
       const blind = this.self.flashed >= BLIND_AT
       event('death', { blind: blind ? 'blind' : 'clear', ...(this.self.reloading ? { action: 'reloading' } : {}) }, 'player (now spectating)')
-      if (this.cur && !this.cur.died) this.cur = { ...this.cur, died: true, diedAt: this.liveAt !== null ? Math.round((now - this.liveAt) / 100) / 10 : null, blindAtDeath: blind, utilityAtDeath: this.self.grenades }
+      if (this.cur && !this.cur.died) this.cur = { ...this.cur, died: true, diedAt: this.liveAt !== null ? Math.round((now - this.liveAt) / 100) / 10 : null, blindAtDeath: blind, utilityAtDeath: this.self.grenades, nadesAtDeath: this.self.nades }
       this.self = { ...this.self, health: 0 }
     }
 
@@ -258,6 +299,32 @@ export class Cs2Gsi {
 
     this.rounds(map, round, own ? pstate : null, side, now)
     return out
+  }
+
+  /**
+   * Grenades while alive: the most carried at once, a count falling as a throw (only once the round
+   * is live: in freeze time a fall is a sale), and flashes and fire as they start.
+   */
+  private utility(prev: Cs2Gsi['self'], nades: GrenadeCounts, health: number | null, flashed: number, burning: number, rphase: string | null, now: number): void {
+    const c = this.cur
+    if (!c || c.died || c.result !== null || (health ?? 0) <= 0) return
+    const carried: Partial<Record<GrenadeKind, number>> = { ...(c.nades ?? {}) }
+    for (const k of GRENADE_KINDS) if ((nades[k] ?? 0) > (carried[k] ?? 0)) carried[k] = nades[k]
+    let thrown = c.thrown ?? {}
+    let { flashed: times = 0, blindSeconds = 0, burned = 0 } = c
+    const live = rphase === 'live' || rphase === 'over'
+    if (prev && prev.health > 0 && live) {
+      const t: Partial<Record<GrenadeKind, number>> = { ...thrown }
+      for (const k of GRENADE_KINDS) {
+        const drop = (prev.nades[k] ?? 0) - (nades[k] ?? 0)
+        if (drop > 0 && drop <= 2) t[k] = (t[k] ?? 0) + drop
+      }
+      thrown = t
+      if (flashed >= BLIND_AT && prev.flashed < BLIND_AT) times++
+      if (prev.flashed >= BLIND_AT) blindSeconds += Math.min(1, Math.max(0, now - prev.t) / 1000)
+      if (burning > 0 && prev.burning <= 0) burned++
+    }
+    this.cur = { ...c, nades: carried, thrown, flashed: times, blindSeconds: Math.round(blindSeconds * 10) / 10, burned }
   }
 
   private rounds(map: Obj | null, round: Obj | null, pstate: Obj | null, side: Side | null, now: number): void {
@@ -291,6 +358,12 @@ export class Cs2Gsi {
         result: null,
         reason: null,
         bomb: null,
+        nades: null,
+        thrown: {},
+        nadesAtDeath: null,
+        flashed: 0,
+        blindSeconds: 0,
+        burned: 0,
       }
       this.liveAt = null
       if (this.self) this.self = { ...this.self, kills: 0, hs: 0 }
@@ -373,6 +446,7 @@ export class Cs2Gsi {
       side: own ? (str(player!.team) === 'CT' ? 'CT' : str(player!.team) === 'T' ? 'T' : null) : (this.cur?.side ?? null),
       money: own ? num(obj(player!.state)?.money) : null,
       score: snap?.score ?? null,
+      nades: own && Number(obj(player!.state)?.health ?? 0) > 0 ? (this.self?.nades ?? null) : null,
     }
   }
 
@@ -417,8 +491,16 @@ export function isCs2Rounds(v: unknown): v is Cs2Rounds {
         (x.blindAtDeath === null || typeof x.blindAtDeath === 'boolean') &&
         (x.result === null || x.result === 'won' || x.result === 'lost') &&
         (x.reason === null || (typeof x.reason === 'string' && x.reason.length <= 40)) &&
-        (x.bomb === null || ['planted', 'exploded', 'defused'].includes(x.bomb as string))
+        (x.bomb === null || ['planted', 'exploded', 'defused'].includes(x.bomb as string)) &&
+        ['nades', 'nadesAtDeath'].every((k) => x[k] === undefined || x[k] === null || isCounts(x[k])) &&
+        (x.thrown === undefined || isCounts(x.thrown)) &&
+        ['flashed', 'blindSeconds', 'burned'].every((k) => x[k] === undefined || (typeof x[k] === 'number' && Number.isFinite(x[k]) && (x[k] as number) >= 0 && (x[k] as number) <= 600))
       )
     })
   )
+}
+
+function isCounts(v: unknown): boolean {
+  const o = obj(v)
+  return !!o && Object.entries(o).every(([k, n]) => (GRENADE_KINDS as readonly string[]).includes(k) && typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 20)
 }

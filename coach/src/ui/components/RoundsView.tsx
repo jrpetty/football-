@@ -3,11 +3,13 @@
 // at the start of each round against what you carried into it, and the lines
 // the coach draws from them. Colour is never the only cue: each cell also
 // says W or L, the buy as a letter, kills as pips and a death as a cross.
+// Grenades: thrown of carried per round, and over the match by kind (what was
+// carried, thrown and still held at death), with flashes and fire.
 
 import { useMemo, useState } from 'react'
 import type { RoundsReport } from '../../core/engine.ts'
-import { roundInsights, roundTotals, type RoundInsight } from '../../core/analyses/rounds.ts'
-import type { BuyType, Cs2Round, Cs2Rounds } from '../../core/gsi/cs2.ts'
+import { GRENADE_LABEL, roundInsights, roundTotals, utilityTotals, type RoundInsight } from '../../core/analyses/rounds.ts'
+import { countNades, GRENADE_KINDS, type BuyType, type Cs2Round, type Cs2Rounds, type GrenadeCounts } from '../../core/gsi/cs2.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 
 const BUY: Readonly<Record<BuyType, { letter: string; label: string }>> = {
@@ -18,6 +20,10 @@ const BUY: Readonly<Record<BuyType, { letter: string; label: string }>> = {
 }
 
 const money = (v: number | null) => (v === null ? '—' : `$${v.toLocaleString('en-US')}`)
+const nadeList = (c: GrenadeCounts | null | undefined) =>
+  GRENADE_KINDS.filter((k) => (c?.[k] ?? 0) > 0)
+    .map((k) => `${c![k]} ${c![k] === 1 ? GRENADE_LABEL[k].one : GRENADE_LABEL[k].many}`)
+    .join(', ')
 
 function cellTitle(r: Cs2Round): string {
   return [
@@ -26,6 +32,13 @@ function cellTitle(r: Cs2Round): string {
     r.startMoney !== null ? `Started with ${money(r.startMoney)}${r.spent !== null ? `, spent ${money(r.spent)}` : ''}` : null,
     `${r.kills} ${r.kills === 1 ? 'kill' : 'kills'}${r.headshots ? ` (${r.headshots} headshot${r.headshots === 1 ? '' : 's'})` : ''}${r.damage !== null ? `, ${r.damage} damage` : ''}`,
     r.died ? `Died${r.diedAt !== null ? ` ${Math.round(r.diedAt)} s in` : ''}${r.blindAtDeath ? ', flashed' : ''}${r.utilityAtDeath ? `, ${r.utilityAtDeath} grenade${r.utilityAtDeath === 1 ? '' : 's'} unused` : ''}` : 'Survived',
+    r.nades !== undefined && countNades(r.nades)
+      ? `Grenades: carried ${nadeList(r.nades)}; threw ${countNades(r.thrown) ? nadeList(r.thrown) : 'none'}`
+      : r.nades !== undefined
+        ? 'No grenades'
+        : null,
+    r.flashed ? `Flashed blind ${r.flashed}× (${r.blindSeconds ?? 0} s)` : null,
+    r.burned ? `Caught fire ${r.burned}×` : null,
   ]
     .filter(Boolean)
     .join('\n')
@@ -52,6 +65,11 @@ export function RoundStrip({ rounds }: { rounds: readonly Cs2Round[] }) {
             <span className="rc-death" aria-label={r.died ? 'died' : 'survived'}>
               {r.died ? `✕${r.diedAt !== null ? Math.round(r.diedAt) : ''}` : ''}
             </span>
+            {r.nades !== undefined && countNades(r.nades) ? (
+              <span className="rc-nades" aria-label={`threw ${countNades(r.thrown)} of ${countNades(r.nades)} grenades`}>
+                {countNades(r.thrown)}/{countNades(r.nades)}
+              </span>
+            ) : null}
           </li>
         )
       })}
@@ -160,7 +178,9 @@ export function RoundsPanel({ profile, matches, insights, onPlaybook }: { profil
         </span>
       </div>
       <RoundStrip rounds={chosen.rounds.rounds} />
-      <p className="muted small rounds-key">W won · L lost · P pistol · E eco · F force · B full buy · ● your kills · ✕ died (seconds into the round). Hover a round for its details.</p>
+      <p className="muted small rounds-key">
+        W won · L lost · P pistol · E eco · F force · B full buy · ● your kills · ✕ died (seconds into the round) · 2/3 grenades thrown of carried. Hover a round for its details.
+      </p>
       <EconomyChart rounds={chosen.rounds.rounds} />
       {buys.length ? (
         <table className="rounds-table small">
@@ -184,6 +204,7 @@ export function RoundsPanel({ profile, matches, insights, onPlaybook }: { profil
           </tbody>
         </table>
       ) : null}
+      <UtilityTable rounds={chosen.rounds.rounds} />
       {lines.length ? (
         <ul className="pitch-insights">
           {lines.map((l) => (
@@ -209,6 +230,51 @@ export function RoundsPanel({ profile, matches, insights, onPlaybook }: { profil
   )
 }
 
+/** Grenades over the match by kind: carried, thrown, still held at death; and flashes and fire. */
+export function UtilityTable({ rounds }: { rounds: readonly Cs2Round[] }) {
+  const u = utilityTotals(rounds)
+  if (!u.rounds) return null
+  const kinds = GRENADE_KINDS.filter((k) => u.carried[k] || u.thrown[k])
+  return (
+    <div className="utility-totals">
+      {kinds.length ? (
+        <table className="rounds-table small">
+          <caption className="muted">Your grenades over {u.rounds} rounds</caption>
+          <thead>
+            <tr>
+              <th scope="col">Grenade</th>
+              <th scope="col">Carried</th>
+              <th scope="col">Thrown</th>
+              <th scope="col">Held when you died</th>
+            </tr>
+          </thead>
+          <tbody>
+            {kinds.map((k) => (
+              <tr key={k}>
+                <td>{GRENADE_LABEL[k].many[0].toUpperCase() + GRENADE_LABEL[k].many.slice(1)}</td>
+                <td>{u.carried[k]}</td>
+                <td>
+                  {u.thrown[k]}
+                  {u.carried[k] ? <span className="muted"> ({Math.round((100 * u.thrown[k]) / u.carried[k])}%)</span> : null}
+                </td>
+                <td>{u.atDeath[k]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="muted small">No grenades carried in these rounds.</p>
+      )}
+      <p className="small">
+        Flashed blind {u.flashed} {u.flashed === 1 ? 'time' : 'times'} (about {Math.round(u.blindSeconds)} s){u.blindDeaths ? `, ${u.blindDeaths} of them just before you died` : ''} · caught fire {u.burned}{' '}
+        {u.burned === 1 ? 'time' : 'times'}
+        {u.fullBuys ? ` · full buys without a smoke: ${u.fullNoSmoke} of ${u.fullBuys}` : ''}
+      </p>
+      <p className="muted small">A grenade that left your hands while you were alive counts as thrown (a dropped one too). Whose flash blinded you is not in the game’s data.</p>
+    </div>
+  )
+}
+
 /** The game's data feed now, and this match's rounds so far (Coach screen). */
 export function LiveRounds({ report }: { report: RoundsReport }) {
   const s = report.status
@@ -221,6 +287,7 @@ export function LiveRounds({ report }: { report: RoundsReport }) {
             {s.round ? ` · round ${s.round}` : ''}
             {s.side ? ` · ${s.side}` : ''}
             {s.money !== null ? ` · ${money(s.money)}` : ''}
+            {s.nades && countNades(s.nades) ? ` · ${nadeList(s.nades)}` : ''}
             {s.score ? ` · ${s.score.ours}–${s.score.theirs}` : ''}
             {s.watching === 'other' ? ' · watching a teammate' : ''}
           </>

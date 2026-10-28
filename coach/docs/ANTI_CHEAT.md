@@ -83,6 +83,11 @@ gives an unfair edge. Sightline settles that with its
     with bots; Premier, Competitive, Wingman and everything online is
     post-match. FACEIT and tournaments: post-match only (their rules ban
     outside help during matches).
+  - Grenade lineups are reference material shown in Sightline's own
+    window, like a guide site: nothing is drawn in the game, nothing aims
+    or throws. Valve's own lineups come from the game's practice-mode
+    guide. Practice positions and aim angles that research found in a
+    cheat client's files were removed, never shipped.
 - **VALORANT** (Vanguard): Riot's policy forbids apps that "draw conclusions
   for you during gameplay", so Sightline is post-match only for VALORANT in
   every mode.

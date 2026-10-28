@@ -7,6 +7,7 @@
 // is never treated as an observation.
 
 import type { ArsenalItem, GameMap, PlaybookEntry, Roster } from '../profile/schema.ts'
+import { ballisticsLines } from './ballistics.ts'
 
 export const KNOWLEDGE_SECTIONS = [
   { id: 'overview', title: 'Overview and current version' },
@@ -288,6 +289,14 @@ export function mapText(map: GameMap, opts: { readonly budget: number; readonly 
     for (const [mode, tip] of Object.entries(map.modeTips ?? {})) b.push(`${mode}: ${tip}`)
     if (map.weaponFit) b.push(`Weapons: ${map.weaponFit}`)
     for (const m of map.mistakes ?? []) b.push(`Mistake: ${m}`)
+    // Grenade lineups and the executes they make up (Valve's own first).
+    const byId = new Map((map.utility ?? []).map((l) => [l.id, l]))
+    for (const p of map.utilityPlans ?? []) b.push(`${p.kind === 'execute' ? `${p.side} execute` : 'CT retake'} ${p.site} "${p.name}": ${p.utility.map((id) => byId.get(id)?.name ?? id).join(' → ')}. ${p.how}`)
+    const lineups = [...(map.utility ?? [])].sort((a, c) => Number(!!c.official) - Number(!!a.official))
+    for (const l of lineups) {
+      const line = `Lineup ${l.name} (${l.side} ${l.type}, ${l.from} → ${l.to}${l.when ? `, ${l.when}` : ''}${l.official ? ', Valve' : ''}${l.unverified ? ', unverified' : ''}): ${l.purpose}${l.stand ? ` Stand: ${l.stand}` : ''}${l.aim ? ` Aim: ${l.aim}` : ''}${l.throw ? ` Throw: ${l.throw}.` : ''}`
+      if (!b.push(line)) break
+    }
   }
   return b.text()
 }
@@ -342,6 +351,10 @@ export function arsenalText(items: readonly ArsenalItem[], opts: { readonly budg
         if (i.strengths?.length) line += ` Strong: ${i.strengths.slice(0, 2).join('; ')}.`
         if (i.weaknesses?.length) line += ` Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`
         if (i.counters?.length) line += ` Beat it: ${i.counters.slice(0, 2).join('; ')}.`
+        if (i.ballistics) line += ` Numbers: ${ballisticsLines(i).join(' ')}`
+        // How it works (the full list is in the arsenal and the local answers); kept short for the prompt.
+        const how = (i.mechanics ?? []).filter((m) => (m.kind ?? 'mechanics') === 'mechanics' || m.name === 'Spray pattern')
+        if (how.length) line += ` Details: ${how.map((m) => `${m.name}: ${m.detail.length > 170 ? `${m.detail.slice(0, 169).replace(/\s+\S*$/, '')}…` : m.detail}${m.unverified ? ' (unverified)' : ''}`).join(' ')}`
         if (i.unverified) line += ' (unverified)'
       }
       if (!b.push(line)) return b.text()

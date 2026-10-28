@@ -478,6 +478,58 @@ export interface GameMap {
     readonly placeNames?: readonly string[]
     readonly calloutPx?: Readonly<Record<string, readonly [number, number]>>
   }
+  /** Grenade lineups (Counter-Strike): where to stand and aim, and what each one is for. */
+  readonly utility?: readonly UtilityLineup[]
+  /** Site executes and retakes: which lineups go together, in what order. */
+  readonly utilityPlans?: readonly UtilityPlan[]
+}
+
+export const GRENADE_TYPES = ['smoke', 'flash', 'he', 'molotov', 'incendiary', 'decoy'] as const
+export type GrenadeType = (typeof GRENADE_TYPES)[number]
+export const THROW_TYPES = ['left-click', 'right-click', 'left+right', 'jump-throw', 'run-jump-throw', 'walk-throw', 'crouch-throw', 'run-throw'] as const
+export type ThrowType = (typeof THROW_TYPES)[number]
+
+/** One grenade lineup: where to stand, where to aim, how to throw, where it lands and what it does for the team. */
+export interface UtilityLineup {
+  readonly id: string
+  readonly name: string
+  readonly type: GrenadeType
+  readonly side: 'T' | 'CT'
+  /** The callout thrown from, and the callout it lands in (or blocks). */
+  readonly from: string
+  readonly to: string
+  readonly toDetail?: string
+  /** Where to stand and what to aim at, by landmarks. */
+  readonly stand?: string
+  readonly aim?: string
+  readonly throw?: ThrowType
+  /** What it blocks, blinds or clears. */
+  readonly purpose: string
+  /** When it is used: default, execute A, retake B, post-plant, anti-rush… */
+  readonly when?: string
+  /** Names of lineups thrown with it. */
+  readonly pairsWith?: readonly string[]
+  /** Pixels on the game's radar overview: where to stand and where it lands (from the game's own lineup guide). */
+  readonly standPx?: readonly [number, number]
+  readonly landPx?: readonly [number, number]
+  /** From Valve's own lineup guide in the game files (practice mode). */
+  readonly official?: boolean
+  readonly sources?: readonly { readonly url: string; readonly title: string }[]
+  readonly note?: string
+  readonly unverified?: boolean
+}
+
+/** A site execute or retake: the lineups in throw order and how it is played. */
+export interface UtilityPlan {
+  readonly id: string
+  readonly name: string
+  readonly kind: 'execute' | 'retake'
+  readonly side: 'T' | 'CT'
+  /** A, B or Mid. */
+  readonly site: string
+  /** Lineup ids, in throw order. */
+  readonly utility: readonly string[]
+  readonly how: string
 }
 
 export const ARSENAL_CATEGORIES = ['weapon', 'lethal', 'tactical', 'equipment', 'perk', 'field_upgrade', 'killstreak', 'wildcard'] as const
@@ -511,7 +563,62 @@ export interface ArsenalItem {
   readonly look?: string
   /** Where the numbers came from and what is uncertain (shown, not spoken). */
   readonly notes?: string
+  /** Guns with the game's own numbers (Counter-Strike): damage tables, hits and time to kill, accuracy. */
+  readonly ballistics?: WeaponBallistics
+  /** How it works in detail (grenades, sprays): from the game files and guides, each marked when unconfirmed. */
+  readonly mechanics?: readonly ArsenalMechanic[]
   readonly unverified?: boolean
+}
+
+export interface ArsenalMechanic {
+  readonly name: string
+  readonly detail: string
+  /** mechanics: how it works; use: how to use it well; mistake: what goes wrong. */
+  readonly kind?: 'mechanics' | 'use' | 'mistake'
+  readonly unverified?: boolean
+  /** Why it is unconfirmed (e.g. only in CS:GO's code). */
+  readonly reason?: string
+}
+
+/**
+ * A gun's numbers from the game's weapon file. Damage falls by `rangeModifier` every 500 units;
+ * through armour a hit does `armorRatio` / 2 of its damage to health. Cones are the game's spread
+ * and inaccuracy values (the widest miss at distance d is d × (spread + inaccuracy)).
+ */
+export interface WeaponBallistics {
+  /** One bullet (one pellet for shotguns) at point-blank range. */
+  readonly damage: number
+  readonly pellets?: number
+  readonly armorRatio: number
+  readonly headshotMultiplier: number
+  readonly rangeModifier: number
+  /** Units; no damage beyond it. */
+  readonly maxRange: number
+  /** Seconds between shots. */
+  readonly cycleTime: number
+  readonly fullAuto: boolean
+  readonly penetration?: number
+  readonly spread: number
+  readonly inaccuracyStand: number
+  readonly inaccuracyCrouch: number
+  /** At full running speed. */
+  readonly inaccuracyMove: number
+  readonly inaccuracyJump?: number
+  /** Added by each shot. */
+  readonly inaccuracyFire?: number
+  readonly recoilMagnitude?: number
+  /** Seconds for firing inaccuracy to wear off, standing and crouched. */
+  readonly recoveryStand?: number
+  readonly recoveryCrouch?: number
+  /** Units a second. */
+  readonly maxSpeed: number
+  /** Scoped numbers (sniper rifles, AUG, SG 553). */
+  readonly scoped?: { readonly spread: number; readonly inaccuracyStand: number; readonly inaccuracyCrouch: number; readonly maxSpeed?: number }
+  /** Burst mode (FAMAS, Glock-18): seconds between bursts. */
+  readonly burstCycleTime?: number
+  /** Seconds from the start of a reload until it can fire. */
+  readonly reloadSeconds?: number
+  readonly deploySeconds?: number
 }
 
 /** A formation and how it is set up (football): what it looks like on the radar, where it is weak, how to beat it. */
@@ -1604,6 +1711,57 @@ export function validateProfile(input: unknown): ValidationResult {
           if (o && typeof o === 'object') for (const [slot, v] of Object.entries(o)) if (/^[A-C]$/.test(slot)) known(v, `${path}.objectives.${k}.${slot}`)
         }
       }
+      const lineupIds = new Set<string>()
+      const pxOk = (v: unknown, at: string) => {
+        if (v === undefined) return
+        if (!Array.isArray(v) || v.length !== 2 || !v.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= -200 && n <= 8400)) c.errors.push(`${at}: [x, y] pixels`)
+      }
+      c.arr(m.utility, `${path}.utility`, true).forEach((u, j) => {
+        const up = `${path}.utility[${j}]`
+        const o = c.obj(u, up)
+        if (!o) return
+        const uid = c.str(o.id, `${up}.id`, { pattern: ID })
+        if (uid && lineupIds.has(uid)) c.errors.push(`${up}.id: duplicate "${uid}"`)
+        if (uid) lineupIds.add(uid)
+        c.str(o.name, `${up}.name`, { max: 60 })
+        c.oneOf(o.type, `${up}.type`, GRENADE_TYPES)
+        c.oneOf(o.side, `${up}.side`, ['T', 'CT'] as const)
+        known(o.from, `${up}.from`)
+        known(o.to, `${up}.to`)
+        if (o.throw !== undefined) c.oneOf(o.throw, `${up}.throw`, THROW_TYPES)
+        for (const k of ['stand', 'aim'] as const) c.str(o[k], `${up}.${k}`, { optional: true, max: 300, spoken: true })
+        c.str(o.toDetail, `${up}.toDetail`, { optional: true, max: 200 })
+        c.str(o.purpose, `${up}.purpose`, { max: 300, spoken: true })
+        c.str(o.when, `${up}.when`, { optional: true, max: 40 })
+        c.str(o.note, `${up}.note`, { optional: true, max: 300 })
+        c.arr(o.pairsWith, `${up}.pairsWith`, true).forEach((v, k) => c.str(v, `${up}.pairsWith[${k}]`, { max: 60 }))
+        pxOk(o.standPx, `${up}.standPx`)
+        pxOk(o.landPx, `${up}.landPx`)
+        if (o.official !== undefined && typeof o.official !== 'boolean') c.errors.push(`${up}.official: must be a boolean`)
+        c.arr(o.sources, `${up}.sources`, true).forEach((s, k) => {
+          const so = c.obj(s, `${up}.sources[${k}]`)
+          if (!so) return
+          c.str(so.url, `${up}.sources[${k}].url`, { pattern: /^https:\/\/\S+$/, max: 500 })
+          c.str(so.title, `${up}.sources[${k}].title`, { max: 200 })
+        })
+      })
+      const planIds = new Set<string>()
+      c.arr(m.utilityPlans, `${path}.utilityPlans`, true).forEach((u, j) => {
+        const up = `${path}.utilityPlans[${j}]`
+        const o = c.obj(u, up)
+        if (!o) return
+        const pid = c.str(o.id, `${up}.id`, { pattern: ID })
+        if (pid && planIds.has(pid)) c.errors.push(`${up}.id: duplicate "${pid}"`)
+        if (pid) planIds.add(pid)
+        c.str(o.name, `${up}.name`, { max: 80 })
+        c.oneOf(o.kind, `${up}.kind`, ['execute', 'retake'] as const)
+        c.oneOf(o.side, `${up}.side`, ['T', 'CT'] as const)
+        c.str(o.site, `${up}.site`, { max: 20 })
+        c.str(o.how, `${up}.how`, { max: 600, spoken: true })
+        c.arr(o.utility, `${up}.utility`).forEach((v, k) => {
+          if (typeof v !== 'string' || !lineupIds.has(v)) c.errors.push(`${up}.utility[${k}]: unknown lineup "${String(v)}"`)
+        })
+      })
     })
   }
   if (kn.formations !== undefined) {
@@ -1649,6 +1807,41 @@ export function validateProfile(input: unknown): ValidationResult {
       c.str(a.look, `${path}.look`, { optional: true, max: 400 })
       c.str(a.notes, `${path}.notes`, { optional: true, max: 400 })
       for (const k of ['strengths', 'weaknesses', 'counters', 'tips'] as const) c.arr(a[k], `${path}.${k}`, true).forEach((v, j) => c.str(v, `${path}.${k}[${j}]`, { max: 400 }))
+      const mech = c.arr(a.mechanics, `${path}.mechanics`, true)
+      if (mech.length > 40) c.errors.push(`${path}.mechanics: at most 40`)
+      mech.forEach((m, j) => {
+        const mo = c.obj(m, `${path}.mechanics[${j}]`)
+        if (!mo) return
+        c.str(mo.name, `${path}.mechanics[${j}].name`, { max: 80 })
+        c.str(mo.detail, `${path}.mechanics[${j}].detail`, { max: 400, spoken: true })
+        if (mo.kind !== undefined) c.oneOf(mo.kind, `${path}.mechanics[${j}].kind`, ['mechanics', 'use', 'mistake'] as const)
+        c.str(mo.reason, `${path}.mechanics[${j}].reason`, { optional: true, max: 200 })
+      })
+      if (a.ballistics !== undefined) {
+        const b = c.obj(a.ballistics, `${path}.ballistics`)
+        if (b) {
+          const bp = `${path}.ballistics`
+          c.num(b.damage, `${bp}.damage`, 1, 1000)
+          c.num(b.pellets, `${bp}.pellets`, 1, 20, true)
+          c.num(b.armorRatio, `${bp}.armorRatio`, 0, 4)
+          c.num(b.headshotMultiplier, `${bp}.headshotMultiplier`, 1, 10)
+          c.num(b.rangeModifier, `${bp}.rangeModifier`, 0.1, 1)
+          c.num(b.maxRange, `${bp}.maxRange`, 10, 20_000)
+          c.num(b.cycleTime, `${bp}.cycleTime`, 0.01, 5)
+          if (typeof b.fullAuto !== 'boolean') c.errors.push(`${bp}.fullAuto: must be a boolean`)
+          for (const k of ['spread', 'inaccuracyStand', 'inaccuracyCrouch', 'inaccuracyMove'] as const) c.num(b[k], `${bp}.${k}`, 0, 2)
+          for (const k of ['inaccuracyJump', 'inaccuracyFire'] as const) c.num(b[k], `${bp}.${k}`, 0, 2, true)
+          for (const k of ['penetration', 'recoilMagnitude', 'recoveryStand', 'recoveryCrouch', 'burstCycleTime', 'reloadSeconds', 'deploySeconds'] as const) c.num(b[k], `${bp}.${k}`, 0, 500, true)
+          c.num(b.maxSpeed, `${bp}.maxSpeed`, 50, 400)
+          if (b.scoped !== undefined) {
+            const sc = c.obj(b.scoped, `${bp}.scoped`)
+            if (sc) {
+              for (const k of ['spread', 'inaccuracyStand', 'inaccuracyCrouch'] as const) c.num(sc[k], `${bp}.scoped.${k}`, 0, 2)
+              c.num(sc.maxSpeed, `${bp}.scoped.maxSpeed`, 50, 400, true)
+            }
+          }
+        }
+      }
     })
   }
 

@@ -11,9 +11,10 @@ import type { HeatmapResult } from '../analyses/heatmap.ts'
 import type { MatchRecord } from '../analyses/matchRecorder.ts'
 import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
-import type { ArsenalItem, GameMap, GameProfile } from '../profile/schema.ts'
+import type { ArsenalItem, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
+import { ballisticsLines } from '../knowledge/ballistics.ts'
 
 export type Intent =
   | { readonly kind: 'heatmap'; readonly heatmapId: string }
@@ -22,8 +23,9 @@ export type Intent =
   | { readonly kind: 'benchmark' }
   | { readonly kind: 'intel' }
   | { readonly kind: 'learned' }
-  | { readonly kind: 'arsenal'; readonly itemId: string; readonly build?: boolean }
+  | { readonly kind: 'arsenal'; readonly itemId: string; readonly build?: boolean; readonly question?: string }
   | { readonly kind: 'map'; readonly mapName: string | null }
+  | { readonly kind: 'utility'; readonly mapName: string | null; readonly question: string }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
@@ -36,12 +38,19 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
   [/\b(die|dying|died|deaths?|killed)\b/i, ['deaths']],
 ]
 
+const NADE_WORDS = /\b(smokes?|flash(?:es|bangs?)?|pop ?flash\w*|molly|mollies|molotovs?|incendiar\w*|incs?|he ?(?:grenades?|nades?)|nades?|grenades?|utility|util|line ?ups?|executes?|retakes?)\b/
+
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  // Grenade lineups on a map: which smokes, flashes or molotovs, from where, for which site; executes and retakes.
+  if (profile.knowledge.maps?.some((m) => m.utility?.length) && NADE_WORDS.test(q) && !/\b(differen\w*|compare\w*|versus|vs)\b/.test(q)) {
+    const named = mapNamedIn(q, profile)
+    if (named?.utility?.length || /\b(line ?ups?|throw|where|executes?|retakes?|for (?:a|b|mid)|(?:a|b) site|site (?:a|b))\b/.test(q)) return { kind: 'utility', mapName: named?.name ?? null, question: q }
+  }
   // A weapon, perk, piece of equipment or streak named in the question: how it works, its range, how to beat it.
   const item = arsenalItemIn(q, profile)
-  if (item && /\b(how|what|good|best|counter|beat|range|work|use|using|vs|versus|should|ttk|build|loadout|attachments?|stats|damage|strong|weak|meta|explain|tell me|about|kill me|killing me|deal with|stop)\b/.test(q))
-    return { kind: 'arsenal', itemId: item.id, ...(/\b(build|loadout|attachments?|class|setup|gunsmith)\b/.test(q) ? { build: true } : {}) }
+  if (item && /\b(how|what|good|best|counter|beat|range|work|use|using|vs|versus|should|ttk|build|loadout|attachments?|stats|damage|strong|weak|meta|explain|tell me|about|kill me|killing me|deal with|stop|does|do|is|can|last|long|far|differen\w*|compare\w*|put out|extinguish\w*)\b/.test(q))
+    return { kind: 'arsenal', itemId: item.id, question: q, ...(/\b(build|loadout|attachments?|class|setup|gunsmith)\b/.test(q) ? { build: true } : {}) }
   // The map: where I am, callouts, power positions, angles, routes, objectives.
   const map = mapNamedIn(q, profile)
   if (profile.positioning && (map || /\b(callouts?|power positions?|head ?glitch\w*|sightlines?|angles?|routes?|rotat\w+|lanes?|this map|the map|where am i|which spot|best spots?|hardpoint (?:order|rotation)|flags?|bomb sites?|spawns?)\b/.test(q)))
@@ -79,9 +88,11 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'learned':
       return learnedAnswer(profile, report, history)
     case 'arsenal':
-      return arsenalAnswer(profile, report, intent.itemId, intent.build === true)
+      return arsenalAnswer(profile, report, intent.itemId, intent.build === true, intent.question ?? '')
     case 'map':
       return mapAnswer(profile, report, intent.mapName)
+    case 'utility':
+      return utilityAnswer(profile, report, intent.mapName, intent.question)
     case 'benchmark': {
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
@@ -327,16 +338,38 @@ function mapNamedIn(q: string, profile: GameProfile): GameMap | null {
   return null
 }
 
-function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string, build: boolean): string | null {
+const STOP = new Set(['what', 'when', 'where', 'which', 'does', 'with', 'that', 'this', 'from', 'have', 'they', 'your', 'about', 'there', 'their', 'work', 'works', 'grenade', 'grenades'])
+const words = (t: string) => new Set((t.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !STOP.has(w)).map((w) => w.replace(/(ing|es|s)$/, '')))
+
+/** The item's detailed mechanics that share the most words with the question (none when nothing matches). */
+function mechanicsFor(i: ArsenalItem, q: string, max = 2): string[] {
+  // The item's own name says nothing about which detail is wanted.
+  const own = words([i.name, ...(i.aliases ?? [])].join(' '))
+  const want = new Set([...words(q)].filter((w) => !own.has(w)))
+  if (!want.size || !i.mechanics?.length) return []
+  return i.mechanics
+    .map((m) => ({ m, score: [...words(`${m.name} ${m.detail}`)].filter((w) => want.has(w)).length }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map(({ m }) => `${m.detail}${m.unverified ? ' (Not confirmed for CS2.)' : ''}`)
+}
+
+function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string, build: boolean, question = ''): string | null {
   const i = profile.knowledge.arsenal?.find((x) => x.id === id)
   if (!i) return null
+  // A specific question about how it works: the matching details first.
+  const detail = mechanicsFor(i, question)
+  if (detail.length) return `${i.name}: ${detail.join(' ')}`
   const what = [i.class?.replace(/_/g, ' '), i.slot, i.cost].filter(Boolean).join(', ')
   const said = (t: string) => i.summary.toLowerCase().includes(t.toLowerCase().slice(0, 40))
   const parts = [`${i.name}${what ? ` (${what})` : ''}: ${i.summary}`]
   if (i.bestRange) parts.push(`Best at ${i.bestRange} range.`)
   // Numbers the summary did not already say.
-  const nums = Object.entries(i.stats ?? {}).flatMap(([k, v]) => (STAT_WORDS[k] && !(k === 'magazine' && /magazine/i.test(i.summary)) ? [STAT_WORDS[k](v)] : []))
+  const nums = Object.entries(i.stats ?? {}).flatMap(([k, v]) => (STAT_WORDS[k] && !(k === 'magazine' && /magazine/i.test(i.summary)) && !(k === 'rpm' && i.ballistics) ? [STAT_WORDS[k](v)] : []))
   if (nums.length) parts.push(`${nums.join(', ')}.`)
+  // The game's own numbers: hits and time to kill, one-tap range, accuracy.
+  if (i.ballistics) parts.push(...ballisticsLines(i).slice(0, 3))
   const strong = (i.strengths ?? []).filter((x) => !said(x)).slice(0, 2)
   if (strong.length) parts.push(`Strong: ${strong.join('; ')}.`)
   if (i.weaknesses?.length) parts.push(`Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`)
@@ -361,6 +394,66 @@ const STAT_WORDS: Readonly<Record<string, (v: number | string) => string>> = {
   adsMs: (v) => `aims down sights in ${v} ms`,
   magazine: (v) => `${v}-round magazine`,
   numbers: (v) => String(v),
+}
+
+const NADE_TYPE: readonly [RegExp, readonly GrenadeType[]][] = [
+  [/\bsmokes?\b/, ['smoke']],
+  [/\bflash/, ['flash']],
+  [/\b(molly|mollies|molotovs?|incendiar\w*|incs?|fire)\b/, ['molotov', 'incendiary']],
+  [/\bhe\b|\bhe ?(grenades?|nades?)\b/, ['he']],
+  [/\bdecoys?\b/, ['decoy']],
+]
+
+/** Grenade lineups on a map, filtered by what the question names: grenade, side, site, callout; or an execute or retake. */
+function utilityAnswer(profile: GameProfile, report: SessionReport, named: string | null, q: string): string | null {
+  const maps = profile.knowledge.maps ?? []
+  const current = report.rounds?.status.map ?? report.map?.position.map ?? report.map?.model?.map ?? null
+  const m = maps.find((x) => x.name === (named ?? current))
+  if (!m?.utility?.length) return named ? `I have no grenade lineups for ${named}.` : `Which map? I have lineups for ${maps.filter((x) => x.utility?.length).map((x) => x.name).join(', ')}.`
+  const side = /\b(ct|counter[- ]?terrorists?|defen[cd]\w*|retakes?)\b/.test(q) ? 'CT' : /\b(t side|as t|terrorists?|attack\w*|executes?)\b/.test(q) ? 'T' : null
+  const site = q.match(/\b(?:(a|b) site|site (a|b)|bombsite (a|b)|(?:for|on|onto|to|take|hit|execute|retake|into) (a|b|mid))\b/)
+  const siteName = site ? (site[1] ?? site[2] ?? site[3] ?? site[4]).toUpperCase().replace('MID', 'Mid') : null
+  const types = NADE_TYPE.find(([re]) => re.test(q))?.[1] ?? null
+  // An execute or retake for a site.
+  const kind = /\bretakes?\b/.test(q) ? 'retake' : /\bexecutes?\b|\bhit\b|\btake (?:a|b)\b/.test(q) ? 'execute' : null
+  if (kind && m.utilityPlans?.length) {
+    const plans = m.utilityPlans.filter((p) => p.kind === kind && (!siteName || p.site === siteName))
+    const p = plans[0]
+    if (p) {
+      const byId = new Map(m.utility.map((l) => [l.id, l]))
+      const steps = p.utility.map((id, i) => {
+        const l = byId.get(id)
+        return l ? `${i + 1}, ${l.name} (${l.type} from ${l.from})` : null
+      })
+      return `${p.name} on ${m.name}: ${p.how} In order: ${steps.filter(Boolean).join('; ')}.${plans.length > 1 ? ` There ${plans.length === 2 ? 'is one more' : `are ${plans.length - 1} more`} in Insights, Grenade lineups.` : ''}`
+    }
+  }
+  // A callout named in the question: lineups landing there (or thrown from there).
+  const callouts = m.callouts.flatMap((c) => [c.name, ...(c.aliases ?? [])].map((n) => ({ n: n.toLowerCase(), name: c.name }))).filter((c) => c.n.length >= 3 && !/^(a|b|ct|t) ?site$/.test(c.n))
+  const spot = callouts.filter((c) => new RegExp(`(^|[^a-z0-9])${c.n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-z0-9])`).test(q)).sort((a, b) => b.n.length - a.n.length)[0]?.name ?? null
+  let list = m.utility.filter((l) => (!types || types.includes(l.type)) && (!side || l.side === side))
+  if (spot) {
+    const there = list.filter((l) => l.to === spot || l.from === spot)
+    if (there.length) list = [...there.filter((l) => l.to === spot), ...there.filter((l) => l.to !== spot)]
+  } else if (siteName) {
+    const bySite = list.filter((l) => new RegExp(`\\b${siteName}\\b`, 'i').test(`${l.when ?? ''} ${l.to}`))
+    if (bySite.length) list = bySite
+  }
+  if (!list.length) return `I have no ${types ? types[0] : 'grenade'} lineups for that on ${m.name}.`
+  // Valve's own lineups first (exact spots), then the rest.
+  list = [...list.filter((l) => l.official), ...list.filter((l) => !l.official)]
+  const [first, ...rest] = list
+  const how = [first.stand ? `Stand: ${first.stand}` : null, first.aim ? `Aim: ${first.aim}` : null, first.throw ? `Throw: ${first.throw.replace(/-/g, ' ')}.` : null].filter(Boolean).join(' ')
+  const more = rest.slice(0, 3).map((l) => `${l.name} (from ${l.from}${l.to !== first.to ? ` to ${l.to}` : ''})`)
+  return [
+    `${first.name} on ${m.name}, ${first.type} from ${first.from}${first.toDetail ? ` onto ${first.toDetail}` : ` to ${first.to}`}: ${first.purpose}`,
+    how,
+    more.length ? `Also: ${more.join('; ')}.` : null,
+    list.length > 4 ? `${list.length - 4} more in Insights, Grenade lineups.` : null,
+    first.unverified ? '(That one is not yet confirmed for the current version.)' : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 function mapAnswer(profile: GameProfile, report: SessionReport, named: string | null): string {

@@ -13,6 +13,7 @@ import { PitchPanel, type PitchMatch } from '../components/PitchView.tsx'
 import { RoundsPanel, type RoundsMatch } from '../components/RoundsView.tsx'
 import { useOfficialSource } from '../officialSource.ts'
 import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
+import { UtilityPanel } from '../components/UtilityView.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 import { policyFor } from '../policy.ts'
@@ -198,6 +199,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
             <span className="muted small">From the game’s own data: each round’s buy, kills, death and result</span>
           </div>
           <RoundsPanel profile={profile} matches={roundMatches} insights={held ? undefined : report?.rounds?.insights} onPlaybook={showPlay} />
+        </section>
+      ) : null}
+
+      {profile.knowledge.maps?.some((m) => m.utility?.length) ? (
+        <section className="panel" aria-labelledby="utility-h">
+          <div className="panel-head">
+            <h2 id="utility-h">Grenade lineups</h2>
+            <span className="muted small">Smokes, flashes, molotovs and HE grenades for each map: where to stand and aim, what each one does, and the executes and retakes they make up</span>
+          </div>
+          <UtilityPanel profile={profile} official={official} current={report?.rounds?.match?.map ?? report?.map?.model?.map ?? null} />
         </section>
       ) : null}
 

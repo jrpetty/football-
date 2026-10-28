@@ -37,7 +37,7 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
   const score = { CT: 0, T: 0 }
   const wins: Record<string, string> = {}
   const stats = { kills: 0, assists: 0, deaths: 0, mvps: 0, score: 0 }
-  const truth = { rounds: 0, won: 0, kills: 0, deaths: 0, blindDeaths: 0, forces: 0, earlyDeaths: 0, utilityDeaths: 0, byBuy: { pistol: 0, eco: 0, force: 0, full: 0 } as Record<string, number> }
+  const truth = { rounds: 0, won: 0, kills: 0, deaths: 0, blindDeaths: 0, forces: 0, earlyDeaths: 0, utilityDeaths: 0, thrown: 0, flashed: 0, burned: 0, carried: 0, byBuy: { pistol: 0, eco: 0, force: 0, full: 0 } as Record<string, number> }
   let carry: Weapon[] | null = null
   let lastLost = false
 
@@ -100,7 +100,8 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
       ]
     } else if (lastLost && money >= 2000 && rnd() < 0.7) {
       buy = 'force'
-      spent = money - 150
+      // A force stays under a full buy's equipment (FULL_BUY in the GSI reader).
+      spent = Math.min(money - 150, (side === 'CT' ? 3800 : 3600) - 250)
       weapons = [
         { name: 'weapon_knife', type: 'Knife', state: 'holstered' },
         { name: pistolName, type: 'Pistol', state: 'holstered' },
@@ -127,7 +128,7 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
     const diedAt = died ? Math.round((side === 'T' ? 3 + rnd() * 12 : 6 + rnd() * (live / 1000 - 8)) * 1000) : null
     const blind = died && rnd() < 0.3
     const reloading = died && !blind && rnd() < 0.12
-    const nades = weapons.filter((w) => w.type === 'Grenade').reduce((s, w) => s + (w.ammo_reserve ?? 1), 0)
+    truth.carried += weapons.filter((w) => w.type === 'Grenade').reduce((s, w) => s + (w.ammo_reserve ?? 1), 0)
     const t0 = t
     const tLive = t0 + FREEZE
     const tEnd = tLive + live
@@ -135,20 +136,60 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
     send(t0, { map: 'live', round: 'freezetime' }, me(side, state0, kept ?? [{ name: 'weapon_knife', type: 'Knife', state: 'holstered' }, { name: pistolName, type: 'Pistol', state: 'active' }]))
     money -= spent
     send(tLive, { map: 'live', round: 'live' }, me(side, { ...state0, money, equip_value: equip }, weapons))
-    // Kills spread through the player's time alive.
+    // While alive, in time order: kills, grenades thrown, being flashed and catching fire. On CT the
+    // scripted player uses most of their grenades; on T, few before dying.
     const alive = diedAt ?? live - 1500
+    const held: Weapon[] = weapons.map((w) => ({ ...w }))
+    const hand = () => held.map((w) => ({ ...w }))
+    type Moment = { at: number; kind: 'kill' | 'throw' | 'flash' | 'burn'; name?: string; level?: number }
+    const moments: Moment[] = []
+    for (let k = 0; k < kills; k++) moments.push({ at: Math.round(((k + 1) / (kills + 1)) * alive), kind: 'kill' })
+    const throwP = side === 'CT' ? 0.8 : 0.3
+    for (const w of held) if (w.type === 'Grenade') for (let c = 0; c < (w.ammo_reserve ?? 1); c++) if (rnd() < throwP) moments.push({ at: 1500 + Math.round(rnd() * Math.max(500, alive - 3000)), kind: 'throw', name: w.name })
+    // A flash fades over about two seconds; fire burns for under one. Each step is its own update.
+    if (alive > 6000 && rnd() < 0.35) {
+      const at = 2000 + Math.round(rnd() * (alive - 5000))
+      ;[255, 170, 60, 0].forEach((level, i) => moments.push({ at: at + i * 600, kind: 'flash', level }))
+    }
+    if (alive > 5000 && rnd() < 0.15) {
+      const at = 2000 + Math.round(rnd() * (alive - 4000))
+      moments.push({ at, kind: 'burn', level: 255 }, { at: at + 800, kind: 'burn', level: 0 })
+    }
+    moments.sort((x, y) => x.at - y.at)
+    const LIVE = { map: 'live', round: 'live' }
     let rk = 0
     let hs = 0
     let dmg = 0
-    for (let k = 0; k < kills; k++) {
-      const at = tLive + Math.round(((k + 1) / (kills + 1)) * alive)
-      rk++
-      if (rnd() < 0.5) hs++
-      dmg += 100
-      stats.kills++
-      truth.kills++
-      send(at, { map: 'live', round: 'live' }, me(side, { ...state0, money: money + 300 * rk, equip_value: equip, round_kills: rk, round_killhs: hs, round_totaldmg: dmg }, weapons))
-      b.batch(at + 300, {}, [{ type: 'kill', attributes: { headshot: hs === rk ? 'head' : 'body', range: pick(['close', 'mid', 'mid', 'long']), movement: pick(['still', 'still', 'moving']), opening: k === 0 && rnd() < 0.3 ? 'first_death' : 'later' }, evidence: 'kill feed' }])
+    // The flash and fire levels carry into every update until they fade.
+    let flash = 0
+    let burn = 0
+    const now = (extra: Record<string, unknown> = {}) => ({ ...state0, money: money + 300 * rk, equip_value: equip, round_kills: rk, round_killhs: hs, round_totaldmg: dmg, flashed: flash, burning: burn, ...extra })
+    for (const m of moments) {
+      const at = tLive + m.at
+      if (m.kind === 'kill') {
+        rk++
+        if (rnd() < 0.5) hs++
+        dmg += 100
+        stats.kills++
+        truth.kills++
+        send(at, LIVE, me(side, now(), hand()))
+        b.batch(at + 300, {}, [{ type: 'kill', attributes: { headshot: hs === rk ? 'head' : 'body', range: pick(['close', 'mid', 'mid', 'long']), movement: pick(['still', 'still', 'moving']), opening: rk === 1 && rnd() < 0.3 ? 'first_death' : 'later' }, evidence: 'kill feed' }])
+      } else if (m.kind === 'throw') {
+        const w = held.find((x) => x.name === m.name)
+        if (!w) continue
+        if ((w.ammo_reserve ?? 1) > 1) w.ammo_reserve = (w.ammo_reserve ?? 1) - 1
+        else held.splice(held.indexOf(w), 1)
+        truth.thrown++
+        send(at, LIVE, me(side, now(), hand()))
+      } else if (m.kind === 'flash') {
+        if (m.level === 255) truth.flashed++
+        flash = m.level ?? 0
+        send(at, LIVE, me(side, now(), hand()))
+      } else {
+        if (m.level) truth.burned++
+        burn = m.level ?? 0
+        send(at, LIVE, me(side, now({ health: burn ? 92 : 84 }), hand()))
+      }
     }
     if (died) {
       const at = tLive + diedAt!
@@ -156,11 +197,11 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
       truth.deaths++
       if (blind) truth.blindDeaths++
       if (diedAt! <= 20_000) truth.earlyDeaths++
-      if (nades >= 2) truth.utilityDeaths++
-      const dying = { ...state0, money: money + 300 * rk, equip_value: equip, round_kills: rk, round_killhs: hs, round_totaldmg: dmg + 40 }
-      if (blind) send(at - 400, { map: 'live', round: 'live' }, me(side, { ...dying, flashed: 255 }, weapons))
-      if (reloading) send(at - 300, { map: 'live', round: 'live' }, me(side, dying, weapons.map((w) => (w.state === 'active' ? { ...w, state: 'reloading' } : w))))
-      send(at, { map: 'live', round: 'live' }, me(side, { ...dying, health: 0, armor: 0, flashed: blind ? 200 : 0 }, weapons))
+      if (held.filter((w) => w.type === 'Grenade').reduce((s, w) => s + (w.ammo_reserve ?? 1), 0) >= 2) truth.utilityDeaths++
+      const dying = now({ round_totaldmg: dmg + 40 })
+      if (blind) send(at - 400, LIVE, me(side, { ...dying, flashed: 255 }, hand()))
+      if (reloading) send(at - 300, LIVE, me(side, dying, hand().map((w) => (w.state === 'active' ? { ...w, state: 'reloading' } : w))))
+      send(at, LIVE, me(side, { ...dying, health: 0, armor: 0, flashed: blind ? 200 : 0 }, hand()))
       send(at + 1200, { map: 'live', round: 'live' }, mate(side))
       // The screen: the death panel and freeze-cam a few seconds later.
       const killedBy = pick(['rifle', 'rifle', 'rifle', 'awp', 'smg', 'pistol'] as const)
@@ -204,8 +245,8 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
     losses = won ? Math.max(0, losses - 1) : Math.min(4, losses + 1)
     lastLost = !won
     // Surviving a won round keeps the gun.
-    if (!died && (buy === 'full' || buy === 'force')) carry = weapons
-    send(tEnd, { map: 'live', round: 'over', win: winner, ...(bomb ? { bomb } : {}) }, died ? mate(side) : me(side, { health: 100 - Math.round(rnd() * 60), armor: 50, money, round_kills: rk, round_killhs: hs, round_totaldmg: dmg, equip_value: equip }, weapons))
+    if (!died && (buy === 'full' || buy === 'force')) carry = hand()
+    send(tEnd, { map: 'live', round: 'over', win: winner, ...(bomb ? { bomb } : {}) }, died ? mate(side) : me(side, { health: 100 - Math.round(rnd() * 60), armor: 50, money, round_kills: rk, round_killhs: hs, round_totaldmg: dmg, equip_value: equip }, hand()))
     // Where the player went this round, as the screen showed it.
     for (let x = tLive; x < (died ? tLive + diedAt! : tEnd); x += interval) {
       const area = demo.route[(Math.floor((x - tLive) / 6000) + n) % demo.route.length]
@@ -218,7 +259,7 @@ export function cs2MatchReplay(opts: { readonly seed: number; readonly map: Demo
   return {
     profileId: 'cs2',
     batches: b.batches,
-    gameState: gsi,
+    gameState: [...gsi].sort((x, y) => x.at - y.at),
     truth: { ...truth, score: { ...score }, side: n <= HALF ? 'CT' : 'T' },
     endsAt: t + 2000,
   }

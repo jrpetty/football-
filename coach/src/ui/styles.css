@@ -4536,3 +4536,293 @@ td > .swatch {
   font: 11.5px/1.45 var(--mono);
   white-space: pre;
 }
+
+/* Gun numbers (arsenal) */
+.gun-numbers {
+  margin: 8px 0;
+}
+.gun-lines {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+.gun-lines li {
+  margin: 2px 0;
+}
+.gun-table,
+.gun-compare {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  min-width: 100%;
+}
+.gun-table caption,
+.gun-compare caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 6px;
+  color: var(--text-2);
+}
+.gun-table th,
+.gun-table td,
+.gun-compare th,
+.gun-compare td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.gun-table th[scope='row'],
+.gun-compare th[scope='row'] {
+  text-align: left;
+}
+.gun-table thead th,
+.gun-compare thead th {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.gun-table td.one {
+  color: var(--accent);
+  font-weight: 700;
+}
+.gun-table .htk {
+  color: var(--text-3);
+  font-weight: 400;
+}
+.gun-table td.one .htk {
+  color: var(--accent);
+}
+.gun-compare tbody tr:hover {
+  background: var(--panel-2);
+}
+.gun-compare thead .link-btn {
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Grenade lineups */
+.utility-panel {
+  --nade-smoke: #c3ccd9;
+  --nade-flash: #f2d24b;
+  --nade-he: #e05a9a;
+  --nade-fire: #ff8a3d;
+  --nade-decoy: #79a8ff;
+}
+.utility-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .utility-body {
+    grid-template-columns: 1fr;
+  }
+}
+.utility-map {
+  margin: 0;
+}
+.utility-map svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.utility-bg {
+  fill: var(--bg-sunken);
+}
+.callout-mark circle {
+  fill: var(--text-3);
+}
+.callout-mark text {
+  fill: var(--text-2);
+  font: 600 17px var(--font);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 4px;
+}
+.lineup-mark {
+  cursor: pointer;
+}
+.lineup-mark.dim {
+  opacity: 0.25;
+}
+.lineup-mark line {
+  stroke-width: 4;
+  fill: none;
+}
+.lineup-mark.on line {
+  stroke-width: 7;
+}
+.lineup-mark .stand {
+  fill: var(--bg);
+  stroke: var(--text);
+  stroke-width: 3;
+}
+.lineup-mark .land {
+  fill-opacity: 0.35;
+  stroke-width: 3;
+}
+.lineup-mark .land-letter {
+  fill: var(--text);
+  font: 800 18px var(--font);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.8);
+  stroke-width: 4px;
+}
+.nade-stroke.smoke {
+  stroke: var(--nade-smoke);
+}
+.nade-stroke.flash {
+  stroke: var(--nade-flash);
+}
+.nade-stroke.he {
+  stroke: var(--nade-he);
+}
+.nade-stroke.fire {
+  stroke: var(--nade-fire);
+}
+.nade-stroke.decoy {
+  stroke: var(--nade-decoy);
+}
+.nade-fill.smoke {
+  fill: var(--nade-smoke);
+  stroke: var(--nade-smoke);
+}
+.nade-fill.flash {
+  fill: var(--nade-flash);
+  stroke: var(--nade-flash);
+}
+.nade-fill.he {
+  fill: var(--nade-he);
+  stroke: var(--nade-he);
+}
+.nade-fill.fire {
+  fill: var(--nade-fire);
+  stroke: var(--nade-fire);
+}
+.nade-fill.decoy {
+  fill: var(--nade-decoy);
+  stroke: var(--nade-decoy);
+}
+.lineup-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 3px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+.lineup-row {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.lineup.open .lineup-row,
+.lineup-row:hover {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+.lineup-name .badge {
+  margin-left: 6px;
+}
+.nade-glyph {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font: 800 11.5px var(--font);
+  color: #111;
+}
+.nade-glyph.smoke {
+  background: var(--nade-smoke);
+}
+.nade-glyph.flash {
+  background: var(--nade-flash);
+}
+.nade-glyph.he {
+  background: var(--nade-he);
+}
+.nade-glyph.fire {
+  background: var(--nade-fire);
+}
+.nade-glyph.decoy {
+  background: var(--nade-decoy);
+}
+.lineup-detail {
+  padding: 4px 8px 8px 40px;
+}
+.lineup-detail p {
+  margin: 3px 0;
+}
+.utility-plans h3 {
+  margin: 0 0 4px;
+}
+.utility-plans ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+  display: grid;
+  gap: 3px;
+}
+.plan-btn {
+  width: 100%;
+  text-align: left;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.plan-btn.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.plan-steps {
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 10px;
+  margin: 4px 0 8px;
+}
+.plan-steps p {
+  margin: 0 0 4px;
+}
+.plan-steps ol {
+  margin: 0;
+  padding-left: 18px;
+}
+.round-cell .rc-nades {
+  font-size: 10px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.utility-totals {
+  margin: 8px 0;
+}
+.utility-totals caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: 4px;
+}
+.mechanics {
+  margin: 8px 0;
+}
+.mechanics ul {
+  margin: 2px 0 8px;
+  padding-left: 18px;
+}
+.mechanics li {
+  margin: 3px 0;
+}
+.mechanics .badge {
+  margin-left: 6px;
+}

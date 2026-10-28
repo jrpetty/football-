@@ -194,9 +194,9 @@ test('questions: a weapon or perk by name, the map, where you are', async () => 
   ]
   mw4.knowledge.maps = [yard]
   const p = mw4 as unknown as Parameters<typeof classify>[1]
-  assert.deepEqual(classify('how do I beat the Rezi 12?', p), { kind: 'arsenal', itemId: 'rezi-12' })
-  assert.deepEqual(classify('best rezi 12 build?', p), { kind: 'arsenal', itemId: 'rezi-12', build: true })
-  assert.deepEqual(classify('what does ghost do', p), { kind: 'arsenal', itemId: 'ghost' })
+  assert.deepEqual(classify('how do I beat the Rezi 12?', p), { kind: 'arsenal', itemId: 'rezi-12', question: 'how do i beat the rezi 12?' })
+  assert.deepEqual(classify('best rezi 12 build?', p), { kind: 'arsenal', itemId: 'rezi-12', build: true, question: 'best rezi 12 build?' })
+  assert.deepEqual(classify('what does ghost do', p), { kind: 'arsenal', itemId: 'ghost', question: 'what does ghost do' })
   assert.deepEqual(classify('power positions on yard?', p), { kind: 'map', mapName: 'Yard' })
   assert.deepEqual(classify('where am i?', p), { kind: 'map', mapName: null })
   const { engineFor, settings } = await import('./helpers.ts')

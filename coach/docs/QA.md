@@ -215,6 +215,11 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.48 | CS2 Practice with bots, capture on, Game data on. Get kills, die flashed once and once while reloading. | Coach → Rounds: each round with your buy, kills, death. Insights after the match: the round strip, the money chart, and deaths flashed and reloading counted under the factors. |
 | 13.49 | CS2: Radar Is Rotating: No, Radar Centers The Player: Yes, Radar Map Zoom 0.5. Export the map's radar overview from the game files and import it in Settings → Official overhead maps. | The overview is kept; the preview shows the pack's callouts labelled where they are (on maps with callout positions). Play: the stitched radar is placed on it; deaths pinned on the overview. Note any wrong placement. |
 | 13.50 | CS2 Premier or Competitive match with capture on. | No live tips, no live rounds strip during the match ("open after the match"); everything appears after it. |
+| 14.1 | CS2: Insights → Grenade lineups. Pick each map, then T, CT, and each grenade type; pick an execute. | Lineups drawn from where they are thrown to where they land (solid for Valve's, dashed for the rest); the execute's grenades numbered in order. With the map's overview imported, they sit on it. Note any that land in the wrong place. |
+| 14.2 | In Practice, throw five Valve lineups (marked Valve) and five researched ones, following Stand, Aim and Throw. | Each lands where the coach says. Note the ones that do not (map, name, where it went). |
+| 14.3 | Ask: "what smokes for an A execute on Mirage?", "where do I throw the Xbox smoke?", "how long does a smoke last?", "how many body shots does the M4A1-S need?" | Each answered from the pack: the execute in order; the lineup with stand, aim and throw; about 18 s of cover; 4 up close, 5 at 20 m. |
+| 14.4 | CS2 Practice with Game data on: buy two flashes and a smoke, throw one flash, get flashed by a bot, stand in a molotov, die holding the rest. | Insights → Rounds: the round says 1 of 3 thrown, flashed once, caught fire once, 2 held at death; the grenade table matches. |
+| 14.5 | Insights → Arsenal → AK-47, then Compare guns. | The damage table (142 to the head at 5 m, 110 through a helmet, 4 body hits through kevlar) and the compare table sort by each column. |
 
 ## 14. Accessibility and layout
 

@@ -34,7 +34,7 @@ export interface OfficialSource {
 }
 
 /** A map's official picture, loaded and decoded, with its analysis. */
-function useOfficialPicture(official: OfficialSource | undefined, mapId: string | null): { base: OfficialBase; picture: HTMLImageElement } | null {
+export function useOfficialPicture(official: OfficialSource | undefined, mapId: string | null): { base: OfficialBase; picture: HTMLImageElement } | null {
   const savedAt = mapId ? (official?.kept[mapId]?.savedAt ?? null) : null
   const [pic, setPic] = useState<{ key: string; base: OfficialBase; picture: HTMLImageElement } | null>(null)
   const key = mapId && savedAt ? `${mapId}@${savedAt}` : null

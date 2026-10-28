@@ -4,8 +4,10 @@
 // damage, kills and survival per round, and each side's record. Only the
 // player's own buy is known (the game sends nothing about teammates or
 // enemies while playing), so team-buy lines are phrased about the player.
+// Grenades: how many of those carried were thrown, what full buys carried, how
+// often the player was flashed blind or stood in fire.
 
-import type { BuyType, Cs2Round, Cs2Rounds } from '../gsi/cs2.ts'
+import { GRENADE_KINDS, countNades, type BuyType, type Cs2Round, type Cs2Rounds, type GrenadeKind } from '../gsi/cs2.ts'
 
 export interface RoundInsight {
   readonly id: string
@@ -28,6 +30,116 @@ export interface RoundTotals {
 }
 
 const pct = (k: number, n: number) => `${Math.round((100 * k) / Math.max(1, n))}%`
+
+export const GRENADE_LABEL: Readonly<Record<GrenadeKind, { one: string; many: string }>> = {
+  smoke: { one: 'smoke', many: 'smokes' },
+  flash: { one: 'flash', many: 'flashes' },
+  he: { one: 'HE grenade', many: 'HE grenades' },
+  fire: { one: 'molotov or incendiary', many: 'molotovs and incendiaries' },
+  decoy: { one: 'decoy', many: 'decoys' },
+}
+
+export interface UtilityTotals {
+  /** Rounds with grenade data (recorded by this version of the coach). */
+  readonly rounds: number
+  readonly carried: Readonly<Record<GrenadeKind, number>>
+  readonly thrown: Readonly<Record<GrenadeKind, number>>
+  readonly atDeath: Readonly<Record<GrenadeKind, number>>
+  readonly flashed: number
+  readonly blindSeconds: number
+  readonly blindDeaths: number
+  readonly burned: number
+  /** Full buys, and those without a smoke or without a flash. */
+  readonly fullBuys: number
+  readonly fullNoSmoke: number
+  readonly fullNoFlash: number
+}
+
+const zero = (): Record<GrenadeKind, number> => ({ smoke: 0, flash: 0, he: 0, fire: 0, decoy: 0 })
+
+/** Grenades over finished rounds: carried, thrown, held at death, flashes and fire. */
+export function utilityTotals(rounds: readonly Cs2Round[]): UtilityTotals {
+  const done = rounds.filter((r) => r.result !== null && r.nades !== undefined)
+  const carried = zero()
+  const thrown = zero()
+  const atDeath = zero()
+  let flashed = 0
+  let blindSeconds = 0
+  let burned = 0
+  for (const r of done) {
+    for (const k of GRENADE_KINDS) {
+      carried[k] += r.nades?.[k] ?? 0
+      thrown[k] += r.thrown?.[k] ?? 0
+      atDeath[k] += r.nadesAtDeath?.[k] ?? 0
+    }
+    flashed += r.flashed ?? 0
+    blindSeconds += r.blindSeconds ?? 0
+    burned += r.burned ?? 0
+  }
+  const full = done.filter((r) => r.buy === 'full')
+  return {
+    rounds: done.length,
+    carried,
+    thrown,
+    atDeath,
+    flashed,
+    blindSeconds: Math.round(blindSeconds * 10) / 10,
+    blindDeaths: done.filter((r) => r.died && r.blindAtDeath).length,
+    burned,
+    fullBuys: full.length,
+    fullNoSmoke: full.filter((r) => !(r.nades?.smoke ?? 0)).length,
+    fullNoFlash: full.filter((r) => !(r.nades?.flash ?? 0)).length,
+  }
+}
+
+const list = (c: Readonly<Record<GrenadeKind, number>>) =>
+  GRENADE_KINDS.filter((k) => c[k] > 0)
+    .map((k) => `${c[k]} ${c[k] === 1 ? GRENADE_LABEL[k].one : GRENADE_LABEL[k].many}`)
+    .join(', ')
+
+/** Lines about the player's grenades (needs rounds recorded with grenade data). */
+export function utilityInsights(rounds: readonly Cs2Round[]): RoundInsight[] {
+  const u = utilityTotals(rounds)
+  if (u.rounds < 6) return []
+  const out: RoundInsight[] = []
+  // Grenades thrown out of those carried: overall, or on the side where most were kept.
+  const share = (x: UtilityTotals) => ({ carried: countNades(x.carried), thrown: countNades(x.thrown), atDeath: countNades(x.atDeath), x })
+  const all = share(u)
+  const bySide = (['T', 'CT'] as const).map((side) => ({ side, ...share(utilityTotals(rounds.filter((r) => r.side === side))) })).filter((x) => x.carried >= 6)
+  const worst = bySide.sort((a, b) => a.thrown / a.carried - b.thrown / b.carried)[0]
+  const pick = all.carried >= 8 && all.thrown / all.carried <= 0.6 ? { ...all, side: null } : worst && worst.thrown / worst.carried <= 0.5 ? worst : null
+  if (pick)
+    out.push({
+      id: 'utility-thrown',
+      text: `${pick.side ? `As ${pick.side} you` : 'You'} threw ${pick.thrown} of the ${pick.carried} grenades you carried (${pct(pick.thrown, pick.carried)})${pick.atDeath ? `; ${pick.atDeath} were still in your hands when you died (${list(pick.x.atDeath)})` : ''}. Decide where each grenade goes before the round starts, and throw it before you take the fight.`,
+      playbook: 'support-role',
+      tags: ['utility'],
+    })
+  if (u.fullBuys >= 4 && (u.fullNoSmoke / u.fullBuys >= 0.5 || u.fullNoFlash / u.fullBuys >= 0.5)) {
+    const smoke = u.fullNoSmoke / u.fullBuys >= u.fullNoFlash / u.fullBuys
+    out.push({
+      id: 'full-buy-utility',
+      text: `On ${u.fullBuys} full buys you went without a smoke ${u.fullNoSmoke} times and without a flash ${u.fullNoFlash} times. A full buy is a gun, armour and utility: a smoke ($300) and a flash ($200) at the least.`,
+      playbook: smoke ? 'smokes' : 'flashes',
+      tags: ['utility', 'economy'],
+    })
+  }
+  if (u.flashed >= 4 || u.blindDeaths >= 2)
+    out.push({
+      id: 'flashed',
+      text: `You were flashed blind ${u.flashed} times in ${u.rounds} rounds (about ${Math.round(u.blindSeconds)} s in all)${u.blindDeaths ? `, and ${u.blindDeaths} of your deaths came while blind` : ''}. Turn away when you hear a flash land, hold angles a step back from the corner, and reposition after a flash instead of peeking.`,
+      playbook: 'play-around-utility',
+      tags: ['utility', 'deaths'],
+    })
+  if (u.burned >= 3)
+    out.push({
+      id: 'burned',
+      text: `You stood in fire ${u.burned} times. A molotov or incendiary does about 40 damage a second: step out at once and take another route or wait it out.`,
+      playbook: 'molotovs',
+      tags: ['utility'],
+    })
+  return out
+}
 const BUY_LABEL: Readonly<Record<BuyType, string>> = { pistol: 'pistol rounds', eco: 'eco rounds', force: 'force buys', full: 'full buys' }
 
 export function roundTotals(rounds: readonly Cs2Round[]): RoundTotals {
@@ -59,7 +171,7 @@ export function roundTotals(rounds: readonly Cs2Round[]): RoundTotals {
 }
 
 /** Lines for one match or several (oldest first); `focus`: only that one. */
-export function roundInsights(matches: readonly Cs2Rounds[], focus: number | null = null, max = 7): RoundInsight[] {
+export function roundInsights(matches: readonly Cs2Rounds[], focus: number | null = null, max = 10): RoundInsight[] {
   const ms = focus === null ? matches : matches.slice(focus, focus + 1)
   const rounds = ms.flatMap((m) => m.rounds.filter((r) => r.result !== null))
   if (rounds.length < 6) return []
@@ -69,7 +181,7 @@ export function roundInsights(matches: readonly Cs2Rounds[], focus: number | nul
   const adr = t.damageRounds ? Math.round(t.damage / t.damageRounds) : null
   out.push({
     id: 'per-round',
-    text: `Over ${t.rounds} rounds: ${(t.kills / t.rounds).toFixed(2)} kills a round${adr !== null ? `, ${adr} damage a round` : ''}, and you survived ${pct(t.rounds - t.deaths, t.rounds)} of them${t.multiKills ? `; ${t.multiKills} rounds with three or more kills` : ''}.`,
+    text: `Over ${t.rounds} rounds: ${(t.kills / t.rounds).toFixed(2)} kills a round${adr !== null ? `, ${adr} damage a round` : ''}, and you survived ${pct(t.rounds - t.deaths, t.rounds)} of them${t.multiKills ? `; ${t.multiKills} ${t.multiKills === 1 ? 'round' : 'rounds'} with three or more kills` : ''}.`,
     tags: ['numbers'],
   })
   // Rounds won by the player's buy.
@@ -121,8 +233,9 @@ export function roundInsights(matches: readonly Cs2Rounds[], focus: number | nul
       })
   }
   // Dying with grenades in hand.
+  // (With grenade data, the grenade lines below say this with the kinds.)
   const withUtility = rounds.filter((r) => r.died && r.utilityAtDeath !== null)
-  if (withUtility.length >= 6) {
+  if (withUtility.length >= 6 && !rounds.some((r) => r.nades !== undefined)) {
     const unused = withUtility.filter((r) => r.utilityAtDeath! >= 2).length
     if (unused / withUtility.length >= 0.35)
       out.push({
@@ -132,6 +245,8 @@ export function roundInsights(matches: readonly Cs2Rounds[], focus: number | nul
         tags: ['utility', 'deaths'],
       })
   }
+  // Grenades.
+  out.push(...utilityInsights(rounds))
   // Each side.
   if (t.bySide.CT.n >= 4 && t.bySide.T.n >= 4) {
     const ct = t.bySide.CT.won / t.bySide.CT.n

@@ -205,7 +205,11 @@ export class ReplaySource implements FrameSource {
     this.timer = setInterval(() => {
       const t = this.now()
       // The game's data first (it arrives straight away), then what the screen showed.
-      while (nextUpdate < updates.length && updates[nextUpdate].at <= t) sink.gameState(updates[nextUpdate++].payload, t)
+      // Each update keeps its own time, as the game stamps its posts (a tick can carry several).
+      while (nextUpdate < updates.length && updates[nextUpdate].at <= t) {
+        const u = updates[nextUpdate++]
+        sink.gameState(u.payload, u.at)
+      }
       const due: Observation[] = []
       while (this.next < batches.length && batches[this.next].arrivesAt <= t) due.push(...batches[this.next++].observations)
       if (due.length) sink.observations(due, t)

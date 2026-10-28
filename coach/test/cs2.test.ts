@@ -5,8 +5,8 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { Cs2Gsi, isCs2Rounds } from '../src/core/gsi/cs2.ts'
-import { roundInsights, roundTotals } from '../src/core/analyses/rounds.ts'
+import { Cs2Gsi, countNades, isCs2Rounds } from '../src/core/gsi/cs2.ts'
+import { roundInsights, roundTotals, utilityTotals } from '../src/core/analyses/rounds.ts'
 import { isMatchRecord } from '../src/core/analyses/matchRecorder.ts'
 import { cs2MatchReplay } from '../src/sim/cs2Match.ts'
 import { demoMapFrom } from '../src/sim/visionReplay.ts'
@@ -58,6 +58,44 @@ test('Game State Integration: names, kills, deaths and each round with the buy a
   assert.equal(totals.kills, truth.kills)
   assert.ok(roundInsights([rounds]).some((l) => l.id === 'per-round'))
 })
+
+test('Game State Integration: grenades carried, thrown and held at death, flashes and fire', () => {
+  for (const seed of [3, 7, 11]) {
+    const r = replay(seed)
+    const g = new Cs2Gsi({ profileId: 'cs2', maps: cs2.knowledge.maps, arsenal: cs2.knowledge.arsenal })
+    for (const u of r.gameState!) g.payload(u.payload, u.at)
+    const rounds = g.snapshot()!
+    const truth = r.truth as { thrown: number; flashed: number; burned: number; carried: number; utilityDeaths: number; blindDeaths: number }
+    const u = utilityTotals(rounds.rounds)
+    assert.equal(u.rounds, rounds.rounds.length)
+    assert.equal(countNades(u.thrown), truth.thrown, `seed ${seed}: thrown`)
+    // Flashes survived, and the ones that came just before a death.
+    assert.equal(u.flashed, truth.flashed + truth.blindDeaths, `seed ${seed}: flashed`)
+    assert.equal(u.blindDeaths, truth.blindDeaths)
+    assert.equal(u.burned, truth.burned, `seed ${seed}: burned`)
+    assert.equal(countNades(u.carried), truth.carried, `seed ${seed}: carried`)
+    // Grenades dropped at death are never counted as thrown.
+    for (const x of rounds.rounds) assert.ok(countNades(x.thrown) + countNades(x.nadesAtDeath) <= countNades(x.nades), `round ${x.n}`)
+    assert.equal(rounds.rounds.filter((x) => countNades(x.nadesAtDeath) >= 2).length, truth.utilityDeaths)
+    if (truth.flashed) assert.ok(u.blindSeconds > 0)
+    assert.ok(isCs2Rounds(JSON.parse(JSON.stringify(rounds))))
+  }
+  // The demo player keeps grenades on T side: the coach says so.
+  const lines = roundInsights([replayRounds(3)])
+  assert.ok(lines.some((l) => l.id === 'utility-thrown' && l.playbook === 'support-role'), lines.map((l) => l.id).join(' '))
+  assert.ok(!lines.some((l) => l.id === 'unused-utility'), 'the kinds line replaces the plain count')
+  // Stored rounds with bad grenade counts are refused.
+  const ok = replayRounds(3)
+  assert.equal(isCs2Rounds({ ...ok, rounds: [{ ...ok.rounds[0], thrown: { lasers: 2 } }] }), false)
+  assert.equal(isCs2Rounds({ ...ok, rounds: [{ ...ok.rounds[0], flashed: -1 }] }), false)
+})
+
+function replayRounds(seed: number) {
+  const r = replay(seed)
+  const g = new Cs2Gsi({ profileId: 'cs2', maps: cs2.knowledge.maps, arsenal: cs2.knowledge.arsenal })
+  for (const u of r.gameState!) g.payload(u.payload, u.at)
+  return g.snapshot()!
+}
 
 test('an update that carries only what changed is merged into the last', () => {
   const g = new Cs2Gsi({ profileId: 'cs2', maps: cs2.knowledge.maps })
