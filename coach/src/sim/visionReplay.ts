@@ -228,6 +228,7 @@ export function aoe2GameReplay(opts: { seed: number; startAt?: number; intervalM
       ...(gameSec > 840 && i % 9 === 0 ? { enemyBuildings: gameSec > 1100 ? '2 Stable, Barracks' : 'Barracks, Archery Range' } : {}),
       ...(gameSec > 900 && i % 6 === 3 ? { enemyUnits: gameSec > 1150 ? '6 Knights, 4 Archers' : '5 Scout Cavalry' } : {}),
       ...(gameSec > 900 && i % 6 === 0 ? { ownArmy: gameSec > 1150 ? '8 Spearmen, 6 Archers' : '6 Archers' } : {}),
+      ...(i % 8 === 4 ? { ownBuildings: gameSec < 600 ? 'Town Center' : gameSec < 800 ? 'Town Center, Barracks' : gameSec < 1100 ? 'Town Center, Barracks, 2 Archery Range' : 'Town Center, Barracks, 2 Archery Range, Blacksmith' } : {}),
     })
   }
   return {
@@ -406,8 +407,13 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
         ...(k >= 0 ? { enemyUnits: k % 2 === 0 ? '10 Longbowmen, 4 Spearmen' : '6 Longbowmen' } : {}),
       },
       events,
-      // The player's own army, as seen in the fights.
-      k >= 0 && army > 0 ? { ownArmy: k % 2 === 0 ? `${Math.ceil(army * 0.6)} Horsemen, ${Math.floor(army * 0.4)} Spearmen` : `${army} Royal Knights` } : {},
+      // The player's own army, as seen in the fights, and their base as they build it.
+      {
+        ...(k >= 0 && army > 0 ? { ownArmy: k % 2 === 0 ? `${Math.ceil(army * 0.6)} Horsemen, ${Math.floor(army * 0.4)} Spearmen` : `${army} Royal Knights` } : {}),
+        ...(i % 10 === 5
+          ? { ownBuildings: sec < 120 ? 'Town Center' : sec < 270 ? 'Town Center, Barracks' : sec < 420 ? 'Town Center, Barracks, School of Cavalry' : 'Town Center, Barracks, School of Cavalry, 2 Stable, Blacksmith' }
+          : {}),
+      },
     )
   }
   return {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
-import { COOLDOWN_RANGE, VERBOSITIES, VISION_LIMITS, visionPrefsFor, type CoachSettings, type VisionPrefs } from '../../core/settings.ts'
+import { COOLDOWN_RANGE, LEARNING_MIN_GAMES, learningPrefsFor, VERBOSITIES, VISION_LIMITS, visionPrefsFor, type CoachSettings, type LearningPrefs, type VisionPrefs } from '../../core/settings.ts'
 import type { Verbosity } from '../../core/types.ts'
 import { cachedPromptTokens, estimatePerHour, modelPrice, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
 import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
@@ -42,6 +42,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
 
       <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} />
       {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} /> : null}
+      {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
@@ -369,6 +370,74 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
             Reset to game defaults
           </button>
         ) : null}
+      </div>
+    </section>
+  )
+}
+
+// --- Learning across games (per game) ----------------------------------------------------------
+
+/** What the coach learns from this game's matches, and whether it recalls it at the start of a game. */
+function LearningPanel({ settings, onSettings, session, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile }) {
+  const prefs = learningPrefsFor(profile.id, settings)
+  const [confirm, setConfirm] = useState(false)
+  const [forgot, setForgot] = useState<number | null>(null)
+  const set = (patch: LearningPrefs) => onSettings({ learning: { ...settings.learning, [profile.id]: { ...(settings.learning[profile.id] ?? {}), ...patch } } })
+  const spec = profile.learning!
+  return (
+    <section className="panel" aria-labelledby="learning">
+      <div className="panel-head">
+        <h2 id="learning">Learning: {profile.game.title}</h2>
+        <span className={`badge ${prefs.enabled ? 'ok' : 'neutral'}`}>{prefs.enabled ? 'On' : 'Off'}</span>
+      </div>
+      <p className="small" style={{ marginTop: 0 }}>
+        After each game the coach files what your screen showed under {spec.dimensions.map((d) => d.label.toLowerCase()).join(', ')}, and learns{' '}
+        {spec.tracks.map((t) => t.label.toLowerCase()).join(', ')}. It keeps this between sessions only with “Remember my games” on (below).
+      </p>
+      <div className="grid-2">
+        <div className="field">
+          <Switch checked={prefs.enabled} onChange={(enabled) => set({ enabled })} label="Learn from my games" hint="Off: nothing new is kept for this game; what was learned stays until you forget it." />
+        </div>
+        <div className="field">
+          <Switch
+            checked={prefs.recall}
+            onChange={(recall) => set({ recall })}
+            label="Recall at the start of a game"
+            hint={`Once the ${spec.dimensions.filter((d) => d.live).map((d) => d.label.toLowerCase()).join(' or ')} is known: “Your last games against … ”. Only where live coaching is allowed; otherwise in Insights after the match.`}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="learn-min">Recall after {prefs.minGames} {prefs.minGames === 1 ? 'game' : 'games'} of that kind</label>
+          <input id="learn-min" type="range" min={LEARNING_MIN_GAMES.min} max={LEARNING_MIN_GAMES.max} step={1} value={prefs.minGames} onChange={(e) => set({ minGames: Number(e.target.value) })} />
+          <span className="muted small">More games before anything is said: fewer early hunches from a single game.</span>
+        </div>
+        <div className="field">
+          <span className="label">Forget</span>
+          {confirm ? (
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn sm danger"
+                onClick={() =>
+                  void session.forgetLearned().then((n) => {
+                    setForgot(n)
+                    setConfirm(false)
+                  })
+                }
+              >
+                Forget what was learned
+              </button>
+              <button type="button" className="btn sm ghost" onClick={() => setConfirm(false)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="btn sm ghost danger" onClick={() => setConfirm(true)}>
+              Forget what was learned for {profile.game.title}…
+            </button>
+          )}
+          <span className="muted small">{forgot !== null ? `Forgotten from ${forgot} saved ${forgot === 1 ? 'game' : 'games'}.` : 'Scores and other match records stay.'}</span>
+        </div>
       </div>
     </section>
   )

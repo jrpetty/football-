@@ -38,6 +38,26 @@ export interface CoachSettings {
   readonly commentary: boolean
   /** The player's own screen-reading choices, by pack id; a missing field uses the pack's value. */
   readonly vision: Readonly<Record<string, VisionPrefs>>
+  /** What the coach learns across games, by pack id; a missing field uses the default. */
+  readonly learning: Readonly<Record<string, LearningPrefs>>
+}
+
+/** The player's choices about learning across games, for one game. */
+export interface LearningPrefs {
+  /** Keep what each side was seen doing in this game's match records (default on). */
+  readonly enabled?: boolean
+  /** Say what past games of the same kind showed when a game starts (default on; only where live coaching is allowed). */
+  readonly recall?: boolean
+  /** Games of that kind needed before anything is recalled (default 1). */
+  readonly minGames?: number
+}
+
+export const LEARNING_MIN_GAMES = { min: 1, max: 10 } as const
+
+/** The learning choices in effect for a pack. */
+export function learningPrefsFor(packId: string, settings: Pick<CoachSettings, 'learning'>): { enabled: boolean; recall: boolean; minGames: number } {
+  const own = settings.learning[packId] ?? {}
+  return { enabled: own.enabled ?? true, recall: own.recall ?? true, minGames: own.minGames ?? 1 }
 }
 
 /** How often and how sharply the coach looks at the screen for one game. */
@@ -116,6 +136,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   onboarded: false,
   commentary: false,
   vision: {},
+  learning: {},
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -159,7 +180,23 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     onboarded: typeof o.onboarded === 'boolean' ? o.onboarded : base.onboarded,
     commentary: typeof o.commentary === 'boolean' ? o.commentary : base.commentary,
     vision: sanitizeVision(o.vision, base.vision),
+    learning: sanitizeLearning(o.learning, base.learning),
   }
+}
+
+function sanitizeLearning(v: unknown, base: CoachSettings['learning']): CoachSettings['learning'] {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return base
+  const out: Record<string, LearningPrefs> = {}
+  for (const [pack, raw] of Object.entries(v).slice(0, 50)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof raw !== 'object' || raw === null) continue
+    const o = raw as Record<string, unknown>
+    const prefs: { enabled?: boolean; recall?: boolean; minGames?: number } = {}
+    if (typeof o.enabled === 'boolean') prefs.enabled = o.enabled
+    if (typeof o.recall === 'boolean') prefs.recall = o.recall
+    if (typeof o.minGames === 'number' && Number.isInteger(o.minGames)) prefs.minGames = Math.min(LEARNING_MIN_GAMES.max, Math.max(LEARNING_MIN_GAMES.min, o.minGames))
+    if (Object.keys(prefs).length) out[pack] = prefs
+  }
+  return out
 }
 
 function sanitizeVision(v: unknown, base: CoachSettings['vision']): CoachSettings['vision'] {

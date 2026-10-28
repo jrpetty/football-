@@ -173,11 +173,13 @@ export class IntelTracker {
   private pastSeen(m: CivPlanMove): PastSeen | null {
     const h = this.history
     if (!h?.matches) return null
-    const names = [
-      ...(m.signals.landmarks ?? []),
-      ...(m.signals.units ?? []).filter((id) => this.units.get(id)?.factions?.length).map((id) => this.units.get(id)!.name),
-      ...(m.signals.buildings ?? []).map((id) => this.roster.buildings.find((b) => b.id === id)).filter((b) => b?.factions?.length).map((b) => b!.name),
-    ]
+    // A plan's landmark is its surest sign (a staple unique unit shows up in most of a civ's plans); else its unique units and buildings.
+    const names = m.signals.landmarks?.length
+      ? m.signals.landmarks
+      : [
+          ...(m.signals.units ?? []).filter((id) => this.units.get(id)?.factions?.length).map((id) => this.units.get(id)!.name),
+          ...(m.signals.buildings ?? []).map((id) => this.roster.buildings.find((b) => b.id === id)).filter((b) => b?.factions?.length).map((b) => b!.name),
+        ]
     if (!names.length) return null
     return { seen: Math.max(0, ...names.map((n) => h.seen.get(n) ?? 0)), of: h.matches }
   }

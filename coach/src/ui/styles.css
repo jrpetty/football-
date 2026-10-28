@@ -3289,3 +3289,23 @@ kbd {
   margin-left: 6px;
   font-size: 11px;
 }
+
+/* Refresh time on the Coach screen */
+.refresh-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 8px 0;
+}
+.refresh-control label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.refresh-control.compact {
+  margin: 0;
+}
+.refresh-control.compact .small {
+  max-width: 260px;
+}

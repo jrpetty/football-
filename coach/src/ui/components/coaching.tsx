@@ -8,7 +8,7 @@ import { expectedAt } from '../../core/analyses/benchmarks.ts'
 import type { FactorResult } from '../../core/analyses/factors.ts'
 import type { BattleRecord } from '../../core/analyses/battles.ts'
 import type { IntelReport, PastSeen } from '../../core/analyses/intel.ts'
-import { clock, dimensionValues, learnedFrom, type LearnedTrack, type LearnSource } from '../../core/analyses/learning.ts'
+import { clock, dimensionValues, learnedFrom, plansSeen, type Learned, type LearnedTrack, type LearnSource } from '../../core/analyses/learning.ts'
 import type { GameProfile, PlaybookEntry } from '../../core/profile/schema.ts'
 import type { MatchReview } from '../../core/review.ts'
 import { gameClock } from '../format.ts'
@@ -479,6 +479,9 @@ export function LearnedPanel({ profile, records, initial }: { profile: GameProfi
   const dims = useMemo(() => dimensionValues(records, profile), [records, profile])
   const [filter, setFilter] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }))
   const learned = useMemo(() => learnedFrom(records, profile, filter), [records, profile, filter])
+  // The civilisations chosen in the filter, to set the learned games against their reference plans.
+  const opponentCiv = filter[profile.learning?.dimensions.find((d) => d.from === 'faction')?.id ?? ''] ?? ''
+  const yourCiv = filter[profile.learning?.dimensions.find((d) => d.from === 'context' && d.key === profile.intel?.playerFactionContext)?.id ?? ''] ?? ''
   const tracks = profile.learning?.tracks ?? []
   if (!dims.some((d) => d.values.length)) {
     return (
@@ -537,6 +540,7 @@ export function LearnedPanel({ profile, records, initial }: { profile: GameProfi
               <div key={who}>
                 <h3 className="learned-side">{who === 'them' ? 'Them' : 'You'}</h3>
                 {side(who).length ? side(who).map((t) => <LearnedTrackView key={t.id} t={t} />) : <p className="muted small">Not seen yet.</p>}
+                <CivPlansSeen profile={profile} learned={learned} side={who} civ={who === 'them' ? opponentCiv : yourCiv} />
               </div>
             ))}
           </div>
@@ -582,5 +586,41 @@ function LearnedTrackView({ t }: { t: LearnedTrack }) {
       ) : null}
     </div>
   )
+}
+
+/**
+ * A civilisation's usual plans (from the pack), with how many of the chosen
+ * games showed each one's tell-tale signs: what you actually meet against
+ * them, or what you actually play as them.
+ */
+function CivPlansSeen({ profile, learned, side, civ }: { profile: GameProfile; learned: Learned; side: 'you' | 'them'; civ: string }) {
+  if (!civ) return null
+  const plans = plansSeen(profile, civ, learned, side)
+  if (!plans.length) return null
+  const shown = [...plans].sort((a, b) => b.seen - a.seen || a.age - b.age).slice(0, 6)
+  return (
+    <div className="learned-track">
+      <div className="label">
+        {side === 'them' ? `${civ} plans you met` : `${civ} plans you played`} <span className="muted">· from the pack’s plans for {civ}</span>
+      </div>
+      <ul className="learned-items">
+        {shown.map((p) => (
+          <li key={p.id}>
+            <span className="learned-bar" style={{ width: `${p.of ? Math.round((p.seen / p.of) * 100) : 0}%` }} aria-hidden="true" />
+            <span className="learned-name">
+              <span className="muted">{ageWord(profile, p.age)}</span> {p.name}
+            </span>
+            <span className="muted small">{p.seen ? `${p.seen} of ${p.of}` : 'not seen'}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** "Feudal" for age 2, from the pack's age names. */
+function ageWord(profile: GameProfile, age: number): string {
+  const n = profile.intel?.ages?.[age - 1]
+  return n ? n[0].toUpperCase() + n.slice(1) : `Age ${age}`
 }
 

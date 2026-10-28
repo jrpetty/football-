@@ -179,6 +179,9 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.12 | Sonnet 5.5 for vision, thinking Off; play 5 minutes. | No errors; measured thinking tokens near zero; compare the readings with a game on Brief. |
 | 13.13 | AoE IV vs the AI, memory on: play two games against the same civilisation. | Second game, once their civilisation is read: "Your last game against …" on the timeline (spoken with commentary on); Their side plan cards show "Met in your last game"; Insights → What the coach has learned shows their order, armies and yours. |
 | 13.14 | Same in ranked. | Nothing recalled during play; Insights shows it after the match. |
+| 13.16 | Coach screen, cloud vision on: change "Look every" before and during capture. | The next looks follow the new pace; during capture the reply time shows, with a warning when replies are slower than the pace. |
+| 13.17 | Settings → Learning (AoE IV): recall after 3 games; play two games vs English, then a third. | Nothing recalled in the second game; recalled in the third. Learn off: the next game keeps nothing new. Forget: Insights → What the coach has learned is empty; History still lists the games. |
+| 13.18 | AoE IV with your civilisation set, two games. | Insights → You: your buildings in order (no starting Town Center); "<your civ> plans you played"; Them: "<their civ> plans you met". |
 | 13.15 | MW4 vs bots, two matches on one map; FC vs CPU, two matches against one team. | Insights shows what killed you, your weapons' kills and deaths (MW4); how they scored and how you lost the ball (FC). |
 
 ## 14. Accessibility and layout

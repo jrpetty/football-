@@ -57,6 +57,12 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
     const seen = new Set<string>()
     return [...state.history, ...(report?.matches ?? [])].filter((m) => m.gameProfileId === profile.id && (seen.has(m.id) ? false : (seen.add(m.id), true)))
   }, [state.history, report, profile.id])
+  // Open on this game's kind (the opponent being played, or the last one), else on every game.
+  const learnedStart = useMemo(() => {
+    if (report?.learned && Object.keys(report.learned.filter).length) return report.learned.filter
+    const dims = [...learnFrom].reverse().find((m) => m.scout)?.scout?.dims ?? {}
+    return Object.fromEntries((profile.learning?.dimensions ?? []).filter((d) => d.live && dims[d.id]).map((d) => [d.id, dims[d.id]]))
+  }, [report, learnFrom, profile])
 
   return (
     <div className="page">
@@ -136,7 +142,7 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
             <h2 id="learned-h">What the coach has learned</h2>
             <span className="muted small">{settings.saveTendencies ? 'Your saved games plus this session' : 'This session only: turn on “Remember my games” to keep it'}</span>
           </div>
-          <LearnedPanel key={JSON.stringify(report?.learned?.filter ?? {})} profile={profile} records={learnFrom} initial={report?.learned?.filter} />
+          <LearnedPanel key={JSON.stringify(learnedStart)} profile={profile} records={learnFrom} initial={learnedStart} />
         </section>
       )}
 

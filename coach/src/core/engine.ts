@@ -32,7 +32,7 @@ import { liveCueMessage, matchSummaryMessage, mistakeTipMessage, roundReviewMess
 import { CoachingGovernor, type EffectiveMode } from './policy/governor.ts'
 import type { PolicyScope, ResolvedPolicy } from './policy/registry.ts'
 import { eventCatalog, type EpisodeSpec, type GameProfile, type MistakeSpec, type VisionEventSpec } from './profile/schema.ts'
-import type { CoachSettings } from './settings.ts'
+import { learningPrefsFor, type CoachSettings } from './settings.ts'
 import { STALE_AFTER_MS, VisibleStateTracker } from './tracker.ts'
 import type {
   BoundaryKind,
@@ -449,7 +449,7 @@ export class CoachEngine {
       // Between matches, the last match's (for the review and answers) until the next one is read.
       context: Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) },
       intel: this.intel?.report() ?? null,
-      learned: this.profile.learning ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
+      learned: this.profile.learning && this.learning().enabled ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -488,7 +488,7 @@ export class CoachEngine {
     }
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
-    this.scout?.observe(this.visible, now)
+    if (this.learning().enabled) this.scout?.observe(this.visible, now)
     this.benchmarks.observe(this.visible)
     for (const k of this.profile.contextKeys ?? []) {
       const v = this.visible.values[k]
@@ -518,7 +518,7 @@ export class CoachEngine {
   private handleEvents(events: GameEvent[], now: number, out: EngineOutput): void {
     for (const ev of events) {
       out.entries.push({ type: 'event', at: ev.at, event: ev })
-      this.scout?.event(ev, now, this.visible)
+      if (this.learning().enabled) this.scout?.event(ev, now, this.visible)
       this.heatmaps.record(ev)
       this.factors.record(ev)
       if (ev.category !== 'boundary') this.matchHasData = true
@@ -647,7 +647,7 @@ export class CoachEngine {
       benchmarks: this.benchmarks.results(),
       battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
       context: { ...this.gameContext },
-      scout: this.scout?.finish(this.learningDims()) ?? null,
+      scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
       endedManually: end.manual,
     })
     if (this.matchHasData || record.scout) {
@@ -759,7 +759,7 @@ export class CoachEngine {
 
   /** Once the opponent's faction is known, what the player's past games against it showed, for the reference plans. */
   private linkHistory(): void {
-    const faction = this.intel?.opponentFaction?.name ?? null
+    const faction = this.learning().enabled ? (this.intel?.opponentFaction?.name ?? null) : null
     if (faction === this.historyFor) return
     this.historyFor = faction
     const dim = this.profile.learning?.dimensions.find((d) => d.from === 'faction')
@@ -777,6 +777,11 @@ export class CoachEngine {
     return Object.fromEntries((this.profile.learning?.dimensions ?? []).filter((d) => d.live && last[d.id]).map((d) => [d.id, last[d.id]]))
   }
 
+  /** The player's learning choices for this game. */
+  private learning(): { enabled: boolean; recall: boolean; minGames: number } {
+    return learningPrefsFor(this.profile.id, this.settings)
+  }
+
   /** A state value read during this match, as text. */
   private thisMatch(key: string): string | undefined {
     const v = this.visible.values[key]
@@ -792,11 +797,13 @@ export class CoachEngine {
   /** Once a live dimension is known, what past matches filed under it had in common, said once per match. */
   private recall(now: number): { news: IntelNews; at: number }[] {
     const out: { news: IntelNews; at: number }[] = []
+    const prefs = this.learning()
+    if (!prefs.enabled || !prefs.recall) return out
     for (const [id, value] of Object.entries(this.liveFilter())) {
       if (this.recalled.has(id)) continue
       this.recalled.add(id)
       const l = learnedFrom(this.matchHistory, this.profile, { [id]: value })
-      if (!l) continue
+      if (!l || l.matches < prefs.minGames) continue
       const lines = [...learnedLines(l, 'them', 2), ...learnedLines(l, 'you', 3).slice(-1)]
       if (!lines.length) continue
       const games = l.matches === 1 ? 'game' : `${l.matches} games`

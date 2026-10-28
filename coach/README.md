@@ -180,8 +180,10 @@ Then press **Choose the game window**, play, and listen.
   usually does, marked as their usual plan rather than a read. It also
   gives your own civilisation's plan for your current age, and their
   next timing window.
-- **You set how it looks, per game** (Settings → Screen reading). Look
-  every 1–20 seconds (the defaults are 2.5 s for MW4 and FC, 3 s for AoE),
+- **You set how it looks, per game** (Settings → Screen reading, and the
+  "Look every" control on the Coach screen, before and during capture,
+  which also shows how long replies take and warns when they are slower
+  than your pace). Look every 1–20 seconds (the defaults are 2.5 s for MW4 and FC, 3 s for AoE),
   how many looks run at once (auto keeps a short interval even when a
   reply takes longer), and the detail of each look (768 to 1600 pixels
   wide). Changes apply from the next look, even mid-game. With Sonnet 5.5
@@ -194,18 +196,22 @@ Then press **Choose the game window**, play, and listen.
   map and mode; FC: the opponent and their formation), and the coach keeps
   what each side was seen doing:
   - AoE IV and II: their buildings and army in the order they first showed
-    up on your screen, their age-ups, your army and your age-ups. Later it
+    up on your screen, their age-ups, your own buildings (your build order,
+    without what you start with), your army and your age-ups. Later it
     tells you their usual order and army mix against you, yours, and what
     went with wins and losses ("When they had Council Hall: you lost 2 of
-    2"). The civilisation plans are marked with how often you met each
-    ("Met in 3 of your last 5 games").
+    2"). Each civilisation's plans are linked to your games: the plans you
+    met against them and the plans you played as your civilisation, by
+    their landmarks or unique units ("Met in 3 of your last 5 games").
   - MW4: what killed you and from what range on each map, the enemy's
     killstreaks, and your kills and deaths with each weapon you held.
   - FC: how each opponent scored against you (crosses, cutbacks…), your
     defending on those goals, how you scored and how you lost the ball.
   When the next game of that kind starts it says what it learned ("Your
   last 3 games against English: …"), where live coaching is allowed;
-  otherwise it waits for Insights. Ask "what do they usually build?" or
+  otherwise it waits for Insights. Settings → Learning, per game: learn
+  on or off, recall at the start of a game on or off, how many games of
+  that kind before it recalls anything, and forget what was learned. Ask "what do they usually build?" or
   "what's my usual build?". It keeps learning between sessions with
   "Remember my games" on. "First seen" means first on your screen, not
   when it was made.

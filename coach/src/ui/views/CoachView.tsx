@@ -15,6 +15,7 @@ import { Meter, Notice, Segmented, Switch } from '../components/common.tsx'
 import { Breakdown, EconomyPanel, PolicyBadge, Scoreboard, ScopeChips, StatePanel, ZoneMap } from '../components/viz.tsx'
 import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
+import { RefreshControl } from '../components/RefreshControl.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -232,11 +233,13 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
             cloudReady(cloud) ? (
               <>
                 <p className="small">
-                  <span className="badge ok">Cloud vision on</span> Every {formatMs(profile.vision!.sampleIntervalMs)}, one{' '}
+                  <span className="badge ok">Cloud vision on</span> Every {formatMs(visionPrefsFor(profile, settings).intervalMs)}, one{' '}
                   {profile.vision!.crops?.length ? 'set of HUD crops' : 'downscaled frame'} goes to {modelPrice(cloud.settings.visionModel).label.split(' (')[0]} with your key.
                 </p>
+                <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} />
                 <p className="muted small">
-                  About {usd(est)} per hour of play (estimate). Session cap {usd(cloud.settings.sessionCapUsd)}.
+                  About {usd(est)} per hour of play (estimate). Session cap {usd(cloud.settings.sessionCapUsd)}. Faster looks catch more in
+                  shooters and football; detail and more in Settings → Screen reading.
                 </p>
               </>
             ) : (
@@ -363,6 +366,9 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
             <button type="button" className="btn sm" onClick={() => setAligning(true)}>
               Check HUD alignment
             </button>
+          ) : null}
+          {cloudReady(cloud) && state.status?.vision.enabled ? (
+            <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} vision={state.status.vision} compact />
           ) : null}
           <select aria-label="Coaching mode" value={settings.mode} onChange={(e) => onSettings({ mode: e.target.value as CoachSettings['mode'] })}>
             {COACHING_MODES.map((m) => (

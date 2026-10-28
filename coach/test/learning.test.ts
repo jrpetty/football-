@@ -8,12 +8,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CloudService, visionThinkingParam, type CloudClient } from '../electron/cloud/service.ts'
 import { DEFAULT_CLOUD } from '../shared/cloud.ts'
-import { learnedFrom, learnedLines, nameIndex, parseList, ScoutRecorder, type LearnSource } from '../src/core/analyses/learning.ts'
+import { learnedFrom, learnedLines, nameIndex, parseList, plansSeen, ScoutRecorder, type LearnSource } from '../src/core/analyses/learning.ts'
 import type { MatchRecord } from '../src/core/analyses/matchRecorder.ts'
 import { rosterText } from '../src/core/knowledge/base.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
 import { answerLocally, classify } from '../src/core/qa/ask.ts'
-import { sanitizeSettings, visionPrefsFor } from '../src/core/settings.ts'
+import { learningPrefsFor, sanitizeSettings, visionPrefsFor } from '../src/core/settings.ts'
 import type { GameEvent, VisibleState } from '../src/core/types.ts'
 import { VisionSampler } from '../src/core/vision/sampler.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
@@ -278,4 +278,60 @@ test('the packs that learn validate, and say what they learn', () => {
     assert.ok((p.learning?.tracks.length ?? 0) >= 4, p.id)
     assert.ok(p.learning!.dimensions.some((d) => d.live), `${p.id}: something to recall live`)
   }
+})
+
+// --- The player's learning choices, your build, and the civilisation plans ------------------------
+
+/** Three AoE IV games against English as French; the third with the given settings. */
+function threeGames(learning: Record<string, unknown> = {}) {
+  const history: MatchRecord[] = []
+  let last: ReturnType<typeof play> & { report: ReturnType<CoachEngine['report']> } = null!
+  for (const [n, seed] of [4, 5, 6].entries()) {
+    const engine = engineFor(aoe4, settings({ profileId: 'aoe4', profileModeId: 'skirmish-vs-ai', mode: 'training', commentary: true, ...(n === 2 ? { learning: sanitizeSettings({ learning }).learning } : {}) }), {
+      context: { civ: 'French' },
+      matchHistory: [...history],
+    })
+    const r = play(engine, aoe4GameReplay({ seed }))
+    history.push(...r.matches.map((m) => ({ ...m, id: `${m.id}-${seed}` })))
+    last = { ...r, report: engine.report() }
+  }
+  return { history, last }
+}
+
+test('learning choices: off keeps nothing new and says nothing; recall off stays quiet; recall waits for enough games', () => {
+  assert.deepEqual(sanitizeSettings({ learning: { aoe4: { enabled: false, minGames: 40 }, 'bad id': { recall: false } } }).learning, { aoe4: { enabled: false, minGames: 10 } })
+  assert.deepEqual(learningPrefsFor('ea-fc', sanitizeSettings({})), { enabled: true, recall: true, minGames: 1 })
+
+  const off = threeGames({ aoe4: { enabled: false } })
+  assert.equal(off.history.at(-1)!.scout, undefined, 'nothing kept')
+  assert.ok(!off.last.notices.some((n) => /^Your last/.test(n)))
+  assert.equal(off.last.report.learned, null)
+  assert.equal(off.last.report.intel?.reads.find((r) => /Longbow/.test(r.name))?.past ?? null, null, 'plans not linked either')
+
+  const quiet = threeGames({ aoe4: { recall: false } })
+  assert.ok(quiet.history.at(-1)!.scout, 'still learned')
+  assert.ok(!quiet.last.notices.some((n) => /^Your last/.test(n)))
+
+  assert.ok(!threeGames({ aoe4: { minGames: 3 } }).last.notices.some((n) => /^Your last/.test(n)), 'two games are not enough')
+  assert.ok(threeGames({ aoe4: { minGames: 2 } }).last.notices.some((n) => /^Your last 2 games/.test(n)))
+})
+
+test('your build order: your buildings as they appear, without what you start with; your army; your civilisation’s plans you played', () => {
+  const { history } = threeGames()
+  const l = learnedFrom(history, aoe4, { civ: 'French' })!
+  const yours = l.tracks.find((t) => t.id === 'your-buildings')!
+  assert.deepEqual(
+    yours.order.map((o) => o.name),
+    ['Barracks', 'School of Cavalry', 'Blacksmith', 'Stable'],
+    'the starting Town Center is not part of the order',
+  )
+  assert.match(learnedLines(l, 'you').join(' '), /^Your buildings in the usual order \(first seen\): Barracks \d:\d\d, School of Cavalry/)
+  // French plans this player played (School of Cavalry is a French landmark), and English plans met.
+  const played = plansSeen(aoe4, 'French', l, 'you')
+  assert.ok(played.some((p) => p.seen === 3 && p.of === 3), JSON.stringify(played.slice(0, 4)))
+  const met = plansSeen(aoe4, 'English', learnedFrom(history, aoe4, { opponent: 'English' })!, 'them')
+  assert.ok(met.some((p) => /Longbow/.test(p.name) && p.seen === 3))
+  assert.ok(met.some((p) => p.seen === 0), 'plans never met are listed as such')
+  // Asked out loud.
+  assert.match(answerLocally(classify("what's my usual build?", aoe4), aoe4, threeGames().last.report, history)!, /Your buildings in the usual order/)
 })

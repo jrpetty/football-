@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -283,6 +283,14 @@
         "ttlMs": 8000,
         "description": "Your own (the player's) military units visible in this frame or listed in the selection panel, as 'count Name' using the roster's unit names where there is one, comma-separated (e.g. '12 Spearman, 8 Archer'). Count only what you can see; omit if none.",
         "maxLength": 240
+      },
+      {
+        "key": "ownBuildings",
+        "label": "Your buildings in view",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Your own (the player's) buildings visible in this frame, built or being placed: production buildings, landmarks, Town Centers, Keeps, towers, markets, monasteries, docks, as 'count Name' using the roster's names where there is one, comma-separated (e.g. '2 Barracks, Archery Range, Council Hall'). Leave out houses, farms, walls and drop-off camps; omit if none.",
+        "maxLength": 200
       }
     ],
     "events": [
@@ -20535,6 +20543,15 @@
         "from": "value",
         "key": "opponentAge",
         "kind": "age",
+        "order": true
+      },
+      {
+        "id": "your-buildings",
+        "label": "Your buildings",
+        "side": "you",
+        "from": "list",
+        "key": "ownBuildings",
+        "kind": "building",
         "order": true
       },
       {

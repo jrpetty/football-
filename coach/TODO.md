@@ -178,6 +178,9 @@ Legend:
 - ☑ Thinking off for screen readings (Sonnet 5.5 and Haiku 5.5); matchup-only reference once the opponent's civilisation is read (about 70% less text per look); measured cost per look from the API's token counts.
 - ☑ Learning across games for AoE IV, AoE II, MW4 and FC: what each side was seen doing (first-seen order, army mix, tallies, results), filed by opponent, civilisation, map, mode or formation; recalled at the start of the next game of that kind where live coaching is allowed; linked to the civilisation plans; answers, digest, Insights panel. *Tested with each game's demo played several times (`test/learning.test.ts`).*
 - ☑ Readings from one match no longer carry into the next (map, opponent).
+- ☑ "Look every" on the Coach screen (before and during capture) with reply time and a warning when replies are slower than the pace.
+- ☑ Learning settings per game: learn on/off, recall on/off, games needed before recall (1–10), forget what was learned (match records stay).
+- ☑ Your own buildings (AoE IV, AoE II) for your build order, without the starting base; each civilisation's plans linked to your games on both sides (met against them, played as yours), by landmark first. *Tested (`test/learning.test.ts`).*
 - ◐ New readings from real frames: your army, the opponent's AoE II civilisation and army, your MW4 weapon and enemy killstreaks, the FC opponent and formation. *Untested without captures.*
 - ◐ How much thinking costs on Opus 5.5 at low effort, and whether thinking off loses accuracy on Sonnet or Haiku. *Measure on a real session with the new cost breakdown.*
 

@@ -264,6 +264,24 @@ export class CoachSession {
     this.set({ history: this.state.history.filter((m) => m.id !== id) })
   }
 
+  /** Forgets what was learned from this game's saved matches (the rest of each record stays). Returns how many were changed. */
+  async forgetLearned(): Promise<number> {
+    if (!this.profile) return 0
+    let changed = 0
+    const history: MatchRecord[] = []
+    for (const m of this.state.history) {
+      if (!m.scout) {
+        history.push(m)
+        continue
+      }
+      const { scout: _forgotten, ...rest } = m
+      if (await this.bridge.saveMatch(rest).catch(() => false)) changed++
+      history.push(rest)
+    }
+    this.set({ history })
+    return changed
+  }
+
   async runResearch(focus: string): Promise<string | null> {
     const profile = this.profile
     if (!profile || this.state.researching) return null

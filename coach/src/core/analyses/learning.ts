@@ -33,6 +33,8 @@ export interface MatchScout {
 
 /** Per track, at most this many names are kept per match. */
 const MAX_ITEMS = 40
+/** The first buildings seen before this were there from the start. */
+const STARTING_SEC = 120
 
 interface Mutable {
   first: number | null
@@ -297,9 +299,13 @@ export function learnedFrom(records: readonly LearnSource[], profile: GameProfil
       }
     })
     items.sort((a, b) => b.seenIn - a.seenIn || b.total - a.total || a.name.localeCompare(b.name))
+    // What a side starts with (its first Town Center) is not part of a build order: the buildings seen
+    // first, early on, before anything else was.
+    const earliest = Math.min(...items.map((i) => i.firstSec ?? Infinity))
+    const starting = (i: LearnedItem) => t.kind === 'building' && i.firstSec !== null && i.firstSec < STARTING_SEC && i.firstSec <= earliest
     const order = t.order
       ? items
-          .filter((i) => i.share >= 0.5 && i.firstSec !== null)
+          .filter((i) => i.share >= 0.5 && i.firstSec !== null && !starting(i))
           .sort((a, b) => a.firstSec! - b.firstSec!)
           .slice(0, 8)
           .map((i) => ({ name: i.name, atSec: i.firstSec! }))
@@ -401,4 +407,44 @@ export function learnedLines(l: Learned, side: 'you' | 'them', max = 4): string[
     if (worst && worst !== best && worst.lost > worst.won) out.push(`${subject} ${say(worst)}: you lost ${worst.lost} of ${worst.won + worst.lost}.`)
   }
   return out.slice(0, max)
+}
+
+/**
+ * A civilisation's reference plans, age by age, with how many of the
+ * learned games showed each plan's tell-tale signs (landmarks, unique units,
+ * civilisation buildings) on the given side. Links the pack's plans for a
+ * civilisation to what was actually seen with or against it.
+ */
+export function plansSeen(
+  profile: GameProfile,
+  factionName: string,
+  l: Learned,
+  side: 'you' | 'them',
+): { age: number; id: string; name: string; seen: number; of: number; playAs: readonly string[] }[] {
+  const roster = profile.knowledge.roster
+  const f = roster?.factions.find((x) => x.name.toLowerCase() === factionName.toLowerCase() || x.id === factionName.toLowerCase())
+  if (!roster || !f?.agePlans?.length) return []
+  const seen = new Map<string, number>()
+  let of = 0
+  for (const t of l.tracks.filter((x) => x.side === side)) {
+    of = Math.max(of, t.matches)
+    for (const i of t.items) seen.set(i.name, Math.max(seen.get(i.name) ?? 0, i.seenIn))
+  }
+  const unit = new Map(roster.units.map((u) => [u.id, u]))
+  const building = new Map(roster.buildings.map((b) => [b.id, b]))
+  const out: { age: number; id: string; name: string; seen: number; of: number; playAs: readonly string[] }[] = []
+  for (const plan of f.agePlans) {
+    for (const m of plan.theirMoves) {
+      // A plan's landmark is its surest sign (a staple unique unit shows up in most of a civ's plans); else its unique units and buildings.
+      const signs = m.signals.landmarks?.length
+        ? m.signals.landmarks
+        : [
+            ...(m.signals.units ?? []).filter((id) => unit.get(id)?.factions?.length).map((id) => unit.get(id)!.name),
+            ...(m.signals.buildings ?? []).filter((id) => building.get(id)?.factions?.length).map((id) => building.get(id)!.name),
+          ]
+      if (!signs.length) continue
+      out.push({ age: plan.age, id: m.id, name: m.name, seen: Math.max(0, ...signs.map((s) => seen.get(s) ?? 0)), of, playAs: plan.playAs })
+    }
+  }
+  return out
 }
