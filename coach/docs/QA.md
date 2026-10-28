@@ -149,7 +149,18 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 11.7 | With cloud on, **Deeper review with Claude**. | A review marked as written by the model with its cost; counts match the panels below. If it fails, the local review stays with a note. |
 | 11.8 | Real MW4 killcams: compare 10 deaths' tags (Timeline, event details) with what the killcam showed. | Most tags match; unclear killcams are "unknown", not guessed. Record the agreement rate. |
 
-## 12. Accessibility and layout
+## 12. Push-to-talk and AoE IV battles
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 12.1 | Settings → Voice input on, download the speech model. With the game focused, press the talk key, ask "Where am I dying most?", press it again. | A rising tone, then a falling tone. The question appears as "You (voice)" and the answer is spoken in the chosen voice. |
+| 12.2 | Turn voice input off and press the talk key with the game focused. | A low error tone and, when not capturing, the coach says that voice input is off. |
+| 12.3 | Windows Settings → Privacy → Microphone → block desktop apps, press the talk key. | The coach says the microphone is blocked and where to allow it. |
+| 12.4 | Online match: ask a question by voice. | Two even tones (held); the answer arrives after the match. |
+| 12.5 | AoE IV vs AI, Training mode: lose two or three fights under the enemy Town Center. | "Pull back out of their arrow range." once the pattern is clear; Insights → Fights this session lists each fight with the army before and at its lowest. |
+| 12.6 | AoE IV ranked: play a full game with several fights, then Insights. | The summary says "Fights I could follow: N won, M lost." Unclear fights are labelled unclear. The map and opponent's civilisation show at the top of Insights. |
+
+## 13. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is

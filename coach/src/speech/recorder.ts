@@ -1,5 +1,5 @@
 // Push-to-talk recording for "ask the coach". The microphone is opened only
-// while the player holds (or toggles) the talk control, captured as 16 kHz
+// between two presses of the talk key (or clicks of the talk button), captured as 16 kHz
 // mono PCM, and handed to the local recogniser. Nothing is stored or sent
 // anywhere else; the stream is closed as soon as recording stops.
 
@@ -40,7 +40,10 @@ export class PushToTalkRecorder {
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
       video: false,
     })
-    return new PushToTalkRecorder(stream, onLimit)
+    const rec = new PushToTalkRecorder(stream, onLimit)
+    // Started from a global key, not a click: make sure audio is flowing.
+    await rec.ctx.resume().catch(() => undefined)
+    return rec
   }
 
   /** Stop and return the recording as 16 kHz mono samples. */
@@ -69,4 +72,14 @@ export class PushToTalkRecorder {
     for (const t of this.stream.getTracks()) t.stop()
     void this.ctx.close()
   }
+}
+
+/** What to tell the player when the microphone cannot be opened. */
+export function micErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : ''
+  if (name === 'NotAllowedError' || name === 'SecurityError')
+    return 'The microphone is blocked. On Windows: Settings, Privacy and security, Microphone, and allow desktop apps to use it.'
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'No microphone found. Plug one in or pick a default input device in your sound settings.'
+  if (name === 'NotReadableError') return 'The microphone is in use by another program or could not be started.'
+  return `Microphone unavailable: ${err instanceof Error ? err.message : String(err)}`
 }

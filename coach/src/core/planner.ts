@@ -22,6 +22,7 @@ import {
 import type { HeatmapResult } from './analyses/heatmap.ts'
 import type { FactorFinding, FactorResult } from './analyses/factors.ts'
 import type { BenchmarkResult } from './analyses/benchmarks.ts'
+import type { BattleRecord } from './analyses/battles.ts'
 import type { MatchRecord } from './analyses/matchRecorder.ts'
 import type { MistakeTotals } from './analyses/mistakes.ts'
 import type { EpisodeSpec, GameProfile, LiveCueSpec, MistakeSpec } from './profile/schema.ts'
@@ -81,6 +82,7 @@ export interface ReviewInputs {
   readonly heatmaps: readonly HeatmapResult[]
   readonly factors: readonly FactorResult[]
   readonly benchmarks: readonly BenchmarkResult[]
+  readonly battles: readonly BattleRecord[]
   readonly mistakes: Readonly<Record<string, MistakeTotals>>
   /** Mistake ids or episode ids queued from live play since the last review. */
   readonly queuedTopics: readonly string[]
@@ -159,6 +161,14 @@ function factorLines(i: ReviewInputs, max: number): { lines: string[]; topics: s
   }
 }
 
+/** "Fights I could follow: 2 won, 3 lost." (unclear ones are not called either way). */
+function battleLine(battles: readonly BattleRecord[]): string[] {
+  const won = battles.filter((b) => b.outcome === 'won').length
+  const lost = battles.filter((b) => b.outcome === 'lost').length
+  if (won + lost === 0) return []
+  return [`Fights I could follow: ${won} won, ${lost} lost.`]
+}
+
 function benchmarkLines(i: ReviewInputs, max: number): { lines: string[]; topics: string[] } {
   const behind = i.benchmarks.filter((b) => b.worst).slice(0, max)
   return {
@@ -229,7 +239,7 @@ export function matchSummaryMessage(i: SummaryInputs, now: number): NewMessage {
   const stats = statLines(i)
   // Most actionable first: how fights are lost, the economy against its benchmark, where things happen, then the rest.
   const lines = withoutRepeatedAdvice(i.profile, [...facts.lines, ...bench.lines, ...zones.lines, ...mis.lines, ...ins.lines, ...stats])
-  const opening = [...(i.score ? [scoreLine(i.score)] : []), ...(facts.strength ? [facts.strength] : [])]
+  const opening = [...(i.score ? [scoreLine(i.score)] : []), ...battleLine(i.battles), ...(facts.strength ? [facts.strength] : [])]
   const best = [ins.best, zones.best, facts.best].filter((g): g is EvidenceGrade => !!g).sort((a, b) => GRADE_ORDER[b] - GRADE_ORDER[a])[0]
   return {
     category: 'post_event',

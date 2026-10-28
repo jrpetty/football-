@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v4, Windows-first.
+> **Status:** v5, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -114,9 +114,22 @@ Then press **Choose the game window**, play, and listen.
     you were in the open"), and notices deaths seconds after your own kill.
     Killcams are reconstructions, so findings are "likely", and unreadable
     ones are counted, never guessed. Plus where you die and what kills you.
-  - **AoE IV:** your villager count against one Town Center that never stops
-    (21 at 5:00, 36 at 10:00) with a strong-player reference; housed time,
-    idle villagers, floating resources, age-up timing.
+  - **AoE IV battles:** each fight is followed across the frames where your
+    army is fighting, and read for where it happened (near their Town
+    Center or Keep, near your defences, open field, choke, sacred site),
+    the unit matchup, army size, whether your ranged units were screened,
+    clumping under Mangonel fire, their siege left alone, and reinforcements
+    trickling in. A fight is called won or lost only when what the frames
+    show and your army size (population minus villagers) agree; the rest
+    are "unclear". The coach then compares fights won and lost ("All 3
+    fights lost came near their Town Center, towers or Keep") and gives the
+    fix, with the reasoning behind it (arrow ranges, bonus damage, armor
+    math, Update 17.0 changes).
+  - **AoE IV economy:** your villager count against one Town Center that
+    never stops (21 at 5:00, 36 at 10:00) with a strong-player reference;
+    housed time, idle villagers, floating resources, age-up timing. The
+    map and your opponent's civilisation are read from the loading screen
+    and kept for the review.
   - **AoE II:** housed time, idle villagers, floating resources, and age-up
     timing against your targets.
   - **EA FC 27:** where you concede and score and how, the first defensive
@@ -125,8 +138,8 @@ Then press **Choose the game window**, play, and listen.
     ball, and stats against warning lines.
   - **Patterns** like "deaths after pushing alone": graded, with
     counterexamples.
-- **Advice that comes with a fix.** Each pack has a playbook (MW4 30
-  entries, AoE IV 26, FC 27 25) of what good players do, what it looks like
+- **Advice that comes with a fix, and the reason.** Each pack has a playbook
+  (MW4 30 entries, AoE IV 41, FC 27 25) of what good players do, what it looks like
   on screen, the fix and a drill, with its sources (pro, coach, official,
   guide, forum). Every finding the coach speaks carries its fix, once.
 - **The coach's review.** After a session, Insights gives a headline, what
@@ -138,8 +151,12 @@ Then press **Choose the game window**, play, and listen.
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a
     quicker CPU).
-  - Press your talk key and ask anything: "What should I do here?", "Where
-    am I dying most?", "Was that a good build?".
+  - Press your talk key (F8 by default) and ask anything: "What should I do
+    here?", "Where am I dying most?", "How did my fights go?". A rising tone
+    means it is listening; press the key again to send (a falling tone). It
+    answers out loud. If something is wrong (voice input off, no microphone,
+    the speech model not downloaded) it says so, out loud when you are not
+    mid-match.
   - During capture, Claude sees your screen with the question.
   - Common questions are answered on your PC from the recorded data.
 - **Decisions.** Press your mark key mid-game. After the match Claude looks

@@ -13,6 +13,7 @@
 
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
+import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -108,6 +109,10 @@ export interface SessionReport {
   readonly heatmaps: readonly HeatmapResult[]
   readonly factors: readonly FactorResult[]
   readonly benchmarks: readonly BenchmarkResult[]
+  /** Fights followed this session (strategy packs), oldest first. */
+  readonly battles: readonly BattleRecord[]
+  /** What the game is (map, opponent's civilisation…), as last read. */
+  readonly context: Readonly<Record<string, string | number>>
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
@@ -135,6 +140,10 @@ export class CoachEngine {
   private readonly recorder: MatchRecorder
   private readonly factors: FactorAnalyzer
   private readonly benchmarks: BenchmarkTracker
+  private readonly battles: BattleTracker
+  /** Index into the battle log where the current match starts. */
+  private matchBattlesFrom = 0
+  private gameContext: Record<string, string | number> = {}
   /** Factor tips already given this match (once each). */
   private factorTipsGiven = new Set<string>()
 
@@ -189,6 +198,8 @@ export class CoachEngine {
     this.recorder = new MatchRecorder(profile.matchStats)
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
+    const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
+    this.battles = new BattleTracker(profile.battles ?? null, clockKey)
 
     this.episodeSpecs = new Map(profile.episodes.map((e) => [e.id, e]))
     this.mistakeSpecs = new Map((profile.mistakes ?? []).map((m) => [m.id, m]))
@@ -267,7 +278,8 @@ export class CoachEngine {
     const out = emptyOutput()
     this.lastT = Math.max(this.lastT, now)
     this.fuser.ingest(observations)
-    const events: GameEvent[] = []
+    // Fights are followed frame by frame, before banners are de-duplicated.
+    const events: GameEvent[] = this.battles.update(observations, this.fuser.snapshot(now), now)
     for (const obs of observations) {
       if (obs.kind !== 'event') continue
       const spec = this.visionEvents.get(obs.eventType)
@@ -316,6 +328,8 @@ export class CoachEngine {
   stop(now: number): EngineOutput {
     const out = emptyOutput()
     for (const ep of this.evaluator.closeAll(now, 'session-ended')) this.recordEpisode(ep, out)
+    const fights = this.battles.flush()
+    if (fights.length) this.handleEvents(fights, now, out)
     if (this.matchHasData) this.endMatch({ result: 'unknown', at: now, manual: true }, now, out, 'idle')
     this.releaseAnswers(now, out, 'idle')
     return out
@@ -385,6 +399,8 @@ export class CoachEngine {
       heatmaps: this.heatmaps.results('session'),
       factors: this.factors.results('session'),
       benchmarks: this.benchmarks.results(),
+      battles: this.battles.battles(),
+      context: { ...this.gameContext },
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -424,6 +440,10 @@ export class CoachEngine {
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
     this.benchmarks.observe(this.visible)
+    for (const k of this.profile.contextKeys ?? []) {
+      const v = this.visible.values[k]
+      if (v && !v.conflicted && (typeof v.value === 'string' || typeof v.value === 'number')) this.gameContext[k] = v.value
+    }
 
     // Vision sightings of goals enrich (or wait for) scoreboard goals.
     for (const ev of events) {
@@ -566,6 +586,8 @@ export class CoachEngine {
       heatmaps: this.heatmaps.results('match'),
       factors: this.factors.matchCounts(),
       benchmarks: this.benchmarks.results(),
+      battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
+      context: { ...this.gameContext },
       endedManually: end.manual,
     })
     if (this.matchHasData) {
@@ -592,6 +614,9 @@ export class CoachEngine {
     this.heatmaps.newMatch()
     this.factors.newMatch()
     this.benchmarks.newMatch()
+    this.battles.newMatch()
+    this.matchBattlesFrom = this.battles.battles().length
+    this.gameContext = {}
     this.factorTipsGiven = new Set()
     this.mistakes.newMatch()
     for (const s of this.scores) s.newMatch()
@@ -644,6 +669,7 @@ export class CoachEngine {
       heatmaps: this.heatmaps.results(scope),
       factors: this.factors.results(scope),
       benchmarks: scope === 'match' ? this.benchmarks.results() : [],
+      battles: this.battles.battles().slice(scope === 'match' ? this.matchBattlesFrom : 0),
       mistakes: this.mistakes.totals(scope, this.lastT),
       queuedTopics: this.governor.takeQueuedTopics(),
       reviewLines,
@@ -747,4 +773,8 @@ function emptyOutput(): EngineOutput {
 
 function notice(at: number, level: 'info' | 'warning', text: string): TimelineEntry {
   return { type: 'notice', at, level, text }
+}
+
+function battleCounts(list: readonly BattleRecord[]): { won: number; lost: number; unclear: number } {
+  return { won: list.filter((b) => b.outcome === 'won').length, lost: list.filter((b) => b.outcome === 'lost').length, unclear: list.filter((b) => b.outcome === 'unclear').length }
 }

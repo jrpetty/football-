@@ -17,7 +17,8 @@ import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, Tim
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
-import { PushToTalkRecorder } from '../speech/recorder.ts'
+import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
+import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
 import type { FromWorker, ToWorker, WorkerStatus } from '../worker/protocol.ts'
@@ -215,6 +216,8 @@ export class CoachSession {
     const first = this.profile === null
     this.profile = profile
     this.settings = settings
+    // The chosen voice applies straight away, not only once capture starts.
+    this.speech.configure(settings.voice)
     // Questions are about one game; a new game starts a new conversation.
     if (changedPack && this.state.phase === 'idle') this.set({ conversation: [] })
     if (first || changedPack || changedOptIn) await this.reloadPlayerData()
@@ -505,14 +508,16 @@ export class CoachSession {
       note = `Answered by ${cloud.settings.answerModel} from ${shot ? 'your screen and ' : ''}this session's recorded data${history.length ? ' and your match history' : ''}.`
     } else {
       text =
-        'I can answer questions about where you concede or lose the ball, your mistakes, patterns, statistics and how a match went from what I recorded. ' +
-        'For open questions, add an API key and turn on cloud features in Settings.'
+        'Without Claude I can answer from what I recorded: where things happen, how your fights go, your mistakes, patterns, statistics and how a match went. ' +
+        'For other questions, add your Claude API key in Settings.'
       note = null
     }
 
     // Not capturing: nobody is mid-match in front of the coach, so answer directly.
     if (!this.worker || !this.source) {
       this.patchQa(id, { status: 'answered', answer: text, author, note, costUsd })
+      // Asked out loud: answer out loud.
+      if (via === 'voice' && !settings.muted) this.speech.enqueue({ id: `answer-${id}`, text, category: 'post_event', priority: 'normal', expiresAt: null })
       return
     }
     const now = this.source.now()
@@ -528,34 +533,41 @@ export class CoachSession {
       this.recorder = null
       if (!rec) return
       this.set({ talk: 'transcribing' })
+      tone('send')
       try {
         const pcm = await rec.stop()
-        if (pcm.length < 16_000 * 0.3) {
-          this.set({ talk: 'idle', talkError: 'That was too short to hear. Hold the talk button while you speak.' })
-          return
-        }
+        if (pcm.length < 16_000 * 0.3) return this.talkFailed('That was too short to hear. Press the talk key, ask your question, then press it again.')
         const text = (await this.bridge.transcribe(pcm)).trim()
-        this.set({ talk: 'idle', talkError: text ? null : 'I did not catch that. Try again a little closer to the microphone.' })
-        if (text) {
-          this.noteOnRecentMoment(text)
-          await this.ask(text, 'voice', cloud)
-        }
+        if (!text) return this.talkFailed('I did not catch that. Try again a little closer to the microphone.')
+        this.set({ talk: 'idle', talkError: null })
+        this.noteOnRecentMoment(text)
+        await this.ask(text, 'voice', cloud)
       } catch (err) {
-        this.set({ talk: 'idle', talkError: err instanceof Error ? err.message : String(err) })
+        this.talkFailed(talkErrorMessage(err))
       }
       return
     }
-    if (!this.settings?.voiceInput) {
-      this.set({ talkError: 'Voice input is off. Turn it on in Settings → Voice input.' })
-      return
-    }
+    if (!this.settings?.voiceInput) return this.talkFailed('Voice input is off. Turn it on in Settings, Voice input.')
     try {
+      // Stop the coach talking first, so the microphone does not hear it.
       this.speech.stopAll()
+      tone('listen')
       this.recorder = await PushToTalkRecorder.start(() => void this.toggleTalk(cloud))
       this.set({ talk: 'recording', talkError: null })
     } catch (err) {
-      this.set({ talk: 'idle', talkError: `Microphone unavailable: ${err instanceof Error ? err.message : String(err)}` })
+      this.talkFailed(micErrorMessage(err))
     }
+  }
+
+  /**
+   * A talk problem: shown, and said out loud when not mid-match, since the
+   * player pressed a key while looking at the game and would otherwise hear
+   * nothing. During capture it is a tone and the on-screen message only.
+   */
+  private talkFailed(message: string): void {
+    this.set({ talk: 'idle', talkError: message })
+    tone('error')
+    if (!this.worker && !this.settings?.muted) this.speech.enqueue({ id: uid('talk-error'), text: message, category: 'descriptive', priority: 'normal', expiresAt: null })
   }
 
   cancelTalk(): void {
@@ -600,7 +612,7 @@ export class CoachSession {
       timeline: [...this.state.timeline, { type: 'notice', at, level: 'info', text: 'You marked this moment. Review it after the match.' }],
     })
     this.flash(`Moment marked${this.settings?.voiceInput ? ' — press your talk key to add what you were thinking' : ''}.`)
-    chime()
+    tone('mark')
   }
 
   /**
@@ -822,7 +834,11 @@ export class CoachSession {
             speech: spoken && !this.settings?.muted ? (this.speech.available ? 'waiting' : 'unavailable') : 'shown',
           })
         }
-        if (e.message.requestedByPlayer) conversation = settleAnswer(conversation, e.message, e.decision)
+        if (e.message.requestedByPlayer) {
+          conversation = settleAnswer(conversation, e.message, e.decision)
+          // Held for after the match: a tone, so the player knows it was heard.
+          if (e.decision.decision === 'queued') tone('held')
+        }
       }
       patch.captions = captions.slice(-CAPTIONS_CAP)
       if (conversation !== this.state.conversation) patch.conversation = conversation
@@ -900,27 +916,14 @@ function settleAnswer(conversation: readonly QaEntry[], message: CoachingMessage
 }
 
 export function emptyReport(profile: GameProfile): SessionReport {
-  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], mistakes: [], insights: [], matches: [] }
+  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], battles: [], context: {}, mistakes: [], insights: [], matches: [] }
 }
 
-/** A soft two-note chime confirming a marked moment (no speech, so it never talks over the game). */
-function chime(): void {
-  try {
-    const ctx = new AudioContext()
-    const t = ctx.currentTime
-    for (const [i, f] of [660, 880].entries()) {
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.frequency.value = f
-      g.gain.setValueAtTime(0.0001, t + i * 0.09)
-      g.gain.exponentialRampToValueAtTime(0.12, t + i * 0.09 + 0.02)
-      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.18)
-      o.connect(g).connect(ctx.destination)
-      o.start(t + i * 0.09)
-      o.stop(t + i * 0.09 + 0.2)
-    }
-    setTimeout(() => void ctx.close(), 600)
-  } catch {
-    // no audio device: the on-screen confirmation is enough
-  }
+/** A readable message for a failed transcription (IPC errors carry a long prefix). */
+function talkErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err)
+  const msg = raw.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '')
+  if (/not installed/i.test(msg)) return 'Speech recognition is not downloaded yet. Get it in Settings, Voice input.'
+  if (/voice input is off/i.test(msg)) return 'Voice input is off. Turn it on in Settings, Voice input.'
+  return `I could not understand the recording: ${msg}`
 }

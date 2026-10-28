@@ -302,7 +302,7 @@ function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: Coa
         checked={settings.voiceInput}
         onChange={(voiceInput) => onSettings({ voiceInput })}
         label={<b>Ask the coach out loud (push to talk)</b>}
-        hint={`The microphone opens only while you hold the talk control${info?.talkShortcut ? ` (${info.talkShortcut})` : ''}, for at most 15 seconds. Speech is recognised on this computer; audio is never stored or sent.`}
+        hint={`Press the talk key${info?.talkShortcut ? ` (${info.talkShortcut})` : ''} to start listening (a rising tone), ask, then press it again to send (a falling tone); it stops by itself after 15 seconds. The coach answers out loud. Speech is recognised on this computer; audio is never stored or sent.`}
       />
       {settings.voiceInput && desktop && status ? (
         <div className="voice-model">

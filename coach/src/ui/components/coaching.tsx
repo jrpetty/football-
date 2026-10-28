@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import type { BenchmarkResult } from '../../core/analyses/benchmarks.ts'
 import { expectedAt } from '../../core/analyses/benchmarks.ts'
 import type { FactorResult } from '../../core/analyses/factors.ts'
+import type { BattleRecord } from '../../core/analyses/battles.ts'
 import type { GameProfile, PlaybookEntry } from '../../core/profile/schema.ts'
 import type { MatchReview } from '../../core/review.ts'
 import { gameClock } from '../format.ts'
@@ -118,6 +119,49 @@ function plural(noun: string, n: number): string {
   return n === 1 ? noun.replace(/^(\w+?)s\b/, '$1') : noun
 }
 
+// --- Battles ------------------------------------------------------------------------------------
+
+const OUTCOME_LABEL = { won: 'Won', lost: 'Lost', unclear: 'Unclear' } as const
+
+/** One row per fight followed: when, result, army before and at its lowest, and what the frames showed. */
+export function BattleLog({ battles, profile }: { battles: readonly BattleRecord[]; profile: GameProfile }) {
+  const fight = profile.vision?.events.find((e) => e.type === profile.battles?.event)
+  // Only circumstances the coach compares (e.g. not "no enemy siege").
+  const label = (key: string, value: string) => profile.factors?.find((x) => x.attribute === key)?.values.find((v) => v.value === value)?.label ?? null
+  const keys = (fight?.attributes ?? []).map((a) => a.key).filter((k) => k !== profile.battles?.trendAttribute)
+  return (
+    <div className="table-wrap">
+      <table className="table battles">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Result</th>
+            <th className="num">Army</th>
+            <th>What the frames showed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {battles.map((b) => (
+            <tr key={b.startAt}>
+              <td className="num">{b.gameSec !== null ? gameClock(b.gameSec) : '—'}</td>
+              <td>
+                <span className={`badge ${b.outcome === 'won' ? 'ok' : b.outcome === 'lost' ? 'live' : 'neutral'}`}>{OUTCOME_LABEL[b.outcome]}</span>
+              </td>
+              <td className="num">{b.armyBefore !== null && b.armyLow !== null ? `${b.armyBefore} → ${b.armyLow}` : '—'}</td>
+              <td className="small">
+                {[...keys, 'ending']
+                  .map((k) => (b.attributes[k] ? label(k, b.attributes[k]) : null))
+                  .filter(Boolean)
+                  .join(' · ') || <span className="muted">Nothing clear</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // --- Benchmarks -------------------------------------------------------------------------------
 
 export function BenchmarkChart({ result }: { result: BenchmarkResult }) {
@@ -207,6 +251,11 @@ export function Playbook({ profile, linked, open, onToggle }: { profile: GamePro
             <span className="muted small play-fix">{e.fix}</span>
           </summary>
           <p className="play-principle">{e.principle}</p>
+          {e.why ? (
+            <p className="play-why small">
+              <span className="label">Why it works</span> {e.why}
+            </p>
+          ) : null}
           <div className="grid-2">
             <ul className="good" aria-label="What good players do">
               {e.good.map((g) => (

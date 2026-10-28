@@ -170,7 +170,7 @@ export function playbookText(entries: readonly PlaybookEntry[], budget: number):
   for (const p of entries) {
     const kinds = [...new Set(p.sources.map((s) => s.kind))].join('/')
     const block = [
-      `- [${p.id}] ${p.title}: ${p.principle}`,
+      `- [${p.id}] ${p.title}: ${p.principle}${p.why ? ` Why: ${p.why}` : ''}`,
       `  Good: ${p.good.join('; ')}. Poor: ${p.bad.join('; ')}.`,
       `  On screen: ${p.signals.join('; ')}. Fix: ${p.fix}${p.drill ? ` Drill: ${p.drill}` : ''} (sources: ${kinds})`,
     ].join('\n')

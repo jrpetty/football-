@@ -349,11 +349,34 @@ export interface BenchmarkSpec {
   readonly playbook?: string
 }
 
+/**
+ * Battles (strategy games): runs of frames where the player's army is seen
+ * fighting, settled into won or lost fights (see src/core/analyses/battles.ts).
+ * The won/lost events carry the fight event's attributes (except the trend)
+ * plus "ending" on lost fights, so factors can compare them.
+ */
+export interface BattleSpec {
+  /** Vision event reported on frames where the player's army is fighting. */
+  readonly event: string
+  /** Its attribute with the visible trend: winning, losing or even. */
+  readonly trendAttribute: string
+  /** Army size = total − minus (state keys), e.g. population − villagers. */
+  readonly army: { readonly total: string; readonly minus?: string }
+  /** The fight ends after this long without a fight frame. */
+  readonly gapMs: number
+  /** Fewer frames than this: a skirmish, logged as unclear. */
+  readonly minFrames: number
+  readonly wonEvent: string
+  readonly lostEvent: string
+}
+
 /** A coaching principle as good players and coaches teach it, with the fix and its sources. */
 export interface PlaybookEntry {
   readonly id: string
   readonly title: string
   readonly principle: string
+  /** The reasoning behind it: mechanics and numbers (with the patch they come from). */
+  readonly why?: string
   readonly good: readonly string[]
   readonly bad: readonly string[]
   /** How it shows on screen (what the coach can see). */
@@ -424,6 +447,9 @@ export interface GameProfile {
   readonly matchStats?: MatchStatSpec
   readonly factors?: readonly FactorSpec[]
   readonly benchmarks?: readonly BenchmarkSpec[]
+  readonly battles?: BattleSpec
+  /** State keys that describe the game rather than the play (map, opponent's civilisation…), kept for the review and answers. */
+  readonly contextKeys?: readonly string[]
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -819,6 +845,35 @@ export function validateProfile(input: unknown): ValidationResult {
     c.num(o.confirmWindowMs, `${path}.confirmWindowMs`, 1000, 120_000, true)
   })
 
+  if (p.battles !== undefined) {
+    const b = c.obj(p.battles, 'battles')
+    if (b) {
+      const ev = c.str(b.event, 'battles.event')
+      const attrs = ev ? visionEvents.get(ev)?.attributes : undefined
+      if (ev && !attrs) c.errors.push(`battles.event: unknown vision event "${ev}"`)
+      const trend = c.str(b.trendAttribute, 'battles.trendAttribute')
+      if (trend && attrs && !attrs.has(trend)) c.errors.push(`battles.trendAttribute: event "${ev}" has no attribute "${trend}"`)
+      const army = c.obj(b.army, 'battles.army')
+      for (const k of ['total', 'minus'] as const) {
+        if (!army || (k === 'minus' && army.minus === undefined)) continue
+        const key = c.str(army[k], `battles.army.${k}`)
+        if (key && !visionStateKeys.has(key)) c.errors.push(`battles.army.${k}: unknown state key "${key}"`)
+      }
+      c.num(b.gapMs, 'battles.gapMs', 2000, 120_000)
+      c.num(b.minFrames, 'battles.minFrames', 1, 20)
+      const carried = new Set([...(attrs ?? [])].filter((a) => a !== trend))
+      for (const k of ['wonEvent', 'lostEvent'] as const) {
+        const id = c.str(b[k], `battles.${k}`, { pattern: ID })
+        if (!id) continue
+        derivedEvents.add(id)
+        derivedAttributes.set(id, k === 'lostEvent' ? new Set([...carried, 'ending']) : carried)
+      }
+    }
+  }
+  c.arr(p.contextKeys, 'contextKeys', true).forEach((k, i) => {
+    if (typeof k !== 'string' || !visionStateKeys.has(k)) c.errors.push(`contextKeys[${i}]: unknown state key "${String(k)}"`)
+  })
+
   // Mistake rules create events (category "mistake").
   c.arr(p.mistakes, 'mistakes', true).forEach((m, i) => {
     const path = `mistakes[${i}]`
@@ -916,6 +971,7 @@ export function validateProfile(input: unknown): ValidationResult {
       }
       c.str(o.title, `${path}.title`, { max: 100 })
       c.str(o.principle, `${path}.principle`, { max: 600, spoken: true })
+      c.str(o.why, `${path}.why`, { optional: true, max: 900 })
       c.str(o.fix, `${path}.fix`, { max: 240, spoken: true })
       c.str(o.drill, `${path}.drill`, { optional: true, max: 400 })
       for (const f of ['good', 'bad', 'signals', 'tags'] as const) c.arr(o[f], `${path}.${f}`).forEach((x, j) => c.str(x, `${path}.${f}[${j}]`, { max: 300, spoken: f !== 'tags' }))

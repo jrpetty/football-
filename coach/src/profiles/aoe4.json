@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -100,7 +100,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villagers (the worker counts beside each resource plus idle, only if all are readable), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens.",
+    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villagers (the worker counts beside each resource plus idle, only if all are readable), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen.",
     "sampleIntervalMs": 4000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
@@ -198,6 +198,20 @@
         "max": 36000,
         "ttlMs": 12000,
         "description": "The in-game clock converted to seconds."
+      },
+      {
+        "key": "mapName",
+        "label": "Map",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The map name, from the loading screen or the map info."
+      },
+      {
+        "key": "opponentCiv",
+        "label": "Opponent's civilisation",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The opponent's civilisation in a 1v1, from the loading screen or the scoreboard. Omit in team games or if not shown."
       }
     ],
     "events": [
@@ -214,6 +228,96 @@
         "category": "context",
         "description": "An on-screen alert says the player's units or buildings are under attack.",
         "dedupeMs": 15000
+      },
+      {
+        "type": "fight",
+        "label": "Fight on screen",
+        "category": "context",
+        "description": "The player's own military units are visibly fighting enemy units in this frame (attacking, health bars dropping). Not for buildings being hit with no units fighting, and not for villagers alone.",
+        "attributes": [
+          {
+            "key": "trend",
+            "options": [
+              "winning",
+              "losing",
+              "even",
+              "unknown"
+            ],
+            "description": "How the fight looks now: more of the player's units left with healthy bars (winning), fewer or dying faster (losing)."
+          },
+          {
+            "key": "location",
+            "options": [
+              "near_enemy_defenses",
+              "near_own_defenses",
+              "open_field",
+              "choke",
+              "sacred_site",
+              "unknown"
+            ],
+            "description": "Where it is: within reach of an enemy Town Center, Keep or tower; of the player's own; open ground; a narrow gap between obstacles; a sacred site."
+          },
+          {
+            "key": "matchup",
+            "options": [
+              "you_counter",
+              "they_counter",
+              "mixed",
+              "unknown"
+            ],
+            "description": "Do the player's main units counter the enemy's main units (spears vs cavalry, archers vs spears, horsemen vs archers or siege, crossbows vs heavy), the reverse, or neither?"
+          },
+          {
+            "key": "numbers",
+            "options": [
+              "outnumbered",
+              "even",
+              "outnumbering",
+              "unknown"
+            ],
+            "description": "The player's visible army against the visible enemy army, by rough size."
+          },
+          {
+            "key": "ranged",
+            "options": [
+              "screened",
+              "exposed",
+              "no_ranged",
+              "unknown"
+            ],
+            "description": "The player's ranged units behind their melee (screened), in front of it or alone (exposed), or none."
+          },
+          {
+            "key": "splash",
+            "options": [
+              "clumped_under_siege",
+              "spread_under_siege",
+              "no_enemy_siege",
+              "unknown"
+            ],
+            "description": "Whether enemy Mangonels or similar are firing, and if so whether the player's units are in a tight clump or spread out."
+          },
+          {
+            "key": "enemySiege",
+            "options": [
+              "ignored",
+              "attacked",
+              "none",
+              "unknown"
+            ],
+            "description": "Enemy siege present and nobody of the player's attacking it (ignored), being attacked, or none."
+          },
+          {
+            "key": "reinforcing",
+            "options": [
+              "grouped",
+              "trickling",
+              "unknown"
+            ],
+            "description": "Reinforcements arriving as a group, or single units walking in one by one."
+          }
+        ],
+        "dedupeMs": 30000
       }
     ]
   },
@@ -446,6 +550,23 @@
         "tags": [
           "scouting",
           "army"
+        ]
+      },
+      {
+        "id": "context-matters",
+        "title": "Advice depends on the game in front of you",
+        "summary": "The same fight needs different advice by civilisation (unique units and missing Blacksmith upgrades change the numbers), map (open maps favour pressure, closed maps favour booming and late siege fights), age (Feudal fights are about economic damage and +1 upgrades, Castle fights about unit tiers and siege, Imperial fights about value per population), what was scouted, team or 1v1, and skill level (one fix at a time below Platinum; micro such as kiting and charge recycling above it). Never assume what was not on the player's screen, and say which patch a number comes from.",
+        "good": [
+          "Naming the civilisations, map and age before advising on a fight",
+          "Giving a lower-rated player one fix at a time"
+        ],
+        "bad": [
+          "Applying generic unit numbers to a unique unit",
+          "Advising on enemy units or resources that were never on screen"
+        ],
+        "tags": [
+          "context",
+          "coaching"
         ]
       }
     ],
@@ -1187,7 +1308,8 @@
         "tags": [
           "army",
           "counters"
-        ]
+        ],
+        "why": "Bonus damage drives the counters: Archers get +5 to +8 against light melee, Crossbows +10 to +12 against heavy units, Horsemen about +10 against ranged units and siege, and Spearmen brace against cavalry charges. Armor subtracts from both base and bonus damage, so the right unit can deal several times the damage of the wrong one (wiki values)."
       },
       {
         "id": "blacksmith-timing",
@@ -1215,7 +1337,8 @@
         "tags": [
           "army",
           "upgrades"
-        ]
+        ],
+        "why": "One point of armor matters most when attack is low against armor: an archer doing 3 damage against 2 armor does 2 once the target gets +1, a third less. Steeled Arrow costs 50 wood and 125 gold (wiki)."
       },
       {
         "id": "army-between",
@@ -1304,7 +1427,8 @@
         "tags": [
           "army",
           "decisions"
-        ]
+        ],
+        "why": "A Town Center gains one arrow per garrisoned unit up to about eight, reaching 6 tiles (7 with Arrowslits), and a Keep fires a three-arrow volley plus one per garrisoned unit at 8 tiles (wiki values). Those arrows are free damage for the defender, on top of their reinforcements being seconds away."
       },
       {
         "id": "defend-under-your-tc",
@@ -1342,7 +1466,8 @@
         "tags": [
           "defence",
           "economy"
-        ]
+        ],
+        "why": "Each villager garrisoned in a Town Center adds an arrow, so a full Town Center hits much harder, but every garrisoned villager gathers nothing: 20 villagers inside for 30 seconds is 10 villager-minutes of lost work."
       },
       {
         "id": "raid-protection",
@@ -1370,7 +1495,8 @@
         "tags": [
           "defence",
           "economy"
-        ]
+        ],
+        "why": "A dead villager costs 50 food plus all its future gathering, and villagers forced into a Town Center gather nothing while inside, so raids hurt through lost time even without kills. Secondary Town Centers do not shoot unless garrisoned."
       },
       {
         "id": "concave-and-chokes",
@@ -1404,7 +1530,8 @@
         "tags": [
           "army",
           "micro"
-        ]
+        ],
+        "why": "Only units that can reach the enemy deal damage: a wide front lets more of your units fight at once, and a narrow choke lets fewer of theirs fight. A flank also reaches their ranged units and siege, where Horsemen get bonus damage."
       },
       {
         "id": "siege-usage",
@@ -1437,7 +1564,8 @@
         "tags": [
           "army",
           "siege"
-        ]
+        ],
+        "why": "Siege resists arrows by percentage (Mangonel about 85%, Ram about 95%) and takes extra melee damage, so only melee and cavalry kill it quickly. Update 17.0 raises Ram health from 370 to 410."
       },
       {
         "id": "sacred-sites",
@@ -1628,6 +1756,604 @@
         "tags": [
           "practice"
         ]
+      },
+      {
+        "id": "upgrade-edge",
+        "title": "Take even fights only with the upgrade edge",
+        "principle": "With equal numbers, the side one Blacksmith upgrade or unit tier ahead usually wins, so time even fights to your upgrades, not theirs.",
+        "why": "Damage per hit is attack plus bonus minus the target's armor, with a floor of 1, and armor also reduces bonus damage. One point matters most when attack is low against armor: an archer doing 3 damage against 2 ranged armor does 2 once the target gets +1, a third less (wiki and Steam guide; patch values vary). Steeled Arrow costs 50 wood and 125 gold in Feudal; Veteran tiers cost 100 food and 250 gold.",
+        "good": [
+          "Two Blacksmith upgrades done before attacking a same-size army that has none",
+          "The Blacksmith kept researching while you mass units"
+        ],
+        "bad": [
+          "Forcing a fight 20 seconds before your own +1 finishes",
+          "Base units into Veteran units at equal numbers"
+        ],
+        "signals": [
+          "Even-sized fights lost with no clear counter or position problem"
+        ],
+        "fix": "Delay an even fight until your pending upgrade or tier finishes.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Attack_(Age_of_Empires_IV)",
+            "title": "Attack, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Armor_(Age_of_Empires_IV)",
+            "title": "Armor, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3661824697",
+            "title": "The hidden math of AoE4: armor, bonus damage and resistance (Steam guide)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Steeled_Arrow",
+            "title": "Steeled Arrow, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Upgrade_(Age_of_Empires_IV)",
+            "title": "Unit upgrades, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://turnspender.itch.io/aoe4-combat-simulator",
+            "title": "AoE4 combat simulator",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "upgrades"
+        ],
+        "drill": "Custom game or combat simulator: 15 against 15 with and without +1 armor, and count the survivors."
+      },
+      {
+        "id": "power-spike-windows",
+        "title": "Fight in your power window, not theirs",
+        "principle": "Hit the opponent while their resources are tied up in an age-up landmark, a Town Center or a Keep, and avoid big fights just before your own age-up or tier lands.",
+        "why": "Resources spent on a landmark or Town Center are not units, so the army in front of you is smaller than their economy suggests. In Update 17.0 a Town Center takes 165 seconds instead of 150, so an expanding player is exposed for longer. Once Castle Age lands, new tiers, Springalds, Mangonels and armor techs can flip the same matchup.",
+        "good": [
+          "Hitting a scouted landmark under construction with Feudal units before their Castle units arrive"
+        ],
+        "bad": [
+          "Losing the whole Feudal army to an opponent who just reached Castle Age"
+        ],
+        "signals": [
+          "Fights lost shortly after the opponent aged up"
+        ],
+        "fix": "Check the enemy's age-up before committing, and attack into their age-up rather than after it.",
+        "sources": [
+          {
+            "url": "https://www.ageofempires.com/news/age-of-empires-iv-update-17-0/",
+            "title": "Update 17.0 notes (official)",
+            "kind": "official"
+          },
+          {
+            "url": "https://pup-explorer.aoe4world.com/technologies",
+            "title": "Technologies, aoe4world",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4.aoeinfo.net/en/item/1016.html",
+            "title": "HRE fast castle timings, aoeinfo",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "timings"
+        ]
+      },
+      {
+        "id": "value-traded",
+        "title": "Judge a fight by the resources traded, not the kill count",
+        "principle": "Count what died in resources and position, not in heads.",
+        "why": "Unit costs differ by up to four times: a Spearman is 60 food and 20 wood, an Archer 30 food and 50 wood, a Knight 140 food and 100 gold, a Mangonel 400 wood and 200 gold. Losing 5 Knights (1,200) to kill 12 Archers (960) is a losing trade despite winning 12 to 5, and one Mangonel is worth more than seven Archers. The in-game military score weights losses heavily, so it does not tell you who won the fights.",
+        "good": [
+          "Losing 8 Spearmen to kill 2 Mangonels and 4 Archers"
+        ],
+        "bad": [
+          "Chasing Archers with Knights into a Spearman wall for \"10 kills\""
+        ],
+        "signals": [
+          "Army size falling more than the enemy's visible army"
+        ],
+        "fix": "Count each fight's losses in resources before deciding who won.",
+        "sources": [
+          {
+            "url": "https://aoedb.net/aoe4/units/",
+            "title": "Unit statistics, AoEDB",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4world.com/explorer/units/mangonel",
+            "title": "Mangonel, aoe4world explorer",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Springald",
+            "title": "Springald, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://steamcommunity.com/app/1466860/discussions/0/3199240042197312807",
+            "title": "Military score discussion, Steam",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "decisions"
+        ]
+      },
+      {
+        "id": "reinforce-in-waves",
+        "title": "Reinforce as a group, never one by one",
+        "principle": "Rally new units to a safe point behind the army and send them in together.",
+        "why": "In ranged fights, strength grows faster than numbers: ten units arriving together beat two groups of five arriving one after the other by much more than double (general RTS reasoning, not measured for AoE4). Units walking in alone also arrive without a concave and die before they contribute. The official tips say to move rally points to a staging point before a fight.",
+        "good": [
+          "Production rallied beside the army, new groups sent in every 30 to 40 seconds"
+        ],
+        "bad": [
+          "The rally flag in the enemy base, a line of single Spearmen across the map"
+        ],
+        "signals": [
+          "Single units arriving at a fight; small groups dying away from the main army"
+        ],
+        "fix": "Move your rally point behind your army and send reinforcements in batches.",
+        "sources": [
+          {
+            "url": "https://news.xbox.com/en-us/2021/11/03/age-of-empires-4-tips/",
+            "title": "Tips to get your army up to speed (Xbox Wire)",
+            "kind": "official"
+          },
+          {
+            "url": "https://steamcommunity.com/app/1466860/discussions/0/768556677520851501/",
+            "title": "Things I struggle with in AoE4, Steam discussions",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "army"
+        ]
+      },
+      {
+        "id": "fight-near-production",
+        "title": "Make an even army come to you",
+        "principle": "When the armies are close in size, fight near your own Town Center, towers and production.",
+        "why": "Your reinforcements walk 10 to 20 seconds, theirs a minute or more; your Town Center and towers add arrows; villagers can repair or attack rams; and your damaged units can retreat to heal. The attacker must win by a margin to make up the walk.",
+        "good": [
+          "Taking the fight a few tiles in front of your own Town Center"
+        ],
+        "bad": [
+          "Chasing a retreating army across the map into their Town Center range"
+        ],
+        "signals": [
+          "Fights won near your own buildings and lost far from them"
+        ],
+        "fix": "With even armies, hold near your production until the enemy commits, then engage.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Monk_(Age_of_Empires_IV)",
+            "title": "Monk, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=s9TkSQV1Mhg",
+            "title": "5 defense tips every AoE4 player needs (video)",
+            "kind": "coach"
+          }
+        ],
+        "tags": [
+          "battles",
+          "positioning"
+        ]
+      },
+      {
+        "id": "retreat-early",
+        "title": "Retreat while the fight is only slightly lost",
+        "principle": "Pull back as soon as the trade turns against you, not when three units are left, and heal before the next fight.",
+        "why": "Units deal full damage at low health, but a losing army that stays gives the winner free hits, and fleeing infantry is caught by faster cavalry. Pulling back early saves most of the army's value. Monks heal about 7 health per second (half in combat), so a healed army gains a free army's worth of health over several fights (wiki numbers).",
+        "good": [
+          "Pulling back to a Town Center halfway through a losing fight, healing, and returning at full health"
+        ],
+        "bad": [
+          "Attack-moving until the army is wiped",
+          "Infantry retreating from Horsemen in the open"
+        ],
+        "signals": [
+          "Lost fights where the army fell to under a quarter of its size"
+        ],
+        "fix": "Pull back toward your Town Center or towers the moment you are losing the trade.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Monk_(Age_of_Empires_IV)",
+            "title": "Monk, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "decisions"
+        ]
+      },
+      {
+        "id": "target-priority",
+        "title": "Focus the units they cannot afford to lose",
+        "principle": "Ranged units on light infantry, Horsemen on archers and siege, Spearmen on cavalry, melee and cavalry on Mangonels and Springalds, melee and villagers on rams.",
+        "why": "Bonus damage is large: Archers get +5 to +8 against light melee, Crossbows +10 to +12 against heavy units, Horsemen about +10 against ranged units and siege. Siege resists arrows by percentage (Mangonel about 85%, Ram about 95%) and takes extra melee damage, so arrows barely scratch it while melee shreds it (wiki values, patch-dependent).",
+        "good": [
+          "Knights diving the Mangonel",
+          "Archers told to shoot the Spearmen, not the Men-at-Arms"
+        ],
+        "bad": [
+          "Thirty Archers shooting a Ram",
+          "Horsemen attacking Spearmen"
+        ],
+        "signals": [
+          "An enemy Mangonel still firing after ten seconds of fighting; your ranged units shooting siege"
+        ],
+        "fix": "Send your cavalry at their siege and ranged units, and point your ranged units at their light infantry.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Springald",
+            "title": "Springald, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Horseman",
+            "title": "Horseman, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Archer_(Age_of_Empires_IV)",
+            "title": "Archer, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Crossbowman_(Age_of_Empires_IV)",
+            "title": "Crossbowman, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4world.com/explorer/civs/templar",
+            "title": "Siege resistances (aoe4world explorer)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.aoe4.club/en/civs/hre/units/battering-ram",
+            "title": "Battering Ram, aoe4.club",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/is-it-better-to-attack-move-or-focus-fire/202628",
+            "title": "Attack-move or focus fire, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "micro"
+        ]
+      },
+      {
+        "id": "screen-your-ranged",
+        "title": "Keep ranged units behind a melee screen",
+        "principle": "Kite slow melee units with ranged units; against cavalry, pull the ranged units behind your Spearmen instead of trying to outrun them.",
+        "why": "Archers have 5 tiles of range and fire about every 1.6 seconds, so a step back between shots costs nothing against slow Men-at-Arms. Horsemen are faster than Archers, so kiting them fails; the counter is to run into your own Spearmen and fight from behind them.",
+        "good": [
+          "Archers stepping back after each volley",
+          "Archers falling back behind braced Spearmen when Horsemen come"
+        ],
+        "bad": [
+          "Archers standing still while melee closes",
+          "Archers alone in the open with Horsemen on them"
+        ],
+        "signals": [
+          "Your ranged units in front of your melee, or in melee contact"
+        ],
+        "fix": "Keep your ranged units on their own control group behind your melee and step them back between volleys.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Archer_(Age_of_Empires_IV)",
+            "title": "Archer, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Crossbowman_(Age_of_Empires_IV)",
+            "title": "Crossbowman, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=FdJFDsXr4ws",
+            "title": "Ultimate micro guide (community video)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://diamondlobby.com/age-of-empires-4/how-to-micro-in-aoe4/",
+            "title": "How to micro in AoE4, DiamondLobby",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "micro"
+        ],
+        "drill": "Custom game: kite 10 Archers against 6 Men-at-Arms without losing one."
+      },
+      {
+        "id": "spread-vs-mangonel",
+        "title": "Spread out or dive against Mangonels",
+        "principle": "Never leave massed ranged units clumped in Mangonel range: spread them, or kill the Mangonel with cavalry inside its minimum range.",
+        "why": "A Mangonel fires three projectiles into a small area with 9 tiles of range and a 3-tile minimum range, has about 130 health and resists 85% of arrow damage. Clumped units take every projectile; spread units take one. Formations loosen as units re-clump in combat, so re-spread every few seconds (wiki and forum).",
+        "good": [
+          "Archers in a loose line",
+          "Three Horsemen running past the screen to the Mangonel"
+        ],
+        "bad": [
+          "Twenty-five Archers in one ball losing six to one volley"
+        ],
+        "signals": [
+          "Several of your health bars dropping at once; an enemy Mangonel nobody attacks"
+        ],
+        "fix": "Spread your ranged units and send cavalry straight at the Mangonel.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Mangonel_(Age_of_Empires_IV)",
+            "title": "Mangonel, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4world.com/explorer/units/mangonel",
+            "title": "Mangonel, aoe4world explorer",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=FdJFDsXr4ws",
+            "title": "Ultimate micro guide (community video)",
+            "kind": "coach"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/do-you-find-mangonels-op/181889",
+            "title": "Do you find mangonels OP, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "siege",
+          "micro"
+        ]
+      },
+      {
+        "id": "brace-and-charge",
+        "title": "Spearmen must stand or attack-move to brace",
+        "principle": "Spearmen brace against cavalry only when idle or attack-moving; cavalry must pull out and re-engage to charge again.",
+        "why": "A Knight's charge hits for 32 to 45 against 21 to 30 for a normal hit. Braced Spearmen cancel the charge and stop the cavalry, but only when idle or attack-moving, not on a move command and not when hit from behind. A forum rule of thumb says Spearmen need about two to one against Lancers, depending on upgrades.",
+        "good": [
+          "Spearmen holding position as Knights charge in",
+          "Knights hitting, pulling back three tiles and charging again"
+        ],
+        "bad": [
+          "Right-click moving Spearmen into Knights",
+          "Knights stuck in a long melee with Spearmen"
+        ],
+        "signals": [
+          "Spearmen walking, not fighting, when cavalry hits them"
+        ],
+        "fix": "Attack-move or stop your Spearmen as cavalry approach, and pull your cavalry out to charge again.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Lancer_(Age_of_Empires_IV)",
+            "title": "Lancer and Knight, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Heavy_Spearman",
+            "title": "Heavy Spearman, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/spearman-bracing-vs-cavalry-in-depth-video/181840",
+            "title": "Spearman bracing vs cavalry, official forums",
+            "kind": "forum"
+          },
+          {
+            "url": "https://steamcommunity.com/app/1466860/discussions/0/4357790501745719692",
+            "title": "Spears vs lancers, Steam discussions",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "micro"
+        ]
+      },
+      {
+        "id": "attack-move-17",
+        "title": "Attack-move into fights, then target what matters",
+        "principle": "Attack-move for the first contact, then give targeted orders for priority units.",
+        "why": "Attack-move makes units fight whatever is nearest, which suits the opening contact and big ranged groups; targeted orders kill priority units but can overkill or make units walk past screens. Before 17.0, attack-move could pull units onto buildings mid-fight; Update 17.0 adds a setting so attack-move ignores buildings, while rams, trebuchets and cannons still target them. The coach cannot see this setting.",
+        "good": [
+          "Attack-moving the army in, then sending cavalry at the siege"
+        ],
+        "bad": [
+          "Units hitting a house while their army dies next to them"
+        ],
+        "signals": [
+          "Your units attacking walls, houses or farms while enemy units are in range"
+        ],
+        "fix": "If your army keeps hitting houses in fights, turn on the 17.0 setting so attack-move ignores buildings.",
+        "sources": [
+          {
+            "url": "https://www.ageofempires.com/news/age-of-empires-iv-update-17-0/",
+            "title": "Update 17.0 notes (official)",
+            "kind": "official"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/is-it-better-to-attack-move-or-focus-fire/202628",
+            "title": "Attack-move or focus fire, official forums",
+            "kind": "forum"
+          },
+          {
+            "url": "https://diamondlobby.com/age-of-empires-4/how-to-micro-in-aoe4/",
+            "title": "How to micro in AoE4, DiamondLobby",
+            "kind": "guide"
+          },
+          {
+            "url": "https://forums.ageofempires.com/t/attack-move-not-ignoring-buildings/267026",
+            "title": "Attack move not ignoring buildings, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "controls"
+        ]
+      },
+      {
+        "id": "kill-siege-first",
+        "title": "Siege fights decide Castle and Imperial games",
+        "principle": "Escort your siege with units that beat the enemy's siege-killers, and kill their siege before anything else.",
+        "why": "Siege is expensive and takes a lot of population: a Mangonel is 400 wood and 200 gold. Springalds are the anti-siege tool. Rams resist arrows almost entirely and take extra melee damage; Update 17.0 raises Ram health from 370 to 410, so a melee response that used to just kill a ram now leaves it alive.",
+        "good": [
+          "Springalds behind Spearmen killing both enemy Mangonels before they fire twice"
+        ],
+        "bad": [
+          "Mangonels walking ahead of the army and dying to four Horsemen"
+        ],
+        "signals": [
+          "Your siege ahead of your army; rams at a building with none of your melee near them"
+        ],
+        "fix": "Keep your siege behind your melee and kill the enemy's siege first.",
+        "sources": [
+          {
+            "url": "https://www.ageofempires.com/news/age-of-empires-iv-update-17-0/",
+            "title": "Update 17.0 notes (official)",
+            "kind": "official"
+          },
+          {
+            "url": "https://aoe4world.com/explorer/units/mangonel",
+            "title": "Mangonel, aoe4world explorer",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Springald",
+            "title": "Springald, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://aoe4world.com/explorer/civs/templar",
+            "title": "Siege resistances (aoe4world explorer)",
+            "kind": "guide"
+          },
+          {
+            "url": "https://www.aoe4.club/en/civs/hre/units/battering-ram",
+            "title": "Battering Ram, aoe4.club",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "siege"
+        ]
+      },
+      {
+        "id": "arrow-range",
+        "title": "Know how far the arrows reach before choosing where to fight",
+        "principle": "Fight outside enemy arrow range and lure the enemy inside yours.",
+        "why": "Each unit garrisoned in a Town Center adds an arrow, up to about eight, reaching 6 tiles (7 with Arrowslits); the capital Town Center has a stronger extra arrow. Secondary Town Centers only shoot when garrisoned. A Keep fires a three-arrow volley plus one per garrisoned unit at 8 tiles (wiki values, check after 17.0).",
+        "good": [
+          "Fighting at least 9 tiles away from an enemy Keep"
+        ],
+        "bad": [
+          "Chasing into an expansion Town Center full of villagers"
+        ],
+        "signals": [
+          "Fights in frame with an enemy Town Center, Keep or tower"
+        ],
+        "fix": "Pull the fight at least 9 tiles away from enemy Town Centers and Keeps before engaging.",
+        "sources": [
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Town_Center_(Age_of_Empires_IV)",
+            "title": "Town Center, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Capital_Town_Center",
+            "title": "Capital Town Center, Age of Empires wiki",
+            "kind": "guide"
+          },
+          {
+            "url": "https://ageofempires.fandom.com/wiki/Keep_(Age_of_Empires_IV)",
+            "title": "Keep, Age of Empires wiki",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "positioning"
+        ]
+      },
+      {
+        "id": "base-trade-or-defend",
+        "title": "Defend or trade bases: compare speed and win conditions",
+        "principle": "Trade bases only if your army is faster, their base is weaker, and you win the race to their landmarks or production; otherwise go home.",
+        "why": "Age of Empires IV is won by destroying landmarks (or by a Wonder or sacred sites), and landmarks take a long time to break without siege. If your army destroys their production faster than theirs destroys yours, the trade is yours.",
+        "good": [
+          "Knights against slow infantry, killing military buildings while Town Center arrows hold home"
+        ],
+        "bad": [
+          "Slow infantry with no rams in their base while 30 Knights burn your villagers"
+        ],
+        "signals": [
+          "Both armies in each other's base; under-attack alerts at home"
+        ],
+        "fix": "Before trading bases, check that your army breaks their buildings faster than theirs breaks yours.",
+        "sources": [
+          {
+            "url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3075929086",
+            "title": "AoE4 beginner guide (Steam)",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "battles",
+          "decisions"
+        ]
+      },
+      {
+        "id": "pop-efficiency",
+        "title": "At max population, value per population wins",
+        "principle": "Near 200 population, upgraded gold units beat cheap units; before that, cost efficiency matters more.",
+        "why": "The population cap is 200, Knights take 1 population and siege about 3 (forum figures). Once both sides are maxed, the stronger army per population slot wins, so replace cheap units with upgraded ones instead of adding more.",
+        "good": [
+          "Swapping cheap units for upgraded gold units at 200 population"
+        ],
+        "bad": [
+          "Throwing more cheap units at an upgraded army at max population"
+        ],
+        "signals": [
+          "Population at the cap and fights still lost"
+        ],
+        "fix": "At max population, replace cheap units with upgraded gold units.",
+        "sources": [
+          {
+            "url": "https://forums.ageofempires.com/t/how-can-knights-be-balanced-at-one-pop-supply/182083",
+            "title": "Knights at one population, official forums",
+            "kind": "forum"
+          }
+        ],
+        "tags": [
+          "battles",
+          "army"
+        ]
       }
     ]
   },
@@ -1636,7 +2362,8 @@
     "Frames are sampled every few seconds, so very short idle periods can be missed.",
     "HUD positions and the civilisation list are researched, not yet checked against live captures at every UI scale.",
     "Mistake durations are measured in real time on your screen.",
-    "The villager curve assumes a 20-second villager and the usual six-villager start; some civilisations differ, and villagers lost to raids also show as a gap."
+    "The villager curve assumes a 20-second villager and the usual six-villager start; some civilisations differ, and villagers lost to raids also show as a gap.",
+    "Fights are followed from frames where your army is fighting on screen; a fight off screen is missed. The outcome combines how the fight looked with your army size (population minus villagers), so fights where neither is clear are logged as unclear, not called."
   ],
   "failClosed": [
     "No cloud vision: this pack cannot read the game.",
@@ -1681,6 +2408,244 @@
         }
       ],
       "playbook": "tc-never-idle"
+    }
+  ],
+  "battles": {
+    "event": "fight",
+    "trendAttribute": "trend",
+    "army": {
+      "total": "population",
+      "minus": "villagers"
+    },
+    "gapMs": 20000,
+    "minFrames": 2,
+    "wonEvent": "fight_won",
+    "lostEvent": "fight_lost"
+  },
+  "contextKeys": [
+    "mapName",
+    "opponentCiv"
+  ],
+  "factors": [
+    {
+      "id": "fight-location",
+      "label": "Where you fought",
+      "attribute": "location",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "near_enemy_defenses",
+          "label": "Near their defences",
+          "phrase": "near their Town Center, towers or Keep",
+          "avoidable": true,
+          "playbook": "arrow-range",
+          "liveTip": "Pull back out of their arrow range."
+        },
+        {
+          "value": "near_own_defenses",
+          "label": "Near your defences",
+          "phrase": "near your own defences",
+          "playbook": "fight-near-production"
+        },
+        {
+          "value": "open_field",
+          "label": "Open field",
+          "phrase": "in the open field"
+        },
+        {
+          "value": "choke",
+          "label": "Choke",
+          "phrase": "in a choke",
+          "playbook": "concave-and-chokes"
+        },
+        {
+          "value": "sacred_site",
+          "label": "Sacred site",
+          "phrase": "at a sacred site",
+          "playbook": "sacred-sites"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-matchup",
+      "label": "Unit matchup",
+      "attribute": "matchup",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "they_counter",
+          "label": "Their units countered yours",
+          "phrase": "where their units countered yours",
+          "avoidable": true,
+          "playbook": "counter-core",
+          "liveTip": "Build the counter to their army."
+        },
+        {
+          "value": "you_counter",
+          "label": "Your units countered theirs",
+          "phrase": "where your units countered theirs",
+          "playbook": "counter-core"
+        },
+        {
+          "value": "mixed",
+          "label": "Mixed",
+          "phrase": "with mixed armies"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-numbers",
+      "label": "Army size",
+      "attribute": "numbers",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "outnumbered",
+          "label": "Outnumbered",
+          "phrase": "while outnumbered",
+          "avoidable": true,
+          "playbook": "fight-near-production",
+          "liveTip": "Outnumbered: fall back to your towers."
+        },
+        {
+          "value": "even",
+          "label": "Even",
+          "phrase": "at even numbers",
+          "playbook": "upgrade-edge"
+        },
+        {
+          "value": "outnumbering",
+          "label": "Bigger army",
+          "phrase": "with the bigger army"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-ranged",
+      "label": "Your ranged units",
+      "attribute": "ranged",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "exposed",
+          "label": "Exposed",
+          "phrase": "with your ranged units exposed",
+          "avoidable": true,
+          "playbook": "screen-your-ranged",
+          "liveTip": "Keep archers behind your melee."
+        },
+        {
+          "value": "screened",
+          "label": "Behind melee",
+          "phrase": "with your ranged units screened"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-splash",
+      "label": "Against siege splash",
+      "attribute": "splash",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "clumped_under_siege",
+          "label": "Clumped under siege fire",
+          "phrase": "clumped under Mangonel fire",
+          "avoidable": true,
+          "playbook": "spread-vs-mangonel",
+          "liveTip": "Spread out; dive their Mangonel."
+        },
+        {
+          "value": "spread_under_siege",
+          "label": "Spread under siege fire",
+          "phrase": "spread out under Mangonel fire"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-enemy-siege",
+      "label": "Their siege",
+      "attribute": "enemySiege",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "ignored",
+          "label": "Left alone",
+          "phrase": "with their siege left alone",
+          "avoidable": true,
+          "playbook": "kill-siege-first",
+          "liveTip": "Kill their siege first."
+        },
+        {
+          "value": "attacked",
+          "label": "Attacked",
+          "phrase": "while attacking their siege"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-reinforcing",
+      "label": "Reinforcements",
+      "attribute": "reinforcing",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "trickling",
+          "label": "One by one",
+          "phrase": "with reinforcements trickling in",
+          "avoidable": true,
+          "playbook": "reinforce-in-waves",
+          "liveTip": "Rally behind the army; send groups."
+        },
+        {
+          "value": "grouped",
+          "label": "As a group",
+          "phrase": "with reinforcements arriving together"
+        }
+      ],
+      "winEvent": "fight_won"
+    },
+    {
+      "id": "fight-ending",
+      "label": "How lost fights ended",
+      "attribute": "ending",
+      "lossEvent": "fight_lost",
+      "lossNoun": "fights lost",
+      "minEvents": 3,
+      "values": [
+        {
+          "value": "fought_to_the_end",
+          "label": "Fought to the end",
+          "phrase": "with the army fought down to almost nothing",
+          "avoidable": true,
+          "playbook": "retreat-early"
+        },
+        {
+          "value": "pulled_back",
+          "label": "Pulled back",
+          "phrase": "with the army pulled back in time"
+        }
+      ]
     }
   ]
 }

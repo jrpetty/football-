@@ -300,7 +300,10 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
 /**
  * An Age of Empires IV game (~16 game minutes compressed into `realMinutes`).
  * The scripted player's villager count falls behind the one-Town-Center curve
- * after the Feudal Age (a long idle Town Center), and recovers a little.
+ * after the Feudal Age (a long idle Town Center), and recovers a little. From
+ * 5:00 they fight six times: the three fights taken near the enemy's defences
+ * are lost (two clumped under Mangonel fire, one fought until the army was
+ * nearly gone); the three near home or in the open are won.
  */
 export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number } = { seed: 1 }): VisionReplay {
   const rnd = mulberry32(opts.seed)
@@ -311,6 +314,23 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
   const gameSecAt = (i: number) => Math.round((i / samples) * 960)
   // Villagers: on the curve until 4:00, then 150 s with no production, then back to 3 a minute.
   const villagersAt = (sec: number) => (sec <= 240 ? 6 + Math.floor(sec / 20) : sec <= 390 ? 18 : 18 + Math.floor((sec - 390) / 20))
+
+  type Fight = { won: boolean; frames: number; keep: number; trend: string[]; tags: Record<string, string> }
+  const near = { location: 'near_enemy_defenses', numbers: 'even', ranged: 'screened', enemySiege: 'none', reinforcing: 'grouped' }
+  const home = { location: 'near_own_defenses', numbers: 'even', ranged: 'screened', splash: 'no_enemy_siege', enemySiege: 'none', reinforcing: 'grouped' }
+  const fights: Fight[] = [
+    { won: false, frames: 3, keep: 0.15, trend: ['even', 'losing', 'losing'], tags: { ...near, matchup: 'mixed', splash: 'no_enemy_siege' } },
+    { won: true, frames: 3, keep: 0.85, trend: ['even', 'winning', 'winning'], tags: { ...home, matchup: 'you_counter' } },
+    { won: false, frames: 3, keep: 0.5, trend: ['even', 'losing', 'losing'], tags: { ...near, matchup: 'they_counter', splash: 'clumped_under_siege', enemySiege: 'ignored' } },
+    { won: true, frames: 3, keep: 0.8, trend: ['winning', 'winning', 'winning'], tags: { ...home, matchup: 'mixed' } },
+    { won: false, frames: 4, keep: 0.45, trend: ['even', 'even', 'losing', 'losing'], tags: { ...near, matchup: 'mixed', splash: 'clumped_under_siege', enemySiege: 'ignored' } },
+    { won: true, frames: 3, keep: 0.9, trend: ['even', 'winning', 'winning'], tags: { ...home, location: 'open_field', matchup: 'you_counter' } },
+  ]
+  // Fight k starts at sample fightAt[k]; samples between fights exceed the 20 s gap.
+  const first = Math.round(samples * 0.32)
+  const fightAt = fights.map((_, k) => first + k * 9)
+  let army = 0
+  let fightArmy = 0
   for (let i = 0; i <= samples + 4; i++) {
     const t = start + i * interval
     if (i > samples) {
@@ -319,25 +339,50 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
     }
     const sec = gameSecAt(i)
     const vills = villagersAt(sec)
-    b.batch(t, {
-      phase: 'round',
-      food: 150 + Math.round(rnd() * 200),
-      wood: 100 + Math.round(rnd() * 200),
-      gold: 50 + Math.round(rnd() * 150),
-      stone: 0,
-      villagers: vills,
-      idleVillagers: 0,
-      population: vills + Math.floor(sec / 120),
-      populationCap: vills + Math.floor(sec / 120) + 8,
-      age: sec < 270 ? 'dark' : 'feudal',
-      gameTimeSec: sec,
-    })
+    if (sec > 240) army += 2 // production between fights
+    const k = fightAt.findIndex((at, j) => i >= at && i < at + fights[j].frames)
+    const events: { type: string; attributes: Record<string, string>; evidence: string }[] = []
+    if (k >= 0) {
+      const f = fights[k]
+      const frame = i - fightAt[k]
+      if (frame === 0) fightArmy = army
+      // The army shrinks across the fight's frames to its final share.
+      army = Math.round(fightArmy * (1 - ((1 - f.keep) * (frame + 1)) / f.frames))
+      events.push({ type: 'fight', attributes: { trend: f.trend[frame], ...f.tags }, evidence: 'army fighting on screen' })
+    }
+    b.batch(
+      t,
+      {
+        phase: 'round',
+        food: 150 + Math.round(rnd() * 200),
+        wood: 100 + Math.round(rnd() * 200),
+        gold: 50 + Math.round(rnd() * 150),
+        stone: 0,
+        villagers: vills,
+        idleVillagers: 0,
+        population: vills + army,
+        populationCap: vills + army + 8,
+        age: sec < 270 ? 'dark' : 'feudal',
+        gameTimeSec: sec,
+        ...(i === 1 ? { mapName: 'Dry Arabia', opponentCiv: 'English' } : {}),
+      },
+      events,
+    )
   }
   return {
     profileId: 'aoe4',
     batches: b.batches,
     // Expected on the curve: 21 at 5:00, 36 at 10:00, 51 at 15:00.
-    truth: { at300: villagersAt(300), at600: villagersAt(600), at900: villagersAt(900), gapAt600: 36 - villagersAt(600) },
+    truth: {
+      at300: villagersAt(300),
+      at600: villagersAt(600),
+      at900: villagersAt(900),
+      gapAt600: 36 - villagersAt(600),
+      fightsWon: fights.filter((f) => f.won).length,
+      fightsLost: fights.filter((f) => !f.won).length,
+      lostNearDefenses: fights.filter((f) => !f.won && f.tags.location === 'near_enemy_defenses').length,
+      lostClumped: fights.filter((f) => !f.won && f.tags.splash === 'clumped_under_siege').length,
+    },
     endsAt: start + (samples + 5) * interval,
   }
 }

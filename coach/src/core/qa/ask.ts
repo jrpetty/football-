@@ -33,7 +33,7 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
-  if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
+  if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
   if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
   for (const [re, ids] of HEATMAP_WORDS) {
@@ -43,7 +43,7 @@ export function classify(question: string, profile: GameProfile): Intent {
   if (/\b(mistakes?|wrong|bad habits?|what should i (?:work on|improve|fix)|improve)\b/.test(q)) return { kind: 'mistakes' }
   if (/\b(pass(?:ing)? accuracy|possession|shots|stats|statistics|trend)\b/.test(q)) return { kind: 'stats' }
   if (/\b(patterns?|tendenc(?:y|ies)|habits?)\b/.test(q)) return { kind: 'patterns' }
-  if (/\b(how (?:did|am|was) i|how'?s it going|summary|recap|how did (?:the|that) (?:match|game) go)\b/.test(q)) return { kind: 'summary' }
+  if (/\b(how (?:did|am|was) i|how'?s it going|summary|recap|how (?:did|do|does|was) (?:the|that|my) (?:match|game)(?: go)?)\b/.test(q)) return { kind: 'summary' }
   return { kind: 'open' }
 }
 
@@ -52,7 +52,9 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
   switch (intent.kind) {
     case 'heatmap': {
       const h = report.heatmaps.find((x) => x.spec.id === intent.heatmapId)
-      return h ? heatmapAnswer(h) : null
+      if (h) return heatmapAnswer(h)
+      const spec = profile.heatmaps?.find((x) => x.id === intent.heatmapId)
+      return spec ? `I have not seen any ${spec.phrase} yet. Start capture and play, and I will track where they happen.` : null
     }
     case 'fights':
       return fightsAnswer(profile, report)
@@ -125,7 +127,7 @@ function fightsAnswer(profile: GameProfile, report: SessionReport): string {
   const weak = factorFindings(report.factors, 'weak').filter((f) => f.kind === 'weakness')
   const strong = factorFindings(report.factors, 'moderate').find((f) => f.kind === 'strength')
   if (!weak.length) {
-    if (all === 0) return 'I have not seen a death or a conceded goal I could read yet this session.'
+    if (all === 0) return 'I have not seen a fight I could read yet this session.'
     return `I could read the details of ${tagged} of ${all} so far, which is not enough to call a pattern. I read them from killcams and replays, so let those play out when you can.`
   }
   const lines = weak.slice(0, 2).map((f) => `${f.grade === 'weak' ? 'Early sign: ' : ''}${f.statement} ${adviceFor(profile, f.playbook) ?? ''}`.trim())
@@ -185,6 +187,22 @@ export function buildDigest(i: DigestInputs): string {
           howCreated: h.breakdown,
           claimGrade: h.claim?.grade ?? 'none',
         })),
+      game: Object.keys(i.report.context).length ? i.report.context : undefined,
+      fightsFollowed: i.report.battles.length
+        ? {
+            won: i.report.battles.filter((b) => b.outcome === 'won').length,
+            lost: i.report.battles.filter((b) => b.outcome === 'lost').length,
+            unclear: i.report.battles.filter((b) => b.outcome === 'unclear').length,
+            readFrom: 'fight frames on screen and the army size (population minus villagers); likely, not certain',
+            recent: i.report.battles.slice(-12).map((b) => ({
+              atGameSec: b.gameSec,
+              outcome: b.outcome,
+              army: b.armyBefore !== null && b.armyLow !== null ? `${b.armyBefore} → ${b.armyLow}` : null,
+              lastRead: b.lastTrend,
+              circumstances: b.attributes,
+            })),
+          }
+        : undefined,
       fights: i.report.factors
         .filter((f) => f.taggedLosses + f.taggedWins + f.untagged > 0)
         .map((f) => ({

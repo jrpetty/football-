@@ -3100,3 +3100,25 @@ kbd {
   background: var(--panel-2);
   color: var(--text-2);
 }
+
+/* --- v5: fights log, reasoning ---------------------------------------------------- */
+
+.play-why {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--info-soft);
+  line-height: 1.55;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table.battles td {
+  vertical-align: top;
+}
+
+.context-line {
+  color: var(--text-2);
+  margin: 4px 0 0;
+}

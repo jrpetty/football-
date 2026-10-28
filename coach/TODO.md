@@ -139,6 +139,20 @@ Legend:
 - ◐ Killcam reading accuracy. *Depends on the vision model on real MW4 killcams; untested without captures.*
 - ☐ Watch pro VODs (Valdemar, Beastyqt, CDL) to attribute more advice directly and check the AoE IV villager reference per civilisation.
 
+## v5 delivery
+
+### Talking to the coach
+- ☑ Push-to-talk end to end in Electron: the global key pressed through the X server like a real keyboard, Chromium's fake microphone playing a spoken question, local recognition ("Where am I dying most?" transcribed in about half a second), the answer, and the spoken reply. *Recorded run under Xvfb.*
+- ☑ Fixed: answers to spoken questions were not spoken when not capturing; the chosen neural voice was not applied until capture started (idle speech fell back to the system voice); a context created by a global key could start suspended. Added listen/send/held/error tones, spoken problems (voice input off, microphone blocked by Windows privacy settings, model missing), and answers when nothing has been recorded yet.
+- ◐ A real microphone on Windows. *Not available here.*
+
+### Age of Empires IV battles
+- ☑ Battle tracking from fight frames and army size, settled only when both agree; fights compared by location, matchup, numbers, ranged screen, siege splash, enemy siege, reinforcements, and how lost fights ended. Fight log, live tip against the AI, summary line, digest. *Tested on a scripted game with ground truth (`test/battles.test.ts`).*
+- ☑ Fifteen battle playbook entries with the reasoning (armor math, bonus damage, arrow ranges, siege resistances, Update 17.0 Ram and Town Center changes), and reasoning added to seven existing entries; shown as "Why it works" and given to Claude.
+- ☑ Map and opponent's civilisation read and kept with the session and match records.
+- ◐ How well Claude reads fights from real frames (trend, matchup, clumping). *Untested without captures; the research notes one frame cannot show a trend, so outcomes rely on several frames plus the army size.*
+- ☐ Check the numbers after Update 17.0 (29 Oct 2026): Town Center build time, Ram health, Mangonel and Springald values, Town Center garrison arrows.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

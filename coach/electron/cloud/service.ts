@@ -22,7 +22,7 @@ import { SCREEN_KINDS } from '../../src/core/vision/screens.ts'
 import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, type KnowledgeSectionId } from '../../src/core/knowledge/base.ts'
 
 /** Prompt budget for the pack's coaching playbook in answers and reviews. */
-const PLAYBOOK_CHARS = 24_000
+const PLAYBOOK_CHARS = 32_000
 import type { GameProfile } from '../../src/core/profile/schema.ts'
 import type { CloudResult, CloudSettings, ResearchBrief } from '../../shared/cloud.ts'
 

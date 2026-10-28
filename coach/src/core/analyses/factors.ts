@@ -165,9 +165,15 @@ export function factorResult(spec: FactorSpec, counts: ReadonlyMap<string, { l: 
     for (const r of rows) {
       const v = byValue.get(r.value)!
       if (!v.avoidable || r.losses < 2) continue
-      if (findings.some((f) => f.value === r.value && f.kind === 'weakness')) continue
       const g = gradeShare(r.losses, L)
-      if (g) findings.push(finding('weakness', v, g, `${r.losses} of your ${L} ${spec.lossNoun ?? 'deaths'} came ${v.phrase}.`, r.losses, L))
+      if (!g) continue
+      // One finding per value: the share replaces a weaker comparison (a few fights can be a clear share of losses).
+      const i = findings.findIndex((f) => f.value === r.value && f.kind === 'weakness')
+      if (i >= 0 && RANK[findings[i].grade] >= RANK[g]) continue
+      if (i >= 0) findings.splice(i, 1)
+      const noun = spec.lossNoun ?? 'deaths'
+      const statement = r.losses === L ? `All ${L} ${noun} came ${v.phrase}.` : `${r.losses} of your ${L} ${noun} came ${v.phrase}.`
+      findings.push(finding('weakness', v, g, statement, r.losses, L))
     }
   }
   return { spec, rows, taggedLosses: L, taggedWins: W, untagged, findings: findings.sort((a, b) => RANK[b.grade] - RANK[a.grade] || b.count / b.of - a.count / a.of) }

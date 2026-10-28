@@ -30,6 +30,10 @@ export interface MatchRecord {
   readonly factors?: Readonly<Record<string, Readonly<Record<string, readonly [number, number]>>>>
   /** Benchmark readings at checkpoints: id → points. */
   readonly benchmarks?: Readonly<Record<string, readonly { readonly atSec: number; readonly actual: number; readonly expected: number }[]>>
+  /** Fights the coach could follow (strategy packs). */
+  readonly battles?: { readonly won: number; readonly lost: number; readonly unclear: number }
+  /** What the game was (map, opponent's civilisation…), as read from the screen. */
+  readonly context?: Readonly<Record<string, string | number>>
   /** True when the match was ended by the player (stop or "match over"), not seen on screen. */
   readonly endedManually: boolean
 }
@@ -70,6 +74,8 @@ export class MatchRecorder {
     heatmaps: readonly HeatmapResult[]
     factors?: Record<string, Record<string, [number, number]>>
     benchmarks?: readonly BenchmarkResult[]
+    battles?: { won: number; lost: number; unclear: number }
+    context?: Record<string, string | number>
     endedManually: boolean
   }): MatchRecord {
     const record: MatchRecord = {
@@ -91,6 +97,8 @@ export class MatchRecorder {
       ),
       zones: Object.fromEntries(input.heatmaps.filter((h) => h.total > 0).map((h) => [h.spec.id, { ...h.cells }])),
       ...(input.factors && Object.keys(input.factors).length ? { factors: input.factors } : {}),
+      ...(input.battles && input.battles.won + input.battles.lost + input.battles.unclear > 0 ? { battles: input.battles } : {}),
+      ...(input.context && Object.keys(input.context).length ? { context: input.context } : {}),
       ...(input.benchmarks?.some((b) => b.points.length)
         ? { benchmarks: Object.fromEntries(input.benchmarks.filter((b) => b.points.length).map((b) => [b.spec.id, b.points.map(({ atSec, actual, expected }) => ({ atSec, actual, expected }))])) }
         : {}),
@@ -115,11 +123,23 @@ export function isMatchRecord(v: unknown): v is MatchRecord {
     o.stats !== null &&
     Object.values(o.stats as object).every((x) => typeof x === 'number' && Number.isFinite(x)) &&
     (o.factors === undefined || isFactorCounts(o.factors)) &&
-    (o.benchmarks === undefined || isBenchmarkPoints(o.benchmarks))
+    (o.benchmarks === undefined || isBenchmarkPoints(o.benchmarks)) &&
+    (o.battles === undefined || isBattleCounts(o.battles)) &&
+    (o.context === undefined || isContext(o.context))
   )
 }
 
 const count = (x: unknown) => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < 1e6
+
+function isBattleCounts(v: unknown): boolean {
+  if (!v || typeof v !== 'object') return false
+  const o = v as Record<string, unknown>
+  return ['won', 'lost', 'unclear'].every((k) => typeof o[k] === 'number' && Number.isInteger(o[k]) && (o[k] as number) >= 0)
+}
+
+function isContext(v: unknown): boolean {
+  return !!v && typeof v === 'object' && Object.values(v).every((x) => (typeof x === 'string' && x.length <= 120) || typeof x === 'number')
+}
 
 function isFactorCounts(v: unknown): boolean {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return false

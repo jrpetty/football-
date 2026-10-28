@@ -7,7 +7,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { PatternRecord } from '../../core/types.ts'
 import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
-import { BenchmarkChart, FactorCard, Playbook, ReviewCard } from '../components/coaching.tsx'
+import { BattleLog, BenchmarkChart, FactorCard, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -57,6 +57,13 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
     <div className="page">
       <div>
         <h1>Insights · {profile.game.title}</h1>
+        {report && Object.keys(report.context).length ? (
+          <p className="small context-line">
+            {Object.entries(report.context)
+              .map(([k, v]) => `${profile.vision?.state.find((x) => x.key === k)?.label ?? k}: ${v}`)
+              .join(' · ')}
+          </p>
+        ) : null}
         <p className="lede">
           Where things happen, what keeps going wrong, and which habits go with worse outcomes — counted from what was visible,
           with how sure the coach is. Associations, not proof of cause.
@@ -108,11 +115,29 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
         </section>
       )}
 
+      {report && report.battles.length > 0 && (
+        <section className="panel" aria-labelledby="battles-h">
+          <div className="panel-head">
+            <h2 id="battles-h">Fights this session</h2>
+            <span className="muted small">
+              {report.battles.filter((b) => b.outcome === 'won').length} won · {report.battles.filter((b) => b.outcome === 'lost').length} lost ·{' '}
+              {report.battles.filter((b) => b.outcome === 'unclear').length} unclear · army = population minus villagers
+            </span>
+          </div>
+          <BattleLog battles={report.battles} profile={profile} />
+          <p className="muted small">
+            A fight is called only when the frames and the army size agree; the rest are unclear. Fights off screen are not seen.
+          </p>
+        </section>
+      )}
+
       {seenFights.length > 0 && (
         <section className="panel" aria-labelledby="fights-h">
           <div className="panel-head">
             <h2 id="fights-h">How your fights go</h2>
-            <span className="muted small">Read from killcams and replays · likely, not certain · unreadable ones are counted, not guessed</span>
+            <span className="muted small">
+              {profile.battles ? 'Read from the fight frames and your army size' : 'Read from killcams and replays'} · likely, not certain · unreadable ones are counted, not guessed
+            </span>
           </div>
           <div className="factors">
             {fights.map((f) => (
