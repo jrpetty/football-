@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function InsightsView({ state, session, profile, settings, cloud }: Props) {
-  const official = useOfficialSource(session, state.overheads)
+  const official = useOfficialSource(session, state.overheads, profile.id)
   const report = state.report?.profileId === profile.id ? state.report : null
   const now = useMemo(() => new Date(), [state.snapshot, report])
   const mode = settings.profileModeId

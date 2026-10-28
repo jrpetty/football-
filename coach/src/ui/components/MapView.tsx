@@ -18,6 +18,8 @@ import { mapInsights, mapLayers, officialPoint, resolvePoint, storedAlignment, t
 import type { GameMap, GameProfile } from '../../core/profile/schema.ts'
 import { gameClock } from '../format.ts'
 import type { OverheadAnalysis } from '../overhead.ts'
+import { hasLowerLevel, type LayoutLevel } from '../../core/map/layout.ts'
+import { layoutTerrain, type LayoutPicture } from '../layouts.ts'
 import type { ShownMosaic } from '../session.ts'
 import { Segmented } from './common.tsx'
 import { LAYERS, MapOverhead, stylizedImage, type Layer } from './MapOverhead.tsx'
@@ -31,22 +33,35 @@ export interface OfficialSource {
   readonly place?: (mosaic: ShownMosaic, mapId: string) => Promise<number>
   /** Saves a placement adjusted by hand (not while capturing). */
   readonly adjust?: (mosaic: ShownMosaic, piece: number, a: Alignment) => Promise<void>
+  /** The pack's own drawing of a map's real layout (Counter-Strike 2), for when no overhead map is kept. */
+  readonly layout?: { readonly has: (mapId: string) => boolean; readonly load: (mapId: string, level: LayoutLevel) => Promise<LayoutPicture | null> }
 }
 
-/** A map's official picture, loaded and decoded, with its analysis. */
-export function useOfficialPicture(official: OfficialSource | undefined, mapId: string | null): { base: OfficialBase; picture: HTMLImageElement } | null {
+/**
+ * A map's official picture, loaded and decoded, with its analysis. With `layout`, a map with no
+ * kept picture gets the pack's drawing of its real layout instead (for showing things on the map,
+ * never for placing the stitched minimap: that needs the game's own art).
+ */
+export function useOfficialPicture(
+  official: OfficialSource | undefined,
+  mapId: string | null,
+  opts: { readonly layout?: boolean; readonly level?: LayoutLevel } = {},
+): { base: OfficialBase; picture: HTMLImageElement; layout?: LayoutPicture } | null {
   const savedAt = mapId ? (official?.kept[mapId]?.savedAt ?? null) : null
-  const [pic, setPic] = useState<{ key: string; base: OfficialBase; picture: HTMLImageElement } | null>(null)
-  const key = mapId && savedAt ? `${mapId}@${savedAt}` : null
+  const [pic, setPic] = useState<{ key: string; base: OfficialBase; picture: HTMLImageElement; layout?: LayoutPicture } | null>(null)
+  const drawn = !savedAt && !!opts.layout && !!mapId && !!official?.layout?.has(mapId)
+  const level = opts.level ?? 'upper'
+  const key = mapId && savedAt ? `${mapId}@${savedAt}` : drawn ? `${mapId}@layout:${level}` : null
   useEffect(() => {
     if (!key || !official || !mapId) return
     let live = true
-    void official.load(mapId).then(async (r) => {
+    const got: Promise<{ url: string; analysis: OfficialBase; layout?: LayoutPicture } | null> = drawn ? official.layout!.load(mapId, level).then((r) => (r ? { url: r.url, analysis: r.analysis, layout: r } : null)) : official.load(mapId)
+    void got.then(async (r) => {
       if (!r || !live) return
       const img = new Image()
       img.src = r.url
       await img.decode().catch(() => undefined)
-      if (live && img.naturalWidth) setPic({ key, base: r.analysis, picture: img })
+      if (live && img.naturalWidth) setPic({ key, base: r.analysis, picture: img, ...(r.layout ? { layout: r.layout } : {}) })
     })
     return () => {
       live = false
@@ -96,6 +111,8 @@ export function MapPanel({
   const [chosen, setChosen] = useState<string | null>(null)
   const name = chosen ?? live?.model?.map ?? live?.minimap?.map ?? played[0]?.name ?? names[0] ?? null
   const model = useMemo(() => (name ? (live?.model?.map === name ? live.model : mapModelFrom(records, profile.knowledge.maps, name)) : null), [name, live, records, profile])
+  const game = name ? findMap(profile.knowledge.maps, name) : null
+  const real = useRealMap(official, game ?? null)
   if (!names.length) return <p className="muted small">No map seen yet. With cloud vision on, the coach reads the map name and where you are on it each look.</p>
   const stitched = name ? stitchedFor(mosaics, profile, name) : null
   return (
@@ -129,7 +146,7 @@ export function MapPanel({
           official={official}
         />
       ) : name && official && officialFor(official, profile, name) ? (
-        <OfficialPreview name={name} mapId={officialFor(official, profile, name)!} official={official} radar={findMap(profile.knowledge.maps, name)?.radar} />
+        <OfficialPreview key={name} name={name} mapId={officialFor(official, profile, name)!} official={official} radar={game?.radar} game={game} />
       ) : name ? (
         <p className="muted small map-howto">
           No overhead map of {name} yet. Play it with your minimap set to <b>fixed</b> (north up) and cloud vision on: the coach stitches the map from your minimap as you move,
@@ -140,14 +157,21 @@ export function MapPanel({
         stitched ? (
           <details className="map-areas">
             <summary className="small">Areas and routes, by name</summary>
-            <MapModelView model={model} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
+            <MapModelView model={model} real={real} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
           </details>
         ) : (
-          <MapModelView model={model} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
+          <MapModelView model={model} real={real} here={live?.model?.map === model.map && live.position.ageMs < 20_000 ? live.position.area : null} fit={live?.model?.map === model.map ? live.fit : []} />
         )
       ) : null}
     </div>
   )
+}
+
+/** The map's picture with its callouts' places, when it has both (Counter-Strike 2). */
+function useRealMap(official: OfficialSource | undefined, game: GameMap | null): RealMap | null {
+  const px = game?.radar?.calloutPx
+  const pic = useOfficialPicture(official, px ? (game?.id ?? null) : null, { layout: true })
+  return useMemo(() => (pic && px && Math.abs(pic.base.srcW - pic.base.srcH) <= 2 ? { url: pic.picture.src, size: game!.radar!.imageSize ?? 1024, px } : null), [pic, px, game])
 }
 
 function sameMap(profile: GameProfile, a: string, b: string): boolean {
@@ -157,24 +181,59 @@ function sameMap(profile: GameProfile, a: string, b: string): boolean {
 
 function officialFor(official: OfficialSource, profile: GameProfile, name: string): string | null {
   const id = findMap(profile.knowledge.maps, name)?.id
-  return id && official.kept[id] ? id : null
+  return id && (official.kept[id] || official.layout?.has(id)) ? id : null
 }
 
 const NOTHING: ReadonlySet<Layer> = new Set()
 const CALLOUTS_ONLY: ReadonlySet<Layer> = new Set(['callouts'])
 
-/** A map's official overhead map before it was played with a fixed minimap. */
-function OfficialPreview({ name, mapId, official, radar }: { name: string; mapId: string; official: OfficialSource; radar?: GameMap['radar'] }) {
-  const pic = useOfficialPicture(official, mapId)
+/** A map's official overhead map (or the pack's drawing of its real layout) before it was played with a fixed minimap. */
+function OfficialPreview({ name, mapId, official, radar, game }: { name: string; mapId: string; official: OfficialSource; radar?: GameMap['radar']; game?: GameMap | null }) {
+  const [level, setLevel] = useState<LayoutLevel>('upper')
+  const [view, setView] = useState<'overhead' | '3d'>('overhead')
+  const pic = useOfficialPicture(official, mapId, { layout: true, level })
   const empty = useMemo<StoredMosaic>(() => ({ version: 1, map: name, updatedAt: '', pieces: [], joined: {}, nextId: 1, callouts: {}, heights: {} }), [name])
-  const layers = useMemo(() => (pic ? mapLayers(empty, [], pic.base, radar) : null), [pic, empty, radar])
-  if (!pic || !layers) return <p className="muted small">Loading the official map of {name}…</p>
+  // On a map with two levels, each level shows its own callouts (by the pack's heights).
+  const callouts = useMemo(() => {
+    if (!pic?.layout || !hasLowerLevel(pic.layout.layout) || !radar?.calloutPx || !game) return radar
+    const lower = new Set(game.callouts.filter((c) => c.elevation?.includes('underground')).map((c) => c.name))
+    const upperOnly = new Set(game.callouts.filter((c) => !c.elevation || c.elevation.some((e) => e !== 'underground')).map((c) => c.name))
+    const keep = level === 'lower' ? lower : upperOnly
+    return { ...radar, calloutPx: Object.fromEntries(Object.entries(radar.calloutPx).filter(([n]) => keep.has(n))) }
+  }, [pic, radar, game, level])
+  const layers = useMemo(() => (pic ? mapLayers(empty, [], pic.base, callouts) : null), [pic, empty, callouts])
+  const terrain = useMemo(() => (pic?.layout && layers ? layoutTerrain(pic.layout.layout, layers.image.w, layers.image.h, level) : null), [pic, layers, level])
+  if (!pic || !layers) return <p className="muted small">Loading the map of {name}…</p>
+  const drawn = pic.layout
+  const two = !!drawn && hasLowerLevel(drawn.layout)
   return (
     <div className="stitched">
-      <MapOverhead layers={layers} show={layers.callouts.length ? CALLOUTS_ONLY : NOTHING} picture={pic.picture} label={`${name}, official overhead map`} />
+      {drawn ? (
+        <div className="learned-filters">
+          <Segmented label="View" value={view} onChange={setView} options={[{ value: 'overhead', label: 'From above' }, { value: '3d', label: '3D' }]} />
+          {two ? <Segmented label="Level" value={level} onChange={setLevel} options={[{ value: 'upper', label: 'Upper level' }, { value: 'lower', label: 'Lower level' }]} /> : null}
+        </div>
+      ) : null}
+      {view === '3d' && terrain ? (
+        <Suspense fallback={<p className="muted small">Loading 3D…</p>}>
+          <Scene3D layers={layers} show={CALLOUTS_ONLY} picture={pic.picture} terrain={terrain} label={`${name} in 3D, at its real heights`} />
+        </Suspense>
+      ) : (
+        <MapOverhead layers={layers} show={layers.callouts.length ? CALLOUTS_ONLY : NOTHING} picture={pic.picture} label={drawn ? `${name}, its real layout from above` : `${name}, official overhead map`} />
+      )}
       <p className="muted small">
-        {name}’s official overhead map{layers.callouts.length ? `, with its ${layers.callouts.length} callouts` : ''}. Play it with your minimap set to <b>fixed</b> (north up): the coach places what your minimap shows on this map by itself, and pins
-        where you die, get kills and where killers were on it.
+        {drawn ? (
+          <>
+            {name}’s real layout{two ? ` (${level} level)` : ''}, drawn by the coach from the game’s own nav mesh: {drawn.layout.areas.toLocaleString('en-GB')} floor areas at their real
+            heights, darker low and paler high{layers.callouts.length ? `, with its ${layers.callouts.length} callouts` : ''}. No game art is used; import the game’s radar overview in Settings
+            to see its own drawing and to have the coach place your minimap and deaths on it.
+          </>
+        ) : (
+          <>
+            {name}’s official overhead map{layers.callouts.length ? `, with its ${layers.callouts.length} callouts` : ''}. Play it with your minimap set to <b>fixed</b> (north up): the coach places what your minimap shows on this map by itself, and pins
+            where you die, get kills and where killers were on it.
+          </>
+        )}
       </p>
     </div>
   )
@@ -216,16 +275,20 @@ function StitchedMap({
   }, [records, liveKey, profile, name])
   const game = findMap(profile.knowledge.maps, name)
   const mapId = game?.id ?? null
-  const pic = useOfficialPicture(official, mapId)
+  // The kept overview; or the drawing of the map's real layout, only for a map placed on that very
+  // drawing (the demo): real play is placed on the game's own art, never on the drawing.
+  const anyPic = useOfficialPicture(official, mapId, { layout: true })
+  const pic = anyPic && (!anyPic.layout || mosaic.alignedTo?.id === anyPic.base.id) ? anyPic : null
   const [basis, setBasis] = useState<'official' | 'stitched'>('official')
   const onOfficial = basis === 'official' && pic ? pic : null
+  const where = pic?.layout ? 'map’s real layout (drawn from the game’s nav mesh)' : 'official map'
   const layers = useMemo(() => mapLayers(mosaic, matches, onOfficial?.base ?? null, game?.radar), [mosaic, matches, onOfficial, game])
   // A map stitched before its official map was kept (or placed on another picture) is placed on it once, here.
   const [placing, setPlacing] = useState(false)
   const tried = useRef('')
   const placedHere = !!pic && mosaic.alignedTo?.id === pic.base.id && Object.keys(mosaic.aligned ?? {}).length > 0
   useEffect(() => {
-    if (!pic || !mapId || !official?.place || mosaic.synthetic || live || placedHere) return
+    if (!pic || pic.layout || !mapId || !official?.place || mosaic.synthetic || live || placedHere) return
     const k = `${mosaic.map}:${pic.base.id}`
     if (tried.current === k) return
     tried.current = k
@@ -324,7 +387,7 @@ function StitchedMap({
               setCheck(false)
             }}
             options={[
-              { value: 'official', label: 'Official' },
+              { value: 'official', label: pic.layout ? 'Real layout' : 'Official' },
               { value: 'stitched', label: 'Stitched' },
             ]}
           />
@@ -368,7 +431,7 @@ function StitchedMap({
       {off ? (
         <div className="official-status small">
           <span className={`badge ${share !== null && share >= 0.95 ? 'ok' : share ? 'warn' : 'neutral'}`}>
-            {placing ? 'Placing…' : share === null ? 'Official map' : `${Math.round(share * 100)}% placed`}
+            {placing ? 'Placing…' : share === null ? (pic?.layout ? 'Real layout' : 'Official map') : `${Math.round(share * 100)}% placed`}
           </span>
           <span>
             {placing
@@ -376,8 +439,8 @@ function StitchedMap({
               : share === null
                 ? 'Nothing played on this map yet.'
                 : off.unplaced
-                  ? `${off.placed} of your points are on the official map; ${off.unplaced} are on parts not placed yet (a look-alike part stays unplaced until you walk somewhere only one part has). The Stitched view shows them all.`
-                  : 'Every point is on the official map. While playing, each frame is pinned to it.'}
+                  ? `${off.placed} of your points are on the ${where}; ${off.unplaced} are on parts not placed yet (a look-alike part stays unplaced until you walk somewhere only one part has). The Stitched view shows them all.`
+                  : `Every point is on the ${where}. While playing, each frame is pinned to it.`}
           </span>
           {view === 'overhead' && mosaic.pieces.length ? (
             <button type="button" className="btn sm ghost" aria-pressed={check} onClick={() => setCheck(!check)}>
@@ -487,7 +550,7 @@ function StitchedMap({
       </div>
       <p className="muted small">
         {mosaic.synthetic ? 'A synthetic map from the demo (not saved). ' : ''}
-        {off ? 'On the official overhead map, from your minimap' : 'Stitched from your minimap'}
+        {off ? (pic?.layout ? 'On the map’s real layout, from your minimap' : 'On the official overhead map, from your minimap') : 'Stitched from your minimap'}
         {layers.matches ? ` over ${layers.matches} ${layers.matches === 1 ? 'match' : 'matches'}` : ''}: {deaths.length} deaths and {kills.length} kills
         placed{deaths.length ? `, ${killcam} killers seen on the killcam’s minimap` : ''}. Where you died is where your own minimap was just before it cut away.
         {!off && mosaic.pieces.length > 1 ? ` ${mosaic.pieces.length - 1} more piece${mosaic.pieces.length > 2 ? 's' : ''} of this map not joined yet (walk between them).` : ''}
@@ -526,16 +589,34 @@ function StitchedMap({
   )
 }
 
-function MapModelView({ model, here, fit }: { model: MapModel; here: string | null; fit: readonly string[] }) {
-  const [view, setView] = useState<'2d' | '3d'>('2d')
+/** A map's picture (the game's overview or the drawing of its real layout) and where each callout is on it. */
+export interface RealMap {
+  readonly url: string
+  /** The overview's size in pixels (the callout pixels' frame). */
+  readonly size: number
+  readonly px: Readonly<Record<string, readonly [number, number]>>
+}
+
+const RS = 640
+
+function MapModelView({ model, here, fit, real = null }: { model: MapModel; here: string | null; fit: readonly string[]; real?: RealMap | null }) {
+  // The real map once its picture has loaded, unless another view was picked.
+  const [picked, setView] = useState<'real' | '2d' | '3d' | null>(null)
+  const view = picked ?? (real ? 'real' : '2d')
   const iso = view === '3d'
+  const onReal = view === 'real' && !!real
   const laid = useMemo(() => layoutMap(model), [model])
-  const at = new Map(laid.map((a) => [a.name, a]))
+  // On the real map, only areas with a known place are drawn (each at its callout's spot).
+  const at = new Map(laid.filter((a) => !onReal || real!.px[a.name]).map((a) => [a.name, a]))
   const areas = new Map(model.areas.map((a) => [a.name, a]))
   const maxSec = Math.max(1, ...model.areas.map((a) => a.seconds))
   const learned = model.areas.some((a) => a.visits || a.deaths || a.kills)
   const lines = mapLines(model)
-  const pt = (n: string) => {
+  const pt = (n: string): [number, number] => {
+    if (onReal) {
+      const [x, y] = real!.px[n]
+      return [16 + (x / real!.size) * (RS - 32), 16 + (y / real!.size) * (RS - 32)]
+    }
     const a = at.get(n)!
     return project(a.x, a.y, a.z, iso)
   }
@@ -559,14 +640,20 @@ function MapModelView({ model, here, fit }: { model: MapModel; here: string | nu
           {model.matches ? ` · learned from ${model.matches} ${model.matches === 1 ? 'game' : 'games'}` : ' · not played yet'}
           {model.reference ? ` · ${model.reference.callouts.length} callouts from the pack` : ' · areas named from what you saw'}
         </p>
-        <Segmented label="View" value={view} onChange={setView} options={[{ value: '2d', label: 'Top' }, { value: '3d', label: '3D (heights)' }]} />
+        <Segmented
+          label="View"
+          value={view}
+          onChange={setView}
+          options={[...(real ? [{ value: 'real' as const, label: 'On the map' }] : []), { value: '2d', label: real ? 'Sketch' : 'Top' }, { value: '3d', label: '3D (heights)' }]}
+        />
       </div>
-      <svg className="map-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Learned map of ${model.map}`}>
+      <svg className={`map-svg${onReal ? ' on-real' : ''}`} viewBox={onReal ? `0 0 ${RS} ${RS}` : `0 0 ${W} ${H}`} role="img" aria-label={`Learned map of ${model.map}`}>
         <defs>
           <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" className="map-arrow" />
           </marker>
         </defs>
+        {onReal ? <image href={real!.url} x={16} y={16} width={RS - 32} height={RS - 32} opacity={0.92} /> : null}
         {iso
           ? // The ground plane, so heights read as heights.
             (() => {
@@ -600,6 +687,7 @@ function MapModelView({ model, here, fit }: { model: MapModel; here: string | nu
           return <circle key={`pp-${p.callout}`} className="map-power" cx={x} cy={y} r={16} />
         })}
         {[...laid]
+          .filter((a) => at.has(a.name))
           .sort((a, b) => a.z - b.z || a.y - b.y)
           .map((a) => {
             const s = areas.get(a.name)!
@@ -623,8 +711,8 @@ function MapModelView({ model, here, fit }: { model: MapModel; here: string | nu
       </svg>
       <p className="muted small map-legend">
         Size: time spent · green: more kills than deaths · red: more deaths · <span className="legend-red">red arrows</span>: where killers shot from ·
-        rings: the pack’s power positions · lines: links and the routes you took{iso ? ' · ▲ upper floor or roof' : ''}. Positions are a sketch from the pack’s rough
-        layout and your routes, not a survey.
+        rings: the pack’s power positions · lines: links and the routes you took{iso ? ' · ▲ upper floor or roof' : ''}.{' '}
+        {onReal ? 'Each area at its callout’s place on the real map.' : 'Positions are a sketch from the pack’s rough layout and your routes, not a survey.'}
       </p>
       {!learned ? <p className="muted small">Not learned yet: play this map with cloud vision on.</p> : null}
       {lines.length || fit.length ? (
@@ -718,7 +806,8 @@ export function WhereYouAre({ report, mosaics, profile, official }: { report: Ma
   const mosaic = mm?.map ? (Object.values(mosaics ?? {}).find((m) => m.map.toLowerCase() === mm.map!.toLowerCase()) ?? null) : null
   const game = mm?.map && profile ? findMap(profile.knowledge.maps, mm.map) : null
   const mapId = game?.id ?? null
-  const pic = useOfficialPicture(official, mapId)
+  const anyPic = useOfficialPicture(official, mapId, { layout: true })
+  const pic = anyPic && (!anyPic.layout || mosaic?.alignedTo?.id === anyPic.base.id) ? anyPic : null
   const layers = useMemo(() => {
     if (!mosaic) return null
     const pins = report.pins ? [report.pins] : []

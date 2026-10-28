@@ -4826,3 +4826,15 @@ td > .swatch {
 .mechanics .badge {
   margin-left: 6px;
 }
+/* The learned areas on the real map: square, labels kept readable over the drawing. */
+.map-svg.on-real {
+  aspect-ratio: 1;
+  max-height: 720px;
+  margin: 0 auto;
+  display: block;
+}
+.map-svg.on-real text {
+  paint-order: stroke;
+  stroke: rgba(5, 8, 13, 0.85);
+  stroke-width: 3px;
+}

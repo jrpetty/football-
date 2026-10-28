@@ -6,7 +6,9 @@
 // Drag to orbit, wheel to zoom, right-drag to pan; it turns slowly until
 // touched. Loaded on demand (three.js is large). With the map's official
 // overhead map: a floor plan built from its drawing (walls stand up, solid
-// structures stand taller, out of bounds is sunk), the picture on top.
+// structures stand taller, out of bounds is sunk), the picture on top. With
+// a map's real layout (the game's nav mesh): every floor at its real height,
+// walls standing round them, and nothing where there is no floor.
 
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -30,9 +32,12 @@ export default function MapScene3D({
   focus,
   label,
   picture = null,
+  terrain = null,
 }: {
   layers: MapLayers
   show: ReadonlySet<Layer>
+  /** Real heights on the layers' grid (in its pixels), NaN where there is no floor or wall. */
+  terrain?: Float32Array | null
   /** The official overhead map's picture (with official layers). */
   picture?: HTMLImageElement | ImageBitmap | null
   here?: { readonly x: number; readonly y: number } | null
@@ -82,7 +87,7 @@ export default function MapScene3D({
 
     // Ground: the stitched map as a height field, the picture (with death heat) on top.
     const official = layers.official && picture ? layers.official.base : null
-    const field = official ? officialHeights(layers) : heightField(layers)
+    const field = terrain ?? (official ? officialHeights(layers) : heightField(layers))
     const pic = official ? officialPicture(picture!, official) : stylizedMap(layers)
     // The texture at the picture's own resolution (the official map is sharper than the layers' grid).
     const tex = document.createElement('canvas')
@@ -112,7 +117,7 @@ export default function MapScene3D({
     const aimg = actx.createImageData(w, h)
     for (let i = 0; i < w * h; i++) {
       // Out of bounds stays in view on the official map (dimmed and sunk); unseen ground is cut away on the stitched one.
-      const v = official || layers.image.weight[i] ? 255 : 0
+      const v = terrain ? (Number.isNaN(terrain[i]) ? 0 : 255) : official || layers.image.weight[i] ? 255 : 0
       aimg.data[i * 4] = aimg.data[i * 4 + 1] = aimg.data[i * 4 + 2] = v
       aimg.data[i * 4 + 3] = 255
     }
@@ -125,18 +130,23 @@ export default function MapScene3D({
     geo.rotateX(-Math.PI / 2)
     const pos = geo.attributes.position as THREE.BufferAttribute
     // The official drawing's walls are a pixel or two wide: each vertex takes the tallest thing under it.
-    const pool = official ? Math.max(1, Math.ceil(w / segX / 2)) : 0
+    const pool = official || terrain ? Math.max(1, Math.ceil(w / segX / 2)) : 0
     const sample = (px: number, py: number) => {
       const x = Math.max(0, Math.min(w - 1, Math.round(px)))
       const y = Math.max(0, Math.min(h - 1, Math.round(py)))
       if (!pool) return field[y * w + x]
       let m = -Infinity
       for (let yy = Math.max(0, y - pool); yy <= Math.min(h - 1, y + pool); yy++)
-        for (let xx = Math.max(0, x - pool); xx <= Math.min(w - 1, x + pool); xx++) m = Math.max(m, field[yy * w + xx])
+        for (let xx = Math.max(0, x - pool); xx <= Math.min(w - 1, x + pool); xx++) {
+          const v = field[yy * w + xx]
+          if (v > m) m = v
+        }
       return m
     }
     const heightAt = (px: number, py: number) => {
       const v = sample(px, py)
+      // Real heights: no floor here sinks under the table (and is cut away).
+      if (terrain) return v === -Infinity ? -6 : v
       if (official) return v * BUILD * 1.15
       if (v < 0) return -3
       // Crisp walls: the structure value pushed towards 0 or 1, then lifted.
@@ -397,7 +407,7 @@ export default function MapScene3D({
       el.replaceChildren()
       api.current = null
     }
-  }, [layers, show, here?.x, here?.y, focus, label, picture])
+  }, [layers, show, here?.x, here?.y, focus, label, picture, terrain])
 
   if (failed) return <p className="muted small">3D needs WebGL, which is not available here ({failed}). The overhead map shows the same.</p>
   return (

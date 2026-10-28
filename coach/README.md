@@ -128,9 +128,16 @@ Then press **Choose the game window**, play, and listen.
         code or a single guide (50 of 236, spray patterns included) are
         marked unverified, with the reason.
       - **Maps:** the seven Active Duty maps (Ancient, Anubis, Cache,
-        Dust II, Inferno, Mirage, Nuke) with 186 callouts placed on the
-        game's radar overview, links, power positions, sightlines, bomb
-        sites and the radar coordinates; and **227 grenade lineups**: 44
+        Dust II, Inferno, Mirage, Nuke), each with its **real layout**
+        built from the game's own nav mesh (the walkable floor the game
+        uses for bots: 1,969–3,040 floor areas a map, with heights; Nuke's
+        upper and lower levels apart). The coach draws it from above in its
+        own style and in 3D at the real heights, so every map view works
+        without importing anything, and no game art is shipped. Every
+        callout spot and every one of Valve's grenade spots stands on that
+        floor (checked in the tests). 186 callouts, links, power positions,
+        sightlines, bomb sites and the radar coordinates; and **227 grenade
+        lineups**: 44
         from Valve's own guide in the game files with the exact spot to
         stand and where it lands, and 183 from lineup guides (where to
         stand and aim, the throw, what it does), plus 38 executes and
@@ -338,10 +345,14 @@ Then press **Choose the game window**, play, and listen.
       throw order. Ask "what smokes for an A execute on Mirage?" or "where
       do I throw the Xbox smoke?" and the coach answers from them.
     - **The radar stitched, with deaths pinned to the spot,** as for MW4
-      (Radar Is Rotating: No). The game's own radar overview can be the
-      official map: export it from the game files and import it (the app
-      does not ship Valve's images); on it every callout is labelled where
-      it is. Nuke's lower level is kept as its own piece of the map.
+      (Radar Is Rotating: No). Every map view shows the map's real layout
+      from the start (Insights → The map: from above, in 3D, by level on
+      Nuke; your areas, deaths, kills and killers' arrows at their real
+      places; grenade lineups on it). To have your own minimap placed on
+      the map while you play, import the game's radar overview from the
+      game files (the app does not ship Valve's images): the stitched radar
+      is matched against the game's own art. The demo draws its radar from
+      the real layout and is placed on it. Nuke's lower level is kept as its own piece of the map.
       Measured on the real overviews with a
       simulated radar (30 runs): no point placed in the wrong spot, 95%
       within 0.6% of the map's width in 29 runs (2.6% once, on Nuke), and

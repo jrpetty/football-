@@ -242,8 +242,8 @@ function UtilityMap({
 }) {
   const S = map.radar?.imageSize ?? 1024
   const px = map.radar?.calloutPx ?? {}
-  const pic = useOfficialPicture(official, official?.kept[map.id] ? map.id : null)
-  // Only the game's own square overview lines up with these pixels.
+  const pic = useOfficialPicture(official, map.id, { layout: true })
+  // Only a square overview (the game's own, or the pack's drawing of the real layout) lines up with these pixels.
   const square = pic && Math.abs(pic.base.srcW - pic.base.srcH) <= 2 ? pic : null
   const drawn = lineups.map((l, i) => ({ l, i, e: ends(l, px) })).filter((x) => x.e)
   const sel = selected ? drawn.find((x) => x.l.id === selected) : null
@@ -284,7 +284,7 @@ function UtilityMap({
         })}
       </svg>
       <figcaption className="muted small">
-        {square ? `On ${map.name}’s overview from your game files.` : `A sketch of ${map.name}’s callouts; import the game’s overview in Settings to draw on the real map.`} Solid line: exact spot from Valve’s
+        {square?.layout ? `On ${map.name}’s real layout, drawn from the game’s nav mesh.` : square ? `On ${map.name}’s overview from your game files.` : `A sketch of ${map.name}’s callouts.`} Solid line: exact spot from Valve’s
         guide; dashed: callout to callout. Letters: S smoke, F flash, H HE, M molotov or incendiary, D decoy.
       </figcaption>
     </figure>

@@ -219,6 +219,8 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 14.2 | In Practice, throw five Valve lineups (marked Valve) and five researched ones, following Stand, Aim and Throw. | Each lands where the coach says. Note the ones that do not (map, name, where it went). |
 | 14.3 | Ask: "what smokes for an A execute on Mirage?", "where do I throw the Xbox smoke?", "how long does a smoke last?", "how many body shots does the M4A1-S need?" | Each answered from the pack: the execute in order; the lineup with stand, aim and throw; about 18 s of cover; 4 up close, 5 at 20 m. |
 | 14.4 | CS2 Practice with Game data on: buy two flashes and a smoke, throw one flash, get flashed by a bot, stand in a molotov, die holding the rest. | Insights → Rounds: the round says 1 of 3 thrown, flashed once, caught fire once, 2 held at death; the grenade table matches. |
+| 14.6 | CS2 with no overview imported: Insights → The map, each Active Duty map; From above, 3D, and on Nuke Upper and Lower level. | The real layout of each map (walls round the floor, darker low, paler high), callouts on the floor; 3D at real heights; Nuke's lower level shows B, Ramp's bottom, Secret and Decon with their callouts. Note any area missing or misplaced. |
+| 14.7 | Play a CS2 Practice match with Radar Is Rotating: No and no overview imported, then import the overview and play again. | First match: the stitched radar on its own (no placement on the drawing); the areas list on the real map by callout. After importing: the minimap placed on the game's overview. |
 | 14.5 | Insights → Arsenal → AK-47, then Compare guns. | The damage table (142 to the head at 5 m, 110 through a helmet, 4 body hits through kevlar) and the compare table sort by each column. |
 
 ## 14. Accessibility and layout

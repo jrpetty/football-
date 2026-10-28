@@ -347,7 +347,7 @@ function LastSession({ state, onTab }: { state: SessionState; onTab: (t: Tab) =>
 // --- During capture -------------------------------------------------------------------
 
 function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud, usage, info, onTab }: Props) {
-  const official = useOfficialSource(session, state.overheads)
+  const official = useOfficialSource(session, state.overheads, profile.id)
   const [aligning, setAligning] = useState(false)
   const st = state.status
   const report = state.report?.profileId === profile.id ? state.report : null

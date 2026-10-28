@@ -30,6 +30,7 @@ import type { FromWorker, ToWorker, VisionConfig, WorkerStatus } from '../worker
 import type { StoredMosaic } from '../core/map/minimap.ts'
 import { findMap } from '../core/analyses/mapModel.ts'
 import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE, placeOnOverhead, type DecodedImage, type OverheadAnalysis } from './overhead.ts'
+import { hasLayout, layoutPicture } from './layouts.ts'
 import { fromBase64 } from '../core/map/minimap.ts'
 import { policyFor } from './policy.ts'
 
@@ -439,18 +440,22 @@ export class CoachSession {
       const img = await decodeImage(png)
       const a = await analyzeOverhead(img)
       if (a.score < MIN_OVERHEAD_SCORE) return null
-      return {
-        picture: { data: img.data, w: img.width, h: img.height },
-        box: { x0: a.box.x0 / a.k, y0: a.box.y0 / a.k, x1: a.box.x1 / a.k, y1: a.box.y1 / a.k },
-        inBounds: (x, y) => {
-          const X = Math.round(x * a.k)
-          const Y = Math.round(y * a.k)
-          return X >= 0 && Y >= 0 && X < a.w && Y < a.h && a.kind[Y * a.w + X] !== KIND_OUT
-        },
-      }
+      return demoPictureFrom(img, a)
     } catch {
       return null
     }
+  }
+
+  /** The map's real layout as the demo's radar art and the picture the worker places it on (no overview kept). */
+  private demoLayout: { readonly map: string; readonly img: DecodedImage } | null = null
+
+  private async demoOnLayout(mapId: string, mapName: string): Promise<DemoOfficial | null> {
+    const profile = this.profile
+    if (!profile || !hasLayout(profile.id, mapId)) return null
+    const lp = await layoutPicture(profile.id, mapId).catch(() => null)
+    if (!lp) return null
+    this.demoLayout = { map: mapName, img: lp.image }
+    return demoPictureFrom(lp.image, lp.analysis)
   }
 
   /** What official image the worker has for each map (by map name), so it is sent once. */
@@ -463,10 +468,16 @@ export class CoachSession {
     const game = findMap(profile.knowledge.maps, mapName)
     const info = game ? this.state.overheads[game.id] : undefined
     const k = mapName.toLowerCase()
-    const tag = info?.savedAt ?? ''
+    // The demo on a map's drawn layout: the worker places the demo's radar on that same drawing.
+    const drawn = this.sourceKind !== 'screen' && this.demoLayout && this.demoLayout.map.toLowerCase() === k ? this.demoLayout : null
+    const tag = drawn ? 'layout' : (info?.savedAt ?? '')
     if ((this.officialSent.get(k) ?? '') === tag) return
     this.officialSent.set(k, tag)
     const worker = this.worker
+    if (drawn) {
+      const data = new Uint8ClampedArray(drawn.img.data)
+      return this.post({ type: 'official', map: mapName, image: { data, width: drawn.img.width, height: drawn.img.height } }, [data.buffer])
+    }
     if (!info || !game) return this.post({ type: 'official', map: mapName, image: null })
     void (async () => {
       const png = await this.bridge.loadOverhead(profile.id, game.id).catch(() => null)
@@ -654,6 +665,7 @@ export class CoachSession {
   private async openSource(kind: SourceChoice, sink: FrameSink, onEnded: () => void, speed: number): Promise<FrameSource> {
     const seed = Date.now() % 100_000
     this.demoOnOfficial = false
+    this.demoLayout = null
     switch (kind) {
       case 'screen':
         return ScreenCaptureSource.start(sink, onEnded)
@@ -722,7 +734,8 @@ export class CoachSession {
         const pickMap = (list: typeof maps) => list.map((m) => ({ m, demo: demoMapFrom(m) })).find((x) => !!x.demo) ?? null
         const chosen = pickMap(maps.filter((m) => this.state.overheads[m.id])) ?? pickMap(maps)
         if (!chosen) throw new Error('The Counter-Strike 2 pack has no map to play the demo on.')
-        const official = this.state.overheads[chosen.m.id] && this.profile?.positioning?.minimap ? await this.demoOfficial(chosen.m.id) : null
+        // On the overview the player kept, else on the drawing of the map's real layout.
+        const official = this.profile?.positioning?.minimap ? ((this.state.overheads[chosen.m.id] ? await this.demoOfficial(chosen.m.id) : null) ?? (await this.demoOnLayout(chosen.m.id, chosen.m.name))) : null
         this.demoOnOfficial = !!official
         const replay = cs2MatchReplay({ seed, map: chosen.demo!, mapId: `de_${chosen.m.id}` })
         const mm = this.profile?.positioning?.minimap
@@ -1305,4 +1318,17 @@ function talkErrorMessage(err: unknown): string {
   if (/not installed/i.test(msg)) return 'Speech recognition is not downloaded yet. Get it in Settings, Voice input.'
   if (/voice input is off/i.test(msg)) return 'Voice input is off. Turn it on in Settings, Voice input.'
   return `I could not understand the recording: ${msg}`
+}
+
+/** A kept overview or a drawn layout as the demo's radar art: the picture, its bounds and what is in bounds. */
+function demoPictureFrom(img: DecodedImage, a: OverheadAnalysis): DemoOfficial {
+  return {
+    picture: { data: img.data, w: img.width, h: img.height },
+    box: { x0: a.box.x0 / a.k, y0: a.box.y0 / a.k, x1: a.box.x1 / a.k, y1: a.box.y1 / a.k },
+    inBounds: (x, y) => {
+      const X = Math.round(x * a.k)
+      const Y = Math.round(y * a.k)
+      return X >= 0 && Y >= 0 && X < a.w && Y < a.h && a.kind[Y * a.w + X] !== KIND_OUT
+    },
+  }
 }
