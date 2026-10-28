@@ -153,6 +153,15 @@ Legend:
 - ◐ How well Claude reads fights from real frames (trend, matchup, clumping). *Untested without captures; the research notes one frame cannot show a trend, so outcomes rely on several frames plus the army size.*
 - ☐ Check the numbers after Update 17.0 (29 Oct 2026): Town Center build time, Ram health, Mangonel and Springald values, Town Center garrison arrows.
 
+## v6 delivery
+
+- ☑ Live commentary: its own message type and pacing, built only from readings, spoken where live speech is allowed, a one-time notice elsewhere. *Unit tests, and a recorded Electron run of the AoE IV demo with commentary on: 11 spoken lines in 100 seconds.*
+- ☑ AoE IV roster: every civilisation (with variants and announced upcoming ones), unique units, landmarks, bonuses, how to play against them; generic units with counters and the reasoning; production buildings; counter rules. Validated so every reference resolves.
+- ☑ Scouting intel: the opponent's civilisation, buildings and army read from the player's screen; what each building can make for that civilisation; answers for the player's civilisation; commentary lines, a "Their side" panel, the summary and Claude's digest.
+- ☑ Researched reference loaded into the packs: MW4 (weapons, perks, streaks, maps, modes, HUD), EA FC 27 (mechanics, tactics, modes, screens, patch history), AoE II DE (56 civilisations, counters, build orders), with sources.
+- ◐ Recognising enemy buildings and units in real frames. *Depends on Claude reading real AoE IV screens; untested without captures.*
+- ◐ Research quality: page fetches were blocked; sources are search summaries and aoe4world's open data on GitHub. Uncertain items are marked "(unverified)".
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

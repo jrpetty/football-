@@ -160,7 +160,17 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 12.5 | AoE IV vs AI, Training mode: lose two or three fights under the enemy Town Center. | "Pull back out of their arrow range." once the pattern is clear; Insights → Fights this session lists each fight with the army before and at its lowest. |
 | 12.6 | AoE IV ranked: play a full game with several fights, then Insights. | The summary says "Fights I could follow: N won, M lost." Unclear fights are labelled unclear. The map and opponent's civilisation show at the top of Insights. |
 
-## 13. Accessibility and layout
+## 13. Live commentary and scouting
+
+| # | Steps | Expected |
+| --- | --- | --- |
+| 13.1 | Top bar → 🎙 Commentary on. AoE IV against the AI (Training mode). | Spoken lines as things happen: villager checkpoints, fights starting and ending, scouted buildings. Each line under about 20 words, never two at once. |
+| 13.2 | Same with a ranked game. | The timeline says once that commentary cannot speak during play here; nothing is spoken until the match summary. |
+| 13.3 | AoE IV: let the loading screen show; then scout the enemy base with your scout. | "Opponent: <civ>. Watch for <unique units>." then "They have a Stable: expect …". Coach view → Their side lists the buildings, what they can make and the answers. |
+| 13.4 | Set your civilisation in setup (e.g. English) and meet enemy Spearmen. | The answer names Longbowmen rather than Archers. |
+| 13.5 | Ask "what are they making?" | A local answer from what was seen; nothing invented when nothing was scouted. |
+
+## 14. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is

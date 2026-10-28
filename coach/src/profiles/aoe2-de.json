@@ -420,7 +420,1299 @@
     "terminology": {
       "housed": "housed",
       "tc": "Town Center"
-    }
+    },
+    "reference": [
+      {
+        "id": "overview",
+        "items": [
+          {
+            "name": "What AoE2: DE is",
+            "detail": "Real-time strategy game (Forgotten Empires / World's Edge, Microsoft). Players gather food, wood, gold and stone with villagers, advance through four ages (Dark, Feudal, Castle, Imperial), build an army from a civilisation-specific tech tree and win by destroying the enemy (Conquest) or other victory conditions. Matches usually 20-45 minutes in 1v1."
+          },
+          {
+            "name": "Current version (as of 2026-10-28)",
+            "detail": "Latest patch: Update 188329 (27 Oct 2026, stability/OOS/crash fixes, lobby search by Game ID). Previous: Update 185872 (22 Sep 2026) shipped with The Viking Sagas: Varangian Guard and Mounted Crossbowman regional units, Longboat renamed Longship (regional), new Arabian Desert map, Vikings rework."
+          },
+          {
+            "name": "DLC timeline (DE)",
+            "detail": "Lords of the West 2021 (Burgundians, Sicilians); Dawn of the Dukes 2021 (Bohemians, Poles); Dynasties of India 2022 (Bengalis, Dravidians, Gurjaras; Indians->Hindustanis); Return of Rome 2023 (Romans + AoE1 mode); Mountain Royals 2023 (Armenians, Georgians); Chronicles: Battle for Greece 2024; Three Kingdoms 2025; Chronicles: Alexander Oct 2025; Last Chieftains Feb 2026; Viking Sagas Sep 2026."
+          },
+          {
+            "name": "Civilisation count",
+            "detail": "56 civilisations playable in standard Random Map/ranked: 45 pre-2025 civs + Three Kingdoms (Wu, Shu, Wei, Jurchens, Khitans) + Last Chieftains (Mapuche, Muisca, Tupi) + Viking Sagas (Danes, Saxons, Varangians). Chronicles civs (Achaemenids, Athenians, Spartans, Macedonians, Thracians, Puru) are excluded from ranked."
+          },
+          {
+            "name": "Regional units trend",
+            "detail": "Recent DLCs moved many units to 'regional' shared pools: Steppe Lancer (steppe civs), Winged Hussar (Poles/Lithuanians), Genitour (Berbers, African allies), Hei Guang Cavalry and Traction Trebuchet (Wu/Shu/Wei), Slinger and Champi Warrior (Inca, Mapuche, Muisca, Tupi), Varangian Guard (Byzantines, Danes, Saxons, Varangians, Vikings), Mounted Crossbowman (~12-15 European civs)."
+          },
+          {
+            "name": "Win condition basics",
+            "detail": "Default Random Map = Conquest: destroy all enemy units and buildings that count (or opponent resigns, which is how most ranked games end). Optional: Wonder victory (build and hold a Wonder), Relic victory (hold all relics), Regicide (kill king). Most ranked games end by 'GG' resign when one player loses economy or army decisively."
+          },
+          {
+            "name": "Core loop for coaching",
+            "detail": "Economy first: never let the Town Center (TC) idle, never be housed, keep villagers working. Then: scout the opponent, pick a strategy that fits civ+map, build the right counters, spend resources (avoid floating), upgrade (eco, blacksmith), and attack when ahead. Most sub-1500 Elo games are decided by macro (vil count, idle time) not micro."
+          },
+          {
+            "name": "Screen-only coaching constraint",
+            "detail": "Everything the app knows must come from pixels: resource bar numbers, population, game clock, current age text, idle-villager counter, selected-unit panel, minimap, chat/notification text and the post-game statistics screen. Do not read game memory, inject input, or show hidden information (e.g. fogged enemy units) - that would be cheating."
+          },
+          {
+            "name": "Fair-play note",
+            "detail": "Third-party overlays that only read the screen are generally tolerated, but anything that reveals fog-of-war, automates actions or modifies game files can violate the game's ToS and the ranked code of conduct. The coach should advise, not act. Spectator tools (e.g. CaptureAge) see more information than a player and must not be used for live play."
+          },
+          {
+            "name": "Balance meta snapshot 2026 (unverified)",
+            "detail": "Community tier lists/stat sites (mid-late 2026) frequently rank Hindustanis, Armenians, Bulgarians, Mayans, Franks, Chinese and Wu highly for 1v1; Varangians reported near the bottom (~47% win rate, aoe2insights). Win rates shift every patch; treat any tier ranking as a snapshot only."
+          },
+          {
+            "name": "Known data uncertainties",
+            "detail": "Exact numbers for the 2026 civs (Mapuche, Muisca, Tupi, Danes, Saxons, Varangians) and the Vikings rework vary across fan sites and changed in patches 170934/177723/185872. Older-civ bonuses below reflect long-standing values but individual percentages may have been tuned. Verify specific numbers against the in-game civ tech tree (Tech Tree button)."
+          }
+        ]
+      },
+      {
+        "id": "modes",
+        "items": [
+          {
+            "name": "Random Map (RM)",
+            "detail": "The standard mode. Players start in Dark Age with a TC, 3 villagers, a scout (or civ-specific), 200 wood/200 food/100 gold/200 stone (standard resources). Map generated from a script. Ranked queues: RM 1v1 and RM Team Games (2v2-4v4). Pop cap usually 200."
+          },
+          {
+            "name": "Ranked 1v1 (RM)",
+            "detail": "Matchmade on a rotating map pool (Arabia is a near-permanent fixture and most played; pools change every ~2 weeks). Players can ban a few maps and favour some. Elo shown on profile; ~1000 is roughly average active ladder, 1600+ strong, 2000+ top ~1%, 2500+ pro (approximate)."
+          },
+          {
+            "name": "Ranked Team Games",
+            "detail": "2v2/3v3/4v4 RM ladder with separate Elo. Common maps: Arabia, Arena, Black Forest, Nomad, Team Islands. Pocket/flank roles: flanks (edge positions) usually play archers/early aggression; pockets (middle) boom into knights/cavalry and reinforce flanks. Team bonuses of every civ apply to all allies."
+          },
+          {
+            "name": "Empire Wars (EW)",
+            "detail": "Faster mode starting in Feudal Age with a pre-built economy (roughly two dozen villagers already working, drop sites, some farms, a few houses and basic eco upgrades). Skips the Dark Age build order; games are decided by Feudal/Castle aggression and macro. Has its own ranked 1v1 and team ladders. Exact starting layout varies by civ (unverified)."
+          },
+          {
+            "name": "Death Match (DM)",
+            "detail": "Start with very large resources (e.g. 20k each) and usually Imperial Age available quickly; pure army/production battles. Economy matters less; unit counters and micro matter more. Niche but long-standing community."
+          },
+          {
+            "name": "Return of Rome (RoR)",
+            "detail": "Separate Antiquity game mode using AoE1-style mechanics and civilizations (Egyptians, Greeks, Romans etc.), with its own ranked queues. Different tech tree, units and ages (Stone, Tool, Bronze, Iron). Coaching content for AoE2 RM does not transfer directly."
+          },
+          {
+            "name": "Chronicles (Battle for Greece, Alexander)",
+            "detail": "Paid add-ons with antiquity civs (Achaemenids, Athenians, Spartans, Macedonians, Thracians, Puru) usable in campaigns, skirmish and custom lobbies, but not in ranked. Have unique mechanics (e.g. Athenian/Spartan specific buildings)."
+          },
+          {
+            "name": "Other game modes",
+            "detail": "Regicide (protect a King), King of the Hill (hold a central Monument), Wonder Race, Defend the Wonder, Capture the Relic, Sudden Death (lose your single TC = lose), Battle Royale, Treaty (no attack before timer), Nomad start (no TC). Available in lobbies and skirmish."
+          },
+          {
+            "name": "Quick Play / Lobby / Skirmish",
+            "detail": "Quick Play: unranked matchmaking. Lobby browser: custom games with chosen settings (tournaments, mods). Skirmish: vs AI (Easiest to Extreme). The Extreme AI is a reasonable training partner for build orders but behaves predictably."
+          },
+          {
+            "name": "Campaigns, Art of War, Learn to Play",
+            "detail": "Single-player historical campaigns (many DLC campaigns), Art of War challenges (timed drills: early economy, booming, attacking, defending - excellent benchmark practice with medals), Learn to Play tutorial for new players."
+          },
+          {
+            "name": "Spectating and replays",
+            "detail": "Live spectate with delay and recorded games (.aoe2record) can be watched from the main menu. Replays show all players' information, so they are ideal for post-game coaching but not part of live play. Built-in post-game statistics give villager count, idle time, military score and age-up times."
+          },
+          {
+            "name": "Team vs 1v1 differences",
+            "detail": "Team games: more booming and late-game, team bonuses matter, trade (Trade Carts between allied Markets) becomes the main gold source late. 1v1: more early aggression, map control and scouting dominate; gold runs out later so trash units matter in long games."
+          }
+        ]
+      },
+      {
+        "id": "maps",
+        "items": [
+          {
+            "name": "Arabia",
+            "detail": "Open land map with scattered trees and hills, 2 gold and 1 stone per player plus extras. Most played ranked map. Encourages Feudal aggression (scouts, archers, men-at-arms) and Castle Age knights/crossbows. Players often wall with palisades. Hills give +25% damage advantage, so fight uphill only when necessary."
+          },
+          {
+            "name": "Arabian Desert (new 2026)",
+            "detail": "Added in Update 185872 (Sep 2026). Desert variant of Arabia appearing in ranked statistics alongside Arabia. Exact generation (resources, terrain) unverified - treat like an open land map with Feudal aggression until confirmed."
+          },
+          {
+            "name": "Arena",
+            "detail": "Each player starts inside stone walls with extra resources. Feudal aggression rarely pays off; standard is fast castle into boom, monks/relics, knights, siege (rams/mangonels) or towers. Classic plans: fast castle + monks, 2-3 TC boom, fast Imperial. Key: break walls with siege and avoid being out-boomed."
+          },
+          {
+            "name": "Islands / Team Islands",
+            "detail": "Players on separate islands; only reachable by water. Play is naval: docks early, fishing ships, galleys, fire ships, demolition ships, then transport ships for landings. Civs with naval bonuses (Vikings, Italians, Portuguese, Malay, Dravidians, Japanese, Danes, Saxons) shine."
+          },
+          {
+            "name": "Black Forest",
+            "detail": "Closed map: dense forest leaves narrow paths. Boom-oriented (multiple TCs), Castle/Imperial Age armies with siege; trebuchets and onagers (which can cut trees with Siege Onager) matter. Walling the few entrances is easy."
+          },
+          {
+            "name": "Nomad / Land Nomad",
+            "detail": "Players start without a TC (villagers spread). Must choose TC location quickly. Nomad (water) leads to early docks/water fights; Land Nomad is land-only. Early scouting and fast house/TC placement are key; first minutes are chaotic."
+          },
+          {
+            "name": "Hybrid maps (Baltic, Mediterranean, Four Lakes, Scandinavia, Northern Isles)",
+            "detail": "Land + water: control of water (fish and naval dominance) often decides games; players must decide whether to fight on water or land. Losing water usually means being shot at by galleys and losing fish income."
+          },
+          {
+            "name": "Closed/semi-closed land (Hideout, Fortress, Golden Pit, Socotra, Glade)",
+            "detail": "Hideout/Fortress give walls or pre-built defences (Fortress: start with walls/towers); Golden Pit/Gold Rush concentrate gold in contested middle; Socotra and Glade are newer ranked staples. These reward strong Castle Age play and control of central resources."
+          },
+          {
+            "name": "Megarandom",
+            "detail": "Random map type and terrain each game (land, water, hybrid, closed). Tests adaptability; scouting the map early is essential to choose the plan."
+          },
+          {
+            "name": "Haboob, Michi, Steppe, Serengeti and others",
+            "detail": "Frequently seen in rotations. Haboob: open desert with different resource layout (unverified details). Michi: forests divide players (boom). Steppe: open, few trees, lots of food (cavalry). Serengeti: lots of hunt. Rotating maps change - read the map name on the loading screen."
+          },
+          {
+            "name": "Map positions and hills",
+            "detail": "Elevation: units on higher ground deal +25% damage to lower units and receive -25% (DE rules; some civ bonuses modify). Ranged units on hills are strong; avoid engaging uphill. Fight near your own TC/towers. Front woodlines are vulnerable to raids."
+          },
+          {
+            "name": "Map pool rotation",
+            "detail": "Ranked pools rotate roughly every two weeks; usually ~7-9 maps in 1v1 with Arabia constant. The ranked player sees the map name on the loading screen and in the top-of-game objectives. Map stats sites (aoe2insights, aoestats) show best civs per map."
+          },
+          {
+            "name": "Resources per map (typical land)",
+            "detail": "Per player on standard land maps: ~8 sheep near TC (plus more scattered), 2 wild boar (sometimes 3), 1 berry bush cluster (6 bushes), some deer, 1 large gold (7 piles) + smaller golds, 1 stone (5-6 piles), several woodlines. Relics in neutral areas (5 on most maps)."
+          }
+        ]
+      },
+      {
+        "id": "screens",
+        "items": [
+          {
+            "name": "Main menu",
+            "detail": "Large menu with buttons: Single Player (Campaigns, Skirmish, Art of War, Learn to Play), Multiplayer (Quick Play, Ranked, Lobby Browser, Spectate), Profile/Leaderboards, Learning/Tech Tree, Options, Store/DLC. No in-game HUD; no resource bar. Coach should stay idle or offer pre-game tips."
+          },
+          {
+            "name": "Lobby / game setup screen",
+            "detail": "Shows player slots (name, civ dropdown, colour, team, ping), map selection, game settings (map size, resources, pop cap, starting age, victory, reveal map, game speed). A ready/start button. Coach can read map and civs here to prepare matchup advice."
+          },
+          {
+            "name": "Ranked matchmaking / civ select",
+            "detail": "Queue screen with map preferences (favourites and bans) and civ selection (random or chosen). After a match is found a loading screen appears with player names, civ emblems, Elo and map name."
+          },
+          {
+            "name": "Loading screen",
+            "detail": "Full-screen image with progress bar, map name and player cards (name, civ, team colour, rating in ranked). Best moment to give a matchup summary: opponent civ unique units, what to scout for, recommended opening."
+          },
+          {
+            "name": "In-game (live) screen",
+            "detail": "Top resource bar (wood, food, gold, stone, population), age/clock at top, minimap bottom-right, command panel bottom-left, selection panel bottom-centre. Presence of the game clock ticking identifies live play vs pause."
+          },
+          {
+            "name": "Pause screen",
+            "detail": "Game halts and a 'Paused' message overlays the screen; clock stops. In multiplayer, pauses are limited. Coach can use pauses for longer advice."
+          },
+          {
+            "name": "Tech tree screen",
+            "detail": "Full-screen chart of the selected civ's buildings, units and techs by age; unavailable items are greyed/dimmed. Opened via the Tech Tree button in the top-right menu or main menu. Useful to confirm what a civ lacks."
+          },
+          {
+            "name": "Post-game / statistics screen",
+            "detail": "Victory or Defeat banner, then tabs: Summary/Score, Military (units killed/lost, buildings razed), Economy (resources collected, tributes, trade), Technology (age-up times), Society (relics, wonders, conversions), and a Timeline graph. Ideal for coaching: compare Feudal/Castle times, villagers, idle time."
+          },
+          {
+            "name": "Replay / spectator view",
+            "detail": "Shows replay controls (play/pause, speed, timeline seek) and player-selection dropdown; can show all players' resources. If the coach detects replay UI it should label advice as post-game review."
+          },
+          {
+            "name": "Victory/Defeat banners",
+            "detail": "Large centred text 'Victory!' or 'Defeat'/'You have been defeated' or 'X resigned'. Signals end of match - coach should switch to review mode."
+          },
+          {
+            "name": "Chat and notifications",
+            "detail": "Chat lines appear on the left/top-left; system messages like 'X has advanced to the Feudal Age', 'X is researching/has built a Wonder', 'Your relic has been ...', and tributes. Age-up messages for the opponent reveal their timing - useful for adaptation."
+          },
+          {
+            "name": "Diplomacy / objectives / menu dialogs",
+            "detail": "Pop-up dialogs from the top-right buttons: Objectives (shows victory conditions and map), Chat, Diplomacy (ally/enemy, tribute), Menu (save, options, resign, quit). Resign confirmation appears from Menu."
+          }
+        ]
+      },
+      {
+        "id": "hud",
+        "items": [
+          {
+            "name": "Resource bar (top-left)",
+            "detail": "Shows stockpiled Wood, Food, Gold, Stone with icons, then Population as current/available (e.g. 34/40). In DE, small numbers next to each resource show how many villagers are gathering it. Pop near cap (e.g. 38/40) = need houses now."
+          },
+          {
+            "name": "Population and housing",
+            "detail": "Each House gives +5 pop (costs 25 wood); TC gives +5; civ exceptions: Huns need no houses, Inca houses give +10. If pop equals cap the TC stops and the population number flashes/turns red; 'You need to build more houses' notification. Max pop usually 200."
+          },
+          {
+            "name": "Idle villager button",
+            "detail": "Button near the minimap (bottom right area) with a villager icon and a count of idle villagers. Hotkey '.' cycles idle villagers (',' for idle military in DE default grid). A non-zero idle count for more than a few seconds is a key coaching trigger."
+          },
+          {
+            "name": "Game clock and age indicator",
+            "detail": "Top centre/top area shows current Age (Dark/Feudal/Castle/Imperial Age) and in-game time (hh:mm:ss) and optionally speed. During an age-up research, the TC shows a progress bar; DE also shows age-up progress for players in the scores panel."
+          },
+          {
+            "name": "Minimap (bottom-right)",
+            "detail": "Shows terrain, player-coloured units/buildings, resources and fog. Flashing dots/alerts show attacks. Buttons around it toggle modes (combat/economy/normal), formation, signal flare. Coach can read enemy army presence on minimap only where visible (not fogged)."
+          },
+          {
+            "name": "Command panel (bottom-left)",
+            "detail": "Grid of buttons for the selected unit/building: build menus for villagers (economic and military buildings), train/research buttons for buildings, stance/formation buttons for military. Cost appears on hover tooltip."
+          },
+          {
+            "name": "Selection panel (bottom-centre)",
+            "detail": "Shows portrait(s), HP bar, attack, armor (melee/pierce), range, and for buildings the production queue with progress. Multiple selection shows unit icons. Reading the queue lets the coach detect idle TC (empty queue) or over-queuing."
+          },
+          {
+            "name": "Score panel",
+            "detail": "Optional panel above the minimap showing each player's score and in DE (if enabled) age-up progress. Military/economy score gaps hint at who is ahead but score is a weak indicator."
+          },
+          {
+            "name": "Top-right menu buttons",
+            "detail": "Objectives, Chat, Diplomacy, Tech Tree, Menu (and in DE quick tutorial/settings). Hotkey F10 opens menu (default). Game speed shown in lobby/scores in replays."
+          },
+          {
+            "name": "Alerts and sounds",
+            "detail": "Attack alerts (horn/'Your army is under attack', 'Your villagers are under attack') with minimap flashes; Town Bell (hotkey depends on layout) garrisons villagers. TC idle has no explicit alert - coach must detect it from the queue/selection panel or villager count stagnation."
+          },
+          {
+            "name": "Key default hotkeys (grid/classic vary)",
+            "detail": "H = select Town Center (then Q = villager in grid), Ctrl+ select buildings, '.' idle villager, ',' idle military, Shift = queue, Delete = kill selected, F3 pause (default), Space = go to last event. Hotkey layouts differ (Grid vs Classic vs custom) - the coach should not assume exact keys (unverified per profile)."
+          },
+          {
+            "name": "Health and status indicators",
+            "detail": "Units show HP bars (toggleable), garrison count icons on buildings, flags on relic-holding monasteries, research progress bars on buildings. Converting monks show a chant animation. Gather points/rally flags are visible when a building is selected."
+          },
+          {
+            "name": "Villager count per resource",
+            "detail": "DE shows villager counts per resource under the resource icons (food/wood/gold/stone) and total villager count on hover; this lets the coach estimate eco balance (e.g. 'only 2 on gold while going Castle')."
+          }
+        ]
+      },
+      {
+        "id": "roster",
+        "items": [
+          {
+            "name": "Armenians",
+            "detail": "UUs: Composite Bowman (ignores part of armor), Warrior Priest (monastery infantry-healer). Militia and Spearman upgrades come an age early; Mule Carts as mobile drop sites; Fortified Church; strong galleys. UTs Cilician Fleet, Fereters. Feudal Long Swords/M@A pressure, then infantry+archers. Beat: archers/hand cannons vs infantry, cavalry or siege vs Composite Bowmen. High 2026 win rate."
+          },
+          {
+            "name": "Aztecs",
+            "detail": "UU: Jaguar Warrior (anti-infantry). No cavalry: Eagle Warriors replace it. Villagers carry more, military created faster, Monks +HP per Monastery tech, relics more gold, start +gold. UTs Atlatl (skirms +1/+1), Garland Wars (infantry +4 attack). Strong eagles, monks, siege. Beat: Champions/long swords vs eagles, archers vs Jaguars/infantry, light cav vs monks; out-trade late when gold runs low."
+          },
+          {
+            "name": "Bengalis",
+            "detail": "UU: Ratha (chariot switching melee/ranged). Elephants (Battle Elephant, Elephant Archer) resist bonus damage/conversion; TCs spawn 2 villagers on each age-up (DE values; verify); ships regenerate. UTs Paiks (Rathas/elephants attack faster), Mahayana (villagers/monks less pop). Beat: halberdiers + monks vs elephants, skirms/infantry vs Rathas; punish slow elephant mass with mobility."
+          },
+          {
+            "name": "Berbers",
+            "detail": "UUs: Camel Archer (anti cavalry-archer), Genitour (mounted skirmisher). Villagers move faster, Stable units cheaper (Castle/Imp), ships faster. UTs Kasbah (castles work faster for team), Maghrebi Camels (camels regenerate). Strong Camels, Cav Archers, Genitours. Beat: heavy infantry (champions), arbalests, monks vs camels; pikes vs cav archers mixed with skirms."
+          },
+          {
+            "name": "Bohemians",
+            "detail": "UUs: Hussite Wagon (pierce-tank cart that shields units), Houfnice (unique bombard upgrade). Gunpowder and Chemistry in Castle Age, cheaper Monastery techs, mining-related eco bonuses, Spearman-line bonus damage +25%. UTs Wagenburg Tactics, Hussite Reforms. Beat: early aggression (Feudal), knights/cav vs hand cannons, siege onagers vs clumps; their cavalry is weak."
+          },
+          {
+            "name": "Britons",
+            "detail": "UU: Longbowman (very long range archer). Foot archers +range in Castle/Imperial, cheaper TCs, shepherds faster, archery ranges work faster. UTs Yeomen (+range, tower attack), Warwolf (trebuchet splash). Masters of mass archers. Beat: skirmishers, rams vs archers under TCs, siege onagers, knights/eagles/huskarls closing distance; they lack strong late cavalry."
+          },
+          {
+            "name": "Bulgarians",
+            "detail": "UU: Konnik (cavalry that dismounts into infantry on death); Krepost (small castle). Militia-line upgrades free, cheaper TCs (stone), Blacksmith upgrades cheaper. UTs Stirrups (cav attack faster), Bagains (militia +5 melee armor). Strong M@A rush, Konnik/Knights, Champions. Beat: mass archers/hand cannons; weak archer line; avoid melee trades."
+          },
+          {
+            "name": "Burgundians",
+            "detail": "UUs: Coustillier (charge-attack cavalry), Flemish Militia (via Flemish Revolution). Economic upgrades available an age earlier, Cavalier upgrade in Castle Age, gunpowder bonus damage, relics generate food (reduced in 2026). UTs Burgundian Vineyards, Flemish Revolution. Strong knight play. Beat: pikemen/camels/monks vs cav; pressure before eco upgrades pay off."
+          },
+          {
+            "name": "Burmese",
+            "detail": "UU: Arambai (inaccurate ranged cavalry with high damage). Free lumberjack upgrades, infantry +1 attack per age, cheaper Monastery techs, relics visible. UTs Howdah (elephants +armor), Manipur Cavalry. Battle elephants, Arambai, infantry. Beat: skirmishers/archers vs Arambai (low pierce armor), halberdiers + monks vs elephants, cavalry vs infantry-light comps."
+          },
+          {
+            "name": "Byzantines",
+            "detail": "UUs: Cataphract (anti-infantry heavy cav); Varangian Guard (now regional). Counter units (spears, skirms, camels) cheaper, buildings have extra HP, Imperial Age cheaper, Town Watch free, monks heal faster, fire ships stronger. UTs Greek Fire, Logistica. Great defensive/trash civ. Beat: target eco early (no eco bonus), mass gold units with good upgrades, cataphracts lose to archers/hand cannons."
+          },
+          {
+            "name": "Celts",
+            "detail": "UU: Woad Raider (fast infantry). Infantry move faster, lumberjacks faster, siege fires faster, livestock protection; team bonus siege workshops faster. UTs Stronghold (castles fire faster/heal infantry), Furor Celtica (siege +HP). Strong siege onagers/scorpions + infantry. Beat: archers/hand cannons vs infantry, cavalry vs siege (spread units vs onagers), early archer harass."
+          },
+          {
+            "name": "Chinese",
+            "detail": "UU: Chu Ko Nu (multiple arrows). Start +3 villagers but less food/wood, techs cheaper by age, TCs +pop, Demolition ships +HP. UTs Great Wall, Rocketry (scorpions/CKN). Gained some 3K-era content (verify). Versatile archers/knights/monks. Beat: punish the slower start with early pressure; skirms/onagers vs Chu Ko Nu; mixed armies."
+          },
+          {
+            "name": "Cumans",
+            "detail": "UU: Kipchak (multi-arrow cav archer); Steppe Lancer (regional). Can build a 2nd TC in Feudal, Siege Workshop and Battering Ram in Feudal, cavalry faster per age. UTs Steppe Husbandry, Cuman Mercenaries (team). Famous Feudal TC boom and ram rush. Beat: punish Feudal TC boom with aggression; pikes/camels vs cav, skirms vs Kipchaks."
+          },
+          {
+            "name": "Danes (2026)",
+            "detail": "UU: Jomsviking (hardy infantry that throws torches at buildings/ships). Food drop-off bonus for villagers/fishing ships, loot from destroyed enemy buildings (~25% of cost; figures vary), Barracks/Siege Workshop techs cheaper gold, faster Varangian Guards/Longships; team: siege +2 LOS. UTs Hamask (infantry +attack when hurt), Northmen's Fury (siege vs buildings). Beat: archers/HC, cavalry vs siege."
+          },
+          {
+            "name": "Dravidians",
+            "detail": "UUs: Urumi Swordsman (charge attack infantry), Thirisadai (big warship). Wood bonus on age-up, fishermen carry more, cheaper Barracks techs, skirms/Elephant Archers attack faster; no Knight line. UTs Medical Corps, Wootz Steel (melee ignores armor). Strong water and infantry/skirms. Beat: cavalry archers and knights on land; dominate water early or they snowball."
+          },
+          {
+            "name": "Ethiopians",
+            "detail": "UU: Shotel Warrior (very fast-attacking infantry). Archers fire faster, +food/gold on each age-up, Pikeman upgrade free, siege bonus via Torsion Engines (bigger blast). UTs Royal Heirs, Torsion Engines. Strong Feudal archers, crossbows, halb+arbalest. Beat: knights/skirms early, siege onagers vs mass archers, cav archers outmanoeuvre."
+          },
+          {
+            "name": "Franks",
+            "detail": "UU: Throwing Axeman (ranged-melee infantry). Cavalry +20% HP, farm upgrades free, foragers faster, cheaper castles. UTs Bearded Axe, Chivalry (stables work faster). Iconic knight/paladin civ; scouts into knights on Arabia. Beat: pikes/halbs, camels, monks; archers + pikes in Feudal; keep pikes ready when knights hit Castle Age."
+          },
+          {
+            "name": "Georgians",
+            "detail": "UU: Monaspa (cavalry stronger in groups). Shares Mule Cart and Fortified Church with Armenians. Cavalry regeneration, elevation/defence bonuses and cheaper repairs (verify specifics). UTs Svan Towers, Aznauri Cavalry. Strong knight-line/cavalry and defensive play. Beat: pikes/camels vs cav, monks; don't fight them uphill."
+          },
+          {
+            "name": "Goths",
+            "detail": "UU: Huskarl (infantry with huge pierce armor). Infantry cheaper each age, infantry bonus vs buildings, hunters faster, +10 pop in Imperial, instant Loom. UTs Anarchy, Perfusion (barracks 100% faster). Infantry flood late. No Stone Walls; weak early defence. Beat: early archers/scouts before infantry flood, hand cannons/cataphracts/onagers/champions vs huskarls late."
+          },
+          {
+            "name": "Gurjaras",
+            "detail": "UUs: Chakram Thrower (pass-through ranged infantry), Shrivamsha Rider (dodging light cav). Livestock garrisoned in Mills generates food, mounted units deal extra bonus damage, foragers faster; camels/elephant archers strong. UTs Kshatriyas (cheaper military food), Frontier Guards. Beat: infantry vs camels, archers/arbalests in mass, monks vs elephant archers."
+          },
+          {
+            "name": "Hindustanis",
+            "detail": "UUs: Ghulam (anti-archer infantry), Imperial Camel upgrade. Villagers cheaper each age, camels bonus vs buildings, gunpowder +armor, Caravanserai (trade). UTs Grand Trunk Road, Shatagni (HC +range). Frequently top-tier in 2026 lists. Strong camels/hand cannons/archers. Beat: archers/infantry vs camels, siege onagers vs HC clumps, early pressure before vil discount snowballs."
+          },
+          {
+            "name": "Huns",
+            "detail": "UU: Tarkan (anti-building cavalry). No houses needed, cav archers cheaper, stables work faster, trebuchets more accurate. UTs Marauders (Tarkans at stables), Atheism. Strong scout/knight/CA aggression; weak late monks/infantry. Beat: walls + pikes early, skirms/camels vs CA, halbs + arbalests late; trade into Imperial when their gold runs out."
+          },
+          {
+            "name": "Incas",
+            "detail": "UU: Kamayuk (long-reach spear). Slingers and Champi Warriors now regional; Incas also got Settlements (2026). Start with Llama, villagers benefit from blacksmith armor, houses +10 pop, buildings cost less stone, military food discount (buffed 2026). UTs Andean Sling, Fabric Shields. Strong eagles/slingers/kamayuks. Beat: champions vs eagles, cavalry vs slingers."
+          },
+          {
+            "name": "Italians",
+            "detail": "UUs: Genoese Crossbowman (anti-cavalry archer), Condottiero (anti-gunpowder infantry). Cheaper age-ups, cheaper dock techs/fishing, gunpowder cheaper. UTs Pavise (archer armor), Silk Road (cheaper trade). Strong water, arbalests/Genoese, fast Castle. Beat: skirms/onagers vs archers, infantry or siege vs Genoese; deny water early."
+          },
+          {
+            "name": "Japanese",
+            "detail": "UU: Samurai (anti-unique-unit infantry). Cheaper drop-site camps, fishing ships stronger, infantry attack faster from Feudal, strong trebuchets. UTs Yasama, Kataparuto. Strong M@A rush, champions, arbalests, water. Beat: archers vs infantry, onagers, cavalry vs archers; out-trade champions with hand cannons/archers."
+          },
+          {
+            "name": "Jurchens (2025)",
+            "detail": "UUs: Iron Pagoda (cavalry that sometimes blocks melee hits), Grenadier (incendiary-bomb infantry). Hunt/livestock meat does not decay, mounted units and Fire Lancers attack faster from Feudal, siege/fortification upgrades cheaper, reduced friendly fire. UTs Fortified Bastions, Thunderclap Bombs. Team: gunpowder +2 LOS. Beat: pikes/camels/monks vs cav; skirms/cav vs grenadiers."
+          },
+          {
+            "name": "Khitans (2025)",
+            "detail": "UUs: Liao Dao (infantry with lingering bleed damage), Mounted Trebuchet (camel siege). Pastures replace Farms (livestock food; techs Domestication/Pastoralism/Transhumance); melee attack upgrades stronger (verify). UTs Ordo Cavalry, Lamellar Armor (reflect melee damage). Team: infantry +2 vs ranged. Beat: archers/HC vs infantry, cavalry raids on pasture eco."
+          },
+          {
+            "name": "Khmer",
+            "detail": "UU: Ballista Elephant (scorpion on an elephant). No buildings needed to age up, villagers garrison in houses, farmers efficient, battle elephants faster; team scorpions +range. UTs Tusk Swords, Double Crossbow. Strong elephants/scorpions/flexible openings. Beat: halberdiers + monks vs elephants, mangonels can hurt ballista clumps, infantry swarm vs scorpions."
+          },
+          {
+            "name": "Koreans",
+            "detail": "UUs: War Wagon (armored ranged cav), Turtle Ship. Free tower upgrades, towers +range, military units cost less wood, stone mining bonus. UTs Eupseong (towers +range), Shinkichon (mangonels +range). Tower rush and onager-heavy comps. Beat: rams vs towers, cavalry/halbs vs War Wagons, spread vs onagers, siege rams + knights."
+          },
+          {
+            "name": "Lithuanians",
+            "detail": "UU: Leitis (cavalry ignoring armor); Winged Hussar (regional). Extra starting food, spear/skirm faster, Knights/Leitis gain attack per relic (max 4). UTs Hill Forts, Tower Shields (spear/skirm pierce armor). Strong knights/relic play. Beat: deny relics with monks/light cav, pikes/camels, monks vs cav; early archer play."
+          },
+          {
+            "name": "Magyars",
+            "detail": "UU: Magyar Huszar (cheap fast cavalry). Forging line free, scouts cheaper, villagers kill wolves easily, cav archers +range via Recurve Bow. UTs Corvinian Army, Recurve Bow. Scout rush, CA, hussar/paladin late. Beat: pikes/camels vs cav, skirms vs CA, arbalest + halb; walls vs early raids."
+          },
+          {
+            "name": "Malay",
+            "detail": "UUs: Karambit Warrior (cheap half-pop infantry), Harbor (dock that shoots). Ages advance much faster, fish traps cheap/infinite, Battle Elephants cheaper, docks +LOS. UTs Thalassocracy, Forced Levy (Champions cost no gold). Strong water, elephants, two-handed swordsman spam. Beat: archers/HC vs infantry, monks/halbs vs elephants, outplay water."
+          },
+          {
+            "name": "Malians",
+            "detail": "UU: Gbeto (fast, fragile thrown-weapon infantry). Buildings cost less wood, Barracks units +pierce armor each age, gold mining bonus. UTs Tigui (TCs fire arrows without garrison), Farimba (cavalry +attack). Strong infantry vs archers, camels, Farimba knights. Beat: cavalry vs gbetos, onagers vs infantry, archers early before armor stacks."
+          },
+          {
+            "name": "Mapuche (2026)",
+            "detail": "UUs: Kona (Castle cavalry, more damage vs injured units), Bolas Rider (ranged cav that slows). Infantry/Slinger/Skirm +HP per age, mounted units gain gold per enemy military kill, forager bonus. UTs Malon (pass-through damage), Butalmapu. Slinger/Champi regional. Exact numbers unverified. Beat: archers vs infantry, pikes/camels vs Kona."
+          },
+          {
+            "name": "Mayans",
+            "detail": "UU: Plumed Archer (fast, armored archer). Start +1 villager (-50 food), resources last 15% longer, archery units cheaper each age, cheaper walls. UTs Hul'che Javelineers, El Dorado (eagles +HP). No cavalry: eagles + archers. Very strong ladder civ. Beat: early aggression, skirms/onagers vs plumes, champions/hand cannons vs eagles."
+          },
+          {
+            "name": "Mongols",
+            "detail": "UU: Mangudai (fast cav archer with bonus vs siege); Steppe Lancer (regional). Cav archers fire faster, light cav/hussars +HP, hunters work faster. UTs Nomads, Drill (siege moves 50% faster). Scout rush, CA, siege onagers. Beat: camels and skirms, walls vs scouts, halbs vs lancers, arbalests + siege rams."
+          },
+          {
+            "name": "Muisca (2026)",
+            "detail": "UUs: Guecha Warrior (Castle, javelin-throwing anti-archer with high pierce armor; death heals nearby Guechas), Temple Guard (heavy infantry, Barracks/Monastery, attacks faster in combat). Cheaper Settlements, Champi/Archery units +melee armor, free Caravan/Guilds; team gold lasts longer. UTs Herbalism, Huaracas. Numbers unverified. Beat: cavalry vs Guechas."
+          },
+          {
+            "name": "Persians",
+            "detail": "UUs: War Elephant, Savar (Persian Paladin replacement). Strong economy/TC bonuses, knights bonus vs archers. UTs Kamandaran (archer-line no gold), Citadels. Strong knights/savar, elephants late. Beat: pikes/halbs and camels vs cavalry, monks + halbs vs elephants, archers early before cavalry comes."
+          },
+          {
+            "name": "Poles",
+            "detail": "UUs: Obuch (armor-shredding infantry), Winged Hussar (regional). Folwark replaces Mill (extra food from farms), villagers regenerate, stone miners generate gold. UTs Szlachta Privileges (knights cheaper gold), Lechitic Legacy (light cav trample). Strong knights/hussars eco. Beat: pikes/camels vs cav, archers vs obuch, raid folwark farms."
+          },
+          {
+            "name": "Portuguese",
+            "detail": "UUs: Organ Gun (multi-bullet gunpowder), Caravel (pass-through ship); Feitoria building. All units cost less gold, ships +HP, Cartography free, techs research faster. UTs Carrack, Arquebus. Strong arbalests, water, gunpowder. Beat: aggression before Castle, knights vs organ guns/arbalests, onagers/rams, punish slow mobility."
+          },
+          {
+            "name": "Romans",
+            "detail": "UUs: Legionary (replaces Two-Handed/Champion), Centurion (aura cavalry). Strong Feudal M@A/infantry, cheap/strong Scorpions (Ballistas UT), galley bonuses. UTs Ballistas, Comitatenses (charge attacks). Beat: archers/HC vs infantry, cavalry vs scorpions, onagers vs infantry clumps, keep army away from Centurion auras."
+          },
+          {
+            "name": "Saracens",
+            "detail": "UU: Mameluke (ranged-melee camel). Strong market, camels and archers bonuses, foot archers bonus vs buildings. UTs Bimaristan (monks heal multiple), Counterweights (siege attack). Market-abuse, camels/archers. Beat: archers/arbalests and champions vs camels and Mamelukes, knights vs their archers, monks; deny market abuse by pressuring early."
+          },
+          {
+            "name": "Saxons (2026)",
+            "detail": "UU: Hearth Troop (heavy infantry, opens with a javelin). Drop sites give small food/stone when built, foot soldiers cheaper per TC/Castle (max -20%), towers/castles fire extra arrows from Castle Age, Longships/Catapult Galleons +HP; team: allies repair faster. UTs Clerical Recruitment, Shield Wall (massed infantry armor). Beat: archers, siege vs fortifications."
+          },
+          {
+            "name": "Shu (2025)",
+            "detail": "UUs: White Feather Guard (infantry that slows), War Chariot (crossbow vehicle). Lumberjacks generate some food, archer techs cheaper, siege faster; Hei Guang Cavalry and Traction Trebuchet regional. UTs Coiled Serpent Array, Bolt Magazine. Strong archers/siege. Beat: knights/skirms vs archers, cavalry vs siege/chariots (verify chariot armor class)."
+          },
+          {
+            "name": "Sicilians",
+            "detail": "UU: Serjeant (infantry that builds Donjons). Land units absorb a third of bonus damage, Castles/TCs built faster, farm bonus. UTs First Crusade (TCs spawn Serjeants), Hauberk (knights +armor). Strong knights and Donjon aggression. Beat: generic-damage units (champions, arbalests) since counters lose bonus effectiveness, raid eco early."
+          },
+          {
+            "name": "Slavs",
+            "detail": "UU: Boyar (high melee armor cavalry). Farmers work faster, Tracking free, siege cheaper, military buildings +5 pop. UTs Detinets (castles/towers use wood), Druzhina (infantry trample). Strong knights/boyars, siege, infantry. Beat: archers early (Slavs archers weak late), camels/halbs/monks vs cav."
+          },
+          {
+            "name": "Spanish",
+            "detail": "UUs: Conquistador (mounted hand cannoneer), Missionary (mounted monk). Builders faster, blacksmith upgrades no gold, gunpowder fires faster, trade bonus (team). UTs Inquisition, Supremacy. Strong paladin/conquistador and late gunpowder. Beat: skirms/camels vs conqs, halbs/camels vs paladins, deny trade late."
+          },
+          {
+            "name": "Tatars",
+            "detail": "UUs: Keshik (gold-generating cavalry), Flaming Camel; Steppe Lancer (regional). Livestock more food, units on higher elevation get extra damage, Thumb Ring/Parthian bonuses, new TCs spawn sheep. UTs Silk Armor, Timurid Siegecraft. Cav archers and Keshiks. Beat: camels/skirms vs CA, halbs vs keshiks, avoid fighting downhill."
+          },
+          {
+            "name": "Teutons",
+            "detail": "UU: Teutonic Knight (slow, tanky infantry). Monks heal from further, towers garrison more, Murder Holes free, cheaper farms, melee armor bonuses, conversion resistance. UTs Ironclad, Crenellations. Tank paladins, TK, siege, towers. Beat: archers and cav archers (they lack mobility), hand cannons vs TK, mangonels vs crossbows, raid farms."
+          },
+          {
+            "name": "Tupi (2026)",
+            "detail": "UUs: Blackwood Archer (Castle archer trained in pairs, half pop), Ibirapema Warrior (heavy infantry, area damage). Start +25 each resource, villagers garrison in Settlements, fallen units refund ~15% cost, Archery/Barracks upgrades cheaper food. UTs Caciques, Curare (poison). Team: towers/castles +10 pop. Numbers unverified. Beat: skirms/onagers vs archers, cav raids."
+          },
+          {
+            "name": "Turks",
+            "detail": "UU: Janissary (strong hand cannoneer). Gunpowder +HP and cheaper techs, Chemistry free, gold miners faster, light cav upgrades free, scout armor. UTs Sipahi (CA +HP), Artillery (bombard +range). Weak early (no strong eco), strong gunpowder late. Beat: early aggression; cavalry/eagles/huskarls vs Janissaries, onagers vs clumps; they lack halbs/elite skirms."
+          },
+          {
+            "name": "Varangians (2026)",
+            "detail": "UU: Jarl (axe-throwing cavalry, strong vs infantry). Shepherds/fishermen/hunters also generate gold, Bloodlines and Caravan stronger, Varangian Guards attack faster and make more gold, Longships/Catapult Galleons attack faster. UTs Vendel Legacy (knight trample), Gothikon. Team: Knight-line +1 vs infantry. Low early win rate (2026). Beat: pikes/camels, archers."
+          },
+          {
+            "name": "Vietnamese",
+            "detail": "UU: Rattan Archer (archer with high pierce armor). Enemy start positions revealed, archery units +HP, eco upgrades cost no wood, Imperial Skirmisher. UTs Chatras (elephants +HP), Paper Money. Strong archers, battle elephants. Beat: knights/hussars vs archers, onagers, hand cannons vs rattans (skirms weak vs rattans)."
+          },
+          {
+            "name": "Vikings (reworked 2026)",
+            "detail": "UU: Berserk (regenerating infantry). Free Wheelbarrow/Hand Cart, infantry +HP, cheaper warships. 2026 rework: lost Cavalry Archers and Gambesons, gained Varangian Guard, Mounted Crossbowman, Catapult Galleon (reported); Chieftains no longer gives gold from kills. UTs Chieftains, Bogsveigar. Strong water and infantry/archers. Beat: archers/HC vs infantry, deny water."
+          },
+          {
+            "name": "Wei (2025)",
+            "detail": "UUs: Tiger Cavalry (gains levels from kills; nerfed June 2026), Xianbei Raider (cav archer). Free villager per eco upgrade, Hei Guang Cavalry/Xianbei +HP in Castle/Imp, Traction Trebuchets/Lou Chuan cheaper. UTs Tuntian (military passively make food), Ming Guang Armor (mounted +4 melee armor). Team: cav +2 vs siege. Beat: pikes/camels/monks; deny snowballing Tiger Cav."
+          },
+          {
+            "name": "Wu (2025)",
+            "detail": "UUs: Fire Archer (incendiary archer), Jian Swordsman (heavy infantry with breakable shield). Military buildings/docks give food when built, infantry regenerates, Jian/Hei Guang +2 attack in Imperial, free Careening/Dry Dock. UTs Red Cliffs Tactics, Sitting Tiger. Team: houses built faster. Strong water/infantry (A-tier per Hera, Mar 2026). Beat: archers vs infantry, cav vs archers."
+          },
+          {
+            "name": "Chronicles civilisations (not ranked)",
+            "detail": "Achaemenids, Athenians, Spartans (Battle for Greece, 2024) and Macedonians, Thracians, Puru (Alexander the Great, Oct 2025). Antiquity-themed with own tech trees, available in campaigns/skirmish/custom lobbies only. If seen in a lobby, treat as custom game; coaching for ranked civs does not apply directly."
+          },
+          {
+            "name": "Unit: Villager",
+            "detail": "Gathers, builds, repairs; 50 food, 25s train at TC. Core of economy. Weak in combat (Loom +HP/armor). Protect from raids: garrison in TC (Town Bell), retreat behind walls/towers, build defences. Coaching: continuous production until ~100-130 villagers in 1v1."
+          },
+          {
+            "name": "Unit: Militia line (Militia, Man-at-Arms, Long Swordsman, Two-Handed, Champion)",
+            "detail": "Barracks infantry, food+gold. Strong vs buildings, eagles (bonus), trash units and cheap infantry; M@A rush in Feudal. Countered by archers (outranged, low pierce armor), hand cannoneers, cataphracts, Teutonic Knights, Samurai, Jaguar Warriors. Need Supplies/blacksmith armor. Champions are a late anti-trash unit."
+          },
+          {
+            "name": "Unit: Spearman line (Spearman, Pikeman, Halberdier)",
+            "detail": "Cheap food+wood anti-cavalry infantry with large bonus damage vs cavalry, camels and elephants. Counters: Knights, Camels, Steppe Lancers, elephants, Scouts. Weak to archers, hand cannons, militia-line (champions), scorpions/onagers. Late-game trash staple with Skirmishers."
+          },
+          {
+            "name": "Unit: Eagle Warrior line",
+            "detail": "Mesoamerican/South American infantry (Aztecs, Mayans, Incas and some newer civs) replacing cavalry: fast, high pierce armor, bonus vs monks and siege. Counters archers, monks, siege, raids. Countered by militia-line (bonus vs eagles), champions, cavalry with high attack (paladins), hand cannoneers, cataphracts."
+          },
+          {
+            "name": "Unit: Archer line (Archer, Crossbowman, Arbalester)",
+            "detail": "Ranged foot archers (wood+gold). Counter infantry (militia, spears), monks at range and slow units. Countered by Skirmishers (bonus vs archers, high pierce armor), Mangonels/Onagers (area damage vs clumps), Knights/Cavalry, Eagles, Huskarls, rams (very high pierce armor). Upgrades: Fletching/Bodkin/Bracer, Thumb Ring, Ballistics."
+          },
+          {
+            "name": "Unit: Skirmisher line",
+            "detail": "Cheap food+wood ranged infantry with bonus vs archers (and spears). Trash unit; very high pierce armor. Counters archers, cav archers (weakly), Genoese, Composite Bowmen (less). Countered by infantry (Militia line), cavalry (knights/scouts), Mangonels, hand cannoneers. Pair with spears/halbs vs cavalry."
+          },
+          {
+            "name": "Unit: Cavalry Archer line",
+            "detail": "Mobile mounted archer (wood+gold), strong with Thumb Ring/Parthian Tactics/Bloodlines; hit-and-run. Counter infantry, slow units, siege. Countered by Skirmishers (bonus vs archers), Camels/Light Cavalry/Hussars (catch them), Genoese, Camel Archers, Onagers. Vikings lost CA in 2026; many European civs use Mounted Crossbowman instead."
+          },
+          {
+            "name": "Unit: Mounted Crossbowman (regional, 2026)",
+            "detail": "New regional ranged cavalry for many European civs (Bohemians, Britons, Burgundians, Celts, Franks, Italians, Poles, Portuguese, Sicilians, Spanish, Teutons, Danes, Saxons, Varangians, Vikings per fan site; list unverified). ~45 HP, range 4, slower fire. Treat like a cav archer: counter with skirms, camels, light cav."
+          },
+          {
+            "name": "Unit: Hand Cannoneer",
+            "detail": "Gunpowder infantry (Imperial; Castle for some civs). Huge attack with bonus vs infantry, inaccurate at range; poor pierce armor. Counters infantry (champions, huskarls, eagles), cavalry moderately. Countered by cavalry (knights/hussars), onagers, archers/arbalesters outranging them, Condottieri; skirmishers are poor vs them."
+          },
+          {
+            "name": "Unit: Scout line (Scout, Light Cavalry, Hussar)",
+            "detail": "Cheap fast cavalry (food only). Scouting, raiding villagers, bonus vs monks and (light cav) good vs siege and cav archers in mass. Countered by Spearmen/Pikemen/Halberdiers, Camels, Knights, Archers en masse in Feudal. Hussars are the main late-game cavalry trash unit."
+          },
+          {
+            "name": "Unit: Knight line (Knight, Cavalier, Paladin)",
+            "detail": "Heavy cavalry (food+gold). High HP and melee armor; strong vs archers, skirms, siege and most infantry except spears. Countered by Pikemen/Halberdiers, Camels, Monks (conversion), Mamelukes, Genoese Crossbowmen, Kamayuks and massed Hand Cannons."
+          },
+          {
+            "name": "Unit: Camel Rider line",
+            "detail": "Fast cavalry with large bonus damage vs cavalry (and camels/ships for some). Available to Middle-Eastern, African, Indian civs. Counter knights, cav archers, steppe lancers, scouts. Countered by archers, militia-line infantry, monks and hand cannons; halberdiers trade roughly evenly."
+          },
+          {
+            "name": "Unit: Battle Elephant / Armored Elephant",
+            "detail": "Slow, very high HP cavalry (South/Southeast Asian, Persians/Indian). Trample (area) damage, strong vs buildings and melee. Countered by Halberdiers/pikes (bonus vs elephants), Monks (conversion, unless resisted), massed upgraded ranged units kiting, Mamelukes. Armored/Siege Elephant regional siege variant."
+          },
+          {
+            "name": "Unit: Elephant Archer",
+            "detail": "Tanky mounted archer for Indian civs. Strong vs infantry and slow armies. Countered by Skirmishers (archer class), Halberdiers/Pikes (elephant bonus), Monks, Onagers/Scorpions, Hand Cannons. Very costly - losing a group is a big swing."
+          },
+          {
+            "name": "Unit: Steppe Lancer",
+            "detail": "Regional cavalry (Cumans, Mongols, Tatars and other steppe civs) with melee range 1 allowing stacking; strong in groups vs infantry/archers/raids. Countered by Halberdiers, Camels, Knights in small engagements, Monks, Mamelukes."
+          },
+          {
+            "name": "Unit: Battering Ram line",
+            "detail": "Siege Workshop (Castle; Feudal for Cumans). Very high pierce armor, huge bonus vs buildings; units can garrison inside (adds speed/attack). Counters buildings, archers/towers/TCs. Countered by melee units: Militia line, Cavalry, Hussars, Mamelukes; villagers in emergencies. Never let rams hit your TC unchecked."
+          },
+          {
+            "name": "Unit: Mangonel line (Mangonel, Onager, Siege Onager)",
+            "detail": "Area-damage siege (Castle). Destroys massed archers, infantry, skirms; friendly fire. Counters clumped ranged/foot units. Countered by cavalry (knights/hussars), Bombard Cannons, enemy Onagers (micro), and splitting units to dodge shots. Siege Onager can cut trees."
+          },
+          {
+            "name": "Unit: Scorpion line (Scorpion, Heavy Scorpion)",
+            "detail": "Pass-through bolts; strong vs massed infantry and elephants (some civs). Very weak to cavalry and melee. Romans/Celts/Khmer specialties. Countered by cavalry, mangonels/onagers, bombard cannons."
+          },
+          {
+            "name": "Unit: Trebuchet / Traction Trebuchet",
+            "detail": "Long-range siege (Castle Imperial), packs/unpacks, huge damage vs buildings, cannot hit units well. Counters castles, towers, TCs, other trebuchets/siege at range. Countered by cavalry/any melee, Bombard Cannons. Traction Trebuchet: regional for Wu/Shu/Wei (verify specifics)."
+          },
+          {
+            "name": "Unit: Bombard Cannon",
+            "detail": "Gunpowder siege (Imperial, Chemistry). Long range, bonus vs buildings and siege; counters trebuchets, onagers, castles. Countered by cavalry and enemy bombard cannons/trebuchets; keep it shielded by your army."
+          },
+          {
+            "name": "Unit: Monk",
+            "detail": "Monastery. Converts enemy units (instant victory vs expensive units like knights/elephants), heals, picks up relics (gold). Counters elephants, knights, UU, siege (with Redemption). Countered by Light Cavalry/Hussars and Eagles (bonus vs monks), Scouts, archers at range, onagers, Faith (tech) on enemy side. Atonement/Redemption/Theocracy techs."
+          },
+          {
+            "name": "Unit: Galley line (Galley, War Galley, Galleon)",
+            "detail": "Main ranged warship; controls water, kills fishing ships, bonus vs ships. Counter Demolition ships (outrange). Countered by Fire Ships (bonus vs ships, short range) and Turtle Ships. Water triangle: fire > galley > demo > fire (approx)."
+          },
+          {
+            "name": "Unit: Fire Ship line",
+            "detail": "Close-range anti-ship warship with bonus damage vs ships, tanky. Counters galleys and other ships at close range. Countered by Demolition Ships and by Galleys kiting with good micro. Byzantine fire ships are especially strong."
+          },
+          {
+            "name": "Unit: Demolition Ship / Raft",
+            "detail": "Suicide ship with area damage, kills massed ships and docks. Countered by Galleys (outrange, kill before contact). Strong vs fire ships and clumped fleets. Dravidians/Chinese/Koreans variants."
+          },
+          {
+            "name": "Unit: Cannon Galleon line",
+            "detail": "Gunpowder siege ship with very long range, bonus vs buildings; destroys coastal buildings and units on shore. Weak vs other warships (min range). Countered by Galleys, Fire Ships, Demolition ships."
+          },
+          {
+            "name": "Unit: Longship (regional 2026)",
+            "detail": "Formerly Viking Longboat, renamed Longship in Update 185872 and shared by Vikings, Danes, Saxons, Varangians. Fires multiple arrows; strong vs ships and shore units. Countered by fire ships, demolition ships, cannon galleons at range (approx)."
+          },
+          {
+            "name": "Unit: Trade Cart / Trade Cog",
+            "detail": "Generates gold travelling between your Market (or Dock) and another player's/ally's Market; gold scales with distance. Key late-game gold source in team games. Countered by any raiding unit (light cav/hussars, CA); defend routes with walls/towers."
+          },
+          {
+            "name": "Unit: Slinger (regional 2026)",
+            "detail": "Ranged infantry for Incas, Mapuche, Muisca, Tupi (reworked Feb 2026; cost changed to 50F/25W in June 2026). Bonus vs infantry; counters infantry and eagles. Countered by cavalry and rams; treat as an anti-infantry ranged unit. Exact stats unverified."
+          },
+          {
+            "name": "Unit: Champi Warrior (regional 2026)",
+            "detail": "Fast infantry for Incas, Mapuche, Muisca, Tupi; can build Outposts, good for scouting/raiding and vs ranged soldiers (per official description). Likely countered by heavy cavalry (unverified). Costs changed in 2026 patches; stats unverified."
+          },
+          {
+            "name": "Unit: Varangian Guard (regional 2026)",
+            "detail": "Barracks shock infantry from Castle Age for Byzantines, Danes, Saxons, Varangians, Vikings. ~70 HP, 13 melee attack, 1 pierce armor (fan wiki); generates gold while attacking. Countered by archers, hand cannons, cataphracts, onagers; beats trash infantry and buildings."
+          },
+          {
+            "name": "Unit: Hei Guang Cavalry (regional 2025)",
+            "detail": "Knight-line replacement for Wu, Shu and Wei (Three Kingdoms). Treat as heavy cavalry: counter with pikes/halberdiers, camels, monks. Exact stats unverified."
+          },
+          {
+            "name": "Unit: Genitour (regional)",
+            "detail": "Mounted skirmisher (Berbers and allies/African civs). Strong vs archers and cav archers; mobile anti-archer. Countered by knights, militia-line infantry and onagers. Trash-ish unit costing food+wood."
+          },
+          {
+            "name": "Unit: Condottiero",
+            "detail": "Italian infantry available to Italians and their team in Imperial; bonus vs gunpowder units. Counters Hand Cannons, Janissaries, Conquistadors, Organ Guns. Countered by archers, cavalry."
+          },
+          {
+            "name": "Unit: Hussite Wagon / Organ Gun / War Wagon (ranged UU wagons)",
+            "detail": "Wagon-type UUs (Bohemian Hussite Wagon, Portuguese Organ Gun, Korean War Wagon): high pierce armor or ranged multi-shot. Counter with melee cavalry/infantry and Bombard/siege; avoid shooting them with archers (War Wagon/Hussite)."
+          },
+          {
+            "name": "Unit: Town Center (building)",
+            "detail": "Trains villagers, researches eco techs and age-ups; fires arrows when garrisoned (and per civ bonus). Base defence vs raids. 275W 100S (cost varies by civ). Extra TCs in Castle Age = boom. Countered by rams, trebs, bombard cannons, massed infantry/elephants. Keep TC production continuous."
+          },
+          {
+            "name": "Unit: Castle (building)",
+            "detail": "650 stone (cost varies), trains UUs and UTs, strong arrow fire and large range. Placing a forward castle can win games. Countered by trebuchets, bombard cannons, rams with infantry support, petards. Towers and walls cheaper defensive options."
+          },
+          {
+            "name": "Unit: Towers and Walls (buildings)",
+            "detail": "Watch/Guard/Keep towers (stone/wood) shoot arrows, can be garrisoned. Palisade (wood) and Stone walls block movement. Used to block raids and tower rush. Countered by rams, siege, infantry (vs palisades), villagers repairing on defence."
+          },
+          {
+            "name": "Unit: Unique units (general)",
+            "detail": "Each civ trains 1-2 unique units at its Castle (some at Barracks/Stable/other). Anti-UU options: Samurai (bonus vs UU), Monks (convert), Bombards vs ranged UU; read the selected unit's armour/attack panel to identify its class. See each civ entry."
+          }
+        ]
+      },
+      {
+        "id": "mechanics",
+        "items": [
+          {
+            "name": "Armor and damage formula",
+            "detail": "Each attack has typed damage (melee, pierce, plus bonus classes). Damage = sum over classes of max(0, attack - armor), with a minimum of 1 overall. Units have melee and pierce armor; bonus damage applies vs armor classes (cavalry, archer, infantry, building, siege, camel, elephant, ship, eagle, unique unit, etc.)."
+          },
+          {
+            "name": "Counter system summary",
+            "detail": "Spears beat cavalry; cavalry beats archers/siege; archers beat infantry; skirms beat archers; camels beat cavalry; infantry (militia) beats eagles/trash; eagles beat archers/monks; monks beat elephants/knights in small numbers; mangonels beat massed ranged/infantry; rams beat buildings; bombards beat siege. Always counter-build what you scout."
+          },
+          {
+            "name": "Gold vs trash units",
+            "detail": "Gold units (knights, crossbows, champions, CA, UUs) are stronger but drain gold. Trash units (spearmen line, skirmishers, scout/hussar line) cost no gold; late-game 1v1 when gold mines run out, armies shift to trash + trade/relic gold. Elite skirms + halbs + hussars is the classic trash comp."
+          },
+          {
+            "name": "Ages and age-up costs",
+            "detail": "Feudal: 500 food (+2 Dark Age buildings); Castle: 800 food 200 gold (+2 Feudal buildings); Imperial: 1000 food 800 gold (+ Castle or 2 Castle Age buildings). Research times ~130s/160s/190s at TC. Many civ bonuses reduce cost or time (Italians, Malay, Khmer, Muisca reported)."
+          },
+          {
+            "name": "Economy rates and techs",
+            "detail": "Villager 50 food, 25s at TC. Loom (villager HP/armor). Eco upgrades: Double-Bit Axe, Bow Saw, Two-Man Saw (wood); Horse Collar, Heavy Plow, Crop Rotation (farms); Gold/Stone Mining and Shaft Mining; Wheelbarrow, Hand Cart (villager speed/capacity). Get Double-Bit and Horse Collar in Feudal; Wheelbarrow around Feudal/Castle."
+          },
+          {
+            "name": "Food sources order",
+            "detail": "Sheep under TC first (6 vils), lure boars (villager shoots boar and runs to TC; 2 boars, sometimes 3), berries with a Mill, deer (push or hunt with scout), then farms (60 wood each) once hunt runs low. Herdables don't decay if not killed; killed carcasses decay slowly."
+          },
+          {
+            "name": "Elevation",
+            "detail": "Units on higher ground deal bonus damage and take less (roughly +/-25%; some civ bonuses change this, e.g. Tatars/Georgians). Hill control matters in archer fights and castle placement."
+          },
+          {
+            "name": "Conversion and relics",
+            "detail": "Monks convert units after a random chant time (shortened by Theocracy/other techs); Faith gives resistance. Relics (5 on most maps) placed in Monastery generate gold over time (~0.5 gold/sec each; civ bonuses vary). Relic victory possible if enabled."
+          },
+          {
+            "name": "Garrison and Town Bell",
+            "detail": "Villagers can garrison in TC (and towers/castles), adding arrows. Ring Town Bell to send all villagers inside during raids; ring back to resume work. Overuse of the bell costs gathering time; better to garrison only the threatened villagers."
+          },
+          {
+            "name": "Walling",
+            "detail": "Palisades and Houses used to quick-wall resources vs scouts/men-at-arms. Gates allow own units through. Stone walls stronger but cost stone. Walls are temporary - buy time, not permanent safety. Enemy can attack walls with infantry/rams."
+          },
+          {
+            "name": "Trade and markets",
+            "detail": "Market buys/sells resources with dynamic prices (cost increases on repeated buys); Saracens have better rates. Tribute (Diplomacy menu) sends resources to allies with a fee (Coinage/Banking reduce). Trade carts give gold proportional to distance between markets."
+          },
+          {
+            "name": "Unit upgrades",
+            "detail": "Blacksmith: attack (Forging line for melee, Fletching line for archers), armor (Scale Mail/Barding/Padded Archer line). University: Ballistics, Chemistry, Murder Holes, Masonry, Siege Engineers, Bombard Tower... Unit-line upgrades at their building (e.g. Crossbowman upgrade at Archery Range). Unupgraded armies lose to smaller upgraded ones."
+          },
+          {
+            "name": "Population and housing math",
+            "detail": "Dark Age: a house every ~25 seconds of TC production if only TC producing (+5 pop per 2 villagers ~50s). In Feudal+ with military production, you need multiple houses every minute. Being housed is one of the most common early mistakes."
+          },
+          {
+            "name": "Scouting info visible on screen",
+            "detail": "Fog-of-war shows explored terrain greyed out; only units within your units'/buildings' line of sight are visible. Scouting with the starting scout (lure deer, find enemy base, count enemy buildings, see their eco) reveals the opponent's plan (e.g. barracks early = drush/M@A)."
+          },
+          {
+            "name": "Pathing and formations",
+            "detail": "Units move as groups with formations; Shift-queued waypoints. Ranged units need micro to avoid mangonel shots (split). DE pathing improved in 2026 (Update 185872 mentions pathfinding improvements, unverified details)."
+          },
+          {
+            "name": "Bonus damage vs buildings",
+            "detail": "Rams, trebuchets, bombards, and some infantry (Goths, Danes Jomsviking torches) have bonus vs buildings. Archers are poor vs buildings. Petards (Castle UU-like demolition, some civs) and Tarkans specialise in buildings."
+          },
+          {
+            "name": "Food decay and resource depletion",
+            "detail": "Hunted animals decay slowly; natural resources (trees, gold, stone, berries) deplete; Mayans/Muisca team bonus extend some. Farms deplete and must be reseeded (pre-queue farm reseeds at the Mill)."
+          },
+          {
+            "name": "Score and stats as performance proxy",
+            "detail": "Post-game stats (villagers created, idle time, resources collected, age-up times, units lost) are the best objective coaching data. Total idle TC time is reported as 'TC idle time' in DE stats (verify label)."
+          }
+        ]
+      },
+      {
+        "id": "strategy",
+        "items": [
+          {
+            "name": "Dark Age opening principles",
+            "detail": "Queue villagers constantly, put first 6 on sheep under TC, next 4 on wood, then lure first boar, build a house early (TC starts at 5 pop room + 2 houses up front), 4 berries with a mill, lure second boar, more wood and farms later. Loom before Feudal. Scout finds sheep, boars, deer and enemy base."
+          },
+          {
+            "name": "Scouts build (Arabia, ~22 pop)",
+            "detail": "Typical: 6 sheep, 4 wood, 1 lures boar, 4 berries, 1 lures 2nd boar, 2-3 more food, 4-5 wood, click Feudal at ~22 villagers with Loom; build Barracks during Dark/age-up, 2 Stables on arrival. Feudal click ~9:00-10:30 depending on skill. Raid villagers with 3-6 scouts, then transition to knights or archers."
+          },
+          {
+            "name": "Archers build (Arabia, ~21-23 pop)",
+            "detail": "6 sheep, 4-6 wood, boars, berries; go up ~21-23 pop with heavy wood (8-10). Build Barracks while going up, 2-3 Archery Ranges on arrival; gold miners (3-5) during age-up. Fletching early. Strong vs infantry and slow eco; weak to skirms and walls. Transition to crossbows in Castle."
+          },
+          {
+            "name": "Men-at-Arms / Drush openings",
+            "detail": "Barracks very early, Militia/Man-at-Arms (Feudal upgrade) to harass woodlines and slow the enemy, followed by archers (M@A into archers) or a fast castle (drush FC). Need Gold early (~3-4 vils). Counter: walls, archers, towers near gold/wood, Loom."
+          },
+          {
+            "name": "Fast Castle (FC) build",
+            "detail": "Typically ~27 pop Feudal click (+2 during age-up), heavy food+gold, Blacksmith + Market in Feudal, click Castle on arrival. Castle Age ~16:00-17:30 at intermediate level (~15:00 for pros). Lead into Knights, UU, monks, boom (2-3 extra TCs) or siege. Vulnerable to early Feudal pressure on open maps."
+          },
+          {
+            "name": "Tower rush (Trush)",
+            "detail": "Scout + villagers forward to build Watch Towers near opponent's resources in Feudal. High-risk, stone-heavy. Counter: pull villagers to rebuild/gather elsewhere, build your own towers, palisade, get Loom, rush with villagers to attack foundations early, archers/rams later."
+          },
+          {
+            "name": "Castle Age boom",
+            "detail": "On reaching Castle, build 2-3 extra TCs (275 wood + 100 stone each) to raise villager production; protect with army. Goal: 100+ villagers by ~25-30 min. Classic on Arena/Black Forest/team pockets; risky on Arabia vs strong Castle Age aggression."
+          },
+          {
+            "name": "Imperial transition",
+            "detail": "Go Imperial when economy supports it (~80-110 villagers). Key techs: Blast Furnace/plate armors, Bracer, elite UU, Siege Onager, Hussar, Halberdier, Arbalester. Trebuchets break castles. Plan trade/relic gold when mines run out."
+          },
+          {
+            "name": "Water openings (Islands/Hybrid)",
+            "detail": "Early Dock (often 2-4) in Dark Age for fishing ships, Feudal galleys to contest water; fire ships counter galleys; demolition ships punish clumps. Keep making fishing ships; water control often decides hybrid maps."
+          },
+          {
+            "name": "Benchmark timings (approx, community)",
+            "detail": "Feudal Age arrival: pro ~9:00-10:00, intermediate (1000-1400 Elo) ~10:30-12:00, beginner often 13:00+. Castle Age: pro FC ~15:00-16:00, intermediate ~18:00-20:00. Imperial: ~30-35 min in standard 1v1. These are rough community benchmarks, not official."
+          },
+          {
+            "name": "Villager count benchmarks (approx)",
+            "detail": "Continuous TC production gives ~2.4 villagers/min from one TC. Rough targets: ~20 vils at 8:30, ~30 at 15:00, ~50-60 at 20:00 (with extra TCs), 80-100 by 25-30 min. Pros hit 100+ by ~25 min with 2-3 TCs. Compare villager count over time in post-game stats."
+          },
+          {
+            "name": "Responding to scouted openings",
+            "detail": "Enemy barracks early -> expect M@A/drush: get Loom, wall woodlines, archers or skirms. Enemy stable(s) -> scouts: build spearmen, wall, keep vils close. Archery ranges -> skirms (+M@A) or quick-castle with knights. No military -> they fast castle: punish with Feudal aggression or boom faster."
+          },
+          {
+            "name": "Defending a raid",
+            "detail": "Pull threatened villagers to TC (or garrison), use spearmen vs scouts/knights, skirms vs archers, keep producing villagers. Don't stop the economy: only move workers that are actually threatened. Add walls, towers, or castles near key resources."
+          },
+          {
+            "name": "Attacking a raid target",
+            "detail": "Raid where villagers are unprotected: far woodlines, gold mines, farms not under TC. Hit-and-run: keep army alive, retreat when counters appear. A good raid trade = enemy villager deaths and idle time vs few of your units lost."
+          },
+          {
+            "name": "Army composition by civ archetype",
+            "detail": "Archer civs: crossbows/arbalests + support (skirms, mangonels). Cavalry civs: knights/paladins + light cav, CA where possible. Infantry civs: militia line + skirms/halbs/rams. Mixed comps (e.g. knights + crossbows) cover each other's counters. Upgrade the unit line you commit to."
+          },
+          {
+            "name": "Team-game roles",
+            "detail": "Flank: early Feudal pressure (archers/scouts), defend vs enemy flank. Pocket: boom into knights/cav, send resources/units to flanks. Coordinate age-ups; use team bonuses; trade carts late. Communicate with flares and quick-chat."
+          },
+          {
+            "name": "Using relics and monks",
+            "detail": "Early Castle Age monks: collect relics for steady gold, convert enemy knights/elephants, heal army. Defend vs enemy monks with light cav/eagles. Relic gold matters most in long games after mines run out."
+          },
+          {
+            "name": "Closing out a game",
+            "detail": "When ahead, convert advantage: push with siege (rams/trebuchets) and army to destroy TCs and production. Avoid overextending into castles/TCs without siege. If behind, defend at home with towers/castles, boom behind walls and look for trades on their eco."
+          },
+          {
+            "name": "Civ matchup approach",
+            "detail": "Read opponent civ on loading screen: identify their power spike (e.g. Franks knights in Castle, Mayans eagles/archers, Goths Imperial infantry) and their weakness (missing units/upgrades in the tech tree). Plan to fight at your spike and before theirs."
+          }
+        ]
+      },
+      {
+        "id": "mistakes",
+        "items": [
+          {
+            "name": "Beginner: idle Town Center",
+            "detail": "TC not producing villagers for seconds/minutes. Fix: always queue 1-2 villagers (not 5+ which locks resources), check TC via hotkey every few seconds, set gather point to resource. Coach trigger: empty TC queue in selection panel or villager count not rising."
+          },
+          {
+            "name": "Beginner: getting housed",
+            "detail": "Pop equals cap (e.g. 15/15) so production stops. Fix: build a house every ~25s in Dark Age; when 3-5 pop below cap, start a new house; in Feudal+ build 2 at once. Coach trigger: pop >= cap-2 with no house under construction."
+          },
+          {
+            "name": "Beginner: idle villagers",
+            "detail": "Villagers finishing buildings or resources then standing still. Fix: shift-queue villagers back to work after building, use idle villager key '.', set rally points. Coach trigger: idle villager count > 0 for >10s."
+          },
+          {
+            "name": "Beginner: floating resources",
+            "detail": "Hundreds of unspent resources (e.g. 800+ wood) while not saving for something. Fix: add production buildings, farms, TCs, upgrades; spend to match income. Coach trigger: any resource > 600-800 outside of saving for age-up/castle."
+          },
+          {
+            "name": "Beginner: skipping eco upgrades",
+            "detail": "No Double-Bit Axe, Horse Collar, Wheelbarrow, Gold Mining. Fix: research Double-Bit Axe and Horse Collar early Feudal; Wheelbarrow by early Castle; Bow Saw and Heavy Plow in Castle. Coach can check techs via post-game technology stats or building research panel."
+          },
+          {
+            "name": "Beginner: poor sheep/boar handling",
+            "detail": "Villagers walk far to hunt or lose boars. Fix: kill sheep under TC, lure boars with one villager (shoot then run back), keep 6-8 on food early. Losing a villager to a boar is a big setback."
+          },
+          {
+            "name": "Beginner: no scouting",
+            "detail": "Not knowing the opponent's plan. Fix: send scout to enemy base by ~2-4 minutes, check barracks/stable/range and resources; re-scout at Feudal and Castle Age."
+          },
+          {
+            "name": "Beginner: wrong counters",
+            "detail": "Building the same unit regardless of enemy army (e.g. archers vs skirms, knights vs pikes). Fix: check enemy army composition and use the counter chart; read unit attack/armor in the selection panel."
+          },
+          {
+            "name": "Intermediate: late Feudal/Castle timings",
+            "detail": "Clicking up 2-4 minutes slower than benchmark due to unbalanced eco. Fix: practise a fixed build order (Art of War drills), check time at Feudal click against target (~9:30-10:30 scouts/archers, ~16:30-17:30 FC)."
+          },
+          {
+            "name": "Intermediate: no farms transition",
+            "detail": "Running out of hunt/berries with no farms, causing food crash. Fix: start farms before hunt ends (~10-14 min), keep wood income for farms (60W each), pre-seed farms at the mill."
+          },
+          {
+            "name": "Intermediate: not upgrading army",
+            "detail": "Fighting without Blacksmith upgrades or unit-line upgrades (e.g. crossbows without Fletching/Bodkin). Fix: research blacksmith upgrades with gold surplus; upgrade the line you are making first."
+          },
+          {
+            "name": "Intermediate: forgetting to boom",
+            "detail": "Staying on one TC in Castle Age while opponent builds 3. Fix: add 1-2 TCs at Castle arrival when safe; target 60+ villagers by ~20 min."
+          },
+          {
+            "name": "Intermediate: overextending into castles/TCs",
+            "detail": "Losing armies attacking under defensive buildings. Fix: bring siege (rams/mangonels/trebs), bait units out, fight in open field."
+          },
+          {
+            "name": "Intermediate: neglecting map control",
+            "detail": "Letting opponent's army roam free, losing woodlines and gold. Fix: keep army between their base and your eco, use towers/walls and forward production."
+          },
+          {
+            "name": "Intermediate: bad gold management",
+            "detail": "Running out of gold in late game with no plan. Fix: secure second gold mines, take relics, trade (team games), shift to trash units (halbs/skirms/hussars) when gold runs low."
+          },
+          {
+            "name": "Advanced: inefficient micro vs mangonels",
+            "detail": "Archer balls destroyed by mangonel shots. Fix: split units, attack mangonels with cavalry, bait shots."
+          },
+          {
+            "name": "Advanced: poor decision timing",
+            "detail": "Going up or committing to boom at the wrong moment (e.g. booming into opponent's power spike). Fix: read opponent age-up messages, scout their army, adapt decisions; pressure when they age up and are vulnerable."
+          },
+          {
+            "name": "Advanced: inefficient trades and idle army",
+            "detail": "Army standing idle at home while opponent booms. Fix: always have a plan for military units (raid, defend, siege); use hotkeyed control groups."
+          },
+          {
+            "name": "All levels: tilting/resigning too early",
+            "detail": "Resigning after a lost fight when economy still decent; or staying angry and making rushed choices. Fix: reassess villager counts and resources; many games are won by defending and rebuilding."
+          },
+          {
+            "name": "All levels: not using hotkeys",
+            "detail": "Clicking buildings with mouse slows play. Fix: learn TC hotkey, idle villager key, build hotkeys and control groups (Ctrl+number). Profile hotkey layout varies (grid/classic)."
+          }
+        ]
+      },
+      {
+        "id": "glossary",
+        "items": [
+          {
+            "name": "TC",
+            "detail": "Town Center: main building producing villagers and age-ups."
+          },
+          {
+            "name": "Boom",
+            "detail": "Investing heavily in economy (extra TCs/villagers) before military."
+          },
+          {
+            "name": "Rush / Flush",
+            "detail": "Early aggression: Feudal 'flush' (archers/scouts/towers) aiming to damage economy."
+          },
+          {
+            "name": "Drush",
+            "detail": "Dark Age rush with militia (usually 3) to harass, often followed by FC or archers."
+          },
+          {
+            "name": "FC",
+            "detail": "Fast Castle: skipping Feudal military to reach Castle Age quickly."
+          },
+          {
+            "name": "M@A",
+            "detail": "Men-at-Arms: Feudal infantry upgrade of Militia; 'M@A into archers' is a common opening."
+          },
+          {
+            "name": "Trush",
+            "detail": "Tower rush: building towers near enemy resources in Feudal."
+          },
+          {
+            "name": "Scouts",
+            "detail": "Scout cavalry opening in Feudal (2-6 scouts raiding)."
+          },
+          {
+            "name": "Lure",
+            "detail": "Pulling a boar/deer back to the TC to hunt efficiently."
+          },
+          {
+            "name": "Deer push",
+            "detail": "Using the scout to push deer towards the TC for faster food."
+          },
+          {
+            "name": "Quickwall",
+            "detail": "Fast palisade/house walls to block raids."
+          },
+          {
+            "name": "UU / UT",
+            "detail": "Unique Unit / Unique Technology of a civilisation (Castle-trained/researched)."
+          },
+          {
+            "name": "Trash units",
+            "detail": "Units costing no gold: spearmen line, skirmishers, scout line (plus some UU like Magyar Huszar)."
+          },
+          {
+            "name": "Gold units",
+            "detail": "Units costing gold, stronger but expensive (knights, crossbows, champions, UUs)."
+          },
+          {
+            "name": "FU",
+            "detail": "Fully upgraded: unit with all blacksmith and line upgrades (e.g. FU Arbalester)."
+          },
+          {
+            "name": "Pop / Housed",
+            "detail": "Population; 'housed' means at the pop cap so production stops."
+          },
+          {
+            "name": "Idle time",
+            "detail": "Time villagers or TC are not working; key macro metric."
+          },
+          {
+            "name": "Eco",
+            "detail": "Economy: villager count, gathering efficiency, upgrades."
+          },
+          {
+            "name": "Imp / Imperial",
+            "detail": "Imperial Age (4th Age)."
+          },
+          {
+            "name": "Hit and run",
+            "detail": "Raiding then retreating before enemy defence arrives (common with cav archers/scouts)."
+          },
+          {
+            "name": "Micro / Macro",
+            "detail": "Micro: unit control in fights. Macro: economy, production, decisions."
+          },
+          {
+            "name": "Elo",
+            "detail": "Ranked rating shown on profile/leaderboards; separate for 1v1, TG, EW."
+          },
+          {
+            "name": "RM / EW / DM / TG",
+            "detail": "Random Map / Empire Wars / Death Match / Team Game."
+          },
+          {
+            "name": "Pocket / Flank",
+            "detail": "Team game positions: pocket (middle), flank (edge)."
+          },
+          {
+            "name": "Onager",
+            "detail": "Upgraded Mangonel (area siege); Siege Onager cuts trees."
+          },
+          {
+            "name": "Treb",
+            "detail": "Trebuchet: long-range siege for buildings."
+          },
+          {
+            "name": "Redemption / Atonement",
+            "detail": "Monk techs allowing conversion of buildings/siege and monks."
+          },
+          {
+            "name": "Relic",
+            "detail": "Map item; garrison in Monastery for gold; relic victory possible."
+          },
+          {
+            "name": "Wonder",
+            "detail": "Expensive building; holding it for a timer wins (if enabled)."
+          },
+          {
+            "name": "Regional unit",
+            "detail": "A unit shared by a group of civs (e.g. Steppe Lancer, Slinger, Varangian Guard, Mounted Crossbowman)."
+          },
+          {
+            "name": "Hybrid map",
+            "detail": "Map with both land and water play (e.g. Four Lakes, Baltic, Scandinavia)."
+          },
+          {
+            "name": "CA / HCA",
+            "detail": "Cavalry Archer / Heavy Cavalry Archer."
+          },
+          {
+            "name": "Halb / Pike / Spear",
+            "detail": "Halberdier / Pikeman / Spearman (anti-cavalry infantry line)."
+          },
+          {
+            "name": "Arb / Xbow",
+            "detail": "Arbalester / Crossbowman."
+          },
+          {
+            "name": "Pally",
+            "detail": "Paladin (top Knight-line upgrade)."
+          },
+          {
+            "name": "Settlement (2026)",
+            "detail": "New South American building added in The Last Chieftains (Inca, Muisca, Tupi, Mapuche); villagers can garrison and it heals/supports units - details unverified."
+          },
+          {
+            "name": "Folwark / Feitoria / Krepost / Donjon",
+            "detail": "Civ-specific buildings: Poles mill, Portuguese passive resource building, Bulgarian small castle, Sicilian tower-production building."
+          },
+          {
+            "name": "Mule Cart",
+            "detail": "Armenian/Georgian mobile drop site replacing lumber/mining camps."
+          },
+          {
+            "name": "GG",
+            "detail": "'Good game' - typically typed when resigning."
+          }
+        ]
+      }
+    ],
+    "referenceCheckedAt": "2026-10-28",
+    "referenceVersion": "Age of Empires II: Definitive Edition - Update 188329 (27 Oct 2026); latest DLC The Viking Sagas (22 Sep 2026); 56 standard/ranked civilisations",
+    "referenceSources": [
+      {
+        "url": "https://www.ageofempires.com/news/age-of-empires-ii-definitive-edition-update-188329/",
+        "title": "Age of Empires II: DE Update 188329 (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/age-of-empires-ii-definitive-edition-update-185872/",
+        "title": "Age of Empires II: DE Update 185872 (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/age-of-empires-ii-definitive-edition-update-177723/",
+        "title": "Age of Empires II: DE Update 177723 (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/age-of-empires-ii-definitive-edition-update-170934/",
+        "title": "Age of Empires II: DE Update 170934 (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/age-of-empires-ii-definitive-edition-update-169123/",
+        "title": "Age of Empires II: DE Update 169123 (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/the-viking-sagas-available-now-for-age-of-empires-ii-definitive-edition/",
+        "title": "The Viking Sagas available now (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/games/aoeiide/the-viking-sagas/",
+        "title": "The Viking Sagas DLC page (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/the-warriors-of-the-last-chieftains/",
+        "title": "The Warriors of the Last Chieftains (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/pre-order-the-last-chieftains-aoeii-de/",
+        "title": "Pre-Order The Last Chieftains (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/games/aoeiide/the-three-kingdoms/",
+        "title": "The Three Kingdoms DLC page (official)"
+      },
+      {
+        "url": "https://www.ageofempires.com/news/new-dlc-available-now-chronicles-alexander-the-great/",
+        "title": "Chronicles: Alexander the Great available now (official)"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Age_of_Empires_II:_Definitive_Edition_-_The_Viking_Sagas",
+        "title": "Fandom: The Viking Sagas"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Age_of_Empires_II:_Definitive_Edition_-_The_Last_Chieftains",
+        "title": "Fandom: The Last Chieftains"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Age_of_Empires_II:_Definitive_Edition_-_The_Three_Kingdoms",
+        "title": "Fandom: The Three Kingdoms"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Danes_(Age_of_Empires_II)",
+        "title": "Fandom: Danes"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Saxons",
+        "title": "Fandom: Saxons"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Varangians",
+        "title": "Fandom: Varangians"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Vikings_(Age_of_Empires_II)",
+        "title": "Fandom: Vikings (AoE II)"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Varangian_Guard_(Age_of_Empires_II)",
+        "title": "Fandom: Varangian Guard"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Regional_asset",
+        "title": "Fandom: Regional asset"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Mapuche_(Age_of_Empires_II)",
+        "title": "Fandom: Mapuche"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Tupi_(Age_of_Empires_II)",
+        "title": "Fandom: Tupi"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Guecha_Warrior",
+        "title": "Fandom: Guecha Warrior"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Temple_Guard",
+        "title": "Fandom: Temple Guard"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Kona",
+        "title": "Fandom: Kona"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Wei",
+        "title": "Fandom: Wei"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Wu",
+        "title": "Fandom: Wu"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Shu",
+        "title": "Fandom: Shu"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Jurchens",
+        "title": "Fandom: Jurchens"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Khitans",
+        "title": "Fandom: Khitans"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Civilization_(Age_of_Empires_II)",
+        "title": "Fandom: Civilization (AoE II)"
+      },
+      {
+        "url": "https://ageofempires.fandom.com/wiki/Update_177723",
+        "title": "Fandom: Update 177723"
+      },
+      {
+        "url": "https://liquipedia.net/ageofempires/Vikings/Age_of_Empires_II",
+        "title": "Liquipedia: Vikings (AoE II)"
+      },
+      {
+        "url": "https://liquipedia.net/ageofempires/Arabia",
+        "title": "Liquipedia: Arabia"
+      },
+      {
+        "url": "https://liquipedia.net/ageofempires/Age_of_Empires_II/Definitive_Edition/Chronicles_Alexander_the_Great",
+        "title": "Liquipedia: Chronicles Alexander the Great"
+      },
+      {
+        "url": "https://www.aoe2insights.com/civilization/varangians/",
+        "title": "AoE2 Insights: Varangians statistics"
+      },
+      {
+        "url": "https://www.aoe2insights.com/civilization/danes/",
+        "title": "AoE2 Insights: Danes statistics"
+      },
+      {
+        "url": "https://www.aoe2insights.com/civilization/muisca/",
+        "title": "AoE2 Insights: Muisca statistics"
+      },
+      {
+        "url": "https://www.aoe2insights.com/",
+        "title": "AoE2 Insights"
+      },
+      {
+        "url": "https://www.aoe2companion.com/",
+        "title": "AoE2 Companion"
+      },
+      {
+        "url": "https://aoestats.io/",
+        "title": "aoestats civilization statistics"
+      },
+      {
+        "url": "https://ageofnotes.com/stats/maps/",
+        "title": "Age of Notes: AoE2 Map Atlas (Patch 185872)"
+      },
+      {
+        "url": "https://ageofnotes.com/beginners/age-of-empires-2-civilizations-complete-guide/",
+        "title": "Age of Notes: All 56 civs guide (2026)"
+      },
+      {
+        "url": "https://aoe2.ai/en/techtree/varangians",
+        "title": "aoe2.ai: Varangians tech tree"
+      },
+      {
+        "url": "https://aoecoach.com/en/resources/civilizations/danes/",
+        "title": "AoE Coach: Danes guide"
+      },
+      {
+        "url": "https://aoecoach.com/en/resources/civilizations/saxons/",
+        "title": "AoE Coach: Saxons guide"
+      },
+      {
+        "url": "https://aoecoach.com/en/resources/civilizations/vikings",
+        "title": "AoE Coach: Vikings guide"
+      },
+      {
+        "url": "https://aoecoach.com/en/resources/guides/muisca-civilization-guide/",
+        "title": "AoE Coach: Muisca guide"
+      },
+      {
+        "url": "https://note.com/aoe2_moti/n/n626acb02cfe8?hl=en",
+        "title": "Hera tier list translation (all 53 civs, 1v1 Arabia, 2026)"
+      },
+      {
+        "url": "https://aoeauthority.com/guides/aoe2-best-civilization-ranked",
+        "title": "AoEAuthority: Best civilizations tier list 2026"
+      },
+      {
+        "url": "https://www.aoe2counterhub.com/units/mounted-crossbowman.html",
+        "title": "AoE2 Counter Hub: Mounted Crossbowman"
+      },
+      {
+        "url": "https://jeu.video/article/age-of-empires-ii-update-185872-arabian-desert-regional-units",
+        "title": "jeu.video: Update 185872 summary"
+      },
+      {
+        "url": "https://www.ghacks.net/2025/04/11/age-of-empires-2-definitive-edition-gets-5-new-civilizations-in-the-three-kingdoms-dlc/",
+        "title": "gHacks: Three Kingdoms 5 new civs"
+      },
+      {
+        "url": "https://forums.ageofempires.com/t/how-to-solve-a-problem-like-the-three-kingdoms/274886",
+        "title": "Official forums: Three Kingdoms debate"
+      },
+      {
+        "url": "https://aoe2techtree.net/",
+        "title": "AoE2 Tech Tree (interactive)"
+      },
+      {
+        "url": "https://www.youtube.com/@SpiritOfTheLaw",
+        "title": "Spirit of the Law YouTube (mechanics)"
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/Age_of_Empires_II:_Definitive_Edition",
+        "title": "Wikipedia: Age of Empires II: Definitive Edition"
+      }
+    ]
   },
   "limitations": [
     "Reads only what the HUD shows: resources, population, idle villagers, age and clock. It cannot see Town Center queues, unit counts or anything under the fog of war.",

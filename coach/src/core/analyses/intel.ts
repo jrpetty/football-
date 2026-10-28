@@ -85,6 +85,8 @@ export class IntelTracker {
   private seenUnits = new Map<string, { count: number; firstAt: number }>()
   private announcedUnits = new Set<string>()
   private previous: IntelReport | null = null
+  /** Readings from before the current match started belong to the last one. */
+  private since = -Infinity
 
   constructor(roster: Roster, spec: NonNullable<GameProfile['intel']>, playerFaction: string | null) {
     this.roster = roster
@@ -116,7 +118,7 @@ export class IntelTracker {
     const news: IntelNews[] = []
     const str = (key: string) => {
       const v = visible.values[key]
-      return v && typeof v.value === 'string' && !v.conflicted ? v.value : null
+      return v && typeof v.value === 'string' && !v.conflicted && v.observedAt >= this.since ? v.value : null
     }
     const factionText = str(this.spec.factionKey)
     if (!this.faction && factionText) {
@@ -149,8 +151,9 @@ export class IntelTracker {
     return news
   }
 
-  newMatch(): void {
+  newMatch(at = Infinity): void {
     if (this.faction || this.buildings.size || this.seenUnits.size) this.previous = this.report()
+    this.since = at
     this.faction = null
     this.buildings = new Map()
     this.seenUnits = new Map()
@@ -189,8 +192,9 @@ export class IntelTracker {
         continue
       }
       if (u.id === 'villager') continue
-      if (faction?.lacks?.includes(u.id)) continue
-      out.push(faction?.replaces?.[u.id] ?? u.id)
+      const replacement = faction?.replaces?.[u.id]
+      if (replacement) out.push(replacement)
+      else if (!faction?.lacks?.includes(u.id)) out.push(u.id)
     }
     return [...new Set(out)]
   }
@@ -200,15 +204,20 @@ export class IntelTracker {
     const u = this.units.get(unitId)
     if (!u) return []
     const mine = this.playerFaction
-    const ok = (x: RosterUnit) => (!x.factions?.length || (mine !== null && x.factions.includes(mine.id))) && !mine?.lacks?.includes(x.id)
+    // A standard unit the player's civilisation replaces becomes its replacement; one it lacks is skipped.
+    const mineOf = (x: RosterUnit): string | null => {
+      if (x.factions?.length) return mine !== null && x.factions.includes(mine.id) ? x.id : null
+      const r = mine?.replaces?.[x.id]
+      if (r) return r
+      return mine?.lacks?.includes(x.id) ? null : x.id
+    }
     const out: string[] = []
     for (const ref of u.counteredBy) {
       const direct = this.units.get(ref)
       const cands = direct ? [direct] : this.roster.units.filter((x) => x.classes.includes(ref) && !x.factions?.length).slice(0, 2)
       for (const c of cands) {
-        if (!ok(c)) continue
-        const id = mine?.replaces?.[c.id] ?? c.id
-        if (!out.includes(id)) out.push(id)
+        const id = mineOf(c)
+        if (id && !out.includes(id)) out.push(id)
       }
     }
     return out.slice(0, 3)
@@ -226,7 +235,7 @@ export class IntelTracker {
     if (!can.length) return null
     const names = can.slice(0, 3).map((u) => plural(u.name))
     const beat = [...new Set(can.slice(0, 2).flatMap((u) => this.answersTo(u.id)))].slice(0, 2).map((x) => plural(this.units.get(x)?.name ?? x))
-    return `They have a ${b.name}: expect ${list(names, 'or')}.${beat.length ? ` ${list(beat)} answer them.` : ''}`
+    return `They have ${/^[aeiou]/i.test(b.name) ? 'an' : 'a'} ${b.name}: expect ${list(names, 'or')}.${beat.length ? ` ${list(beat)} answer them.` : ''}`
   }
 
   private unitLine(id: string): string {
@@ -237,6 +246,8 @@ export class IntelTracker {
 }
 
 export function plural(name: string): string {
+  // Japanese and Mongol names (Samurai, Mangudai, Yumi Ashigaru) keep their form.
+  if (/[iu]$/i.test(name)) return name
   if (/man$/i.test(name)) return name.replace(/man$/i, 'men')
   if (/-at-arms$/i.test(name)) return name.replace(/^man/i, 'Men')
   if (/(s|x|ch|sh)$/i.test(name)) return `${name}es`

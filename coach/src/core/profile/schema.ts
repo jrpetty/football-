@@ -540,6 +540,9 @@ export interface GameProfile {
     readonly reference?: readonly KnowledgeSection[]
     /** When the reference was last checked against the game. */
     readonly referenceCheckedAt?: string
+    /** The game version the reference describes. */
+    readonly referenceVersion?: string
+    readonly referenceSources?: readonly { readonly url: string; readonly title: string }[]
   }
   readonly limitations: readonly string[]
   /** Conditions under which the pack stops inferring (shown to the player). */
@@ -1325,6 +1328,13 @@ export function validateProfile(input: unknown): ValidationResult {
         })
       })
       c.str(knowledge.referenceCheckedAt, 'knowledge.referenceCheckedAt', { optional: true, max: 40 })
+      c.str(knowledge.referenceVersion, 'knowledge.referenceVersion', { optional: true, max: 160 })
+      c.arr(knowledge.referenceSources, 'knowledge.referenceSources', true).forEach((x, i) => {
+        const so = c.obj(x, `knowledge.referenceSources[${i}]`)
+        if (!so) return
+        c.str(so.url, `knowledge.referenceSources[${i}].url`, { pattern: /^https:\/\/\S+$/, max: 500 })
+        c.str(so.title, `knowledge.referenceSources[${i}].title`, { max: 200 })
+      })
     }
   }
 

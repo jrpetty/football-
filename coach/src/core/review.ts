@@ -7,6 +7,7 @@
 import type { SessionReport } from './engine.ts'
 import { humanize, mistakeLine } from './language.ts'
 import { factorFindings } from './planner.ts'
+import { plural } from './analyses/intel.ts'
 import { BANNED_CLAIMS, type GameProfile, type PlaybookEntry } from './profile/schema.ts'
 
 export interface ReviewFocus {
@@ -46,6 +47,18 @@ export function localReview(profile: GameProfile, report: SessionReport): MatchR
   const findings = factorFindings(report.factors, 'weak')
   for (const f of findings.filter((x) => x.kind === 'weakness' && x.grade !== 'weak')) add(f.statement, f.playbook)
   for (const b of report.benchmarks.filter((x) => x.worst)) add(b.worst!.statement, b.spec.playbook)
+  // What the opponent fielded, and what beats it (from the roster, for the player's civilisation).
+  const met = report.intel?.units[0]
+  const answer = report.intel?.counters.find((c) => c.against === met?.name && c.build.length)
+  if (met && met.count >= 3 && answer && focus.length < MAX_FOCUS) {
+    focus.push({
+      evidence: `You mostly met ${plural(met.name)} (${met.count} at once).`,
+      principle: answer.why ?? '',
+      fix: `Build ${answer.build.slice(0, 2).map(plural).join(' or ')} against them.`,
+      drill: null,
+      playbook: book.has('counter-core') ? 'counter-core' : null,
+    })
+  }
   for (const h of report.heatmaps.filter((x) => x.claim && x.claim.grade !== 'weak')) {
     const top = h.topBreakdown
     const playbook = top ? h.spec.breakdown?.playbook?.[top.value] : undefined

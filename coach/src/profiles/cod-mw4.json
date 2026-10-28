@@ -486,11 +486,59 @@
       "pre-aim": "aiming where an enemy will appear before they do",
       "trade": "killing the enemy who just killed a teammate"
     },
-    "referenceCheckedAt": "2026-10-27",
+    "referenceCheckedAt": "2026-10-28",
     "reference": [
       {
         "id": "overview",
         "items": [
+          {
+            "name": "Game identity",
+            "detail": "Call of Duty: Modern Warfare 4, developed by Infinity Ward (Beenox PC support, Digital Legends Switch 2 port). Released Oct 23, 2026 on PS5, Xbox Series X|S, PC and Nintendo Switch 2; no PS4/Xbox One. Campaign set on the Korean Peninsula (a second Korean War)."
+          },
+          {
+            "name": "Release waves",
+            "detail": "Campaign early access Oct 16, DMZ Oct 20, full launch Oct 23, 2026. Open Beta ran Aug 28 - Sep 1, 2026 (with earlier beta weekends). Shipment added Oct 27, Possession LTM Oct 29, Infected Oct 30, Season 1 + Warzone integration Nov 6, 2026."
+          },
+          {
+            "name": "Pillars of MW4 multiplayer",
+            "detail": "Grounded movement (no omnimovement), no hipfire bloom ('Ballistic Authority'), slower Beta-Weekend-2 TTK kept for launch, pick-3 perks (18), 17 killstreaks attached per loadout, Smart Streak meter that rewards objective play, Apex attachments at max weapon level."
+          },
+          {
+            "name": "Launch content size",
+            "detail": "33 weapons (8 AR, 5 SMG, 3 LMG, 2 shotgun, 3 marksman, 3 sniper, 4 pistol, 4 launcher, 1 melee), 18 perks, 17 killstreaks, 12 field upgrades, 9 tacticals, 11 lethals, 12 core 6v6 maps, Kill Block, 4 Gunfight maps, 3 Ground War maps, roughly 13 launch modes plus a movement training course."
+          },
+          {
+            "name": "Progression",
+            "detail": "Player levels 1-55 unlock weapons, perks, equipment and streaks (Create-a-Class opens at level 4). Then 10 Prestiges and 1,000 Prestige Master levels. Each prestige you choose Classic (reset unlocks, +20% XP, permanent unlock token) or Regular (keep everything). Weapon Prestige also returns."
+          },
+          {
+            "name": "DMZ is part of MW4",
+            "detail": "DMZ returns as MW4's extraction mode on the Hajin map, with its own 1-70 level track and Operator Prestige. Gear is kept only if you exfil; dying marks your operator Missing In Action."
+          },
+          {
+            "name": "Warzone tie-in",
+            "detail": "Warzone integrates MW4 on Nov 6, 2026 (Season 1): Hajin joins Battle Royale (Verdansk stays), Zodiac joins Resurgence, MW4 weapons/operators/movement arrive and omnimovement goes away. Warzone on PS4/Xbox One shuts down that day."
+          },
+          {
+            "name": "Current patch state (as of Oct 28)",
+            "detail": "Launch patch notes (official, Oct ~21-25) did a full weapon/attachment balance pass, buffed SMGs at close-mid range, added flinch/damage tuning to one-hit-kill weapons, and made Tac Sprint a Blood Rush perk feature. IW said more weapon tuning was being looked at for the following week; no named nerfs found yet."
+          },
+          {
+            "name": "Ranked Play status",
+            "detail": "No MW4 Ranked Play date announced as of Oct 28, 2026, and it is not on the Season 1 (Nov 6) roadmap. Precedent (MW3 launched Nov 2023, Ranked Jan 2024) suggests weeks to months later. Ranks/ruleset unknown. [Unverified]"
+          },
+          {
+            "name": "Competitive scene",
+            "detail": "MW4 is the game for the 2027 Call of Duty League season. Pros used HAN 86, M4, VEL 46 and ISO Nightshade in day-1 kickoff events. The official CDL ruleset/GA restrictions were not found in research. [Unverified]"
+          },
+          {
+            "name": "Reception of UI",
+            "detail": "Reviewers (Destructoid, Windows Central, The Outer Haven) and CharlieINTEL describe a cleaner, faster UI: vertical menus return, plus a left-docked pop-out sidebar/'blade' menu for quick access to class creation in MP and DMZ."
+          },
+          {
+            "name": "How to read this reference",
+            "detail": "Facts tagged [Unverified] come from a single third-party guide, beta-era data, or conflicting sources. TTK/RPM numbers are community-measured and can shift with patches. Callofduty.com could not be fetched directly; official details come via search snippets."
+          },
           {
             "name": "Release",
             "detail": "Released Oct 23, 2026 by Infinity Ward and Activision on PS5, Xbox Series X|S, PC and Nintendo Switch 2; announced May 2026."
@@ -512,6 +560,98 @@
       {
         "id": "modes",
         "items": [
+          {
+            "name": "Team Deathmatch",
+            "detail": "6v6 respawn. Official launch listing: 10-minute time limit, 100-kill score limit (raised from 75 during beta). Most kills wins. Win by trading efficiently, holding spawns-safe power areas and stacking UAVs; avoid feeding streaks."
+          },
+          {
+            "name": "Kill Confirmed",
+            "detail": "6v6 respawn. 10 minutes, score limit 75. Kills do not score by themselves: each kill drops a dog tag, and you score by collecting enemy tags (collecting a teammate's tag denies the enemy). Win by trading near tags and denying, not by sniping from afar."
+          },
+          {
+            "name": "Domination",
+            "detail": "6v6 respawn. Score limit 200, no time limit (official listing). Capture and hold flags A/B/C for points over time; sides switch at half score. Smart Streak meter credits flag captures. Standard plan: secure your spawn-side flag plus B and hold 2 flags; don't triple-cap and flip spawns unless you can hold."
+          },
+          {
+            "name": "Hardpoint",
+            "detail": "6v6 respawn. Score limit 250; the official listing reportedly shows 5-minute match time (check in game). One zone, scoring only while uncontested (one player in it is enough). The zone rotates every 60 s in a fixed per-map order; rotate early (with ~10 s left) to set up on the next hill. Holding Hardpoint feeds the streak meter."
+          },
+          {
+            "name": "Search & Destroy",
+            "detail": "Round-based, one life per round, no respawns. Attackers win by eliminating defenders or detonating the bomb at site A or B; defenders win by eliminating attackers, preventing the plant or defusing. Teams alternate sides. Rounds-to-win is likely 6 (series standard) but not confirmed. Launch patch (Oct 25) tripled S&D XP. [Unverified]"
+          },
+          {
+            "name": "Free-for-All",
+            "detail": "Every player for themselves, respawn. First to the score limit or most kills at time wins. Use Ghost/Ninja-type perks and avoid lanes where multiple players converge."
+          },
+          {
+            "name": "Inflation (new)",
+            "detail": "6v6 respawn, 10 minutes, no score limit: team holding the most cash at the end wins. Eliminating enemies collects their cash; carrying lots of cash past a threshold reveals you to both teams as a high-value target. Dying drops part of your cash. Overtime in the final minutes adds bigger multipliers. Protect your rich carriers; hunt revealed enemies."
+          },
+          {
+            "name": "Hijack (new)",
+            "detail": "6v6 round-based. One Data Spike in the middle: carry, throw or pass it to the enemy Comm Station and plant it to score over time, with a bonus if the upload completes. Rounds 4 minutes, score limit 300, sides swap between rounds. Planting the Spike feeds the streak meter. (One outlier source describes a moving package instead.)"
+          },
+          {
+            "name": "Frontline",
+            "detail": "6v6 respawn. Each team always spawns in its own fixed base; kills made outside the enemy base are worth more. Sides swap when one team reaches half the score limit. Reported 10 minutes, score limit 100. Don't push into the enemy base: it is low value and you die to fresh spawns. [Unverified]"
+          },
+          {
+            "name": "Collateral (new)",
+            "detail": "Counter-Strike-style bomb mode: attack/defend two sites, 2-minute rounds, first to 6 round wins. No custom classes: start with pistol and $800, earn cash for kills, objectives and round wins, buy weapons/armor/perks/equipment/team UAV. No respawn, no health regen, no streaks except team UAV. Death loses gear but keeps cash. Team size reported as 6v6 or 5v5 (conflict)."
+          },
+          {
+            "name": "Gunfight (2v2)",
+            "detail": "Single-life rounds; every player gets the same randomly assigned loadout. Maps: Cafe, Library, NYC, Smuggler. If time runs out, an Overtime Flag appears: capture it or win on remaining health. Win by playing together, trading and using utility early."
+          },
+          {
+            "name": "Kill Block Gunfight (3v3 / 10v10)",
+            "detail": "Gunfight on the modular Kill Block arena. Official: 50-second rounds, first to 6, single life, shared random loadouts, sides swap after round one, then layout and loadout change every two rounds; Overtime Flag decides ties. Re-read sightlines after each layout change."
+          },
+          {
+            "name": "Ground War: Combat Outpost",
+            "detail": "Large-scale (32v32 at launch; 24v24 in beta) on Imjin Farmland, Wolves Stadium and Forest. Domination-style: capture Outposts for points and forward spawns; reinforce held Outposts to unlock team rewards (local UAV, JLTV airdrop, Light Tank at HQ). Reported 20 min, 1,500 score. [Unverified]"
+          },
+          {
+            "name": "Gun Game (party mode)",
+            "detail": "Free-for-all ladder: each kill advances you to the next weapon; first to finish the ladder wins. Being melee'd sets you back a weapon (series standard). [Unverified]"
+          },
+          {
+            "name": "Possession (LTM, Oct 29)",
+            "detail": "Halloween limited-time mode announced for Oct 29. Reported idea: eliminating an opponent lets you take over their position and loadout. Full ruleset not published at time of research. [Unverified]"
+          },
+          {
+            "name": "Infected (Oct 30)",
+            "detail": "Returning party mode: one player starts Infected; every Survivor they kill joins the Infected. Survivors win by lasting to the time limit, Infected win by converting everyone."
+          },
+          {
+            "name": "Shipment 24/7 / Shipment",
+            "detail": "Shipment (tiny container map) added Oct 27. Widely used for camo/weapon XP farming. Whether a dedicated 24/7 playlist exists was disputed between sources. [Unverified]"
+          },
+          {
+            "name": "Hardcore variants",
+            "detail": "Hardcore versions of core modes (e.g. Domination, Hardpoint) are listed at launch: reduced HUD, much lower health, friendly fire. Coach note: minimap info is limited, so rely on sound and UAVs."
+          },
+          {
+            "name": "Counter Attack / Drop Zone",
+            "detail": "Mentioned in older coverage and one modes site, but a GamerFuzion read of the official launch list says both are missing at launch. Treat as not available until seen in game. [Unverified]"
+          },
+          {
+            "name": "Ranked Play",
+            "detail": "Not live as of Oct 28, 2026; no date announced and not on the Nov 6 Season 1 roadmap. Expect a CDL-style ruleset (Hardpoint, S&D, likely a third mode, restricted items) when it arrives. [Unverified]"
+          },
+          {
+            "name": "DMZ (Hajin)",
+            "detail": "Extraction mode: squads (reported up to 3) deploy into Hajin, complete contracts, fight AI and players, then exfil by helicopter at Tac-Map exfil zones (calling it alerts nearby players/AI; stay aboard until the timer hits zero), Fulton balloons or Exfil Flares. Die and you lose carried gear. Killing 4 operators makes you Wanted. Separate 1-70 level track."
+          },
+          {
+            "name": "Warzone (from Nov 6)",
+            "detail": "Battle Royale gets Hajin (Verdansk stays); Resurgence gets Zodiac (industrial South Korea, railway through the map). MW4 movement replaces omnimovement and Tac Sprint is default (no perk needed) per reports. MW4 weapons and progression carry over."
+          },
+          {
+            "name": "Movement training course",
+            "detail": "A dedicated movement training experience ships with launch; it grades runs from C- to S. Use it to drill mantle-into-slide, supine slide and ledge hang before ranked-style play."
+          },
           {
             "name": "Respawn modes",
             "detail": "Team Deathmatch, Domination, Hardpoint, Kill Confirmed and Free-for-All, each also in Hardcore."
@@ -539,16 +679,144 @@
           {
             "name": "Campaign",
             "detail": "A joint Korean and US Marine squad in Seoul."
-          },
-          {
-            "name": "Ranked Play",
-            "detail": "Start date not confirmed at launch (unverified)."
           }
         ]
       },
       {
         "id": "maps",
         "items": [
+          {
+            "name": "Cachette (core 6v6)",
+            "detail": "France: hideout/wine warehouse and mechanic's garage by a rail terminal. Cobblestone streets, shipping containers, rooftops and tight interiors; many flanks and upper-floor routes. Key routes: Backlot, Central Containers, Front Gate; central rooftops lead to Armory and Lounge. Beta complaint: spawn traps for the side without A-side spawn."
+          },
+          {
+            "name": "Cachette Hardpoint order",
+            "detail": "Murder Box -> Graffiti -> Central Containers -> Armory -> Garage (single source, GamesAtlas). [Unverified]"
+          },
+          {
+            "name": "Coal (core 6v6)",
+            "detail": "Remote former Soviet coal-processing plant. Areas: Central Quarry, Processing Plant, warehouses, conveyor routes, loading areas, upper industrial walkways, outer perimeter. The quarry is the contested crossroads: don't cross it in the open; use warehouse routes to rotate and check high walkways first."
+          },
+          {
+            "name": "Coal Hardpoint order",
+            "detail": "Conveyor -> Garage -> Stockpiles -> Under Structure -> Sorting (GamesAtlas). [Unverified]"
+          },
+          {
+            "name": "Lithium (core 6v6)",
+            "detail": "Mexican lithium refinery in the Sierra mountains. Defined by mid-range sightlines (favors AR, LMG, marksman). Garage doors toggle with wall buttons; you can slide under partly shut doors. A camouflaged truck on the east road overlooks Runoff Area and Refinery. Ranked #1 beta map by one creator."
+          },
+          {
+            "name": "Lithium Hardpoint",
+            "detail": "Six hills on a fixed rotation; longest rotation P3 -> P4 (east side to southwest), so leave P3 early (Rankkd). [Unverified]"
+          },
+          {
+            "name": "Lotus (core 6v6)",
+            "detail": "South Korean fishing village after an amphibious assault: fish market, hostel, boathouse, gardens, restaurant, residential blocks. Interiors (Restaurant, Hostel, Fish Market, Boathouse) suit SMG/shotgun; main street has longer lines. Boathouse pipe climbs to lower roof and 2nd floor overlooking Docks; you can swim (have a pistol)."
+          },
+          {
+            "name": "Lotus Hardpoint order",
+            "detail": "Fish Market 1F -> Hostel 1F -> Boathouse 1F -> Garden -> Restaurant -> Market (Squid Statue) (GamesAtlas). [Unverified]"
+          },
+          {
+            "name": "Mumbai (core 6v6)",
+            "detail": "India: fugitive's hideout in a crowded residential district with a Victorian market and a railway line through it. Not in beta; little layout guidance published yet. Expect dense housing (close range) cut by market/rail lanes. [Unverified]"
+          },
+          {
+            "name": "Munition (core 6v6)",
+            "detail": "North Korean military command site around a large ammunition depot: hangars, monitoring rooms, crane, water tower and a linked skybridge (likely a power position over the lanes). Six Hardpoint hills per Rankkd. [Unverified]"
+          },
+          {
+            "name": "Nautical (core 6v6)",
+            "detail": "Damaged South Korean ferry: burning decks, debris and exposed outer decks. Not in beta; no detailed lane/spawn guides found. Expect long exposed deck lanes and tight interior corridors. [Unverified]"
+          },
+          {
+            "name": "Reactor U92 (core 6v6)",
+            "detail": "South Korean nuclear reactor complex in meltdown. Big concave command room with arcing electrical damage (key control point in objective modes) and a boiling containment pool at the center. Players holding the central space punish uncleared crossings. Not in beta."
+          },
+          {
+            "name": "Rooftops (core 6v6)",
+            "detail": "Snowy New York rooftop of Hotel Times West: greenhouse, mechanical platforms (fans), patio, laundry room, pigeon coop; exterior walkways wrap the roofline, so check flank access before settling. Mix of closed rooms and open space."
+          },
+          {
+            "name": "Rooftops Hardpoint",
+            "detail": "Rankkd: 6 hills, P1 mid, P2 north-west, P3 east (P2->P3 crosses almost the whole roof), P4 south-mid (B site), P5 north-mid (by A), P6 south-east. GamesAtlas names: Laundry Room, Fans, Greenhouse, Center, Patio, Pigeon Coop (start point conflicts). [Unverified]"
+          },
+          {
+            "name": "Sentry (core 6v6)",
+            "detail": "Military base in whiteout conditions (North Korea per most sources; one says Russian). Command/control center, damaged barracks, maintenance garage, generator room, substation, dome. Whiteout limits long sightlines; thermal/Cold-Blooded matter more. Not in beta."
+          },
+          {
+            "name": "Sentry Hardpoint order",
+            "detail": "Control Center -> Barracks -> Dome -> Driveway (white jeeps) -> Utility (fuel depot) (GamesAtlas). [Unverified]"
+          },
+          {
+            "name": "Silkworm (core 6v6)",
+            "detail": "Dense Seoul shopping district centered on a subway entrance. Grounded street fights with few vantage points; beginner-friendly. Main Street cars can be set ablaze with frags/launchers/LMG fire. Game Room favors CQB; watch the Convenience Store from behind the counter. Ranked #2 beta map by one creator."
+          },
+          {
+            "name": "Silkworm Hardpoint order",
+            "detail": "Subway Entrance -> Apartment Alley -> Game Room -> Main Street (armored vehicles) -> Storefront Alley -> Convenience Store (GamesAtlas). [Unverified]"
+          },
+          {
+            "name": "Transit 213 (core 6v6)",
+            "detail": "Small, high-intensity bus depot/parking lot in western India packed with colored buses; smallest core map in beta, Shipment-like pace. Grenades decide fights; buses give cover but draw grenades, so don't linger at one bus after a fight. Community favorite."
+          },
+          {
+            "name": "Transit 213 Hardpoint",
+            "detail": "Rankkd: 5 hills, P1 mid bus lot, P2 north-east, P3 west (B site), P4 south, P5 north; P4->P5 is the longest rotation. GamesAtlas names: Center Lot, Repair Shop, Dumpster, Apartments, Luggage. [Unverified]"
+          },
+          {
+            "name": "Shipment (6v6, added Oct 27)",
+            "detail": "Classic tiny container yard. Constant spawns, grenade spam, fastest weapon/camo XP. One guide mentions flanking lanes and a forklift chokepoint. Run fast-ADS SMG/shotgun, Fast Hands, Battle Hardened, Bomb Squad."
+          },
+          {
+            "name": "Kill Block (modular arena)",
+            "detail": "Built from three 'Slabs' (two End Slabs + a Central Slab) combining into 500+ layouts, some inspired by Crash, Highrise and Shoot House; about Shoot House size. Hosts Gunfight 3v3 and 10v10. Layout changes every two rounds per official rules (other guides say every round/match)."
+          },
+          {
+            "name": "Gunfight: Cafe",
+            "detail": "Paris courtyard with a theater, magazine kiosk and a central fountain (center cover/Overtime Flag area). [Unverified]"
+          },
+          {
+            "name": "Gunfight: Library",
+            "detail": "Wood-paneled state library with bookshelves and a central walkway raised over both sides; the walkway is the high-ground control point. [Unverified]"
+          },
+          {
+            "name": "Gunfight: NYC",
+            "detail": "Wintry downtown at night with a stage, stands, equipment cases and vendor stalls."
+          },
+          {
+            "name": "Gunfight: Smuggler",
+            "detail": "Rail yard with parked train cars (fight inside or climb ladders onto roofs), warehouses and open ends."
+          },
+          {
+            "name": "Ground War: Imjin Farmland",
+            "detail": "Rural Korea: open fields, farms, waterways, roads and rail tracks; relatively flat with narrow roads and shortcuts. Long sightlines: vehicles and snipers dominate open fields."
+          },
+          {
+            "name": "Ground War: Wolves Stadium",
+            "detail": "Urban Ground War map in Hajin centered on a large stadium; expect vertical fights and stadium interior control."
+          },
+          {
+            "name": "Ground War: Forest",
+            "detail": "Wooded hillside between Imjin Farmland and Wolves Stadium. Not in beta; layout details unpublished. [Unverified]"
+          },
+          {
+            "name": "DMZ: Hajin",
+            "detail": "Large Korean DMZ map (also coming to Warzone BR Nov 6). Includes a nuclear power plant area in the north-east. Exfil zones shown on the Tac-Map with a door icon."
+          },
+          {
+            "name": "Warzone: Zodiac (Resurgence)",
+            "detail": "Industrial South Korean facility crossed by a railway; first playable in MW4 Open Beta, visibility improved after beta. Joins Resurgence Nov 6."
+          },
+          {
+            "name": "Power positions and head glitches",
+            "detail": "No reliable MW4-specific head-glitch or spawn guides were published by Oct 28, 2026. Known strong spots: Lithium east-road truck, Lotus Boathouse roof/2nd floor, Library center walkway, Munition skybridge, Reactor command room. Verify in game. [Unverified]"
+          },
+          {
+            "name": "Map pool notes",
+            "detail": "Six core maps were in the beta (Cachette, Lithium, Lotus, Rooftops, Silkworm, Transit 213); six debuted at launch (Coal, Mumbai, Munition, Nautical, Reactor U92, Sentry). Some counts say 20 or 21 MP maps depending on Shipment/Kill Block."
+          },
           {
             "name": "Cachette",
             "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
@@ -598,34 +866,6 @@
             "detail": "Core 6v6 map (launch; names from a fan wiki, unverified)."
           },
           {
-            "name": "Imjin Farmland",
-            "detail": "Ground War 32v32 map."
-          },
-          {
-            "name": "Wolves Stadium",
-            "detail": "Ground War 32v32 map."
-          },
-          {
-            "name": "Forest",
-            "detail": "Ground War 32v32 map."
-          },
-          {
-            "name": "Cafe",
-            "detail": "Gunfight 2v2 map."
-          },
-          {
-            "name": "Library",
-            "detail": "Gunfight 2v2 map."
-          },
-          {
-            "name": "NYC",
-            "detail": "Gunfight 2v2 map."
-          },
-          {
-            "name": "Smuggler",
-            "detail": "Gunfight 2v2 map."
-          },
-          {
             "name": "Kill Block",
             "detail": "Modular map for 3v3 and 10v10 Gunfight with hundreds of configurations."
           }
@@ -634,6 +874,66 @@
       {
         "id": "screens",
         "items": [
+          {
+            "name": "Main menu / sidebar",
+            "detail": "MW4 uses a cleaner UI with vertical menus and a left-docked pop-out 'blade' sidebar giving quick access to modes and Create-a-Class in MP and DMZ. Faster loading than Black Ops 7 menus per early impressions."
+          },
+          {
+            "name": "Playlist / mode select",
+            "detail": "Mode tiles for Core 6v6 (respawn and objective), Gunfight/Kill Block, Ground War, Party modes and Hardcore. Map voting was enabled during the beta and is expected in lobbies. [Unverified]"
+          },
+          {
+            "name": "Create-a-Class / Loadout",
+            "detail": "Unified loadout: operator, primary, secondary, lethal, tactical, field upgrade, 3 perks (one per slot) and the 3 killstreaks are all saved per loadout (first time in a Modern Warfare game). Create-a-Class unlocks at player level 4."
+          },
+          {
+            "name": "Gunsmith",
+            "detail": "Up to 5 standard attachments plus a separate Apex slot (unlocked at max weapon level). Apex attachments may block some slots. Weapon level progress counts across MP, DMZ and Warzone. DMZ looted guns can have up to 8 attachment slots."
+          },
+          {
+            "name": "Prestige choice screen",
+            "detail": "At level 55 you choose Classic prestige (reset unlocks, +20% XP, permanent unlock token) or Regular (keep unlocks). 10 prestiges then 1,000 Prestige Master levels. Weapon Prestige locks attachments and moves the gun to a classic level unlock path."
+          },
+          {
+            "name": "Pre-match lobby",
+            "detail": "Shows map and mode, team rosters and (when on) map vote. Use it to swap loadouts for the map: AR/marksman for Lithium, SMG/shotgun for Transit 213, Shipment, Lotus interiors. [Unverified]"
+          },
+          {
+            "name": "Scoreboard (in match)",
+            "detail": "Opened by holding Options/Tab: team scores, each player's score, kills, deaths, assists and objective stats. Exact columns in MW4 not verified. [Unverified]"
+          },
+          {
+            "name": "Death screen and killcam",
+            "detail": "After death a killcam replays the killer's view (Skip Killcam setting exists; guides recommend leaving it on to learn enemy angles). Expect killer name, weapon and health remaining; exact panel contents not verified. Then respawn with the option to change loadout. [Unverified]"
+          },
+          {
+            "name": "Final killcam / end of match",
+            "detail": "Series standard: final killcam of the winning play, then top-players podium, XP and weapon-level progress, challenge/camo progress. MW4-specific layout not verified. [Unverified]"
+          },
+          {
+            "name": "Tac-Map (DMZ)",
+            "detail": "Full-screen map in DMZ showing objectives, contracts and exfil zones (door icon). Exfil call triggers a countdown timer on screen."
+          },
+          {
+            "name": "Collateral buy menu",
+            "detail": "Between rounds in Collateral: buy weapons, armor, perks, equipment and team UAV with cash (start $800). One guide claims 26 options. [Unverified]"
+          },
+          {
+            "name": "Kill Block round transition",
+            "detail": "Kill Block shows the new Slab layout and shared loadout every two rounds; read the new layout before moving."
+          },
+          {
+            "name": "Movement course results",
+            "detail": "Movement training course grades runs from C- to S."
+          },
+          {
+            "name": "Settings: Interface/HUD",
+            "detail": "Options include HUD Bounds, minimap shape (square recommended) and rotation, compass on/off, stamina bar toggle, HUD widget shake, crosshair dot size, color filters (filter 2 commonly suggested), FPS/ping/packet-loss telemetry, killcam skip."
+          },
+          {
+            "name": "Settings: Movement",
+            "detail": "Sprint Assist (single-tap run is default with Blood Rush), Mantle Assist, Grounded Mantle, slide/dive behaviour. Guides suggest Sprint Assist on with zero delay; auto Tac Sprint may slow ADS. [Unverified]"
+          },
           {
             "name": "Main menu",
             "detail": "Campaign, Multiplayer and DMZ (layout unverified)."
@@ -661,7 +961,59 @@
         "items": [
           {
             "name": "Minimap",
-            "detail": "Square or round, rotating or fixed (HUD settings); red dots on the minimap are back."
+            "detail": "Top-left corner (IW Modern Warfare convention). Shows teammates, UAV/radar pings and objectives. Recommended: square shape, rotation on. Birdseye perk zooms it out and shows enemy facing on pings. Counter UAV scrambles it. [Unverified]"
+          },
+          {
+            "name": "Firing red dots",
+            "detail": "Unconfirmed for MW4. MWII/Warzone 2 removed unsuppressed-fire red dots from minimap and compass; one MW4 DMZ settings guide implies red dots appear on the compass when enemies shoot. Verify in game before coaching around it. [Unverified]"
+          },
+          {
+            "name": "Compass",
+            "detail": "Top-center compass bar can be toggled on/off in Interface settings; recommended on. May show pings/markers. [Unverified]"
+          },
+          {
+            "name": "Score and timer",
+            "detail": "Team scores and match timer sit with the minimap at the top-left in IW Modern Warfare titles; objective status (A/B/C flags, Hardpoint timer, bomb) appears alongside. [Unverified]"
+          },
+          {
+            "name": "Killfeed",
+            "detail": "Left side of the screen above the chat (series convention): killer, weapon icon, victim; headshot icon. Use it to track who is alive in S&D/Gunfight. [Unverified]"
+          },
+          {
+            "name": "Ammo, weapon and equipment",
+            "detail": "Bottom-right: current weapon, mag/reserve ammo, lethal and tactical counts; field upgrade charge meter nearby. [Unverified]"
+          },
+          {
+            "name": "Killstreak meter",
+            "detail": "Shows the 3 selected killstreaks and progress (kills plus Smart Streak objective credit) near the lower right; ready streaks highlighted with the D-pad/number key prompt. [Unverified]"
+          },
+          {
+            "name": "Objective markers",
+            "detail": "World-space icons for flags (A/B/C), Hardpoint zone, Data Spike/Comm Station (Hijack), bombs (S&D/Collateral), dog tags (KC), cash HVT reveals (Inflation)."
+          },
+          {
+            "name": "Hitmarkers and damage",
+            "detail": "Hitmarkers at the crosshair (different for kills/armor), red directional damage arcs showing where you're being hit from. Track damage direction to find the shooter. [Unverified]"
+          },
+          {
+            "name": "Stamina bar",
+            "detail": "Tac Sprint/stamina indicator can be hidden in settings. Tac sprint slows as stamina drains."
+          },
+          {
+            "name": "HVT reveal (Inflation)",
+            "detail": "Players carrying cash past the threshold are revealed to both teams on the HUD/minimap as high-value targets."
+          },
+          {
+            "name": "Smart Streak/feedback popups",
+            "detail": "Score popups (+XP) for kills, captures, holding Hardpoint and planting the Data Spike; these objective actions also fill the streak meter."
+          },
+          {
+            "name": "High Alert pulse",
+            "detail": "With High Alert equipped, the screen edge pulses toward an unseen enemy who is spotting you."
+          },
+          {
+            "name": "HUD clarity",
+            "detail": "Reviewers describe the MW4 HUD as cleaner while showing the same info. HUD Bounds can pull elements toward screen center."
           },
           {
             "name": "HUD bounds",
@@ -677,132 +1029,444 @@
         "id": "roster",
         "items": [
           {
-            "name": "Han 86",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: M4",
+            "detail": "Consensus top-tier all-rounder; mid-long range. Community TTK ~296 ms (0-10 m), ~422 ms (40-80 m). Sample build (Oct 26): Slimline Elite optic, FSS IS300 muzzle, FSS Fireline Grip, PF1 Fixed stock, 5.56 NATO Overpressured ammo. Apex: M4 Hurricane (top-loaded 50-round 5.7x28mm mag)."
           },
           {
-            "name": "M4",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: HAN 86",
+            "detail": "Most-used pro AR at day-1 kickoff events (Ghosty, Alluka, Drazah, Simp builds). ~740 RPM; community TTK ~243-279 ms close, ~371 ms at 40 m. Close-mid laser. Pro attachments include Corvus LVL-40 comp, FSS TAC90 grip, Slimline Elite, SA H86 465MM barrel. Apex: X20 Skybreaker (targeting optic + airburst grenade launcher)."
           },
           {
-            "name": "Hyeon Burst",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Kastov 762",
+            "detail": "Hard-hitting 7.62 AR, S/A tier. Community TTK ~300 ms (0-10 m), ~457 ms (40-80 m); more recoil than M4. Apex: Kastov ARC (barrel with integrated optic emitting an RF pulse that disrupts infantry, electronics and vehicles); may have two Apex options. [Unverified]"
           },
           {
-            "name": "Patriot XMR",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Hyeon Burst",
+            "detail": "Burst AR, A tier on several lists; rewards players who don't miss. Apex options: Hyeon Hyperburst (full-auto, first 3 rounds extremely fast then much slower) or Hyeon Auto (plain full-auto conversion)."
           },
           {
-            "name": "Kastov 762",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Patriot XMR",
+            "detail": "Mostly B tier. Apex: Patriot Volt underbarrel firing 50,000 V taser darts (non-lethal, cripples enemy movement)."
           },
           {
-            "name": "Oden",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Oden",
+            "detail": "Heavy AR, C tier on most lists (B on Game8). Apex reported as Sentinel: full conversion to a semi-auto sniper with bipod, suppressor and scope. [Unverified]"
           },
           {
-            "name": "Axion",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Axion",
+            "detail": "A-C tier depending on list; A tier in DMZ. Apex is a saw-style mobility/hipfire conversion (named Reaver, Clearcut or Crusader by different guides). [Unverified]"
           },
           {
-            "name": "Cronen Squall",
-            "detail": "Assault rifle (launch roster; spellings vary between sources)."
+            "name": "AR: Cronen Squall",
+            "detail": "B tier in MP, A tier in DMZ per guides. Solid mid-range option; no standout data found."
           },
           {
-            "name": "ISO Nightshade",
-            "detail": "SMG (launch roster; spellings vary between sources)."
+            "name": "SMG: ISO Nightshade",
+            "detail": "Meta SMG. ~923 RPM, fastest close TTK of top picks (~260 ms 0-10 m) but falls off past ~15 m (~453 ms 40-80 m). Builds: FSS Crackdown or XRK Herder 40 muzzle, Demo STP-1 rear grip, 40-round mag, ZLR Carbon-900 barrel. Apex: ISO Trace (RFID rounds tag hit enemies and show their position on the gun's display)."
           },
           {
-            "name": "VEL 46",
-            "detail": "SMG (launch roster; spellings vary between sources)."
+            "name": "SMG: VEL 46",
+            "detail": "~952 RPM, 40-round mag, very fast close TTK (some data puts it above the Nightshade up close). Used in pro day-1 builds. Apex: VEL 46 Snap (faster weapon swaps)."
           },
           {
-            "name": "Wz.55 Striga",
-            "detail": "SMG (launch roster; spellings vary between sources)."
+            "name": "SMG: PPSh-41",
+            "detail": "~1,110 RPM with a 71-round drum; huge mag for objective holds but strong horizontal recoil. S tier on Epic Carry. Unlocks around player level 27. Apex: Ember (incendiary underbarrel launcher)."
           },
           {
-            "name": "PPSh-41",
-            "detail": "SMG (launch roster; spellings vary between sources)."
+            "name": "SMG: X-58 Nyx",
+            "detail": "~800 RPM; trades fire rate for steadier recoil, good mid-range for an SMG. S tier on Game8. Apex: X-58 Void (stealth build with subsonic ammo)."
           },
           {
-            "name": "X-58 Nyx",
-            "detail": "SMG (launch roster; spellings vary between sources)."
+            "name": "SMG: Wz.55 Striga",
+            "detail": "Slowest SMG (~651 RPM) but highest damage per shot; ~64 ms open-bolt delay before first shot, so pre-aim and don't react-fire. Apex: Striga Rampage (dual-wield)."
           },
           {
-            "name": "Rezi 12",
-            "detail": "Shotgun (launch roster; spellings vary between sources)."
+            "name": "LMG: FiNN LMG",
+            "detail": "B-A tier; good sustained fire for holding lanes and Hardpoints. Its early Demolition preset can farm kills quickly."
           },
           {
-            "name": "Warlord",
-            "detail": "Shotgun (launch roster; spellings vary between sources)."
+            "name": "LMG: Type 73",
+            "detail": "Tier opinions range from S (Skycoach best LMG) to C (Mobalytics). Use for long lanes on Lithium/Munition. [Unverified]"
           },
           {
-            "name": "Finn LMG",
-            "detail": "LMG (launch roster; spellings vary between sources)."
+            "name": "LMG: APOC-338",
+            "detail": "A tier on Mobalytics; little other data. Heavy LMG for long-range lane control. [Unverified]"
           },
           {
-            "name": "Type 73",
-            "detail": "LMG (launch roster; spellings vary between sources)."
+            "name": "Shotgun: Rezi 12",
+            "detail": "Best shotgun per several lists (A tier). Tune for fire rate and handling. Strong in Lotus interiors, Transit 213, Shipment and Kill Block."
           },
           {
-            "name": "APOC-338",
-            "detail": "LMG (launch roster; spellings vary between sources)."
+            "name": "Shotgun: Warlord",
+            "detail": "C tier. One early source questioned whether it was available at launch. [Unverified]"
           },
           {
-            "name": "MAR-9",
-            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+            "name": "Marksman: Oris 8.6",
+            "detail": "Quickscope favorite: reported one-shot kills up to ~25 m (beta testing via Dexerto). S tier on Game8; MW4Meta lists it among launch leaders. Launch added flinch/damage tuning to one-hit-kill weapons, so expect less forgiving play when shot."
           },
           {
-            "name": "Oris 8.6",
-            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+            "name": "Marksman: Mosin-Nagant",
+            "detail": "Bolt-action marksman, B tier; one-shot potential at medium-long range but very accuracy-dependent."
           },
           {
-            "name": "Mosin-Nagant",
-            "detail": "Marksman rifle (launch roster; spellings vary between sources)."
+            "name": "Marksman: MAR-9",
+            "detail": "C tier; a middle-range option without full sniper handling penalties."
           },
           {
-            "name": "KG-7 Vulcan",
-            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+            "name": "Sniper: KG-7 Vulcan",
+            "detail": "Strongest sniper per most guides: bolt-action, one-shot to the chest, quickscope-friendly, unlocks early (level 4 per Game8). Less appealing on huge Ground War/Warzone ranges."
           },
           {
-            "name": "Astaroth .57",
-            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+            "name": "Sniper: Astaroth .57",
+            "detail": "Highest damage and best bullet penetration of the snipers (one shot), but ranked low (D tier) by GameRant, presumably for slow handling. [Unverified]"
           },
           {
-            "name": "Signal 50",
-            "detail": "Sniper rifle (launch roster; spellings vary between sources)."
+            "name": "Sniper: Signal 50",
+            "detail": "Semi-auto sniper; 1-2 shots to kill; lowest damage per shot of the class. Forgiving follow-ups."
           },
           {
-            "name": "SANG 9mm",
-            "detail": "Pistol (launch roster; spellings vary between sources)."
+            "name": "Pistol: SANG 9mm",
+            "detail": "Close-quarters 9mm with minimal recoil (B tier on Dexerto). Reliable backup."
           },
           {
-            "name": "Krait P68",
-            "detail": "Pistol (launch roster; spellings vary between sources)."
+            "name": "Pistol: Krait P68",
+            "detail": "Semi-auto .45 ACP. Faster TTK than the .50 GS at 0-10 m; ranked best pistol by one site, D tier by another."
           },
           {
-            "name": ".50 GS",
-            "detail": "Pistol (launch roster; spellings vary between sources)."
+            "name": "Pistol: .50 GS",
+            "detail": "Desert Eagle-style hand cannon; better than Krait at 40-80 m. Unlocks around player rank 23."
           },
           {
-            "name": "Mojave .357",
-            "detail": "Pistol (launch roster; spellings vary between sources)."
+            "name": "Pistol: Mojave .357",
+            "detail": "Revolver; C tier, usable but demanding to play consistently."
           },
           {
-            "name": "PILA",
-            "detail": "Launcher (launch roster; spellings vary between sources)."
+            "name": "Launcher: PILA",
+            "detail": "Unlocks level 4. Guided or free-fire missiles; main anti-air launcher for UAVs, helicopters and drones. 1 round + 1 reserve; missiles arm at ~11 m."
           },
           {
-            "name": "RPG-8",
-            "detail": "Launcher (launch roster; spellings vary between sources)."
+            "name": "Launcher: RPG-8",
+            "detail": "Unlocks level 23. Unguided rocket vs vehicles/groups; arms at ~9 m (no point-blank kills)."
           },
           {
-            "name": "JOKR",
-            "detail": "Launcher (launch roster; spellings vary between sources)."
+            "name": "Launcher: JOKR",
+            "detail": "Unlocks level 43. Lock-on top-attack launcher for vehicles and killstreaks (hits from above)."
           },
           {
-            "name": "PM-40 Anvil",
-            "detail": "Launcher (launch roster; spellings vary between sources)."
+            "name": "Launcher: PM-40 Anvil",
+            "detail": "Unlocks level 54. Pump-action 43 mm grenade launcher (3 rounds, 6 reserve) for area denial."
+          },
+          {
+            "name": "Melee: FSS Carbon Edge 1095",
+            "detail": "The launch melee weapon (knife-type)."
+          },
+          {
+            "name": "Attachment rules",
+            "detail": "5 standard Gunsmith attachments + 1 Apex slot that does not use a standard slot. Apex unlocks at max weapon level; 28 Apex attachments at launch (counts vary)."
+          },
+          {
+            "name": "Attachment: suppressors (FSS Crackdown, XRK Herder 40, XRK Mil-Tac)",
+            "detail": "Common on SMG/AR meta builds: keeps you off enemy radar when firing (if firing reveals you) and adds recoil/range control. [Unverified]"
+          },
+          {
+            "name": "Attachment: barrels (ZLR Carbon-900, 18 LE Crosswind, SA H86 465MM)",
+            "detail": "Range barrels: Carbon-900 extends ISO Nightshade effective range past ~15 m; 465MM is a pro HAN 86 pick."
+          },
+          {
+            "name": "Attachment: optics (Slimline Elite, ZLR Type C, SZ Prima-4)",
+            "detail": "Slimline Elite mini reflex is the most common pro/meta optic on M4 and HAN 86."
+          },
+          {
+            "name": "Attachment: grips (Demo STP-1 rear, FSS Fireline, FSS TAC90, XRK Justice II)",
+            "detail": "Demo STP-1 rear grip appears on most ISO Nightshade builds; Fireline/TAC90 for AR recoil control."
+          },
+          {
+            "name": "Attachment: stocks (PF1 Fixed, Demo Dozer, EXP G2-44, FR4 Retractable)",
+            "detail": "Fixed stocks for AR recoil; retractable/light stocks for strafe and ADS speed."
+          },
+          {
+            "name": "Attachment: lasers and ammo (SA Laz-500, QFL-S4.5, Pulse-MW, 5.56 Overpressured)",
+            "detail": "Lasers speed ADS/hipfire for SMGs; 5.56 NATO Overpressured ammo boosts M4 damage range."
+          },
+          {
+            "name": "Perk system",
+            "detail": "Pick three: one perk from each of 3 slots, 6 options per slot (18 total). Six perks are available when Create-a-Class opens at level 4; Kill Chain unlocks last (~level 48)."
+          },
+          {
+            "name": "Perk 1: Quick Fix",
+            "detail": "Kills with a weapon or objective interactions immediately start health regen. Level 4. Great for objective players."
+          },
+          {
+            "name": "Perk 1: Overkill",
+            "detail": "Carry two primary weapons (e.g. AR/sniper + SMG). Level 4."
+          },
+          {
+            "name": "Perk 1: High Alert",
+            "detail": "Screen-edge vision pulse when an unseen enemy spots you. Level 8 (16 in beta). Rated low by some lists; Cold-Blooded counters it."
+          },
+          {
+            "name": "Perk 1: Ghost",
+            "detail": "Undetectable by enemy UAV, callouts, Portable Radar and Heartbeat Sensor. Level 24. S tier; the hard counter to UAV spam (not Advanced UAV per series norms). [Unverified]"
+          },
+          {
+            "name": "Perk 1: Resupply",
+            "detail": "Equipment recharges over time, +1 capacity, faster Field Upgrade charge; launch patch speeds the first recharge. ~Level 31."
+          },
+          {
+            "name": "Perk 1: Kill Chain",
+            "detail": "Killstreak kills count (reportedly at half value) toward your streak. ~Level 48. Exact wording incomplete. [Unverified]"
+          },
+          {
+            "name": "Perk 2: Hardline",
+            "detail": "All killstreaks cost 1 less kill. Level 4."
+          },
+          {
+            "name": "Perk 2: Blood Rush",
+            "detail": "Grants Tactical Sprint in multiplayer (moved here from default at launch) and kills restore stamina. Level 4. Core pick for aggressive players."
+          },
+          {
+            "name": "Perk 2: Bomb Squad",
+            "detail": "Less damage from non-killstreak explosives, resets grenade fuse when you pick one up, immune to knockdown. Level 16."
+          },
+          {
+            "name": "Perk 2: Fast Hands",
+            "detail": "Faster reloads, weapon swaps and equipment use. ~Level 20."
+          },
+          {
+            "name": "Perk 2: Ninja",
+            "detail": "Much quieter footsteps with reduced audible range. ~Level 30. S tier (footstep audio was retuned after beta complaints)."
+          },
+          {
+            "name": "Perk 2: Birdseye",
+            "detail": "Zoomed-out minimap; UAV and radar pings show enemy facing; reportedly extended counter-UAV radius. ~Level 40."
+          },
+          {
+            "name": "Perk 3: Lethal Reach",
+            "detail": "Throw equipment farther with a visible arc (some guides say longer melee range instead). Rated low. [Unverified]"
+          },
+          {
+            "name": "Perk 3: Combat Grid",
+            "detail": "Level 4. Reported to spot enemy killstreaks / give wall-hack-style info; exact effect not documented in sources found. [Unverified]"
+          },
+          {
+            "name": "Perk 3: Battle Hardened",
+            "detail": "Reduces enemy tactical effects; launch patch strengthened it vs Flash, Concussion and Screamer Mine. Level 12."
+          },
+          {
+            "name": "Perk 3: Scavenger",
+            "detail": "Enemies drop an ammo cache on death (no launcher ammo). ~Level 28."
+          },
+          {
+            "name": "Perk 3: Tracker",
+            "detail": "See enemy footprints and their death markers; your own kill markers are hidden. ~Level 32."
+          },
+          {
+            "name": "Perk 3: Cold-Blooded",
+            "detail": "Hidden from AI targeting (streaks/turrets), thermal optics, Recon Drones, spotter scopes, Snapshot Grenades and High Alert. ~Level 30-36. S tier."
+          },
+          {
+            "name": "Killstreak system",
+            "detail": "17 streaks, chosen per loadout. Cost tiers 4/6/8/10/12 kills at launch (beta was 3/5/7/9/11); official patch notes reportedly say UAV is 5 kills (4 with Hardline) - conflict. Smart Streak meter: objective actions add progress. Streaks reset on death. Hardline -1."
+          },
+          {
+            "name": "Streak: UAV (4-5)",
+            "detail": "Recon plane shows enemies on your team's minimap. Launch buff: health 100 -> 150, so needs more to shoot down. Counter: Ghost, shoot it down (PILA/ JOKR/ LMG), Counter UAV."
+          },
+          {
+            "name": "Streak: Bomb Glider (4)",
+            "detail": "Hand-held glider with an explosive payload you fly into targets. Counter: shoot it out of the air, break line from windows, Bomb Squad reduces non-streak explosives only. [Unverified]"
+          },
+          {
+            "name": "Streak: Care Package (4)",
+            "detail": "Airdrop containing a random killstreak. Counter: steal it, or camp the drop."
+          },
+          {
+            "name": "Streak: Impact Warhead (4)",
+            "detail": "Explosive payload that drills through multiple floors before detonating - punishes roof/interior campers. Counter: move away from the marked area, don't stack."
+          },
+          {
+            "name": "Streak: Artillery Beacon (6)",
+            "detail": "Deploy a beacon; heat-seeking artillery tracks it. Counter: destroy or move away from the beacon; Cold-Blooded may help vs targeting. [Unverified]"
+          },
+          {
+            "name": "Streak: Crossfire (6)",
+            "detail": "Two airstrikes hit one area from opposite directions. Counter: get indoors/under hard cover and clear the line."
+          },
+          {
+            "name": "Streak: Combat Drone (6)",
+            "detail": "Remote-controlled anti-personnel drone. Counter: shoot it, DDOS/Shock Stick, Cold-Blooded vs targeting. [Unverified]"
+          },
+          {
+            "name": "Streak: Counter UAV (6)",
+            "detail": "Scrambles all enemy minimaps. Counter: shoot it down (launcher), rely on sound and Birdseye radius. [Unverified]"
+          },
+          {
+            "name": "Streak: Wheelson (8)",
+            "detail": "AI ground vehicle that hunts nearby targets or guards its owner's area; made more aggressive at launch. Counter: launchers, Shock Stick/DDOS, Cold-Blooded vs AI targeting, use doors/elevation."
+          },
+          {
+            "name": "Streak: Missile Salvo (8)",
+            "detail": "Aerial missile platform firing lock-on missiles. Counter: stay under cover, move between buildings, Cold-Blooded. [Unverified]"
+          },
+          {
+            "name": "Streak: Railgun Sentry (8)",
+            "detail": "Electromagnetic cannon firing tungsten flechettes; can run as an autonomous sentry. Counter: Cold-Blooded vs AI, approach from behind/out of its view, launchers, Drill Charge, DDOS."
+          },
+          {
+            "name": "Streak: Attack Helicopter (10)",
+            "detail": "AI helicopter patrols and engages. Counter: PILA/JOKR, SAM Airburst Turret, Cold-Blooded, stay indoors."
+          },
+          {
+            "name": "Streak: Deathstalker (10)",
+            "detail": "Player-controlled helicopter with twin turrets that overheat. Counter: launchers/SAM turret; fight from cover while it overheats."
+          },
+          {
+            "name": "Streak: Advanced UAV (10)",
+            "detail": "Orbital UAV showing enemy positions and facing in real time; immune to lock-on. Counter: Counter UAV / DDOS-style jamming; Ghost behavior vs AUAV unverified; play indoors and keep moving. [Unverified]"
+          },
+          {
+            "name": "Streak: Argonaut (10)",
+            "detail": "Juggernaut-style: heavy armor, pump-action cluster grenade launcher and burst-fire sidearm. Counter: focus fire as a team, launchers/explosives, avoid close range."
+          },
+          {
+            "name": "Streak: Gunship (12)",
+            "detail": "Heavy aircraft with 105 mm, 40 mm and 25 mm cannons. Counter: launchers, SAM turret, Cold-Blooded vs thermal, stay under hard cover."
+          },
+          {
+            "name": "Streak: Air Lockdown (12)",
+            "detail": "Series of bombing runs plus extra anti-air cover while active (protects your air streaks). Unlocks level 55. Counter: hide indoors, wait it out, don't fly air streaks into it."
+          },
+          {
+            "name": "Streak: Tactical Nuke (30, unverified)",
+            "detail": "Some guides describe a 30-kill Tactical Nuke that ends the match; others don't list it at launch. Whether objective credit counts is unknown. [Unverified]"
+          },
+          {
+            "name": "Field Upgrade: Portable Radar",
+            "detail": "Level 4, medium recharge. Periodically pings nearby enemies to your team. Countered by Ghost. [Unverified]"
+          },
+          {
+            "name": "Field Upgrade: DDOS",
+            "detail": "Level 4, fast recharge. Pulse that briefly jams and disables nearby enemy electronics and sensors (equipment, drones, streak gear)."
+          },
+          {
+            "name": "Field Upgrade: Munitions Box",
+            "detail": "Level 6. Ammo/equipment resupply for the team."
+          },
+          {
+            "name": "Field Upgrade: SAM Airburst Turret",
+            "detail": "Level 8, slow recharge. Portable missile turret that shoots down aerial threats (UAVs, helis, gunships)."
+          },
+          {
+            "name": "Field Upgrade: Riot Shield",
+            "detail": "Level 11. Deployable/held shield for cover. [Unverified]"
+          },
+          {
+            "name": "Field Upgrade: Trophy System",
+            "detail": "Level 14, fast recharge. Destroys incoming grenades/projectiles; key for Hardpoint and S&D plants."
+          },
+          {
+            "name": "Field Upgrade: Seeker Drone",
+            "detail": "Level 19, slow recharge. Drone that seeks nearby enemies and snapshots (reveals) them."
+          },
+          {
+            "name": "Field Upgrade: Inflatable Decoy",
+            "detail": "Level 25, medium. Proximity-activated (or manual) inflatable dummy to bait shots."
+          },
+          {
+            "name": "Field Upgrade: Smoke Wall",
+            "detail": "Level 29, medium. Hand-held rocket laying a long trail of heavy smoke - cross long lanes safely."
+          },
+          {
+            "name": "Field Upgrade: Recon Drone",
+            "detail": "Level 33, slow. Fly a drone to spot enemies. Cold-Blooded hides you from it."
+          },
+          {
+            "name": "Field Upgrade: Razor Wire Trap",
+            "detail": "Level 41, medium. Proximity mine that snares enemies in barbed wire; guard flanks/objectives."
+          },
+          {
+            "name": "Field Upgrade: Tactical Insertion",
+            "detail": "Level 45. Sets your next respawn point. [Unverified]"
+          },
+          {
+            "name": "Tactical: Flash Grenade",
+            "detail": "Level 4. Blinds and deafens. Battle Hardened reduces it."
+          },
+          {
+            "name": "Tactical: Smoke Grenade",
+            "detail": "Level 4. Smoke screen blocking vision and automated targeting."
+          },
+          {
+            "name": "Tactical: Snapshot Grenade",
+            "detail": "Level 10. Briefly reveals enemies in its area to your team. Cold-Blooded hides you."
+          },
+          {
+            "name": "Tactical: Concussion Grenade",
+            "detail": "Level 15. Slows and disorients. Battle Hardened reduces it."
+          },
+          {
+            "name": "Tactical: Heartbeat Sensor",
+            "detail": "Level 23. Handheld tablet showing nearby enemies. Ghost hides you."
+          },
+          {
+            "name": "Tactical: Shock Stick",
+            "detail": "Level 29. Electrocutes enemies, damages equipment and disrupts vehicles (some lists call it lethal)."
+          },
+          {
+            "name": "Tactical: Decoy Grenade",
+            "detail": "Level 42. Simulates gunfire/radar noise to distract. Also used to farm weapon XP on Shipment. [Unverified]"
+          },
+          {
+            "name": "Tactical: Stim",
+            "detail": "Level 47. Instant heal/recovery. [Unverified]"
+          },
+          {
+            "name": "Tactical: Screamer Mine",
+            "detail": "Level 53. Proximity mine that suppresses and marks enemies. Battle Hardened reduces it."
+          },
+          {
+            "name": "Lethal: Frag Grenade",
+            "detail": "Level 4. Cookable fragmentation grenade."
+          },
+          {
+            "name": "Lethal: Sticky Grenade",
+            "detail": "Level 4. Sticks to surfaces/players (beta listed Semtex in this role). [Unverified]"
+          },
+          {
+            "name": "Lethal: Drill Charge",
+            "detail": "Level 7. Thermal lance bores through cover before exploding - flushes head-glitch/cover holders."
+          },
+          {
+            "name": "Lethal: Proximity Mine",
+            "detail": "Level 13. Proximity explosive."
+          },
+          {
+            "name": "Lethal: Zip Gun",
+            "detail": "Level 17. Single-use pistol for close targets."
+          },
+          {
+            "name": "Lethal: Trip Wire",
+            "detail": "Level 22. Thrown trap that sets a detonation wire; several can link into a network."
+          },
+          {
+            "name": "Lethal: Thermite",
+            "detail": "Level 26. Burning damage over time; area denial."
+          },
+          {
+            "name": "Lethal: Molotov Cocktail",
+            "detail": "Level 28. Fire area denial for doors and objectives."
+          },
+          {
+            "name": "Lethal: Claymore",
+            "detail": "Level 37. Directional proximity mine for flanks."
+          },
+          {
+            "name": "Lethal: C4",
+            "detail": "Level 43. Remote-detonated explosive; also vs vehicles."
+          },
+          {
+            "name": "Lethal: Throwing Knife",
+            "detail": "Level 49. One-hit thrown knife (retrievable). [Unverified]"
           },
           {
             "name": "UAV",
@@ -875,84 +1539,128 @@
           {
             "name": "Tactical Nuke",
             "detail": "Killstreak at 30 kills."
-          },
-          {
-            "name": "Quick Fix",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "Overkill",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "High Alert",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "Ghost",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "Resupply",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "Kill Chain",
-            "detail": "Perk, slot 1."
-          },
-          {
-            "name": "Hardline",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Blood Rush",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Bomb Squad",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Fast Hands",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Ninja",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Birdseye",
-            "detail": "Perk, slot 2."
-          },
-          {
-            "name": "Lethal Reach",
-            "detail": "Perk, slot 3."
-          },
-          {
-            "name": "Combat Grid",
-            "detail": "Perk, slot 3."
-          },
-          {
-            "name": "Battle Hardened",
-            "detail": "Perk, slot 3."
-          },
-          {
-            "name": "Scavenger",
-            "detail": "Perk, slot 3."
-          },
-          {
-            "name": "Tracker",
-            "detail": "Perk, slot 3."
-          },
-          {
-            "name": "Cold-Blooded",
-            "detail": "Perk, slot 3."
           }
         ]
       },
       {
         "id": "mechanics",
         "items": [
+          {
+            "name": "TTK overview",
+            "detail": "Launch keeps the slower Beta Weekend 2 TTK after Weekend 1 complaints. Community numbers (beta/launch, approximate): AR ~280-300 ms close, ~370-460 ms at 40-80 m; top SMGs ~240-260 ms at 0-10 m. Numbers vary by site and patch."
+          },
+          {
+            "name": "No bloom: Ballistic Authority",
+            "detail": "Hipfire bloom removed: bullets go where the barrel points. Recoil is input-tied with a 'jerk' layer for natural kick/sway. Hipfire is consistent, so close-range hipfire with lasers is viable."
+          },
+          {
+            "name": "Flinch and one-shot tuning",
+            "detail": "Launch added more flinch and damage tuning to one-hit-kill weapons (snipers/marksman). Shoot snipers first to throw off their aim."
+          },
+          {
+            "name": "SMG range buff",
+            "detail": "Launch buffed SMGs at close-to-mid range, so ARs should avoid tight corners and hold lanes."
+          },
+          {
+            "name": "Headshot multipliers",
+            "detail": "Example: HAN 86 headshot multiplier cut 1.4x -> 1.25x in beta (another sheet says 1.2x). Upper-chest aim is reliable; headshots help but don't change TTK much on many guns. [Unverified]"
+          },
+          {
+            "name": "No omnimovement",
+            "detail": "MW4 drops Black Ops 6/7 omnimovement (no sprint/dive in any direction). Movement is grounded: sprint, slide, mantle, ledge hang, climb, jump."
+          },
+          {
+            "name": "Tactical Sprint",
+            "detail": "In MP, Tac Sprint requires the Blood Rush perk (Perk 2); single-tap run is the default input; no sprint-out penalty per launch notes. Tac sprint slows as stamina drains. In DMZ (and reportedly Warzone) it's default."
+          },
+          {
+            "name": "Sprint-to-fire",
+            "detail": "Coming out of sprint/tac sprint delays your first shot; settle before a peek. Auto Tac Sprint may slow ADS. Exact sprint-to-fire ms not published. [Unverified]"
+          },
+          {
+            "name": "Slides and slide cancel",
+            "detail": "Sliding and slide-into-ADS remain; slide canceling is reported possible. New Supine Slide: double-tap crouch while sprinting for a longer, lower slide ending on your back, feet first."
+          },
+          {
+            "name": "Mantle system",
+            "detail": "Mantle Momentum keeps forward speed; Mantle Steering lets you steer or abort mid-mantle; Mantle Slide chains a mantle into a slide (e.g. over a car or planter into a room)."
+          },
+          {
+            "name": "Ledge hang and shimmy",
+            "detail": "Ledge hangs return (faster than MWII) with shimmy. Use to peek over ledges and surprise defenders."
+          },
+          {
+            "name": "Footstep audio",
+            "detail": "Beta patch cut audible distance and volume of enemy footsteps/gear; Ninja makes you very quiet. Use a headset; listen for gear rattle on stairs."
+          },
+          {
+            "name": "Smart Streak meter",
+            "detail": "Kills each count as a point; objective actions (capturing a Domination flag, holding Hardpoint, planting the Data Spike) also add progress. Meter resets on death."
+          },
+          {
+            "name": "Killstreak costs",
+            "detail": "4/6/8/10/12 tiers (UAV possibly 5). Hardline -1. Kill Chain lets streak kills count (reportedly at half) toward further streaks. [Unverified]"
+          },
+          {
+            "name": "Loadout rules",
+            "detail": "Primary + secondary (Overkill for two primaries), 1 lethal, 1 tactical, 1 field upgrade, 3 perks (one per slot), 3 killstreaks per loadout. 5 attachments + Apex."
+          },
+          {
+            "name": "Weapon leveling and Apex",
+            "detail": "Leveling a gun to max unlocks its Apex attachment; weapon XP is shared across MP, DMZ and Warzone. Shipment and Decoy Grenade tricks are popular for weapon XP."
+          },
+          {
+            "name": "Hardpoint rotation",
+            "detail": "Zone moves every 60 s in a fixed per-map order; some maps have 5 hills, Lithium and Munition 6 (per Rankkd)."
+          },
+          {
+            "name": "Domination spawns",
+            "detail": "Holding flags influences spawns; triple-capping flips enemy spawns toward your back flag. Sides switch at half score (100)."
+          },
+          {
+            "name": "Frontline spawns",
+            "detail": "Fixed team bases; spawning is predictable, so fights happen in the middle. Kills outside enemy base score more."
+          },
+          {
+            "name": "Spawn logic generally",
+            "detail": "MW4-specific spawn rules aren't documented. Beta complaints on Cachette (A-side spawn trap) and a Hijack spawn fix in the Oct 25 patch show spawns are still being tuned. [Unverified]"
+          },
+          {
+            "name": "Launcher arming distance",
+            "detail": "PILA missiles arm at ~11 m, RPG-8 at ~9 m; too-close shots won't explode."
+          },
+          {
+            "name": "UAV durability",
+            "detail": "UAV health raised 100 -> 150 at launch: it takes more fire to shoot down; use launchers or SAM turret."
+          },
+          {
+            "name": "Garage doors (Lithium)",
+            "detail": "Garage doors open/close with wall buttons; you can slide under a partly closed door."
+          },
+          {
+            "name": "Destructible/flammable cover",
+            "detail": "Cars on Silkworm's Main Street can be set on fire with explosives/LMG fire; the Drill Charge bores through cover; Impact Warhead drills through floors."
+          },
+          {
+            "name": "Kill Block layout cycle",
+            "detail": "Layout and shared loadout change every two rounds; sides swap after round one."
+          },
+          {
+            "name": "Collateral economy",
+            "detail": "Start $800 + pistol. Earn cash from kills (varies by kill type), objectives and round wins; death loses gear but keeps cash. No health regen."
+          },
+          {
+            "name": "Inflation economy",
+            "detail": "Kills transfer cash; carry past the threshold and you're revealed to everyone; death drops part of your cash; Overtime multipliers late."
+          },
+          {
+            "name": "DMZ exfil",
+            "detail": "Call exfil at a smoke-marked zone (alerts nearby enemies), board and stay until the timer hits zero. Fulton balloons and Exfil Flares are alternates."
+          },
+          {
+            "name": "Movement in Warzone (Nov 6)",
+            "detail": "Warzone switches to MW4 movement (no omnimovement); Tac Sprint is reportedly default there without a perk."
+          },
           {
             "name": "Movement",
             "detail": "Omnimovement and wall-jumping are removed; new supine slide, mantle slide, pipe climbing and hanging; slide-cancel stays. In the beta, tactical sprint moved into the Blood Rush perk (launch status unverified)."
@@ -975,6 +1683,94 @@
         "id": "strategy",
         "items": [
           {
+            "name": "Counter UAV spam",
+            "detail": "Run Ghost (Perk 1). Shoot UAVs down with PILA/JOKR or SAM Airburst Turret (UAV now has 150 health). Your own Counter UAV scrambles their minimap. Move after every fight since you're shown on the minimap."
+          },
+          {
+            "name": "Counter ground AI streaks",
+            "detail": "Wheelson and Railgun Sentry: Cold-Blooded hides you from AI targeting; destroy with launchers, DDOS, Shock Stick or Drill Charge; approach sentries from behind or from cover angles."
+          },
+          {
+            "name": "Counter air streaks",
+            "detail": "Attack Heli, Deathstalker, Gunship: PILA (guided), JOKR (lock-on top attack) or SAM Airburst Turret; stay indoors; Cold-Blooded vs thermal/AI. Air Lockdown adds AA for their team, so wait it out."
+          },
+          {
+            "name": "Counter Argonaut",
+            "detail": "Focus fire as a group, use explosives/launchers, keep distance from its cluster-grenade launcher, and trade rather than duel."
+          },
+          {
+            "name": "Counter recon equipment",
+            "detail": "Ghost beats Portable Radar, Heartbeat Sensor and UAV; Cold-Blooded beats Snapshot Grenade, Recon Drone, thermals and High Alert; DDOS jams nearby sensors."
+          },
+          {
+            "name": "Counter tacticals",
+            "detail": "Battle Hardened cuts Flash, Concussion and Screamer Mine effects (strengthened at launch)."
+          },
+          {
+            "name": "Counter explosives",
+            "detail": "Bomb Squad reduces non-streak explosive damage; Trophy System eats grenades on Hardpoint and bomb plants."
+          },
+          {
+            "name": "Hardpoint: how to win",
+            "detail": "Rotate to the next hill ~10 s early, set up before the enemy, play off the zone rather than standing in the open, trade in pairs, use Quick Fix for regen on captures. Learn each map's fixed rotation (e.g. Transit 213 P4->P5 and Lithium P3->P4 are long)."
+          },
+          {
+            "name": "Loadout archetype: SMG slayer",
+            "detail": "ISO Nightshade or VEL 46 with laser/fast ADS; perks Quick Fix, Blood Rush (Tac Sprint), Battle Hardened. Best on Transit 213, Silkworm, Lotus, Shipment, Kill Block."
+          },
+          {
+            "name": "Loadout archetype: AR anchor",
+            "detail": "M4 or HAN 86 with Slimline Elite, recoil grip/stock; perks Ghost or Quick Fix, Fast Hands or Bomb Squad, Cold-Blooded or Battle Hardened. Best on Lithium, Munition, Rooftops lanes."
+          },
+          {
+            "name": "Loadout archetype: sniper/marksman",
+            "detail": "KG-7 Vulcan or Oris 8.6 with Overkill + SMG secondary. Hold long lanes (Lithium, Imjin Farmland); expect flinch tuning to punish getting hit first."
+          },
+          {
+            "name": "Loadout archetype: team support",
+            "detail": "Ghost, Birdseye, Combat Grid with UAV/Counter UAV/Advanced UAV streaks and Portable Radar or SAM turret. Gives intel and shuts down enemy air."
+          },
+          {
+            "name": "Streak choice",
+            "detail": "With the slower TTK, cheap streaks (UAV, Care Package, Counter UAV) and objective credit via Smart Streaks are more reachable; pick per-loadout streaks that fit the mode (Hardline + UAV/CUAV/Advanced UAV for objective play)."
+          },
+          {
+            "name": "Map: Lithium",
+            "detail": "Use AR/LMG/marksman for mid-range sightlines; take the east-road truck to watch Runoff and Refinery; use garage door slides for surprise entries."
+          },
+          {
+            "name": "Map: Lotus",
+            "detail": "Pair a marksman rifle with an SMG (Overkill); shotgun/SMG for Restaurant, Hostel, Fish Market and Boathouse; climb the Boathouse pipe for the roof/2F angle over Docks."
+          },
+          {
+            "name": "Map: Transit 213",
+            "detail": "Bring extra lethals; buses are grenade magnets, so move after each fight; SMG/shotgun dominate."
+          },
+          {
+            "name": "Map: Silkworm",
+            "detail": "Street-level CQB map: fight in Game Room with CQB loadouts, hold the Convenience Store from behind the counter, ignite clustered cars on Main Street."
+          },
+          {
+            "name": "Map: Cachette",
+            "detail": "Use rooftops and upper floors for flanks; avoid being pinned in the losing spawn - rotate through Backlot or Front Gate instead of the Central Containers choke."
+          },
+          {
+            "name": "Map: Reactor U92",
+            "detail": "Control the command room in objective modes; don't cross the central space without clearing angles."
+          },
+          {
+            "name": "Map: Coal",
+            "detail": "Don't cross the Central Quarry in the open; use warehouse routes for rotations and check upper walkways."
+          },
+          {
+            "name": "Using sound",
+            "detail": "With footsteps retuned shorter, use a headset; Ninja for flanks; Tracker to follow footprints."
+          },
+          {
+            "name": "Info from the killfeed and killcam",
+            "detail": "Watch killcams to learn enemy angles and spawn flow; use the killfeed in single-life modes to count remaining enemies."
+          },
+          {
             "name": "Lanes and sightlines",
             "detail": "General Call of Duty map design (not checked per map): most core maps have three lanes; controlling the middle and avoiding long open sightlines with short-range weapons wins engagements."
           },
@@ -987,6 +1783,86 @@
       {
         "id": "mistakes",
         "items": [
+          {
+            "name": "Sprinting into fights",
+            "detail": "Tac Sprint (Blood Rush) and sprint-out delay your first shot; enemies holding angles win. Slow down near corners."
+          },
+          {
+            "name": "Running Tac Sprint without Blood Rush expectations",
+            "detail": "In MW4 MP Tac Sprint only exists with Blood Rush; players expecting BO6/7 omnimovement or default Tac Sprint misjudge rotations."
+          },
+          {
+            "name": "Ignoring UAVs",
+            "detail": "Staying still while an enemy UAV is up; UAV now has 150 HP and many teams don't shoot it down. Run Ghost or shoot it down."
+          },
+          {
+            "name": "Using ARs in SMG territory",
+            "detail": "Launch buffed SMGs at close-mid range; taking corner fights on Transit 213/Silkworm with a slow AR loses."
+          },
+          {
+            "name": "SMG lane fights",
+            "detail": "ISO Nightshade falls off past ~15 m; don't challenge ARs/marksman on Lithium's long lanes."
+          },
+          {
+            "name": "Late Hardpoint rotations",
+            "detail": "Arriving after the zone moves (60 s) means fighting set-up enemies. Rotate ~10 s early."
+          },
+          {
+            "name": "Triple-capping in Domination",
+            "detail": "Flipping spawns and getting attacked from behind. Hold 2 flags unless you can lock the third."
+          },
+          {
+            "name": "Chasing kills in objective modes",
+            "detail": "Not playing objectives wastes Smart Streak credit and loses the game; captures/holds fill your streak meter."
+          },
+          {
+            "name": "Standing next to buses on Transit 213",
+            "detail": "Buses attract grenades; reposition after each fight."
+          },
+          {
+            "name": "Point-blank launcher shots",
+            "detail": "PILA/RPG won't arm under ~11/~9 m."
+          },
+          {
+            "name": "Skipping killcams",
+            "detail": "Killcams show the angle and position you died to; skipping removes free info."
+          },
+          {
+            "name": "Not adapting to Kill Block layouts",
+            "detail": "Reusing last round's route after the layout changes every two rounds."
+          },
+          {
+            "name": "Hiding in high-floor rooms vs Impact Warhead",
+            "detail": "Impact Warhead drills through floors; move away from the marked area."
+          },
+          {
+            "name": "Ignoring Battle Hardened vs flash/stun spam",
+            "detail": "Flash, Concussion and Screamer Mine are common; Battle Hardened was buffed at launch."
+          },
+          {
+            "name": "Not using Hardline when farming UAVs",
+            "detail": "Hardline drops the UAV cost by one; helpful for objective players stacking intel streaks."
+          },
+          {
+            "name": "Over-relying on headshots",
+            "detail": "Headshot multipliers are modest (e.g. ~1.2-1.25x on HAN 86); center-mass consistency wins more fights. [Unverified]"
+          },
+          {
+            "name": "Dying with cash in Inflation",
+            "detail": "Overextending while carrying lots of cash drops it to enemies and reveals you as an HVT."
+          },
+          {
+            "name": "Calling exfil without cover (DMZ)",
+            "detail": "Calling the helicopter alerts nearby players and AI; secure the area first and stay aboard until the timer ends."
+          },
+          {
+            "name": "Wasting Collateral cash",
+            "detail": "Buying full kits on eco rounds and going broke; plan buys with the team."
+          },
+          {
+            "name": "Treating guides as gospel",
+            "detail": "Many MW4 numbers (TTK, unlock levels, tiers) are beta-era and conflict between sites; verify in game after patches."
+          },
           {
             "name": "Dying in the same area repeatedly",
             "detail": "Visible as deaths clustering on one part of the minimap; change route or approach."
@@ -1005,12 +1881,164 @@
         "id": "glossary",
         "items": [
           {
-            "name": "Spawn flip",
-            "detail": "Spawns switching sides when one team pushes too far."
+            "name": "TTK",
+            "detail": "Time to kill: ms from first shot to kill. MW4 kept the slower Beta Weekend 2 TTK."
+          },
+          {
+            "name": "Ballistic Authority",
+            "detail": "MW4 gunplay system: no hipfire bloom; bullets go where the barrel points."
+          },
+          {
+            "name": "Apex attachment",
+            "detail": "Special weapon conversion unlocked at max weapon level; separate from the 5 Gunsmith slots."
+          },
+          {
+            "name": "Gunsmith",
+            "detail": "Weapon customization: up to 5 attachments plus Apex."
+          },
+          {
+            "name": "Smart Streak meter",
+            "detail": "MW4 killstreak meter: kills plus objective actions add progress; resets on death."
+          },
+          {
+            "name": "Killstreak",
+            "detail": "Reward earned by kills (and objective credit) without dying; 17 at launch, chosen per loadout."
+          },
+          {
+            "name": "Field Upgrade",
+            "detail": "Rechargeable ability (e.g. DDOS, Trophy System, SAM Turret)."
+          },
+          {
+            "name": "Lethal / Tactical",
+            "detail": "Damage equipment (frag, C4) vs utility equipment (flash, smoke, snapshot)."
+          },
+          {
+            "name": "Overkill",
+            "detail": "Perk to carry two primaries."
+          },
+          {
+            "name": "Hardline",
+            "detail": "Perk making streaks cost one less kill."
+          },
+          {
+            "name": "Blood Rush",
+            "detail": "Perk that grants Tactical Sprint in MW4 MP."
+          },
+          {
+            "name": "Tac Sprint",
+            "detail": "Tactical Sprint: faster sprint burst draining stamina; MP needs Blood Rush."
+          },
+          {
+            "name": "Supine Slide",
+            "detail": "MW4 slide via double-tap crouch while sprinting; longer, lower, ends on your back."
+          },
+          {
+            "name": "Mantle Slide / Steering / Momentum",
+            "detail": "MW4 mantle features: chain into slide, steer/abort mid-mantle, keep forward speed."
+          },
+          {
+            "name": "Ledge hang",
+            "detail": "Hang from a ledge and shimmy; returns in MW4."
+          },
+          {
+            "name": "Omnimovement",
+            "detail": "BO6/BO7 360-degree sprint/dive system; not in MW4."
+          },
+          {
+            "name": "Slab",
+            "detail": "A modular section of Kill Block (End Slabs and a Central Slab)."
+          },
+          {
+            "name": "Kill Block",
+            "detail": "MW4's modular arena with 500+ layouts for Gunfight 3v3/10v10."
+          },
+          {
+            "name": "Overtime Flag",
+            "detail": "Flag that spawns when a Gunfight round's timer expires; capture it to win the round."
+          },
+          {
+            "name": "Data Spike / Comm Station",
+            "detail": "Hijack objective item and the enemy target where it's planted."
+          },
+          {
+            "name": "HVT",
+            "detail": "High-value target; in Inflation, players carrying lots of cash are revealed."
+          },
+          {
+            "name": "Buy menu",
+            "detail": "Collateral's between-round shop for weapons, armor, perks, equipment and team UAV."
+          },
+          {
+            "name": "Combat Outpost",
+            "detail": "Ground War mode: capture/reinforce outposts for points, spawns and vehicle/UAV rewards."
+          },
+          {
+            "name": "Exfil",
+            "detail": "Extraction from DMZ by helicopter, Fulton balloon or flare; required to keep gear."
+          },
+          {
+            "name": "MIA",
+            "detail": "Missing In Action: DMZ operator status after dying before exfil."
+          },
+          {
+            "name": "Tac-Map",
+            "detail": "Full-screen map in DMZ showing exfils and objectives."
+          },
+          {
+            "name": "Classic / Regular Prestige",
+            "detail": "MW4 prestige choice: reset unlocks for +20% XP and a token, or keep everything."
+          },
+          {
+            "name": "Prestige Master",
+            "detail": "1,000 levels after the 10th prestige."
+          },
+          {
+            "name": "Weapon Prestige",
+            "detail": "Resets a weapon's attachments to a classic level path for rewards."
           },
           {
             "name": "Head glitch",
-            "detail": "Cover that shows only the player's head over it."
+            "detail": "Cover that exposes only your head while you shoot; flush with Drill Charge or explosives."
+          },
+          {
+            "name": "Power position",
+            "detail": "Elevated or central spot with strong sightlines (e.g. Lotus Boathouse roof, Library walkway)."
+          },
+          {
+            "name": "Trade",
+            "detail": "Killing the enemy who just killed your teammate before they reset."
+          },
+          {
+            "name": "Rotation (Hardpoint)",
+            "detail": "Moving to the next hill before it activates."
+          },
+          {
+            "name": "Spawn flip",
+            "detail": "When a team's spawns move to the opposite side, often after triple-capping in Domination."
+          },
+          {
+            "name": "Flinch",
+            "detail": "Aim kick when you're shot; increased on one-shot weapons at launch."
+          },
+          {
+            "name": "Hipfire",
+            "detail": "Shooting without aiming down sights; consistent in MW4 because there's no bloom."
+          },
+          {
+            "name": "ADS",
+            "detail": "Aim down sights."
+          },
+          {
+            "name": "CDL",
+            "detail": "Call of Duty League; 2027 season plays on MW4."
+          },
+          {
+            "name": "GA",
+            "detail": "Gentlemen's Agreement: competitive restrictions on items/perks; MW4 list not yet found."
+          },
+          {
+            "name": "Season 1",
+            "detail": "First MW4 content season, starting Nov 6, 2026, with Warzone integration."
           }
         ]
       }
@@ -2077,6 +3105,241 @@
           "maps"
         ],
         "drill": "Private match: name the lanes, power spots and spawns, pre-aiming every doorway."
+      }
+    ],
+    "referenceVersion": "Launch (Season 0 / pre-Season 1), as of 2026-10-28",
+    "referenceSources": [
+      {
+        "url": "https://en.wikipedia.org/wiki/Call_of_Duty:_Modern_Warfare_4",
+        "title": "Call of Duty: Modern Warfare 4 - Wikipedia"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/10/call-of-duty-modern-warfare-4-launch-multiplayer-operators-weapons-equipment-create-a-class",
+        "title": "Ready for Launch: Operators, Weapons, Equipment, Create-a-Class (Call of Duty blog)"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/10/call-of-duty-modern-warfare-4-ready-for-launch-maps-modes",
+        "title": "Ready for Launch: Multiplayer Maps and Modes Confirmed (Call of Duty blog)"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/10/call-of-duty-modern-warfare-4-ready-for-launch-progression-prestige",
+        "title": "Ready for Launch: Progression and Prestige (Call of Duty blog)"
+      },
+      {
+        "url": "https://www.callofduty.com/patchnotes/2026/10/call-of-duty-modern-warfare-4-launch-patch-notes",
+        "title": "Modern Warfare 4 Launch Patch Notes (Call of Duty)"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/08/call-of-duty-modern-warfare-4-next-highlights-multiplayer-gameplay-systems",
+        "title": "MW4 Multiplayer: Movement, Gunplay, Modes, & Maps (Call of Duty blog)"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/07/call-of-duty-modern-warfare-4-multiplayer-kill-block",
+        "title": "MW4 Multiplayer: Kill Block Intel (Call of Duty blog)"
+      },
+      {
+        "url": "https://www.callofduty.com/guides/mw4/open-beta-maps-modes",
+        "title": "MW4 Beta Maps & Modes (Call of Duty guide)"
+      },
+      {
+        "url": "https://www.callofduty.com/blog/2026/10/call-of-duty-modern-warfare-4-dmz-deep-dive-hajin",
+        "title": "DMZ Deep Dive, Part 1 (Call of Duty blog)"
+      },
+      {
+        "url": "https://x.com/CallofDuty/status/2090838263770804545",
+        "title": "Call of Duty on X: Smart Streak System"
+      },
+      {
+        "url": "https://www.keengamer.com/articles/news/call-of-duty-reveals-all-modern-warfare-4-launch-game-modes/",
+        "title": "Call of Duty Reveals All MW4 Launch Game Modes (KeenGamer)"
+      },
+      {
+        "url": "https://www.gamerfuzion.com/modern-warfare-4-launch-modes-official-rules-collateral-buy-menu-counter-attack-drop-zone-missing/",
+        "title": "MW4 Launch Modes: Official Rules (GamerFuzion)"
+      },
+      {
+        "url": "https://www.gamerfuzion.com/modern-warfare-4-launch-patch-notes-ttk-tac-sprint-perks-killstreaks-dmz/",
+        "title": "MW4 Launch Patch Notes Explained (GamerFuzion)"
+      },
+      {
+        "url": "https://www.gamerfuzion.com/modern-warfare-4-season-1-release-date-november-6-roadmap-shipment-possession-infected/",
+        "title": "MW4 Season 1 Starts November 6 (GamerFuzion)"
+      },
+      {
+        "url": "https://www.gamerfuzion.com/modern-warfare-4-killstreaks-perks-field-upgrades-equipment-every-unlock-level/",
+        "title": "MW4 Killstreaks, Perks, Field Upgrades and Equipment: Every Unlock Level (GamerFuzion)"
+      },
+      {
+        "url": "https://www.g2a.com/news/features/guide/modern-warfare-4-weapons-guide/",
+        "title": "MW4 Weapons Guide: All 33 Launch Guns (G2A News)"
+      },
+      {
+        "url": "https://dotesports.com/call-of-duty/guides/all-mw4-weapons-unlock-guide",
+        "title": "All weapons in MW4 and how to unlock them (Dot Esports)"
+      },
+      {
+        "url": "https://dotesports.com/call-of-duty/guides/mw4-maps-modes",
+        "title": "All MW4 maps and modes (Dot Esports)"
+      },
+      {
+        "url": "https://dotesports.com/call-of-duty/guides/best-mw4-perks",
+        "title": "Best Perks in MW4 (Dot Esports)"
+      },
+      {
+        "url": "https://gamerant.com/call-of-duty-cod-modern-warfare-4-mw4-best-weapons-meta-multiplayer-tier-list/",
+        "title": "Best Weapons in MW4 Multiplayer tier list (Game Rant)"
+      },
+      {
+        "url": "https://gamerant.com/call-of-duty-modern-warfare-4-cod-mw4-best-smgs-ranked/",
+        "title": "Best SMGs in MW4 (Game Rant)"
+      },
+      {
+        "url": "https://gamerant.com/call-of-duty-modern-warfare-4-mw4-all-apex-weapon-attachments-effects/",
+        "title": "Every Gun and Apex Attachment in MW4 (Game Rant)"
+      },
+      {
+        "url": "https://gamerant.com/cod-mw4-multiplayer-modes-explained/",
+        "title": "All Multiplayer Modes in MW4 (Game Rant)"
+      },
+      {
+        "url": "https://www.thegamer.com/call-of-duty-modern-warfare-4-all-game-modes-guide/",
+        "title": "All Multiplayer Modes And How To Win In MW4 (TheGamer)"
+      },
+      {
+        "url": "https://insider-gaming.com/modern-warfare-4-all-perks/",
+        "title": "All MW4 Perks & How to Get Them (Insider Gaming)"
+      },
+      {
+        "url": "https://insider-gaming.com/modern-warfare-4-will-not-feature-omnimovement-but-does-have-slide-canceling/",
+        "title": "MW4 Will Not Feature Omnimovement (Insider Gaming)"
+      },
+      {
+        "url": "https://www.dexerto.com/wikis/modern-warfare-4/movement-changes/",
+        "title": "MW4 movement explained (Dexerto)"
+      },
+      {
+        "url": "https://www.dexerto.com/wikis/modern-warfare-4/ranked-play/",
+        "title": "When is Ranked Play coming to MW4? (Dexerto)"
+      },
+      {
+        "url": "https://www.dexerto.com/wikis/modern-warfare-4/warzone-integration/",
+        "title": "When does MW4 integrate with Warzone? (Dexerto)"
+      },
+      {
+        "url": "https://www.dexerto.com/call-of-duty/one-shot-modern-warfare-4-rifle-is-a-throwback-to-one-of-cods-most-op-weapons-3422193/",
+        "title": "One-shot MW4 rifle (Dexerto)"
+      },
+      {
+        "url": "https://www.pcgamer.com/games/call-of-duty/call-of-duty-modern-warfare-4s-first-beta-patch-adds-a-new-map-and-mode-as-infinity-ward-responds-to-complaints-about-footstep-noise-and-weapon-lethality/",
+        "title": "MW4 first beta patch: footsteps and lethality (PC Gamer)"
+      },
+      {
+        "url": "https://cogconnected.com/feature/modern-warfare-4-multiplayer-overview/",
+        "title": "MW4 Multiplayer Overview (COGconnected)"
+      },
+      {
+        "url": "https://www.windowscentral.com/gaming/call-of-duty/call-of-duty-modern-warfare-4-review",
+        "title": "MW4 review (Windows Central)"
+      },
+      {
+        "url": "https://www.destructoid.com/modern-warfare-4-hands-on-impressions/",
+        "title": "MW4 multiplayer hands-on (Destructoid)"
+      },
+      {
+        "url": "https://www.theouterhaven.net/call-of-duty-modern-warfare-4-review/",
+        "title": "MW4 Review (The Outer Haven)"
+      },
+      {
+        "url": "https://x.com/charlieINTEL/status/2090831795017158854",
+        "title": "CharlieINTEL on X: new MW4 UI"
+      },
+      {
+        "url": "https://breakingpoint.gg/posts/best-modern-warfare-4-class-setups-day-1-pro-builds",
+        "title": "Best MW4 Class Setups: Day 1 Pro Builds (BreakingPoint)"
+      },
+      {
+        "url": "https://codmunity.gg/ttk/mw4",
+        "title": "MW4 TTK Rankings (Codmunity)"
+      },
+      {
+        "url": "https://codmunity.gg/compare/mw4/han-86-vs-m4",
+        "title": "HAN 86 vs M4 TTK (Codmunity)"
+      },
+      {
+        "url": "https://mw4.gg/weapons/vel-46/",
+        "title": "MW4 VEL 46 stats (mw4.gg)"
+      },
+      {
+        "url": "https://game8.co/games/Call-of-Duty-Modern-Warfare-4/archives/632263",
+        "title": "Best Guns Tier List October 2026 (Game8)"
+      },
+      {
+        "url": "https://www.gamesatlas.com/articles/all-hardpoint-rotations-in-mw4-maps-2026",
+        "title": "All Hardpoint Rotations in MW4 Maps (GamesAtlas)"
+      },
+      {
+        "url": "https://www.rankkd.com/guides-tools/call-of-duty-modern-warfare-4/guides/hardpoint-tips",
+        "title": "MW4 Hardpoint Tips: Hill Order, Rotations and Spawns (Rankkd)"
+      },
+      {
+        "url": "https://www.callofduty.com/guides/modernwarfare4/multiplayer-maps/launch/silkworm",
+        "title": "Silkworm map guide (Call of Duty)"
+      },
+      {
+        "url": "https://www.callofduty.com/guides/modernwarfare4/multiplayer-maps/launch/cachette",
+        "title": "Cachette map guide (Call of Duty)"
+      },
+      {
+        "url": "https://beebom.com/call-of-duty-modern-warfare-4-maps-list/",
+        "title": "All MW4 Maps (Beebom)"
+      },
+      {
+        "url": "https://esports.gg/guides/call-of-duty/all-maps-and-game-modes-in-modern-warfare-4-multiplayer/",
+        "title": "All maps and game modes in MW4 (esports.gg)"
+      },
+      {
+        "url": "https://x.com/MW4Media/status/2112959048232608173",
+        "title": "MW4 News on X: four 2v2 Gunfight maps"
+      },
+      {
+        "url": "https://timesaver.gg/blog/modern-warfare-4-kill-block-explained",
+        "title": "MW4 Kill Block Explained (timesaver.gg)"
+      },
+      {
+        "url": "https://games.gg/news/mw4-counter-strike-collateral-mode/",
+        "title": "MW4 Collateral Mode (games.gg)"
+      },
+      {
+        "url": "https://www.gfinityesports.com/article/call-of-duty-mw4-dmz-how-to-extract-exfil",
+        "title": "MW4 DMZ how to extract (Gfinity)"
+      },
+      {
+        "url": "https://allthings.how/how-dmz-works-in-call-of-duty-modern-warfare-4-beginner-s-guide/",
+        "title": "How DMZ Works in MW4 (AllThings.How)"
+      },
+      {
+        "url": "https://www.exitlag.com/blog/warzone-mw4-release-date/",
+        "title": "Warzone MW4 Release Date: What Changes on November 6 (ExitLag)"
+      },
+      {
+        "url": "https://www.keengamer.com/articles/guides/modern-warfare-4-dmz-best-settings-controller-fps-audio/",
+        "title": "MW4 DMZ Best Settings (KeenGamer)"
+      },
+      {
+        "url": "https://skycoach.gg/blog/call-of-duty/articles/mw4-best-settings",
+        "title": "MW4 Best Settings Guide (Skycoach)"
+      },
+      {
+        "url": "https://insider-gaming.com/best-iso-nightshade-loadout-modern-warfare-4/",
+        "title": "Best ISO Nightshade Loadout (Insider Gaming)"
+      },
+      {
+        "url": "https://www.dailyrespawn.com/article/modern-warfare-4-patch-notes-october-25-2026-s-d-xp-tripled-bomb-fix-rolled-back",
+        "title": "MW4 Patch Notes Oct 25, 2026 (Daily Respawn)"
+      },
+      {
+        "url": "https://videogameschronicle.com/news/modern-warfare-4-announced-this-years-call-of-duty-is-skipping-ps4-and-coming-to-switch-2",
+        "title": "MW4 announced, skipping PS4, coming to Switch 2 (VGC)"
       }
     ]
   },

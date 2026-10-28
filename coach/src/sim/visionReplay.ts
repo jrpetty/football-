@@ -365,6 +365,9 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
         age: sec < 270 ? 'dark' : 'feudal',
         gameTimeSec: sec,
         ...(i === 1 ? { mapName: 'Dry Arabia', opponentCiv: 'English' } : {}),
+        // The scout reaches their base, then their army shows up in the fights.
+        ...(i >= Math.round(samples * 0.2) && i < Math.round(samples * 0.2) + 2 ? { enemyBuildings: 'Archery Range, 2 Barracks' } : {}),
+        ...(k >= 0 ? { enemyUnits: k % 2 === 0 ? '10 Longbowmen, 4 Spearmen' : '6 Longbowmen' } : {}),
       },
       events,
     )
@@ -382,6 +385,8 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
       fightsLost: fights.filter((f) => !f.won).length,
       lostNearDefenses: fights.filter((f) => !f.won && f.tags.location === 'near_enemy_defenses').length,
       lostClumped: fights.filter((f) => !f.won && f.tags.splash === 'clumped_under_siege').length,
+      opponent: 'English',
+      mostSeen: 'Longbowman',
     },
     endsAt: start + (samples + 5) * interval,
   }

@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v5, Windows-first.
+> **Status:** v6, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -147,6 +147,19 @@ Then press **Choose the game window**, play, and listen.
   count, the principle, the fix and a drill. It is built on your PC; with
   cloud features on, Claude can write a deeper one from the same data.
   "Read it to me" speaks it.
+- **Live commentary** (🎙 in the top bar). Short spoken lines as things
+  happen: a fight starting and how it ended ("Fight lost near their Town
+  Center, towers or Keep. Army 34 to 16."), a death and how it happened, a
+  goal, a scouted building ("They have a Stable: expect Horsemen or Knights.
+  Spearmen answer them."), a villager checkpoint. It speaks during play only
+  where the game and mode allow it (campaigns, against the AI or bots); in
+  online play it says so once at the start and you get the review after.
+- **Knows the opponent (AoE IV).** Their civilisation is read from the
+  loading screen, and every civilisation's unique units, landmarks and
+  bonuses are in the pack, including upcoming ones. When your screen shows
+  their buildings or army, the coach works out what those buildings can make
+  for that civilisation, and which of your units beat them (for your own
+  civilisation). Nothing in the fog of war is guessed.
 - **Talks with you.**
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a

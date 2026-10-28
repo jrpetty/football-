@@ -1489,6 +1489,1382 @@
           "settings"
         ]
       }
+    ],
+    "reference": [
+      {
+        "id": "overview",
+        "items": [
+          {
+            "name": "Release and platforms",
+            "detail": "EA SPORTS FC 27 launched worldwide 25 Sep 2026 (early access before that) on PS5, Xbox Series X|S, PC (EA app/Steam/Epic), Nintendo Switch 2 and last-gen/Switch versions. The Grounds and Clubs are current-gen/PC/Switch 2 only."
+          },
+          {
+            "name": "Version as of 2026-10-28",
+            "detail": "Latest is Title Update 1.1.0, released 27 Oct 2026 (the console build may show as 1.07). It has no gameplay balance or tuning changes. Gameplay tuning is otherwise the launch build plus TU 1.0.1 slider tweaks and Live Update #1."
+          },
+          {
+            "name": "Two gameplay types: Competitive vs Authentic",
+            "detail": "Competitive gameplay is used in online modes such as Ultimate Team and Rivals. It is tuned for direct user control and has the AI-defending nerf. Authentic Gameplay 2.0 is for Career and Kick-Off: more realistic movement and physicality, varied CPU styles, plus 25 new gameplay sliders and 10 CPU sliders split into Opponent and Teammate."
+          },
+          {
+            "name": "Headline gameplay change: AI defending reduced",
+            "detail": "AI teammates no longer stick a leg out to auto-tackle when near the ball carrier. They hold shape and can still pick up loose balls, but the user must time tackles and switch manually. To compensate, jockey speed and manual standing-tackle reach are higher than in FC 26. EA says this applies to Competitive gameplay."
+          },
+          {
+            "name": "Headline: more manual passing",
+            "detail": "Through balls follow your aim more strictly, with less correction toward an open lane. Dinked passes are fully manual and are now only on double-tap Through Pass. Crosses drop into the space you aim at instead of homing onto a player, so aim and power decide quality."
+          },
+          {
+            "name": "Headline: attacking spatial awareness and curved runs",
+            "detail": "AI attackers weigh space, defensive shape and the offside line, for example holding level with the last defender and then curving in. New inputs are the Triggered Curved Run (tap L1+R1/LB+RB) and Pass & Follow (L1+R1+X/LB+RB+A). Manual runs now stop after a limited distance, and you can retrigger them."
+          },
+          {
+            "name": "Headline: manual corners",
+            "detail": "Corners are a three-step sequence: aim and deliver, position players using Avoidance (hold R1/RB) and Shielding (hold L2/LT), then time the header. Attackers no longer auto-move to the best spot. Free kicks and corners have pre-set tactics on D-pad Up."
+          },
+          {
+            "name": "Headline: PlayStyles narrowed toward attributes",
+            "detail": "Ten PlayStyles were reworked: Finesse Shot, Technical, Intercept, Rapid, Quick Step, Pinged Pass, Tiki Taka, Jockey, Precision Header and Low Driven. Base attributes matter more. The maximum PlayStyles+ per item fell from 5 to 3. Per a Red Bull pro, a PlayStyle is now worth roughly a 5-10% bonus."
+          },
+          {
+            "name": "Patch history: TU 1.0.1 (around 22-23 Sep 2026)",
+            "detail": "Day-zero update with 8 bug fixes and 2 tuning changes. It raised the default Jockey and Sprint Jockey speeds in Authentic gameplay only (Career, Kick-Off), with no effect on Competitive. It also reportedly increased long-term fatigue in Grounds 11v11 (single source). EA kept launch tuning in place to let players adapt."
+          },
+          {
+            "name": "Patch history: TU 1.0.2 (28 Sep) and 1.0.3 (2 Oct)",
+            "detail": "No gameplay changes. 1.0.2 fixed the FC Pro Open registration country list. 1.0.3 fixed a Moments loading screen, Grounds matchmaking, duplicates in Club Transfers, and Squad Battles match settings changing unintentionally."
+          },
+          {
+            "name": "Patch history: TU 1.0.4 (around 7 Oct 2026)",
+            "detail": "Bug fixes only, with no gameplay tuning. Career fixes: fewer high-OVR/potential generated players, offers get responses instead of instant acceptance, free agents signable with the window closed. Also a FUT post-match error, PS5 player-indicator colours, and FC Lite Kick-Off roster pulls. Dribbling was NOT nerfed."
+          },
+          {
+            "name": "Patch history: Live Update #1 (14-15 Oct 2026)",
+            "detail": "Server-side fix with no download (restart the game). It closed the deep free-kick exploit used in Rivals and Champions before Champions Finals. EA acknowledged the exploit on 13 Oct. A separate report of a goalkeeper scoring from free kicks in his own box surfaced around 13 Oct; its fix status is unclear. [Unverified]"
+          },
+          {
+            "name": "Patch history: TU 1.1.0 (27 Oct 2026)",
+            "detail": "No balance or tuning changes. Fixes: in 1v1 the GK holding the ball after a pass request; in 1v1 the GK taking a free kick instead of the user; 2v2 players stuck in the net after a slide; custom tactics saving wrongly or moving players to wrong positions; 50+ Grounds fixes. Also a redesigned Career Team Management screen, faster high-OVR pack reveals, and persistent SBC filters."
+          },
+          {
+            "name": "EA stance on balance (launch feedback update)",
+            "detail": "EA says it will be very measured with core gameplay changes. It is monitoring manual defending (it sees a learning curve: players who adapt win more) and shooting variety, especially near-post low driven shots, which it says can outperform other options. It is broadly happy with the shooting vs GK balance. No nerf as of 28 Oct."
+          },
+          {
+            "name": "Closed beta changes that shipped",
+            "detail": "From EA's closed beta feedback update: repeated presses of Shoulder Challenge now make the defender stick an arm out and lose speed (anti-spam), and Team Press has no effect while the ball is in your own defensive third."
+          },
+          {
+            "name": "FUT season calendar",
+            "detail": "Season 1 (Ones to Watch theme) ran to Thu 22 Oct 2026. Season 2 runs about 22 Oct to 3 Dec 2026 and is reportedly themed 'FC Heritage', with up to 16 Heritage items on the Standard and Premium ladders. Expected Season 2 promos: Ultimate Scream, UEFA Road to the Knockouts, Hall of FUT Unleashed, Black Friday Thunderstruck. Exact dates are not confirmed by EA. [Unverified]"
+          },
+          {
+            "name": "Weekly reset times (approximate)",
+            "detail": "Rivals rewards: Thursday 06:59 UTC (per EA help). Squad Battles rewards: Sunday about 06:59 UTC (community-tracked). SP daily cap resets at 07:00 UTC. Champions Finals run Friday evening to Monday morning (UK about 19:00 Fri to 08:00 Mon). Check the in-game timers; the UK moved to GMT on 25 Oct."
+          },
+          {
+            "name": "FC Pro 27 esports calendar",
+            "detail": "Open Ladder ran 21 Sep to 3 Oct 2026 in Ultimate Team (Division 5+ in Rivals to enter). Regional qualifiers 10-11 Oct (Battlefy). Global Qualifier LAN in London 5-7 Nov (64 players). FC Pro Open 30 Nov 2026 to 25 Jan 2027 (24 players, groups then finals; top 8 to Worlds). $1M World Championship; over $2.5M season pool. Worlds date TBC."
+          },
+          {
+            "name": "FC 27 Lite (free version)",
+            "detail": "A free limited client with Kick-Off, Learn to Play, Online Friendlies and Online Seasons. No Ultimate Team, Manager Career or The Grounds. EA lists it on PlayStation, Xbox, EA app, Steam and Epic. Progress carries over to the full game on the same EA account and platform."
+          },
+          {
+            "name": "Critical reception",
+            "detail": "Reviews call FC 27 an evolution. Game Informer gave it 7.25/10. Praise goes to the Career overhaul (TransferRoom transfers, Dynamic OVR) and the more manual defending and passing. Criticism: The Grounds feels unfinished, AI teammate decisions are poor, and some EA forum users feel running, passing and shooting took a step back."
+          },
+          {
+            "name": "What a screen-only coach can measure",
+            "detail": "The visible score clock, radar dots, player indicators, power bars, the pause-menu Match Facts (possession, shots, xG, passes, tackles), half-time and full-time summaries, Rivals and Champions progress screens, and tactics screens. Never read memory. Infer the opponent's shape from radar dot spacing and the line from the defender dots."
+          },
+          {
+            "name": "Scope note on verification",
+            "detail": "Much FC 27 detail comes from third-party guides (FUT.GG, FIFPlay, NealGuides, timesaver.gg, Dexerto and others) because ea.com could not be fetched directly. Items marked [Unverified] conflict between sources or rest on a single source. Exact button inputs and reward numbers should be confirmed in-game."
+          }
+        ]
+      },
+      {
+        "id": "modes",
+        "items": [
+          {
+            "name": "Ultimate Team (FUT) overview",
+            "detail": "Build a squad from player items via packs, SBCs, Evolutions, objectives and the Transfer Market, then play online (Rivals, Champions, Live Events, Rush, Friendlies) or offline (Squad Battles, single-player Live Events, Moments). It uses Competitive gameplay. The Competitive settings preset is the FUT default."
+          },
+          {
+            "name": "Division Rivals: structure",
+            "detail": "10 numbered divisions (10 lowest) plus Elite. Weekly points: win 3, draw 1, loss 0. Base weekly reward at 15-29 points, Upgrade at 30+. Extra points help climbing divisions only. Win streaks speed up stage progress. Elite uses a Skill Rating that starts at 500 instead of stages."
+          },
+          {
+            "name": "Division Rivals: rewards",
+            "detail": "Weekly rewards scale by division and are claimed Thursday 06:59 UTC. Launch-update pack rewards are tradeable. CQP by division per week (one source): Elite 1000, Div 1 750, Div 2 600, Div 3 500, Div 4 400 ... Div 10 50. Coin figures conflict between sites. Rivals wins pay about 70 SP. Bounties appear more often."
+          },
+          {
+            "name": "Division Rivals: matchmaking note",
+            "detail": "Matchmaking blends division and skill. Community reports that Division 6-ish lobbies can feel harder than Champions because of skill-based matching. Pros advise not to judge progress on single results. [Unverified]"
+          },
+          {
+            "name": "FUT Champions: qualification",
+            "detail": "Earn 1,000 Champions Qualification Points (CQP) for Season 1. CQP comes from Division Rivals weekly rewards and a Squad Battles World Class wins objective. There is no division requirement (the old Division 6 gate was removed); a higher division just earns CQP faster. Every Finals finish refunds some CQP, e.g. 8 wins gives 400."
+          },
+          {
+            "name": "FUT Champions: Finals format",
+            "detail": "Up to 15 matches over a weekend window (Friday evening to Monday morning UK). Each win moves you up one rank; losses do not cost rank. 15 ranks: Contender (1-5 wins), Champions (6-10), Elite (11-15). The FC 26 Play-Offs stage and Challengers mode were removed."
+          },
+          {
+            "name": "Squad Battles",
+            "detail": "Offline vs AI squads (user-created plus featured TOTW and promo squads). Battle Points depend on difficulty (about 0.5x Beginner to 2.6x Ultimate for a win), opponent rating and chem, result, and goals (capped at 5). Weekly match cap: sources say 14 or 18 counted games. Quitting early gives 0 points. Win about 50 SP. Rewards on Sunday by rank, Elite 1 to Top 200. [Unverified]"
+          },
+          {
+            "name": "Squad Battles CQP objective",
+            "detail": "A seasonal objective awards Champions Qualification Points for wins on World Class difficulty, with milestones reported at 10, 12 and 15 wins. It lets offline players help qualify for Champions."
+          },
+          {
+            "name": "Rush (Ultimate Team)",
+            "detail": "Small-sided mode with 4 user outfield players plus an AI GK (5v5 in FUT; FC 25-26 format carried over, not explicitly confirmed by EA). Weekly Rush Points tiers run from 2,500 to 35,000 points and are earned by playing, winning and completing Block challenges in squad building. Weekly Rush rewards are untradeable. [Unverified]"
+          },
+          {
+            "name": "Rush rules (series convention)",
+            "detail": "Rush rules in FC 25-26: short matches on a compact pitch, kick-off by racing to a ball from your own goal line, offside only in the final third, blue card (temporary sin bin), and a penalty from a shot run-up. FC 27 has a Rush tutorial covering offsides, corners, penalties and Blue Cards. Specifics are not confirmed for FC 27. [Unverified]"
+          },
+          {
+            "name": "Live Events (FUT)",
+            "detail": "Rotating themed competitions, both multiplayer and single-player vs AI, with entry rules (e.g. league or rarity limits) and objective-linked rewards. A win is worth about 60 SP."
+          },
+          {
+            "name": "Moments (FUT)",
+            "detail": "Short single-player scenarios with set objectives (score X, assist, etc.). They earn Stars, which are exchanged in the Moments Gallery. TU 1.0.3 fixed a Moments challenge loading-screen hang."
+          },
+          {
+            "name": "FUT Friendlies",
+            "detail": "Casual matches (Play a Friend, Couch Play, themed friendlies) with no effect on ranking. Good for testing tactics and settings without pressure."
+          },
+          {
+            "name": "Squad Building Challenges (SBC) - FC 27 changes",
+            "detail": "Streamlined SBCs give each item a number that adds toward the goal, instead of requiring up to 11 specific players. Some streamlined SBCs drop rating, chem and position requirements. TU 1.1.0 keeps saved SBC filters within a session."
+          },
+          {
+            "name": "Evolutions - FC 27 changes",
+            "detail": "Evolutions now use branching Pathways: pick between upgrade routes and preview the chain before committing. They upgrade stats, PlayStyles, roles and cosmetics after completing match objectives."
+          },
+          {
+            "name": "FUT Gallery and Holographics",
+            "detail": "The Gallery permanently records every player you have owned, even if discarded or used in an SBC. Themed sets are graded D to S, raise your Gallery Level and unlock tokens, cosmetics and Holographic items. Holographics are rarer animated variants (Regular and Pristine) with identical stats that count more toward sets. Gallery cards are not consumed."
+          },
+          {
+            "name": "Hall of FUT",
+            "detail": "A new tier of players tied to Ultimate Team memories (launch class includes Akinfenwa, Loic Remy, Eljero Elia). Base items are only obtainable from the Gallery Token Store. Special versions arrive via campaigns. Chemistry works like Heroes."
+          },
+          {
+            "name": "FUT chemistry changes",
+            "detail": "ICONs keep full chem in position and +1 to every league, but their nation contribution drops from +2 to +1. Heroes (and Hall of FUT) keep a +1 nation link, but their league contribution drops from +2 to +1. Base ICONs start at 88 OVR."
+          },
+          {
+            "name": "Season Pass and SP",
+            "detail": "Season Pass levels are earned with SP. Match SP ranges from 15 to 100 per eligible match by mode and result, with an 850 SP daily cap from matches (reset 07:00 UTC). Objectives add more: dailies about 30, weeklies about 500, seasonal about 500 per week. Grounds and Career also feed the pass. Pass progress resets at season end."
+          },
+          {
+            "name": "Manager Career",
+            "detail": "Rebuilt transfers with TransferRoom integration and Expected Transfer Value (xTV) pricing. Staged negotiations with buy-back, sell-on and loan-back clauses, instalments and bonuses. Dynamic OVR (form, morale, fitness). Coaches forecast potential. Practice Arena replaces Training Plans. Also Manager Live, Creator Challenges, Liga MX, ICONs, and simulation for up to 10 leagues."
+          },
+          {
+            "name": "Career: Dynamic OVR",
+            "detail": "A player's current OVR moves with Form, Morale and Match Fitness without changing base ability. Morale is driven by playing time, squad role, expectations and interactions. It is shown in Team Management, Squad Hub, Development Plans and Scout Reports. Out-of-position penalties vary by versatility."
+          },
+          {
+            "name": "Career: Practice Arena",
+            "detail": "In the Career Central hub you can play 11v11 practice matches of your starting XI vs reserves. They inherit your gameplay type and sliders, so they are a good sandbox to rehearse tactics."
+          },
+          {
+            "name": "Career: Creator Challenges and Manager Live",
+            "detail": "Creator Challenges are custom scenarios (narrative, rules, win conditions) built and shared through a web dashboard. Manager Live is a set of live, rotating manager challenges. Exact reward structures are not covered here. [Unverified]"
+          },
+          {
+            "name": "Career: TU 1.1.0 additions",
+            "detail": "Redesigned Team Management screen, per-save toggle for Press Conferences, adjustable frequency of Unexpected Events, new rivalry objectives (Consistency Rivalries, Match Limit Rivalries), and negotiation rejections that now explain why."
+          },
+          {
+            "name": "Player Career",
+            "detail": "Play as one footballer. New in FC 27: Rivalries against AI players in your role, plus Liga MX and ICONs. CPU Teammate and CPU Opponent sliders are separate in Authentic Gameplay 2.0, which helps single-player control."
+          },
+          {
+            "name": "The Grounds (new social hub)",
+            "detail": "Open-world hub for your created Pro with up to 100 players across three districts: Parkside (UK), Montclair (French cage football) and Zeiza (Argentine potrero), linked by the Terrace. Pitches host 1v1, 2v2, 3v3 and Rush, plus minigames (Balloon Ball, Bucket Ball, Goal Control, Big Race, Attacking Scenarios, Bocce Ball). Current-gen/PC/Switch 2 only."
+          },
+          {
+            "name": "The Grounds progression",
+            "detail": "Archetype XP (AXP), Grounds Coins, Masteries and Amps. All 13 Archetypes are unlocked from the start, and resets are free. Masteries give permanent attribute boosts per Archetype. Amps are temporary modifiers (2 Standard plus 1 Signature that adds PlayStyles or perks) that expire after N matches. Grounds also feeds the Season Pass."
+          },
+          {
+            "name": "Clubs (inside The Grounds)",
+            "detail": "Clubs now lives inside The Grounds: walk to the Clubhouse entrance for Leagues (points-based promotion and relegation) and Playoffs, or to Stadium Access for 11v11 Drop-In and Rush. New Club Tournaments are 11v11 with House Rules variants. EA says bigger Grounds and Clubs features are coming in a future update."
+          },
+          {
+            "name": "Clubs Archetypes (13)",
+            "detail": "Shot Stopper, Sweeper Keeper, Progressor, Boss, Marauder, Disruptor, Recycler, Maestro, Creator, Spark, Magician, Finisher, Target. Each Mastery raises two attributes (e.g. Finisher: Composure and Finishing). Sources disagree on some positional groupings."
+          },
+          {
+            "name": "Kick-Off",
+            "detail": "Local matches vs CPU or couch co-op using Authentic gameplay. Match types: Classic, House Rules, Rush (sources say 3v3 or 5v5), Best Of series, Cup finals and licensed competition matches. A good place to drill the new corners and runs. [Unverified]"
+          },
+          {
+            "name": "Online Seasons and Co-Op Seasons",
+            "detail": "Ranked 1v1 with real clubs or national teams: 10-game seasons to earn promotion and titles through divisions. Co-Op Seasons is the 2v2 version with a friend against other duos. Uses Competitive-style online settings."
+          },
+          {
+            "name": "Online Friendlies",
+            "detail": "Matches against an invited friend with real teams. Sources describe it either as one-offs or as a five-match mini-season. [Unverified]"
+          },
+          {
+            "name": "Learn to Play / Training",
+            "detail": "Skill Games and the training arena for drilling new mechanics such as low driven double-tap timing, curved runs, Avoidance and Shielding on corners, and jockey/tackle timing. Included in FC Lite."
+          },
+          {
+            "name": "FC Pro Open Ladder entry",
+            "detail": "Esports qualification runs through Ultimate Team. Reach Division 5 or above in Division Rivals to become eligible for the in-game FC Pro Open Ladder (FC 27 window was 21 Sep to 3 Oct 2026)."
+          }
+        ]
+      },
+      {
+        "id": "maps",
+        "items": [
+          {
+            "name": "Defensive third",
+            "detail": "The third nearest your goal. Team Press has NO effect while the ball is here (FC 27 change). Defend with manual jockey and switching here; do not pull CBs out to press."
+          },
+          {
+            "name": "Middle third",
+            "detail": "Most pressing and turnovers happen here. Team Press and an Aggressive/95 line are most effective here; Second Man Press/Teammate Contain help close passing lanes."
+          },
+          {
+            "name": "Final third",
+            "detail": "Where through balls, curved runs and cut-backs decide chances. Against a high line, the space is BEHIND the defence rather than between the lines."
+          },
+          {
+            "name": "Space behind a high line",
+            "detail": "When the opponent's line height is 90+ (Aggressive, default 95), lofted or lobbed through balls into this channel, timed before your striker drifts offside, are the primary counter."
+          },
+          {
+            "name": "Half-spaces",
+            "detail": "Channels between the touchline lanes and the centre. Inside Forwards and Shadow Strikers exploit them; curved runs from here bend around CBs."
+          },
+          {
+            "name": "Zone 14 / edge of the box",
+            "detail": "Central area just outside the box. Home to the CAM, Shadow Striker and Playmaker. Finesse and low driven shots are taken from here; the 4-3-1-2 and 4-2-1-3 overload it."
+          },
+          {
+            "name": "Wide channels / flanks",
+            "detail": "The weakness of narrow formations (4-3-1-2, 4-1-2-1-2): fullbacks are isolated. Switch play here when the opponent commits players to one side."
+          },
+          {
+            "name": "Near-post zone",
+            "detail": "Near-post low driven shots are acknowledged by EA as strong in FC 27. As an attacker aim near post when the GK gives an opening; as a defender cover the near post in 1v1s."
+          },
+          {
+            "name": "Penalty box and six-yard box",
+            "detail": "Low driven shots are recommended inside the box and in 1v1s. On corners, positioning (Avoidance/Shielding) inside the six-yard and penalty-spot areas decides headers."
+          },
+          {
+            "name": "Corner positioning spots",
+            "detail": "Near post, far post, penalty spot, edge of the box. In FC 27 attackers do not auto-move to the best spot. Use Avoidance (hold R1/RB) to slip through and Shielding (hold L2/LT) to hold position, then time the header."
+          },
+          {
+            "name": "Grounds: Parkside",
+            "detail": "UK-inspired district of The Grounds hub with its own pitches, stores and activities."
+          },
+          {
+            "name": "Grounds: Montclair",
+            "detail": "French-inspired district built around cage football."
+          },
+          {
+            "name": "Grounds: Zeiza",
+            "detail": "Argentine potrero-inspired district."
+          },
+          {
+            "name": "Grounds: The Terrace",
+            "detail": "Central area connecting the three districts. The Clubhouse entrance (Leagues, Playoffs) and Stadium Access (11v11 Drop-In, Rush) are reachable from the hub."
+          }
+        ]
+      },
+      {
+        "id": "screens",
+        "items": [
+          {
+            "name": "Main menu / Football Club hub",
+            "detail": "The home screen has tiles for Ultimate Team, Career, The Grounds/Clubs, Kick-Off, Online and Settings. Settings > Game Settings, then R1/RB to reach Visual Settings (radar, indicators). FC 27 layout specifics are not verified. [Unverified]"
+          },
+          {
+            "name": "Pause menu",
+            "detail": "Pausing during a match opens Resume, Match Facts/Performance (stats), Team Management/Tactics (subs, formation, roles), Settings, and Quit/Forfeit. Online pauses are limited and timed. Recognise it by the dimmed pitch behind a vertical menu list. [Unverified]"
+          },
+          {
+            "name": "Match Facts screen (how to recognise)",
+            "detail": "Opened from pause, half-time or full-time. It shows a two-column team comparison: Possession %, Shots, Shots on Target, xG (expected goals), Passes, Pass Accuracy, Tackles (won), Interceptions, Fouls, Corners, Offsides, Yellow/Red cards. L1/R1 or LB/RB cycles between stat groups. [Unverified]"
+          },
+          {
+            "name": "Performance / heat map tabs",
+            "detail": "Further tabs show possession heat maps (overall, won, lost), shot maps (all shots, goals, off target, blocked, saved), player ratings, distance covered and minutes played. Use them to diagnose where the ball is lost and which shot zones fail. [Unverified]"
+          },
+          {
+            "name": "HyperMotion Insight Overlays",
+            "detail": "An optional setting that displays live stat overlays (e.g. possession, shot or xG pop-ups, player sprint stats) during play without pausing. When it is enabled the coach may see transient stat banners. [Unverified]"
+          },
+          {
+            "name": "Half-time screen",
+            "detail": "At 45' a half-time transition shows the score with a stats summary (possession, shots, xG). Online there is a short countdown to make subs and tactics changes. A good moment to show the coach's half-time debrief. [Unverified]"
+          },
+          {
+            "name": "Full-time / post-match screen",
+            "detail": "Shows the final score, match facts and Player of the Match. In FUT it is followed by the rewards screen (coins, SP, objectives progress) and, for Rivals and Champions, a progress screen (points bar, stage, rank). [Unverified]"
+          },
+          {
+            "name": "Rivals progress screen",
+            "detail": "After a Rivals match a progress bar shows weekly points (3 win, 1 draw), 15 and 30 point thresholds for Base and Upgrade rewards, stage stars and division. A useful OCR target for tracking the weekly target. [Unverified]"
+          },
+          {
+            "name": "Champions Finals hub",
+            "detail": "Shows matches played out of 15, wins, current rank (Contender, Champions or Elite tiers) and the time left in the weekend window. [Unverified]"
+          },
+          {
+            "name": "Replay / instant replay",
+            "detail": "Goals trigger a celebration then highlight replays from several cameras, with a transition wipe (logo swipe) before and after. Radar, score clock and player indicators are typically hidden during replays. Skip with the button prompt. Do not count replay frames as live play. [Unverified]"
+          },
+          {
+            "name": "Team Management / Tactics screen",
+            "detail": "Formation pitch view with player cards, a Roles and Focus selector per position, and Custom Tactics tabs: Build-Up Style, Defensive Approach plus Line Height slider. Up to 5 saved tactics (shareable codes). A TU 1.1.0 fix addressed tactics saving incorrectly. [Unverified]"
+          },
+          {
+            "name": "Set-piece overlay",
+            "detail": "On corners and free kicks an aiming arc and indicator appears. D-pad Up opens set-piece tactics (moved from D-pad Down for corners in FC 27). On corners a short positioning window follows delivery."
+          },
+          {
+            "name": "Tactics D-pad overlay",
+            "detail": "D-pad Left during play opens My Tactics (5 saved Custom Tactics, switching takes a moment). D-pad Right opens Tactical Focus (Default/Attacking/Defending). A small banner confirms the change."
+          },
+          {
+            "name": "Loading / pre-match screen",
+            "detail": "Team line-ups, kit and stadium, followed by the walk-out and kick-off. In FUT the squad rating and chemistry appear on the line-up card. [Unverified]"
+          },
+          {
+            "name": "Squad Battles results screen",
+            "detail": "Shows Battle Points earned, broken into result, difficulty multiplier, goals and performance, plus weekly rank. [Unverified]"
+          }
+        ]
+      },
+      {
+        "id": "hud",
+        "items": [
+          {
+            "name": "Score clock (scoreboard)",
+            "detail": "Normally top-left: team short names or crests, score, match clock in minutes, and an added-time (+X) badge late in each half. It can be hidden in accessibility/visual settings. Use OCR here to read the score and minute. [Unverified]"
+          },
+          {
+            "name": "Radar (mini-map)",
+            "detail": "Bottom-centre pitch overview in 2D (top-down) or 3D, or off. Dots show both teams and the ball, with configurable dot colours (team colours recommended). Pros favour 2D. Read the opponent's line height and shape from the dot positions. [Unverified]"
+          },
+          {
+            "name": "Player indicator",
+            "detail": "A marker above the controlled player (arrow, name or number, or a name bar) with a stamina bar. The size and type are configurable, e.g. Player Name Large. The indicator can fade with stamina loss. A Next Player Switch indicator shows the L1/LB switch target."
+          },
+          {
+            "name": "Power bar",
+            "detail": "A bar appears under or near the player for shots, passes, crosses and set pieces, showing charge. It is useful for coaching over-powered shots and passes. [Unverified]"
+          },
+          {
+            "name": "Set-piece aiming arc",
+            "detail": "On corners and free kicks a trajectory and aim marker shows the delivery target. FC 27 adds a short post-delivery window to move attackers."
+          },
+          {
+            "name": "Card and event banners",
+            "detail": "Booking (yellow/red), substitution, injury, offside and goal banners appear as overlays, typically lower-third or near the scoreboard. [Unverified]"
+          },
+          {
+            "name": "Camera: Tele Broadcast",
+            "detail": "Recommended for competitive play by many guides: Height about 10-20, Zoom about 0-5, Power Shot Zoom off, camera shake off. Gives a higher, wider view of passing lanes."
+          },
+          {
+            "name": "Camera: Co-Op",
+            "detail": "Wider horizontal view favoured by some guides for 11v11. It shows runs and shape without relying on the radar as much."
+          },
+          {
+            "name": "Broadcast camera / presentation",
+            "detail": "The default broadcast-style camera with TV-style graphics. Not ideal for competitive vision. FC 27-specific broadcast package details were not found. [Unverified]"
+          },
+          {
+            "name": "Pass Receiver Lock indicator",
+            "detail": "When Pass Receiver Lock is on, control locks onto the intended receiver. Most guides set it to Late, so the lock engages after the kick and you can control the passer longer."
+          }
+        ]
+      },
+      {
+        "id": "roster",
+        "items": [
+          {
+            "name": "Formation: 4-2-1-3 (launch meta)",
+            "detail": "The most-used FUT formation at launch (about 25% of squads on FUT.GG). Two CDMs give cover now that AI defending is weaker. Typical: CDMs Deep-Lying Playmaker plus Holding, CAM Playmaker or Shadow Striker, Inside Forwards on the wings, ST Advanced Forward, Balanced build-up, line about 60. It needs pace on both wide forwards."
+          },
+          {
+            "name": "Formation: 4-3-1-2 (pro favourite)",
+            "detail": "The most-used shape among FC 27 pros per FUTSettings and FUT.GG (about 29-31% of pros). No wingers, so the centre is overloaded: CMs Box-to-Box or Holding, CAM Shadow Striker, two STs Advanced Forward, Fullbacks. Vejrgang: Balanced build-up, Balanced line 60. Weakness: width, as the fullbacks are isolated."
+          },
+          {
+            "name": "Formation: 4-4-1-1",
+            "detail": "Popular community pick (about 31% of squads per U7buy) and recommended by Tekkz in Red Bull's guide. Safe against counters with two banks of four, and the second striker links play. Good for counter-attacking."
+          },
+          {
+            "name": "Formation: 4-2-3-1 Wide",
+            "detail": "Balanced option for protecting leads, with two CDMs plus wide midfielders for width."
+          },
+          {
+            "name": "Formation: 4-1-2-1-2 Narrow",
+            "detail": "Central diamond. Strong through the middle and on combination play, but vulnerable on the flanks."
+          },
+          {
+            "name": "Formation: 4-4-2 Flat",
+            "detail": "Beginner-friendly and balanced. Vejrgang's FC 25-26 favourite. Only two CMs, so a lost midfield duel exposes the back line. Skycoach suggests line height about 55."
+          },
+          {
+            "name": "Formation: 4-2-2-2",
+            "detail": "Two CDMs plus two CAM/inside players and two strikers. Narrow and compact, central overloads."
+          },
+          {
+            "name": "Formation: 4-3-3 / 4-5-1 Flat",
+            "detail": "Wider midfield shapes. The 4-5-1 Flat is often paired with Short Passing build-up and a High line about 70 (FUT.GG)."
+          },
+          {
+            "name": "Formation: 5-3-2",
+            "detail": "Strongest defensive shape per Skycoach, but rarely used. Back-five cover suits users who struggle with manual defending."
+          },
+          {
+            "name": "Role: Goalkeeper / Sweeper Keeper / Ball-Playing Keeper",
+            "detail": "Goalkeeper stays on the line. Sweeper Keeper comes off the line to clear balls behind a high line (pairs with Aggressive/95 depth; Tekkz uses it). Ball-Playing Keeper joins build-up (Vejrgang uses it)."
+          },
+          {
+            "name": "Role: Fullback / Wingback / Falseback / Inverted Wingback / Wide Back",
+            "detail": "Fullback is the default balanced defender. Wingback and Attacking Wingback push high for width (in narrow formations they provide all the width). Falseback and Inverted Wingback tuck into midfield. Wide Back is a defensive wide CB-style role (sources dispute whether it is new)."
+          },
+          {
+            "name": "Role: Defender / Stopper / Ball-Playing Defender",
+            "detail": "CB roles. Defender holds the line. Stopper steps out aggressively to engage (risky with weak AI defending). Ball-Playing Defender progresses the ball in build-up."
+          },
+          {
+            "name": "Role: Holding / Centre-Half / Deep-Lying Playmaker",
+            "detail": "CDM roles. Holding screens the back four (most-used defensive pairing). Centre-Half drops between the CBs. Deep-Lying Playmaker dictates build-up from deep. In 4-2-1-3 a common pairing is DLP plus Holding."
+          },
+          {
+            "name": "Role: Box-to-Box / Playmaker / Half-Winger / Box Crasher",
+            "detail": "CM roles. Box-to-Box covers both boxes (Vejrgang and Tekkz CMs). Playmaker drifts to receive. Half-Winger drifts wide. Box Crasher makes late runs into the box (Dexerto pairs Holding plus Box Crasher)."
+          },
+          {
+            "name": "Role: Shadow Striker / Classic 10 / Playmaker (CAM)",
+            "detail": "Shadow Striker attacks the box like a second striker (the most common pro CAM role). Classic 10 stays central to create. Playmaker roams to receive."
+          },
+          {
+            "name": "Role: Winger / Inside Forward / Wide Playmaker",
+            "detail": "Winger hugs the line and crosses. Inside Forward cuts into the half-space to shoot (meta in 4-2-1-3). Wide Playmaker drifts inside to create."
+          },
+          {
+            "name": "Role: Advanced Forward / Poacher / False 9 / Target Forward",
+            "detail": "Advanced Forward (Attack focus) runs in behind and is the most-used ST role (about 60-65%). Poacher stays in the box. False 9 drops to link. Target Forward holds up and wins headers."
+          },
+          {
+            "name": "Role familiarity: Role+, Role++ and Versatile Focus",
+            "detail": "Role+ and Role++ mark players suited to a role. In FC 27 all special cards automatically get Role++ in all positions within their primary and secondary roles. Out-of-position penalties are reportedly reduced, and a Versatile Focus option exists. EA has never published numeric effects. [Unverified]"
+          },
+          {
+            "name": "Role count",
+            "detail": "37 position-role slots (about 30 distinct role names), carried over from FC 26. More alternate roles are promised during the year. The four roles often called new (Wide Back, Inverted Wingback, Box Crasher, Ball-Playing Keeper) were announced in FC 26."
+          },
+          {
+            "name": "PlayStyles overview",
+            "detail": "36 PlayStyle abilities (some GK-only). Gold PlayStyle+ is the stronger version. In FC 27 a card has a maximum of 3 PlayStyles+ (down from 5). EA's design aim is that attributes matter more, with a PlayStyle worth about 5-10%."
+          },
+          {
+            "name": "PlayStyle change: Finesse Shot",
+            "detail": "Attributes (stats) now influence finesse outcomes more. Spin, animation speed and off-angle effectiveness were adjusted to shrink the gap for players without the PlayStyle. A high-Curve and Finishing player without it is closer than before."
+          },
+          {
+            "name": "PlayStyle change: Low Driven Shot",
+            "detail": "Shot-speed boost removed: speed now comes from shooting attributes and input power only. The PlayStyle and PlayStyle+ still add accuracy. Low driven remains strong, especially at the near post."
+          },
+          {
+            "name": "PlayStyle change: Technical",
+            "detail": "The gap between Technical and Technical+ was reduced; + still feels smoother. It improves Controlled Sprint dribbling."
+          },
+          {
+            "name": "PlayStyle change: Rapid",
+            "detail": "The dribbling speed boost for PlayStyle owners is reduced. Non-PlayStyle players are unchanged, so raw Sprint Speed and Agility matter more."
+          },
+          {
+            "name": "PlayStyle change: Quick Step",
+            "detail": "Smaller boost to acceleration and explosive dribbling. The Acceleration attribute matters more. Still helps the sprint-boost burst (R1/RB release then sprint)."
+          },
+          {
+            "name": "PlayStyle change: Pinged Pass",
+            "detail": "No longer reduces the receiver's trap error. It only affects the pass itself (fast, driven ground passes)."
+          },
+          {
+            "name": "PlayStyle change: Tiki Taka",
+            "detail": "FC 26's animation-speed boost and receiver trap boost were removed. It is now focused on quick combination one-touch play."
+          },
+          {
+            "name": "PlayStyle change: Jockey",
+            "detail": "Smaller acceleration boost when leaving jockey. Non-PlayStyle players get faster jockey-sprint and acceleration, so all defenders can jockey better."
+          },
+          {
+            "name": "PlayStyle change: Intercept",
+            "detail": "Players without Intercept but with high defensive attributes get more reach and success, so the PlayStyle's relative edge is smaller."
+          },
+          {
+            "name": "PlayStyle change: Precision Header",
+            "detail": "The accuracy boost was rebalanced; the gap between Precision Header and + is reduced."
+          },
+          {
+            "name": "PlayStyle: First Touch",
+            "detail": "Reduces error when trapping the ball and speeds the transition into dribbling. More valuable now that Tiki Taka and Pinged Pass no longer help receivers."
+          },
+          {
+            "name": "PlayStyle: Rush Out (GK)",
+            "detail": "The keeper is faster when leaving the goal to close down an attacker. Useful behind a high line. Other GK PlayStyles include Far Reach, Footwork, Cross Claimer, Deflector and Far Throw. [Unverified]"
+          },
+          {
+            "name": "PlayStyles Lab",
+            "detail": "A FUT feature to add PlayStyles to items. The PlayStyle+ Lab returned around Future Stars Week 2 (from 17 Oct 2026). [Unverified]"
+          },
+          {
+            "name": "Skill moves: star rating rule",
+            "detail": "A player can only perform moves up to their Skill Moves star rating (1-5). In FC 27, 5-star moves were fixed in The Grounds (TU 1.0.1). Simplified Skill Moves is an option; pros turn it off."
+          },
+          {
+            "name": "Skill moves: new in FC 27 (disputed)",
+            "detail": "The commonly cited new moves are Fake Turn (3 or 4 star), Ball Roll Spin (4 star), Stepover Combo (4 or 5 star) and Kneel Header (5 star, or 1 star needing the Trickster PlayStyle). Other lists add First Time Spin, Alternate Elastico Chop and Running Fake Drag (5 star). Counts range from 4 to 18 new entries. [Unverified]"
+          },
+          {
+            "name": "Skill moves: 2-star examples",
+            "detail": "Stop and Go, Drag to Drag, plus classic Stepover, Reverse Stepover, Body Feint, Ball Roll. Effective, simple direction changes (verify the in-game list). [Unverified]"
+          },
+          {
+            "name": "Skill moves: 3-star examples",
+            "detail": "Foot to Foot, Lateral Heel to Heel, Heel Chop, Roulette, Fake Left/Go Right, Ball Roll Cut, Drag Back, Spin. These are bread-and-butter evasion moves. [Unverified]"
+          },
+          {
+            "name": "Skill moves: 4-star examples",
+            "detail": "Drag Turn, Standing Scoop Turn, Flair Roulette, Four Touch Skill, Skilled Bridge, Drag to Chop, Ball Roll Spin, Fake Turn, plus Lane Change, Ball Roll Fake Turn, Elastico Chop, Heel to Ball Roll. [Unverified]"
+          },
+          {
+            "name": "Skill moves: 5-star examples",
+            "detail": "First Time Spin, Alternate Elastico Chop, Running Fake Drag, Stepover Combo, plus Elastico, Reverse Elastico, Advanced Rainbow, Tornado Spin, Ball Roll Flick, Flick Over. [Unverified]"
+          },
+          {
+            "name": "Skill moves: practical use in FC 27",
+            "detail": "With AI defenders no longer auto-tackling, simple direction changes (drag back, ball roll, stop-and-go, lane change) beat lunging users. Many users now jockey well, so do not spam skills into a set defender: use them when the defender commits. Practise in Training before using them online."
+          }
+        ]
+      },
+      {
+        "id": "mechanics",
+        "items": [
+          {
+            "name": "Controller preset: Competitive",
+            "detail": "The Competitive settings preset is the default in Ultimate Team and cannot be changed there, though individual settings can be adjusted in other modes. It uses Precision shot assistance by default."
+          },
+          {
+            "name": "Passing assistance settings",
+            "detail": "Common pro setup: Ground, Cross and Lob passes Assisted; Through Pass Semi (direction follows your stick, power partly assisted) or Manual. Pass Receiver Lock set to Late."
+          },
+          {
+            "name": "Shot assistance",
+            "detail": "Options are Assisted, Precision and Manual. Precision is the most common competitive pick. Red Bull recommends Assisted for players in Rivals Division 3 or lower until they master aiming. Turn Auto Shots off."
+          },
+          {
+            "name": "Switching settings",
+            "detail": "Auto Switching: Air Balls and Loose Balls (or Manual). Right Stick Switching: Classic, Player Relative, sensitivity about 3-7. Next Player Switch Indicator on. Many pros (RBLZ Levy) prefer right-stick switching over L1/LB for precision."
+          },
+          {
+            "name": "Defending settings",
+            "detail": "Advanced Defending (separate standing tackle and shoulder inputs) vs Tactical Defending (context-selects the tackle). Pass Block Assistance on, Professional Fouls on, Auto Clearances off (common pro list). Analog Sprint off."
+          },
+          {
+            "name": "Jockey (L2/LT)",
+            "detail": "Hold to face the attacker side-on. FC 27 jockey speed is higher than FC 26 in Competitive gameplay (TU 1.0.1 also raised it in Authentic). Stay goal-side about 1 metre away and wait for a heavy touch."
+          },
+          {
+            "name": "Standing tackle (Circle/B)",
+            "detail": "The default tackle; manual reach is longer than FC 26. Make one timed attempt, not three. R1+Circle (hard tackle) is risky. AI teammates no longer auto-tackle, so you must make it."
+          },
+          {
+            "name": "Slide tackle (Square/X)",
+            "detail": "Last-resort tackle; a miss removes the defender from play, and mistimed slides give fouls, cards or penalties. Use it only when the standing tackle cannot reach."
+          },
+          {
+            "name": "Contain and Second Man Press",
+            "detail": "Contain is X/A (Classic scheme). Teammate Contain or Second Man Press is R1/RB (hold, per most guides): one AI teammate closes the ball carrier while you cover the passing lane or runner. Do not pull CBs out with it. [Unverified]"
+          },
+          {
+            "name": "Shoulder challenge (anti-spam)",
+            "detail": "Repeated shoulder-challenge presses now make the defender stick an arm out and slow down. Spamming it is punished. Use single, timed challenges when side by side."
+          },
+          {
+            "name": "Team Press",
+            "detail": "Team-wide pressing for a limited time. In FC 27 it has NO effect while the ball is in your defensive third. Use it in the middle or final third after losing possession. It drains stamina."
+          },
+          {
+            "name": "Manual switching priority",
+            "detail": "With weaker AI defenders, switching early to the right defender before the danger arrives is essential. Switching to a CB too early drops the line and opens space (RBLZ Levy)."
+          },
+          {
+            "name": "Through pass (Triangle/Y)",
+            "detail": "Follows your aimed direction strictly in FC 27. Aim at the space the runner will reach, not at the runner. Power and direction both matter. Precision Through Pass is R1+Triangle / RB+Y."
+          },
+          {
+            "name": "Dinked / lofted through pass",
+            "detail": "Dinked pass is now only on double-tap Through Pass and is fully manual. A lobbed through (L1+Triangle / LB+Y) beats a high line. Guides disagree on some double-tap labels. [Unverified]"
+          },
+          {
+            "name": "Driven ground pass (R1+X / RB+A)",
+            "detail": "A fast pass between midfielders to break a press. Do not drive it into a tightly marked striker."
+          },
+          {
+            "name": "Crossing (Square/X)",
+            "detail": "Less assisted: crosses drop into the space you aim at. Cross ahead of the attacker's run rather than at the body. Whipped and driven crosses have variants. Clean header contact needs precise timing."
+          },
+          {
+            "name": "Triggered run (L1/LB)",
+            "detail": "Sends a teammate on a direct run. In FC 27 manual runs stop after a limited distance and players return to position; retrigger if needed."
+          },
+          {
+            "name": "Triggered Curved Run (tap L1+R1 / LB+RB)",
+            "detail": "New in FC 27: the selected teammate bends the run around defenders into open space. Strong against flat high lines to stay onside, then cut in."
+          },
+          {
+            "name": "Pass & Follow Run (L1+R1+X / LB+RB+A)",
+            "detail": "New in FC 27: pass, and the passer immediately makes a curved follow-up run, giving a quick one-two route."
+          },
+          {
+            "name": "Avoidance (hold R1/RB on corners)",
+            "detail": "New: during the corner positioning window, the controlled attacker or defender slips through crowds without being blocked. Some guides list it as R1+Left Stick. [Unverified]"
+          },
+          {
+            "name": "Shielding (hold L2/LT)",
+            "detail": "Holds position or protects the ball. On corners, after Avoidance, hold Shielding to anchor your attacker so defenders cannot step in front. Throw-ins also gain Shielding and Avoidance."
+          },
+          {
+            "name": "Set-piece tactics (D-pad Up)",
+            "detail": "Free kicks and corners carry pre-set player instructions. The corner tactics menu moved from D-pad Down to D-pad Up. The FC 26 options 'Edge of Box Run' and 'Crowd the Goalkeeper' were removed in favour of adding or removing players."
+          },
+          {
+            "name": "Corners: three steps",
+            "detail": "1) Aim and deliver. 2) Move your attacker with Avoidance and Shielding into a spot (no auto-positioning). 3) Time the header or volley. Defenders must also manually switch and mark in crowded boxes."
+          },
+          {
+            "name": "Shot types overview",
+            "detail": "Standard (Circle/B), Finesse (R1+Circle), Power Shot (L1+R1+Circle), Chip (L1+Circle), Low Driven (double-tap shoot), Low Driven Finesse (R1+shoot, shoot) and Low Driven Power (L1+R1+shoot, shoot). Timed finishing has not returned since FC 26 removed it."
+          },
+          {
+            "name": "Low driven shot",
+            "detail": "Double-tap shoot, with the second press right after the first. It no longer gains extra speed from the PlayStyle; speed comes from attributes and power. Best inside the box, in 1v1s and toward bottom corners. EA acknowledges near-post low drivens are strong."
+          },
+          {
+            "name": "Finesse shot",
+            "detail": "R1/RB+shoot: curled placement to the far corner. Outcomes depend more on the Curve and Finishing attributes now. Use it from the edge of the box at an angle, with space."
+          },
+          {
+            "name": "Power shot",
+            "detail": "L1+R1 (LB+RB)+shoot. Slow wind-up, high speed. Best from range with a clear lane; avoid it under pressure in a crowded box. Turn Power Shot Zoom off."
+          },
+          {
+            "name": "Dribbling: Controlled Sprint",
+            "detail": "Sits between slow dribble and full sprint. Use it near the box and release it before sharp turns. The Technical PlayStyle improves it."
+          },
+          {
+            "name": "Dribbling: sprint touches",
+            "detail": "Full sprint lengthens touches, so direction changes get harder. Over-sprinting is a top mistake: walk into space first."
+          },
+          {
+            "name": "Dribbling: sprint boost",
+            "detail": "Hold R1/RB for tight touches, release, then tap sprint for an explosive burst. Quick Step helps, though less after its nerf."
+          },
+          {
+            "name": "Dribbling: off-balance dribbling (new)",
+            "detail": "When a physical challenge knocks an agile dribbler off balance, they can keep the ball and choose the next touch. It favours Agility, Balance and Dribbling, but timing and body position matter."
+          },
+          {
+            "name": "Dribbling: shielding and stop-and-go",
+            "detail": "Slow down to make the defender settle into a jockey, then accelerate when they commit. Small first touches beat compact blocks; take big touches only into open space."
+          },
+          {
+            "name": "AI attacking spatial awareness",
+            "detail": "AI runners read space, defensive shape and the offside line, e.g. a winger stays level with the last defender, then curves in when the pass is played. It works alongside Player Roles, which still define run types."
+          },
+          {
+            "name": "AI defending behaviour (Competitive)",
+            "detail": "AI defenders hold positional shape and block lanes but rarely start tackles. They react to nearby loose balls. Interception ranges for passive AI were reduced. The user must provide the pressure."
+          },
+          {
+            "name": "Defensive Approach and Line Height",
+            "detail": "Deep 1-30 (default 25): drops with runs, no pressure. Balanced 31-60 (50): flexible. High 61-90 (70): situational pressure, may not track runs. Aggressive 91-100 (95): presses immediately after losing the ball, plays an offside trap, extra stamina drain."
+          },
+          {
+            "name": "Build-Up Style",
+            "detail": "Three options: Short Passing (patient, players come short), Balanced (default, most used) and Counter (direct, runners go early). Tekkz reportedly uses Counter with a 4-3-1-2 line 60. [Unverified]"
+          },
+          {
+            "name": "In-match tactics: My Tactics (D-pad Left)",
+            "detail": "Switch between up to 5 saved Custom Tactics. Each can change formation, Build-Up, Defensive Approach, Player Roles and Focuses without pausing. It takes a moment to apply."
+          },
+          {
+            "name": "In-match tactics: Tactical Focus (D-pad Right)",
+            "detail": "Default, Attacking or Defending: temporarily shifts build-up, defensive approach and compatible role focuses without changing the formation or roles or editing the saved tactic. Use Defending to protect a late lead."
+          },
+          {
+            "name": "Player stamina and fatigue",
+            "detail": "Sprinting, pressing (Team Press, Aggressive approach) and long matches drain stamina. The player indicator can fade with stamina. Make subs at about 60-70 minutes for pressing players. [Unverified]"
+          },
+          {
+            "name": "Professional fouls",
+            "detail": "When on, a defender can deliberately foul to stop a counter at the cost of a card risk. Commonly enabled by pros."
+          },
+          {
+            "name": "Goalkeeper control",
+            "detail": "Manual GK rush (Triangle/Y hold) and GK switch exist. The 1v1 GK holding-ball bug was fixed in TU 1.1.0. Watch for keepers left exposed at the near post. [Unverified]"
+          },
+          {
+            "name": "Visual settings that help",
+            "detail": "2D radar with team-coloured dots, Player Name Large indicator, Next Player Switch Indicator on, camera shake off, Power Shot Zoom off. Path: Settings > Game Settings > R1/RB to Visual Settings."
+          }
+        ]
+      },
+      {
+        "id": "strategy",
+        "items": [
+          {
+            "name": "Default competitive tactic template",
+            "detail": "Balanced build-up, Balanced defensive approach, line height about 55-61, two holding-type midfielders (CDM pair or Holding plus Box-to-Box). This is the community and pro baseline in FC 27 because AI defending is weaker."
+          },
+          {
+            "name": "Vejrgang's 4-3-1-2 (FUTSettings)",
+            "detail": "Balanced build-up, Balanced approach, line 60. GK Ball-Playing Keeper; LB and RB Fullback; CBs Defender; CMs two Box-to-Box plus one Holding; CAM Shadow Striker; STs Advanced Forward x2. [Unverified]"
+          },
+          {
+            "name": "Tekkz 4-3-1-2 / 4-4-1-1",
+            "detail": "FUTSettings lists Tekkz in a 4-3-1-2 with Counter build-up, Balanced approach, line 60, Sweeper Keeper, Fullbacks, Defenders, Box-to-Box CMs, Shadow Striker and two Advanced Forwards. Red Bull quotes him recommending a 4-4-1-1 with adjusted roles. The sources conflict. [Unverified]"
+          },
+          {
+            "name": "RedLac's 4-3-1-2 (Red Bull)",
+            "detail": "Drops wide players to bolster central midfield; focus attack and defence through the centre. Line height and roles not published."
+          },
+          {
+            "name": "NealGuides 4-2-1-3",
+            "detail": "ST Advanced Forward, wide Inside Forwards, CAM Shadow Striker, CDMs Deep-Lying Playmaker plus Holding, Fullbacks, Defenders. Codes conflict across pages, so test in-game."
+          },
+          {
+            "name": "Aggressive 95 depth meta",
+            "detail": "Since around two weeks after launch many lobbies run Aggressive (default 95) with an extreme high press and offside trap. The depth slider acts more directly on the line, manual runs are capped, and through balls are less assisted, which makes the trap strong. EA has announced no change."
+          },
+          {
+            "name": "How to beat 95 depth / high press",
+            "detail": "Short triangles (CB to CDM to CM) to draw the presser out before playing forward. Switch play to the far side when they overload one side. Lobbed through balls into space behind the line, timed before the striker goes offside. Curved runs to stay onside. Driven passes into midfield, not into a marked ST."
+          },
+          {
+            "name": "Using 95 depth safely",
+            "detail": "You need fast CBs to recover when the trap breaks, plus a Sweeper Keeper. Watch stamina (Aggressive drains more). Drop to High (about 70) or Balanced (60) when leading or when CBs are slow."
+          },
+          {
+            "name": "How to beat narrow formations (4-3-1-2, 4-1-2-1-2)",
+            "detail": "Their weakness is width. Isolate their fullbacks with wingers or wide overloads, switch play quickly before they shift, cross early, then attack the centre once their midfield is pulled wide. Avoid forcing passes into the packed middle. [Unverified]"
+          },
+          {
+            "name": "How to beat a deep block / park the bus",
+            "detail": "Stretch the pitch with width, vary the tempo (patient circulation, then sudden one-twos), attack the CB-FB gap, use cut-backs and near-post low drivens, shoot from range for rebounds, and treat corners as a weapon with the new manual positioning. [Unverified]"
+          },
+          {
+            "name": "How to beat counter-attack teams",
+            "detail": "Keep two holding midfielders (4-2-1-3, 4-2-3-1) and avoid committing fullbacks at the same time. Use professional fouls on breaks. Jockey and delay rather than diving in. Keep the line Balanced (about 55-60)."
+          },
+          {
+            "name": "Defending in FC 27: priorities",
+            "detail": "1) Switch early to the right player. 2) Jockey goal-side and keep your distance. 3) One timed standing tackle. 4) Use Second Man Press sparingly. 5) Never pull CBs out of the line. 6) Team Press only outside your defensive third."
+          },
+          {
+            "name": "Build-up under pressure",
+            "detail": "Stay composed: frantic pass mashing causes misplaced passes. Pass in the direction the player is facing. Use a DLP or Ball-Playing Defender to recycle. Driven ground passes beat a press between the lines (Red Bull pro tips)."
+          },
+          {
+            "name": "Game-state management",
+            "detail": "Leading late: Tactical Focus Defending (D-pad Right), swap to a saved 5-back or deeper tactic (D-pad Left), lower the line, keep the ball. Chasing: Tactical Focus Attacking, add a striker, raise the line and use Team Press in the middle third."
+          },
+          {
+            "name": "Corner attacking routine",
+            "detail": "Deliver to a zone (near post or penalty spot), use Avoidance to escape your marker, Shielding to hold the spot, then time the header. Mix short corners if their box is crowded."
+          },
+          {
+            "name": "Corner defending routine",
+            "detail": "Manually select the most dangerous marker before delivery, use Avoidance to beat screens, stay goal-side and contest. Auto-switching on air balls helps some users."
+          },
+          {
+            "name": "Squad building for FC 27",
+            "detail": "Attributes matter more than PlayStyles now. Prioritise Pace, Acceleration, Agility and Balance for dribblers, Defensive Awareness and Standing Tackle for CBs, and Curve and Finishing for finessers. Fast CBs are key behind high lines. A card has at most 3 PlayStyles+."
+          },
+          {
+            "name": "Rivals weekly plan",
+            "detail": "Reach 30 points for the Upgrade reward (10 wins). Win streaks speed up promotion. Stop when tilted. CQP from your division helps reach Champions (1,000 needed)."
+          },
+          {
+            "name": "Squad Battles efficiency",
+            "detail": "Play one difficulty above your comfort level vs lower-rated squads and drop for strong ones. Score up to 5 goals. Never quit early (0 points). Win on World Class for the CQP objective."
+          },
+          {
+            "name": "Champions weekend plan",
+            "detail": "15 matches, so spread them across Friday to Monday. Rewards are by wins, with coins starting at 5 wins. Avoid long tilt runs; review losses between games."
+          },
+          {
+            "name": "Half-time coaching checklist",
+            "detail": "Compare possession, shots and xG. Is the opponent's line high (radar)? Are you losing the ball centrally (possession lost heat map)? Change one thing: line height, build-up style or a role focus."
+          },
+          {
+            "name": "Exploiting the near post",
+            "detail": "When the keeper cheats toward the far post or you have a tight angle, the near-post low driven shot is the highest-percentage finish in FC 27 (EA-acknowledged). As a defender, block the near-post lane."
+          },
+          {
+            "name": "Career mode tactics",
+            "detail": "4-2-1-3 with DLP or Holding CDMs, or a 4-4-2 Flat balanced system, are recommended. Authentic gameplay makes teammates less likely to run in behind automatically, so trigger runs more."
+          },
+          {
+            "name": "Rush and small-sided play",
+            "detail": "Spacing matters more than skill: keep one player back, use quick one-twos, and exploit the AI GK with low driven shots. Rush-specific rules can be checked in the in-game tutorial. [Unverified]"
+          }
+        ]
+      },
+      {
+        "id": "mistakes",
+        "items": [
+          {
+            "name": "Waiting for AI teammates to win the ball",
+            "detail": "In FC 27 AI defenders no longer auto-tackle. Fix: switch to the nearest defender, jockey and make a timed standing tackle yourself."
+          },
+          {
+            "name": "Spamming tackle or shoulder challenge",
+            "detail": "Multiple presses lead to missed tackles, and spammed shoulder challenges now slow the defender. Fix: one timed tackle after a heavy touch."
+          },
+          {
+            "name": "Pulling centre-backs out of the line",
+            "detail": "Pressing with a CB opens the space behind. Fix: press with midfielders or Second Man Press and keep CBs in the line."
+          },
+          {
+            "name": "Switching too late (or to a CB too early)",
+            "detail": "Late switches leave runners free, and switching to a CB too early drops the line. Fix: anticipate and switch before the pass; prefer right-stick switching for precision."
+          },
+          {
+            "name": "Using Team Press in your own third",
+            "detail": "It does nothing there in FC 27. Fix: press after losing the ball in the middle or final third."
+          },
+          {
+            "name": "Over-sprinting",
+            "detail": "Holding sprint lengthens touches and causes turnovers. Fix: cut sprint use by about 30%, walk into space, and use Controlled Sprint near the box."
+          },
+          {
+            "name": "Through balls aimed at the runner",
+            "detail": "FC 27 through balls follow your aim strictly. Fix: aim at the space ahead of the run and control power; practise in Training."
+          },
+          {
+            "name": "Crossing at the striker's body",
+            "detail": "Crosses land in the aimed space. Fix: cross ahead of the run into space and time the header."
+          },
+          {
+            "name": "Expecting auto-positioning on corners",
+            "detail": "Attackers do not move to the best spot. Fix: use Avoidance and Shielding during the positioning window."
+          },
+          {
+            "name": "Relying on PlayStyles over attributes",
+            "detail": "PlayStyles are worth about 5-10% now. Fix: pick players for core attributes (pace, agility, shooting, defending)."
+          },
+          {
+            "name": "Power shots under pressure",
+            "detail": "Long wind-up shots get blocked in a crowded box. Fix: low driven or finesse in the box; power shots only with a clear lane from range."
+          },
+          {
+            "name": "Ignoring the near post",
+            "detail": "Users always aim far post. Fix: check whether the GK has opened the near post and take the low driven."
+          },
+          {
+            "name": "Changing everything after one loss",
+            "detail": "Overreacting hides the real issue. Fix: identify the repeated failure (e.g. 2v1s on one flank) and adjust one setting."
+          },
+          {
+            "name": "Buying cards to fix an undiagnosed problem",
+            "detail": "Fix: review match facts and replays first to see whether the problem is squad or execution."
+          },
+          {
+            "name": "Line too high with slow CBs",
+            "detail": "95 depth with slow CBs gets beaten by lobbed throughs. Fix: lower to about 60-70 or buy faster CBs plus a Sweeper Keeper."
+          },
+          {
+            "name": "Forcing the ball into a narrow block",
+            "detail": "Fix: switch play wide, use fullbacks and overloads, and cut back."
+          },
+          {
+            "name": "Not using the radar",
+            "detail": "Runs outside the camera are missed. Fix: use the 2D radar with team colours and glance often."
+          },
+          {
+            "name": "Frantic passing in build-up",
+            "detail": "Mashing pass causes misplaced balls. Fix: composure; pass in the direction the player faces."
+          },
+          {
+            "name": "Mistimed slide tackles",
+            "detail": "A miss removes the defender and risks cards or penalties. Fix: standing tackle by default; slide only as a last resort."
+          },
+          {
+            "name": "Quitting Squad Battles early",
+            "detail": "Ending a match early gives 0 Battle Points. Fix: finish matches."
+          },
+          {
+            "name": "Not trigger-running in Authentic or Career",
+            "detail": "Authentic AI makes fewer automatic runs in behind. Fix: use L1 runs and curved runs."
+          },
+          {
+            "name": "Using exploits (e.g. deep free-kick glitch)",
+            "detail": "Exploits are patched (Live Update #1) and can risk account action. The coach must never recommend glitches. Fix: practise legitimate set pieces."
+          },
+          {
+            "name": "Leaving Pass Receiver Lock on Default",
+            "detail": "Control switches to the receiver too early. Fix: set it to Late."
+          },
+          {
+            "name": "Tilting through a weekend",
+            "detail": "Fix: take breaks between Champions games, review the last loss's Match Facts, and stop after 3 straight losses. [Unverified]"
+          }
+        ]
+      },
+      {
+        "id": "glossary",
+        "items": [
+          {
+            "name": "TU (Title Update)",
+            "detail": "A downloadable patch (e.g. 1.0.4, 1.1.0) that goes through console certification."
+          },
+          {
+            "name": "Live Update",
+            "detail": "A server-side tuning or fix applied by restarting the game, with no download (e.g. Live Update #1 free-kick fix)."
+          },
+          {
+            "name": "Pitch Notes",
+            "detail": "EA's official developer blog posts about gameplay and modes (Gameplay Deep Dive, Launch Update, and so on)."
+          },
+          {
+            "name": "Competitive gameplay",
+            "detail": "The online gameplay ruleset (FUT, Rivals, Champions) with reduced AI defending."
+          },
+          {
+            "name": "Authentic Gameplay 2.0",
+            "detail": "The offline and realistic ruleset (Career, Kick-Off) with expanded sliders."
+          },
+          {
+            "name": "CQP",
+            "detail": "Champions Qualification Points; 1,000 needed to enter FUT Champions Finals."
+          },
+          {
+            "name": "Champs / Weekend League",
+            "detail": "FUT Champions Finals: 15 matches over a weekend."
+          },
+          {
+            "name": "Rivals",
+            "detail": "Division Rivals, the weekly ranked FUT online mode."
+          },
+          {
+            "name": "SBC",
+            "detail": "Squad Building Challenge: exchange items for rewards."
+          },
+          {
+            "name": "Evo",
+            "detail": "Evolution: upgrade path for an item via objectives (Pathways in FC 27)."
+          },
+          {
+            "name": "SP",
+            "detail": "Season Points that level the Season Pass; 850/day cap from matches."
+          },
+          {
+            "name": "TOTW",
+            "detail": "Team of the Week special items."
+          },
+          {
+            "name": "OVR",
+            "detail": "Overall rating; in Career FC 27 it is dynamic with form, morale and fitness."
+          },
+          {
+            "name": "xG",
+            "detail": "Expected goals: shot-quality measure shown in Match Facts."
+          },
+          {
+            "name": "Chem",
+            "detail": "Chemistry: FUT link bonus from club, league and nation (0-3 per player)."
+          },
+          {
+            "name": "PlayStyle / PlayStyle+",
+            "detail": "Special abilities; + is the elite version (max 3 per item in FC 27)."
+          },
+          {
+            "name": "Role / Role+ / Role++",
+            "detail": "Player Role tactical behaviour and familiarity levels."
+          },
+          {
+            "name": "Focus",
+            "detail": "Sub-setting of a role (e.g. Attack, Balanced, Defend, Build-Up)."
+          },
+          {
+            "name": "Depth / line height",
+            "detail": "Defensive line height slider 1-100 (Aggressive default 95)."
+          },
+          {
+            "name": "Build-Up Style",
+            "detail": "Short Passing, Balanced or Counter."
+          },
+          {
+            "name": "Defensive Approach",
+            "detail": "Deep, Balanced, High or Aggressive."
+          },
+          {
+            "name": "Jockey",
+            "detail": "Side-on defending stance (L2/LT)."
+          },
+          {
+            "name": "Second Man Press / Teammate Contain",
+            "detail": "Teammate presses the ball carrier (R1/RB)."
+          },
+          {
+            "name": "Team Press",
+            "detail": "Temporary team-wide press; inactive in your own defensive third in FC 27."
+          },
+          {
+            "name": "Low driven (LD)",
+            "detail": "Double-tap shoot for a low, accurate shot."
+          },
+          {
+            "name": "Finesse shot",
+            "detail": "R1/RB+shoot placed curling shot, usually to the far corner."
+          },
+          {
+            "name": "Curved Run",
+            "detail": "New FC 27 triggered run that bends into space (L1+R1)."
+          },
+          {
+            "name": "Pass & Follow",
+            "detail": "New FC 27 run where the passer follows up (L1+R1+X)."
+          },
+          {
+            "name": "Avoidance",
+            "detail": "New FC 27 input to slip through crowds before corner delivery."
+          },
+          {
+            "name": "Shielding",
+            "detail": "Protect the ball or hold position (L2/LT)."
+          },
+          {
+            "name": "Off-balance dribbling",
+            "detail": "New FC 27 recovery dribble after physical contact."
+          },
+          {
+            "name": "Dinked pass",
+            "detail": "Chipped pass on double-tap Through Pass."
+          },
+          {
+            "name": "Inside Forward (IF)",
+            "detail": "Wide forward role cutting inside."
+          },
+          {
+            "name": "Shadow Striker (SS)",
+            "detail": "CAM role making runs like a second striker."
+          },
+          {
+            "name": "DLP",
+            "detail": "Deep-Lying Playmaker CDM role."
+          },
+          {
+            "name": "B2B",
+            "detail": "Box-to-Box CM role."
+          },
+          {
+            "name": "AF",
+            "detail": "Advanced Forward striker role."
+          },
+          {
+            "name": "The Grounds",
+            "detail": "FC 27 open-world social hub that houses Clubs."
+          },
+          {
+            "name": "AXP",
+            "detail": "Archetype XP, the Grounds and Clubs progression currency."
+          },
+          {
+            "name": "Amps / Masteries",
+            "detail": "Grounds progression: temporary modifiers and permanent archetype boosts."
+          },
+          {
+            "name": "FC IQ",
+            "detail": "The tactics system introduced in FC 25: roles, focuses and smart tactics."
+          },
+          {
+            "name": "Meta",
+            "detail": "Most effective, commonly used tactics or players at a given time."
+          },
+          {
+            "name": "Sweat",
+            "detail": "Slang for an ultra-try-hard meta playstyle."
+          },
+          {
+            "name": "Tilt",
+            "detail": "Playing worse due to frustration after losses."
+          },
+          {
+            "name": "FC Pro",
+            "detail": "EA's official esports circuit (Open, World Championship)."
+          }
+        ]
+      }
+    ],
+    "referenceCheckedAt": "2026-10-28",
+    "referenceVersion": "FC 27, Title Update 1.1.0 (console build 1.07), as of 2026-10-28",
+    "referenceSources": [
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-gameplay-deep-dive",
+        "title": "EA Pitch Notes: FC 27 Gameplay Deep Dive"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-launch-update",
+        "title": "EA Pitch Notes: FC 27 Ultimate Team Launch Update"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-launch-feedback-update",
+        "title": "EA: FC 27 Launch Feedback Update"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-closed-beta-feedback-update",
+        "title": "EA: FC 27 Closed Beta Feedback Update"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc27-title-update-v1-1-0",
+        "title": "EA: FC 27 Title Update v1.1.0"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc27-title-update-v1-0-4",
+        "title": "EA: FC 27 Title Update v1.0.4"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-the-grounds-deep-dive",
+        "title": "EA Pitch Notes: The Grounds Deep Dive"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/pitch-notes-fc27-career-mode-deep-dive",
+        "title": "EA Pitch Notes: Career Mode Deep Dive"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-27/news/fc-27-hall-of-fut",
+        "title": "EA: Introducing the FC 27 Hall of FUT"
+      },
+      {
+        "url": "https://www.ea.com/games/ea-sports-fc/fc-pro/news/fc-pro-27-deep-dive",
+        "title": "EA: FC Pro 27 Deep Dive"
+      },
+      {
+        "url": "https://help.ea.com/en/articles/ea-sports-fc/fc-27-lite/",
+        "title": "EA Help: What is FC Lite"
+      },
+      {
+        "url": "https://www.frostbite.com/able/resources/ea-sports-fc/fc-27",
+        "title": "EA Accessibility Resources: FC 27"
+      },
+      {
+        "url": "https://forums.ea.com/discussions/fc-27-technical-issues-en/fc27-tactics-menu-is-full-of-bugs/13722492",
+        "title": "EA Forums: FC27 tactics menu is full of bugs"
+      },
+      {
+        "url": "https://www.redbull.com/int-en/ea-fc-27-guide-tips",
+        "title": "Red Bull: 10 essential EA FC 27 tips from a pro"
+      },
+      {
+        "url": "https://www.redbull.com/int-en/best-ea-fc-27-custom-tactics",
+        "title": "Red Bull: Best EA FC 27 custom tactics from pro players"
+      },
+      {
+        "url": "https://www.redbull.com/int-en/ea-fc-27-best-settings",
+        "title": "Red Bull: Best EA FC 27 settings"
+      },
+      {
+        "url": "https://www.redbull.com/int-en/ea-fc-27-career-mode-new-features",
+        "title": "Red Bull: FC 27 Career Mode new features"
+      },
+      {
+        "url": "https://www.redbull.com/us-en/fc-27-fut-champions-guide-rewards-schedule-tips",
+        "title": "Red Bull: FC 27 FUT Champions guide"
+      },
+      {
+        "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-defending-tips",
+        "title": "RB Leipzig: Defending tips by RBLZ_Levyfinn"
+      },
+      {
+        "url": "https://rbleipzig.com/en/teams/rblz-gaming/ea-sports-fc/ea-fc-best-formations",
+        "title": "RB Leipzig: EA FC 27 top 3 formations"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-3-1-2/",
+        "title": "FUT.GG: Best 4-3-1-2 Custom Tactics FC 27"
+      },
+      {
+        "url": "https://www.fut.gg/tactics/4-2-1-3/",
+        "title": "FUT.GG: Best 4-2-1-3 Custom Tactics FC 27"
+      },
+      {
+        "url": "https://www.fut.gg/news/how-to-use-avoidance-and-shielding-in-fc-27-corner-kicks/",
+        "title": "FUT.GG: Avoidance and Shielding in FC 27 corners"
+      },
+      {
+        "url": "https://www.fut.gg/news/how-to-do-triggered-curved-runs-and-pass-follow-runs-in-fc-27/",
+        "title": "FUT.GG: Triggered Curved Runs and Pass & Follow"
+      },
+      {
+        "url": "https://www.futbin.com/whats-new-fc-27",
+        "title": "FUTBIN: What's new in EA FC 27 Ultimate Team"
+      },
+      {
+        "url": "https://nealguides.com/best-fc-27-formations/",
+        "title": "NealGuides: Best FC 27 Formations"
+      },
+      {
+        "url": "https://nealguides.com/fc-27-corners-crossing-dribbling/",
+        "title": "NealGuides: FC 27 Corners Explained"
+      },
+      {
+        "url": "https://nealguides.com/fc-27-best-camera-settings/",
+        "title": "NealGuides: FC 27 Best Camera Settings"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-rivals/",
+        "title": "FIFPlay: FC 27 Rivals"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-defending-tips/",
+        "title": "FIFPlay: FC 27 Defending Tips"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-controls/",
+        "title": "FIFPlay: FC 27 Controls"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-shooting-and-finishing-tips/",
+        "title": "FIFPlay: FC 27 Shooting and Finishing"
+      },
+      {
+        "url": "https://www.fifplay.com/fc-27-squad-battles/",
+        "title": "FIFPlay: FC 27 Squad Battles"
+      },
+      {
+        "url": "https://www.operationsports.com/all-ea-fc-27-playstyle-changes-explained/",
+        "title": "Operation Sports: All EA FC 27 PlayStyle Changes"
+      },
+      {
+        "url": "https://www.operationsports.com/ea-sports-fc-27-update-1-1-0-arrives-tomorrow-patch-notes-revealed",
+        "title": "Operation Sports: FC 27 Update 1.1.0 patch notes"
+      },
+      {
+        "url": "https://www.operationsports.com/new-ea-fc-27-glitch-allows-goalkeepers-to-score-from-their-box-and-it-might-actually-kill-ultimate-team/",
+        "title": "Operation Sports: FC 27 goalkeeper glitch"
+      },
+      {
+        "url": "https://www.dexerto.com/wikis/ea-fc-27/best-formations-and-custom-tactics/",
+        "title": "Dexerto: Best EA FC 27 formations & custom tactics"
+      },
+      {
+        "url": "https://www.dexerto.com/wikis/ea-fc-27/the-grounds-explained/",
+        "title": "Dexerto: The Grounds explained"
+      },
+      {
+        "url": "https://dotesports.com/ea-sports-fc/guides/ea-sports-fc-27-gameplay-details",
+        "title": "Dot Esports: FC 27 defending, crosses & passing overhaul"
+      },
+      {
+        "url": "https://dotesports.com/ea-sports-fc/guides/best-ea-fc-27-camera-controller-settings",
+        "title": "Dot Esports: Best FC 27 camera & controller settings"
+      },
+      {
+        "url": "https://www.destructoid.com/fc-27-gameplay-deep-dive-pitch-notes/",
+        "title": "Destructoid: FC 27 Gameplay Deep Dive pitch notes"
+      },
+      {
+        "url": "https://realsport101.com/article/fc-27-gameplay-deep-dive-breakdown-ai-defending-nerfs-manual-passing-new-set-pieces",
+        "title": "RealSport101: FC 27 Gameplay Deep Dive breakdown"
+      },
+      {
+        "url": "https://soccergaming.com/ea-sports-fc-27-title-update-1-1-0-patch-notes-revealed",
+        "title": "SoccerGaming: FC 27 TU 1.1.0 full patch notes"
+      },
+      {
+        "url": "https://soccergaming.com/fc-27-freekick-glitch-fixed-with-live-update",
+        "title": "SoccerGaming: FC 27 free-kick glitch fixed with Live Update"
+      },
+      {
+        "url": "https://insider-gaming.com/ea-sports-fc-27-title-update-1-0-1-patch-notes-fixes-across-the-grounds-gameplay-ultimate-team-and-more/",
+        "title": "Insider Gaming: FC 27 TU 1.0.1 patch notes"
+      },
+      {
+        "url": "https://futfc.gg/fc-title-update/",
+        "title": "FUTFC: FC 27 Title Update tracker"
+      },
+      {
+        "url": "https://timesaver.gg/blog/fc-27-95-depth-offside-trap-how-to-beat-it",
+        "title": "timesaver.gg: FC 27 95 depth and counters"
+      },
+      {
+        "url": "https://timesaver.gg/blog/fc-27-player-roles-explained-all-37-role-familiarity",
+        "title": "timesaver.gg: FC 27 Player Roles explained"
+      },
+      {
+        "url": "https://howtovideogame.com/ea-fc-27-best-tactics-formations/",
+        "title": "HowToVideoGame: FC 27 tactics and defensive approach ranges"
+      },
+      {
+        "url": "https://futsettings.com/players/andersvejrgang",
+        "title": "FUTSettings: Anders Vejrgang FC 27 custom tactics"
+      },
+      {
+        "url": "https://futsettings.com/players/tekkz",
+        "title": "FUTSettings: Tekkz FC 27 custom tactics"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-champions/",
+        "title": "FIFA Uteam: FC 27 Champions explained"
+      },
+      {
+        "url": "https://fifauteam.com/fc-27-stats/",
+        "title": "FIFA Uteam: FC 27 Stats - Match Facts and Performance"
+      },
+      {
+        "url": "https://futfc.gg/fut-champions-rewards/",
+        "title": "FUTFC: FC 27 FUT Champions rewards"
+      },
+      {
+        "url": "https://keymap.io/controls/ea-sports-fc-27/skill-moves/",
+        "title": "Keymap: FC 27 skill moves by star rating"
+      },
+      {
+        "url": "https://proclubshq.com/blog/fc27-control-changes/",
+        "title": "ProClubsHQ: FC 27 control changes"
+      },
+      {
+        "url": "https://liquipedia.net/easportsfc/FC_Pro_27/Open",
+        "title": "Liquipedia: FC Pro 27 Open"
+      },
+      {
+        "url": "https://gameinformer.com/review/ea-sports-fc-27/more-build-up-play-than-the-long-ball",
+        "title": "Game Informer: EA Sports FC 27 review"
+      },
+      {
+        "url": "https://www.videogameschronicle.com/news/ea-sports-fc-27-ultimate-team-changes-explained-simplified-sbcs-fut-gallery-holographic-items-and-more/",
+        "title": "VGC: FC 27 Ultimate Team changes explained"
+      },
+      {
+        "url": "https://www.thespike.gg/fifa/ea-fc-27/career-mode",
+        "title": "The Spike: FC 27 Career Mode guide"
+      }
     ]
   },
   "limitations": [

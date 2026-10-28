@@ -654,7 +654,7 @@ export class CoachEngine {
     this.factors.newMatch()
     this.benchmarks.newMatch()
     this.battles.newMatch()
-    this.intel?.newMatch()
+    this.intel?.newMatch(this.lastT)
     this.matchBattlesFrom = this.battles.battles().length
     this.gameContext = {}
     this.factorTipsGiven = new Set()

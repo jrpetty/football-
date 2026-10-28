@@ -58,9 +58,9 @@ const MAX_JPEG_BYTES = 3 * 1024 * 1024
 const VISION_KNOWLEDGE_CHARS = 14_000
 const ANSWER_KNOWLEDGE_CHARS = 60_000
 /** Unit and building names with how to tell them apart, for the recogniser (strategy games). */
-const VISION_ROSTER_CHARS = 16_000
+const VISION_ROSTER_CHARS = 36_000
 /** The full roster with counters and civilisations, for answers. */
-const ANSWER_ROSTER_CHARS = 60_000
+const ANSWER_ROSTER_CHARS = 100_000
 
 const consent = new CaptureConsent()
 /** The sources last shown in the picker. Only these can be chosen. */
