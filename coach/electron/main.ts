@@ -55,6 +55,7 @@ import { writeFile } from 'node:fs/promises'
 import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
+import { SinglePress, TalkKeyGesture } from '../src/speech/talkKey.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? null
@@ -102,16 +103,39 @@ let gsi: GsiServer | null = null
 const shortcuts: Record<keyof Hotkeys, string | null> = { talk: null, mark: null, stop: null }
 const shortcutErrors: string[] = []
 
+/** The talk key: tap to start and stop, or hold while speaking (the OS reports a held key over and over). */
+const talkGesture = new TalkKeyGesture()
+let talkTimer: ReturnType<typeof setInterval> | null = null
+const singlePress = { mark: new SinglePress(), stop: new SinglePress() }
+
+function talkKey(action: 'start' | 'stop' | null): void {
+  if (action) win?.webContents.send(CHANNELS.pushToTalk, action)
+  // Watch for the release of a held key (no more repeats) while there is one to watch for.
+  if (talkGesture.watching && !talkTimer) {
+    talkTimer = setInterval(() => {
+      talkKey(talkGesture.tick(Date.now()))
+      if (!talkGesture.watching && talkTimer) {
+        clearInterval(talkTimer)
+        talkTimer = null
+      }
+    }, 40)
+  }
+}
+
 /** (Re-)register the player's global keys. They work while the game has focus; the OS gives them to Sightline only. */
 function registerShortcuts(keys: Hotkeys): void {
   globalShortcut.unregisterAll()
   shortcutErrors.length = 0
-  const actions: Record<keyof Hotkeys, string> = { talk: CHANNELS.pushToTalk, mark: CHANNELS.markMoment, stop: CHANNELS.stopRequested }
+  const actions: Record<keyof Hotkeys, () => void> = {
+    talk: () => talkKey(talkGesture.press(Date.now())),
+    mark: () => singlePress.mark.press(Date.now()) && win?.webContents.send(CHANNELS.markMoment),
+    stop: () => singlePress.stop.press(Date.now()) && win?.webContents.send(CHANNELS.stopRequested),
+  }
   for (const name of ['stop', 'talk', 'mark'] as const) {
     const accel = keys[name]
     let ok = false
     try {
-      ok = globalShortcut.register(accel, () => win?.webContents.send(actions[name]))
+      ok = globalShortcut.register(accel, actions[name])
     } catch {
       ok = false
     }
@@ -386,6 +410,9 @@ function registerIpc(): void {
   handle(CHANNELS.chooseSource, (id) => {
     if (!isSourceId(id) || !offered.has(id)) throw new Error('Invalid capture source')
     consent.choose(id)
+  })
+  ipcMain.on(CHANNELS.talkEnded, (e) => {
+    if (isTrustedSender(e)) talkGesture.reset()
   })
   ipcMain.on(CHANNELS.captureState, (e, active: unknown, label: unknown) => {
     if (!isTrustedSender(e) || !win) return

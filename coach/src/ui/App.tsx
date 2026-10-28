@@ -88,7 +88,8 @@ export function App() {
 
   // Global shortcuts: stop capture; push-to-talk.
   useEffect(() => bridge.onStopRequested(() => void session.stop()), [bridge, session])
-  useEffect(() => bridge.onPushToTalk(() => void session.toggleTalk(cloud)), [bridge, session, cloud])
+  useEffect(() => bridge.onPushToTalk((action) => void session.talkKey(action, cloud)), [bridge, session, cloud])
+  useEffect(() => session.setCloud(cloud), [session, cloud])
   useEffect(() => bridge.onMarkMoment(() => void session.markMoment()), [bridge, session])
   // Keys are re-registered by the shell when they change; show what it actually got.
   const hotkeysKey = JSON.stringify(settings.hotkeys)
@@ -155,6 +156,22 @@ export function App() {
   )
 
   const talkLabel = state.talk === 'recording' ? 'Listening… tap to send' : state.talk === 'transcribing' ? 'Transcribing…' : 'Talk'
+  const alwaysOn = settings.voiceInput && settings.listen === 'always'
+  const listen = state.listen
+  const listenLabel =
+    listen.status === 'on'
+      ? listen.awaiting
+        ? 'Ask now…'
+        : settings.wakeWord
+          ? 'Say “Coach…”'
+          : 'Listening'
+      : listen.status === 'paused'
+        ? 'Listening paused'
+        : listen.status === 'starting'
+          ? 'Opening mic…'
+          : listen.status === 'error'
+            ? 'Mic problem'
+            : 'Listening off'
 
   return (
     <div className="app">
@@ -208,7 +225,24 @@ export function App() {
             {capturing && cloud.spend.ratePerHour ? <span className="muted">· {usd(cloud.spend.ratePerHour)}/h</span> : null}
           </button>
         ) : null}
-        {settings.voiceInput && (
+        {alwaysOn && (
+          <button
+            type="button"
+            className={`btn talk listen-chip${listen.status === 'on' ? ' live' : ''}${listen.awaiting ? ' recording' : ''}${listen.status === 'error' ? ' problem' : ''}`}
+            aria-pressed={listen.status === 'on'}
+            onClick={() => (listen.status === 'error' ? session.retryListening() : session.setListeningPaused(listen.status !== 'paused'))}
+            title={
+              listen.status === 'error'
+                ? `${listen.error ?? 'The microphone could not be opened.'} Click to try again.`
+                : listen.status === 'paused'
+                  ? 'Always listening is paused. Click to listen again.'
+                  : `Always listening${settings.wakeWord ? ': start with “Coach”, then ask' : ''}. Click to pause. The talk key still works.`
+            }
+          >
+            <MicIcon /> {state.talk === 'idle' ? listenLabel : talkLabel}
+          </button>
+        )}
+        {settings.voiceInput && !alwaysOn && (
           <button
             type="button"
             className={`btn talk${state.talk === 'recording' ? ' recording' : ''}`}
@@ -221,16 +255,18 @@ export function App() {
         )}
         <button
           type="button"
-          className="btn toggle commentary"
+          className={`btn toggle commentary${settings.commentary && !policy.scope.has('live') ? ' held' : ''}`}
           aria-pressed={settings.commentary}
           onClick={() => updateSettings({ commentary: !settings.commentary })}
           title={
             policy.scope.has('live')
               ? 'Live commentary: short spoken lines about what the coach sees, as it happens'
-              : `Live commentary is allowed only where speaking during play is: ${policy.reasons[0]}`
+              : settings.profileModeId
+                ? `Commentary cannot talk during play in this mode, so it waits for the match to end. ${policy.reasons[0]}`
+                : 'The game mode is not set, so it is treated as ranked and commentary stays quiet during play. Pick your mode on the Coach screen.'
           }
         >
-          🎙 Commentary{settings.commentary && !policy.scope.has('live') ? ' (held here)' : ''}
+          🎙 Commentary{settings.commentary && !policy.scope.has('live') ? (settings.profileModeId ? ': after the match' : ': set your mode') : ''}
         </button>
         <button
           type="button"

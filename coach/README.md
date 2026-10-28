@@ -380,12 +380,27 @@ Then press **Choose the game window**, play, and listen.
   cloud features on, Claude can write a deeper one from the same data.
   "Read it to me" speaks it.
 - **Live commentary** (🎙 in the top bar). Short spoken lines as things
-  happen: a fight starting and how it ended ("Fight lost near their Town
-  Center, towers or Keep. Army 34 to 16."), a death and how it happened, a
-  goal, a scouted building ("They have a Stable: expect Horsemen or Knights.
-  Spearmen answer them."), a villager checkpoint. It speaks during play only
-  where the game and mode allow it (campaigns, against the AI or bots); in
-  online play it says so once at the start and you get the review after.
+  happen:
+  - a fight starting and how it ended ("Fight lost near their Town Center,
+    towers or Keep. Army 34 to 16.");
+  - a death and how it happened, or a goal;
+  - a scouted building ("They have a Stable: expect Horsemen or Knights.
+    Spearmen answer them.");
+  - a villager checkpoint, or your age-up ("You reached the Feudal Age at
+    4:48.");
+  - what it sees of a mistake ("Housed at 40 of 40."), unless Training
+    mode already gives the tip.
+
+  After a quiet spell (about a minute), it reads out what is on screen now:
+  "8:09, population 76 of 84, Feudal Age, food 291, wood 251, gold 122."
+  That way silence never means it stopped watching.
+
+  It speaks during play only where the game and mode allow it: campaigns,
+  or against the AI or bots. In ranked or online play, or with the game
+  mode not set, it says so out loud when capture starts ("Commentary is on,
+  but in Ranked 1v1 I stay quiet until the match ends…"), and you get the
+  review after. The 🎙 button then turns amber: "Commentary: after the
+  match", or "set your mode".
 - **Knows the opponent (AoE IV).** Their civilisation is read from the
   loading screen, and every civilisation's unique units, landmarks and
   bonuses are in the pack, including upcoming ones. When your screen shows
@@ -451,12 +466,20 @@ Then press **Choose the game window**, play, and listen.
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a
     quicker CPU).
-  - Press your talk key (F8 by default) and ask anything: "What should I do
-    here?", "Where am I dying most?", "How did my fights go?". A rising tone
-    means it is listening; press the key again to send (a falling tone). It
-    answers out loud. If something is wrong (voice input off, no microphone,
-    the speech model not downloaded) it says so, out loud when you are not
-    mid-match.
+  - Ask anything: "What should I do here?", "Where am I dying most?", "How
+    many villagers should I have at ten minutes?". It answers out loud. Two
+    ways (Settings → Voice input):
+    - **Talk key** (F8 by default): hold it while you ask and let go, or tap
+      it, ask, and tap it again. A rising tone means it is listening, a
+      falling tone that it is thinking.
+    - **Always listening**: the microphone stays open and it hears you
+      whenever you speak. By default only speech that starts with "Coach"
+      is a question ("Coach, what beats knights?"; just "Coach" and it waits
+      a few seconds for the question), so talk to your team is not. It
+      pauses while it is talking itself, and the top-bar button pauses it.
+      Best with a headset.
+  - If something is wrong (voice input off, no microphone, the speech model
+    not downloaded), it says so, out loud when you are not mid-match.
   - During capture, Claude sees your screen with the question.
   - Common questions are answered on your PC from the recorded data.
 - **Decisions.** Press your mark key mid-game. After the match Claude looks
@@ -568,7 +591,8 @@ coach/
   src/profiles/    game packs (JSON, validated at load)
   src/worker/      analysis worker (frame queue, screen memory, vision relay, snapshots)
   src/capture/     screen, simulation and replay sources
-  src/speech/      speech queue with neural or system voice; push-to-talk recorder
+  src/speech/      speech queue with neural or system voice; talk-key gesture; recorder;
+                   always-listening voice detection
   src/ui/          React UI
   build/           installer icon
   test/            node:test suites

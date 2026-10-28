@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "cod-mw4",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "name": "Call of Duty: Modern Warfare 4",
   "depth": "pack",
   "game": {
@@ -12236,6 +12236,15 @@
     "death": "Died",
     "kill": "Kill",
     "streak_earned": "Streak earned"
+  },
+  "commentaryStatus": {
+    "everySec": 90,
+    "parts": [
+      "score {playerScore} to {opponentScore}",
+      "{kills} kills, {deaths} deaths",
+      "{matchTimeLeftSec|clock} left"
+    ],
+    "minParts": 2
   },
   "learning": {
     "dimensions": [

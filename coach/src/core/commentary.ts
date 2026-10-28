@@ -6,7 +6,9 @@
 // governor's call (src/core/policy/governor.ts, decideCommentary).
 
 import { fitWords, humanize, WORD_LIMITS } from './language.ts'
+import type { ResolvedPolicy } from './policy/registry.ts'
 import type { BenchmarkSpec, GameProfile } from './profile/schema.ts'
+import type { CoachSettings } from './settings.ts'
 import type { GameEvent } from './types.ts'
 
 /** Phrases for an event's attributes, from the pack's factors (avoidable circumstances first). */
@@ -47,10 +49,39 @@ export function fitCommentary(text: string): string {
   return `${words.join(' ').replace(/[,;:]$/, '')}.`
 }
 
+/** A reading as it is said: numbers with separators, "1:05" for a clock, enum values as words. */
+export type ReadingLookup = (key: string) => string | number | boolean | null
+
+/**
+ * Fill "{key}" placeholders from the current readings ("{gameTimeSec|clock}" for a clock).
+ * Null when a reading is missing, so a line never says a number the screen did not show.
+ */
+export function fillReadings(template: string, read: ReadingLookup): string | null {
+  let missing = false
+  const out = template.replace(/\{([a-zA-Z][a-zA-Z0-9_]*)(\|clock)?\}/g, (_m, key: string, clockFmt?: string) => {
+    const v = read(key)
+    if (v === null || v === '' || typeof v === 'boolean') {
+      missing = true
+      return ''
+    }
+    if (typeof v === 'number') return clockFmt ? gameClock(v) : Math.round(v).toLocaleString('en-GB')
+    const words = humanize(v)
+    return words[0].toUpperCase() + words.slice(1)
+  })
+  return missing ? null : out
+}
+
+function gameClock(sec: number): string {
+  const s = Math.max(0, Math.round(sec))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
 /** A line for an event the pack comments on, or null. */
-export function eventLine(profile: GameProfile, ev: GameEvent): string | null {
-  const lead = profile.commentary?.[ev.ruleId]
-  if (!lead) return null
+export function eventLine(profile: GameProfile, ev: GameEvent, read: ReadingLookup = () => null): string | null {
+  const template = profile.commentary?.[ev.ruleId]
+  if (!template) return null
+  // Readings in the line ("Housed at {population} of {populationCap}"): without them, the event's own name.
+  const lead = template.includes('{') ? (fillReadings(template, read) ?? humanize(ev.label)) : template
   const parts = phrases(profile, ev, 2)
   const zone = zoneLabel(profile, ev)
   let line = lead
@@ -87,4 +118,41 @@ export function checkpointLine(spec: BenchmarkSpec, atSec: number, actual: numbe
 /** A plain description when there is nothing better: "Under attack." */
 export function fallbackLine(ev: GameEvent): string {
   return finish(`${humanize(ev.label)}.`)
+}
+
+/**
+ * Said once when capture starts with commentary on: that it will talk, or why it will stay quiet
+ * during play (so silence is never taken for a fault), and where it can talk instead. A status
+ * line about the app, not coaching.
+ */
+export function commentaryStartLine(profile: GameProfile, settings: Pick<CoachSettings, 'mode' | 'profileModeId' | 'tournament'>, policy: ResolvedPolicy, liveModeLabels: readonly string[]): string {
+  if (settings.tournament) return 'Commentary is on, but tournament mode keeps me silent.'
+  if (policy.scope.has('live')) {
+    if (settings.mode === 'silent') return 'Commentary is on, but silent tracker mode keeps me quiet. Change the coaching mode in Settings to hear it.'
+    return 'Commentary on. I will call out what I see.'
+  }
+  const where = liveModeLabels.length ? ` I can talk during ${listOf(liveModeLabels.map(shortMode))}.` : ''
+  const mode = profile.modes.find((m) => m.id === settings.profileModeId)
+  if (!mode) return `Commentary is on, but the game mode is not set, so I stay quiet during play. Pick the mode on the Coach screen.${where}`
+  return `Commentary is on, but in ${shortMode(mode.label)} I stay quiet until the match ends, then you get the review.${where}`
+}
+
+/** "Skirmish vs AI (single-player)" → "Skirmish vs AI". */
+function shortMode(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, '')
+}
+
+function listOf(items: readonly string[]): string {
+  if (items.length <= 1) return items[0] ?? ''
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/**
+ * A status line from the current readings, when commentary has been quiet for a while: the pack's
+ * pieces in order, each kept only when every reading in it is on screen now. Null with too few.
+ */
+export function statusLine(parts: readonly string[], minParts: number, read: ReadingLookup): string | null {
+  const kept = parts.map((p) => fillReadings(p, read)).filter((x): x is string => !!x)
+  if (kept.length < minParts) return null
+  return finish(`${kept.join(', ')}.`)
 }

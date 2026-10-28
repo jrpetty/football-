@@ -616,6 +616,9 @@ export function sayable(text: string): string {
 }
 
 export function plural(name: string): string {
+  // "Man-at-Arms (from the Castle Age)": the name is plural, the note is kept as it is.
+  const note = /^(.*?\S)(\s*\([^)]*\))$/.exec(name)
+  if (note) return plural(note[1]) + note[2]
   // Japanese and Mongol names (Samurai, Mangudai, Yumi Ashigaru) keep their form.
   if (/[iu]$/i.test(name) || /(cavalry|infantry)$/i.test(name)) return name
   if (/man$/i.test(name)) return name.replace(/man$/i, 'men')

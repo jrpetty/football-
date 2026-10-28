@@ -480,7 +480,8 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
     }
     const sec = gameSecAt(i)
     const vills = villagersAt(sec)
-    if (sec > 240) army += 2 // production between fights
+    // Production between fights, up to the population cap of 200.
+    if (sec > 240 && vills + army + 2 <= 200) army += 2
     const k = fightAt.findIndex((at, j) => i >= at && i < at + fights[j].frames)
     const events: { type: string; attributes: Record<string, string>; evidence: string }[] = []
     if (k >= 0) {

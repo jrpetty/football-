@@ -238,6 +238,7 @@ export const browserBridge: SightlineBridge = {
   onPushToTalk() {
     return () => {}
   },
+  talkEnded() {},
   onMarkMoment() {
     return () => {}
   },

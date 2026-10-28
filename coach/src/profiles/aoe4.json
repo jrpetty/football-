@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -20568,8 +20568,30 @@
     "fight_won": "Fight won",
     "fight_lost": "Fight lost",
     "landmark_destroyed": "Landmark destroyed",
-    "under_attack": "Under attack"
+    "under_attack": "Under attack",
+    "housed": "Housed at {population} of {populationCap}",
+    "idle-villagers": "Idle villagers: {idleVillagers}",
+    "floating-dark": "Banked: food {food}, wood {wood}, gold {gold}",
+    "floating-resources": "Banked: food {food}, wood {wood}, gold {gold}",
+    "floating-castle": "Banked: food {food}, wood {wood}, gold {gold}",
+    "floating-imperial": "Banked: food {food}, wood {wood}, gold {gold}"
   },
+  "commentaryStatus": {
+    "everySec": 75,
+    "parts": [
+      "{gameTimeSec|clock}",
+      "population {population} of {populationCap}",
+      "{age} Age",
+      "food {food}, wood {wood}, gold {gold}"
+    ],
+    "minParts": 2
+  },
+  "commentaryChanges": [
+    {
+      "key": "age",
+      "text": "You reached the {age} Age at {gameTimeSec|clock}."
+    }
+  ],
   "intel": {
     "factionKey": "opponentCiv",
     "buildingsKey": "enemyBuildings",

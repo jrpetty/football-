@@ -3124,6 +3124,30 @@ kbd {
   color: var(--accent);
 }
 
+/* On, but the game and mode do not allow speech during play: it waits for the match to end. */
+.btn.toggle.commentary.held[aria-pressed='true'] {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.btn.talk.listen-chip.live {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn.talk.listen-chip.problem {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.talk.recording,
+  .btn.icon.recording {
+    animation: none;
+  }
+}
+
 .intel {
   display: flex;
   flex-direction: column;
@@ -4826,4 +4850,36 @@ td > .swatch {
   paint-order: stroke;
   stroke: rgba(5, 8, 13, 0.85);
   stroke-width: 3px;
+}
+
+.listen-status {
+  margin-top: 10px;
+}
+
+.listen-meter {
+  position: relative;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.listen-meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--text-2);
+  transition: width 0.1s linear;
+}
+
+.listen-meter span.speaking {
+  background: var(--accent);
+}
+
+.listen-meter i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--warn);
 }

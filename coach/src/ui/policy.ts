@@ -37,3 +37,8 @@ export function policyFor(profile: GameProfile, settings: CoachSettings, now = n
     now,
   })
 }
+
+/** The pack's modes where the coach may speak during play (for "against the AI, I talk"). */
+export function liveModes(profile: GameProfile, settings: CoachSettings, now = new Date()): string[] {
+  return profile.modes.filter((m) => policyFor(profile, { ...settings, profileModeId: m.id }, now).scope.has('live')).map((m) => m.label)
+}

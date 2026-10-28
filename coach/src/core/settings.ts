@@ -20,8 +20,12 @@ export interface CoachSettings {
   }
   /** Opt-in: keep structured tendency counts, match history and notes between sessions. Never frames. */
   readonly saveTendencies: boolean
-  /** Opt-in: push-to-talk questions, recognised locally. Enables the microphone only while talking. */
+  /** Opt-in: spoken questions, recognised locally. With the talk key, the microphone is open only while talking. */
   readonly voiceInput: boolean
+  /** How the player talks to the coach: the talk key (tap, or hold while speaking), or always listening. */
+  readonly listen: ListenMode
+  /** Always listening: only speech that starts with "coach" is a question. */
+  readonly wakeWord: boolean
   /** Tournament / event play: all coaching output is disabled (event rules can be stricter than publishers'). */
   readonly tournament: boolean
   /** For the generic pack: which game this is (a policy registry id such as "valorant"), or null if unlisted. */
@@ -43,6 +47,9 @@ export interface CoachSettings {
   /** Where the minimap is on the player's screen, by pack id, when it differs from the pack's (normalised; set with Align minimap). */
   readonly minimap: Readonly<Record<string, MinimapBox>>
 }
+
+export type ListenMode = 'key' | 'always'
+export const LISTEN_MODES: readonly ListenMode[] = ['key', 'always']
 
 export interface MinimapBox {
   readonly x: number
@@ -137,6 +144,8 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   voice: { voiceURI: null, rate: 1, volume: 0.8 },
   saveTendencies: false,
   voiceInput: false,
+  listen: 'key',
+  wakeWord: true,
   tournament: false,
   gameId: null,
   context: {},
@@ -182,6 +191,8 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     },
     saveTendencies: typeof o.saveTendencies === 'boolean' ? o.saveTendencies : base.saveTendencies,
     voiceInput: typeof o.voiceInput === 'boolean' ? o.voiceInput : base.voiceInput,
+    listen: pick(o.listen, LISTEN_MODES, base.listen),
+    wakeWord: typeof o.wakeWord === 'boolean' ? o.wakeWord : base.wakeWord,
     tournament: typeof o.tournament === 'boolean' ? o.tournament : base.tournament,
     gameId: id(o.gameId, base.gameId),
     context: sanitizeContext(o.context, base.context),

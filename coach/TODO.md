@@ -307,6 +307,33 @@ Legend:
 - ☑ AoE IV floating judged by age, against what the next age costs: over 1,000 in the Dark Age, 2,200 in Feudal, 4,000 in Castle and 3,000 in Imperial. The housed tip says "add population space" (Japanese Farmhouses, Malian houses).
 - ◐ Where AoE IV shows the total villager count on the HUD is not confirmed here: the official forums could not be reached. Waiting on a screenshot from a real game. *QA 15.1.*
 
+## v16 delivery
+
+- ☑ The talk key works when held. Windows (and X11) report a held global key about 30 times a second, and Electron passes on every report (Chromium registers it without `MOD_NOREPEAT`). Each report used to flip recording on and off, so holding the key never recorded anything. Now (`src/speech/talkKey.ts`, `test/voice.test.ts`):
+  - the repeats are read as "still held", and their stopping as the release: hold while you ask and let go, or tap and tap again;
+  - the mark and stop keys act once per press.
+
+  *Checked in the real app on X11 with a held key (xdotool): one start and one stop, the stop 0.4 s after release; the spoken question was asked.*
+- ☑ Talk-key recordings are trimmed to the speech before recognition. The speech model (Moonshine tiny) returns nothing when a second or more of quiet comes before the words, which is what a press of the key usually records.
+
+  *Measured: a 12 s recording with the question in it came back empty; trimmed to 3.6 s it was transcribed.*
+- ☑ Always listening (Settings → Voice input), for players who choose it:
+  - the microphone stays open, and stretches of speech are found by loudness against the room's noise;
+  - by default only speech that starts with "Coach" is a question;
+  - it pauses while the coach talks; the top bar pauses it;
+  - a live meter and "Last heard" in Settings.
+
+  *Checked in the real app with a recorded question as the microphone: "Coach, how many villagers should I have at ten minutes?" asked 7 s in; "Push their gold with me, now." not asked.*
+- ☑ Commentary that explains itself and keeps talking:
+  - at capture start it says whether it can talk in this game and mode, and where it can. The default "Not sure" mode and ranked play are post-match only, which looked like a broken feature;
+  - the 🎙 button turns amber when commentary is held;
+  - a status line from the screen after about a minute of quiet;
+  - your age-up;
+  - housed, idle villagers and big banks described, outside Training mode (AoE IV and II; status lines for MW4, CS2 and FC too).
+- ☑ "How many villagers should I have at ten minutes?" is answered from the curve (36), with your reading near that time if there is one.
+- ◐ Always listening through speakers: sudden loud game sound can be taken for speech, then usually comes back as no words. A headset is recommended. *QA 16.5.*
+- ◐ Men-at-Arms are listed as a Castle Age unit for most civilisations (Feudal for the English). Sources disagree (some list a Feudal "Early Man-at-Arms"); check in game.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

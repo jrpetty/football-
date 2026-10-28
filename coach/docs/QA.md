@@ -236,7 +236,19 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 15.2 | In the same game, get housed once, leave a villager idle, and bank 2,500 resources in Feudal. | Housed, idle villagers and floating (Feudal) each counted once. Floating is not flagged with 1,500 banked in Feudal, or 3,000 in Castle. |
 | 15.3 | Ask: "how many villagers should I have at 10 minutes?" and "should I go 3 TC?" | 36 against one Town Center that never stops, and no advice to add Town Centers. |
 
-## 16. Accessibility and layout
+## 16. Talking to the coach and live commentary
+
+| # | Steps | Expected |
+|---|---|---|
+| 16.1 | Settings → Voice input on, Talk key. In a game, hold the talk key, ask "how many villagers should I have at ten minutes?", let go. | One rising tone when pressed, one falling tone when let go (no flicker of tones while held). The answer: "One Town Center that never stops has 36 villagers at 10:00…". |
+| 16.2 | Tap the talk key, wait two seconds, ask, wait two seconds, tap it again. | The question is understood (the quiet before and after is trimmed off). |
+| 16.3 | Settings → Always listening, "Only when I start with Coach" on. Say "Coach, what beats knights?", then talk to a friend without "Coach". | The first is asked and answered; the second shows as "(not for the coach)" in Settings and nothing else happens. Say just "Coach", then the question within a few seconds: asked. |
+| 16.4 | Always listening, while the coach is talking. | It does not answer itself. The top-bar button pauses and resumes listening. |
+| 16.5 | Always listening through speakers (no headset) with game sound. | Note how often game sound is taken for speech (Settings → Last heard). |
+| 16.6 | Commentary on, AoE IV, mode Skirmish vs AI, start capture. | "Commentary on. I will call out what I see." Then lines as things happen, and when nothing has happened for about a minute, a status line ("8:09, population 76 of 84, Feudal Age, …"). Your age-up is said. |
+| 16.7 | Commentary on, mode Ranked 1v1 (or mode not set), start capture. | It says why it stays quiet and where it can talk; the 🎙 button is amber ("after the match" or "set your mode"); nothing is said during play. |
+
+## 17. Accessibility and layout
 
 - Every control is reachable by keyboard, with a visible focus ring.
 - Screen readers announce capture-state changes (the pill is

@@ -20,7 +20,7 @@ it only stays out of the things anti-cheat looks for.
 | Sends keyboard/mouse input, aims, automates | **Never** | Input automation is the clearest cheat signal, and Activision has acted against screen-reading tools that automated aiming. |
 | Kernel driver, admin rights, services | **None** | Sightline runs as an ordinary user program. |
 | Sees the game | OS window capture (Windows Graphics Capture through Chromium), the same API as browser screen sharing and many streaming tools | It sees pixels the player already sees, from outside the game process. |
-| Global keys (talk, mark, stop) | Standard OS hotkey registration (`RegisterHotKey`), as Discord and OBS use | It doesn't read the game's input; the OS just tells Sightline its key was pressed. |
+| Global keys (talk, mark, stop) | Standard OS hotkey registration (`RegisterHotKey`), as Discord and OBS use | It doesn't read the game's input; the OS just tells Sightline its key was pressed. Holding the talk key is recognised from the OS's own repeated reports of that key, not from a keyboard hook. |
 | Network | Only Anthropic's API (your key), and only with cloud features on; one-time model downloads from GitHub | Nothing talks to game servers. |
 | Hides itself, renames its process, obfuscates | **Never** | Being transparent is the point. |
 

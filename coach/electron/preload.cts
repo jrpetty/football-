@@ -69,7 +69,14 @@ const bridge: SightlineBridge = {
     }
   },
   onStopRequested: (cb) => listen('sightline:stop-requested', cb),
-  onPushToTalk: (cb) => listen('sightline:push-to-talk', cb),
+  onPushToTalk: (cb) => {
+    const listener = (_e: unknown, action: unknown) => cb(action === 'stop' ? 'stop' : 'start')
+    ipcRenderer.on('sightline:push-to-talk', listener)
+    return () => {
+      ipcRenderer.removeListener('sightline:push-to-talk', listener)
+    }
+  },
+  talkEnded: () => ipcRenderer.send('sightline:talk-ended'),
   onMarkMoment: (cb) => listen('sightline:mark-moment', cb),
   testCloud: () => invoke('sightline:test-cloud'),
   loadScreens: (id) => invoke('sightline:load-screens', id),

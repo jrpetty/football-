@@ -14,7 +14,7 @@
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
-import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './commentary.ts'
+import { checkpointLine, eventLine, fightStartLine, fillReadings, fitCommentary, statusLine, type ReadingLookup } from './commentary.ts'
 import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
 import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type MapPosition } from './analyses/mapModel.ts'
@@ -214,6 +214,12 @@ export class CoachEngine {
   private readonly battles: BattleTracker
   private readonly intel: IntelTracker | null
   private intelQueue: { news: IntelNews; at: number }[] = []
+  /** When a commentary line was last spoken (for the status line after a quiet spell). */
+  private lastCommentAt: number | null = null
+  /** Watched readings: the value last confirmed, and a new value waiting for a second reading. */
+  private watched = new Map<string, { value: string | null; pending: string | null; pendingAt: number }>()
+  /** Changes waiting for a gap in the commentary (said once; dropped when old). */
+  private changeQueue: { line: string; topic: string; at: number; confidence: number; evidence: string }[] = []
   /** Index into the battle log where the current match starts. */
   private matchBattlesFrom = 0
   private gameContext: Record<string, string | number> = {}
@@ -651,10 +657,12 @@ export class CoachEngine {
     if (events.some((ev) => (this.profile.factors ?? []).some((f) => f.lossEvent === ev.ruleId))) this.maybeFactorTip(now, out)
     if (this.settings.commentary) {
       for (const ev of events) {
+        // In training mode a mistake already gets its tip; the commentary would say it twice.
+        if (ev.category === 'mistake' && this.settings.mode === 'training') continue
         // Where it happened on the map, and where the killer shot from, when the screen showed it
         // (then the named area replaces the rough minimap zone).
         const p = placedDeaths.get(ev.uid)
-        const line = eventLine(this.profile, p?.area ? { ...ev, zone: undefined } : ev)
+        const line = eventLine(this.profile, p?.area ? { ...ev, zone: undefined } : ev, this.reading)
         const from = p?.killerSpot ? (p.killerSpot === p.area ? ', shot from inside it' : `, shot from ${p.killerSpot}`) : ''
         const where = p?.area ? ` At ${p.area}${from}.` : ''
         if (line) this.comment(`${line}${where}`, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)
@@ -811,6 +819,8 @@ export class CoachEngine {
     this.battles.newMatch()
     this.intel?.newMatch(this.lastT)
     this.intelQueue = []
+    this.watched = new Map()
+    this.changeQueue = []
     this.recalled = new Set()
     this.historyFor = null
     this.matchSince = this.lastT
@@ -873,6 +883,54 @@ export class CoachEngine {
     this.intelQueue = this.intelQueue.filter((q) => now - q.at < INTEL_WAIT_MS).sort((a, b) => Number(b.news.kind === 'read') - Number(a.news.kind === 'read'))
     const next = this.intelQueue[0]
     if (next && this.comment(next.news.text, `intel:${next.news.kind}:${next.news.id}`, next.at, 0.8, `seen on screen: ${next.news.id}`, now, out)) this.intelQueue.shift()
+    this.commentOnChanges(now, out)
+    this.commentStatus(now, out)
+  }
+
+  /** A fresh, agreed reading as commentary may say it, or null. */
+  private readonly reading: ReadingLookup = (key) => {
+    const v = this.visible.values[key]
+    return v && !v.conflicted ? v.value : null
+  }
+
+  /** A watched reading (the player's age) that changed and was read the same way twice: said once. */
+  private commentOnChanges(now: number, out: EngineOutput): void {
+    for (const spec of this.profile.commentaryChanges ?? []) {
+      const v = this.visible.values[spec.key]
+      if (!v || v.conflicted || (typeof v.value !== 'string' && typeof v.value !== 'number')) continue
+      const value = String(v.value)
+      const w = this.watched.get(spec.key) ?? { value: null, pending: null, pendingAt: -Infinity }
+      if (value === w.value) {
+        this.watched.set(spec.key, { ...w, pending: null })
+        continue
+      }
+      // A new value counts once it is seen in two different readings.
+      if (w.pending !== value) {
+        this.watched.set(spec.key, { ...w, pending: value, pendingAt: v.observedAt })
+        continue
+      }
+      if (v.observedAt <= w.pendingAt) continue
+      this.watched.set(spec.key, { value, pending: null, pendingAt: -Infinity })
+      // The first value of a match is where the player already is, not news.
+      if (w.value === null) continue
+      const line = fillReadings(spec.text, this.reading)
+      if (line) this.changeQueue.push({ line, topic: `change:${spec.key}:${value}`, at: now, confidence: v.confidence, evidence: `${spec.key} read as ${value} twice` })
+    }
+    // Said once, so it waits its turn rather than being lost to the pacing.
+    this.changeQueue = this.changeQueue.filter((c) => now - c.at < INTEL_WAIT_MS)
+    const next = this.changeQueue[0]
+    if (next && this.comment(next.line, next.topic, next.at, next.confidence, next.evidence, now, out)) this.changeQueue.shift()
+  }
+
+  /** After a quiet spell, a short line of what is on screen now, so the player knows the coach is still watching. */
+  private commentStatus(now: number, out: EngineOutput): void {
+    const spec = this.profile.commentaryStatus
+    if (!spec || this.window() !== 'during_play') return
+    this.lastCommentAt ??= now
+    if (now - this.lastCommentAt < spec.everySec * 1000) return
+    const line = statusLine(spec.parts, spec.minParts, this.reading)
+    if (!line) return
+    this.comment(line, `status:${now}`, now, 0.8, 'readings on screen now', now, out)
   }
 
   /**
@@ -1074,7 +1132,9 @@ export class CoachEngine {
       now,
       out,
     )
-    return out.utterances.length > before
+    const spoken = out.utterances.length > before
+    if (spoken) this.lastCommentAt = now
+    return spoken
   }
 
   /** Insights the coach may use: the player has not dismissed or disputed them. */

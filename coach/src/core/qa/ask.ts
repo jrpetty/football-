@@ -11,7 +11,8 @@ import type { HeatmapResult } from '../analyses/heatmap.ts'
 import type { MatchRecord } from '../analyses/matchRecorder.ts'
 import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
-import type { ArsenalItem, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
+import type { ArsenalItem, BenchmarkSpec, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
+import { expectedAt } from '../analyses/benchmarks.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 import { ballisticsLines } from '../knowledge/ballistics.ts'
@@ -20,7 +21,7 @@ export type Intent =
   | { readonly kind: 'heatmap'; readonly heatmapId: string }
   | { readonly kind: 'mistakes' }
   | { readonly kind: 'fights' }
-  | { readonly kind: 'benchmark' }
+  | { readonly kind: 'benchmark'; readonly atSec?: number; readonly target?: boolean }
   | { readonly kind: 'intel' }
   | { readonly kind: 'learned' }
   | { readonly kind: 'arsenal'; readonly itemId: string; readonly build?: boolean; readonly question?: string }
@@ -59,7 +60,12 @@ export function classify(question: string, profile: GameProfile): Intent {
   if (profile.learning && /\b(usually|usual|normally|tend to|build orders?|my (?:usual )?build|last (?:few )?(?:games|matches)|past (?:games|matches)|history|compositions?|comps?|what have you learn\w*|what did you learn\w*|how do i do (?:against|vs|on|with)|against (?:them|this|him|her) before)\b/.test(q)) return { kind: 'learned' }
   if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make|do)|counter|scout\w*|opponent|their plan|what(?:'s| is) (?:their|the) plan|game plan|strategy)\b/.test(q)) return { kind: 'intel' }
   if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
-  if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
+  if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) {
+    // "How many villagers should I have at ten minutes?": the curve's number, not a judgement.
+    const target = /\b(should i (?:have|be at)|supposed to|target|expected|aim for|how many \w+ (?:at|by))\b/.test(q)
+    const atSec = clockIn(q)
+    return { kind: 'benchmark', ...(target ? { target } : {}), ...(atSec !== null ? { atSec } : {}) }
+  }
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
   for (const [re, ids] of HEATMAP_WORDS) {
     const id = ids.find((x) => heatmaps.has(x))
@@ -94,6 +100,8 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'utility':
       return utilityAnswer(profile, report, intent.mapName, intent.question)
     case 'benchmark': {
+      const spec = profile.benchmarks?.[0]
+      if (spec && (intent.target || intent.atSec !== undefined)) return benchmarkTarget(spec, report, intent.atSec ?? null)
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
       const met = report.benchmarks.filter((b) => b.points.length)
@@ -551,4 +559,35 @@ function avg(v: readonly number[]): number {
 
 function fmt(v: number, unit?: string): string {
   return `${Number.isInteger(v) ? v : v.toFixed(1)}${unit ?? ''}`
+}
+
+const NUMBER_WORDS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+  twenty: 20, 'twenty five': 25, thirty: 30, 'thirty five': 35, forty: 40, 'forty five': 45, fifty: 50, sixty: 60,
+}
+
+/** A game time named in a question: "at 10:30", "by 12 minutes", "at ten minutes" (seconds), or null. */
+export function clockIn(q: string): number | null {
+  const mmss = /\b(\d{1,2}):([0-5]\d)\b/.exec(q)
+  if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])
+  const words = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|')
+  const m = new RegExp(`\\b(\\d{1,3}|${words})[ -]?(?:minutes?|mins?|m)\\b`).exec(q)
+  if (!m) return null
+  const n = /^\d/.test(m[1]) ? Number(m[1]) : NUMBER_WORDS[m[1].replace('-', ' ')]
+  return n > 0 && n <= 180 ? n * 60 : null
+}
+
+/** What the benchmark curve gives at a time (or at its checkpoints), and what was read near it. */
+function benchmarkTarget(spec: BenchmarkSpec, report: SessionReport, atSec: number | null): string {
+  const lead = spec.expectedPhrase[0].toUpperCase() + spec.expectedPhrase.slice(1)
+  const how = `That is ${spec.expected.start} to start and ${spec.expected.perMinute} a minute${spec.expected.cap ? `, up to ${spec.expected.cap}` : ''}.`
+  if (atSec === null) {
+    const at = spec.checkpointsSec.map((cp, i) => `${expectedAt(spec, cp)}${i === 0 ? ` ${spec.noun}` : ''} at ${clockText(cp)}`)
+    return `${lead} has ${at.length > 1 ? `${at.slice(0, -1).join(', ')} and ${at[at.length - 1]}` : at[0]}. ${how}`
+  }
+  let text = `${lead} has ${expectedAt(spec, atSec)} ${spec.noun} at ${clockText(atSec)}. ${how}`
+  const read = report.benchmarks.find((b) => b.spec.id === spec.id)?.points.find((p) => Math.abs(p.atSec - atSec) <= 60)
+  if (read) text += ` You had ${read.actual} at ${clockText(read.atSec)}.`
+  return text
 }

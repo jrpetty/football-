@@ -200,8 +200,13 @@ export interface SightlineBridge {
 
   /** The global stop shortcut was pressed. Returns an unsubscribe function. */
   onStopRequested(cb: () => void): () => void
-  /** The global push-to-talk shortcut was pressed (toggle). Returns an unsubscribe function. */
-  onPushToTalk(cb: () => void): () => void
+  /**
+   * The global talk key: "start" on a press, "stop" on the next tap or when a held key is let go
+   * (src/speech/talkKey.ts). Returns an unsubscribe function.
+   */
+  onPushToTalk(cb: (action: 'start' | 'stop') => void): () => void
+  /** Recording ended without the talk key (time limit, the on-screen button), so its next press starts again. */
+  talkEnded(): void
   /** The global "mark this moment" shortcut was pressed. Returns an unsubscribe function. */
   onMarkMoment(cb: () => void): () => void
 }

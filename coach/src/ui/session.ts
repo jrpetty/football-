@@ -23,6 +23,9 @@ import { RADAR_COLOURS, type RadarColour } from '../core/pitch/radar.ts'
 import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
+import { AlwaysListener } from '../speech/listener.ts'
+import { heardCommand, trimToSpeech, withoutWakeWord } from '../speech/vad.ts'
+import { commentaryStartLine } from '../core/commentary.ts'
 import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
@@ -32,7 +35,7 @@ import { findMap } from '../core/analyses/mapModel.ts'
 import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE, placeOnOverhead, type DecodedImage, type OverheadAnalysis } from './overhead.ts'
 import { hasLayout, layoutPicture } from './layouts.ts'
 import { fromBase64 } from '../core/map/minimap.ts'
-import { policyFor } from './policy.ts'
+import { liveModes, policyFor } from './policy.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
 const MAX_IN_FLIGHT = 2
@@ -126,6 +129,8 @@ export interface SessionState {
   readonly conversation: readonly QaEntry[]
   readonly talk: 'idle' | 'recording' | 'transcribing'
   readonly talkError: string | null
+  /** Always listening (when chosen in Settings). */
+  readonly listen: ListenState
   readonly moments: readonly Moment[]
   /** A short confirmation (e.g. "Moment marked"), cleared after a few seconds. */
   readonly toast: string | null
@@ -134,6 +139,20 @@ export interface SessionState {
 }
 
 export type ShownMosaic = StoredMosaic & { readonly synthetic?: boolean }
+
+export interface ListenState {
+  readonly status: 'off' | 'starting' | 'on' | 'paused' | 'error'
+  readonly error: string | null
+  /** The last thing the recogniser heard, and what it was taken for. */
+  readonly heard: { readonly text: string; readonly kind: 'question' | 'wake' | 'ignore'; readonly at: number } | null
+  /** "Coach" was heard on its own: the next thing said is the question. */
+  readonly awaiting: boolean
+}
+
+const LISTEN_OFF: ListenState = { status: 'off', error: null, heard: null, awaiting: false }
+/** After "coach" on its own, how long the next words count as the question. */
+const AWAIT_QUESTION_MS = 8000
+const LISTEN_RETRY_MS = 5000
 
 /** The stitched map for a map name, if there is one. */
 export function mosaicFor(mosaics: Readonly<Record<string, ShownMosaic>>, map: string | null | undefined): ShownMosaic | null {
@@ -176,6 +195,7 @@ const INITIAL: SessionState = {
   conversation: [],
   talk: 'idle',
   talkError: null,
+  listen: LISTEN_OFF,
   moments: [],
   toast: null,
   review: NO_REVIEW,
@@ -199,6 +219,18 @@ export class CoachSession {
   private settings: CoachSettings | null = null
   private profile: GameProfile | null = null
   private recorder: PushToTalkRecorder | null = null
+  /** The talk key was let go before the microphone opened: ask as soon as it has. */
+  private stopWhenOpen = false
+  private listener: AlwaysListener | null = null
+  private listenOpening = false
+  private listenPaused = false
+  private listenBusy = false
+  /** When opening the always-on microphone last failed (it is tried again, at most this often). */
+  private listenFailedAt = -Infinity
+  private awaitUntil = 0
+  private awaitTimer: ReturnType<typeof setTimeout> | null = null
+  /** The latest cloud status, for questions heard while always listening. */
+  private cloud: CloudStatus | null = null
   private snapshotSeq = 0
   private readonly snapshots = new Map<number, (s: { jpeg: ArrayBuffer; frameAt: number } | null) => void>()
   /** Screenshots of marked moments, by moment id (memory only). */
@@ -251,6 +283,7 @@ export class CoachSession {
     this.settings = settings
     // The chosen voice applies straight away, not only once capture starts.
     this.speech.configure(settings.voice)
+    this.syncListening()
     // Questions are about one game; a new game starts a new conversation.
     if (changedPack && this.state.phase === 'idle') this.set({ conversation: [] })
     if (first || changedPack || changedOptIn) await this.reloadPlayerData()
@@ -587,6 +620,7 @@ export class CoachSession {
       mosaics: this.state.mosaics,
       overheads: this.state.overheads,
       conversation: samePack ? this.state.conversation : [],
+      listen: this.state.listen,
     })
     this.speech.configure(settings.voice)
 
@@ -660,6 +694,11 @@ export class CoachSession {
       startedAt: Date.now(),
       clockOrigin: source.kind === 'screen' ? source.now() : 0,
     })
+    // Commentary on: say whether it can talk in this game and mode, so silence is never a mystery.
+    if (settings.commentary && !settings.muted) {
+      const line = commentaryStartLine(profile, settings, policy, liveModes(profile, settings))
+      this.speech.enqueue({ id: uid('commentary-status'), text: line, category: 'descriptive', priority: 'normal', expiresAt: null })
+    }
   }
 
   private async openSource(kind: SourceChoice, sink: FrameSink, onEnded: () => void, speed: number): Promise<FrameSource> {
@@ -791,6 +830,7 @@ export class CoachSession {
     this.settings = settings
     this.speech.configure(settings.voice)
     if (mutedNow) this.speech.stopAll()
+    this.syncListening()
     const profile = this.profile
     if (this.worker && profile) {
       this.post({ type: 'settings', settings, policy: policyFor(profile, settings), context: this.contextFor(profile, settings), now: this.now() })
@@ -902,37 +942,176 @@ export class CoachSession {
     this.post({ type: 'answer', question: q, text, author, now })
   }
 
-  /** Push-to-talk: first call starts recording, second stops and asks. */
+  /** The latest cloud status (questions heard while always listening are asked with it). */
+  setCloud(cloud: CloudStatus): void {
+    this.cloud = cloud
+  }
+
+  /** The talk key: a press starts recording; the next tap, or letting go of a held key, asks. */
+  async talkKey(action: 'start' | 'stop', cloud: CloudStatus): Promise<void> {
+    if (action === 'start') {
+      if (this.state.talk === 'idle') await this.startTalk(cloud)
+    } else if (this.state.talk === 'recording') await this.finishTalk(cloud)
+  }
+
+  /** The talk button: first click starts recording, the second stops and asks. */
   async toggleTalk(cloud: CloudStatus): Promise<void> {
     if (this.state.talk === 'transcribing') return
     if (this.state.talk === 'recording') {
-      const rec = this.recorder
-      this.recorder = null
-      if (!rec) return
-      this.set({ talk: 'transcribing' })
-      tone('send')
-      try {
-        const pcm = await rec.stop()
-        if (pcm.length < 16_000 * 0.3) return this.talkFailed('That was too short to hear. Press the talk key, ask your question, then press it again.')
-        const text = (await this.bridge.transcribe(pcm)).trim()
-        if (!text) return this.talkFailed('I did not catch that. Try again a little closer to the microphone.')
-        this.set({ talk: 'idle', talkError: null })
-        this.noteOnRecentMoment(text)
-        await this.ask(text, 'voice', cloud)
-      } catch (err) {
-        this.talkFailed(talkErrorMessage(err))
-      }
-      return
+      this.bridge.talkEnded()
+      return this.finishTalk(cloud)
     }
+    return this.startTalk(cloud)
+  }
+
+  private async startTalk(cloud: CloudStatus): Promise<void> {
     if (!this.settings?.voiceInput) return this.talkFailed('Voice input is off. Turn it on in Settings, Voice input.')
+    // Recording from now on, even while the microphone opens, so a quick release is not lost.
+    this.set({ talk: 'recording', talkError: null })
+    this.stopWhenOpen = false
+    this.listener?.setPaused(true)
     try {
       // Stop the coach talking first, so the microphone does not hear it.
       this.speech.stopAll()
       tone('listen')
-      this.recorder = await PushToTalkRecorder.start(() => void this.toggleTalk(cloud))
-      this.set({ talk: 'recording', talkError: null })
+      this.recorder = await PushToTalkRecorder.start(() => {
+        this.bridge.talkEnded()
+        void this.finishTalk(cloud)
+      })
+      if (this.stopWhenOpen) await this.finishTalk(cloud)
     } catch (err) {
+      this.recorder = null
       this.talkFailed(micErrorMessage(err))
+    }
+  }
+
+  private async finishTalk(cloud: CloudStatus): Promise<void> {
+    const rec = this.recorder
+    if (!rec) {
+      // Still opening the microphone: stop as soon as it is open.
+      if (this.state.talk === 'recording') this.stopWhenOpen = true
+      return
+    }
+    this.recorder = null
+    this.set({ talk: 'transcribing' })
+    tone('send')
+    try {
+      const pcm = await rec.stop()
+      if (pcm.length < 16_000 * 0.3) return this.talkFailed('That was too short to hear. Hold the talk key while you ask, or tap it, ask, and tap it again.')
+      const text = withoutWakeWord(await this.bridge.transcribe(trimToSpeech(pcm)))
+      if (!text) return this.talkFailed('I did not catch that. Try again a little closer to the microphone.')
+      this.set({ talk: 'idle', talkError: null })
+      this.noteOnRecentMoment(text)
+      await this.ask(text, 'voice', cloud)
+    } catch (err) {
+      this.talkFailed(talkErrorMessage(err))
+    } finally {
+      this.resumeListening()
+    }
+  }
+
+  // --- Always listening ----------------------------------------------------------------
+
+  /** Pause or resume always-listening from the top bar (not saved: it is on again next time). */
+  setListeningPaused(paused: boolean): void {
+    this.listenPaused = paused
+    this.syncListening()
+  }
+
+  /** Try opening the microphone again after a problem. */
+  retryListening(): void {
+    this.listenFailedAt = -Infinity
+    this.listener?.stop()
+    this.listener = null
+    this.set({ listen: { ...this.state.listen, status: 'off', error: null } })
+    this.syncListening()
+  }
+
+  /** Open or close the always-listening microphone to match the settings and the pause button. */
+  private syncListening(): void {
+    const want = !!this.settings?.voiceInput && this.settings.listen === 'always'
+    if (!want || this.listenPaused) {
+      this.listener?.stop()
+      this.listener = null
+      const status = want ? 'paused' : 'off'
+      if (this.state.listen.status !== status) this.set({ listen: { ...LISTEN_OFF, status, heard: this.state.listen.heard } })
+      return
+    }
+    // After a problem (no speech model yet, microphone blocked), try again on the next change, not in a loop.
+    if (this.listener || this.listenOpening || (this.state.listen.status === 'error' && Date.now() - this.listenFailedAt < LISTEN_RETRY_MS)) return
+    this.listenOpening = true
+    this.set({ listen: { ...this.state.listen, status: 'starting', error: null } })
+    void (async () => {
+      try {
+        const voice = await this.bridge.voiceStatus()
+        if (!voice.installed) {
+          this.listenFailedAt = Date.now()
+          this.set({ listen: { ...this.state.listen, status: 'error', error: 'Speech recognition is not downloaded yet. Get it in Settings, Voice input.' } })
+          return
+        }
+        const l = await AlwaysListener.start((pcm) => void this.heardSpeech(pcm))
+        if (!(this.settings?.voiceInput && this.settings.listen === 'always') || this.listenPaused) {
+          l.stop()
+          return
+        }
+        this.listener = l
+        l.setPaused(this.speech.speakingId !== null || this.state.talk !== 'idle', 0)
+        this.set({ listen: { ...this.state.listen, status: 'on', error: null } })
+      } catch (err) {
+        this.listenFailedAt = Date.now()
+        this.set({ listen: { ...this.state.listen, status: 'error', error: micErrorMessage(err) } })
+      } finally {
+        this.listenOpening = false
+        // The settings may have changed while the microphone was opening.
+        if (this.state.listen.status !== 'error') this.syncListening()
+      }
+    })()
+  }
+
+  /** Input level for the meter in Settings (0..1), or null when not listening. */
+  listenLevel(): { level: number; threshold: number; speaking: boolean } | null {
+    return this.listener?.level ?? null
+  }
+
+  /** The coach stopped talking (or push-to-talk ended): hear again after a short tail. */
+  private resumeListening(): void {
+    this.listener?.setPaused(this.speech.speakingId !== null || this.state.talk !== 'idle')
+  }
+
+  /** A short tone without the always-on microphone taking it for speech. */
+  private cue(kind: Parameters<typeof tone>[0]): void {
+    this.listener?.setPaused(true)
+    tone(kind)
+    this.listener?.setPaused(this.speech.speakingId !== null || this.state.talk !== 'idle', 700)
+  }
+
+  /** A stretch of speech heard while always listening: transcribe it, and ask it if it was for the coach. */
+  private async heardSpeech(pcm: Float32Array): Promise<void> {
+    if (this.listenBusy || this.state.talk !== 'idle') return
+    this.listenBusy = true
+    try {
+      const text = (await this.bridge.transcribe(trimToSpeech(pcm))).trim()
+      if (!text) return
+      const h = heardCommand(text, this.settings?.wakeWord ?? true, Date.now() < this.awaitUntil)
+      this.set({ listen: { ...this.state.listen, error: null, heard: { text, kind: h.kind, at: Date.now() }, awaiting: h.kind === 'wake' } })
+      if (this.awaitTimer) clearTimeout(this.awaitTimer)
+      this.awaitTimer = null
+      if (h.kind === 'wake') {
+        this.awaitUntil = Date.now() + AWAIT_QUESTION_MS
+        this.awaitTimer = setTimeout(() => this.set({ listen: { ...this.state.listen, awaiting: false } }), AWAIT_QUESTION_MS)
+        this.cue('listen')
+        return
+      }
+      if (h.kind !== 'question') return
+      this.awaitUntil = 0
+      this.cue('send')
+      this.noteOnRecentMoment(h.text)
+      const cloud = this.cloud
+      if (cloud) await this.ask(h.text, 'voice', cloud)
+    } catch (err) {
+      this.set({ listen: { ...this.state.listen, error: talkErrorMessage(err) } })
+    } finally {
+      this.listenBusy = false
     }
   }
 
@@ -944,13 +1123,18 @@ export class CoachSession {
   private talkFailed(message: string): void {
     this.set({ talk: 'idle', talkError: message })
     tone('error')
+    this.resumeListening()
     if (!this.worker && !this.settings?.muted) this.speech.enqueue({ id: uid('talk-error'), text: message, category: 'descriptive', priority: 'normal', expiresAt: null })
   }
 
   cancelTalk(): void {
     this.recorder?.cancel()
     this.recorder = null
-    if (this.state.talk !== 'idle') this.set({ talk: 'idle' })
+    if (this.state.talk !== 'idle') {
+      this.bridge.talkEnded()
+      this.set({ talk: 'idle' })
+    }
+    this.resumeListening()
   }
 
   clearConversation(): void {
@@ -1288,6 +1472,8 @@ export class CoachSession {
   }
 
   private updateSpeech(id: string, speech: SpeechState): void {
+    // Not hearing itself: the always-on microphone pauses while the coach talks.
+    this.resumeListening()
     if (!this.state.captions.some((c) => c.id === id)) return
     this.set({ captions: this.state.captions.map((c) => (c.id === id ? { ...c, speech } : c)) })
   }

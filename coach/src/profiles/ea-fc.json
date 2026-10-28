@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "ea-fc",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "name": "EA SPORTS FC (broadcast camera)",
   "depth": "pack",
   "game": {
@@ -5676,6 +5676,15 @@
     "goal_scored": "Goal for you",
     "goal_conceded": "Goal against",
     "turnover": "Lost the ball"
+  },
+  "commentaryStatus": {
+    "everySec": 90,
+    "parts": [
+      "{matchMinute} minutes, {homeScore} to {awayScore}",
+      "possession {possessionPct} percent",
+      "{shots} shots, {shotsOnTarget} on target"
+    ],
+    "minParts": 2
   },
   "contextKeys": [
     "opponentFormation",

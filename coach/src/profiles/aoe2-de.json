@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe2-de",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": "Age of Empires II: Definitive Edition",
   "depth": "pack",
   "game": {
@@ -1842,5 +1842,26 @@
         "order": true
       }
     ]
-  }
+  },
+  "commentary": {
+    "housed": "Housed at {population} of {populationCap}",
+    "idle-villagers": "Idle villagers: {idleVillagers}",
+    "floating-resources": "Banked: food {food}, wood {wood}, gold {gold}"
+  },
+  "commentaryStatus": {
+    "everySec": 75,
+    "parts": [
+      "{gameTimeSec|clock}",
+      "population {population} of {populationCap}",
+      "{age} Age",
+      "food {food}, wood {wood}, gold {gold}"
+    ],
+    "minParts": 2
+  },
+  "commentaryChanges": [
+    {
+      "key": "age",
+      "text": "You reached the {age} Age at {gameTimeSec|clock}."
+    }
+  ]
 }

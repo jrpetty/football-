@@ -73,3 +73,71 @@ test('commentary pacing: at most one line every few seconds and eight a minute',
 test('packs: commentary leads are short and refer to real events', () => {
   for (const p of [aoe4, mw4, builtInProfile('ea-fc')]) assert.ok(Object.keys(p.commentary ?? {}).length > 0, p.id)
 })
+
+// --- Saying something: status lines, the age, mistakes, and why it is quiet -------------------
+
+test('commentary against the AI never goes quiet for long: a status line from the readings, and the age-up', () => {
+  const { spoken } = play('aoe4', 'skirmish-vs-ai', aoe4GameReplay({ seed: 4, realMinutes: 16, intervalMs: 3000 }), { mode: 'competitive-safe' })
+  const status = spoken.filter((t) => /^\d+:\d\d, population \d+ of \d+/.test(t))
+  assert.ok(status.length >= 4, spoken.join('\n'))
+  // Only readings that were on screen, in the pack's order.
+  assert.match(status[0], /^\d+:\d\d, population \d+ of \d+, Dark Age, food \d+, wood \d+, gold \d+\.$/)
+  assert.ok(spoken.some((t) => /^You reached the Feudal Age at 4:\d\d\.$/.test(t)), 'the age-up is said')
+  for (const t of spoken) {
+    assert.doesNotMatch(t, BANNED_CLAIMS)
+    assert.ok(t.split(/\s+/).length <= 22, t)
+  }
+})
+
+test('commentary: a status line waits for a quiet spell and leaves out what is not on screen', async () => {
+  const { statusLine } = await import('../src/core/commentary.ts')
+  const parts = aoe4.commentaryStatus!.parts
+  const read = (vals: Record<string, string | number>) => (k: string) => vals[k] ?? null
+  assert.equal(statusLine(parts, 2, read({ gameTimeSec: 605, population: 31, populationCap: 40, age: 'feudal' })), '10:05, population 31 of 40, Feudal Age.')
+  assert.equal(statusLine(parts, 2, read({ gameTimeSec: 605 })), null, 'too little on screen')
+  assert.equal(statusLine(parts, 2, read({ age: 'castle', food: 1200, wood: 40, gold: 900 })), 'Castle Age, food 1,200, wood 40, gold 900.')
+})
+
+test('commentary in competitive-safe mode says what it sees of mistakes; training mode leaves that to the tip', async () => {
+  const { aoe2GameReplay } = await import('../src/sim/visionReplay.ts')
+  const safe = play('aoe2-de', 'skirmish-vs-ai', aoe2GameReplay({ seed: 5 }), { mode: 'competitive-safe' })
+  assert.ok(safe.spoken.some((t) => /^Housed at \d+ of \d+\.$/.test(t)), safe.spoken.join('\n'))
+  const training = play('aoe2-de', 'skirmish-vs-ai', aoe2GameReplay({ seed: 5 }), { mode: 'training' })
+  assert.ok(!training.spoken.some((t) => t.startsWith('Housed at')))
+  assert.ok(training.utterances.some((u) => u.category === 'training' && /housed/i.test(u.text)))
+})
+
+test('commentary at capture start says whether it can talk here, and where it can', async () => {
+  const { commentaryStartLine } = await import('../src/core/commentary.ts')
+  const { policyFor } = await import('./helpers.ts')
+  const s = (profileModeId: string | null, over: Record<string, unknown> = {}) => settings({ profileId: 'aoe4', profileModeId, commentary: true, ...over })
+  const live = ['Campaign / Historical Battles', 'Skirmish vs AI']
+  assert.equal(commentaryStartLine(aoe4, s('skirmish-vs-ai'), policyFor(aoe4, 'skirmish-vs-ai'), live), 'Commentary on. I will call out what I see.')
+  assert.equal(
+    commentaryStartLine(aoe4, s('ranked-1v1'), policyFor(aoe4, 'ranked-1v1'), live),
+    'Commentary is on, but in Ranked 1v1 I stay quiet until the match ends, then you get the review. I can talk during Campaign / Historical Battles and Skirmish vs AI.',
+  )
+  assert.match(commentaryStartLine(aoe4, s(null), policyFor(aoe4, null), live), /^Commentary is on, but the game mode is not set, so I stay quiet during play\. Pick the mode on the Coach screen\./)
+  assert.match(commentaryStartLine(aoe4, s('skirmish-vs-ai', { mode: 'silent' }), policyFor(aoe4, 'skirmish-vs-ai'), live), /silent tracker mode/)
+  assert.match(commentaryStartLine(aoe4, s('skirmish-vs-ai', { tournament: true }), policyFor(aoe4, 'skirmish-vs-ai', { tournament: true }), live), /tournament mode keeps me silent/)
+  for (const m of [null, 'ranked-1v1', 'skirmish-vs-ai']) assert.doesNotMatch(commentaryStartLine(aoe4, s(m), policyFor(aoe4, m), live), BANNED_CLAIMS)
+})
+
+test('commentary in ranked play: still never spoken, status lines and the age-up included', () => {
+  const { utterances, commentary } = play('aoe4', 'ranked-1v1', aoe4GameReplay({ seed: 4, realMinutes: 16, intervalMs: 3000 }), { mode: 'competitive-safe' })
+  assert.ok(utterances.every((u) => u.category !== 'commentary'))
+  assert.ok(commentary.length > 0 && commentary.every((c) => c.decision.decision === 'suppressed'))
+})
+
+test('packs: readings in commentary lines must exist', async () => {
+  const { validateProfile } = await import('../src/core/profile/schema.ts')
+  const bad = JSON.parse(JSON.stringify(aoe4))
+  bad.commentaryStatus.parts = ['{population} of {popCap}']
+  bad.commentaryChanges = [{ key: 'era', text: '{era|minutes}' }]
+  const r = validateProfile(bad)
+  assert.ok(!r.ok)
+  const errors = (r as { errors: string[] }).errors.join('\n')
+  assert.match(errors, /commentaryStatus\.parts\[0\]: unknown reading "popCap"/)
+  assert.match(errors, /commentaryChanges\[0\]\.key: unknown state key "era"/)
+  assert.match(errors, /unknown format "minutes"/)
+})

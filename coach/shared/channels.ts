@@ -43,6 +43,7 @@ export const CHANNELS = {
   synthesize: 'sightline:synthesize',
   stopRequested: 'sightline:stop-requested',
   pushToTalk: 'sightline:push-to-talk',
+  talkEnded: 'sightline:talk-ended',
   markMoment: 'sightline:mark-moment',
   loadScreens: 'sightline:load-screens',
   saveScreens: 'sightline:save-screens',

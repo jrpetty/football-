@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "cs2",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Counter-Strike 2",
   "depth": "pack",
   "game": {
@@ -22251,6 +22251,15 @@
     "kill": "Kill",
     "bomb_planted": "Bomb planted",
     "bomb_defused": "Bomb defused"
+  },
+  "commentaryStatus": {
+    "everySec": 60,
+    "parts": [
+      "score {playerScore} to {opponentScore}",
+      "{aliveOurs} alive against {aliveTheirs}",
+      "money {money}"
+    ],
+    "minParts": 2
   },
   "contextKeys": [
     "mapName",

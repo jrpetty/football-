@@ -56,7 +56,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.gameState?.kind === 'cs2-gsi' ? <GameDataPanel bridge={bridge} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
-      <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
+      <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} session={session} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
 
       <VoicePanel settings={settings} onSettings={onSettings} session={session} bridge={bridge} info={info} />
@@ -808,7 +808,19 @@ function MemoryPanel({ settings, onSettings, bridge, session }: { settings: Coac
 
 // --- Voice input -------------------------------------------------------------------------
 
-function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge; info: PlatformInfo | null }) {
+function VoiceInputPanel({
+  settings,
+  onSettings,
+  bridge,
+  info,
+  session,
+}: {
+  settings: CoachSettings
+  onSettings: (p: Partial<CoachSettings>) => void
+  bridge: SightlineBridge
+  info: PlatformInfo | null
+  session: CoachSession
+}) {
   const [status, setStatus] = useState<VoiceModelStatus | null>(null)
   const refresh = useCallback(() => void bridge.voiceStatus().then(setStatus), [bridge])
   useEffect(refresh, [refresh])
@@ -818,6 +830,11 @@ function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: Coa
     return () => clearInterval(t)
   }, [status?.installing, refresh])
   const desktop = info?.shell === 'electron'
+  // The speech model just finished downloading: always listening can start now.
+  const installed = status?.installed === true
+  useEffect(() => {
+    if (installed && session.getState().listen.status === 'error') session.retryListening()
+  }, [installed, session])
   return (
     <section className="panel" aria-labelledby="vin">
       <div className="panel-head">
@@ -827,9 +844,43 @@ function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: Coa
       <Switch
         checked={settings.voiceInput}
         onChange={(voiceInput) => onSettings({ voiceInput })}
-        label={<b>Ask the coach out loud (push to talk)</b>}
-        hint={`Press the talk key${info?.talkShortcut ? ` (${info.talkShortcut})` : ''} to start listening (a rising tone), ask, then press it again to send (a falling tone); it stops by itself after 15 seconds. The coach answers out loud. Speech is recognised on this computer; audio is never stored or sent.`}
+        label={<b>Ask the coach out loud</b>}
+        hint="The coach answers out loud. Speech is recognised on this computer; audio is never stored or sent. Only the words of a question go to Claude, as with a typed one."
       />
+      {settings.voiceInput ? (
+        <>
+          <div className="field" style={{ marginTop: 12 }}>
+            <span className="small">
+              <b>How you talk to it</b>
+            </span>
+            <Segmented
+              label="How you talk to the coach"
+              value={settings.listen}
+              options={[
+                { value: 'key', label: 'Talk key' },
+                { value: 'always', label: 'Always listening' },
+              ]}
+              onChange={(listen) => onSettings({ listen })}
+            />
+            <span className="muted small">
+              {settings.listen === 'key'
+                ? `Hold the talk key${info?.talkShortcut ? ` (${info.talkShortcut})` : ''} while you ask and let go to send, or tap it, ask, and tap it again. A rising tone means it is listening, a falling tone that it is thinking. It stops by itself after 15 seconds. The microphone is open only while you talk.`
+                : 'The microphone stays open while the app runs, and it hears you whenever you speak (it pauses while the coach itself is talking). The talk key still works. Best with a headset: through speakers, game sound can be taken for speech.'}
+            </span>
+          </div>
+          {settings.listen === 'always' ? (
+            <>
+              <Switch
+                checked={settings.wakeWord}
+                onChange={(wakeWord) => onSettings({ wakeWord })}
+                label={<b>Only when I start with “Coach”</b>}
+                hint="“Coach, how many villagers should I have?” is asked; talk to your team is not. Say just “Coach” and it waits a few seconds for the question. Turn this off to have everything you say taken as a question."
+              />
+              <ListeningStatus session={session} />
+            </>
+          ) : null}
+        </>
+      ) : null}
       {settings.voiceInput && desktop && status ? (
         <div className="voice-model">
           {status.installed ? (
@@ -863,6 +914,46 @@ function VoiceInputPanel({ settings, onSettings, bridge, info }: { settings: Coa
   )
 }
 
+/** Always listening: whether the microphone is open, a live input meter, and the last thing heard. */
+function ListeningStatus({ session }: { session: CoachSession }) {
+  const state = useSyncExternalStore(session.subscribe, session.getState)
+  const l = state.listen
+  const [meter, setMeter] = useState<{ level: number; threshold: number; speaking: boolean } | null>(null)
+  useEffect(() => {
+    if (l.status !== 'on') return setMeter(null)
+    const t = setInterval(() => setMeter(session.listenLevel()), 120)
+    return () => clearInterval(t)
+  }, [l.status, session])
+  const pct = (v: number) => `${Math.min(100, Math.round(Math.sqrt(v / 0.3) * 100))}%`
+  return (
+    <div className="listen-status">
+      <div className="btn-row small">
+        <span className={`badge ${l.status === 'on' ? 'ok' : l.status === 'error' ? 'warn' : 'neutral'}`}>
+          {l.status === 'on' ? 'Listening' : l.status === 'starting' ? 'Opening the microphone…' : l.status === 'paused' ? 'Paused (top bar)' : l.status === 'error' ? 'Not listening' : 'Off'}
+        </span>
+        {l.status === 'error' || l.status === 'paused' ? (
+          <button type="button" className="btn sm ghost" onClick={() => (l.status === 'error' ? session.retryListening() : session.setListeningPaused(false))}>
+            {l.status === 'error' ? 'Try again' : 'Listen again'}
+          </button>
+        ) : null}
+      </div>
+      {meter ? (
+        <div className="listen-meter" aria-hidden="true" title="Your microphone level; speech must cross the line">
+          <span className={meter.speaking ? 'speaking' : ''} style={{ width: pct(meter.level) }} />
+          <i style={{ left: pct(meter.threshold) }} />
+        </div>
+      ) : null}
+      {l.error ? <Notice level="warning">{l.error}</Notice> : null}
+      {l.heard ? (
+        <p className="small muted" style={{ margin: '6px 0 0' }}>
+          Last heard: “{l.heard.text}”{' '}
+          {l.heard.kind === 'question' ? '(asked)' : l.heard.kind === 'wake' ? '(waiting for your question)' : '(not for the coach)'}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 // --- Keyboard -----------------------------------------------------------------------------
 
 function KeyboardPanel({ settings, onSettings, info }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; info: PlatformInfo | null }) {
@@ -879,7 +970,7 @@ function KeyboardPanel({ settings, onSettings, info }: { settings: CoachSettings
       <div className="hotkeys">
         <HotkeyField
           label="Talk to the coach"
-          hint={settings.voiceInput ? 'Press once to start talking, again to send.' : 'Turn on voice input above to use it.'}
+          hint={settings.voiceInput ? 'Hold it while you ask and let go, or tap it, ask, and tap it again.' : 'Turn on voice input above to use it.'}
           value={keys.talk}
           taken={taken('talk')}
           onChange={set('talk')}

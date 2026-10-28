@@ -353,6 +353,22 @@ export interface BenchmarkSpec {
   readonly playbook?: string
 }
 
+export interface CommentaryStatusSpec {
+  /** Said after this many seconds without a commentary line. */
+  readonly everySec: number
+  /** Pieces in order, e.g. "{gameTimeSec|clock}", "population {population} of {populationCap}"; a piece is left out when a reading in it is missing. */
+  readonly parts: readonly string[]
+  /** Say nothing with fewer pieces than this. */
+  readonly minParts: number
+}
+
+export interface CommentaryChangeSpec {
+  /** The reading watched (an enum or string). */
+  readonly key: string
+  /** What is said once the new value is read twice in a row, e.g. "{age} Age, at {gameTimeSec|clock}." */
+  readonly text: string
+}
+
 /**
  * Battles (strategy games): runs of frames where the player's army is seen
  * fighting, settled into won or lost fights (see src/core/analyses/battles.ts).
@@ -862,8 +878,15 @@ export interface GameProfile {
   readonly factors?: readonly FactorSpec[]
   readonly benchmarks?: readonly BenchmarkSpec[]
   readonly battles?: BattleSpec
-  /** Live commentary: event type → the line's opening words (e.g. death → "Died"). */
+  /**
+   * Live commentary: event type (or mistake id) → the line's opening words (e.g. death → "Died").
+   * "{key}" placeholders are filled from the readings ("Housed at {population} of {populationCap}").
+   */
   readonly commentary?: Readonly<Record<string, string>>
+  /** Live commentary when it has been quiet for a while: a line built from the readings on screen now. */
+  readonly commentaryStatus?: CommentaryStatusSpec
+  /** Live commentary when a reading changes and stays changed (e.g. the player's age). */
+  readonly commentaryChanges?: readonly CommentaryChangeSpec[]
   /** State keys that describe the game rather than the play (map, opponent's civilisation…), kept for the review and answers. */
   readonly contextKeys?: readonly string[]
   /**
@@ -1326,14 +1349,48 @@ export function validateProfile(input: unknown): ValidationResult {
       }
     }
   }
+  // "{key}" and "{key|clock}" placeholders must name readings the pack has.
+  const placeholders = (text: unknown, path: string) => {
+    if (typeof text !== 'string') return
+    for (const m of text.matchAll(/\{([^}|]*)(\|[^}]*)?\}/g)) {
+      if (!visionStateKeys.has(m[1])) c.errors.push(`${path}: unknown reading "${m[1]}"`)
+      if (m[2] && m[2] !== '|clock') c.errors.push(`${path}: unknown format "${m[2].slice(1)}"`)
+    }
+  }
   if (p.commentary !== undefined) {
     const com = c.obj(p.commentary, 'commentary')
-    const known = new Set([...visionEvents.keys(), ...derivedEvents, ...((Array.isArray(p.events) ? p.events : []) as Obj[]).map((e) => e?.id)])
+    const known = new Set([
+      ...visionEvents.keys(),
+      ...derivedEvents,
+      ...((Array.isArray(p.events) ? p.events : []) as Obj[]).map((e) => e?.id),
+      ...((Array.isArray(p.mistakes) ? p.mistakes : []) as Obj[]).map((e) => e?.id),
+    ])
     for (const [k, v] of Object.entries(com ?? {})) {
       if (!known.has(k)) c.errors.push(`commentary.${k}: unknown event`)
       c.str(v, `commentary.${k}`, { max: 60, spoken: true })
+      placeholders(v, `commentary.${k}`)
     }
   }
+  if (p.commentaryStatus !== undefined) {
+    const st = c.obj(p.commentaryStatus, 'commentaryStatus')
+    if (st) {
+      c.num(st.everySec, 'commentaryStatus.everySec', 20, 600)
+      const parts = c.arr(st.parts, 'commentaryStatus.parts')
+      parts.forEach((x, i) => {
+        c.str(x, `commentaryStatus.parts[${i}]`, { max: 60, spoken: true })
+        placeholders(x, `commentaryStatus.parts[${i}]`)
+      })
+      c.num(st.minParts, 'commentaryStatus.minParts', 1, Math.max(1, parts.length))
+    }
+  }
+  c.arr(p.commentaryChanges, 'commentaryChanges', true).forEach((x, i) => {
+    const o = c.obj(x, `commentaryChanges[${i}]`)
+    if (!o) return
+    const key = c.str(o.key, `commentaryChanges[${i}].key`)
+    if (key && !visionStateKeys.has(key)) c.errors.push(`commentaryChanges[${i}].key: unknown state key "${key}"`)
+    c.str(o.text, `commentaryChanges[${i}].text`, { max: 80, spoken: true })
+    placeholders(o.text, `commentaryChanges[${i}].text`)
+  })
   c.arr(p.contextKeys, 'contextKeys', true).forEach((k, i) => {
     if (typeof k !== 'string' || !visionStateKeys.has(k)) c.errors.push(`contextKeys[${i}]: unknown state key "${String(k)}"`)
   })
