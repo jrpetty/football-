@@ -237,3 +237,36 @@ test('a map stitched before its official map was kept is placed on it afterwards
   assert.ok(errs.length >= r.points * 0.8, `${errs.length} of ${r.points}`)
   assert.ok(errs[Math.floor(errs.length * 0.95)] <= 8, `p95 ${errs[Math.floor(errs.length * 0.95)]}`)
 })
+
+test("a game's own radar overview with a transparent surround: the playable area is what is not transparent, and the pack's callouts are labelled on it", () => {
+  // An overview like Counter-Strike's: textured floors inside an irregular shape, transparent around it.
+  const size = 512
+  const rnd = mulberry32(9)
+  const img = new Uint8ClampedArray(size * size * 4)
+  let opaque = 0
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const o = (y * size + x) * 4
+      const inside = (x > 60 && x < 300 && y > 80 && y < 420) || (x >= 300 && x < 460 && y > 200 && y < 330)
+      if (!inside) continue
+      const v = 90 + ((x >> 4) + (y >> 4)) % 3 * 40 + rnd() * 20
+      img[o] = v
+      img[o + 1] = v * 0.95
+      img[o + 2] = v * 0.85
+      img[o + 3] = 255
+      opaque++
+    }
+  const off = analyzeOfficial(img, size, size)
+  let out = 0
+  for (let i = 0; i < off.w * off.h; i++) if (off.kind[i] === KIND_OUT) out++
+  assert.ok(Math.abs(out / (off.w * off.h) - (1 - opaque / (size * size))) < 0.01, `out ${out / (off.w * off.h)}`)
+  assert.ok(off.box.x0 >= 58 && off.box.x0 <= 63 && off.box.x1 >= 457 && off.box.x1 <= 461, JSON.stringify(off.box))
+  // A square overview with callout pixels (on the game's 1024 px overview): labels where they are, visited or not.
+  const empty: StoredMosaic = { version: 1, map: 'X', updatedAt: '', pieces: [], joined: {}, nextId: 1, callouts: {}, heights: {} }
+  const layers = mapLayers(empty, [], { ...off, srcW: size, srcH: size }, { imageSize: 1024, calloutPx: { 'A Site': [600, 400], Mid: [200, 300] } })!
+  const a = layers.callouts.find((c) => c.name === 'A Site')!
+  assert.ok(Math.abs(a.x - 300 * off.k) < 1 && Math.abs(a.y - 200 * off.k) < 1, JSON.stringify(a))
+  assert.equal(layers.callouts.length, 2)
+  // Not on a picture that is not square (not the game's overview).
+  assert.equal(mapLayers(empty, [], { ...off, srcW: size, srcH: size / 2 }, { calloutPx: { Mid: [1, 1] } })!.callouts.length, 0)
+})

@@ -564,7 +564,7 @@ export interface PositioningSpec {
    * the pixel (fixed, north-up minimaps): where it usually is, and the
    * player-context choice that says whether it is fixed or rotating.
    */
-  readonly minimap?: { readonly region: NormRect & { readonly round?: boolean }; readonly fixedContextKey?: string; readonly marker?: boolean }
+  readonly minimap?: { readonly region: NormRect & { readonly round?: boolean }; readonly fixedContextKey?: string; readonly marker?: boolean; readonly sameArt?: boolean }
 }
 
 /**
@@ -1530,6 +1530,7 @@ export function validateProfile(input: unknown): ValidationResult {
           const ctx = c.str(mm.fixedContextKey, 'positioning.minimap.fixedContextKey', { optional: true })
           if (ctx && !(Array.isArray(p.playerContext) && (p.playerContext as Obj[]).some((x) => x && x.id === ctx))) c.errors.push(`positioning.minimap.fixedContextKey: unknown player context "${ctx}"`)
           if (mm.marker !== undefined && typeof mm.marker !== 'boolean') c.errors.push('positioning.minimap.marker: must be a boolean')
+          if (mm.sameArt !== undefined && typeof mm.sameArt !== 'boolean') c.errors.push('positioning.minimap.sameArt: must be a boolean')
         }
       }
     }

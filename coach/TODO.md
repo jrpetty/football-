@@ -257,6 +257,24 @@ Legend:
 - ◐ Real MW4 minimaps against the official images: art style, zoom and whether the in-game minimap is drawn from the same picture are untested. *The three simulated art styles are the stand-in; QA 13.38–13.41 measure it.*
 - ◐ Kill Block has no overhead image (only a screenshot, refused), and Hajin and Zodiac have none; eight maps only have 450 px community images.
 
+## v13 delivery
+
+- ☑ EA SPORTS FC: every player and the ball read from the 2D radar, about twice a second, on this computer (no cloud call): teams by the radar colours set (or two colour groups, yours worked out from the first goal), ends per half, possession, territory, turnovers and regains, shots, kick-offs, goals with their last seconds; average shapes with and without the ball; formations matched against 18 shapes (`test/pitch.test.ts`).
+
+  *Measured on simulated radars: 95–99% of players found within about a metre (p95 0.4–1.2 m), the right team for 97% or more, the ball in about 97% of frames, possession within about 3% of the truth, both ends right in 97% or more of frames, every goal found. Formations: right every time with players about 1 m off their places, 98% at 2 m, 92% at 3 m (the misses are near-identical shapes such as 4-4-1-1 and 4-4-2); a scattered team is never given a shape. At the app's 960 px analysis width the demo radar was read in 955 of 968 frames.*
+- ☑ FC insights against real-football tracking figures (low block under 35 m, length 31–46 m, width 35–48 m, defence-to-midfield gap about 10 m, pressing within 5 m, shot value by zone), the opponent's shape with how to beat it, and the playbook entry for each.
+- ☑ FC views: Insights → The pitch (shapes, heat, lost and won balls, shots, every goal played back, 3D stadium); the radar live on the Coach screen (offline modes); Settings → Radar (align on a still with what is read drawn on it; the game's settings to use).
+- ☑ FC 27 pack v1.4.0: 23 modes (live tips offline against the CPU outside Ultimate Team), 30 more playbook entries (55), 13 formations, 149 more reference items, radar colours as the game lists them.
+- ☑ Counter-Strike 2 pack: 13 modes, 10 maps with 258 callouts and the game's radar transforms, 44 weapons and equipment from the game files, 51 playbook entries, 16 fight factors, 309 reference items, policy entries (`test/cs2.test.ts`).
+- ☑ CS2 Game State Integration: a listener on 127.0.0.1, off until turned on, token-checked, size-capped (`test/gsi-server.test.ts`); the cfg file saved from Settings; exact kills, deaths (flashed, reloading), the map, side, score, money and phase; the screen's details of each death added to the death the game reported, never counted twice.
+- ☑ CS2 rounds and economy: each round's buy, spend, kills, damage, death and result; lines on forcing, pistol rounds, early deaths, unused grenades and each side; the round strip and money chart.
+- ☑ CS2 radar stitched and placed on the game's own overview (imported from the game files; never bundled), with the pack's callouts labelled at their places; overview images with a transparent surround use it for the playable area; stricter placement for radars drawn from the overview itself.
+
+  *Measured on the ten real 1024 px overviews with a simulated centred, north-up round radar (teammates, enemies, A/B letters, the player's arrow), 30 runs (three per map, six lives each): no point placed in the wrong spot; 95% of points within 0.21–0.61% of the map's width (2–5 overview pixels, well under a metre) in 29 runs and 2.6% in one (Nuke); 68–93% of the points placed while playing in 29 runs, 17% in one (Cache: its first pieces never matched clearly enough, so they stayed unplaced rather than risk a wrong spot). Before the transparency fix and the stricter rules, Nuke, Vertigo, Ancient and Anubis had pieces placed in the wrong spot; that is what these changes are for.*
+- ☑ CS2 demo: a short synthetic match sending Game State Integration updates, the screen's readings and a radar to stitch.
+- ◐ Real FC radar captures: how FC draws the ball and the controlled player, the lines, and the radar at set pieces are undocumented; the default box is an estimate. *QA 13.43–13.46.*
+- ◐ Real CS2: the radar's look in game (the player's arrow, icons, the lower-level switch) and Game State Integration against a live client are untested here. *QA 13.47–13.50.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

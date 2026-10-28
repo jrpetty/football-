@@ -59,8 +59,30 @@ gives an unfair edge. Sightline settles that with its
     but test it on the current build.
   - Microsoft's terms allow automatic checks for "unauthorized hardware or
     software that enables cheating or tampering".
-- **EA SPORTS FC** on PC uses EA's own anti-cheat. The same principles apply,
-  and online modes are post-match only.
+- **EA SPORTS FC** on PC uses EA Javelin Anticheat, which closes the game
+  when software on its denylist is running.
+  - EA's user agreement describes prohibited programs as ones that cheat,
+    change the game's interface, or "intercept or collect information from
+    the game". Sightline only captures the screen, but that wording is
+    broad, so live tips are kept to offline modes against the CPU outside
+    Ultimate Team; everything online, Ultimate Team (rewards) and Squad
+    Battles (ranked) is post-match. FC Pro rules ban third-party "helper"
+    applications in competition.
+  - The radar is read from the captured frame only, like any other pixels.
+- **Counter-Strike 2** uses VAC and runs in Trusted Mode, which blocks
+  third-party code from injecting into the game.
+  - Sightline never injects, reads memory, or needs the
+    `-allow_third_party_software` launch option; it captures the screen.
+  - Game State Integration is Valve's own feature for tools: the game posts
+    the player's own state to a local address named in a cfg file. While
+    playing it sends no positions and nothing about other players, so it
+    cannot reveal hidden information. The bomb-plant update is delayed on
+    purpose by the game, and the coach does not time the bomb.
+  - Valve's Fair Play Guidelines forbid any automation. The coach only
+    talks. Live tips only in Practice, Workshop maps and your own server
+    with bots; Premier, Competitive, Wingman and everything online is
+    post-match. FACEIT and tournaments: post-match only (their rules ban
+    outside help during matches).
 - **VALORANT** (Vanguard): Riot's policy forbids apps that "draw conclusions
   for you during gameplay", so Sightline is post-match only for VALORANT in
   every mode.

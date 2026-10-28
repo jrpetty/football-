@@ -207,6 +207,14 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.40 | Check placement. | The stitched map's walls sit on the official walls everywhere you walked. If not: note where, nudge it, and confirm the pins move with it. |
 | 13.41 | A symmetric map (Shipment, Library): spawn on one side, then the other. | No piece is drawn on the wrong side; a piece that saw only the shared middle stays unplaced until you reach a part only one side has. |
 | 13.42 | 3D view on the official map. | Walls and buildings stand on the official drawing; out of bounds is lower and dimmed; pins and arcs on top; no errors. |
+| 13.43 | FC: in the game set Radar 2D, User Radar Colour Blue, Opponent Radar Colour Red; pick the same on the Coach screen. Kick-Off vs CPU; Settings → Radar → Align on the screen. | The still shows the pitch outline drawn on the radar and a dot on each player ("Radar read: … 11 and 11 players"). If not, fit the box and note the position your screen needs. |
+| 13.44 | Play a half. Coach → The radar. | Every player and the ball where the radar shows them, your team attacking right (after half-time too). Possession moves with the ball. |
+| 13.45 | After the match: Insights → The pitch (Shape, Heat, Lost & won, Goals, 3D). | Shapes look like your formation and the opponent's (note the formation named). Lost balls where you lost them; every goal listed and its seconds played back; the stadium shows the shapes. Note what is wrong. |
+| 13.46 | FC radar colours left at Default; then set to Black. | Default: a warning on the Coach screen and in Settings; teams told apart and yours worked out after the first goal. Black: the warning says Black cannot be read. |
+| 13.47 | CS2: Settings → Game data → Listen; Save the cfg file (into …\game\csgo\cfg); restart CS2 (the console shows "Loading Game State Integration"). | The panel shows updates arriving. Nothing arrives with the listener off; a request without the token (e.g. curl to 127.0.0.1) is refused (403). |
+| 13.48 | CS2 Practice with bots, capture on, Game data on. Get kills, die flashed once and once while reloading. | Coach → Rounds: each round with your buy, kills, death. Insights after the match: the round strip, the money chart, and deaths flashed and reloading counted under the factors. |
+| 13.49 | CS2: Radar Is Rotating: No, Radar Centers The Player: Yes, Radar Map Zoom 0.5. Export the map's radar overview from the game files and import it in Settings → Official overhead maps. | The overview is kept; the preview shows the pack's callouts labelled where they are (on maps with callout positions). Play: the stitched radar is placed on it; deaths pinned on the overview. Note any wrong placement. |
+| 13.50 | CS2 Premier or Competitive match with capture on. | No live tips, no live rounds strip during the match ("open after the match"); everything appears after it. |
 
 ## 14. Accessibility and layout
 

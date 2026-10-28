@@ -45,10 +45,18 @@ export function OfficialMapsPanel({ session, profile, info }: { session: CoachSe
         are pinned on the exact map, shown in the overhead and 3D views. A placement it is not sure of is never drawn (two look-alike wings stay unplaced until you
         walk somewhere only one has).
       </p>
-      <p className="muted small">
-        These images are the publisher’s artwork, so the app does not ship them. {desktop ? 'Download each from its official page here, or open' : 'Open'} the page, save
-        the map image and import it. They are kept on this computer only and never uploaded.
-      </p>
+      {maps.some((m) => m.radar) ? (
+        <p className="muted small">
+          These are the game’s own radar overviews, which are Valve’s artwork, so the app does not ship them. They are inside your game files
+          (game\csgo\pak01_dir.vpk, panorama/images/overheadmaps/de_&lt;map&gt;_radar_psd): export them as PNG with a VPK viewer such as Source 2 Viewer and
+          import them here (named after the map). On a square overview the pack’s callouts are labelled where they are. Kept on this computer only and never uploaded.
+        </p>
+      ) : (
+        <p className="muted small">
+          These images are the publisher’s artwork, so the app does not ship them. {desktop ? 'Download each from its official page here, or open' : 'Open'} the page, save
+          the map image and import it. They are kept on this computer only and never uploaded.
+        </p>
+      )}
 
       <div
         className={`drop-zone${drag ? ' over' : ''}`}

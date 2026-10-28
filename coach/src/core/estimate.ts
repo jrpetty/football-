@@ -10,7 +10,15 @@ import { measuredLook, type LookAverage, type UsageSummary } from './usage.ts'
 import { cachedPromptTokens, costOf, estimateRange } from './vision/cost.ts'
 
 /** Typical minutes of one match, by pack (else 20). */
-const MATCH_MINUTES: Readonly<Record<string, number>> = { aoe4: 30, 'aoe2-de': 35, 'cod-mw4': 10, 'ea-fc': 15, 'synthetic-arena': 10 }
+const MATCH_MINUTES: Readonly<Record<string, number>> = {
+  aoe4: 30,
+  'aoe2-de': 35,
+  'cod-mw4': 10,
+  // A Premier or Competitive match: up to 24 rounds of about 1:45 each, with buy time and half-time.
+  cs2: 40,
+  'ea-fc': 15,
+  'synthetic-arena': 10,
+}
 
 export function matchMinutes(packId: string): number {
   return MATCH_MINUTES[packId] ?? 20

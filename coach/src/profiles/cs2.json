@@ -14764,7 +14764,9 @@
         "h": 0.27,
         "round": true
       },
-      "fixedContextKey": "radarFixed"
+      "fixedContextKey": "radarFixed",
+      "marker": false,
+      "sameArt": true
     }
   }
 }

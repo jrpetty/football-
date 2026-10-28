@@ -15,7 +15,7 @@ import type { MatchPins } from '../../core/map/locator.ts'
 import { fromBase64, type StoredMosaic } from '../../core/map/minimap.ts'
 import type { Alignment } from '../../core/map/official.ts'
 import { mapInsights, mapLayers, officialPoint, resolvePoint, storedAlignment, type OfficialBase } from '../../core/map/view.ts'
-import type { GameProfile } from '../../core/profile/schema.ts'
+import type { GameMap, GameProfile } from '../../core/profile/schema.ts'
 import { gameClock } from '../format.ts'
 import type { OverheadAnalysis } from '../overhead.ts'
 import type { ShownMosaic } from '../session.ts'
@@ -129,7 +129,7 @@ export function MapPanel({
           official={official}
         />
       ) : name && official && officialFor(official, profile, name) ? (
-        <OfficialPreview name={name} mapId={officialFor(official, profile, name)!} official={official} />
+        <OfficialPreview name={name} mapId={officialFor(official, profile, name)!} official={official} radar={findMap(profile.knowledge.maps, name)?.radar} />
       ) : name ? (
         <p className="muted small map-howto">
           No overhead map of {name} yet. Play it with your minimap set to <b>fixed</b> (north up) and cloud vision on: the coach stitches the map from your minimap as you move,
@@ -161,10 +161,10 @@ function officialFor(official: OfficialSource, profile: GameProfile, name: strin
 }
 
 /** A map's official overhead map before it was played with a fixed minimap. */
-function OfficialPreview({ name, mapId, official }: { name: string; mapId: string; official: OfficialSource }) {
+function OfficialPreview({ name, mapId, official, radar }: { name: string; mapId: string; official: OfficialSource; radar?: GameMap['radar'] }) {
   const pic = useOfficialPicture(official, mapId)
   const empty = useMemo<StoredMosaic>(() => ({ version: 1, map: name, updatedAt: '', pieces: [], joined: {}, nextId: 1, callouts: {}, heights: {} }), [name])
-  const layers = useMemo(() => (pic ? mapLayers(empty, [], pic.base) : null), [pic, empty])
+  const layers = useMemo(() => (pic ? mapLayers(empty, [], pic.base, radar) : null), [pic, empty, radar])
   if (!pic || !layers) return <p className="muted small">Loading the official map of {name}…</p>
   return (
     <div className="stitched">
@@ -211,11 +211,12 @@ function StitchedMap({
     if (livePins) out.push(livePins)
     return out
   }, [records, liveKey, profile, name])
-  const mapId = findMap(profile.knowledge.maps, name)?.id ?? null
+  const game = findMap(profile.knowledge.maps, name)
+  const mapId = game?.id ?? null
   const pic = useOfficialPicture(official, mapId)
   const [basis, setBasis] = useState<'official' | 'stitched'>('official')
   const onOfficial = basis === 'official' && pic ? pic : null
-  const layers = useMemo(() => mapLayers(mosaic, matches, onOfficial?.base ?? null), [mosaic, matches, onOfficial])
+  const layers = useMemo(() => mapLayers(mosaic, matches, onOfficial?.base ?? null, game?.radar), [mosaic, matches, onOfficial, game])
   // A map stitched before its official map was kept (or placed on another picture) is placed on it once, here.
   const [placing, setPlacing] = useState(false)
   const tried = useRef('')
@@ -712,15 +713,16 @@ export function WhereYouAre({ report, mosaics, profile, official }: { report: Ma
   const p = report.position
   const mm = report.minimap
   const mosaic = mm?.map ? (Object.values(mosaics ?? {}).find((m) => m.map.toLowerCase() === mm.map!.toLowerCase()) ?? null) : null
-  const mapId = mm?.map && profile ? (findMap(profile.knowledge.maps, mm.map)?.id ?? null) : null
+  const game = mm?.map && profile ? findMap(profile.knowledge.maps, mm.map) : null
+  const mapId = game?.id ?? null
   const pic = useOfficialPicture(official, mapId)
   const layers = useMemo(() => {
     if (!mosaic) return null
     const pins = report.pins ? [report.pins] : []
     // On the official map once anything of this match is placed on it.
-    const onOfficial = pic ? mapLayers(mosaic, pins, pic.base) : null
+    const onOfficial = pic ? mapLayers(mosaic, pins, pic.base, game?.radar) : null
     return onOfficial?.official?.placed ? onOfficial : mapLayers(mosaic, pins)
-  }, [mosaic, report.pins, pic])
+  }, [mosaic, report.pins, pic, game])
   const here = useMemo(() => {
     if (!mm?.here || !layers || !mosaic || mm.ageMs > 5000) return null
     if (layers.official) return officialPoint(mosaic, layers.official.base, mm.here.piece, mm.here.x, mm.here.y)

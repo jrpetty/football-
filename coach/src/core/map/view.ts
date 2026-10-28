@@ -118,7 +118,16 @@ export function officialPoint(m: StoredMosaic, base: OfficialBase, piece: number
 }
 
 /** Everything to draw for a stitched map and some matches on it (oldest first); on the official map when given. */
-export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[], base?: OfficialBase | null): MapLayers | null {
+/**
+ * `radar`: the game's own overview (Counter-Strike), with callouts' pixels on it. When the official
+ * picture is that overview (square), every callout is labelled where it is, visited or not.
+ */
+export function mapLayers(
+  m: StoredMosaic,
+  matches: readonly MatchPins[],
+  base?: OfficialBase | null,
+  radar?: { readonly imageSize?: number; readonly calloutPx?: Readonly<Record<string, readonly [number, number]>> } | null,
+): MapLayers | null {
   const stitched = mainImage(m)
   const image = base ? officialImage(base) : stitched
   if (!image) return null
@@ -175,6 +184,14 @@ export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[], base?:
     const at = on(c.piece, c.x, c.y)
     return at ? [{ name, ...at, n: c.n }] : []
   })
+  if (base && radar?.calloutPx && Math.abs(base.srcW / base.srcH - 1) < 0.03) {
+    const size = radar.imageSize ?? 1024
+    const have = new Set(callouts.map((c) => c.name.toLowerCase()))
+    for (const [name, [px, py]] of Object.entries(radar.calloutPx)) {
+      if (have.has(name.toLowerCase())) continue
+      callouts.push({ name, x: px * (base.srcW / size) * base.k, y: py * (base.srcH / size) * base.k, n: 0 })
+    }
+  }
   const heights = Object.entries(m.heights).flatMap(([k, v]) => {
     const [piece, cx, cy] = k.split(':').map(Number)
     const at = on(piece, cx * CELL + CELL / 2, cy * CELL + CELL / 2)

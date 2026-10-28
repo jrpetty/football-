@@ -62,6 +62,9 @@ export interface OfficialMap {
 }
 
 /** Analyses an official overhead image (RGBA bytes). */
+/** What a transparent surround is drawn on (a radar's dark background). */
+const BACKDROP = [14, 17, 22] as const
+
 export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: number, srcH: number, maxSide = 1024): OfficialMap {
   const k = Math.min(1, maxSide / Math.max(srcW, srcH))
   const w = Math.max(1, Math.round(srcW * k))
@@ -69,6 +72,7 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
   const R = new Float32Array(w * h)
   const G = new Float32Array(w * h)
   const B = new Float32Array(w * h)
+  const A = new Float32Array(w * h)
   for (let y = 0; y < h; y++) {
     const sy0 = Math.floor(y / k)
     const sy1 = Math.max(sy0 + 1, Math.min(srcH, Math.floor((y + 1) / k)))
@@ -78,6 +82,7 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
       let r = 0
       let g = 0
       let b = 0
+      let a = 0
       let n = 0
       for (let sy = sy0; sy < sy1; sy++) {
         let o = (sy * srcW + sx0) * 4
@@ -85,13 +90,17 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
           r += rgba[o]
           g += rgba[o + 1]
           b += rgba[o + 2]
+          a += rgba[o + 3]
           n++
         }
       }
       const i = y * w + x
-      R[i] = r / n
-      G[i] = g / n
-      B[i] = b / n
+      // Transparent parts (a radar overview's surround) as a radar draws them: on its dark background.
+      const al = a / n / 255
+      A[i] = al
+      R[i] = (r / n) * al + BACKDROP[0] * (1 - al)
+      G[i] = (g / n) * al + BACKDROP[1] * (1 - al)
+      B[i] = (b / n) * al + BACKDROP[2] * (1 - al)
     }
   }
   const lum = new Float32Array(w * h)
@@ -102,13 +111,19 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
     if (lum[i] >= 0.47 && B[i] >= R[i] * 0.85) line[i] = 1
     if (R[i] > B[i] * 1.12 && R[i] >= 45) warm[i] = 1
   }
+  // A picture with a transparent surround (a game's own radar overview) says where the playable
+  // area is: what is not transparent.
+  let transparent = 0
+  for (let i = 0; i < w * h; i++) if (A[i] < 0.5) transparent++
+  const byAlpha = transparent / (w * h) >= 0.05 && transparent / (w * h) <= 0.95
   // The outside: flooded in from the edges, stopped by the (thickened) lines. A boundary with a
   // gap would let the flood in, so the lines are thickened until the result is plausible.
   // A leak shows as an "inside" that is mostly the lines themselves.
   let outside: Uint8Array = new Uint8Array(w * h)
-  let inFrac = 0
-  let bounded = false
-  for (const d of [1, 2, 3, 4, 5, 6]) {
+  let inFrac = byAlpha ? 1 - transparent / (w * h) : 0
+  let bounded = byAlpha
+  if (byAlpha) for (let i = 0; i < w * h; i++) outside[i] = A[i] < 0.5 ? 1 : 0
+  for (const d of byAlpha ? [] : [1, 2, 3, 4, 5, 6]) {
     const barrier = dilate(line, w, h, d)
     outside = flood(barrier, w, h)
     let inside = 0
@@ -125,7 +140,7 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
     }
   }
   // Else by colour: out of bounds is drawn warm (orange) or near black; the playable area is cool blue-grey.
-  if (!bounded) {
+  if (!bounded && !byAlpha) {
     const cool = new Uint8Array(w * h)
     for (let i = 0; i < w * h; i++) cool[i] = line[i] || (B[i] > R[i] * 1.25 && B[i] >= 30) ? 1 : 0
     for (const d of [1, 2, 3]) {
@@ -146,7 +161,18 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
     }
   }
   if (!bounded) outside.fill(0)
-  else outside = keepLargest(outside, w, h)
+  else if (!byAlpha) outside = keepLargest(outside, w, h)
+  // On an overview drawn as a picture (no wall lines), walls are where the picture changes sharply.
+  if (byAlpha) {
+    line.fill(0)
+    for (let y = 1; y < h - 1; y++)
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x
+        const gx = lum[i + 1] - lum[i - 1]
+        const gy = lum[i + w] - lum[i - w]
+        if (A[i] >= 0.5 && Math.hypot(gx, gy) >= 0.22) line[i] = 1
+      }
+  }
   // Inside: walls, solid (hatched) structures, indoor floors, open ground.
   const warmSum = boxSum(warm, w, h, 2)
   const kind = new Uint8Array(w * h)
@@ -725,7 +751,7 @@ export function locateWindow(p: PieceImage, off: OfficialMap, scale: number): { 
  * window does not match there clearly (the peak on the edge of the search,
  * or too weak a match).
  */
-export function anchorWindow(p: PieceImage, off: OfficialMap, scale: number, X: number, Y: number, radius: number): { x: number; y: number; ncc: number } | null {
+export function anchorWindow(p: PieceImage, off: OfficialMap, scale: number, X: number, Y: number, radius: number, min = ANCHOR_MIN): { x: number; y: number; ncc: number } | null {
   const lv = off.levels[0]
   const t = template(p, scale * off.k, lv.w, 1, 1200)
   if (t.idx.length < 30) return null
@@ -747,7 +773,7 @@ export function anchorWindow(p: PieceImage, off: OfficialMap, scale: number, X: 
   for (let dy = gy - 1; dy <= gy + 1; dy++)
     for (let dx = gx - 1; dx <= gx + 1; dx++) if (Math.abs(dx) <= R && Math.abs(dy) <= R && at(dx, dy) > at(bx, by)) [bx, by] = [dx, dy]
   const best = at(bx, by)
-  if (Math.abs(bx) >= R - 1 || Math.abs(by) >= R - 1 || best < ANCHOR_MIN) return null
+  if (Math.abs(bx) >= R - 1 || Math.abs(by) >= R - 1 || best < min) return null
   // To a fraction of a pixel: a parabola through the peak and its neighbours.
   const sub = (a: number, b: number, c: number) => (a - 2 * b + c < 0 ? Math.max(-0.5, Math.min(0.5, (a - c) / (2 * (a - 2 * b + c)))) : 0)
   const fx = bx + sub(at(bx - 1, by), best, at(bx + 1, by))

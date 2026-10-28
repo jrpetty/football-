@@ -18,10 +18,11 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v12, Windows-first.
+> **Status:** v13, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
+> - Counter-Strike 2;
 > - Age of Empires IV;
 > - EA SPORTS FC (FC 27);
 > - Age of Empires II: DE;
@@ -107,6 +108,19 @@ Then press **Choose the game window**, play, and listen.
       areas (callouts), links, power positions, sightlines and Hardpoint
       rotations; movement, mechanics and every mode's rules.
     - AoE IV covers all 25 civilisations, landmarks and economy numbers.
+    - Counter-Strike 2 (game files of 22 Oct 2026, Premier Season Five):
+      all 44 weapons and pieces of equipment with price, kill reward,
+      damage, armour penetration, fire rate, magazine, one-tap range and
+      how to beat each; the 10 Active Duty and reserve maps with 258
+      callouts, links, power positions, sightlines, bomb sites and the
+      game's own radar coordinates; the economy (loss bonus, rewards,
+      plant bonus), timings, HUD, 13 modes, 51 playbook entries and 309
+      reference items.
+    - FC 27 (Title Update 1.1.0): 23 modes, the radar and HUD, FC IQ
+      roles and tactics, skill moves, set pieces, 13 formations with how
+      each looks on the radar, its weak spots and how to beat it, 55
+      playbook entries and real-football benchmarks (block heights, team
+      length and width, line distances, shot values by zone).
   - **Build game knowledge** adds a much larger, cited knowledge base that
     Claude researches on the web. It is stored compressed and fed to Claude
     within size budgets, so cost stays bounded.
@@ -231,10 +245,81 @@ Then press **Choose the game window**, play, and listen.
     mistake in each goal replay (a defender pulled out of the line, an
     unmarked far-post runner, an open cutback lane…), where you lose the
     ball, and stats against warning lines.
+  - **EA FC 27: the whole pitch, from the radar.** The 2D radar at the
+    bottom of the screen shows every player and the ball; the coach reads
+    them about twice a second, on this computer, with no cloud call:
+    - every player to about a metre and the ball, both teams told apart
+      by the radar colours you set (or worked out from the first goal when
+      left at Default), which end each team defends (half-time included);
+    - possession and territory, lost and won balls and how fast you won
+      them back, shots with the usual value of where they were taken,
+      kick-offs, and the seconds before every goal;
+    - each team's average shape with and without the ball, and the
+      formation it makes: the ten outfield players are matched against 18
+      shapes (4-4-2 to 5-2-1-2), so the opponent's 4-3-1-2 is named and
+      linked to how to beat it;
+    - your back line's height (low block, mid block, high line), the
+      team's length and width, the gap between defence and midfield, and
+      how often someone was within 5 m of the ball, against real-football
+      tracking figures (FC publishes none).
+
+    In Insights → The pitch: both shapes on a pitch, heat, lost and won
+    balls and shots, every goal played back, and a floodlit 3D stadium with
+    the shapes or a goal. The Coach screen shows the radar live in offline
+    modes. Settings → Radar: align the box on a still (what is read is drawn
+    on it) and the game settings to use (2D radar; two strong radar colours
+    such as Blue and Red: Black cannot be told from the dark radar).
+    Measured on simulated radars: 95–99% of players found within about a
+    metre, the right team for 97% or more, the ball in about 97% of frames,
+    possession within about 3% of the truth, every goal found; the formation
+    reader names the right shape every time with players 1 m off their
+    places on average, 98% at 2 m. Not yet checked on real FC captures:
+    how FC draws the ball and the player you control is not documented.
+  - **Counter-Strike 2: the game's own data, the death panel and the
+    radar.**
+    - **Game State Integration** (Settings → Game data, off until you turn
+      it on): Counter-Strike 2 sends your own state to a listener on this
+      computer (127.0.0.1 only, with this computer's token). The coach then
+      counts every kill and death exactly, knows if you were flashed or
+      reloading when you died, and keeps each round: your money, what you
+      spent, the buy it made (pistol, eco, force, full), kills, headshots,
+      damage, when you died and with how many grenades unused, and the
+      result. While you play the game sends nothing about other players,
+      so nothing hidden is ever known. Save the cfg file from Settings into
+      the game's cfg folder once and restart the game.
+    - **Every death read for how it happened** (with cloud vision): traded
+      or not, one enemy or two, moving or still, blind, through smoke or a
+      wall, the range, alone or with a teammate, the opening duel or not,
+      utility first, what you were doing (peeking, holding, crossing,
+      reloading, defusing), the buy against theirs, the numbers, what
+      killed you and deaths straight after your own kill: 16 factors, each
+      with its fix. Killer Replay is off in Premier and Competitive, so
+      these come from the death panel, the freeze-cam, the kill feed and
+      the radar. A death the game reported gets the screen's details added,
+      never counted twice.
+    - **Rounds and economy** (Insights): a round strip (won or lost, your
+      buy, kills, death), your money against what you carried in, and
+      lines on forcing ("you force-bought 5 times and lost 4; 3 times you
+      could not buy the round after"), pistol rounds, early deaths, dying
+      with grenades unused, and each side.
+    - **The radar stitched, with deaths pinned to the spot,** as for MW4
+      (Radar Is Rotating: No). The game's own radar overview can be the
+      official map: export it from the game files and import it (the app
+      does not ship Valve's images); on it every callout is labelled where
+      it is. The lower levels of Nuke, Vertigo and Train are kept as their
+      own piece of the map. Measured on the ten real overviews with a
+      simulated radar (30 runs): no point placed in the wrong spot, 95%
+      within 0.6% of the map's width in 29 runs (2.6% once, on Nuke), and
+      68–93% of points placed while playing (17% once, on Cache: unclear
+      pieces wait rather than guess). Not yet checked on real CS2 radar
+      captures.
+    - Live tips only in Practice, Workshop maps and your own server with
+      bots; Premier, Competitive, Wingman, FACEIT and the rest are reviewed
+      after the match.
   - **Patterns** like "deaths after pushing alone": graded, with
     counterexamples.
 - **Advice that comes with a fix, and the reason.** Each pack has a playbook
-  (MW4 30 entries, AoE IV 41, FC 27 25) of what good players do, what it looks like
+  (MW4 30 entries, CS2 51, AoE IV 41, FC 27 55) of what good players do, what it looks like
   on screen, the fix and a drill, with its sources (pro, coach, official,
   guide, forum). Every finding the coach speaks carries its fix, once.
 - **The coach's review.** After a session, Insights gives a headline, what
@@ -387,6 +472,11 @@ to a little (still screens are skipped, so real play usually costs less):
 | Age of Empires IV (3 s), per hour | $18–24 | $11–13 | $0.55–0.64 |
 | Age of Empires IV, 30-minute game | $9.30–12.30 | $5.55–6.45 | $0.28–0.32 |
 | EA SPORTS FC (2.5 s), per hour | $17–24 | $9–11 | $0.46–0.57 |
+| Counter-Strike 2 (2.5 s), per hour | $20–27 | $11–13 | $0.56–0.67 |
+| Counter-Strike 2, 40-minute match | $13.50–18.30 | $7.50–8.95 | $0.38–0.45 |
+
+The FC radar and Counter-Strike 2's Game State Integration cost nothing:
+both are read on this computer.
 
 Each look writes about 350 tokens, so output is most of the cost on Opus and
 Sonnet. After 20 looks of a game with a model, the app shows what those

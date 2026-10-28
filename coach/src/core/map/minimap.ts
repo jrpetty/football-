@@ -480,6 +480,8 @@ const ANCHOR_REACH = 4
 const MAX_VIEWS = 240
 /** Frames a placement from one window must be borne out by before it is shown. */
 const CONFIRM_FRAMES = 3
+/** A minimap drawn from the official map: the least match trusted, and the margin above which no confirmation is needed. */
+const SAME_ART = { ncc: 0.8, margin: 0.1 } as const
 /** A piece is kept only once this much has been seen on it (a still screen never grows). */
 const KEEP_AREA = MM * MM * 1.6
 const MAX_TRAIL = 30_000
@@ -504,6 +506,12 @@ export class MinimapMosaic {
 
   /** Follow only windows with the player's arrow at the centre (not a death screen or a scene that slides like a map). */
   needMarker = true
+  /**
+   * The minimap draws the official map itself (Counter-Strike's radar draws the game's overview):
+   * a right placement matches it closely, so a weak match is not trusted, and one without a clear
+   * margin waits until the frames that follow confirm it.
+   */
+  sameArt = false
   /** The official overhead map, when the player has it: pieces are placed on it, and re-finds are checked against it. */
   private official: OfficialMap | null = null
   private aligned = new Map<number, Alignment>()
@@ -638,7 +646,7 @@ export class MinimapMosaic {
     if (this.official) {
       const s = this.knownScale()
       const at = s ? locateWindow(windowImage(w, CANVAS / 2 - HALF, CANVAS / 2 - HALF), this.official, s) : null
-        if (at && at.unique && s) {
+        if (at && at.unique && s && (!this.sameArt || at.ncc >= SAME_ART.ncc)) {
         this.aligned.set(p.id, { s, tx: at.x - s * (CANVAS / 2 - HALF), ty: at.y - s * (CANVAS / 2 - HALF), ncc: at.ncc, coverage: 1, margin: at.margin })
         this.alignedArea.set(p.id, 0)
         this.provisional.set(p.id, { ok: 0, bad: 0 })
@@ -813,7 +821,7 @@ export class MinimapMosaic {
     if (!a) return null
     const X = a.s * (x - HALF) + a.tx
     const Y = a.s * (y - HALF) + a.ty
-    const at = anchorWindow(windowImage(w, x - HALF, y - HALF), this.official!, a.s, X, Y, ANCHOR_REACH * a.s)
+    const at = anchorWindow(windowImage(w, x - HALF, y - HALF), this.official!, a.s, X, Y, ANCHOR_REACH * a.s, this.sameArt ? SAME_ART.ncc : undefined)
     const rate = this.anchored.get(piece) ?? { ok: 0, n: 0 }
     this.anchored.set(piece, { ok: rate.ok * 0.95 + (at ? 1 : 0), n: rate.n * 0.95 + 1 })
     const check = this.provisional.get(piece)
@@ -844,7 +852,7 @@ export class MinimapMosaic {
       const X = a.s * (v.point.x - HALF) + a.tx
       const Y = a.s * (v.point.y - HALF) + a.ty
       // Further than while following: the piece may have drifted a little before it was placed.
-      const at = anchorWindow(v.img, this.official!, a.s, X, Y, 1.5 * ANCHOR_REACH * a.s)
+      const at = anchorWindow(v.img, this.official!, a.s, X, Y, 1.5 * ANCHOR_REACH * a.s, this.sameArt ? SAME_ART.ncc : undefined)
       if (at) moved.set(v.point, { ...v.point, x: v.point.x + (at.x - X) / a.s, y: v.point.y + (at.y - Y) / a.s })
     }
     const oldest = mine[0].point.t
@@ -889,11 +897,14 @@ export class MinimapMosaic {
       // A worse fit never replaces a good one, but the whole piece outranks the one window it was
       // first placed by, and a window placement the whole piece does not bear out is dropped.
       const prev = this.aligned.get(piece)
-      if (usable(r.value) && (!usable(prev) || !this.alignedArea.get(piece) || r.value.ncc >= prev.ncc - 0.05)) {
+      if (this.ok(r.value) && (!this.ok(prev) || !this.alignedArea.get(piece) || r.value.ncc >= prev.ncc - 0.05)) {
         this.aligned.set(piece, r.value)
-        this.provisional.delete(piece)
         this.anchored.delete(piece)
-        this.pinDown(piece)
+        if (this.sameArt && r.value.margin !== undefined && r.value.margin < SAME_ART.margin) this.provisional.set(piece, { ok: 0, bad: 0 })
+        else {
+          this.provisional.delete(piece)
+          this.pinDown(piece)
+        }
       } else if (this.provisional.has(piece)) this.unplace(piece)
       if (this.aligned.has(piece)) this.alignedArea.set(piece, this.job.area)
       this.dirty = true
@@ -902,9 +913,14 @@ export class MinimapMosaic {
     }
   }
 
+  /** Good enough to draw on: for a minimap drawn from the official map, a close match only. */
+  private ok(a: Alignment | null | undefined): a is Alignment {
+    return usable(a) && (a.manual === true || !this.sameArt || a.ncc >= SAME_ART.ncc)
+  }
+
   /** The scale found so far (official pixels per stitched pixel), the middle of the placements. */
   knownScale(): number | null {
-    const ss = [...this.aligned].filter(([id, a]) => usable(a) && !this.provisional.has(id)).map(([, a]) => a.s).sort((a, b) => a - b)
+    const ss = [...this.aligned].filter(([id, a]) => this.ok(a) && !this.provisional.has(id)).map(([, a]) => a.s).sort((a, b) => a - b)
     return ss.length ? ss[ss.length >> 1] : null
   }
 
@@ -915,11 +931,11 @@ export class MinimapMosaic {
 
   private placement(piece: number, certain = false): Alignment | null {
     const a = this.aligned.get(piece)
-    if (usable(a)) return certain && this.provisional.has(piece) ? null : a
+    if (this.ok(a)) return certain && this.provisional.has(piece) ? null : a
     for (const [id] of this.joined) {
       if (this.resolve(id, 0, 0).piece !== piece) continue
       const b = this.aligned.get(id)
-      if (!usable(b) || (certain && this.provisional.has(id))) continue
+      if (!this.ok(b) || (certain && this.provisional.has(id))) continue
       const r = this.resolve(id, 0, 0)
       // x_id = x_piece − (r.x − 0): the joined piece's origin lies at r on this one.
       return { ...b, tx: b.tx - b.s * r.x, ty: b.ty - b.s * r.y }

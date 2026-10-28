@@ -21,6 +21,8 @@ export interface MinimapSpec {
   readonly fixedContextKey?: string
   /** False when the game's player marker is not a bright arrow at the minimap's centre. */
   readonly marker?: boolean
+  /** The minimap draws the official overhead map itself (Counter-Strike's radar): placements must match it closely. */
+  readonly sameArt?: boolean
 }
 
 export interface MapPin {
@@ -123,6 +125,7 @@ export class MinimapLocator {
   private fresh(name: string, stored: StoredMosaic | null): MinimapMosaic {
     const m = new MinimapMosaic(name, stored)
     m.needMarker = this.spec.marker !== false
+    m.sameArt = this.spec.sameArt === true
     return m
   }
 

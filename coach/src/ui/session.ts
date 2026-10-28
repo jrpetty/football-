@@ -289,6 +289,10 @@ export class CoachSession {
     for (const f of files.slice(0, 40)) {
       const id = mapId ?? mapForFile(f.name, maps)
       const map = maps.find((m) => m.id === id)
+      if (map && map.radar?.lowerBelowZ !== undefined && /(^|[^a-z])lower([^a-z]|$)/i.test(f.name)) {
+        out.push({ name: f.name, ok: false, message: `That is the lower level's radar of ${map.name}. Import the main one: the lower level stays its own piece of the stitched map.` })
+        continue
+      }
       if (!map) {
         out.push({ name: f.name, ok: false, message: 'Which map is it? Name the file after the map (e.g. "cachette.png"), or import it from that map\'s row.' })
         continue
