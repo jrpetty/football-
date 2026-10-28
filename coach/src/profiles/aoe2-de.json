@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe2-de",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Age of Empires II: Definitive Edition",
   "depth": "pack",
   "game": {
@@ -70,6 +70,13 @@
       "kind": "number",
       "default": 1260,
       "help": "When you aim to have reached the Castle Age. 1260 s (21:00) is only a starting point; set your own."
+    },
+    {
+      "id": "civ",
+      "label": "Your civilisation (optional)",
+      "kind": "text",
+      "default": "",
+      "help": "Lets the coach file your games by civilisation and tell you your usual build with it."
     }
   ],
   "signals": [],
@@ -164,6 +171,38 @@
         "max": 36000,
         "ttlMs": 12000,
         "description": "The in-game clock converted to seconds."
+      },
+      {
+        "key": "opponentCiv",
+        "label": "Opponent's civilisation",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The opponent's civilisation, only if this frame shows it (loading screen, scoreboard, player list, a tooltip). Omit otherwise.",
+        "maxLength": 60
+      },
+      {
+        "key": "enemyBuildings",
+        "label": "Enemy buildings in view",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Enemy (not the player's) production buildings visible in this frame while scouting or fighting, as 'count Name', comma-separated (e.g. '2 Stable, Archery Range'). Omit if none; never list anything in the fog of war.",
+        "maxLength": 240
+      },
+      {
+        "key": "enemyUnits",
+        "label": "Enemy units in view",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Enemy (not the player's) military units visible in this frame, as 'count Name', comma-separated (e.g. '8 Knight, 5 Crossbowman'). Count only what you can see; omit if none.",
+        "maxLength": 240
+      },
+      {
+        "key": "ownArmy",
+        "label": "Your army in view",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Your own (the player's) military units visible in this frame or listed in the selection panel, as 'count Name' using the roster's unit names where there is one, comma-separated (e.g. '12 Spearman, 8 Archer'). Count only what you can see; omit if none.",
+        "maxLength": 240
       }
     ],
     "events": [],
@@ -1723,5 +1762,68 @@
   "failClosed": [
     "Resource or population numbers unreadable: no housed, idle or floating-resource mistakes are counted.",
     "Game clock unreadable: no age-up timing checks."
-  ]
+  ],
+  "contextKeys": [
+    "opponentCiv"
+  ],
+  "learning": {
+    "clockKey": "gameTimeSec",
+    "dimensions": [
+      {
+        "id": "opponent",
+        "label": "Opponent's civilisation",
+        "phrase": "against",
+        "from": "state",
+        "key": "opponentCiv",
+        "live": true
+      },
+      {
+        "id": "civ",
+        "label": "Your civilisation",
+        "phrase": "as",
+        "from": "context",
+        "key": "civ"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "their-buildings",
+        "label": "Their buildings",
+        "side": "them",
+        "from": "list",
+        "key": "enemyBuildings",
+        "kind": "building",
+        "order": true
+      },
+      {
+        "id": "their-army",
+        "label": "Their army",
+        "side": "them",
+        "from": "list",
+        "key": "enemyUnits",
+        "kind": "unit",
+        "order": true,
+        "composition": true
+      },
+      {
+        "id": "your-army",
+        "label": "Your army",
+        "side": "you",
+        "from": "list",
+        "key": "ownArmy",
+        "kind": "unit",
+        "order": true,
+        "composition": true
+      },
+      {
+        "id": "your-age",
+        "label": "Your ages",
+        "side": "you",
+        "from": "value",
+        "key": "age",
+        "kind": "age",
+        "order": true
+      }
+    ]
+  }
 }

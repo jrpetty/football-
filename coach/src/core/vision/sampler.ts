@@ -27,7 +27,7 @@ export interface SamplerStats {
 }
 
 export class VisionSampler {
-  private readonly cfg: SamplerConfig
+  private cfg: SamplerConfig
   private lastSentAt = -Infinity
   private lastGrid: Float32Array | null = null
   private inFlight = 0
@@ -79,6 +79,11 @@ export class VisionSampler {
     this.consecutiveErrors++
     const backoff = retryAfterMs ?? Math.min(60_000, this.cfg.intervalMs * 2 ** this.consecutiveErrors)
     this.backoffUntil = now + backoff
+  }
+
+  /** New interval or looks-at-once, from the player's settings; takes effect from the next frame. */
+  reconfigure(cfg: { readonly intervalMs: number; readonly maxInFlight?: number }): void {
+    this.cfg = { ...this.cfg, intervalMs: cfg.intervalMs, maxSkipMs: cfg.intervalMs * 4, maxInFlight: cfg.maxInFlight ?? this.cfg.maxInFlight }
   }
 
   /** Stop sampling entirely (e.g. the spend cap was reached or cloud vision was switched off). */

@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
-import type { CloudStatus } from '../shared/cloud.ts'
+import { DEFAULT_CLOUD, type CloudSettings, type CloudStatus } from '../shared/cloud.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
 import { validateReview } from '../src/core/review.ts'
 import type { CoachSettings, Hotkeys } from '../src/core/settings.ts'
@@ -68,7 +68,7 @@ let offered = new Map<string, DesktopCapturerSource>()
 let storage: Storage
 let keys: KeyStore
 let cloud: CloudService
-let cloudSettings = { enabled: false, visionModel: 'claude-opus-5-5', answerModel: 'claude-opus-5-5', sessionCapUsd: 2 }
+let cloudSettings: CloudSettings = DEFAULT_CLOUD
 let settings: CoachSettings | null = null
 let recognizer: RecognizerThread | null = null
 let modelStatus: ModelStatus = { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(ASR_MODEL.archiveBytes / 1e6) }
@@ -231,15 +231,21 @@ const promptCache = new Map<string, string>()
 const building = new Map<string, { stage: string; error: string | null }>()
 const lastBuildCost = new Map<string, number>()
 
-async function visionExtras(profile: GameProfile): Promise<PromptExtras> {
-  const key = `vision:${profile.id}`
+async function visionExtras(profile: GameProfile, context: Readonly<Record<string, string | number>>): Promise<PromptExtras> {
+  // Once the opponent's faction is known, only this matchup's roster goes with each frame. The prompt then
+  // changes once per match (one cache write) and stays the same for every later frame.
+  const intel = profile.intel
+  const opponent = cloudSettings.matchupReference && intel && typeof context.opponentFaction === 'string' ? context.opponentFaction : null
+  const mine = intel?.playerFactionContext ? context[intel.playerFactionContext] : undefined
+  const matchup = opponent ? [opponent, ...(typeof mine === 'string' && mine ? [mine] : [])] : null
+  const key = `vision:${profile.id}${matchup ? `:${matchup.join('|')}` : ''}`
   let knowledge = promptCache.get(key)
   if (knowledge === undefined) {
     const kb = await storage.loadKnowledge(profile.id)
     // A compact slice for the recogniser (it runs every few seconds): how to recognise screens and the HUD, and the names of things.
     knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
     // Strategy games: the exact unit and building names to report, and how to tell them apart.
-    if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision', ages: profile.intel?.ages })}`
+    if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision', ages: profile.intel?.ages, ...(matchup ? { factions: matchup } : {}) })}`
     promptCache.set(key, knowledge)
   }
   const screensKey = `screens:${profile.id}`
@@ -395,7 +401,7 @@ function registerIpc(): void {
     if (!(r?.jpeg instanceof ArrayBuffer) || r.jpeg.byteLength === 0 || r.jpeg.byteLength > MAX_JPEG_BYTES) {
       return { ok: false, error: 'Invalid frame.', fatal: true }
     }
-    return cloud.analyzeFrame(profile, { base64: Buffer.from(r.jpeg).toString('base64'), mediaType: 'image/jpeg' }, sanitizeContext(r.context), await visionExtras(profile))
+    return cloud.analyzeFrame(profile, { base64: Buffer.from(r.jpeg).toString('base64'), mediaType: 'image/jpeg' }, sanitizeContext(r.context), await visionExtras(profile, sanitizeContext(r.context)))
   })
   handle(CHANNELS.ask, async (req) => {
     const r = req as { profileId?: unknown; question?: unknown; digest?: unknown; image?: unknown; review?: unknown } | null

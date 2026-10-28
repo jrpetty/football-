@@ -36,6 +36,36 @@ export interface CoachSettings {
   readonly onboarded: boolean
   /** Running live commentary of what the coach sees, where the game and mode allow speech during play. */
   readonly commentary: boolean
+  /** The player's own screen-reading choices, by pack id; a missing field uses the pack's value. */
+  readonly vision: Readonly<Record<string, VisionPrefs>>
+}
+
+/** How often and how sharply the coach looks at the screen for one game. */
+export interface VisionPrefs {
+  /** Time between two looks. */
+  readonly intervalMs?: number
+  /** Width the frame is scaled down to before it is sent (more pixels: more detail, more cost). */
+  readonly maxWidth?: number
+  /** Looks allowed at once, so a short interval is kept even when a reply takes longer than it. */
+  readonly maxInFlight?: number
+}
+
+export const VISION_LIMITS = { intervalMs: { min: 1000, max: 20_000 }, maxInFlight: { min: 1, max: 4 }, widths: [768, 1024, 1280, 1600] } as const
+
+/** Typical time for one look to come back; used to keep a short interval with enough looks in flight. */
+const TYPICAL_REPLY_MS = 3000
+
+/** The screen-reading settings in effect for a pack: the player's choices over the pack's defaults. */
+export function visionPrefsFor(
+  pack: { readonly id: string; readonly vision?: { readonly sampleIntervalMs: number; readonly maxWidth: number; readonly maxInFlight?: number } },
+  settings: Pick<CoachSettings, 'vision'>,
+): { intervalMs: number; maxWidth: number; maxInFlight: number; custom: boolean } {
+  const own = settings.vision[pack.id] ?? {}
+  const intervalMs = own.intervalMs ?? pack.vision?.sampleIntervalMs ?? 3000
+  const maxWidth = own.maxWidth ?? pack.vision?.maxWidth ?? 1280
+  // Unless the player chose, allow enough looks at once to keep the interval while replies are out.
+  const auto = Math.max(pack.vision?.maxInFlight ?? 1, Math.min(VISION_LIMITS.maxInFlight.max, Math.ceil(TYPICAL_REPLY_MS / intervalMs)))
+  return { intervalMs, maxWidth, maxInFlight: own.maxInFlight ?? auto, custom: Object.keys(own).length > 0 }
 }
 
 export interface Hotkeys {
@@ -85,6 +115,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   hotkeys: DEFAULT_HOTKEYS,
   onboarded: false,
   commentary: false,
+  vision: {},
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -127,7 +158,24 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     hotkeys: sanitizeHotkeys(o.hotkeys, base.hotkeys),
     onboarded: typeof o.onboarded === 'boolean' ? o.onboarded : base.onboarded,
     commentary: typeof o.commentary === 'boolean' ? o.commentary : base.commentary,
+    vision: sanitizeVision(o.vision, base.vision),
   }
+}
+
+function sanitizeVision(v: unknown, base: CoachSettings['vision']): CoachSettings['vision'] {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return base
+  const out: Record<string, VisionPrefs> = {}
+  for (const [pack, raw] of Object.entries(v).slice(0, 50)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof raw !== 'object' || raw === null) continue
+    const o = raw as Record<string, unknown>
+    const prefs: { intervalMs?: number; maxWidth?: number; maxInFlight?: number } = {}
+    const L = VISION_LIMITS
+    if (typeof o.intervalMs === 'number' && Number.isFinite(o.intervalMs)) prefs.intervalMs = Math.round(Math.min(L.intervalMs.max, Math.max(L.intervalMs.min, o.intervalMs)) / 100) * 100
+    if (typeof o.maxWidth === 'number' && (L.widths as readonly number[]).includes(o.maxWidth)) prefs.maxWidth = o.maxWidth
+    if (typeof o.maxInFlight === 'number' && Number.isInteger(o.maxInFlight)) prefs.maxInFlight = Math.min(L.maxInFlight.max, Math.max(L.maxInFlight.min, o.maxInFlight))
+    if (Object.keys(prefs).length) out[pack] = prefs
+  }
+  return out
 }
 
 function sanitizeHotkeys(v: unknown, base: Hotkeys): Hotkeys {

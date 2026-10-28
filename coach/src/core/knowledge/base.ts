@@ -186,7 +186,11 @@ export function playbookText(entries: readonly PlaybookEntry[], budget: number):
  * to report and how to tell units and buildings apart. For answers: also
  * counters, civilisations' bonuses and how to play against them.
  */
-export function rosterText(roster: Roster, opts: { readonly budget: number; readonly detail: 'vision' | 'answer'; readonly ages?: readonly string[] }): string {
+/**
+ * The roster as prompt text. With `factions` (ids or names, e.g. this match's two civilisations), only
+ * their units and buildings and the shared ones are listed in full; the other civilisations are named.
+ */
+export function rosterText(roster: Roster, opts: { readonly budget: number; readonly detail: 'vision' | 'answer'; readonly ages?: readonly string[]; readonly factions?: readonly string[] }): string {
   const out: string[] = []
   let used = 0
   const push = (line: string) => {
@@ -198,20 +202,29 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   const unitName = new Map(roster.units.map((u) => [u.id, u.name]))
   const factionName = new Map(roster.factions.map((f) => [f.id, f.name]))
   const names = (ids: readonly string[]) => ids.map((id) => unitName.get(id) ?? id).join(', ')
+  const wanted = (opts.factions ?? []).map((x) => x.toLowerCase())
+  const only = new Set(roster.factions.filter((f) => wanted.includes(f.id) || wanted.includes(f.name.toLowerCase())).map((f) => f.id))
+  // Only narrow when the opponent's civilisation was recognised; anything else gets the whole roster.
+  const narrow = only.size > 0
+  const inMatch = (factions: readonly string[] | undefined) => !narrow || !factions?.length || factions.some((f) => only.has(f))
   const ageName = (n: number) => {
     const a = opts.ages?.[n - 1]
     return a ? `${a[0].toUpperCase()}${a.slice(1)} Age` : `age ${n}`
   }
   const age = (n: number | undefined) => (n ? ` · ${ageName(n)}` : '')
   push(`## Roster (${roster.patch}, checked ${roster.checkedAt}); report these exact names`)
+  if (narrow) push(`This match: ${[...only].map((id) => factionName.get(id)).join(' and ')}. Only their units and buildings and the shared ones are listed.`)
   if (opts.detail === 'answer') push('Ages matter: a unit or building marked with an age is not available before it, so never expect or suggest it earlier.')
   push('### Buildings')
   for (const b of roster.buildings) {
+    if (!inMatch(b.factions)) continue
     if (!push(`- ${b.name}${b.factions?.length ? ` (${b.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''}${age(b.age)}: makes ${names(b.produces) || 'no units'}${b.look ? `. Looks: ${b.look}` : ''}${opts.detail === 'answer' && b.signals ? `. Means: ${b.signals}` : ''}`)) break
   }
   // Civilisations (with their landmarks) before units: the opponent's civ and landmarks matter most if the budget runs out.
   push('### Civilisations')
+  if (narrow) push(`- Other civilisations (not in this match): ${roster.factions.filter((f) => !only.has(f.id)).map((f) => f.name).join(', ')}`)
   for (const f of roster.factions) {
+    if (!only.has(f.id) && narrow) continue
     const landmarks = (f.landmarks ?? []).map((l) => `${l.name}${l.age ? ` (${ageName(l.age)})` : ''}`).join(', ')
     const base = `- ${f.name}${f.status === 'upcoming' ? ' (UPCOMING, not released)' : ''}${f.variantOf ? ` (variant of ${factionName.get(f.variantOf) ?? f.variantOf})` : ''}: unique ${names(f.uniqueUnits) || 'none'}${landmarks ? `; landmarks ${landmarks}` : ''}`
     const more = opts.detail === 'answer' ? `. ${f.bonuses.slice(0, 5).join('; ')}${f.howToPlayAgainst ? `. Against them: ${f.howToPlayAgainst}` : ''}` : ''
@@ -219,6 +232,7 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   }
   push('### Units')
   for (const u of roster.units) {
+    if (!inMatch(u.factions)) continue
     const who = u.factions?.length ? ` (${u.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''
     const answer = opts.detail === 'answer' ? `; beats ${names(u.counters)}; beaten by ${names(u.counteredBy)}${u.why ? `. ${u.why}` : ''}` : ''
     const early = u.ageFor ? Object.entries(u.ageFor).map(([f, n]) => `${factionName.get(f) ?? f} ${ageName(n)}`) : []

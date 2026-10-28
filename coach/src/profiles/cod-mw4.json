@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "cod-mw4",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "Call of Duty: Modern Warfare 4",
   "depth": "pack",
   "game": {
@@ -158,6 +158,22 @@
         "type": "string",
         "ttlMs": 600000,
         "description": "The game mode name (e.g. Domination, Hardpoint), from a loading screen or scoreboard."
+      },
+      {
+        "key": "ownWeapon",
+        "label": "Your weapon",
+        "type": "string",
+        "ttlMs": 15000,
+        "description": "The name of the weapon the player is holding, as shown in the HUD's weapon panel (e.g. 'MCW', 'Holger 556'). Omit if not visible.",
+        "maxLength": 40
+      },
+      {
+        "key": "enemyStreaks",
+        "label": "Enemy killstreaks",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Killstreaks the enemy team called in, shown in this frame by the announcer text, killfeed icon or a warning (e.g. 'UAV, Cluster Strike'). Comma-separated names; omit if none.",
+        "maxLength": 120
       }
     ],
     "events": [
@@ -3626,5 +3642,75 @@
     "death": "Died",
     "kill": "Kill",
     "streak_earned": "Streak earned"
+  },
+  "learning": {
+    "dimensions": [
+      {
+        "id": "map",
+        "label": "Map",
+        "phrase": "on",
+        "from": "state",
+        "key": "mapName",
+        "live": true
+      },
+      {
+        "id": "mode",
+        "label": "Mode",
+        "phrase": "in",
+        "from": "state",
+        "key": "modeName"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "killed-by",
+        "label": "What killed you",
+        "side": "them",
+        "from": "event",
+        "key": "death",
+        "attribute": "killedBy",
+        "kind": "weapon type"
+      },
+      {
+        "id": "enemy-streaks",
+        "label": "Their killstreaks",
+        "side": "them",
+        "from": "list",
+        "key": "enemyStreaks",
+        "kind": "killstreak",
+        "composition": true
+      },
+      {
+        "id": "death-range",
+        "label": "Range of your deaths",
+        "side": "you",
+        "from": "event",
+        "key": "death",
+        "attribute": "range",
+        "kind": "range"
+      },
+      {
+        "id": "kill-range",
+        "label": "Range of your kills",
+        "side": "you",
+        "from": "event",
+        "key": "kill",
+        "attribute": "range",
+        "kind": "range"
+      },
+      {
+        "id": "your-weapon",
+        "label": "Your weapons (kills–deaths)",
+        "side": "you",
+        "from": "value",
+        "key": "ownWeapon",
+        "kind": "weapon",
+        "composition": true,
+        "tally": {
+          "good": "kill",
+          "bad": "death"
+        }
+      }
+    ]
   }
 }

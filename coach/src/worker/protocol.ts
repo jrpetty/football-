@@ -18,6 +18,8 @@ export interface VisionConfig {
   readonly enabled: boolean
   readonly intervalMs: number
   readonly maxInFlight?: number
+  /** Width sampled frames are scaled down to (the pack's value when absent). */
+  readonly maxWidth?: number
 }
 
 export type ToWorker =

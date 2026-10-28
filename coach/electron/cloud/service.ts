@@ -24,7 +24,7 @@ import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, t
 /** Prompt budget for the pack's coaching playbook in answers and reviews. */
 const PLAYBOOK_CHARS = 32_000
 import type { GameProfile } from '../../src/core/profile/schema.ts'
-import type { CloudResult, CloudSettings, ResearchBrief } from '../../shared/cloud.ts'
+import type { CloudResult, CloudSettings, ResearchBrief, VisionThinking, VisionUsage } from '../../shared/cloud.ts'
 
 export { DEFAULT_CLOUD } from '../../shared/cloud.ts'
 export type { CloudResult, CloudSettings, ResearchBrief }
@@ -41,6 +41,7 @@ export class CloudService {
   private client: { key: string; client: CloudClient } | null = null
   private spentUsd = 0
   private calls = 0
+  private vision: VisionUsage = NO_VISION_USAGE
 
   constructor(
     getKey: () => string | null,
@@ -52,8 +53,8 @@ export class CloudService {
     this.makeClient = makeClient
   }
 
-  get spend(): { usd: number; calls: number; capUsd: number } {
-    return { usd: this.spentUsd, calls: this.calls, capUsd: this.getSettings().sessionCapUsd }
+  get spend(): { usd: number; calls: number; capUsd: number; vision: VisionUsage } {
+    return { usd: this.spentUsd, calls: this.calls, capUsd: this.getSettings().sessionCapUsd, vision: this.vision }
   }
 
   /**
@@ -75,6 +76,7 @@ export class CloudService {
   resetSession(): void {
     this.spentUsd = 0
     this.calls = 0
+    this.vision = NO_VISION_USAGE
   }
 
   async analyzeFrame(
@@ -85,12 +87,14 @@ export class CloudService {
   ): Promise<CloudResult<{ response: VisionResponse }>> {
     const ready = this.ready()
     if (!ready.ok) return ready
-    const model = this.getSettings().visionModel
+    const { visionModel: model, visionThinking } = this.getSettings()
+    const thinking = visionThinkingParam(model, visionThinking)
     try {
       const msg = await ready.client.beta.messages.parse({
         model,
         max_tokens: 4000,
-        ...fallbackParams(model),
+        // The lowest thinking setting is Sonnet 5.5's own; no fallback model would accept it.
+        ...(thinking ? { thinking: thinking as unknown as Anthropic.Beta.Messages.BetaThinkingConfigParam } : fallbackParams(model)),
         output_config: { effort: 'low', format: betaZodOutputFormat(visionSchema(profile)) },
         system: [{ type: 'text', text: visionSystemPrompt(profile, extras), cache_control: { type: 'ephemeral' } }],
         messages: [
@@ -104,6 +108,7 @@ export class CloudService {
         ],
       })
       const costUsd = this.charge(model, msg.usage)
+      this.vision = addVisionUsage(this.vision, costUsd, msg.usage)
       if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to describe this frame.' }
       if (!msg.parsed_output) return { ok: false, error: 'The model response did not match the schema.' }
       return { ok: true, costUsd, response: msg.parsed_output }
@@ -352,6 +357,33 @@ export class CloudService {
     this.calls++
     return c
   }
+}
+
+const NO_VISION_USAGE: VisionUsage = { calls: 0, usd: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, thinking: 0 }
+
+function addVisionUsage(u: VisionUsage, usd: number, usage: Usage & { output_tokens_details?: { thinking_tokens?: number | null } | null }): VisionUsage {
+  return {
+    calls: u.calls + 1,
+    usd: u.usd + usd,
+    input: u.input + usage.input_tokens,
+    cacheRead: u.cacheRead + (usage.cache_read_input_tokens ?? 0),
+    cacheWrite: u.cacheWrite + (usage.cache_creation_input_tokens ?? 0),
+    output: u.output + usage.output_tokens,
+    thinking: u.thinking + (usage.output_tokens_details?.thinking_tokens ?? 0),
+  }
+}
+
+/**
+ * Thinking for screen readings. 'auto' sends nothing (adaptive thinking at the
+ * request's low effort). 'off': Sonnet 5.5's lowest setting is "between_tools"
+ * (no extended thinking; it rejects "disabled"); Haiku 5.5 accepts "disabled"
+ * at low effort; Opus 5.5 cannot turn thinking off, so it stays at low effort.
+ */
+export function visionThinkingParam(model: string, mode: VisionThinking): { type: 'between_tools' | 'disabled' } | null {
+  if (mode !== 'off') return null
+  if (model.startsWith('claude-sonnet-5-5')) return { type: 'between_tools' }
+  if (model.startsWith('claude-haiku-5-5')) return { type: 'disabled' }
+  return null
 }
 
 /** Server-side refusal fallback where the model supports it (not Haiku). */

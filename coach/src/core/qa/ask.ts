@@ -13,6 +13,7 @@ import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
 import type { GameProfile } from '../profile/schema.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
+import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 
 export type Intent =
   | { readonly kind: 'heatmap'; readonly heatmapId: string }
@@ -20,6 +21,7 @@ export type Intent =
   | { readonly kind: 'fights' }
   | { readonly kind: 'benchmark' }
   | { readonly kind: 'intel' }
+  | { readonly kind: 'learned' }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
@@ -34,6 +36,8 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  // What past games showed: their usual build, my usual build, how I do against this.
+  if (profile.learning && /\b(usually|usual|normally|tend to|build orders?|my (?:usual )?build|last (?:few )?(?:games|matches)|past (?:games|matches)|history|compositions?|comps?|what have you learn\w*|what did you learn\w*|how do i do (?:against|vs|on|with)|against (?:them|this|him|her) before)\b/.test(q)) return { kind: 'learned' }
   if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make|do)|counter|scout\w*|opponent|their plan|what(?:'s| is) (?:their|the) plan|game plan|strategy)\b/.test(q)) return { kind: 'intel' }
   if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
   if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
@@ -62,6 +66,8 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
       return fightsAnswer(profile, report)
     case 'intel':
       return intelAnswer(report)
+    case 'learned':
+      return learnedAnswer(profile, report, history)
     case 'benchmark': {
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
@@ -216,6 +222,7 @@ export function buildDigest(i: DigestInputs): string {
         })),
       game: Object.keys(i.report.context).length ? i.report.context : undefined,
       scouted: i.report.intel ?? undefined,
+      learnedFromPastGames: learnedDigest(p, i.report, i.history),
       civPlans: civPlans(p, i.report),
       fightsFollowed: i.report.battles.length
         ? {
@@ -283,6 +290,56 @@ function civPlans(p: GameProfile, report: SessionReport) {
     note: 'Reference plans from guides and pro play; match them to what was seen before calling one.',
     opponent: theirs ? { civ: theirs.name, summary: theirs.playstyle, ages: (theirs.agePlans ?? []).filter((a) => near(a.age)) } : null,
     you: i.yourPlan,
+  }
+}
+
+/** All matches known for learning: saved history and this session's, once each. */
+function allMatches(report: SessionReport, history: readonly MatchRecord[]): MatchRecord[] {
+  const seen = new Set<string>()
+  return [...history, ...report.matches].filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
+}
+
+/** What past games like this one showed (live filter: e.g. the opponent's civilisation), or across all games. */
+function learnedNow(profile: GameProfile, report: SessionReport, history: readonly MatchRecord[]): Learned | null {
+  const all = allMatches(report, history)
+  return (report.learned ? learnedFrom(all, profile, report.learned.filter) : null) ?? learnedFrom(all, profile, {})
+}
+
+function learnedAnswer(profile: GameProfile, report: SessionReport, history: readonly MatchRecord[]): string {
+  const l = learnedNow(profile, report, history)
+  if (!l) {
+    return 'I have no past games to learn from yet. Turn on "Remember my games" in Settings and play a few: I learn their usual builds and armies, and yours, from what your screen shows.'
+  }
+  const lines = [...learnedLines(l, 'them', 3), ...learnedLines(l, 'you', 3)]
+  const games = `${l.matches} ${l.matches === 1 ? 'game' : 'games'}`
+  const record = l.won + l.lost ? ` You won ${l.won} of ${l.won + l.lost} with a result read.` : ''
+  if (!lines.length) return `From your last ${games}${l.filterText ? ` ${l.filterText}` : ''}, I have not seen enough on screen to see a pattern yet.${record}`
+  return `From your last ${games}${l.filterText ? ` ${l.filterText}` : ''} (as first seen on your screen): ${lines.join(' ')}${record}`
+}
+
+function learnedDigest(profile: GameProfile, report: SessionReport, history: readonly MatchRecord[]) {
+  const l = learnedNow(profile, report, history)
+  if (!l) return undefined
+  return {
+    filedUnder: l.filterText || 'all games',
+    matches: l.matches,
+    won: l.won,
+    lost: l.lost,
+    note: 'From what the player\'s screen showed in past games: "first seen" times are when it appeared on screen, not when it was made.',
+    tracks: l.tracks.map((t) => ({
+      what: t.label,
+      side: t.side,
+      games: t.matches,
+      usualOrder: t.order.length ? t.order.map((o) => `${o.name} ${clockText(o.atSec)}`) : undefined,
+      items: t.items.slice(0, 8).map((x) => ({
+        name: x.name,
+        seenInGames: x.seenIn,
+        ...(x.firstSec !== null ? { firstSeen: clockText(x.firstSec) } : {}),
+        ...(x.peak ? { mostAtOnce: x.peak } : {}),
+        ...(t.tally ? { good: x.good, bad: x.bad } : { times: x.total }),
+        ...(x.won + x.lost ? { won: x.won, lost: x.lost } : {}),
+      })),
+    })),
   }
 }
 

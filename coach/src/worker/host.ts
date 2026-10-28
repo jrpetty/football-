@@ -28,7 +28,7 @@ export interface HostDeps {
   /** Decode a bitmap into RGBA pixels. Must not keep the bitmap. */
   decode(bitmap: ImageBitmap, timestamp: number): Frame
   /** Encode a frame (or the pack's crops) as a downscaled JPEG; `full` ignores the crops. */
-  encodeJpeg(frame: Frame, profile: GameProfile, full?: { maxWidth: number }): Promise<ArrayBuffer>
+  encodeJpeg(frame: Frame, profile: GameProfile, opts?: { readonly maxWidth?: number; readonly full?: boolean }): Promise<ArrayBuffer>
   /** Schedule the queue to drain (setTimeout in a worker; synchronous in tests). */
   schedule(fn: () => void): void
   now(): number
@@ -145,6 +145,7 @@ export class PipelineHost {
       return
     }
     if (!this.sampler) this.sampler = new VisionSampler({ intervalMs: cfg.intervalMs, minChange: 1.5, maxSkipMs: cfg.intervalMs * 4, maxInFlight: cfg.maxInFlight ?? 1 })
+    else this.sampler.reconfigure({ intervalMs: cfg.intervalMs, maxInFlight: cfg.maxInFlight ?? 1 })
     this.sampler.setPaused(false)
   }
 
@@ -192,7 +193,7 @@ export class PipelineHost {
     }
     const width = Math.min(maxWidth, frame.width)
     this.deps
-      .encodeJpeg(frame, this.profile, { maxWidth: width })
+      .encodeJpeg(frame, this.profile, { maxWidth: width, full: true })
       .then((jpeg) => this.deps.post({ type: 'snapshot', requestId, jpeg, frameAt: frame.timestamp, width, height: Math.round((frame.height * width) / frame.width) }, [jpeg]))
       .catch(() => this.deps.post({ type: 'snapshot', requestId, jpeg: null, frameAt: 0, width: 0, height: 0 }))
   }
@@ -260,7 +261,7 @@ export class PipelineHost {
     if (this.sentHashes.size > 8) this.sentHashes.delete(this.sentHashes.keys().next().value!)
     this.sampler.sending(frame.timestamp, grid)
     this.deps
-      .encodeJpeg(frame, this.profile)
+      .encodeJpeg(frame, this.profile, { maxWidth: this.vision?.maxWidth })
       .then((jpeg) => this.deps.post({ type: 'vision-frame', frameAt: frame.timestamp, jpeg }, [jpeg]))
       .catch((err: unknown) => {
         this.sampler?.done(frame.timestamp, false)

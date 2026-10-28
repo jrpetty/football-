@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -275,6 +275,14 @@
         ],
         "ttlMs": 600000,
         "description": "The opponent's current age, only if this frame shows it: an '<player> has advanced to the … Age' notification about the opponent, the age shown for them in the player list or scoreboard, or a scouted age-up landmark of theirs that is finished. Omit otherwise; never guess from the clock."
+      },
+      {
+        "key": "ownArmy",
+        "label": "Your army in view",
+        "type": "string",
+        "ttlMs": 8000,
+        "description": "Your own (the player's) military units visible in this frame or listed in the selection panel, as 'count Name' using the roster's unit names where there is one, comma-separated (e.g. '12 Spearman, 8 Archer'). Count only what you can see; omit if none.",
+        "maxLength": 240
       }
     ],
     "events": [
@@ -20473,5 +20481,81 @@
     "opponentAgeKey": "opponentAge",
     "playerAgeKey": "age",
     "cuesKey": "enemyCues"
+  },
+  "learning": {
+    "clockKey": "gameTimeSec",
+    "dimensions": [
+      {
+        "id": "opponent",
+        "label": "Opponent's civilisation",
+        "phrase": "against",
+        "from": "faction",
+        "key": "opponentCiv",
+        "live": true
+      },
+      {
+        "id": "civ",
+        "label": "Your civilisation",
+        "phrase": "as",
+        "from": "context",
+        "key": "civ"
+      },
+      {
+        "id": "map",
+        "label": "Map",
+        "phrase": "on",
+        "from": "state",
+        "key": "mapName"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "their-buildings",
+        "label": "Their buildings",
+        "side": "them",
+        "from": "list",
+        "key": "enemyBuildings",
+        "kind": "building",
+        "order": true
+      },
+      {
+        "id": "their-army",
+        "label": "Their army",
+        "side": "them",
+        "from": "list",
+        "key": "enemyUnits",
+        "kind": "unit",
+        "order": true,
+        "composition": true
+      },
+      {
+        "id": "their-age",
+        "label": "Their ages",
+        "side": "them",
+        "from": "value",
+        "key": "opponentAge",
+        "kind": "age",
+        "order": true
+      },
+      {
+        "id": "your-army",
+        "label": "Your army",
+        "side": "you",
+        "from": "list",
+        "key": "ownArmy",
+        "kind": "unit",
+        "order": true,
+        "composition": true
+      },
+      {
+        "id": "your-age",
+        "label": "Your ages",
+        "side": "you",
+        "from": "value",
+        "key": "age",
+        "kind": "age",
+        "order": true
+      }
+    ]
   }
 }

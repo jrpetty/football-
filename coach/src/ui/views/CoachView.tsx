@@ -4,7 +4,7 @@ import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { EffectiveMode } from '../../core/policy/governor.ts'
 import type { ResolvedPolicy } from '../../core/policy/registry.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
-import { COACHING_MODES, MODE_INFO, TONE_INFO, TONES, type CoachSettings } from '../../core/settings.ts'
+import { COACHING_MODES, MODE_INFO, TONE_INFO, TONES, visionPrefsFor, type CoachSettings } from '../../core/settings.ts'
 import type { SignalState } from '../../core/types.ts'
 import { cachedPromptTokens, estimatePerHour, modelPrice } from '../../core/vision/cost.ts'
 import { builtInProfile } from '../../profiles/index.ts'
@@ -14,6 +14,7 @@ import { AskBox, Conversation } from '../components/ask.tsx'
 import { Meter, Notice, Segmented, Switch } from '../components/common.tsx'
 import { Breakdown, EconomyPanel, PolicyBadge, Scoreboard, ScopeChips, StatePanel, ZoneMap } from '../components/viz.tsx'
 import { IntelPanel } from '../components/coaching.tsx'
+import { learnedLines } from '../../core/analyses/learning.ts'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -46,7 +47,10 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
   const context = settings.context[profile.id] ?? {}
   const visionPack = !!profile.vision
   const est = visionPack
-    ? estimatePerHour(cloud.settings.visionModel, profile.vision!.sampleIntervalMs, profile.vision!.maxWidth, Math.round((profile.vision!.maxWidth * 9) / 16), cachedPromptTokens(!!profile.knowledge.roster))
+    ? (() => {
+        const v = visionPrefsFor(profile, settings)
+        return estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, Math.round((v.maxWidth * 9) / 16), cachedPromptTokens(!!profile.knowledge.roster))
+      })()
     : 0
 
   const demo = (kind: SourceChoice, packId: string, speed: number, preferMode?: string) => {
@@ -449,6 +453,22 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
               )}
             </section>
           )}
+
+          {profile.learning && policy.scope.has('live') && state.report?.learned ? (
+            <section className="panel" aria-labelledby="learned-live-h">
+              <div className="panel-head">
+                <h2 id="learned-live-h">From your past games</h2>
+                <span className="muted small">
+                  {state.report.learned.matches} {state.report.learned.matches === 1 ? 'game' : 'games'} {state.report.learned.filterText}
+                </span>
+              </div>
+              <ul className="small">
+                {[...learnedLines(state.report.learned, 'them', 3), ...learnedLines(state.report.learned, 'you', 2)].map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {profile.signals.length > 0 && (
             <section className="panel" aria-labelledby="hud-h">

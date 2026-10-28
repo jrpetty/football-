@@ -40,17 +40,25 @@ export interface IntelReport {
   /** Their likely plans, best supported first, from what the screen showed (never from what it did not). */
   readonly reads: readonly IntelRead[]
   /** Their civilisation's usual plans at their age, when nothing points to one yet. */
-  readonly usual: readonly { readonly name: string; readonly signals: string }[]
+  readonly usual: readonly { readonly name: string; readonly signals: string; readonly past: PastSeen | null }[]
   /** How to play the player's own civilisation in their current age. */
   readonly yourPlan: { readonly age: number; readonly ageName: string; readonly playAs: readonly string[]; readonly powerSpikes: readonly string[]; readonly weakWindows: readonly string[] } | null
   /** Their power spikes and weak windows at their age. */
   readonly theirWindows: { readonly powerSpikes: readonly string[]; readonly weakWindows: readonly string[] } | null
 }
 
+/** In the player's past games against this faction: in how many its tell-tale signs were seen. */
+export interface PastSeen {
+  readonly seen: number
+  readonly of: number
+}
+
 export interface IntelRead {
   readonly id: string
   readonly name: string
   readonly age: number
+  /** How often the player met this plan before (from memory), when there is history against this faction. */
+  readonly past: PastSeen | null
   /** Matching evidence seen, e.g. "Council Hall", "2 Barracks", "Longbowman". */
   readonly evidence: readonly string[]
   readonly score: number
@@ -70,7 +78,7 @@ export const READ_MIN_SCORE = 2
 export type AgeBasis = 'seen' | 'fielded' | 'assumed'
 
 export interface IntelNews {
-  readonly kind: 'faction' | 'building' | 'unit' | 'age' | 'read' | 'plan'
+  readonly kind: 'faction' | 'building' | 'unit' | 'age' | 'read' | 'plan' | 'history'
   readonly id: string
   readonly text: string
 }
@@ -127,6 +135,7 @@ export class IntelTracker {
   private seenCues: string[] = []
   private announcedReads = new Set<string>()
   private announcedPlanAge: number | null = null
+  private history: { readonly matches: number; readonly seen: ReadonlyMap<string, number> } | null = null
   private playerFaction: RosterFaction | null
   private faction: RosterFaction | null = null
   private buildings = new Map<string, { count: number; firstAt: number }>()
@@ -149,6 +158,33 @@ export class IntelTracker {
     const landmarkNames = [...new Set(roster.factions.flatMap((f) => (f.landmarks ?? []).map((l) => l.name)))]
     this.landmarkMatchers = landmarkNames.map((n) => matcher('building', `landmark:${n}`, n)).sort(byLength)
     this.playerFaction = this.findFaction(playerFaction)
+  }
+
+  /**
+   * What the player's past games against this faction showed on the enemy's
+   * side: matches, and in how many each name (building, unit, landmark) was
+   * seen. Links the reference plans to what this player actually meets.
+   */
+  setHistory(h: { readonly matches: number; readonly seen: ReadonlyMap<string, number> } | null): void {
+    this.history = h
+  }
+
+  /** In how many past games a plan's tell-tale signs (landmarks, unique units, civ buildings) were seen; null without history or signs. */
+  private pastSeen(m: CivPlanMove): PastSeen | null {
+    const h = this.history
+    if (!h?.matches) return null
+    const names = [
+      ...(m.signals.landmarks ?? []),
+      ...(m.signals.units ?? []).filter((id) => this.units.get(id)?.factions?.length).map((id) => this.units.get(id)!.name),
+      ...(m.signals.buildings ?? []).map((id) => this.roster.buildings.find((b) => b.id === id)).filter((b) => b?.factions?.length).map((b) => b!.name),
+    ]
+    if (!names.length) return null
+    return { seen: Math.max(0, ...names.map((n) => h.seen.get(n) ?? 0)), of: h.matches }
+  }
+
+  /** The opponent's faction, once recognised. */
+  get opponentFaction(): RosterFaction | null {
+    return this.faction
   }
 
   setPlayerFaction(name: string | null): void {
@@ -299,7 +335,7 @@ export class IntelTracker {
           evidence.push(seen > 1 ? `${seen} ${building?.name ?? b}` : (building?.name ?? b))
         }
         if (!distinct) score = Math.min(score, READ_MIN_SCORE - 1)
-        if (score > 0) out.push({ id: m.id, name: m.name, age: plan.age, evidence, score, timing: m.timing ?? null, threat: m.threat, response: m.response, punish: m.punish ?? null })
+        if (score > 0) out.push({ id: m.id, name: m.name, age: plan.age, past: this.pastSeen(m), evidence, score, timing: m.timing ?? null, threat: m.threat, response: m.response, punish: m.punish ?? null })
       }
     }
     // Their current age first among equals: that is the plan in motion.
@@ -318,15 +354,22 @@ export class IntelTracker {
     return (f.landmarks ?? []).some((l) => l.age === age && this.seenLandmarks.has(l.name))
   }
 
-  private usual(): { name: string; signals: string }[] {
+  private usual(): { name: string; signals: string; past: PastSeen | null }[] {
     const age = this.opponentAge()?.age
     const plan = age ? this.agePlan(this.faction, age) : null
-    return (plan?.theirMoves ?? []).slice(0, 3).map((m: CivPlanMove) => ({
-      name: m.name,
-      signals: [...(m.signals.landmarks ?? []), ...(m.signals.buildings ?? []).map((b) => this.roster.buildings.find((x) => x.id === b)?.name ?? b), ...(m.signals.units ?? []).map((u) => this.units.get(u)?.name ?? u), ...(m.signals.cues ?? [])]
-        .slice(0, 4)
-        .join(', '),
-    }))
+    // With history against this faction, what this player actually meets comes first.
+    const share = (p: PastSeen | null) => (p ? p.seen / p.of : -1)
+    return (plan?.theirMoves ?? [])
+      .map((m) => ({ m, past: this.pastSeen(m) }))
+      .sort((a, b) => share(b.past) - share(a.past))
+      .slice(0, 3)
+      .map(({ m, past }) => ({
+        name: m.name,
+        past,
+        signals: [...(m.signals.landmarks ?? []), ...(m.signals.buildings ?? []).map((b) => this.roster.buildings.find((x) => x.id === b)?.name ?? b), ...(m.signals.units ?? []).map((u) => this.units.get(u)?.name ?? u), ...(m.signals.cues ?? [])]
+          .slice(0, 4)
+          .join(', '),
+      }))
   }
 
   newMatch(at = Infinity): void {
@@ -572,7 +615,7 @@ export function sayable(text: string): string {
 
 export function plural(name: string): string {
   // Japanese and Mongol names (Samurai, Mangudai, Yumi Ashigaru) keep their form.
-  if (/[iu]$/i.test(name)) return name
+  if (/[iu]$/i.test(name) || /(cavalry|infantry)$/i.test(name)) return name
   if (/man$/i.test(name)) return name.replace(/man$/i, 'men')
   if (/-at-arms$/i.test(name)) return name.replace(/^man/i, 'Men')
   if (/(s|x|ch|sh)$/i.test(name)) return `${name}es`

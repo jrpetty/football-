@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import type { PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
-import { COOLDOWN_RANGE, VERBOSITIES, type CoachSettings } from '../../core/settings.ts'
+import { COOLDOWN_RANGE, VERBOSITIES, VISION_LIMITS, visionPrefsFor, type CoachSettings, type VisionPrefs } from '../../core/settings.ts'
 import type { Verbosity } from '../../core/types.ts'
-import { cachedPromptTokens, estimatePerHour, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
+import { cachedPromptTokens, estimatePerHour, modelPrice, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
 import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
@@ -40,7 +40,8 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
         <p className="lede">How the coach sounds, when it may speak, how it sees, what it remembers, and how you talk to it.</p>
       </div>
 
-      <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} />
+      <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} />
+      {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
@@ -133,7 +134,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
 
 // --- Cloud (Anthropic API) ----------------------------------------------------------------
 
-function CloudPanel({ bridge, cloud, onCloud, profile }: { bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile }) {
+function CloudPanel({ bridge, cloud, onCloud, profile, settings }: { bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile; settings: CoachSettings }) {
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
   const apply = (p: Promise<CloudStatus>) =>
@@ -141,7 +142,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile }: { bridge: SightlineBrid
       setError(null)
       onCloud(c)
     }).catch((e: unknown) => setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e)))
-  const v = profile.vision
+  const v = profile.vision ? visionPrefsFor(profile, settings) : null
   const height = v ? Math.round((v.maxWidth * 9) / 16) : 0
 
   return (
@@ -208,8 +209,8 @@ function CloudPanel({ bridge, cloud, onCloud, profile }: { bridge: SightlineBrid
               </select>
               {v ? (
                 <span className="muted small">
-                  {profile.game.title}: one image every {(v.sampleIntervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.sampleIntervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster)))}/hour (estimate;
-                  unchanged frames are skipped). Haiku is far cheaper; Opus reads busy screens best.
+                  {profile.game.title}: one look every {(v.intervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.intervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster)))}/hour
+                  before thinking (estimate; see Screen reading below for what this session measured). Haiku is far cheaper; Opus reads busy screens best.
                 </span>
               ) : null}
             </div>
@@ -235,6 +236,140 @@ function CloudPanel({ bridge, cloud, onCloud, profile }: { bridge: SightlineBrid
           {error ? <Notice level="error">{error}</Notice> : null}
         </>
       )}
+    </section>
+  )
+}
+
+// --- Screen reading (per game) -------------------------------------------------------------
+
+const WIDTH_LABEL: Record<number, string> = { 768: 'Low', 1024: 'Medium', 1280: 'High', 1600: 'Max' }
+
+/** How often and how sharply the coach looks at this game's screen, chosen by the player; and what it costs, measured. */
+function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge; cloud: CloudStatus; onCloud: (c: CloudStatus) => void; profile: GameProfile }) {
+  const pack = profile.vision!
+  const v = visionPrefsFor(profile, settings)
+  const own = settings.vision[profile.id] ?? {}
+  const set = (patch: VisionPrefs | null) => {
+    const next = { ...settings.vision }
+    if (patch === null) delete next[profile.id]
+    else next[profile.id] = { ...own, ...patch }
+    onSettings({ vision: next })
+  }
+  const unset = (key: keyof VisionPrefs) => {
+    const { [key]: _drop, ...rest } = own
+    const next = { ...settings.vision, [profile.id]: rest }
+    if (!Object.keys(rest).length) delete next[profile.id]
+    onSettings({ vision: next })
+  }
+  const height = Math.round((v.maxWidth * 9) / 16)
+  const model = cloud.settings.visionModel
+  const estimate = estimatePerHour(model, v.intervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster))
+  const used = cloud.spend.vision
+  const measured = used && used.calls >= 5 ? used : null
+  const per = (n: number) => Math.round(n / (measured?.calls ?? 1))
+  const perHour = (3_600_000 / v.intervalMs) | 0
+  const sonnetOrHaiku = /^claude-(sonnet|haiku)-5-5/.test(model)
+  const applyCloud = (p: Promise<CloudStatus>) => void p.then(onCloud).catch(() => undefined)
+  return (
+    <section className="panel" aria-labelledby="screen-reading">
+      <div className="panel-head">
+        <h2 id="screen-reading">Screen reading: {profile.game.title}</h2>
+        <span className={`badge ${v.custom ? 'ok' : 'neutral'}`}>{v.custom ? 'Your settings' : 'Game defaults'}</span>
+      </div>
+      <p className="small" style={{ marginTop: 0 }}>
+        How often the coach looks at your screen for this game, and how sharp each look is. Faster looks catch more (gunfights, quick scouting
+        passes) and cost more. Each game keeps its own settings; changes apply from the next look, even during capture.
+      </p>
+      <div className="grid-2">
+        <div className="field">
+          <label htmlFor="vision-interval">Look every {(v.intervalMs / 1000).toFixed(1)} s</label>
+          <input
+            id="vision-interval"
+            type="range"
+            min={VISION_LIMITS.intervalMs.min}
+            max={VISION_LIMITS.intervalMs.max}
+            step={500}
+            value={v.intervalMs}
+            onChange={(e) => set({ intervalMs: Number(e.target.value) })}
+          />
+          <div className="btn-row">
+            <button type="button" className="btn sm ghost" onClick={() => set({ intervalMs: 1000 })}>Fast · 1 s</button>
+            <button type="button" className="btn sm ghost" onClick={() => unset('intervalMs')}>Game default · {(pack.sampleIntervalMs / 1000).toFixed(1)} s</button>
+            <button type="button" className="btn sm ghost" onClick={() => set({ intervalMs: 6000 })}>Saver · 6 s</button>
+          </div>
+          <span className="muted small">Shooters and football change fast: 1–2.5 s. Strategy games: 3–5 s. About {perHour.toLocaleString()} looks an hour of play.</span>
+        </div>
+        <div className="field">
+          <span className="label">Looks at once</span>
+          <Segmented
+            label="Looks at once"
+            value={own.maxInFlight ? String(own.maxInFlight) : 'auto'}
+            onChange={(x) => (x === 'auto' ? unset('maxInFlight') : set({ maxInFlight: Number(x) }))}
+            options={[{ value: 'auto', label: `Auto (${v.maxInFlight})` }, ...[1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))]}
+          />
+          <span className="muted small">A reply takes a few seconds; with a short interval, more looks at once keep the pace. Auto picks enough for your interval.</span>
+        </div>
+        <div className="field">
+          <span className="label">Detail</span>
+          <Segmented
+            label="Detail"
+            value={String(v.maxWidth)}
+            onChange={(x) => (Number(x) === pack.maxWidth ? unset('maxWidth') : set({ maxWidth: Number(x) }))}
+            options={VISION_LIMITS.widths.map((w) => ({ value: String(w), label: `${WIDTH_LABEL[w]}${w === pack.maxWidth ? ' (default)' : ''}` }))}
+          />
+          <span className="muted small">
+            Each look is scaled to {v.maxWidth} pixels wide. Lower is cheaper but small icons and text get harder to read; higher helps busy screens.
+          </span>
+        </div>
+        {cloud.available ? (
+          <div className="field">
+            <span className="label">Thinking before each look</span>
+            <Segmented
+              label="Thinking before each look"
+              value={cloud.settings.visionThinking}
+              onChange={(visionThinking) => applyCloud(bridge.setCloudSettings({ visionThinking }))}
+              options={[
+                { value: 'auto', label: 'Brief (default)' },
+                { value: 'off', label: 'Off' },
+              ]}
+            />
+            <span className="muted small">
+              {sonnetOrHaiku
+                ? 'Off skips thinking on screen readings: faster and cheaper. Reading a screen rarely needs it, but compare a game each way before you decide.'
+                : `${modelPrice(model).label} always thinks a little (kept brief). Off applies to Sonnet 5.5 and Haiku 5.5.`}
+            </span>
+          </div>
+        ) : null}
+        {cloud.available && profile.intel ? (
+          <div className="field">
+            <Switch
+              checked={cloud.settings.matchupReference}
+              onChange={(matchupReference) => applyCloud(bridge.setCloudSettings({ matchupReference }))}
+              label="Send only this matchup’s reference"
+              hint="Once the opponent’s civilisation is read, each look carries only the two civilisations’ units and buildings (and the shared ones) instead of all of them: about 70% less reference text per look, same names."
+            />
+          </div>
+        ) : null}
+      </div>
+      <div className="cost-box">
+        <div>
+          <span className="label">Estimate</span> ≈ {usd(estimate)}/hour with {modelPrice(model).label.replace(/ \(.*\)$/, '')}, before thinking.
+        </div>
+        {measured ? (
+          <div>
+            <span className="label">Measured this session</span> {measured.calls} looks, {usd(measured.usd / measured.calls)} each ≈ {usd((measured.usd / measured.calls) * perHour)}/hour at this
+            refresh. Per look: {per(measured.input).toLocaleString()} tokens of image and question, {per(measured.cacheRead + measured.cacheWrite).toLocaleString()} of
+            cached reference, {per(measured.output).toLocaleString()} written{measured.thinking ? ` (${per(measured.thinking).toLocaleString()} of them thinking)` : ''}.
+          </div>
+        ) : (
+          <div className="muted small">After a few looks with cloud vision on, the measured cost per look and per hour shows here (from the API’s own token counts).</div>
+        )}
+        {v.custom ? (
+          <button type="button" className="btn sm ghost" onClick={() => set(null)}>
+            Reset to game defaults
+          </button>
+        ) : null}
+      </div>
     </section>
   )
 }

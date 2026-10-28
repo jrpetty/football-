@@ -329,5 +329,7 @@ export function sanitizeCloud(input: unknown, base: CloudSettings): CloudSetting
     visionModel: model(o.visionModel, base.visionModel),
     answerModel: model(o.answerModel, base.answerModel),
     sessionCapUsd: Math.round(cap * 100) / 100,
+    visionThinking: o.visionThinking === 'off' || o.visionThinking === 'auto' ? o.visionThinking : base.visionThinking,
+    matchupReference: typeof o.matchupReference === 'boolean' ? o.matchupReference : base.matchupReference,
   }
 }

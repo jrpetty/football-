@@ -14,15 +14,15 @@ declare const self: DedicatedWorkerGlobalScope
 let canvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
 
-async function encodeJpeg(frame: Frame, profile: GameProfile, full?: { maxWidth: number }): Promise<ArrayBuffer> {
+async function encodeJpeg(frame: Frame, profile: GameProfile, opts: { readonly maxWidth?: number; readonly full?: boolean } = {}): Promise<ArrayBuffer> {
   const v = profile.vision ?? { maxWidth: 1280, crops: undefined }
   const source = new OffscreenCanvas(frame.width, frame.height)
   source.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(frame.data), frame.width, frame.height), 0, 0)
   // Either the whole frame, or the pack's crops stacked top to bottom.
-  const parts = !full && v.crops?.length
+  const parts = !opts.full && v.crops?.length
     ? v.crops.map((c) => ({ sx: c.region.x * frame.width, sy: c.region.y * frame.height, sw: c.region.w * frame.width, sh: c.region.h * frame.height }))
     : [{ sx: 0, sy: 0, sw: frame.width, sh: frame.height }]
-  const width = Math.min(full ? full.maxWidth : v.maxWidth, Math.max(...parts.map((p) => p.sw)))
+  const width = Math.min(opts.maxWidth ?? v.maxWidth, Math.max(...parts.map((p) => p.sw)))
   const heights = parts.map((p) => Math.round((p.sh * width) / p.sw))
   const out = new OffscreenCanvas(width, heights.reduce((a, b) => a + b, 0))
   const octx = out.getContext('2d')!

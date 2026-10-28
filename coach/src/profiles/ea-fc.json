@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "ea-fc",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": "EA SPORTS FC (broadcast camera)",
   "depth": "pack",
   "game": {
@@ -163,6 +163,22 @@
         "max": 20,
         "ttlMs": 60000,
         "description": "Only on a statistics screen, and only if xG is shown: the player's team's expected goals."
+      },
+      {
+        "key": "opponentTeam",
+        "label": "Opponent's team",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The opponent's team name or abbreviation from the scoreboard or team sheet (the side that is not the player's). Omit if not visible.",
+        "maxLength": 40
+      },
+      {
+        "key": "opponentFormation",
+        "label": "Opponent's formation",
+        "type": "string",
+        "ttlMs": 600000,
+        "description": "The opponent's formation, only if this frame shows it (team sheet, pause menu, a formation-change banner), e.g. '4-2-3-1'. Omit otherwise.",
+        "maxLength": 20
       }
     ],
     "events": [
@@ -2947,5 +2963,88 @@
     "goal_scored": "Goal for you",
     "goal_conceded": "Goal against",
     "turnover": "Lost the ball"
+  },
+  "contextKeys": [
+    "opponentFormation",
+    "opponentTeam"
+  ],
+  "learning": {
+    "dimensions": [
+      {
+        "id": "opponent",
+        "label": "Opponent",
+        "phrase": "against",
+        "from": "state",
+        "key": "opponentTeam",
+        "live": true
+      },
+      {
+        "id": "formation",
+        "label": "Opponent's formation",
+        "phrase": "facing",
+        "from": "state",
+        "key": "opponentFormation",
+        "live": true
+      }
+    ],
+    "tracks": [
+      {
+        "id": "conceded",
+        "label": "How they scored",
+        "side": "them",
+        "from": "event",
+        "key": "goal",
+        "attribute": "buildUp",
+        "where": {
+          "attribute": "scorer",
+          "value": "opponent"
+        },
+        "kind": "goal"
+      },
+      {
+        "id": "defending",
+        "label": "Your defending on goals against",
+        "side": "you",
+        "from": "event",
+        "key": "goal",
+        "attribute": "defending",
+        "where": {
+          "attribute": "scorer",
+          "value": "opponent"
+        },
+        "kind": "mistake"
+      },
+      {
+        "id": "scored",
+        "label": "How you scored",
+        "side": "you",
+        "from": "event",
+        "key": "goal",
+        "attribute": "buildUp",
+        "where": {
+          "attribute": "scorer",
+          "value": "player"
+        },
+        "kind": "goal"
+      },
+      {
+        "id": "turnovers",
+        "label": "How you lost the ball",
+        "side": "you",
+        "from": "event",
+        "key": "turnover",
+        "attribute": "cause",
+        "kind": "turnover"
+      },
+      {
+        "id": "their-formation",
+        "label": "Their formations",
+        "side": "them",
+        "from": "value",
+        "key": "opponentFormation",
+        "kind": "formation",
+        "composition": true
+      }
+    ]
   }
 }

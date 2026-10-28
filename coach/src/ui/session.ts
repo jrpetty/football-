@@ -12,7 +12,7 @@ import type { PatternSnapshot, PatternVerdict } from '../core/patterns.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
 import { answerLocally, buildDigest, classify } from '../core/qa/ask.ts'
 import { statusLabel } from '../core/policy/registry.ts'
-import type { CoachSettings } from '../core/settings.ts'
+import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
@@ -21,7 +21,7 @@ import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
 import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
-import type { FromWorker, ToWorker, WorkerStatus } from '../worker/protocol.ts'
+import type { FromWorker, ToWorker, VisionConfig, WorkerStatus } from '../worker/protocol.ts'
 import { policyFor } from './policy.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
@@ -166,6 +166,8 @@ export class CoachSession {
   private readonly bridge: SightlineBridge
   readonly speech: SpeechController
   private worker: Worker | null = null
+  /** Cloud vision runs for this session (screen capture, cloud on, key set, a pack that reads the screen). */
+  private visionEnabled = false
   private source: FrameSource | null = null
   private inFlight = 0
   private settings: CoachSettings | null = null
@@ -311,11 +313,8 @@ export class CoachSession {
 
     const policy = policyFor(profile, settings)
     const context = this.contextFor(profile, settings)
-    const vision = {
-      enabled: kind === 'screen' && cloud.available && cloud.settings.enabled && cloud.key.set && !!profile.vision,
-      intervalMs: profile.vision?.sampleIntervalMs ?? 3000,
-      maxInFlight: profile.vision?.maxInFlight ?? 1,
-    }
+    this.visionEnabled = kind === 'screen' && cloud.available && cloud.settings.enabled && cloud.key.set && !!profile.vision
+    const vision = this.visionConfig(profile, settings)
     if (vision.enabled) await this.bridge.resetCloudSession().catch(() => undefined)
 
     const screens = vision.enabled ? await this.bridge.loadScreens(profile.id).catch(() => null) : null
@@ -436,7 +435,15 @@ export class CoachSession {
     const profile = this.profile
     if (this.worker && profile) {
       this.post({ type: 'settings', settings, policy: policyFor(profile, settings), context: this.contextFor(profile, settings), now: this.now() })
+      // A new refresh time or detail applies from the next frame, without restarting capture.
+      this.post({ type: 'vision-config', vision: this.visionConfig(profile, settings), now: this.now() })
     }
+  }
+
+  /** Screen reading for this pack: the player's refresh time, looks at once and detail over the pack's defaults. */
+  private visionConfig(profile: GameProfile, settings: CoachSettings): VisionConfig {
+    const v = visionPrefsFor(profile, settings)
+    return { enabled: this.visionEnabled, intervalMs: v.intervalMs, maxInFlight: v.maxInFlight, maxWidth: v.maxWidth }
   }
 
   markBoundary(kind: 'round-end' | 'match-end', result: RoundResult): void {
@@ -452,6 +459,12 @@ export class CoachSession {
   /** A still for the alignment check; the caller must close it. */
   still(): Promise<ImageBitmap | null> {
     return this.source?.still() ?? Promise.resolve(null)
+  }
+
+  /** The player's context for a screen reading, plus the opponent's faction once it was read (for the matchup's reference). */
+  private visionContext(profile: GameProfile, settings: CoachSettings): Record<string, string | number> {
+    const faction = this.state.report?.profileId === profile.id ? this.state.report.intel?.faction?.id : undefined
+    return { ...this.contextFor(profile, settings), ...(faction ? { opponentFaction: faction } : {}) }
   }
 
   private contextFor(profile: GameProfile, settings: CoachSettings): Record<string, string | number> {
@@ -875,7 +888,7 @@ export class CoachSession {
     const worker = this.worker
     if (!profile || !settings || !worker) return
     const r = await this.bridge
-      .analyzeFrame({ profileId: profile.id, jpeg, context: this.contextFor(profile, settings) })
+      .analyzeFrame({ profileId: profile.id, jpeg, context: this.visionContext(profile, settings) })
       .catch((err: unknown) => ({ ok: false as const, error: String(err) }))
     // The session may have stopped (or a new one started) while the request was out.
     if (this.worker !== worker || !this.source) return
@@ -917,7 +930,7 @@ function settleAnswer(conversation: readonly QaEntry[], message: CoachingMessage
 }
 
 export function emptyReport(profile: GameProfile): SessionReport {
-  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], battles: [], context: {}, intel: null, mistakes: [], insights: [], matches: [] }
+  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], battles: [], context: {}, intel: null, learned: null, mistakes: [], insights: [], matches: [] }
 }
 
 /** A readable message for a failed transcription (IPC errors carry a long prefix). */

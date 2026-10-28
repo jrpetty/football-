@@ -36,13 +36,24 @@ class Builder {
     this.rnd = rnd
   }
 
-  batch(frameAt: number, state: Record<string, Value>, events: { type: string; zone?: string; attributes?: Record<string, Value>; evidence: string }[] = []): void {
+  /**
+   * One frame's readings. `more` holds readings added to the fixtures later
+   * (what each side fields, the weapon in hand…): they take a fixed confidence
+   * so the scripted random sequence of the older readings stays the same.
+   */
+  batch(
+    frameAt: number,
+    state: Record<string, Value>,
+    events: { type: string; zone?: string; attributes?: Record<string, Value>; evidence: string }[] = [],
+    more: Record<string, Value> = {},
+  ): void {
     const latency = 1200 + Math.round(this.rnd() * 1500)
     const conf = () => 0.82 + this.rnd() * 0.15
     const observations: Observation[] = []
     for (const [key, value] of Object.entries(state)) {
       observations.push(this.obs(frameAt, latency, 'state', key, conf(), { value }))
     }
+    for (const [key, value] of Object.entries(more)) observations.push(this.obs(frameAt, latency, 'state', key, 0.9, { value }))
     for (const e of events) {
       observations.push(this.obs(frameAt, latency, 'event', e.type, conf(), { zone: e.zone, attributes: e.attributes, evidence: e.evidence }))
     }
@@ -151,7 +162,18 @@ export function fcMatchReplay(opts: { seed: number; startAt?: number; intervalMs
     // One deliberate misread of the scoreboard (an 8 for a 0) that must not become a goal.
     const misread = !misreadDone && i === Math.round(samples * 0.1)
     if (misread) misreadDone = true
-    b.batch(t, { phase: inBreak ? 'round_end' : 'round', homeScore: misread ? 8 : home, awayScore: away, matchMinute: minuteAt(i) }, events)
+    b.batch(
+      t,
+      {
+        phase: inBreak ? 'round_end' : 'round',
+        homeScore: misread ? 8 : home,
+        awayScore: away,
+        matchMinute: minuteAt(i),
+      },
+      events,
+      // The team sheet at kick-off names the opponent and their shape.
+      i === 1 ? { opponentTeam: 'Northbridge FC', opponentFormation: '4-2-3-1' } : {},
+    )
   }
   return {
     profileId: 'ea-fc',
@@ -201,6 +223,11 @@ export function aoe2GameReplay(opts: { seed: number; startAt?: number; intervalM
       idleVillagers: idle,
       age,
       gameTimeSec: gameSec,
+    }, [], {
+      ...(i === 1 ? { opponentCiv: 'Franks' } : {}),
+      ...(gameSec > 840 && i % 9 === 0 ? { enemyBuildings: gameSec > 1100 ? '2 Stable, Barracks' : 'Barracks, Archery Range' } : {}),
+      ...(gameSec > 900 && i % 6 === 3 ? { enemyUnits: gameSec > 1150 ? '6 Knights, 4 Archers' : '5 Scout Cavalry' } : {}),
+      ...(gameSec > 900 && i % 6 === 0 ? { ownArmy: gameSec > 1150 ? '8 Spearmen, 6 Archers' : '6 Archers' } : {}),
     })
   }
   return {
@@ -274,8 +301,17 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
     const f = fights.get(i)
     b.batch(
       t,
-      { phase: 'round', playerScore: player, opponentScore: enemy, matchTimeLeftSec: Math.max(0, 600 - Math.round((i / samples) * 600)), mapName: 'Synthetic Yard', modeName: 'Hardpoint' },
+      {
+        phase: 'round',
+        playerScore: player,
+        opponentScore: enemy,
+        matchTimeLeftSec: Math.max(0, 600 - Math.round((i / samples) * 600)),
+        mapName: 'Synthetic Yard',
+        modeName: 'Hardpoint',
+      },
       f ? [{ type: f.type, ...(f.type === 'death' ? { zone: ['n', 'c', 'e', 'c', 'w'][i % 5] } : {}), attributes: f.tags, evidence: f.type === 'death' ? 'killcam' : 'kill marker' }] : [],
+      // The weapon in hand (the sidearm now and then), and the enemy's killstreaks as they come.
+      { ownWeapon: i % 7 === 6 ? 'Renetti' : 'MCW', ...(i % 23 === 11 ? { enemyStreaks: i % 46 === 11 ? 'UAV' : 'UAV, Cluster Strike' } : {}) },
     )
   }
   const tagged = (key: string, value: string, list: Tags[]) => list.filter((x) => x[key] === value).length
@@ -370,6 +406,8 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
         ...(k >= 0 ? { enemyUnits: k % 2 === 0 ? '10 Longbowmen, 4 Spearmen' : '6 Longbowmen' } : {}),
       },
       events,
+      // The player's own army, as seen in the fights.
+      k >= 0 && army > 0 ? { ownArmy: k % 2 === 0 ? `${Math.ceil(army * 0.6)} Horsemen, ${Math.floor(army * 0.4)} Spearmen` : `${army} Royal Knights` } : {},
     )
   }
   return {

@@ -7,7 +7,8 @@ import type { BenchmarkResult } from '../../core/analyses/benchmarks.ts'
 import { expectedAt } from '../../core/analyses/benchmarks.ts'
 import type { FactorResult } from '../../core/analyses/factors.ts'
 import type { BattleRecord } from '../../core/analyses/battles.ts'
-import type { IntelReport } from '../../core/analyses/intel.ts'
+import type { IntelReport, PastSeen } from '../../core/analyses/intel.ts'
+import { clock, dimensionValues, learnedFrom, type LearnedTrack, type LearnSource } from '../../core/analyses/learning.ts'
 import type { GameProfile, PlaybookEntry } from '../../core/profile/schema.ts'
 import type { MatchReview } from '../../core/review.ts'
 import { gameClock } from '../format.ts'
@@ -390,6 +391,7 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
                 <b>{r.name}</b>
                 {r.timing ? <span className="muted small">{r.timing}</span> : null}
               </div>
+              <PastBadge past={r.past} />
               <p className="small muted">Seen: {r.evidence.join(', ')}</p>
               <p className="small">{r.threat}</p>
               <ul className="good small">
@@ -412,7 +414,7 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
             {intel.usual.map((u) => (
               <li key={u.name}>
                 <b>{u.name}</b>
-                {u.signals ? <span className="muted"> · look for {u.signals}</span> : null}
+                {u.signals ? <span className="muted"> · look for {u.signals}</span> : null} <PastBadge past={u.past} />
               </li>
             ))}
           </ul>
@@ -457,3 +459,128 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
     </div>
   )
 }
+
+/** "Met in 3 of your 5 games against them": the reference plan, linked to what this player actually meets. */
+function PastBadge({ past }: { past: PastSeen | null }) {
+  if (!past) return null
+  return (
+    <span className={`badge ${past.seen ? 'ok' : 'neutral'} past`} title="From your saved games against this civilisation: in how many its tell-tale signs were on your screen">
+      {past.seen ? `Met in ${past.seen} of your ${past.of} ${past.of === 1 ? 'game' : 'games'}` : `Not in your last ${past.of} ${past.of === 1 ? 'game' : 'games'}`}
+    </span>
+  )
+}
+
+/**
+ * What the coach has learned across games, from what the screen showed: for
+ * each side, the usual order (first seen), the usual mix, tallies and how
+ * games went with each. Filtered by what the games were (opponent, map…).
+ */
+export function LearnedPanel({ profile, records, initial }: { profile: GameProfile; records: readonly LearnSource[]; initial?: Readonly<Record<string, string>> }) {
+  const dims = useMemo(() => dimensionValues(records, profile), [records, profile])
+  const [filter, setFilter] = useState<Record<string, string>>(() => ({ ...(initial ?? {}) }))
+  const learned = useMemo(() => learnedFrom(records, profile, filter), [records, profile, filter])
+  const tracks = profile.learning?.tracks ?? []
+  if (!dims.some((d) => d.values.length)) {
+    return (
+      <div className="learned">
+        <p className="small">
+          After each game the coach files what your screen showed under {profile.learning?.dimensions.map((d) => d.label.toLowerCase()).join(', ')}, and learns:
+        </p>
+        <ul className="small">
+          {tracks.map((t) => (
+            <li key={t.id}>
+              <b>{t.label}</b>
+              {t.order ? ' · in what order, by time first seen' : ''}
+              {t.composition ? ' · how often each' : ''}
+              {t.tally ? ' · with kills and deaths' : ''}
+            </li>
+          ))}
+        </ul>
+        <p className="muted small">Nothing learned yet. Play a few games with “Remember my games” on (Settings) so it carries over between sessions.</p>
+      </div>
+    )
+  }
+  const side = (who: 'them' | 'you') => (learned?.tracks ?? []).filter((t) => t.side === who)
+  return (
+    <div className="learned">
+      <div className="learned-filters">
+        {dims
+          .filter((d) => d.values.length)
+          .map((d) => (
+            <label key={d.id} className="field-inline">
+              <span className="label">{d.label}</span>
+              <select value={filter[d.id] ?? ''} onChange={(e) => setFilter((f) => ({ ...f, [d.id]: e.target.value }))}>
+                <option value="">All</option>
+                {d.values.map((v) => (
+                  <option key={v.value} value={v.value}>
+                    {v.value} ({v.matches})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+      </div>
+      {!learned ? (
+        <p className="muted small">No saved games match this choice.</p>
+      ) : (
+        <>
+          <p className="small">
+            <b>
+              {learned.matches} {learned.matches === 1 ? 'game' : 'games'}
+            </b>
+            {learned.filterText ? ` ${learned.filterText}` : ''}
+            {learned.won + learned.lost ? ` · won ${learned.won}, lost ${learned.lost}` : ''}
+            <span className="muted"> · first seen = when it appeared on your screen</span>
+          </p>
+          <div className="grid-2">
+            {(['them', 'you'] as const).map((who) => (
+              <div key={who}>
+                <h3 className="learned-side">{who === 'them' ? 'Them' : 'You'}</h3>
+                {side(who).length ? side(who).map((t) => <LearnedTrackView key={t.id} t={t} />) : <p className="muted small">Not seen yet.</p>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function LearnedTrackView({ t }: { t: LearnedTrack }) {
+  const order = t.kind === 'age' ? t.order.filter((o) => o.atSec >= 60) : t.order
+  return (
+    <div className="learned-track">
+      <div className="label">
+        {t.label} <span className="muted">· {t.matches} {t.matches === 1 ? 'game' : 'games'}</span>
+      </div>
+      {order.length ? (
+        <ol className="build-order">
+          {order.map((o) => (
+            <li key={o.name}>
+              <span>{o.name}</span> <span className="muted">{clock(o.atSec)}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {t.kind !== 'age' ? (
+        <ul className="learned-items">
+          {t.items.slice(0, 6).map((i) => (
+            <li key={i.name}>
+              <span className="learned-bar" style={{ width: `${Math.round(i.share * 100)}%` }} aria-hidden="true" />
+              <span className="learned-name">{i.name.replace(/_/g, ' ')}</span>
+              <span className="muted small">
+                {t.tally
+                  ? `${i.good}–${i.bad}`
+                  : t.composition || t.order
+                    ? `${i.seenIn} of ${t.matches}${i.firstSec !== null && t.order ? ` · first ${clock(i.firstSec)}` : ''}${i.peak && i.peak > 1 ? ` · up to ${i.peak}` : ''}`
+                    : `${i.total}×`}
+                {i.won + i.lost ? ` · won ${i.won} of ${i.won + i.lost}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+

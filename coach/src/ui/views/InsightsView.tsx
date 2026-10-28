@@ -7,7 +7,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { PatternRecord } from '../../core/types.ts'
 import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
-import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
+import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -52,6 +52,11 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
   const benches = (report?.benchmarks ?? []).filter((b) => b.points.length > 0)
   const deep = cloud.available && cloud.settings.enabled && cloud.key.set
   const capturing = state.phase !== 'idle'
+  // Saved games plus this session's, once each: what the coach learns from.
+  const learnFrom = useMemo(() => {
+    const seen = new Set<string>()
+    return [...state.history, ...(report?.matches ?? [])].filter((m) => m.gameProfileId === profile.id && (seen.has(m.id) ? false : (seen.add(m.id), true)))
+  }, [state.history, report, profile.id])
 
   return (
     <div className="page">
@@ -122,6 +127,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
             <span className="muted small">Only what your screen showed: scouted buildings, their army in view, the loading screen</span>
           </div>
           <IntelPanel intel={report.intel} profile={profile} />
+        </section>
+      )}
+
+      {profile.learning && (
+        <section className="panel" aria-labelledby="learned-h">
+          <div className="panel-head">
+            <h2 id="learned-h">What the coach has learned</h2>
+            <span className="muted small">{settings.saveTendencies ? 'Your saved games plus this session' : 'This session only: turn on “Remember my games” to keep it'}</span>
+          </div>
+          <LearnedPanel key={JSON.stringify(report?.learned?.filter ?? {})} profile={profile} records={learnFrom} initial={report?.learned?.filter} />
         </section>
       )}
 

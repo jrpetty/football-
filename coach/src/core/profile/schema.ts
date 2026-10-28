@@ -413,6 +413,52 @@ export interface RosterBuilding {
   readonly factions?: readonly string[]
 }
 
+/**
+ * Learning across matches: what each match is filed under, and what is
+ * followed for each side (as first seen, how many at once, how often).
+ */
+export interface LearningSpec {
+  /** State key with the in-game clock in seconds, for "first seen at"; else time since the match started. */
+  readonly clockKey?: string
+  readonly dimensions: readonly LearningDimension[]
+  readonly tracks: readonly LearningTrack[]
+}
+
+export interface LearningDimension {
+  readonly id: string
+  readonly label: string
+  /** "against" for the opponent's civilisation, "on" for a map: used in "your last games against English on Dry Arabia". */
+  readonly phrase?: string
+  /** state: a visible-state key; context: a player-context id; faction: the opponent's faction as recognised (intel). */
+  readonly from: 'state' | 'context' | 'faction'
+  readonly key: string
+  /** Live, the coach recalls past matches filed under this as soon as it is known. */
+  readonly live?: boolean
+}
+
+export interface LearningTrack {
+  readonly id: string
+  /** "Their buildings", "Your army", "Killed by". */
+  readonly label: string
+  readonly side: 'you' | 'them'
+  /** list: a "count Name, …" state key; value: a single-value state key (an age, a weapon in hand); event: an event type (by an attribute). */
+  readonly from: 'list' | 'value' | 'event'
+  /** State key, or the event type for event tracks. */
+  readonly key: string
+  /** Event tracks: the attribute whose value is counted (else the event itself). */
+  readonly attribute?: string
+  /** Event tracks: only events with this attribute value (e.g. goals scored by the opponent). */
+  readonly where?: { readonly attribute: string; readonly value: string }
+  /** What the names are, for wording: building, unit, age, weapon, goal… */
+  readonly kind: string
+  /** Part of a build order: the time each name is first seen matters. */
+  readonly order?: boolean
+  /** An army or pick mix: how often each name is fielded. */
+  readonly composition?: boolean
+  /** Value tracks: count these events while each value is current (e.g. kills and deaths per weapon). */
+  readonly tally?: { readonly good: string; readonly bad: string }
+}
+
 /** A plan a civilisation commonly goes for in one age, and how its opponent can see it coming. */
 export interface CivPlanMove {
   readonly id: string
@@ -567,6 +613,8 @@ export interface GameProfile {
     /** State key with other notable enemy things in view (second Town Center, tower at your gold, palisade…), matched against plan cues by key words. */
     readonly cuesKey?: string
   }
+  /** What the coach learns across matches from what the screen showed (needs memory on). */
+  readonly learning?: LearningSpec
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -1198,6 +1246,66 @@ export function validateProfile(input: unknown): ValidationResult {
       c.arr(it.ages, 'intel.ages', true).forEach((a, i) => c.str(a, `intel.ages[${i}]`, { max: 40 }))
       const pc = c.str(it.playerFactionContext, 'intel.playerFactionContext', { optional: true })
       if (pc && !contextIds.has(pc)) c.errors.push(`intel.playerFactionContext: unknown player context "${pc}"`)
+    }
+  }
+
+  if (p.learning !== undefined) {
+    const l = c.obj(p.learning, 'learning')
+    if (l) {
+      const ck = c.str(l.clockKey, 'learning.clockKey', { optional: true })
+      if (ck && !visionStateKeys.has(ck)) c.errors.push(`learning.clockKey: unknown state key "${ck}"`)
+      const ids = new Set<string>()
+      c.arr(l.dimensions, 'learning.dimensions').forEach((x, i) => {
+        const path = `learning.dimensions[${i}]`
+        const d = c.obj(x, path)
+        if (!d) return
+        const id = c.str(d.id, `${path}.id`, { pattern: ID })
+        if (id && ids.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+        if (id) ids.add(id)
+        c.str(d.label, `${path}.label`, { max: 40 })
+        c.str(d.phrase, `${path}.phrase`, { optional: true, max: 20 })
+        const from = c.oneOf(d.from, `${path}.from`, ['state', 'context', 'faction'] as const)
+        const key = c.str(d.key, `${path}.key`)
+        if (from === 'state' && key && !visionStateKeys.has(key)) c.errors.push(`${path}.key: unknown state key "${key}"`)
+        if (from === 'context' && key && !contextIds.has(key)) c.errors.push(`${path}.key: unknown player context "${key}"`)
+        if (from === 'faction' && !p.intel) c.errors.push(`${path}: a faction dimension needs intel`)
+        if (d.live !== undefined && typeof d.live !== 'boolean') c.errors.push(`${path}.live: must be a boolean`)
+      })
+      const trackIds = new Set<string>()
+      c.arr(l.tracks, 'learning.tracks').forEach((x, i) => {
+        const path = `learning.tracks[${i}]`
+        const t = c.obj(x, path)
+        if (!t) return
+        const id = c.str(t.id, `${path}.id`, { pattern: ID })
+        if (id && trackIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+        if (id) trackIds.add(id)
+        c.str(t.label, `${path}.label`, { max: 40 })
+        c.str(t.kind, `${path}.kind`, { max: 30 })
+        c.oneOf(t.side, `${path}.side`, ['you', 'them'] as const)
+        const from = c.oneOf(t.from, `${path}.from`, ['list', 'value', 'event'] as const)
+        const key = c.str(t.key, `${path}.key`)
+        if (from === 'event') {
+          const ev = key ? visionEvents.get(key) : undefined
+          if (key && !ev) c.errors.push(`${path}.key: unknown vision event "${key}"`)
+          const attr = c.str(t.attribute, `${path}.attribute`, { optional: true })
+          if (attr && ev && !ev.attributes.has(attr)) c.errors.push(`${path}.attribute: unknown attribute "${attr}" of ${key}`)
+          if (t.where !== undefined) {
+            const w = c.obj(t.where, `${path}.where`)
+            const wa = w ? c.str(w.attribute, `${path}.where.attribute`) : null
+            if (w) c.str(w.value, `${path}.where.value`)
+            if (wa && ev && !ev.attributes.has(wa)) c.errors.push(`${path}.where.attribute: unknown attribute "${wa}" of ${key}`)
+          }
+        } else if (key && !visionStateKeys.has(key)) c.errors.push(`${path}.key: unknown state key "${key}"`)
+        if (t.tally !== undefined) {
+          const ta = c.obj(t.tally, `${path}.tally`)
+          if (from !== 'value') c.errors.push(`${path}.tally: only value tracks keep a tally`)
+          for (const k of ['good', 'bad'] as const) {
+            const e = ta ? c.str(ta[k], `${path}.tally.${k}`) : null
+            if (e && !visionEvents.has(e)) c.errors.push(`${path}.tally.${k}: unknown vision event "${e}"`)
+          }
+        }
+        for (const k of ['order', 'composition'] as const) if (t[k] !== undefined && typeof t[k] !== 'boolean') c.errors.push(`${path}.${k}: must be a boolean`)
+      })
     }
   }
 

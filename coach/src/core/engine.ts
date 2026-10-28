@@ -16,6 +16,7 @@ import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './commentary.ts'
 import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
+import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -119,6 +120,8 @@ export interface SessionReport {
   readonly context: Readonly<Record<string, string | number>>
   /** Scouting intel (strategy packs with a roster), or null. */
   readonly intel: IntelReport | null
+  /** What past matches like this one had in common (packs that learn), for what is known of this match so far. */
+  readonly learned: Learned | null
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
@@ -144,6 +147,14 @@ export class CoachEngine {
   private readonly scores: ScoreTracker[]
   private readonly phases: PhaseBoundaryDetector
   private readonly recorder: MatchRecorder
+  /** What each side is seen building and fielding this match (packs that learn across matches). */
+  private readonly scout: ScoutRecorder | null
+  /** Dimensions already recalled this match ("your last games against English…"). */
+  private recalled = new Set<string>()
+  /** The opponent's faction the intel's history was last linked for. */
+  private historyFor: string | null = null
+  /** When the current match began (readings before it belong to the last match). */
+  private matchSince = -Infinity
   private readonly factors: FactorAnalyzer
   private readonly benchmarks: BenchmarkTracker
   private readonly battles: BattleTracker
@@ -204,6 +215,7 @@ export class CoachEngine {
     this.scores = (profile.scoreRules ?? []).map((r) => new ScoreTracker(r, sideOf(this.context[r.sideContext])))
     this.phases = new PhaseBoundaryDetector()
     this.recorder = new MatchRecorder(profile.matchStats)
+    this.scout = profile.learning ? new ScoutRecorder(profile) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
@@ -434,8 +446,10 @@ export class CoachEngine {
       factors: this.factors.results('session'),
       benchmarks: this.benchmarks.results(),
       battles: this.battles.battles(),
-      context: { ...this.gameContext },
+      // Between matches, the last match's (for the review and answers) until the next one is read.
+      context: Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) },
       intel: this.intel?.report() ?? null,
+      learned: this.profile.learning ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -474,10 +488,12 @@ export class CoachEngine {
     }
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
+    this.scout?.observe(this.visible, now)
     this.benchmarks.observe(this.visible)
     for (const k of this.profile.contextKeys ?? []) {
       const v = this.visible.values[k]
-      if (v && !v.conflicted && (typeof v.value === 'string' || typeof v.value === 'number')) this.gameContext[k] = v.value
+      // Only this match's readings: the last match's map or opponent can linger in the state for minutes.
+      if (v && !v.conflicted && v.observedAt >= this.matchSince && (typeof v.value === 'string' || typeof v.value === 'number')) this.gameContext[k] = v.value
     }
 
     // Vision sightings of goals enrich (or wait for) scoreboard goals.
@@ -502,6 +518,7 @@ export class CoachEngine {
   private handleEvents(events: GameEvent[], now: number, out: EngineOutput): void {
     for (const ev of events) {
       out.entries.push({ type: 'event', at: ev.at, event: ev })
+      this.scout?.event(ev, now, this.visible)
       this.heatmaps.record(ev)
       this.factors.record(ev)
       if (ev.category !== 'boundary') this.matchHasData = true
@@ -630,9 +647,10 @@ export class CoachEngine {
       benchmarks: this.benchmarks.results(),
       battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
       context: { ...this.gameContext },
+      scout: this.scout?.finish(this.learningDims()) ?? null,
       endedManually: end.manual,
     })
-    if (this.matchHasData) {
+    if (this.matchHasData || record.scout) {
       const msg = matchSummaryMessage(
         {
           ...inputs,
@@ -659,6 +677,9 @@ export class CoachEngine {
     this.battles.newMatch()
     this.intel?.newMatch(this.lastT)
     this.intelQueue = []
+    this.recalled = new Set()
+    this.historyFor = null
+    this.matchSince = this.lastT
     this.matchBattlesFrom = this.battles.battles().length
     this.gameContext = {}
     this.factorTipsGiven = new Set()
@@ -703,16 +724,85 @@ export class CoachEngine {
   /** Commentary that does not come from a single event: a fight starting, a benchmark checkpoint. */
   private commentOnState(now: number, out: EngineOutput): void {
     const news = this.intel?.update(this.visible, now) ?? []
+    this.linkHistory()
+    // Past matches like this one: on the timeline and spoken with the commentary, only where live coaching
+    // is allowed; elsewhere they wait for Insights after the match, like the rest of the scouting.
+    const recalled = this.policy.scope.has('live') ? this.recall(now) : []
+    for (const r of recalled) out.entries.push(notice(now, 'info', r.news.text))
     const start = this.battles.takeStart()
     const fresh = this.benchmarks.takeFresh()
     if (!this.settings.commentary) return
     if (start) this.comment(fightStartLine(this.profile, start), `fight-start:${now}`, now, 0.8, 'first frame of a fight', now, out)
     for (const f of fresh) this.comment(checkpointLine(f.spec, f.atSec, f.actual, f.expected), `checkpoint:${f.spec.id}:${f.atSec}`, now, 0.85, `${f.spec.label} at ${f.atSec}s`, now, out)
     // Scouting news is said once, so it waits its turn rather than being lost to the pacing; reads go first.
-    this.intelQueue.push(...news.map((n) => ({ news: n, at: now })))
+    this.intelQueue.push(...news.map((n) => ({ news: n, at: now })), ...recalled)
     this.intelQueue = this.intelQueue.filter((q) => now - q.at < INTEL_WAIT_MS).sort((a, b) => Number(b.news.kind === 'read') - Number(a.news.kind === 'read'))
     const next = this.intelQueue[0]
     if (next && this.comment(next.news.text, `intel:${next.news.kind}:${next.news.id}`, next.at, 0.8, `seen on screen: ${next.news.id}`, now, out)) this.intelQueue.shift()
+  }
+
+  /**
+   * What this match is, as far as known: each learning dimension's value from
+   * the screen (map, mode), the player's settings (their civilisation) or the
+   * recognised opponent's faction.
+   */
+  private learningDims(): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const d of this.profile.learning?.dimensions ?? []) {
+      const raw =
+        d.from === 'faction' ? this.intel?.opponentFaction?.name : d.from === 'context' ? this.context[d.key] : (this.gameContext[d.key] ?? this.thisMatch(d.key))
+      const v = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim().slice(0, 80) : ''
+      if (v) out[d.id] = v
+    }
+    return out
+  }
+
+  /** Once the opponent's faction is known, what the player's past games against it showed, for the reference plans. */
+  private linkHistory(): void {
+    const faction = this.intel?.opponentFaction?.name ?? null
+    if (faction === this.historyFor) return
+    this.historyFor = faction
+    const dim = this.profile.learning?.dimensions.find((d) => d.from === 'faction')
+    const l = faction && dim ? learnedFrom(this.matchHistory, this.profile, { [dim.id]: faction }) : null
+    const seen = new Map<string, number>()
+    for (const t of l?.tracks.filter((x) => x.side === 'them') ?? []) for (const i of t.items) seen.set(i.name, Math.max(seen.get(i.name) ?? 0, i.seenIn))
+    this.intel?.setHistory(l ? { matches: l.matches, seen } : null)
+  }
+
+  /** What the report's learning is about: this match's live dimensions, or between matches the last match's. */
+  private reportFilter(): Record<string, string> {
+    const now = this.liveFilter()
+    if (Object.keys(now).length) return now
+    const last = this.sessionMatches.at(-1)?.scout?.dims ?? {}
+    return Object.fromEntries((this.profile.learning?.dimensions ?? []).filter((d) => d.live && last[d.id]).map((d) => [d.id, last[d.id]]))
+  }
+
+  /** A state value read during this match, as text. */
+  private thisMatch(key: string): string | undefined {
+    const v = this.visible.values[key]
+    return v && !v.conflicted && v.observedAt >= this.matchSince ? stringValue(v.value) : undefined
+  }
+
+  /** The live dimensions known so far (e.g. the opponent's civilisation once read). */
+  private liveFilter(): Record<string, string> {
+    const dims = this.learningDims()
+    return Object.fromEntries((this.profile.learning?.dimensions ?? []).filter((d) => d.live && dims[d.id]).map((d) => [d.id, dims[d.id]]))
+  }
+
+  /** Once a live dimension is known, what past matches filed under it had in common, said once per match. */
+  private recall(now: number): { news: IntelNews; at: number }[] {
+    const out: { news: IntelNews; at: number }[] = []
+    for (const [id, value] of Object.entries(this.liveFilter())) {
+      if (this.recalled.has(id)) continue
+      this.recalled.add(id)
+      const l = learnedFrom(this.matchHistory, this.profile, { [id]: value })
+      if (!l) continue
+      const lines = [...learnedLines(l, 'them', 2), ...learnedLines(l, 'you', 3).slice(-1)]
+      if (!lines.length) continue
+      const games = `${l.matches} ${l.matches === 1 ? 'game' : 'games'}`
+      out.push({ news: { kind: 'history', id: `${id}:${value}`, text: `Your last ${games} ${l.filterText}: ${lines.join(' ')}` }, at: now })
+    }
+    return out
   }
 
   /** Says a commentary line if the governor allows it now; true when it was spoken. */
@@ -860,4 +950,8 @@ function notice(at: number, level: 'info' | 'warning', text: string): TimelineEn
 
 function battleCounts(list: readonly BattleRecord[]): { won: number; lost: number; unclear: number } {
   return { won: list.filter((b) => b.outcome === 'won').length, lost: list.filter((b) => b.outcome === 'lost').length, unclear: list.filter((b) => b.outcome === 'unclear').length }
+}
+
+function stringValue(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : typeof v === 'number' ? String(v) : undefined
 }
