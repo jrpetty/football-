@@ -261,6 +261,8 @@ test("a game's own radar overview with a transparent surround: the playable area
   for (let i = 0; i < off.w * off.h; i++) if (off.kind[i] === KIND_OUT) out++
   assert.ok(Math.abs(out / (off.w * off.h) - (1 - opaque / (size * size))) < 0.01, `out ${out / (off.w * off.h)}`)
   assert.ok(off.box.x0 >= 58 && off.box.x0 <= 63 && off.box.x1 >= 457 && off.box.x1 <= 461, JSON.stringify(off.box))
+  // A transparent surround marks a game's map picture: kept as an overhead map.
+  assert.equal(off.score, 1)
   // A square overview with callout pixels (on the game's 1024 px overview): labels where they are, visited or not.
   const empty: StoredMosaic = { version: 1, map: 'X', updatedAt: '', pieces: [], joined: {}, nextId: 1, callouts: {}, heights: {} }
   const layers = mapLayers(empty, [], { ...off, srcW: size, srcH: size }, { imageSize: 1024, calloutPx: { 'A Site': [600, 400], Mid: [200, 300] } })!

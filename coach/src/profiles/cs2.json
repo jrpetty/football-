@@ -8436,7 +8436,8 @@
           "posX": -3453,
           "posY": 2887,
           "scale": 7,
-          "imageSize": 1024
+          "imageSize": 1024,
+          "lowerBelowZ": -495
         }
       },
       {
@@ -9709,7 +9710,8 @@
           "posX": -2308,
           "posY": 2078,
           "scale": 4.082077,
-          "imageSize": 1024
+          "imageSize": 1024,
+          "lowerBelowZ": -50
         }
       },
       {
@@ -10288,7 +10290,8 @@
           "posX": -3168,
           "posY": 1762,
           "scale": 4,
-          "imageSize": 1024
+          "imageSize": 1024,
+          "lowerBelowZ": 11700
         }
       }
     ],

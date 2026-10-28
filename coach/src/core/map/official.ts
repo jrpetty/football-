@@ -211,7 +211,8 @@ export function analyzeOfficial(rgba: Uint8ClampedArray | Uint8Array, srcW: numb
   const lineFrac = inside ? lines / inside : 0
   // Out of bounds is drawn darker than the playable area, or in warm texture.
   const surround = outN && (darkOut / outN < (inside ? litIn / inside : 1) + 0.05 || warmOut / outN > 0.25) ? 1 : 0
-  const score = ((bounded && inFrac >= 0.05 && inFrac <= 0.85 ? 1 : 0) + Math.min(1, lineFrac * 10) + surround) / 3
+  // A transparent surround is itself the mark of a game's map picture (a screenshot never has one).
+  const score = byAlpha && inFrac >= 0.05 && inFrac <= 0.9 ? 1 : ((bounded && inFrac >= 0.05 && inFrac <= 0.85 ? 1 : 0) + Math.min(1, lineFrac * 10) + surround) / 3
   const levels: Level[] = [{ w, h, v: lum }]
   for (let l = 1; l <= 3; l++) levels.push(half(levels[l - 1]))
   return {

@@ -566,7 +566,7 @@ function GameDataPanel({ bridge }: { bridge: SightlineBridge }) {
             <span className="label">Set it up once</span>
             <ol className="small" style={{ margin: '4px 0', paddingLeft: 18 }}>
               <li>
-                Save the file into the game’s cfg folder{cfg?.folder ? ` (found: ${cfg.folder})` : ' (…\steamapps\common\Counter-Strike Global Offensive\game\csgo\cfg)'}.{' '}
+                Save the file into the game’s cfg folder{cfg?.folder ? ` (found: ${cfg.folder})` : ' (…\\steamapps\\common\\Counter-Strike Global Offensive\\game\\csgo\\cfg)'}.{' '}
                 <button
                   type="button"
                   className="btn sm"

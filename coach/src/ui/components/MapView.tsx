@@ -160,6 +160,9 @@ function officialFor(official: OfficialSource, profile: GameProfile, name: strin
   return id && official.kept[id] ? id : null
 }
 
+const NOTHING: ReadonlySet<Layer> = new Set()
+const CALLOUTS_ONLY: ReadonlySet<Layer> = new Set(['callouts'])
+
 /** A map's official overhead map before it was played with a fixed minimap. */
 function OfficialPreview({ name, mapId, official, radar }: { name: string; mapId: string; official: OfficialSource; radar?: GameMap['radar'] }) {
   const pic = useOfficialPicture(official, mapId)
@@ -168,9 +171,9 @@ function OfficialPreview({ name, mapId, official, radar }: { name: string; mapId
   if (!pic || !layers) return <p className="muted small">Loading the official map of {name}…</p>
   return (
     <div className="stitched">
-      <MapOverhead layers={layers} show={new Set()} picture={pic.picture} label={`${name}, official overhead map`} />
+      <MapOverhead layers={layers} show={layers.callouts.length ? CALLOUTS_ONLY : NOTHING} picture={pic.picture} label={`${name}, official overhead map`} />
       <p className="muted small">
-        {name}’s official overhead map. Play it with your minimap set to <b>fixed</b> (north up): the coach places what your minimap shows on this map by itself, and pins
+        {name}’s official overhead map{layers.callouts.length ? `, with its ${layers.callouts.length} callouts` : ''}. Play it with your minimap set to <b>fixed</b> (north up): the coach places what your minimap shows on this map by itself, and pins
         where you die, get kills and where killers were on it.
       </p>
     </div>
