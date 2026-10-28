@@ -4073,3 +4073,26 @@ td > .swatch {
     grid-column: 1 / -1;
   }
 }
+
+/* Map views on the official overhead map */
+.official-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.official-status > span:nth-child(2) {
+  flex: 1;
+  min-width: 220px;
+}
+.official-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}

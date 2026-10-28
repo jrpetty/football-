@@ -3,10 +3,13 @@
 // died, where they got kills, where each killer was and the line of fire,
 // their paths life by life, enemy pings and a heat of deaths. Zoom with the
 // wheel or the buttons, drag to pan, hover a marker for its details. One
-// match can be played back on it.
+// match can be played back on it. With the map's official overhead map, that
+// picture is the base (out of bounds dimmed), and the stitched map can be laid
+// over it to check the placement.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { deathClusters, type MapLayers, type PlacedPin } from '../../core/map/view.ts'
+import { KIND_OUT } from '../../core/map/official.ts'
+import { deathClusters, type MapImage, type MapLayers, type OfficialBase, type PlacedPin } from '../../core/map/view.ts'
 import { gameClock } from '../format.ts'
 
 export type Layer = 'deaths' | 'kills' | 'killers' | 'paths' | 'enemies' | 'heat' | 'callouts'
@@ -32,7 +35,38 @@ export const MARK = {
 
 /** The stitched map as a picture: dark ground, lighter structures, edges in the accent colour. */
 export function stylizedMap(layers: MapLayers): HTMLCanvasElement {
-  const { w, h, lum, weight } = layers.image
+  return stylizedImage(layers.image)
+}
+
+/** The official overhead map as the base: the picture (up to 2048 px across), out of bounds dimmed. */
+export function officialPicture(picture: HTMLImageElement | ImageBitmap, base: OfficialBase): HTMLCanvasElement {
+  const f = Math.min(1, 2048 / Math.max(picture.width, picture.height))
+  const c = document.createElement('canvas')
+  c.width = Math.round(picture.width * f)
+  c.height = Math.round(picture.height * f)
+  const ctx = c.getContext('2d')!
+  ctx.drawImage(picture, 0, 0, c.width, c.height)
+  const mask = document.createElement('canvas')
+  mask.width = base.w
+  mask.height = base.h
+  const mctx = mask.getContext('2d')!
+  const img = mctx.createImageData(base.w, base.h)
+  for (let i = 0; i < base.w * base.h; i++) {
+    if (base.kind[i] !== KIND_OUT) continue
+    img.data[i * 4] = 5
+    img.data[i * 4 + 1] = 8
+    img.data[i * 4 + 2] = 14
+    img.data[i * 4 + 3] = 150
+  }
+  mctx.putImageData(img, 0, 0)
+  ctx.imageSmoothingEnabled = true
+  ctx.drawImage(mask, 0, 0, c.width, c.height)
+  return c
+}
+
+/** A stitched image drawn as a tactical map. */
+export function stylizedImage(image: MapImage): HTMLCanvasElement {
+  const { w, h, lum, weight } = image
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
@@ -128,9 +162,15 @@ export function MapOverhead({
   playT,
   compact = false,
   label,
+  picture = null,
+  overlay = null,
 }: {
   layers: MapLayers
   show: ReadonlySet<Layer>
+  /** The official overhead map's picture (with official layers). */
+  picture?: HTMLImageElement | ImageBitmap | null
+  /** Stitched pieces laid over the official map to check their placement: each with its transform (canvas → layer pixels). */
+  overlay?: readonly { readonly canvas: HTMLCanvasElement; readonly m: readonly [number, number, number, number, number, number] }[] | null
   /** The player now (image coordinates), live. */
   here?: { readonly x: number; readonly y: number } | null
   /** Only this match (index into the matches the layers were built from), or all. */
@@ -150,7 +190,8 @@ export function MapOverhead({
 
   // The picture depends only on the stitched map, not on the pins (which change every few seconds while playing).
   const image = layers.image
-  const base = useMemo(() => stylizedMap(layers), [image])
+  const officialBase = layers.official?.base ?? null
+  const base = useMemo(() => (officialBase && picture ? officialPicture(picture, officialBase) : stylizedMap(layers)), [image, officialBase, picture])
   const pins = useMemo(
     () => layers.pins.filter((p) => (focus === null || focus === undefined || p.match === focus) && (playT === null || playT === undefined || p.t <= playT)),
     [layers, focus, playT],
@@ -212,8 +253,19 @@ export function MapOverhead({
     ctx.save()
     ctx.translate(v.tx, v.ty)
     ctx.scale(v.s, v.s)
-    ctx.imageSmoothingEnabled = v.s < 2
-    ctx.drawImage(base, 0, 0)
+    ctx.imageSmoothingEnabled = !!officialBase || v.s < 2
+    ctx.drawImage(base, 0, 0, iw, ih)
+    if (overlay?.length) {
+      ctx.globalAlpha = 0.6
+      ctx.imageSmoothingEnabled = v.s < 2
+      for (const o of overlay) {
+        ctx.save()
+        ctx.transform(...o.m)
+        ctx.drawImage(o.canvas, 0, 0)
+        ctx.restore()
+      }
+      ctx.globalAlpha = 1
+    }
     const px = 1 / v.s
     if (show.has('heat')) {
       ctx.globalCompositeOperation = 'screen'
@@ -318,7 +370,7 @@ export function MapOverhead({
     }
     if (here) drawHere(ctx, here.x, here.y, px, pulse / 1.6)
     ctx.restore()
-  }, [base, heat, layers, pins, clusters, show, v, size, here, pulse, focus, playT, hover])
+  }, [base, heat, layers, pins, clusters, show, v, size, here, pulse, focus, playT, hover, overlay, officialBase, iw, ih])
 
   // Pointer: drag to pan, wheel to zoom, hover for details.
   const onWheel = (e: React.WheelEvent) => {
@@ -375,7 +427,7 @@ export function MapOverhead({
         ref={canvas}
         style={{ width: size.w, height: size.h }}
         role="img"
-        aria-label={`${label}: ${deaths} deaths and ${kills} kills placed on the map stitched from your minimap.`}
+        aria-label={`${label}: ${deaths} deaths and ${kills} kills placed on ${officialBase ? 'the official overhead map' : 'the map stitched from your minimap'}.`}
         onWheel={onWheel}
         onPointerDown={onDown}
         onPointerMove={onMove}

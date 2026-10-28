@@ -10,6 +10,8 @@ export interface TacMap {
   readonly size: number
   /** Luminance 0..1, size×size. */
   readonly lum: Float32Array
+  /** A real picture drawn in its own colours instead (the official overhead map the player kept), RGBA. */
+  readonly picture?: { readonly data: Uint8ClampedArray; readonly w: number; readonly h: number }
 }
 
 export function tacMap(seed: number, size = 720): TacMap {
@@ -92,11 +94,27 @@ export function drawMinimap(m: TacMap, cx: number, cy: number, px: number, d: Mi
     out[o + 2] = b
     out[o + 3] = 255
   }
+  const pic = m.picture
+  // A picture: four samples over each minimap pixel (the game draws its minimap filtered).
+  const pick = (x: number, y: number, c: number) => {
+    const X = Math.round(x)
+    const Y = Math.round(y)
+    return X < 0 || Y < 0 || X >= pic!.w || Y >= pic!.h ? [12, 16, 22][c] : pic!.data[(Y * pic!.w + X) * 4 + c]
+  }
   for (let y = 0; y < px; y++) {
     for (let x = 0; x < px; x++) {
       const dx = x - half + 0.5
       const dy = y - half + 0.5
       if (d.round && dx * dx + dy * dy > half * half) continue
+      if (pic) {
+        const sx = cx + dx * d.scale
+        const sy = cy + dy * d.scale
+        const q = 0.3 * d.scale
+        const n = d.noise ? (rnd() - 0.5) * d.noise * 255 : 0
+        const ch = (c: number) => (pick(sx - q, sy - q, c) + pick(sx + q, sy - q, c) + pick(sx - q, sy + q, c) + pick(sx + q, sy + q, c)) / 4 + n
+        set(x, y, ch(0), ch(1), ch(2))
+        continue
+      }
       let v = sample(m, cx + dx * d.scale, cy + dy * d.scale)
       if (d.noise) v += (rnd() - 0.5) * d.noise
       v = Math.max(0, Math.min(1, v))

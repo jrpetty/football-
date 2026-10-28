@@ -4,18 +4,56 @@
 // areas placed from the pack's rough layout and pulled together by the
 // routes the player actually took, sized by time spent, coloured by kills
 // against deaths, with the angles that killed them drawn as red arrows; "3D"
-// lifts each area to its height layer in an isometric view.
+// lifts each area to its height layer in an isometric view. With the map's
+// official overhead map, all of it is drawn on that instead (see OfficialSource).
 
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import type { OverheadInfo } from '../../../shared/bridge.ts'
 import type { MapReport } from '../../core/engine.ts'
 import { findMap, layoutMap, mapLines, mapModelFrom, mapsPlayed, type MapMatchRecord, type MapModel } from '../../core/analyses/mapModel.ts'
 import type { MatchPins } from '../../core/map/locator.ts'
-import { mapInsights, mapLayers, resolvePoint } from '../../core/map/view.ts'
+import { fromBase64, type StoredMosaic } from '../../core/map/minimap.ts'
+import type { Alignment } from '../../core/map/official.ts'
+import { mapInsights, mapLayers, officialPoint, resolvePoint, storedAlignment, type OfficialBase } from '../../core/map/view.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { gameClock } from '../format.ts'
+import type { OverheadAnalysis } from '../overhead.ts'
 import type { ShownMosaic } from '../session.ts'
 import { Segmented } from './common.tsx'
-import { LAYERS, MapOverhead, type Layer } from './MapOverhead.tsx'
+import { LAYERS, MapOverhead, stylizedImage, type Layer } from './MapOverhead.tsx'
+
+/** Official overhead maps for the map views (see CoachSession). */
+export interface OfficialSource {
+  /** Kept images, by map id. */
+  readonly kept: Readonly<Record<string, OverheadInfo>>
+  readonly load: (mapId: string) => Promise<{ url: string; analysis: OverheadAnalysis } | null>
+  /** Places a saved stitched map on the official map after the fact (not while capturing). */
+  readonly place?: (mosaic: ShownMosaic, mapId: string) => Promise<number>
+  /** Saves a placement adjusted by hand (not while capturing). */
+  readonly adjust?: (mosaic: ShownMosaic, piece: number, a: Alignment) => Promise<void>
+}
+
+/** A map's official picture, loaded and decoded, with its analysis. */
+function useOfficialPicture(official: OfficialSource | undefined, mapId: string | null): { base: OfficialBase; picture: HTMLImageElement } | null {
+  const savedAt = mapId ? (official?.kept[mapId]?.savedAt ?? null) : null
+  const [pic, setPic] = useState<{ key: string; base: OfficialBase; picture: HTMLImageElement } | null>(null)
+  const key = mapId && savedAt ? `${mapId}@${savedAt}` : null
+  useEffect(() => {
+    if (!key || !official || !mapId) return
+    let live = true
+    void official.load(mapId).then(async (r) => {
+      if (!r || !live) return
+      const img = new Image()
+      img.src = r.url
+      await img.decode().catch(() => undefined)
+      if (live && img.naturalWidth) setPic({ key, base: r.analysis, picture: img })
+    })
+    return () => {
+      live = false
+    }
+  }, [key])
+  return pic && pic.key === key ? pic : null
+}
 
 const W = 640
 const H = 420
@@ -35,12 +73,15 @@ export function MapPanel({
   records,
   live,
   mosaics,
+  official,
 }: {
   profile: GameProfile
   records: readonly MapMatchRecord[]
   live?: MapReport | null
   /** Maps stitched from the minimap, by map name (lower case). */
   mosaics?: Readonly<Record<string, ShownMosaic>>
+  /** Official overhead maps the player kept. */
+  official?: OfficialSource
 }) {
   const played = useMemo(() => mapsPlayed(records, profile.knowledge.maps), [records, profile])
   const names = useMemo(() => {
@@ -78,7 +119,17 @@ export function MapPanel({
         </label>
       </div>
       {name && stitched ? (
-        <StitchedMap key={name} name={name} mosaic={stitched} profile={profile} records={records} live={live?.minimap?.map && sameMap(profile, live.minimap.map, name) ? live : null} />
+        <StitchedMap
+          key={name}
+          name={name}
+          mosaic={stitched}
+          profile={profile}
+          records={records}
+          live={live?.minimap?.map && sameMap(profile, live.minimap.map, name) ? live : null}
+          official={official}
+        />
+      ) : name && official && officialFor(official, profile, name) ? (
+        <OfficialPreview name={name} mapId={officialFor(official, profile, name)!} official={official} />
       ) : name ? (
         <p className="muted small map-howto">
           No overhead map of {name} yet. Play it with your minimap set to <b>fixed</b> (north up) and cloud vision on: the coach stitches the map from your minimap as you move,
@@ -104,6 +155,28 @@ function sameMap(profile: GameProfile, a: string, b: string): boolean {
   return n(a) === n(b)
 }
 
+function officialFor(official: OfficialSource, profile: GameProfile, name: string): string | null {
+  const id = findMap(profile.knowledge.maps, name)?.id
+  return id && official.kept[id] ? id : null
+}
+
+/** A map's official overhead map before it was played with a fixed minimap. */
+function OfficialPreview({ name, mapId, official }: { name: string; mapId: string; official: OfficialSource }) {
+  const pic = useOfficialPicture(official, mapId)
+  const empty = useMemo<StoredMosaic>(() => ({ version: 1, map: name, updatedAt: '', pieces: [], joined: {}, nextId: 1, callouts: {}, heights: {} }), [name])
+  const layers = useMemo(() => (pic ? mapLayers(empty, [], pic.base) : null), [pic, empty])
+  if (!pic || !layers) return <p className="muted small">Loading the official map of {name}…</p>
+  return (
+    <div className="stitched">
+      <MapOverhead layers={layers} show={new Set()} picture={pic.picture} label={`${name}, official overhead map`} />
+      <p className="muted small">
+        {name}’s official overhead map. Play it with your minimap set to <b>fixed</b> (north up): the coach places what your minimap shows on this map by itself, and pins
+        where you die, get kills and where killers were on it.
+      </p>
+    </div>
+  )
+}
+
 function stitchedFor(mosaics: Readonly<Record<string, ShownMosaic>> | undefined, profile: GameProfile, name: string): ShownMosaic | null {
   if (!mosaics) return null
   return Object.values(mosaics).find((m) => sameMap(profile, m.map, name) && m.pieces.length > 0) ?? null
@@ -113,8 +186,22 @@ const Scene3D = lazy(() => import('./MapScene3D.tsx'))
 
 const DEFAULT_LAYERS: readonly Layer[] = ['deaths', 'kills', 'killers', 'paths', 'heat', 'callouts']
 
-/** The overhead and 3D maps stitched from the minimap, with this map's matches on them. */
-function StitchedMap({ name, mosaic, profile, records, live }: { name: string; mosaic: ShownMosaic; profile: GameProfile; records: readonly MapMatchRecord[]; live: MapReport | null }) {
+/** The overhead and 3D maps stitched from the minimap (or the official map they are placed on), with this map's matches on them. */
+function StitchedMap({
+  name,
+  mosaic,
+  profile,
+  records,
+  live,
+  official,
+}: {
+  name: string
+  mosaic: ShownMosaic
+  profile: GameProfile
+  records: readonly MapMatchRecord[]
+  live: MapReport | null
+  official?: OfficialSource
+}) {
   // The matches on this map with pins (oldest first), then the one being played.
   // While playing, the live pins are taken again only when something was added (not on every report).
   const livePins = live?.pins && sameMap(profile, live.pins.map, name) ? live.pins : null
@@ -124,7 +211,46 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
     if (livePins) out.push(livePins)
     return out
   }, [records, liveKey, profile, name])
-  const layers = useMemo(() => mapLayers(mosaic, matches), [mosaic, matches])
+  const mapId = findMap(profile.knowledge.maps, name)?.id ?? null
+  const pic = useOfficialPicture(official, mapId)
+  const [basis, setBasis] = useState<'official' | 'stitched'>('official')
+  const onOfficial = basis === 'official' && pic ? pic : null
+  const layers = useMemo(() => mapLayers(mosaic, matches, onOfficial?.base ?? null), [mosaic, matches, onOfficial])
+  // A map stitched before its official map was kept (or placed on another picture) is placed on it once, here.
+  const [placing, setPlacing] = useState(false)
+  const tried = useRef('')
+  const placedHere = !!pic && mosaic.alignedTo?.id === pic.base.id && Object.keys(mosaic.aligned ?? {}).length > 0
+  useEffect(() => {
+    if (!pic || !mapId || !official?.place || mosaic.synthetic || live || placedHere) return
+    const k = `${mosaic.map}:${pic.base.id}`
+    if (tried.current === k) return
+    tried.current = k
+    setPlacing(true)
+    void official.place(mosaic, mapId).finally(() => setPlacing(false))
+  }, [pic, mapId, official, mosaic, live, placedHere])
+  // Checking the placement: the stitched map laid over the official one, nudged by hand if need be.
+  const [check, setCheck] = useState(false)
+  const overlay = useMemo(() => {
+    if (!check || !onOfficial) return null
+    const k = onOfficial.base.k
+    return mosaic.pieces.flatMap((p) => {
+      const a = storedAlignment(mosaic, p.id, onOfficial.base.id)
+      if (!a) return []
+      const canvas = stylizedImage({ piece: p.id, x0: p.x0, y0: p.y0, w: p.w, h: p.h, lum: fromBase64(p.mean), weight: fromBase64(p.weight) })
+      return [{ canvas, m: [a.s * k, 0, 0, a.s * k, (a.s * p.x0 + a.tx) * k, (a.s * p.y0 + a.ty) * k] as const }]
+    })
+  }, [check, onOfficial, mosaic])
+  const mainPlaced = onOfficial ? [...mosaic.pieces].sort((a, b) => b.w * b.h - a.w * a.h).find((p) => mosaic.aligned?.[String(p.id)]) : undefined
+  const nudge = (dx: number, dy: number, ds = 1) => {
+    if (!mainPlaced || !onOfficial || !official?.adjust) return
+    const a = mosaic.aligned![String(mainPlaced.id)]
+    const k = onOfficial.base.k
+    // Scaled about the piece's middle; moved by working pixels.
+    const cx = mainPlaced.x0 + mainPlaced.w / 2
+    const cy = mainPlaced.y0 + mainPlaced.h / 2
+    const s = a.s * ds
+    void official.adjust(mosaic, mainPlaced.id, { ...a, s, tx: a.tx + (a.s - s) * cx + dx / k, ty: a.ty + (a.s - s) * cy + dy / k, manual: true })
+  }
   const [view, setView] = useState<'overhead' | '3d'>('overhead')
   const [scope, setScope] = useState<'last' | 'all'>(live?.pins ? 'last' : 'all')
   const [show, setShow] = useState<ReadonlySet<Layer>>(() => new Set(DEFAULT_LAYERS))
@@ -134,6 +260,7 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
   const here = useMemo(() => {
     const h = live?.minimap?.here
     if (!h || !layers || (live?.minimap?.ageMs ?? Infinity) > 5000) return null
+    if (layers.official) return officialPoint(mosaic, layers.official.base, h.piece, h.x, h.y)
     const r = resolvePoint(mosaic, h.piece, h.x, h.y)
     return r.piece === layers.image.piece ? { x: r.x - layers.image.x0, y: r.y - layers.image.y0 } : null
   }, [live, layers, mosaic])
@@ -172,7 +299,9 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
   const deaths = inScope.filter((p) => p.kind === 'death')
   const kills = inScope.filter((p) => p.kind === 'kill')
   const killcam = deaths.filter((p) => p.killer?.from === 'killcam').length
-  const label = `${name}, stitched from your minimap`
+  const label = layers.official ? `${name}, official overhead map` : `${name}, stitched from your minimap`
+  const off = layers.official
+  const share = off && off.placed + off.unplaced ? off.placed / (off.placed + off.unplaced) : null
   const toggle = (l: Layer) => {
     const next = new Set(show)
     if (next.has(l)) next.delete(l)
@@ -182,6 +311,20 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
   return (
     <div className="stitched">
       <div className="stitched-bar">
+        {pic ? (
+          <Segmented
+            label="Map"
+            value={basis}
+            onChange={(b) => {
+              setBasis(b)
+              setCheck(false)
+            }}
+            options={[
+              { value: 'official', label: 'Official' },
+              { value: 'stitched', label: 'Stitched' },
+            ]}
+          />
+        ) : null}
         <Segmented
           label="View"
           value={view}
@@ -212,12 +355,63 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
         </div>
       </div>
       {view === 'overhead' ? (
-        <MapOverhead layers={layers} show={show} here={here} focus={focus} playT={playT} label={label} />
+        <MapOverhead layers={layers} show={show} here={here} focus={focus} playT={playT} label={label} picture={onOfficial?.picture ?? null} overlay={overlay} />
       ) : (
         <Suspense fallback={<p className="muted small">Loading 3D…</p>}>
-          <Scene3D layers={layers} show={show} here={here} focus={focus} label={label} />
+          <Scene3D layers={layers} show={show} here={here} focus={focus} label={label} picture={onOfficial?.picture ?? null} />
         </Suspense>
       )}
+      {off ? (
+        <div className="official-status small">
+          <span className={`badge ${share !== null && share >= 0.95 ? 'ok' : share ? 'warn' : 'neutral'}`}>
+            {placing ? 'Placing…' : share === null ? 'Official map' : `${Math.round(share * 100)}% placed`}
+          </span>
+          <span>
+            {placing
+              ? 'Placing your stitched map on the official map (about a second a piece)…'
+              : share === null
+                ? 'Nothing played on this map yet.'
+                : off.unplaced
+                  ? `${off.placed} of your points are on the official map; ${off.unplaced} are on parts not placed yet (a look-alike part stays unplaced until you walk somewhere only one part has). The Stitched view shows them all.`
+                  : 'Every point is on the official map. While playing, each frame is pinned to it.'}
+          </span>
+          {view === 'overhead' && mosaic.pieces.length ? (
+            <button type="button" className="btn sm ghost" aria-pressed={check} onClick={() => setCheck(!check)}>
+              {check ? 'Done checking' : 'Check placement'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {check && off ? (
+        <div className="official-check small">
+          <span>Your stitched map is laid over the official one: its walls should sit on the official walls.</span>
+          {mainPlaced && official?.adjust && !live && !mosaic.synthetic ? (
+            <span className="btn-row" role="group" aria-label="Nudge the placement">
+              <button type="button" className="btn sm ghost" aria-label="Move left" onClick={(e) => nudge(e.shiftKey ? -5 : -1, 0)}>
+                ←
+              </button>
+              <button type="button" className="btn sm ghost" aria-label="Move up" onClick={(e) => nudge(0, e.shiftKey ? -5 : -1)}>
+                ↑
+              </button>
+              <button type="button" className="btn sm ghost" aria-label="Move down" onClick={(e) => nudge(0, e.shiftKey ? 5 : 1)}>
+                ↓
+              </button>
+              <button type="button" className="btn sm ghost" aria-label="Move right" onClick={(e) => nudge(e.shiftKey ? 5 : 1, 0)}>
+                →
+              </button>
+              <button type="button" className="btn sm ghost" aria-label="Smaller" onClick={() => nudge(0, 0, 1 / 1.005)}>
+                −
+              </button>
+              <button type="button" className="btn sm ghost" aria-label="Larger" onClick={() => nudge(0, 0, 1.005)}>
+                +
+              </button>
+              <span className="muted">Shift: 5 px. Kept as your placement.</span>
+            </span>
+          ) : (
+            <span className="muted">{live ? 'Adjusting is possible after the session.' : ''}</span>
+          )}
+        </div>
+      ) : null}
       {view === 'overhead' && focus !== null && endT > 0 ? (
         <div className="playback">
           <button
@@ -289,9 +483,10 @@ function StitchedMap({ name, mosaic, profile, records, live }: { name: string; m
       </div>
       <p className="muted small">
         {mosaic.synthetic ? 'A synthetic map from the demo (not saved). ' : ''}
-        Stitched from your minimap{layers.matches ? ` over ${layers.matches} ${layers.matches === 1 ? 'match' : 'matches'}` : ''}: {deaths.length} deaths and {kills.length} kills
+        {off ? 'On the official overhead map, from your minimap' : 'Stitched from your minimap'}
+        {layers.matches ? ` over ${layers.matches} ${layers.matches === 1 ? 'match' : 'matches'}` : ''}: {deaths.length} deaths and {kills.length} kills
         placed{deaths.length ? `, ${killcam} killers seen on the killcam’s minimap` : ''}. Where you died is where your own minimap was just before it cut away.
-        {mosaic.pieces.length > 1 ? ` ${mosaic.pieces.length - 1} more piece${mosaic.pieces.length > 2 ? 's' : ''} of this map not joined yet (walk between them).` : ''}
+        {!off && mosaic.pieces.length > 1 ? ` ${mosaic.pieces.length - 1} more piece${mosaic.pieces.length > 2 ? 's' : ''} of this map not joined yet (walk between them).` : ''}
       </p>
       {deaths.length ? (
         <details className="map-deaths">
@@ -513,13 +708,22 @@ function MapReference({ model }: { model: MapModel }) {
 }
 
 /** The live card: where the player is now and what is known about it, with the stitched map around them. */
-export function WhereYouAre({ report, mosaics }: { report: MapReport; mosaics?: Readonly<Record<string, ShownMosaic>> }) {
+export function WhereYouAre({ report, mosaics, profile, official }: { report: MapReport; mosaics?: Readonly<Record<string, ShownMosaic>>; profile?: GameProfile; official?: OfficialSource }) {
   const p = report.position
   const mm = report.minimap
   const mosaic = mm?.map ? (Object.values(mosaics ?? {}).find((m) => m.map.toLowerCase() === mm.map!.toLowerCase()) ?? null) : null
-  const layers = useMemo(() => (mosaic ? mapLayers(mosaic, report.pins ? [report.pins] : []) : null), [mosaic, report.pins])
+  const mapId = mm?.map && profile ? (findMap(profile.knowledge.maps, mm.map)?.id ?? null) : null
+  const pic = useOfficialPicture(official, mapId)
+  const layers = useMemo(() => {
+    if (!mosaic) return null
+    const pins = report.pins ? [report.pins] : []
+    // On the official map once anything of this match is placed on it.
+    const onOfficial = pic ? mapLayers(mosaic, pins, pic.base) : null
+    return onOfficial?.official?.placed ? onOfficial : mapLayers(mosaic, pins)
+  }, [mosaic, report.pins, pic])
   const here = useMemo(() => {
     if (!mm?.here || !layers || !mosaic || mm.ageMs > 5000) return null
+    if (layers.official) return officialPoint(mosaic, layers.official.base, mm.here.piece, mm.here.x, mm.here.y)
     const r = resolvePoint(mosaic, mm.here.piece, mm.here.x, mm.here.y)
     return r.piece === layers.image.piece ? { x: r.x - layers.image.x0, y: r.y - layers.image.y0 } : null
   }, [mm, layers, mosaic])
@@ -530,7 +734,7 @@ export function WhereYouAre({ report, mosaics }: { report: MapReport; mosaics?: 
   const fresh = p.ageMs < 20_000
   return (
     <div className="where">
-      {layers ? <MapOverhead layers={layers} show={show} here={here} focus={0} compact label={`Where you are on ${mosaic!.map}`} /> : null}
+      {layers ? <MapOverhead layers={layers} show={show} here={here} focus={0} compact label={`Where you are on ${mosaic!.map}`} picture={layers.official ? (pic?.picture ?? null) : null} /> : null}
       <p className="where-now">
         {p.area && fresh ? (
           <>

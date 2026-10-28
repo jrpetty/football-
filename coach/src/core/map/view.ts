@@ -5,9 +5,15 @@
 // light and dark shapes, raised where the player was seen upstairs or on a
 // roof). Points recorded on pieces that were joined later are moved onto the
 // piece they joined.
+//
+// With the map's official overhead map, everything is drawn on it instead:
+// each point goes through its piece's placement on the official map (found
+// and checked while playing, or afterwards); points on pieces not placed are
+// left out and counted, never guessed.
 
 import { CELL, fromBase64, type StoredMosaic } from './minimap.ts'
 import type { MapPin, MatchPins } from './locator.ts'
+import { KIND_INDOOR, KIND_OUT, KIND_SOLID, KIND_WALL, toOfficial, usable, type Alignment } from './official.ts'
 
 export interface MapImage {
   readonly piece: number
@@ -56,8 +62,23 @@ export interface PlacedPin extends MapPin {
   readonly killerPx?: { readonly x: number; readonly y: number } | null
 }
 
+/** An official overhead map, as the views need it (see official.worker.ts). */
+export interface OfficialBase {
+  readonly id: string
+  readonly srcW: number
+  readonly srcH: number
+  /** Working size, and working pixels per image pixel: the layers' coordinates. */
+  readonly w: number
+  readonly h: number
+  readonly k: number
+  readonly kind: Uint8Array
+}
+
 export interface MapLayers {
+  /** The stitched piece drawn; with an official map, a stand-in of its size (in bounds = seen). */
   readonly image: MapImage
+  /** Drawn on the official overhead map (coordinates are its working pixels). */
+  readonly official?: { readonly base: OfficialBase; readonly placed: number; readonly unplaced: number } | null
   readonly pins: readonly PlacedPin[]
   /** Paths in image coordinates: one per life per match, with times (s). */
   readonly paths: readonly { readonly match: number; readonly life: number; readonly points: readonly (readonly [number, number, number])[] }[]
@@ -71,11 +92,46 @@ export interface MapLayers {
   readonly matches: number
 }
 
-/** Everything to draw for a stitched map and some matches on it (oldest first). */
-export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[]): MapLayers | null {
-  const image = mainImage(m)
+/**
+ * A piece's placement on an official map, from a stored stitched map: its own, or one of a piece
+ * joined into it. None when the placements were made on another picture.
+ */
+export function storedAlignment(m: StoredMosaic, piece: number, officialId: string): Alignment | null {
+  if (m.alignedTo?.id !== officialId) return null
+  const own = m.aligned?.[String(piece)]
+  if (usable(own)) return own
+  for (const [id, a] of Object.entries(m.aligned ?? {})) {
+    if (!usable(a)) continue
+    const r = resolvePoint(m, Number(id), 0, 0)
+    if (r.piece === piece && Number(id) !== piece) return { ...a, tx: a.tx - a.s * r.x, ty: a.ty - a.s * r.y }
+  }
+  return null
+}
+
+/** Where a stitched point lies on the official map (its working pixels), if its piece is placed. */
+export function officialPoint(m: StoredMosaic, base: OfficialBase, piece: number, x: number, y: number): { x: number; y: number } | null {
+  const r = resolvePoint(m, piece, x, y)
+  const a = storedAlignment(m, r.piece, base.id)
+  if (!a) return null
+  const o = toOfficial(a, r.x, r.y)
+  return { x: o.x * base.k, y: o.y * base.k }
+}
+
+/** Everything to draw for a stitched map and some matches on it (oldest first); on the official map when given. */
+export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[], base?: OfficialBase | null): MapLayers | null {
+  const stitched = mainImage(m)
+  const image = base ? officialImage(base) : stitched
   if (!image) return null
-  const on = (piece: number, x: number, y: number) => {
+  let placed = 0
+  let unplaced = 0
+  // `count`: a point of the player's (pins and paths), counted as placed or not.
+  const on = (piece: number, x: number, y: number, count = false) => {
+    if (base) {
+      const at = officialPoint(m, base, piece, x, y)
+      if (count && at) placed++
+      else if (count) unplaced++
+      return at
+    }
     const r = resolvePoint(m, piece, x, y)
     return r.piece === image.piece ? { x: r.x - image.x0, y: r.y - image.y0 } : null
   }
@@ -86,7 +142,7 @@ export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[]): MapLa
   matches.forEach((mp, i) => {
     let any = false
     for (const p of mp.pins) {
-      const at = on(p.piece, p.x, p.y)
+      const at = on(p.piece, p.x, p.y, true)
       if (!at) continue
       any = true
       const k = p.killer ? on(p.killer.piece, p.killer.x, p.killer.y) : null
@@ -94,7 +150,7 @@ export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[]): MapLa
     }
     let cur: { match: number; life: number; points: [number, number, number][] } | null = null
     for (const [piece, x, y, t, life] of mp.trail) {
-      const at = on(piece, x, y)
+      const at = on(piece, x, y, true)
       if (!at) {
         cur = null
         continue
@@ -126,7 +182,56 @@ export function mapLayers(m: StoredMosaic, matches: readonly MatchPins[]): MapLa
     const best = v.indexOf(Math.max(...v))
     return [{ ...at, level: best - 1 }]
   })
-  return { image, pins, paths, enemies: [...enemyCells.values()], callouts, heights, matches: used }
+  return { image, pins, paths, enemies: [...enemyCells.values()], callouts, heights, matches: used, official: base ? { base, placed, unplaced } : null }
+}
+
+const officialImages = new WeakMap<OfficialBase, MapImage>()
+
+/** A stand-in image of the official map's size: in bounds counts as seen. */
+function officialImage(base: OfficialBase): MapImage {
+  const hit = officialImages.get(base)
+  if (hit) return hit
+  const n = base.w * base.h
+  const lum = new Uint8Array(n)
+  const weight = new Uint8Array(n)
+  for (let i = 0; i < n; i++) {
+    const k = base.kind[i]
+    weight[i] = k === KIND_OUT ? 0 : 1
+    lum[i] = k === KIND_WALL ? 220 : k === KIND_SOLID ? 170 : k === KIND_INDOOR ? 90 : 40
+  }
+  const img = { piece: -1, x0: 0, y0: 0, w: base.w, h: base.h, lum, weight }
+  officialImages.set(base, img)
+  return img
+}
+
+/**
+ * Heights from the official map's drawing (for the 3D view), 0..1: walls stand up, solid
+ * structures stand taller, indoor floors sit a little above the open ground, and out of bounds is
+ * sunk. Where the player was seen upstairs or on a roof, the floor is raised as on the stitched map.
+ */
+export function officialHeights(layers: MapLayers): Float32Array {
+  const base = layers.official!.base
+  const { w, h, kind } = base
+  const out = new Float32Array(w * h)
+  for (let i = 0; i < w * h; i++) {
+    const k = kind[i]
+    out[i] = k === KIND_OUT ? -0.12 : k === KIND_WALL ? 0.55 : k === KIND_SOLID ? 0.85 : k === KIND_INDOOR ? 0.04 : 0
+  }
+  const r = Math.max(4, Math.round(CELL * 1.2))
+  for (const c of layers.heights) {
+    if (!c.level) continue
+    const lift = c.level === 2 ? 0.8 : c.level === 1 ? 0.4 : -0.1
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        const x = Math.round(c.x + dx)
+        const y = Math.round(c.y + dy)
+        if (x < 0 || y < 0 || x >= w || y >= h) continue
+        const i = y * w + x
+        if (kind[i] === KIND_OUT || kind[i] === KIND_WALL) continue
+        out[i] = Math.max(out[i], lift * (1 - Math.hypot(dx, dy) / (r * 1.4)))
+      }
+  }
+  return out
 }
 
 /**

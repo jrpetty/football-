@@ -3,7 +3,8 @@
 // from its name, and analysing it (in a worker) to check it is a tactical map.
 
 import type { GameMap } from '../core/profile/schema.ts'
-import type { OverheadAnalysis } from '../worker/official.worker.ts'
+import type { Alignment, PieceImage } from '../core/map/official.ts'
+import type { OfficialReply, OfficialRequest, OverheadAnalysis } from '../worker/official.worker.ts'
 
 export type { OverheadAnalysis }
 
@@ -72,18 +73,19 @@ export function mapForFile(fileName: string, maps: readonly GameMap[]): string |
 
 let worker: Worker | null = null
 let nextId = 1
-const waiting = new Map<number, { resolve: (a: OverheadAnalysis) => void; reject: (e: Error) => void }>()
+const waiting = new Map<number, { resolve: (r: OfficialReply) => void; reject: (e: Error) => void }>()
 
-/** Analyses an image in a worker. The image's pixels are copied (the caller keeps them). */
-export function analyzeOverhead(img: DecodedImage): Promise<OverheadAnalysis> {
+type Body = OfficialRequest extends infer R ? (R extends OfficialRequest ? Omit<R, 'id'> : never) : never
+
+function ask(body: Body, transfer: Transferable[]): Promise<OfficialReply> {
   if (!worker) {
     worker = new Worker(new URL('../worker/official.worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (e: MessageEvent<{ id: number; analysis?: OverheadAnalysis; error?: string }>) => {
+    worker.onmessage = (e: MessageEvent<OfficialReply>) => {
       const w = waiting.get(e.data.id)
       waiting.delete(e.data.id)
       if (!w) return
-      if (e.data.analysis) w.resolve(e.data.analysis)
-      else w.reject(new Error(e.data.error ?? 'Analysis failed.'))
+      if ('error' in e.data) w.reject(new Error(e.data.error))
+      else w.resolve(e.data)
     }
     worker.onerror = (e) => {
       for (const w of waiting.values()) w.reject(new Error(e.message || 'Analysis failed.'))
@@ -93,9 +95,24 @@ export function analyzeOverhead(img: DecodedImage): Promise<OverheadAnalysis> {
     }
   }
   const id = nextId++
-  const data = new Uint8ClampedArray(img.data)
   return new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject })
-    worker!.postMessage({ id, data, width: img.width, height: img.height }, [data.buffer])
+    worker!.postMessage({ ...body, id }, transfer)
   })
+}
+
+/** Analyses an image in a worker. The image's pixels are copied (the caller keeps them). */
+export async function analyzeOverhead(img: DecodedImage): Promise<OverheadAnalysis> {
+  const data = new Uint8ClampedArray(img.data)
+  const r = await ask({ kind: 'analyze', data, width: img.width, height: img.height }, [data.buffer])
+  if (!('analysis' in r)) throw new Error('Analysis failed.')
+  return r.analysis
+}
+
+/** Places stitched pieces on an official map in a worker (about a second a piece). */
+export async function placeOnOverhead(img: DecodedImage, pieces: readonly (PieceImage & { readonly piece: number })[]): Promise<{ officialId: string; srcW: number; srcH: number; aligned: Record<string, Alignment> }> {
+  const data = new Uint8ClampedArray(img.data)
+  const r = await ask({ kind: 'place', data, width: img.width, height: img.height, pieces }, [data.buffer])
+  if (!('placed' in r)) throw new Error('Placing failed.')
+  return r.placed
 }

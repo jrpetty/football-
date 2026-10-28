@@ -16,7 +16,8 @@ import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
-import { mw4DemoPicture } from '../sim/mw4Minimap.ts'
+import { mw4DemoPicture, type DemoOfficial } from '../sim/mw4Minimap.ts'
+import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
 import { tone } from './tones.ts'
@@ -25,7 +26,8 @@ import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
 import type { FromWorker, ToWorker, VisionConfig, WorkerStatus } from '../worker/protocol.ts'
 import type { StoredMosaic } from '../core/map/minimap.ts'
 import { findMap } from '../core/analyses/mapModel.ts'
-import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE, type DecodedImage, type OverheadAnalysis } from './overhead.ts'
+import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE, placeOnOverhead, type DecodedImage, type OverheadAnalysis } from './overhead.ts'
+import { fromBase64 } from '../core/map/minimap.ts'
 import { policyFor } from './policy.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
@@ -385,13 +387,70 @@ export class CoachSession {
     return url && analysis ? { url, analysis } : null
   }
 
+  /**
+   * Places a saved stitched map on its official overhead map after the fact (it was stitched
+   * before the image was kept, or on another picture), and saves the placements with it. Not while
+   * capturing: the session's own copy places itself. Returns how many pieces were placed.
+   */
+  async placeStored(mosaic: ShownMosaic, mapId: string): Promise<number> {
+    const profile = this.profile
+    if (!profile || mosaic.synthetic || this.state.phase !== 'idle' || !this.state.overheads[mapId]) return 0
+    const png = await this.bridge.loadOverhead(profile.id, mapId).catch(() => null)
+    if (!png) return 0
+    const img = await decodeImage(png)
+    const pieces = mosaic.pieces.map((p) => ({ piece: p.id, x0: p.x0, y0: p.y0, w: p.w, h: p.h, lum: fromBase64(p.mean), weight: fromBase64(p.weight) }))
+    const r = await placeOnOverhead(img, pieces).catch(() => null)
+    if (!r || this.profile?.id !== profile.id) return 0
+    // Placements by hand on this picture stay.
+    const manual = mosaic.alignedTo?.id === r.officialId ? Object.fromEntries(Object.entries(mosaic.aligned ?? {}).filter(([, a]) => a.manual)) : {}
+    const next: StoredMosaic = { ...mosaic, aligned: { ...r.aligned, ...manual }, alignedTo: { w: r.srcW, h: r.srcH, id: r.officialId } }
+    await this.storeMosaic(next)
+    return Object.keys(r.aligned).length
+  }
+
+  /** Saves a placement adjusted by hand (the overhead view's check). */
+  async adjustStored(mosaic: ShownMosaic, piece: number, a: Alignment): Promise<void> {
+    if (mosaic.synthetic || this.state.phase !== 'idle' || !mosaic.alignedTo) return
+    await this.storeMosaic({ ...mosaic, aligned: { ...(mosaic.aligned ?? {}), [String(piece)]: { ...a, manual: true } } })
+  }
+
+  private async storeMosaic(m: StoredMosaic): Promise<void> {
+    const key = m.map.toLowerCase()
+    this.set({ mosaics: { ...this.state.mosaics, [key]: m } })
+    if (this.profile) await this.bridge.saveMosaic(this.profile.id, m).catch(() => false)
+  }
+
+  /** The demo walks on the official overhead map the player kept (see openSource). */
+  private demoOnOfficial = false
+
+  private async demoOfficial(mapId: string): Promise<DemoOfficial | null> {
+    const png = this.profile ? await this.bridge.loadOverhead(this.profile.id, mapId).catch(() => null) : null
+    if (!png) return null
+    try {
+      const img = await decodeImage(png)
+      const a = await analyzeOverhead(img)
+      if (a.score < MIN_OVERHEAD_SCORE) return null
+      return {
+        picture: { data: img.data, w: img.width, h: img.height },
+        box: { x0: a.box.x0 / a.k, y0: a.box.y0 / a.k, x1: a.box.x1 / a.k, y1: a.box.y1 / a.k },
+        inBounds: (x, y) => {
+          const X = Math.round(x * a.k)
+          const Y = Math.round(y * a.k)
+          return X >= 0 && Y >= 0 && X < a.w && Y < a.h && a.kind[Y * a.w + X] !== KIND_OUT
+        },
+      }
+    } catch {
+      return null
+    }
+  }
+
   /** What official image the worker has for each map (by map name), so it is sent once. */
   private officialSent = new Map<string, string>()
 
   /** Gives the worker the official overhead map of the map being played (real play only). */
   private syncOfficial(mapName: string | null): void {
     const profile = this.profile
-    if (!mapName || !profile || !this.worker || this.sourceKind !== 'screen') return
+    if (!mapName || !profile || !this.worker || (this.sourceKind !== 'screen' && !this.demoOnOfficial)) return
     const game = findMap(profile.knowledge.maps, mapName)
     const info = game ? this.state.overheads[game.id] : undefined
     const k = mapName.toLowerCase()
@@ -506,6 +565,7 @@ export class CoachSession {
       notes: this.state.notes,
       research: this.state.research,
       mosaics: this.state.mosaics,
+      overheads: this.state.overheads,
       conversation: samePack ? this.state.conversation : [],
     })
     this.speech.configure(settings.voice)
@@ -579,6 +639,7 @@ export class CoachSession {
 
   private async openSource(kind: SourceChoice, sink: FrameSink, onEnded: () => void, speed: number): Promise<FrameSource> {
     const seed = Date.now() % 100_000
+    this.demoOnOfficial = false
     switch (kind) {
       case 'screen':
         return ScreenCaptureSource.start(sink, onEnded)
@@ -591,8 +652,15 @@ export class CoachSession {
       case 'replay-mw4':
       {
         // A real map from the pack (a core map with links and a power position), walked by a synthetic player.
+        // With an official overhead map kept for one, the demo walks on that picture: what the coach
+        // stitches, places and pins is then shown on the real map (still not a real match).
         const maps = this.profile?.knowledge.maps ?? []
-        const map = maps.filter((m) => m.type === 'core').map(demoMapFrom).find((m) => !!m) ?? null
+        const core = maps.filter((m) => m.type === 'core')
+        const pick = (list: typeof maps) => list.map(demoMapFrom).find((m) => !!m) ?? null
+        const map = pick(core.filter((m) => this.state.overheads[m.id])) ?? pick(core)
+        const game = maps.find((m) => m.name === map?.name)
+        const official = game && this.state.overheads[game.id] && this.profile?.positioning?.minimap ? await this.demoOfficial(game.id) : null
+        this.demoOnOfficial = !!official
         const replay = mw4MatchReplay({ seed, realMinutes: 4, map })
         // A synthetic minimap in its usual place, so the map is stitched and deaths are pinned as in real play.
         const mm = this.profile?.positioning?.minimap
@@ -600,7 +668,8 @@ export class CoachSession {
           ? mw4DemoPicture(replay, {
               seed,
               region: this.settings?.minimap[this.profile!.id] ?? mm.region,
-              callouts: maps.find((m) => m.name === map?.name)?.callouts,
+              callouts: game?.callouts,
+              official,
             })
           : null
         return new ReplaySource(sink, onEnded, replay, {

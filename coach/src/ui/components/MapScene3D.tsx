@@ -4,7 +4,9 @@
 // where each death was, the killer's line of fire as an amber arc with a
 // tracer, kills, the paths life by life, enemy pings and callout labels.
 // Drag to orbit, wheel to zoom, right-drag to pan; it turns slowly until
-// touched. Loaded on demand (three.js is large).
+// touched. Loaded on demand (three.js is large). With the map's official
+// overhead map: a floor plan built from its drawing (walls stand up, solid
+// structures stand taller, out of bounds is sunk), the picture on top.
 
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -14,9 +16,9 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'
-import { heightField, type MapLayers, type PlacedPin } from '../../core/map/view.ts'
+import { heightField, officialHeights, type MapLayers, type PlacedPin } from '../../core/map/view.ts'
 import { gameClock } from '../format.ts'
-import { MARK, stylizedMap, type Layer } from './MapOverhead.tsx'
+import { MARK, officialPicture, stylizedMap, type Layer } from './MapOverhead.tsx'
 
 /** Height of a structure, in map pixels. */
 const BUILD = 11
@@ -27,9 +29,12 @@ export default function MapScene3D({
   here,
   focus,
   label,
+  picture = null,
 }: {
   layers: MapLayers
   show: ReadonlySet<Layer>
+  /** The official overhead map's picture (with official layers). */
+  picture?: HTMLImageElement | ImageBitmap | null
   here?: { readonly x: number; readonly y: number } | null
   focus?: number | null
   label: string
@@ -76,22 +81,25 @@ export default function MapScene3D({
     camera.position.copy(home)
 
     // Ground: the stitched map as a height field, the picture (with death heat) on top.
-    const field = heightField(layers)
-    const pic = stylizedMap(layers)
+    const official = layers.official && picture ? layers.official.base : null
+    const field = official ? officialHeights(layers) : heightField(layers)
+    const pic = official ? officialPicture(picture!, official) : stylizedMap(layers)
+    // The texture at the picture's own resolution (the official map is sharper than the layers' grid).
     const tex = document.createElement('canvas')
-    tex.width = w
-    tex.height = h
+    tex.width = pic.width
+    tex.height = pic.height
+    const f = pic.width / w
     const tctx = tex.getContext('2d')!
     tctx.drawImage(pic, 0, 0)
     if (show.has('heat')) {
       tctx.globalCompositeOperation = 'screen'
       for (const p of layers.pins) {
         if (p.kind !== 'death' || (focus !== null && focus !== undefined && p.match !== focus)) continue
-        const g = tctx.createRadialGradient(p.px, p.py, 0, p.px, p.py, 20)
+        const g = tctx.createRadialGradient(p.px * f, p.py * f, 0, p.px * f, p.py * f, 20 * f)
         g.addColorStop(0, 'rgba(255, 70, 70, 0.55)')
         g.addColorStop(1, 'rgba(255, 70, 70, 0)')
         tctx.fillStyle = g
-        tctx.fillRect(p.px - 20, p.py - 20, 40, 40)
+        tctx.fillRect((p.px - 20) * f, (p.py - 20) * f, 40 * f, 40 * f)
       }
     }
     const texture = new THREE.CanvasTexture(tex)
@@ -103,7 +111,8 @@ export default function MapScene3D({
     const actx = alpha.getContext('2d')!
     const aimg = actx.createImageData(w, h)
     for (let i = 0; i < w * h; i++) {
-      const v = layers.image.weight[i] ? 255 : 0
+      // Out of bounds stays in view on the official map (dimmed and sunk); unseen ground is cut away on the stitched one.
+      const v = official || layers.image.weight[i] ? 255 : 0
       aimg.data[i * 4] = aimg.data[i * 4 + 1] = aimg.data[i * 4 + 2] = v
       aimg.data[i * 4 + 3] = 255
     }
@@ -115,13 +124,20 @@ export default function MapScene3D({
     const geo = new THREE.PlaneGeometry(w, h, segX, segZ)
     geo.rotateX(-Math.PI / 2)
     const pos = geo.attributes.position as THREE.BufferAttribute
+    // The official drawing's walls are a pixel or two wide: each vertex takes the tallest thing under it.
+    const pool = official ? Math.max(1, Math.ceil(w / segX / 2)) : 0
     const sample = (px: number, py: number) => {
       const x = Math.max(0, Math.min(w - 1, Math.round(px)))
       const y = Math.max(0, Math.min(h - 1, Math.round(py)))
-      return field[y * w + x]
+      if (!pool) return field[y * w + x]
+      let m = -Infinity
+      for (let yy = Math.max(0, y - pool); yy <= Math.min(h - 1, y + pool); yy++)
+        for (let xx = Math.max(0, x - pool); xx <= Math.min(w - 1, x + pool); xx++) m = Math.max(m, field[yy * w + xx])
+      return m
     }
     const heightAt = (px: number, py: number) => {
       const v = sample(px, py)
+      if (official) return v * BUILD * 1.15
       if (v < 0) return -3
       // Crisp walls: the structure value pushed towards 0 or 1, then lifted.
       const s = Math.max(0, Math.min(1, (Math.min(v, 1) - 0.42) / 0.16))
@@ -381,7 +397,7 @@ export default function MapScene3D({
       el.replaceChildren()
       api.current = null
     }
-  }, [layers, show, here?.x, here?.y, focus, label])
+  }, [layers, show, here?.x, here?.y, focus, label, picture])
 
   if (failed) return <p className="muted small">3D needs WebGL, which is not available here ({failed}). The overhead map shows the same.</p>
   return (

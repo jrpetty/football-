@@ -6,8 +6,9 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { analyzeOfficial, KIND_FLOOR, KIND_INDOOR, KIND_OUT, KIND_SOLID, KIND_WALL, toOfficial, type OfficialMap } from '../src/core/map/official.ts'
-import { cleanMosaic, MinimapMosaic, MM, readWindow } from '../src/core/map/minimap.ts'
+import { analyzeOfficial, placePieces, KIND_FLOOR, KIND_INDOOR, KIND_OUT, KIND_SOLID, KIND_WALL, toOfficial, type OfficialMap } from '../src/core/map/official.ts'
+import { cleanMosaic, fromBase64, MinimapMosaic, MM, readWindow, type StoredMosaic } from '../src/core/map/minimap.ts'
+import { mapLayers, officialHeights, officialPoint } from '../src/core/map/view.ts'
 import { mulberry32 } from '../src/sim/syntheticArena.ts'
 
 /**
@@ -90,7 +91,7 @@ test('an official map: the playable area inside the boundary, walls, solid hatch
 })
 
 /** A walking player's minimap cut from the official image (filtered, with the arrow). */
-function play(off: OfficialMap, rgba: Uint8ClampedArray, size: number, opts: { lives: { x: number; y: number }[]; frames: number; seed: number }) {
+function play(off: OfficialMap, rgba: Uint8ClampedArray, size: number, opts: { lives: { x: number; y: number }[]; frames: number; seed: number; official?: boolean }) {
   const rnd = mulberry32(opts.seed)
   const FW = 144
   const PX = 130
@@ -99,7 +100,7 @@ function play(off: OfficialMap, rgba: Uint8ClampedArray, size: number, opts: { l
   const sample = (x: number, y: number, c: number) => rgba[(Math.max(0, Math.min(size - 1, Math.round(y))) * size + Math.max(0, Math.min(size - 1, Math.round(x)))) * 4 + c]
   const inBounds = (x: number, y: number) => off.kind[Math.round(y * off.k) * off.w + Math.round(x * off.k)] !== KIND_OUT
   const mosaic = new MinimapMosaic('Synthetic')
-  mosaic.setOfficial(off)
+  if (opts.official !== false) mosaic.setOfficial(off)
   const truth = new Map<number, [number, number]>()
   let t = 0
   for (const start of opts.lives) {
@@ -139,7 +140,7 @@ function play(off: OfficialMap, rgba: Uint8ClampedArray, size: number, opts: { l
     const o = toOfficial(al, r.x, r.y)
     errs.push(Math.hypot(o.x - g[0], o.y - g[1]))
   }
-  return { mosaic, errs: errs.sort((p, q) => p - q), points: mosaic.trail.length, scale: mosaic.knownScale(), span }
+  return { mosaic, errs: errs.sort((p, q) => p - q), points: mosaic.trail.length, scale: mosaic.knownScale(), span, truth }
 }
 
 test('the stitched minimap is placed on the official map while playing: scale and position found, every placed point within a few pixels', () => {
@@ -173,4 +174,66 @@ test('two identical wings: a respawn in the other wing is never put in the wrong
   const wrong = r.errs.filter((e) => e > 40).length
   assert.equal(wrong, 0, `${wrong} points in the wrong wing (p95 ${r.errs[Math.floor(r.errs.length * 0.95)]})`)
   assert.ok(r.errs.length >= r.points * 0.5, `${r.errs.length} of ${r.points} placed`)
+})
+
+/** The path a mosaic recorded, as a match's pins would carry it. */
+function matchOf(m: MinimapMosaic) {
+  return { map: m.map, pins: [], trail: m.trail.map((p) => [p.piece, p.x, p.y, p.t / 1000, 0] as const), enemies: {} }
+}
+
+test('the views draw on the official map: every placed point where the player was, out of bounds sunk in 3D', () => {
+  const size = 600
+  const rgba = officialImage(size, 5)
+  const off = analyzeOfficial(rgba, size, size)
+  const r = play(off, rgba, size, { lives: [{ x: 300, y: 300 }, { x: 430, y: 160 }], frames: 100, seed: 3 })
+  const saved = cleanMosaic(JSON.parse(JSON.stringify(r.mosaic.save())))!
+  const layers = mapLayers(saved, [matchOf(r.mosaic)], off)!
+  assert.ok(layers.official && layers.official.placed > 0)
+  assert.equal(layers.image.w, off.w)
+  const errs: number[] = []
+  for (const p of r.mosaic.trail) {
+    const at = officialPoint(saved, off, p.piece, p.x, p.y)
+    const g = r.truth.get(p.t)
+    if (at && g) errs.push(Math.hypot(at.x / off.k - g[0], at.y / off.k - g[1]))
+  }
+  errs.sort((a, b) => a - b)
+  assert.ok(errs.length >= r.points * 0.8, `${errs.length} of ${r.points}`)
+  assert.ok(errs[Math.floor(errs.length * 0.95)] <= 4, `p95 ${errs[Math.floor(errs.length * 0.95)]}`)
+  // A picture the placements were not made on: nothing is drawn on it.
+  const other = analyzeOfficial(officialImage(size, 6), size, size)
+  assert.equal(mapLayers(saved, [matchOf(r.mosaic)], other)!.official!.placed, 0)
+  // 3D: walls and solid blocks stand up, out of bounds is lower than the floor.
+  const hts = officialHeights(layers)
+  let wall = 0
+  let out = 0
+  for (let i = 0; i < hts.length; i++) {
+    if (off.kind[i] === KIND_WALL) wall = Math.max(wall, hts[i])
+    if (off.kind[i] === KIND_OUT) out = Math.min(out, hts[i])
+  }
+  assert.ok(wall > 0.4 && out < 0)
+})
+
+test('a map stitched before its official map was kept is placed on it afterwards', () => {
+  const size = 600
+  const rgba = officialImage(size, 5)
+  const off = analyzeOfficial(rgba, size, size)
+  const r = play(off, rgba, size, { lives: [{ x: 300, y: 300 }], frames: 140, seed: 5, official: false })
+  const stored = cleanMosaic(JSON.parse(JSON.stringify(r.mosaic.save())))!
+  assert.equal(stored.aligned, undefined)
+  const aligned = placePieces(
+    off,
+    stored.pieces.map((p) => ({ piece: p.id, x0: p.x0, y0: p.y0, w: p.w, h: p.h, lum: fromBase64(p.mean), weight: fromBase64(p.weight) })),
+  )
+  assert.ok(Object.keys(aligned).length >= 1)
+  const placed: StoredMosaic = { ...stored, aligned, alignedTo: { w: off.srcW, h: off.srcH, id: off.id } }
+  const errs: number[] = []
+  for (const p of r.mosaic.trail) {
+    const at = officialPoint(placed, off, p.piece, p.x, p.y)
+    const g = r.truth.get(p.t)
+    if (at && g) errs.push(Math.hypot(at.x / off.k - g[0], at.y / off.k - g[1]))
+  }
+  errs.sort((a, b) => a - b)
+  // Without frames to pin it down, the stitched map's small drift shows: still within a few pixels.
+  assert.ok(errs.length >= r.points * 0.8, `${errs.length} of ${r.points}`)
+  assert.ok(errs[Math.floor(errs.length * 0.95)] <= 8, `p95 ${errs[Math.floor(errs.length * 0.95)]}`)
 })

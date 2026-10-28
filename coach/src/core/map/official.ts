@@ -621,6 +621,19 @@ export function alignPiece(p: PieceImage, off: OfficialMap, opts: { readonly sca
   }
 }
 
+/** Places several pieces of one stitched map, largest first: the first placed gives the scale the others are placed at. Usable placements only. */
+export function placePieces(off: OfficialMap, pieces: readonly (PieceImage & { readonly piece: number })[]): Record<string, Alignment> {
+  const out: Record<string, Alignment> = {}
+  let scale: number | undefined
+  for (const p of [...pieces].sort((a, b) => b.w * b.h - a.w * a.h)) {
+    const a = alignPiece(p, off, scale ? { scale } : {})
+    if (!usable(a)) continue
+    out[String(p.piece)] = a
+    scale ??= a.s
+  }
+  return out
+}
+
 /** Aligns without blocking a page: a step, then a pause. */
 export async function alignPieceAsync(p: PieceImage, off: OfficialMap, opts: { readonly scale?: number } = {}): Promise<Alignment | null> {
   const it = alignSteps(p, off, opts)

@@ -51,12 +51,38 @@ export interface Mw4DemoPicture {
   frame(t: number, width?: number, height?: number): Frame
 }
 
+/**
+ * The official overhead map to walk on instead of a synthetic one (the player's own image): the
+ * picture, its playable area's box (image px), and whether a spot is in bounds.
+ */
+export interface DemoOfficial {
+  readonly picture: { readonly data: Uint8ClampedArray; readonly w: number; readonly h: number }
+  readonly box: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }
+  readonly inBounds: (x: number, y: number) => boolean
+}
+
 export function mw4DemoPicture(
   replay: VisionReplay,
-  opts: { readonly seed: number; readonly region: MinimapRegion; readonly callouts?: readonly { readonly name: string; readonly grid?: string }[] },
+  opts: { readonly seed: number; readonly region: MinimapRegion; readonly callouts?: readonly { readonly name: string; readonly grid?: string }[]; readonly official?: DemoOfficial | null },
 ): Mw4DemoPicture {
   const rnd = mulberry32(opts.seed ^ 0x5eed)
-  const map = tacMap(opts.seed % 1000)
+  const off = opts.official ?? null
+  const map: TacMap = off ? { size: 0, lum: new Float32Array(0), picture: off.picture } : tacMap(opts.seed % 1000)
+  // Map units: the synthetic map is 720 px with its areas in 100..620; an official map's playable box takes their place.
+  const unit = off ? Math.max(off.box.x1 - off.box.x0, off.box.y1 - off.box.y0) / 520 : 1
+  const inside = (x: number, y: number): [number, number] => {
+    if (!off || off.inBounds(x, y)) return [x, y]
+    // The nearest spot in bounds, searched outwards.
+    for (let r = 4; r < 400; r += 4)
+      for (let a = 0; a < 16; a++) {
+        const X = x + r * Math.cos((a * Math.PI) / 8)
+        const Y = y + r * Math.sin((a * Math.PI) / 8)
+        if (off.inBounds(X, Y)) return [X, Y]
+      }
+    return [x, y]
+  }
+  const toMap = (gx: number, gy: number): [number, number] =>
+    off ? inside(off.box.x0 + (0.08 + gx * 0.84) * (off.box.x1 - off.box.x0), off.box.y0 + (0.08 + gy * 0.84) * (off.box.y1 - off.box.y0)) : [100 + gx * (MAP_SIZE - 200), 100 + gy * (MAP_SIZE - 200)]
   // Areas: the pack's rough grid, spread where several share a cell; others placed around the middle.
   const areas = new Map<string, [number, number]>()
   const perCell = new Map<string, number>()
@@ -76,7 +102,7 @@ export function mw4DemoPicture(
       const r = 0.15 + 0.25 * rnd()
       ;[x, y] = [0.5 + r * Math.cos(a), 0.5 + r * Math.sin(a)]
     }
-    areas.set(name, [100 + Math.max(0, Math.min(1, x)) * (MAP_SIZE - 200), 100 + Math.max(0, Math.min(1, y)) * (MAP_SIZE - 200)])
+    areas.set(name, toMap(Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, y))))
   }
   for (const c of opts.callouts ?? []) place(c.name, c.grid)
 
@@ -105,10 +131,12 @@ export function mw4DemoPicture(
     }
   }
   reads.sort((a, b) => a.t - b.t)
-  const spawns: [number, number][] = [
-    [130, MAP_SIZE - 140],
-    [MAP_SIZE - 140, 130],
-  ]
+  const spawns: [number, number][] = off
+    ? [toMap(0.05, 0.95), toMap(0.95, 0.05)]
+    : [
+        [130, MAP_SIZE - 140],
+        [MAP_SIZE - 140, 130],
+      ]
 
   // Simulate the whole replay at 100 ms steps.
   const STEP = 100
@@ -141,16 +169,20 @@ export function mw4DemoPicture(
     // Head for the area the next reading names (being there by then), wandering a little around it.
     const next = reads[Math.min(r, reads.length - 1)]
     const anchor = next ? (areas.get(next.area) ?? [x, y]) : [x, y]
-    if (t % 3000 === 0) wander = [(rnd() - 0.5) * 50, (rnd() - 0.5) * 50]
+    if (t % 3000 === 0) wander = [(rnd() - 0.5) * 50 * unit, (rnd() - 0.5) * 50 * unit]
     const tx = anchor[0] + wander[0]
     const ty = anchor[1] + wander[1]
     const dx = tx - x
     const dy = ty - y
     const dist = Math.hypot(dx, dy)
-    const step = Math.min(dist, (SPEED * STEP) / 1000)
+    const step = Math.min(dist, (SPEED * unit * STEP) / 1000)
     if (dist > 0.5) {
-      x += (dx / dist) * step
-      y += (dy / dist) * step
+      const nx = x + (dx / dist) * step
+      const ny = y + (dy / dist) * step
+      // On an official map, out of bounds is not walked into (the wander target moves on in a moment).
+      if (!off || off.inBounds(nx, ny)) [x, y] = [nx, ny]
+      else if (off.inBounds(nx, y)) x = nx
+      else if (off.inBounds(x, ny)) y = ny
       heading = (Math.atan2(dx, -dy) * 180) / Math.PI
     }
     states.push({ x, y, heading, view: 'alive' })
@@ -160,7 +192,7 @@ export function mw4DemoPicture(
   const killerAt = (t: number, s: State): [number, number] => {
     const death = deaths.find((k) => t >= k.t - DEAD_BEFORE_MS && t < k.t - DEAD_BEFORE_MS + KILLCAM_MS)
     const spot = death?.killerSpot ? areas.get(death.killerSpot) : undefined
-    return spot ? [spot[0] + 6, spot[1] - 4] : [s.x + 70, s.y - 40]
+    return spot ? [spot[0] + 6 * unit, spot[1] - 4 * unit] : [s.x + 70 * unit, s.y - 40 * unit]
   }
 
   return {
@@ -195,7 +227,9 @@ export function mw4DemoPicture(
           const a = areas.get(near.area)
           if (a) enemies.push({ x: a[0], y: a[1] })
         }
-        drawMinimap(map, s.cx, s.cy, px, { scale: SCALE, heading: s.heading, enemies, noise: 0.025, seed: Math.round(t) }, data, width, Math.round(opts.region.x * width), Math.round(opts.region.y * height))
+        // On an official map, the minimap shows about a third of the playable area across.
+        const scale = off ? (0.35 * 520 * unit) / px : SCALE
+        drawMinimap(map, s.cx, s.cy, px, { scale, heading: s.heading, enemies, noise: off ? 0.03 : 0.025, seed: Math.round(t) }, data, width, Math.round(opts.region.x * width), Math.round(opts.region.y * height))
       }
       return { width, height, data, timestamp: t }
     },

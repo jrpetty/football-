@@ -22,6 +22,7 @@ import { WhereYouAre } from '../components/MapView.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
+import { useOfficialSource } from '../officialSource.ts'
 
 interface Props {
   state: SessionState
@@ -341,6 +342,7 @@ function LastSession({ state, onTab }: { state: SessionState; onTab: (t: Tab) =>
 // --- During capture -------------------------------------------------------------------
 
 function LiveView({ state, session, settings, onSettings, profile, policy, effective, cloud, usage, info, onTab }: Props) {
+  const official = useOfficialSource(session, state.overheads)
   const [aligning, setAligning] = useState(false)
   const st = state.status
   const report = state.report?.profileId === profile.id ? state.report : null
@@ -479,7 +481,7 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                 <h2 id="where-h">Where you are</h2>
                 <span className="muted small">From your own view, each look</span>
               </div>
-              <WhereYouAre report={state.report.map} mosaics={state.mosaics} />
+              <WhereYouAre report={state.report.map} mosaics={state.mosaics} profile={profile} official={official} />
             </section>
           ) : null}
 

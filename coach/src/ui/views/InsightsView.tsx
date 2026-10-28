@@ -9,6 +9,7 @@ import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
 import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { MapPanel } from '../components/MapView.tsx'
+import { useOfficialSource } from '../officialSource.ts'
 import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function InsightsView({ state, session, profile, settings, cloud }: Props) {
+  const official = useOfficialSource(session, state.overheads)
   const report = state.report?.profileId === profile.id ? state.report : null
   const now = useMemo(() => new Date(), [state.snapshot, report])
   const mode = settings.profileModeId
@@ -155,7 +157,7 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
             <h2 id="map-h">The map, learned from watching</h2>
             <span className="muted small">Stitched from your own minimap: where you went, fought and died, and where they shot from</span>
           </div>
-          <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} mosaics={state.mosaics} />
+          <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} mosaics={state.mosaics} official={official} />
         </section>
       )}
 
