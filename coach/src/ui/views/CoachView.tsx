@@ -6,7 +6,7 @@ import type { ResolvedPolicy } from '../../core/policy/registry.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { COACHING_MODES, MODE_INFO, TONE_INFO, TONES, type CoachSettings } from '../../core/settings.ts'
 import type { SignalState } from '../../core/types.ts'
-import { estimatePerHour, modelPrice } from '../../core/vision/cost.ts'
+import { cachedPromptTokens, estimatePerHour, modelPrice } from '../../core/vision/cost.ts'
 import { builtInProfile } from '../../profiles/index.ts'
 import type { ProfileCatalog, Tab } from '../App.tsx'
 import { AlignmentCheck } from '../components/AlignmentCheck.tsx'
@@ -46,7 +46,7 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
   const context = settings.context[profile.id] ?? {}
   const visionPack = !!profile.vision
   const est = visionPack
-    ? estimatePerHour(cloud.settings.visionModel, profile.vision!.sampleIntervalMs, profile.vision!.maxWidth, Math.round((profile.vision!.maxWidth * 9) / 16))
+    ? estimatePerHour(cloud.settings.visionModel, profile.vision!.sampleIntervalMs, profile.vision!.maxWidth, Math.round((profile.vision!.maxWidth * 9) / 16), cachedPromptTokens(!!profile.knowledge.roster))
     : 0
 
   const demo = (kind: SourceChoice, packId: string, speed: number, preferMode?: string) => {

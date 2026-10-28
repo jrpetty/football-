@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v6, Windows-first.
+> **Status:** v7, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -166,6 +166,22 @@ Then press **Choose the game window**, play, and listen.
   what becomes possible. Their age comes from the screen when it shows it,
   else a lower bound from what they have fielded, else yours (said as an
   assumption). Nothing in the fog of war is guessed.
+- **Reads their plan (AoE IV).** Every civilisation has its usual plans
+  for each age, from Dark to Imperial: openings, the timings to watch,
+  their power spikes, and how to respond. When something you scouted
+  matches one of those plans (a Council Hall and an Archery Range for
+  English, say), the coach calls the likely plan with its timing, the
+  response and the evidence ("Read: …, Feudal. <the response>. Seen:
+  Council Hall, Archery Range."). A plan
+  is called only once the screen supports it (a landmark counts most,
+  then units, then buildings and cues like a tower at your gold or a
+  second Town Center). Before that it gives what that civilisation
+  usually does, marked as their usual plan rather than a read. It also
+  gives your own civilisation's plan for your current age, and their
+  next timing window.
+- **Samples every 3 seconds in AoE** (up to two frames in flight, so one
+  slow reply never stalls the next), to catch short fights and quick
+  scouting passes.
 - **Talks with you.**
   - Natural neural voices run on your PC: Jenny (British, fast on any PC),
     or Kokoro's 9 American and British voices (best quality, needs a
@@ -219,6 +235,13 @@ A per-session spending cap (default $2) stops all calls when reached. Known
 menus cost nothing after the first time. Claude Opus 5.5 is the default
 because it reads busy screens best; Claude Haiku 5.5 is a small fraction of
 the cost.
+
+At the 3-second AoE sampling rate, a rough estimate is $18 per hour on Opus
+5.5, $11 on Sonnet 5.5 and about $0.55 on Haiku 5.5, counting the cached
+roster prompt sent with each frame (unchanged frames are skipped, so real
+play usually costs less; Settings shows the current estimate). The default
+$2 cap therefore lasts about 7 minutes on Opus: raise it in Settings (up to
+$20), or pick Sonnet for long sessions.
 
 ## Layout
 

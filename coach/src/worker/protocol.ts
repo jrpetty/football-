@@ -17,6 +17,7 @@ import type { ScreenCatalog, ScreenInfo } from '../core/vision/screens.ts'
 export interface VisionConfig {
   readonly enabled: boolean
   readonly intervalMs: number
+  readonly maxInFlight?: number
 }
 
 export type ToWorker =

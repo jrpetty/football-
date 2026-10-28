@@ -381,6 +381,67 @@ export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: Ga
           )}
         </div>
       </div>
+      {intel.reads.length ? (
+        <div className="reads">
+          <div className="label">Likely plan</div>
+          {intel.reads.slice(0, 2).map((r) => (
+            <article key={r.id} className="read">
+              <div className="read-head">
+                <b>{r.name}</b>
+                {r.timing ? <span className="muted small">{r.timing}</span> : null}
+              </div>
+              <p className="small muted">Seen: {r.evidence.join(', ')}</p>
+              <p className="small">{r.threat}</p>
+              <ul className="good small">
+                {r.response.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+              {r.punish ? (
+                <p className="small">
+                  <span className="label">Punish</span> {r.punish}
+                </p>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : intel.usual.length ? (
+        <div className="reads">
+          <div className="label">Usual for them now (nothing points to one yet)</div>
+          <ul className="small">
+            {intel.usual.map((u) => (
+              <li key={u.name}>
+                <b>{u.name}</b>
+                {u.signals ? <span className="muted"> · look for {u.signals}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {intel.theirWindows && (intel.theirWindows.powerSpikes.length || intel.theirWindows.weakWindows.length) ? (
+        <p className="small">
+          {intel.theirWindows.powerSpikes.length ? (
+            <>
+              <span className="label">Their spike</span> {intel.theirWindows.powerSpikes[0]}{' '}
+            </>
+          ) : null}
+          {intel.theirWindows.weakWindows.length ? (
+            <>
+              <span className="label">Their weak window</span> {intel.theirWindows.weakWindows[0]}
+            </>
+          ) : null}
+        </p>
+      ) : null}
+      {intel.yourPlan ? (
+        <div className="your-plan">
+          <div className="label">Your {intel.yourPlan.ageName}</div>
+          <ul className="small">
+            {intel.yourPlan.playAs.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {intel.counters.some((c) => c.build.length) ? (
         <div className="intel-counters">
           {intel.counters

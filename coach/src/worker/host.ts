@@ -144,7 +144,7 @@ export class PipelineHost {
       this.sampler?.setPaused(true)
       return
     }
-    if (!this.sampler) this.sampler = new VisionSampler({ intervalMs: cfg.intervalMs, minChange: 1.5, maxSkipMs: cfg.intervalMs * 4 })
+    if (!this.sampler) this.sampler = new VisionSampler({ intervalMs: cfg.intervalMs, minChange: 1.5, maxSkipMs: cfg.intervalMs * 4, maxInFlight: cfg.maxInFlight ?? 1 })
     this.sampler.setPaused(false)
   }
 

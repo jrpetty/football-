@@ -14,7 +14,7 @@
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
-import { checkpointLine, eventLine, fightStartLine } from './commentary.ts'
+import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './commentary.ts'
 import { IntelTracker, type IntelReport } from './analyses/intel.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
@@ -711,7 +711,7 @@ export class CoachEngine {
     this.decide(
       {
         category: 'commentary',
-        text,
+        text: fitCommentary(text),
         confidence,
         grade: 'moderate',
         evidenceSummary: evidence,

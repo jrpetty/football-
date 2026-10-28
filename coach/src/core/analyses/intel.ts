@@ -14,7 +14,7 @@
 // landmark), else a lower bound from what they have fielded, else the
 // player's own age as a working assumption — said as such.
 
-import type { GameProfile, Roster, RosterFaction, RosterUnit } from '../profile/schema.ts'
+import type { CivAgePlan, CivPlanMove, GameProfile, Roster, RosterFaction, RosterUnit } from '../profile/schema.ts'
 import type { VisibleState } from '../types.ts'
 
 export interface IntelSeen {
@@ -35,13 +35,39 @@ export interface IntelReport {
   readonly likely: readonly { readonly id: string; readonly name: string; readonly from: string; readonly age: number | null; readonly later: boolean }[]
   /** For each enemy unit type seen (most first): what the player can build against it now (or from which age). */
   readonly counters: readonly { readonly against: string; readonly build: readonly string[]; readonly why: string | null }[]
+  /** Their landmarks seen on screen. */
+  readonly landmarks: readonly string[]
+  /** Their likely plans, best supported first, from what the screen showed (never from what it did not). */
+  readonly reads: readonly IntelRead[]
+  /** Their civilisation's usual plans at their age, when nothing points to one yet. */
+  readonly usual: readonly { readonly name: string; readonly signals: string }[]
+  /** How to play the player's own civilisation in their current age. */
+  readonly yourPlan: { readonly age: number; readonly ageName: string; readonly playAs: readonly string[]; readonly powerSpikes: readonly string[]; readonly weakWindows: readonly string[] } | null
+  /** Their power spikes and weak windows at their age. */
+  readonly theirWindows: { readonly powerSpikes: readonly string[]; readonly weakWindows: readonly string[] } | null
 }
+
+export interface IntelRead {
+  readonly id: string
+  readonly name: string
+  readonly age: number
+  /** Matching evidence seen, e.g. "Council Hall", "2 Barracks", "Longbowman". */
+  readonly evidence: readonly string[]
+  readonly score: number
+  readonly timing: string | null
+  readonly threat: string
+  readonly response: readonly string[]
+  readonly punish: string | null
+}
+
+/** A plan is called a read once the screen shows this much support: a landmark (3), a unique unit or cue (2), a common unit or building (1 each). */
+export const READ_MIN_SCORE = 2
 
 /** seen: the screen showed their age; fielded: at least the age of what they have; assumed: same as the player's. */
 export type AgeBasis = 'seen' | 'fielded' | 'assumed'
 
 export interface IntelNews {
-  readonly kind: 'faction' | 'building' | 'unit' | 'age'
+  readonly kind: 'faction' | 'building' | 'unit' | 'age' | 'read' | 'plan'
   readonly id: string
   readonly text: string
 }
@@ -91,6 +117,13 @@ export class IntelTracker {
   private readonly units: Map<string, RosterUnit>
   private readonly unitMatchers: Matcher[]
   private readonly buildingMatchers: Matcher[]
+  /** Landmark names of every civilisation (the opponent's are those that count). */
+  private readonly landmarkMatchers: Matcher[]
+  private seenLandmarks = new Map<string, number>()
+  /** Other enemy things seen (free text from the recogniser), for plan cues. */
+  private seenCues: string[] = []
+  private announcedReads = new Set<string>()
+  private announcedPlanAge: number | null = null
   private playerFaction: RosterFaction | null
   private faction: RosterFaction | null = null
   private buildings = new Map<string, { count: number; firstAt: number }>()
@@ -110,6 +143,8 @@ export class IntelTracker {
     const byLength = (a: Matcher, b: Matcher) => b.len - a.len
     this.unitMatchers = roster.units.flatMap((u) => [u.name, ...(u.aliases ?? [])].map((n) => matcher('unit', u.id, n))).sort(byLength)
     this.buildingMatchers = roster.buildings.flatMap((b) => [b.name, ...(b.aliases ?? [])].map((n) => matcher('building', b.id, n))).sort(byLength)
+    const landmarkNames = [...new Set(roster.factions.flatMap((f) => (f.landmarks ?? []).map((l) => l.name)))]
+    this.landmarkMatchers = landmarkNames.map((n) => matcher('building', `landmark:${n}`, n)).sort(byLength)
     this.playerFaction = this.findFaction(playerFaction)
   }
 
@@ -152,8 +187,16 @@ export class IntelTracker {
       this.faction = this.findFaction(factionText)
       if (this.faction) news.push({ kind: 'faction', id: this.faction.id, text: this.factionLine(this.faction) })
     }
-    const b = str(this.spec.buildingsKey)
+    const cue = this.spec.cuesKey ? str(this.spec.cuesKey) : null
+    if (cue && !this.seenCues.includes(cue.toLowerCase())) this.seenCues = [...this.seenCues, cue.toLowerCase()].slice(-40)
+    let b = str(this.spec.buildingsKey)
     if (b) {
+      // Landmarks first (their names can contain building words, e.g. "Abbey of Kings").
+      for (const [id] of parseNames(b, this.landmarkMatchers)) {
+        const name = id.slice('landmark:'.length)
+        if (!this.seenLandmarks.has(name)) this.seenLandmarks.set(name, now)
+        b = b.replace(new RegExp(escape(name), 'ig'), ' ')
+      }
       for (const [id, count] of parseNames(b, this.buildingMatchers)) {
         const cur = this.buildings.get(id)
         if (!cur) {
@@ -175,7 +218,91 @@ export class IntelTracker {
         }
       }
     }
+    news.push(...this.readNews())
     return news
+  }
+
+  /** New reads (once each) and the player's plan when their age changes. */
+  private readNews(): IntelNews[] {
+    const out: IntelNews[] = []
+    // Only a clear leader is said: when two plans fit what was seen equally, wait for the screen to tell them apart.
+    const [best, next] = this.reads()
+    if (best && best.score >= READ_MIN_SCORE && (!next || best.score > next.score) && !this.announcedReads.has(best.id)) {
+      this.announcedReads.add(best.id)
+      const timing = best.timing ? `, ${best.timing}` : ''
+      out.push({ kind: 'read', id: best.id, text: sayable(`Read: ${best.name}${timing}. ${best.response[0] ?? best.threat}. Seen: ${best.evidence.join(', ')}.`) })
+    }
+    const mine = this.playerAge !== null ? this.agePlan(this.playerFaction, this.playerAge) : null
+    if (mine && this.announcedPlanAge !== this.playerAge && mine.playAs.length) {
+      this.announcedPlanAge = this.playerAge
+      out.push({ kind: 'plan', id: `${this.playerFaction!.id}:${mine.age}`, text: sayable(`${this.ageName(mine.age)} as ${this.playerFaction!.name}: ${mine.playAs[0]}`) })
+    }
+    return out
+  }
+
+  private agePlan(faction: RosterFaction | null, age: number): CivAgePlan | null {
+    return faction?.agePlans?.find((p) => p.age === age) ?? null
+  }
+
+  /**
+   * The opponent's plans at their age (and the age before), scored by what
+   * the screen showed: their landmarks (3 each), units (2 each if not every
+   * civilisation has them, else 1), buildings
+   * (1 each, more when they have several) and cues the recogniser noted (a
+   * second Town Center, towers at gold; 2 each, matched on key words).
+   */
+  reads(): IntelRead[] {
+    const f = this.faction
+    if (!f?.agePlans?.length) return []
+    const age = this.opponentAge()?.age ?? null
+    const plans = f.agePlans.filter((p) => age === null || p.age === age || p.age === age - 1 || (p.age === age + 1 && this.landmarkOfAge(f, age + 1)))
+    const out: IntelRead[] = []
+    for (const plan of plans) {
+      for (const m of plan.theirMoves) {
+        const evidence: string[] = []
+        let score = 0
+        for (const l of m.signals.landmarks ?? []) if (this.seenLandmarks.has(l)) ((score += 3), evidence.push(l))
+        // A unit only some civilisations have says more than one every civilisation has.
+        for (const u of m.signals.units ?? []) if (this.seenUnits.has(u)) ((score += this.units.get(u)?.factions?.length ? 2 : 1), evidence.push(this.units.get(u)?.name ?? u))
+        for (const c of m.signals.cues ?? []) if (this.cueSeen(c)) ((score += 2), evidence.push(c.replace(/\s*\(unverified\)/, '')))
+        const wanted = new Map<string, number>()
+        for (const b of m.signals.buildings ?? []) wanted.set(b, (wanted.get(b) ?? 0) + 1)
+        for (const [b, n] of wanted) {
+          const seen = this.buildings.get(b)?.count ?? 0
+          if (seen) {
+            score += Math.min(seen, n)
+            const name = this.roster.buildings.find((x) => x.id === b)?.name ?? b
+            evidence.push(seen > 1 ? `${seen} ${name}` : name)
+          }
+        }
+        if (score > 0) out.push({ id: m.id, name: m.name, age: plan.age, evidence, score, timing: m.timing ?? null, threat: m.threat, response: m.response, punish: m.punish ?? null })
+      }
+    }
+    // Their current age first among equals: that is the plan in motion.
+    return out.sort((a, b) => b.score - a.score || (age !== null ? Math.abs(a.age - age) - Math.abs(b.age - age) : 0))
+  }
+
+  /** A plan cue ("towers at your gold") counts as seen when the recogniser's notes share its key words. */
+  private cueSeen(cue: string): boolean {
+    const words = keyWords(cue)
+    if (!words.length) return false
+    const need = words.length === 1 ? 1 : 2
+    return this.seenCues.some((seen) => words.filter((w) => seen.includes(w)).length >= need)
+  }
+
+  private landmarkOfAge(f: RosterFaction, age: number): boolean {
+    return (f.landmarks ?? []).some((l) => l.age === age && this.seenLandmarks.has(l.name))
+  }
+
+  private usual(): { name: string; signals: string }[] {
+    const age = this.opponentAge()?.age
+    const plan = age ? this.agePlan(this.faction, age) : null
+    return (plan?.theirMoves ?? []).slice(0, 3).map((m: CivPlanMove) => ({
+      name: m.name,
+      signals: [...(m.signals.landmarks ?? []), ...(m.signals.buildings ?? []).map((b) => this.roster.buildings.find((x) => x.id === b)?.name ?? b), ...(m.signals.units ?? []).map((u) => this.units.get(u)?.name ?? u), ...(m.signals.cues ?? [])]
+        .slice(0, 4)
+        .join(', '),
+    }))
   }
 
   newMatch(at = Infinity): void {
@@ -186,6 +313,10 @@ export class IntelTracker {
     this.seenUnits = new Map()
     this.announcedUnits = new Set()
     this.opponentAgeSeen = null
+    this.seenLandmarks = new Map()
+    this.seenCues = []
+    this.announcedReads = new Set()
+    this.announcedPlanAge = null
   }
 
   /** The opponent's age as best known: shown on screen, else at least what they fielded, else the player's own (assumed). */
@@ -206,7 +337,7 @@ export class IntelTracker {
 
   /** This match's intel, or the last match's while nothing is known yet. */
   report(): IntelReport {
-    if (!this.faction && !this.buildings.size && !this.seenUnits.size && this.previous) return this.previous
+    if (!this.faction && !this.buildings.size && !this.seenUnits.size && !this.seenLandmarks.size && this.previous) return this.previous
     const name = (id: string) => this.units.get(id)?.name ?? this.roster.buildings.find((b) => b.id === id)?.name ?? id
     const seen = (m: Map<string, { count: number; firstAt: number }>) =>
       [...m].map(([id, v]) => ({ id, name: name(id), count: v.count, firstAt: v.firstAt })).sort((a, b) => b.count - a.count || a.firstAt - b.firstAt)
@@ -227,6 +358,17 @@ export class IntelTracker {
       units,
       opponentAge: theirAge ? { ...theirAge, name: this.ageName(theirAge.age) } : null,
       likely,
+      landmarks: [...this.seenLandmarks.keys()],
+      reads: this.reads().filter((r) => r.score >= READ_MIN_SCORE),
+      usual: this.usual(),
+      yourPlan: (() => {
+        const p = this.playerAge !== null ? this.agePlan(this.playerFaction, this.playerAge) : null
+        return p ? { age: p.age, ageName: this.ageName(p.age), playAs: p.playAs, powerSpikes: p.powerSpikes ?? [], weakWindows: p.weakWindows ?? [] } : null
+      })(),
+      theirWindows: (() => {
+        const a = theirAge ? this.agePlan(this.faction, theirAge.age) : null
+        return a ? { powerSpikes: a.powerSpikes ?? [], weakWindows: a.weakWindows ?? [] } : null
+      })(),
       counters: units.slice(0, 4).map((x) => ({
         against: x.name,
         build: this.answers(x.id).map((a) => (a.now ? name(a.id) : `${name(a.id)} (from the ${this.ageName(a.age!)})`)),
@@ -370,6 +512,33 @@ export class IntelTracker {
     const tail = later && now.length < 2 ? ` ${name(later.id)} from the ${this.ageName(later.age!)}.` : ''
     return `They're making ${plural(u.name)}. ${list(now.map((a) => name(a.id)))} beat them.${tail}`
   }
+}
+
+const STOP = new Set(['their', 'your', 'with', 'from', 'into', 'near', 'early', 'very', 'than', 'that', 'this', 'they', 'unverified', 'more', 'some', 'many', 'before', 'after', 'about', 'around'])
+
+/** Significant words of a cue (4+ letters, singular-ish), for loose matching against what the recogniser noted. */
+function keyWords(text: string): string[] {
+  return [...new Set(text.toLowerCase().replace(/\(unverified\)/g, '').split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).map((w) => w.replace(/(ies|es|s)$/, (m) => (m === 'ies' ? 'y' : ''))))]
+}
+
+/** Reference text made fit to speak: no "(unverified)" tags or shorthand symbols, a capital and a full stop. */
+export function sayable(text: string): string {
+  const t = text
+    .replace(/\s*\(unverified\)/gi, '')
+    // Community shorthand, said in full.
+    .replace(/\bvills?\b/gi, 'villagers')
+    .replace(/\bTCs\b/g, 'Town Centers')
+    .replace(/\bTC\b/g, 'Town Center')
+    .replace(/\bMAA\b/g, 'Men-at-Arms')
+    .replace(/\bvs\.?(?=\s)/gi, 'against')
+    .replace(/~\s*/g, 'about ')
+    .replace(/\s*\+\s*/g, ' and ')
+    .replace(/\s*\/\s*/g, ' or ')
+    .replace(/\.(\s*\.)+/g, '.')
+    .replace(/\s+/g, ' ')
+    .replace(/(^|[.!?]\s+)([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase())
+    .trim()
+  return /[.!?]$/.test(t) ? t : `${t}.`
 }
 
 export function plural(name: string): string {

@@ -28,10 +28,11 @@ test('roster: every released civilisation and the announced ones, each with uniq
 })
 
 test('roster prompt text: names to report and how to tell units apart, within budget', () => {
-  const vision = rosterText(roster, { budget: 36_000, detail: 'vision' })
+  const vision = rosterText(roster, { budget: 44_000, detail: 'vision' })
   assert.match(vision, /- Longbowman \(English\)/)
   assert.match(vision, /Vikings \(UPCOMING, not released\)/)
-  assert.ok(vision.length <= 36_000)
+  assert.ok(vision.length <= 44_000)
+  assert.match(vision, /- Bondi Spearman \(Vikings\)/, 'every unit fits, the newest civs included')
   assert.match(rosterText(roster, { budget: 100_000, detail: 'answer' }), /### Counter rules/)
 })
 

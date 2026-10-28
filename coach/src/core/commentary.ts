@@ -35,7 +35,16 @@ function zoneLabel(profile: GameProfile, ev: GameEvent): string | null {
 }
 
 function finish(text: string): string {
-  return fitWords([text], WORD_LIMITS.commentary)
+  return fitCommentary(text)
+}
+
+/** Whole sentences up to the commentary limit; a single long first sentence is cut at the limit rather than dropped. */
+export function fitCommentary(text: string): string {
+  const sentences = text.split(/(?<=[.!?])\s+/)
+  const fitted = fitWords(sentences, WORD_LIMITS.commentary)
+  if (fitted) return fitted
+  const words = sentences[0].split(/\s+/).slice(0, WORD_LIMITS.commentary)
+  return `${words.join(' ').replace(/[,;:]$/, '')}.`
 }
 
 /** A line for an event the pack comments on, or null. */

@@ -314,6 +314,7 @@ export class CoachSession {
     const vision = {
       enabled: kind === 'screen' && cloud.available && cloud.settings.enabled && cloud.key.set && !!profile.vision,
       intervalMs: profile.vision?.sampleIntervalMs ?? 3000,
+      maxInFlight: profile.vision?.maxInFlight ?? 1,
     }
     if (vision.enabled) await this.bridge.resetCloudSession().catch(() => undefined)
 

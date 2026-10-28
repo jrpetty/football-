@@ -127,7 +127,7 @@
   "events": [],
   "vision": {
     "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villagers (the worker counts beside each resource plus idle, only if all are readable), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen. When enemy buildings or units are visible (scouting, fights, their base), list them with the roster's exact names and counts; never list anything in the fog of war.",
-    "sampleIntervalMs": 4000,
+    "sampleIntervalMs": 3000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
     "state": [
@@ -374,7 +374,8 @@
         ],
         "dedupeMs": 30000
       }
-    ]
+    ],
+    "maxInFlight": 2
   },
   "mistakes": [
     {

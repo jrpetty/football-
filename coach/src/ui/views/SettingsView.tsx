@@ -4,7 +4,7 @@ import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { COOLDOWN_RANGE, VERBOSITIES, type CoachSettings } from '../../core/settings.ts'
 import type { Verbosity } from '../../core/types.ts'
-import { estimatePerHour, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
+import { cachedPromptTokens, estimatePerHour, MODELS, PRICING_URL } from '../../core/vision/cost.ts'
 import { DEFAULT_CAPTURE } from '../../capture/sources.ts'
 import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
@@ -208,7 +208,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile }: { bridge: SightlineBrid
               </select>
               {v ? (
                 <span className="muted small">
-                  {profile.game.title}: one image every {(v.sampleIntervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.sampleIntervalMs, v.maxWidth, height))}/hour (estimate;
+                  {profile.game.title}: one image every {(v.sampleIntervalMs / 1000).toFixed(1)} s ≈ {usd(estimatePerHour(cloud.settings.visionModel, v.sampleIntervalMs, v.maxWidth, height, cachedPromptTokens(!!profile.knowledge.roster)))}/hour (estimate;
                   unchanged frames are skipped). Haiku is far cheaper; Opus reads busy screens best.
                 </span>
               ) : null}

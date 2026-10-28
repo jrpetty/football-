@@ -1,5 +1,7 @@
 // Decides when a captured frame is worth sending to the vision recogniser.
-// Cost and latency matter more than coverage: at most one request in flight,
+// Cost and latency matter more than coverage: at most one request in flight
+// (or a pack's small maximum, so a fast-moving game is seen every few seconds
+// even when an answer takes longer than the interval),
 // a minimum interval, near-identical frames skipped (paused game, menus), and
 // exponential backoff after errors. The decision never depends on what the
 // model said about earlier frames.
@@ -10,6 +12,8 @@ export interface SamplerConfig {
   readonly minChange: number
   /** But send anyway after this long, so slow changes (a clock) are still read. */
   readonly maxSkipMs: number
+  /** Requests allowed at once (default 1). Answers may then arrive out of order; the state fuser keeps the newest. */
+  readonly maxInFlight?: number
 }
 
 export interface SamplerStats {
@@ -26,7 +30,7 @@ export class VisionSampler {
   private readonly cfg: SamplerConfig
   private lastSentAt = -Infinity
   private lastGrid: Float32Array | null = null
-  private inFlight = false
+  private inFlight = 0
   private backoffUntil = 0
   private consecutiveErrors = 0
   private sent = 0
@@ -41,7 +45,7 @@ export class VisionSampler {
 
   /** Should this frame be sent? If true, the caller must call `sent()` and later `done()`. */
   shouldSample(now: number, grid: Float32Array): boolean {
-    if (this.paused || this.inFlight || now < this.backoffUntil) return false
+    if (this.paused || this.inFlight >= (this.cfg.maxInFlight ?? 1) || now < this.backoffUntil) return false
     const since = now - this.lastSentAt
     if (since < this.cfg.intervalMs) return false
     if (this.lastGrid && since < this.cfg.maxSkipMs && meanDiff(grid, this.lastGrid) < this.cfg.minChange) {
@@ -52,7 +56,7 @@ export class VisionSampler {
   }
 
   sending(now: number, grid: Float32Array): void {
-    this.inFlight = true
+    this.inFlight++
     this.lastSentAt = now
     this.lastGrid = grid
     this.sent++
@@ -66,7 +70,7 @@ export class VisionSampler {
   }
 
   done(now: number, ok: boolean, retryAfterMs?: number): void {
-    this.inFlight = false
+    this.inFlight = Math.max(0, this.inFlight - 1)
     if (ok) {
       this.consecutiveErrors = 0
       return
@@ -83,7 +87,7 @@ export class VisionSampler {
   }
 
   get stats(): SamplerStats {
-    return { sent: this.sent, skippedUnchanged: this.skippedUnchanged, errors: this.errors, knownScreens: this.knownScreens, inFlight: this.inFlight, backoffUntil: this.backoffUntil }
+    return { sent: this.sent, skippedUnchanged: this.skippedUnchanged, errors: this.errors, knownScreens: this.knownScreens, inFlight: this.inFlight > 0, backoffUntil: this.backoffUntil }
   }
 }
 

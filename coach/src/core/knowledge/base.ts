@@ -209,17 +209,19 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   for (const b of roster.buildings) {
     if (!push(`- ${b.name}${b.factions?.length ? ` (${b.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''}${age(b.age)}: makes ${names(b.produces) || 'no units'}${b.look ? `. Looks: ${b.look}` : ''}${opts.detail === 'answer' && b.signals ? `. Means: ${b.signals}` : ''}`)) break
   }
+  // Civilisations (with their landmarks) before units: the opponent's civ and landmarks matter most if the budget runs out.
+  push('### Civilisations')
+  for (const f of roster.factions) {
+    const landmarks = (f.landmarks ?? []).map((l) => `${l.name}${l.age ? ` (${ageName(l.age)})` : ''}`).join(', ')
+    const base = `- ${f.name}${f.status === 'upcoming' ? ' (UPCOMING, not released)' : ''}${f.variantOf ? ` (variant of ${factionName.get(f.variantOf) ?? f.variantOf})` : ''}: unique ${names(f.uniqueUnits) || 'none'}${landmarks ? `; landmarks ${landmarks}` : ''}`
+    const more = opts.detail === 'answer' ? `. ${f.bonuses.slice(0, 5).join('; ')}${f.howToPlayAgainst ? `. Against them: ${f.howToPlayAgainst}` : ''}` : ''
+    if (!push(base + more)) break
+  }
   push('### Units')
   for (const u of roster.units) {
     const who = u.factions?.length ? ` (${u.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''
     const answer = opts.detail === 'answer' ? `; beats ${names(u.counters)}; beaten by ${names(u.counteredBy)}${u.why ? `. ${u.why}` : ''}` : ''
     if (!push(`- ${u.name}${who} [${u.classes.join(' ')}${age(u.age)}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
-  }
-  push('### Civilisations')
-  for (const f of roster.factions) {
-    const base = `- ${f.name}${f.status === 'upcoming' ? ' (UPCOMING, not released)' : ''}${f.variantOf ? ` (variant of ${factionName.get(f.variantOf) ?? f.variantOf})` : ''}: unique ${names(f.uniqueUnits) || 'none'}`
-    const more = opts.detail === 'answer' ? `. ${f.bonuses.slice(0, 5).join('; ')}${f.howToPlayAgainst ? `. Against them: ${f.howToPlayAgainst}` : ''}` : ''
-    if (!push(base + more)) break
   }
   if (opts.detail === 'answer') {
     push('### Counter rules')

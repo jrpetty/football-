@@ -170,6 +170,10 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.4 | Set your civilisation in setup (e.g. English) and meet enemy Spearmen. | The answer names Longbowmen rather than Archers. |
 | 13.4b | Feudal Age against English: scout their Barracks. | Spearmen or Men-at-Arms expected, never Wynguard Footmen (Imperial). When their age-up notice shows, "They reached the Castle Age. Now possible: …". |
 | 13.5 | Ask "what are they making?" | A local answer from what was seen; nothing invented when nothing was scouted. |
+| 13.6 | AoE IV, any civ vs English in Feudal. Scout their Council Hall and Archery Range. | Their side shows a read card (the plan, the evidence it was based on, the response). Spoken once: "Read: … Seen: Council Hall, Archery Range." Before scouting, the panel shows only "Their usual plan", marked as not yet seen. |
+| 13.7 | Set your civilisation, then age up. | "<Age> as <civ>: …" is said once per age; Their side shows "Your plan" for your current age, and their power spikes and weak windows. |
+| 13.8 | Ask "what's their plan?" and "what should I do this age?" | The answer names the read (with evidence) or says nothing has been scouted that supports one, then your plan for this age. |
+| 13.9 | Settings → model estimate; play 5 minutes of AoE IV. | Frames about every 3 seconds; Settings spend grows by roughly the estimate; at the cap all calls stop with a notice. |
 
 ## 14. Accessibility and layout
 

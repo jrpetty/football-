@@ -3158,3 +3158,45 @@ kbd {
 .intel-counters p {
   margin: 2px 0;
 }
+
+.reads,
+.your-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.read {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  border: 1px solid rgba(242, 184, 75, 0.35);
+}
+
+.read p {
+  margin: 4px 0;
+}
+
+.read-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.read ul.good,
+.your-plan ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.read ul.good li::marker {
+  content: '→  ';
+  color: var(--accent);
+}
+
+.your-plan {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}

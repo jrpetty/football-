@@ -266,3 +266,16 @@ test("the coach's review: structured output with the playbook in the cached syst
   assert.ok(req.output_config.format, 'structured output')
   assert.match(req.messages[0].content, /probable, not certain/)
 })
+
+test('sampler: with two requests allowed, a frame goes out every interval even while an answer is slow', () => {
+  const s = new VisionSampler({ intervalMs: 3000, minChange: 0, maxSkipMs: 12_000, maxInFlight: 2 })
+  const g = (v: number) => new Float32Array(64).fill(v)
+  assert.equal(s.shouldSample(0, g(1)), true)
+  s.sending(0, g(1))
+  assert.equal(s.shouldSample(1500, g(2)), false, 'the interval still applies')
+  assert.equal(s.shouldSample(3000, g(2)), true, 'the first answer is still out')
+  s.sending(3000, g(2))
+  assert.equal(s.shouldSample(6000, g(3)), false, 'never more than two at once')
+  s.done(6500, true)
+  assert.equal(s.shouldSample(6500, g(3)), true)
+})

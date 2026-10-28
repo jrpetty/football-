@@ -34,7 +34,7 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
-  if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make)|counter|scout\w*|opponent)\b/.test(q)) return { kind: 'intel' }
+  if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make|do)|counter|scout\w*|opponent|their plan|what(?:'s| is) (?:their|the) plan|game plan|strategy)\b/.test(q)) return { kind: 'intel' }
   if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
   if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
@@ -140,6 +140,10 @@ function intelAnswer(report: SessionReport): string {
   if (now.length) parts.push(`Those buildings can also make ${now.slice(0, 4).map((l) => l.name).join(', ')}.`)
   if (later.length) parts.push(`Not yet: ${later.slice(0, 3).map((l) => l.name).join(', ')}.`)
   for (const c of i.counters.slice(0, 2)) if (c.build.length) parts.push(`Against ${c.against}: ${c.build.join(' or ')}.`)
+  const read = i.reads[0]
+  if (read) parts.push(`Likely plan: ${read.name}, from ${read.evidence.join(', ')}. ${read.response.slice(0, 2).join(' ')}`)
+  else if (i.usual.length) parts.push(`Nothing points to a plan yet. Usual for them now: ${i.usual.map((u) => u.name).join('; ')}.`)
+  if (i.yourPlan?.playAs.length) parts.push(`Your ${i.yourPlan.ageName}: ${i.yourPlan.playAs[0]}`)
   return parts.join(' ')
 }
 
@@ -212,6 +216,7 @@ export function buildDigest(i: DigestInputs): string {
         })),
       game: Object.keys(i.report.context).length ? i.report.context : undefined,
       scouted: i.report.intel ?? undefined,
+      civPlans: civPlans(p, i.report),
       fightsFollowed: i.report.battles.length
         ? {
             won: i.report.battles.filter((b) => b.outcome === 'won').length,
@@ -264,6 +269,21 @@ export function buildDigest(i: DigestInputs): string {
     research: i.research ? { asOf: i.research.createdAt, brief: i.research.text.slice(0, 3500), sources: i.research.sources.slice(0, 8) } : null,
   }
   return JSON.stringify(digest)
+}
+
+/** The opponent's plans around their age and the player's own plan, from the pack's roster (reference, not observation). */
+function civPlans(p: GameProfile, report: SessionReport) {
+  const i = report.intel
+  const factions = p.knowledge.roster?.factions ?? []
+  if (!i) return undefined
+  const theirs = i.faction ? factions.find((f) => f.id === i.faction!.id) : undefined
+  const age = i.opponentAge?.age ?? null
+  const near = (a: number) => age === null || Math.abs(a - age) <= 1
+  return {
+    note: 'Reference plans from guides and pro play; match them to what was seen before calling one.',
+    opponent: theirs ? { civ: theirs.name, summary: theirs.playstyle, ages: (theirs.agePlans ?? []).filter((a) => near(a.age)) } : null,
+    you: i.yourPlan,
+  }
 }
 
 function slimMatch(m: MatchRecord) {

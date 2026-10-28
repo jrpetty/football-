@@ -162,6 +162,14 @@ Legend:
 - ◐ Recognising enemy buildings and units in real frames. *Depends on Claude reading real AoE IV screens; untested without captures.*
 - ◐ Research quality: page fetches were blocked; sources are search summaries and aoe4world's open data on GitHub. Uncertain items are marked "(unverified)".
 
+## v7 delivery
+
+- ☑ Vision every 3 seconds for the AoE packs, with up to two reads in flight. Settings shows the cost estimate; the README gives it per model.
+- ☑ Every AoE IV civilisation's plans for each age, Dark to Imperial: their usual moves with the signals that give them away, timings, threats, responses and punishes; how to play the civ at that age; power spikes and weak windows. Validated so every building, unit and landmark belongs to that civ.
+- ☑ Tactical reads: a plan is called only when scouted landmarks, units, buildings or noted cues support it (score ≥ 2), once, spoken with its response and evidence; the player's own plan per age; "Their usual plan" until then.
+- ◐ Plan research: from search summaries and community guides for the current patch; the upcoming civs' plans are marked "(unverified)" and need a check at release.
+- ◐ Cue reading (a tower at your gold, a second Town Center) from real frames. *Untested without captures.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

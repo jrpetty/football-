@@ -46,11 +46,20 @@ export function imageTokens(width: number, height: number): number {
   return Math.ceil((width * height) / 750)
 }
 
-/** Rough USD per hour of play at a sampling interval, assuming a cached system prompt. */
-export function estimatePerHour(model: string, intervalMs: number, imageWidth: number, imageHeight: number): number {
+/**
+ * Cached system-prompt tokens per frame: the pack's screen and HUD notes, plus
+ * the roster of unit and building names for strategy packs (about four
+ * characters per token).
+ */
+export function cachedPromptTokens(hasRoster: boolean): number {
+  return hasRoster ? 15_000 : 5_000
+}
+
+/** Rough USD per hour of play at a sampling interval, with the system prompt read from the cache. */
+export function estimatePerHour(model: string, intervalMs: number, imageWidth: number, imageHeight: number, cachedTokens = cachedPromptTokens(false)): number {
   const perCall = costOf(model, {
     input_tokens: imageTokens(imageWidth, imageHeight) + 150,
-    cache_read_input_tokens: 1500,
+    cache_read_input_tokens: cachedTokens,
     output_tokens: 350,
   })
   return perCall * (3_600_000 / intervalMs)

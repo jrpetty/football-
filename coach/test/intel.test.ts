@@ -89,3 +89,69 @@ test('intel: the player civilisation shapes the answer (unique replacements); up
   t.newMatch()
   assert.equal(t.report().faction?.name, 'Scots', 'the last match stays visible until new intel arrives')
 })
+
+test('reads: a plan is called only once the screen supports it, with the answer; the player gets their own age plan', () => {
+  const planned: Roster = {
+    ...roster,
+    factions: roster.factions.map((f) =>
+      f.id === 'english'
+        ? {
+            ...f,
+            landmarks: [{ age: 2, name: 'Council Hall', effect: 'Archery Range that works faster' }],
+            agePlans: [
+              {
+                age: 2,
+                theirMoves: [
+                  { id: 'longbow-push', name: 'Council Hall Longbow push', signals: { landmarks: ['Council Hall'], buildings: ['archery-range'], units: ['longbowman'] }, timing: 'lands 5:30–7:00', threat: 'Massed Longbowmen outrange you.', response: ['Horsemen at their gold, Spearmen at home.'], punish: 'Their eco is thin.' },
+                  { id: 'tower-rush', name: 'Tower rush', signals: { buildings: ['barracks'], cues: ['towers at your gold'] }, threat: 'Towers at your gold.', response: ['Build a Barracks and pull villagers.'] },
+                ],
+                playAs: ['Wall the gold.'],
+                powerSpikes: ['Council Hall'],
+                weakWindows: ['Before the landmark finishes'],
+              },
+            ],
+          }
+        : f.id === 'mongols'
+          ? { ...f, agePlans: [{ age: 2, theirMoves: [], playAs: ['Raid with Mangudai while you boom.'] }] }
+          : f,
+    ),
+  }
+  const t = new IntelTracker(planned, { ...spec, ages: ['dark', 'feudal', 'castle', 'imperial'], opponentAgeKey: 'opponentAge', playerAgeKey: 'age' }, 'Mongols')
+  const n1 = t.update(state({ age: 'feudal', opponentAge: 'feudal', opponentCiv: 'English', enemyBuildings: 'Archery Range' }), 1000)
+  assert.ok(!n1.some((n) => n.kind === 'read'), 'one building is not enough')
+  assert.ok(n1.some((n) => n.kind === 'plan' && n.text === 'Feudal Age as Mongols: Raid with Mangudai while you boom.'))
+  assert.equal(t.report().usual[0].name, 'Council Hall Longbow push')
+  const n2 = t.update(state({ age: 'feudal', enemyBuildings: 'Council Hall' }), 2000)
+  const read = n2.find((n) => n.kind === 'read')!
+  assert.equal(read.text, 'Read: Council Hall Longbow push, lands 5:30–7:00. Horsemen at their gold, Spearmen at home. Seen: Council Hall, Archery Range.')
+  const r = t.report()
+  assert.deepEqual(r.landmarks, ['Council Hall'])
+  assert.ok(!r.buildings.some((b) => /Council/.test(b.name)), 'a landmark is not read as a building')
+  assert.deepEqual([...r.reads[0].evidence].sort(), ['Archery Range', 'Council Hall'])
+  assert.equal(r.reads[0].score, 4)
+  assert.deepEqual(r.theirWindows, { powerSpikes: ['Council Hall'], weakWindows: ['Before the landmark finishes'] })
+  assert.equal(t.update(state({ enemyUnits: '5 Longbowmen' }), 3000).filter((n) => n.kind === 'read').length, 0, 'said once')
+
+  // A cue the recogniser noted counts when it shares the plan cue's key words.
+  const c = new IntelTracker(planned, { ...spec, ages: ['dark', 'feudal', 'castle', 'imperial'], opponentAgeKey: 'opponentAge', playerAgeKey: 'age', cuesKey: 'enemyCues' }, 'Mongols')
+  c.update(state({ opponentAge: 'feudal', opponentCiv: 'English', enemyCues: 'palisade walls' }), 1000)
+  assert.ok(!c.report().reads.some((x) => x.id === 'tower-rush'), 'an unrelated cue does not count')
+  const n3 = c.update(state({ enemyBuildings: 'Barracks', enemyCues: 'stone tower at your gold' }), 2000)
+  assert.ok(n3.some((n) => n.kind === 'read' && n.id === 'tower-rush' && /Seen: towers at your gold, Barracks\.$/.test(n.text)))
+
+  // Two plans equally supported: nothing is said until the screen tells them apart.
+  const d = new IntelTracker(planned, { ...spec, ages: ['dark', 'feudal', 'castle', 'imperial'], opponentAgeKey: 'opponentAge', playerAgeKey: 'age', cuesKey: 'enemyCues' }, 'Mongols')
+  const tied = d.update(state({ opponentAge: 'feudal', opponentCiv: 'English', enemyBuildings: 'Barracks, Archery Range', enemyUnits: '4 Longbowmen', enemyCues: 'tower at your gold' }), 1000)
+  assert.deepEqual(d.report().reads.map((x) => x.score), [3, 3])
+  assert.ok(!tied.some((n) => n.kind === 'read'), 'a tie is not called')
+  const broken = d.update(state({ enemyBuildings: 'Council Hall' }), 2000)
+  assert.ok(broken.some((n) => n.kind === 'read' && n.id === 'longbow-push'))
+})
+
+test('sayable: reference shorthand is made fit to speak', async () => {
+  const { sayable } = await import('../src/core/analyses/intel.ts')
+  assert.equal(sayable('Read: Sipahi raids, from ~5:30 (unverified). spearman packs at gold/wood + outpost'), 'Read: Sipahi raids, from about 5:30. Spearman packs at gold or wood and outpost.')
+  assert.equal(sayable('Wall the gold..'), 'Wall the gold.')
+  assert.equal(sayable('Pull vills to TC vs MAA.'), 'Pull villagers to Town Center against Men-at-Arms.')
+})
+

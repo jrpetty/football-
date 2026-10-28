@@ -184,6 +184,8 @@ export interface VisionSpec {
   /** What the recogniser should pay attention to, in one paragraph. */
   readonly purpose: string
   readonly sampleIntervalMs: number
+  /** Vision requests allowed at once (1–3, default 1): with 2, a frame is looked at every interval even when answers take longer. */
+  readonly maxInFlight?: number
   /** Longest acceptable recognition latency; older observations are not used for live coaching. */
   readonly maxLatencyMs: number
   readonly maxWidth: number
@@ -409,6 +411,27 @@ export interface RosterBuilding {
   readonly factions?: readonly string[]
 }
 
+/** A plan a civilisation commonly goes for in one age, and how its opponent can see it coming. */
+export interface CivPlanMove {
+  readonly id: string
+  readonly name: string
+  /** What the opponent can see on their own screen: landmark names, building and unit ids, other cues (shown, not matched). */
+  readonly signals: { readonly landmarks?: readonly string[]; readonly buildings?: readonly string[]; readonly units?: readonly string[]; readonly cues?: readonly string[] }
+  readonly timing?: string
+  readonly threat: string
+  readonly response: readonly string[]
+  readonly punish?: string
+}
+
+export interface CivAgePlan {
+  readonly age: number
+  readonly theirMoves: readonly CivPlanMove[]
+  /** Priorities when playing this civilisation in this age. */
+  readonly playAs: readonly string[]
+  readonly powerSpikes?: readonly string[]
+  readonly weakWindows?: readonly string[]
+}
+
 export interface RosterFaction {
   readonly id: string
   readonly name: string
@@ -427,6 +450,8 @@ export interface RosterFaction {
   readonly playstyle?: string
   readonly commonStrategies?: readonly string[]
   readonly howToPlayAgainst?: string
+  /** Common plans age by age (1 = first age), how to read them and answer them, and how to play the civilisation. */
+  readonly agePlans?: readonly CivAgePlan[]
   readonly sources?: readonly { readonly url: string; readonly title: string; readonly kind: string }[]
 }
 
@@ -537,6 +562,8 @@ export interface GameProfile {
     readonly opponentAgeKey?: string
     /** State key with the player's own age. */
     readonly playerAgeKey?: string
+    /** State key with other notable enemy things in view (second Town Center, tower at your gold, palisade…), matched against plan cues by key words. */
+    readonly cuesKey?: string
   }
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
@@ -854,6 +881,7 @@ export function validateProfile(input: unknown): ValidationResult {
     if (v) {
       c.str(v.purpose, 'vision.purpose', { max: 2000 })
       c.num(v.sampleIntervalMs, 'vision.sampleIntervalMs', 1000, 60_000)
+      c.num(v.maxInFlight, 'vision.maxInFlight', 1, 3, true)
       c.num(v.maxLatencyMs, 'vision.maxLatencyMs', 1000, 60_000)
       c.num(v.maxWidth, 'vision.maxWidth', 320, 1920)
       c.arr(v.crops, 'vision.crops', true).forEach((cr, i) => {
@@ -1116,6 +1144,30 @@ export function validateProfile(input: unknown): ValidationResult {
         }
         if (f.variantOf !== undefined && f.variantOf !== null) ref(f.variantOf, `${path}.variantOf`, 'faction')
         for (const k of ['playstyle', 'howToPlayAgainst'] as const) c.str(f[k], `${path}.${k}`, { optional: true, max: 600 })
+        const landmarkNames = new Set((Array.isArray(f.landmarks) ? (f.landmarks as Obj[]) : []).map((l) => String(l?.name ?? '').toLowerCase()))
+        c.arr(f.agePlans, `${path}.agePlans`, true).forEach((ap, i) => {
+          const a = c.obj(ap, `${path}.agePlans[${i}]`)
+          if (!a) return
+          const ag = `${path}.agePlans[${i}]`
+          c.num(a.age, `${ag}.age`, 1, 10)
+          c.arr(a.playAs, `${ag}.playAs`).forEach((x, j) => c.str(x, `${ag}.playAs[${j}]`, { max: 300 }))
+          c.arr(a.theirMoves, `${ag}.theirMoves`).forEach((mv, j) => {
+            const m = c.obj(mv, `${ag}.theirMoves[${j}]`)
+            if (!m) return
+            const mp = `${ag}.theirMoves[${j}]`
+            c.str(m.id, `${mp}.id`, { pattern: ID })
+            c.str(m.name, `${mp}.name`, { max: 120 })
+            c.str(m.threat, `${mp}.threat`, { max: 300 })
+            c.arr(m.response, `${mp}.response`).forEach((x, k) => c.str(x, `${mp}.response[${k}]`, { max: 300 }))
+            const sig = c.obj(m.signals, `${mp}.signals`)
+            if (!sig) return
+            c.arr(sig.buildings, `${mp}.signals.buildings`, true).forEach((v, k) => ref(v, `${mp}.signals.buildings[${k}]`, 'building'))
+            c.arr(sig.units, `${mp}.signals.units`, true).forEach((v, k) => ref(v, `${mp}.signals.units[${k}]`, 'unit'))
+            c.arr(sig.landmarks, `${mp}.signals.landmarks`, true).forEach((v, k) => {
+              if (typeof v !== 'string' || !landmarkNames.has(v.toLowerCase())) c.errors.push(`${mp}.signals.landmarks[${k}]: not one of this civilisation's landmarks ("${String(v)}")`)
+            })
+          })
+        })
       })
     }
   }
@@ -1127,6 +1179,8 @@ export function validateProfile(input: unknown): ValidationResult {
         const key = c.str(it[k], `intel.${k}`)
         if (key && !visionStateKeys.has(key)) c.errors.push(`intel.${k}: unknown state key "${key}"`)
       }
+      const ck = c.str(it.cuesKey, 'intel.cuesKey', { optional: true })
+      if (ck && !visionStateKeys.has(ck)) c.errors.push(`intel.cuesKey: unknown state key "${ck}"`)
       for (const k of ['opponentAgeKey', 'playerAgeKey'] as const) {
         const key = c.str(it[k], `intel.${k}`, { optional: true })
         if (key && !visionStateKeys.has(key)) c.errors.push(`intel.${k}: unknown state key "${key}"`)

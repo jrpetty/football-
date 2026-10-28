@@ -76,7 +76,7 @@
   "events": [],
   "vision": {
     "purpose": "Age of Empires II: Definitive Edition. Read the top resource panel (food, wood, gold, stone stockpiles), the population as current/maximum, the idle villager count if shown, the current age, and the in-game clock. Report only numbers you can actually read; leave out anything hidden, cut off or illegible. Report phase 'match_end' on a victory/defeat or post-game statistics screen and 'menu' in menus or lobbies.",
-    "sampleIntervalMs": 4000,
+    "sampleIntervalMs": 3000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
     "state": [
@@ -166,7 +166,8 @@
         "description": "The in-game clock converted to seconds."
       }
     ],
-    "events": []
+    "events": [],
+    "maxInFlight": 2
   },
   "mistakes": [
     {
