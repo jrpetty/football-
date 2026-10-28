@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v11, Windows-first.
+> **Status:** v12, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -154,6 +154,38 @@ Then press **Choose the game window**, play, and listen.
     rotating minimap, deaths are placed by area only. The MW4 demo draws a
     synthetic minimap, so you can watch a map being built. Tested on
     synthetic maps; not yet checked on real MW4 minimaps.
+  - **MW4: everything on the official overhead map.** Give the coach a
+    map's official tac map (Settings → Official overhead maps) and it places
+    your stitched minimap on it by itself while you play: the scale and
+    position are found by matching the two, and then every frame is pinned
+    to the official map, so the stitched map no longer drifts. Deaths,
+    kills, killers, paths, pings and callouts are then drawn on the real
+    map, overhead and in 3D (a floor plan raised from the official drawing).
+    - Ambiguity is refused, not guessed: a placement must beat the best one
+      elsewhere by a clear margin (two look-alike wings tie, so a piece
+      that has only seen the shared middle stays unplaced until you walk
+      somewhere only one wing has), and a placement from a single minimap
+      view is shown only once the next frames bear it out. The map view says
+      what share of your points is placed; the Stitched view shows them all.
+    - **Check placement** lays your stitched map over the official one (its
+      walls should sit on the official walls), with nudge buttons to adjust
+      it by hand.
+    - Maps stitched before you added the official map are placed on it
+      afterwards, once.
+    - The images are the publisher's artwork, so the app does not ship
+      them. On the desktop app, **Download** fetches the map's official
+      guide page (named in the pack) and keeps the image on it that looks
+      most like a tactical map; or open the page, save the image and
+      import it (drag and drop works; files are matched to maps by name).
+      Each image must look like a tactical map to be kept (a screenshot of
+      the game is refused). Kept on this computer only.
+    - Accuracy, measured on the 20 real official map images with simulated
+      minimaps in three art styles: every point placed, none in the wrong
+      place, 95% within 0.62% of the playable area's width (a few pixels on
+      a 2048 px map); the worst single point was 3% off (a moment of lost
+      tracking). Not yet measured on real MW4 minimap captures.
+      With an official map kept, the MW4 demo walks on it, so you can watch
+      the whole flow.
   - **MW4: knows where you are, and learns the map by watching.** Each look
     names the area you are in (a callout of the current map, from your own
     view: buildings, signs, objectives, minimap) and your height (ground,
@@ -388,7 +420,8 @@ coach/
   src/core/        engine: observations, visible-state fusion, frame health, analyses, evidence,
                    pattern memory, policy, planner, Q&A, vision contract/sampler/screens, knowledge base,
                    fight factors, benchmarks, the coach's review; map/: the map stitched from the
-                   minimap, pins on it, what the map views draw
+                   minimap, pins on it, the official overhead map and placing on it, what the map
+                   views draw
   src/policy/      registry.json (publisher-policy records)
   src/profiles/    game packs (JSON, validated at load)
   src/worker/      analysis worker (frame queue, screen memory, vision relay, snapshots)

@@ -245,6 +245,18 @@ Legend:
 - ◐ Real MW4 minimaps: where the minimap sits by default, its zoom, whether the arrow passes the brightness check, whether killcams show the killer's minimap, and whether the minimap's lighter shapes really are buildings (for the 3D). *No captures in the build environment; the defaults are guesses to check with the alignment tool.*
 - ◐ Maps whose minimap zooms (vehicles, Ground War) or rotates are not stitched.
 
+## v12 delivery
+
+- ☑ The official overhead map analysed: playable area (inside the boundary, found by flooding in from the edges, gaps closed), walls, solid structures, indoor floors, out of bounds; a score for how much it looks like a tactical map (the real maps 0.88–1, a screenshot of the game 0.33) (`test/official.test.ts`).
+- ☑ The stitched minimap placed on it while playing: scale and position by coarse-to-fine matching; ambiguity refused (the margin over the best placement elsewhere, every scale's runner-up included; single-window placements provisional until three frames bear them out); re-finds after a respawn must agree with the official map; every tracked frame pinned to the official map (no drift); points recorded before a piece was placed pinned down afterwards.
+
+  *Measured on the 20 real official map images (12 from the official guide, 8 community-hosted) with simulated minimaps in three art styles: every point placed, none wrong (over 5% off), p95 at most 0.62% of the playable area's width; the worst single point 3.0% (Reactor U92, a brief loss of tracking). A mirrored-wings test never places a piece in the wrong wing.*
+- ☑ Getting the images: Download from the official guide page named in the pack (desktop, on click, https and the page's own sites only), Open page, Import (picker or drag and drop, matched to maps by name), Remove. Each image checked before it is kept. Pack v1.5.0 names the official page of the twelve launch maps and a community page for eight more (`test/overhead.test.ts`).
+- ☑ The map views on the official map: overhead, live mini-map and 3D floor plan; placed share shown, unplaced points left out (Stitched view shows them); Check placement overlay with nudges; maps stitched earlier placed afterwards; the MW4 demo walks on a kept official map. *Browser and Electron runs of the demo on the official Cachette image: 100% placed.*
+- ◐ Downloading from the official pages is untested against the live sites: they were unreachable from the build environment. *The page parser is tested on sample pages; if a page hides its image, saving and importing it works.*
+- ◐ Real MW4 minimaps against the official images: art style, zoom and whether the in-game minimap is drawn from the same picture are untested. *The three simulated art styles are the stand-in; QA 13.38–13.41 measure it.*
+- ◐ Kill Block has no overhead image (only a screenshot, refused), and Hajin and Zodiac have none; eight maps only have 450 px community images.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

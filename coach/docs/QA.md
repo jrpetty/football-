@@ -200,6 +200,13 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.33 | 3D view of the map. | Buildings stand where the minimap shows them. Upper floors and roofs where you were seen are higher. Beams on deaths, arcs from killers, labels. Orbits smoothly; no errors. |
 | 13.34 | Set the minimap to rotating on the Coach screen. | Nothing is stitched. Where you are says to set it to fixed; deaths are placed by area. |
 | 13.35 | Ranked match. | No live mini-map during play; the map and its pins appear after the match. |
+| 13.36 | Settings → Official overhead maps → Download on a launch map (desktop app). | The official image is kept (a thumbnail, "Kept"); or a clear message to open the page, save the image and import it. Note which maps' pages work. |
+| 13.37 | Open page on a map, save its tac map image, drop it on the panel (named after the map), then a screenshot of the game. | The tac map is kept; the screenshot is refused as not a tactical map. A file named after no map asks which map it is. |
+| 13.38 | Play a match on a map with its official map kept (fixed minimap). | Coach → Where you are shows the official map with your dot on the right spot within the first minute of walking. Insights → The map: Official view, "100% placed" (or a share with the reason). |
+| 13.39 | Die in recognisable spots (a doorway, a window, a container). | Each death pin sits on that spot of the official map. Note the error in metres for each. |
+| 13.40 | Check placement. | The stitched map's walls sit on the official walls everywhere you walked. If not: note where, nudge it, and confirm the pins move with it. |
+| 13.41 | A symmetric map (Shipment, Library): spawn on one side, then the other. | No piece is drawn on the wrong side; a piece that saw only the shared middle stays unplaced until you reach a part only one side has. |
+| 13.42 | 3D view on the official map. | Walls and buildings stand on the official drawing; out of bounds is lower and dimmed; pins and arcs on top; no errors. |
 
 ## 14. Accessibility and layout
 
