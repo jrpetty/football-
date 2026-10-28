@@ -15,6 +15,10 @@ export interface CloudSettings {
   readonly visionThinking: VisionThinking
   /** Once the opponent's faction is known, send only this matchup's part of the roster with each frame (less to pay for, same names). */
   readonly matchupReference: boolean
+  /** A monthly spending budget in USD (0: none). The app warns as it is approached. */
+  readonly monthlyBudgetUsd: number
+  /** Stop all cloud calls once the monthly budget is reached (else only warn). */
+  readonly stopAtBudget: boolean
 }
 
 export type VisionThinking = 'auto' | 'off'
@@ -26,6 +30,21 @@ export const DEFAULT_CLOUD: CloudSettings = {
   sessionCapUsd: 2,
   visionThinking: 'auto',
   matchupReference: true,
+  monthlyBudgetUsd: 0,
+  stopAtBudget: false,
+}
+
+/** This session's spend, and the month's for the budget. */
+export interface CloudSpend {
+  readonly usd: number
+  readonly calls: number
+  readonly capUsd: number
+  readonly vision?: VisionUsage
+  /** USD per hour at the pace of the last few minutes of calls, or null. */
+  readonly ratePerHour?: number | null
+  /** This month's spend so far, all sessions (estimate). */
+  readonly monthUsd?: number
+  readonly monthlyBudgetUsd?: number
 }
 
 /** What screen readings actually used this session, from the API's own token counts. */
@@ -65,5 +84,5 @@ export interface CloudStatus {
   readonly available: boolean
   readonly settings: CloudSettings
   readonly key: KeyStatus
-  readonly spend: { readonly usd: number; readonly calls: number; readonly capUsd: number; readonly vision?: VisionUsage }
+  readonly spend: CloudSpend
 }

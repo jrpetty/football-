@@ -265,11 +265,11 @@ test('thinking off for screen readings: the lowest setting each model accepts, a
   await svc.analyzeFrame(aoe4, img, {})
   assert.deepEqual(calls[0].thinking, { type: 'between_tools' })
   assert.equal(calls[0].fallbacks, undefined, 'no fallback model takes that setting')
-  const v = svc.spend.vision
+  const v = svc.spend.vision!
   assert.deepEqual([v.calls, v.input, v.cacheRead, v.output, v.thinking], [2, 2800, 18_000, 840, 120])
   assert.ok(v.usd > 0)
   svc.resetSession()
-  assert.equal(svc.spend.vision.calls, 0)
+  assert.equal(svc.spend.vision!.calls, 0)
 })
 
 test('the packs that learn validate, and say what they learn', () => {

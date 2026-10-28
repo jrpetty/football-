@@ -16,7 +16,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { z } from 'zod/v4'
-import { costOf, modelPrice, type Usage } from '../../src/core/vision/cost.ts'
+import { costOf, modelPrice, servedPrice, type Usage } from '../../src/core/vision/cost.ts'
+import type { UsageCall, UsageFeature } from '../../src/core/usage.ts'
 import { PHASES, visionSystemPrompt, visionUserText, type PromptExtras, type VisionResponse } from '../../src/core/vision/contract.ts'
 import { SCREEN_KINDS } from '../../src/core/vision/screens.ts'
 import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, type KnowledgeSectionId } from '../../src/core/knowledge/base.ts'
@@ -24,7 +25,7 @@ import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, t
 /** Prompt budget for the pack's coaching playbook in answers and reviews. */
 const PLAYBOOK_CHARS = 32_000
 import type { GameProfile } from '../../src/core/profile/schema.ts'
-import type { CloudResult, CloudSettings, ResearchBrief, VisionThinking, VisionUsage } from '../../shared/cloud.ts'
+import type { CloudResult, CloudSettings, CloudSpend, ResearchBrief, VisionThinking, VisionUsage } from '../../shared/cloud.ts'
 
 export { DEFAULT_CLOUD } from '../../shared/cloud.ts'
 export type { CloudResult, CloudSettings, ResearchBrief }
@@ -42,19 +43,42 @@ export class CloudService {
   private spentUsd = 0
   private calls = 0
   private vision: VisionUsage = NO_VISION_USAGE
+  /** Recent calls (time, USD), for the spending rate right now. */
+  private recent: { at: number; usd: number }[] = []
+  private readonly onCall: (call: UsageCall) => void
+  private readonly monthSpend: () => number
+  private readonly now: () => number
 
   constructor(
     getKey: () => string | null,
     getSettings: () => CloudSettings,
     makeClient: (key: string) => CloudClient = (apiKey) => new Anthropic({ apiKey, baseURL: ANTHROPIC_BASE_URL, maxRetries: 1, timeout: 30_000 }),
+    /** Every call's usage, for the ledger kept across sessions; and this month's spend so far, for the monthly budget. */
+    opts: { readonly onCall?: (call: UsageCall) => void; readonly monthSpend?: () => number; readonly now?: () => number } = {},
   ) {
     this.getKey = getKey
     this.getSettings = getSettings
     this.makeClient = makeClient
+    this.onCall = opts.onCall ?? (() => undefined)
+    this.monthSpend = opts.monthSpend ?? (() => 0)
+    this.now = opts.now ?? (() => Date.now())
   }
 
-  get spend(): { usd: number; calls: number; capUsd: number; vision: VisionUsage } {
-    return { usd: this.spentUsd, calls: this.calls, capUsd: this.getSettings().sessionCapUsd, vision: this.vision }
+  get spend(): CloudSpend {
+    const s = this.getSettings()
+    // Spending rate over the last five minutes of calls, once there are a few to go on.
+    const now = this.now()
+    const window = this.recent.filter((r) => now - r.at <= RATE_WINDOW_MS)
+    const span = window.length >= 3 ? Math.max(60_000, now - window[0].at) : 0
+    return {
+      usd: this.spentUsd,
+      calls: this.calls,
+      capUsd: s.sessionCapUsd,
+      vision: this.vision,
+      ratePerHour: span ? (window.reduce((t, r) => t + r.usd, 0) / span) * 3_600_000 : null,
+      monthUsd: this.monthSpend(),
+      monthlyBudgetUsd: s.monthlyBudgetUsd,
+    }
   }
 
   /**
@@ -77,6 +101,7 @@ export class CloudService {
     this.spentUsd = 0
     this.calls = 0
     this.vision = NO_VISION_USAGE
+    this.recent = []
   }
 
   async analyzeFrame(
@@ -107,7 +132,7 @@ export class CloudService {
           },
         ],
       })
-      const costUsd = this.charge(model, msg.usage)
+      const costUsd = this.charge('vision', model, msg, profile.id)
       this.vision = addVisionUsage(this.vision, costUsd, msg.usage)
       if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to describe this frame.' }
       if (!msg.parsed_output) return { ok: false, error: 'The model response did not match the schema.' }
@@ -154,7 +179,7 @@ export class CloudService {
           },
         ],
       })
-      const costUsd = this.charge(model, msg.usage)
+      const costUsd = this.charge(opts.review ? 'review' : 'answer', model, msg, profile.id)
       if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to answer that question.' }
       const text = msg.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join(' ').trim()
       return text ? { ok: true, costUsd, text } : { ok: false, error: 'Empty answer.' }
@@ -192,7 +217,7 @@ export class CloudService {
           },
         ],
       })
-      const costUsd = this.charge(model, msg.usage)
+      const costUsd = this.charge('review', model, msg, profile.id)
       if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to review this session.' }
       if (!msg.parsed_output) return { ok: false, error: 'The review did not match the expected shape.' }
       return { ok: true, costUsd, review: msg.parsed_output }
@@ -229,7 +254,7 @@ export class CloudService {
           tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 }],
           messages,
         })
-        costUsd += this.charge(model, msg.usage)
+        costUsd += this.charge('research', model, msg, null)
         for (const block of msg.content) {
           if (block.type === 'text') texts.push(block.text)
           if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
@@ -287,7 +312,7 @@ export class CloudService {
           ],
           messages,
         })
-        costUsd += this.charge(model, msg.usage)
+        costUsd += this.charge('knowledge', model, msg, profile.id)
         for (const block of msg.content) {
           if (block.type === 'text') notes.push(block.text)
           if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
@@ -322,7 +347,7 @@ export class CloudService {
           ],
           messages: [{ role: 'user', content: `Fill these sections as completely as the notes allow: ${group.map((g) => `${g} (${KNOWLEDGE_SECTIONS.find((s) => s.id === g)!.title})`).join('; ')}.` }],
         })
-        costUsd += this.charge(model, msg.usage)
+        costUsd += this.charge('knowledge', model, msg, profile.id)
         if (msg.parsed_output) {
           sections.push(...msg.parsed_output.sections)
           if (msg.parsed_output.gameVersion && gameVersion === 'unknown') gameVersion = msg.parsed_output.gameVersion
@@ -345,23 +370,47 @@ export class CloudService {
     if (this.spentUsd >= s.sessionCapUsd) {
       return { ok: false, error: `Session spend cap of $${s.sessionCapUsd.toFixed(2)} reached; cloud calls are paused until the next session.`, fatal: true }
     }
+    if (s.stopAtBudget && s.monthlyBudgetUsd > 0 && this.monthSpend() >= s.monthlyBudgetUsd) {
+      return { ok: false, error: `Monthly budget of $${s.monthlyBudgetUsd.toFixed(2)} reached; cloud calls are paused until next month (or raise it in Settings).`, fatal: true }
+    }
     const key = this.getKey()
     if (!key) return { ok: false, error: 'No API key is set.', fatal: true }
     if (this.client?.key !== key) this.client = { key, client: this.makeClient(key) }
     return { ok: true, client: this.client.client }
   }
 
-  private charge(model: string, usage: Usage): number {
-    const c = costOf(model, usage)
-    this.spentUsd += c
+  /** Bills one response at the price of the model that served it, and records it in the ledger. */
+  private charge(feature: UsageFeature, requested: string, msg: { readonly usage: Usage; readonly model?: string | null }, pack: string | null): number {
+    const served = msg.model && servedPrice(msg.model) ? msg.model : requested
+    const u = msg.usage
+    const usd = costOf(served, u)
+    this.spentUsd += usd
     this.calls++
-    return c
+    const now = this.now()
+    this.recent = [...this.recent.filter((r) => now - r.at <= RATE_WINDOW_MS), { at: now, usd }]
+    this.onCall({
+      at: new Date(now),
+      feature,
+      model: served,
+      pack,
+      usd,
+      input: u.input_tokens,
+      cacheRead: u.cache_read_input_tokens ?? 0,
+      cacheWrite: u.cache_creation_input_tokens ?? 0,
+      output: u.output_tokens,
+      thinking: u.output_tokens_details?.thinking_tokens ?? 0,
+      webSearches: u.server_tool_use?.web_search_requests ?? 0,
+    })
+    return usd
   }
 }
 
+/** The spending rate is measured over this window of recent calls. */
+const RATE_WINDOW_MS = 5 * 60_000
+
 const NO_VISION_USAGE: VisionUsage = { calls: 0, usd: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, thinking: 0 }
 
-function addVisionUsage(u: VisionUsage, usd: number, usage: Usage & { output_tokens_details?: { thinking_tokens?: number | null } | null }): VisionUsage {
+function addVisionUsage(u: VisionUsage, usd: number, usage: Usage): VisionUsage {
   return {
     calls: u.calls + 1,
     usd: u.usd + usd,

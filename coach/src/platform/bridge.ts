@@ -158,6 +158,10 @@ export const browserBridge: SightlineBridge = {
   async cloudStatus() {
     return CLOUD_UNAVAILABLE
   },
+  async usageSummary() {
+    return null
+  },
+  async forgetUsage() {},
   async setCloudSettings() {
     return CLOUD_UNAVAILABLE
   },

@@ -11,6 +11,7 @@ import type { CoachSettings } from '../src/core/settings.ts'
 import type { VisionResponse } from '../src/core/vision/contract.ts'
 import type { MatchReview } from '../src/core/review.ts'
 import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './cloud.ts'
+import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
 import type { KnowledgeItem, KnowledgeSectionId } from '../src/core/knowledge/base.ts'
@@ -106,6 +107,10 @@ export interface SightlineBridge {
 
   // Cloud features (desktop app only, off by default).
   cloudStatus(): Promise<CloudStatus>
+  /** What the cloud has cost: today, this month, all time, by feature, model and game (numbers only). */
+  usageSummary(): Promise<UsageSummary | null>
+  /** Clears the usage history (not the bill). */
+  forgetUsage(): Promise<void>
   setCloudSettings(settings: Partial<CloudSettings>): Promise<CloudStatus>
   setApiKey(key: string | null): Promise<CloudStatus>
   resetCloudSession(): Promise<void>

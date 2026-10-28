@@ -21,6 +21,7 @@ import { isMatchRecord, type MatchRecord } from '../src/core/analyses/matchRecor
 import { deletePattern, migrateSnapshot, setVerdict, type PatternSnapshot, type PatternVerdict } from '../src/core/patterns.ts'
 import { DEFAULT_SETTINGS, sanitizeSettings, type CoachSettings } from '../src/core/settings.ts'
 import { MODELS } from '../src/core/vision/cost.ts'
+import { cleanLedger, type UsageLedger } from '../src/core/usage.ts'
 import { isScreenCatalog, type ScreenCatalog } from '../src/core/vision/screens.ts'
 import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import { gunzipSync, gzipSync } from 'node:zlib'
@@ -78,6 +79,16 @@ export class Storage {
     const clean = sanitizeCloud(input, await this.loadCloud())
     await this.writeJson(join(this.root, 'cloud.json'), clean)
     return clean
+  }
+
+  // --- Usage (numbers only: tokens and estimated USD per day, feature, model, game) ----------------
+
+  async loadUsage(): Promise<UsageLedger> {
+    return cleanLedger(await this.readJson(join(this.root, 'usage.json')))
+  }
+
+  async saveUsage(ledger: UsageLedger): Promise<void> {
+    await this.writeJson(join(this.root, 'usage.json'), ledger)
   }
 
   // --- Long-term memory (opt-in) -----------------------------------------------------------
@@ -331,5 +342,8 @@ export function sanitizeCloud(input: unknown, base: CloudSettings): CloudSetting
     sessionCapUsd: Math.round(cap * 100) / 100,
     visionThinking: o.visionThinking === 'off' || o.visionThinking === 'auto' ? o.visionThinking : base.visionThinking,
     matchupReference: typeof o.matchupReference === 'boolean' ? o.matchupReference : base.matchupReference,
+    monthlyBudgetUsd:
+      typeof o.monthlyBudgetUsd === 'number' && Number.isFinite(o.monthlyBudgetUsd) ? Math.round(Math.min(10_000, Math.max(0, o.monthlyBudgetUsd)) * 100) / 100 : base.monthlyBudgetUsd,
+    stopAtBudget: typeof o.stopAtBudget === 'boolean' ? o.stopAtBudget : base.stopAtBudget,
   }
 }

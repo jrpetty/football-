@@ -23,6 +23,8 @@ export const CHANNELS = {
   listUserProfiles: 'sightline:list-user-profiles',
   openProfilesFolder: 'sightline:open-profiles-folder',
   cloudStatus: 'sightline:cloud-status',
+  usageSummary: 'sightline:usage-summary',
+  forgetUsage: 'sightline:forget-usage',
   setCloudSettings: 'sightline:set-cloud-settings',
   setApiKey: 'sightline:set-api-key',
   resetCloudSession: 'sightline:reset-cloud-session',

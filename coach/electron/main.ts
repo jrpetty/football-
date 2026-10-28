@@ -32,6 +32,7 @@ import { dirname, join } from 'node:path'
 import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudSettings, type CloudStatus } from '../shared/cloud.ts'
+import { emptyLedger, recordCall, summarizeUsage, type UsageLedger } from '../src/core/usage.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
 import { validateReview } from '../src/core/review.ts'
 import type { CoachSettings, Hotkeys } from '../src/core/settings.ts'
@@ -227,6 +228,17 @@ function sanitizeContext(v: unknown): Record<string, string | number> {
   return out
 }
 
+/** What the cloud has cost, across sessions (numbers only); written a few seconds after a call, not on every one. */
+let usage: UsageLedger = emptyLedger()
+let usageTimer: ReturnType<typeof setTimeout> | null = null
+function saveUsageSoon(): void {
+  if (usageTimer) return
+  usageTimer = setTimeout(() => {
+    usageTimer = null
+    void storage.saveUsage(usage).catch(() => undefined)
+  }, 5000)
+}
+
 function cloudStatus(): CloudStatus {
   return { available: true, settings: cloudSettings, key: keys.status, spend: cloud.spend }
 }
@@ -401,6 +413,11 @@ function registerIpc(): void {
 
   // --- Cloud (opt-in, player's key) -----------------------------------------------------------
   handle(CHANNELS.cloudStatus, () => cloudStatus())
+  handle(CHANNELS.usageSummary, () => summarizeUsage(usage, new Date()))
+  handle(CHANNELS.forgetUsage, async () => {
+    usage = emptyLedger()
+    await storage.saveUsage(usage)
+  })
   handle(CHANNELS.setCloudSettings, async (s) => {
     cloudSettings = await storage.saveCloud({ ...cloudSettings, ...(typeof s === 'object' && s ? s : {}) })
     return cloudStatus()
@@ -579,7 +596,14 @@ if (!app.requestSingleInstanceLock()) {
     cloudSettings = await storage.loadCloud()
     keys = new KeyStore(join(root, 'secret.bin'), cipher)
     await keys.load()
-    cloud = new CloudService(() => keys.get(), () => cloudSettings)
+    usage = await storage.loadUsage()
+    cloud = new CloudService(() => keys.get(), () => cloudSettings, undefined, {
+      onCall: (call) => {
+        recordCall(usage, call)
+        saveUsageSoon()
+      },
+      monthSpend: () => summarizeUsage(usage, new Date()).thisMonth.usd,
+    })
     modelStatus = { ...modelStatus, installed: await isInstalled(root, ASR_MODEL) }
     for (const key of ['jenny', 'kokoro'] as const) ttsModels[key] = { ...ttsModels[key], installed: await isInstalled(root, TTS_MODELS[key]) }
 
@@ -594,6 +618,12 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.on('will-quit', () => {
+    // The last few seconds of usage, not yet written.
+    if (usageTimer) {
+      clearTimeout(usageTimer)
+      usageTimer = null
+      void storage.saveUsage(usage).catch(() => undefined)
+    }
     globalShortcut.unregisterAll()
     recognizer?.close()
     tts?.close()
