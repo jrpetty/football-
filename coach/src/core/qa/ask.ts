@@ -331,9 +331,7 @@ function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string):
   const what = [i.class?.replace(/_/g, ' '), i.slot, i.cost].filter(Boolean).join(', ')
   const parts = [`${i.name}${what ? ` (${what})` : ''}: ${i.summary}`]
   if (i.bestRange) parts.push(`Best at ${i.bestRange} range.`)
-  const nums = Object.entries(i.stats ?? {})
-    .filter(([k]) => ['rpm', 'ttkCloseMs', 'ttkFarMs', 'adsMs', 'magazine', 'numbers'].includes(k))
-    .map(([k, v]) => `${STAT_WORDS[k] ?? k} ${v}`)
+  const nums = Object.entries(i.stats ?? {}).flatMap(([k, v]) => (STAT_WORDS[k] ? [STAT_WORDS[k](v)] : []))
   if (nums.length) parts.push(`${nums.join(', ')}.`)
   if (i.strengths?.length) parts.push(`Strong: ${i.strengths.slice(0, 2).join('; ')}.`)
   if (i.weaknesses?.length) parts.push(`Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`)
@@ -346,7 +344,15 @@ function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string):
   return parts.join(' ').replace(/\.\./g, '.')
 }
 
-const STAT_WORDS: Readonly<Record<string, string>> = { rpm: 'fire rate (rpm)', ttkCloseMs: 'TTK close (ms)', ttkFarMs: 'TTK far (ms)', adsMs: 'ADS (ms)', magazine: 'magazine', numbers: 'numbers:' }
+/** Numbers said in words. */
+const STAT_WORDS: Readonly<Record<string, (v: number | string) => string>> = {
+  rpm: (v) => `${v} rounds a minute`,
+  ttkCloseMs: (v) => `kills in about ${v} ms up close`,
+  ttkFarMs: (v) => `${v} ms at range`,
+  adsMs: (v) => `aims down sights in ${v} ms`,
+  magazine: (v) => `${v}-round magazine`,
+  numbers: (v) => String(v),
+}
 
 function mapAnswer(profile: GameProfile, report: SessionReport, named: string | null): string {
   const m = report.map

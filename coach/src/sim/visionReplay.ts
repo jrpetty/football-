@@ -248,7 +248,71 @@ type Tags = Record<string, string>
  * scripted player dies in the open a lot, loses long-range fights, wins close
  * ones, and five times dies within seconds of their own kill.
  */
-export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number } = { seed: 1 }): VisionReplay {
+/** A walk through a map for the MW4 demo: the areas in the order visited, and one held angle (a killer's spot and where it hits). */
+export interface DemoMap {
+  readonly name: string
+  readonly route: readonly string[]
+  readonly heldFrom: string
+  readonly heldAt: string
+  /** Height layer per area (ground when absent). */
+  readonly heights?: Readonly<Record<string, string>>
+}
+
+const SYNTHETIC_YARD: DemoMap = {
+  name: 'Synthetic Yard',
+  route: ['Spawn A', 'Alley', 'Market', 'Garage', 'Market', 'Clock Tower', 'Market', 'Alley'],
+  heldFrom: 'Clock Tower',
+  heldAt: 'Market',
+  heights: { 'Clock Tower': 'upper', Garage: 'roof' },
+}
+
+/**
+ * A demo walk for a map from the pack: from its first power position (the
+ * held angle) to a neighbouring area, along its links.
+ */
+export function demoMapFrom(map: {
+  readonly name: string
+  readonly callouts: readonly { readonly name: string; readonly elevation?: readonly string[] }[]
+  readonly connections?: readonly (readonly [string, string])[]
+  readonly powerPositions?: readonly { readonly callout: string }[]
+}): DemoMap | null {
+  const links = map.connections ?? []
+  const heldFrom = map.powerPositions?.[0]?.callout
+  if (!heldFrom || links.length < 3) return null
+  const next = (a: string) => links.filter(([x, y]) => x === a || y === a).map(([x, y]) => (x === a ? y : x))
+  const heldAt = next(heldFrom)[0]
+  if (!heldAt) return null
+  // Walk the links from the held spot's neighbour, preferring unvisited areas.
+  const route = [heldAt]
+  const seen = new Set(route)
+  for (let i = 0; i < 9; i++) {
+    const options = next(route[route.length - 1])
+    const pick = options.find((o) => !seen.has(o)) ?? options[i % Math.max(1, options.length)]
+    if (!pick) break
+    route.push(pick)
+    seen.add(pick)
+    if (i % 3 === 2) route.push(heldAt)
+  }
+  const heights: Record<string, string> = {}
+  for (const c of map.callouts) {
+    const e = c.elevation ?? []
+    if (e.includes('upper')) heights[c.name] = 'upper'
+    else if (e.includes('roof')) heights[c.name] = 'roof'
+  }
+  return { name: map.name, route, heldFrom, heldAt, heights }
+}
+
+const KILLER_WEAPON: Readonly<Record<string, string>> = {
+  assault_rifle: 'M4',
+  sniper: 'KG-7 Vulcan',
+  marksman: 'Oris 8.6',
+  smg: 'VEL 46',
+  shotgun: 'Rezi 12',
+  lmg: 'FiNN LMG',
+}
+
+export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number; map?: DemoMap | null } = { seed: 1 }): VisionReplay {
+  const demo = opts.map ?? SYNTHETIC_YARD
   const rnd = mulberry32(opts.seed)
   const b = new Builder('cod-mw4', rnd)
   const interval = opts.intervalMs ?? 2500
@@ -289,6 +353,26 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
     }
   }
 
+  // Where the player is: the walk, about 10 s per area; before a long-range death, out at the held spot.
+  // On a death (a killcam) the player's own position is not read; the killer's spot and weapon are.
+  const positionAt = (i: number): Record<string, string> => {
+    const f = fights.get(i)
+    if (f?.type === 'death') {
+      const held = f.tags.range === 'long'
+      return {
+        ...(held ? { killerSpot: demo.heldFrom } : f.tags.range !== 'unknown' ? { killerSpot: demo.route[(i + 3) % demo.route.length] } : {}),
+        ...(KILLER_WEAPON[f.tags.killedBy] ? { killerWeapon: KILLER_WEAPON[f.tags.killedBy] } : {}),
+      }
+    }
+    const next = fights.get(i + 1)
+    const area = next?.type === 'death' && next.tags.range === 'long' ? demo.heldAt : demo.route[Math.floor(i / 4) % demo.route.length]
+    return {
+      location: area,
+      elevation: demo.heights?.[area] ?? 'ground',
+      ...(i % 6 === 2 ? { enemyPositions: i % 12 === 2 ? `2 ${demo.heldFrom}` : demo.route[(i + 5) % demo.route.length] } : {}),
+    }
+  }
+
   let player = 0
   let enemy = 0
   for (let i = 0; i <= samples + 4; i++) {
@@ -307,12 +391,16 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
         playerScore: player,
         opponentScore: enemy,
         matchTimeLeftSec: Math.max(0, 600 - Math.round((i / samples) * 600)),
-        mapName: 'Synthetic Yard',
+        mapName: demo.name,
         modeName: 'Hardpoint',
       },
       f ? [{ type: f.type, ...(f.type === 'death' ? { zone: ['n', 'c', 'e', 'c', 'w'][i % 5] } : {}), attributes: f.tags, evidence: f.type === 'death' ? 'killcam' : 'kill marker' }] : [],
-      // The weapon in hand (the sidearm now and then), and the enemy's killstreaks as they come.
-      { ownWeapon: i % 7 === 6 ? 'Renetti' : 'MCW', ...(i % 23 === 11 ? { enemyStreaks: i % 46 === 11 ? 'UAV' : 'UAV, Cluster Strike' } : {}) },
+      {
+        // The weapon in hand (the sidearm now and then), and the enemy's killstreaks as they come.
+        ownWeapon: i % 7 === 6 ? 'Renetti' : 'MCW',
+        ...(i % 23 === 11 ? { enemyStreaks: i % 46 === 11 ? 'UAV' : 'UAV, Cluster Strike' } : {}),
+        ...positionAt(i),
+      },
     )
   }
   const tagged = (key: string, value: string, list: Tags[]) => list.filter((x) => x[key] === value).length

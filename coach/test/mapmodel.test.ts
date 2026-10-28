@@ -156,3 +156,51 @@ test('the MW4 pack reads position each look and validates', () => {
   for (const k of ['location', 'elevation', 'killerSpot', 'killerWeapon', 'enemyPositions', 'ownWeapon']) assert.ok(mw4.vision!.state.some((s) => s.key === k), k)
   assert.ok(mw4.contextKeys?.includes('mapName'))
 })
+
+test('MW4 demo against bots: deaths placed and spoken with where they came from, the held angle called once, the map summarised', async () => {
+  const { mw4MatchReplay } = await import('../src/sim/visionReplay.ts')
+  const { engineFor, settings } = await import('./helpers.ts')
+  const mw4 = builtInProfile('cod-mw4')
+  const run = (modeId: string) => {
+    const e = engineFor(mw4, settings({ profileId: 'cod-mw4', profileModeId: modeId, mode: 'training', commentary: true }))
+    const said: { category: string; text: string }[] = []
+    let now = 0
+    for (const b of mw4MatchReplay({ seed: 4 }).batches) said.push(...e.ingestObservations(b.observations, (now = Math.max(now, b.arrivesAt))).utterances)
+    return { said, report: e.report() }
+  }
+  const bots = run('private-bots')
+  assert.ok(bots.said.some((u) => u.category === 'commentary' && /At Market, shot from Clock Tower\.$/.test(u.text)))
+  assert.deepEqual(
+    bots.said.filter((u) => /held angle/.test(u.text)).map((u) => u.text),
+    ['2 deaths at Market from Clock Tower: held angle. Clear it or cross elsewhere.'],
+  )
+  const m = bots.report.map!
+  assert.equal(m.model?.map, 'Synthetic Yard')
+  assert.match(m.lines[0], /^Most deaths at Market \(\d+ of \d+\), \d+ of them shot from Clock Tower\.$/)
+  assert.ok(m.model!.areas.find((a) => a.name === 'Clock Tower')!.elevations.includes('upper'))
+  assert.equal(m.model!.killerWeapons[0].name, 'M4')
+  // Online: nothing about the map during play.
+  const online = run('multiplayer')
+  assert.ok(!online.said.some((u) => /held angle|shot from/.test(u.text)))
+  assert.ok(online.report.map?.model, 'still learned, for after the match')
+})
+
+test('questions: a weapon or perk by name, the map, where you are', async () => {
+  const { classify, answerLocally } = await import('../src/core/qa/ask.ts')
+  const mw4 = structuredClone(builtInProfile('cod-mw4')) as unknown as { knowledge: { arsenal: unknown[]; maps: unknown[] } }
+  mw4.knowledge.arsenal = [
+    { id: 'rezi-12', name: 'Rezi 12', category: 'weapon', class: 'shotgun', bestRange: 'close', stats: { rpm: 90 }, summary: 'Pump shotgun.', counters: ['Stay past 10 m'] },
+    { id: 'ghost', name: 'Ghost', category: 'perk', slot: 'Perk 1', summary: 'Hidden from UAV while moving.' },
+  ]
+  mw4.knowledge.maps = [yard]
+  const p = mw4 as unknown as Parameters<typeof classify>[1]
+  assert.deepEqual(classify('how do I beat the Rezi 12?', p), { kind: 'arsenal', itemId: 'rezi-12' })
+  assert.deepEqual(classify('what does ghost do', p), { kind: 'arsenal', itemId: 'ghost' })
+  assert.deepEqual(classify('power positions on yard?', p), { kind: 'map', mapName: 'Yard' })
+  assert.deepEqual(classify('where am i?', p), { kind: 'map', mapName: null })
+  const { engineFor, settings } = await import('./helpers.ts')
+  const report = engineFor(p, settings({ profileId: 'cod-mw4', profileModeId: 'private-bots' })).report()
+  assert.equal(answerLocally(classify('how do I beat the Rezi 12?', p), p, report, []), 'Rezi 12 (shotgun): Pump shotgun. Best at close range. 90 rounds a minute. To beat it: Stay past 10 m.')
+  assert.match(answerLocally(classify('power positions on yard?', p), p, report, [])!, /^Power positions on Yard: Clock Tower \(sees all of Market from above\)\. Hardpoint order: Market, Garage, Clock Tower\.$/)
+  assert.match(answerLocally(classify('where am i?', p), p, report, [])!, /^I have not seen enough of this map yet/)
+})

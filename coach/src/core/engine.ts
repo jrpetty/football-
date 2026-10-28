@@ -27,7 +27,7 @@ import { EpisodeEvaluator } from './episodes.ts'
 import { evaluateEpisode, gradeAtLeast, GRADE_ORDER } from './evidence.ts'
 import { EventDetector } from './events.ts'
 import { FrameHealthMonitor } from './frameHealth.ts'
-import { episodeSummary, insightStatement, type RoundRecord } from './language.ts'
+import { countWords, episodeSummary, insightStatement, WORD_LIMITS, type RoundRecord } from './language.ts'
 import { PatternMemory, type PatternSnapshot, type PatternVerdict } from './patterns.ts'
 import { liveCueMessage, matchSummaryMessage, mistakeTipMessage, roundReviewMessage } from './planner.ts'
 import { CoachingGovernor, type EffectiveMode } from './policy/governor.ts'
@@ -551,7 +551,8 @@ export class CoachEngine {
         const line = eventLine(this.profile, ev)
         // Where it happened on the map, and where the killer shot from, when the screen showed it.
         const p = placedDeaths.get(ev.uid)
-        const where = p?.area ? ` At ${p.area}${p.killerSpot ? `, shot from ${p.killerSpot}` : ''}.` : ''
+        const from = p?.killerSpot ? (p.killerSpot === p.area ? ', shot from inside it' : `, shot from ${p.killerSpot}`) : ''
+        const where = p?.area ? ` At ${p.area}${from}.` : ''
         if (line) this.comment(`${line}${where}`, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)
       }
     }
@@ -825,11 +826,15 @@ export class CoachEngine {
   private heldAngleTip(from: string, to: string, n: number, now: number, out: EngineOutput): void {
     const topic = `held-angle:${from}:${to}`
     if (this.factorTipsGiven.has(topic)) return
-    this.factorTipsGiven.add(topic)
+    const before = out.utterances.length
     this.decide(
       {
         category: 'training',
-        text: `${n} deaths at ${to} from ${from}. That angle is held: check it first, use a smoke, or cross somewhere else.`,
+        // Live tips are short: the longest version that fits.
+        text:
+          [`${n} deaths at ${to} from ${from}: held angle. Clear it or cross elsewhere.`, `Held angle: ${from} onto ${to}. Cross elsewhere.`, `Held angle from ${from}.`].find(
+            (t) => countWords(t) <= WORD_LIMITS.training,
+          ) ?? `Held angle from ${from}.`,
         confidence: 0.75,
         grade: 'moderate',
         evidenceSummary: `${n} deaths this match at ${to}, killcam showing the killer at ${from}`,
@@ -843,6 +848,8 @@ export class CoachEngine {
       now,
       out,
     )
+    // Said once; if the pacing held it back, the next death from there tries again.
+    if (out.utterances.length > before) this.factorTipsGiven.add(topic)
   }
 
   /** The player's learning choices for this game. */
