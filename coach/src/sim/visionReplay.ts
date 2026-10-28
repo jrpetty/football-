@@ -366,7 +366,7 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
         gameTimeSec: sec,
         ...(i === 1 ? { mapName: 'Dry Arabia', opponentCiv: 'English' } : {}),
         // The scout reaches their base, then their army shows up in the fights.
-        ...(i >= Math.round(samples * 0.2) && i < Math.round(samples * 0.2) + 2 ? { enemyBuildings: 'Archery Range, 2 Barracks' } : {}),
+        ...(i >= Math.round(samples * 0.2) && i < Math.round(samples * 0.2) + 2 ? { enemyBuildings: 'Archery Range, 2 Barracks, Council Hall', enemyCues: 'palisade walls' } : {}),
         ...(k >= 0 ? { enemyUnits: k % 2 === 0 ? '10 Longbowmen, 4 Spearmen' : '6 Longbowmen' } : {}),
       },
       events,
