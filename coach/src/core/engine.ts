@@ -17,6 +17,7 @@ import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './commentary.ts'
 import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
+import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type MapPosition } from './analyses/mapModel.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -122,9 +123,20 @@ export interface SessionReport {
   readonly intel: IntelReport | null
   /** What past matches like this one had in common (packs that learn), for what is known of this match so far. */
   readonly learned: Learned | null
+  /** Shooters: where the player is, and the map as learned from this and past matches. */
+  readonly map: MapReport | null
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
+}
+
+/** The current map: where the player is, what was learned about it, and what that says. */
+export interface MapReport {
+  readonly position: MapPosition
+  readonly model: MapModel | null
+  readonly lines: readonly string[]
+  /** Whether the weapon in hand suits the fights taken with it. */
+  readonly fit: readonly string[]
 }
 
 export class CoachEngine {
@@ -149,6 +161,8 @@ export class CoachEngine {
   private readonly recorder: MatchRecorder
   /** What each side is seen building and fielding this match (packs that learn across matches). */
   private readonly scout: ScoutRecorder | null
+  /** Where the player goes, fights and dies on the map (shooters). */
+  private readonly mapTracker: MapTracker | null
   /** Dimensions already recalled this match ("your last games against English…"). */
   private recalled = new Set<string>()
   /** The opponent's faction the intel's history was last linked for. */
@@ -216,6 +230,7 @@ export class CoachEngine {
     this.phases = new PhaseBoundaryDetector()
     this.recorder = new MatchRecorder(profile.matchStats)
     this.scout = profile.learning ? new ScoutRecorder(profile) : null
+    this.mapTracker = profile.positioning ? new MapTracker(profile.positioning, profile.knowledge.maps) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
@@ -450,6 +465,7 @@ export class CoachEngine {
       context: Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) },
       intel: this.intel?.report() ?? null,
       learned: this.profile.learning && this.learning().enabled ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
+      map: this.mapReport(),
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -489,6 +505,7 @@ export class CoachEngine {
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
     if (this.learning().enabled) this.scout?.observe(this.visible, now)
+    this.mapTracker?.observe(this.visible)
     this.benchmarks.observe(this.visible)
     for (const k of this.profile.contextKeys ?? []) {
       const v = this.visible.values[k]
@@ -516,9 +533,14 @@ export class CoachEngine {
   }
 
   private handleEvents(events: GameEvent[], now: number, out: EngineOutput): void {
+    // Deaths placed on the map this tick, for the commentary line.
+    const placedDeaths = new Map<string, { area: string | null; killerSpot: string | null }>()
     for (const ev of events) {
       out.entries.push({ type: 'event', at: ev.at, event: ev })
       if (this.learning().enabled) this.scout?.event(ev, now, this.visible)
+      const placed = this.mapTracker?.event(ev, this.visible) ?? null
+      if (placed) placedDeaths.set(ev.uid, placed)
+      if (placed && placed.repeat >= 2 && placed.killerSpot && placed.area) this.heldAngleTip(placed.killerSpot, placed.area, placed.repeat, now, out)
       this.heatmaps.record(ev)
       this.factors.record(ev)
       if (ev.category !== 'boundary') this.matchHasData = true
@@ -527,7 +549,10 @@ export class CoachEngine {
     if (this.settings.commentary) {
       for (const ev of events) {
         const line = eventLine(this.profile, ev)
-        if (line) this.comment(line, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)
+        // Where it happened on the map, and where the killer shot from, when the screen showed it.
+        const p = placedDeaths.get(ev.uid)
+        const where = p?.area ? ` At ${p.area}${p.killerSpot ? `, shot from ${p.killerSpot}` : ''}.` : ''
+        if (line) this.comment(`${line}${where}`, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)
       }
     }
 
@@ -648,9 +673,10 @@ export class CoachEngine {
       battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
       context: { ...this.gameContext },
       scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
+      mapModel: this.mapTracker?.finish() ?? null,
       endedManually: end.manual,
     })
-    if (this.matchHasData || record.scout) {
+    if (this.matchHasData || record.scout || record.mapModel) {
       const msg = matchSummaryMessage(
         {
           ...inputs,
@@ -775,6 +801,48 @@ export class CoachEngine {
     if (Object.keys(now).length) return now
     const last = this.sessionMatches.at(-1)?.scout?.dims ?? {}
     return Object.fromEntries((this.profile.learning?.dimensions ?? []).filter((d) => d.live && last[d.id]).map((d) => [d.id, last[d.id]]))
+  }
+
+  /** Where the player is, and the current (or last) map as learned from past matches and this one. */
+  private mapReport(): MapReport | null {
+    if (!this.mapTracker) return null
+    const position = this.mapTracker.position(this.lastT)
+    const current = this.mapTracker.snapshot()
+    const name = position.map ?? this.sessionMatches.at(-1)?.mapModel?.map ?? null
+    if (!name) return { position, model: null, lines: [], fit: [] }
+    const records = [...this.matchHistory.flatMap((m) => (m.mapModel ? [m.mapModel] : [])), ...(current ? [current] : [])]
+    const model = mapModelFrom(records, this.profile.knowledge.maps, name)
+    const arsenal = this.profile.knowledge.arsenal ?? []
+    const byName = (n: string) => arsenal.find((a) => [a.name, ...(a.aliases ?? [])].some((x) => x.toLowerCase() === n.toLowerCase()))
+    const fit = (model?.weapons ?? [])
+      .slice(0, 3)
+      .map((w) => weaponFitLine(w, byName(w.name)?.bestRange, model!.deathsBy, (c) => c.replace(/_/g, ' ')))
+      .filter((x): x is string => !!x)
+    return { position, model, lines: model ? mapLines(model) : [], fit }
+  }
+
+  /** The second death this match from the same spot to the same area: that angle is held. Training tip where live tips are allowed. */
+  private heldAngleTip(from: string, to: string, n: number, now: number, out: EngineOutput): void {
+    const topic = `held-angle:${from}:${to}`
+    if (this.factorTipsGiven.has(topic)) return
+    this.factorTipsGiven.add(topic)
+    this.decide(
+      {
+        category: 'training',
+        text: `${n} deaths at ${to} from ${from}. That angle is held: check it first, use a smoke, or cross somewhere else.`,
+        confidence: 0.75,
+        grade: 'moderate',
+        evidenceSummary: `${n} deaths this match at ${to}, killcam showing the killer at ${from}`,
+        topic,
+        priority: 'normal',
+        createdAt: now,
+        basedOnObservationAt: now,
+        expiresAtMs: now + 20_000,
+        author: 'template',
+      },
+      now,
+      out,
+    )
   }
 
   /** The player's learning choices for this game. */

@@ -3309,3 +3309,145 @@ kbd {
 .refresh-control.compact .small {
   max-width: 260px;
 }
+
+/* The learned map */
+.map-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.map-svg {
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.map-ground {
+  fill: var(--panel-2);
+  stroke: var(--line-strong);
+}
+.map-stem {
+  stroke: var(--line-strong);
+  stroke-dasharray: 3 3;
+}
+.map-link {
+  stroke: var(--text-3);
+  opacity: 0.55;
+}
+.map-link.ref {
+  stroke-dasharray: 4 4;
+  opacity: 0.35;
+}
+.map-sightline {
+  stroke: var(--live);
+  opacity: 0.8;
+}
+.map-arrow {
+  fill: var(--live);
+}
+.map-power {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+  stroke-dasharray: 2 3;
+}
+.map-node circle {
+  fill: var(--text-3);
+  stroke: var(--bg);
+  stroke-width: 1.5;
+}
+.map-node.good circle {
+  fill: var(--strong);
+}
+.map-node.bad circle {
+  fill: var(--live);
+}
+.map-node.even circle {
+  fill: var(--warn);
+}
+.map-node.unseen circle {
+  fill: none;
+  stroke: var(--text-3);
+  opacity: 0.6;
+}
+.map-node.here circle {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+.map-node text {
+  fill: var(--text-2);
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: var(--bg-sunken);
+  stroke-width: 3px;
+}
+.map-node.unseen text {
+  fill: var(--text-3);
+}
+.legend-red {
+  color: var(--live);
+}
+.map-table tr.here td {
+  color: var(--text);
+  font-weight: 600;
+}
+.map-ref summary {
+  cursor: pointer;
+  margin: 8px 0;
+}
+.where-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+/* Arsenal */
+.arsenal-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.arsenal-controls input[type='search'] {
+  flex: 1 1 220px;
+}
+.arsenal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+.arsenal-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  text-align: left;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+.arsenal-item.open .arsenal-row {
+  border-color: var(--line-strong);
+}
+.arsenal-name .badge {
+  margin-left: 6px;
+}
+.arsenal-detail {
+  padding: 6px 10px 10px;
+}
+.arsenal-detail p {
+  margin: 6px 0;
+}

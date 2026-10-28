@@ -6,7 +6,7 @@
 // background knowledge for recognising and explaining what is on screen. It
 // is never treated as an observation.
 
-import type { PlaybookEntry, Roster } from '../profile/schema.ts'
+import type { ArsenalItem, GameMap, PlaybookEntry, Roster } from '../profile/schema.ts'
 
 export const KNOWLEDGE_SECTIONS = [
   { id: 'overview', title: 'Overview and current version' },
@@ -244,3 +244,103 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   }
   return out.join('\n')
 }
+
+/** Pushes lines while they fit the budget. */
+function budgeted(budget: number) {
+  const out: string[] = []
+  let used = 0
+  return {
+    push(line: string): boolean {
+      if (used + line.length + 1 > budget) return false
+      out.push(line)
+      used += line.length + 1
+      return true
+    },
+    text: () => out.join('\n'),
+  }
+}
+
+/**
+ * One map as prompt text. For the recogniser: every callout with its rough
+ * position, heights and how it looks from the player's own view, so it can
+ * say where the player is. For answers: also links, power positions, held
+ * sightlines, spawns, objectives and per-mode tips.
+ */
+export function mapText(map: GameMap, opts: { readonly budget: number; readonly detail: 'vision' | 'answer' }): string {
+  const b = budgeted(opts.budget)
+  b.push(`## Map: ${map.name}${map.setting ? ` (${map.setting})` : ''}`)
+  if (opts.detail === 'vision') b.push('Report "location" with one of these callout names when the player\'s own view (not a killcam) shows where they are; "killerSpot" on a killcam with the callout the killer shot from.')
+  if (map.layout) b.push(`Layout: ${map.layout}`)
+  for (const c of map.callouts) {
+    const where = [c.grid, c.elevation?.join('/')].filter(Boolean).join('; ')
+    const extra = opts.detail === 'answer' && c.use ? ` Use: ${c.use}` : ''
+    if (!b.push(`- ${c.name}${c.aliases?.length ? ` (also ${c.aliases.join(', ')})` : ''}${where ? ` [${where}]` : ''}${c.look ? `: ${c.look}` : ''}${extra}`)) break
+  }
+  if (opts.detail === 'answer') {
+    if (map.connections?.length) b.push(`Links: ${map.connections.map(([a, c]) => `${a}–${c}`).join('; ')}`)
+    for (const pp of map.powerPositions ?? []) b.push(`Power position ${pp.callout}: ${pp.why}${pp.counter ? ` Counter: ${pp.counter}` : ''}`)
+    for (const sl of map.sightlines ?? []) b.push(`Sightline ${sl.from} → ${sl.to}${sl.why ? `: ${sl.why}` : ''}`)
+    if (map.spawns) b.push(`Spawns: ${map.spawns}`)
+    const o = map.objectives
+    if (o?.hardpoint?.length) b.push(`Hardpoint rotation: ${o.hardpoint.join(' → ')}`)
+    if (o?.domination) b.push(`Domination: ${Object.entries(o.domination).map(([k, v]) => `${k} ${v}`).join(', ')}`)
+    if (o?.searchAndDestroy) b.push(`Search & Destroy: ${Object.entries(o.searchAndDestroy).map(([k, v]) => `${k} ${v}`).join(', ')}`)
+    for (const [mode, tip] of Object.entries(map.modeTips ?? {})) b.push(`${mode}: ${tip}`)
+    if (map.weaponFit) b.push(`Weapons: ${map.weaponFit}`)
+    for (const m of map.mistakes ?? []) b.push(`Mistake: ${m}`)
+  }
+  return b.text()
+}
+
+/** All maps in short, for recognising which map this is (vision) or answering about any of them. */
+export function mapsIndexText(maps: readonly GameMap[], opts: { readonly budget: number; readonly detail: 'vision' | 'answer' }): string {
+  const b = budgeted(opts.budget)
+  b.push('## Maps (report "mapName" with one of these names)')
+  for (const m of maps) {
+    const pp = opts.detail === 'answer' && m.powerPositions?.length ? ` Power: ${m.powerPositions.map((x) => x.callout).join(', ')}.` : ''
+    const layout = opts.detail === 'answer' && m.layout ? ` ${m.layout}` : ''
+    if (!b.push(`- ${m.name}${m.aliases?.length ? ` (also ${m.aliases.join(', ')})` : ''}${m.type ? ` [${m.type}]` : ''}${m.setting ? `: ${m.setting}` : ''}${layout}${pp}`)) break
+  }
+  return b.text()
+}
+
+const CATEGORY_TITLE: Readonly<Record<ArsenalItem['category'], string>> = {
+  weapon: 'Weapons',
+  lethal: 'Lethal equipment',
+  tactical: 'Tactical equipment',
+  perk: 'Perks',
+  field_upgrade: 'Field upgrades',
+  killstreak: 'Killstreaks',
+  wildcard: 'Wildcards',
+}
+
+/**
+ * The arsenal as prompt text. For the recogniser: names (to report the
+ * weapon in hand, the killer's weapon, killstreaks) and how to tell them
+ * apart. For answers: how each works, its range and numbers, and how to beat it.
+ */
+export function arsenalText(items: readonly ArsenalItem[], opts: { readonly budget: number; readonly detail: 'vision' | 'answer' }): string {
+  const b = budgeted(opts.budget)
+  b.push('## Arsenal (report these exact names)')
+  for (const cat of Object.keys(CATEGORY_TITLE) as ArsenalItem['category'][]) {
+    const list = items.filter((i) => i.category === cat)
+    if (!list.length) continue
+    b.push(`### ${CATEGORY_TITLE[cat]}`)
+    for (const i of list) {
+      const tag = [i.class?.replace(/_/g, ' '), i.slot, i.cost, i.bestRange ? `best ${i.bestRange}` : null].filter(Boolean).join(', ')
+      let line = `- ${i.name}${tag ? ` (${tag})` : ''}`
+      if (opts.detail === 'vision') line += i.look ? `: ${i.look}` : ''
+      else {
+        const stats = i.stats ? Object.entries(i.stats).map(([k, v]) => `${k} ${v}`).join(', ') : ''
+        line += `: ${i.summary}${stats ? ` [${stats}]` : ''}`
+        if (i.strengths?.length) line += ` Strong: ${i.strengths.slice(0, 2).join('; ')}.`
+        if (i.weaknesses?.length) line += ` Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`
+        if (i.counters?.length) line += ` Beat it: ${i.counters.slice(0, 2).join('; ')}.`
+        if (i.unverified) line += ' (unverified)'
+      }
+      if (!b.push(line)) return b.text()
+    }
+  }
+  return b.text()
+}
+

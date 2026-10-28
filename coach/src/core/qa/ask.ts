@@ -11,7 +11,7 @@ import type { HeatmapResult } from '../analyses/heatmap.ts'
 import type { MatchRecord } from '../analyses/matchRecorder.ts'
 import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
-import type { GameProfile } from '../profile/schema.ts'
+import type { ArsenalItem, GameMap, GameProfile } from '../profile/schema.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 
@@ -22,6 +22,8 @@ export type Intent =
   | { readonly kind: 'benchmark' }
   | { readonly kind: 'intel' }
   | { readonly kind: 'learned' }
+  | { readonly kind: 'arsenal'; readonly itemId: string }
+  | { readonly kind: 'map'; readonly mapName: string | null }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
@@ -36,6 +38,13 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  // A weapon, perk, piece of equipment or streak named in the question: how it works, its range, how to beat it.
+  const item = arsenalItemIn(q, profile)
+  if (item && /\b(how|what|good|best|counter|beat|range|work|use|using|vs|versus|should|ttk|build|loadout|attachments?|stats|damage|strong|weak|meta|explain|tell me|about|kill me|killing me|deal with|stop)\b/.test(q)) return { kind: 'arsenal', itemId: item.id }
+  // The map: where I am, callouts, power positions, angles, routes, objectives.
+  const map = mapNamedIn(q, profile)
+  if (profile.positioning && (map || /\b(callouts?|power positions?|head ?glitch\w*|sightlines?|angles?|routes?|rotat\w+|lanes?|this map|the map|where am i|which spot|best spots?|hardpoint (?:order|rotation)|flags?|bomb sites?|spawns?)\b/.test(q)))
+    return { kind: 'map', mapName: map?.name ?? null }
   // What past games showed: their usual build, my usual build, how I do against this.
   if (profile.learning && /\b(usually|usual|normally|tend to|build orders?|my (?:usual )?build|last (?:few )?(?:games|matches)|past (?:games|matches)|history|compositions?|comps?|what have you learn\w*|what did you learn\w*|how do i do (?:against|vs|on|with)|against (?:them|this|him|her) before)\b/.test(q)) return { kind: 'learned' }
   if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make|do)|counter|scout\w*|opponent|their plan|what(?:'s| is) (?:their|the) plan|game plan|strategy)\b/.test(q)) return { kind: 'intel' }
@@ -68,6 +77,10 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
       return intelAnswer(report)
     case 'learned':
       return learnedAnswer(profile, report, history)
+    case 'arsenal':
+      return arsenalAnswer(profile, report, intent.itemId)
+    case 'map':
+      return mapAnswer(profile, report, intent.mapName)
     case 'benchmark': {
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
@@ -223,6 +236,7 @@ export function buildDigest(i: DigestInputs): string {
       game: Object.keys(i.report.context).length ? i.report.context : undefined,
       scouted: i.report.intel ?? undefined,
       learnedFromPastGames: learnedDigest(p, i.report, i.history),
+      map: mapDigest(i.report),
       civPlans: civPlans(p, i.report),
       fightsFollowed: i.report.battles.length
         ? {
@@ -290,6 +304,82 @@ function civPlans(p: GameProfile, report: SessionReport) {
     note: 'Reference plans from guides and pro play; match them to what was seen before calling one.',
     opponent: theirs ? { civ: theirs.name, summary: theirs.playstyle, ages: (theirs.agePlans ?? []).filter((a) => near(a.age)) } : null,
     you: i.yourPlan,
+  }
+}
+
+/** The longest arsenal name or alias that appears in the question as words. */
+function arsenalItemIn(q: string, profile: GameProfile): ArsenalItem | null {
+  let best: { item: ArsenalItem; len: number } | null = null
+  for (const item of profile.knowledge.arsenal ?? []) {
+    for (const n of [item.name, ...(item.aliases ?? [])]) {
+      const k = n.toLowerCase()
+      if (k.length < 3 || (best && k.length <= best.len)) continue
+      if (new RegExp(`(^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-z0-9])`).test(q)) best = { item, len: k.length }
+    }
+  }
+  return best?.item ?? null
+}
+
+function mapNamedIn(q: string, profile: GameProfile): GameMap | null {
+  for (const m of profile.knowledge.maps ?? []) for (const n of [m.name, ...(m.aliases ?? [])]) if (n.length >= 4 && new RegExp(`\\b${n.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(q)) return m
+  return null
+}
+
+function arsenalAnswer(profile: GameProfile, report: SessionReport, id: string): string | null {
+  const i = profile.knowledge.arsenal?.find((x) => x.id === id)
+  if (!i) return null
+  const what = [i.class?.replace(/_/g, ' '), i.slot, i.cost].filter(Boolean).join(', ')
+  const parts = [`${i.name}${what ? ` (${what})` : ''}: ${i.summary}`]
+  if (i.bestRange) parts.push(`Best at ${i.bestRange} range.`)
+  const nums = Object.entries(i.stats ?? {})
+    .filter(([k]) => ['rpm', 'ttkCloseMs', 'ttkFarMs', 'adsMs', 'magazine', 'numbers'].includes(k))
+    .map(([k, v]) => `${STAT_WORDS[k] ?? k} ${v}`)
+  if (nums.length) parts.push(`${nums.join(', ')}.`)
+  if (i.strengths?.length) parts.push(`Strong: ${i.strengths.slice(0, 2).join('; ')}.`)
+  if (i.weaknesses?.length) parts.push(`Weak: ${i.weaknesses.slice(0, 2).join('; ')}.`)
+  if (i.counters?.length) parts.push(`To beat it: ${i.counters.slice(0, 2).join('; ')}.`)
+  if (i.tips?.length) parts.push(`Tip: ${i.tips[0]}`)
+  // The player's own record with it on this map, when there is one.
+  const mine = report.map?.model?.weapons.find((w) => w.name.toLowerCase() === i.name.toLowerCase())
+  if (mine) parts.push(`Your record with it on ${report.map!.model!.map}: ${mine.kills} kills, ${mine.deaths} deaths.`)
+  if (i.unverified) parts.push('(Some of this is not yet confirmed for the current patch.)')
+  return parts.join(' ').replace(/\.\./g, '.')
+}
+
+const STAT_WORDS: Readonly<Record<string, string>> = { rpm: 'fire rate (rpm)', ttkCloseMs: 'TTK close (ms)', ttkFarMs: 'TTK far (ms)', adsMs: 'ADS (ms)', magazine: 'magazine', numbers: 'numbers:' }
+
+function mapAnswer(profile: GameProfile, report: SessionReport, named: string | null): string {
+  const m = report.map
+  const ref = (profile.knowledge.maps ?? []).find((x) => x.name === (named ?? m?.model?.map))
+  const parts: string[] = []
+  if (!named && m?.position.area && m.position.ageMs < 20_000) parts.push(`You are at ${m.position.area}${m.position.elevation && m.position.elevation !== 'ground' ? ` (${m.position.elevation})` : ''}${m.position.map ? ` on ${m.position.map}` : ''}.`)
+  if ((!named || named === m?.model?.map) && m?.lines.length) parts.push(...m.lines.slice(0, 3), ...m.fit.slice(0, 1))
+  if (ref) {
+    if (ref.powerPositions?.length) parts.push(`Power positions on ${ref.name}: ${ref.powerPositions.slice(0, 3).map((p) => `${p.callout} (${p.why.replace(/[.]$/, '')})`).join('; ')}.`)
+    if (ref.objectives?.hardpoint?.length) parts.push(`Hardpoint order: ${ref.objectives.hardpoint.join(', ')}.`)
+    if (!parts.length && ref.layout) parts.push(`${ref.name}: ${ref.layout}`)
+  }
+  if (!parts.length) return 'I have not seen enough of this map yet. Play on it with cloud vision on and I will learn where you go, fight and die, and where they shoot from.'
+  return parts.join(' ')
+}
+
+function mapDigest(report: SessionReport) {
+  const m = report.map
+  if (!m || (!m.model && !m.position.area)) return undefined
+  const ref = m.model?.reference
+  return {
+    note: 'Learned from the player\'s own screen: areas named by each look, deaths placed where their own view last placed them, killer spots from killcams. Likely, not certain.',
+    position: m.position.area ? { map: m.position.map, area: m.position.area, elevation: m.position.elevation, secondsAgo: Math.round(m.position.ageMs / 1000) } : undefined,
+    findings: m.lines,
+    weaponFit: m.fit,
+    areas: m.model?.areas.filter((a) => a.visits || a.deaths || a.kills).slice(0, 15).map((a) => ({ name: a.name, seconds: a.seconds, kills: a.kills, deaths: a.deaths, enemiesSeen: a.enemies, heights: a.elevations })),
+    heldAngles: m.model?.sightlines.slice(0, 6),
+    routes: m.model?.routes.slice(0, 6),
+    killerWeapons: m.model?.killerWeapons.slice(0, 6),
+    yourWeapons: m.model?.weapons.slice(0, 4),
+    reference: ref
+      ? { map: ref.name, layout: ref.layout, powerPositions: ref.powerPositions, sightlines: ref.sightlines?.slice(0, 8), objectives: ref.objectives, modeTips: ref.modeTips, callouts: ref.callouts.map((c) => c.name) }
+      : undefined,
   }
 }
 

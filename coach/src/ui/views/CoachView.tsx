@@ -16,6 +16,7 @@ import { Breakdown, EconomyPanel, PolicyBadge, Scoreboard, ScopeChips, StatePane
 import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
+import { WhereYouAre } from '../components/MapView.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -459,6 +460,16 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
               )}
             </section>
           )}
+
+          {profile.positioning && policy.scope.has('live') && state.report?.map ? (
+            <section className="panel" aria-labelledby="where-h">
+              <div className="panel-head">
+                <h2 id="where-h">Where you are</h2>
+                <span className="muted small">From your own view, each look</span>
+              </div>
+              <WhereYouAre report={state.report.map} />
+            </section>
+          ) : null}
 
           {profile.learning && policy.scope.has('live') && state.report?.learned ? (
             <section className="panel" aria-labelledby="learned-live-h">

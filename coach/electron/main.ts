@@ -41,7 +41,8 @@ import { CloudService } from './cloud/service.ts'
 import { CaptureConsent, isSourceId } from './consent.ts'
 import type { PromptExtras } from '../src/core/vision/contract.ts'
 import { screensForPrompt } from '../src/core/vision/screens.ts'
-import { knowledgeStats, knowledgeText, rosterText, type KnowledgeBase } from '../src/core/knowledge/base.ts'
+import { arsenalText, knowledgeStats, knowledgeText, mapsIndexText, mapText, rosterText, type KnowledgeBase } from '../src/core/knowledge/base.ts'
+import { findMap } from '../src/core/analyses/mapModel.ts'
 import type { KnowledgeStatus } from '../shared/bridge.ts'
 import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
@@ -61,6 +62,14 @@ const ANSWER_KNOWLEDGE_CHARS = 60_000
 const VISION_ROSTER_CHARS = 44_000
 /** The full roster with counters and civilisations, for answers. */
 const ANSWER_ROSTER_CHARS = 100_000
+/** One map's callouts and how they look, with each look (shooters). */
+const VISION_MAP_CHARS = 9_000
+/** Weapon, equipment and streak names with how to tell them apart, with each look. */
+const VISION_ARSENAL_CHARS = 9_000
+/** How every weapon, perk and streak works, for answers. */
+const ANSWER_ARSENAL_CHARS = 60_000
+/** Every map in short (the current map in full goes in the digest), for answers. */
+const ANSWER_MAPS_CHARS = 20_000
 
 const consent = new CaptureConsent()
 /** The sources last shown in the picker. Only these can be chosen. */
@@ -238,7 +247,11 @@ async function visionExtras(profile: GameProfile, context: Readonly<Record<strin
   const opponent = cloudSettings.matchupReference && intel && typeof context.opponentFaction === 'string' ? context.opponentFaction : null
   const mine = intel?.playerFactionContext ? context[intel.playerFactionContext] : undefined
   const matchup = opponent ? [opponent, ...(typeof mine === 'string' && mine ? [mine] : [])] : null
-  const key = `vision:${profile.id}${matchup ? `:${matchup.join('|')}` : ''}`
+  // Shooters: once the map is read, its callouts (so each look can say where the player is); before that, the map names.
+  const maps = profile.knowledge.maps ?? []
+  const mapName = profile.positioning && typeof context[profile.positioning.mapKey] === 'string' ? (context[profile.positioning.mapKey] as string) : null
+  const map = findMap(maps, mapName)
+  const key = `vision:${profile.id}${matchup ? `:${matchup.join('|')}` : ''}${map ? `@${map.id}` : ''}`
   let knowledge = promptCache.get(key)
   if (knowledge === undefined) {
     const kb = await storage.loadKnowledge(profile.id)
@@ -246,6 +259,8 @@ async function visionExtras(profile: GameProfile, context: Readonly<Record<strin
     knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
     // Strategy games: the exact unit and building names to report, and how to tell them apart.
     if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision', ages: profile.intel?.ages, ...(matchup ? { factions: matchup } : {}) })}`
+    if (maps.length) knowledge += `\n${map ? mapText(map, { budget: VISION_MAP_CHARS, detail: 'vision' }) : mapsIndexText(maps, { budget: 4000, detail: 'vision' })}`
+    if (profile.knowledge.arsenal?.length) knowledge += `\n${arsenalText(profile.knowledge.arsenal, { budget: VISION_ARSENAL_CHARS, detail: 'vision' })}`
     promptCache.set(key, knowledge)
   }
   const screensKey = `screens:${profile.id}`
@@ -264,6 +279,8 @@ async function answerKnowledge(profile: GameProfile): Promise<string> {
     const kb = await storage.loadKnowledge(profile.id)
     text = knowledgeText(knowledgeSources(profile, kb), { budget: ANSWER_KNOWLEDGE_CHARS })
     if (profile.knowledge.roster) text += `\n${rosterText(profile.knowledge.roster, { budget: ANSWER_ROSTER_CHARS, detail: 'answer', ages: profile.intel?.ages })}`
+    if (profile.knowledge.arsenal?.length) text += `\n${arsenalText(profile.knowledge.arsenal, { budget: ANSWER_ARSENAL_CHARS, detail: 'answer' })}`
+    if (profile.knowledge.maps?.length) text += `\n${mapsIndexText(profile.knowledge.maps, { budget: ANSWER_MAPS_CHARS, detail: 'answer' })}`
     const screens = screensForPrompt(await storage.loadScreens(profile.id), 40)
     if (screens) text += `\n## Screens seen in this player's games\n${screens}`
     promptCache.set(key, text)

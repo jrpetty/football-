@@ -8,8 +8,11 @@ import type { PatternRecord } from '../../core/types.ts'
 import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
 import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
+import { MapPanel } from '../components/MapView.tsx'
+import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
+import { policyFor } from '../policy.ts'
 
 interface Props {
   state: SessionState
@@ -52,6 +55,9 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
   const benches = (report?.benchmarks ?? []).filter((b) => b.points.length > 0)
   const deep = cloud.available && cloud.settings.enabled && cloud.key.set
   const capturing = state.phase !== 'idle'
+  // In modes without live coaching, what this match shows (their side, where you are and die) waits for the match to end.
+  const policy = useMemo(() => policyFor(profile, settings), [profile, settings])
+  const held = capturing && !policy.scope.has('live')
   // Saved games plus this session's, once each: what the coach learns from.
   const learnFrom = useMemo(() => {
     const seen = new Set<string>()
@@ -126,7 +132,14 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
         </section>
       )}
 
-      {report?.intel && (report.intel.faction || report.intel.buildings.length > 0 || report.intel.units.length > 0) && (
+      {held && (report?.intel || report?.map) ? (
+        <Notice level="info">
+          In this mode, what the current match shows (their side, where you are, the deaths on this map) opens after the match, so the coach never helps live where
+          that is not allowed. Saved games and the reference are below.
+        </Notice>
+      ) : null}
+
+      {!held && report?.intel && (report.intel.faction || report.intel.buildings.length > 0 || report.intel.units.length > 0) && (
         <section className="panel" aria-labelledby="intel-h">
           <div className="panel-head">
             <h2 id="intel-h">Their side</h2>
@@ -135,6 +148,26 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
           <IntelPanel intel={report.intel} profile={profile} />
         </section>
       )}
+
+      {profile.positioning && (
+        <section className="panel" aria-labelledby="map-h">
+          <div className="panel-head">
+            <h2 id="map-h">The map, learned from watching</h2>
+            <span className="muted small">Where you went, fought and died, and where they shot from: named by each look, placed by your own view</span>
+          </div>
+          <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} />
+        </section>
+      )}
+
+      {profile.knowledge.arsenal?.length ? (
+        <section className="panel" aria-labelledby="arsenal-h">
+          <div className="panel-head">
+            <h2 id="arsenal-h">Arsenal</h2>
+            <span className="muted small">{profile.knowledge.referenceVersion ?? 'From the pack'} · how each works, its range and numbers, how to beat it</span>
+          </div>
+          <ArsenalPanel profile={profile} yours={held ? undefined : report?.map?.model?.weapons} killers={held ? undefined : report?.map?.model?.killerWeapons} />
+        </section>
+      ) : null}
 
       {profile.learning && (
         <section className="panel" aria-labelledby="learned-h">

@@ -413,6 +413,110 @@ export interface RosterBuilding {
   readonly factions?: readonly string[]
 }
 
+/** Height layers of a map area, lowest to highest. */
+export const ELEVATIONS = ['underground', 'ground', 'upper', 'roof'] as const
+export type Elevation = (typeof ELEVATIONS)[number]
+export const MAP_GRID = ['nw', 'n', 'ne', 'w', 'c', 'e', 'sw', 's', 'se'] as const
+export type MapGridCell = (typeof MAP_GRID)[number]
+
+/** A named area of a map (a callout), and how to recognise it from the player's own view. */
+export interface MapCallout {
+  readonly name: string
+  readonly aliases?: readonly string[]
+  /** Coarse position on a 3×3 grid of the whole map (north up). */
+  readonly grid?: MapGridCell
+  readonly elevation?: readonly Elevation[]
+  /** First-person recognition cues: materials, signs, colours, objects. */
+  readonly look?: string
+  /** What it is for, or why it is dangerous. */
+  readonly use?: string
+  readonly unverified?: boolean
+}
+
+/** A map: its areas, how they connect, where fights are won, and where objectives are. */
+export interface GameMap {
+  readonly id: string
+  readonly name: string
+  readonly aliases?: readonly string[]
+  /** core, small, gunfight, ground_war… */
+  readonly type?: string
+  readonly size?: string
+  readonly setting?: string
+  readonly layout?: string
+  readonly callouts: readonly MapCallout[]
+  /** Pairs of callouts you can move between directly. */
+  readonly connections?: readonly (readonly [string, string])[]
+  readonly powerPositions?: readonly { readonly callout: string; readonly why: string; readonly counter?: string }[]
+  readonly sightlines?: readonly { readonly from: string; readonly to: string; readonly why?: string }[]
+  readonly spawns?: string
+  readonly objectives?: {
+    readonly hardpoint?: readonly string[]
+    readonly domination?: Readonly<Record<string, string>>
+    readonly searchAndDestroy?: Readonly<Record<string, string>>
+    readonly other?: string
+  }
+  readonly modeTips?: Readonly<Record<string, string>>
+  readonly weaponFit?: string
+  readonly mistakes?: readonly string[]
+  readonly sources?: readonly { readonly url: string; readonly title: string }[]
+}
+
+export const ARSENAL_CATEGORIES = ['weapon', 'lethal', 'tactical', 'perk', 'field_upgrade', 'killstreak', 'wildcard'] as const
+export const RANGE_BANDS = ['close', 'close-mid', 'mid', 'mid-long', 'long'] as const
+export type RangeBand = (typeof RANGE_BANDS)[number]
+
+/** A weapon, piece of equipment, perk, field upgrade or killstreak: how it works and how to beat it. */
+export interface ArsenalItem {
+  readonly id: string
+  readonly name: string
+  readonly aliases?: readonly string[]
+  readonly category: (typeof ARSENAL_CATEGORIES)[number]
+  /** Weapons: assault_rifle, smg, sniper… */
+  readonly class?: string
+  /** Perk slot. */
+  readonly slot?: string
+  /** Killstreaks: kills or score. */
+  readonly cost?: string
+  /** Weapons: the range where it wins. */
+  readonly bestRange?: RangeBand
+  /** Numbers when known (rpm, ttkCloseMs, ttkFarMs, adsMs, magazine, fuse, radius…). */
+  readonly stats?: Readonly<Record<string, number | string>>
+  /** How it works. */
+  readonly summary: string
+  readonly strengths?: readonly string[]
+  readonly weaknesses?: readonly string[]
+  /** How to beat it when the enemy has it. */
+  readonly counters?: readonly string[]
+  readonly tips?: readonly string[]
+  /** On-screen recognition cues. */
+  readonly look?: string
+  readonly unverified?: boolean
+}
+
+/**
+ * Where the player is, read from the screen (shooters): which keys carry the
+ * map, the area (callout), its height, where a killer shot from, and the
+ * events that are deaths and kills.
+ */
+export interface PositioningSpec {
+  readonly mapKey: string
+  readonly locationKey: string
+  readonly elevationKey?: string
+  /** On a killcam: the callout the killer shot from. */
+  readonly killerSpotKey?: string
+  readonly killerWeaponKey?: string
+  /** Callouts where enemies are visible (on screen or minimap pings), as a "count Name" list. */
+  readonly enemyPositionsKey?: string
+  /** The weapon in the player's hands. */
+  readonly weaponKey?: string
+  readonly deathEvent: string
+  readonly killEvent?: string
+  /** Event attribute with the fight's range (close, mid, long). */
+  readonly rangeAttribute?: string
+  /** Death attribute with what killed the player (smg, sniper…). */
+  readonly killedByAttribute?: string
+}
+
 /**
  * Learning across matches: what each match is filed under, and what is
  * followed for each side (as first seen, how many at once, how often).
@@ -615,6 +719,8 @@ export interface GameProfile {
   }
   /** What the coach learns across matches from what the screen showed (needs memory on). */
   readonly learning?: LearningSpec
+  /** Where the player is on the map, read from the screen, for the learned map model (shooters). */
+  readonly positioning?: PositioningSpec
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -626,6 +732,10 @@ export interface GameProfile {
     readonly playbook?: readonly PlaybookEntry[]
     /** Factions, units, buildings and counters (strategy games). */
     readonly roster?: Roster
+    /** The game's maps with named areas (callouts), links, power positions and objectives (shooters). */
+    readonly maps?: readonly GameMap[]
+    /** Weapons, equipment, perks, field upgrades and killstreaks: how each works, its range and counters. */
+    readonly arsenal?: readonly ArsenalItem[]
     /** Curated reference knowledge (modes, maps, screens, HUD, roster…), dated; see src/core/knowledge/base.ts. */
     readonly reference?: readonly KnowledgeSection[]
     /** When the reference was last checked against the game. */
@@ -1307,6 +1417,95 @@ export function validateProfile(input: unknown): ValidationResult {
         for (const k of ['order', 'composition'] as const) if (t[k] !== undefined && typeof t[k] !== 'boolean') c.errors.push(`${path}.${k}: must be a boolean`)
       })
     }
+  }
+
+  if (p.positioning !== undefined) {
+    const ps = c.obj(p.positioning, 'positioning')
+    if (ps) {
+      for (const k of ['mapKey', 'locationKey'] as const) {
+        const key = c.str(ps[k], `positioning.${k}`)
+        if (key && !visionStateKeys.has(key)) c.errors.push(`positioning.${k}: unknown state key "${key}"`)
+      }
+      for (const k of ['elevationKey', 'killerSpotKey', 'killerWeaponKey', 'enemyPositionsKey', 'weaponKey'] as const) {
+        const key = c.str(ps[k], `positioning.${k}`, { optional: true })
+        if (key && !visionStateKeys.has(key)) c.errors.push(`positioning.${k}: unknown state key "${key}"`)
+      }
+      const death = c.str(ps.deathEvent, 'positioning.deathEvent')
+      if (death && !visionEvents.has(death)) c.errors.push(`positioning.deathEvent: unknown vision event "${death}"`)
+      const kill = c.str(ps.killEvent, 'positioning.killEvent', { optional: true })
+      if (kill && !visionEvents.has(kill)) c.errors.push(`positioning.killEvent: unknown vision event "${kill}"`)
+      for (const k of ['rangeAttribute', 'killedByAttribute'] as const) {
+        const a = c.str(ps[k], `positioning.${k}`, { optional: true })
+        if (a && death && !visionEvents.get(death)?.attributes.has(a)) c.errors.push(`positioning.${k}: unknown attribute "${a}" of ${death}`)
+      }
+    }
+  }
+  const kn = (p.knowledge && typeof p.knowledge === 'object' ? p.knowledge : {}) as Obj
+  if (kn.maps !== undefined) {
+    const mapIds = new Set<string>()
+    c.arr(kn.maps, 'knowledge.maps').forEach((x, i) => {
+      const path = `knowledge.maps[${i}]`
+      const m = c.obj(x, path)
+      if (!m) return
+      const id = c.str(m.id, `${path}.id`, { pattern: ID })
+      if (id && mapIds.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+      if (id) mapIds.add(id)
+      c.str(m.name, `${path}.name`, { max: 60 })
+      for (const k of ['type', 'size', 'setting', 'layout', 'spawns', 'weaponFit'] as const) c.str(m[k], `${path}.${k}`, { optional: true, max: 700 })
+      const names = new Set<string>()
+      c.arr(m.callouts, `${path}.callouts`).forEach((y, j) => {
+        const cp = `${path}.callouts[${j}]`
+        const co = c.obj(y, cp)
+        if (!co) return
+        const name = c.str(co.name, `${cp}.name`, { max: 60 })
+        if (name && names.has(name.toLowerCase())) c.errors.push(`${cp}.name: duplicate "${name}"`)
+        if (name) names.add(name.toLowerCase())
+        if (co.grid !== undefined) c.oneOf(co.grid, `${cp}.grid`, MAP_GRID)
+        c.arr(co.elevation, `${cp}.elevation`, true).forEach((e, k) => c.oneOf(e, `${cp}.elevation[${k}]`, ELEVATIONS))
+        for (const k of ['look', 'use'] as const) c.str(co[k], `${cp}.${k}`, { optional: true, max: 400 })
+      })
+      const known = (v: unknown, at: string) => {
+        if (typeof v !== 'string' || !names.has(v.toLowerCase())) c.errors.push(`${at}: unknown callout "${String(v)}"`)
+      }
+      c.arr(m.connections, `${path}.connections`, true).forEach((pair, j) => {
+        if (!Array.isArray(pair) || pair.length !== 2) return void c.errors.push(`${path}.connections[${j}]: expected two callouts`)
+        pair.forEach((v, k) => known(v, `${path}.connections[${j}][${k}]`))
+      })
+      c.arr(m.powerPositions, `${path}.powerPositions`, true).forEach((pp, j) => {
+        const o = c.obj(pp, `${path}.powerPositions[${j}]`)
+        if (o) known(o.callout, `${path}.powerPositions[${j}].callout`)
+      })
+      c.arr(m.sightlines, `${path}.sightlines`, true).forEach((sl, j) => {
+        const o = c.obj(sl, `${path}.sightlines[${j}]`)
+        if (o) for (const k of ['from', 'to'] as const) known(o[k], `${path}.sightlines[${j}].${k}`)
+      })
+      const ob = m.objectives as Obj | undefined
+      if (ob && typeof ob === 'object') {
+        c.arr(ob.hardpoint, `${path}.objectives.hardpoint`, true).forEach((v, j) => known(v, `${path}.objectives.hardpoint[${j}]`))
+        for (const k of ['domination', 'searchAndDestroy'] as const) {
+          const o = ob[k] as Obj | undefined
+          if (o && typeof o === 'object') for (const [slot, v] of Object.entries(o)) if (/^[A-C]$/.test(slot)) known(v, `${path}.objectives.${k}.${slot}`)
+        }
+      }
+    })
+  }
+  if (kn.arsenal !== undefined) {
+    const ids = new Set<string>()
+    c.arr(kn.arsenal, 'knowledge.arsenal').forEach((x, i) => {
+      const path = `knowledge.arsenal[${i}]`
+      const a = c.obj(x, path)
+      if (!a) return
+      const id = c.str(a.id, `${path}.id`, { pattern: ID })
+      if (id && ids.has(id)) c.errors.push(`${path}.id: duplicate "${id}"`)
+      if (id) ids.add(id)
+      c.str(a.name, `${path}.name`, { max: 60 })
+      c.oneOf(a.category, `${path}.category`, ARSENAL_CATEGORIES)
+      if (a.bestRange !== undefined) c.oneOf(a.bestRange, `${path}.bestRange`, RANGE_BANDS)
+      c.str(a.summary, `${path}.summary`, { max: 900 })
+      for (const k of ['class', 'slot', 'cost'] as const) c.str(a[k], `${path}.${k}`, { optional: true, max: 60 })
+      c.str(a.look, `${path}.look`, { optional: true, max: 400 })
+      for (const k of ['strengths', 'weaknesses', 'counters', 'tips'] as const) c.arr(a[k], `${path}.${k}`, true).forEach((v, j) => c.str(v, `${path}.${k}[${j}]`, { max: 400 }))
+    })
   }
 
   // Playbook (validated first: factors and benchmarks refer to it).

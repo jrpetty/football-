@@ -481,8 +481,12 @@ export class CoachSession {
 
   /** The player's context for a screen reading, plus the opponent's faction once it was read (for the matchup's reference). */
   private visionContext(profile: GameProfile, settings: CoachSettings): Record<string, string | number> {
-    const faction = this.state.report?.profileId === profile.id ? this.state.report.intel?.faction?.id : undefined
-    return { ...this.contextFor(profile, settings), ...(faction ? { opponentFaction: faction } : {}) }
+    const report = this.state.report?.profileId === profile.id ? this.state.report : null
+    const faction = report?.intel?.faction?.id
+    // Shooters: the map once read, so each look carries that map's callouts.
+    const mapKey = profile.positioning?.mapKey
+    const map = mapKey ? report?.context[mapKey] : undefined
+    return { ...this.contextFor(profile, settings), ...(faction ? { opponentFaction: faction } : {}), ...(mapKey && typeof map === 'string' ? { [mapKey]: map } : {}) }
   }
 
   private contextFor(profile: GameProfile, settings: CoachSettings): Record<string, string | number> {
@@ -948,7 +952,7 @@ function settleAnswer(conversation: readonly QaEntry[], message: CoachingMessage
 }
 
 export function emptyReport(profile: GameProfile): SessionReport {
-  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], battles: [], context: {}, intel: null, learned: null, mistakes: [], insights: [], matches: [] }
+  return { profileId: profile.id, record: { won: 0, lost: 0, drawn: 0, unread: 0 }, score: null, heatmaps: [], factors: [], benchmarks: [], battles: [], context: {}, intel: null, learned: null, map: null, mistakes: [], insights: [], matches: [] }
 }
 
 /** A readable message for a failed transcription (IPC errors carry a long prefix). */

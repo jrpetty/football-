@@ -8,6 +8,7 @@ import type { HeatmapResult } from './heatmap.ts'
 import type { BenchmarkResult } from './benchmarks.ts'
 import type { MistakeTotals } from './mistakes.ts'
 import type { MatchScout } from './learning.ts'
+import type { MapMatchRecord } from './mapModel.ts'
 
 export const MATCH_RECORD_SCHEMA = 1
 
@@ -37,6 +38,8 @@ export interface MatchRecord {
   readonly context?: Readonly<Record<string, string | number>>
   /** What each side was seen building and fielding, and when (packs that learn across matches). */
   readonly scout?: MatchScout
+  /** Where the player went, fought and died on the map (shooters), for the learned map model. */
+  readonly mapModel?: MapMatchRecord
   /** True when the match was ended by the player (stop or "match over"), not seen on screen. */
   readonly endedManually: boolean
 }
@@ -80,6 +83,7 @@ export class MatchRecorder {
     battles?: { won: number; lost: number; unclear: number }
     context?: Record<string, string | number>
     scout?: MatchScout | null
+    mapModel?: MapMatchRecord | null
     endedManually: boolean
   }): MatchRecord {
     const record: MatchRecord = {
@@ -107,6 +111,7 @@ export class MatchRecorder {
         ? { benchmarks: Object.fromEntries(input.benchmarks.filter((b) => b.points.length).map((b) => [b.spec.id, b.points.map(({ atSec, actual, expected }) => ({ atSec, actual, expected }))])) }
         : {}),
       ...(input.scout ? { scout: input.scout } : {}),
+      ...(input.mapModel ? { mapModel: input.mapModel } : {}),
       endedManually: input.endedManually,
     }
     this.stats = new Map()
