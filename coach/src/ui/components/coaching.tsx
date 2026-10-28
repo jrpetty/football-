@@ -7,6 +7,7 @@ import type { BenchmarkResult } from '../../core/analyses/benchmarks.ts'
 import { expectedAt } from '../../core/analyses/benchmarks.ts'
 import type { FactorResult } from '../../core/analyses/factors.ts'
 import type { BattleRecord } from '../../core/analyses/battles.ts'
+import type { IntelReport } from '../../core/analyses/intel.ts'
 import type { GameProfile, PlaybookEntry } from '../../core/profile/schema.ts'
 import type { MatchReview } from '../../core/review.ts'
 import { gameClock } from '../format.ts'
@@ -298,4 +299,81 @@ function domain(url: string): string {
   } catch {
     return url
   }
+}
+
+// --- Scouting intel -------------------------------------------------------------------------------
+
+/** The opponent as far as the player's screen showed it: civilisation, buildings, army, what they can make, and answers. */
+export function IntelPanel({ intel, profile }: { intel: IntelReport; profile: GameProfile }) {
+  const faction = intel.faction ? profile.knowledge.roster?.factions.find((f) => f.id === intel.faction!.id) : undefined
+  const unitName = (id: string) => profile.knowledge.roster?.units.find((u) => u.id === id)?.name ?? id
+  return (
+    <div className="intel">
+      {faction ? (
+        <div className="intel-civ">
+          <div className="intel-civ-head">
+            <b>{faction.name}</b>
+            {faction.status === 'upcoming' ? <span className="badge warn">Upcoming</span> : null}
+            {faction.dlc ? <span className="muted small">{faction.dlc}</span> : null}
+          </div>
+          {faction.uniqueUnits.length ? <p className="small">Unique units: {faction.uniqueUnits.map(unitName).join(', ')}</p> : null}
+          {faction.howToPlayAgainst ? (
+            <p className="focus-fix">
+              <span className="label">Against them</span> {faction.howToPlayAgainst}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="muted small">Their civilisation is read from the loading screen.</p>
+      )}
+      <div className="grid-2">
+        <div>
+          <div className="label">Buildings seen</div>
+          {intel.buildings.length ? (
+            <ul className="intel-list">
+              {intel.buildings.map((b) => (
+                <li key={b.id}>
+                  {b.name}
+                  {b.count > 1 ? ` ×${b.count}` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted small">None yet: scout their base.</p>
+          )}
+          {intel.likely.length ? (
+            <p className="small">
+              <span className="label">They can also make</span> {intel.likely.map((l) => l.name).join(', ')}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <div className="label">Army seen</div>
+          {intel.units.length ? (
+            <ul className="intel-list">
+              {intel.units.map((u) => (
+                <li key={u.id}>
+                  {u.name} <span className="muted">up to {u.count}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted small">None yet.</p>
+          )}
+        </div>
+      </div>
+      {intel.counters.some((c) => c.build.length) ? (
+        <div className="intel-counters">
+          {intel.counters
+            .filter((c) => c.build.length)
+            .map((c) => (
+              <p key={c.against} className="small">
+                <b>Against {c.against}:</b> {c.build.join(' or ')}
+                {c.why ? <span className="muted"> · {c.why}</span> : null}
+              </p>
+            ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }

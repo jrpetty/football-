@@ -64,6 +64,14 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
           </div>
         </div>
         <div style={{ marginTop: 16 }}>
+          <Switch
+            checked={settings.commentary}
+            onChange={(commentary) => onSettings({ commentary })}
+            label={<b>Live commentary</b>}
+            hint="Short spoken lines about what the coach sees as it happens: fights starting and how they ended, deaths and how they happened, goals, scouted buildings, checkpoints. It speaks during play only where the game and mode allow it (campaigns, against the AI or bots); elsewhere it tells you once at the start and you get the review after the match."
+          />
+        </div>
+        <div style={{ marginTop: 12 }}>
           <Switch checked={settings.muted} onChange={(muted) => onSettings({ muted })} label={<b>Hard mute</b>} hint="Nothing is spoken. Messages still appear in the app and the review." />
         </div>
       </section>

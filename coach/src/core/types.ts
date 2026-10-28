@@ -204,7 +204,7 @@ export type PolicyStatus =
 /** When a message would reach the player. */
 export type DeliveryWindow = 'during_play' | 'round_break' | 'post_match' | 'idle'
 
-export type MessageCategory = 'descriptive' | 'reflective' | 'post_event' | 'training' | 'live_tactical'
+export type MessageCategory = 'descriptive' | 'reflective' | 'post_event' | 'training' | 'live_tactical' | 'commentary'
 
 export type CoachingMode = 'silent' | 'post-round' | 'post-match' | 'training' | 'competitive-safe'
 export type CoachTone = 'gentle' | 'direct' | 'analytical' | 'high-energy'

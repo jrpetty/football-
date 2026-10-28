@@ -2647,5 +2647,11 @@
         }
       ]
     }
-  ]
+  ],
+  "commentary": {
+    "fight_won": "Fight won",
+    "fight_lost": "Fight lost",
+    "landmark_destroyed": "Landmark destroyed",
+    "under_attack": "Under attack"
+  }
 }

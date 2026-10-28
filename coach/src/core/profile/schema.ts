@@ -158,6 +158,8 @@ export interface VisionStateSpec {
   readonly options?: readonly string[]
   readonly min?: number
   readonly max?: number
+  /** Strings: longest value kept (default 80, at most 300). */
+  readonly maxLength?: number
   /** How long a reading stays valid. */
   readonly ttlMs: number
   /** Instruction to the recogniser: where it is on screen and how to read it. */
@@ -370,6 +372,71 @@ export interface BattleSpec {
   readonly lostEvent: string
 }
 
+/**
+ * A strategy game's roster: factions (civilisations), units, the buildings
+ * that make them, and counters. Used to recognise what is on screen, to work
+ * out what a scouted building can produce for the opponent's faction, and to
+ * say what beats it. Reference knowledge, dated, never an observation.
+ */
+export interface RosterUnit {
+  readonly id: string
+  readonly name: string
+  readonly aliases?: readonly string[]
+  readonly classes: readonly string[]
+  /** Building id that produces it. */
+  readonly building: string
+  readonly age?: number
+  readonly cost?: string
+  readonly counters: readonly string[]
+  readonly counteredBy: readonly string[]
+  readonly why?: string
+  /** How to tell it apart on screen. */
+  readonly look?: string
+  /** Only these factions have it (unique units). */
+  readonly factions?: readonly string[]
+}
+
+export interface RosterBuilding {
+  readonly id: string
+  readonly name: string
+  readonly aliases?: readonly string[]
+  readonly produces: readonly string[]
+  /** What seeing it tells you about the opponent's plan. */
+  readonly signals?: string
+  readonly look?: string
+  readonly factions?: readonly string[]
+}
+
+export interface RosterFaction {
+  readonly id: string
+  readonly name: string
+  readonly aliases?: readonly string[]
+  readonly status: 'released' | 'upcoming'
+  readonly dlc?: string
+  readonly release?: string | null
+  readonly variantOf?: string | null
+  readonly bonuses: readonly string[]
+  readonly uniqueUnits: readonly string[]
+  /** Standard unit id → the unique unit that takes its place. */
+  readonly replaces?: Readonly<Record<string, string>>
+  /** Standard units (ids) or features the faction does not have. */
+  readonly lacks?: readonly string[]
+  readonly landmarks?: readonly { readonly age: number; readonly name: string; readonly effect: string }[]
+  readonly playstyle?: string
+  readonly commonStrategies?: readonly string[]
+  readonly howToPlayAgainst?: string
+  readonly sources?: readonly { readonly url: string; readonly title: string; readonly kind: string }[]
+}
+
+export interface Roster {
+  readonly checkedAt: string
+  readonly patch: string
+  readonly factions: readonly RosterFaction[]
+  readonly units: readonly RosterUnit[]
+  readonly buildings: readonly RosterBuilding[]
+  readonly counterRules?: readonly { readonly if: string; readonly build: string; readonly why?: string; readonly avoid?: string }[]
+}
+
 /** A coaching principle as good players and coaches teach it, with the fix and its sources. */
 export interface PlaybookEntry {
   readonly id: string
@@ -448,8 +515,16 @@ export interface GameProfile {
   readonly factors?: readonly FactorSpec[]
   readonly benchmarks?: readonly BenchmarkSpec[]
   readonly battles?: BattleSpec
+  /** Live commentary: event type → the line's opening words (e.g. death → "Died"). */
+  readonly commentary?: Readonly<Record<string, string>>
   /** State keys that describe the game rather than the play (map, opponent's civilisation…), kept for the review and answers. */
   readonly contextKeys?: readonly string[]
+  /**
+   * Scouting intel (needs knowledge.roster): state keys holding the
+   * opponent's faction, and the enemy buildings and units visible on the
+   * player's screen (names from the roster, with counts).
+   */
+  readonly intel?: { readonly factionKey: string; readonly buildingsKey: string; readonly unitsKey: string; readonly playerFactionContext?: string }
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -459,6 +534,8 @@ export interface GameProfile {
     readonly terminology: Readonly<Record<string, string>>
     /** How good players and coaches judge play, with fixes and sources. */
     readonly playbook?: readonly PlaybookEntry[]
+    /** Factions, units, buildings and counters (strategy games). */
+    readonly roster?: Roster
     /** Curated reference knowledge (modes, maps, screens, HUD, roster…), dated; see src/core/knowledge/base.ts. */
     readonly reference?: readonly KnowledgeSection[]
     /** When the reference was last checked against the game. */
@@ -785,6 +862,7 @@ export function validateProfile(input: unknown): ValidationResult {
         c.num(o.min, `${path}.min`, -1e9, 1e9, true)
         c.num(o.max, `${path}.max`, -1e9, 1e9, true)
         c.num(o.ttlMs, `${path}.ttlMs`, 500, 600_000)
+        c.num(o.maxLength, `${path}.maxLength`, 10, 300, true)
         c.str(o.description, `${path}.description`, { max: 600 })
       })
       const vEvents = c.arr(v.events, 'vision.events')
@@ -868,6 +946,14 @@ export function validateProfile(input: unknown): ValidationResult {
         derivedEvents.add(id)
         derivedAttributes.set(id, k === 'lostEvent' ? new Set([...carried, 'ending']) : carried)
       }
+    }
+  }
+  if (p.commentary !== undefined) {
+    const com = c.obj(p.commentary, 'commentary')
+    const known = new Set([...visionEvents.keys(), ...derivedEvents, ...((Array.isArray(p.events) ? p.events : []) as Obj[]).map((e) => e?.id)])
+    for (const [k, v] of Object.entries(com ?? {})) {
+      if (!known.has(k)) c.errors.push(`commentary.${k}: unknown event`)
+      c.str(v, `commentary.${k}`, { max: 60, spoken: true })
     }
   }
   c.arr(p.contextKeys, 'contextKeys', true).forEach((k, i) => {
@@ -955,6 +1041,80 @@ export function validateProfile(input: unknown): ValidationResult {
     }
   }
   c.num(p.liveFreshnessMs, 'liveFreshnessMs', 500, 60_000, true)
+
+  // Roster (strategy games): every reference must resolve.
+  const rosterObj = (p.knowledge && typeof p.knowledge === 'object' ? (p.knowledge as Obj).roster : undefined) as Obj | undefined
+  if (rosterObj !== undefined) {
+    const r = c.obj(rosterObj, 'knowledge.roster')
+    if (r) {
+      c.str(r.checkedAt, 'knowledge.roster.checkedAt', { pattern: /^\d{4}-\d{2}-\d{2}$/ })
+      c.str(r.patch, 'knowledge.roster.patch', { max: 160 })
+      const unitIds = new Set<string>()
+      const classes = new Set<string>()
+      const buildingIds = new Set<string>()
+      const factionIds = new Set<string>()
+      const units = c.arr(r.units, 'knowledge.roster.units')
+      const buildings = c.arr(r.buildings, 'knowledge.roster.buildings')
+      const factions = c.arr(r.factions, 'knowledge.roster.factions')
+      for (const [list, ids, name] of [[units, unitIds, 'units'], [buildings, buildingIds, 'buildings'], [factions, factionIds, 'factions']] as const) {
+        list.forEach((x, i) => {
+          const id = c.str((x as Obj)?.id, `knowledge.roster.${name}[${i}].id`, { pattern: ID })
+          if (id && ids.has(id)) c.errors.push(`knowledge.roster.${name}[${i}].id: duplicate "${id}"`)
+          if (id) ids.add(id)
+          c.str((x as Obj)?.name, `knowledge.roster.${name}[${i}].name`, { max: 80 })
+        })
+      }
+      units.forEach((u) => (Array.isArray((u as Obj)?.classes) ? ((u as Obj).classes as unknown[]) : []).forEach((k) => typeof k === 'string' && classes.add(k)))
+      const ref = (v: unknown, path: string, kinds: 'unit' | 'unit-or-class' | 'building' | 'faction') => {
+        const ok =
+          typeof v === 'string' &&
+          (kinds === 'building' ? buildingIds.has(v) : kinds === 'faction' ? factionIds.has(v) : unitIds.has(v) || (kinds === 'unit-or-class' && classes.has(v)))
+        if (!ok) c.errors.push(`${path}: unknown ${kinds.replace(/-/g, ' ')} "${String(v)}"`)
+      }
+      units.forEach((x, i) => {
+        const u = c.obj(x, `knowledge.roster.units[${i}]`)
+        if (!u) return
+        const path = `knowledge.roster.units[${i}]`
+        ref(u.building, `${path}.building`, 'building')
+        c.arr(u.classes, `${path}.classes`)
+        for (const k of ['counters', 'counteredBy'] as const) c.arr(u[k], `${path}.${k}`).forEach((v, j) => ref(v, `${path}.${k}[${j}]`, 'unit-or-class'))
+        for (const k of ['why', 'look', 'cost'] as const) c.str(u[k], `${path}.${k}`, { optional: true, max: 400 })
+        c.arr(u.factions, `${path}.factions`, true).forEach((v, j) => ref(v, `${path}.factions[${j}]`, 'faction'))
+      })
+      buildings.forEach((x, i) => {
+        const b = c.obj(x, `knowledge.roster.buildings[${i}]`)
+        if (!b) return
+        c.arr(b.produces, `knowledge.roster.buildings[${i}].produces`).forEach((v, j) => ref(v, `knowledge.roster.buildings[${i}].produces[${j}]`, 'unit'))
+        for (const k of ['signals', 'look'] as const) c.str(b[k], `knowledge.roster.buildings[${i}].${k}`, { optional: true, max: 400 })
+      })
+      factions.forEach((x, i) => {
+        const f = c.obj(x, `knowledge.roster.factions[${i}]`)
+        if (!f) return
+        const path = `knowledge.roster.factions[${i}]`
+        c.oneOf(f.status, `${path}.status`, ['released', 'upcoming'] as const)
+        c.arr(f.uniqueUnits, `${path}.uniqueUnits`).forEach((v, j) => ref(v, `${path}.uniqueUnits[${j}]`, 'unit'))
+        const rep = f.replaces === undefined ? null : c.obj(f.replaces, `${path}.replaces`)
+        for (const [k, v] of Object.entries(rep ?? {})) {
+          ref(k, `${path}.replaces key`, 'unit')
+          ref(v, `${path}.replaces.${k}`, 'unit')
+        }
+        if (f.variantOf !== undefined && f.variantOf !== null) ref(f.variantOf, `${path}.variantOf`, 'faction')
+        for (const k of ['playstyle', 'howToPlayAgainst'] as const) c.str(f[k], `${path}.${k}`, { optional: true, max: 600 })
+      })
+    }
+  }
+  if (p.intel !== undefined) {
+    const it = c.obj(p.intel, 'intel')
+    if (it) {
+      if (!rosterObj) c.errors.push('intel: needs knowledge.roster')
+      for (const k of ['factionKey', 'buildingsKey', 'unitsKey'] as const) {
+        const key = c.str(it[k], `intel.${k}`)
+        if (key && !visionStateKeys.has(key)) c.errors.push(`intel.${k}: unknown state key "${key}"`)
+      }
+      const pc = c.str(it.playerFactionContext, 'intel.playerFactionContext', { optional: true })
+      if (pc && !contextIds.has(pc)) c.errors.push(`intel.playerFactionContext: unknown player context "${pc}"`)
+    }
+  }
 
   // Playbook (validated first: factors and benchmarks refer to it).
   const playbookIds = new Set<string>()

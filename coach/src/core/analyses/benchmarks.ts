@@ -37,6 +37,8 @@ export class BenchmarkTracker {
   private readonly specs: readonly BenchmarkSpec[]
   /** Best reading per spec and checkpoint: the one closest in game time. */
   private readings = new Map<string, Map<number, { value: number; dist: number }>>()
+  /** Checkpoints read for the first time since the last take (for commentary). */
+  private fresh: { spec: BenchmarkSpec; atSec: number; actual: number }[] = []
   /** The last match's readings, shown until the next match has some of its own. */
   private previous = new Map<string, Map<number, { value: number; dist: number }>>()
 
@@ -56,12 +58,21 @@ export class BenchmarkTracker {
         let m = this.readings.get(spec.id)
         if (!m) this.readings.set(spec.id, (m = new Map()))
         const cur = m.get(cp)
+        if (!cur) this.fresh.push({ spec, atSec: cp, actual: v.value })
         if (!cur || dist < cur.dist) m.set(cp, { value: v.value, dist })
       }
     }
   }
 
+  /** Checkpoints just reached, once each. */
+  takeFresh(): { spec: BenchmarkSpec; atSec: number; actual: number; expected: number }[] {
+    const out = this.fresh.map((f) => ({ ...f, expected: expectedAt(f.spec, f.atSec) }))
+    this.fresh = []
+    return out
+  }
+
   newMatch(): void {
+    this.fresh = []
     if (this.readings.size) this.previous = this.readings
     this.readings = new Map()
   }

@@ -84,6 +84,7 @@ export const CATEGORY_TEXT = {
   post_event: 'Review',
   training: 'Training tip',
   live_tactical: 'Live tip',
+  commentary: 'Commentary',
 } as const
 
 /** "2.5 s", "45 s", "1 min 12 s". */

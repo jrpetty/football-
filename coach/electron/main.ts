@@ -41,7 +41,7 @@ import { CloudService } from './cloud/service.ts'
 import { CaptureConsent, isSourceId } from './consent.ts'
 import type { PromptExtras } from '../src/core/vision/contract.ts'
 import { screensForPrompt } from '../src/core/vision/screens.ts'
-import { knowledgeStats, knowledgeText, type KnowledgeBase } from '../src/core/knowledge/base.ts'
+import { knowledgeStats, knowledgeText, rosterText, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import type { KnowledgeStatus } from '../shared/bridge.ts'
 import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
@@ -57,6 +57,10 @@ const MAX_JPEG_BYTES = 3 * 1024 * 1024
 /** Knowledge in the recogniser's prompt (sent every few seconds, cached) and in answers (rarer, can be much larger). */
 const VISION_KNOWLEDGE_CHARS = 14_000
 const ANSWER_KNOWLEDGE_CHARS = 60_000
+/** Unit and building names with how to tell them apart, for the recogniser (strategy games). */
+const VISION_ROSTER_CHARS = 16_000
+/** The full roster with counters and civilisations, for answers. */
+const ANSWER_ROSTER_CHARS = 60_000
 
 const consent = new CaptureConsent()
 /** The sources last shown in the picker. Only these can be chosen. */
@@ -234,6 +238,8 @@ async function visionExtras(profile: GameProfile): Promise<PromptExtras> {
     const kb = await storage.loadKnowledge(profile.id)
     // A compact slice for the recogniser (it runs every few seconds): how to recognise screens and the HUD, and the names of things.
     knowledge = knowledgeText(knowledgeSources(profile, kb), { budget: VISION_KNOWLEDGE_CHARS, sections: ['screens', 'hud', 'modes', 'maps', 'roster', 'overview'] })
+    // Strategy games: the exact unit and building names to report, and how to tell them apart.
+    if (profile.knowledge.roster) knowledge += `\n${rosterText(profile.knowledge.roster, { budget: VISION_ROSTER_CHARS, detail: 'vision' })}`
     promptCache.set(key, knowledge)
   }
   const screensKey = `screens:${profile.id}`
@@ -251,6 +257,7 @@ async function answerKnowledge(profile: GameProfile): Promise<string> {
   if (text === undefined) {
     const kb = await storage.loadKnowledge(profile.id)
     text = knowledgeText(knowledgeSources(profile, kb), { budget: ANSWER_KNOWLEDGE_CHARS })
+    if (profile.knowledge.roster) text += `\n${rosterText(profile.knowledge.roster, { budget: ANSWER_ROSTER_CHARS, detail: 'answer' })}`
     const screens = screensForPrompt(await storage.loadScreens(profile.id), 40)
     if (screens) text += `\n## Screens seen in this player's games\n${screens}`
     promptCache.set(key, text)

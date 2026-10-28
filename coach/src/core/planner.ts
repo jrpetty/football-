@@ -23,6 +23,7 @@ import type { HeatmapResult } from './analyses/heatmap.ts'
 import type { FactorFinding, FactorResult } from './analyses/factors.ts'
 import type { BenchmarkResult } from './analyses/benchmarks.ts'
 import type { BattleRecord } from './analyses/battles.ts'
+import type { IntelReport } from './analyses/intel.ts'
 import type { MatchRecord } from './analyses/matchRecorder.ts'
 import type { MistakeTotals } from './analyses/mistakes.ts'
 import type { EpisodeSpec, GameProfile, LiveCueSpec, MistakeSpec } from './profile/schema.ts'
@@ -83,6 +84,7 @@ export interface ReviewInputs {
   readonly factors: readonly FactorResult[]
   readonly benchmarks: readonly BenchmarkResult[]
   readonly battles: readonly BattleRecord[]
+  readonly intel: IntelReport | null
   readonly mistakes: Readonly<Record<string, MistakeTotals>>
   /** Mistake ids or episode ids queued from live play since the last review. */
   readonly queuedTopics: readonly string[]
@@ -169,6 +171,14 @@ function battleLine(battles: readonly BattleRecord[]): string[] {
   return [`Fights I could follow: ${won} won, ${lost} lost.`]
 }
 
+/** "You mostly met Knights (8 at once); Spearmen and Crossbowmen beat them." */
+function intelLines(intel: IntelReport | null): string[] {
+  const top = intel?.counters[0]
+  const seen = intel?.units[0]
+  if (!top || !seen || seen.count < 3) return []
+  return [`You mostly met ${seen.name} (${seen.count} at once)${top.build.length ? `; ${top.build.join(' and ')} beat them` : ''}.`]
+}
+
 function benchmarkLines(i: ReviewInputs, max: number): { lines: string[]; topics: string[] } {
   const behind = i.benchmarks.filter((b) => b.worst).slice(0, max)
   return {
@@ -238,7 +248,7 @@ export function matchSummaryMessage(i: SummaryInputs, now: number): NewMessage {
   const mis = mistakeLines(i, false, 2)
   const stats = statLines(i)
   // Most actionable first: how fights are lost, the economy against its benchmark, where things happen, then the rest.
-  const lines = withoutRepeatedAdvice(i.profile, [...facts.lines, ...bench.lines, ...zones.lines, ...mis.lines, ...ins.lines, ...stats])
+  const lines = withoutRepeatedAdvice(i.profile, [...facts.lines, ...intelLines(i.intel), ...bench.lines, ...zones.lines, ...mis.lines, ...ins.lines, ...stats])
   const opening = [...(i.score ? [scoreLine(i.score)] : []), ...battleLine(i.battles), ...(facts.strength ? [facts.strength] : [])]
   const best = [ins.best, zones.best, facts.best].filter((g): g is EvidenceGrade => !!g).sort((a, b) => GRADE_ORDER[b] - GRADE_ORDER[a])[0]
   return {

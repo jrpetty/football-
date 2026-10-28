@@ -19,6 +19,7 @@ export type Intent =
   | { readonly kind: 'mistakes' }
   | { readonly kind: 'fights' }
   | { readonly kind: 'benchmark' }
+  | { readonly kind: 'intel' }
   | { readonly kind: 'summary' }
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
@@ -33,6 +34,7 @@ const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make)|counter|scout\w*|opponent)\b/.test(q)) return { kind: 'intel' }
   if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
   if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) return { kind: 'benchmark' }
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
@@ -58,6 +60,8 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     }
     case 'fights':
       return fightsAnswer(profile, report)
+    case 'intel':
+      return intelAnswer(report)
     case 'benchmark': {
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
@@ -118,6 +122,21 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'open':
       return null
   }
+}
+
+/** What was scouted, what it can make, and what beats it. Only what was on the player's screen. */
+function intelAnswer(report: SessionReport): string {
+  const i = report.intel
+  if (!i || (!i.faction && !i.buildings.length && !i.units.length)) {
+    return 'I have not seen their civilisation, buildings or army yet. Scout their base, or let me see the loading screen, and I will tell you what they can make and what beats it.'
+  }
+  const parts: string[] = []
+  if (i.faction) parts.push(`They are ${i.faction.name}${i.faction.status === 'upcoming' ? ' (not released yet, so details are thin)' : ''}.`)
+  if (i.buildings.length) parts.push(`I saw ${i.buildings.slice(0, 4).map((b) => (b.count > 1 ? `${b.count} ${b.name}s` : `a ${b.name}`)).join(', ')}.`)
+  if (i.units.length) parts.push(`Units seen: ${i.units.slice(0, 4).map((u) => `${u.name} (up to ${u.count})`).join(', ')}.`)
+  if (i.likely.length) parts.push(`Those buildings can also make ${i.likely.slice(0, 4).map((l) => l.name).join(', ')}.`)
+  for (const c of i.counters.slice(0, 2)) if (c.build.length) parts.push(`Against ${c.against}: ${c.build.join(' or ')}.`)
+  return parts.join(' ')
 }
 
 /** How fights are being lost, from killcam/replay tags, with the fixes. */
@@ -188,6 +207,7 @@ export function buildDigest(i: DigestInputs): string {
           claimGrade: h.claim?.grade ?? 'none',
         })),
       game: Object.keys(i.report.context).length ? i.report.context : undefined,
+      scouted: i.report.intel ?? undefined,
       fightsFollowed: i.report.battles.length
         ? {
             won: i.report.battles.filter((b) => b.outcome === 'won').length,

@@ -3122,3 +3122,39 @@ kbd {
   color: var(--text-2);
   margin: 4px 0 0;
 }
+
+.btn.toggle.commentary[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.intel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.intel-civ-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.intel-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.intel-counters {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+}
+
+.intel-counters p {
+  margin: 2px 0;
+}

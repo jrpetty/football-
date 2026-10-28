@@ -187,6 +187,19 @@ export function App() {
         )}
         <button
           type="button"
+          className="btn toggle commentary"
+          aria-pressed={settings.commentary}
+          onClick={() => updateSettings({ commentary: !settings.commentary })}
+          title={
+            policy.scope.has('live')
+              ? 'Live commentary: short spoken lines about what the coach sees, as it happens'
+              : `Live commentary is allowed only where speaking during play is: ${policy.reasons[0]}`
+          }
+        >
+          🎙 Commentary{settings.commentary && !policy.scope.has('live') ? ' (held here)' : ''}
+        </button>
+        <button
+          type="button"
           className="btn toggle"
           aria-pressed={settings.muted}
           onClick={() => updateSettings({ muted: !settings.muted })}

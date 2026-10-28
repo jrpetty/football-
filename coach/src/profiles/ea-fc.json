@@ -1566,5 +1566,10 @@
         }
       ]
     }
-  ]
+  ],
+  "commentary": {
+    "goal_scored": "Goal for you",
+    "goal_conceded": "Goal against",
+    "turnover": "Lost the ball"
+  }
 }

@@ -31,6 +31,10 @@ export const VERBOSITY_RULES: Record<
 /** The same reflective topic is not spoken again within this window. */
 const REFLECTIVE_REPEAT_MS = 5 * 60_000
 const LIVE_CATEGORIES = new Set(['training', 'live_tactical'])
+/** Commentary pacing: a line at most every few seconds, and not the same line twice in quick succession. */
+export const COMMENTARY_GAP_MS = 6_000
+const COMMENTARY_REPEAT_MS = 30_000
+const COMMENTARY_PER_MINUTE = 8
 
 export function windowScope(w: DeliveryWindow): PolicyScope {
   return w === 'during_play' ? 'live' : w === 'round_break' ? 'round_break' : 'post_match'
@@ -68,6 +72,8 @@ export class CoachingGovernor {
   private readonly topicSpokenAt = new Map<string, number>()
   private readonly queued = new Set<string>()
   private pendingReflective: { id: string; expiresAt: number }[] = []
+  private lastCommentaryAt = -Infinity
+  private commentaryAt: number[] = []
 
   constructor(settings: CoachSettings, policy: ResolvedPolicy) {
     this.settings = settings
@@ -133,6 +139,7 @@ export class CoachingGovernor {
       reasons.push(this.policy.reasons[0])
       return result('suppressed')
     }
+    if (msg.category === 'commentary') return this.decideCommentary(msg, now, window, reasons, result)
     if (!this.policy.scope.has(scope)) {
       reasons.push(`${this.policy.reasons[0]} (${scopeText(scope)} is not allowed)`)
       if (live && !msg.requestedByPlayer) {
@@ -199,6 +206,54 @@ export class CoachingGovernor {
     const utterance = this.speak(msg, now)
     if (!live && window === 'round_break') this.pendingReflective.push({ id: msg.id, expiresAt: msg.expiresAtMs })
     return result('spoken', utterance)
+  }
+
+  /**
+   * Live commentary: the player turned it on, so where the game and mode
+   * allow speech during play it speaks, on its own pace (it never delays a
+   * coaching tip, and it is dropped rather than read late). Elsewhere it is
+   * not delivered at all: commentary after the fact is not commentary.
+   */
+  private decideCommentary(msg: CoachingMessage, now: number, window: DeliveryWindow, reasons: string[], result: (d: DeliveryDecision, u?: Utterance | null) => Decision): Decision {
+    if (!this.settings.commentary) {
+      reasons.push('live commentary is off')
+      return result('suppressed')
+    }
+    if (window !== 'during_play') {
+      reasons.push('commentary is only for live play')
+      return result('suppressed')
+    }
+    if (!this.policy.scope.has('live')) {
+      reasons.push(`${this.policy.reasons[0]} (speaking during play is not allowed)`)
+      return result('suppressed')
+    }
+    if (this.settings.mode === 'silent') {
+      reasons.push('silent tracker mode never speaks')
+      return result('text-only')
+    }
+    if (this.settings.muted) {
+      reasons.push('muted')
+      return result('text-only')
+    }
+    const since = now - this.lastCommentaryAt
+    if (since < COMMENTARY_GAP_MS) {
+      reasons.push(`commentary paced: last line ${(since / 1000).toFixed(0)}s ago`)
+      return result('suppressed')
+    }
+    const last = this.topicSpokenAt.get(msg.topic)
+    if (last !== undefined && now - last < COMMENTARY_REPEAT_MS) {
+      reasons.push('said the same thing recently')
+      return result('suppressed')
+    }
+    if (this.commentaryAt.filter((t) => now - t < 60_000).length >= COMMENTARY_PER_MINUTE) {
+      reasons.push(`already ${COMMENTARY_PER_MINUTE} commentary lines in the last minute`)
+      return result('suppressed')
+    }
+    this.lastCommentaryAt = now
+    this.commentaryAt = [...this.commentaryAt.filter((t) => now - t < 60_000), now]
+    this.topicSpokenAt.set(msg.topic, now)
+    reasons.push('live commentary is on and allowed here')
+    return result('spoken', { id: msg.id, text: msg.text, category: msg.category, priority: msg.priority, expiresAt: msg.expiresAtMs })
   }
 
   private liveGate(now: number, topic: string): string | null {

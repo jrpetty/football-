@@ -6,7 +6,7 @@
 // background knowledge for recognising and explaining what is on screen. It
 // is never treated as an observation.
 
-import type { PlaybookEntry } from '../profile/schema.ts'
+import type { PlaybookEntry, Roster } from '../profile/schema.ts'
 
 export const KNOWLEDGE_SECTIONS = [
   { id: 'overview', title: 'Overview and current version' },
@@ -177,6 +177,47 @@ export function playbookText(entries: readonly PlaybookEntry[], budget: number):
     if (used + block.length + 1 > budget) break
     out.push(block)
     used += block.length + 1
+  }
+  return out.join('\n')
+}
+
+/**
+ * A strategy game's roster as prompt text. For the recogniser: the exact names
+ * to report and how to tell units and buildings apart. For answers: also
+ * counters, civilisations' bonuses and how to play against them.
+ */
+export function rosterText(roster: Roster, opts: { readonly budget: number; readonly detail: 'vision' | 'answer' }): string {
+  const out: string[] = []
+  let used = 0
+  const push = (line: string) => {
+    if (used + line.length + 1 > opts.budget) return false
+    out.push(line)
+    used += line.length + 1
+    return true
+  }
+  const unitName = new Map(roster.units.map((u) => [u.id, u.name]))
+  const factionName = new Map(roster.factions.map((f) => [f.id, f.name]))
+  const names = (ids: readonly string[]) => ids.map((id) => unitName.get(id) ?? id).join(', ')
+  push(`## Roster (${roster.patch}, checked ${roster.checkedAt}); report these exact names`)
+  push('### Buildings')
+  for (const b of roster.buildings) {
+    if (!push(`- ${b.name}${b.factions?.length ? ` (${b.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''}: makes ${names(b.produces) || 'no units'}${b.look ? `. Looks: ${b.look}` : ''}${opts.detail === 'answer' && b.signals ? `. Means: ${b.signals}` : ''}`)) break
+  }
+  push('### Units')
+  for (const u of roster.units) {
+    const who = u.factions?.length ? ` (${u.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''
+    const answer = opts.detail === 'answer' ? `; beats ${names(u.counters)}; beaten by ${names(u.counteredBy)}${u.why ? `. ${u.why}` : ''}` : ''
+    if (!push(`- ${u.name}${who} [${u.classes.join(' ')}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
+  }
+  push('### Civilisations')
+  for (const f of roster.factions) {
+    const base = `- ${f.name}${f.status === 'upcoming' ? ' (UPCOMING, not released)' : ''}${f.variantOf ? ` (variant of ${factionName.get(f.variantOf) ?? f.variantOf})` : ''}: unique ${names(f.uniqueUnits) || 'none'}`
+    const more = opts.detail === 'answer' ? `. ${f.bonuses.slice(0, 5).join('; ')}${f.howToPlayAgainst ? `. Against them: ${f.howToPlayAgainst}` : ''}` : ''
+    if (!push(base + more)) break
+  }
+  if (opts.detail === 'answer') {
+    push('### Counter rules')
+    for (const r of roster.counterRules ?? []) if (!push(`- If ${r.if}: build ${r.build}${r.why ? ` (${r.why})` : ''}${r.avoid ? `; avoid ${r.avoid}` : ''}`)) break
   }
   return out.join('\n')
 }

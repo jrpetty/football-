@@ -34,6 +34,8 @@ export interface BattleRecord {
 }
 
 interface Open {
+  announced: boolean
+  firstReadings: Record<string, string>
   startAt: number
   lastAt: number
   gameSec: number | null
@@ -85,13 +87,23 @@ export class BattleTracker {
       for (const [k, v] of Object.entries(obs.attributes ?? {})) {
         if (typeof v !== 'string' || v === 'unknown') continue
         if (k === spec.trendAttribute) o.trends.push(v)
-        else o.readings.set(k, [...(o.readings.get(k) ?? []), v])
+        else {
+          o.readings.set(k, [...(o.readings.get(k) ?? []), v])
+          if (o.frames === 1) o.firstReadings[k] = v
+        }
       }
     }
     // A fight also ends when play stops (menu, round or match end) or after the gap.
     const playing = visible.phase === 'round' || visible.phase === 'combat' || visible.phase === 'unknown'
     if (this.open && (!playing || now - this.open.lastAt > spec.gapMs)) out.push(...this.close())
     return out
+  }
+
+  /** The first frame's readings of a fight that has just started, once (for commentary). */
+  takeStart(): Readonly<Record<string, string>> | null {
+    if (!this.open || this.open.announced) return null
+    this.open.announced = true
+    return this.open.firstReadings
   }
 
   /** Close any open fight (match end, stop). */
@@ -112,6 +124,8 @@ export class BattleTracker {
     const before = this.army.filter((a) => a.at >= at - BEFORE_MS && a.at <= at).map((a) => a.v)
     const t = this.timeKey ? visible.values[this.timeKey] : undefined
     return {
+      announced: false,
+      firstReadings: {},
       startAt: at,
       lastAt: at,
       gameSec: t && typeof t.value === 'number' ? t.value : null,

@@ -13,6 +13,7 @@ import { AlignmentCheck } from '../components/AlignmentCheck.tsx'
 import { AskBox, Conversation } from '../components/ask.tsx'
 import { Meter, Notice, Segmented, Switch } from '../components/common.tsx'
 import { Breakdown, EconomyPanel, PolicyBadge, Scoreboard, ScopeChips, StatePanel, ZoneMap } from '../components/viz.tsx'
+import { IntelPanel } from '../components/coaching.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -430,6 +431,22 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                 <span className="muted small">From the visible top bar</span>
               </div>
               <EconomyPanel visible={st.visible} context={context} />
+            </section>
+          )}
+
+          {profile.intel && (
+            <section className="panel" aria-labelledby="intel-live-h">
+              <div className="panel-head">
+                <h2 id="intel-live-h">Their side</h2>
+                <span className="muted small">From your screen only</span>
+              </div>
+              {!policy.scope.has('live') ? (
+                <p className="muted small">In this mode, scouting intel opens after the match (Insights), so the coach never coaches you live where that is not allowed.</p>
+              ) : state.report?.intel ? (
+                <IntelPanel intel={state.report.intel} profile={profile} />
+              ) : (
+                <p className="muted small">Nothing seen yet. Scout their base; their civilisation is read from the loading screen.</p>
+              )}
             </section>
           )}
 

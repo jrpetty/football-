@@ -34,6 +34,8 @@ export interface CoachSettings {
   readonly hotkeys: Hotkeys
   /** The first-run setup was completed or skipped. */
   readonly onboarded: boolean
+  /** Running live commentary of what the coach sees, where the game and mode allow speech during play. */
+  readonly commentary: boolean
 }
 
 export interface Hotkeys {
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   profileModeId: null,
   hotkeys: DEFAULT_HOTKEYS,
   onboarded: false,
+  commentary: false,
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -123,6 +126,7 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     profileModeId: id(o.profileModeId, base.profileModeId),
     hotkeys: sanitizeHotkeys(o.hotkeys, base.hotkeys),
     onboarded: typeof o.onboarded === 'boolean' ? o.onboarded : base.onboarded,
+    commentary: typeof o.commentary === 'boolean' ? o.commentary : base.commentary,
   }
 }
 

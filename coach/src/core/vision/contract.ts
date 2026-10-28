@@ -203,7 +203,7 @@ function parseValue(spec: VisionStateSpec, raw: unknown): string | number | bool
     case 'enum':
       return spec.options!.includes(text.toLowerCase()) ? text.toLowerCase() : null
     case 'string':
-      return text.slice(0, 80)
+      return text.slice(0, spec.maxLength ?? 80)
   }
 }
 

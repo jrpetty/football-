@@ -7,7 +7,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { PatternRecord } from '../../core/types.ts'
 import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
-import { BattleLog, BenchmarkChart, FactorCard, Playbook, ReviewCard } from '../components/coaching.tsx'
+import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -112,6 +112,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
               {capturing ? ' In online modes it opens after the match.' : ''}
             </p>
           )}
+        </section>
+      )}
+
+      {report?.intel && (report.intel.faction || report.intel.buildings.length > 0 || report.intel.units.length > 0) && (
+        <section className="panel" aria-labelledby="intel-h">
+          <div className="panel-head">
+            <h2 id="intel-h">Their side</h2>
+            <span className="muted small">Only what your screen showed: scouted buildings, their army in view, the loading screen</span>
+          </div>
+          <IntelPanel intel={report.intel} profile={profile} />
         </section>
       )}
 

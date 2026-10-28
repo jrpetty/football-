@@ -14,6 +14,8 @@
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
+import { checkpointLine, eventLine, fightStartLine } from './commentary.ts'
+import { IntelTracker, type IntelReport } from './analyses/intel.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -113,6 +115,8 @@ export interface SessionReport {
   readonly battles: readonly BattleRecord[]
   /** What the game is (map, opponent's civilisation…), as last read. */
   readonly context: Readonly<Record<string, string | number>>
+  /** Scouting intel (strategy packs with a roster), or null. */
+  readonly intel: IntelReport | null
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
@@ -141,6 +145,7 @@ export class CoachEngine {
   private readonly factors: FactorAnalyzer
   private readonly benchmarks: BenchmarkTracker
   private readonly battles: BattleTracker
+  private readonly intel: IntelTracker | null
   /** Index into the battle log where the current match starts. */
   private matchBattlesFrom = 0
   private gameContext: Record<string, string | number> = {}
@@ -200,6 +205,8 @@ export class CoachEngine {
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
     this.battles = new BattleTracker(profile.battles ?? null, clockKey)
+    const roster = profile.knowledge.roster
+    this.intel = profile.intel && roster ? new IntelTracker(roster, profile.intel, this.playerFaction()) : null
 
     this.episodeSpecs = new Map(profile.episodes.map((e) => [e.id, e]))
     this.mistakeSpecs = new Map((profile.mistakes ?? []).map((m) => [m.id, m]))
@@ -215,6 +222,8 @@ export class CoachEngine {
     const { downgradeReason } = this.governor.mode
     if (downgradeReason) out.push(notice(now, 'warning', downgradeReason))
     if (this.memory.historyNotice) out.push(notice(now, 'info', this.memory.historyNotice))
+    const commentary = this.commentaryNotice()
+    if (commentary) out.push(commentary(now))
     if (this.profile.validation.status !== 'verified') {
       out.push(notice(now, 'info', `"${this.profile.name}" is ${this.profile.validation.status}: ${this.profile.validation.notes}`))
     }
@@ -223,16 +232,38 @@ export class CoachEngine {
 
   configure(settings: CoachSettings, policy: ResolvedPolicy, context: PlayerContext | null, now: number): TimelineEntry[] {
     const before = this.governor.mode.downgradeReason
+    const commentaryBefore = this.commentaryNotice() !== null
     this.settings = settings
     this.policy = policy
     if (context) {
       this.context = context
       this.mistakes.setContext(context)
+      this.intel?.setPlayerFaction(this.playerFaction())
       ;(this.profile.scoreRules ?? []).forEach((r, i) => this.scores[i].setSide(sideOf(context[r.sideContext])))
     }
     this.governor.configure(settings, policy)
     const after = this.governor.mode.downgradeReason
-    return after && after !== before ? [notice(now, 'warning', after)] : []
+    const out = after && after !== before ? [notice(now, 'warning', after)] : []
+    const commentary = this.commentaryNotice()
+    if (commentary && !commentaryBefore) out.push(commentary(now))
+    return out
+  }
+
+  private playerFaction(): string | null {
+    const key = this.profile.intel?.playerFactionContext
+    const v = key ? this.context[key] : undefined
+    return typeof v === 'string' && v ? v : null
+  }
+
+  /** Commentary is on but cannot speak here: say so once, instead of going quiet. */
+  private commentaryNotice(): ((now: number) => TimelineEntry) | null {
+    if (!this.settings.commentary) return null
+    if (!this.policy.scope.has('live'))
+      return (now) => notice(now, 'warning', `Live commentary is on, but it cannot speak during play here: ${this.policy.reasons[0]}. You get the review after the match.`)
+    if (this.settings.mode === 'silent') return (now) => notice(now, 'warning', 'Live commentary is on, but Silent tracker mode never speaks.')
+    if (this.settings.muted) return (now) => notice(now, 'warning', 'Live commentary is on, but the coach is muted.')
+    if (!this.profile.commentary && !this.profile.benchmarks?.length) return (now) => notice(now, 'info', 'This pack has little to comment on live; tips and answers still work.')
+    return (now) => notice(now, 'info', 'Live commentary is on: short spoken lines about what the coach sees.')
   }
 
   /** Capture paused, target changed, or resumed: the picture cannot be trusted while set. */
@@ -401,6 +432,7 @@ export class CoachEngine {
       benchmarks: this.benchmarks.results(),
       battles: this.battles.battles(),
       context: { ...this.gameContext },
+      intel: this.intel?.report() ?? null,
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -457,6 +489,7 @@ export class CoachEngine {
       }
     }
     this.handleEvents([...events, ...derived].sort((a, b) => a.at - b.at), now, out)
+    this.commentOnState(now, out)
   }
 
   private forgetSightings(eventType: string, before: number): void {
@@ -471,6 +504,12 @@ export class CoachEngine {
       if (ev.category !== 'boundary') this.matchHasData = true
     }
     if (events.some((ev) => (this.profile.factors ?? []).some((f) => f.lossEvent === ev.ruleId))) this.maybeFactorTip(now, out)
+    if (this.settings.commentary) {
+      for (const ev of events) {
+        const line = eventLine(this.profile, ev)
+        if (line) this.comment(line, `event:${ev.ruleId}:${ev.uid}`, ev.at, ev.confidence, ev.evidence, now, out)
+      }
+    }
 
     const visible = (key: string) => this.signals.get(key)?.known === true || this.fuser.get(key, now) !== null
     for (const ep of this.evaluator.update(now, events, visible)) this.recordEpisode(ep, out)
@@ -615,6 +654,7 @@ export class CoachEngine {
     this.factors.newMatch()
     this.benchmarks.newMatch()
     this.battles.newMatch()
+    this.intel?.newMatch()
     this.matchBattlesFrom = this.battles.battles().length
     this.gameContext = {}
     this.factorTipsGiven = new Set()
@@ -656,6 +696,37 @@ export class CoachEngine {
     }
   }
 
+  /** Commentary that does not come from a single event: a fight starting, a benchmark checkpoint. */
+  private commentOnState(now: number, out: EngineOutput): void {
+    const news = this.intel?.update(this.visible, now) ?? []
+    if (this.settings.commentary) for (const n of news) this.comment(n.text, `intel:${n.kind}:${n.id}`, now, 0.8, `seen on screen: ${n.id}`, now, out)
+    const start = this.battles.takeStart()
+    const fresh = this.benchmarks.takeFresh()
+    if (!this.settings.commentary) return
+    if (start) this.comment(fightStartLine(this.profile, start), `fight-start:${now}`, now, 0.8, 'first frame of a fight', now, out)
+    for (const f of fresh) this.comment(checkpointLine(f.spec, f.atSec, f.actual, f.expected), `checkpoint:${f.spec.id}:${f.atSec}`, now, 0.85, `${f.spec.label} at ${f.atSec}s`, now, out)
+  }
+
+  private comment(text: string, topic: string, at: number, confidence: number, evidence: string, now: number, out: EngineOutput): void {
+    this.decide(
+      {
+        category: 'commentary',
+        text,
+        confidence,
+        grade: 'moderate',
+        evidenceSummary: evidence,
+        topic: `commentary:${topic}`,
+        priority: 'low',
+        createdAt: now,
+        basedOnObservationAt: at,
+        expiresAtMs: Math.max(at, now) + 10_000,
+        author: 'template',
+      },
+      now,
+      out,
+    )
+  }
+
   /** Insights the coach may use: the player has not dismissed or disputed them. */
   private usableInsights(): Insight[] {
     return [...this.insightCache.values()].filter((i) => this.memory.verdict(i.episodeId) === null)
@@ -670,6 +741,7 @@ export class CoachEngine {
       factors: this.factors.results(scope),
       benchmarks: scope === 'match' ? this.benchmarks.results() : [],
       battles: this.battles.battles().slice(scope === 'match' ? this.matchBattlesFrom : 0),
+      intel: this.intel?.report() ?? null,
       mistakes: this.mistakes.totals(scope, this.lastT),
       queuedTopics: this.governor.takeQueuedTopics(),
       reviewLines,

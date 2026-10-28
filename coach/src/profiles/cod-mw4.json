@@ -2358,5 +2358,10 @@
         }
       ]
     }
-  ]
+  ],
+  "commentary": {
+    "death": "Died",
+    "kill": "Kill",
+    "streak_earned": "Streak earned"
+  }
 }

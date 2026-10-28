@@ -11,6 +11,7 @@ export const WORD_LIMITS = {
   training: 14,
   live_tactical: 14,
   descriptive: 25,
+  commentary: 22,
   reflective: 45,
   post_event: 110,
   answer: 140,
