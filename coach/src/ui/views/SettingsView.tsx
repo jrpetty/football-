@@ -12,6 +12,8 @@ import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
 import { MinimapAlign } from '../components/MinimapAlign.tsx'
+import { RadarAlign } from '../components/RadarAlign.tsx'
+import { RADAR_COLOURS, radarColourHint, type RadarColour } from '../../core/pitch/radar.ts'
 import { OfficialMapsPanel } from '../components/OfficialMapsPanel.tsx'
 import { HotkeyField } from '../components/HotkeyField.tsx'
 import type { Hotkeys } from '../../core/settings.ts'
@@ -51,6 +53,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap && profile.knowledge.maps?.length ? <OfficialMapsPanel session={session} profile={profile} info={info} /> : null}
+      {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
@@ -485,6 +488,88 @@ function MinimapPanel({ settings, onSettings, session, profile }: { settings: Co
         </div>
       </div>
       {aligning ? <MinimapAlign session={session} initial={box} packDefault={spec.region} onSave={setBox} onClose={() => setAligning(false)} /> : null}
+    </section>
+  )
+}
+
+// --- The radar (football): where it is, its colours, what the game should be set to ---------------
+
+function RadarPanel({ settings, onSettings, session, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile }) {
+  const state = useSyncExternalStore(session.subscribe, session.getState)
+  const spec = profile.pitch!
+  const own = settings.minimap[profile.id]
+  const box = own ?? spec.radar
+  const [aligning, setAligning] = useState(false)
+  const ctx = settings.context[profile.id] ?? {}
+  const colour = (k: string | undefined) => String((k ? ctx[k] : undefined) ?? 'default')
+  const ours = colour(spec.oursColourKey)
+  const theirs = colour(spec.theirsColourKey)
+  const hint = radarColourHint(ours, theirs)
+  const known = (c: string): RadarColour | null => (c in RADAR_COLOURS ? (c as RadarColour) : null)
+  const setBox = (b: typeof box | null) => {
+    const next = { ...settings.minimap }
+    if (b) next[profile.id] = b
+    else delete next[profile.id]
+    onSettings({ minimap: next })
+  }
+  const live = state.report?.profileId === profile.id ? state.report.pitch?.live : null
+  return (
+    <section className="panel" aria-labelledby="radar-h">
+      <div className="panel-head">
+        <h2 id="radar-h">Radar: {profile.game.title}</h2>
+        <span className={`badge ${hint ? 'warn' : 'ok'}`}>{hint ? 'Check the colours' : 'Colours set'}</span>
+      </div>
+      <p className="small" style={{ marginTop: 0 }}>
+        The coach reads every player and the ball from the 2D radar at the bottom of the screen, about twice a second: team shapes, the back line, possession, lost balls,
+        shots and the seconds before each goal (Insights → The pitch). Only your screen’s pixels are read.
+      </p>
+      <div className="grid-2">
+        <div className="field">
+          <span className="label">Where the radar is</span>
+          <span className="small">
+            {own ? 'Your alignment' : 'The game’s default'}: {Math.round(box.x * 1000) / 10}% from the left, {Math.round(box.y * 1000) / 10}% from the top,{' '}
+            {Math.round(box.w * 1000) / 10}% wide, {Math.round(box.h * 1000) / 10}% high.
+          </span>
+          <div className="btn-row">
+            <button type="button" className="btn sm" disabled={state.phase !== 'capturing'} onClick={() => setAligning(true)}>
+              Align on the screen…
+            </button>
+            {own ? (
+              <button type="button" className="btn sm ghost" onClick={() => setBox(null)}>
+                Use the game’s default
+              </button>
+            ) : null}
+          </div>
+          <span className="muted small">
+            {state.phase === 'capturing'
+              ? live?.ok
+                ? `Reading now: ${live.ours.length} and ${live.theirs.length} players${live.ball ? ' and the ball' : ''}.`
+                : 'Not reading the radar right now (a replay or menu, or the box is off).'
+              : 'Start capture (or the demo) to align it on a still.'}
+          </span>
+        </div>
+        <div className="field">
+          <span className="label">In the game (Settings › Game Settings › Visual)</span>
+          <ul className="small" style={{ margin: '4px 0', paddingLeft: 18 }}>
+            <li>Radar: 2D (3D is drawn in perspective and is not measured; Off turns this off).</li>
+            <li>
+              User Radar Colour and Opponent Radar Colour: two strong, different colours, such as Blue and Red. Then pick the same on the Coach screen (now: {ours} and {theirs}).
+            </li>
+            <li>Score Clock: On, so goals are counted.</li>
+          </ul>
+          {hint ? <p className="warn-text small">⚠ {hint}</p> : null}
+        </div>
+      </div>
+      {aligning ? (
+        <RadarAlign
+          session={session}
+          initial={box}
+          packDefault={spec.radar}
+          colours={{ ours: known(ours), theirs: known(theirs) }}
+          onSave={setBox}
+          onClose={() => setAligning(false)}
+        />
+      ) : null}
     </section>
   )
 }

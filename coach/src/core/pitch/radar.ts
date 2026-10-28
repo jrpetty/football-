@@ -28,6 +28,16 @@ export const RADAR_COLOURS = {
 } as const satisfies Record<string, readonly [number, number, number]>
 export type RadarColour = keyof typeof RADAR_COLOURS
 
+/** What to change in the game's radar colour settings so the radar reads well (null: nothing). */
+export function radarColourHint(ours: string, theirs: string): string | null {
+  if (ours === 'black' || theirs === 'black')
+    return 'Black radar dots cannot be told from the dark radar. In Settings > Game Settings > Visual, set User and Opponent Radar Colour to two other colours, such as Blue and Red.'
+  if (ours !== 'default' && ours === theirs) return 'Both teams have the same radar colour, so they cannot be told apart. Set the Opponent Radar Colour to a different one.'
+  if (ours === 'default' || theirs === 'default')
+    return 'Radar colours are at Default (kit colours), so similar kits can look the same and your team is worked out from the goals. Set User and Opponent Radar Colour to two strong colours, such as Blue and Red, and choose the same here.'
+  return null
+}
+
 export interface RadarDot {
   /** Pitch metres. */
   readonly x: number

@@ -5468,6 +5468,126 @@
           }
         ],
         "unverified": true
+      },
+      {
+        "id": "general-433",
+        "name": "4-3-3 (general)",
+        "formation": "4-3-3",
+        "radarLook": "Three forwards high and wide, a midfield three in a line or a triangle, four at the back. Without the ball the wingers often drop level with the midfield, so it can read as a 4-5-1.",
+        "strengths": [
+          "Width in attack from the wingers",
+          "A front three that can press the back line",
+          "Midfield triangle for short passing"
+        ],
+        "weaknesses": [
+          "Space behind the wingers when they stay high",
+          "Full-backs left one against one when the winger does not track",
+          "A single holding midfielder can be overloaded"
+        ],
+        "counters": [
+          "Switch the ball quickly to the side the winger has left",
+          "Put two players around their holding midfielder",
+          "Overlap your full-back when their winger does not track back"
+        ],
+        "who": "General football shape, common in FC; not tied to a pro setup. Written from standard tactical knowledge rather than FC-specific sources.",
+        "sources": [],
+        "unverified": true
+      },
+      {
+        "id": "general-352",
+        "name": "3-5-2 (general)",
+        "formation": "3-5-2",
+        "radarLook": "Three centre-backs close together, wing-backs level with the midfield, two strikers. Without the ball the wing-backs drop and it reads as a 5-3-2.",
+        "strengths": [
+          "Numbers in central midfield",
+          "Two strikers to occupy the centre-backs",
+          "Width from the wing-backs"
+        ],
+        "weaknesses": [
+          "Space behind the wing-backs when they push on",
+          "Wide centre-backs pulled into the channels",
+          "Only one wide player on each flank"
+        ],
+        "counters": [
+          "Attack the space behind their wing-backs early",
+          "Put two players on each flank to make two against one",
+          "Draw a centre-back wide, then run into the gap they leaves"
+        ],
+        "who": "General football shape, common in FC; not tied to a pro setup. Written from standard tactical knowledge rather than FC-specific sources.",
+        "sources": [],
+        "unverified": true
+      },
+      {
+        "id": "general-451",
+        "name": "4-5-1 / 4-1-4-1 (general)",
+        "formation": "4-5-1 / 4-1-4-1",
+        "radarLook": "A flat midfield line of four or five in front of the back four and one striker. Compact and deep when defending.",
+        "strengths": [
+          "Compact lines that are hard to play through",
+          "Cover in wide areas",
+          "Room to counter through the striker"
+        ],
+        "weaknesses": [
+          "A lone striker gets little support",
+          "Long spells without the ball",
+          "Space for crosses from deep when the wide players do not close down"
+        ],
+        "counters": [
+          "Be patient and move the ball side to side until a gap opens",
+          "Use cutbacks rather than crosses into a crowded box",
+          "Press their striker’s first touch so the counter does not start"
+        ],
+        "who": "General football shape, common in FC; not tied to a pro setup. Written from standard tactical knowledge rather than FC-specific sources.",
+        "sources": [],
+        "unverified": true
+      },
+      {
+        "id": "general-343",
+        "name": "3-4-3 (general)",
+        "formation": "3-4-3",
+        "radarLook": "Three at the back, a midfield four with wing-backs, and three forwards. Very wide in attack.",
+        "strengths": [
+          "Five attackers when the wing-backs join",
+          "Pressing across the whole front line",
+          "Width on both flanks"
+        ],
+        "weaknesses": [
+          "Two central midfielders can be outnumbered",
+          "Wide centre-backs exposed on the counter",
+          "Space behind the wing-backs"
+        ],
+        "counters": [
+          "Get an extra player into central midfield",
+          "Counter into the channels behind their wing-backs",
+          "Play quickly through their pressing front three"
+        ],
+        "who": "General football shape, common in FC; not tied to a pro setup. Written from standard tactical knowledge rather than FC-specific sources.",
+        "sources": [],
+        "unverified": true
+      },
+      {
+        "id": "general-541",
+        "name": "5-4-1 (general)",
+        "formation": "5-4-1",
+        "radarLook": "Five across the back and four in front, one striker. A very deep, narrow block.",
+        "strengths": [
+          "Hard to break down in and around the box",
+          "Little space behind the defence",
+          "Cover against crosses"
+        ],
+        "weaknesses": [
+          "Little threat going forward",
+          "Long spells without the ball",
+          "Space to shoot from the edge of the box"
+        ],
+        "counters": [
+          "Move the ball from side to side quickly to shift the block",
+          "Shoot only from clear chances at the edge of the box, or work a cutback",
+          "Push your centre-backs up to keep them pinned"
+        ],
+        "who": "General football shape, common in FC; not tied to a pro setup. Written from standard tactical knowledge rather than FC-specific sources.",
+        "sources": [],
+        "unverified": true
       }
     ]
   },

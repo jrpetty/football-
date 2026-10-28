@@ -7,7 +7,8 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readRadar, RADAR_COLOURS, type RadarColour } from '../src/core/pitch/radar.ts'
+import { radarColourHint, readRadar, RADAR_COLOURS, type RadarColour } from '../src/core/pitch/radar.ts'
+import { FORMATION_SHAPES, formationOf, shapesIn } from '../src/core/pitch/formations.ts'
 import { isPitchRecord, PitchTracker, type PitchMatchRecord } from '../src/core/pitch/tracker.ts'
 import { pitchInsights } from '../src/core/pitch/insights.ts'
 import { isMatchRecord } from '../src/core/analyses/matchRecorder.ts'
@@ -185,7 +186,7 @@ test('EA SPORTS FC demo end to end: the radar read through the engine, the match
   const region = fc.pitch!.radar
   const picture = fcDemoPicture(football, { seed: 6, region, colours: [RADAR_COLOURS.blue, RADAR_COLOURS.red] })
   const s = settings({ profileId: 'ea-fc', profileModeId: 'kickoff-vs-cpu', mode: 'training' })
-  const e = engineFor(fc, { ...s, context: { ...s.context, 'ea-fc': { ...defaultContext(fc), radarColour: 'blue', opponentRadarColour: 'red' } } })
+  const e = engineFor(fc, s, { context: { ...defaultContext(fc), radarColour: 'blue', opponentRadarColour: 'red' } })
   const batches = [...replay.batches].sort((a, b) => a.arrivesAt - b.arrivesAt)
   let next = 0
   for (let t = 0; t <= replay.endsAt; t += 200) {
@@ -195,6 +196,8 @@ test('EA SPORTS FC demo end to end: the radar read through the engine, the match
   while (next < batches.length) e.ingestObservations(batches[next].observations, batches[next++].arrivesAt)
   const rep = e.report()
   assert.equal(rep.matches.length, 1)
+  // Colours set to two strong ones: nothing to change in the game's settings.
+  assert.equal(rep.pitch?.hint, null)
   const pitch = rep.matches[0].pitch
   assert.ok(pitch, 'the match record has the pitch')
   assert.equal(pitch.sides, 'known')
@@ -202,4 +205,36 @@ test('EA SPORTS FC demo end to end: the radar read through the engine, the match
   assert.equal(pitch.goals.length, truth.conceded + truth.scored)
   assert.ok(isMatchRecord(JSON.parse(JSON.stringify(rep.matches[0]))))
   assert.ok((rep.pitch?.insights ?? []).length >= 2, (rep.pitch?.insights ?? []).map((l) => l.id).join(', '))
+  // The opponent's shape is named and linked to the pack's counters when the pack knows it.
+  const their = rep.pitch?.insights.find((l) => l.id === 'their-shape')
+  assert.ok(their, 'their shape')
+  assert.match(their.text, /4-3-3/)
+})
+
+test('formations: the shapes FC teams use, read from noisy average positions', () => {
+  const rnd = mulberry32(21)
+  const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd())
+  let right = 0
+  let n = 0
+  for (const [name, shape] of Object.entries(FORMATION_SHAPES))
+    for (let k = 0; k < 12; k++) {
+      // Any depth and width of block, players up to about 1.5 m off their slot.
+      const len = 28 + rnd() * 25
+      const wid = 38 + rnd() * 22
+      const x0 = 15 + rnd() * 20
+      const pts = shape.map((p) => [x0 + p[0] * len + gauss() * 1.5, (68 - wid) / 2 + p[1] * wid + gauss() * 1.5] as [number, number])
+      n++
+      if (formationOf(pts) === name) right++
+    }
+  assert.ok(right / n >= 0.95, `${right} of ${n}`)
+  // A scattered team is no shape.
+  assert.equal(formationOf(Array.from({ length: 10 }, () => [10 + rnd() * 50, 5 + rnd() * 58] as [number, number])), '')
+  assert.deepEqual(shapesIn('4-2-3-1 (Wide) or 5-3-2 / 5-2-1-2'), ['4-2-3-1', '5-3-2', '5-2-1-2'])
+})
+
+test('radar colours: Default, Black or the same colour twice get advice; two strong colours do not', () => {
+  assert.match(radarColourHint('default', 'red') ?? '', /Default/)
+  assert.match(radarColourHint('black', 'red') ?? '', /Black/)
+  assert.match(radarColourHint('red', 'red') ?? '', /same/)
+  assert.equal(radarColourHint('blue', 'red'), null)
 })

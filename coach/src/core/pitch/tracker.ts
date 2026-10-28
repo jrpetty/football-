@@ -329,7 +329,7 @@ export class PitchTracker {
     return this.owner
   }
 
-  /** A shot: the ball suddenly fast (over 18 m/s) towards a goal mouth from within 40 m. */
+  /** A shot: the ball suddenly fast (over 18 m/s) towards the goal mouth it attacks, from within 40 m. */
   private shots(s: Sample): void {
     const p = this.last
     if (!s.ball || !p?.ball || s.t - p.t < 100 || s.t - p.t > 600 || s.t < this.shotCool) return
@@ -341,7 +341,11 @@ export class PitchTracker {
     const reach = (endX - p.ball[0]) / vx
     const yAt = p.ball[1] + vy * reach
     if (Math.abs(endX - p.ball[0]) > 40 || Math.abs(yAt - WD / 2) > 11) return
-    const shooter = p.owner ?? (vx > 0 ? (this.leftIs ?? 'A') : this.leftIs ? other(this.leftIs) : 'B')
+    // The team attacking that goal (the one defending the other end); a fast ball to their own
+    // goal is a pass back to the keeper or a clearance, not a shot.
+    const attacker: Label | null = this.leftIs ? (vx > 0 ? this.leftIs : other(this.leftIs)) : null
+    if (attacker && p.owner && p.owner !== attacker) return
+    const shooter = attacker ?? p.owner ?? (vx > 0 ? 'A' : 'B')
     this.events.push({ kind: 'shot', t: p.t, x: p.ball[0], y: p.ball[1], team: shooter })
     this.shotCool = s.t + 1500
   }

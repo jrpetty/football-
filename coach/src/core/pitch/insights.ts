@@ -37,7 +37,11 @@ export const LINE_GAP = 10
 
 const pct = (k: number, n: number) => `${Math.round((100 * k) / Math.max(1, n))}%`
 const m = (v: number) => `${Math.round(v)} m`
-const clause = (t: string) => t.trim().replace(/[.;]+$/, '')
+/** A list item as part of a sentence: no closing stop, and lower case unless it starts with a name or a number. */
+const clause = (t: string) => {
+  const x = t.trim().replace(/[.;]+$/, '')
+  return /^[A-Z][a-z]/.test(x) && !/^(I|FC|EA|CPU)\b/.test(x) ? x[0].toLowerCase() + x.slice(1) : x
+}
 
 /** Rough expected goals for a shot from a place (own goal at x = 0, attacking x = 105), by real-football zone averages. */
 export function zoneXg(x: number, y: number): number {
@@ -174,7 +178,7 @@ export function pitchInsights(records: readonly PitchMatchRecord[], focus: numbe
   const theirOut = mergeShape(rs.map((r) => r.theirShape.out))
   if (theirOut && theirOut.frames >= 60 && theirOut.formation) {
     const entry = formationEntries(theirOut.formation, formations)[0]
-    const tips = entry ? entry.counters.slice(0, 2).map(clause).join('. ') : ''
+    const tips = entry ? entry.counters.slice(0, 2).map(clause).join('; ') : ''
     out.push({
       id: 'their-shape',
       text: `They defended in a ${theirOut.formation} shape with their deepest player about ${m(theirOut.line)} from their goal${theirOut.line > BLOCKS.high ? ' (a high line: space in behind)' : ''}.${tips ? ` Against it: ${tips}.` : ''}`,

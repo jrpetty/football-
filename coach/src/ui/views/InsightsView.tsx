@@ -9,6 +9,7 @@ import { GradeBadge, Notice } from '../components/common.tsx'
 import { Breakdown, ZoneMap } from '../components/viz.tsx'
 import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { MapPanel } from '../components/MapView.tsx'
+import { PitchPanel, type PitchMatch } from '../components/PitchView.tsx'
 import { useOfficialSource } from '../officialSource.ts'
 import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
@@ -49,6 +50,7 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
     for (const b of report?.benchmarks ?? []) if (b.worst && b.spec.playbook) ids.add(b.spec.playbook)
     for (const m of report?.mistakes ?? []) if (m.totals.count && m.spec.playbook) ids.add(m.spec.playbook)
     for (const f of state.review.review?.focus ?? []) if (f.playbook) ids.add(f.playbook)
+    for (const l of report?.pitch?.insights ?? []) if (l.playbook) ids.add(l.playbook)
     return ids
   }, [report, state.review.review])
   const seenFights = (report?.factors ?? []).filter((f) => f.taggedLosses + f.taggedWins + f.untagged > 0)
@@ -65,6 +67,14 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
     const seen = new Set<string>()
     return [...state.history, ...(report?.matches ?? [])].filter((m) => m.gameProfileId === profile.id && (seen.has(m.id) ? false : (seen.add(m.id), true)))
   }, [state.history, report, profile.id])
+  // Matches read from the radar (football), oldest first, with the one being played (when it may be shown).
+  const pitchMatches = useMemo<PitchMatch[]>(() => {
+    const done = learnFrom.flatMap((m) =>
+      m.pitch ? [{ id: m.id, label: `${dateShort(m.endedAt)}${m.score ? ` · ${m.score.player}–${m.score.opponent}` : ''}`, record: m.pitch }] : [],
+    )
+    const now = !held && report?.pitch?.match ? [{ id: 'current', label: 'This match so far', record: report.pitch.match }] : []
+    return [...done, ...now]
+  }, [learnFrom, report, held])
   // Open on this game's kind (the opponent being played, or the last one), else on every game.
   const learnedStart = useMemo(() => {
     if (report?.learned && Object.keys(report.learned.filter).length) return report.learned.filter
@@ -160,6 +170,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
           <MapPanel profile={profile} records={learnFrom.flatMap((m) => (m.mapModel ? [m.mapModel] : []))} live={held ? null : report?.map} mosaics={state.mosaics} official={official} />
         </section>
       )}
+
+      {profile.pitch ? (
+        <section className="panel" aria-labelledby="pitch-h">
+          <div className="panel-head">
+            <h2 id="pitch-h">The pitch</h2>
+            <span className="muted small">Read from the 2D radar: both teams’ shapes, where the ball went, and the seconds before every goal</span>
+          </div>
+          <PitchPanel profile={profile} matches={pitchMatches} insights={held ? undefined : report?.pitch?.insights} onPlaybook={showPlay} />
+        </section>
+      ) : null}
 
       {profile.knowledge.arsenal?.length ? (
         <section className="panel" aria-labelledby="arsenal-h">

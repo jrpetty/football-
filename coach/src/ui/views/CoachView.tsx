@@ -19,6 +19,7 @@ import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
 import { WhereYouAre } from '../components/MapView.tsx'
+import { LivePitch } from '../components/PitchView.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -482,6 +483,16 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                 <span className="muted small">From your own view, each look</span>
               </div>
               <WhereYouAre report={state.report.map} mosaics={state.mosaics} profile={profile} official={official} />
+            </section>
+          ) : null}
+
+          {profile.pitch && policy.scope.has('live') && state.report?.pitch ? (
+            <section className="panel" aria-labelledby="pitch-live-h">
+              <div className="panel-head">
+                <h2 id="pitch-live-h">The radar</h2>
+                <span className="muted small">Every player and the ball, as read from your radar; you attack to the right</span>
+              </div>
+              <LivePitch report={state.report.pitch} />
             </section>
           ) : null}
 

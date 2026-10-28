@@ -17,6 +17,8 @@ import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, Tim
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
 import { mw4DemoPicture, type DemoOfficial } from '../sim/mw4Minimap.ts'
+import { fcDemoPicture } from '../sim/fcMatch.ts'
+import { RADAR_COLOURS, type RadarColour } from '../core/pitch/radar.ts'
 import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
@@ -645,8 +647,29 @@ export class CoachSession {
         return ScreenCaptureSource.start(sink, onEnded)
       case 'simulation':
         return new SimulatedSource(sink, onEnded, { speed })
-      case 'replay-fc':
-        return new ReplaySource(sink, onEnded, fcMatchReplay({ seed, realMinutes: 4 }), { speed, label: 'EA SPORTS FC — synthetic replay (not a real match)' })
+      case 'replay-fc': {
+        const replay = fcMatchReplay({ seed, realMinutes: 4 })
+        // A synthetic 2D radar in its usual place, in the colours the player set (Blue and Red when
+        // left at Default or set to Black), so the pitch views fill as in real play.
+        const pitch = this.profile?.pitch
+        const football = replay.truth.football as Parameters<typeof fcDemoPicture>[0] | undefined
+        const ctx = this.profile ? (this.settings?.context[this.profile.id] ?? {}) : {}
+        const colour = (k: string | undefined, fallback: RadarColour) => {
+          const v = k ? ctx[k] : undefined
+          return RADAR_COLOURS[typeof v === 'string' && v in RADAR_COLOURS ? (v as RadarColour) : fallback]
+        }
+        const ours = colour(pitch?.oursColourKey, 'blue')
+        const theirs = colour(pitch?.theirsColourKey, ours === RADAR_COLOURS.red ? 'blue' : 'red')
+        const picture =
+          pitch && football
+            ? fcDemoPicture(football, { seed, region: this.settings?.minimap[this.profile!.id] ?? pitch.radar, colours: [ours, theirs === ours ? RADAR_COLOURS.orange : theirs] })
+            : null
+        return new ReplaySource(sink, onEnded, replay, {
+          speed,
+          label: 'EA SPORTS FC — synthetic replay (not a real match)',
+          ...(picture ? { frames: (t: number) => picture.frame(t, 960, 540) } : {}),
+        })
+      }
       case 'replay-aoe':
         return new ReplaySource(sink, onEnded, aoe2GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires II — synthetic replay (not a real game)' })
       case 'replay-mw4':

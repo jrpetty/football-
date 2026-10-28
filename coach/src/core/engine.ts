@@ -23,7 +23,7 @@ import type { StoredMosaic } from './map/minimap.ts'
 import type { OfficialMap } from './map/official.ts'
 import { PitchTracker, type PitchLive, type PitchMatchRecord } from './pitch/tracker.ts'
 import { pitchInsights, type PitchInsight } from './pitch/insights.ts'
-import { RADAR_COLOURS, type RadarColour } from './pitch/radar.ts'
+import { RADAR_COLOURS, radarColourHint, type RadarColour } from './pitch/radar.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -322,13 +322,7 @@ export class CoachEngine {
   private radarHint(): string | null {
     const spec = this.profile.pitch
     const v = (k: string | undefined) => (k ? String(this.context[k] ?? 'default') : 'default')
-    const ours = v(spec?.oursColourKey)
-    const theirs = v(spec?.theirsColourKey)
-    if (ours === 'black' || theirs === 'black') return 'Black radar dots cannot be told from the dark radar. In Settings > Game Settings > Visual, set User and Opponent Radar Colour to two other colours, such as Blue and Red.'
-    if (ours !== 'default' && ours === theirs) return 'Both teams have the same radar colour, so they cannot be told apart. Set the Opponent Radar Colour to a different one.'
-    if (ours === 'default' || theirs === 'default')
-      return 'Radar colours are at Default (kit colours), so similar kits can look the same and your team is worked out from the goals. Set User and Opponent Radar Colour to two strong colours, such as Blue and Red, and choose the same here.'
-    return null
+    return radarColourHint(v(spec?.oursColourKey), v(spec?.theirsColourKey))
   }
 
   private radarColours(): { ours: RadarColour | null; theirs: RadarColour | null } {
