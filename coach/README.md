@@ -18,7 +18,7 @@ It works by looking at the screen, never by touching the game:
   AI or bots, post-match coaching in online and ranked play;
 - it fails closed.
 
-> **Status:** v8, Windows-first.
+> **Status:** v9, Windows-first.
 >
 > **Game packs:**
 > - Call of Duty: Modern Warfare 4;
@@ -99,8 +99,13 @@ Then press **Choose the game window**, play, and listen.
 - **Knows the game before it starts.**
   - Each pack ships a curated, dated reference: modes, maps, screens, HUD,
     roster, mechanics.
-    - MW4 covers all 33 launch weapons, 17 killstreaks, 18 perks and the
-      launch maps.
+    - MW4 (launch, Oct 2026): all 33 launch weapons with class, fire rate,
+      magazine, best range, community time-to-kill where published,
+      strengths, weaknesses, how to beat each and its meta build; 11
+      lethals, 9 tacticals, 18 perks, 12 field upgrades and 18 killstreaks
+      with how each works and how to counter it; 23 maps with 167 named
+      areas (callouts), links, power positions, sightlines and Hardpoint
+      rotations; movement, mechanics and every mode's rules.
     - AoE IV covers all 25 civilisations, landmarks and economy numbers.
   - **Build game knowledge** adds a much larger, cited knowledge base that
     Claude researches on the web. It is stored compressed and fed to Claude
@@ -114,6 +119,29 @@ Then press **Choose the game window**, play, and listen.
     you were in the open"), and notices deaths seconds after your own kill.
     Killcams are reconstructions, so findings are "likely", and unreadable
     ones are counted, never guessed. Plus where you die and what kills you.
+  - **MW4: knows where you are, and learns the map by watching.** Each look
+    names the area you are in (a callout of the current map, from your own
+    view: buildings, signs, objectives, minimap) and your height (ground,
+    upper floor, roof, underground); killcams give the killer's spot and
+    weapon; enemy pings give where they tend to be. From that the coach
+    builds a model of each map: time and kills and deaths per area, the
+    routes you take, the height layers, and held angles (where killers shot
+    from and where you died). Insights draws it from the pack's rough
+    layout and your routes, top-down or in 3D by height, with red arrows
+    for held angles and rings on power positions. It tells you where you
+    die and from where ("Most deaths at Central Containers, 6 of them shot
+    from Armory"), your best area, where enemies show up, your time on
+    power positions, spawn deaths ("4 deaths within 15 s of the one before:
+    they are holding your spawn's exits"), time between deaths, and
+    whether your weapon suits the fights you take with it ("M4 is built for
+    mid-long range, but you lost 5 of 6 close-range fights with it, mostly
+    to SMGs"). Against bots it calls a held angle on the second death from
+    it, and death lines say where and from where. Ask about any weapon,
+    perk, streak or map ("how do I beat the Rezi 12?", "best M4 build?",
+    "power positions on Rooftops?", "where am I?"). The Coach screen shows
+    where you are; Insights has the arsenal, searchable, with your record
+    and what killed you. The map is a sketch, not a survey: positions come
+    from rough 3×3 grid placements and the routes you take.
   - **AoE IV battles:** each fight is followed across the frames where your
     army is fighting, and read for where it happened (near their Town
     Center or Keep, near your defences, open field, choke, sacred site),

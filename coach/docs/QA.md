@@ -183,6 +183,10 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 13.16 | Coach screen, cloud vision on: change "Look every" before and during capture. | The next looks follow the new pace; during capture the reply time shows, with a warning when replies are slower than the pace. |
 | 13.17 | Settings → Learning (AoE IV): recall after 3 games; play two games vs English, then a third. | Nothing recalled in the second game; recalled in the third. Learn off: the next game keeps nothing new. Forget: Insights → What the coach has learned is empty; History still lists the games. |
 | 13.18 | AoE IV with your civilisation set, two games. | Insights → You: your buildings in order (no starting Town Center); "<your civ> plans you played"; Them: "<their civ> plans you met". |
+| 13.19 | MW4 vs bots on a core map, cloud vision on. Walk through several named areas, go upstairs, die twice from the same angle. | Coach → Where you are names the area (and "upper" upstairs) within a few seconds; the second death from the same spot: "2 deaths at … from …: held angle."; death lines say "At …, shot from …". Note any wrong area names. |
+| 13.20 | After the match: Insights → The map, learned from watching. | The map drawn with the areas you visited, your routes, a red arrow for the held angle, rings on power positions; 3D lifts upper floors; the table lists time, kills, deaths. |
+| 13.21 | Ask "is the M4 good?", "best M4 build?", "what does Ghost do?", "power positions on Rooftops?". | Answers from the pack in plain words; the build only for the second question. |
+| 13.22 | MW4 ranked or public match. | Nothing about the map or the held angle during play; Insights says it opens after the match. |
 
 ## 14. Accessibility and layout
 

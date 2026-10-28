@@ -184,6 +184,15 @@ Legend:
 - ◐ New readings from real frames: your army, the opponent's AoE II civilisation and army, your MW4 weapon and enemy killstreaks, the FC opponent and formation. *Untested without captures.*
 - ◐ How much thinking costs on Opus 5.5 at low effort, and whether thinking off loses accuracy on Sonnet or Haiku. *Measure on a real session with the new cost breakdown.*
 
+## v9 delivery
+
+- ☑ MW4 position each look (callout and height), killer's spot and weapon from killcams, enemy sightings; the current map's callouts sent with each look.
+- ☑ Map model learned from watching: areas, routes, heights, held angles, enemy sightings, spawn deaths, time between deaths, weapon results by range; drawn top-down and in 3D; held-angle tip against bots; answers and digest. *Tested with synthetic data and the demo on a real map (`test/mapmodel.test.ts`).*
+- ☑ MW4 arsenal (101 items) and 23 maps researched and merged; answers about any weapon, perk, streak or map; arsenal browser.
+- ◐ Callouts: few MW4 callouts are published five days after launch; most names are single-source Hardpoint-hill names and most grid positions are inferred from the official Tac-Map images (marked unverified). Domination flags and most S&D sites are not published. Check in game and correct.
+- ◐ Recognising the area, height, killer's spot and weapon from real frames. *Untested without captures; "look" cues are inferred from names and official descriptions.*
+- ◐ Equipment, field upgrade and streak numbers (damage, radius, durations) are not published; marked as unknown rather than guessed.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).
