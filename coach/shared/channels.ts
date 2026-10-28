@@ -60,4 +60,9 @@ export const CHANNELS = {
   deleteKnowledge: 'sightline:delete-knowledge',
   testCloud: 'sightline:test-cloud',
   reviewMatch: 'sightline:review-match',
+  gsiStatus: 'sightline:gsi-status',
+  gsiConfigure: 'sightline:gsi-configure',
+  gsiCfg: 'sightline:gsi-cfg',
+  gsiSaveCfg: 'sightline:gsi-save-cfg',
+  gameState: 'sightline:game-state',
 } as const

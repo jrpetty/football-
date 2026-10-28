@@ -47,6 +47,8 @@ export type ToWorker =
   | { readonly type: 'pixels'; readonly frame: Frame }
   /** Observations from a synthetic vision replay (demo/tests). */
   | { readonly type: 'observations'; readonly observations: Observation[]; readonly now: number }
+  /** An update from the game's own data feed (Counter-Strike 2 Game State Integration), at `now` on the capture clock. */
+  | { readonly type: 'game-state'; readonly payload: unknown; readonly now: number }
   /** The main process's answer for a frame the worker sampled. */
   | {
       readonly type: 'vision-result'

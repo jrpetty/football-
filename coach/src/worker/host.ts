@@ -104,6 +104,9 @@ export class PipelineHost {
       case 'observations':
         if (this.engine) this.emit(this.engine.ingestObservations(msg.observations, msg.now), true)
         return
+      case 'game-state':
+        if (this.engine) this.emit(this.engine.ingestGameState(msg.payload, msg.now), true)
+        return
       case 'vision-result':
         return this.visionResult(msg)
       case 'snapshot':

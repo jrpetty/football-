@@ -18,6 +18,7 @@ import {
   app,
   BrowserWindow,
   desktopCapturer,
+  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -49,6 +50,8 @@ import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
 import { ASR_MODEL, isInstalled, installModel, removeModel, TTS_MODELS } from './models.ts'
 import { fetchOverhead, overheadPage } from './overhead.ts'
+import { findCs2CfgFolder, GSI_CFG_NAME, GsiServer } from './gsi.ts'
+import { writeFile } from 'node:fs/promises'
 import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
@@ -91,6 +94,8 @@ const ttsModels: Record<TtsModelKey, ModelState> = {
 /** Measured synthesis speed per model (compute seconds per second of speech), smoothed. */
 const ttsRtf: Partial<Record<TtsModelKey, number>> = {}
 let win: BrowserWindow | null = null
+/** Counter-Strike 2 Game State Integration: off until the player turns it on. */
+let gsi: GsiServer | null = null
 /** Global keys currently registered (accelerator), or null when the OS refused one (another app owns it). */
 const shortcuts: Record<keyof Hotkeys, string | null> = { talk: null, mark: null, stop: null }
 const shortcutErrors: string[] = []
@@ -462,6 +467,27 @@ function registerIpc(): void {
     return review ? { ok: true, costUsd: res.costUsd, review } : { ok: false, error: 'The review did not pass the checks (size, wording or playbook links).' }
   })
 
+  // --- Counter-Strike 2 Game State Integration: a listener on 127.0.0.1, off until turned on ---------
+  handle(CHANNELS.gsiStatus, () => gsi?.status() ?? null)
+  handle(CHANNELS.gsiConfigure, async (cfg) => (gsi ? gsi.configure(cfg) : null))
+  handle(CHANNELS.gsiCfg, async () => ({ text: gsi?.cfgText() ?? '', fileName: GSI_CFG_NAME, folder: await findCs2CfgFolder() }))
+  handle(CHANNELS.gsiSaveCfg, async () => {
+    if (!gsi || !win) return { ok: false, error: 'Not ready.' }
+    const folder = await findCs2CfgFolder()
+    const r = await dialog.showSaveDialog(win, {
+      title: 'Save the Game State Integration file',
+      defaultPath: join(folder ?? app.getPath('documents'), GSI_CFG_NAME),
+      filters: [{ name: 'Counter-Strike cfg', extensions: ['cfg'] }],
+    })
+    if (r.canceled || !r.filePath) return { ok: false }
+    try {
+      await writeFile(r.filePath, gsi.cfgText(), 'utf8')
+      return { ok: true, path: r.filePath }
+    } catch (err) {
+      return { ok: false, error: `Could not save it: ${err instanceof Error ? err.message : String(err)}` }
+    }
+  })
+
   // --- Game knowledge: learned screens, and the researched knowledge base ------------------------
   handle(CHANNELS.loadScreens, (id) => storage.loadScreens(id))
   handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
@@ -624,6 +650,8 @@ if (!app.requestSingleInstanceLock()) {
       },
       monthSpend: () => summarizeUsage(usage, new Date()).thisMonth.usd,
     })
+    gsi = new GsiServer(root, (body) => win?.webContents.send(CHANNELS.gameState, body))
+    await gsi.init()
     modelStatus = { ...modelStatus, installed: await isInstalled(root, ASR_MODEL) }
     for (const key of ['jenny', 'kokoro'] as const) ttsModels[key] = { ...ttsModels[key], installed: await isInstalled(root, TTS_MODELS[key]) }
 
@@ -645,6 +673,7 @@ if (!app.requestSingleInstanceLock()) {
       void storage.saveUsage(usage).catch(() => undefined)
     }
     globalShortcut.unregisterAll()
+    void gsi?.stop()
     recognizer?.close()
     tts?.close()
   })

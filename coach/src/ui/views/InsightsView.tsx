@@ -10,6 +10,7 @@ import { Breakdown, ZoneMap } from '../components/viz.tsx'
 import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbook, ReviewCard } from '../components/coaching.tsx'
 import { MapPanel } from '../components/MapView.tsx'
 import { PitchPanel, type PitchMatch } from '../components/PitchView.tsx'
+import { RoundsPanel, type RoundsMatch } from '../components/RoundsView.tsx'
 import { useOfficialSource } from '../officialSource.ts'
 import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
 import { dateShort, formatMs, pct } from '../format.ts'
@@ -51,6 +52,7 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
     for (const m of report?.mistakes ?? []) if (m.totals.count && m.spec.playbook) ids.add(m.spec.playbook)
     for (const f of state.review.review?.focus ?? []) if (f.playbook) ids.add(f.playbook)
     for (const l of report?.pitch?.insights ?? []) if (l.playbook) ids.add(l.playbook)
+    for (const l of report?.rounds?.insights ?? []) if (l.playbook) ids.add(l.playbook)
     return ids
   }, [report, state.review.review])
   const seenFights = (report?.factors ?? []).filter((f) => f.taggedLosses + f.taggedWins + f.untagged > 0)
@@ -73,6 +75,14 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
       m.pitch ? [{ id: m.id, label: `${dateShort(m.endedAt)}${m.score ? ` · ${m.score.player}–${m.score.opponent}` : ''}`, record: m.pitch }] : [],
     )
     const now = !held && report?.pitch?.match ? [{ id: 'current', label: 'This match so far', record: report.pitch.match }] : []
+    return [...done, ...now]
+  }, [learnFrom, report, held])
+  // Counter-Strike rounds from the game's own data, oldest first, with the match being played (when it may be shown).
+  const roundMatches = useMemo<RoundsMatch[]>(() => {
+    const done = learnFrom.flatMap((m) =>
+      m.roundLog ? [{ id: m.id, label: `${dateShort(m.endedAt)}${m.roundLog.map ? ` · ${m.roundLog.map}` : ''}${m.roundLog.score ? ` · ${m.roundLog.score.ours}–${m.roundLog.score.theirs}` : ''}`, rounds: m.roundLog }] : [],
+    )
+    const now = !held && report?.rounds?.match ? [{ id: 'current', label: 'This match so far', rounds: report.rounds.match }] : []
     return [...done, ...now]
   }, [learnFrom, report, held])
   // Open on this game's kind (the opponent being played, or the last one), else on every game.
@@ -178,6 +188,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
             <span className="muted small">Read from the 2D radar: both teams’ shapes, where the ball went, and the seconds before every goal</span>
           </div>
           <PitchPanel profile={profile} matches={pitchMatches} insights={held ? undefined : report?.pitch?.insights} onPlaybook={showPlay} />
+        </section>
+      ) : null}
+
+      {profile.gameState ? (
+        <section className="panel" aria-labelledby="rounds-h">
+          <div className="panel-head">
+            <h2 id="rounds-h">Rounds and economy</h2>
+            <span className="muted small">From the game’s own data: each round’s buy, kills, death and result</span>
+          </div>
+          <RoundsPanel profile={profile} matches={roundMatches} insights={held ? undefined : report?.rounds?.insights} onPlaybook={showPlay} />
         </section>
       ) : null}
 

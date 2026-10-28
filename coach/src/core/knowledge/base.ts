@@ -308,6 +308,7 @@ const CATEGORY_TITLE: Readonly<Record<ArsenalItem['category'], string>> = {
   weapon: 'Weapons',
   lethal: 'Lethal equipment',
   tactical: 'Tactical equipment',
+  equipment: 'Equipment',
   perk: 'Perks',
   field_upgrade: 'Field upgrades',
   killstreak: 'Killstreaks',

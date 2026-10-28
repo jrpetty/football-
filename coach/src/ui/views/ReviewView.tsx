@@ -110,6 +110,7 @@ function body(e: TimelineEntry) {
             <span>{e.event.label}</span>
             {e.event.manual ? <span className="badge neutral">marked by you</span> : null}
             {e.event.source === 'vision-model' ? <span className="badge info">vision model</span> : null}
+            {e.event.source === 'game-api' ? <span className="badge info">game data</span> : null}
           </div>
           <div className="tl-detail">
             {e.event.evidence}

@@ -24,6 +24,8 @@ export interface FrameSink {
   skipped(): void
   /** Observations from a synthetic vision replay. */
   observations(obs: Observation[], now: number): void
+  /** An update from the game's own data feed (a replay's, or the game's while capturing). */
+  gameState(payload: unknown, now: number): void
   /** The capture cannot currently be trusted (or recovered, with null). */
   problem(reason: string | null): void
 }
@@ -198,8 +200,12 @@ export class ReplaySource implements FrameSource {
     this.label = opts.label
     this.frames = opts.frames ?? null
     const batches = [...replay.batches].sort((a, b) => a.arrivesAt - b.arrivesAt)
+    const updates = [...(replay.gameState ?? [])].sort((a, b) => a.at - b.at)
+    let nextUpdate = 0
     this.timer = setInterval(() => {
       const t = this.now()
+      // The game's data first (it arrives straight away), then what the screen showed.
+      while (nextUpdate < updates.length && updates[nextUpdate].at <= t) sink.gameState(updates[nextUpdate++].payload, t)
       const due: Observation[] = []
       while (this.next < batches.length && batches[this.next].arrivesAt <= t) due.push(...batches[this.next++].observations)
       if (due.length) sink.observations(due, t)
@@ -209,7 +215,7 @@ export class ReplaySource implements FrameSource {
           sink.pixels(this.frames(t))
         } else sink.skipped()
       }
-      if (this.next >= batches.length && t > replay.endsAt + 2000) {
+      if (this.next >= batches.length && nextUpdate >= updates.length && t > replay.endsAt + 2000) {
         this.stop()
         onEnded()
       }

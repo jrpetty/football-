@@ -87,6 +87,19 @@ export interface VoiceModelStatus {
   readonly sizeMb: number
 }
 
+/** Counter-Strike 2 Game State Integration: the local listener's state. */
+export interface GsiServerStatus {
+  /** False in the browser preview (the desktop app only). */
+  readonly available: boolean
+  readonly enabled: boolean
+  readonly listening: boolean
+  readonly port: number
+  /** When the last update came (epoch ms). */
+  readonly lastAt: number | null
+  readonly updates: number
+  readonly error: string | null
+}
+
 export interface SightlineBridge {
   info(): Promise<PlatformInfo>
   /** Windows/screens the player may choose from (Electron without a system picker only). */
@@ -174,6 +187,16 @@ export interface SightlineBridge {
   installTts(model: TtsModelKey): Promise<TtsStatus>
   removeTts(model: TtsModelKey): Promise<TtsStatus>
   synthesize(req: { voice: string; text: string; speed: number }): Promise<SynthResult>
+
+  // Counter-Strike 2 Game State Integration: a listener on this computer only (127.0.0.1), off until turned on.
+  gsiStatus(): Promise<GsiServerStatus>
+  gsiConfigure(cfg: { enabled: boolean; port: number }): Promise<GsiServerStatus>
+  /** The cfg file's text (with this computer's token), and the game's cfg folder when found. */
+  gsiCfg(): Promise<{ text: string; fileName: string; folder: string | null }>
+  /** Saves the cfg file where the player picks (the game's cfg folder when found). */
+  gsiSaveCfg(): Promise<{ ok: boolean; path?: string; error?: string }>
+  /** An update from the game. Returns an unsubscribe function. */
+  onGameState(cb: (payload: unknown) => void): () => void
 
   /** The global stop shortcut was pressed. Returns an unsubscribe function. */
   onStopRequested(cb: () => void): () => void

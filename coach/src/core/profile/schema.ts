@@ -464,9 +464,23 @@ export interface GameMap {
    * save it from. The image itself is never bundled.
    */
   readonly overhead?: { readonly page: string; readonly source: 'official' | 'community' }
+  /**
+   * The game's own radar overview (Counter-Strike): where the overview image sits in world units
+   * (image pixel = (world - pos) / scale, y down), its size, the height below which the lower
+   * level is shown, the in-game place names, and callouts' pixels on the overview.
+   */
+  readonly radar?: {
+    readonly posX: number
+    readonly posY: number
+    readonly scale: number
+    readonly imageSize?: number
+    readonly lowerBelowZ?: number
+    readonly placeNames?: readonly string[]
+    readonly calloutPx?: Readonly<Record<string, readonly [number, number]>>
+  }
 }
 
-export const ARSENAL_CATEGORIES = ['weapon', 'lethal', 'tactical', 'perk', 'field_upgrade', 'killstreak', 'wildcard'] as const
+export const ARSENAL_CATEGORIES = ['weapon', 'lethal', 'tactical', 'equipment', 'perk', 'field_upgrade', 'killstreak', 'wildcard'] as const
 export const RANGE_BANDS = ['close', 'close-mid', 'mid', 'mid-long', 'long'] as const
 export type RangeBand = (typeof RANGE_BANDS)[number]
 
@@ -770,6 +784,8 @@ export interface GameProfile {
   readonly positioning?: PositioningSpec
   /** Football: the radar that shows every player and the ball (see src/core/pitch). */
   readonly pitch?: PitchSpec
+  /** The game's own local data feed, when it has one (Counter-Strike 2 Game State Integration, see src/core/gsi). */
+  readonly gameState?: { readonly kind: 'cs2-gsi' }
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -1481,6 +1497,11 @@ export function validateProfile(input: unknown): ValidationResult {
     }
   }
 
+  if (p.gameState !== undefined) {
+    const gs = c.obj(p.gameState, 'gameState')
+    if (gs) c.oneOf(gs.kind, 'gameState.kind', ['cs2-gsi'] as const)
+  }
+
   if (p.positioning !== undefined) {
     const ps = c.obj(p.positioning, 'positioning')
     if (ps) {
@@ -1531,6 +1552,20 @@ export function validateProfile(input: unknown): ValidationResult {
           const page = c.str(o.page, `${path}.overhead.page`, { max: 300 })
           if (page && !/^https:\/\/[^\s/]+\/\S*$/.test(page)) c.errors.push(`${path}.overhead.page: must be an https URL`)
           c.oneOf(o.source, `${path}.overhead.source`, ['official', 'community'] as const)
+        }
+      }
+      if (m.radar !== undefined) {
+        const r = c.obj(m.radar, `${path}.radar`)
+        if (r) {
+          c.num(r.posX, `${path}.radar.posX`, -100_000, 100_000)
+          c.num(r.posY, `${path}.radar.posY`, -100_000, 100_000)
+          c.num(r.scale, `${path}.radar.scale`, 0.01, 100)
+          c.num(r.imageSize, `${path}.radar.imageSize`, 64, 8192, true)
+          c.num(r.lowerBelowZ, `${path}.radar.lowerBelowZ`, -100_000, 100_000, true)
+          c.arr(r.placeNames, `${path}.radar.placeNames`, true).forEach((x, j) => c.str(x, `${path}.radar.placeNames[${j}]`, { max: 60 }))
+          const px = r.calloutPx === undefined ? null : c.obj(r.calloutPx, `${path}.radar.calloutPx`)
+          for (const [k, v] of Object.entries(px ?? {}))
+            if (!Array.isArray(v) || v.length !== 2 || !v.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= -200 && n <= 8400)) c.errors.push(`${path}.radar.calloutPx.${k}: [x, y] pixels`)
         }
       }
       const names = new Set<string>()

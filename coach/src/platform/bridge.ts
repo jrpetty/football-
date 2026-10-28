@@ -4,7 +4,7 @@
 // opt-in data as the desktop app, but unencrypted, and says so.
 
 import type { StoredMosaic } from '../core/map/minimap.ts'
-import type { PlayerNotes, SightlineBridge, VoiceModelStatus } from '../../shared/bridge.ts'
+import type { GsiServerStatus, PlayerNotes, SightlineBridge, VoiceModelStatus } from '../../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudStatus } from '../../shared/cloud.ts'
 import type { TtsStatus } from '../../shared/voices.ts'
 import { isMatchRecord, type MatchRecord } from '../core/analyses/matchRecorder.ts'
@@ -62,6 +62,7 @@ const CLOUD_UNAVAILABLE: CloudStatus = {
   spend: { usd: 0, calls: 0, capUsd: DEFAULT_CLOUD.sessionCapUsd },
 }
 
+const NO_GSI: GsiServerStatus = { available: false, enabled: false, listening: false, port: 0, lastAt: null, updates: 0, error: 'Game State Integration needs the desktop app.' }
 const NO_VOICE: VoiceModelStatus = { installed: false, installing: false, progress: 0, error: 'Voice input needs the desktop app.', sizeMb: 108 }
 const NO_TTS: TtsStatus = {
   available: false,
@@ -215,6 +216,22 @@ export const browserBridge: SightlineBridge = {
     throw new Error('Neural voices need the desktop app.')
   },
 
+  // Game State Integration needs the desktop app (a local listener).
+  async gsiStatus() {
+    return NO_GSI
+  },
+  async gsiConfigure() {
+    return NO_GSI
+  },
+  async gsiCfg() {
+    return { text: '', fileName: 'gamestate_integration_sightline.cfg', folder: null }
+  },
+  async gsiSaveCfg() {
+    return { ok: false, error: 'Game State Integration needs the desktop app.' }
+  },
+  onGameState() {
+    return () => {}
+  },
   onStopRequested() {
     return () => {}
   },

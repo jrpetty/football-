@@ -20,6 +20,7 @@ import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
 import { WhereYouAre } from '../components/MapView.tsx'
 import { LivePitch } from '../components/PitchView.tsx'
+import { LiveRounds } from '../components/RoundsView.tsx'
 import { CATEGORY_TEXT, clock, formatMs, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
@@ -294,6 +295,9 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
           <button type="button" className="btn" onClick={() => demo('replay-mw4', 'cod-mw4', 2, 'private-bots')} disabled={state.phase === 'starting'}>
             🎖️ Modern Warfare 4 replay
           </button>
+          <button type="button" className="btn" onClick={() => demo('replay-cs2', 'cs2', 2, 'practice')} disabled={state.phase === 'starting'}>
+            🎯 Counter-Strike 2 replay
+          </button>
           <button type="button" className="btn" onClick={() => demo('replay-aoe4', 'aoe4', 2, 'skirmish-vs-ai')} disabled={state.phase === 'starting'}>
             🛡️ Age of Empires IV replay
           </button>
@@ -483,6 +487,16 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
                 <span className="muted small">From your own view, each look</span>
               </div>
               <WhereYouAre report={state.report.map} mosaics={state.mosaics} profile={profile} official={official} />
+            </section>
+          ) : null}
+
+          {profile.gameState && state.report?.rounds ? (
+            <section className="panel" aria-labelledby="rounds-live-h">
+              <div className="panel-head">
+                <h2 id="rounds-live-h">Rounds</h2>
+                <span className="muted small">{policy.scope.has('live') ? 'From the game’s own data' : 'Your rounds open after the match in this mode'}</span>
+              </div>
+              {policy.scope.has('live') ? <LiveRounds report={state.report.rounds} /> : <LiveRounds report={{ ...state.report.rounds, match: null }} />}
             </section>
           ) : null}
 

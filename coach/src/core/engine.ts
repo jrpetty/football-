@@ -24,6 +24,8 @@ import type { OfficialMap } from './map/official.ts'
 import { PitchTracker, type PitchLive, type PitchMatchRecord } from './pitch/tracker.ts'
 import { pitchInsights, type PitchInsight } from './pitch/insights.ts'
 import { RADAR_COLOURS, radarColourHint, type RadarColour } from './pitch/radar.ts'
+import { Cs2Gsi, type Cs2Rounds, type GsiStatus } from './gsi/cs2.ts'
+import { roundInsights, type RoundInsight } from './analyses/rounds.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -135,6 +137,7 @@ export interface SessionReport {
   readonly map: MapReport | null
   /** Football: the match on the radar (now, so far), and what it says. */
   readonly pitch?: PitchReport | null
+  readonly rounds?: RoundsReport | null
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
@@ -147,6 +150,13 @@ export interface PitchReport {
   readonly insights: readonly PitchInsight[]
   /** What to change in the game's radar settings so it reads well (null: nothing). */
   readonly hint: string | null
+}
+
+/** Counter-Strike rounds from the game's own data: the feed now, this match's rounds, and lines from them and past matches. */
+export interface RoundsReport {
+  readonly status: GsiStatus
+  readonly match: Cs2Rounds | null
+  readonly insights: readonly RoundInsight[]
 }
 
 /** The current map: where the player is, what was learned about it, and what that says. */
@@ -189,6 +199,9 @@ export class CoachEngine {
   /** The player on the map stitched from their minimap, to the pixel (fixed minimaps). */
   private readonly locator: MinimapLocator | null
   private readonly pitch: PitchTracker | null
+  private readonly gsi: Cs2Gsi | null
+  /** The last event recorded per de-duplication key, so a later sighting of the same event can add its details. */
+  private readonly lastEventUid = new Map<string, string>()
   private pitchCache: { at: number; report: PitchReport } | null = null
   /** Dimensions already recalled this match ("your last games against English…"). */
   private recalled = new Set<string>()
@@ -261,6 +274,7 @@ export class CoachEngine {
     const mm = profile.positioning?.minimap
     this.locator = mm ? new MinimapLocator(mm, { stored: opts.mosaics, region: settings.minimap[profile.id] ?? null, fixed: this.minimapFixed() }) : null
     this.pitch = profile.pitch ? new PitchTracker(settings.minimap[profile.id] ?? profile.pitch.radar, this.radarColours()) : null
+    this.gsi = profile.gameState?.kind === 'cs2-gsi' ? new Cs2Gsi({ profileId: profile.id, maps: profile.knowledge.maps, arsenal: profile.knowledge.arsenal }) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
@@ -410,10 +424,21 @@ export class CoachEngine {
       if (!spec) continue
       const key = [obs.eventType, ...(spec.dedupeBy ?? []).map((a) => String(obs.attributes?.[a]))].join('|')
       const last = this.lastVisionEventAt.get(key)
-      if (last !== undefined && obs.timestampMs - last < spec.dedupeMs) continue // the same banner seen again
+      // The game's own data is exact: every event it reports counts. A screen sighting of an event
+      // already recorded (the same banner, or a death the game reported first) adds what it saw.
+      if (obs.source !== 'game-api' && last !== undefined && obs.timestampMs - last < spec.dedupeMs) {
+        const uid = this.lastEventUid.get(key)
+        if (uid && (obs.attributes || obs.zone)) {
+          this.heatmaps.amend(uid, obs.zone, obs.attributes ?? {})
+          this.factors.amend(uid, obs.attributes)
+        }
+        continue
+      }
       this.lastVisionEventAt.set(key, obs.timestampMs)
+      const uid = `${obs.eventType}#v${++this.eventSeq}`
+      this.lastEventUid.set(key, uid)
       events.push({
-        uid: `${obs.eventType}#v${++this.eventSeq}`,
+        uid,
         ruleId: obs.eventType,
         label: spec.label,
         category: spec.category,
@@ -427,6 +452,14 @@ export class CoachEngine {
     }
     this.step(now, events, out)
     return out
+  }
+
+  /** One update from the game's own data feed (Counter-Strike 2 Game State Integration), arriving at `now`. */
+  ingestGameState(payload: unknown, now: number): EngineOutput {
+    if (!this.gsi) return emptyOutput()
+    const obs = this.gsi.payload(payload, now)
+    if (obs.some((o) => o.kind === 'event')) this.matchHasData = true
+    return this.ingestObservations(obs, now)
   }
 
   /** The player marked a round or match end by hand (for HUDs the pack cannot read). */
@@ -530,6 +563,7 @@ export class CoachEngine {
       learned: this.profile.learning && this.learning().enabled ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
       map: this.mapReport(),
       pitch: this.pitchReport(),
+      rounds: this.roundsReport(),
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -746,10 +780,11 @@ export class CoachEngine {
       scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
       mapModel: this.finishMap(),
       pitch: this.pitch?.finish() ?? null,
+      roundLog: this.gsi?.finish() ?? null,
       endedManually: end.manual,
     })
     this.pitchCache = null
-    if (this.matchHasData || record.scout || record.mapModel || record.pitch) {
+    if (this.matchHasData || record.scout || record.mapModel || record.pitch || record.roundLog) {
       const msg = matchSummaryMessage(
         {
           ...inputs,
@@ -902,6 +937,14 @@ export class CoachEngine {
     const record = this.mapTracker?.finish() ?? null
     const pins = this.locator?.finish() ?? null
     return record ? { ...record, ...(pins && (pins.pins.length || pins.trail.length) ? { pins } : {}) } : null
+  }
+
+  /** Counter-Strike rounds from the game's data: the feed now, this match, and lines from it and past matches. */
+  private roundsReport(): RoundsReport | null {
+    if (!this.gsi) return null
+    const match = this.gsi.snapshot()
+    const past = this.matchHistory.flatMap((m) => (m.roundLog ? [m.roundLog] : []))
+    return { status: this.gsi.status(this.lastT), match, insights: roundInsights([...past, ...(match ? [match] : [])]) }
   }
 
   /** Football on the radar: now, this match so far (at most every 2 s), and lines from it and past matches. */

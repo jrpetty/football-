@@ -18,6 +18,7 @@ import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, typ
 import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
 import { mw4DemoPicture, type DemoOfficial } from '../sim/mw4Minimap.ts'
 import { fcDemoPicture } from '../sim/fcMatch.ts'
+import { cs2MatchReplay } from '../sim/cs2Match.ts'
 import { RADAR_COLOURS, type RadarColour } from '../core/pitch/radar.ts'
 import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
@@ -43,7 +44,7 @@ const MOMENTS_CAP = 24
 const MOMENT_NOTE_WINDOW_MS = 20_000
 
 export type Phase = 'idle' | 'starting' | 'capturing'
-export type SourceChoice = 'screen' | 'simulation' | 'replay-fc' | 'replay-aoe' | 'replay-mw4' | 'replay-aoe4'
+export type SourceChoice = 'screen' | 'simulation' | 'replay-fc' | 'replay-aoe' | 'replay-mw4' | 'replay-aoe4' | 'replay-cs2'
 
 export type SpeechState = 'waiting' | 'speaking' | 'finished' | 'interrupted' | 'expired' | 'unavailable' | 'shown'
 
@@ -204,6 +205,8 @@ export class CoachSession {
   private toastTimer: ReturnType<typeof setTimeout> | null = null
   /** What the current (or last) session watched: only real play's maps are saved. */
   private sourceKind: string | null = null
+  /** Stops forwarding the game's own data feed (Counter-Strike 2) when capture stops. */
+  private unsubGameState: (() => void) | null = null
   private readonly mosaicSavedAt = new Map<string, number>()
 
   constructor(bridge: SightlineBridge) {
@@ -614,6 +617,7 @@ export class CoachSession {
         this.post({ type: 'pixels', frame }, [frame.data.buffer as ArrayBuffer])
       },
       observations: (observations, now) => this.post({ type: 'observations', observations, now }),
+      gameState: (payload, now) => this.post({ type: 'game-state', payload, now }),
       problem: (reason) => this.post({ type: 'capture-problem', reason, now: this.now() }),
     }
     const onEnded = () => void this.stop()
@@ -629,6 +633,10 @@ export class CoachSession {
     }
     const source = this.source
     this.sourceKind = source.kind
+    // Playing for real with a game that has its own data feed: its updates go to the engine on the
+    // capture's clock, only while capturing (the listener itself is off until turned on in Settings).
+    this.unsubGameState?.()
+    this.unsubGameState = kind === 'screen' && this.profile?.gameState ? this.bridge.onGameState((payload) => this.source === source && sink.gameState(payload, source.now())) : null
     this.speech.setClock(() => source.now())
     this.bridge.setCaptureState(true, source.label)
     this.set({
@@ -703,6 +711,24 @@ export class CoachSession {
       }
       case 'replay-aoe4':
         return new ReplaySource(sink, onEnded, aoe4GameReplay({ seed, realMinutes: 4 }), { speed, label: 'Age of Empires IV — synthetic replay (not a real game)' })
+      case 'replay-cs2': {
+        // An Active Duty map from the pack, a short synthetic match: the game's own data (as Game State
+        // Integration sends it), the screen's readings, and a synthetic radar to stitch, as in real play.
+        const maps = (this.profile?.knowledge.maps ?? []).filter((m) => m.type === 'active duty')
+        const pickMap = (list: typeof maps) => list.map((m) => ({ m, demo: demoMapFrom(m) })).find((x) => !!x.demo) ?? null
+        const chosen = pickMap(maps.filter((m) => this.state.overheads[m.id])) ?? pickMap(maps)
+        if (!chosen) throw new Error('The Counter-Strike 2 pack has no map to play the demo on.')
+        const official = this.state.overheads[chosen.m.id] && this.profile?.positioning?.minimap ? await this.demoOfficial(chosen.m.id) : null
+        this.demoOnOfficial = !!official
+        const replay = cs2MatchReplay({ seed, map: chosen.demo!, mapId: `de_${chosen.m.id}` })
+        const mm = this.profile?.positioning?.minimap
+        const picture = mm ? mw4DemoPicture(replay, { seed, region: this.settings?.minimap[this.profile!.id] ?? mm.region, callouts: chosen.m.callouts, official }) : null
+        return new ReplaySource(sink, onEnded, replay, {
+          speed,
+          label: `Counter-Strike 2 on ${chosen.m.name} — synthetic replay (not a real match)`,
+          ...(picture ? { frames: (t: number) => picture.frame(t) } : {}),
+        })
+      }
     }
   }
 
@@ -711,6 +737,8 @@ export class CoachSession {
     const source = this.source
     const worker = this.worker
     if (!source && !worker) return
+    this.unsubGameState?.()
+    this.unsubGameState = null
     this.source = null
     source?.stop()
     this.speech.stopAll()

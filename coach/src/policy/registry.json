@@ -329,6 +329,68 @@
       "notes": "Ranked, Quick Match and lobbies with other players: post-match review only. The game is reported to close when some prohibited tools are running (e.g. a trainer overlay); Sightline never injects into or overlays the game."
     },
     {
+      "id": "cs2/offline-practice",
+      "publisher": "Valve",
+      "game": "Counter-Strike 2",
+      "gameIds": [
+        "cs2"
+      ],
+      "modes": [
+        "practice",
+        "workshop",
+        "private-bots"
+      ],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Practice against bots on a local server, Workshop training maps and the player's own server with bots only: no other players are affected and nothing is ranked. This is Sightline's internal judgement, not Valve approval.",
+      "reviewedAt": "2026-10-28",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": "If friends or strangers join the server, choose another mode. Sightline never injects into the game, reads its memory, automates input or draws over it; Game State Integration is Valve's own data feed and sends only the player's own state while playing."
+    },
+    {
+      "id": "cs2/all-other-modes",
+      "publisher": "Valve",
+      "game": "Counter-Strike 2",
+      "gameIds": [
+        "cs2"
+      ],
+      "modes": [
+        "*"
+      ],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://help.steampowered.com/en/faqs/view/571A-97DA-70E9-FF74",
+          "title": "Steam Support: Valve Anti-Cheat (VAC) System",
+          "excerpt": "VAC bans accounts for cheats that modify or read the game; bans are permanent. CS2's Trusted Mode blocks third-party code from injecting into the game. No statement about screen-only coaching tools was found.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://store.steampowered.com/subscriber_agreement/",
+          "title": "Steam Subscriber Agreement",
+          "excerpt": "Valve may restrict or terminate accounts for cheating or for using unauthorised third-party software that interferes with games (summary, not quoted).",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://steamcommunity.com/games/CSGO/announcements/detail/532126482488623354",
+          "title": "Counter-Strike 2: 'Guns, Guides, and Games' (Mar 2026)",
+          "excerpt": "Valve added limited in-game map guides for the first rounds of each half in Competitive and Retakes and kept them off in Premier: light built-in guidance, which does not extend to third-party live coaching.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://github.com/antonpup/CounterStrike2GSI/issues/12",
+          "title": "CounterStrike2GSI issue #12 (library maintainer)",
+          "excerpt": "While playing, Game State Integration sends only the player's own state; positions and all-player data are available only while spectating.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-10-28",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Premier, Competitive, Wingman, Rush, Casual, Deathmatch, Arms Race, Retakes, community servers and FACEIT: post-match review only until Valve's position is documented. Tournament and league rules forbid outside help during matches; FACEIT runs its own anti-cheat and rules."
+    },
+    {
       "id": "default/offline-single-player",
       "publisher": "(any)",
       "game": "Any game without its own entry",

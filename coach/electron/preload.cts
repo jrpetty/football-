@@ -57,6 +57,17 @@ const bridge: SightlineBridge = {
   installTts: (key) => invoke('sightline:install-tts', key),
   removeTts: (key) => invoke('sightline:remove-tts', key),
   synthesize: (req) => invoke('sightline:synthesize', req),
+  gsiStatus: () => invoke('sightline:gsi-status'),
+  gsiConfigure: (cfg) => invoke('sightline:gsi-configure', cfg),
+  gsiCfg: () => invoke('sightline:gsi-cfg'),
+  gsiSaveCfg: () => invoke('sightline:gsi-save-cfg'),
+  onGameState: (cb) => {
+    const listener = (_e: unknown, payload: unknown) => cb(payload)
+    ipcRenderer.on('sightline:game-state', listener)
+    return () => {
+      ipcRenderer.removeListener('sightline:game-state', listener)
+    }
+  },
   onStopRequested: (cb) => listen('sightline:stop-requested', cb),
   onPushToTalk: (cb) => listen('sightline:push-to-talk', cb),
   onMarkMoment: (cb) => listen('sightline:mark-moment', cb),

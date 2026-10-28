@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import type { PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
+import type { GsiServerStatus, PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { COOLDOWN_RANGE, LEARNING_MIN_GAMES, learningPrefsFor, VERBOSITIES, VISION_LIMITS, visionPrefsFor, type CoachSettings, type LearningPrefs, type VisionPrefs } from '../../core/settings.ts'
@@ -54,6 +54,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap && profile.knowledge.maps?.length ? <OfficialMapsPanel session={session} profile={profile} info={info} /> : null}
       {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
+      {profile.gameState?.kind === 'cs2-gsi' ? <GameDataPanel bridge={bridge} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
@@ -488,6 +489,120 @@ function MinimapPanel({ settings, onSettings, session, profile }: { settings: Co
         </div>
       </div>
       {aligning ? <MinimapAlign session={session} initial={box} packDefault={spec.region} onSave={setBox} onClose={() => setAligning(false)} /> : null}
+    </section>
+  )
+}
+
+// --- Counter-Strike 2 Game State Integration: the game's own data, on this computer only -----------
+
+const RADAR_CONSOLE = 'cl_radar_rotate 0; cl_radar_always_centered 1; cl_radar_scale 0.5; cl_radar_scale_dynamic 0'
+
+function GameDataPanel({ bridge }: { bridge: SightlineBridge }) {
+  const [status, setStatus] = useState<GsiServerStatus | null>(null)
+  const [port, setPort] = useState('')
+  const [cfg, setCfg] = useState<{ text: string; fileName: string; folder: string | null } | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let live = true
+    const poll = () =>
+      void bridge.gsiStatus().then((s) => {
+        if (!live || !s) return
+        setStatus(s)
+        setPort((p) => p || String(s.port))
+      })
+    poll()
+    const id = setInterval(poll, 3000)
+    void bridge.gsiCfg().then((c) => live && setCfg(c))
+    return () => {
+      live = false
+      clearInterval(id)
+    }
+  }, [bridge])
+  const apply = async (enabled: boolean) => {
+    setBusy(true)
+    const p = Number(port)
+    const s = await bridge.gsiConfigure({ enabled, port: Number.isInteger(p) && p >= 1024 && p <= 65535 ? p : (status?.port ?? 31982) })
+    if (s) setStatus(s)
+    setCfg(await bridge.gsiCfg())
+    setBusy(false)
+  }
+  const copy = (text: string) => void navigator.clipboard?.writeText(text).catch(() => undefined)
+  const available = status?.available !== false
+  return (
+    <section className="panel" aria-labelledby="gsi-h">
+      <div className="panel-head">
+        <h2 id="gsi-h">Game data: Counter-Strike 2</h2>
+        <span className={`badge ${status?.listening ? 'ok' : ''}`}>{!available ? 'Desktop app only' : status?.listening ? 'Listening' : status?.enabled ? 'Not listening' : 'Off'}</span>
+      </div>
+      <p className="small" style={{ marginTop: 0 }}>
+        Counter-Strike 2’s own Game State Integration sends your rounds, money, health, weapons and kills to an address on this computer. With it on, the coach
+        counts every kill and death exactly, knows when you were flashed or reloading, and keeps each round’s buy and result. While you play the game sends only your own
+        state: no positions, no other players, nothing hidden, so it stays fair. The listener is on 127.0.0.1 only, needs this computer’s token, and nothing it receives
+        is stored except in your match records.
+      </p>
+      {!available ? (
+        <Notice level="info">Game State Integration needs the desktop app (it listens for the game on this computer).</Notice>
+      ) : (
+        <div className="grid-2">
+          <div className="field">
+            <Switch checked={!!status?.enabled} onChange={(on) => void apply(on)} label="Listen for the game’s data" hint={status?.error ?? undefined} />
+            <label className="small">
+              Port{' '}
+              <input type="number" min={1024} max={65535} value={port} onChange={(e) => setPort(e.target.value)} style={{ width: 90 }} aria-label="Port" />{' '}
+              <button type="button" className="btn sm ghost" disabled={busy || String(status?.port) === port} onClick={() => void apply(!!status?.enabled)}>
+                Use this port
+              </button>
+            </label>
+            <span className="muted small">
+              {status?.listening
+                ? status.lastAt
+                  ? `${status.updates} updates; the last ${Math.max(0, Math.round((Date.now() - status.lastAt) / 1000))} s ago.`
+                  : 'Waiting for the game: save the file below and restart Counter-Strike 2.'
+                : 'Off.'}
+            </span>
+          </div>
+          <div className="field">
+            <span className="label">Set it up once</span>
+            <ol className="small" style={{ margin: '4px 0', paddingLeft: 18 }}>
+              <li>
+                Save the file into the game’s cfg folder{cfg?.folder ? ` (found: ${cfg.folder})` : ' (…\steamapps\common\Counter-Strike Global Offensive\game\csgo\cfg)'}.{' '}
+                <button
+                  type="button"
+                  className="btn sm"
+                  onClick={() =>
+                    void bridge.gsiSaveCfg().then((r) => setSaved(r.ok ? `Saved: ${r.path}` : r.error ? r.error : null))
+                  }
+                >
+                  Save the cfg file…
+                </button>
+              </li>
+              <li>Restart Counter-Strike 2: it reads the file at launch (the console shows “Loading Game State Integration”).</li>
+              <li>Start capture on the Coach screen with this pack: rounds and money appear there.</li>
+            </ol>
+            {saved ? <span className="small">{saved}</span> : null}
+            {cfg?.text ? (
+              <details className="small">
+                <summary>Show the file ({cfg.fileName})</summary>
+                <pre className="code-block">{cfg.text}</pre>
+                <button type="button" className="btn sm ghost" onClick={() => copy(cfg.text)}>
+                  Copy
+                </button>
+              </details>
+            ) : null}
+          </div>
+        </div>
+      )}
+      <div className="field" style={{ marginTop: 10 }}>
+        <span className="label">The radar, for the death map</span>
+        <span className="small">
+          Settings › Game › Radar / Tablet: Radar Is Rotating: No, Radar Centers The Player: Yes, Radar Map Zoom about 0.5. Or paste into the console:{' '}
+          <code>{RADAR_CONSOLE}</code>{' '}
+          <button type="button" className="btn sm ghost" onClick={() => copy(RADAR_CONSOLE)}>
+            Copy
+          </button>
+        </span>
+      </div>
     </section>
   )
 }

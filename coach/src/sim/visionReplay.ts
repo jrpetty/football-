@@ -21,11 +21,13 @@ export interface VisionReplay {
   readonly batches: ObservationBatch[]
   readonly truth: Record<string, unknown>
   readonly endsAt: number
+  /** Updates from the game's own data feed, at their times (Counter-Strike 2 Game State Integration). */
+  readonly gameState?: readonly { readonly at: number; readonly payload: unknown }[]
 }
 
 type Value = string | number | boolean
 
-class Builder {
+export class Builder {
   private seq = 0
   readonly batches: ObservationBatch[] = []
   private readonly profileId: string

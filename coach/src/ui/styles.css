@@ -4360,3 +4360,179 @@ td > .swatch {
 .radar-dot.theirs {
   border-radius: 1px;
 }
+
+/* --- Counter-Strike rounds ---------------------------------------------------------------- */
+.rounds-panel,
+.live-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rounds-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.round-strip {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 6px;
+  overflow-x: auto;
+}
+.round-cell {
+  flex: 0 0 auto;
+  width: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 0 5px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font: 600 11px var(--font);
+  cursor: default;
+}
+.round-cell.won {
+  border-color: rgba(90, 209, 184, 0.55);
+  background: rgba(90, 209, 184, 0.12);
+}
+.round-cell.lost {
+  border-color: rgba(255, 92, 92, 0.45);
+  background: rgba(255, 92, 92, 0.1);
+}
+.round-cell.live {
+  border-style: dashed;
+}
+.round-cell.half {
+  margin-left: 10px;
+}
+.rc-n {
+  color: var(--text-3);
+  font-size: 10px;
+}
+.rc-res {
+  font-size: 13px;
+}
+.round-cell.won .rc-res {
+  color: var(--accent);
+}
+.round-cell.lost .rc-res {
+  color: var(--live);
+}
+.rc-buy {
+  min-width: 16px;
+  text-align: center;
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  color: var(--text-2);
+}
+.rc-buy.full {
+  color: #3987e5;
+}
+.rc-buy.force {
+  color: var(--warn);
+}
+.rc-kills {
+  color: var(--text);
+  font-size: 8px;
+  letter-spacing: -1px;
+  min-height: 10px;
+}
+.rc-death {
+  color: var(--live);
+  font-size: 10px;
+  min-height: 12px;
+}
+.econ-chart {
+  margin: 0;
+}
+.econ-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.econ-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.econ-tick {
+  fill: var(--text-3);
+  font: 10px var(--font);
+  text-anchor: end;
+}
+.econ-tick.mid {
+  text-anchor: middle;
+}
+.econ-bar {
+  fill: #3987e5;
+  opacity: 0.85;
+}
+.econ-bar.force {
+  fill: #c98500;
+}
+.econ-bar.eco,
+.econ-bar.pistol {
+  fill: #7a869b;
+}
+.econ-line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.econ-dot {
+  fill: var(--text);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.econ-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: var(--text-2);
+}
+.econ-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lg-bar {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #3987e5;
+}
+.lg-line {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  background: var(--text);
+}
+.rounds-table {
+  border-collapse: collapse;
+  max-width: 420px;
+}
+.rounds-table th,
+.rounds-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.rounds-key {
+  margin: -4px 0 0;
+}
+.code-block {
+  margin: 6px 0;
+  padding: 8px 10px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font: 11.5px/1.45 var(--mono);
+  white-space: pre;
+}

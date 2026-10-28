@@ -58,7 +58,8 @@ export type RoundResult = 'win' | 'loss' | 'draw' | 'unknown'
 // --- Observations and visible state ---------------------------------------------
 
 /** Where an observation came from. A model's description of a frame is still only an observation. */
-export type ObservationSource = 'pixel' | 'vision-model' | 'user' | 'derived'
+/** 'game-api': the game's own data feed (Counter-Strike 2 Game State Integration). */
+export type ObservationSource = 'pixel' | 'vision-model' | 'user' | 'derived' | 'game-api'
 
 /**
  * One structured detection: a state reading ("population = 25") or an event

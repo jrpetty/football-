@@ -11,6 +11,7 @@ const CATS: readonly { value: ArsenalItem['category']; label: string }[] = [
   { value: 'weapon', label: 'Weapons' },
   { value: 'lethal', label: 'Lethal' },
   { value: 'tactical', label: 'Tactical' },
+  { value: 'equipment', label: 'Equipment' },
   { value: 'perk', label: 'Perks' },
   { value: 'field_upgrade', label: 'Field upgrades' },
   { value: 'killstreak', label: 'Killstreaks' },
