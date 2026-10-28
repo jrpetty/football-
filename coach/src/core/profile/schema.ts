@@ -388,6 +388,8 @@ export interface RosterUnit {
   /** Building id that produces it. */
   readonly building: string
   readonly age?: number
+  /** Civilisations that get it in a different age (an early version), by faction id. */
+  readonly ageFor?: Readonly<Record<string, number>>
   readonly cost?: string
   readonly counters: readonly string[]
   readonly counteredBy: readonly string[]
@@ -1124,6 +1126,13 @@ export function validateProfile(input: unknown): ValidationResult {
         for (const k of ['counters', 'counteredBy'] as const) c.arr(u[k], `${path}.${k}`).forEach((v, j) => ref(v, `${path}.${k}[${j}]`, 'unit-or-class'))
         for (const k of ['why', 'look', 'cost'] as const) c.str(u[k], `${path}.${k}`, { optional: true, max: 400 })
         c.arr(u.factions, `${path}.factions`, true).forEach((v, j) => ref(v, `${path}.factions[${j}]`, 'faction'))
+        if (u.ageFor !== undefined) {
+          const af = c.obj(u.ageFor, `${path}.ageFor`)
+          for (const [k, v] of Object.entries(af ?? {})) {
+            ref(k, `${path}.ageFor`, 'faction')
+            c.num(v, `${path}.ageFor.${k}`, 1, 10)
+          }
+        }
       })
       buildings.forEach((x, i) => {
         const b = c.obj(x, `knowledge.roster.buildings[${i}]`)

@@ -15,7 +15,7 @@ import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './commentary.ts'
-import { IntelTracker, type IntelReport } from './analyses/intel.ts'
+import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -55,6 +55,8 @@ import { VisibleStateFuser } from './visibleState.ts'
 const HUD_LOST_AFTER_MS = 3000
 /** Banner and replay sightings this close to a score change belong to that goal. */
 const SAME_GOAL_MS = 10_000
+/** How long scouting news may wait for a gap in the commentary before it is dropped as old. */
+const INTEL_WAIT_MS = 45_000
 
 export type PlayerContext = Readonly<Record<string, string | number>>
 
@@ -146,6 +148,7 @@ export class CoachEngine {
   private readonly benchmarks: BenchmarkTracker
   private readonly battles: BattleTracker
   private readonly intel: IntelTracker | null
+  private intelQueue: { news: IntelNews; at: number }[] = []
   /** Index into the battle log where the current match starts. */
   private matchBattlesFrom = 0
   private gameContext: Record<string, string | number> = {}
@@ -655,6 +658,7 @@ export class CoachEngine {
     this.benchmarks.newMatch()
     this.battles.newMatch()
     this.intel?.newMatch(this.lastT)
+    this.intelQueue = []
     this.matchBattlesFrom = this.battles.battles().length
     this.gameContext = {}
     this.factorTipsGiven = new Set()
@@ -699,15 +703,21 @@ export class CoachEngine {
   /** Commentary that does not come from a single event: a fight starting, a benchmark checkpoint. */
   private commentOnState(now: number, out: EngineOutput): void {
     const news = this.intel?.update(this.visible, now) ?? []
-    if (this.settings.commentary) for (const n of news) this.comment(n.text, `intel:${n.kind}:${n.id}`, now, 0.8, `seen on screen: ${n.id}`, now, out)
     const start = this.battles.takeStart()
     const fresh = this.benchmarks.takeFresh()
     if (!this.settings.commentary) return
     if (start) this.comment(fightStartLine(this.profile, start), `fight-start:${now}`, now, 0.8, 'first frame of a fight', now, out)
     for (const f of fresh) this.comment(checkpointLine(f.spec, f.atSec, f.actual, f.expected), `checkpoint:${f.spec.id}:${f.atSec}`, now, 0.85, `${f.spec.label} at ${f.atSec}s`, now, out)
+    // Scouting news is said once, so it waits its turn rather than being lost to the pacing; reads go first.
+    this.intelQueue.push(...news.map((n) => ({ news: n, at: now })))
+    this.intelQueue = this.intelQueue.filter((q) => now - q.at < INTEL_WAIT_MS).sort((a, b) => Number(b.news.kind === 'read') - Number(a.news.kind === 'read'))
+    const next = this.intelQueue[0]
+    if (next && this.comment(next.news.text, `intel:${next.news.kind}:${next.news.id}`, next.at, 0.8, `seen on screen: ${next.news.id}`, now, out)) this.intelQueue.shift()
   }
 
-  private comment(text: string, topic: string, at: number, confidence: number, evidence: string, now: number, out: EngineOutput): void {
+  /** Says a commentary line if the governor allows it now; true when it was spoken. */
+  private comment(text: string, topic: string, at: number, confidence: number, evidence: string, now: number, out: EngineOutput): boolean {
+    const before = out.utterances.length
     this.decide(
       {
         category: 'commentary',
@@ -725,6 +735,7 @@ export class CoachEngine {
       now,
       out,
     )
+    return out.utterances.length > before
   }
 
   /** Insights the coach may use: the player has not dismissed or disputed them. */

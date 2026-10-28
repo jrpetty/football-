@@ -221,7 +221,8 @@ export function rosterText(roster: Roster, opts: { readonly budget: number; read
   for (const u of roster.units) {
     const who = u.factions?.length ? ` (${u.factions.map((f) => factionName.get(f) ?? f).join(', ')})` : ''
     const answer = opts.detail === 'answer' ? `; beats ${names(u.counters)}; beaten by ${names(u.counteredBy)}${u.why ? `. ${u.why}` : ''}` : ''
-    if (!push(`- ${u.name}${who} [${u.classes.join(' ')}${age(u.age)}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
+    const early = u.ageFor ? Object.entries(u.ageFor).map(([f, n]) => `${factionName.get(f) ?? f} ${ageName(n)}`) : []
+    if (!push(`- ${u.name}${who} [${u.classes.join(' ')}${age(u.age)}${early.length ? `; ${early.join(', ')}` : ''}]${u.look ? `: ${u.look}` : ''}${answer}`)) break
   }
   if (opts.detail === 'answer') {
     push('### Counter rules')

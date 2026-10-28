@@ -123,7 +123,7 @@ test('reads: a plan is called only once the screen supports it, with the answer;
   assert.equal(t.report().usual[0].name, 'Council Hall Longbow push')
   const n2 = t.update(state({ age: 'feudal', enemyBuildings: 'Council Hall' }), 2000)
   const read = n2.find((n) => n.kind === 'read')!
-  assert.equal(read.text, 'Read: Council Hall Longbow push, lands 5:30–7:00. Horsemen at their gold, Spearmen at home. Seen: Council Hall, Archery Range.')
+  assert.equal(read.text, 'Read: Council Hall Longbow push. Horsemen at their gold, Spearmen at home. Seen: Council Hall, Archery Range. Timing: lands 5:30 to 7:00.')
   const r = t.report()
   assert.deepEqual(r.landmarks, ['Council Hall'])
   assert.ok(!r.buildings.some((b) => /Council/.test(b.name)), 'a landmark is not read as a building')
@@ -152,6 +152,7 @@ test('sayable: reference shorthand is made fit to speak', async () => {
   const { sayable } = await import('../src/core/analyses/intel.ts')
   assert.equal(sayable('Read: Sipahi raids, from ~5:30 (unverified). spearman packs at gold/wood + outpost'), 'Read: Sipahi raids, from about 5:30. Spearman packs at gold or wood and outpost.')
   assert.equal(sayable('Wall the gold..'), 'Wall the gold.')
-  assert.equal(sayable('Pull vills to TC vs MAA.'), 'Pull villagers to Town Center against Men-at-Arms.')
+  assert.equal(sayable('Pull vills to TC vs MAA, target vils.'), 'Pull villagers to Town Center against Men-at-Arms, target villagers.')
+  assert.equal(sayable('Council Hall (+100% speed); pressure 5:30-7:00'), 'Council Hall (plus 100% speed); pressure 5:30 to 7:00.')
 })
 

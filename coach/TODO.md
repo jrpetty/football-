@@ -167,6 +167,8 @@ Legend:
 - ☑ Vision every 3 seconds for the AoE packs, with up to two reads in flight. Settings shows the cost estimate; the README gives it per model.
 - ☑ Every AoE IV civilisation's plans for each age, Dark to Imperial: their usual moves with the signals that give them away, timings, threats, responses and punishes; how to play the civ at that age; power spikes and weak windows. Validated so every building, unit and landmark belongs to that civ.
 - ☑ Tactical reads: a plan is called only when scouted landmarks, units, buildings or noted cues support it (score ≥ 2), once, spoken with its response and evidence; the player's own plan per age; "Their usual plan" until then.
+- ☑ Per-civilisation unit ages from the game data (English Men-at-Arms in the Dark Age, HRE ones in Feudal, Rus Knights in Feudal, Mongol Horsemen in the Dark Age…), used for what a building can make, the opponent's age and your answers.
+- ☑ Scouting news waits for a gap in the commentary instead of being lost to the pacing; reads go first. *Tested on the AoE IV demo played as French (`test/plans.test.ts`).*
 - ◐ Plan research: from search summaries and community guides for the current patch; the upcoming civs' plans are marked "(unverified)" and need a check at release.
 - ◐ Cue reading (a tower at your gold, a second Town Center) from real frames. *Untested without captures.*
 

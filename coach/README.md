@@ -160,7 +160,8 @@ Then press **Choose the game window**, play, and listen.
   their buildings or army, the coach works out what those buildings can make
   for that civilisation, and which of your units beat them (for your own
   civilisation). Ages are respected: a unit is expected only once they can
-  have reached its age (Wynguard Footmen need the Imperial Age), answers are
+  have reached its age (Wynguard Footmen need the Imperial Age; English
+  Men-at-Arms come in the Dark Age, other civs' in the Castle Age), answers are
   ones you can build at your age (with the better later one marked, e.g.
   "Arbalétriers from the Castle Age"), and their age-ups are announced with
   what becomes possible. Their age comes from the screen when it shows it,

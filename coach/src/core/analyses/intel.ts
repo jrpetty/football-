@@ -60,7 +60,10 @@ export interface IntelRead {
   readonly punish: string | null
 }
 
-/** A plan is called a read once the screen shows this much support: a landmark (3), a unique unit or cue (2), a common unit or building (1 each). */
+/**
+ * A plan is called a read once the screen shows this much support — a landmark (3), a unique unit, cue or
+ * second Town Center (2), a common unit or building (1 each) — including at least one of the distinctive ones.
+ */
 export const READ_MIN_SCORE = 2
 
 /** seen: the screen showed their age; fielded: at least the age of what they have; assumed: same as the player's. */
@@ -229,8 +232,9 @@ export class IntelTracker {
     const [best, next] = this.reads()
     if (best && best.score >= READ_MIN_SCORE && (!next || best.score > next.score) && !this.announcedReads.has(best.id)) {
       this.announcedReads.add(best.id)
-      const timing = best.timing ? `, ${best.timing}` : ''
-      out.push({ kind: 'read', id: best.id, text: sayable(`Read: ${best.name}${timing}. ${best.response[0] ?? best.threat}. Seen: ${best.evidence.join(', ')}.`) })
+      // Sentences in order of worth: commentary keeps whole sentences up to its word limit.
+      const timing = best.timing ? ` Timing: ${best.timing}.` : ''
+      out.push({ kind: 'read', id: best.id, text: sayable(`Read: ${best.name}. ${best.response[0] ?? best.threat}. Seen: ${best.evidence.join(', ')}.${timing}`) })
     }
     const mine = this.playerAge !== null ? this.agePlan(this.playerFaction, this.playerAge) : null
     if (mine && this.announcedPlanAge !== this.playerAge && mine.playAs.length) {
@@ -238,6 +242,13 @@ export class IntelTracker {
       out.push({ kind: 'plan', id: `${this.playerFaction!.id}:${mine.age}`, text: sayable(`${this.ageName(mine.age)} as ${this.playerFaction!.name}: ${mine.playAs[0]}`) })
     }
     return out
+  }
+
+  /** The age a faction gets a unit: its own early (or late) version when it has one, else the unit's age. */
+  ageOf(unitId: string, faction: RosterFaction | null): number | null {
+    const u = this.units.get(unitId)
+    if (!u) return null
+    return (faction && u.ageFor?.[faction.id]) ?? u.age ?? null
   }
 
   private agePlan(faction: RosterFaction | null, age: number): CivAgePlan | null {
@@ -261,20 +272,33 @@ export class IntelTracker {
       for (const m of plan.theirMoves) {
         const evidence: string[] = []
         let score = 0
-        for (const l of m.signals.landmarks ?? []) if (this.seenLandmarks.has(l)) ((score += 3), evidence.push(l))
-        // A unit only some civilisations have says more than one every civilisation has.
-        for (const u of m.signals.units ?? []) if (this.seenUnits.has(u)) ((score += this.units.get(u)?.factions?.length ? 2 : 1), evidence.push(this.units.get(u)?.name ?? u))
-        for (const c of m.signals.cues ?? []) if (this.cueSeen(c)) ((score += 2), evidence.push(c.replace(/\s*\(unverified\)/, '')))
+        // Something only this plan (or civ) shows: without one, generic sightings never add up to a read.
+        let distinct = false
+        for (const l of m.signals.landmarks ?? []) if (this.seenLandmarks.has(l)) ((score += 3), (distinct = true), evidence.push(l))
+        for (const id of m.signals.units ?? []) {
+          const u = this.units.get(id)
+          // Villagers and scouts are in every game.
+          if (!u || !this.seenUnits.has(id) || id === 'scout' || u.classes.includes('economic') || u.classes.includes('workers')) continue
+          // A unit only some civilisations have says more than one every civilisation has.
+          const unique = !!u.factions?.length
+          score += unique ? 2 : 1
+          distinct ||= unique
+          evidence.push(u.name)
+        }
+        for (const c of m.signals.cues ?? []) if (this.cueSeen(c)) ((score += 2), (distinct = true), evidence.push(c.replace(/\s*\(unverified\)/, '')))
         const wanted = new Map<string, number>()
         for (const b of m.signals.buildings ?? []) wanted.set(b, (wanted.get(b) ?? 0) + 1)
         for (const [b, n] of wanted) {
           const seen = this.buildings.get(b)?.count ?? 0
-          if (seen) {
-            score += Math.min(seen, n)
-            const name = this.roster.buildings.find((x) => x.id === b)?.name ?? b
-            evidence.push(seen > 1 ? `${seen} ${name}` : name)
-          }
+          const building = this.roster.buildings.find((x) => x.id === b)
+          // Everyone starts with a Town Center: only a second one is news.
+          const extraTc = b === 'town-center'
+          if (!seen || (extraTc && seen < 2)) continue
+          score += extraTc ? 2 : Math.min(seen, n)
+          distinct ||= extraTc || !!building?.factions?.length
+          evidence.push(seen > 1 ? `${seen} ${building?.name ?? b}` : (building?.name ?? b))
         }
+        if (!distinct) score = Math.min(score, READ_MIN_SCORE - 1)
         if (score > 0) out.push({ id: m.id, name: m.name, age: plan.age, evidence, score, timing: m.timing ?? null, threat: m.threat, response: m.response, punish: m.punish ?? null })
       }
     }
@@ -322,7 +346,7 @@ export class IntelTracker {
   /** The opponent's age as best known: shown on screen, else at least what they fielded, else the player's own (assumed). */
   opponentAge(): { age: number; basis: AgeBasis } | null {
     if (this.opponentAgeSeen !== null) return { age: this.opponentAgeSeen, basis: 'seen' }
-    const ages = [...[...this.seenUnits.keys()].map((id) => this.units.get(id)?.age), ...[...this.buildings.keys()].map((id) => this.roster.buildings.find((b) => b.id === id)?.age)].filter(
+    const ages = [...[...this.seenUnits.keys()].map((id) => this.ageOf(id, this.faction)), ...[...this.buildings.keys()].map((id) => this.roster.buildings.find((b) => b.id === id)?.age)].filter(
       (a): a is number => typeof a === 'number',
     )
     const fielded = ages.length ? Math.max(...ages) : null
@@ -347,7 +371,7 @@ export class IntelTracker {
     for (const [bid] of this.buildings) {
       for (const uid of this.producible(bid, this.faction)) {
         if (this.seenUnits.has(uid) || likely.some((l) => l.id === uid)) continue
-        const age = this.units.get(uid)?.age ?? null
+        const age = this.ageOf(uid, this.faction)
         likely.push({ id: uid, name: name(uid), from: name(bid), age, later: age !== null && theirAge !== null && age > theirAge.age })
       }
     }
@@ -384,7 +408,7 @@ export class IntelTracker {
    */
   producible(buildingId: string, faction: RosterFaction | null, maxAge: number | null = null): string[] {
     const out: string[] = []
-    const inAge = (id: string) => maxAge === null || (this.units.get(id)?.age ?? 1) <= maxAge
+    const inAge = (id: string) => maxAge === null || (this.ageOf(id, faction) ?? 1) <= maxAge
     for (const u of this.roster.units) {
       if (u.building !== buildingId) continue
       if (u.factions?.length) {
@@ -415,7 +439,7 @@ export class IntelTracker {
     const all = this.candidateAnswers(unitId)
       .filter((id) => !this.isLandmarkUnit(id))
       .map((id) => {
-        const age = this.units.get(id)?.age ?? null
+        const age = this.ageOf(id, this.playerFaction)
         return { id, age, now: this.playerAge === null || age === null || age <= this.playerAge }
       })
     const now = all.filter((a) => a.now)
@@ -459,6 +483,7 @@ export class IntelTracker {
     const uniques = f.uniqueUnits
       .map((id) => this.units.get(id))
       .filter((u): u is RosterUnit => !!u)
+      .map((u) => ({ name: u.name, age: this.ageOf(u.id, f) }))
       .sort((a, b) => (a.age ?? 9) - (b.age ?? 9))
       .slice(0, 3)
       .map((u) => (u.age ? `${u.name} (${this.shortAge(u.age)})` : u.name))
@@ -480,9 +505,10 @@ export class IntelTracker {
     const a = /^[aeiou]/i.test(b.name) ? 'an' : 'a'
     if (!can.length) {
       // Nothing yet at their age: say when it starts to matter.
-      const later = military(this.producible(id, this.faction)).sort((x, y) => (x.age ?? 0) - (y.age ?? 0))
-      if (!later.length || later[0].age == null) return null
-      return `They have ${a} ${b.name}: ${list(later.slice(0, 2).map((u) => plural(u.name)), 'or')} from the ${this.ageName(later[0].age)}.`
+      const at = (u: RosterUnit) => this.ageOf(u.id, this.faction) ?? 0
+      const later = military(this.producible(id, this.faction)).sort((x, y) => at(x) - at(y))
+      if (!later.length || !at(later[0])) return null
+      return `They have ${a} ${b.name}: ${list(later.slice(0, 2).map((u) => plural(u.name)), 'or')} from the ${this.ageName(at(later[0]))}.`
     }
     const names = can.slice(0, 3).map((u) => plural(u.name))
     const beat = [...new Set(can.slice(0, 2).flatMap((u) => this.answersTo(u.id)))].slice(0, 2).map((x) => plural(this.units.get(x)?.name ?? x))
@@ -496,7 +522,7 @@ export class IntelTracker {
     const fromCiv = this.faction?.uniqueUnits ?? []
     for (const id of [...fromBuildings, ...fromCiv]) {
       const u = this.units.get(id)
-      if (u && u.age === age && !u.classes.includes('workers') && !unlocked.includes(u.name)) unlocked.push(u.name)
+      if (u && this.ageOf(id, this.faction) === age && !u.classes.includes('workers') && !unlocked.includes(u.name)) unlocked.push(u.name)
     }
     return `They reached the ${this.ageName(age)}.${unlocked.length ? ` Now possible: ${list(unlocked.slice(0, 3).map(plural))}.` : ''}`
   }
@@ -526,12 +552,15 @@ export function sayable(text: string): string {
   const t = text
     .replace(/\s*\(unverified\)/gi, '')
     // Community shorthand, said in full.
-    .replace(/\bvills?\b/gi, 'villagers')
+    .replace(/\b(?:vill?s|vill)\b/gi, 'villagers')
     .replace(/\bTCs\b/g, 'Town Centers')
     .replace(/\bTC\b/g, 'Town Center')
     .replace(/\bMAA\b/g, 'Men-at-Arms')
     .replace(/\bvs\.?(?=\s)/gi, 'against')
     .replace(/~\s*/g, 'about ')
+    .replace(/(\d)\s*[-–]\s*(\d)/g, '$1 to $2')
+    .replace(/\(\s*\+\s*(?=\d)/g, '(plus ')
+    .replace(/\s*\+\s*(?=\d)/g, ' plus ')
     .replace(/\s*\+\s*/g, ' and ')
     .replace(/\s*\/\s*/g, ' or ')
     .replace(/\.(\s*\.)+/g, '.')
