@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "ea-fc",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": "EA SPORTS FC (broadcast camera)",
   "depth": "pack",
   "game": {
@@ -82,6 +82,40 @@
       "kind": "text",
       "default": "",
       "help": "Optional: the 3-letter abbreviation, so the recogniser can tell your goals from the opponent's."
+    },
+    {
+      "id": "radarColour",
+      "label": "Your radar colour",
+      "kind": "choice",
+      "options": [
+        "default",
+        "red",
+        "blue",
+        "green",
+        "purple",
+        "orange",
+        "yellow",
+        "white"
+      ],
+      "default": "default",
+      "help": "The colour of your team's dots on the radar, as set in the game (Settings: User Radar Colour). Set it and the opponent's to two different colours (not black) so the coach reads every player; left at Default, it works out which team is yours from the first goal."
+    },
+    {
+      "id": "opponentRadarColour",
+      "label": "Opponent's radar colour",
+      "kind": "choice",
+      "options": [
+        "default",
+        "red",
+        "blue",
+        "green",
+        "purple",
+        "orange",
+        "yellow",
+        "white"
+      ],
+      "default": "default",
+      "help": "The colour of the opponent's dots on the radar (Settings: Opponent Radar Colour)."
     }
   ],
   "signals": [],
@@ -491,6 +525,16 @@
   ],
   "liveCues": [],
   "liveFreshnessMs": 6000,
+  "pitch": {
+    "radar": {
+      "x": 0.4,
+      "y": 0.815,
+      "w": 0.2,
+      "h": 0.17
+    },
+    "oursColourKey": "radarColour",
+    "theirsColourKey": "opponentRadarColour"
+  },
   "knowledge": {
     "concepts": [
       {

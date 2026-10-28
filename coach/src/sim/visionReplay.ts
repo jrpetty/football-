@@ -178,7 +178,21 @@ export function fcMatchReplay(opts: { seed: number; startAt?: number; intervalMs
   return {
     profileId: 'ea-fc',
     batches: b.batches,
-    truth: { conceded: conceded.length, scored: scored.length, finalScore: { home, away }, concededZones: conceded.map((g) => g.zone), turnovers: turnovers.size, goalEvents },
+    truth: {
+      conceded: conceded.length,
+      scored: scored.length,
+      finalScore: { home, away },
+      concededZones: conceded.map((g) => g.zone),
+      turnovers: turnovers.size,
+      goalEvents,
+      // For the radar demo (src/sim/fcMatch.ts): goals go in 1.5 s before the scoreboard shows them.
+      football: {
+        goals: [...conceded.map((g) => ({ at: start + g.i * interval - 1500, team: 1 })), ...scored.map((g) => ({ at: start + g.i * interval - 1500, team: 0 }))].sort((a, b) => a.at - b.at),
+        halfTimeAt: start + halfTime * interval,
+        secondHalfAt: start + (halfTime + 4) * interval,
+        endAt: start + samples * interval,
+      },
+    },
     endsAt: start + (samples + 7) * interval,
   }
 }

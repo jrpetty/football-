@@ -9,6 +9,7 @@ import type { BenchmarkResult } from './benchmarks.ts'
 import type { MistakeTotals } from './mistakes.ts'
 import type { MatchScout } from './learning.ts'
 import type { MapMatchRecord } from './mapModel.ts'
+import { isPitchRecord, type PitchMatchRecord } from '../pitch/tracker.ts'
 
 export const MATCH_RECORD_SCHEMA = 1
 
@@ -40,6 +41,8 @@ export interface MatchRecord {
   readonly scout?: MatchScout
   /** Where the player went, fought and died on the map (shooters), for the learned map model. */
   readonly mapModel?: MapMatchRecord
+  /** Football: the match on the radar (shapes, turnovers, shots, goals with their last seconds). */
+  readonly pitch?: PitchMatchRecord
   /** True when the match was ended by the player (stop or "match over"), not seen on screen. */
   readonly endedManually: boolean
 }
@@ -84,6 +87,7 @@ export class MatchRecorder {
     context?: Record<string, string | number>
     scout?: MatchScout | null
     mapModel?: MapMatchRecord | null
+    pitch?: PitchMatchRecord | null
     endedManually: boolean
   }): MatchRecord {
     const record: MatchRecord = {
@@ -112,6 +116,7 @@ export class MatchRecorder {
         : {}),
       ...(input.scout ? { scout: input.scout } : {}),
       ...(input.mapModel ? { mapModel: input.mapModel } : {}),
+      ...(input.pitch ? { pitch: input.pitch } : {}),
       endedManually: input.endedManually,
     }
     this.stats = new Map()
@@ -135,7 +140,8 @@ export function isMatchRecord(v: unknown): v is MatchRecord {
     (o.factors === undefined || isFactorCounts(o.factors)) &&
     (o.benchmarks === undefined || isBenchmarkPoints(o.benchmarks)) &&
     (o.battles === undefined || isBattleCounts(o.battles)) &&
-    (o.context === undefined || isContext(o.context))
+    (o.context === undefined || isContext(o.context)) &&
+    (o.pitch === undefined || isPitchRecord(o.pitch))
   )
 }
 

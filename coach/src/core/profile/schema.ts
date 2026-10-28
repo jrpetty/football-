@@ -531,6 +531,17 @@ export interface PositioningSpec {
 }
 
 /**
+ * A football game's radar: where it usually is on screen, and the player-context choices with the
+ * team colours the player set in the game for their own dots and the opponent's ("default": not
+ * set; the tracker tells the two apart and works out which is the player's from the first goal).
+ */
+export interface PitchSpec {
+  readonly radar: NormRect
+  readonly oursColourKey?: string
+  readonly theirsColourKey?: string
+}
+
+/**
  * Learning across matches: what each match is filed under, and what is
  * followed for each side (as first seen, how many at once, how often).
  */
@@ -734,6 +745,8 @@ export interface GameProfile {
   readonly learning?: LearningSpec
   /** Where the player is on the map, read from the screen, for the learned map model (shooters). */
   readonly positioning?: PositioningSpec
+  /** Football: the radar that shows every player and the ball (see src/core/pitch). */
+  readonly pitch?: PitchSpec
   /** Live tips about vision-derived moments older than this are not spoken. */
   readonly liveFreshnessMs?: number
   readonly knowledge: {
@@ -1429,6 +1442,17 @@ export function validateProfile(input: unknown): ValidationResult {
         }
         for (const k of ['order', 'composition'] as const) if (t[k] !== undefined && typeof t[k] !== 'boolean') c.errors.push(`${path}.${k}: must be a boolean`)
       })
+    }
+  }
+
+  if (p.pitch !== undefined) {
+    const pt = c.obj(p.pitch, 'pitch')
+    if (pt) {
+      c.rect(pt.radar, 'pitch.radar')
+      for (const k of ['oursColourKey', 'theirsColourKey'] as const) {
+        const ctx = c.str(pt[k], `pitch.${k}`, { optional: true })
+        if (ctx && !(Array.isArray(p.playerContext) && (p.playerContext as Obj[]).some((x) => x && x.id === ctx))) c.errors.push(`pitch.${k}: unknown player context "${ctx}"`)
+      }
     }
   }
 

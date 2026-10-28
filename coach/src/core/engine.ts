@@ -21,6 +21,9 @@ import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type 
 import { MinimapLocator, type LocatorStatus, type MatchPins } from './map/locator.ts'
 import type { StoredMosaic } from './map/minimap.ts'
 import type { OfficialMap } from './map/official.ts'
+import { PitchTracker, type PitchLive, type PitchMatchRecord } from './pitch/tracker.ts'
+import { pitchInsights, type PitchInsight } from './pitch/insights.ts'
+import { RADAR_COLOURS, type RadarColour } from './pitch/radar.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -130,9 +133,18 @@ export interface SessionReport {
   readonly learned: Learned | null
   /** Shooters: where the player is, and the map as learned from this and past matches. */
   readonly map: MapReport | null
+  /** Football: the match on the radar (now, so far), and what it says. */
+  readonly pitch?: PitchReport | null
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
+}
+
+/** Football on the radar: everyone now, this match so far, and lines from it. */
+export interface PitchReport {
+  readonly live: PitchLive | null
+  readonly match: PitchMatchRecord | null
+  readonly insights: readonly PitchInsight[]
 }
 
 /** The current map: where the player is, what was learned about it, and what that says. */
@@ -174,6 +186,8 @@ export class CoachEngine {
   private readonly mapTracker: MapTracker | null
   /** The player on the map stitched from their minimap, to the pixel (fixed minimaps). */
   private readonly locator: MinimapLocator | null
+  private readonly pitch: PitchTracker | null
+  private pitchCache: { at: number; report: PitchReport } | null = null
   /** Dimensions already recalled this match ("your last games against English…"). */
   private recalled = new Set<string>()
   /** The opponent's faction the intel's history was last linked for. */
@@ -244,6 +258,7 @@ export class CoachEngine {
     this.mapTracker = profile.positioning ? new MapTracker(profile.positioning, profile.knowledge.maps) : null
     const mm = profile.positioning?.minimap
     this.locator = mm ? new MinimapLocator(mm, { stored: opts.mosaics, region: settings.minimap[profile.id] ?? null, fixed: this.minimapFixed() }) : null
+    this.pitch = profile.pitch ? new PitchTracker(settings.minimap[profile.id] ?? profile.pitch.radar, this.radarColours()) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
@@ -286,6 +301,7 @@ export class CoachEngine {
     }
     this.governor.configure(settings, policy)
     this.locator?.configure(settings.minimap[this.profile.id] ?? null, this.minimapFixed())
+    if (this.profile.pitch) this.pitch?.configure(settings.minimap[this.profile.id] ?? this.profile.pitch.radar, this.radarColours())
     const after = this.governor.mode.downgradeReason
     const out = after && after !== before ? [notice(now, 'warning', after)] : []
     const commentary = this.commentaryNotice()
@@ -297,6 +313,16 @@ export class CoachEngine {
   private minimapFixed(): boolean {
     const k = this.profile.positioning?.minimap?.fixedContextKey
     return !k || this.context[k] !== 'rotating'
+  }
+
+  /** The team colours the player set for the radar (null: the game's default colours). */
+  private radarColours(): { ours: RadarColour | null; theirs: RadarColour | null } {
+    const spec = this.profile.pitch
+    const pick = (k: string | undefined) => {
+      const v = k ? this.context[k] : undefined
+      return typeof v === 'string' && v in RADAR_COLOURS ? (v as RadarColour) : null
+    }
+    return { ours: pick(spec?.oursColourKey), theirs: pick(spec?.theirsColourKey) }
   }
 
   /** Was a menu, loading or results screen showing a moment ago (no minimap to follow)? */
@@ -350,6 +376,7 @@ export class CoachEngine {
     }
     this.checkAspect(frame, out)
     if (this.locator && !health.problem) this.locator.frame(frame, this.offPlay(t))
+    if (this.pitch && !health.problem) this.pitch.frame(frame, this.offPlay(t))
 
     if (this.profile.signals.length) {
       this.signals = this.tracker.update(frame)
@@ -493,6 +520,7 @@ export class CoachEngine {
       intel: this.intel?.report() ?? null,
       learned: this.profile.learning && this.learning().enabled ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
       map: this.mapReport(),
+      pitch: this.pitchReport(),
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
@@ -519,6 +547,9 @@ export class CoachEngine {
     for (const [i, tracker] of this.scores.entries()) {
       const u = tracker.update(this.visible, now)
       derived.push(...u.events)
+      // Goals on the radar: their last seconds, and (colours not set) which team is the player's.
+      const rule = this.profile.scoreRules?.[i]
+      for (const e of u.events) if (rule && (e.ruleId === rule.forEvent || e.ruleId === rule.againstEvent)) this.pitch?.goal(e.at, e.ruleId === rule.forEvent ? 'for' : 'against')
       // A confirmed score change is a new goal: sightings from well before it belonged to an
       // earlier goal, so they must not swallow this goal's banner or replay as a repeat.
       const confirm = this.profile.scoreRules?.[i].confirmEvent
@@ -705,9 +736,11 @@ export class CoachEngine {
       context: { ...this.gameContext },
       scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
       mapModel: this.finishMap(),
+      pitch: this.pitch?.finish() ?? null,
       endedManually: end.manual,
     })
-    if (this.matchHasData || record.scout || record.mapModel) {
+    this.pitchCache = null
+    if (this.matchHasData || record.scout || record.mapModel || record.pitch) {
       const msg = matchSummaryMessage(
         {
           ...inputs,
@@ -862,7 +895,19 @@ export class CoachEngine {
     return record ? { ...record, ...(pins && (pins.pins.length || pins.trail.length) ? { pins } : {}) } : null
   }
 
-  /** The stitched map to save, when it changed (throttled unless forced). */
+  /** Football on the radar: now, this match so far (at most every 2 s), and lines from it and past matches. */
+  private pitchReport(): PitchReport | null {
+    if (!this.pitch) return null
+    const t = this.lastT
+    if (this.pitchCache && t - this.pitchCache.at < 2000) return { ...this.pitchCache.report, live: this.pitch.status(t) }
+    const match = this.pitch.snapshot()
+    const past = this.matchHistory.flatMap((m) => (m.pitch ? [m.pitch] : []))
+    const all = [...past, ...(match ? [match] : [])]
+    const report: PitchReport = { live: this.pitch.status(t), match, insights: pitchInsights(all, null) }
+    this.pitchCache = { at: t, report }
+    return report
+  }
+
   /** The official overhead map of a map (null: none). */
   setOfficial(map: string, off: OfficialMap | null): void {
     this.locator?.setOfficial(map, off)
