@@ -12,6 +12,9 @@
 //   knowledge/<pack>.kb.gz   game knowledge base built by research (gzip JSON; public web content)
 //   knowledge/<pack>.screens.json  screens learned from the player's screen: 64-bit
 //                            fingerprints + names (no images); deleted with player data
+//   knowledge/<pack>.maps/<map>.json.gz  maps stitched from the player's minimap (the
+//                            minimap's picture of the map, callouts and heights; no
+//                            frames); deleted with player data
 //
 // Inputs come from the renderer and are re-validated here.
 
@@ -23,11 +26,14 @@ import { DEFAULT_SETTINGS, sanitizeSettings, type CoachSettings } from '../src/c
 import { MODELS } from '../src/core/vision/cost.ts'
 import { cleanLedger, type UsageLedger } from '../src/core/usage.ts'
 import { isScreenCatalog, type ScreenCatalog } from '../src/core/vision/screens.ts'
+import { cleanMosaic, type StoredMosaic } from '../src/core/map/minimap.ts'
 import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import type { Cipher } from './cloud/keystore.ts'
 import { DEFAULT_CLOUD, type CloudSettings, type ResearchBrief } from '../shared/cloud.ts'
 
+/** A stitched map, as JSON, at most this long (a large map is about 1 MB). */
+const MAX_MOSAIC_CHARS = 6_000_000
 const PROFILE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const MAX_PROFILE_BYTES = 512 * 1024
 const MAX_PROFILES = 50
@@ -167,9 +173,12 @@ export class Storage {
   async forgetPlayerData(profileId: unknown): Promise<void> {
     if (profileId === null) {
       for (const name of await readdir(join(this.root, 'knowledge')).catch(() => [] as string[])) {
-        if (name.endsWith('.screens.json')) await rm(join(this.root, 'knowledge', name), { force: true })
+        if (name.endsWith('.screens.json') || name.endsWith('.maps')) await rm(join(this.root, 'knowledge', name), { recursive: true, force: true })
       }
-    } else if (isProfileId(profileId)) await rm(this.screensPath(profileId), { force: true })
+    } else if (isProfileId(profileId)) {
+      await rm(this.screensPath(profileId), { force: true })
+      await rm(this.mapsDir(profileId), { recursive: true, force: true })
+    }
     for (const dir of ['tendencies', 'history', 'notes']) {
       if (profileId === null) {
         await rm(join(this.root, dir), { recursive: true, force: true })
@@ -255,6 +264,50 @@ export class Storage {
   async knowledgeBytes(profileId: unknown): Promise<number> {
     if (!isProfileId(profileId)) return 0
     return (await stat(this.knowledgePath(profileId)).catch(() => null))?.size ?? 0
+  }
+
+  // --- Maps stitched from the minimap ---------------------------------------------------
+
+  async loadMosaics(profileId: unknown): Promise<StoredMosaic[]> {
+    if (!isProfileId(profileId)) return []
+    const out: StoredMosaic[] = []
+    for (const name of (await readdir(this.mapsDir(profileId)).catch(() => [] as string[])).slice(0, 80)) {
+      if (!name.endsWith('.json.gz')) continue
+      try {
+        const m = cleanMosaic(JSON.parse(gunzipSync(await readFile(join(this.mapsDir(profileId), name))).toString('utf8')))
+        if (m) out.push(m)
+      } catch {
+        // A damaged file is skipped.
+      }
+    }
+    return out
+  }
+
+  async saveMosaic(profileId: unknown, input: unknown): Promise<boolean> {
+    const m = cleanMosaic(input)
+    if (!isProfileId(profileId) || !m || !m.map.trim()) return false
+    const json = JSON.stringify(m)
+    if (json.length > MAX_MOSAIC_CHARS) return false
+    await mkdir(this.mapsDir(profileId), { recursive: true })
+    const path = this.mosaicPath(profileId, m.map)
+    const tmp = `${path}.${process.pid}.tmp`
+    await writeFile(tmp, gzipSync(Buffer.from(json, 'utf8'), { level: 6 }))
+    await rename(tmp, path)
+    return true
+  }
+
+  async deleteMosaic(profileId: unknown, map: unknown): Promise<void> {
+    if (isProfileId(profileId) && typeof map === 'string' && map.trim()) await rm(this.mosaicPath(profileId, map), { force: true })
+  }
+
+  private mapsDir(profileId: string): string {
+    return join(this.root, 'knowledge', `${profileId}.maps`)
+  }
+
+  /** One file per map, named from the map's name (letters and digits only). */
+  private mosaicPath(profileId: string, map: string): string {
+    const slug = map.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'map'
+    return join(this.mapsDir(profileId), `${slug}.json.gz`)
   }
 
   private screensPath(profileId: string): string {

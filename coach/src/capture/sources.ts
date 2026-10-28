@@ -189,15 +189,26 @@ export class ReplaySource implements FrameSource {
   private next = 0
   private ended = false
 
-  constructor(sink: FrameSink, onEnded: () => void, replay: VisionReplay, opts: { speed?: number; label: string }) {
+  private readonly frames: ((t: number) => Frame) | null
+  private lastFrameAt = -Infinity
+
+  /** `frames`: a picture to go with the replay (the MW4 demo's minimap), sent about five times a second of replay time. */
+  constructor(sink: FrameSink, onEnded: () => void, replay: VisionReplay, opts: { speed?: number; label: string; frames?: (t: number) => Frame }) {
     this.speed = opts.speed ?? 1
     this.label = opts.label
+    this.frames = opts.frames ?? null
     const batches = [...replay.batches].sort((a, b) => a.arrivesAt - b.arrivesAt)
     this.timer = setInterval(() => {
       const t = this.now()
       const due: Observation[] = []
       while (this.next < batches.length && batches[this.next].arrivesAt <= t) due.push(...batches[this.next++].observations)
       if (due.length) sink.observations(due, t)
+      if (this.frames && t - this.lastFrameAt >= 200) {
+        if (sink.ready()) {
+          this.lastFrameAt = t
+          sink.pixels(this.frames(t))
+        } else sink.skipped()
+      }
       if (this.next >= batches.length && t > replay.endsAt + 2000) {
         this.stop()
         onEnded()
@@ -210,7 +221,9 @@ export class ReplaySource implements FrameSource {
   }
 
   async still(): Promise<ImageBitmap | null> {
-    return null
+    if (!this.frames) return null
+    const f = this.frames(this.now())
+    return createImageBitmap(new ImageData(new Uint8ClampedArray(f.data), f.width, f.height))
   }
 
   stop(): void {

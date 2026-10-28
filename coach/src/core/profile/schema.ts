@@ -517,6 +517,12 @@ export interface PositioningSpec {
   readonly rangeAttribute?: string
   /** Death attribute with what killed the player (smg, sniper…). */
   readonly killedByAttribute?: string
+  /**
+   * The minimap, to stitch the map from it and place the player on it to
+   * the pixel (fixed, north-up minimaps): where it usually is, and the
+   * player-context choice that says whether it is fixed or rotating.
+   */
+  readonly minimap?: { readonly region: NormRect & { readonly round?: boolean }; readonly fixedContextKey?: string; readonly marker?: boolean }
 }
 
 /**
@@ -1439,6 +1445,17 @@ export function validateProfile(input: unknown): ValidationResult {
       for (const k of ['rangeAttribute', 'killedByAttribute'] as const) {
         const a = c.str(ps[k], `positioning.${k}`, { optional: true })
         if (a && death && !visionEvents.get(death)?.attributes.has(a)) c.errors.push(`positioning.${k}: unknown attribute "${a}" of ${death}`)
+      }
+      if (ps.minimap !== undefined) {
+        const mm = c.obj(ps.minimap, 'positioning.minimap')
+        if (mm) {
+          c.rect(mm.region, 'positioning.minimap.region')
+          const reg = mm.region as Obj | undefined
+          if (reg && reg.round !== undefined && typeof reg.round !== 'boolean') c.errors.push('positioning.minimap.region.round: must be a boolean')
+          const ctx = c.str(mm.fixedContextKey, 'positioning.minimap.fixedContextKey', { optional: true })
+          if (ctx && !(Array.isArray(p.playerContext) && (p.playerContext as Obj[]).some((x) => x && x.id === ctx))) c.errors.push(`positioning.minimap.fixedContextKey: unknown player context "${ctx}"`)
+          if (mm.marker !== undefined && typeof mm.marker !== 'boolean') c.errors.push('positioning.minimap.marker: must be a boolean')
+        }
       }
     }
   }

@@ -18,6 +18,8 @@ import { checkpointLine, eventLine, fightStartLine, fitCommentary } from './comm
 import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
 import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type MapPosition } from './analyses/mapModel.ts'
+import { MinimapLocator, type LocatorStatus, type MatchPins } from './map/locator.ts'
+import type { StoredMosaic } from './map/minimap.ts'
 import { PhaseBoundaryDetector } from './analyses/boundaries.ts'
 import { HeatmapAnalyzer, type HeatmapResult } from './analyses/heatmap.ts'
 import { MatchRecorder, type MatchRecord } from './analyses/matchRecorder.ts'
@@ -68,6 +70,8 @@ export interface EngineOptions {
   readonly context?: PlayerContext
   /** Recent matches of this pack (opt-in history), for comparisons in summaries. */
   readonly matchHistory?: readonly MatchRecord[]
+  /** Maps stitched from the minimap in earlier sessions (packs with a minimap). */
+  readonly mosaics?: readonly StoredMosaic[]
   readonly clock?: () => Date
 }
 
@@ -137,6 +141,10 @@ export interface MapReport {
   readonly lines: readonly string[]
   /** Whether the weapon in hand suits the fights taken with it. */
   readonly fit: readonly string[]
+  /** The minimap: whether it is being followed, and where the player is on the stitched map. */
+  readonly minimap: LocatorStatus | null
+  /** This match on the stitched map: deaths, kills, killers, the path, enemy pings. */
+  readonly pins: MatchPins | null
 }
 
 export class CoachEngine {
@@ -163,6 +171,8 @@ export class CoachEngine {
   private readonly scout: ScoutRecorder | null
   /** Where the player goes, fights and dies on the map (shooters). */
   private readonly mapTracker: MapTracker | null
+  /** The player on the map stitched from their minimap, to the pixel (fixed minimaps). */
+  private readonly locator: MinimapLocator | null
   /** Dimensions already recalled this match ("your last games against English…"). */
   private recalled = new Set<string>()
   /** The opponent's faction the intel's history was last linked for. */
@@ -231,6 +241,8 @@ export class CoachEngine {
     this.recorder = new MatchRecorder(profile.matchStats)
     this.scout = profile.learning ? new ScoutRecorder(profile) : null
     this.mapTracker = profile.positioning ? new MapTracker(profile.positioning, profile.knowledge.maps) : null
+    const mm = profile.positioning?.minimap
+    this.locator = mm ? new MinimapLocator(mm, { stored: opts.mosaics, region: settings.minimap[profile.id] ?? null, fixed: this.minimapFixed() }) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
@@ -272,11 +284,24 @@ export class CoachEngine {
       ;(this.profile.scoreRules ?? []).forEach((r, i) => this.scores[i].setSide(sideOf(context[r.sideContext])))
     }
     this.governor.configure(settings, policy)
+    this.locator?.configure(settings.minimap[this.profile.id] ?? null, this.minimapFixed())
     const after = this.governor.mode.downgradeReason
     const out = after && after !== before ? [notice(now, 'warning', after)] : []
     const commentary = this.commentaryNotice()
     if (commentary && !commentaryBefore) out.push(commentary(now))
     return out
+  }
+
+  /** Whether the player's minimap is fixed (north up), as they said; fixed unless they said rotating. */
+  private minimapFixed(): boolean {
+    const k = this.profile.positioning?.minimap?.fixedContextKey
+    return !k || this.context[k] !== 'rotating'
+  }
+
+  /** Was a menu, loading or results screen showing a moment ago (no minimap to follow)? */
+  private offPlay(t: number): boolean {
+    const p = this.visible.values.phase
+    return !!p && !p.conflicted && (p.value === 'menu' || p.value === 'match_end') && t - p.observedAt < 8000
   }
 
   private playerFaction(): string | null {
@@ -323,6 +348,7 @@ export class CoachEngine {
       out.entries.push(notice(t, 'info', `The captured window changed size to ${frame.width}×${frame.height}.`))
     }
     this.checkAspect(frame, out)
+    if (this.locator && !health.problem) this.locator.frame(frame, this.offPlay(t))
 
     if (this.profile.signals.length) {
       this.signals = this.tracker.update(frame)
@@ -506,6 +532,7 @@ export class CoachEngine {
     this.recorder.observe(this.visible, now)
     if (this.learning().enabled) this.scout?.observe(this.visible, now)
     this.mapTracker?.observe(this.visible)
+    if (this.locator && this.profile.positioning) this.locator.observe(this.visible, this.profile.positioning)
     this.benchmarks.observe(this.visible)
     for (const k of this.profile.contextKeys ?? []) {
       const v = this.visible.values[k]
@@ -540,6 +567,7 @@ export class CoachEngine {
       if (this.learning().enabled) this.scout?.event(ev, now, this.visible)
       const placed = this.mapTracker?.event(ev, this.visible) ?? null
       if (placed) placedDeaths.set(ev.uid, placed)
+      this.pinEvent(ev)
       if (placed && placed.repeat >= 2 && placed.killerSpot && placed.area) this.heldAngleTip(placed.killerSpot, placed.area, placed.repeat, now, out)
       this.heatmaps.record(ev)
       this.factors.record(ev)
@@ -675,7 +703,7 @@ export class CoachEngine {
       battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
       context: { ...this.gameContext },
       scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
-      mapModel: this.mapTracker?.finish() ?? null,
+      mapModel: this.finishMap(),
       endedManually: end.manual,
     })
     if (this.matchHasData || record.scout || record.mapModel) {
@@ -805,13 +833,48 @@ export class CoachEngine {
     return Object.fromEntries((this.profile.learning?.dimensions ?? []).filter((d) => d.live && last[d.id]).map((d) => [d.id, last[d.id]]))
   }
 
+  /** A death or kill, for the stitched map: when it was read, where (by name), the killer's spot and weapons. */
+  private pinEvent(ev: GameEvent): void {
+    const ps = this.profile.positioning
+    if (!this.locator || !ps) return
+    const kind = ev.ruleId === ps.deathEvent ? 'death' : ps.killEvent && ev.ruleId === ps.killEvent ? 'kill' : null
+    if (!kind) return
+    const str = (k: string | undefined, within: number) => {
+      const v = k ? this.visible.values[k] : undefined
+      return v && !v.conflicted && typeof v.value === 'string' && v.value.trim() && Math.abs(v.observedAt - ev.at) <= within ? v.value.trim().slice(0, 40) : null
+    }
+    const range = ps.rangeAttribute ? ev.attributes?.[ps.rangeAttribute] : undefined
+    this.locator.event({
+      kind,
+      t: ev.at,
+      area: str(ps.locationKey, 6000),
+      killerSpot: kind === 'death' ? str(ps.killerSpotKey, 8000) : null,
+      weapon: kind === 'death' ? str(ps.killerWeaponKey, 8000) : str(ps.weaponKey, 30_000),
+      range: typeof range === 'string' && range !== 'unknown' ? range : null,
+    })
+  }
+
+  /** The match's map record, with its pins on the stitched map. */
+  private finishMap(): MatchRecord['mapModel'] | null {
+    const record = this.mapTracker?.finish() ?? null
+    const pins = this.locator?.finish() ?? null
+    return record ? { ...record, ...(pins && (pins.pins.length || pins.trail.length) ? { pins } : {}) } : null
+  }
+
+  /** The stitched map to save, when it changed (throttled unless forced). */
+  takeMosaic(now: number, force = false): StoredMosaic | null {
+    return this.locator?.takeSave(now, force) ?? null
+  }
+
   /** Where the player is, and the current (or last) map as learned from past matches and this one. */
   private mapReport(): MapReport | null {
     if (!this.mapTracker) return null
     const position = this.mapTracker.position(this.lastT)
     const current = this.mapTracker.snapshot()
     const name = position.map ?? this.sessionMatches.at(-1)?.mapModel?.map ?? null
-    if (!name) return { position, model: null, lines: [], fit: [] }
+    const minimap = this.locator?.status(this.lastT) ?? null
+    const pins = this.locator?.snapshot() ?? null
+    if (!name) return { position, model: null, lines: [], fit: [], minimap, pins }
     const records = [...this.matchHistory.flatMap((m) => (m.mapModel ? [m.mapModel] : [])), ...(current ? [current] : [])]
     const model = mapModelFrom(records, this.profile.knowledge.maps, name)
     const arsenal = this.profile.knowledge.arsenal ?? []
@@ -820,7 +883,7 @@ export class CoachEngine {
       .slice(0, 3)
       .map((w) => weaponFitLine(w, byName(w.name)?.bestRange, model!.deathsBy, (c) => c.replace(/_/g, ' ')))
       .filter((x): x is string => !!x)
-    return { position, model, lines: model ? mapLines(model) : [], fit }
+    return { position, model, lines: model ? mapLines(model) : [], fit, minimap, pins }
   }
 
   /** The second death this match from the same spot to the same area: that angle is held. Training tip where live tips are allowed. */

@@ -16,12 +16,14 @@ import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
+import { mw4DemoPicture } from '../sim/mw4Minimap.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { PushToTalkRecorder, micErrorMessage } from '../speech/recorder.ts'
 import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
 import { createBrowserSpeech, type SpeechController } from '../speech/speech.ts'
 import type { FromWorker, ToWorker, VisionConfig, WorkerStatus } from '../worker/protocol.ts'
+import type { StoredMosaic } from '../core/map/minimap.ts'
 import { policyFor } from './policy.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
@@ -106,6 +108,8 @@ export interface SessionState {
   readonly notes: PlayerNotes | null
   readonly research: ResearchBrief | null
   readonly researching: boolean
+  /** Maps stitched from the minimap, by map name (lower case). A demo's are synthetic and never saved. */
+  readonly mosaics: Readonly<Record<string, ShownMosaic>>
 
   readonly conversation: readonly QaEntry[]
   readonly talk: 'idle' | 'recording' | 'transcribing'
@@ -115,6 +119,13 @@ export interface SessionState {
   readonly toast: string | null
   /** The coach's review of the session (built on request). */
   readonly review: ReviewState
+}
+
+export type ShownMosaic = StoredMosaic & { readonly synthetic?: boolean }
+
+/** The stitched map for a map name, if there is one. */
+export function mosaicFor(mosaics: Readonly<Record<string, ShownMosaic>>, map: string | null | undefined): ShownMosaic | null {
+  return map ? (mosaics[map.toLowerCase()] ?? null) : null
 }
 
 export interface ReviewState {
@@ -147,6 +158,7 @@ const INITIAL: SessionState = {
   notes: null,
   research: null,
   researching: false,
+  mosaics: {},
   conversation: [],
   talk: 'idle',
   talkError: null,
@@ -178,6 +190,8 @@ export class CoachSession {
   /** Screenshots of marked moments, by moment id (memory only). */
   private readonly momentImages = new Map<string, ArrayBuffer>()
   private toastTimer: ReturnType<typeof setTimeout> | null = null
+  /** What the current (or last) session watched: only real play's maps are saved. */
+  private sourceKind: string | null = null
 
   constructor(bridge: SightlineBridge) {
     this.bridge = bridge
@@ -229,14 +243,16 @@ export class CoachSession {
     const profile = this.profile
     if (!profile) return
     const id = profile.id
-    const [history, snapshot, notes, research] = await Promise.all([
+    const [history, snapshot, notes, research, stitched] = await Promise.all([
       this.bridge.loadMatches(id).catch(() => []),
       this.bridge.loadTendencies(id).catch(() => null),
       this.bridge.loadNotes(id).catch(() => null),
       this.bridge.loadResearch(id).catch(() => null),
+      profile.positioning?.minimap ? this.bridge.loadMosaics(id).catch(() => []) : Promise.resolve([]),
     ])
     if (this.profile?.id !== id) return
-    this.set({ profileId: id, history, snapshot, notes, research, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
+    const mosaics = Object.fromEntries(stitched.map((m) => [m.map.toLowerCase(), m]))
+    this.set({ profileId: id, history, snapshot, notes, research, mosaics, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
   }
 
   async saveNotes(notes: PlayerNotes): Promise<boolean> {
@@ -326,6 +342,7 @@ export class CoachSession {
       snapshot: this.state.snapshot,
       notes: this.state.notes,
       research: this.state.research,
+      mosaics: this.state.mosaics,
       conversation: samePack ? this.state.conversation : [],
     })
     this.speech.configure(settings.voice)
@@ -354,6 +371,8 @@ export class CoachSession {
       context,
       vision,
       screens,
+      // A demo stitches its own synthetic map from scratch; real play continues the maps learned before.
+      mosaics: kind === 'screen' ? Object.values(this.state.mosaics).filter((m) => !m.synthetic) : [],
       now: 0,
     })
 
@@ -383,6 +402,7 @@ export class CoachSession {
       return
     }
     const source = this.source
+    this.sourceKind = source.kind
     this.speech.setClock(() => source.now())
     this.bridge.setCaptureState(true, source.label)
     this.set({
@@ -409,9 +429,20 @@ export class CoachSession {
         // A real map from the pack (a core map with links and a power position), walked by a synthetic player.
         const maps = this.profile?.knowledge.maps ?? []
         const map = maps.filter((m) => m.type === 'core').map(demoMapFrom).find((m) => !!m) ?? null
-        return new ReplaySource(sink, onEnded, mw4MatchReplay({ seed, realMinutes: 4, map }), {
+        const replay = mw4MatchReplay({ seed, realMinutes: 4, map })
+        // A synthetic minimap in its usual place, so the map is stitched and deaths are pinned as in real play.
+        const mm = this.profile?.positioning?.minimap
+        const picture = mm
+          ? mw4DemoPicture(replay, {
+              seed,
+              region: this.settings?.minimap[this.profile!.id] ?? mm.region,
+              callouts: maps.find((m) => m.name === map?.name)?.callouts,
+            })
+          : null
+        return new ReplaySource(sink, onEnded, replay, {
           speed,
           label: `Modern Warfare 4${map ? ` on ${map.name}` : ''} — synthetic replay (not a real match)`,
+          ...(picture ? { frames: (t: number) => picture.frame(t) } : {}),
         })
       }
       case 'replay-aoe4':
@@ -841,6 +872,14 @@ export class CoachSession {
       case 'screens':
         void this.bridge.saveScreens(msg.catalog).catch(() => false)
         return
+      case 'mosaic': {
+        // The source is already gone when the last map of a session arrives.
+        const real = this.sourceKind === 'screen'
+        const shown: ShownMosaic = real ? msg.mosaic : { ...msg.mosaic, synthetic: true }
+        this.set({ mosaics: { ...this.state.mosaics, [msg.mosaic.map.toLowerCase()]: shown } })
+        if (real && this.profile) void this.bridge.saveMosaic(this.profile.id, msg.mosaic).catch(() => false)
+        return
+      }
       case 'snapshot': {
         const resolve = this.snapshots.get(msg.requestId)
         this.snapshots.delete(msg.requestId)

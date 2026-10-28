@@ -14,6 +14,7 @@ import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './c
 import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
+import type { StoredMosaic } from '../src/core/map/minimap.ts'
 import type { KnowledgeItem, KnowledgeSectionId } from '../src/core/knowledge/base.ts'
 
 export interface KnowledgeStatus {
@@ -128,6 +129,10 @@ export interface SightlineBridge {
   // Game knowledge: screens learned from play, and a researched knowledge base.
   loadScreens(profileId: string): Promise<ScreenCatalog | null>
   saveScreens(catalog: ScreenCatalog): Promise<boolean>
+  /** Maps stitched from the player's minimap, for one game (images of the map only, no frames). */
+  loadMosaics(profileId: string): Promise<StoredMosaic[]>
+  saveMosaic(profileId: string, mosaic: StoredMosaic): Promise<boolean>
+  deleteMosaic(profileId: string, map: string): Promise<void>
   knowledgeStatus(profileId: string): Promise<KnowledgeStatus>
   /** Starts building in the background; poll knowledgeStatus for progress. */
   buildKnowledge(req: { profileId: string; focus: string }): Promise<KnowledgeStatus>

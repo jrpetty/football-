@@ -13,6 +13,7 @@ import type { CoachSettings } from '../core/settings.ts'
 import type { Frame, Observation, RoundResult, TimelineEntry, Utterance } from '../core/types.ts'
 import type { SamplerStats } from '../core/vision/sampler.ts'
 import type { ScreenCatalog, ScreenInfo } from '../core/vision/screens.ts'
+import type { StoredMosaic } from '../core/map/minimap.ts'
 
 export interface VisionConfig {
   readonly enabled: boolean
@@ -34,6 +35,8 @@ export type ToWorker =
       readonly vision: VisionConfig
       /** Screens learned in earlier sessions (menus etc.), recognised locally without a request. */
       readonly screens: ScreenCatalog | null
+      /** Maps stitched from the minimap in earlier sessions. */
+      readonly mosaics?: readonly StoredMosaic[]
       readonly now: number
     }
   /** Encode the latest frame (whole, downscaled) for a question about the screen or a marked moment. */
@@ -105,6 +108,8 @@ export type FromWorker =
   | { readonly type: 'vision-frame'; readonly frameAt: number; readonly jpeg: ArrayBuffer }
   /** The screen catalog changed (a new menu was learned): the renderer saves it. */
   | { readonly type: 'screens'; readonly catalog: ScreenCatalog }
+  /** The map stitched from the minimap grew: the renderer shows and saves it. */
+  | { readonly type: 'mosaic'; readonly mosaic: StoredMosaic }
   | { readonly type: 'snapshot'; readonly requestId: number; readonly jpeg: ArrayBuffer | null; readonly frameAt: number; readonly width: number; readonly height: number }
   | { readonly type: 'stopped'; readonly snapshot: PatternSnapshot; readonly insights: InsightView[]; readonly report: SessionReport }
   | { readonly type: 'error'; readonly message: string }

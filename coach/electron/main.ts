@@ -463,6 +463,9 @@ function registerIpc(): void {
 
   // --- Game knowledge: learned screens, and the researched knowledge base ------------------------
   handle(CHANNELS.loadScreens, (id) => storage.loadScreens(id))
+  handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
+  handle(CHANNELS.saveMosaic, (id, m) => storage.saveMosaic(id, m))
+  handle(CHANNELS.deleteMosaic, (id, map) => storage.deleteMosaic(id, map))
   handle(CHANNELS.saveScreens, async (catalog) => {
     const ok = await storage.saveScreens(catalog)
     if (ok) promptCache.clear()

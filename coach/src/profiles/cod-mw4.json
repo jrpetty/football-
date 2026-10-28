@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "cod-mw4",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": "Call of Duty: Modern Warfare 4",
   "depth": "pack",
   "game": {
@@ -80,7 +80,7 @@
         "rotating"
       ],
       "default": "fixed",
-      "help": "Death areas are only meaningful with a fixed (north-up) minimap."
+      "help": "With a fixed (north-up) minimap the coach stitches the map from it and pins where you die to the spot; with a rotating one, only to the area."
     }
   ],
   "signals": [],
@@ -10208,6 +10208,15 @@
     "deathEvent": "death",
     "killEvent": "kill",
     "rangeAttribute": "range",
-    "killedByAttribute": "killedBy"
+    "killedByAttribute": "killedBy",
+    "minimap": {
+      "region": {
+        "x": 0.012,
+        "y": 0.022,
+        "w": 0.135,
+        "h": 0.24
+      },
+      "fixedContextKey": "minimapFixed"
+    }
   }
 }

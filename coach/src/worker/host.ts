@@ -86,6 +86,7 @@ export class PipelineHost {
           history: msg.history,
           matchHistory: msg.matchHistory,
           context: msg.context,
+          mosaics: msg.mosaics,
         })
         this.configureVision(msg.vision)
         this.emit({ entries: msg.profile.vision || msg.profile.signals.length ? this.engine.startNotices(msg.now) : [], utterances: [], cancel: [], matches: [] }, true)
@@ -130,6 +131,7 @@ export class PipelineHost {
         this.sampler = null
         this.lastFrame = null
         const out = engine.stop(msg.now)
+        this.postMosaic(engine, msg.now, true)
         this.deps.post({ type: 'output', ...out, status: null, report: engine.report(), frameDone: false })
         this.deps.post({ type: 'stopped', snapshot: engine.snapshot(new Date()), insights: engine.insights(), report: engine.report() })
         return
@@ -226,6 +228,7 @@ export class PipelineHost {
         }
       } else frame = next.frame
       const out = this.engine.processFrame(frame)
+      this.postMosaic(this.engine, frame.timestamp, out.matches.length > 0)
       this.lastFrame = frame
       this.maybeSample(frame)
       this.timings = [...this.timings.slice(-19), this.deps.now() - started]
@@ -269,8 +272,15 @@ export class PipelineHost {
       })
   }
 
+  /** Sends the stitched map when it grew (throttled), or now at a match's end. */
+  private postMosaic(engine: CoachEngine, now: number, force: boolean): void {
+    const mosaic = engine.takeMosaic(now, force)
+    if (mosaic) this.deps.post({ type: 'mosaic', mosaic })
+  }
+
   private emit(out: EngineOutput, withStatus: boolean, frameDone = false): void {
     const engine = this.engine
+    if (engine && out.matches.length) this.postMosaic(engine, this.deps.now(), true)
     this.outputs++
     const changed = out.entries.some((e) => e.type !== 'notice') || out.matches.length > 0
     this.deps.post({

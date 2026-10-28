@@ -3,6 +3,7 @@
 // no cloud features, no voice input). The browser preview stores the same
 // opt-in data as the desktop app, but unencrypted, and says so.
 
+import type { StoredMosaic } from '../core/map/minimap.ts'
 import type { PlayerNotes, SightlineBridge, VoiceModelStatus } from '../../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudStatus } from '../../shared/cloud.ts'
 import type { TtsStatus } from '../../shared/voices.ts'
@@ -70,6 +71,8 @@ const NO_TTS: TtsStatus = {
   },
   realTimeFactor: {},
 }
+const previewMosaics = new Map<string, Map<string, StoredMosaic>>()
+
 const NO_KNOWLEDGE = { building: false, stage: null, error: null, knowledge: null, screens: 0 }
 const desktopOnly = { ok: false as const, error: 'Cloud features need the desktop app (your API key never touches a web page).', fatal: true }
 
@@ -225,6 +228,19 @@ export const browserBridge: SightlineBridge = {
   },
   async saveScreens() {
     return false
+  },
+  // The browser preview keeps stitched maps for this page only.
+  async loadMosaics(profileId: string) {
+    return [...(previewMosaics.get(profileId)?.values() ?? [])]
+  },
+  async saveMosaic(profileId: string, mosaic: StoredMosaic) {
+    const m = previewMosaics.get(profileId) ?? new Map<string, StoredMosaic>()
+    m.set(mosaic.map.toLowerCase(), mosaic)
+    previewMosaics.set(profileId, m)
+    return true
+  },
+  async deleteMosaic(profileId: string, map: string) {
+    previewMosaics.get(profileId)?.delete(map.toLowerCase())
   },
   async knowledgeStatus() {
     return NO_KNOWLEDGE

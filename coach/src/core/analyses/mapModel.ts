@@ -14,6 +14,7 @@
 
 import type { Elevation, GameMap, MapCallout, MapGridCell, PositioningSpec } from '../profile/schema.ts'
 import type { GameEvent, VisibleState } from '../types.ts'
+import type { MatchPins } from '../map/locator.ts'
 import { parseList } from './learning.ts'
 
 export interface AreaStat {
@@ -51,6 +52,8 @@ export interface MapMatchRecord {
   readonly spawnDeaths?: Readonly<Record<string, number>>
   /** Seconds between deaths (each life after the first death), at most 60 kept. */
   readonly lives?: readonly number[]
+  /** On the map stitched from the minimap: deaths, kills and killers to the spot, the path, enemy pings. */
+  readonly pins?: MatchPins
 }
 
 /** Where the player is right now. */

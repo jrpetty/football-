@@ -40,6 +40,16 @@ export interface CoachSettings {
   readonly vision: Readonly<Record<string, VisionPrefs>>
   /** What the coach learns across games, by pack id; a missing field uses the default. */
   readonly learning: Readonly<Record<string, LearningPrefs>>
+  /** Where the minimap is on the player's screen, by pack id, when it differs from the pack's (normalised; set with Align minimap). */
+  readonly minimap: Readonly<Record<string, MinimapBox>>
+}
+
+export interface MinimapBox {
+  readonly x: number
+  readonly y: number
+  readonly w: number
+  readonly h: number
+  readonly round?: boolean
 }
 
 /** The player's choices about learning across games, for one game. */
@@ -137,6 +147,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   commentary: false,
   vision: {},
   learning: {},
+  minimap: {},
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -181,7 +192,23 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     commentary: typeof o.commentary === 'boolean' ? o.commentary : base.commentary,
     vision: sanitizeVision(o.vision, base.vision),
     learning: sanitizeLearning(o.learning, base.learning),
+    minimap: sanitizeMinimap(o.minimap, base.minimap),
   }
+}
+
+function sanitizeMinimap(v: unknown, base: CoachSettings['minimap']): CoachSettings['minimap'] {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return base
+  const out: Record<string, MinimapBox> = {}
+  for (const [pack, raw] of Object.entries(v).slice(0, 50)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof raw !== 'object' || raw === null) continue
+    const o = raw as Record<string, unknown>
+    const n = (k: string) => (typeof o[k] === 'number' && Number.isFinite(o[k]) ? Math.round((o[k] as number) * 10000) / 10000 : NaN)
+    const [x, y, w, h] = [n('x'), n('y'), n('w'), n('h')]
+    // A sensible box: inside the frame and not tiny.
+    if (![x, y, w, h].every((q) => q >= 0 && q <= 1) || w < 0.03 || h < 0.03 || x + w > 1.0001 || y + h > 1.0001) continue
+    out[pack] = { x, y, w, h, ...(o.round === true ? { round: true } : {}) }
+  }
+  return out
 }
 
 function sanitizeLearning(v: unknown, base: CoachSettings['learning']): CoachSettings['learning'] {
