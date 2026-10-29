@@ -73,6 +73,7 @@ const NO_TTS: TtsStatus = {
   realTimeFactor: {},
 }
 const previewMosaics = new Map<string, Map<string, StoredMosaic>>()
+const previewDocs = new Map<string, unknown>()
 const previewOverheads = new Map<string, Map<string, { png: Uint8Array; savedAt: string }>>()
 
 const NO_KNOWLEDGE = { building: false, stage: null, error: null, knowledge: null, screens: 0 }
@@ -259,6 +260,26 @@ export const browserBridge: SightlineBridge = {
   },
   async aoe4worldSearch() {
     return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async aoe4worldGames() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async aoe4worldFacts() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async aoe4worldGameBuild() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async aoe4worldSuggestBuild() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  // The browser preview keeps documents for this page only.
+  async loadDoc(kind: string, profileId: string) {
+    return previewDocs.get(`${kind}:${profileId}`) ?? null
+  },
+  async saveDoc(kind: string, profileId: string, doc: unknown) {
+    previewDocs.set(`${kind}:${profileId}`, doc)
+    return true
   },
   // The browser preview keeps stitched maps for this page only.
   async loadMosaics(profileId: string) {

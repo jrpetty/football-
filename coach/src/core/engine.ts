@@ -11,6 +11,7 @@
 // the same in the Web Worker, in Node tests and on synthetic input. It never
 // keeps a frame after processFrame returns.
 
+import { BuildCaller, type BuildOrder } from './aoe4/buildOrder.ts'
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
@@ -18,7 +19,7 @@ import { ReadingLogger } from './truth/readingLog.ts'
 import { SourceAgreement, type AgreementRow } from './truth/agreement.ts'
 import { usualAt, withUsual } from './analyses/baseline.ts'
 import { checkpointLine, eventLine, fightStartLine, fillReadings, fitCommentary, statusLine, type ReadingLookup } from './commentary.ts'
-import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
+import { findFaction, IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
 import { mapLines, mapModelFrom, MapTracker, weaponFitLine, type MapModel, type MapPosition } from './analyses/mapModel.ts'
 import { MinimapLocator, type LocatorStatus, type MatchPins } from './map/locator.ts'
@@ -81,6 +82,10 @@ export interface EngineOptions {
   readonly matchHistory?: readonly MatchRecord[]
   /** Maps stitched from the minimap in earlier sessions (packs with a minimap). */
   readonly mosaics?: readonly StoredMosaic[]
+  /** The build order to call during play (the build trainer). */
+  readonly build?: BuildOrder | null
+  /** The practice focus, said once at the start of play. */
+  readonly practice?: string | null
   readonly clock?: () => Date
 }
 
@@ -214,6 +219,10 @@ export class CoachEngine {
   private historyFor: string | null = null
   /** When the current match began (readings before it belong to the last match). */
   private matchSince = -Infinity
+  private readonly buildOrder: BuildOrder | null
+  private buildCaller: BuildCaller | null
+  /** Said once, at the start of play (null once said). */
+  private practiceLine: string | null
   private readonly factors: FactorAnalyzer
   private readonly benchmarks: BenchmarkTracker
   private readonly battles: BattleTracker
@@ -267,6 +276,9 @@ export class CoachEngine {
     this.context = opts.context ?? defaultContext(profile)
     this.clock = opts.clock ?? (() => new Date())
     this.matchHistory = [...(opts.matchHistory ?? [])]
+    this.buildOrder = opts.build ?? null
+    this.buildCaller = this.buildOrder ? new BuildCaller(this.buildOrder) : null
+    this.practiceLine = opts.practice ?? null
 
     this.tracker = new VisibleStateTracker(profile.signals)
     this.detector = new EventDetector(profile.events, profile.signals)
@@ -291,7 +303,7 @@ export class CoachEngine {
     this.pitch = profile.pitch ? new PitchTracker(settings.minimap[profile.id] ?? profile.pitch.radar, this.radarColours()) : null
     this.gsi = profile.gameState?.kind === 'cs2-gsi' ? new Cs2Gsi({ profileId: profile.id, maps: profile.knowledge.maps, arsenal: profile.knowledge.arsenal }) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
-    this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [], this.playerFaction())
+    this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [], this.playerFactionId())
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
     this.battles = new BattleTracker(profile.battles ?? null, clockKey)
     const roster = profile.knowledge.roster
@@ -313,7 +325,7 @@ export class CoachEngine {
     if (this.memory.historyNotice) out.push(notice(now, 'info', this.memory.historyNotice))
     const commentary = this.commentaryNotice()
     if (commentary) out.push(commentary(now))
-    const faction = this.playerFaction()
+    const faction = this.playerFactionId()
     for (const b of this.profile.benchmarks ?? []) {
       const skip = faction ? b.byFaction?.[faction]?.skip : undefined
       if (skip) out.push(notice(now, 'info', `${b.label}: not compared. ${skip}`))
@@ -333,7 +345,7 @@ export class CoachEngine {
       this.context = context
       this.mistakes.setContext(context)
       this.intel?.setPlayerFaction(this.playerFaction())
-      this.benchmarks.setFaction(this.playerFaction())
+      this.benchmarks.setFaction(this.playerFactionId())
       ;(this.profile.scoreRules ?? []).forEach((r, i) => this.scores[i].setSide(sideOf(context[r.sideContext])))
     }
     this.governor.configure(settings, policy)
@@ -373,6 +385,13 @@ export class CoachEngine {
   private offPlay(t: number): boolean {
     const p = this.visible.values.phase
     return !!p && !p.conflicted && (p.value === 'menu' || p.value === 'match_end') && t - p.observedAt < 8000
+  }
+
+  /** The player's civilisation as the pack's id ("order-of-the-dragon"), for per-civilisation curves. */
+  private playerFactionId(): string | null {
+    const roster = this.profile.knowledge.roster
+    const name = this.playerFaction()
+    return roster ? (findFaction(roster, name)?.id ?? null) : name
   }
 
   private playerFaction(): string | null {
@@ -652,6 +671,24 @@ export class CoachEngine {
     }
     this.handleEvents([...events, ...derived].sort((a, b) => a.at - b.at), now, out)
     this.commentOnState(now, out)
+    this.callBuild(now, out)
+  }
+
+  /** The practice focus once, then the build trainer's next steps against the game clock, during play. */
+  private callBuild(now: number, out: EngineOutput): void {
+    if (this.window() !== 'during_play') return
+    const say = (text: string, topic: string) =>
+      this.decide({ category: 'build', text, confidence: 1, grade: 'moderate', evidenceSummary: 'the player chose it', topic, priority: 'normal', createdAt: now, basedOnObservationAt: now, expiresAtMs: now + 6000, author: 'template' }, now, out)
+    if (this.practiceLine) {
+      say(this.practiceLine, 'practice')
+      this.practiceLine = null
+      return
+    }
+    if (!this.buildCaller) return
+    const t = this.reading(this.profile.benchmarks?.[0]?.timeKey ?? 'gameTimeSec')
+    if (typeof t !== 'number') return
+    const v = this.reading('villagers')
+    for (const call of this.buildCaller.tick(t, typeof v === 'number' ? v : null)) say(call.text, call.topic)
   }
 
   private forgetSightings(eventType: string, before: number): void {
@@ -836,6 +873,7 @@ export class CoachEngine {
     this.factors.newMatch()
     this.benchmarks.newMatch()
     this.battles.newMatch()
+    this.buildCaller = this.buildOrder ? new BuildCaller(this.buildOrder) : null
     this.intel?.newMatch(this.lastT)
     this.intelQueue = []
     this.watched = new Map()

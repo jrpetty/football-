@@ -5103,3 +5103,215 @@ td > .swatch {
 .ready-action {
   flex: none;
 }
+
+/* --- Progress: week, trends, win rates, practice, build orders ---------------------------------- */
+
+.week-lines {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trend-chart {
+  margin: 0 0 14px;
+}
+
+.trend-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.trend-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 4px;
+}
+
+.trend-chart .axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.trend-chart .tick {
+  fill: var(--text-3);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+.trend-chart .median {
+  stroke: var(--text-3);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.trend-chart .trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.55;
+}
+
+.trend-chart .dot {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.trend-chart .dot.won {
+  fill: var(--accent);
+}
+
+.trend-chart .dot.lost {
+  fill: var(--panel);
+}
+
+.rate-bar {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.rate-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+.practice-list,
+.practice-pick,
+.build-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.practice-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.practice-focus.current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.practice-focus.done {
+  opacity: 0.85;
+}
+
+.practice-pick .switch-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.practice-pick input {
+  margin-top: 4px;
+}
+
+.build-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.build-sources > .btn {
+  align-self: flex-start;
+}
+
+.build-active {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin: 8px 0 12px;
+}
+
+.build-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.build-steps ol {
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+  columns: 2 240px;
+}
+
+.build-steps li {
+  break-inside: avoid;
+  padding: 2px 0;
+}
+
+.build-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.step-late td:last-child,
+.step-not-made td:last-child,
+.step-missing td:last-child {
+  color: var(--warn);
+}
+
+.step-early td:last-child,
+.step-on-time td:last-child {
+  color: var(--accent);
+}
+
+/* --- Opponent card ------------------------------------------------------------------------------- */
+
+.opp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opp-ages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.opp-age {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.opp-age.now {
+  border-color: var(--accent);
+}
+
+.opp-age ul {
+  margin: 0;
+  padding-left: 16px;
+}

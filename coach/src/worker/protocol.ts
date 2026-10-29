@@ -17,6 +17,7 @@ import type { StoredMosaic } from '../core/map/minimap.ts'
 import type { HudField, HudStatus } from '../core/hud/reader.ts'
 import type { GlyphBookData } from '../core/hud/glyphs.ts'
 
+import type { BuildOrder } from '../core/aoe4/buildOrder.ts'
 export interface VisionConfig {
   readonly enabled: boolean
   readonly intervalMs: number
@@ -41,6 +42,8 @@ export type ToWorker =
       readonly mosaics?: readonly StoredMosaic[]
       /** HUD numbers marked by the player, and the digit shapes learned in earlier sessions. */
       readonly hud?: { readonly fields: readonly HudField[]; readonly book: GlyphBookData | null; readonly saves: boolean } | null
+      /** The build order to call during play (the build trainer), and the practice focus to say at the start. */
+      readonly training?: { readonly build: BuildOrder | null; readonly practice: string | null } | null
       readonly now: number
     }
   /** Encode the latest frame (whole, downscaled) for a question about the screen or a marked moment. */

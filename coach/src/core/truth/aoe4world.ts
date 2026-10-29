@@ -23,7 +23,22 @@ export interface SummaryPlayer {
   readonly villagersLost: readonly number[]
   /** Stockpiles every 20 s. */
   readonly resources: { readonly t: readonly number[]; readonly food: readonly number[]; readonly wood: readonly number[]; readonly gold: readonly number[]; readonly stone: readonly number[] } | null
+  /** What was built, trained and researched, and when (game seconds; the first 20 minutes). */
+  readonly build: readonly BuildEvent[]
 }
+
+/** One thing in a real build order: a building completed, a unit trained, a technology or an age reached. */
+export interface BuildEvent {
+  readonly t: number
+  readonly kind: 'building' | 'unit' | 'upgrade' | 'age'
+  /** The game's own name for it (the last part of its icon), e.g. "barracks", "horseman_2"; ages: "feudal". */
+  readonly item: string
+}
+
+/** Build events kept: the first 20 minutes, at most this many of one thing, at most this many in all. */
+const BUILD_UNTIL_SEC = 1200
+const BUILD_PER_ITEM = 6
+const BUILD_MAX = 300
 
 export interface GameSummary {
   readonly gameId: number
@@ -70,6 +85,21 @@ export function parseSummary(raw: unknown): GameSummary | null {
       const t = nums(actions[key])
       if (t?.length) ages[age] = t[0]
     }
+    // The build order: buildings by when they were completed, units by when they were trained (villagers too).
+    const build: BuildEvent[] = []
+    for (const item of p.buildOrder as Record<string, unknown>[]) {
+      // Villagers are counted separately (villagersMade).
+      if (!item || typeof item !== 'object' || typeof item.icon !== 'string' || isVillager(item)) continue
+      const slug = (item.icon.split('/').pop() ?? '').slice(0, 60)
+      const kind = item.type === 'Building' ? 'building' : item.type === 'Unit' ? 'unit' : item.type === 'Upgrade' ? 'upgrade' : null
+      if (!kind || !slug) continue
+      const times = nums(kind === 'building' ? (Array.isArray(item.constructed) && item.constructed.length ? item.constructed : item.finished) : item.finished)
+      if (!times) continue
+      // Buildings and units there from the start (time 0) are not part of the build.
+      for (const t of times.filter((x) => x > 0 && x <= BUILD_UNTIL_SEC).slice(0, BUILD_PER_ITEM)) build.push({ t, kind, item: slug })
+    }
+    for (const [age, sec] of Object.entries(ages)) if (sec <= BUILD_UNTIL_SEC) build.push({ t: sec, kind: 'age', item: age })
+    build.sort((a, b) => a.t - b.t || a.item.localeCompare(b.item))
     const r = p.resources as Record<string, unknown> | undefined
     const t = nums(r?.timestamps)
     const series = t && (['food', 'wood', 'gold', 'stone'] as const).map((k) => nums(r?.[k]))
@@ -84,6 +114,7 @@ export function parseSummary(raw: unknown): GameSummary | null {
       villagersMade: made.sort((a, b) => a - b),
       villagersLost: lost.sort((a, b) => a - b),
       resources,
+      build: build.slice(0, BUILD_MAX),
     })
   }
   return {

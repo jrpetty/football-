@@ -23,6 +23,7 @@ import { RADAR_COLOURS, type RadarColour } from '../core/pitch/radar.ts'
 import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { LISTEN_OFF, VoiceInput, type ListenState } from './voiceInput.ts'
+import { NO_PROGRESS, ProgressStore, type ProgressState } from './progressStore.ts'
 import { commentaryStartLine } from '../core/commentary.ts'
 import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
@@ -131,6 +132,8 @@ export interface SessionState {
   readonly talkError: string | null
   /** Always listening (when chosen in Settings). */
   readonly listen: ListenState
+  /** AoE4World history, practice plan and build orders for the selected pack. */
+  readonly progress: ProgressState
   readonly moments: readonly Moment[]
   /** A short confirmation (e.g. "Moment marked"), cleared after a few seconds. */
   readonly toast: string | null
@@ -184,6 +187,7 @@ const INITIAL: SessionState = {
   talk: 'idle',
   talkError: null,
   listen: LISTEN_OFF,
+  progress: NO_PROGRESS,
   moments: [],
   toast: null,
   review: NO_REVIEW,
@@ -207,6 +211,8 @@ export class CoachSession {
   private settings: CoachSettings | null = null
   private profile: GameProfile | null = null
   private readonly voice: VoiceInput
+  /** AoE4World history, practice plan and build orders (the Progress screen calls it). */
+  readonly progress: ProgressStore
   /** The latest cloud status, for questions heard while always listening. */
   private cloud: CloudStatus | null = null
   private snapshotSeq = 0
@@ -229,6 +235,17 @@ export class CoachSession {
       },
       new NeuralPlayer((req) => bridge.synthesize(req)),
     )
+    this.progress = new ProgressStore({
+      bridge,
+      profile: () => this.profile,
+      settings: () => this.settings,
+      matches: () => {
+        const seen = new Set<string>()
+        return [...this.state.history, ...this.state.matches].filter((m) => m.gameProfileId === this.profile?.id && !seen.has(m.id) && seen.add(m.id))
+      },
+      get: () => this.state.progress,
+      set: (patch) => this.set({ progress: { ...this.state.progress, ...patch } }),
+    })
     this.voice = new VoiceInput({
       bridge,
       speech: this.speech,
@@ -295,6 +312,7 @@ export class CoachSession {
     const mosaics = Object.fromEntries(stitched.map((m) => [m.map.toLowerCase(), m]))
     const overheads = Object.fromEntries(kept.map((o) => [o.mapId, o]))
     this.set({ profileId: id, history, snapshot, notes, research, mosaics, overheads, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
+    await this.progress.load()
   }
 
   // --- Official overhead maps ------------------------------------------------------------------
@@ -562,6 +580,8 @@ export class CoachSession {
     if (!r.ok) return { ok: false, message: r.error }
     const truth = compareWithSummary(record, r.player, r.gameId)
     await this.keepTruth(id, truth)
+    // The new game joins the history (and the practice plan).
+    void this.progress.sync()
     const judged = truth.lines.filter((l) => l.ok !== null)
     return { ok: true, message: `Checked against AoE4World: ${judged.filter((l) => l.ok).length} of ${judged.length} right.` }
   }
@@ -666,6 +686,7 @@ export class CoachSession {
       overheads: this.state.overheads,
       conversation: samePack ? this.state.conversation : [],
       listen: this.state.listen,
+      progress: this.state.progress,
     })
     this.speech.configure(settings.voice)
 
@@ -700,6 +721,8 @@ export class CoachSession {
       // A demo stitches its own synthetic map from scratch; real play continues the maps learned before.
       mosaics: kind === 'screen' ? Object.values(this.state.mosaics).filter((m) => !m.synthetic) : [],
       hud: hudFields.length ? { fields: hudFields, book: hudBook, saves: settings.hudSaves } : null,
+      // The build trainer's build for the player's civilisation, and the practice focus.
+      training: { build: this.progress.activeBuild(), practice: this.progress.practiceLine() },
       now: 0,
     })
 
@@ -876,7 +899,9 @@ export class CoachSession {
 
   updateSettings(settings: CoachSettings): void {
     const mutedNow = settings.muted && !this.settings?.muted
+    const relink = settings.aoe4world.profileId !== this.settings?.aoe4world.profileId || settings.saveTendencies !== this.settings?.saveTendencies
     this.settings = settings
+    if (relink) void this.progress.load()
     this.speech.configure(settings.voice)
     if (mutedNow) this.speech.stopAll()
     this.voice.sync()
@@ -1329,6 +1354,7 @@ export class CoachSession {
       this.scheduleTruthChecks(msg.matches)
     }
     if (Object.keys(patch).length) this.set(patch)
+    if (msg.matches.length) this.progress.refreshPlan()
 
     if (msg.cancel.length) this.speech.cancel(msg.cancel)
     for (const u of msg.utterances) {

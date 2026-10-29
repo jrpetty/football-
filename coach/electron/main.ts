@@ -56,7 +56,7 @@ import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
 import { SinglePress, TalkKeyGesture } from '../src/speech/talkKey.ts'
-import { aoe4worldSearch, aoe4worldSummary } from './aoe4world.ts'
+import { aoe4worldFacts, aoe4worldGameBuild, aoe4worldGames, aoe4worldSearch, aoe4worldSuggestBuild, aoe4worldSummary } from './aoe4world.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? null
@@ -555,6 +555,12 @@ function registerIpc(): void {
   handle(CHANNELS.saveHudBook, (id, book) => storage.saveHudBook(id, book))
   handle(CHANNELS.aoe4worldSummary, (id, endedAt, d) => aoe4worldSummary(id, endedAt, d))
   handle(CHANNELS.aoe4worldSearch, (q) => aoe4worldSearch(q))
+  handle(CHANNELS.aoe4worldGames, (id) => aoe4worldGames(id))
+  handle(CHANNELS.aoe4worldFacts, (id, ids) => aoe4worldFacts(id, ids))
+  handle(CHANNELS.aoe4worldGameBuild, (link) => aoe4worldGameBuild(link))
+  handle(CHANNELS.aoe4worldSuggestBuild, (civ) => aoe4worldSuggestBuild(civ))
+  handle(CHANNELS.loadDoc, (kind, id) => storage.loadDoc(kind, id))
+  handle(CHANNELS.saveDoc, (kind, id, doc) => storage.saveDoc(kind, id, doc))
   handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
   handle(CHANNELS.saveMosaic, (id, m) => storage.saveMosaic(id, m))
   handle(CHANNELS.deleteMosaic, (id, map) => storage.deleteMosaic(id, map))

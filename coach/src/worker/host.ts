@@ -100,6 +100,8 @@ export class PipelineHost {
           matchHistory: msg.matchHistory,
           context: msg.context,
           mosaics: msg.mosaics,
+          build: msg.training?.build ?? null,
+          practice: msg.training?.practice ?? null,
         })
         this.hud = msg.hud?.fields.length ? new HudReader(msg.hud.fields, msg.hud.book) : null
         this.hudSaves = msg.hud?.saves === true

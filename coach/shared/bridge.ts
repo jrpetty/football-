@@ -17,6 +17,20 @@ import type { ScreenCatalog } from '../src/core/vision/screens.ts'
 import type { StoredMosaic } from '../src/core/map/minimap.ts'
 import type { GlyphBookData } from '../src/core/hud/glyphs.ts'
 import type { SummaryPlayer } from '../src/core/truth/aoe4world.ts'
+import type { GameFacts, HistoryGame } from '../src/core/aoe4/history.ts'
+
+/** One player's build in an AoE4World game. */
+export interface GamePlayerBuild {
+  readonly profileId: number
+  readonly name: string
+  readonly civ: string
+  readonly result: string | null
+  readonly opponentCiv: string | null
+  readonly facts: GameFacts
+}
+
+/** Player documents kept per game pack: the AoE4World history, the practice plan, saved build orders. */
+export type DocKind = 'aoe4world' | 'practice' | 'builds'
 
 /** An official overhead map image kept for a map. */
 export interface OverheadInfo {
@@ -166,6 +180,18 @@ export interface SightlineBridge {
   aoe4worldSummary(profileId: number, endedAt: string, durationSec: number): Promise<{ ok: true; gameId: number; player: SummaryPlayer } | { ok: false; error: string }>
   /** Find one's AoE4World profile by in-game name. */
   aoe4worldSearch(query: string): Promise<{ ok: true; players: { profileId: number; name: string; country: string | null }[] } | { ok: false; error: string }>
+  /** The player's public games on AoE4World (up to 200, newest first). */
+  aoe4worldGames(profileId: number): Promise<{ ok: true; games: HistoryGame[] } | { ok: false; error: string }>
+  /** Facts of some of the player's games from their summaries (at most 10 per call, slowly). */
+  aoe4worldFacts(profileId: number, gameIds: number[]): Promise<{ ok: true; facts: GameFacts[]; missing: number[]; busy: boolean } | { ok: false; error: string }>
+  /** The players' builds in one AoE4World game, from its link. */
+  aoe4worldGameBuild(link: string): Promise<{ ok: true; gameId: number; players: GamePlayerBuild[] } | { ok: false; error: string }>
+  /** A build for a civilisation from a recent high-rated Ranked 1v1 win on AoE4World. */
+  aoe4worldSuggestBuild(civ: string): Promise<{ ok: true; gameId: number; rating: number | null; player: GamePlayerBuild } | { ok: false; error: string }>
+  /** A player document for one game pack (checked on load and save; null when there is none). */
+  loadDoc(kind: DocKind, profileId: string): Promise<unknown>
+  /** False when not saved (invalid, or the history and practice plan need "Remember my games"). */
+  saveDoc(kind: DocKind, profileId: string, doc: unknown): Promise<boolean>
   /** Maps stitched from the player's minimap, for one game (images of the map only, no frames). */
   loadMosaics(profileId: string): Promise<StoredMosaic[]>
   saveMosaic(profileId: string, mosaic: StoredMosaic): Promise<boolean>

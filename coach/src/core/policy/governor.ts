@@ -33,6 +33,8 @@ const REFLECTIVE_REPEAT_MS = 5 * 60_000
 const LIVE_CATEGORIES = new Set(['training', 'live_tactical'])
 /** Commentary pacing: a line at most every few seconds, and not the same line twice in quick succession. */
 export const COMMENTARY_GAP_MS = 6_000
+/** Build-order calls: at most one line this often. */
+export const BUILD_GAP_MS = 4_000
 const COMMENTARY_REPEAT_MS = 30_000
 const COMMENTARY_PER_MINUTE = 8
 
@@ -73,6 +75,7 @@ export class CoachingGovernor {
   private readonly queued = new Set<string>()
   private pendingReflective: { id: string; expiresAt: number }[] = []
   private lastCommentaryAt = -Infinity
+  private lastBuildAt = -Infinity
   private commentaryAt: number[] = []
 
   constructor(settings: CoachSettings, policy: ResolvedPolicy) {
@@ -140,6 +143,7 @@ export class CoachingGovernor {
       return result('suppressed')
     }
     if (msg.category === 'commentary') return this.decideCommentary(msg, now, window, reasons, result)
+    if (msg.category === 'build') return this.decideBuild(msg, now, window, reasons, result)
     if (!this.policy.scope.has(scope)) {
       reasons.push(`${this.policy.reasons[0]} (${scopeText(scope)} is not allowed)`)
       if (live && !msg.requestedByPlayer) {
@@ -254,6 +258,37 @@ export class CoachingGovernor {
       return result('text-only')
     }
     reasons.push('live commentary is on and allowed here')
+    return result('spoken', { id: msg.id, text: msg.text, category: msg.category, priority: msg.priority, expiresAt: msg.expiresAtMs })
+  }
+
+  /**
+   * Build-order calls (and the practice focus): the player chose to train with them, so where the game
+   * and mode allow speech during play they are spoken, paced; elsewhere they are not delivered at all.
+   */
+  private decideBuild(msg: CoachingMessage, now: number, window: DeliveryWindow, reasons: string[], result: (d: DeliveryDecision, u?: Utterance | null) => Decision): Decision {
+    if (window !== 'during_play') {
+      reasons.push('build calls are only for live play')
+      return result('suppressed')
+    }
+    if (!this.policy.scope.has('live')) {
+      reasons.push(`${this.policy.reasons[0]} (speaking during play is not allowed)`)
+      return result('suppressed')
+    }
+    const since = now - this.lastBuildAt
+    if (since < BUILD_GAP_MS) {
+      reasons.push(`build calls paced: last ${(since / 1000).toFixed(0)}s ago`)
+      return result('suppressed')
+    }
+    this.lastBuildAt = now
+    if (this.settings.mode === 'silent') {
+      reasons.push('silent tracker mode never speaks')
+      return result('text-only')
+    }
+    if (this.settings.muted) {
+      reasons.push('muted')
+      return result('text-only')
+    }
+    reasons.push('the build trainer is on and live coaching is allowed here')
     return result('spoken', { id: msg.id, text: msg.text, category: msg.category, priority: msg.priority, expiresAt: msg.expiresAtMs })
   }
 

@@ -17,6 +17,7 @@ import { CoachSession, type SourceChoice } from './session.ts'
 import { AskView } from './views/AskView.tsx'
 import { CoachView } from './views/CoachView.tsx'
 import { HistoryView } from './views/HistoryView.tsx'
+import { ProgressView } from './views/ProgressView.tsx'
 import { InsightsView } from './views/InsightsView.tsx'
 import { MomentsView } from './views/MomentsView.tsx'
 import { PrivacyView } from './views/PrivacyView.tsx'
@@ -25,7 +26,7 @@ import { SettingsView } from './views/SettingsView.tsx'
 import { UsageView } from './views/UsageView.tsx'
 import { usd } from './format.ts'
 
-export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
+export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'progress' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
 
 export interface ProfileCatalog {
   readonly profiles: readonly GameProfile[]
@@ -297,6 +298,7 @@ export function App() {
               ['insights', 'Insights', state.report?.insights.filter((i) => i.insight.grade !== 'insufficient').length || null],
               ['moments', 'Decisions', state.moments.length || null],
               ['ask', 'Ask the coach', state.conversation.length || null],
+              ['progress', 'Progress', state.progress.practice && session.progress.currentFocus() ? '◆' : null],
               ['history', 'History', state.history.length || null],
               ['review', 'Session timeline', state.timeline.filter((e) => e.type === 'message').length || null],
               ['usage', 'Usage & cost', null],
@@ -382,6 +384,7 @@ export function App() {
           {tab === 'insights' && <InsightsView state={state} session={session} profile={profile} settings={settings} cloud={cloud} />}
           {tab === 'moments' && <MomentsView state={state} session={session} settings={settings} cloud={cloud} info={info} onTab={setTab} />}
           {tab === 'ask' && <AskView state={state} session={session} profile={profile} settings={settings} cloud={cloud} bridge={bridge} onTab={setTab} />}
+          {tab === 'progress' && <ProgressView session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'review' && <ReviewView state={state} />}
           {tab === 'usage' && (

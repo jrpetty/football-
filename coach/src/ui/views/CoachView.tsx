@@ -19,6 +19,8 @@ import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
 import { ReadyCheck } from '../components/ReadyCheck.tsx'
+import { OpponentCardPicker, OpponentCardView } from '../components/OpponentCard.tsx'
+import { showValue } from '../../core/analyses/practice.ts'
 import type { SightlineBridge } from '../../../shared/bridge.ts'
 import { WhereYouAre } from '../components/MapView.tsx'
 import { LivePitch } from '../components/PitchView.tsx'
@@ -272,6 +274,8 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
         </section>
       </div>
 
+      {profile.id === 'aoe4' ? <OpponentCardPicker profile={profile} yourCiv={session.progress.playerCiv()} /> : null}
+
       <ReadyCheck state={state} session={session} settings={settings} onSettings={onSettings} profile={profile} policy={policy} cloud={cloud} info={info} bridge={bridge} onTab={onTab} />
 
       <section className="panel start-panel" aria-labelledby="step-start">
@@ -485,6 +489,15 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
             </section>
           )}
 
+          {profile.id === 'aoe4' && policy.scope.has('live') && state.report?.intel?.faction ? (
+            <section className="panel" aria-labelledby="opp-live-h">
+              <div className="panel-head">
+                <h2 id="opp-live-h">Opponent card: {state.report.intel.faction.name}</h2>
+              </div>
+              <OpponentCardView profile={profile} theirCiv={state.report.intel.faction.id} yourCiv={session.progress.playerCiv()} yourAge={state.report.intel.yourPlan?.age ?? 1} />
+            </section>
+          ) : null}
+
           {profile.positioning && policy.scope.has('live') && state.report?.map ? (
             <section className="panel" aria-labelledby="where-h">
               <div className="panel-head">
@@ -607,6 +620,8 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
 
           <NotSaidPanel state={state} />
 
+          <TrainingPanel state={state} session={session} policy={policy} onTab={onTab} />
+
           <section className="panel" aria-labelledby="mom-h">
             <div className="panel-head">
               <h2 id="mom-h">Decisions to review</h2>
@@ -650,6 +665,36 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
 
       {aligning ? <AlignmentCheck session={session} profile={profile} onClose={() => setAligning(false)} /> : null}
     </div>
+  )
+}
+
+/** The practice focus and the build being trained with, during a session. */
+function TrainingPanel({ state, session, policy, onTab }: { state: SessionState; session: CoachSession; policy: ResolvedPolicy; onTab: (t: Tab) => void }) {
+  const focus = session.progress.currentFocus()
+  const build = session.progress.activeBuild()
+  if (!focus && !build) return null
+  const live = policy.scope.has('live')
+  return (
+    <section className="panel" aria-labelledby="training-h">
+      <div className="panel-head">
+        <h2 id="training-h">Training</h2>
+        <button type="button" className="link-btn small" onClick={() => onTab('progress')}>
+          Progress
+        </button>
+      </div>
+      {focus ? (
+        <p className="small" style={{ marginTop: 0 }}>
+          <b>Practice: {focus.title}.</b> Target {showValue(focus.unit, focus.target)} (before: {showValue(focus.unit, focus.baseline)}). Game {Math.min(focus.results.length + 1, focus.games)} of {focus.games}.
+        </p>
+      ) : null}
+      {build ? (
+        <p className="small" style={{ marginBottom: 0 }}>
+          <b>Build:</b> {build.name}.{' '}
+          <span className="muted">{live ? 'The next steps are called as you play.' : 'Not called during play in this mode; compare after the match on Progress.'}</span>
+        </p>
+      ) : null}
+      {state.phase === 'capturing' && !live && focus ? <p className="muted small">The focus is shown here, not said, in this mode.</p> : null}
+    </section>
   )
 }
 

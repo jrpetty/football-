@@ -122,6 +122,18 @@ export function parseNames(text: string, matchers: readonly Matcher[]): Map<stri
   return found
 }
 
+/** A civilisation by its id, name or alias ("Order of the Dragon", "order-of-the-dragon", "OotD"). */
+export function findFaction(roster: Roster, name: string | null | undefined): RosterFaction | null {
+  if (!name) return null
+  const q = name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+  if (!q) return null
+  return (
+    roster.factions.find((f) => [f.id.replace(/-/g, ' '), f.name, ...(f.aliases ?? [])].some((n) => n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() === q)) ??
+    roster.factions.find((f) => q.length >= 4 && f.name.toLowerCase().includes(q)) ??
+    null
+  )
+}
+
 export class IntelTracker {
   private readonly roster: Roster
   private readonly spec: NonNullable<GameProfile['intel']>
@@ -194,14 +206,7 @@ export class IntelTracker {
   }
 
   findFaction(name: string | null | undefined): RosterFaction | null {
-    if (!name) return null
-    const q = name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-    if (!q) return null
-    return (
-      this.roster.factions.find((f) => [f.id.replace(/-/g, ' '), f.name, ...(f.aliases ?? [])].some((n) => n.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() === q)) ??
-      this.roster.factions.find((f) => q.length >= 4 && f.name.toLowerCase().includes(q)) ??
-      null
-    )
+    return findFaction(this.roster, name)
   }
 
   update(visible: VisibleState, now: number): IntelNews[] {

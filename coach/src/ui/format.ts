@@ -86,6 +86,7 @@ export const CATEGORY_TEXT = {
   training: 'Training tip',
   live_tactical: 'Live tip',
   commentary: 'Commentary',
+  build: 'Build order',
 } as const
 
 /** "2.5 s", "45 s", "1 min 12 s". */

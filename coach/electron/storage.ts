@@ -7,7 +7,10 @@
 //   secret.bin               API key, OS-encrypted (see cloud/keystore.ts)
 //   tendencies/<pack>.json   opt-in pattern counts            ┐ player data:
 //   history/<pack>.json      opt-in match records             │ encrypted with
-//   notes/<pack>.json        opt-in notes and goals           ┘ safeStorage when available
+//   notes/<pack>.json        opt-in notes and goals           │ safeStorage when available
+//   aoe4world/<pack>.json    opt-in: the player's AoE4World games and their facts
+//   practice/<pack>.json     opt-in: the practice plan
+//   builds/<pack>.json       saved build orders (made by the player) ┘
 //   research/<pack>.json     cited research briefs (public web content)
 //   knowledge/<pack>.kb.gz   game knowledge base built by research (gzip JSON; public web content)
 //   knowledge/<pack>.screens.json  screens learned from the player's screen: 64-bit
@@ -32,6 +35,9 @@ import { MODELS } from '../src/core/vision/cost.ts'
 import { cleanLedger, type UsageLedger } from '../src/core/usage.ts'
 import { isScreenCatalog, type ScreenCatalog } from '../src/core/vision/screens.ts'
 import { isGlyphBookData, type GlyphBookData } from '../src/core/hud/glyphs.ts'
+import { isAoe4History } from '../src/core/aoe4/history.ts'
+import { isBuildLibrary } from '../src/core/aoe4/buildOrder.ts'
+import { isPracticePlan } from '../src/core/analyses/practice.ts'
 import { cleanMosaic, type StoredMosaic } from '../src/core/map/minimap.ts'
 import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import { gunzipSync, gzipSync } from 'node:zlib'
@@ -56,6 +62,13 @@ export interface PlayerNotes {
   readonly notes: string
   readonly updatedAt: string
 }
+
+/** Folders of player data: deleted with "Forget", included in the export. */
+const PLAYER_DIRS = ['tendencies', 'history', 'notes', 'aoe4world', 'practice', 'builds'] as const
+
+type DocKind = 'aoe4world' | 'practice' | 'builds'
+const DOC_CHECK: Record<DocKind, (v: unknown) => boolean> = { aoe4world: isAoe4History, practice: isPracticePlan, builds: isBuildLibrary }
+const isDocKind = (v: unknown): v is DocKind => v === 'aoe4world' || v === 'practice' || v === 'builds'
 
 export class Storage {
   readonly root: string
@@ -180,6 +193,24 @@ export class Storage {
     return true
   }
 
+  // --- Player documents: AoE4World history, practice plan, build orders ----------------------
+
+  async loadDoc(kind: unknown, profileId: unknown): Promise<unknown> {
+    if (!isDocKind(kind) || !isProfileId(profileId)) return null
+    const v = await this.readPrivate(this.path(kind, profileId))
+    return DOC_CHECK[kind](v) ? v : null
+  }
+
+  /** The AoE4World history and the practice plan are kept only with "Remember my games" on; build orders always (the player saved them). */
+  async saveDoc(kind: unknown, profileId: unknown, doc: unknown): Promise<boolean> {
+    if (!isDocKind(kind) || !isProfileId(profileId) || !DOC_CHECK[kind](doc)) return false
+    if (kind !== 'builds' && !(await this.optedIn())) return false
+    if (JSON.stringify(doc).length > 4_000_000) return false
+    await mkdir(join(this.root, kind), { recursive: true })
+    await this.writePrivate(this.path(kind, profileId), doc)
+    return true
+  }
+
   /** Delete long-term player data for one pack, or for every pack when null. */
   async forgetPlayerData(profileId: unknown): Promise<void> {
     if (profileId === null) {
@@ -191,7 +222,7 @@ export class Storage {
       await rm(this.hudPath(profileId), { force: true })
       await rm(this.mapsDir(profileId), { recursive: true, force: true })
     }
-    for (const dir of ['tendencies', 'history', 'notes']) {
+    for (const dir of PLAYER_DIRS) {
       if (profileId === null) {
         await rm(join(this.root, dir), { recursive: true, force: true })
         await mkdir(join(this.root, dir), { recursive: true })
@@ -204,7 +235,7 @@ export class Storage {
   /** Every piece of stored player data, decrypted, as one JSON document (for the player to keep). */
   async exportPlayerData(): Promise<string> {
     const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), encryptedAtRest: this.encrypted }
-    for (const dir of ['tendencies', 'history', 'notes']) {
+    for (const dir of PLAYER_DIRS) {
       const entries: Record<string, unknown> = {}
       for (const name of await readdir(join(this.root, dir)).catch(() => [] as string[])) {
         if (!name.endsWith('.json')) continue
