@@ -592,7 +592,15 @@
         "description": "The defused-bomb icon or \"The bomb has been defused\" banner.",
         "dedupeMs": 20000
       }
-    ]
+    ],
+    "detail": {
+      "keys": [
+        "mapName",
+        "modeName",
+        "killerSpot",
+        "killerWeapon"
+      ]
+    }
   },
   "zones": [
     {

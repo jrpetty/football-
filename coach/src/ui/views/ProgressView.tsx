@@ -469,6 +469,7 @@ function BuildsPanel({ session, profile }: Props) {
           </div>
           {vs ? <BuildComparison label={vs.label} checks={vs.checks} /> : <p className="muted small">Play a game as {civOf(profile, civ)} to see it against this build.</p>}
           <BuildSteps build={active} />
+          <UpgradeTimings session={session} build={active} />
           <SplitEditor key={active.id} session={session} build={active} />
         </div>
       ) : (
@@ -503,6 +504,63 @@ function BuildsPanel({ session, profile }: Props) {
         </>
       ) : null}
     </section>
+  )
+}
+
+/** Wheelbarrow, Textiles and the Blacksmith: your last game's times against the build and the game it came from. */
+function UpgradeTimings({ session, build }: { session: CoachSession; build: BuildOrder }) {
+  const u = session.progress.upgradesAgainst(build)
+  if (!u) return null
+  const cell = (t: number | null, ref: number | null) => {
+    if (t === null) return <span className="muted">–</span>
+    const late = ref !== null && t - ref >= 45
+    const early = ref !== null && ref - t >= 45
+    return <span className={late ? 'warn-text' : early ? 'ok-text' : ''}>{clock(t)}</span>
+  }
+  return (
+    <div className="upgrade-timings">
+      <h3 className="small">Upgrade timings</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        {u.label}, from its AoE4World summary (after the match only). Against the build's steps and the whole game it came from
+        {u.sourceLabel ? ` (${u.sourceLabel})` : ''}, which goes on past the build's last step. Red: 45 s or more later than the build (or, without a build step, their game).
+      </p>
+      {u.rows.length ? (
+        <div className="table-scroll">
+          <table className="table upgrade-table">
+            <thead>
+              <tr>
+                <th>Upgrade</th>
+                <th>Where</th>
+                <th>You</th>
+                <th>The build</th>
+                <th>Their game</th>
+              </tr>
+            </thead>
+            <tbody>
+              {u.rows.map((r) => (
+                <tr key={r.upgrade.id}>
+                  <td>{r.upgrade.name}</td>
+                  <td className="muted">{r.upgrade.at}</td>
+                  <td>{cell(r.yours, r.build ?? r.source)}</td>
+                  <td>{r.build !== null ? clock(r.build) : <span className="muted">–</span>}</td>
+                  <td>{r.source !== null ? clock(r.source) : <span className="muted">{build.upgrades ? '–' : 'not kept'}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted small">No Wheelbarrow, Textiles or Blacksmith upgrades in that game or in the build.</p>
+      )}
+      {u.findings.length ? (
+        <ul className="week-lines">
+          {u.findings.map((f) => (
+            <li key={f}>{f}</li>
+          ))}
+        </ul>
+      ) : null}
+      {!build.upgrades && build.from ? <p className="muted small">This build was saved before upgrade times were kept: make it again from the same game to see their game's times.</p> : null}
+    </div>
   )
 }
 

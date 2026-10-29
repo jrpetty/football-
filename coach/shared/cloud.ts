@@ -1,6 +1,8 @@
 // Cloud feature types shared by the main process and the renderer. The
 // renderer never sees the API key: only whether one is set.
 
+import type { TierStats } from '../src/core/vision/tiers.ts'
+
 export interface CloudSettings {
   readonly enabled: boolean
   readonly visionModel: string
@@ -19,6 +21,11 @@ export interface CloudSettings {
   readonly monthlyBudgetUsd: number
   /** Stop all cloud calls once the monthly budget is reached (else only warn). */
   readonly stopAtBudget: boolean
+  /**
+   * Smart reading: every look is read by the fast model (Haiku 5.5, no thinking) and only looks that
+   * need it (fights, deaths, scouted names, results, new screens, a regular check) also by `visionModel`.
+   */
+  readonly smartReading: boolean
 }
 
 export type VisionThinking = 'auto' | 'off'
@@ -32,6 +39,7 @@ export const DEFAULT_CLOUD: CloudSettings = {
   matchupReference: true,
   monthlyBudgetUsd: 0,
   stopAtBudget: false,
+  smartReading: true,
 }
 
 /** This session's spend, and the month's for the budget. */
@@ -57,6 +65,8 @@ export interface VisionUsage {
   readonly output: number
   /** Part of the output spent thinking, when the API reports it. */
   readonly thinking: number
+  /** Smart reading: looks read by the fast model, those also read by the chosen one and why, and how often the two agreed. */
+  readonly tiers?: TierStats
 }
 
 export type CloudResult<T> =

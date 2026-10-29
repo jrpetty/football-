@@ -193,6 +193,11 @@ export interface VisionSpec {
   readonly crops?: readonly { readonly id: string; readonly label: string; readonly region: NormRect }[]
   readonly state: readonly VisionStateSpec[]
   readonly events: readonly VisionEventSpec[]
+  /**
+   * Smart reading: what sends a look on from the fast model to the player's chosen one. Events
+   * (default: those with details to read) and readings that must match the reference exactly.
+   */
+  readonly detail?: { readonly events?: readonly string[]; readonly keys?: readonly string[] }
 }
 
 // --- Analyses (v2) ----------------------------------------------------------------------
@@ -1318,6 +1323,11 @@ export function validateProfile(input: unknown): ValidationResult {
         }
         if (type) visionEvents.set(type, { attributes: attrs, zoneSet: zs })
       })
+      const d = v.detail === undefined ? null : c.obj(v.detail, 'vision.detail')
+      if (d) {
+        for (const [i, k] of c.arr(d.events, 'vision.detail.events', true).entries()) if (typeof k !== 'string' || !visionEvents.has(k)) c.errors.push(`vision.detail.events[${i}]: not a vision event`)
+        for (const [i, k] of c.arr(d.keys, 'vision.detail.keys', true).entries()) if (typeof k !== 'string' || !visionStateKeys.has(k)) c.errors.push(`vision.detail.keys[${i}]: not a vision state key`)
+      }
     }
   }
 

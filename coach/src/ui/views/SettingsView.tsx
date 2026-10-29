@@ -287,10 +287,13 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
     onSettings({ vision: next })
   }
   const model = cloud.settings.visionModel
-  const est = playEstimate(profile, settings, cloud.settings, usage)!
   const used = cloud.spend.vision
+  const tiers = used?.tiers && used.tiers.fast > 0 ? used.tiers : null
+  const est = playEstimate(profile, settings, cloud.settings, usage, undefined, tiers && tiers.fast >= 20 ? tiers.detail / tiers.fast : null)!
   const measured = used && used.calls >= 5 ? used : null
-  const per = (n: number) => Math.round(n / (measured?.calls ?? 1))
+  /** Looks (a smart look may be two calls). */
+  const looks = tiers?.fast ?? measured?.calls ?? 1
+  const per = (n: number) => Math.round(n / looks)
   const perHour = (3_600_000 / v.intervalMs) | 0
   const sonnetOrHaiku = /^claude-(sonnet|haiku)-5-5/.test(model)
   const applyCloud = (p: Promise<CloudStatus>) => void p.then(onCloud).catch(() => undefined)
@@ -364,6 +367,16 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
             </span>
           </div>
         ) : null}
+        {cloud.available ? (
+          <div className="field">
+            <Switch
+              checked={cloud.settings.smartReading}
+              onChange={(smartReading) => applyCloud(bridge.setCloudSettings({ smartReading }))}
+              label="Smart reading (much cheaper)"
+              hint={`Every look is read by Haiku 5.5, the fastest and cheapest model, with no thinking. ${modelPrice(model).label.replace(/ \(.*\)$/, '')} reads the same frame only when it needs its care: fights, deaths and killcams, the enemy units and names to match exactly, results, new screens, and one look in 25 as a check. If Haiku disagrees with it on more than one number in five, every look goes to ${modelPrice(model).label.replace(/ \(.*\)$/, '')} for the rest of the session.`}
+            />
+          </div>
+        ) : null}
         {cloud.available && profile.intel ? (
           <div className="field">
             <Switch
@@ -378,8 +391,11 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
       <div className="cost-box">
         <div>
           <span className="label">Estimate</span> {usdFine(est.listPerLook.low)}–{usdFine(est.listPerLook.high)} a look ≈ {usdRange(est.listPerHour.low, est.listPerHour.high)}/hour with{' '}
-          {modelPrice(model).label.replace(/ \(.*\)$/, '')} at list prices (from no thinking to a little), about {usdRange(est.listPerMatch.low, est.listPerMatch.high)} for a typical{' '}
-          {est.matchMinutes}-minute match. Still screens are skipped, so real play usually costs less.
+          {est.smart
+            ? `Haiku 5.5 on every look and ${modelPrice(model).label.replace(/ \(.*\)$/, '')} on ${Math.round(est.smart.share * 100)}% of them (${est.smart.measuredShare ? 'this session' : 'assumed until measured'})`
+            : modelPrice(model).label.replace(/ \(.*\)$/, '')}{' '}
+          at list prices (from no thinking to a little), about {usdRange(est.listPerMatch.low, est.listPerMatch.high)} for a typical {est.matchMinutes}-minute match. Still screens are skipped, so real play usually
+          costs less.
         </div>
         {est.measured ? (
           <div>
@@ -389,8 +405,15 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
         ) : null}
         {measured ? (
           <div>
-            <span className="label">Measured this session</span> {measured.calls} looks, {usdFine(measured.usd / measured.calls)} each ≈ {usd((measured.usd / measured.calls) * perHour)}/hour at this
-            refresh. Per look: {per(measured.input).toLocaleString()} tokens of image and question, {per(measured.cacheRead + measured.cacheWrite).toLocaleString()} of
+            <span className="label">Measured this session</span> {looks} looks, {usdFine(measured.usd / looks)} each ≈ {usd((measured.usd / looks) * perHour)}/hour at this refresh.
+            {tiers ? (
+              <>
+                {' '}
+                Smart reading: {tiers.detail} of {tiers.fast} looks also read by {modelPrice(model).label.replace(/ \(.*\)$/, '')}
+                {tiers.checked ? `; the two agreed on ${Math.round((tiers.agreed / tiers.checked) * 100)}% of ${tiers.checked} numbers read on the same frames` : ''}.
+              </>
+            ) : null}
+            {tiers?.off ? <Notice level="warning">{tiers.off}</Notice> : null} Per look: {per(measured.input).toLocaleString()} tokens of image and question, {per(measured.cacheRead + measured.cacheWrite).toLocaleString()} of
             cached reference, {per(measured.output).toLocaleString()} written{measured.thinking ? ` (${per(measured.thinking).toLocaleString()} of them thinking)` : ''}.
           </div>
         ) : (
@@ -866,6 +889,12 @@ function MemoryPanel({ settings, onSettings, bridge, session }: { settings: Coac
         onChange={(saveTendencies) => onSettings({ saveTendencies })}
         label={<b>Remember my games between sessions</b>}
         hint="Keeps match records (score, statistics, mistakes, zone counts), pattern counts and your notes so the coach can compare across games. Never video, screenshots or audio."
+      />
+      <Switch
+        checked={settings.autoMoments}
+        onChange={(autoMoments) => onSettings({ autoMoments })}
+        label={<b>Snapshot each death and each fight lost</b>}
+        hint="Keeps the frame the coach read it from (already sent for screen reading, so nothing extra is captured or sent), with what it read about it, to flick through on the Decisions page after the match. In memory for this session only; never written to disk."
       />
       <p className="muted small">
         {encrypted === null ? '' : encrypted ? 'Stored on this computer, encrypted with your OS account.' : 'Stored on this computer without encryption (OS encryption unavailable, or browser preview).'} Patterns fade with a 30-day half-life, and patterns from an older game version are not mixed in.

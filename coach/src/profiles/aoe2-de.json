@@ -214,6 +214,13 @@
       }
     ],
     "events": [],
+    "detail": {
+      "keys": [
+        "opponentCiv",
+        "enemyBuildings",
+        "enemyUnits"
+      ]
+    },
     "maxInFlight": 2
   },
   "mistakes": [

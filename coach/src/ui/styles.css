@@ -5421,3 +5421,93 @@ td > .swatch {
 .split-table input.invalid {
   border-color: var(--live);
 }
+
+/* --- Upgrade timings ----------------------------------------------------------------- */
+.upgrade-timings {
+  margin-top: 12px;
+}
+.upgrade-table td,
+.upgrade-table th {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.upgrade-table .warn-text {
+  color: var(--live);
+}
+.upgrade-table .ok-text {
+  color: var(--accent);
+}
+
+/* --- Key moments viewer ---------------------------------------------------------------- */
+.km-view {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 16px;
+  outline: none;
+}
+@media (max-width: 820px) {
+  .km-view {
+    grid-template-columns: 1fr;
+  }
+}
+.km-shot {
+  position: relative;
+  margin: 0;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 120px;
+}
+.km-shot img {
+  width: 100%;
+  display: block;
+}
+.km-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 56px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(7, 11, 18, 0.6);
+  color: var(--text);
+  font-size: 26px;
+  cursor: pointer;
+}
+.km-nav.prev {
+  left: 6px;
+}
+.km-nav.next {
+  right: 6px;
+}
+.km-tags {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+.km-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-top: 12px;
+  padding-bottom: 4px;
+}
+.km-thumb {
+  flex: 0 0 auto;
+  width: 96px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 11px;
+}
+.km-thumb.on {
+  border-color: var(--accent);
+}
+.km-thumb img {
+  width: 100%;
+  display: block;
+  border-radius: 4px 4px 0 0;
+}

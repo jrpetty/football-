@@ -435,6 +435,15 @@
         "dedupeMs": 30000
       }
     ],
+    "detail": {
+      "keys": [
+        "mapName",
+        "opponentCiv",
+        "enemyBuildings",
+        "enemyUnits",
+        "enemyCues"
+      ]
+    },
     "maxInFlight": 2
   },
   "mistakes": [

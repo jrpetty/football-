@@ -258,7 +258,7 @@ test('thinking off for screen readings: the lowest setting each model accepts, a
       },
     },
   } as unknown as CloudClient
-  const cloud = { ...DEFAULT_CLOUD, enabled: true, visionModel: 'claude-sonnet-5-5', visionThinking: 'off' as const }
+  const cloud = { ...DEFAULT_CLOUD, enabled: true, visionModel: 'claude-sonnet-5-5', visionThinking: 'off' as const, smartReading: false }
   const svc = new CloudService(() => 'sk-ant-test-0000000000000000000000', () => cloud, () => client)
   const img = { base64: 'AAAA', mediaType: 'image/jpeg' as const }
   await svc.analyzeFrame(aoe4, img, {})

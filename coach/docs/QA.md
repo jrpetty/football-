@@ -301,3 +301,11 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 21.4 | Reach 200 population and stay there a minute. Then lose 5 villagers to a raid while the Town Center keeps working. | Neither adds idle time; the raid stretch is listed under "Not counted" (villagers lost). |
 | 21.5 | Progress → Build orders → the build in use → Villagers on each resource: add 4:00 with 8 food, 8 wood, 2 gold; save. Play it against the AI with 5 on wood at 4:00. | At 4:00: "Build wants 8 on wood by 4:00, you have 5." After the game the same line under "Your last game the coach watched". |
 | 21.6 | Same build with Castle at 9:00. In Feudal keep only 1 on gold. | Once the gold rate is measured (about a minute in): "Gold for Castle: … with 1 on gold, there around …; the build ages up at 9:00. About N more on gold." At most twice. |
+
+## 22. Smart reading, upgrade timings and key moments
+
+| # | Steps | Expected |
+|---|---|---|
+| 22.1 | AoE IV with your AoE4World profile linked and a build in use: play a Ranked game where you research Wheelbarrow and a few Blacksmith upgrades. Progress → Build orders → Upgrade timings. | Each upgrade you got, at the time AoE4World shows for it, beside the build and their game. Note any Blacksmith upgrade missing from the table that you did research (its icon name was not matched). |
+| 22.2 | Call of Duty against bots (or any match) with screen reading on: die a few times. After the match, Decisions. | Key moments: one per death, the killcam or death screen, with cover, movement and range where read. Left and right arrows move between them. Nothing about them in the app's data folder. |
+| 22.3 | Play 10 minutes of AoE IV with screen reading on and Smart reading on. Settings → Screen reading. | "Smart reading: N of M looks also read by …" and how often the two agreed; the measured cost per hour. Compare with the same 10 minutes with Smart reading off. Note any reading that looked worse (numbers, fights, names). |

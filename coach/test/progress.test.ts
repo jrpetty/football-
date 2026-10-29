@@ -346,3 +346,34 @@ test('the civilisation chosen on the Coach screen (its name) selects its own vil
   const horde = play('skirmish-vs-ai', { civ: 'Golden Horde' })
   assert.ok(horde.entries.some((e) => e.type === 'notice' && /Villagers against the clock: not compared\. Golden Horde villagers take 37 seconds/.test(e.text)))
 })
+
+test('upgrade timings: Wheelbarrow, Textiles and the Blacksmith by name or line and tier; against the build and the game it came from', async () => {
+  const { trackedUpgrade, upgradeTimes, upgradeRows, upgradeFindings } = await import('../src/core/aoe4/upgrades.ts')
+  assert.equal(trackedUpgrade('wheelbarrow'), 'wheelbarrow')
+  assert.equal(trackedUpgrade('upgrade_villager_health'), 'textiles')
+  assert.equal(trackedUpgrade('upgrade_melee_damage_i'), 'melee-damage-1')
+  assert.equal(trackedUpgrade('ranged_armor_3'), 'ranged-armor-3')
+  assert.equal(trackedUpgrade('icons/races/common/upgrades/balanced_projectiles'), 'ranged-damage-2')
+  assert.equal(trackedUpgrade('gold_gather_1'), null)
+  const source = upgradeTimes([
+    { t: 200, kind: 'upgrade', item: 'wheelbarrow' },
+    { t: 610, kind: 'upgrade', item: 'bloomery' },
+    { t: 900, kind: 'upgrade', item: 'steeled_arrow' },
+  ])
+  assert.deepEqual(source, { wheelbarrow: 200, 'melee-damage-1': 610, 'ranged-damage-1': 900 })
+  // A build made from that game keeps them, and its steps carry the tier.
+  const plan = buildFromGame({ events: [{ t: 200, kind: 'upgrade', item: 'wheelbarrow' }, { t: 610, kind: 'upgrade', item: 'bloomery' }, { t: 900, kind: 'upgrade', item: 'steeled_arrow' }], villagers: {}, ages: { castle: 600 } }, { civ: 'english', name: 'x', source: 'game', roster })
+  assert.deepEqual(plan.upgrades, source)
+  assert.ok(isBuildOrder(plan))
+  assert.ok(plan.steps.some((s) => s.key === 'melee-damage-1' && s.name === 'Bloomery'))
+  const mine = upgradeTimes([{ t: 330, kind: 'upgrade', item: 'wheelbarrow' }])
+  const rows = upgradeRows(mine, { wheelbarrow: 200, 'melee-damage-1': 610 }, source, 1200)
+  assert.deepEqual(rows.map((r) => [r.upgrade.id, r.yours, r.build, r.source]), [
+    ['wheelbarrow', 330, 200, 200],
+    ['melee-damage-1', null, 610, 610],
+    ['ranged-damage-1', null, null, 900],
+  ])
+  assert.deepEqual(upgradeFindings(rows), ['Bloomery: not researched (the build at 10:10).', 'Steeled Arrow: not researched (their game at 15:00).', 'Wheelbarrow 2:10 later than the build (5:30 against 3:20).'])
+  // A shorter game: an upgrade their game got later is not listed as missing.
+  assert.ok(!upgradeRows(mine, null, source, 700).some((r) => r.upgrade.id === 'ranged-damage-1'))
+})

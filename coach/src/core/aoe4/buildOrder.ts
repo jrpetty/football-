@@ -12,6 +12,7 @@ import type { Roster } from '../profile/schema.ts'
 import type { BuildEvent } from '../truth/aoe4world.ts'
 import { itemKey, itemName, nameKey } from './names.ts'
 import { isWorkerSplit, MAX_SPLITS, splitLine, type WorkerSplit, type Workers } from './workers.ts'
+import { TRACKED_UPGRADES, trackedUpgrade, upgradeTimes } from './upgrades.ts'
 
 export const BUILD_SCHEMA = 1
 export const MAX_STEPS = 32
@@ -40,6 +41,8 @@ export interface BuildOrder {
   readonly steps: readonly BuildStep[]
   /** Villagers wanted on each resource by a few times (optional). */
   readonly splits?: readonly WorkerSplit[]
+  /** Wheelbarrow, Textiles and Blacksmith upgrade times in the whole game it came from (first 20 minutes). */
+  readonly upgrades?: Readonly<Record<string, number>>
 }
 
 /** The facts a build is made from, or compared with. */
@@ -56,6 +59,9 @@ const NOT_A_STEP = /^(house|farm|farmhouse|palisade.*|.*wall.*|.*gate.*|outpost|
 const NOT_A_UNIT_STEP = /^(villager|scout|fishing_boat|trade.*|traders?|monk|imam|prelate|scholar|dervish|shaman)$/
 /** Production buildings whose second copy is a step too. */
 const SECOND_COPY = /^(barracks|archery_range|stable|town_center|siege_workshop|dock)$/
+
+/** A step's matching key: the icon key, or for Wheelbarrow, Textiles and the Blacksmith the upgrade with its tier. */
+const stepKey = (e: BuildEvent) => (e.kind === 'upgrade' ? (trackedUpgrade(e.item) ?? itemKey(e.item)) : itemKey(e.item))
 
 let seq = 0
 export const buildId = () => `b-${Date.now().toString(36)}-${(++seq).toString(36)}`
@@ -82,13 +88,14 @@ export function buildFromGame(played: PlayedBuild, opts: { civ: string; name: st
       continue
     }
     if (e.kind === 'building' && itemKey(e.item).startsWith('landmark_') && events.some((x) => x.kind === 'age' && Math.abs(x.t - e.t) <= 3)) continue
-    const key = itemKey(e.item)
+    const key = stepKey(e)
     const n = (seen.get(`${e.kind}:${key}`) ?? 0) + 1
     seen.set(`${e.kind}:${key}`, n)
     if (e.kind === 'building' && (NOT_A_STEP.test(key) || n > (SECOND_COPY.test(key) ? 2 : 1))) continue
     if (e.kind === 'unit' && (NOT_A_UNIT_STEP.test(key) || n > 1)) continue
     if (e.kind === 'upgrade' && n > 1) continue
-    steps.push({ atSec: e.t, kind: e.kind, key, name: itemName(e.kind, e.item, opts.roster), count: n })
+    const tracked = e.kind === 'upgrade' ? TRACKED_UPGRADES.find((u) => u.id === key) : undefined
+    steps.push({ atSec: e.t, kind: e.kind, key, name: tracked?.name ?? itemName(e.kind, e.item, opts.roster), count: n })
   }
   for (const [sec, v] of Object.entries(played.villagers)) if (Number(sec) <= until) steps.push({ atSec: Number(sec), kind: 'villagers', key: 'villagers', name: 'Villagers', count: v })
   steps.sort((a, b) => a.atSec - b.atSec || (a.kind === 'villagers' ? 1 : 0) - (b.kind === 'villagers' ? 1 : 0))
@@ -99,7 +106,18 @@ export function buildFromGame(played: PlayedBuild, opts: { civ: string; name: st
     if (i < 0) break
     steps.splice(i, 1)
   }
-  return { schema: BUILD_SCHEMA, id: buildId(), name: opts.name.slice(0, 80), civ: opts.civ, source: opts.source, ...(opts.from ? { from: opts.from } : {}), createdAt: (opts.now ?? new Date()).toISOString(), steps }
+  const upgrades = upgradeTimes(played.events)
+  return {
+    schema: BUILD_SCHEMA,
+    id: buildId(),
+    name: opts.name.slice(0, 80),
+    civ: opts.civ,
+    source: opts.source,
+    ...(opts.from ? { from: opts.from } : {}),
+    createdAt: (opts.now ?? new Date()).toISOString(),
+    steps,
+    ...(Object.keys(upgrades).length ? { upgrades } : {}),
+  }
 }
 
 export const clock = (sec: number) => `${sec < 0 ? '-' : ''}${Math.floor(Math.abs(sec) / 60)}:${String(Math.round(Math.abs(sec) % 60)).padStart(2, '0')}`
@@ -123,8 +141,8 @@ export function compareBuild(plan: BuildOrder, played: PlayedBuild, opts: { last
   const counts = new Map<string, number[]>()
   for (const e of played.events) {
     if (e.kind === 'age') continue
-    const k = `${e.kind}:${itemKey(e.item)}`
-    counts.set(k, [...(counts.get(k) ?? []), e.t].sort((a, b) => a - b))
+    // Upgrades by their tracked key ("melee-damage-2"), and by the icon key builds made before had.
+    for (const k of new Set([`${e.kind}:${stepKey(e)}`, `${e.kind}:${itemKey(e.item)}`])) counts.set(k, [...(counts.get(k) ?? []), e.t].sort((a, b) => a - b))
   }
   const last = opts.lastSec ?? Infinity
   return plan.steps.map((step): StepCheck => {
@@ -297,6 +315,8 @@ export function isBuildOrder(v: unknown): v is BuildOrder {
         s.name.length <= 80 &&
         typeof s.count === 'number',
     ) &&
-    (o.splits === undefined || (Array.isArray(o.splits) && o.splits.length <= MAX_SPLITS && o.splits.every(isWorkerSplit)))
+    (o.splits === undefined || (Array.isArray(o.splits) && o.splits.length <= MAX_SPLITS && o.splits.every(isWorkerSplit))) &&
+    (o.upgrades === undefined ||
+      (typeof o.upgrades === 'object' && o.upgrades !== null && Object.keys(o.upgrades).length <= 20 && Object.values(o.upgrades).every((t) => typeof t === 'number' && t >= 0 && t <= 3600)))
   )
 }

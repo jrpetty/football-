@@ -13,7 +13,7 @@ import type { GameProfile } from '../core/profile/schema.ts'
 import { answerLocally, buildDigest, classify } from '../core/qa/ask.ts'
 import { statusLabel } from '../core/policy/registry.ts'
 import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
-import type { CoachingMessage, DecisionRecord, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
+import type { CoachingMessage, DecisionRecord, GameEvent, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
 import { ReplaySource, ScreenCaptureSource, SimulatedSource, type FrameSink, type FrameSource, type Surface } from '../capture/sources.ts'
 import { aoe2GameReplay, aoe4GameReplay, demoMapFrom, fcMatchReplay, mw4MatchReplay } from '../sim/visionReplay.ts'
 import { mw4DemoPicture, type DemoOfficial } from '../sim/mw4Minimap.ts'
@@ -38,6 +38,24 @@ import { fromBase64 } from '../core/map/minimap.ts'
 import { liveModes, policyFor } from './policy.ts'
 import { hudFieldsFor } from '../core/hud/reader.ts'
 import { compareWithPlayer, compareWithSummary, type TruthReport } from '../core/truth/aoe4world.ts'
+import { autoMomentFor, RecentFrames, type AutoMomentInfo } from '../core/autoMoments.ts'
+
+/** A JPEG scaled down to `width` (the original when it is smaller, or when scaling is not available). */
+async function downscaleJpeg(jpeg: ArrayBuffer, width: number): Promise<ArrayBuffer> {
+  try {
+    const bmp = await createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' }))
+    if (bmp.width <= width) {
+      bmp.close()
+      return jpeg
+    }
+    const canvas = new OffscreenCanvas(width, Math.round((bmp.height * width) / bmp.width))
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+    bmp.close()
+    return await (await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 })).arrayBuffer()
+  } catch {
+    return jpeg
+  }
+}
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
 const MAX_IN_FLIGHT = 2
@@ -46,6 +64,10 @@ const CAPTIONS_CAP = 40
 const CONVERSATION_CAP = 60
 /** Marked moments kept per session (each is a ~100 KB screenshot in memory). */
 const MOMENTS_CAP = 24
+/** Automatic snapshots kept per session (deaths, fights lost), downscaled to about 60 KB each. */
+const AUTO_MOMENTS_CAP = 40
+/** Automatic snapshots are scaled to this width. */
+const AUTO_MOMENT_WIDTH = 960
 /** A voice question this soon after marking a moment becomes that moment's note. */
 const MOMENT_NOTE_WINDOW_MS = 20_000
 
@@ -93,6 +115,8 @@ export interface Moment {
   readonly context: { readonly score: { player: number; opponent: number } | null; readonly screen: string | null; readonly phase: string | null }
   /** What the player said about it (a voice question right after marking). */
   readonly note: string | null
+  /** Taken automatically (a death, a fight lost), with what was read about it; absent for a marked moment. */
+  readonly auto?: AutoMomentInfo
   readonly review: { readonly status: 'idle' | 'reviewing' | 'done' | 'error'; readonly text: string | null; readonly costUsd: number }
 }
 
@@ -220,6 +244,8 @@ export class CoachSession {
   private readonly snapshots = new Map<number, (s: { jpeg: ArrayBuffer; frameAt: number } | null) => void>()
   /** Screenshots of marked moments, by moment id (memory only). */
   private readonly momentImages = new Map<string, ArrayBuffer>()
+  /** The last frames sent for screen reading, to snapshot the one a death or lost fight was read from. */
+  private recentFrames = new RecentFrames<ArrayBuffer>(12)
   private toastTimer: ReturnType<typeof setTimeout> | null = null
   /** What the current (or last) session watched: only real play's maps are saved. */
   private sourceKind: string | null = null
@@ -691,6 +717,8 @@ export class CoachSession {
     if (this.state.phase !== 'idle') return
     this.profile = profile
     this.settings = settings
+    // Frames held for snapshots belong to the last session (a lost fight closed after stopping still had its frame).
+    this.recentFrames = new RecentFrames<ArrayBuffer>(12)
     const samePack = this.state.profileId === profile.id
     this.set({ phase: 'starting', error: null })
     if (!samePack) await this.reloadPlayerData()
@@ -1108,11 +1136,7 @@ export class CoachSession {
       note: null,
       review: { status: 'idle', text: null, costUsd: 0 },
     }
-    let moments = [...this.state.moments, moment]
-    while (moments.length > MOMENTS_CAP) {
-      this.dropMomentImage(moments[0])
-      moments = moments.slice(1)
-    }
+    const moments = this.capMoments([...this.state.moments, moment])
     this.set({
       moments,
       timeline: [...this.state.timeline, { type: 'notice', at, level: 'info', text: 'You marked this moment. Review it after the match.' }],
@@ -1239,13 +1263,54 @@ export class CoachSession {
     if (this.state.moments.length) this.set({ moments: [] })
   }
 
+  /** At most MOMENTS_CAP marked and AUTO_MOMENTS_CAP automatic moments: the oldest of a kind go first. */
+  private capMoments(moments: Moment[]): Moment[] {
+    let out = moments
+    for (const [auto, cap] of [
+      [false, MOMENTS_CAP],
+      [true, AUTO_MOMENTS_CAP],
+    ] as const) {
+      while (out.filter((m) => !!m.auto === auto).length > cap) {
+        const oldest = out.find((m) => !!m.auto === auto)!
+        this.dropMomentImage(oldest)
+        out = out.filter((m) => m !== oldest)
+      }
+    }
+    return out
+  }
+
+  /** A death or lost fight: a snapshot from the frame it was read from (real play with screen reading only). */
+  private async autoMoment(ev: GameEvent): Promise<void> {
+    const profile = this.profile
+    if (!profile || !this.settings?.autoMoments || this.sourceKind !== 'screen') return
+    const info = autoMomentFor(profile, ev)
+    if (!info) return
+    const frame = this.recentFrames.take(ev.at)
+    if (!frame) return
+    const jpeg = await downscaleJpeg(frame, AUTO_MOMENT_WIDTH)
+    const id = uid('auto')
+    this.momentImages.set(id, jpeg)
+    const st = this.state.status
+    const moment: Moment = {
+      id,
+      at: ev.at,
+      markedAt: new Date().toISOString(),
+      imageUrl: URL.createObjectURL(new Blob([jpeg], { type: 'image/jpeg' })),
+      context: { score: st?.score ?? null, screen: st?.vision.screen?.name ?? null, phase: st?.visible.phase ?? null },
+      note: null,
+      review: { status: 'idle', text: null, costUsd: 0 },
+      auto: info,
+    }
+    this.set({ moments: this.capMoments([...this.state.moments, moment]) })
+  }
+
   private dropMomentImage(m: Moment): void {
     if (m.imageUrl) URL.revokeObjectURL(m.imageUrl)
     this.momentImages.delete(m.id)
   }
 
   private noteOnRecentMoment(text: string): void {
-    const last = this.state.moments.at(-1)
+    const last = this.state.moments.filter((m) => !m.auto).at(-1)
     if (!last || last.note || !this.source || this.source.now() - last.at > MOMENT_NOTE_WINDOW_MS) return
     this.patchMoment(last.id, { note: text.slice(0, 300) })
   }
@@ -1366,6 +1431,7 @@ export class CoachSession {
         }
       }
       patch.captions = captions.slice(-CAPTIONS_CAP)
+      for (const e of msg.entries) if (e.type === 'event') void this.autoMoment(e.event)
       if (conversation !== this.state.conversation) patch.conversation = conversation
     }
     if (msg.matches.length) {
@@ -1408,6 +1474,8 @@ export class CoachSession {
       .catch((err: unknown) => ({ ok: false as const, error: String(err) }))
     // The session may have stopped (or a new one started) while the request was out.
     if (this.worker !== worker || !this.source) return
+    // Kept briefly, to snapshot a death or lost fight read from this frame (memory only).
+    if (this.sourceKind === 'screen' && settings.autoMoments && r.ok && r.response.events.length) this.recentFrames.keep(frameAt, jpeg)
     const arrivedAt = this.source.now()
     if (r.ok) {
       this.set({ visionCostUsd: this.state.visionCostUsd + r.costUsd })

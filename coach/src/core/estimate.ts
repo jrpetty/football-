@@ -8,6 +8,7 @@ import type { GameProfile } from './profile/schema.ts'
 import { visionPrefsFor, type CoachSettings } from './settings.ts'
 import { measuredLook, type LookAverage, type UsageSummary } from './usage.ts'
 import { cachedPromptTokens, costOf, estimateRange } from './vision/cost.ts'
+import { DETAIL_SHARE_ASSUMED, FAST_VISION_MODEL } from './vision/tiers.ts'
 
 /** Typical minutes of one match, by pack (else 20). */
 const MATCH_MINUTES: Readonly<Record<string, number>> = {
@@ -43,20 +44,31 @@ export interface PlayEstimate {
   readonly perMatch: { readonly low: number; readonly high: number }
   /** A typical match at list prices, whatever has been measured. */
   readonly listPerMatch: { readonly low: number; readonly high: number }
+  /** Smart reading: the share of looks also read by the chosen model (measured this session, else assumed). */
+  readonly smart: { readonly share: number; readonly measuredShare: boolean } | null
 }
 
 export function playEstimate(
   profile: Pick<GameProfile, 'id' | 'vision' | 'knowledge'>,
   settings: Pick<CoachSettings, 'vision'>,
-  cloud: { readonly visionModel: string; readonly visionThinking: 'auto' | 'off' },
+  cloud: { readonly visionModel: string; readonly visionThinking: 'auto' | 'off'; readonly smartReading?: boolean },
   summary: Pick<UsageSummary, 'looks'> | null | undefined,
   model = cloud.visionModel,
+  /** Smart reading: this session's share of looks sent on to the chosen model, once measured. */
+  detailShare: number | null = null,
 ): PlayEstimate | null {
   if (!profile.vision) return null
   const v = visionPrefsFor(profile, settings)
   const cached = cachedPromptTokens(profile)
-  const r = estimateRange(model, { intervalMs: v.intervalMs, width: v.maxWidth, height: Math.round((v.maxWidth * 9) / 16), cachedTokens: cached, thinkingOff: cloud.visionThinking === 'off' })
-  const m = measuredLook(summary, profile.id, model)
+  const shape = { intervalMs: v.intervalMs, width: v.maxWidth, height: Math.round((v.maxWidth * 9) / 16), cachedTokens: cached }
+  const single = estimateRange(model, { ...shape, thinkingOff: cloud.visionThinking === 'off' })
+  const smart = cloud.smartReading && model !== FAST_VISION_MODEL ? { share: detailShare ?? DETAIL_SHARE_ASSUMED, measuredShare: detailShare !== null } : null
+  // Smart reading: every look by the fast model, the share sent on by the chosen one as well.
+  const fast = smart ? estimateRange(FAST_VISION_MODEL, { ...shape, thinkingOff: true }) : null
+  const r = fast && smart ? { ...single, perLook: fast.perLook + smart.share * single.perLook, low: fast.low + smart.share * single.low, high: fast.high + smart.share * single.high } : single
+  const mFast = smart ? measuredLook(summary, profile.id, FAST_VISION_MODEL) : null
+  const mDetail = measuredLook(summary, profile.id, model, smart ? 5 : undefined)
+  const m = smart ? (mFast ? { ...mFast, usdPerLook: mFast.usdPerLook + smart.share * (mDetail?.usdPerLook ?? single.perLook) } : null) : mDetail
   const measured = m ? { ...m, perHour: m.usdPerLook * r.looksPerHour } : null
   const minutes = matchMinutes(profile.id)
   const perHour = measured ? { low: measured.perHour, high: measured.perHour } : { low: r.low, high: r.high }
@@ -76,6 +88,7 @@ export function playEstimate(
     matchMinutes: minutes,
     perMatch: { low: (perHour.low * minutes) / 60 + fill, high: (perHour.high * minutes) / 60 + fill },
     listPerMatch: { low: (r.low * minutes) / 60 + fillOnce, high: (r.high * minutes) / 60 + fillOnce },
+    smart,
   }
 }
 

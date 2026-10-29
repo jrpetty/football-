@@ -380,7 +380,15 @@
         "description": "A banner shows the player earned a killstreak.",
         "dedupeMs": 10000
       }
-    ]
+    ],
+    "detail": {
+      "keys": [
+        "mapName",
+        "modeName",
+        "killerSpot",
+        "killerWeapon"
+      ]
+    }
   },
   "zones": [
     {

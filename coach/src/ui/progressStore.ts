@@ -9,6 +9,7 @@ import { findFaction } from '../core/analyses/intel.ts'
 import { currentFocus, isPracticePlan, makePlan, measurements, practiceLine, recordGames, suggestFoci, type PracticePlan } from '../core/analyses/practice.ts'
 import { addFacts, emptyHistory, isAoe4History, mergeGames, SUMMARIES_PER_SYNC, wantSummaries, type Aoe4History } from '../core/aoe4/history.ts'
 import { compareSplits, isWorkerSplit, MAX_SPLITS, splitsFromReadings, type SplitCheck, type WorkerSplit } from '../core/aoe4/workers.ts'
+import { TRACKED_UPGRADES, trackedUpgrade, upgradeFindings, upgradeRows, upgradeTimes, type UpgradeRow } from '../core/aoe4/upgrades.ts'
 import { buildFromGame, compareBuild, emptyLibrary, isBuildLibrary, MAX_BUILDS, playedFromScreen, type BuildLibrary, type BuildOrder, type PlayedBuild, type StepCheck } from '../core/aoe4/buildOrder.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
 import type { CoachSettings } from '../core/settings.ts'
@@ -322,6 +323,31 @@ export class ProgressStore {
   /** The players in an AoE4World game, from its link, to make a build from one of them. */
   playersInGame(link: string) {
     return this.host.bridge.aoe4worldGameBuild(link).catch(() => ({ ok: false as const, error: 'Could not reach AoE4World.' }))
+  }
+
+  /**
+   * Upgrade timings in the player's last AoE4World game with the build's civilisation: theirs against the
+   * build's steps and the whole game the build came from.
+   */
+  upgradesAgainst(build: BuildOrder): { label: string; rows: UpgradeRow[]; findings: string[]; sourceLabel: string | null } | null {
+    const profile = this.host.profile()
+    const h = this.host.get().aoe4
+    const g = h?.games.find((x) => x.civ === build.civ && h.facts[x.gameId] && x.gameId !== build.from?.gameId)
+    if (!profile || !g) return null
+    const yours = upgradeTimes(h!.facts[g.gameId].build)
+    const fromSteps: Record<string, number> = {}
+    for (const s of build.steps) {
+      if (s.kind !== 'upgrade') continue
+      const id = TRACKED_UPGRADES.some((u) => u.id === s.key) ? s.key : trackedUpgrade(s.key)
+      if (id && !(id in fromSteps)) fromSteps[id] = s.atSec
+    }
+    const rows = upgradeRows(yours, Object.keys(fromSteps).length ? fromSteps : null, build.upgrades ?? null, g.durationSec)
+    return {
+      label: `Your last ${civName(profile, build.civ)} game on AoE4World (${new Date(g.startedAt * 1000).toLocaleDateString()})`,
+      rows,
+      findings: upgradeFindings(rows),
+      sourceLabel: build.from ? `${build.from.player === 'you' ? 'your game' : build.from.player}${build.from.rating ? ` (${build.from.rating})` : ''}` : null,
+    }
   }
 
   /** The player's most recent game with the build's civilisation, and how it went against the build. */

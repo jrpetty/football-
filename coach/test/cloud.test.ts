@@ -14,6 +14,7 @@ import { DEFAULT_CLOUD } from '../shared/cloud.ts'
 import { validateVisionResponse, visionSystemPrompt, visionUserText, type VisionResponse } from '../src/core/vision/contract.ts'
 import { costOf, estimatePerHour } from '../src/core/vision/cost.ts'
 import { VisionSampler } from '../src/core/vision/sampler.ts'
+import { AGREEMENT_MIN_CHECKED, AUDIT_EVERY, FAST_VISION_MODEL } from '../src/core/vision/tiers.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
 
 const fc = builtInProfile('ea-fc')
@@ -136,7 +137,7 @@ const usage = { input_tokens: 1000, output_tokens: 300, cache_read_input_tokens:
 const parsed: VisionResponse = { phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, state: [], events: [], unreadable: '' }
 
 test('the service refuses to call out when switched off, without a key, or over the cap', async () => {
-  let settings = { ...DEFAULT_CLOUD }
+  let settings = { ...DEFAULT_CLOUD, smartReading: false }
   let key: string | null = null
   const { client, calls } = fakeClient({ parse: () => ({ usage, stop_reason: 'end_turn', parsed_output: parsed }) })
   const svc = new CloudService(() => key, () => settings, () => client)
@@ -278,4 +279,134 @@ test('sampler: with two requests allowed, a frame goes out every interval even w
   assert.equal(s.shouldSample(6000, g(3)), false, 'never more than two at once')
   s.done(6500, true)
   assert.equal(s.shouldSample(6500, g(3)), true)
+})
+
+// --- Smart reading ---------------------------------------------------------------------------
+
+const aoe4 = builtInProfile('aoe4')
+const reading = (over: Partial<VisionResponse> = {}): VisionResponse => ({
+  phase: 'round',
+  phaseConfidence: 0.9,
+  visibleOutcome: null,
+  visibleHealth: null,
+  state: [
+    { key: 'food', value: '200', confidence: 0.9 },
+    { key: 'villagers', value: '21', confidence: 0.9 },
+  ],
+  events: [],
+  unreadable: '',
+  screen: { name: 'In match', kind: 'gameplay', summary: '' },
+  ...over,
+})
+
+test('smart reading: the fast model reads every look; the chosen model only the looks that need it, its reference cached for an hour', async () => {
+  const settings = { ...DEFAULT_CLOUD, enabled: true }
+  let detailReply = reading({ state: [{ key: 'food', value: '200', confidence: 0.95 }, { key: 'villagers', value: '21', confidence: 0.95 }] })
+  let fastReply = reading()
+  const { client, calls } = fakeClient({
+    parse: () => {
+      const req = calls[calls.length - 1] as { model: string }
+      return { usage, stop_reason: 'end_turn', parsed_output: req.model === FAST_VISION_MODEL ? fastReply : detailReply }
+    },
+  })
+  const svc = new CloudService(() => 'sk-ant-test-0000000000000000000000', () => settings, () => client)
+  const img = { base64: 'AAAA', mediaType: 'image/jpeg' as const }
+  const known = { screens: '- In match (gameplay)\n- Main menu (menu): start here' }
+
+  // An ordinary look: the fast model only, thinking off, no fallback parameters.
+  const plain = await svc.analyzeFrame(aoe4, img, {}, known)
+  assert.ok(plain.ok)
+  assert.equal(calls.length, 1)
+  const fastReq = calls[0] as { model: string; thinking?: { type: string }; betas?: unknown; system: { cache_control: { ttl?: string } }[] }
+  assert.equal(fastReq.model, FAST_VISION_MODEL)
+  assert.deepEqual(fastReq.thinking, { type: 'disabled' })
+  assert.equal(fastReq.betas, undefined)
+  assert.equal(fastReq.system[0].cache_control.ttl, undefined)
+
+  // A fight: the same frame goes on to the chosen model; its answer is used.
+  fastReply = reading({ events: [{ type: 'fight', zone: null, attributes: [], confidence: 0.8, evidence: 'armies clash' }] })
+  detailReply = reading({ events: [{ type: 'fight', zone: null, attributes: [{ key: 'trend', value: 'losing' }], confidence: 0.9, evidence: 'army fighting' }] })
+  const fight = await svc.analyzeFrame(aoe4, img, {}, known)
+  assert.ok(fight.ok && fight.response.events[0].attributes[0].value === 'losing')
+  assert.equal(calls.length, 3)
+  const detailReq = calls[2] as { model: string; system: { cache_control: { ttl?: string } }[] }
+  assert.equal(detailReq.model, 'claude-opus-5-5')
+  assert.equal(detailReq.system[0].cache_control.ttl, '1h')
+
+  // Enemy units seen, a new menu, a result: each sent on. A known screen is not.
+  fastReply = reading({ state: [{ key: 'enemyUnits', value: '6 Longbowmen', confidence: 0.8 }] })
+  await svc.analyzeFrame(aoe4, img, {}, known)
+  fastReply = reading({ phase: 'menu', state: [], screen: { name: 'Civilisation select', kind: 'menu', summary: 'Pick a civilisation.' } })
+  await svc.analyzeFrame(aoe4, img, {}, known)
+  fastReply = reading({ phase: 'menu', state: [], screen: { name: 'Main menu', kind: 'menu', summary: '' } })
+  await svc.analyzeFrame(aoe4, img, {}, known)
+  fastReply = reading({ phase: 'match_end', visibleOutcome: 'success' })
+  await svc.analyzeFrame(aoe4, img, {}, known)
+  const tiers = svc.spend.vision!.tiers!
+  assert.equal(tiers.fast, 6)
+  assert.equal(tiers.detail, 4)
+  assert.deepEqual(tiers.reasons, { event: 1, reading: 1, 'new screen': 1, result: 1 })
+  assert.equal(tiers.off, null)
+  assert.ok(tiers.checked > 0 && tiers.agreed === tiers.checked)
+
+  // A regular check: one look in AUDIT_EVERY goes to both even when nothing needs it.
+  fastReply = reading()
+  const before = calls.length
+  for (let i = tiers.fast; i < AUDIT_EVERY; i++) await svc.analyzeFrame(aoe4, img, {}, known)
+  assert.equal(calls.length - before, AUDIT_EVERY - tiers.fast + 1, 'one extra call: the check')
+  assert.equal(svc.spend.vision!.tiers!.reasons.check, 1)
+})
+
+test('smart reading fails closed: when the fast model disagrees too often, every look goes to the chosen model; a failed detail look keeps the fast one', async () => {
+  const settings = { ...DEFAULT_CLOUD, enabled: true, visionModel: 'claude-sonnet-5-5' }
+  let detailFails = false
+  const { client, calls } = fakeClient({
+    parse: () => {
+      const req = calls[calls.length - 1] as { model: string }
+      if (req.model !== FAST_VISION_MODEL && detailFails) throw new Anthropic.APIConnectionError({ message: 'down' })
+      const fast = req.model === FAST_VISION_MODEL
+      return {
+        usage,
+        stop_reason: 'end_turn',
+        parsed_output: reading({ state: [{ key: 'food', value: fast ? '200' : '900', confidence: 0.9 }, { key: 'villagers', value: fast ? '21' : '31', confidence: 0.9 }], events: [{ type: 'fight', zone: null, attributes: [], confidence: 0.8, evidence: 'x' }] }),
+      }
+    },
+  })
+  const svc = new CloudService(() => 'sk-ant-test-0000000000000000000000', () => settings, () => client)
+  const img = { base64: 'AAAA', mediaType: 'image/jpeg' as const }
+  detailFails = true
+  const kept = await svc.analyzeFrame(aoe4, img, {})
+  assert.ok(kept.ok && kept.response.state[0].value === '200', 'the fast reading is kept')
+  detailFails = false
+  for (let i = 0; i < AGREEMENT_MIN_CHECKED / 2; i++) await svc.analyzeFrame(aoe4, img, {})
+  const t = svc.spend.vision!.tiers!
+  assert.match(t.off ?? '', /agreed with 0% of 20 readings checked/)
+  const n = calls.length
+  await svc.analyzeFrame(aoe4, img, {})
+  assert.equal(calls.length, n + 1)
+  assert.equal((calls[n] as { model: string }).model, 'claude-sonnet-5-5', 'one call, to the chosen model')
+})
+
+test('smart reading: a name the chosen model confirmed is not sent on again while it stays the same; a new one is, at most every 20 s', async () => {
+  const settings = { ...DEFAULT_CLOUD, enabled: true }
+  let t = 0
+  let units = '6 Longbowmen'
+  const { client, calls } = fakeClient({
+    parse: () => ({ usage, stop_reason: 'end_turn', parsed_output: reading({ state: [{ key: 'enemyUnits', value: units, confidence: 0.9 }] }) }),
+  })
+  const svc = new CloudService(() => 'sk-ant-test-0000000000000000000000', () => settings, () => client, { now: () => t })
+  const img = { base64: 'AAAA', mediaType: 'image/jpeg' as const }
+  const detailCalls = () => calls.filter((c) => (c as { model: string }).model !== FAST_VISION_MODEL).length
+  for (let i = 0; i < 7; i++) await svc.analyzeFrame(aoe4, img, {}, {}).then(() => (t += 3000))
+  assert.equal(detailCalls(), 1, 'the same army for 21 s: checked once')
+  units = '10 Longbowmen, 4 Spearmen'
+  await svc.analyzeFrame(aoe4, img, {}, {})
+  assert.equal(detailCalls(), 2, 'a different army, 21 s on: checked')
+  t += 3000
+  units = '12 Longbowmen'
+  await svc.analyzeFrame(aoe4, img, {}, {})
+  assert.equal(detailCalls(), 2, 'another change 3 s later: waits')
+  t += 20_000
+  await svc.analyzeFrame(aoe4, img, {}, {})
+  assert.equal(detailCalls(), 3)
 })

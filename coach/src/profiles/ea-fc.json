@@ -391,7 +391,13 @@
         ],
         "dedupeMs": 4000
       }
-    ]
+    ],
+    "detail": {
+      "keys": [
+        "opponentTeam",
+        "opponentFormation"
+      ]
+    }
   },
   "zones": [
     {

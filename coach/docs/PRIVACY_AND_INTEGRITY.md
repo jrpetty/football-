@@ -20,11 +20,12 @@
 | Data | Where | How long |
 | --- | --- | --- |
 | Captured frames | Video element → ImageBitmap → worker → discarded | Milliseconds. At most 2 in flight; dropped (and `close()`d) when analysis falls behind |
-| Sampled frames for cloud vision (opt-in) | Downscaled JPEG (or only the pack's HUD crops) → main process → Anthropic API | Not stored by Sightline. Anthropic's API data policy applies to the request |
+| Sampled frames for cloud vision (opt-in) | Downscaled JPEG (or only the pack's HUD crops) → main process → Anthropic API (with Smart reading, read by Haiku 5.5 and, for some frames, the same frame again by the chosen model) | Not stored by Sightline. Anthropic's API data policy applies to the request |
 | Voice input audio (opt-in: talk key or always listening) | Renderer memory → main → local recogniser (worker thread) | Discarded after transcription. Never stored or sent. The last thing heard is shown as text in Settings (memory only) |
 | Questions and digests sent to Claude (opt-in) | Main process → Anthropic API | Not stored by Sightline beyond the in-memory conversation |
 | The coach's review | Built in renderer memory from the session's counts. **Deeper review with Claude** sends the same structured digest (no images) when you click it | Until the next session or a game change |
 | Session timeline, conversation | Renderer memory | Until the next session, a game change, or app close |
+| Key moments (each death or fight lost, automatic; Settings → Memory) | The frame already sampled for screen reading, downscaled to 960 px, in renderer memory, with what was read about it | This session only: never written to disk, at most 40. Sent to Anthropic only when you ask for its review |
 | Marked moments (the mark key) | A downscaled screenshot in renderer memory, plus your note | This session only: never written to disk. Deletable one by one; sent to Anthropic only when you ask for a review |
 | A question asked during capture (cloud on) | The current screen, downscaled, sent with the question to Anthropic | Not stored by Sightline |
 | Learned screens (menus, loading screens, scoreboards) | `userData/knowledge/<pack>.screens.json`: a 64-bit fingerprint, name and one-line summary per screen (~200 bytes each, at most 400). No images | Until "Forget everything" or deleting that game's data |

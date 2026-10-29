@@ -77,9 +77,9 @@ export function visionSystemPrompt(profile: GameProfile, extras: PromptExtras = 
   lines.push(
     '',
     'screen: always say what screen this is. name: what the game calls it, or a short plain name (e.g. "Main menu", "Loadout editor", "Post-match scoreboard", "Loading screen", "In match"). ' +
-      `kind: one of ${SCREEN_KINDS.join(', ')}. summary: one sentence — for a menu, what it is for and the key options or information on it; for gameplay, what is happening. ` +
-      'If it matches a known screen below, reuse that exact name.',
+      `kind: one of ${SCREEN_KINDS.join(', ')}. summary: an empty string for gameplay and for a screen in the known list below (reuse its exact name); for any other screen, one sentence on what it is for and the key options or information on it.`,
   )
+  lines.push('', 'unreadable: an empty string, or a few words when something asked for above is on screen but cannot be read. Keep evidence to a few words.')
   if (extras.screens) lines.push('', 'Screens already known in this game:', extras.screens)
   if (extras.knowledge) lines.push('', 'Game reference (background knowledge to help you recognise what you see; never report anything that is not visible in this frame):', extras.knowledge)
   return lines.join('\n')

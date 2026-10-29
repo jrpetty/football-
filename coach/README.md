@@ -476,6 +476,21 @@ Then press **Choose the game window**, play, and listen.
       before (target 33). Target reached."
     - The focus is said at the start of a game where live coaching is
       allowed, and shown on the Coach screen.
+- **Upgrade timings (AoE IV).** Under the build you train with on
+  Progress: Wheelbarrow (Mill), Textiles (Town Center) and the twelve
+  Blacksmith upgrades from your last game's AoE4World summary (so after the
+  match only). Each sits beside the build's own step and the time in the
+  whole game the build came from, which goes on past the build's last step
+  (the high-rated player's Castle Age Blacksmith, for example). Red is 45 s
+  or more behind; the biggest gaps are written out: "Bloomery: not
+  researched (the build at 10:10)."
+- **Key moments, automatically.** Each death (shooters) and each fight lost
+  (AoE IV) keeps a snapshot: the frame the coach read it from, already sent
+  for screen reading, so it costs nothing extra. After the match, flick
+  through them on the Decisions page beside what was read about each one
+  ("Cover when you died: In the open"), and ask for a review of any of them.
+  In memory for this session only (at most 40, about 60 KB each), never
+  written to disk; switch it off in Settings → Memory.
 - **Opponent card (AoE IV).** One screen on the civilisation you face:
   - their usual plans age by age, with timings and how to answer them;
   - their strengths and weak windows;
@@ -554,9 +569,9 @@ Then press **Choose the game window**, play, and listen.
   Each change of the counter must be confirmed by the next reading, so one
   misread number makes neither a villager nor an idle Town Center. Gaps of
   a few seconds between villagers are not counted (up to 3 s at one reading
-  a second, twice the interval when readings are slower). Researching Wheelbarrow or
-  Textiles at the Town Center counts as idle, since the screen can't tell
-  it apart. A second Town Center makes the idle time read low, never high.
+  a second, twice the interval when readings are slower). Researching Textiles or
+  training a scout at the Town Center counts as idle, since the screen can't
+  tell it apart (Wheelbarrow is researched at the Mill). A second Town Center makes the idle time read low, never high.
 - **Villagers on each resource (AoE IV).** The small numbers beside food,
   wood, gold and stone (turn on the game's "Show Advanced Resource" UI
   option; mark them in Settings → Read numbers on this PC to read them every
@@ -723,8 +738,39 @@ included. Only the numbers are kept, on this computer, for 400 days.
 Taxes, credits and discounts are not included. The Console's bill is the
 final word.
 
-Estimates at the packs' default settings, at list prices, from no thinking
-to a little (still screens are skipped, so real play usually costs less):
+**Smart reading (on by default) cuts screen reading by about 75–85%.** Every
+look is read by Haiku 5.5 (the fastest, cheapest model, no thinking). The
+model you chose reads the same frame only when it needs its care:
+- fights, deaths and killcams (their details);
+- enemy units and buildings, the opponent's civilisation, the map and mode,
+  a killer's spot and weapon (names that must match exactly; a name it
+  already read the same is not sent again);
+- result banners, menus and loading screens not seen before;
+- one look in 25, as a check.
+
+Where both read a frame, their numbers are compared (Settings → Screen
+reading shows how often they agreed). If Haiku disagrees on more than one in
+five, every look goes to your chosen model for the rest of the session, and
+the app says so. Other savings: a reading leaves out the screen's description
+unless the screen is new; answers and reviews keep their reference in the
+1-hour cache, so a second question within the hour reads it at a tenth of
+the price.
+
+| Game (default look), Smart reading on | Opus 5.5 for detail | Sonnet 5.5 for detail |
+| --- | --- | --- |
+| Modern Warfare 4, per hour | $4.60–6.00 | $2.80–3.25 |
+| Modern Warfare 4, 10-minute match | $0.80–1.05 | $0.49–0.56 |
+| Age of Empires IV, per hour | $4.25–5.45 | $2.75–3.10 |
+| Age of Empires IV, 30-minute game | $2.20–2.80 | $1.40–1.60 |
+| EA SPORTS FC, per hour | $3.85–5.25 | $2.30–2.70 |
+| Counter-Strike 2, per hour | $4.60–6.00 | $2.80–3.25 |
+
+These assume one look in five also goes to the chosen model; the Settings
+page shows this session's real share and measured cost.
+
+Without Smart reading, at the packs' default settings, at list prices, from
+no thinking to a little (still screens are skipped, so real play usually
+costs less):
 
 | Game (default look) | Opus 5.5 | Sonnet 5.5 | Haiku 5.5 |
 | --- | --- | --- | --- |

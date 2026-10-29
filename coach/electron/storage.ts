@@ -500,5 +500,6 @@ export function sanitizeCloud(input: unknown, base: CloudSettings): CloudSetting
     monthlyBudgetUsd:
       typeof o.monthlyBudgetUsd === 'number' && Number.isFinite(o.monthlyBudgetUsd) ? Math.round(Math.min(10_000, Math.max(0, o.monthlyBudgetUsd)) * 100) / 100 : base.monthlyBudgetUsd,
     stopAtBudget: typeof o.stopAtBudget === 'boolean' ? o.stopAtBudget : base.stopAtBudget,
+    smartReading: typeof o.smartReading === 'boolean' ? o.smartReading : base.smartReading,
   }
 }

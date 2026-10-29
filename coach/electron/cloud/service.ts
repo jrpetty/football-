@@ -20,6 +20,7 @@ import { costOf, modelPrice, servedPrice, type Usage } from '../../src/core/visi
 import type { UsageCall, UsageFeature } from '../../src/core/usage.ts'
 import { PHASES, visionSystemPrompt, visionUserText, type PromptExtras, type VisionResponse } from '../../src/core/vision/contract.ts'
 import { SCREEN_KINDS } from '../../src/core/vision/screens.ts'
+import { addTierStats, AUDIT_EVERY, compareReadings, detailSpec, FAST_VISION_MODEL, knownScreenNames, needsDetail, normReading, NO_TIER_STATS, RECHECK_KEY_MS } from '../../src/core/vision/tiers.ts'
 import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, type KnowledgeSectionId } from '../../src/core/knowledge/base.ts'
 
 /** Prompt budget for the pack's coaching playbook in answers and reviews. */
@@ -43,6 +44,8 @@ export class CloudService {
   private spentUsd = 0
   private calls = 0
   private vision: VisionUsage = NO_VISION_USAGE
+  /** Smart reading: names (pack:key) the chosen model last read, and when. */
+  private confirmed = new Map<string, { value: string; at: number }>()
   /** Recent calls (time, USD), for the spending rate right now. */
   private recent: { at: number; usd: number }[] = []
   private readonly onCall: (call: UsageCall) => void
@@ -101,6 +104,7 @@ export class CloudService {
     this.spentUsd = 0
     this.calls = 0
     this.vision = NO_VISION_USAGE
+    this.confirmed = new Map()
     this.recent = []
   }
 
@@ -112,16 +116,54 @@ export class CloudService {
   ): Promise<CloudResult<{ response: VisionResponse }>> {
     const ready = this.ready()
     if (!ready.ok) return ready
-    const { visionModel: model, visionThinking } = this.getSettings()
-    const thinking = visionThinkingParam(model, visionThinking)
+    const s = this.getSettings()
+    const tiers = this.vision.tiers ?? NO_TIER_STATS
+    if (!s.smartReading || s.visionModel === FAST_VISION_MODEL || tiers.off) return this.look(ready.client, profile, image, context, extras, s.visionModel, s.visionThinking, 'single')
+    // Smart reading: the fast model first; the chosen model on the same frame only when the look needs it.
+    const fast = await this.look(ready.client, profile, image, context, extras, FAST_VISION_MODEL, 'off', 'fast')
+    if (!fast.ok) return fast.fatal ? this.look(ready.client, profile, image, context, extras, s.visionModel, s.visionThinking, 'single') : fast
+    const now = this.now()
+    const confirmed = (key: string, value: string) => {
+      const c = this.confirmed.get(`${profile.id}:${key}`)
+      return !!c && (c.value === normReading(value) || now - c.at < RECHECK_KEY_MS)
+    }
+    const why = needsDetail(profile, fast.response, { known: knownScreenNames(extras.screens), audit: (tiers.fast + 1) % AUDIT_EVERY === 0, confirmed })
+    if (!why || !this.ready().ok) {
+      this.vision = { ...this.vision, tiers: addTierStats(this.vision.tiers ?? NO_TIER_STATS, true, null) }
+      return fast
+    }
+    const detail = await this.look(ready.client, profile, image, context, extras, s.visionModel, s.visionThinking, 'detail')
+    if (detail.ok) {
+      const keys = detailSpec(profile).keys
+      for (const st of detail.response.state) if (keys.has(st.key)) this.confirmed.set(`${profile.id}:${st.key}`, { value: normReading(st.value), at: now })
+      // A name sent on but not read by the chosen model: not asked again for a while.
+      for (const st of fast.response.state) if (keys.has(st.key) && !this.confirmed.has(`${profile.id}:${st.key}`)) this.confirmed.set(`${profile.id}:${st.key}`, { value: '', at: now })
+    }
+    this.vision = { ...this.vision, tiers: addTierStats(this.vision.tiers ?? NO_TIER_STATS, true, why, detail.ok ? compareReadings(profile, fast.response, detail.response) : undefined) }
+    // If the chosen model fails, the fast reading still counts.
+    return detail.ok ? { ok: true, costUsd: fast.costUsd + detail.costUsd, response: detail.response } : fast
+  }
+
+  /** One screen reading by one model. The detail model's reference is cached for an hour, as it is asked only now and then. */
+  private async look(
+    client: CloudClient,
+    profile: GameProfile,
+    image: { readonly base64: string; readonly mediaType: 'image/jpeg' },
+    context: Readonly<Record<string, string | number>>,
+    extras: PromptExtras,
+    model: string,
+    thinkingMode: VisionThinking,
+    tier: 'single' | 'fast' | 'detail',
+  ): Promise<CloudResult<{ response: VisionResponse }>> {
+    const thinking = visionThinkingParam(model, thinkingMode)
     try {
-      const msg = await ready.client.beta.messages.parse({
+      const msg = await client.beta.messages.parse({
         model,
         max_tokens: 4000,
         // The lowest thinking setting is Sonnet 5.5's own; no fallback model would accept it.
         ...(thinking ? { thinking: thinking as unknown as Anthropic.Beta.Messages.BetaThinkingConfigParam } : fallbackParams(model)),
         output_config: { effort: 'low', format: betaZodOutputFormat(visionSchema(profile)) },
-        system: [{ type: 'text', text: visionSystemPrompt(profile, extras), cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: visionSystemPrompt(profile, extras), cache_control: tier === 'detail' ? { type: 'ephemeral', ttl: '1h' } : { type: 'ephemeral' } }],
         messages: [
           {
             role: 'user',
@@ -166,7 +208,7 @@ export class CloudService {
         max_tokens: 16_000,
         ...fallbackParams(model),
         output_config: { effort: 'medium' },
-        system: [{ type: 'text', text: answerSystemPrompt(profile, opts.knowledge ?? '', !!opts.review), cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: answerSystemPrompt(profile, opts.knowledge ?? '', !!opts.review), cache_control: ANSWER_CACHE }],
         messages: [
           {
             role: 'user',
@@ -203,7 +245,7 @@ export class CloudService {
         max_tokens: 16_000,
         ...fallbackParams(model),
         output_config: { effort: 'medium', format: betaZodOutputFormat(reviewSchema) },
-        system: [{ type: 'text', text: answerSystemPrompt(profile, knowledge, true), cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: answerSystemPrompt(profile, knowledge, true), cache_control: ANSWER_CACHE }],
         messages: [
           {
             role: 'user',
@@ -405,6 +447,13 @@ export class CloudService {
   }
 }
 
+/**
+ * Answers and reviews come minutes apart, past the default 5-minute cache: their reference (the playbook
+ * and game knowledge) is cached for an hour, so a second question within the hour reads it at a tenth
+ * of the price instead of writing it again.
+ */
+const ANSWER_CACHE = { type: 'ephemeral', ttl: '1h' } as const
+
 /** The spending rate is measured over this window of recent calls. */
 const RATE_WINDOW_MS = 5 * 60_000
 
@@ -412,6 +461,7 @@ const NO_VISION_USAGE: VisionUsage = { calls: 0, usd: 0, input: 0, cacheRead: 0,
 
 function addVisionUsage(u: VisionUsage, usd: number, usage: Usage): VisionUsage {
   return {
+    ...u,
     calls: u.calls + 1,
     usd: u.usd + usd,
     input: u.input + usage.input_tokens,

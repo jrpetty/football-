@@ -21,6 +21,8 @@ export interface CoachSettings {
   }
   /** Opt-in: keep structured tendency counts, match history and notes between sessions. Never frames. */
   readonly saveTendencies: boolean
+  /** Keep a snapshot of each death (shooters) and each fight lost (strategy), in memory for this session only. */
+  readonly autoMoments: boolean
   /** Opt-in: spoken questions, recognised locally. With the talk key, the microphone is open only while talking. */
   readonly voiceInput: boolean
   /** How the player talks to the coach: the talk key (tap, or hold while speaking), or always listening. */
@@ -156,6 +158,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   muted: false,
   voice: { voiceURI: null, rate: 1, volume: 0.8 },
   saveTendencies: false,
+  autoMoments: true,
   voiceInput: false,
   listen: 'key',
   wakeWord: true,
@@ -210,6 +213,7 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
       volume: num(voice.volume, 0, 1, base.voice.volume),
     },
     saveTendencies: typeof o.saveTendencies === 'boolean' ? o.saveTendencies : base.saveTendencies,
+    autoMoments: typeof o.autoMoments === 'boolean' ? o.autoMoments : base.autoMoments,
     voiceInput: typeof o.voiceInput === 'boolean' ? o.voiceInput : base.voiceInput,
     listen: pick(o.listen, LISTEN_MODES, base.listen),
     wakeWord: typeof o.wakeWord === 'boolean' ? o.wakeWord : base.wakeWord,
