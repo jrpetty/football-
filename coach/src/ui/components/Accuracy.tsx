@@ -108,7 +108,7 @@ export function AccuracyPanel(props: { state: SessionState; session: CoachSessio
   )
 }
 
-function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge }) {
+export function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; bridge: SightlineBridge }) {
   const a = settings.aoe4world
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<{ profileId: number; name: string; country: string | null }[] | null>(null)
@@ -120,7 +120,7 @@ function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSetti
     // A profile number or a link to it is used as it is.
     const id = /(?:players\/)?(\d{3,10})/.exec(query.trim())?.[1]
     if (id && /^\D*\d+\D*$/.test(query.trim())) {
-      onSettings({ aoe4world: { ...a, profileId: Number(id), name: null } })
+      onSettings({ aoe4world: { profileId: Number(id), name: null, auto: true } })
       setBusy(false)
       return
     }
@@ -137,7 +137,7 @@ function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSetti
             AoE4World profile: <b>{a.name ?? a.profileId}</b>
             {a.name ? <span className="muted"> ({a.profileId})</span> : null}
           </span>
-          <button type="button" className="btn sm ghost" onClick={() => onSettings({ aoe4world: { profileId: null, name: null, auto: false } })}>
+          <button type="button" className="btn sm ghost" onClick={() => onSettings({ aoe4world: { profileId: null, name: null, auto: true } })}>
             Change
           </button>
         </div>
@@ -156,7 +156,7 @@ function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSetti
               <ul className="acc-found">
                 {found.map((p) => (
                   <li key={p.profileId}>
-                    <button type="button" className="btn sm ghost" onClick={() => onSettings({ aoe4world: { ...a, profileId: p.profileId, name: p.name } })}>
+                    <button type="button" className="btn sm ghost" onClick={() => onSettings({ aoe4world: { profileId: p.profileId, name: p.name, auto: true } })}>
                       {p.name} {p.country ? <span className="muted">({p.country.toUpperCase()})</span> : null} <span className="muted">#{p.profileId}</span>
                     </button>
                   </li>

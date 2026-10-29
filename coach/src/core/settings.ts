@@ -168,7 +168,8 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   minimap: {},
   hud: {},
   hudSaves: true,
-  aoe4world: { profileId: null, name: null, auto: false },
+  // Checking each match is on once a profile is linked (linking is the opt-in).
+  aoe4world: { profileId: null, name: null, auto: true },
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const

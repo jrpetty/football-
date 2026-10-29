@@ -11,6 +11,7 @@ import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
 import type { Tab } from '../App.tsx'
 import type { CoachSession, SessionState } from '../session.ts'
+import { Aoe4WorldSetup } from './Accuracy.tsx'
 
 type Level = 'ok' | 'warn' | 'bad' | 'off'
 
@@ -42,6 +43,7 @@ export function ReadyCheck(props: {
   const [heard, setHeard] = useState<'idle' | 'playing' | 'yes'>('idle')
   const [mic, setMic] = useState<'idle' | 'testing' | { peak: number } | { error: string }>('idle')
   const [key, setKey] = useState<'idle' | 'waiting' | 'ok' | 'none'>('idle')
+  const [linking, setLinking] = useState(false)
   const [cloudTest, setCloudTest] = useState<'idle' | 'testing' | 'ok' | string>('idle')
 
   useEffect(() => {
@@ -268,11 +270,19 @@ export function ReadyCheck(props: {
     rows.push({
       id: 'truth',
       level: settings.aoe4world.profileId ? 'ok' : 'off',
-      title: settings.aoe4world.profileId ? 'Checked against the real game (AoE4World)' : 'Not checked against the real game',
-      detail: settings.aoe4world.profileId ? 'After each match, in History.' : 'Optional: link your AoE4World profile in History to see how right the coach was.',
-      action: (
+      title: settings.aoe4world.profileId ? `Checked against the real game (AoE4World: ${settings.aoe4world.name ?? settings.aoe4world.profileId})` : 'Not checked against the real game',
+      detail: settings.aoe4world.profileId
+        ? settings.aoe4world.auto
+          ? 'Each Ranked and Quick Match game is checked a few minutes after it ends. Results in History.'
+          : 'Automatic checks are off: check a match in History.'
+        : 'Link your AoE4World profile and every Ranked and Quick Match game is checked against the real numbers.',
+      action: settings.aoe4world.profileId ? (
         <button type="button" className="btn sm ghost" onClick={() => onTab('history')}>
-          {settings.aoe4world.profileId ? 'History' : 'Link'}
+          History
+        </button>
+      ) : (
+        <button type="button" className="btn sm" aria-expanded={linking} onClick={() => setLinking(!linking)}>
+          {linking ? 'Close' : 'Link'}
         </button>
       ),
     })
@@ -300,6 +310,7 @@ export function ReadyCheck(props: {
           </li>
         ))}
       </ul>
+      {linking && profile.id === 'aoe4' && !settings.aoe4world.profileId ? <Aoe4WorldSetup settings={settings} onSettings={onSettings} bridge={bridge} /> : null}
     </section>
   )
 }

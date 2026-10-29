@@ -415,10 +415,11 @@ Then press **Choose the game window**, play, and listen.
 - **Checks itself against the real game** (History → "Is the coach reading
   your games right?"). What the coach read, compared with what really
   happened:
-  - AoE IV: AoE4World's summary of the match (opt-in: find yourself by
-    name or profile number). It has your exact villagers every 20 s, your
-    age-up times and resources. A few minutes after each match, or on
-    request. Only public Ranked and Quick Match games are on AoE4World.
+  - AoE IV: AoE4World's summary of the match. Link your AoE4World profile
+    once (Ready check → Link, or here, by name or profile number) and every
+    Ranked and Quick Match game is checked a few minutes after it ends. It
+    has your exact villagers every 20 s, your age-up times and resources.
+    Only public Ranked and Quick Match games are on AoE4World.
   - Any match: type your villagers at 5, 10 and 15 minutes from the
     post-game statistics.
   - Counter-Strike 2: the screen readings against the game's own data
