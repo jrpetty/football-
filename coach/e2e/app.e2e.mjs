@@ -55,7 +55,7 @@ const userData = mkdtempSync(join(tmpdir(), 'sightline-e2e-'))
 const app = await _electron.launch({
   executablePath: require('electron'),
   // Linux: global keys through X11 (xdotool), not a desktop portal over D-Bus that a test runner may have.
-  args: ['.', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-features=GlobalShortcutsPortal'] : [])],
+  args: ['.', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.platform === 'linux' ? ['--no-sandbox', '--ozone-platform=x11', '--disable-features=GlobalShortcutsPortal'] : [])],
   cwd: root,
   env: { ...process.env, SIGHTLINE_USER_DATA: userData, ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: 'disabled:' } : {}) },
 })
@@ -107,7 +107,8 @@ await check('talk key: held with key repeats, it starts once and stops once; tap
   holdKey('F7', 3000)
   await sleep(2500)
   const held = await win.evaluate(() => window.__ptt.splice(0))
-  assert(JSON.stringify(held) === JSON.stringify(['start', 'stop']), `held: expected start, stop; got ${JSON.stringify(held)}`)
+  const env = process.platform === 'linux' ? ` (DISPLAY=${process.env.DISPLAY}, WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY ?? ''}, XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE ?? ''}, shortcut ${info.talkShortcut})` : ''
+  assert(JSON.stringify(held) === JSON.stringify(['start', 'stop']), `held: expected start, stop; got ${JSON.stringify(held)}${env}`)
   await sleep(1000)
   tapKey('F7')
   await sleep(2500)
