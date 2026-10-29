@@ -54,10 +54,14 @@ function assert(cond, message) {
 const userData = mkdtempSync(join(tmpdir(), 'sightline-e2e-'))
 const app = await _electron.launch({
   executablePath: require('electron'),
-  args: ['.', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
+  // Linux: global keys through X11 (xdotool), not a desktop portal over D-Bus that a test runner may have.
+  args: ['.', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-features=GlobalShortcutsPortal'] : [])],
   cwd: root,
-  env: { ...process.env, SIGHTLINE_USER_DATA: userData },
+  env: { ...process.env, SIGHTLINE_USER_DATA: userData, ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: 'disabled:' } : {}) },
 })
+const mainLog = []
+app.process().stdout?.on('data', (d) => mainLog.push(String(d).trim()))
+app.process().stderr?.on('data', (d) => mainLog.push(String(d).trim()))
 const win = await app.firstWindow()
 const logs = []
 win.on('console', (m) => logs.push(`${m.type()}: ${m.text()}`))
@@ -99,6 +103,7 @@ await check('talk key: held with key repeats, it starts once and stops once; tap
     window.sightline.onPushToTalk((a) => window.__ptt.push(a))
   })
   await win.bringToFront()
+  await sleep(1000)
   holdKey('F7', 3000)
   await sleep(2500)
   const held = await win.evaluate(() => window.__ptt.splice(0))
@@ -145,9 +150,10 @@ await check('ranked: commentary waits for the end of the match, and "Why didn\'t
 
 await app.close()
 rmSync(userData, { recursive: true, force: true })
-writeFileSync(join(out, 'results.json'), JSON.stringify({ results, logs: logs.slice(-80) }, null, 1))
+writeFileSync(join(out, 'results.json'), JSON.stringify({ results, logs: logs.slice(-80), main: mainLog.slice(-80) }, null, 1))
 console.log(`\n${results.length - failed} of ${results.length} passed`)
 if (failed) {
   console.log('Last app console lines:\n' + logs.slice(-20).join('\n'))
+  console.log('Last main-process lines:\n' + mainLog.slice(-20).join('\n'))
   process.exitCode = 1
 }
