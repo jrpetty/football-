@@ -13,6 +13,7 @@ import type { SessionReport } from '../engine.ts'
 import { formatDuration, humanize, mistakeLine, responseLabel } from '../language.ts'
 import type { ArsenalItem, BenchmarkSpec, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
 import { expectedAt } from '../analyses/benchmarks.ts'
+import { productionLines } from '../aoe4/production.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 import { ballisticsLines } from '../knowledge/ballistics.ts'
@@ -60,7 +61,7 @@ export function classify(question: string, profile: GameProfile): Intent {
   if (profile.learning && /\b(usually|usual|normally|tend to|build orders?|my (?:usual )?build|last (?:few )?(?:games|matches)|past (?:games|matches)|history|compositions?|comps?|what have you learn\w*|what did you learn\w*|how do i do (?:against|vs|on|with)|against (?:them|this|him|her) before)\b/.test(q)) return { kind: 'learned' }
   if (profile.intel && /\b(what (?:are|is) (?:they|he|she|the enemy|my opponent) (?:making|building|doing|going)|their (?:army|units|civ|civilisation|civilization|buildings)|what (?:should|do) i (?:build|make|do)|counter|scout\w*|opponent|their plan|what(?:'s| is) (?:their|the) plan|game plan|strategy)\b/.test(q)) return { kind: 'intel' }
   if (profile.factors?.length && /\b(position\w*|gunfights?|fights?|battles?|engagements?|cover|why (?:do|did|am|do i keep) i\b.*\b(die|dying|lose|losing)|how (?:do|did) i (?:die|lose)|what kills me|keep dying)\b/.test(q)) return { kind: 'fights' }
-  if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind)\b/.test(q)) {
+  if (profile.benchmarks?.length && /\b(villagers?|benchmark|on track|economy|eco|macro|behind|town cent(?:er|re)s?|tc|production)\b/.test(q)) {
     // "How many villagers should I have at ten minutes?": the curve's number, not a judgement.
     const target = /\b(should i (?:have|be at)|supposed to|target|expected|aim for|how many \w+ (?:at|by))\b/.test(q)
     const atSec = clockIn(q)
@@ -104,8 +105,11 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
       // The player's civilisation's own curve where it has one (the session's resolved spec).
       const spec = base ? (report.benchmarks.find((b) => b.spec.id === base.id)?.spec ?? base) : undefined
       if (spec && (intent.target || intent.atSec !== undefined)) return benchmarkTarget(spec, report, intent.atSec ?? null)
+      // The Town Center's idle time, where the villager counter was read, comes first: it is the most exact.
+      const tc = report.production ? productionLines(report.production).join(' ') : ''
       const behind = report.benchmarks.filter((b) => b.worst)
-      if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
+      if (behind.length) return [tc, ...behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' '))].filter(Boolean).join(' ')
+      if (tc) return tc
       const met = report.benchmarks.filter((b) => b.points.length)
       if (met.length) return met.map((b) => `${b.spec.label}: on track at ${b.points.length} of ${b.points.length} checkpoints I could read.`).join(' ')
       return 'I have not read enough of the clock and your numbers yet to compare them with the benchmark. Keep the resource panel and the clock visible.'
@@ -292,6 +296,16 @@ export function buildDigest(i: DigestInputs): string {
           points: b.points.map((pt) => ({ atSec: pt.atSec, actual: pt.actual, expected: pt.expected, behind: pt.behind })),
           readFrom: 'the screen near each checkpoint; only numbers read at least twice and agreeing are kept',
         })),
+      ...(i.report.production
+        ? {
+            townCenter: {
+              statement: productionLines(i.report.production),
+              idleStretches: i.report.production.stretches.slice(0, 12),
+              housedWithVillagerWaiting: i.report.production.housedWaits.slice(0, 12),
+              readFrom: `the HUD's villager counter, about every ${i.report.production.readEverySec} s of game time; a villager every ${i.report.production.trainSec} s is one Town Center that never stops; housed, full population, lost villagers and gaps are not counted`,
+            },
+          }
+        : {}),
       mistakes: i.report.mistakes.filter((m) => m.totals.count > 0).map((m) => ({ mistake: m.spec.label, times: m.totals.count, total: formatDuration(m.totals.totalMs) })),
       patterns: i.report.insights
         .filter((x) => x.verdict === null)

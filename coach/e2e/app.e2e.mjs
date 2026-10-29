@@ -170,13 +170,15 @@ function seedDocs() {
     source: 'custom',
     createdAt: new Date().toISOString(),
     steps: [step(30, 'building', 'mill', 'Mill'), step(95, 'building', 'mining_camp', 'Mining Camp'), step(180, 'villagers', 'villagers', 'Villagers', 14), step(270, 'age', 'feudal', 'Feudal Age (Council Hall)'), step(300, 'villagers', 'villagers', 'Villagers', 21)],
+    // The split it wants at 4:00; the demo has 8 on food, 5 on wood and 3 on gold then.
+    splits: [{ atSec: 240, food: 8, wood: 8, gold: 2, stone: 0 }],
   }
   return { history, builds: { schema: 1, builds: [build], active: { english: 'b-test' } } }
 }
 
 await check('Progress: the week from AoE4World, trends and win rates; the practice panel; build orders', async () => {
   // The history is saved before the profile is linked, and it is fresh, so nothing is asked of AoE4World.
-  await settings({ saveTendencies: true, profileId: 'aoe4', profileModeId: 'skirmish-vs-ai', commentary: false, muted: true, context: { aoe4: { civ: 'English' } } })
+  await settings({ saveTendencies: true, profileId: 'aoe4', profileModeId: 'skirmish-vs-ai', mode: 'training', commentary: false, muted: true, context: { aoe4: { civ: 'English' } } })
   const { history, builds } = seedDocs()
   const saved = await win.evaluate(([h, b]) => Promise.all([window.sightline.saveDoc('aoe4world', 'aoe4', h), window.sightline.saveDoc('builds', 'aoe4', b)]), [history, builds])
   assert(saved.every(Boolean), `documents not saved: ${JSON.stringify(saved)}`)
@@ -207,8 +209,19 @@ await check('build trainer: the next steps are called during the AoE IV demo aga
   const panel = await win.textContent('section:has(#training-h)')
   assert(/Test English opening/.test(panel ?? ''), 'the Training panel names the build')
   await win.screenshot({ path: join(out, 'build-trainer.png') })
+  // The split at 4:00 (the villagers on each resource beside the stockpiles), then the Town Center idle line
+  // (the demo stops making villagers from 4:00 to 6:30).
+  const caption = (re) => win.waitForFunction((src) => [...document.querySelectorAll('.captions:not(.not-said) li, .caption-hero')].some((el) => new RegExp(src).test(el.textContent ?? '')), re.source, { timeout: 150_000 })
+  await caption(/Build wants 8 on wood by 4:00, you have 5\./)
+  await caption(/No new villager for \d+ seconds\./)
+  await win.click('nav >> text=Insights')
+  await win.waitForSelector('#tc-h', { timeout: 10_000 })
+  const tc = await win.textContent('section:has(#tc-h)')
+  assert(/Town Center idle \d+:\d\d in total, the longest/.test(tc ?? ''), `Town Center panel: ${tc}`)
+  await win.screenshot({ path: join(out, 'town-center.png'), fullPage: true })
+  await win.click('nav >> text=Coach')
   await stopDemo()
-  return { said: said.slice(0, 3) }
+  return { said: said.slice(0, 3), townCenter: tc?.slice(0, 200) }
 })
 
 await check('CS2 demo review: a demo picked in the file dialog is read in the main process and reviewed on the Progress screen', async () => {

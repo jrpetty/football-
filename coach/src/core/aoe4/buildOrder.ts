@@ -4,12 +4,14 @@
 //
 // A step is something the game records with its time: an age reached, a
 // building completed, a unit or technology finished, or the villager count at a
-// time. What villagers were sent to which resource is not in the game's record,
-// so a build order here does not claim it.
+// time. What villagers were sent to which resource is not in the game's record;
+// a build can hold the split the player wants (typed in, or taken from a game
+// the coach watched, which read the HUD's numbers beside each resource).
 
 import type { Roster } from '../profile/schema.ts'
 import type { BuildEvent } from '../truth/aoe4world.ts'
 import { itemKey, itemName, nameKey } from './names.ts'
+import { isWorkerSplit, MAX_SPLITS, splitLine, type WorkerSplit, type Workers } from './workers.ts'
 
 export const BUILD_SCHEMA = 1
 export const MAX_STEPS = 32
@@ -36,6 +38,8 @@ export interface BuildOrder {
   readonly from?: { readonly gameId: number; readonly player: string; readonly rating: number | null; readonly opponentCiv?: string; readonly result?: string | null }
   readonly createdAt: string
   readonly steps: readonly BuildStep[]
+  /** Villagers wanted on each resource by a few times (optional). */
+  readonly splits?: readonly WorkerSplit[]
 }
 
 /** The facts a build is made from, or compared with. */
@@ -197,6 +201,8 @@ const LEAD_SEC = 8
 const GROUP_SEC = 20
 /** A step whose time passed this long ago is not called any more. */
 const STALE_SEC = 25
+/** A split is checked within this long after its time. */
+const SPLIT_WINDOW_SEC = 20
 
 export interface BuildCall {
   readonly text: string
@@ -208,13 +214,14 @@ export class BuildCaller {
   readonly build: BuildOrder
   private next = 0
   private ended = false
+  private readonly splitsDone = new Set<number>()
 
   constructor(build: BuildOrder) {
     this.build = build
   }
 
-  /** The calls due at this game time, given the villager count on screen now (null when not read). */
-  tick(clockSec: number, villagersNow: number | null): BuildCall[] {
+  /** The calls due at this game time, given the villager count and the villagers on each resource on screen now (null when not read). */
+  tick(clockSec: number, villagersNow: number | null, workersNow: Workers | null = null): BuildCall[] {
     const steps = this.build.steps
     const out: BuildCall[] = []
     // Skip steps long past (capture started late, or the clock jumped).
@@ -233,7 +240,15 @@ export class BuildCaller {
       })
       out.push({ text: `Build: ${parts.join(', then ')}.`, topic: `build:${this.build.id}:${first.atSec}` })
     }
-    if (!this.ended && this.next >= steps.length && steps.length && clockSec >= steps[steps.length - 1].atSec + 30) {
+    // The split the build wants, checked once at its time while the numbers are on screen, in a tick
+    // with no step call (calls are spaced a few seconds apart).
+    for (const s of this.build.splits ?? []) {
+      if (out.length || !workersNow || this.splitsDone.has(s.atSec) || clockSec < s.atSec || clockSec > s.atSec + SPLIT_WINDOW_SEC) continue
+      this.splitsDone.add(s.atSec)
+      const line = splitLine(s, workersNow)
+      if (line) out.push({ text: line, topic: `build:${this.build.id}:split:${s.atSec}` })
+    }
+    if (!out.length && !this.ended && this.next >= steps.length && steps.length && clockSec >= steps[steps.length - 1].atSec + 30) {
       this.ended = true
       out.push({ text: 'End of the build. Keep the Town Center working.', topic: `build:${this.build.id}:end` })
     }
@@ -281,6 +296,7 @@ export function isBuildOrder(v: unknown): v is BuildOrder {
         typeof s.name === 'string' &&
         s.name.length <= 80 &&
         typeof s.count === 'number',
-    )
+    ) &&
+    (o.splits === undefined || (Array.isArray(o.splits) && o.splits.length <= MAX_SPLITS && o.splits.every(isWorkerSplit)))
   )
 }

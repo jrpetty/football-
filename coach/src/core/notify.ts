@@ -6,6 +6,7 @@
 import type { MatchRecord } from './analyses/matchRecorder.ts'
 import type { GameProfile } from './profile/schema.ts'
 import type { MatchReview } from './review.ts'
+import { productionLines } from './aoe4/production.ts'
 
 /** A Discord webhook address: discord.com (or its ptb/canary hosts) /api/webhooks/<id>/<token>. */
 export const DISCORD_WEBHOOK = /^https:\/\/(?:ptb\.|canary\.)?(?:discord|discordapp)\.com\/api\/webhooks\/\d{5,25}\/[\w-]{20,120}$/
@@ -32,6 +33,7 @@ export function matchSummary(profile: GameProfile, record: MatchRecord, review: 
   }
   const ages = (record.readings?.changes ?? []).filter(([, k, v]) => k === 'age' && v !== 'dark').map(([t, , v]) => `${v[0].toUpperCase()}${v.slice(1)} ${clock(t)}`)
   if (ages.length) lines.push(`Ages: ${ages.join(', ')}`)
+  if (record.production) lines.push(...productionLines(record.production).filter((l) => !l.startsWith('Not counted')))
   if (record.battles && record.battles.won + record.battles.lost > 0) lines.push(`Fights followed: ${record.battles.won} won, ${record.battles.lost} lost`)
   const mistakes = Object.entries(record.mistakes)
     .filter(([, m]) => m.count > 0)

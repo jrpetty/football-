@@ -13,7 +13,9 @@
 
 import { BuildCaller, type BuildOrder } from './aoe4/buildOrder.ts'
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
-import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
+import { BenchmarkTracker, specFor, type BenchmarkResult } from './analyses/benchmarks.ts'
+import { ProductionTracker, type ProductionSummary } from './aoe4/production.ts'
+import { GoldForCastle, RESOURCES, WORKER_KEYS, type Workers } from './aoe4/workers.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { ReadingLogger } from './truth/readingLog.ts'
 import { SourceAgreement, type AgreementRow } from './truth/agreement.ts'
@@ -151,6 +153,8 @@ export interface SessionReport {
   readonly matches: readonly MatchRecord[]
   /** Screen readings checked against a direct source of the same number (game data, this PC's HUD reading). */
   readonly checks?: readonly AgreementRow[]
+  /** Age of Empires IV: the Town Center's production this match (idle time), from the villager counter. */
+  readonly production?: ProductionSummary | null
 }
 
 /** Football on the radar: everyone now, this match so far, and lines from it. */
@@ -221,6 +225,17 @@ export class CoachEngine {
   private matchSince = -Infinity
   private readonly buildOrder: BuildOrder | null
   private buildCaller: BuildCaller | null
+  /** Build calls and economy lines waiting for their turn (calls are spaced a few seconds apart). */
+  private buildQueue: { text: string; topic: string; at: number }[] = []
+  private econQueue: { text: string; topic: string; at: number }[] = []
+  /** Villagers on each resource were read at least once this match (for the build's split). */
+  private workersSeen = false
+  private workersNotice = false
+  private readonly production: ProductionTracker | null
+  private readonly gold: GoldForCastle | null
+  /** When each reading the economy trackers use was last taken in (capture ms). */
+  private econRead = new Map<string, number>()
+  private lastProduction: ProductionSummary | null = null
   /** Said once, at the start of play (null once said). */
   private practiceLine: string | null
   private readonly factors: FactorAnalyzer
@@ -279,6 +294,9 @@ export class CoachEngine {
     this.buildOrder = opts.build ?? null
     this.buildCaller = this.buildOrder ? new BuildCaller(this.buildOrder) : null
     this.practiceLine = opts.practice ?? null
+    const villagerCurve = profile.benchmarks?.some((b) => b.id === 'villager-curve') && profile.vision?.state.some((s) => s.key === 'populationCap')
+    this.production = villagerCurve ? new ProductionTracker(null) : null
+    this.gold = villagerCurve && profile.vision?.state.some((s) => s.key === 'goldWorkers') ? new GoldForCastle(this.castleTarget()) : null
 
     this.tracker = new VisibleStateTracker(profile.signals)
     this.detector = new EventDetector(profile.events, profile.signals)
@@ -304,6 +322,7 @@ export class CoachEngine {
     this.gsi = profile.gameState?.kind === 'cs2-gsi' ? new Cs2Gsi({ profileId: profile.id, maps: profile.knowledge.maps, arsenal: profile.knowledge.arsenal }) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
     this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [], this.playerFactionId())
+    this.production?.setTrainSec(this.villagerSec())
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
     this.battles = new BattleTracker(profile.battles ?? null, clockKey)
     const roster = profile.knowledge.roster
@@ -346,6 +365,7 @@ export class CoachEngine {
       this.mistakes.setContext(context)
       this.intel?.setPlayerFaction(this.playerFaction())
       this.benchmarks.setFaction(this.playerFactionId())
+      this.production?.setTrainSec(this.villagerSec())
       ;(this.profile.scoreRules ?? []).forEach((r, i) => this.scores[i].setSide(sideOf(context[r.sideContext])))
     }
     this.governor.configure(settings, policy)
@@ -392,6 +412,18 @@ export class CoachEngine {
     const roster = this.profile.knowledge.roster
     const name = this.playerFaction()
     return roster ? (findFaction(roster, name)?.id ?? null) : name
+  }
+
+  /** Seconds per villager at one Town Center for the player's civilisation (null where it is not judged). */
+  private villagerSec(): number | null {
+    const spec = this.profile.benchmarks?.find((b) => b.id === 'villager-curve')
+    const s = spec ? specFor(spec, this.playerFactionId()) : null
+    return s && s.expected.perMinute > 0 ? Math.round(600 / s.expected.perMinute) / 10 : null
+  }
+
+  /** When the build in use reaches the Castle Age (null without one). */
+  private castleTarget(): number | null {
+    return this.buildOrder?.steps.find((s) => s.kind === 'age' && s.key === 'castle')?.atSec ?? null
   }
 
   private playerFaction(): string | null {
@@ -609,6 +641,7 @@ export class CoachEngine {
       insights: this.insights(),
       matches: [...this.sessionMatches],
       checks: this.agreement.results(),
+      production: this.production?.summary() ?? this.lastProduction,
     }
   }
 
@@ -652,6 +685,7 @@ export class CoachEngine {
     this.mapTracker?.observe(this.visible)
     if (this.locator && this.profile.positioning) this.locator.observe(this.visible, this.profile.positioning)
     this.benchmarks.observe(this.visible)
+    this.observeEconomy(now, out)
     for (const k of this.profile.contextKeys ?? []) {
       const v = this.visible.values[k]
       // Only this match's readings: the last match's map or opponent can linger in the state for minutes.
@@ -676,19 +710,93 @@ export class CoachEngine {
 
   /** The practice focus once, then the build trainer's next steps against the game clock, during play. */
   private callBuild(now: number, out: EngineOutput): void {
-    if (this.window() !== 'during_play') return
-    const say = (text: string, topic: string) =>
-      this.decide({ category: 'build', text, confidence: 1, grade: 'moderate', evidenceSummary: 'the player chose it', topic, priority: 'normal', createdAt: now, basedOnObservationAt: now, expiresAtMs: now + 6000, author: 'template' }, now, out)
-    if (this.practiceLine) {
-      say(this.practiceLine, 'practice')
-      this.practiceLine = null
+    if (this.window() !== 'during_play') {
+      this.buildQueue = []
       return
     }
-    if (!this.buildCaller) return
-    const t = this.reading(this.profile.benchmarks?.[0]?.timeKey ?? 'gameTimeSec')
-    if (typeof t !== 'number') return
-    const v = this.reading('villagers')
-    for (const call of this.buildCaller.tick(t, typeof v === 'number' ? v : null)) say(call.text, call.topic)
+    if (this.practiceLine) {
+      this.buildQueue.push({ text: this.practiceLine, topic: 'practice', at: now })
+      this.practiceLine = null
+    } else if (this.buildCaller) {
+      const t = this.reading(this.profile.benchmarks?.[0]?.timeKey ?? 'gameTimeSec')
+      if (typeof t === 'number') {
+        const v = this.reading('villagers')
+        const workers = this.workersNow(now)
+        for (const call of this.buildCaller.tick(t, typeof v === 'number' ? v : null, workers)) this.buildQueue.push({ ...call, at: now })
+        const first = this.buildOrder?.splits?.[0]
+        if (first && !this.workersSeen && !this.workersNotice && t > first.atSec + 20) {
+          this.workersNotice = true
+          out.entries.push(notice(now, 'info', 'Villagers on each resource were not read, so the build\'s split is not checked. Turn on "Show Advanced Resource" in the game\'s UI options; marking those numbers in Settings → Read numbers on this PC reads them every second.'))
+        }
+      }
+    }
+    this.sayQueued(this.buildQueue, now, out, (q) =>
+      this.decide({ category: 'build', text: q.text, confidence: 1, grade: 'moderate', evidenceSummary: 'the player chose it', topic: q.topic, priority: 'normal', createdAt: now, basedOnObservationAt: q.at, expiresAtMs: now + 6000, author: 'template' }, now, out),
+    )
+  }
+
+  /** The oldest queued line, said once its turn comes: kept while it is only waiting for the pace, up to 20 s. */
+  private sayQueued(queue: { text: string; topic: string; at: number }[], now: number, out: EngineOutput, say: (q: { text: string; topic: string; at: number }) => unknown): void {
+    while (queue.length && now - queue[0].at > 20_000) queue.shift()
+    const q = queue[0]
+    if (!q) return
+    say(q)
+    const last = out.entries.at(-1)
+    const paced = last?.type === 'message' && last.decision.decision === 'suppressed' && last.decision.reasons.some((r) => /paced|cooldown/.test(r))
+    if (!paced) queue.shift()
+  }
+
+  /** Villagers on each resource as read now (all four, fresh), or null. */
+  private workersNow(now: number): Workers | null {
+    const vals = RESOURCES.map((r) => this.visible.values[WORKER_KEYS[r]])
+    if (vals.some((v) => !v || v.conflicted || typeof v.value !== 'number' || now - v.observedAt > 6000)) return null
+    this.workersSeen = true
+    return Object.fromEntries(RESOURCES.map((r, i) => [r, vals[i]!.value as number])) as unknown as Workers
+  }
+
+  /**
+   * Town Center production and gold for the Castle Age, from each new reading, timed by the game clock.
+   * Their lines are live coaching: commentary when it is on, a training tip otherwise.
+   */
+  private observeEconomy(now: number, out: EngineOutput): void {
+    if (!this.production && !this.gold) return
+    const clock = this.visible.values.gameTimeSec
+    if (this.visible.stale || !clock || clock.conflicted || typeof clock.value !== 'number' || now - clock.observedAt > 30_000) return
+    const gameAt = (at: number) => (clock.value as number) + (at - clock.observedAt) / 1000
+    /** A reading taken in since last time, with when (capture ms); undefined when not new. */
+    const fresh = (key: string) => {
+      const v = this.visible.values[key]
+      if (!v || v.conflicted || typeof v.value !== 'number' || v.observedAt <= (this.econRead.get(key) ?? -Infinity)) return undefined
+      this.econRead.set(key, v.observedAt)
+      return { value: v.value, at: v.observedAt }
+    }
+    const vill = fresh('villagers')
+    const pop = fresh('population')
+    const cap = fresh('populationCap')
+    const latest = Math.max(vill?.at ?? -Infinity, pop?.at ?? -Infinity)
+    const same = (r: { at: number } | undefined) => !!r && Math.abs(r.at - latest) <= 1500
+    if (this.production && Number.isFinite(latest)) {
+      const t = gameAt(latest)
+      this.production.observe({ t, villagers: same(vill) ? vill!.value : null, population: same(pop) ? pop!.value : null, populationCap: same(cap) ? cap!.value : null })
+      const alert = this.production.alert(t)
+      if (alert) this.econQueue.push({ ...alert, at: now })
+    }
+    const g = fresh('gold')
+    if (this.gold && g) {
+      const gw = this.visible.values.goldWorkers
+      const age = this.reading('age')
+      const line = this.gold.observe({ t: gameAt(g.at), age: typeof age === 'string' ? age : null, gold: g.value, goldWorkers: gw && !gw.conflicted && typeof gw.value === 'number' && Math.abs(gw.observedAt - g.at) <= 1500 ? gw.value : null })
+      if (line) (line.viaBuild ? this.buildQueue : this.econQueue).push({ text: line.text, topic: line.topic, at: now })
+    }
+    if (this.window() !== 'during_play') {
+      this.econQueue = []
+      return
+    }
+    this.sayQueued(this.econQueue, now, out, (q) =>
+      this.settings.commentary
+        ? this.comment(q.text, q.topic, q.at, 0.85, 'the villager and resource numbers on the HUD', now, out)
+        : this.decide({ category: 'training', text: q.text, confidence: 0.85, grade: 'moderate', evidenceSummary: 'the villager and resource numbers on the HUD', topic: q.topic, priority: 'normal', createdAt: now, basedOnObservationAt: q.at, expiresAtMs: now + 20_000, author: 'template' }, now, out),
+    )
   }
 
   private forgetSightings(eventType: string, before: number): void {
@@ -845,6 +953,7 @@ export class CoachEngine {
       pitch: this.pitch?.finish() ?? null,
       roundLog: this.gsi?.finish() ?? null,
       readings: this.readingLog?.take() ?? null,
+      production: this.production?.summary() ?? null,
       endedManually: end.manual,
     })
     this.pitchCache = null
@@ -874,6 +983,14 @@ export class CoachEngine {
     this.benchmarks.newMatch()
     this.battles.newMatch()
     this.buildCaller = this.buildOrder ? new BuildCaller(this.buildOrder) : null
+    this.buildQueue = []
+    this.econQueue = []
+    this.workersSeen = false
+    this.workersNotice = false
+    if (record.production) this.lastProduction = record.production
+    this.production?.reset()
+    this.gold?.reset(this.castleTarget())
+    this.econRead = new Map()
     this.intel?.newMatch(this.lastT)
     this.intelQueue = []
     this.watched = new Map()

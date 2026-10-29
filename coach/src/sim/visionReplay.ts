@@ -446,6 +446,14 @@ export function mw4MatchReplay(opts: { seed: number; startAt?: number; intervalM
  * are lost (two clumped under Mangonel fire, one fought until the army was
  * nearly gone); the three near home or in the open are won.
  */
+/** A plausible split of the villagers: mostly food and wood, gold from 3:00, one or two building or walking. */
+function workersAt(sec: number, vills: number): { foodWorkers: number; woodWorkers: number; goldWorkers: number; stoneWorkers: number } {
+  const working = Math.max(0, vills - (sec < 60 ? 0 : 2))
+  const gold = sec < 180 ? 0 : Math.round(working * 0.2)
+  const wood = Math.round(working * 0.33)
+  return { foodWorkers: working - wood - gold, woodWorkers: wood, goldWorkers: gold, stoneWorkers: 0 }
+}
+
 export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalMs?: number; realMinutes?: number } = { seed: 1 }): VisionReplay {
   const rnd = mulberry32(opts.seed)
   const b = new Builder('aoe4', rnd)
@@ -501,6 +509,8 @@ export function aoe4GameReplay(opts: { seed: number; startAt?: number; intervalM
         gold: 50 + Math.round(rnd() * 150),
         stone: 0,
         villagers: vills,
+        // Villagers on each resource (the numbers beside the stockpiles): a couple building or walking.
+        ...workersAt(sec, vills),
         idleVillagers: 0,
         population: vills + army,
         populationCap: vills + army + 8,

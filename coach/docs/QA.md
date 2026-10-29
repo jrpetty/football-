@@ -290,3 +290,14 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 20.2 | Same demo on Nuke: switch Upper / Lower level. | Kills and deaths land on walkable areas; B site and Secret marks on the lower level. |
 | 20.3 | AoE IV, Coach screen before a match: type an opponent's name, Look up, pick them. | Their rating, civilisations with win rates, last results and up to three openings. Compare with their AoE4World page. Nothing is looked up after capture starts. |
 | 20.4 | Settings → Discord: paste a webhook from your own server, Save, Send a test. Then finish a captured match. | The test message arrives on your phone; after the match, the summary with the result and points to work on. A non-Discord address is refused. |
+
+## 21. Villagers on each resource and Town Center idle time
+
+| # | Steps | Expected |
+|---|---|---|
+| 21.1 | AoE IV: turn on Options → UI → "Show Advanced Resource". Settings → Read numbers on this PC: mark the villager counter (top left) and the four numbers beside the resources; play a skirmish until each is trusted. | The four numbers and the villager total are read; note any field that never becomes trusted, and the HUD scale. |
+| 21.2 | Against the AI, in Training mode: stop making villagers for about a minute at 5:00, then carry on. | About 35 s after the last villager: "No new villager for … seconds." once. Insights → Town Center: one stretch starting about 20 s after that villager, its length within 2–3 s of what you timed. |
+| 21.3 | Get housed with a villager queued for 30 s, then build a house. Separately, get housed with nothing queued (army production) for 30 s. | "Housed with a villager waiting: about 30 s"; the second is listed under "Not counted", and neither adds to the idle time. |
+| 21.4 | Reach 200 population and stay there a minute. Then lose 5 villagers to a raid while the Town Center keeps working. | Neither adds idle time; the raid stretch is listed under "Not counted" (villagers lost). |
+| 21.5 | Progress → Build orders → the build in use → Villagers on each resource: add 4:00 with 8 food, 8 wood, 2 gold; save. Play it against the AI with 5 on wood at 4:00. | At 4:00: "Build wants 8 on wood by 4:00, you have 5." After the game the same line under "Your last game the coach watched". |
+| 21.6 | Same build with Castle at 9:00. In Feudal keep only 1 on gold. | Once the gold rate is measured (about a minute in): "Gold for Castle: … with 1 on gold, there around …; the build ages up at 9:00. About N more on gold." At most twice. |

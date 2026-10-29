@@ -11,6 +11,7 @@ import { BattleLog, BenchmarkChart, FactorCard, IntelPanel, LearnedPanel, Playbo
 import { MapPanel } from '../components/MapView.tsx'
 import { PitchPanel, type PitchMatch } from '../components/PitchView.tsx'
 import { RoundsPanel, type RoundsMatch } from '../components/RoundsView.tsx'
+import { ProductionPanel } from '../components/Production.tsx'
 import { useOfficialSource } from '../officialSource.ts'
 import { ArsenalPanel } from '../components/ArsenalPanel.tsx'
 import { UtilityPanel } from '../components/UtilityView.tsx'
@@ -279,6 +280,16 @@ export function InsightsView({ state, session, profile, settings, cloud }: Props
           ))}
         </section>
       )}
+
+      {report?.production ? (
+        <section className="panel" aria-labelledby="tc-h">
+          <div className="panel-head">
+            <h2 id="tc-h">Town Center</h2>
+            <span className="muted small">Idle time between villagers; housed and full population are not counted as idle</span>
+          </div>
+          <ProductionPanel summary={report.production} />
+        </section>
+      ) : null}
 
       {report && report.heatmaps.length > 0 && (
         <section className="panel" aria-labelledby="zones-h">

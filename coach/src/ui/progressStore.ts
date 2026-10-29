@@ -8,6 +8,7 @@ import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { findFaction } from '../core/analyses/intel.ts'
 import { currentFocus, isPracticePlan, makePlan, measurements, practiceLine, recordGames, suggestFoci, type PracticePlan } from '../core/analyses/practice.ts'
 import { addFacts, emptyHistory, isAoe4History, mergeGames, SUMMARIES_PER_SYNC, wantSummaries, type Aoe4History } from '../core/aoe4/history.ts'
+import { compareSplits, isWorkerSplit, MAX_SPLITS, splitsFromReadings, type SplitCheck, type WorkerSplit } from '../core/aoe4/workers.ts'
 import { buildFromGame, compareBuild, emptyLibrary, isBuildLibrary, MAX_BUILDS, playedFromScreen, type BuildLibrary, type BuildOrder, type PlayedBuild, type StepCheck } from '../core/aoe4/buildOrder.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
 import type { CoachSettings } from '../core/settings.ts'
@@ -230,6 +231,35 @@ export class ProgressStore {
   async deleteBuild(id: string): Promise<void> {
     const lib = this.host.get().builds
     await this.saveLibrary({ ...lib, builds: lib.builds.filter((b) => b.id !== id), active: Object.fromEntries(Object.entries(lib.active).filter(([, v]) => v !== id)) })
+  }
+
+  /** The villagers on each resource the build wants, by time (replaces the build's split). */
+  async setSplits(id: string, splits: readonly WorkerSplit[]): Promise<void> {
+    const lib = this.host.get().builds
+    const clean = [...splits].filter(isWorkerSplit).sort((a, b) => a.atSec - b.atSec).slice(0, MAX_SPLITS)
+    await this.saveLibrary({ ...lib, builds: lib.builds.map((b) => (b.id === id ? { ...b, splits: clean } : b)) })
+  }
+
+  /** The games the coach watched with this civilisation, newest first. */
+  private watched(civ: string): MatchRecord[] {
+    const roster = this.host.profile()?.knowledge.roster
+    return [...this.host.matches()].reverse().filter((m) => m.gameProfileId === 'aoe4' && roster && findFaction(roster, String(m.context?.playerFaction ?? ''))?.id === civ)
+  }
+
+  /** Split targets from the last game the coach watched with this civilisation where the numbers beside each resource were read. */
+  splitsFromLastGame(civ: string, untilSec: number): { splits: WorkerSplit[]; endedAt: string } | null {
+    for (const rec of this.watched(civ)) {
+      const splits = splitsFromReadings(rec.readings, untilSec)
+      if (splits.length) return { splits, endedAt: rec.endedAt }
+    }
+    return null
+  }
+
+  /** The build's split against the last watched game with its civilisation. */
+  splitsAgainst(build: BuildOrder): { endedAt: string; checks: SplitCheck[] } | null {
+    if (!build.splits?.length) return null
+    const rec = this.watched(build.civ).find((r) => compareSplits(build.splits, r.readings).some((c) => c.had))
+    return rec ? { endedAt: rec.endedAt, checks: compareSplits(build.splits, rec.readings) } : null
   }
 
   async setActive(civ: string, id: string | null): Promise<void> {

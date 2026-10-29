@@ -12,6 +12,7 @@ import type { GamePlayerBuild, SightlineBridge } from '../../../shared/bridge.ts
 import { focusStatus, showValue, type PracticeFocus } from '../../core/analyses/practice.ts'
 import { buildFindings, stepLabel, type BuildOrder, type StepCheck } from '../../core/aoe4/buildOrder.ts'
 import { clock, trends, weeklySummary, winRates, type Trend } from '../../core/aoe4/history.ts'
+import { MAX_SPLITS, RESOURCES, splitText, type Resource } from '../../core/aoe4/workers.ts'
 import { itemName } from '../../core/aoe4/names.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
@@ -468,6 +469,7 @@ function BuildsPanel({ session, profile }: Props) {
           </div>
           {vs ? <BuildComparison label={vs.label} checks={vs.checks} /> : <p className="muted small">Play a game as {civOf(profile, civ)} to see it against this build.</p>}
           <BuildSteps build={active} />
+          <SplitEditor key={active.id} session={session} build={active} />
         </div>
       ) : (
         <p className="muted small">No build set for {civOf(profile, civ)}.</p>
@@ -501,6 +503,93 @@ function BuildsPanel({ session, profile }: Props) {
         </>
       ) : null}
     </section>
+  )
+}
+
+const parseClock = (s: string): number | null => {
+  const m = /^\s*(\d{1,2}):([0-5]\d)\s*$/.exec(s)
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}
+
+/** The villagers on each resource the build wants by a few times; checked live against the HUD's numbers. */
+function SplitEditor({ session, build }: { session: CoachSession; build: BuildOrder }) {
+  const [rows, setRows] = useState<{ at: string; food: number; wood: number; gold: number; stone: number }[]>(() => (build.splits ?? []).map((s) => ({ at: clock(s.atSec), food: s.food, wood: s.wood, gold: s.gold, stone: s.stone })))
+  const [note, setNote] = useState<string | null>(null)
+  const until = Math.max(600, ...build.steps.map((s) => s.atSec))
+  const fromGame = session.progress.splitsFromLastGame(build.civ, until)
+  const against = session.progress.splitsAgainst(build)
+  const bad = rows.some((r) => parseClock(r.at) === null)
+  const set = (i: number, k: 'at' | Resource, v: string) => setRows(rows.map((r, j) => (j === i ? { ...r, [k]: k === 'at' ? v : Math.max(0, Math.min(200, Math.round(Number(v) || 0))) } : r)))
+  const save = async () => {
+    await session.progress.setSplits(build.id, rows.map((r) => ({ atSec: parseClock(r.at)!, food: r.food, wood: r.wood, gold: r.gold, stone: r.stone })))
+    setNote('Saved. It is checked from the next game.')
+  }
+  return (
+    <div className="split-editor">
+      <h3 className="small">Villagers on each resource</h3>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        What the build wants by a few times. At each time, against the AI, the coach compares it with the numbers beside your resources and says the biggest shortfall ("Build wants 6 on wood by 4:00, you have 3"). Needs the game's
+        "Show Advanced Resource" UI option.
+      </p>
+      {rows.length ? (
+        <table className="table split-table">
+          <thead>
+            <tr>
+              <th>By</th>
+              {RESOURCES.map((r) => (
+                <th key={r}>{r[0].toUpperCase() + r.slice(1)}</th>
+              ))}
+              <th aria-label="Remove" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>
+                  <input type="text" aria-label="Time (m:ss)" value={r.at} onChange={(e) => set(i, 'at', e.target.value)} className={parseClock(r.at) === null ? 'invalid' : ''} size={5} />
+                </td>
+                {RESOURCES.map((k) => (
+                  <td key={k}>
+                    <input type="number" min={0} max={200} aria-label={`Villagers on ${k}`} value={r[k]} onChange={(e) => set(i, k, e.target.value)} />
+                  </td>
+                ))}
+                <td>
+                  <button type="button" className="btn sm ghost" onClick={() => setRows(rows.filter((_, j) => j !== i))}>
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
+      <div className="btn-row">
+        <button type="button" className="btn sm" disabled={rows.length >= MAX_SPLITS} onClick={() => setRows([...rows, { at: rows.length ? clock((parseClock(rows[rows.length - 1].at) ?? 0) + 120) : '4:00', food: 0, wood: 0, gold: 0, stone: 0 }])}>
+          Add a time
+        </button>
+        {fromGame ? (
+          <button type="button" className="btn sm ghost" onClick={() => (setRows(fromGame.splits.map((s) => ({ at: clock(s.atSec), food: s.food, wood: s.wood, gold: s.gold, stone: s.stone }))), setNote(`From your game on ${new Date(fromGame.endedAt).toLocaleDateString()}: what was read every 2 minutes. Save to keep it.`))}>
+            Take it from my last game
+          </button>
+        ) : null}
+        <button type="button" className="btn sm primary" disabled={bad} onClick={() => void save()}>
+          Save
+        </button>
+      </div>
+      {note ? <p className="small muted">{note}</p> : null}
+      {against ? (
+        <div className="small">
+          <b>Your last game the coach watched ({new Date(against.endedAt).toLocaleDateString()})</b>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+            {against.checks.map((c) => (
+              <li key={c.want.atSec}>
+                {c.line ?? `${clock(c.want.atSec)}: ${c.had ? `on plan (${splitText(c.had)})` : 'not read then'}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

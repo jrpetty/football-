@@ -530,6 +530,50 @@ Then press **Choose the game window**, play, and listen.
   has 36. Your usual is 28 villagers (your last 6 games with this
   civilisation)."
   It uses the real number from a checked match where there is one.
+- **Town Center idle time (AoE IV).** From the villager counter at the top
+  left, read every second once the coach has learned its digits on your PC
+  (every few seconds from the cloud model until then). A villager takes 20
+  seconds at one Town Center (19 to 23 for some civilisations), so when the
+  counter goes longer than that without rising, the Town Center stood idle
+  for the difference.
+  - After the match, in Insights, the review and the Discord summary:
+    "Town Center idle 1:40 in total, the longest 35 s at 6:10", with every
+    stretch on a strip across the game.
+  - Against the AI, once a villager is about 15 s overdue: "No new villager
+    for 37 seconds. Keep the Town Center working." Said once per stretch.
+  - **Not counted as idle:**
+    - time at full population (200);
+    - time housed. Only the time a villager was ready and waiting for space
+      counts, as its own number ("Housed with a villager waiting: 25 s").
+      That shows when the villager appears the moment you add a house;
+    - stretches where villagers died (a loss hides a villager made);
+    - gaps in the readings;
+    - everything from 100 villagers on (players report the counter shows no
+      more than 100, and most stop making villagers near there).
+
+  Each change of the counter must be confirmed by the next reading, so one
+  misread number makes neither a villager nor an idle Town Center. Gaps of
+  a few seconds between villagers are not counted (up to 3 s at one reading
+  a second, twice the interval when readings are slower). Researching Wheelbarrow or
+  Textiles at the Town Center counts as idle, since the screen can't tell
+  it apart. A second Town Center makes the idle time read low, never high.
+- **Villagers on each resource (AoE IV).** The small numbers beside food,
+  wood, gold and stone (turn on the game's "Show Advanced Resource" UI
+  option; mark them in Settings → Read numbers on this PC to read them every
+  second).
+  - A build order can hold the split it wants by a few times. Type it in, or
+    take it from your last game the coach watched (what was read every 2
+    minutes). Against the AI, at each time the coach says the biggest
+    shortfall: "Build wants 6 on wood by 4:00, you have 3." After a game,
+    Progress shows each time against what you had.
+  - Gold for the Castle Age, in Feudal: from what your gold villagers
+    actually gather (the gold count going up, left out while you spend), when
+    the 600 gold will be there against the build's Castle time, and how many
+    more on gold would make it: "Gold for Castle: 180 of 600 with 2 on gold,
+    there around 11:40; the build ages up at 9:30. About 3 more on gold."
+    Without a build, nobody on gold for a minute in Feudal is said once. 600
+    is the usual Castle cost; a civilisation that ages up differently is not
+    told apart.
 - **Villager curves per civilisation (AoE IV).** From the training times
   in the game files: Order of the Dragon Gilded Villagers take 23 s (about
   2.6 a minute), French villagers 19 s, Viking villagers 22 s, the rest

@@ -13,6 +13,7 @@ import { isPitchRecord, type PitchMatchRecord } from '../pitch/tracker.ts'
 import { isCs2Rounds, type Cs2Rounds } from '../gsi/cs2.ts'
 import { isReadingLog, type ReadingLog } from '../truth/readingLog.ts'
 import { isTruthReport, type TruthReport } from '../truth/aoe4world.ts'
+import { isProductionSummary, type ProductionSummary } from '../aoe4/production.ts'
 
 export const MATCH_RECORD_SCHEMA = 1
 
@@ -52,6 +53,8 @@ export interface MatchRecord {
   readonly readings?: ReadingLog
   /** The coach's readings checked against the real game (AoE4World) or the player's own numbers. */
   readonly truth?: TruthReport
+  /** Age of Empires IV: Town Center idle time, from the villager counter. */
+  readonly production?: ProductionSummary
   /** True when the match was ended by the player (stop or "match over"), not seen on screen. */
   readonly endedManually: boolean
 }
@@ -99,6 +102,7 @@ export class MatchRecorder {
     pitch?: PitchMatchRecord | null
     roundLog?: Cs2Rounds | null
     readings?: ReadingLog | null
+    production?: ProductionSummary | null
     endedManually: boolean
   }): MatchRecord {
     const record: MatchRecord = {
@@ -130,6 +134,7 @@ export class MatchRecorder {
       ...(input.pitch ? { pitch: input.pitch } : {}),
       ...(input.roundLog ? { roundLog: input.roundLog } : {}),
       ...(input.readings ? { readings: input.readings } : {}),
+      ...(input.production ? { production: input.production } : {}),
       endedManually: input.endedManually,
     }
     this.stats = new Map()
@@ -157,7 +162,8 @@ export function isMatchRecord(v: unknown): v is MatchRecord {
     (o.pitch === undefined || isPitchRecord(o.pitch)) &&
     (o.roundLog === undefined || isCs2Rounds(o.roundLog)) &&
     (o.readings === undefined || isReadingLog(o.readings)) &&
-    (o.truth === undefined || isTruthReport(o.truth))
+    (o.truth === undefined || isTruthReport(o.truth)) &&
+    (o.production === undefined || isProductionSummary(o.production))
   )
 }
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -126,7 +126,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the total villager count only where the HUD shows it as one number (never added up from the worker counts beside each resource, which leave out villagers building, walking or carrying), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen. When enemy buildings or units are visible (scouting, fights, their base), list them with the roster's exact names and counts; never list anything in the fog of war.",
+    "purpose": "Age of Empires IV. Read the resource panel (food, wood, gold, stone stockpiles; in the default layout it is at the bottom left, next to the number of workers on each), the population as current/maximum, the idle villager count if a number is shown, the number of villagers working each resource (the small number beside each stockpile, where the HUD shows it), the total villager count only where the HUD shows it as one number (never added up from the worker counts beside each resource, which leave out villagers building, walking or carrying), the current age (Dark, Feudal, Castle or Imperial; the age shown, not one being built), and the in-game clock. Report only numbers you can actually read. Report phase 'match_end' on a victory/defeat banner or the post-game summary, and 'menu' in menus, lobbies or loading screens. When the player's army is fighting on screen, report a fight event with what the frame shows: the trend, where it is, the matchup, numbers, whether ranged units are screened, Mangonel splash, enemy siege and how reinforcements arrive; give unknown for anything unclear. Read the map name and the opponent's civilisation from the loading screen. When enemy buildings or units are visible (scouting, fights, their base), list them with the roster's exact names and counts; never list anything in the fog of war.",
     "sampleIntervalMs": 3000,
     "maxLatencyMs": 12000,
     "maxWidth": 1280,
@@ -202,6 +202,42 @@
         "max": 250,
         "ttlMs": 12000,
         "description": "Total villagers, only from one number the screen shows as the villager total (a villager count on the HUD where your layout shows one, or a scoreboard or statistics screen). Never add up the worker counts beside each resource: villagers building, walking or carrying are in none of them. Omit unless that one number is clearly readable."
+      },
+      {
+        "key": "foodWorkers",
+        "label": "Villagers on food",
+        "type": "number",
+        "min": 0,
+        "max": 250,
+        "ttlMs": 12000,
+        "description": "The small number of villagers working food shown beside the food stockpile (the game's Show Advanced Resource option). Fishing ships on food are counted in it. Omit when no number is shown there."
+      },
+      {
+        "key": "woodWorkers",
+        "label": "Villagers on wood",
+        "type": "number",
+        "min": 0,
+        "max": 250,
+        "ttlMs": 12000,
+        "description": "The small number of villagers working wood shown beside the wood stockpile (the game's Show Advanced Resource option). Omit when no number is shown there."
+      },
+      {
+        "key": "goldWorkers",
+        "label": "Villagers on gold",
+        "type": "number",
+        "min": 0,
+        "max": 250,
+        "ttlMs": 12000,
+        "description": "The small number of villagers working gold shown beside the gold stockpile (the game's Show Advanced Resource option). Traders bringing gold are counted in it. Omit when no number is shown there."
+      },
+      {
+        "key": "stoneWorkers",
+        "label": "Villagers on stone",
+        "type": "number",
+        "min": 0,
+        "max": 250,
+        "ttlMs": 12000,
+        "description": "The small number of villagers working stone shown beside the stone stockpile (the game's Show Advanced Resource option). Omit when no number is shown there."
       },
       {
         "key": "age",
@@ -20638,6 +20674,26 @@
       "key": "villagers",
       "kind": "number",
       "label": "Villager total (where your HUD shows one)"
+    },
+    {
+      "key": "foodWorkers",
+      "kind": "number",
+      "label": "Villagers on food (the small number beside it)"
+    },
+    {
+      "key": "woodWorkers",
+      "kind": "number",
+      "label": "Villagers on wood (the small number beside it)"
+    },
+    {
+      "key": "goldWorkers",
+      "kind": "number",
+      "label": "Villagers on gold (the small number beside it)"
+    },
+    {
+      "key": "stoneWorkers",
+      "kind": "number",
+      "label": "Villagers on stone (the small number beside it)"
     },
     {
       "key": "idleVillagers",

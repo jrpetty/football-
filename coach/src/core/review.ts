@@ -4,6 +4,7 @@
 // findings; when cloud features are on, Claude can write a deeper one from the
 // same digest and playbook (validated against the same shape).
 
+import { productionLines } from './aoe4/production.ts'
 import type { SessionReport } from './engine.ts'
 import { humanize, mistakeLine } from './language.ts'
 import { factorFindings } from './planner.ts'
@@ -46,6 +47,9 @@ export function localReview(profile: GameProfile, report: SessionReport): MatchR
 
   const findings = factorFindings(report.factors, 'weak')
   for (const f of findings.filter((x) => x.kind === 'weakness' && x.grade !== 'weak')) add(f.statement, f.playbook)
+  // The Town Center's idle time (from the villager counter) is more exact than the curve: it goes first.
+  const prod = report.production
+  if (prod && (prod.idleSec >= 60 || prod.housedWaitSec >= 20)) add(productionLines(prod).filter((l) => !l.startsWith('Not counted')).join(' '), 'tc-never-idle')
   for (const b of report.benchmarks.filter((x) => x.worst)) add(b.worst!.statement, b.spec.playbook)
   // What the opponent fielded, and what beats it (from the roster, for the player's civilisation).
   const met = report.intel?.units[0]
