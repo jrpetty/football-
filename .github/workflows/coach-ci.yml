@@ -1,7 +1,8 @@
 name: Sightline coach CI
 
-# Typecheck, test and build the coach package whenever it changes. Tests run
-# the whole engine on synthetic frames, so no Electron binary is needed.
+# Typecheck, test and build the coach package whenever it changes. The unit
+# tests run the whole engine on synthetic frames, with no Electron binary; the
+# app job then drives the built app itself (e2e/app.e2e.mjs) under xvfb.
 on:
   push:
     paths: ['coach/**', '.github/workflows/coach-ci.yml']
@@ -32,3 +33,28 @@ jobs:
       - run: npm test
       - run: npx vite build
       - run: npm run profile:check -- src/profiles/*.json
+
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: coach
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coach/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y xvfb xdotool
+      - run: npm ci
+      - run: npm run build
+      - name: App tests (talk key, commentary, ranked quiet, "why didn't it say that?")
+        run: xvfb-run -a node e2e/app.e2e.mjs e2e-output
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coach-app-tests-linux
+          path: coach/e2e-output
+          retention-days: 14

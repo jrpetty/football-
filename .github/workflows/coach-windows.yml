@@ -44,6 +44,16 @@ jobs:
           path: coach/release/*.exe
           if-no-files-found: error
           retention-days: 30
+      # The real app on Windows: the talk key with the key repeats Windows sends for a held key,
+      # commentary in the demo, and the ranked quiet mode (after the installer is uploaded).
+      - name: App tests
+        run: node e2e/app.e2e.mjs e2e-output
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coach-app-tests-windows
+          path: coach/e2e-output
+          retention-days: 14
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/coach-v')
         uses: softprops/action-gh-release@v2

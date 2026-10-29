@@ -56,7 +56,12 @@ test('commentary in online play: never spoken, and the player is told why once',
 test('commentary off, muted or silent: not spoken; it never blocks a coaching tip', () => {
   assert.equal(play('aoe4', 'skirmish-vs-ai', aoe4GameReplay({ seed: 4 }), { commentary: false }).commentary.length, 0)
   const muted = play('aoe4', 'skirmish-vs-ai', aoe4GameReplay({ seed: 4 }), { muted: true })
-  assert.ok(muted.commentary.length > 0 && muted.commentary.every((c) => c.decision.decision === 'text-only'))
+  assert.ok(muted.commentary.length > 0 && muted.commentary.every((c) => c.decision.decision !== 'spoken'))
+  // Muted lines are shown instead, paced like spoken ones: the same line is not shown again and again.
+  const shown = muted.commentary.filter((c) => c.decision.decision === 'text-only')
+  assert.ok(shown.length > 3)
+  assert.equal(new Set(shown.map((c) => c.message.topic)).size, shown.length, shown.map((c) => c.message.topic).join(' | '))
+  for (let i = 1; i < shown.length; i++) assert.ok(shown[i].at - shown[i - 1].at >= 3000, 'paced')
   const silent = play('aoe4', 'skirmish-vs-ai', aoe4GameReplay({ seed: 4 }), { mode: 'silent' })
   assert.ok(silent.utterances.every((u) => u.category !== 'commentary'))
   // Tips still get through with commentary on (separate pacing).

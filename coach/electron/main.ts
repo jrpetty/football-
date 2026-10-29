@@ -692,6 +692,9 @@ function registerIpc(): void {
   })
 }
 
+// The app tests (e2e/) run with their own, empty data folder so they never touch the player's.
+if (process.env.SIGHTLINE_USER_DATA) app.setPath('userData', process.env.SIGHTLINE_USER_DATA)
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {

@@ -1134,9 +1134,8 @@ export class CoachEngine {
     return out
   }
 
-  /** Says a commentary line if the governor allows it now; true when it was spoken. */
+  /** Says a commentary line if the governor allows it now (or shows it, when muted); true when it was delivered. */
   private comment(text: string, topic: string, at: number, confidence: number, evidence: string, now: number, out: EngineOutput): boolean {
-    const before = out.utterances.length
     this.decide(
       {
         category: 'commentary',
@@ -1154,9 +1153,10 @@ export class CoachEngine {
       now,
       out,
     )
-    const spoken = out.utterances.length > before
-    if (spoken) this.lastCommentAt = now
-    return spoken
+    const last = out.entries.at(-1)
+    const delivered = last?.type === 'message' && (last.decision.decision === 'spoken' || last.decision.decision === 'text-only')
+    if (delivered) this.lastCommentAt = now
+    return delivered
   }
 
   /** This match's checkpoints, each with what the player usually reaches there. */

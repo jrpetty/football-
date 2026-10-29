@@ -227,14 +227,7 @@ export class CoachingGovernor {
       reasons.push(`${this.policy.reasons[0]} (speaking during play is not allowed)`)
       return result('suppressed')
     }
-    if (this.settings.mode === 'silent') {
-      reasons.push('silent tracker mode never speaks')
-      return result('text-only')
-    }
-    if (this.settings.muted) {
-      reasons.push('muted')
-      return result('text-only')
-    }
+    // Paced the same whether it is spoken or only shown (muted), so a muted coach does not repeat itself on screen.
     const since = now - this.lastCommentaryAt
     if (since < COMMENTARY_GAP_MS) {
       reasons.push(`commentary paced: last line ${(since / 1000).toFixed(0)}s ago`)
@@ -252,6 +245,14 @@ export class CoachingGovernor {
     this.lastCommentaryAt = now
     this.commentaryAt = [...this.commentaryAt.filter((t) => now - t < 60_000), now]
     this.topicSpokenAt.set(msg.topic, now)
+    if (this.settings.mode === 'silent') {
+      reasons.push('silent tracker mode never speaks')
+      return result('text-only')
+    }
+    if (this.settings.muted) {
+      reasons.push('muted')
+      return result('text-only')
+    }
     reasons.push('live commentary is on and allowed here')
     return result('spoken', { id: msg.id, text: msg.text, category: msg.category, priority: msg.priority, expiresAt: msg.expiresAtMs })
   }

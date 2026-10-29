@@ -3,3 +3,4 @@ dist
 dist-electron
 release
 *.log
+e2e-output
