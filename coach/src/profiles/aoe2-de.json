@@ -1863,5 +1863,43 @@
       "key": "age",
       "text": "You reached the {age} Age at {gameTimeSec|clock}."
     }
+  ],
+  "hudNumbers": [
+    {
+      "key": "food",
+      "kind": "number",
+      "label": "Food"
+    },
+    {
+      "key": "wood",
+      "kind": "number",
+      "label": "Wood"
+    },
+    {
+      "key": "gold",
+      "kind": "number",
+      "label": "Gold"
+    },
+    {
+      "key": "stone",
+      "kind": "number",
+      "label": "Stone"
+    },
+    {
+      "key": "population",
+      "key2": "populationCap",
+      "kind": "fraction",
+      "label": "Population (e.g. 45/60)"
+    },
+    {
+      "key": "idleVillagers",
+      "kind": "number",
+      "label": "Idle villagers"
+    },
+    {
+      "key": "gameTimeSec",
+      "kind": "clock",
+      "label": "Game clock (e.g. 12:34)"
+    }
   ]
 }

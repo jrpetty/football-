@@ -12246,6 +12246,23 @@
     ],
     "minParts": 2
   },
+  "hudNumbers": [
+    {
+      "key": "playerScore",
+      "kind": "number",
+      "label": "Your team's score"
+    },
+    {
+      "key": "opponentScore",
+      "kind": "number",
+      "label": "Their score"
+    },
+    {
+      "key": "matchTimeLeftSec",
+      "kind": "clock",
+      "label": "Match clock (e.g. 4:59)"
+    }
+  ],
   "learning": {
     "dimensions": [
       {

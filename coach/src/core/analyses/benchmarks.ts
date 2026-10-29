@@ -34,6 +34,8 @@ export interface BenchmarkPoint {
   readonly expected: number
   /** Below expected by more than the tolerance. */
   readonly behind: boolean
+  /** What the player usually reaches here (their recent matches), when known. */
+  readonly usual?: { readonly value: number; readonly games: number; readonly sameFaction: boolean }
 }
 
 export interface BenchmarkResult {

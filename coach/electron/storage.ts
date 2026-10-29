@@ -12,6 +12,8 @@
 //   knowledge/<pack>.kb.gz   game knowledge base built by research (gzip JSON; public web content)
 //   knowledge/<pack>.screens.json  screens learned from the player's screen: 64-bit
 //                            fingerprints + names (no images); deleted with player data
+//   knowledge/<pack>.hud.json  the shapes of the HUD's digits on the player's screen (12×12
+//                            grey levels per character, no images); deleted with player data
 //   knowledge/<pack>.maps/<map>.json.gz  maps stitched from the player's minimap (the
 //                            minimap's picture of the map, callouts and heights; no
 //                            frames); deleted with player data
@@ -29,6 +31,7 @@ import { DEFAULT_SETTINGS, sanitizeSettings, type CoachSettings } from '../src/c
 import { MODELS } from '../src/core/vision/cost.ts'
 import { cleanLedger, type UsageLedger } from '../src/core/usage.ts'
 import { isScreenCatalog, type ScreenCatalog } from '../src/core/vision/screens.ts'
+import { isGlyphBookData, type GlyphBookData } from '../src/core/hud/glyphs.ts'
 import { cleanMosaic, type StoredMosaic } from '../src/core/map/minimap.ts'
 import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import { gunzipSync, gzipSync } from 'node:zlib'
@@ -181,10 +184,11 @@ export class Storage {
   async forgetPlayerData(profileId: unknown): Promise<void> {
     if (profileId === null) {
       for (const name of await readdir(join(this.root, 'knowledge')).catch(() => [] as string[])) {
-        if (name.endsWith('.screens.json') || name.endsWith('.maps')) await rm(join(this.root, 'knowledge', name), { recursive: true, force: true })
+        if (name.endsWith('.screens.json') || name.endsWith('.hud.json') || name.endsWith('.maps')) await rm(join(this.root, 'knowledge', name), { recursive: true, force: true })
       }
     } else if (isProfileId(profileId)) {
       await rm(this.screensPath(profileId), { force: true })
+      await rm(this.hudPath(profileId), { force: true })
       await rm(this.mapsDir(profileId), { recursive: true, force: true })
     }
     for (const dir of ['tendencies', 'history', 'notes']) {
@@ -242,6 +246,22 @@ export class Storage {
     const path = this.screensPath(catalog.packId)
     const tmp = `${path}.${process.pid}.tmp`
     await writeFile(tmp, JSON.stringify(catalog), 'utf8')
+    await rename(tmp, path)
+    return true
+  }
+
+  async loadHudBook(profileId: unknown): Promise<GlyphBookData | null> {
+    if (!isProfileId(profileId)) return null
+    const v = await this.readJson(this.hudPath(profileId))
+    return isGlyphBookData(v) ? v : null
+  }
+
+  async saveHudBook(profileId: unknown, book: unknown): Promise<boolean> {
+    if (!isProfileId(profileId) || !isGlyphBookData(book)) return false
+    await mkdir(join(this.root, 'knowledge'), { recursive: true })
+    const path = this.hudPath(profileId)
+    const tmp = `${path}.${process.pid}.tmp`
+    await writeFile(tmp, JSON.stringify(book), 'utf8')
     await rename(tmp, path)
     return true
   }
@@ -355,6 +375,10 @@ export class Storage {
   private mosaicPath(profileId: string, map: string): string {
     const slug = map.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'map'
     return join(this.mapsDir(profileId), `${slug}.json.gz`)
+  }
+
+  private hudPath(profileId: string): string {
+    return join(this.root, 'knowledge', `${profileId}.hud.json`)
   }
 
   private screensPath(profileId: string): string {

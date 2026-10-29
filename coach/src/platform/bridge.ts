@@ -248,6 +248,18 @@ export const browserBridge: SightlineBridge = {
   async saveScreens() {
     return false
   },
+  async loadHudBook() {
+    return null
+  },
+  async saveHudBook() {
+    return false
+  },
+  async aoe4worldSummary() {
+    return { ok: false as const, error: 'Checking against AoE4World needs the desktop app.' }
+  },
+  async aoe4worldSearch() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
   // The browser preview keeps stitched maps for this page only.
   async loadMosaics(profileId: string) {
     return [...(previewMosaics.get(profileId)?.values() ?? [])]

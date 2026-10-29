@@ -56,6 +56,7 @@ import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
 import { SinglePress, TalkKeyGesture } from '../src/speech/talkKey.ts'
+import { aoe4worldSearch, aoe4worldSummary } from './aoe4world.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? null
@@ -524,6 +525,10 @@ function registerIpc(): void {
 
   // --- Game knowledge: learned screens, and the researched knowledge base ------------------------
   handle(CHANNELS.loadScreens, (id) => storage.loadScreens(id))
+  handle(CHANNELS.loadHudBook, (id) => storage.loadHudBook(id))
+  handle(CHANNELS.saveHudBook, (id, book) => storage.saveHudBook(id, book))
+  handle(CHANNELS.aoe4worldSummary, (id, endedAt, d) => aoe4worldSummary(id, endedAt, d))
+  handle(CHANNELS.aoe4worldSearch, (q) => aoe4worldSearch(q))
   handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
   handle(CHANNELS.saveMosaic, (id, m) => storage.saveMosaic(id, m))
   handle(CHANNELS.deleteMosaic, (id, map) => storage.deleteMosaic(id, map))

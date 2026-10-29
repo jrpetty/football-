@@ -13,6 +13,7 @@ import type { Frame, TimelineEntry } from '../core/types.ts'
 import { validateVisionResponse } from '../core/vision/contract.ts'
 import { VisionSampler } from '../core/vision/sampler.ts'
 import { cleanScreen, dHash, ScreenMemory, type ScreenInfo } from '../core/vision/screens.ts'
+import { HudReader } from '../core/hud/reader.ts'
 import type { FromWorker, ToWorker, VisionConfig, VisionStatus } from './protocol.ts'
 
 /** At most this many frames wait for analysis; older ones are dropped. */
@@ -21,6 +22,10 @@ export const QUEUE_CAPACITY = 2
 const SCREEN_RECHECK_MS = 60_000
 /** For captured frames (several a second), send a full report at least this often, even without new events. Other outputs always carry one. */
 const REPORT_EVERY = 10
+/** HUD numbers are read on this computer at most this often. */
+const HUD_READ_MS = 1000
+/** Learned digit shapes are sent for keeping at most this often (and at the end). */
+const HUD_BOOK_EVERY_MS = 30_000
 
 type Pending = { kind: 'bitmap'; bitmap: ImageBitmap; timestamp: number } | { kind: 'pixels'; frame: Frame }
 
@@ -56,6 +61,13 @@ export class PipelineHost {
   private readonly confirmed = new Map<string, number>()
   private screen: VisionStatus['screen'] = null
   private lastFrame: Frame | null = null
+  /** HUD numbers read on this computer (when the player marked them). */
+  private hud: HudReader | null = null
+  private hudSaves = false
+  /** Looking at the screen half as often: every marked number is read here. */
+  private saving = false
+  private lastHudRead = -Infinity
+  private lastBookPost = -Infinity
 
   constructor(deps: HostDeps) {
     this.deps = deps
@@ -89,6 +101,11 @@ export class PipelineHost {
           context: msg.context,
           mosaics: msg.mosaics,
         })
+        this.hud = msg.hud?.fields.length ? new HudReader(msg.hud.fields, msg.hud.book) : null
+        this.hudSaves = msg.hud?.saves === true
+        this.saving = false
+        this.lastHudRead = -Infinity
+        this.lastBookPost = -Infinity
         this.configureVision(msg.vision)
         this.emit({ entries: msg.profile.vision || msg.profile.signals.length ? this.engine.startNotices(msg.now) : [], utterances: [], cancel: [], matches: [] }, true)
         return
@@ -140,6 +157,8 @@ export class PipelineHost {
         this.lastFrame = null
         const out = engine.stop(msg.now)
         this.postMosaic(engine, msg.now, true)
+        this.postBook(true)
+        this.hud = null
         this.deps.post({ type: 'output', ...out, status: null, report: engine.report(), frameDone: false })
         this.deps.post({ type: 'stopped', snapshot: engine.snapshot(new Date()), insights: engine.insights(), report: engine.report() })
         return
@@ -154,8 +173,10 @@ export class PipelineHost {
       this.sampler?.setPaused(true)
       return
     }
-    if (!this.sampler) this.sampler = new VisionSampler({ intervalMs: cfg.intervalMs, minChange: 1.5, maxSkipMs: cfg.intervalMs * 4, maxInFlight: cfg.maxInFlight ?? 1 })
-    else this.sampler.reconfigure({ intervalMs: cfg.intervalMs, maxInFlight: cfg.maxInFlight ?? 1 })
+    // Every marked HUD number read here: the model is still needed for everything else, but less often.
+    const intervalMs = this.saving ? cfg.intervalMs * 2 : cfg.intervalMs
+    if (!this.sampler) this.sampler = new VisionSampler({ intervalMs, minChange: 1.5, maxSkipMs: intervalMs * 4, maxInFlight: cfg.maxInFlight ?? 1 })
+    else this.sampler.reconfigure({ intervalMs, maxInFlight: cfg.maxInFlight ?? 1 })
     this.sampler.setPaused(false)
   }
 
@@ -175,6 +196,16 @@ export class PipelineHost {
     this.latencies = [...this.latencies.slice(-19), msg.arrivedAt - msg.frameAt]
     this.learnScreen(msg.frameAt, msg.arrivedAt, (msg.response as { screen?: unknown } | null)?.screen)
     const { observations, stats } = validateVisionResponse(msg.response, this.profile, msg.frameAt, msg.arrivedAt, `v${msg.frameAt}`)
+    if (this.hud) {
+      // The same frame read here and by the model: compare, then learn the digits.
+      this.hud.check(msg.frameAt, observations)
+      const saving = this.hudSaves && this.hud.trustedShare === 1
+      if (saving !== this.saving) {
+        this.saving = saving
+        this.configureVision(this.vision)
+      }
+      this.postBook(false)
+    }
     this.visionAccepted += stats.accepted
     this.visionDropped += stats.dropped.length
     this.emit(this.engine.ingestObservations(observations, msg.arrivedAt), true)
@@ -238,6 +269,7 @@ export class PipelineHost {
       const out = this.engine.processFrame(frame)
       this.postMosaic(this.engine, frame.timestamp, out.matches.length > 0)
       this.lastFrame = frame
+      this.readHud(frame)
       this.maybeSample(frame)
       this.timings = [...this.timings.slice(-19), this.deps.now() - started]
       this.emit(out, true, true)
@@ -268,6 +300,7 @@ export class PipelineHost {
       }
       return
     }
+    this.hud?.remember(frame)
     this.sentHashes.set(frame.timestamp, hash)
     if (this.sentHashes.size > 8) this.sentHashes.delete(this.sentHashes.keys().next().value!)
     this.sampler.sending(frame.timestamp, grid)
@@ -278,6 +311,24 @@ export class PipelineHost {
         this.sampler?.done(frame.timestamp, false)
         this.visionLastError = err instanceof Error ? err.message : String(err)
       })
+  }
+
+  /** The HUD numbers this computer has learned to read, about once a second, into the engine. */
+  private readHud(frame: Frame): void {
+    if (!this.hud || !this.engine || !this.profile || frame.timestamp - this.lastHudRead < HUD_READ_MS) return
+    this.lastHudRead = frame.timestamp
+    const observations = this.hud.read(frame, this.profile.id)
+    if (observations.length) this.emit(this.engine.ingestObservations(observations, frame.timestamp), false)
+  }
+
+  /** The learned digit shapes, for keeping between sessions (throttled; always at the end). */
+  private postBook(force: boolean): void {
+    const now = this.deps.now()
+    if (!this.hud || (!force && now - this.lastBookPost < HUD_BOOK_EVERY_MS)) return
+    const book = this.hud.takeBook()
+    if (!book) return
+    this.lastBookPost = now
+    this.deps.post({ type: 'hud-book', book })
   }
 
   /** Sends the stitched map when it grew (throttled), or now at a match's end. */
@@ -310,6 +361,7 @@ export class PipelineHost {
       latencyMs: mean(this.latencies),
       screen: this.screen,
       knownScreens: this.screens?.catalog.screens.length ?? 0,
+      hud: this.hud ? { ...this.hud.status(), saving: this.saving } : null,
     }
   }
 }

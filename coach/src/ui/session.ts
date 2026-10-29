@@ -36,6 +36,8 @@ import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE
 import { hasLayout, layoutPicture } from './layouts.ts'
 import { fromBase64 } from '../core/map/minimap.ts'
 import { liveModes, policyFor } from './policy.ts'
+import { hudFieldsFor } from '../core/hud/reader.ts'
+import { compareWithPlayer, compareWithSummary, type TruthReport } from '../core/truth/aoe4world.ts'
 
 /** Frames allowed in flight to the worker before the source skips sampling. */
 const MAX_IN_FLIGHT = 2
@@ -546,6 +548,61 @@ export class CoachSession {
     this.set({ history: this.state.history.filter((m) => m.id !== id) })
   }
 
+  // --- Checking the coach against the real game ---------------------------------------
+
+  /** Attach a check to a match (saved one or this session's) and keep it. */
+  private async keepTruth(id: string, truth: TruthReport): Promise<MatchRecord | null> {
+    const find = (list: readonly MatchRecord[]) => list.find((m) => m.id === id)
+    const record = find(this.state.history) ?? find(this.state.matches)
+    if (!record) return null
+    const updated: MatchRecord = { ...record, truth }
+    this.set({
+      history: this.state.history.map((m) => (m.id === id ? updated : m)),
+      matches: this.state.matches.map((m) => (m.id === id ? updated : m)),
+    })
+    if (this.settings?.saveTendencies) await this.bridge.saveMatch(updated).catch(() => false)
+    return updated
+  }
+
+  /** AoE4World's summary of the real game against what the coach read in it. Returns a message for the player. */
+  async checkWithAoe4world(id: string): Promise<{ ok: boolean; message: string }> {
+    const profileId = this.settings?.aoe4world.profileId ?? null
+    const record = [...this.state.history, ...this.state.matches].find((m) => m.id === id)
+    if (!profileId) return { ok: false, message: 'Set your AoE4World profile first.' }
+    if (!record) return { ok: false, message: 'That match is gone.' }
+    const r = await this.bridge.aoe4worldSummary(profileId, record.endedAt, record.durationSec).catch(() => ({ ok: false as const, error: 'Could not reach AoE4World.' }))
+    if (!r.ok) return { ok: false, message: r.error }
+    const truth = compareWithSummary(record, r.player, r.gameId)
+    await this.keepTruth(id, truth)
+    const judged = truth.lines.filter((l) => l.ok !== null)
+    return { ok: true, message: `Checked against AoE4World: ${judged.filter((l) => l.ok).length} of ${judged.length} right.` }
+  }
+
+  /** The player's own numbers (from the post-game statistics) against the coach's checkpoints. */
+  async enterRealNumbers(id: string, real: Readonly<Record<number, number>>): Promise<void> {
+    const record = [...this.state.history, ...this.state.matches].find((m) => m.id === id)
+    if (record) await this.keepTruth(id, compareWithPlayer(record, real))
+  }
+
+  /** After a match, when the player asked for it: check with AoE4World once its summary is ready (a few tries). */
+  private scheduleTruthChecks(records: readonly MatchRecord[]): void {
+    const a = this.settings?.aoe4world
+    if (!a?.auto || !a.profileId || this.sourceKind !== 'screen') return
+    for (const r of records) {
+      if (r.gameProfileId !== 'aoe4') continue
+      const tries = [3, 8, 20].map((min) => min * 60_000)
+      const attempt = (i: number) =>
+        setTimeout(() => {
+          const current = [...this.state.history, ...this.state.matches].find((m) => m.id === r.id)
+          if (!current || current.truth) return
+          void this.checkWithAoe4world(r.id).then((res) => {
+            if (!res.ok && i + 1 < tries.length) attempt(i + 1)
+          })
+        }, tries[i])
+      attempt(0)
+    }
+  }
+
   /** Forgets what was learned from this game's saved matches (the rest of each record stays). Returns how many were changed. */
   async forgetLearned(): Promise<number> {
     if (!this.profile) return 0
@@ -631,6 +688,9 @@ export class CoachSession {
     if (vision.enabled) await this.bridge.resetCloudSession().catch(() => undefined)
 
     const screens = vision.enabled ? await this.bridge.loadScreens(profile.id).catch(() => null) : null
+    // HUD numbers read on this PC: only in real play with the model on (it is what teaches and checks them).
+    const hudFields = vision.enabled ? hudFieldsFor(profile.hudNumbers, settings.hud[profile.id]) : []
+    const hudBook = hudFields.length ? await this.bridge.loadHudBook(profile.id).catch(() => null) : null
     this.clearMoments()
 
     const worker = new Worker(new URL('../worker/pipeline.worker.ts', import.meta.url), { type: 'module' })
@@ -651,6 +711,7 @@ export class CoachSession {
       screens,
       // A demo stitches its own synthetic map from scratch; real play continues the maps learned before.
       mosaics: kind === 'screen' ? Object.values(this.state.mosaics).filter((m) => !m.synthetic) : [],
+      hud: hudFields.length ? { fields: hudFields, book: hudBook, saves: settings.hudSaves } : null,
       now: 0,
     })
 
@@ -1357,6 +1418,10 @@ export class CoachSession {
       case 'screens':
         void this.bridge.saveScreens(msg.catalog).catch(() => false)
         return
+      case 'hud-book':
+        // Only from real play: a demo's digits are not the player's HUD.
+        if (this.profile && this.sourceKind === 'screen') void this.bridge.saveHudBook(this.profile.id, msg.book).catch(() => false)
+        return
       case 'mosaic': {
         // The source is already gone when the last map of a session arrives.
         const real = this.sourceKind === 'screen'
@@ -1422,6 +1487,7 @@ export class CoachSession {
     if (msg.matches.length) {
       patch.matches = [...this.state.matches, ...msg.matches]
       void this.saveMatches(msg.matches)
+      this.scheduleTruthChecks(msg.matches)
     }
     if (Object.keys(patch).length) this.set(patch)
 

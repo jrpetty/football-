@@ -15,6 +15,8 @@ import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
 import type { StoredMosaic } from '../src/core/map/minimap.ts'
+import type { GlyphBookData } from '../src/core/hud/glyphs.ts'
+import type { SummaryPlayer } from '../src/core/truth/aoe4world.ts'
 
 /** An official overhead map image kept for a map. */
 export interface OverheadInfo {
@@ -153,6 +155,13 @@ export interface SightlineBridge {
   // Game knowledge: screens learned from play, and a researched knowledge base.
   loadScreens(profileId: string): Promise<ScreenCatalog | null>
   saveScreens(catalog: ScreenCatalog): Promise<boolean>
+  /** The HUD digit shapes learned on this player's screen (Read numbers on this PC). */
+  loadHudBook(profileId: string): Promise<GlyphBookData | null>
+  saveHudBook(profileId: string, book: GlyphBookData): Promise<boolean>
+  /** After a match, when the player asks: AoE4World's summary of the game that ended closest to it. */
+  aoe4worldSummary(profileId: number, endedAt: string, durationSec: number): Promise<{ ok: true; gameId: number; player: SummaryPlayer } | { ok: false; error: string }>
+  /** Find one's AoE4World profile by in-game name. */
+  aoe4worldSearch(query: string): Promise<{ ok: true; players: { profileId: number; name: string; country: string | null }[] } | { ok: false; error: string }>
   /** Maps stitched from the player's minimap, for one game (images of the map only, no frames). */
   loadMosaics(profileId: string): Promise<StoredMosaic[]>
   saveMosaic(profileId: string, mosaic: StoredMosaic): Promise<boolean>

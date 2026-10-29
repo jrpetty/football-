@@ -14,6 +14,9 @@
 import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
+import { ReadingLogger } from './truth/readingLog.ts'
+import { SourceAgreement, type AgreementRow } from './truth/agreement.ts'
+import { usualAt, withUsual } from './analyses/baseline.ts'
 import { checkpointLine, eventLine, fightStartLine, fillReadings, fitCommentary, statusLine, type ReadingLookup } from './commentary.ts'
 import { IntelTracker, type IntelNews, type IntelReport } from './analyses/intel.ts'
 import { learnedFrom, learnedLines, ScoutRecorder, type Learned } from './analyses/learning.ts'
@@ -141,6 +144,8 @@ export interface SessionReport {
   readonly mistakes: readonly { readonly spec: MistakeSpec; readonly totals: MistakeTotals }[]
   readonly insights: readonly InsightView[]
   readonly matches: readonly MatchRecord[]
+  /** Screen readings checked against a direct source of the same number (game data, this PC's HUD reading). */
+  readonly checks?: readonly AgreementRow[]
 }
 
 /** Football on the radar: everyone now, this match so far, and lines from it. */
@@ -220,6 +225,9 @@ export class CoachEngine {
   private watched = new Map<string, { value: string | null; pending: string | null; pendingAt: number }>()
   /** Changes waiting for a gap in the commentary (said once; dropped when old). */
   private changeQueue: { line: string; topic: string; at: number; confidence: number; evidence: string }[] = []
+  /** What was read, every 20 s of game time, for checking against the real game afterwards. */
+  private readingLog: ReadingLogger | null = null
+  private readonly agreement = new SourceAgreement()
   /** Index into the battle log where the current match starts. */
   private matchBattlesFrom = 0
   private gameContext: Record<string, string | number> = {}
@@ -275,6 +283,7 @@ export class CoachEngine {
     this.scores = (profile.scoreRules ?? []).map((r) => new ScoreTracker(r, sideOf(this.context[r.sideContext])))
     this.phases = new PhaseBoundaryDetector()
     this.recorder = new MatchRecorder(profile.matchStats)
+    this.readingLog = readingLoggerFor(profile)
     this.scout = profile.learning ? new ScoutRecorder(profile) : null
     this.mapTracker = profile.positioning ? new MapTracker(profile.positioning, profile.knowledge.maps) : null
     const mm = profile.positioning?.minimap
@@ -422,6 +431,7 @@ export class CoachEngine {
     const out = emptyOutput()
     this.lastT = Math.max(this.lastT, now)
     this.fuser.ingest(observations)
+    for (const o of observations) this.agreement.record(o)
     // Fights are followed frame by frame, before banners are de-duplicated.
     const events: GameEvent[] = this.battles.update(observations, this.fuser.snapshot(now), now)
     for (const obs of observations) {
@@ -561,7 +571,7 @@ export class CoachEngine {
       score: this.scores[0]?.score ?? null,
       heatmaps: this.heatmaps.results('session'),
       factors: this.factors.results('session'),
-      benchmarks: this.benchmarks.results(),
+      benchmarks: this.benchmarksWithUsual(),
       battles: this.battles.battles(),
       // Between matches, the last match's (for the review and answers) until the next one is read.
       context: Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) },
@@ -573,6 +583,7 @@ export class CoachEngine {
       mistakes: (this.profile.mistakes ?? []).map((spec) => ({ spec, totals: totals[spec.id] })),
       insights: this.insights(),
       matches: [...this.sessionMatches],
+      checks: this.agreement.results(),
     }
   }
 
@@ -611,6 +622,7 @@ export class CoachEngine {
     }
     derived.push(...this.mistakes.update(this.visible, now))
     this.recorder.observe(this.visible, now)
+    this.readingLog?.observe(this.visible, now)
     if (this.learning().enabled) this.scout?.observe(this.visible, now)
     this.mapTracker?.observe(this.visible)
     if (this.locator && this.profile.positioning) this.locator.observe(this.visible, this.profile.positioning)
@@ -784,11 +796,12 @@ export class CoachEngine {
       factors: this.factors.matchCounts(),
       benchmarks: this.benchmarks.results(),
       battles: battleCounts(this.battles.battles().slice(this.matchBattlesFrom)),
-      context: { ...this.gameContext },
+      context: { ...this.gameContext, ...(this.playerFaction() ? { playerFaction: this.playerFaction()! } : {}) },
       scout: this.learning().enabled ? (this.scout?.finish(this.learningDims()) ?? null) : (this.scout?.newMatch(), null),
       mapModel: this.finishMap(),
       pitch: this.pitch?.finish() ?? null,
       roundLog: this.gsi?.finish() ?? null,
+      readings: this.readingLog?.take() ?? null,
       endedManually: end.manual,
     })
     this.pitchCache = null
@@ -877,7 +890,10 @@ export class CoachEngine {
     const fresh = this.benchmarks.takeFresh()
     if (!this.settings.commentary) return
     if (start) this.comment(fightStartLine(this.profile, start), `fight-start:${now}`, now, 0.8, 'first frame of a fight', now, out)
-    for (const f of fresh) this.comment(checkpointLine(f.spec, f.atSec, f.actual, f.expected), `checkpoint:${f.spec.id}:${f.atSec}`, now, 0.85, `${f.spec.label} at ${f.atSec}s`, now, out)
+    for (const f of fresh) {
+      const usual = usualAt(this.matchHistory, f.spec.id, f.atSec, this.playerFaction())
+      this.comment(checkpointLine(f.spec, f.atSec, f.actual, f.expected, usual?.value ?? null), `checkpoint:${f.spec.id}:${f.atSec}`, now, 0.85, `${f.spec.label} at ${f.atSec}s`, now, out)
+    }
     // Scouting news is said once, so it waits its turn rather than being lost to the pacing; reads go first.
     this.intelQueue.push(...news.map((n) => ({ news: n, at: now })), ...recalled)
     this.intelQueue = this.intelQueue.filter((q) => now - q.at < INTEL_WAIT_MS).sort((a, b) => Number(b.news.kind === 'read') - Number(a.news.kind === 'read'))
@@ -1137,6 +1153,11 @@ export class CoachEngine {
     return spoken
   }
 
+  /** This match's checkpoints, each with what the player usually reaches there. */
+  private benchmarksWithUsual() {
+    return withUsual(this.benchmarks.results(), this.matchHistory, this.playerFaction())
+  }
+
   /** Insights the coach may use: the player has not dismissed or disputed them. */
   private usableInsights(): Insight[] {
     return [...this.insightCache.values()].filter((i) => this.memory.verdict(i.episodeId) === null)
@@ -1149,7 +1170,7 @@ export class CoachEngine {
       insights: this.usableInsights(),
       heatmaps: this.heatmaps.results(scope),
       factors: this.factors.results(scope),
-      benchmarks: scope === 'match' ? this.benchmarks.results() : [],
+      benchmarks: scope === 'match' ? this.benchmarksWithUsual() : [],
       battles: this.battles.battles().slice(scope === 'match' ? this.matchBattlesFrom : 0),
       intel: this.intel?.report() ?? null,
       mistakes: this.mistakes.totals(scope, this.lastT),
@@ -1263,4 +1284,15 @@ function battleCounts(list: readonly BattleRecord[]): { won: number; lost: numbe
 
 function stringValue(v: unknown): string | undefined {
   return typeof v === 'string' ? v : typeof v === 'number' ? String(v) : undefined
+}
+
+/** A reading log for packs with a game clock (strategy games): the HUD numbers, the benchmark readings and the watched changes. */
+function readingLoggerFor(profile: GameProfile): ReadingLogger | null {
+  const keys = new Set((profile.vision?.state ?? []).map((s) => s.key))
+  const timeKey = profile.benchmarks?.[0]?.timeKey ?? (keys.has('gameTimeSec') ? 'gameTimeSec' : null)
+  if (!timeKey || !keys.has(timeKey)) return null
+  const logged = new Set<string>()
+  for (const h of profile.hudNumbers ?? []) if (h.kind !== 'clock') [h.key, h.key2].forEach((k) => k && logged.add(k))
+  for (const b of profile.benchmarks ?? []) logged.add(b.key)
+  return new ReadingLogger([...logged].filter((k) => keys.has(k)), timeKey, (profile.commentaryChanges ?? []).map((c) => c.key))
 }

@@ -14,6 +14,8 @@ import type { Frame, Observation, RoundResult, TimelineEntry, Utterance } from '
 import type { SamplerStats } from '../core/vision/sampler.ts'
 import type { ScreenCatalog, ScreenInfo } from '../core/vision/screens.ts'
 import type { StoredMosaic } from '../core/map/minimap.ts'
+import type { HudField, HudStatus } from '../core/hud/reader.ts'
+import type { GlyphBookData } from '../core/hud/glyphs.ts'
 
 export interface VisionConfig {
   readonly enabled: boolean
@@ -37,6 +39,8 @@ export type ToWorker =
       readonly screens: ScreenCatalog | null
       /** Maps stitched from the minimap in earlier sessions. */
       readonly mosaics?: readonly StoredMosaic[]
+      /** HUD numbers marked by the player, and the digit shapes learned in earlier sessions. */
+      readonly hud?: { readonly fields: readonly HudField[]; readonly book: GlyphBookData | null; readonly saves: boolean } | null
       readonly now: number
     }
   /** Encode the latest frame (whole, downscaled) for a question about the screen or a marked moment. */
@@ -89,6 +93,8 @@ export interface VisionStatus {
   /** What screen is showing, as last recognised (from memory or by the model). */
   readonly screen: (ScreenInfo & { readonly from: 'memory' | 'model'; readonly at: number }) | null
   readonly knownScreens: number
+  /** HUD numbers read on this computer, when the player marked any. */
+  readonly hud: (HudStatus & { readonly saving: boolean }) | null
 }
 
 export interface WorkerStatus extends EngineStatus {
@@ -115,6 +121,8 @@ export type FromWorker =
   | { readonly type: 'vision-frame'; readonly frameAt: number; readonly jpeg: ArrayBuffer }
   /** The screen catalog changed (a new menu was learned): the renderer saves it. */
   | { readonly type: 'screens'; readonly catalog: ScreenCatalog }
+  /** The HUD digit shapes learned so far (kept between sessions). */
+  | { readonly type: 'hud-book'; readonly book: GlyphBookData }
   /** The map stitched from the minimap grew: the renderer shows and saves it. */
   | { readonly type: 'mosaic'; readonly mosaic: StoredMosaic }
   | { readonly type: 'snapshot'; readonly requestId: number; readonly jpeg: ArrayBuffer | null; readonly frameAt: number; readonly width: number; readonly height: number }

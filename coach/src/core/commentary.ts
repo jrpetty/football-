@@ -106,13 +106,14 @@ export function fightStartLine(profile: GameProfile, attributes: Readonly<Record
   return finish(`Fight starting${bits.length ? ` ${bits.slice(0, 2).join(', ')}` : ''}.`)
 }
 
-/** "5:00 — 18 villagers; one Town Center that never stops has 21." */
-export function checkpointLine(spec: BenchmarkSpec, atSec: number, actual: number, expected: number): string {
+/** "5:00, 18 villagers: 3 behind one Town Center that never stops. Your usual: 17." */
+export function checkpointLine(spec: BenchmarkSpec, atSec: number, actual: number, expected: number, usual: number | null = null): string {
   const m = Math.floor(atSec / 60)
   const s = String(Math.round(atSec % 60)).padStart(2, '0')
   const gap = expected - actual
   const verdict = gap > 0 ? `${gap} behind ${spec.expectedPhrase}` : `on track with ${spec.expectedPhrase}`
-  return finish(`${m}:${s}, ${actual} ${spec.noun}: ${verdict}.`)
+  const mine = usual === null ? '' : usual === actual ? ' Same as your usual.' : ` Your usual: ${usual}.`
+  return finish(`${m}:${s}, ${actual} ${spec.noun}: ${verdict}.${mine}`)
 }
 
 /** A plain description when there is nothing better: "Under attack." */

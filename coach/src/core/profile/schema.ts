@@ -362,6 +362,16 @@ export interface CommentaryStatusSpec {
   readonly minParts: number
 }
 
+export interface HudNumberSpec {
+  /** The reading (for a fraction, the first number). */
+  readonly key: string
+  readonly kind: 'number' | 'fraction' | 'clock'
+  /** A fraction's second number ("45/60": population, then populationCap). */
+  readonly key2?: string
+  /** What the player looks for on their screen, e.g. "Population (45/60)". */
+  readonly label: string
+}
+
 export interface CommentaryChangeSpec {
   /** The reading watched (an enum or string). */
   readonly key: string
@@ -887,6 +897,8 @@ export interface GameProfile {
   readonly commentaryStatus?: CommentaryStatusSpec
   /** Live commentary when a reading changes and stays changed (e.g. the player's age). */
   readonly commentaryChanges?: readonly CommentaryChangeSpec[]
+  /** HUD numbers that can be read on the player's computer once they mark where each is (src/core/hud). */
+  readonly hudNumbers?: readonly HudNumberSpec[]
   /** State keys that describe the game rather than the play (map, opponent's civilisation…), kept for the review and answers. */
   readonly contextKeys?: readonly string[]
   /**
@@ -1371,6 +1383,18 @@ export function validateProfile(input: unknown): ValidationResult {
       placeholders(v, `commentary.${k}`)
     }
   }
+  c.arr(p.hudNumbers, 'hudNumbers', true).forEach((x, i) => {
+    const o = c.obj(x, `hudNumbers[${i}]`)
+    if (!o) return
+    const path = `hudNumbers[${i}]`
+    for (const k of ['key', 'key2'] as const) {
+      const key = c.str(o[k], `${path}.${k}`, { optional: k === 'key2' })
+      if (key && !visionStateKeys.has(key)) c.errors.push(`${path}.${k}: unknown state key "${key}"`)
+    }
+    if (!['number', 'fraction', 'clock'].includes(o.kind as string)) c.errors.push(`${path}.kind: must be number, fraction or clock`)
+    if (o.kind === 'fraction' && typeof o.key2 !== 'string') c.errors.push(`${path}.key2: a fraction needs its second reading`)
+    c.str(o.label, `${path}.label`, { max: 60 })
+  })
   if (p.commentaryStatus !== undefined) {
     const st = c.obj(p.commentaryStatus, 'commentaryStatus')
     if (st) {

@@ -6,6 +6,7 @@ import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
 import type { Tab } from '../App.tsx'
 import { Notice } from '../components/common.tsx'
+import { AccuracyPanel } from '../components/Accuracy.tsx'
 import { Sparkline, StatTrends, ZoneMap } from '../components/viz.tsx'
 import { dateShort, formatMs, labelOf } from '../format.ts'
 import type { CoachSession, SessionState } from '../session.ts'
@@ -15,11 +16,12 @@ interface Props {
   session: CoachSession
   profile: GameProfile
   settings: CoachSettings
+  onSettings: (p: Partial<CoachSettings>) => void
   bridge: SightlineBridge
   onTab: (t: Tab) => void
 }
 
-export function HistoryView({ state, session, profile, settings, bridge, onTab }: Props) {
+export function HistoryView({ state, session, profile, settings, onSettings, bridge, onTab }: Props) {
   const [confirm, setConfirm] = useState(false)
   // Saved history, plus this session's matches if they were not saved.
   const matches = useMemo(() => {
@@ -130,6 +132,8 @@ export function HistoryView({ state, session, profile, settings, bridge, onTab }
               </div>
             </section>
           )}
+
+          <AccuracyPanel state={state} session={session} profile={profile} settings={settings} onSettings={onSettings} bridge={bridge} matches={mine} />
 
           <section className="panel" aria-labelledby="ml-h">
             <div className="panel-head">

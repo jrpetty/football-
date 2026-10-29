@@ -22261,6 +22261,28 @@
     ],
     "minParts": 2
   },
+  "hudNumbers": [
+    {
+      "key": "playerScore",
+      "kind": "number",
+      "label": "Your team's score"
+    },
+    {
+      "key": "opponentScore",
+      "kind": "number",
+      "label": "Their score"
+    },
+    {
+      "key": "roundTimeLeftSec",
+      "kind": "clock",
+      "label": "Round clock (e.g. 1:23)"
+    },
+    {
+      "key": "health",
+      "kind": "number",
+      "label": "Your health"
+    }
+  ],
   "contextKeys": [
     "mapName",
     "modeName",

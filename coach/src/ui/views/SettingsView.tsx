@@ -12,6 +12,7 @@ import type { ProfileCatalog } from '../App.tsx'
 import { Notice, Segmented, Switch } from '../components/common.tsx'
 import { VoicePanel } from '../components/VoicePanel.tsx'
 import { MinimapAlign } from '../components/MinimapAlign.tsx'
+import { HudAlign } from '../components/HudAlign.tsx'
 import { RadarAlign } from '../components/RadarAlign.tsx'
 import { RADAR_COLOURS, radarColourHint, type RadarColour } from '../../core/pitch/radar.ts'
 import { OfficialMapsPanel } from '../components/OfficialMapsPanel.tsx'
@@ -51,6 +52,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       <CloudPanel bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} settings={settings} usage={usage} onUsage={onUsage} />
       {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} usage={usage} /> : null}
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
+      {profile.hudNumbers?.length && profile.vision ? <HudPanel settings={settings} onSettings={onSettings} session={session} profile={profile} bridge={bridge} /> : null}
       {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap && profile.knowledge.maps?.length ? <OfficialMapsPanel session={session} profile={profile} info={info} /> : null}
       {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
@@ -403,6 +405,94 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
 }
 
 // --- The minimap: where it is, and the maps stitched from it --------------------------------------
+
+/** Reading the HUD's numbers on this PC: where they are, and how well each agrees with the cloud model. */
+function HudPanel({ settings, onSettings, session, profile, bridge }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile; bridge: SightlineBridge }) {
+  const state = useSyncExternalStore(session.subscribe, session.getState)
+  const [marking, setMarking] = useState(false)
+  const [forgot, setForgot] = useState(false)
+  const specs = profile.hudNumbers ?? []
+  const boxes = settings.hud[profile.id] ?? {}
+  const marked = specs.filter((s) => boxes[s.key])
+  const live = state.status?.vision.hud ?? null
+  const fieldStats = (key: string) => live?.fields.find((f) => f.key === key) ?? null
+  const trusted = live?.fields.filter((f) => f.trusted).length ?? 0
+  return (
+    <section className="panel" aria-labelledby="hud-h">
+      <div className="panel-head">
+        <h2 id="hud-h">Read numbers on this PC</h2>
+        <span className={`badge ${live?.saving ? 'ok' : marked.length ? 'info' : 'neutral'}`}>
+          {live ? (live.saving ? 'All read here' : `${trusted} of ${live.fields.length} read here`) : marked.length ? `${marked.length} marked` : 'Not set up'}
+        </span>
+      </div>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Your HUD's numbers (resources, population, the clock) never move, so once the coach knows your digits it reads them itself every second, for free, instead of waiting for the cloud model. It learns the digits from what the
+        model reads, and uses its own reading of a number only after the two have agreed on your screen at least 8 times and 95% of the time. Until then nothing changes. The digit shapes (tiny grey patterns, no pictures) are kept on this PC.
+      </p>
+      <div className="btn-row">
+        <button type="button" className="btn" onClick={() => setMarking(true)}>
+          {marked.length ? 'Change where the numbers are' : 'Mark where the numbers are'}
+        </button>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() =>
+            void bridge.saveHudBook(profile.id, { v: 1, chars: {} }).then(() => {
+              setForgot(true)
+              setTimeout(() => setForgot(false), 3000)
+            })
+          }
+        >
+          {forgot ? 'Forgotten' : 'Forget learned digits'}
+        </button>
+      </div>
+      {marked.length ? (
+        <table className="hud-table small">
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Agreed with the model</th>
+              <th>Read here</th>
+              <th>Last read</th>
+            </tr>
+          </thead>
+          <tbody>
+            {marked.map((s) => {
+              const f = fieldStats(s.key)
+              return (
+                <tr key={s.key}>
+                  <td>{s.label}</td>
+                  <td>{f ? (f.checks ? `${f.agreed} of ${f.checks}${f.recent !== null ? ` (recently ${Math.round(f.recent * 100)}%)` : ''}` : 'learning the digits…') : '—'}</td>
+                  <td>{f ? (f.trusted ? '✓ yes' : 'not yet') : '—'}</td>
+                  <td>{f?.last ?? '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      ) : null}
+      {marked.length && !live ? <p className="muted small">The table fills in while you play (with cloud features on).</p> : null}
+      {live ? <p className="muted small">Digits known: {live.known.length ? live.known.join(' ') : 'none yet'}.</p> : null}
+      <div style={{ marginTop: 12 }}>
+        <Switch
+          checked={settings.hudSaves}
+          onChange={(hudSaves) => onSettings({ hudSaves })}
+          label={<b>Save cost once every marked number is read here</b>}
+          hint="The cloud model is then asked half as often (it still reads fights, scouting and everything else). If any number stops agreeing with the model, it goes back to the normal rate."
+        />
+      </div>
+      {marking ? (
+        <HudAlign
+          session={session}
+          specs={specs}
+          initial={boxes}
+          onSave={(b) => onSettings({ hud: { ...settings.hud, [profile.id]: b } })}
+          onClose={() => setMarking(false)}
+        />
+      ) : null}
+    </section>
+  )
+}
 
 function MinimapPanel({ settings, onSettings, session, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile }) {
   const state = useSyncExternalStore(session.subscribe, session.getState)

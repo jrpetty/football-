@@ -381,7 +381,7 @@ export function App() {
           {tab === 'insights' && <InsightsView state={state} session={session} profile={profile} settings={settings} cloud={cloud} />}
           {tab === 'moments' && <MomentsView state={state} session={session} settings={settings} cloud={cloud} info={info} onTab={setTab} />}
           {tab === 'ask' && <AskView state={state} session={session} profile={profile} settings={settings} cloud={cloud} bridge={bridge} onTab={setTab} />}
-          {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} bridge={bridge} onTab={setTab} />}
+          {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'review' && <ReviewView state={state} />}
           {tab === 'usage' && (
             <UsageView

@@ -46,6 +46,12 @@ export interface CoachSettings {
   readonly learning: Readonly<Record<string, LearningPrefs>>
   /** Where the minimap is on the player's screen, by pack id, when it differs from the pack's (normalised; set with Align minimap). */
   readonly minimap: Readonly<Record<string, MinimapBox>>
+  /** Where each HUD number is on the player's screen, by pack id and reading (Settings → Read numbers on this PC). */
+  readonly hud: Readonly<Record<string, Readonly<Record<string, MinimapBox>>>>
+  /** Once every marked number is read on this PC, look at the screen with the cloud model half as often. */
+  readonly hudSaves: boolean
+  /** The player's AoE4World profile, to check the coach's readings against the real game after a match (opt-in). */
+  readonly aoe4world: { readonly profileId: number | null; readonly name: string | null; readonly auto: boolean }
 }
 
 export type ListenMode = 'key' | 'always'
@@ -157,6 +163,9 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   vision: {},
   learning: {},
   minimap: {},
+  hud: {},
+  hudSaves: true,
+  aoe4world: { profileId: null, name: null, auto: false },
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -204,7 +213,46 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     vision: sanitizeVision(o.vision, base.vision),
     learning: sanitizeLearning(o.learning, base.learning),
     minimap: sanitizeMinimap(o.minimap, base.minimap),
+    hud: sanitizeHud(o.hud, base.hud),
+    hudSaves: typeof o.hudSaves === 'boolean' ? o.hudSaves : base.hudSaves,
+    aoe4world: sanitizeAoe4world(o.aoe4world, base.aoe4world),
   }
+}
+
+function sanitizeAoe4world(v: unknown, base: CoachSettings['aoe4world']): CoachSettings['aoe4world'] {
+  if (typeof v !== 'object' || v === null) return base
+  const o = v as Record<string, unknown>
+  const id = o.profileId === null ? null : typeof o.profileId === 'number' && Number.isInteger(o.profileId) && o.profileId > 0 && o.profileId < 1e10 ? o.profileId : base.profileId
+  return {
+    profileId: id,
+    name: id === null ? null : typeof o.name === 'string' ? o.name.slice(0, 60) : base.name,
+    auto: typeof o.auto === 'boolean' ? o.auto : base.auto,
+  }
+}
+
+function sanitizeHud(v: unknown, base: CoachSettings['hud']): CoachSettings['hud'] {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return base
+  const out: Record<string, Record<string, MinimapBox>> = {}
+  for (const [pack, raw] of Object.entries(v).slice(0, 50)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof raw !== 'object' || raw === null || Array.isArray(raw)) continue
+    const boxes = sanitizeHudBoxes(raw)
+    if (Object.keys(boxes).length) out[pack] = boxes
+  }
+  return out
+}
+
+/** Number boxes: small (a HUD number is a sliver of the screen), inside the frame. */
+function sanitizeHudBoxes(raw: object): Record<string, MinimapBox> {
+  const out: Record<string, MinimapBox> = {}
+  for (const [key, b] of Object.entries(raw).slice(0, 40)) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(key) || typeof b !== 'object' || b === null) continue
+    const o = b as Record<string, unknown>
+    const n = (k: string) => (typeof o[k] === 'number' && Number.isFinite(o[k]) ? Math.round((o[k] as number) * 10000) / 10000 : NaN)
+    const [x, y, w, h] = [n('x'), n('y'), n('w'), n('h')]
+    if (![x, y, w, h].every((q) => q >= 0 && q <= 1) || w < 0.005 || h < 0.005 || w > 0.5 || h > 0.3 || x + w > 1.0001 || y + h > 1.0001) continue
+    out[key] = { x, y, w, h }
+  }
+  return out
 }
 
 function sanitizeMinimap(v: unknown, base: CoachSettings['minimap']): CoachSettings['minimap'] {

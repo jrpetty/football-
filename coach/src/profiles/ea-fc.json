@@ -5686,6 +5686,18 @@
     ],
     "minParts": 2
   },
+  "hudNumbers": [
+    {
+      "key": "homeScore",
+      "kind": "number",
+      "label": "Home score"
+    },
+    {
+      "key": "awayScore",
+      "kind": "number",
+      "label": "Away score"
+    }
+  ],
   "contextKeys": [
     "opponentFormation",
     "opponentTeam"

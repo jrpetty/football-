@@ -4883,3 +4883,149 @@ td > .swatch {
   width: 2px;
   background: var(--warn);
 }
+
+/* Marking the HUD's numbers. */
+.hud-align {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.hud-align .align-stage {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.hud-box {
+  position: absolute;
+  border: 2px solid var(--info);
+  pointer-events: none;
+}
+
+.hud-box.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.hud-box span {
+  position: absolute;
+  bottom: 100%;
+  left: -2px;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 0 4px;
+  background: var(--bg-raised);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.hud-fields {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+  flex: 1;
+}
+
+.hud-fields li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.hud-field {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-sunken);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.hud-field.selected {
+  border-color: var(--accent);
+}
+
+.hud-table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+}
+
+.hud-table th,
+.hud-table td {
+  text-align: left;
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Is the coach reading your games right? */
+.acc-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.acc-found {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.acc-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 8px 0;
+}
+
+.acc-summary > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.acc-summary b {
+  font-size: 22px;
+}
+
+.acc-matches {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.acc-match {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.acc-match .badge {
+  cursor: pointer;
+  border: none;
+}
+
+.acc-enter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
