@@ -32,7 +32,7 @@ test('roster prompt text: names to report and how to tell units apart, within bu
   assert.match(vision, /- Longbowman \(English\)/)
   assert.match(vision, /Vikings \(UPCOMING, not released\)/)
   assert.ok(vision.length <= 44_000)
-  assert.match(vision, /- Bondi Spearman \(Vikings\)/, 'every unit fits, the newest civs included')
+  assert.match(vision, /- Bondi \(Vikings\)/, 'every unit fits, the newest civs included')
   assert.match(rosterText(roster, { budget: 100_000, detail: 'answer' }), /### Counter rules/)
 })
 

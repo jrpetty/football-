@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "test": "node --test test/*.test.ts",
     "profile:check": "node scripts/check-profile.ts",
+    "data:aoe4": "node scripts/check-aoe4-data.mjs",
     "dist": "npm run build && electron-builder --publish never",
     "dist:win": "npm run build && electron-builder --win --x64 --publish never"
   },

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -15934,10 +15934,8 @@
         },
         {
           "id": "archer-ship",
-          "name": "Archer Ship (Galley",
+          "name": "Archer Ship (Galley, Dhow, Junk)",
           "aliases": [
-            "Dhow",
-            "Junk)",
             "galley",
             "galleys",
             "dhow",
@@ -15972,10 +15970,8 @@
         },
         {
           "id": "springald-ship",
-          "name": "Springald Ship (Hulk",
+          "name": "Springald Ship (Hulk, Baghlah, War Junk)",
           "aliases": [
-            "Baghlah",
-            "War Junk)",
             "hulk",
             "hulks",
             "baghlah",
@@ -16011,10 +16007,8 @@
         },
         {
           "id": "incendiary-ship",
-          "name": "Incendiary Ship (Demolition Ship",
+          "name": "Incendiary Ship (Demolition Ship, Explosive Dhow, Explosive Junk)",
           "aliases": [
-            "Explosive Dhow",
-            "Explosive Junk)",
             "demo ship",
             "demolition ship",
             "fire ship",
@@ -16043,10 +16037,8 @@
         },
         {
           "id": "warship",
-          "name": "Warship (Carrack",
+          "name": "Warship (Carrack, Xebec, Baochuan)",
           "aliases": [
-            "Xebec",
-            "Baochuan)",
             "carrack",
             "carracks",
             "xebec",
@@ -18166,7 +18158,7 @@
             "melee"
           ],
           "building": "lancaster-castle",
-          "age": 1,
+          "age": 3,
           "counteredBy": [
             "spearman",
             "crossbowman"
@@ -18952,7 +18944,7 @@
             "worker"
           ],
           "building": "town-center",
-          "age": 1,
+          "age": 3,
           "counteredBy": [
             "horseman",
             "scout"
@@ -19142,7 +19134,11 @@
         },
         {
           "id": "bondi-spearman",
-          "name": "Bondi Spearman",
+          "name": "Bondi",
+          "aliases": [
+            "bondi spearman",
+            "bondis"
+          ],
           "classes": [
             "infantry",
             "light",
@@ -19150,11 +19146,13 @@
             "melee"
           ],
           "building": "barracks",
+          "age": 1,
+          "cost": "75F 25W",
           "counteredBy": [
             "archer",
             "man-at-arms"
           ],
-          "why": "Spearmen forming a shield wall in front of Berserkers (marketing copy) (unverified)",
+          "why": "Vikings spearman, cheap and available from the Dark Age; upgrades through Hardened, Veteran and Elite.",
           "look": "Spearman with round shield (unverified)",
           "factions": [
             "vikings"
