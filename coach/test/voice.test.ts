@@ -186,11 +186,19 @@ test('asked out loud: "how many villagers should I have at ten minutes?" gets th
   const report = { benchmarks: [] } as unknown as Parameters<typeof answerLocally>[2]
   assert.equal(
     answerLocally(intent, aoe4, report, []),
-    'One Town Center that never stops has 36 villagers at 10:00. That is 6 to start and 3 a minute, up to 120.',
+    'One Town Center that never stops has 36 villagers at 10:00. That is 6 to start and 3 a minute (one every 20 seconds), up to 120.',
   )
   assert.equal(
     answerLocally(classify('how many villagers should I have?', aoe4), aoe4, report, []),
-    'One Town Center that never stops has 21 villagers at 5:00, 36 at 10:00, 51 at 15:00 and 66 at 20:00. That is 6 to start and 3 a minute, up to 120.',
+    'One Town Center that never stops has 21 villagers at 5:00, 36 at 10:00, 51 at 15:00 and 66 at 20:00. That is 6 to start and 3 a minute (one every 20 seconds), up to 120.',
+  )
+  assert.match(answerLocally(classify('how many villagers at 7 minutes?', aoe4), aoe4, report, [])!, /has 27 villagers at 7:00/)
+  // Playing the Order of the Dragon: the session's curve is theirs.
+  const { specFor } = await import('../src/core/analyses/benchmarks.ts')
+  const dragon = { benchmarks: [{ spec: specFor(aoe4.benchmarks![0], 'order-of-the-dragon'), points: [] }] } as unknown as Parameters<typeof answerLocally>[2]
+  assert.equal(
+    answerLocally(intent, aoe4, dragon, []),
+    'One Town Center that never stops (Gilded Villagers take 23 seconds) has 32 villagers at 10:00. That is 6 to start and 2.6 a minute (one every 23 seconds), up to 120.',
   )
 })
 

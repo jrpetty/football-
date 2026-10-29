@@ -305,7 +305,7 @@ Legend:
   - Kept: reading the opponent's second Town Center when scouted.
   - The benchmark reference feature itself was removed from the schema, the chart and the answers.
 - ☑ AoE IV floating judged by age, against what the next age costs: over 1,000 in the Dark Age, 2,200 in Feudal, 4,000 in Castle and 3,000 in Imperial. The housed tip says "add population space" (Japanese Farmhouses, Malian houses).
-- ◐ Where AoE IV shows the total villager count on the HUD is not confirmed here: the official forums could not be reached. Waiting on a screenshot from a real game. *QA 15.1.*
+- ☑ The villager count on the HUD (closed without a screenshot, at the player's request): AoE IV has a villager number of its own, counting villagers only; the per-resource counts beside the resources miss villagers walking or building (players' forum reports, seen as search results). The coach reads only the villager number, as since this release. *QA 15.1 remains the check in a real game.*
 
 ## v16 delivery
 
@@ -358,7 +358,6 @@ Legend:
   *4 of 4 pass in CI on Windows (the held key sent with Windows key repeats) and on Linux. The Linux job is pinned to Ubuntu 24.04: on the 26.04 runner image xdotool's keys do not reach the global shortcut (cause not found; the key is mapped and the shortcut registered).*
 - ☑ Found by the new app test and fixed: with the voice muted, a commentary line was shown again every few seconds. Shown lines are now paced like spoken ones.
 - ☑ Voice input moved out of `src/ui/session.ts` into `src/ui/voiceInput.ts` (session.ts 1,628 → 1,416 lines). `src/core/engine.ts` is still large (about 1,300 lines); not split this round.
-- ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
 
 ## v18 delivery
 
@@ -376,7 +375,12 @@ Legend:
 - ☑ Fixed: the civilisation chosen on the Coach screen is stored as a name, and the per-civilisation villager curve (v17) and the Golden Horde note looked it up as an id, so they never applied in a real session. Now resolved to the id; covered by an engine test.
 - ☑ App tests (CI): the Progress tab with a seeded history and build, and the build trainer calling steps in the AoE IV demo. 6 of 6 pass locally.
 - ◐ Not done: the opponent's own AoE4World history on the card (their favourite civilisations and openings). That needs a decision on fair play first.
-- ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
+
+## v19 delivery
+
+- ☑ The villager maths, confirmed: a villager takes 20 seconds at a Town Center (the game files), so one Town Center that never stops makes 3 a minute: 6 to start, 21 at 5:00, 36 at 10:00, 51 at 15:00, 66 at 20:00, up to 120. Two published guides give the same 21, 36 and 66 (gamerblurb.com, aoe4.christitus.com). Other civilisations' training times, from the game files: French 19 s, Viking 22 s, Order of the Dragon 23 s.
+- ☑ "How many villagers should I have at…" uses the player's civilisation's curve and gives the maths ("6 to start and 2.6 a minute (one every 23 seconds)"), for any minute ("at 7 minutes": 27).
+- ☑ No screenshot or hand-counted numbers needed: after each Ranked or Quick Match game, AoE4World's summary gives the exact villager count at any time (QA 18.2), and the coach's readings are checked against it.
 
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.

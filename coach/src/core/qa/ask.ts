@@ -100,7 +100,9 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
     case 'utility':
       return utilityAnswer(profile, report, intent.mapName, intent.question)
     case 'benchmark': {
-      const spec = profile.benchmarks?.[0]
+      const base = profile.benchmarks?.[0]
+      // The player's civilisation's own curve where it has one (the session's resolved spec).
+      const spec = base ? (report.benchmarks.find((b) => b.spec.id === base.id)?.spec ?? base) : undefined
       if (spec && (intent.target || intent.atSec !== undefined)) return benchmarkTarget(spec, report, intent.atSec ?? null)
       const behind = report.benchmarks.filter((b) => b.worst)
       if (behind.length) return behind.map((b) => [b.worst!.statement, adviceFor(profile, b.spec.playbook ?? null)].filter(Boolean).join(' ')).join(' ')
@@ -581,7 +583,8 @@ export function clockIn(q: string): number | null {
 /** What the benchmark curve gives at a time (or at its checkpoints), and what was read near it. */
 function benchmarkTarget(spec: BenchmarkSpec, report: SessionReport, atSec: number | null): string {
   const lead = spec.expectedPhrase[0].toUpperCase() + spec.expectedPhrase.slice(1)
-  const how = `That is ${spec.expected.start} to start and ${spec.expected.perMinute} a minute${spec.expected.cap ? `, up to ${spec.expected.cap}` : ''}.`
+  const every = spec.expected.perMinute > 0 ? Math.round(60 / spec.expected.perMinute) : null
+  const how = `That is ${spec.expected.start} to start and ${spec.expected.perMinute} a minute${every ? ` (one every ${every} seconds)` : ''}${spec.expected.cap ? `, up to ${spec.expected.cap}` : ''}.`
   if (atSec === null) {
     const at = spec.checkpointsSec.map((cp, i) => `${expectedAt(spec, cp)}${i === 0 ? ` ${spec.noun}` : ''} at ${clockText(cp)}`)
     return `${lead} has ${at.length > 1 ? `${at.slice(0, -1).join(', ')} and ${at[at.length - 1]}` : at[0]}. ${how}`
