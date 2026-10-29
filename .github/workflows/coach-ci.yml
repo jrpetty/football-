@@ -47,7 +47,10 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: coach/package-lock.json
-      - run: sudo apt-get update && sudo apt-get install -y xvfb xdotool
+      # xkb-data gives Xvfb a full keyboard map, so the function keys have key codes to grab.
+      - run: sudo apt-get update && sudo apt-get install -y xvfb xdotool xkb-data x11-xkb-utils x11-xserver-utils
+      - name: Keyboard check
+        run: xvfb-run -a sh -c 'setxkbmap -query; xmodmap -pk | grep -w F7'
       - run: npm ci
       - run: npm run build
       - name: App tests (talk key, commentary, ranked quiet, "why didn't it say that?")
