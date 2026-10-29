@@ -332,7 +332,7 @@ Legend:
   - housed, idle villagers and big banks described, outside Training mode (AoE IV and II; status lines for MW4, CS2 and FC too).
 - ☑ "How many villagers should I have at ten minutes?" is answered from the curve (36), with your reading near that time if there is one.
 - ◐ Always listening through speakers: sudden loud game sound can be taken for speech, then usually comes back as no words. A headset is recommended. *QA 16.5.*
-- ◐ Men-at-Arms are listed as a Castle Age unit for most civilisations (Feudal for the English). Sources disagree (some list a Feudal "Early Man-at-Arms"); check in game.
+- ☑ Men-at-Arms ages checked against data parsed from the game files (aoe4world/data): Castle Age for the French, Rus and Mongols; the English have Men-at-Arms from the Dark Age, with an Early Man-at-Arms in Feudal. The pack agrees.
 
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
