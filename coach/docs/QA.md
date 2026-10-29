@@ -281,3 +281,12 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 19.6 | Progress → Practice plan → Start the plan; play 3 games. | The focus is said at the start of each game against the AI and shown on the Coach screen; after 3 games, before and after with "Target reached" or not, and the next focus starts. |
 | 19.7 | Coach screen before a match: Opponent card → pick their civilisation. In a skirmish, start capture on the loading screen. | The card: their plans by age with timings and answers, strengths and weak windows, unique units with what beats them for your civilisation, and your plan. During the skirmish it opens by itself once the loading screen is read. |
 | 19.8 | Settings → Coach screen civilisation: Order of the Dragon; play against the AI. | The villager curve is 2.6 a minute (32 at 10:00, not 36). Golden Horde: the session says the villager count is not judged. |
+
+## 20. Demo review, opponent record and Discord
+
+| # | Steps | Expected |
+|---|---|---|
+| 20.1 | CS2: download a match (Watch → Your Matches, or a FACEIT demo). Progress → Demo review → Open a demo; pick yourself. | Read in a few seconds. Check rounds won–lost and your kills–deaths against the in-game scoreboard; check two rounds' deaths (where, which weapon) against the demo itself. The SteamID is remembered for the next demo. |
+| 20.2 | Same demo on Nuke: switch Upper / Lower level. | Kills and deaths land on walkable areas; B site and Secret marks on the lower level. |
+| 20.3 | AoE IV, Coach screen before a match: type an opponent's name, Look up, pick them. | Their rating, civilisations with win rates, last results and up to three openings. Compare with their AoE4World page. Nothing is looked up after capture starts. |
+| 20.4 | Settings → Discord: paste a webhook from your own server, Save, Send a test. Then finish a captured match. | The test message arrives on your phone; after the match, the summary with the result and points to work on. A non-Discord address is refused. |

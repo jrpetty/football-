@@ -382,6 +382,12 @@ Legend:
 - ☑ "How many villagers should I have at…" uses the player's civilisation's curve and gives the maths ("6 to start and 2.6 a minute (one every 23 seconds)"), for any minute ("at 7 minutes": 27).
 - ☑ No screenshot or hand-counted numbers needed: after each Ranked or Quick Match game, AoE4World's summary gives the exact villager count at any time (QA 18.2), and the coach's readings are checked against it.
 
+## v20 delivery
+
+- ☑ Match summary to the player's phone through their own Discord webhook (`src/core/notify.ts`, `electron/discord.ts`): after each captured match, the result, benchmark numbers, age-ups, fights, mistakes, the review's points and the practice focus, under 2,000 characters. Only Discord webhook addresses are accepted (tested); mentions are disabled; a Test button. ◐ Not posted to a real Discord channel from the build environment (no webhook); the request is Discord's standard webhook post (JSON `content`, `username`, `allowed_mentions`).
+- ☑ Opponent record from AoE4World, before the match only and on request (`src/core/aoe4/opponent.ts`): their rating, civilisations with win rates, last 10 results, and the openings of their last three 1v1 games (landmark, Feudal time, first two military units). ◐ AoE4World can't be reached from the build environment; parsing is tested on its documented reply shapes.
+- ☑ Counter-Strike 2 demo review (`src/core/cs2/demo.ts`, `electron/cs2demo.ts`, Progress tab): a .dem is read on this PC with demoparser2 (MIT) in a worker thread. Rounds, K/D/A, damage a round (at most 100 a player a round), KAST, headshots, opening duels, trades within 5 s, grenades, flashes (enemies and teammates), where the player died, kills by weapon, every round's buy against the team's, kills and deaths on the map's layout (both levels on Nuke), and the two or three findings most worth working on. Knife rounds and warm-up are left out. *Checked on a real FACEIT demo on Nuke: 19 rounds, the match ending 6–13 (first to 13), sides swapping after round 12; 135 kills + 1 death to the world = 136 deaths across the ten players; read in about 1.9 s. The app test opens it through the file dialog when given a demo; CI checks that a non-demo file is refused.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

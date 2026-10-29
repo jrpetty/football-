@@ -486,6 +486,44 @@ Then press **Choose the game window**, play, and listen.
   mode). During play it opens by itself where live coaching is allowed. It
   comes from the coach's notes on each civilisation, not from your
   opponent's own games.
+
+  **Their record (optional, before the match only).** Type their name and
+  the coach looks up what anyone can see on AoE4World:
+  - their rating, the civilisations they play and how often they win with
+    each, and their last 10 results;
+  - how they opened in their last three 1v1 games: landmark, Feudal time
+    and first two military units.
+
+  Their most-played civilisation is picked as a first guess. Nothing is
+  looked up during play, and nothing is looked up unless you ask.
+- **Counter-Strike 2 demo review** (Progress tab, in the desktop app).
+  Open a match demo (.dem), from the game (Watch → Your Matches) or from
+  FACEIT, and pick yourself once (your SteamID is remembered). The coach
+  reads the demo on your PC in about two seconds and shows:
+  - rounds won and lost; kills, deaths and assists; damage a round; KAST;
+    headshot kills;
+  - opening duels won and lost; your trade kills, and your deaths a
+    teammate traded within 5 seconds;
+  - grenades thrown, enemies and teammates flashed;
+  - where you died, most first, and your kills by weapon;
+  - your kills and deaths on the map's real layout, upper and lower level
+    on Nuke;
+  - a table of every round: side, result, kills, damage, opening duel,
+    where you died and to what, your buy against your team's;
+  - the two or three things most worth working on, with their numbers. For
+    example: "You died first in 6 of 19 rounds (won 1 of 7 opening duels),
+    2 times at Trophy. Peek with a teammate ready to trade, or let them
+    take first contact."
+
+  Knife rounds and warm-up before the match start are left out. A demo
+  holds both teams' positions, so it is only ever read after the match.
+- **Match summary to your phone (Discord, optional).** Make a webhook in
+  your own Discord server (Server settings → Integrations → Webhooks), paste
+  it in Settings → Discord, and after each captured match the coach posts a
+  short summary: the result, the numbers it read against the benchmarks,
+  age-up times, fights, mistakes, the review's points to work on and your
+  practice focus. Discord delivers it to your phone like any message. Only
+  that text is sent, only to that webhook; the Test button sends a sample.
 - **Your usual.** Once three of your matches have a reading at a
   checkpoint, the coach compares you with yourself as well as with the
   curve: "At 10:00 you had 31 villagers; one Town Center that never stops

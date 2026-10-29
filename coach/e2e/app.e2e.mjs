@@ -8,7 +8,8 @@
 //   3. the Age of Empires IV demo against the AI with commentary on: lines
 //      appear in "Coach said";
 //   4. the same demo set to ranked: commentary waits for the end of the match,
-//      and "Why didn't it say that?" lists the lines held back with the reason.
+//      and "Why didn't it say that?" lists the lines held back with the reason;
+//   5. Progress, the build trainer, and the Counter-Strike 2 demo review.
 //
 // No microphone or speech recognition is needed: the key test checks the key
 // events reaching the app (the fake microphone Chromium provides is used).
@@ -208,6 +209,36 @@ await check('build trainer: the next steps are called during the AoE IV demo aga
   await win.screenshot({ path: join(out, 'build-trainer.png') })
   await stopDemo()
   return { said: said.slice(0, 3) }
+})
+
+await check('CS2 demo review: a demo picked in the file dialog is read in the main process and reviewed on the Progress screen', async () => {
+  // The file dialog is answered from here. With SIGHTLINE_E2E_DEMO set to a real .dem the whole review is
+  // checked; without one (CI keeps no demo), a file that is not a demo must be refused with a message.
+  const demo = process.env.SIGHTLINE_E2E_DEMO ?? join(userData, 'not-a-demo.txt')
+  if (!process.env.SIGHTLINE_E2E_DEMO) writeFileSync(demo, 'hello')
+  await app.evaluate(({ dialog }, file) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] })
+  }, demo)
+  await settings({ profileId: 'cs2', profileModeId: null, steamId: null })
+  await win.click('nav >> text=Progress')
+  await win.waitForSelector('#demo-h', { timeout: 10_000 })
+  await win.click('section:has(#demo-h) >> text=Open a demo')
+  if (!process.env.SIGHTLINE_E2E_DEMO) {
+    await win.waitForSelector('section:has(#demo-h) >> text=That is not a demo file', { timeout: 10_000 })
+    return { refused: true }
+  }
+  await win.waitForSelector('.demo-who select', { timeout: 60_000 })
+  const who = await win.evaluate(() => [...document.querySelectorAll('.demo-who option')].map((o) => o.value).filter(Boolean)[0])
+  await win.selectOption('.demo-who select', who)
+  await win.waitForSelector('.demo-stats', { timeout: 10_000 })
+  const stats = await win.evaluate(() => [...document.querySelectorAll('.demo-stats .stat')].map((s) => s.textContent))
+  const rows = await win.locator('.demo-rounds tbody tr').count()
+  assert(rows >= 10, `round rows: ${rows}`)
+  const marks = await win.locator('.demo-mark').count()
+  await win.screenshot({ path: join(out, 'demo-review.png'), fullPage: true })
+  const saved = await win.evaluate(() => window.sightline.loadSettings().then((s) => s.steamId))
+  assert(saved === who, 'the player picked is remembered')
+  return { stats, rows, marks }
 })
 
 await app.close()

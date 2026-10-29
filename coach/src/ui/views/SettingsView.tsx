@@ -1,3 +1,4 @@
+import { isDiscordWebhook } from '../../core/notify.ts'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { GsiServerStatus, PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
@@ -58,6 +59,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.gameState?.kind === 'cs2-gsi' ? <GameDataPanel bridge={bridge} /> : null}
       <MemoryPanel settings={settings} onSettings={onSettings} bridge={bridge} session={session} />
+      <DiscordPanel settings={settings} onSettings={onSettings} session={session} />
       <VoiceInputPanel settings={settings} onSettings={onSettings} bridge={bridge} info={info} session={session} />
       <KeyboardPanel settings={settings} onSettings={onSettings} info={info} />
 
@@ -892,6 +894,45 @@ function MemoryPanel({ settings, onSettings, bridge, session }: { settings: Coac
           </button>
         )}
       </div>
+    </section>
+  )
+}
+
+function DiscordPanel({ settings, onSettings, session }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession }) {
+  const d = settings.discord
+  const [draft, setDraft] = useState(d.webhook ?? '')
+  const [status, setStatus] = useState<string | null>(null)
+  const valid = isDiscordWebhook(draft.trim())
+  return (
+    <section className="panel" aria-labelledby="discord-h">
+      <div className="panel-head">
+        <h2 id="discord-h">Match summaries on your phone (Discord)</h2>
+        <span className={`badge ${d.webhook && d.afterMatch ? 'ok' : 'neutral'}`}>{d.webhook ? (d.afterMatch ? 'On' : 'Paused') : 'Off'}</span>
+      </div>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        After each match you play (not demos), the coach posts a short summary to a Discord channel of yours: the result, the numbers it read, and the review's points to work on. The Discord app shows it on your phone. In Discord: channel settings → Integrations → Webhooks → New webhook → Copy webhook URL. Only that text is sent, and only there.
+      </p>
+      <div className="btn-row">
+        <input type="password" placeholder="https://discord.com/api/webhooks/…" value={draft} onChange={(e) => setDraft(e.target.value)} style={{ flex: 1 }} aria-label="Discord webhook URL" />
+        <button type="button" className="btn" disabled={!valid || draft.trim() === d.webhook} onClick={() => (onSettings({ discord: { ...d, webhook: draft.trim() } }), setStatus('Saved.'))}>
+          Save
+        </button>
+        {d.webhook ? (
+          <button type="button" className="btn ghost" onClick={() => (onSettings({ discord: { ...d, webhook: null } }), setDraft(''), setStatus('Removed.'))}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+      {draft.trim() && !valid ? <p className="small warn-text">That is not a Discord webhook address (https://discord.com/api/webhooks/…).</p> : null}
+      {d.webhook ? (
+        <>
+          <Switch checked={d.afterMatch} onChange={(afterMatch) => onSettings({ discord: { ...d, afterMatch } })} label={<b>Send a summary after each match</b>} />
+          <button type="button" className="btn sm" onClick={() => void session.testDiscord().then((r) => setStatus(r.ok ? 'Sent: check the channel.' : r.error))}>
+            Send a test message
+          </button>
+        </>
+      ) : null}
+      {status ? <p className="small muted">{status}</p> : null}
     </section>
   )
 }

@@ -15,6 +15,7 @@ import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
 import type { StoredMosaic } from '../src/core/map/minimap.ts'
+import type { DemoData } from '../src/core/cs2/demo.ts'
 import type { GlyphBookData } from '../src/core/hud/glyphs.ts'
 import type { SummaryPlayer } from '../src/core/truth/aoe4world.ts'
 import type { GameFacts, HistoryGame } from '../src/core/aoe4/history.ts'
@@ -188,6 +189,12 @@ export interface SightlineBridge {
   aoe4worldGameBuild(link: string): Promise<{ ok: true; gameId: number; players: GamePlayerBuild[] } | { ok: false; error: string }>
   /** A build for a civilisation from a recent high-rated Ranked 1v1 win on AoE4World. */
   aoe4worldSuggestBuild(civ: string): Promise<{ ok: true; gameId: number; rating: number | null; player: GamePlayerBuild } | { ok: false; error: string }>
+  /** An opponent's public AoE4World record, before a match: their last 50 games and the facts of their last 3 1v1 games. */
+  aoe4worldOpponent(profileId: number): Promise<{ ok: true; games: HistoryGame[]; facts: GameFacts[] } | { ok: false; error: string }>
+  /** Sends text to the Discord webhook saved in the settings (none other). */
+  discordPost(text: string): Promise<{ ok: true } | { ok: false; error: string }>
+  /** Pick a Counter-Strike 2 demo (.dem) and read it on this computer; nothing is sent. `ok: false` with no error when cancelled. */
+  cs2DemoOpen(): Promise<{ ok: true; file: string; data: DemoData } | { ok: false; error?: string }>
   /** A player document for one game pack (checked on load and save; null when there is none). */
   loadDoc(kind: DocKind, profileId: string): Promise<unknown>
   /** False when not saved (invalid, or the history and practice plan need "Remember my games"). */

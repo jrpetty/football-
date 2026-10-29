@@ -5,6 +5,7 @@
 // - A practice plan from the player's most frequent weaknesses (any game pack).
 // - Age of Empires IV build orders: saved builds, the one to train with, and
 //   how the last game went against it.
+// - Counter-Strike 2: a review of a match demo, read on this PC.
 
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import type { GamePlayerBuild, SightlineBridge } from '../../../shared/bridge.ts'
@@ -17,6 +18,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import type { Tab } from '../App.tsx'
 import { Notice } from '../components/common.tsx'
 import { Aoe4WorldSetup } from '../components/Accuracy.tsx'
+import { DemoReviewPanel } from '../components/DemoReview.tsx'
 import type { CoachSession } from '../session.ts'
 
 interface Props {
@@ -32,6 +34,7 @@ export function ProgressView(props: Props) {
   const { session, profile, settings } = props
   const state = useSyncExternalStore(session.subscribe, session.getState)
   const aoe4 = profile.id === 'aoe4'
+  const cs2 = profile.id === 'cs2'
   return (
     <div className="page">
       <header className="page-head">
@@ -39,10 +42,13 @@ export function ProgressView(props: Props) {
         <p className="lede">
           {aoe4
             ? 'Every public game you play, from AoE4World: your week, your trends and win rates. A practice plan from what most often goes wrong, and build orders to train with.'
-            : 'A practice plan from what most often goes wrong in the games the coach watched.'}
+            : cs2
+              ? 'A review of any match demo, read on this PC, and a practice plan from what most often goes wrong in the games the coach watched.'
+              : 'A practice plan from what most often goes wrong in the games the coach watched.'}
         </p>
       </header>
       {aoe4 ? <HistoryPanels {...props} /> : null}
+      {cs2 ? <DemoReviewPanel session={session} profile={profile} settings={settings} onSettings={props.onSettings} bridge={props.bridge} /> : null}
       <PracticePanel session={session} profile={profile} settings={settings} />
       {aoe4 ? <BuildsPanel {...props} /> : null}
       {!state.progress.kept && (state.progress.aoe4 || state.progress.practice) ? (

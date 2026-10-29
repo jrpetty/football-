@@ -274,7 +274,7 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
         </section>
       </div>
 
-      {profile.id === 'aoe4' ? <OpponentCardPicker profile={profile} yourCiv={session.progress.playerCiv()} /> : null}
+      {profile.id === 'aoe4' ? <OpponentCardPicker profile={profile} yourCiv={session.progress.playerCiv()} bridge={bridge} /> : null}
 
       <ReadyCheck state={state} session={session} settings={settings} onSettings={onSettings} profile={profile} policy={policy} cloud={cloud} info={info} bridge={bridge} onTab={onTab} />
 

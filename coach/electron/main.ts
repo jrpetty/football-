@@ -29,7 +29,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
 import { DEFAULT_CLOUD, type CloudSettings, type CloudStatus } from '../shared/cloud.ts'
@@ -56,7 +56,9 @@ import { TtsThread } from './tts/engine.ts'
 import { RecognizerThread, SAMPLE_RATE, MAX_SECONDS } from './stt/recognizer.ts'
 import { isProfileId, Storage } from './storage.ts'
 import { SinglePress, TalkKeyGesture } from '../src/speech/talkKey.ts'
-import { aoe4worldFacts, aoe4worldGameBuild, aoe4worldGames, aoe4worldSearch, aoe4worldSuggestBuild, aoe4worldSummary } from './aoe4world.ts'
+import { discordPost } from './discord.ts'
+import { readDemo } from './cs2demo.ts'
+import { aoe4worldFacts, aoe4worldGameBuild, aoe4worldGames, aoe4worldOpponent, aoe4worldSearch, aoe4worldSuggestBuild, aoe4worldSummary } from './aoe4world.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DEV_URL = process.env.VITE_DEV_SERVER_URL ?? null
@@ -549,6 +551,22 @@ function registerIpc(): void {
     }
   })
 
+  // A match demo, read on this computer after the match (never during one).
+  handle(CHANNELS.cs2DemoOpen, async () => {
+    if (!win) return { ok: false, error: 'Not ready.' }
+    const cfg = await findCs2CfgFolder()
+    const r = await dialog.showOpenDialog(win, {
+      title: 'Open a Counter-Strike 2 demo',
+      defaultPath: cfg ? join(cfg, '..', 'replays') : app.getPath('downloads'),
+      filters: [{ name: 'Counter-Strike 2 demo', extensions: ['dem'] }],
+      properties: ['openFile'],
+    })
+    const file = r.filePaths[0]
+    if (r.canceled || !file) return { ok: false }
+    const d = await readDemo(file)
+    return d.ok ? { ok: true, file: basename(file), data: d.data } : d
+  })
+
   // --- Game knowledge: learned screens, and the researched knowledge base ------------------------
   handle(CHANNELS.loadScreens, (id) => storage.loadScreens(id))
   handle(CHANNELS.loadHudBook, (id) => storage.loadHudBook(id))
@@ -560,6 +578,9 @@ function registerIpc(): void {
   handle(CHANNELS.aoe4worldGameBuild, (link) => aoe4worldGameBuild(link))
   handle(CHANNELS.aoe4worldSuggestBuild, (civ) => aoe4worldSuggestBuild(civ))
   handle(CHANNELS.loadDoc, (kind, id) => storage.loadDoc(kind, id))
+  handle(CHANNELS.aoe4worldOpponent, (id) => aoe4worldOpponent(id))
+  // Only to the webhook in the saved settings: the window cannot send anywhere else.
+  handle(CHANNELS.discordPost, async (text) => discordPost((await storage.loadSettings()).discord.webhook, text))
   handle(CHANNELS.saveDoc, (kind, id, doc) => storage.saveDoc(kind, id, doc))
   handle(CHANNELS.loadMosaics, (id) => storage.loadMosaics(id))
   handle(CHANNELS.saveMosaic, (id, m) => storage.saveMosaic(id, m))

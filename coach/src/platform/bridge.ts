@@ -273,6 +273,15 @@ export const browserBridge: SightlineBridge = {
   async aoe4worldSuggestBuild() {
     return { ok: false as const, error: 'Needs the desktop app.' }
   },
+  async aoe4worldOpponent() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async discordPost() {
+    return { ok: false as const, error: 'Needs the desktop app.' }
+  },
+  async cs2DemoOpen() {
+    return { ok: false as const, error: 'Reading demos needs the desktop app.' }
+  },
   // The browser preview keeps documents for this page only.
   async loadDoc(kind: string, profileId: string) {
     return previewDocs.get(`${kind}:${profileId}`) ?? null

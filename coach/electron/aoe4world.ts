@@ -232,3 +232,28 @@ export async function aoe4worldSuggestBuild(civ: unknown): Promise<{ ok: true; g
     return { ok: false, error: 'Could not reach AoE4World.' }
   }
 }
+
+/**
+ * An opponent's public record, looked up by the player before a match: their last 50 games, and the
+ * summaries of their last 3 one-against-one games (one request every 1.5 s).
+ */
+export async function aoe4worldOpponent(profileId: unknown): Promise<{ ok: true; games: HistoryGame[]; facts: GameFacts[] } | { ok: false; error: string }> {
+  if (!validId(profileId)) return { ok: false, error: 'Choose the player first.' }
+  try {
+    const r = await getJson(`/api/v0/players/${profileId}/games?limit=50`)
+    if (r.status !== 200) return { ok: false, error: statusError(r.status) }
+    const games = parseGameList(r.json, profileId)
+    const facts: GameFacts[] = []
+    for (const g of games.filter((x) => x.opponents.length === 1 && x.durationSec >= 300).slice(0, 3)) {
+      await sleep(SUMMARY_GAP_MS)
+      const s = await getJson(`/players/${profileId}/games/${g.gameId}/summary?camelize=true`)
+      if (s.status === 429) break
+      const summary = s.status === 200 ? parseSummary(s.json) : null
+      const f = summary ? factsFromSummary(summary, profileId) : null
+      if (f) facts.push(f)
+    }
+    return { ok: true, games, facts }
+  } catch {
+    return { ok: false, error: 'Could not reach AoE4World.' }
+  }
+}

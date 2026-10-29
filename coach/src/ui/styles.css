@@ -5315,3 +5315,62 @@ td > .swatch {
   margin: 0;
   padding-left: 16px;
 }
+
+.opp-lookup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.opp-record {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+/* --- CS2 demo review ---------------------------------------------------------------- */
+.demo-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.demo-stats {
+  margin-bottom: 12px;
+}
+.demo-stats .stat {
+  min-width: 120px;
+  max-width: 180px;
+}
+.demo-map svg {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.demo-mark.kill rect {
+  fill: #5ad1b8;
+  stroke: #070b12;
+  stroke-width: 3;
+}
+.demo-mark.death circle {
+  fill: #ff5c5c;
+  stroke: #070b12;
+  stroke-width: 3;
+}
+.demo-rounds td,
+.demo-rounds th {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.demo-level.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.demo-map .btn-row {
+  margin-bottom: 6px;
+}

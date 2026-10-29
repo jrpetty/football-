@@ -1,6 +1,7 @@
 // Player-facing settings. Shared by the renderer, the engine and the Electron
 // main process (which re-validates anything the renderer sends it).
 
+import { isDiscordWebhook } from './notify.ts'
 import type { CoachTone, CoachingMode, Verbosity } from './types.ts'
 
 export interface CoachSettings {
@@ -54,6 +55,10 @@ export interface CoachSettings {
   readonly hudSaves: boolean
   /** The player's AoE4World profile, to check the coach's readings against the real game after a match (opt-in). */
   readonly aoe4world: { readonly profileId: number | null; readonly name: string | null; readonly auto: boolean }
+  /** A match summary to the player's own Discord channel (webhook) after each match (opt-in: off until a webhook is set). */
+  readonly discord: { readonly webhook: string | null; readonly afterMatch: boolean }
+  /** Counter-Strike 2: the player's SteamID64, to find them in a match demo (set when they pick themselves once). */
+  readonly steamId: string | null
 }
 
 export type ListenMode = 'key' | 'always'
@@ -170,6 +175,8 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   hudSaves: true,
   // Checking each match is on once a profile is linked (linking is the opt-in).
   aoe4world: { profileId: null, name: null, auto: true },
+  discord: { webhook: null, afterMatch: true },
+  steamId: null,
 }
 
 export const COOLDOWN_RANGE = { min: 5, max: 300 } as const
@@ -221,7 +228,15 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     hud: sanitizeHud(o.hud, base.hud),
     hudSaves: typeof o.hudSaves === 'boolean' ? o.hudSaves : base.hudSaves,
     aoe4world: sanitizeAoe4world(o.aoe4world, base.aoe4world),
+    discord: sanitizeDiscord(o.discord, base.discord),
+    steamId: o.steamId === null ? null : typeof o.steamId === 'string' && /^7656\d{13}$/.test(o.steamId) ? o.steamId : base.steamId,
   }
+}
+
+function sanitizeDiscord(v: unknown, base: CoachSettings['discord']): CoachSettings['discord'] {
+  if (typeof v !== 'object' || v === null) return base
+  const o = v as Record<string, unknown>
+  return { webhook: o.webhook === null ? null : isDiscordWebhook(o.webhook) ? o.webhook : base.webhook, afterMatch: typeof o.afterMatch === 'boolean' ? o.afterMatch : base.afterMatch }
 }
 
 function sanitizeAoe4world(v: unknown, base: CoachSettings['aoe4world']): CoachSettings['aoe4world'] {

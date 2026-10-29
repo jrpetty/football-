@@ -24,6 +24,7 @@ import { KIND_OUT, type Alignment } from '../core/map/official.ts'
 import { localReview, reviewSpeech, type MatchReview } from '../core/review.ts'
 import { LISTEN_OFF, VoiceInput, type ListenState } from './voiceInput.ts'
 import { NO_PROGRESS, ProgressStore, type ProgressState } from './progressStore.ts'
+import { matchSummary } from '../core/notify.ts'
 import { commentaryStartLine } from '../core/commentary.ts'
 import { tone } from './tones.ts'
 import { NeuralPlayer } from '../speech/neural.ts'
@@ -590,6 +591,25 @@ export class CoachSession {
   async enterRealNumbers(id: string, real: Readonly<Record<number, number>>): Promise<void> {
     const record = [...this.state.history, ...this.state.matches].find((m) => m.id === id)
     if (record) await this.keepTruth(id, compareWithPlayer(record, real))
+  }
+
+  /** After a real match (not a demo), with a Discord webhook set: the match summary to the player's channel. */
+  private postSummaries(records: readonly MatchRecord[]): void {
+    const d = this.settings?.discord
+    const profile = this.profile
+    if (!d?.webhook || !d.afterMatch || !profile || this.sourceKind !== 'screen') return
+    const review = this.state.report?.profileId === profile.id ? localReview(profile, this.state.report) : null
+    for (const r of records) {
+      void this.bridge
+        .discordPost(matchSummary(profile, r, review, { practice: this.progress.practiceLine() }))
+        .then((res) => (res.ok ? undefined : this.flash(`Discord: ${res.error}`)))
+        .catch(() => undefined)
+    }
+  }
+
+  /** Settings: a test message to the webhook. */
+  async testDiscord(): Promise<{ ok: true } | { ok: false; error: string }> {
+    return this.bridge.discordPost('Sightline Coach is connected. A summary of each match will arrive here when it ends.').catch(() => ({ ok: false as const, error: 'Could not send.' }))
   }
 
   /** After a match, when the player asked for it: check with AoE4World once its summary is ready (a few tries). */
@@ -1354,7 +1374,10 @@ export class CoachSession {
       this.scheduleTruthChecks(msg.matches)
     }
     if (Object.keys(patch).length) this.set(patch)
-    if (msg.matches.length) this.progress.refreshPlan()
+    if (msg.matches.length) {
+      this.progress.refreshPlan()
+      this.postSummaries(msg.matches)
+    }
 
     if (msg.cancel.length) this.speech.cancel(msg.cancel)
     for (const u of msg.utterances) {
