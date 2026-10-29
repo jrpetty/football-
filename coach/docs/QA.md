@@ -255,3 +255,16 @@ Use a fresh user profile for steps 1–3. The data folder is
   `role="status"`), and captions use `aria-live`.
 - No horizontal scrolling at window widths of 1024, 1280 and 1440 px.
 - With reduced motion turned on in the OS, there is no pulsing or animation.
+
+## 18. Ready check, checks against the real game, and HUD numbers
+
+| # | Steps | Expected |
+|---|---|---|
+| 18.1 | Coach screen, before starting: go down the Ready check. Press "Test" for the microphone and the talk key (press your talk key when asked). | Each line is right for your setup. The microphone line shows a level when you speak; the talk key line says it works within a second of pressing. A line that is not ready has a button that fixes it or opens the right setting. |
+| 18.2 | AoE IV: History → "Is the coach reading your games right?" → find yourself on AoE4World by name. Turn on "Check each match automatically". Play a Ranked or Quick Match game with capture on. | A few minutes after the match it shows "N of M right (AoE4World)". Open it: the coach's villagers at 5, 10 and 15 minutes beside AoE4World's, and your age-up times. Note every ✗ with the two numbers. |
+| 18.3 | After a skirmish (not on AoE4World), "Enter my numbers" from the post-game statistics. | The same table, marked "your numbers". |
+| 18.4 | Settings → Screen reading → "Read numbers on this PC": mark food, wood, gold, stone, population, villagers and the clock on a screenshot of your HUD. Play 10 minutes with cloud features on. | The table fills in: each number reaches "trusted" after a few dozen model readings, with its agreement at 95% or more. Note any number that stays untrusted and what the HUD looks like there (font, scale, colour). |
+| 18.5 | With "Save cost once every marked number is read here" on, play on. | Usage & cost shows about half the looks per minute once every marked number is trusted; if one stops agreeing, the normal rate comes back. |
+| 18.6 | Play the Order of the Dragon (or Golden Horde) against the AI. | The villager curve uses 23 s Gilded Villagers (19 at 5:00, 32 at 10:00). Golden Horde: the session says the villager count is not judged. |
+| 18.7 | Commentary on, voice muted, a game against the AI. Open "Why didn't it say that?" on the Coach screen. | Lines appear in "Coach said" without repeating; the held-back list shows lines with a reason (pacing, muted, the rules for the mode). |
+| 18.8 | Settings → Voice input: switch the speech model to "More accurate (Moonshine base)" and ask three questions with game sound on. | It downloads once (251 MB) and answers; game sound alone is not transcribed as a question. |

@@ -21,7 +21,8 @@ it only stays out of the things anti-cheat looks for.
 | Kernel driver, admin rights, services | **None** | Sightline runs as an ordinary user program. |
 | Sees the game | OS window capture (Windows Graphics Capture through Chromium), the same API as browser screen sharing and many streaming tools | It sees pixels the player already sees, from outside the game process. |
 | Global keys (talk, mark, stop) | Standard OS hotkey registration (`RegisterHotKey`), as Discord and OBS use | It doesn't read the game's input; the OS just tells Sightline its key was pressed. Holding the talk key is recognised from the OS's own repeated reports of that key, not from a keyboard hook. |
-| Network | Only Anthropic's API (your key), and only with cloud features on; one-time model downloads from GitHub | Nothing talks to game servers. |
+| Reads numbers off the HUD on this PC | From the same captured frame, in the app's own process: the player marks where a number sits, and the digits' shapes are learned from the cloud model's readings | Pixels only, as before. Nothing in or about the game process is read. |
+| Network | Only Anthropic's API (your key), and only with cloud features on; one-time model downloads from GitHub; for AoE IV, if you opt in, AoE4World's public match summaries after a match | Nothing talks to game servers. AoE4World is a public website built from published match data, asked only between matches. |
 | Hides itself, renames its process, obfuscates | **Never** | Being transparent is the point. |
 
 ## Fair play: what the coach says, and when

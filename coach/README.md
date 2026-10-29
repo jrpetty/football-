@@ -401,6 +401,59 @@ Then press **Choose the game window**, play, and listen.
   but in Ranked 1v1 I stay quiet until the match ends…"), and you get the
   review after. The 🎙 button then turns amber: "Commentary: after the
   match", or "set your mode".
+- **Why didn't it say that?** A list on the live Coach screen of the lines
+  the coach had but kept to itself, newest first, each with the deciding
+  reason: the rules for this game and mode, pacing, low confidence, or the
+  moment passed.
+- **Ready check** (Coach screen, before you start). One list says what will
+  happen this session: the game mode and whether it allows live tips,
+  whether you can hear the coach (it plays a line), live commentary, the
+  speech model, your microphone (a 2.5 s level test), your talk key (press
+  it; nothing is recorded), always listening, Claude, the HUD numbers you
+  marked and the AoE4World check. Each line that is not ready has a button
+  that fixes it or goes to the right setting.
+- **Checks itself against the real game** (History → "Is the coach reading
+  your games right?"). What the coach read, compared with what really
+  happened:
+  - AoE IV: AoE4World's summary of the match (opt-in: find yourself by
+    name or profile number). It has your exact villagers every 20 s, your
+    age-up times and resources. A few minutes after each match, or on
+    request. Only public Ranked and Quick Match games are on AoE4World.
+  - Any match: type your villagers at 5, 10 and 15 minutes from the
+    post-game statistics.
+  - Counter-Strike 2: the screen readings against the game's own data
+    (Game State Integration), during play.
+
+  Each match shows "12 of 13 right" with every line (the coach's number,
+  the real one), and the totals over your checked matches. Nothing is sent
+  to AoE4World but your profile number (and the name you type when you
+  search for yourself), never during a match.
+- **Reads HUD numbers on this PC** (Settings → Screen reading → "Read
+  numbers on this PC"). Mark where a number sits (AoE IV: food, wood,
+  gold, stone, population, villagers, idle villagers and the game clock;
+  scores and clocks for MW4, CS2 and FC 27).
+  Sightline then learns the game's digits from the model's own readings:
+  a digit shape is learned only when two readings agree, and a number is
+  trusted only after it agreed with the model at least 8 times (95% or
+  more). Trusted numbers update every frame on your PC, and with "Save
+  cost" on the model is asked half as often. The learned digit shapes (a
+  few kilobytes, no screenshots) are kept in `hud.json`.
+
+  *Measured on six fonts: trusted after 15 to 21 model readings; 93–100% of
+  numbers read; none read wrong.*
+- **Your usual.** Once three of your matches have a reading at a
+  checkpoint, the coach compares you with yourself as well as with the
+  curve: "At 10:00 you had 31 villagers; one Town Center that never stops
+  has 36. Your usual is 28 villagers (your last 6 games with this
+  civilisation)."
+  It uses the real number from a checked match where there is one.
+- **Villager curves per civilisation (AoE IV).** From the training times
+  in the game files: Order of the Dragon Gilded Villagers take 23 s (about
+  2.6 a minute), French villagers 19 s, Viking villagers 22 s, the rest
+  20 s. Golden Horde villagers take 37 s in the game files; until that is
+  checked in real games their count is not judged, and the session says
+  so. Water maps use the same curve, since boats come from the Dock and
+  do not slow the Town Center.
 - **Knows the opponent (AoE IV).** Their civilisation is read from the
   loading screen, and every civilisation's unique units, landmarks and
   bonuses are in the pack, including upcoming ones. When your screen shows
@@ -478,6 +531,12 @@ Then press **Choose the game window**, play, and listen.
       a few seconds for the question), so talk to your team is not. It
       pauses while it is talking itself, and the top-bar button pauses it.
       Best with a headset.
+  - Speech recognition runs on your PC: Moonshine tiny (108 MB, fast) or
+    Moonshine base (251 MB, more accurate), with the Silero voice detector,
+    which keeps game sound and music out before anything is transcribed.
+
+    *Measured on 45 recorded questions: tiny 44 right, base 45. The voice
+    detector found no speech in synthetic game sound.*
   - If something is wrong (voice input off, no microphone, the speech model
     not downloaded), it says so, out loud when you are not mid-match.
   - During capture, Claude sees your screen with the question.

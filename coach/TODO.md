@@ -334,6 +334,32 @@ Legend:
 - ◐ Always listening through speakers: sudden loud game sound can be taken for speech, then usually comes back as no words. A headset is recommended. *QA 16.5.*
 - ☑ Men-at-Arms ages checked against data parsed from the game files (aoe4world/data): Castle Age for the French, Rus and Mongols; the English have Men-at-Arms from the Dark Age, with an Early Man-at-Arms in Feudal. The pack agrees.
 
+## v17 delivery
+
+- ☑ Checked against the real game (History → "Is the coach reading your games right?"):
+  - AoE IV: AoE4World's summary of the match (opt-in), with exact villagers every 20 s, age-ups and resources, compared with the coach's readings. Automatic a few minutes after a match, or on request;
+  - any match: the player's own numbers from the post-game statistics;
+  - Counter-Strike 2: screen readings against the game's own data, live.
+
+  *The summary parser was written against a real AoE4World summary saved in a public project (benjaminshoemaker/aoe4-game-analyzer on GitHub) and its API notes, and is tested on that shape (`test/truth.test.ts`). aoe4world.com cannot be reached from the development sandbox, so the live service is not yet tested. QA 18.2.*
+- ☑ Ready check on the Coach screen: mode and policy, hearing the coach, commentary, speech model, microphone level, talk key, always listening, Claude, HUD numbers, AoE4World. Each line not ready has its fix.
+- ☑ HUD numbers read on this PC (`src/core/hud/`). Digits are learned from the cloud model's own readings (a shape only once two readings agree); a number is trusted after 8 or more checks at 95% agreement. Optional: half the cloud looks once every marked number is trusted.
+
+  *Measured on six fonts: trusted after 15–21 model readings, 93–100% of numbers read, 0 read wrong. Not yet measured on the real AoE IV HUD. QA 18.4.*
+- ☑ "Your usual": the median of your last games at each checkpoint (3 or more games; your civilisation's games when there are 3), using real numbers from checked matches.
+- ☑ AoE IV pack checked against the game files (aoe4world/data, read only to check, never copied in): `npm run data:aoe4`. All 167 units agree on first age and cost after six fixes (Veteran Demilancer and Emissary are Castle Age; the naval names had lost their closing brackets; the Vikings unit is the Bondi). *docs/AOE4_DATA_CHECK.md.*
+- ☑ Villager curves per civilisation, from the game files' training times: Order of the Dragon 23 s, French 19 s, Vikings 22 s. Golden Horde (37 s in the game files) is not judged until checked in real games. Water maps keep the same curve: boats come from the Dock and do not slow the Town Center.
+- ☑ Speech: Moonshine base as a more accurate option, and the Silero voice detector in front of recognition.
+
+  *Measured on 45 recorded questions: tiny 44 right, base 45. Silero found no speech in synthetic game sound.*
+- ☑ "Why didn't it say that?" on the live Coach screen: lines held back, newest first, with the deciding reason.
+- ☑ Real-app tests in CI (`e2e/app.e2e.mjs`): talk key held with repeats and tapped, commentary in the AoE IV demo, ranked staying quiet with its reason. Linux under Xvfb and Windows.
+
+  *4 of 4 pass on Linux here (43 s).*
+- ☑ Found by the new app test and fixed: with the voice muted, a commentary line was shown again every few seconds. Shown lines are now paced like spoken ones.
+- ☑ Voice input moved out of `src/ui/session.ts` into `src/ui/voiceInput.ts` (session.ts 1,628 → 1,416 lines). `src/core/engine.ts` is still large (about 1,300 lines); not split this round.
+- ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

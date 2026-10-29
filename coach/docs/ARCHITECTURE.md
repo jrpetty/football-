@@ -24,8 +24,13 @@ OS capture consent and target selection   electron/consent.ts, electron/main.ts,
   → game knowledge / profile package       src/core/profile/schema.ts, src/profiles/*.json
   → policy and coaching-mode governor      src/core/policy.ts
   → coach planner and language renderer    src/core/engine.ts (planning), src/core/language.ts
-  → local text-to-speech engine            src/speech/speech.ts
+  → local text-to-speech engine            src/speech/speech.ts, src/speech/neural.ts, electron/tts/
   → session review UI and optional profile src/ui/views/*, electron/storage.ts
+
+Alongside:
+  HUD numbers read on this PC              src/core/hud/glyphs.ts, src/core/hud/reader.ts (in src/worker/host.ts)
+  checks against the real game             src/core/truth/ (agreement, AoE4World summaries, the reading log), electron/aoe4world.ts
+  voice input                              src/ui/voiceInput.ts, src/speech/ (talk key gestures, voice activity, always listening)
 ```
 
 `src/core/` is pure TypeScript with no DOM, Electron or Node dependencies. The
@@ -151,16 +156,18 @@ The gates are applied in this order:
 Outside training, a reflective message still playing when the next round
 starts is cancelled.
 
-### Speech: platform voices, local only
+### Speech: local voices and local recognition
 
-The Web Speech API is used, filtered to voices with `localService === true`.
-On Windows these are the SAPI/OneCore voices. If no local voice exists, the
-coach falls back to text and never to a cloud voice. Playback is one utterance
-at a time, the backlog is at most two, expired utterances are dropped, and
-everything is interruptible (mute, Quiet, Stop capture).
+The coach speaks with neural voices that run on the player's PC (Piper Jenny,
+or Kokoro's voices, through sherpa-onnx in a worker thread), downloaded once
+and checksum-verified; the platform's local voices are the fallback, never a
+cloud voice. Playback is one utterance at a time, the backlog is at most two,
+expired utterances are dropped, and everything is interruptible (mute, Quiet,
+Stop capture).
 
-**Trade-off:** voice quality depends on the OS. A bundled neural TTS such as
-Piper is the upgrade path; it is not built.
+Voice questions are recognised on the PC as well: Moonshine (tiny or base)
+behind the Silero voice detector, so game sound is dropped before anything
+is transcribed. Only the words of a question go to Claude.
 
 ## Performance (measured in Node in the development container; not yet measured on Windows hardware)
 
@@ -177,7 +184,7 @@ stays bounded instead of growing.
 
 ## Testing
 
-`npm test` runs 60 tests (Node's test runner, TypeScript run directly):
+`npm test` runs 268 tests (Node's test runner, TypeScript run directly):
 
 - **Vision:** detector accuracy, missing-bar handling, smoothing, staleness,
   and rule semantics.
@@ -189,6 +196,16 @@ stays bounded instead of growing.
 - **Pipeline:** queue, bitmap release, and error containment.
 - **Speech:** local-only voices, expiry, interruption.
 - **Shell:** consent, storage validation, channel parity.
+
+`npm run e2e` (after `npm run build`) drives the real app with Playwright,
+with an empty data folder of its own: the talk key held with key repeats and
+tapped, commentary in the AoE IV demo, and ranked play staying quiet with the
+reason shown under "Why didn't it say that?". CI runs it on Linux under Xvfb
+(xdotool sends the keys) and on Windows (keybd_event sends them, repeats
+included).
+
+`npm run data:aoe4` checks every AoE IV unit's age and cost against data
+parsed from the game files ([docs/AOE4_DATA_CHECK.md](AOE4_DATA_CHECK.md)).
 
 The packaged Electron app was also driven with Playwright under Xvfb. That
 run checked:
