@@ -351,6 +351,19 @@ export interface BenchmarkSpec {
   /** What one unit of shortfall means in time, e.g. "of idle Town Center time" (uses perMinute). */
   readonly gapPhrase?: string
   readonly playbook?: string
+  /**
+   * Where one civilisation differs (villagers that take longer to make): its own
+   * curve, or `skip` with the reason the curve does not apply to it.
+   */
+  readonly byFaction?: Readonly<Record<string, BenchmarkFactionSpec>>
+}
+
+export interface BenchmarkFactionSpec {
+  readonly start?: number
+  readonly perMinute?: number
+  readonly expectedPhrase?: string
+  /** No comparison for this civilisation, and why (said in the review). */
+  readonly skip?: string
 }
 
 export interface CommentaryStatusSpec {
@@ -2031,6 +2044,19 @@ export function validateProfile(input: unknown): ValidationResult {
     c.str(o.gapPhrase, `${path}.gapPhrase`, { optional: true, max: 80, spoken: true })
     const pb = c.str(o.playbook, `${path}.playbook`, { optional: true })
     if (pb && !playbookIds.has(pb)) c.errors.push(`${path}.playbook: unknown playbook entry "${pb}"`)
+    if (o.byFaction !== undefined) {
+      const bf = c.obj(o.byFaction, `${path}.byFaction`)
+      for (const [f, v] of Object.entries(bf ?? {})) {
+        const fp = `${path}.byFaction.${f}`
+        if (!ID.test(f)) c.errors.push(`${fp}: not an id`)
+        const fo = c.obj(v, fp)
+        if (!fo) continue
+        c.num(fo.start, `${fp}.start`, 0, 1e6, true)
+        c.num(fo.perMinute, `${fp}.perMinute`, 0, 1e6, true)
+        c.str(fo.expectedPhrase, `${fp}.expectedPhrase`, { optional: true, max: 120, spoken: true })
+        c.str(fo.skip, `${fp}.skip`, { optional: true, max: 200 })
+      }
+    }
   })
 
   // Episodes.

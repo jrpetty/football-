@@ -8,6 +8,7 @@ import { BANNED_CLAIMS } from '../src/core/profile/schema.ts'
 import { builtInProfile } from '../src/profiles/index.ts'
 import { aoe4GameReplay, mw4MatchReplay, type VisionReplay } from '../src/sim/visionReplay.ts'
 import { engineFor, settings } from './helpers.ts'
+import { notSaid } from '../src/ui/format.ts'
 
 const aoe4 = builtInProfile('aoe4')
 const mw4 = builtInProfile('cod-mw4')
@@ -140,4 +141,15 @@ test('packs: readings in commentary lines must exist', async () => {
   assert.match(errors, /commentaryStatus\.parts\[0\]: unknown reading "popCap"/)
   assert.match(errors, /commentaryChanges\[0\]\.key: unknown state key "era"/)
   assert.match(errors, /unknown format "minutes"/)
+})
+
+test('"why didn\'t it say that?": held-back lines with the deciding reason, newest first, one row per line', () => {
+  const { entries } = play('cod-mw4', 'multiplayer', mw4MatchReplay({ seed: 2 }))
+  const rows = notSaid(entries, 50)
+  assert.ok(rows.length > 0)
+  assert.ok(rows.every((r) => r.reason.length > 3 && r.decision !== ('spoken' as string)))
+  assert.ok(rows.some((r) => /not allowed/.test(r.reason)), rows.map((r) => r.reason).join(' | '))
+  for (let i = 1; i < rows.length; i++) assert.ok(rows[i - 1].at >= rows[i].at)
+  assert.equal(new Set(rows.map((r) => r.text)).size, rows.length)
+  assert.ok(notSaid(entries).length <= 6)
 })

@@ -291,7 +291,7 @@ export class CoachEngine {
     this.pitch = profile.pitch ? new PitchTracker(settings.minimap[profile.id] ?? profile.pitch.radar, this.radarColours()) : null
     this.gsi = profile.gameState?.kind === 'cs2-gsi' ? new Cs2Gsi({ profileId: profile.id, maps: profile.knowledge.maps, arsenal: profile.knowledge.arsenal }) : null
     this.factors = new FactorAnalyzer(profile.factors ?? [])
-    this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [])
+    this.benchmarks = new BenchmarkTracker(profile.benchmarks ?? [], this.playerFaction())
     const clockKey = profile.benchmarks?.[0]?.timeKey ?? (profile.vision?.state.some((s) => s.key === 'gameTimeSec') ? 'gameTimeSec' : null)
     this.battles = new BattleTracker(profile.battles ?? null, clockKey)
     const roster = profile.knowledge.roster
@@ -313,6 +313,11 @@ export class CoachEngine {
     if (this.memory.historyNotice) out.push(notice(now, 'info', this.memory.historyNotice))
     const commentary = this.commentaryNotice()
     if (commentary) out.push(commentary(now))
+    const faction = this.playerFaction()
+    for (const b of this.profile.benchmarks ?? []) {
+      const skip = faction ? b.byFaction?.[faction]?.skip : undefined
+      if (skip) out.push(notice(now, 'info', `${b.label}: not compared. ${skip}`))
+    }
     if (this.profile.validation.status !== 'verified') {
       out.push(notice(now, 'info', `"${this.profile.name}" is ${this.profile.validation.status}: ${this.profile.validation.notes}`))
     }
@@ -328,6 +333,7 @@ export class CoachEngine {
       this.context = context
       this.mistakes.setContext(context)
       this.intel?.setPlayerFaction(this.playerFaction())
+      this.benchmarks.setFaction(this.playerFaction())
       ;(this.profile.scoreRules ?? []).forEach((r, i) => this.scores[i].setSide(sideOf(context[r.sideContext])))
     }
     this.governor.configure(settings, policy)

@@ -120,3 +120,27 @@ export function compact(n: number): string {
 export function modelName(id: string): string {
   return (servedPrice(id)?.label ?? id).replace(/ \(.*\)$/, '')
 }
+
+export interface NotSaidRow {
+  readonly at: number
+  readonly text: string
+  readonly decision: Exclude<DeliveryDecision, 'spoken'>
+  /** The deciding reason, as the governor gave it. */
+  readonly reason: string
+  /** Times the same line was held back. */
+  readonly count: number
+}
+
+/** "Why didn't it say that?": the latest lines the coach had but did not speak, newest first, one row per line. */
+export function notSaid(timeline: readonly TimelineEntry[], limit = 6): NotSaidRow[] {
+  const rows = new Map<string, NotSaidRow>()
+  for (const e of timeline) {
+    if (e.type !== 'message' || e.decision.decision === 'spoken') continue
+    const key = `${e.message.topic}|${e.message.text}`
+    const reason = e.decision.reasons[0] ?? 'not given'
+    const count = (rows.get(key)?.count ?? 0) + 1
+    rows.delete(key)
+    rows.set(key, { at: e.at, text: e.message.text, decision: e.decision.decision, reason, count })
+  }
+  return [...rows.values()].reverse().slice(0, limit)
+}

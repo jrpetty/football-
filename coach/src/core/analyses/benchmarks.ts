@@ -52,8 +52,21 @@ export function expectedAt(spec: BenchmarkSpec, sec: number): number {
   return Math.floor(spec.expected.cap !== undefined ? Math.min(spec.expected.cap, v) : v)
 }
 
+/** The spec as it applies to one civilisation: its own curve, or null when it does not apply. */
+export function specFor(spec: BenchmarkSpec, faction: string | null): BenchmarkSpec | null {
+  const f = faction ? spec.byFaction?.[faction] : undefined
+  if (!f) return spec
+  if (f.skip) return null
+  return {
+    ...spec,
+    expected: { ...spec.expected, start: f.start ?? spec.expected.start, perMinute: f.perMinute ?? spec.expected.perMinute },
+    expectedPhrase: f.expectedPhrase ?? spec.expectedPhrase,
+  }
+}
+
 export class BenchmarkTracker {
-  private readonly specs: readonly BenchmarkSpec[]
+  private readonly all: readonly BenchmarkSpec[]
+  private specs: readonly BenchmarkSpec[]
   /** Readings per spec and checkpoint (up to a dozen each). */
   private readings = new Map<string, Map<number, Reading[]>>()
   /** Checkpoints agreed for the first time since the last take (for commentary). */
@@ -64,8 +77,15 @@ export class BenchmarkTracker {
   /** The last match's readings, shown until the next match has some of its own. */
   private previous = new Map<string, Map<number, Reading[]>>()
 
-  constructor(specs: readonly BenchmarkSpec[]) {
+  constructor(specs: readonly BenchmarkSpec[], faction: string | null = null) {
+    this.all = specs
     this.specs = specs
+    this.setFaction(faction)
+  }
+
+  /** The player's civilisation: its own curve where it has one (readings so far are kept). */
+  setFaction(faction: string | null): void {
+    this.specs = this.all.flatMap((s) => specFor(s, faction) ?? [])
   }
 
   observe(state: VisibleState): void {

@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { CoachEngine } from '../src/core/engine.ts'
 import { FactorAnalyzer, factorResult, historyFactors } from '../src/core/analyses/factors.ts'
-import { BenchmarkTracker, agreed, benchmarkResult, expectedAt } from '../src/core/analyses/benchmarks.ts'
+import { BenchmarkTracker, agreed, benchmarkResult, benchmarkStatement, expectedAt, specFor } from '../src/core/analyses/benchmarks.ts'
 import { playbookText } from '../src/core/knowledge/base.ts'
 import { answerLocally, buildDigest, classify } from '../src/core/qa/ask.ts'
 import { BANNED_CLAIMS, validateProfile, type FactorSpec, type GameProfile } from '../src/core/profile/schema.ts'
@@ -180,6 +180,24 @@ test('benchmarks: the curve, its cap, and readings far from a checkpoint', () =>
   const r = benchmarkResult(s, [{ atSec: 300, actual: 21 }])
   assert.equal(r.worst, null)
   assert.equal(r.met, 1)
+})
+
+test('benchmarks: a civilisation with slower or faster villagers has its own curve; one not yet checked is not judged', () => {
+  const s = aoe4.benchmarks![0]
+  assert.equal(specFor(s, 'english'), s)
+  const dragon = specFor(s, 'order-of-the-dragon')!
+  // Gilded Villagers take 23 seconds: about 2.6 a minute, not 3.
+  assert.deepEqual([300, 600, 900, 1200].map((t) => expectedAt(dragon, t)), [19, 32, 45, 58])
+  assert.deepEqual([300, 600, 900, 1200].map((t) => expectedAt(s, t)), [21, 36, 51, 66])
+  // 28 Gilded Villagers at 10:00 is within the Order of the Dragon's curve, but behind the usual one.
+  assert.equal(benchmarkResult(dragon, [{ atSec: 600, actual: 28 }]).worst, null)
+  assert.ok(benchmarkResult(s, [{ atSec: 600, actual: 28 }]).worst)
+  assert.match(benchmarkStatement(dragon, { atSec: 600, actual: 26, expected: 32, behind: true }), /Gilded Villagers take 23 seconds/)
+  assert.equal(specFor(s, 'golden-horde'), null)
+  const t = new BenchmarkTracker([s], 'golden-horde')
+  assert.equal(t.results().length, 0)
+  t.setFaction('order-of-the-dragon')
+  assert.equal(t.results()[0].spec.expected.perMinute, 2.6)
 })
 
 const at = (observedAt: number, values: Record<string, number>): VisibleState => ({

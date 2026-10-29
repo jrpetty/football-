@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "aoe4",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "name": "Age of Empires IV",
   "depth": "pack",
   "game": {
@@ -20321,7 +20321,24 @@
       "expectedPhrase": "one Town Center that never stops",
       "gapPhrase": "of villager production",
       "playbook": "tc-never-idle",
-      "atMostKey": "population"
+      "atMostKey": "population",
+      "byFaction": {
+        "order-of-the-dragon": {
+          "perMinute": 2.6,
+          "expectedPhrase": "one Town Center that never stops (Gilded Villagers take 23 seconds)"
+        },
+        "french": {
+          "perMinute": 3.15,
+          "expectedPhrase": "one Town Center that never stops (French villagers take 19 seconds)"
+        },
+        "vikings": {
+          "perMinute": 2.7,
+          "expectedPhrase": "one Town Center that never stops (Viking villagers take 22 seconds)"
+        },
+        "golden-horde": {
+          "skip": "Golden Horde villagers take 37 seconds each in the game files, not the usual 20, so the coach does not judge them against a curve until that is checked in real games."
+        }
+      }
     }
   ],
   "battles": {

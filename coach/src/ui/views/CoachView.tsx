@@ -23,7 +23,7 @@ import type { SightlineBridge } from '../../../shared/bridge.ts'
 import { WhereYouAre } from '../components/MapView.tsx'
 import { LivePitch } from '../components/PitchView.tsx'
 import { LiveRounds } from '../components/RoundsView.tsx'
-import { CATEGORY_TEXT, clock, formatMs, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
+import { CATEGORY_TEXT, clock, DECISION_TEXT, formatMs, notSaid, pct, usd, usdRange, WINDOW_TEXT } from '../format.ts'
 import { REGISTRY_GAMES } from '../policy.ts'
 import type { Caption, CoachSession, SessionState, SourceChoice } from '../session.ts'
 import { useOfficialSource } from '../officialSource.ts'
@@ -605,6 +605,8 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
             )}
           </section>
 
+          <NotSaidPanel state={state} />
+
           <section className="panel" aria-labelledby="mom-h">
             <div className="panel-head">
               <h2 id="mom-h">Decisions to review</h2>
@@ -648,6 +650,44 @@ function LiveView({ state, session, settings, onSettings, profile, policy, effec
 
       {aligning ? <AlignmentCheck session={session} profile={profile} onClose={() => setAligning(false)} /> : null}
     </div>
+  )
+}
+
+/** "Why didn't it say that?": lines the coach had but held back, with the deciding reason. */
+function NotSaidPanel({ state }: { state: SessionState }) {
+  const [open, setOpen] = useState(false)
+  const rows = notSaid(state.timeline)
+  return (
+    <section className="panel" aria-labelledby="notsaid-h">
+      <div className="panel-head">
+        <h2 id="notsaid-h">Why didn’t it say that?</h2>
+        <button type="button" className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'Hide' : `Show${rows.length ? ` (${rows.length})` : ''}`}
+        </button>
+      </div>
+      {open ? (
+        rows.length ? (
+          <ol className="captions not-said">
+            {rows.map((r) => (
+              <li key={`${r.at}-${r.text}`}>
+                <span className="tl-time">{clock(r.at - state.clockOrigin)}</span>
+                <span>
+                  <span className="not-said-text">{r.text}</span>
+                  <span className="muted small">
+                    {DECISION_TEXT[r.decision]}: {r.reason}
+                    {r.count > 1 ? ` (${r.count} times)` : ''}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted small" style={{ marginBottom: 0 }}>
+            Nothing held back yet. When the coach has a line but keeps quiet (the rules for this game, pacing, low confidence, the moment passed), it shows here with the reason.
+          </p>
+        )
+      ) : null}
+    </section>
   )
 }
 
