@@ -35,7 +35,10 @@ jobs:
       - run: npm run profile:check -- src/profiles/*.json
 
   app:
-    runs-on: ubuntu-latest
+    # Pinned: on the ubuntu-26.04 image (Xvfb 21.1.22) xdotool's key presses do not reach the
+    # app's global shortcut, with the key mapped and the shortcut registered; on 24.04 they do.
+    # The same test passes on Windows, where players use the app.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
