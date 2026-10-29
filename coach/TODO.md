@@ -355,7 +355,7 @@ Legend:
 - ☑ "Why didn't it say that?" on the live Coach screen: lines held back, newest first, with the deciding reason.
 - ☑ Real-app tests in CI (`e2e/app.e2e.mjs`): talk key held with repeats and tapped, commentary in the AoE IV demo, ranked staying quiet with its reason. Linux under Xvfb and Windows.
 
-  *4 of 4 pass on Linux here (43 s).*
+  *4 of 4 pass in CI on Windows (the held key sent with Windows key repeats) and on Linux. The Linux job is pinned to Ubuntu 24.04: on the 26.04 runner image xdotool's keys do not reach the global shortcut (cause not found; the key is mapped and the shortcut registered).*
 - ☑ Found by the new app test and fixed: with the voice muted, a commentary line was shown again every few seconds. Shown lines are now paced like spoken ones.
 - ☑ Voice input moved out of `src/ui/session.ts` into `src/ui/voiceInput.ts` (session.ts 1,628 → 1,416 lines). `src/core/engine.ts` is still large (about 1,300 lines); not split this round.
 - ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
