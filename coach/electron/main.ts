@@ -48,7 +48,7 @@ import { findMap } from '../src/core/analyses/mapModel.ts'
 import type { KnowledgeStatus } from '../shared/bridge.ts'
 import type { VoiceModelStatus as ModelStatus } from '../shared/bridge.ts'
 import { MAX_SYNTH_CHARS, NEURAL_VOICES, type ModelState, type TtsModelKey, type TtsStatus } from '../shared/voices.ts'
-import { ASR_MODEL, isInstalled, installModel, removeModel, TTS_MODELS } from './models.ts'
+import { ASR_MODELS, installVad, isInstalled, isVadInstalled, installModel, removeModel, TTS_MODELS, type AsrModelKey } from './models.ts'
 import { fetchOverhead, overheadPage } from './overhead.ts'
 import { findCs2CfgFolder, GSI_CFG_NAME, GsiServer } from './gsi.ts'
 import { writeFile } from 'node:fs/promises'
@@ -89,7 +89,32 @@ let cloud: CloudService
 let cloudSettings: CloudSettings = DEFAULT_CLOUD
 let settings: CoachSettings | null = null
 let recognizer: RecognizerThread | null = null
-let modelStatus: ModelStatus = { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(ASR_MODEL.archiveBytes / 1e6) }
+let modelStatus: ModelStatus = { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(ASR_MODELS.tiny.archiveBytes / 1e6), model: 'tiny', vad: false }
+/** The recognition model chosen in Settings. */
+const asrKey = (): AsrModelKey => settings?.speechModel ?? 'tiny'
+
+/** Re-read whether the chosen recognition model and the voice detector are installed. */
+async function refreshModelStatus(): Promise<void> {
+  const root = app.getPath('userData')
+  const key = asrKey()
+  const changed = modelStatus.model !== key
+  modelStatus = {
+    ...modelStatus,
+    model: key,
+    sizeMb: Math.round(ASR_MODELS[key].archiveBytes / 1e6),
+    installed: await isInstalled(root, ASR_MODELS[key]),
+    vad: await isVadInstalled(root),
+    ...(changed ? { installing: false, progress: 0, error: null } : {}),
+  }
+  if (changed) {
+    recognizer?.close()
+    recognizer = null
+  }
+}
+
+function newRecognizer(): RecognizerThread {
+  return new RecognizerThread(app.getPath('userData'), asrKey(), modelStatus.vad)
+}
 let tts: TtsThread | null = null
 const ttsModels: Record<TtsModelKey, ModelState> = {
   jenny: { installed: false, installing: false, progress: 0, error: null, sizeMb: Math.round(TTS_MODELS.jenny.archiveBytes / 1e6) },
@@ -365,7 +390,7 @@ function isJpeg(v: unknown): v is ArrayBuffer {
 function warmVoice(): void {
   // The recogniser too, so the first question is answered without a model-loading pause.
   if (settings?.voiceInput && modelStatus.installed && !recognizer) {
-    recognizer = new RecognizerThread(app.getPath('userData'))
+    recognizer = newRecognizer()
     void recognizer.transcribe(new Float32Array(1600)).catch(() => undefined)
   }
   const voice = NEURAL_VOICES.find((v) => v.id === settings?.voice.voiceURI)
@@ -427,7 +452,8 @@ function registerIpc(): void {
     const before = settings
     settings = await storage.saveSettings(s)
     if (JSON.stringify(before?.hotkeys) !== JSON.stringify(settings.hotkeys)) registerShortcuts(settings.hotkeys)
-    if (before?.voice.voiceURI !== settings.voice.voiceURI || before?.voiceInput !== settings.voiceInput) warmVoice()
+    if (before?.speechModel !== settings.speechModel) await refreshModelStatus()
+    if (before?.voice.voiceURI !== settings.voice.voiceURI || before?.voiceInput !== settings.voiceInput || before?.speechModel !== settings.speechModel) warmVoice()
     return settings
   })
   handle(CHANNELS.loadTendencies, (id) => storage.loadTendencies(id))
@@ -592,11 +618,18 @@ function registerIpc(): void {
   handle(CHANNELS.voiceStatus, () => modelStatus)
   handle(CHANNELS.installVoiceModel, async () => {
     if (!settings?.voiceInput) return { ...modelStatus, error: 'Turn on voice input first.' }
-    if (modelStatus.installing || modelStatus.installed) return modelStatus
+    if (modelStatus.installing || (modelStatus.installed && modelStatus.vad)) return modelStatus
     modelStatus = { ...modelStatus, installing: true, progress: 0, error: null }
-    void installModel(app.getPath('userData'), ASR_MODEL, (p) => (modelStatus = { ...modelStatus, progress: p }))
-      .then(() => {
-        modelStatus = { ...modelStatus, installed: true, installing: false, progress: 1 }
+    const root = app.getPath('userData')
+    const key = asrKey()
+    // The recognition model (if missing) and the small voice detector that keeps game sound out.
+    void (modelStatus.installed ? Promise.resolve() : installModel(root, ASR_MODELS[key], (p) => (modelStatus = { ...modelStatus, progress: p })))
+      .then(() => (modelStatus.vad ? undefined : installVad(root)))
+      .then(async () => {
+        if (asrKey() !== key) return
+        recognizer?.close()
+        recognizer = null
+        modelStatus = { ...modelStatus, installed: true, vad: await isVadInstalled(root), installing: false, progress: 1 }
         warmVoice()
       })
       .catch((e: unknown) => (modelStatus = { ...modelStatus, installing: false, error: e instanceof Error ? e.message : String(e) }))
@@ -605,16 +638,16 @@ function registerIpc(): void {
   handle(CHANNELS.removeVoiceModel, async () => {
     recognizer?.close()
     recognizer = null
-    await removeModel(app.getPath('userData'), ASR_MODEL)
+    await removeModel(app.getPath('userData'), ASR_MODELS[asrKey()])
     modelStatus = { ...modelStatus, installed: false, progress: 0 }
     return modelStatus
   })
-  handle(CHANNELS.transcribe, async (pcm) => {
+  handle(CHANNELS.transcribe, async (pcm, verify) => {
     if (!settings?.voiceInput) throw new Error('Voice input is off.')
     if (!modelStatus.installed) throw new Error('The speech model is not installed.')
     if (!(pcm instanceof Float32Array) || pcm.length === 0 || pcm.length > SAMPLE_RATE * MAX_SECONDS) throw new Error('Invalid audio.')
-    recognizer ??= new RecognizerThread(app.getPath('userData'))
-    return recognizer.transcribe(pcm)
+    recognizer ??= newRecognizer()
+    return recognizer.transcribe(pcm, verify === true)
   })
 
   // --- Neural voices (local text-to-speech) ----------------------------------------------------
@@ -691,7 +724,7 @@ if (!app.requestSingleInstanceLock()) {
     })
     gsi = new GsiServer(root, (body) => win?.webContents.send(CHANNELS.gameState, body))
     await gsi.init()
-    modelStatus = { ...modelStatus, installed: await isInstalled(root, ASR_MODEL) }
+    await refreshModelStatus()
     for (const key of ['jenny', 'kokoro'] as const) ttsModels[key] = { ...ttsModels[key], installed: await isInstalled(root, TTS_MODELS[key]) }
 
     if (!DEV_URL) Menu.setApplicationMenu(null)

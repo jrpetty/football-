@@ -87,6 +87,10 @@ export interface VoiceModelStatus {
   readonly progress: number
   readonly error: string | null
   readonly sizeMb: number
+  /** Which recognition model this is about (the one chosen in Settings). */
+  readonly model: 'tiny' | 'base'
+  /** The voice detector (tells speech from game sound) is installed. */
+  readonly vad: boolean
 }
 
 /** Counter-Strike 2 Game State Integration: the local listener's state. */
@@ -189,7 +193,8 @@ export interface SightlineBridge {
   installVoiceModel(): Promise<VoiceModelStatus>
   removeVoiceModel(): Promise<VoiceModelStatus>
   /** 16 kHz mono PCM in [-1, 1]; returns the recognised text. */
-  transcribe(pcm: Float32Array): Promise<string>
+  /** `verify`: an always-listening stretch, returned empty when no speech is found in it. */
+  transcribe(pcm: Float32Array, verify?: boolean): Promise<string>
 
   // Neural voices (local): downloaded once on request, then synthesised on this computer.
   ttsStatus(): Promise<TtsStatus>

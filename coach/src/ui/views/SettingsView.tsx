@@ -914,6 +914,11 @@ function VoiceInputPanel({
   const [status, setStatus] = useState<VoiceModelStatus | null>(null)
   const refresh = useCallback(() => void bridge.voiceStatus().then(setStatus), [bridge])
   useEffect(refresh, [refresh])
+  // A different model chosen: the app checks whether that one is installed (after saving the choice).
+  useEffect(() => {
+    const t = setTimeout(refresh, 400)
+    return () => clearTimeout(t)
+  }, [refresh, settings.speechModel])
   useEffect(() => {
     if (!status?.installing) return
     const t = setInterval(refresh, 500)
@@ -973,11 +978,37 @@ function VoiceInputPanel({
       ) : null}
       {settings.voiceInput && desktop && status ? (
         <div className="voice-model">
-          {status.installed ? (
+          <div className="field" style={{ marginBottom: 8 }}>
+            <span className="small">
+              <b>Speech recognition</b>
+            </span>
+            <Segmented
+              label="Speech recognition model"
+              value={settings.speechModel}
+              options={[
+                { value: 'tiny', label: 'Fast (Moonshine tiny, 108 MB)' },
+                { value: 'base', label: 'More accurate (Moonshine base, 251 MB)' },
+              ]}
+              onChange={(speechModel) => onSettings({ speechModel })}
+            />
+            <span className="muted small">
+              Measured on 45 spoken test questions: fast took 44 the right way (question or not), about 0.2 s each; more accurate took all 45, about 0.4 s each. Real voices tend to favour the bigger one more.
+            </span>
+          </div>
+          {status.installed && status.vad ? (
             <div className="btn-row">
-              <span className="small">Speech model installed (Moonshine tiny, English, ~{status.sizeMb} MB download).</span>
+              <span className="small">
+                Installed: {settings.speechModel === 'base' ? 'Moonshine base' : 'Moonshine tiny'} (English) and the voice detector that keeps game sound out.
+              </span>
               <button type="button" className="btn sm ghost" onClick={() => void bridge.removeVoiceModel().then(setStatus)}>
                 Remove model
+              </button>
+            </div>
+          ) : status.installed && !status.installing ? (
+            <div className="btn-row">
+              <span className="small">Speech recognition installed. The voice detector (0.6 MB) that keeps game sound out is not.</span>
+              <button type="button" className="btn sm" onClick={() => void bridge.installVoiceModel().then(setStatus)}>
+                Add it
               </button>
             </div>
           ) : status.installing ? (

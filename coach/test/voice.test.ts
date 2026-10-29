@@ -212,3 +212,21 @@ test('a talk-key recording is trimmed to the speech (the recogniser hears nothin
   assert.equal(withoutWakeWord('what beats knights?'), 'What beats knights?')
   assert.equal(withoutWakeWord(''), '')
 })
+
+test('"Coach" as the recogniser mishears it, before a pause, is still the coach; other first words are not', () => {
+  for (const t of ['Ouch, how did that fight go?', 'Poch, what is the enemy building?', 'Hoech, how is my economy?']) assert.equal(heardCommand(t, true).kind, 'question', t)
+  for (const t of ['Catch them at the gold.', 'Each of you take a side.', 'Ouch that hurt', 'Much better, well played.']) assert.equal(heardCommand(t, true).kind, 'ignore', t)
+})
+
+test('the voice detector keeps only the speech, and finds none in game sound', async () => {
+  const { speechPart, MIN_SPEECH_SEC } = await import('../electron/stt/recognizer.ts')
+  const pcm = new Float32Array(16000 * 6)
+  assert.equal(speechPart(pcm, []), null)
+  assert.equal(speechPart(pcm, [[16000, 16000 + MIN_SPEECH_SEC * 16000 - 100]]), null, 'too little speech')
+  const part = speechPart(pcm, [
+    [32000, 48000],
+    [52000, 64000],
+  ])!
+  assert.equal(part.byteOffset / 4, 32000 - 0.35 * 16000)
+  assert.equal(part.length, 64000 + 0.4 * 16000 - (32000 - 0.35 * 16000))
+})

@@ -18,6 +18,8 @@ import { Breakdown, EconomyPanel, PolicyBadge, Scoreboard, ScopeChips, StatePane
 import { IntelPanel } from '../components/coaching.tsx'
 import { learnedLines } from '../../core/analyses/learning.ts'
 import { RefreshControl } from '../components/RefreshControl.tsx'
+import { ReadyCheck } from '../components/ReadyCheck.tsx'
+import type { SightlineBridge } from '../../../shared/bridge.ts'
 import { WhereYouAre } from '../components/MapView.tsx'
 import { LivePitch } from '../components/PitchView.tsx'
 import { LiveRounds } from '../components/RoundsView.tsx'
@@ -38,6 +40,7 @@ interface Props {
   cloud: CloudStatus
   usage: UsageSummary | null
   info: PlatformInfo | null
+  bridge: SightlineBridge
   onStart: (kind: SourceChoice, speed?: number) => void
   onTab: (t: Tab) => void
 }
@@ -50,7 +53,7 @@ const cloudReady = (c: CloudStatus) => c.available && c.settings.enabled && c.ke
 
 // --- Before capture -------------------------------------------------------------------
 
-function SetupView({ state, session, settings, onSettings, catalog, profile, policy, effective, cloud, usage, onStart, onTab }: Props) {
+function SetupView({ state, session, settings, onSettings, catalog, profile, policy, effective, cloud, usage, info, bridge, onStart, onTab }: Props) {
   const mode = profile.modes.find((m) => m.id === settings.profileModeId) ?? null
   const context = settings.context[profile.id] ?? {}
   const visionPack = !!profile.vision
@@ -268,6 +271,8 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
           )}
         </section>
       </div>
+
+      <ReadyCheck state={state} session={session} settings={settings} onSettings={onSettings} profile={profile} policy={policy} cloud={cloud} info={info} bridge={bridge} onTab={onTab} />
 
       <section className="panel start-panel" aria-labelledby="step-start">
         <div className="panel-head">

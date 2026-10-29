@@ -52,7 +52,7 @@ const bridge: SightlineBridge = {
   voiceStatus: () => invoke('sightline:voice-status'),
   installVoiceModel: () => invoke('sightline:install-voice-model'),
   removeVoiceModel: () => invoke('sightline:remove-voice-model'),
-  transcribe: (pcm) => invoke('sightline:transcribe', pcm),
+  transcribe: (pcm, verify) => invoke('sightline:transcribe', pcm, verify === true),
   ttsStatus: () => invoke('sightline:tts-status'),
   installTts: (key) => invoke('sightline:install-tts', key),
   removeTts: (key) => invoke('sightline:remove-tts', key),

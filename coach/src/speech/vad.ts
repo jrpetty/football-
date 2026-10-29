@@ -162,6 +162,22 @@ const WAKE = /^(?:(?:hey|hi|ok|okay|yo|so)\s+)?(?:coach|couch|coat|coach's|coach
 /** What the recogniser makes of a cough, a click or game noise: never a question. */
 const NOISE = /^(?:you|thank you|thanks|thanks for watching|bye|uh+|um+|hm+|mm+|ah+|oh+|okay|ok|yeah|yes|no|the|a|i|so|and|huh|wow|nice|what)$/i
 
+/**
+ * "Coach" as the recogniser often mishears it ("Ouch,", "Poch,", "Hoech,"): a first word within two
+ * letters of "coach", followed by a comma (the pause after a name). Without the comma, only the
+ * listed spellings count, so "catch them" or "each of you" are not taken for the coach.
+ */
+function nearWake(text: string): RegExpExecArray | null {
+  const m = /^((?:hey|hi|ok|okay|yo|so)\s+)?([a-z']{3,7}),\s*/i.exec(text)
+  return m && editDistance(m[2].toLowerCase(), 'coach') <= 2 ? m : null
+}
+
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)))
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+  return d[a.length][b.length]
+}
+
 function words(text: string): string[] {
   return text
     .toLowerCase()
@@ -187,7 +203,7 @@ export function heardCommand(transcript: string, wakeWord: boolean, awaitingQues
   const text = transcript.trim().replace(/\s+/g, ' ')
   const plain = words(text).join(' ')
   if (!plain || NOISE.test(plain)) return { kind: 'ignore' }
-  const m = WAKE.exec(text.replace(/^[^a-z]+/i, ''))
+  const m = WAKE.exec(text.replace(/^[^a-z]+/i, '')) ?? nearWake(text.replace(/^[^a-z]+/i, ''))
   if (m) {
     const rest = text.replace(/^[^a-z]+/i, '').slice(m[0].length).trim()
     if (!rest || NOISE.test(words(rest).join(' '))) return { kind: 'wake' }
@@ -205,7 +221,7 @@ function capitalise(s: string): string {
 /** A talk-key question without a leading "Coach," (everything said with the key is for the coach). */
 export function withoutWakeWord(transcript: string): string {
   const text = transcript.trim().replace(/^[^a-z]+/i, '')
-  const m = WAKE.exec(text)
+  const m = WAKE.exec(text) ?? nearWake(text)
   const rest = m ? text.slice(m[0].length).trim() : text
   return rest ? capitalise(rest) : transcript.trim()
 }

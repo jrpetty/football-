@@ -374,6 +374,7 @@ export function App() {
               cloud={cloud}
               usage={usage}
               info={info}
+              bridge={bridge}
               onStart={start}
               onTab={setTab}
             />

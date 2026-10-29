@@ -1008,8 +1008,49 @@ export class CoachSession {
     this.cloud = cloud
   }
 
+  /** The ready check is waiting for the talk key: a press only answers it. */
+  private keyTest: ((ok: boolean) => void) | null = null
+
+  /** Ready check: resolves true when the talk key reaches the app within 15 s (nothing is recorded). */
+  testTalkKey(): Promise<boolean> {
+    this.keyTest?.(false)
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.keyTest = null
+        resolve(false)
+      }, 15_000)
+      this.keyTest = (ok) => {
+        clearTimeout(timer)
+        this.keyTest = null
+        resolve(ok)
+      }
+    })
+  }
+
+  /** Ready check: open the microphone for a moment and report the loudest level heard (0..1). */
+  async testMic(): Promise<{ ok: true; peak: number } | { ok: false; error: string }> {
+    if (!this.settings?.voiceInput) return { ok: false, error: 'Voice input is off.' }
+    try {
+      let peak = 0
+      const rec = await PushToTalkRecorder.start(() => undefined)
+      const end = Date.now() + 2500
+      while (Date.now() < end) {
+        await new Promise((r) => setTimeout(r, 50))
+        peak = Math.max(peak, rec.level)
+      }
+      rec.cancel()
+      return { ok: true, peak }
+    } catch (err) {
+      return { ok: false, error: micErrorMessage(err) }
+    }
+  }
+
   /** The talk key: a press starts recording; the next tap, or letting go of a held key, asks. */
   async talkKey(action: 'start' | 'stop', cloud: CloudStatus): Promise<void> {
+    if (this.keyTest) {
+      if (action === 'start') this.keyTest(true)
+      return
+    }
     if (action === 'start') {
       if (this.state.talk === 'idle') await this.startTalk(cloud)
     } else if (this.state.talk === 'recording') await this.finishTalk(cloud)
@@ -1151,7 +1192,8 @@ export class CoachSession {
     if (this.listenBusy || this.state.talk !== 'idle') return
     this.listenBusy = true
     try {
-      const text = (await this.bridge.transcribe(trimToSpeech(pcm))).trim()
+      // Checked for speech first (game sound is dropped before it is transcribed).
+      const text = (await this.bridge.transcribe(trimToSpeech(pcm), true)).trim()
       if (!text) return
       const h = heardCommand(text, this.settings?.wakeWord ?? true, Date.now() < this.awaitUntil)
       this.set({ listen: { ...this.state.listen, error: null, heard: { text, kind: h.kind, at: Date.now() }, awaiting: h.kind === 'wake' } })

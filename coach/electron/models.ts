@@ -44,6 +44,53 @@ export const ASR_MODEL: ModelSpec = {
   files: ['preprocess.onnx', 'encode.int8.onnx', 'uncached_decode.int8.onnx', 'cached_decode.int8.onnx', 'tokens.txt', 'LICENSE'],
 }
 
+/** The larger Moonshine: about the same words right on clear speech in our tests, more robust on real voices, twice as slow. */
+export const ASR_MODEL_BASE: ModelSpec = {
+  id: 'moonshine-base-en-int8',
+  kind: 'asr',
+  label: 'Moonshine base (English), int8',
+  license: 'MIT (Useful Sensors); runtime sherpa-onnx, Apache-2.0',
+  url: `${RELEASES}/asr-models/sherpa-onnx-moonshine-base-en-int8.tar.bz2`,
+  sha256: '21870cecaa2e44e4e2bf63e02d1072bed183ccd10284871353bd9d24dad14e5e',
+  archiveBytes: 250_807_309,
+  root: 'sherpa-onnx-moonshine-base-en-int8',
+  files: ['preprocess.onnx', 'encode.int8.onnx', 'uncached_decode.int8.onnx', 'cached_decode.int8.onnx', 'tokens.txt', 'LICENSE'],
+}
+
+export const ASR_MODELS = { tiny: ASR_MODEL, base: ASR_MODEL_BASE } as const
+export type AsrModelKey = keyof typeof ASR_MODELS
+
+/** Silero VAD: tells speech from other sound (game audio) before anything is transcribed. One small file. */
+export const VAD_MODEL = {
+  id: 'silero-vad',
+  url: `${RELEASES}/asr-models/silero_vad.onnx`,
+  sha256: '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6',
+  bytes: 643_854,
+  file: 'silero_vad.onnx',
+  license: 'MIT (Silero Team)',
+} as const
+
+export function vadPath(root: string): string {
+  return join(root, 'models', VAD_MODEL.id, VAD_MODEL.file)
+}
+
+/** Download and verify the voice detector (a single file). */
+export async function installVad(root: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  const res = await fetchImpl(VAD_MODEL.url, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Voice detector download failed (HTTP ${res.status}).`)
+  const data = Buffer.from(await res.arrayBuffer())
+  if (createHash('sha256').update(data).digest('hex') !== VAD_MODEL.sha256) throw new Error('The voice detector did not match its expected checksum; nothing was installed.')
+  const path = vadPath(root)
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(`${path}.partial`, data)
+  await rename(`${path}.partial`, path)
+}
+
+export async function isVadInstalled(root: string): Promise<boolean> {
+  const s = await stat(vadPath(root)).catch(() => null)
+  return !!s?.isFile() && s.size === VAD_MODEL.bytes
+}
+
 /** Neural voices. Jenny is fast enough for any PC; Kokoro sounds best but needs a quicker CPU. */
 export const TTS_MODELS = {
   jenny: {

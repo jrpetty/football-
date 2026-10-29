@@ -5029,3 +5029,67 @@ td > .swatch {
   align-items: center;
   margin-top: 8px;
 }
+
+/* Ready check */
+.ready-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ready-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.ready-list li:first-child {
+  border-top: none;
+}
+
+.ready-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex: none;
+}
+
+.ready-ok .ready-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.ready-warn .ready-icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.ready-bad .ready-icon {
+  background: var(--live-soft);
+  color: var(--live);
+}
+
+.ready-off .ready-icon {
+  background: var(--bg-sunken);
+  color: var(--text-2);
+}
+
+.ready-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.ready-action {
+  flex: none;
+}

@@ -63,7 +63,7 @@ const CLOUD_UNAVAILABLE: CloudStatus = {
 }
 
 const NO_GSI: GsiServerStatus = { available: false, enabled: false, listening: false, port: 0, lastAt: null, updates: 0, error: 'Game State Integration needs the desktop app.' }
-const NO_VOICE: VoiceModelStatus = { installed: false, installing: false, progress: 0, error: 'Voice input needs the desktop app.', sizeMb: 108 }
+const NO_VOICE: VoiceModelStatus = { installed: false, installing: false, progress: 0, error: 'Voice input needs the desktop app.', sizeMb: 108, model: 'tiny', vad: false }
 const NO_TTS: TtsStatus = {
   available: false,
   models: {

@@ -26,6 +26,8 @@ export interface CoachSettings {
   readonly listen: ListenMode
   /** Always listening: only speech that starts with "coach" is a question. */
   readonly wakeWord: boolean
+  /** The speech recognition model: tiny (fast) or base (bigger, slower, more robust). */
+  readonly speechModel: 'tiny' | 'base'
   /** Tournament / event play: all coaching output is disabled (event rules can be stricter than publishers'). */
   readonly tournament: boolean
   /** For the generic pack: which game this is (a policy registry id such as "valorant"), or null if unlisted. */
@@ -152,6 +154,7 @@ export const DEFAULT_SETTINGS: CoachSettings = {
   voiceInput: false,
   listen: 'key',
   wakeWord: true,
+  speechModel: 'tiny',
   tournament: false,
   gameId: null,
   context: {},
@@ -202,6 +205,7 @@ export function sanitizeSettings(input: unknown, base: CoachSettings = DEFAULT_S
     voiceInput: typeof o.voiceInput === 'boolean' ? o.voiceInput : base.voiceInput,
     listen: pick(o.listen, LISTEN_MODES, base.listen),
     wakeWord: typeof o.wakeWord === 'boolean' ? o.wakeWord : base.wakeWord,
+    speechModel: o.speechModel === 'base' || o.speechModel === 'tiny' ? o.speechModel : base.speechModel,
     tournament: typeof o.tournament === 'boolean' ? o.tournament : base.tournament,
     gameId: id(o.gameId, base.gameId),
     context: sanitizeContext(o.context, base.context),
