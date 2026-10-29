@@ -360,6 +360,24 @@ Legend:
 - ☑ Voice input moved out of `src/ui/session.ts` into `src/ui/voiceInput.ts` (session.ts 1,628 → 1,416 lines). `src/core/engine.ts` is still large (about 1,300 lines); not split this round.
 - ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
 
+## v18 delivery
+
+- ☑ Your whole AoE IV history from AoE4World (`src/core/aoe4/history.ts`), once the profile is linked: the games list (up to 200) and the summaries of recent games, read slowly and each once. Progress shows:
+  - your week against the 4 weeks before (games, wins, Feudal and Castle times, villagers at 10:00, the worst matchup and what they made in the losses);
+  - trends game by game;
+  - win rates by matchup, civilisation and map.
+
+  *Checked on two real AoE4World summaries saved in a public project (benjaminshoemaker/aoe4-game-analyzer); aoe4world.com cannot be reached from the development sandbox, so the live service is untested. QA 19.1.*
+- ☑ Build-order trainer (`src/core/aoe4/buildOrder.ts`): builds made from a real game (yours, a pasted link, or a suggested recent high-rated win), with ages, first buildings, units and technologies, and villager counts. Against the AI the next steps are called during play (a new "build" message kind: paced, only where live coaching is allowed); after a game each step is on time, early, late or not made.
+
+  *On a real summary (Beasty's Ayyubids): 30 steps from a Mill at 0:26 to a Springald at 12:06, called in 17 lines (close steps together), each 8 s before its time.*
+- ☑ Practice plans (`src/core/analyses/practice.ts`): up to three weaknesses that stand out (villagers at 10:00, Feudal and Castle times, recurring mistakes), targets from your own numbers, 3 games each, before and after.
+- ☑ Opponent card (`src/core/aoe4/opponentCard.ts`) from the pack's civilisation notes. Before the match in any mode; during play where live coaching is allowed.
+- ☑ Fixed: the civilisation chosen on the Coach screen is stored as a name, and the per-civilisation villager curve (v17) and the Golden Horde note looked it up as an id, so they never applied in a real session. Now resolved to the id; covered by an engine test.
+- ☑ App tests (CI): the Progress tab with a seeded history and build, and the build trainer calling steps in the AoE IV demo. 6 of 6 pass locally.
+- ◐ Not done: the opponent's own AoE4World history on the card (their favourite civilisations and openings). That needs a decision on fair play first.
+- ◐ Waiting on a mid-game AoE IV screenshot with the villager count, and your real villager counts at 5, 10 and 15 minutes. *QA 15.1, 18.2.*
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

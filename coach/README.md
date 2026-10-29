@@ -442,6 +442,50 @@ Then press **Choose the game window**, play, and listen.
 
   *Measured on six fonts: trusted after 15 to 21 model readings; 93–100% of
   numbers read; none read wrong.*
+- **Progress** (its own tab).
+  - **Your whole AoE IV history.** With your AoE4World profile linked, the
+    coach reads every public Ranked and Quick Match game you play, also the
+    ones without the coach running. It shows:
+    - **Your week** against the 4 weeks before: games and wins; Feudal and
+      Castle times; villagers at 10:00; the matchup going worst, with what
+      they made in the losses. For example: "Feudal Age 44 s faster than the
+      4 weeks before (4:38 against 5:22; 6 games this week, 19 before)."
+    - **Trends**, game by game, for all civilisations or one.
+    - **Win rates** by matchup, civilisation and map.
+
+    The summaries are read slowly (one every 1.5 s, at most 30 per sync) and
+    each is fetched once, as AoE4World asks of apps.
+  - **Build-order trainer (AoE IV).** A build is made from a real game: one
+    of yours, any AoE4World game you paste, or a suggested recent win by a
+    high-rated player with your civilisation. It holds the age-ups, the first
+    of each building, unit and technology, and villager counts, with their
+    times.
+    - Against the AI, the coach calls the next steps as you play: "Build:
+      Barracks at 3:10, then Feudal Age (Council Hall) by 4:30."
+    - After any game, each step shows as on time, early, late or not made,
+      biggest gaps first: "Feudal Age 0:45 late (5:15; the build 4:30)."
+
+    The game's record has no information on which resource each villager
+    worked, so builds don't claim it.
+  - **Practice plans.** The two or three weaknesses that stand out in your
+    recent games: villagers at 10:00, Feudal and Castle times, or a
+    recurring mistake (housed, idle villagers, floating).
+    - Each comes with a target set from your own numbers, a drill and 3
+      games. Games count for the focus that was current when you played them.
+    - It then shows before and after: "3 of 3 games: 34 villagers against 29
+      before (target 33). Target reached."
+    - The focus is said at the start of a game where live coaching is
+      allowed, and shown on the Coach screen.
+- **Opponent card (AoE IV).** One screen on the civilisation you face:
+  - their usual plans age by age, with timings and how to answer them;
+  - their strengths and weak windows;
+  - their unique units, with what beats them for your civilisation;
+  - your own plan for the age.
+
+  Before the match, pick their civilisation from the loading screen (any
+  mode). During play it opens by itself where live coaching is allowed. It
+  comes from the coach's notes on each civilisation, not from your
+  opponent's own games.
 - **Your usual.** Once three of your matches have a reading at a
   checkpoint, the coach compares you with yourself as well as with the
   curve: "At 10:00 you had 31 villagers; one Town Center that never stops

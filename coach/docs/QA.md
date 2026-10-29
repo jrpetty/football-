@@ -268,3 +268,16 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 18.6 | Play the Order of the Dragon (or Golden Horde) against the AI. | The villager curve uses 23 s Gilded Villagers (19 at 5:00, 32 at 10:00). Golden Horde: the session says the villager count is not judged. |
 | 18.7 | Commentary on, voice muted, a game against the AI. Open "Why didn't it say that?" on the Coach screen. | Lines appear in "Coach said" without repeating; the held-back list shows lines with a reason (pacing, muted, the rules for the mode). |
 | 18.8 | Settings → Voice input: switch the speech model to "More accurate (Moonshine base)" and ask three questions with game sound on. | It downloads once (251 MB) and answers; game sound alone is not transcribed as a question. |
+
+## 19. Progress, build orders, practice and the opponent card
+
+| # | Steps | Expected |
+|---|---|---|
+| 19.1 | AoE IV with your AoE4World profile linked: open Progress. | "Reading your games list…", then summaries one every second or two (at most 30). Your week, trends and win rates appear. Check two of the numbers against AoE4World's own pages for those games (Feudal time, villagers). |
+| 19.2 | Progress → Build orders → your civilisation → "Suggest one". | A build named after a high-rated player, with its steps (ages, first buildings, units, technologies, villagers). Note the player's rating and whether the steps look like a sensible opening. |
+| 19.3 | "From one of my games": pick a win. Then play a skirmish against the AI with that civilisation. | During play, "Build: …" lines a few seconds before each step (spoken unless muted), none twice, and "End of the build" at the end. After the match, Progress shows each step on time, early, late or not made. |
+| 19.4 | Paste an AoE4World game link and read it. | Both players listed; using one saves their build and sets it for that civilisation. |
+| 19.5 | Ranked 1v1 with a build set. | No build calls during play ("Why didn't it say that?" lists them with the reason); the Training panel says so. |
+| 19.6 | Progress → Practice plan → Start the plan; play 3 games. | The focus is said at the start of each game against the AI and shown on the Coach screen; after 3 games, before and after with "Target reached" or not, and the next focus starts. |
+| 19.7 | Coach screen before a match: Opponent card → pick their civilisation. In a skirmish, start capture on the loading screen. | The card: their plans by age with timings and answers, strengths and weak windows, unique units with what beats them for your civilisation, and your plan. During the skirmish it opens by itself once the loading screen is read. |
+| 19.8 | Settings → Coach screen civilisation: Order of the Dragon; play against the AI. | The villager curve is 2.6 a minute (32 at 10:00, not 36). Golden Horde: the session says the villager count is not judged. |

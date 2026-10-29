@@ -31,6 +31,7 @@ Alongside:
   HUD numbers read on this PC              src/core/hud/glyphs.ts, src/core/hud/reader.ts (in src/worker/host.ts)
   checks against the real game             src/core/truth/ (agreement, AoE4World summaries, the reading log), electron/aoe4world.ts
   voice input                              src/ui/voiceInput.ts, src/speech/ (talk key gestures, voice activity, always listening)
+  progress (AoE IV history, builds, plans) src/core/aoe4/ (history, buildOrder, names, opponentCard), src/core/analyses/practice.ts, src/ui/progressStore.ts
 ```
 
 `src/core/` is pure TypeScript with no DOM, Electron or Node dependencies. The
@@ -184,7 +185,7 @@ stays bounded instead of growing.
 
 ## Testing
 
-`npm test` runs 268 tests (Node's test runner, TypeScript run directly):
+`npm test` runs 282 tests (Node's test runner, TypeScript run directly):
 
 - **Vision:** detector accuracy, missing-bar handling, smoothing, staleness,
   and rule semantics.
