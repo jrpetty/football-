@@ -59,7 +59,11 @@ export function HistoryView({ state, session, profile, settings, onSettings, bri
       ) : null}
 
       {mine.length === 0 ? (
-        <div className="empty">No matches recorded for {profile.game.title} yet. A match is recorded when its end is visible on screen, or when you press “Match over”.</div>
+        <>
+          <div className="empty">No matches recorded for {profile.game.title} yet. A match is recorded when its end is visible on screen, or when you press “Match over”.</div>
+          {/* Set up the check against the real game before the first match. */}
+          <AccuracyPanel state={state} session={session} profile={profile} settings={settings} onSettings={onSettings} bridge={bridge} matches={mine} />
+        </>
       ) : (
         <>
           <section className="panel">

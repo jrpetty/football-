@@ -149,7 +149,7 @@ function Aoe4WorldSetup({ settings, onSettings, bridge }: { settings: CoachSetti
               {busy ? 'Looking…' : 'Find me on AoE4World'}
             </button>
           </div>
-          <span className="muted small">Only public Ranked and Quick Match games are on AoE4World. Nothing is sent but your profile number, and only when a match is checked.</span>
+          <span className="muted small">Only public Ranked and Quick Match games are on AoE4World. Searching sends the name you type; after that only your profile number is sent, and only when a match is checked.</span>
           {error ? <Notice level="warning">{error}</Notice> : null}
           {found ? (
             found.length ? (

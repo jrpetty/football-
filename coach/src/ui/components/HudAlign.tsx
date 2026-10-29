@@ -108,12 +108,21 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
       <div>
         <h1>Mark the numbers on your screen</h1>
         <p className="lede">
-          Pick a number on the right, then drag a box tightly around it on the picture (the whole number, nothing else). The coach then learns your HUD's digits from what the cloud model reads, and reads them on this PC once the two agree.
+          Pick a number from the list, then drag a box tightly around it on the picture (the whole number, nothing else). The coach then learns your HUD's digits from what the cloud model reads, and reads them on this PC once the two agree.
         </p>
       </div>
       <div className="hud-align">
         <div className="align-stage" style={{ width: dims.w, height: dims.h }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
           <canvas ref={canvas} />
+          {state === 'none' ? (
+            <div className="empty" style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center', padding: 24 }}>
+              <span>No picture yet. Start capture in a match and open this again, or use a screenshot of your game (full size, with the HUD showing).</span>
+              <label className="btn" onPointerDown={(e) => e.stopPropagation()}>
+                Use a screenshot…
+                <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void pick(e.target.files?.[0])} />
+              </label>
+            </div>
+          ) : null}
           {state === 'ready'
             ? props.specs.map((s) => {
                 const b = boxes[s.key]
@@ -153,7 +162,6 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
           })}
         </ol>
       </div>
-      {state === 'none' ? <p className="muted small">No picture yet: start capture (in a match) or pick a screenshot of your game below.</p> : null}
       {sel && boxes[selected] ? (
         <p className={`small ${n ? '' : 'warn-text'}`}>
           {n ? `${sel.label}: ${n} characters found in the box. If that is more or fewer than the number shows, redraw it tighter.` : `${sel.label}: no characters found in the box. Draw it around the number.`}
