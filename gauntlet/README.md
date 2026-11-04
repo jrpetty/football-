@@ -288,11 +288,11 @@ default repeat count. Bump the suite `version` when you change it.
 
 | Test | Id | What it does |
 |---|---|---|
-| Monday Inbox | `work.inbox-triage` | Thirty emails, one scam, two duplicates and a deadline that moves twice. Can it clear your Monday? |
-| Find a Slot | `work.meeting-scheduler` | Five people, four time zones, the week the clocks change. When is the earliest slot that works? |
-| Expense Policy Check | `work.expense-audit` | Twenty-six claim lines, one policy, every penny checked. Who gets paid what? |
-| Reconcile the Account | `work.bank-reconciliation` | Sixty lines of bank statement and cash book. Can it find the swapped digits and the double payment? |
-| What Changed in the Contract? | `work.contract-redline` | Two drafts, fifteen hidden changes and a lot of noise. Would you sign it? |
+| Monday Inbox | `work.inbox-triage` | A hundred emails, three scams, and a deadline tied to an audit that keeps moving. Can it clear your Monday? |
+| Find a Slot | `work.meeting-scheduler` | Eight people, six time zones, eight meetings booked in order the week the clocks change. When does each one go? |
+| Expense Policy Check | `work.expense-audit` | A hundred and eighty claim lines, one policy full of exceptions, every penny checked. Who gets paid what? |
+| Reconcile the Account | `work.bank-reconciliation` | Two hundred and seventy lines of statement and cash book. Can it find every swapped digit and double payment? |
+| What Changed in the Contract? | `work.contract-redline` | Two drafts, thirty hidden changes and a lot of noise. Would you sign it? |
 | Ask the Database | `work.sql-questions` | Twelve questions from the boss, one SQLite query each. The query runs on hidden copies of the database too, so hard-coding fails. |
 | Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
 | The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |

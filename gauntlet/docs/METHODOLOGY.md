@@ -454,19 +454,19 @@ human opinion is involved: every mark is a machine check against a key computed 
 
 | Test | The task | Where the key comes from |
 |---|---|---|
-| Monday Inbox (`work.inbox-triage`) | 15–30 emails: a category for each (fixed list, first rule that applies) and every action with its owner, due date (ISO) and priority (fixed rubric). | The generator keeps each email's structured intent; `solve()` applies the stated rules: due-date phrases ("by next Wednesday", "within five working days", "by the end of the month") resolved against England's bank holidays, corrections, reassignments and cancellations applied to the original request, exact copies marked duplicate, lookalike-domain scams marked phishing. |
-| Find a Slot (`work.meeting-scheduler`) | The earliest start (London time, quarter hours) of four meetings for a team in up to six time zones. | Two independent solvers (a scan of every 5-minute start against every rule, and interval arithmetic) must agree. Real time-zone rules (`zoneinfo`) decide the offsets, including weeks when the UK, Europe, the US or Sydney change their clocks; the prompt states the clock-change rules, not the offsets (the easy cases state the offsets). |
-| Expense Policy Check (`work.expense-audit`) | Every claim line paid less than claimed, with the first rule it breaks and the amount to pay; totals per employee, the batch total and reclaimable VAT. | `audit()` applies the written policy to the structured lines with exact decimal arithmetic (half-up to the penny): conversion first, then the rules in order, daily meal limits shared across a day's meals, 45p/25p mileage counted across the 6 April tax-year reset. |
-| Reconcile the Account (`work.bank-reconciliation`) | Every bank line and cash-book entry matched or given a reason from a fixed list, every explained difference (keying error, FX) with its amount, and the adjusted balance. | The key is the generator's own transaction list. `check_unique()` re-derives every one-to-one match from the printed amounts, dates and references alone and asserts there is exactly one; `balance()` proves the adjusted cash book equals the adjusted bank balance. |
-| What Changed in the Contract? (`work.contract-redline`) | Every substantive change between two drafts of a services agreement, by clause number in the new draft, with its type and old and new values. | The diff of the two STRUCTURED versions (clause lists and parameters), so formatting noise (renumbering, moved clauses, renumbered cross-references, "thirty (30) days" written "30 days", recased headings, American spellings) cannot enter the key. |
+| Monday Inbox (`work.inbox-triage`) | 15 / 44–48 / 96–112 emails (easy / medium / hard): a category for each (fixed list, first rule that applies) and every action with its owner, due date (ISO) and priority (fixed rubric with a key-account exception). | The generator keeps each email's structured intent; `solve()` applies the stated rules: due-date phrases ("by next Wednesday", "within five working days", "by the end of the month", "three working days before the site audit") resolved against England's bank holidays and the event's final date, corrections, reassignments (twice) and cancellations applied to the original request, chasers and forwarded text that create no action, exact copies marked duplicate, lookalike-domain scams marked phishing. |
+| Find a Slot (`work.meeting-scheduler`) | The earliest start (London time, quarter hours) of 4 / 6 / 8 meetings for 3 / 5 / 7–8 people in up to six time zones; from the medium cases on the meetings are booked in order, each blocking the next, with recurring entries and two or three late updates. | Two independent solvers (a scan of every 15-minute start against every rule, and interval arithmetic) must agree. Real time-zone rules (`zoneinfo`) decide the offsets, including weeks when the UK, Europe, the US or Sydney change their clocks; the prompt states the clock-change rules, not the offsets (the easy cases state the offsets). |
+| Expense Policy Check (`work.expense-audit`) | 10–12 / 67–74 / 168–179 claim lines: every line paid less than claimed, with the first rule it breaks and the amount to pay; totals per employee, the batch total and reclaimable VAT. | `audit()` applies the written policy to the structured lines with exact decimal arithmetic (half-up to the penny): conversion first, then the rules in order, daily meal limits shared across a day's meals and £20 higher on hotel nights, approvals checked for employee and limit, alcohol on approved entertainment capped at £15 a head, late lines rescued only by a LATE approval for that claim, 45p/25p mileage plus passenger supplement counted in date order across an employee's claims and the 6 April reset. |
+| Reconcile the Account (`work.bank-reconciliation`) | 14 / 46 / about 137 lines a side: every bank line and cash-book entry matched or given a reason from a fixed list (BACS runs, instalments and part-payments included), every explained difference (keying error, FX) with its amount, last month's outstanding items (hard cases) and the adjusted balance. | The key is the generator's own transaction list. `check_unique()` re-derives every one-to-one match from the printed amounts, dates and references alone and asserts there is exactly one; `balance()` proves the adjusted cash book equals the adjusted bank balance. |
+| What Changed in the Contract? (`work.contract-redline`) | 4 / 17–18 / 28–32 substantive changes between two drafts of a services agreement (1,600 / 3,500 / 4,000–4,600 words) with three schedules (sites, service levels, rate card), by clause or schedule row in the new draft, with type and old and new values (obligation, party and cross-reference changes included). | The diff of the two STRUCTURED versions (clause lists and parameters), so formatting noise (renumbering, moved clauses, a re-sorted rate card, renumbered cross-references, "thirty (30) days" written "30 days", recased headings, American spellings) cannot enter the key. |
 
 **Scoring.** All five use the `json` scorer with `lenient` (§5.1a; presentation never costs a point: key case and spacing,
 `£` signs and thousands separators, `"Clause 9.2"` for `"9.2"`, a `T` or "London" in a time, a one-item list, prose
 around the JSON). Credit is fine-grained and the marking is stated in the prompt.
 
-**Points sit where the skill is.** In Monday Inbox, Reconcile the Account and What Changed in the Contract? a field
-where a trap sits is worth more than a routine field (`weights`, per case): 3 points instead of 1 in the inbox and the
-reconciliation, 2 in the contract. A trap field is one the generator's careless reading gets wrong, i.e. the fields
+**Points sit where the skill is.** In Monday Inbox, Expense Policy Check, Reconcile the Account and What Changed in the
+Contract? a field where a trap sits is worth more than a routine field (`weights`, per case): 3 points instead of 1 in
+the inbox, the expense audit and the reconciliation, 2 in the contract. A trap field is one the generator's careless reading gets wrong, i.e. the fields
 touched by a scam, a duplicate, a correction, reassignment or cancellation, a moved meeting or a tricky date (plus the
 newsletter that tries to instruct the AI); a split, a duplicate, a reversal, a keying or FX difference, a timing item
 or the balance; a change hidden by renumbering, a moved clause, a "not" or a definition. An invented item costs its
@@ -475,25 +475,35 @@ would earn (`aboveConstant`), so an answer that reads nothing scores 0.
 
 | Test | Fields in a case | Extra items |
 |---|---|---|
-| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 37–64 fields; trap fields ×3 | An action on an email that has none costs 3 fields ×3 (`sets: {actions: 3}`) |
-| Find a Slot | 1 per meeting: 4 | — |
-| Expense Policy Check | 2 per non-compliant line (rule, amount) + 1 per employee total + total + VAT: 12–34 | A compliant line listed costs 2 (`sets: {non_compliant: 2}`) |
-| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69; trap fields ×3 | An invented difference costs 2 fields ×3 (`sets: {differences: 2}`) |
-| What Changed in the Contract? | 3 per change (type, old, new): 12–45; trap fields ×2 | A listed non-change costs 3 fields ×2 (`sets: {changes: 3}`) |
+| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 37–263 fields; trap fields ×3 | An action on an email that has none costs 3 fields ×3 (`sets: {actions: 3}`) |
+| Find a Slot | 1 per meeting: 4 / 6 / 8 | — |
+| Expense Policy Check | 2 per non-compliant line (rule, amount) + 1 per employee total + total + VAT: 12–164 fields; trap fields ×3 | A compliant line listed costs 2 fields ×3 (`sets: {non_compliant: 2}`) |
+| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a list counts its length and each id) + 2 per difference + 1 per prior item + the balance: 31–322 fields; trap fields ×3 | An invented difference costs 2 fields ×3 (`sets: {differences: 2}`) |
+| What Changed in the Contract? | 3 per change (type, old, new): 12–96 fields; trap fields ×2 | A listed non-change costs 3 fields ×2 (`sets: {changes: 3}`) |
+
+Money totals are compared to the penny (`numberTolerance: 1e-9`, so a total of £14,000 off by 1p is wrong).
 
 **Measured spread** (`node verification/realworld-work/spread.mts`, scripted answers through the real scorer; the
 "careless" answer is each generator's careless solver: first-stated deadlines, the nearest Wednesday for "next
 Wednesday", bank holidays and duplicates missed, scams believed; fixed "usual" UTC offsets, later updates and travel
 time ignored; meal limits per meal, approvals taken from the claim form, 45p throughout; exact-amount matching only;
-old clause numbers, negations and definition changes missed):
+old clause numbers, negations, definition, obligation, party and cross-reference changes missed). The "slip" answer is
+a strong, careful reader who makes one human slip: misses that an event a deadline depends on has moved (inbox),
+overlooks the last calendar update (scheduler), forgets the hotel-night meal uplift (expenses), books the returned
+cheque as a bank charge and flips the FX difference's sign (bank), or takes a re-pointed cross-reference for
+renumbering (contract):
 
-| Test | Careful (key) | Careless (easy / medium / hard) | Do-nothing `{}` | Copy the prompt | Random filler |
-|---|---:|---:|---:|---:|---:|
-| Monday Inbox | 100% | 53% (65 / 49 / 44) | 0% | 0% | 0% |
-| Find a Slot | 100% | 28% (67 / 17 / 0) | 0% | 0% | 0% |
-| Expense Policy Check | 100% | 51% (60 / 57 / 36) | 0% | 0% | 0% |
-| Reconcile the Account | 100% | 49% (63 / 44 / 38) | 0% | 0% | 0% |
-| What Changed in the Contract? | 100% | 46% (67 / 45 / 26) | 0% | 0% | 0% |
+| Test | Careful (key) | Slip (easy / medium / hard) | Careless (easy / medium / hard) | Do-nothing `{}` | Copy the prompt | Random filler |
+|---|---:|---:|---:|---:|---:|---:|
+| Monday Inbox | 100% | 97% (100 / 96 / 96) | 49% (57 / 46 / 43) | 0% | 0% | 0% |
+| Find a Slot | 100% | 71% (100 / 50 / 63) | 32% (67 / 17 / 13) | 0% | 0% | 0% |
+| Expense Policy Check | 100% | 77% (100 / 62 / 69) | 21% (34 / 12 / 18) | 0% | 0% | 0% |
+| Reconcile the Account | 100% | 98% (100 / 96 / 97) | 50% (63 / 49 / 38) | 0% | 0% | 0% |
+| What Changed in the Contract? | 100% | 97% (100 / 97 / 94) | 47% (67 / 48 / 28) | 0% | 0% | 0% |
+
+These scripted answers bound the scale; they are not models. A blind calibration (round 1) found today's models far
+stronger than the careless script, which is why the medium and hard thirds were rebuilt with 3–5 times the volume and
+more interacting rules (hardening round); re-calibrate on t05/t08, s05/s08, x05/x08, r05/r08 and k05/k09.
 
 A constant answer that reads nothing (every email given one category, no actions) scores 0% on Monday Inbox. In
 Find a Slot's hard cases every meeting is chosen so that the careless reading gets it wrong (clock changes and

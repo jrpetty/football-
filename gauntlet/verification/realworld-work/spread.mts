@@ -11,7 +11,7 @@ import type { PromptTest, ScorerSpec } from '../../src/core/types.ts';
 
 export const WORK_IDS = ['work.inbox-triage', 'work.meeting-scheduler', 'work.expense-audit', 'work.bank-reconciliation', 'work.contract-redline'];
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const SCRIPTED: Record<string, Record<string, { careless: unknown }>> = JSON.parse(readFileSync(join(HERE, 'scripted.json'), 'utf8'));
+export const SCRIPTED: Record<string, Record<string, { careless: unknown; slip: unknown }>> = JSON.parse(readFileSync(join(HERE, 'scripted.json'), 'utf8'));
 
 const judges = { ids: [], ask: async () => [] };
 
@@ -36,6 +36,7 @@ export interface Row {
   points: number;
   careful: number;
   careless: number;
+  slip: number;
   nothing: number;
   copy: number;
   random: number;
@@ -49,12 +50,13 @@ export async function spread(): Promise<Row[]> {
       const task = renderCase(t, c).turns.join('\n');
       const careful = await scoreReply(sc, c.expected, '```json\n' + JSON.stringify(c.expected, null, 1) + '\n```', task);
       const careless = await scoreReply(sc, c.expected, '```json\n' + JSON.stringify(SCRIPTED[t.id]![c.id]!.careless) + '\n```', task);
+      const slip = await scoreReply(sc, c.expected, '```json\n' + JSON.stringify(SCRIPTED[t.id]![c.id]!.slip) + '\n```', task);
       const nothing = await scoreReply(sc, c.expected, '{}', task);
       const copy = await scoreReply(sc, c.expected, task, task);
       let rnd = 0;
       for (let k = 0; k < 4; k++) rnd += (await scoreReply(sc, c.expected, filler(77 + k * 13 + rows.length), task)).score ?? 0;
       const items = (careful.detail.items ?? []).length;
-      rows.push({ test: t.id, caseId: c.id, points: items, careful: careful.score ?? 0, careless: careless.score ?? 0, nothing: nothing.score ?? 0, copy: copy.score ?? 0, random: rnd / 4 });
+      rows.push({ test: t.id, caseId: c.id, points: items, careful: careful.score ?? 0, careless: careless.score ?? 0, slip: slip.score ?? 0, nothing: nothing.score ?? 0, copy: copy.score ?? 0, random: rnd / 4 });
     }
   }
   return rows;
@@ -63,11 +65,11 @@ export async function spread(): Promise<Row[]> {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const rows = await spread();
   const pct = (x: number) => `${Math.round(x * 100)}%`;
-  console.log('test | case | fields | careful | careless | do-nothing | copy-prompt | random');
-  for (const r of rows) console.log(`${r.test} | ${r.caseId} | ${r.points} | ${pct(r.careful)} | ${pct(r.careless)} | ${pct(r.nothing)} | ${pct(r.copy)} | ${pct(r.random)}`);
+  console.log('test | case | fields | careful | slip | careless | do-nothing | copy-prompt | random');
+  for (const r of rows) console.log(`${r.test} | ${r.caseId} | ${r.points} | ${pct(r.careful)} | ${pct(r.slip)} | ${pct(r.careless)} | ${pct(r.nothing)} | ${pct(r.copy)} | ${pct(r.random)}`);
   for (const id of WORK_IDS) {
     const rs = rows.filter((r) => r.test === id);
     const m = (f: (r: Row) => number) => pct(rs.reduce((a, r) => a + f(r), 0) / rs.length);
-    console.log(`MEAN ${id}: fields/case ${Math.min(...rs.map((r) => r.points))}-${Math.max(...rs.map((r) => r.points))}, careful ${m((r) => r.careful)}, careless ${m((r) => r.careless)}, do-nothing ${m((r) => r.nothing)}, copy ${m((r) => r.copy)}, random ${m((r) => r.random)}`);
+    console.log(`MEAN ${id}: fields/case ${Math.min(...rs.map((r) => r.points))}-${Math.max(...rs.map((r) => r.points))}, careful ${m((r) => r.careful)}, slip ${m((r) => r.slip)}, careless ${m((r) => r.careless)}, do-nothing ${m((r) => r.nothing)}, copy ${m((r) => r.copy)}, random ${m((r) => r.random)}`);
   }
 }

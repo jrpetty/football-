@@ -60,6 +60,8 @@ class Person:
         self.events = []  # (local date, start time, end time, title, travel minutes)
         self.focus = []  # (weekday set, start, end, label)
         self.update = None  # dict(kind='add'|'remove'|'move', ...)
+        self.recurring = []  # (weekday set, start, end, title, skipped local date or None)
+        self.rec_ids = set()  # ids of p.events entries that come from a recurring entry (not listed one by one)
         self.buffer_after_long = False
 
 
@@ -90,12 +92,13 @@ class World:
         self.sequential = False
         self.friday_rule = True
         self.offsets_given = False
+        self.update_order = []  # people whose later update message changes an answer, in the order the messages arrive
 
 
 def events_of(p, careless=False):
     """Busy intervals (UTC) for a person, after the later update (unless careless) and with travel time."""
     evs = list(p.events)
-    if p.update and not careless:
+    if p.update and not careless and not getattr(p, 'update_ignored', False):
         u = p.update
         if u['kind'] == 'remove':
             evs = [e for e in evs if e is not u['event']]
@@ -169,7 +172,7 @@ def earliest_scan(w, req, careless=False, booked=()):
         lt = utc_to_local_lon(t, careless)
         if lt.minute % 15 == 0 and all(ok_for(w, p, t, b, careless, [(x[0], x[1], x[2]) for x in booked]) for p in who) and (not req['room'] or room_free(w, t, b, careless, booked)):
             return t
-        t += timedelta(minutes=5)
+        t += timedelta(minutes=15)
     return None
 
 
@@ -324,7 +327,7 @@ def gen(seed, tier, cfg):
     w = World()
     w.win = cfg['win']
     w.offsets_given = tier == 'easy'
-    w.sequential = tier == 'hard'
+    w.sequential = tier != 'easy'
     names = people(rng, len(cfg['cities']))
     for name, city in zip(names, cfg['cities']):
         if city in ('London', 'Lisbon', 'Warsaw', 'Johannesburg'):
@@ -344,6 +347,23 @@ def gen(seed, tier, cfg):
         days = (0, 1, 2, 3, 4) if city != 'Dubai' else (0, 1, 2, 3, 4)
         p = Person(name, city, hrs, days)
         w.people.append(p)
+    # recurring entries (medium / hard): expanded into the calendar, listed once as a rule with one skipped date
+    if tier != 'easy':
+        for p in w.people:
+            if rng.random() < 0.7:
+                rs, re_ = rand_block(rng, p.hours, 30, 60)
+                wds = set(rng.sample(range(5), rng.choice([2, 3])))
+                cands = [x for x in daterange(w.win[0], w.win[1]) if x.weekday() in wds and x not in p.off]
+                skip = rng.choice(cands) if cands else None
+                title = rng.choice(['Team stand-up', 'Client check-in', 'Ops huddle', 'Mentoring session'])
+                p.recurring.append((wds, rs, re_, title, skip))
+                d = w.win[0] - timedelta(days=2)
+                while d <= w.win[1] + timedelta(days=2):
+                    if d.weekday() in wds and d != skip and not (p.city in HOLIDAYS.get(d, ())):
+                        ev = (d, rs, re_, title, 0)
+                        p.events.append(ev)
+                        p.rec_ids.add(id(ev))
+                    d += timedelta(days=1)
     # local working days for each person covering the window
     for p in w.people:
         d = w.win[0] - timedelta(days=1)
@@ -419,7 +439,8 @@ def add_update(w, rng, careless_ans, true_reqs):
             if e[4] == 0:
                 cands.append((p, e))
     rng.shuffle(cands)
-    for p, e in cands[:40]:
+    cands = [(p, e) for p, e in cands if id(e) not in p.rec_ids and p.update is None]
+    for p, e in cands[:60]:
         kind = rng.choice(['remove', 'move', 'add'])
         if kind == 'remove':
             p.update = dict(kind='remove', event=e)
@@ -442,6 +463,7 @@ def add_update(w, rng, careless_ans, true_reqs):
         before = solve(w)
         p.update = p.update_saved
         if any(sol[k] != before[k] for k in sol) and all(v is not None for v in sol.values()):
+            w.update_order.append(p)
             return p
         p.update = None
     return None
@@ -452,12 +474,12 @@ CASES = [
     ('s01', 11, 'easy', dict(cities=['London', 'London', 'New York'], win=(date(2026, 6, 16), date(2026, 6, 18)), events_per_day=[1, 2, 2], inperson=0, room_per_day=[1])),
     ('s02', 12, 'easy', dict(cities=['London', 'Singapore', 'London'], win=(date(2026, 7, 7), date(2026, 7, 9)), events_per_day=[1, 2, 3], inperson=0, room_per_day=[1, 2])),
     ('s03', 13, 'easy', dict(cities=['London', 'Dubai', 'New York'], win=(date(2026, 9, 15), date(2026, 9, 17)), events_per_day=[1, 2], inperson=1, room_per_day=[1])),
-    ('s04', 24, 'medium', dict(cities=['London', 'New York', 'Toronto', 'London'], win=(date(2026, 3, 9), date(2026, 3, 13)), events_per_day=[1, 2, 3], inperson=1, room_per_day=[1, 2])),
-    ('s05', 25, 'medium', dict(cities=['London', 'Singapore', 'Mumbai', 'London'], win=(date(2026, 3, 26), date(2026, 4, 1)), events_per_day=[1, 2, 3], inperson=1, room_per_day=[1, 2])),
-    ('s06', 26, 'medium', dict(cities=['Lisbon', 'New York', 'London', 'Johannesburg'], win=(date(2026, 10, 26), date(2026, 10, 30)), events_per_day=[1, 2, 3], inperson=2, room_per_day=[1, 2])),
-    ('s07', 37, 'hard', dict(cities=['London', 'Sydney', 'Singapore', 'London', 'Mumbai'], win=(date(2026, 3, 30), date(2026, 4, 8)), events_per_day=[1, 2, 3], inperson=2, room_per_day=[1, 2, 3])),
-    ('s08', 38, 'hard', dict(cities=['London', 'New York', 'Warsaw', 'Johannesburg', 'London'], win=(date(2026, 10, 22), date(2026, 10, 30)), events_per_day=[1, 2, 3], inperson=2, room_per_day=[1, 2, 3])),
-    ('s09', 39, 'hard', dict(cities=['London', 'Toronto', 'Dubai', 'Mumbai', 'Lisbon', 'London'], win=(date(2026, 3, 26), date(2026, 4, 3)), events_per_day=[1, 2, 3], inperson=2, room_per_day=[1, 2, 3])),
+    ('s04', 24, 'medium', dict(cities=['London', 'New York', 'Toronto', 'London', 'Lisbon'], win=(date(2026, 3, 9), date(2026, 3, 13)), events_per_day=[1, 2, 3], inperson=1, room_per_day=[1, 2])),
+    ('s05', 25, 'medium', dict(cities=['London', 'Singapore', 'Mumbai', 'London', 'Dubai'], win=(date(2026, 3, 26), date(2026, 4, 1)), events_per_day=[1, 2, 3], inperson=1, room_per_day=[1, 2])),
+    ('s06', 26, 'medium', dict(cities=['Lisbon', 'New York', 'London', 'Johannesburg', 'Warsaw'], win=(date(2026, 10, 26), date(2026, 10, 30)), events_per_day=[1, 2, 3], inperson=2, room_per_day=[1, 2])),
+    ('s07', 37, 'hard', dict(cities=['London', 'Sydney', 'Singapore', 'London', 'Mumbai', 'Dubai', 'London', 'Johannesburg'], win=(date(2026, 3, 30), date(2026, 4, 10)), events_per_day=[1, 2, 3], inperson=3, room_per_day=[1, 2, 3])),
+    ('s08', 38, 'hard', dict(cities=['London', 'New York', 'Warsaw', 'Johannesburg', 'London', 'Toronto', 'Lisbon'], win=(date(2026, 10, 19), date(2026, 10, 30)), events_per_day=[1, 2, 3], inperson=3, room_per_day=[1, 2, 3])),
+    ('s09', 39, 'hard', dict(cities=['London', 'Toronto', 'Dubai', 'Mumbai', 'Lisbon', 'London', 'New York', 'Warsaw'], win=(date(2026, 3, 23), date(2026, 4, 3)), events_per_day=[1, 2, 3], inperson=3, room_per_day=[1, 2, 3])),
 ]
 
 
@@ -465,18 +487,18 @@ def make_requests(w, rng, tier):
     names = [p.name for p in w.people]
     lon = [p.name for p in w.people if p.city == 'London']
     reqs = []
-    sizes = {'easy': [2, 3, 2, 3], 'medium': [3, 2, 4, 3], 'hard': [len(names), 3, 3, 2]}[tier]
-    durs = {'easy': [30, 45, 60, 30], 'medium': [45, 60, 30, 90], 'hard': [60, 90, 45, 30]}[tier]
+    sizes = {'easy': [2, 3, 2, 3], 'medium': [3, 2, 4, 3, 3, 2], 'hard': [5, 3, 3, 2, 4, 3, 2, 3]}[tier]
+    durs = {'easy': [30, 45, 60, 30], 'medium': [45, 60, 30, 90, 60, 45], 'hard': [60, 90, 45, 30, 60, 45, 90, 60]}[tier]
     for i, (k, dur) in enumerate(zip(sizes, durs)):
         who = sorted(rng.sample(names, k), key=names.index)
-        room = bool(lon) and any(n in lon for n in who) and (i == 1 or (tier == 'hard' and i == 0))
+        room = bool(lon) and any(n in lon for n in who) and (i in (1, 4) or (tier == 'hard' and i in (0, 6)))
         nb = None
-        if i == 2 and tier != 'easy':
+        if i in (2, 5) and tier != 'easy':
             d = w.win[0] + timedelta(days=1)
             while d.weekday() >= 5:
                 d += timedelta(days=1)
             nb = (d, time(12, 0))
-        reqs.append(dict(label='abcd'[i], who=who, dur=dur, room=room, not_before=nb))
+        reqs.append(dict(label='abcdefgh'[i], who=who, dur=dur, room=room, not_before=nb))
     return reqs
 
 
@@ -488,8 +510,12 @@ def build_case(cid, seed, tier, cfg):
         if any(v is None for v in base.values()):
             continue
         if tier != 'easy':
-            p = add_update(w, rng, None, None)
-            if p is None:
+            ok = True
+            for _ in range({'medium': 2, 'hard': 3}[tier]):
+                if add_update(w, rng, None, None) is None:
+                    ok = False
+                    break
+            if not ok:
                 continue
         sol = solve(w)
         sol2 = solve2(w)
@@ -499,8 +525,9 @@ def build_case(cid, seed, tier, cfg):
             continue
         care = solve(w, careless=True)
         diff = sum(1 for k in sol if careless_str(care[k]) != lon_str(sol[k]))
-        need = {'easy': 0, 'medium': 2, 'hard': 4}[tier]
-        if len(set(sol.values())) < 3 or len(sol) != 4:
+        n_req = len(w.requests)
+        need = {'easy': 0, 'medium': 3, 'hard': 6}[tier]
+        if len(set(sol.values())) < n_req - 1:
             continue
         if diff < need:
             continue
@@ -533,11 +560,16 @@ def render_person(w, p):
     for days, fs, fe, label in p.focus:
         dn = 'every weekday' if len(days) == 5 else ', '.join(DOW_LONG[i] + 's' for i in sorted(days))
         lines.append(f"  - {label}: {fmt_t(fs)}–{fmt_t(fe)} {dn}")
-    for d, s, e, title, travel in sorted(p.events, key=lambda x: (x[0], x[1])):
+    for wds, rs, re_, title, skip in p.recurring:
+        names_ = [DOW_LONG[i] for i in sorted(wds)]
+        dn = ', '.join(names_[:-1]) + ' and ' + names_[-1]
+        sk = f" (not on {uk(skip)})" if skip else ''
+        lines.append(f"  - Every {dn} {fmt_t(rs)}–{fmt_t(re_)} {title}{sk}")
+    for d, s, e, title, travel in sorted((x for x in p.events if id(x) not in p.rec_ids), key=lambda x: (x[0], x[1])):
         tr = f" — needs {travel} min travel before and after" if travel else ''
         lines.append(f"  - {uk(d)} {fmt_t(s)}–{fmt_t(e)} {title}{tr}")
     if p.buffer_after_long:
-        lines.append("  - Needs at least 15 minutes between any two of the meetings booked in this request (a, b, c, d) that they attend.")
+        lines.append(f"  - Needs at least 15 minutes between any two of the meetings booked in this request ({', '.join(r['label'] for r in w.requests)}) that they attend.")
     return '\n'.join(lines)
 
 
@@ -556,7 +588,8 @@ def describe_update(p):
 
 def prompt(w, tier):
     d0, d1 = w.win
-    lines = [f"I need to book four meetings for our team and I'd like the earliest possible slot for each. The booking window is {uky(d0)} to {uky(d1)} (London dates)."]
+    n_words = {4: 'four', 6: 'six', 8: 'eight'}[len(w.requests)]
+    lines = [f"I need to book {n_words} meetings for our team and I'd like the earliest possible slot for each. The booking window is {uky(d0)} to {uky(d1)} (London dates)."]
     lines.append("")
     lines.append("Calendars (every time is the person's own local time on their own local date):")
     for p in w.people:
@@ -573,7 +606,8 @@ def prompt(w, tier):
              "4. A meeting marked \"in the Fleet Room\" needs the room to be free for the whole meeting.",
              "5. Meetings start on the hour or at :15, :30 or :45 London time."]
     if w.sequential:
-        rules.append("6. Book the meetings in order (a, then b, then c, then d). Once a meeting is booked it is in its attendees' calendars and, if it uses the Fleet Room, in the room's bookings, so later meetings must not overlap it.")
+        order = ', then '.join(r['label'] for r in w.requests)
+        rules.append(f"6. Book the meetings in order ({order}). Once a meeting is booked it is in its attendees' calendars and, if it uses the Fleet Room, in the room's bookings, so later meetings must not overlap it.")
     else:
         rules.append("6. Treat each meeting on its own: they do not block each other.")
     lines += rules
@@ -588,14 +622,13 @@ def prompt(w, tier):
         extra = ' in the Fleet Room (London attendees in the room, everyone else by video)' if r['room'] else ' (video call)'
         nb = f", not starting before {uk(r['not_before'][0])} {fmt_t(r['not_before'][1])} London time" if r.get('not_before') else ''
         lines.append(f"  ({r['label']}) {r['dur']} minutes with {', '.join(r['who'])}{extra}{nb}.")
-    ups = [p for p in w.people if p.update]
-    if ups:
-        p = ups[0]
+    ups = w.update_order or [p for p in w.people if p.update]
+    for i, p in enumerate(ups):
         lines.append("")
-        lines.append(f"Message from {p.name}, received after the calendars above were exported: {describe_update(p)}")
+        lines.append(f"Message {i + 1} from {p.name}, received after the calendars above were exported: {describe_update(p)}")
     lines.append("")
     lines.append("For each meeting give the earliest start that satisfies every rule, as a London date and time (24-hour clock, London local time on that date). "
-                 "Answer with one JSON object exactly in this shape:\n{\"a\": \"YYYY-MM-DD HH:MM\", \"b\": \"YYYY-MM-DD HH:MM\", \"c\": \"YYYY-MM-DD HH:MM\", \"d\": \"YYYY-MM-DD HH:MM\"}\n"
+                 "Answer with one JSON object exactly in this shape:\n{" + ', '.join(f'"{r["label"]}": "YYYY-MM-DD HH:MM"' for r in w.requests) + "}\n"
                  "Each meeting is marked on its start time, right or wrong. Reply with the JSON object only (a ```json code block is fine). "
                  "Give one time per meeting: a field with two times, a range or \"either\" is marked wrong, and if you give more than one JSON answer only the last one counts.")
     return '\n'.join(lines)
@@ -611,7 +644,14 @@ def make_cases():
         if w.offsets_given:
             for d in daterange(w.win[0], w.win[1]):
                 assert datetime.combine(d, time(12), tzinfo=LON).utcoffset() == timedelta(hours=1)
-        out.append(dict(id=cid, tier=tier, w=w, prompt=prompt(w, tier), expected=exp, careless=careless, attempt=attempt))
+        # a strong reader's slip: the last update message is overlooked
+        slip = exp
+        if w.update_order:
+            last = w.update_order[-1]
+            last.update_ignored = True
+            slip = {k: lon_str(v) for k, v in solve(w).items()}
+            last.update_ignored = False
+        out.append(dict(id=cid, tier=tier, w=w, prompt=prompt(w, tier), expected=exp, careless=careless, slip=slip, attempt=attempt))
     return out
 
 
