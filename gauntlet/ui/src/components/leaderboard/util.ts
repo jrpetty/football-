@@ -18,6 +18,8 @@ const SHORT: Record<string, string> = {
   creative: 'Creative',
   extraction: 'Extract',
   trick: 'Fooled?',
+  work: 'Work',
+  life: 'Life',
 };
 
 /** Compact category label for dense table headers and chart axes. */
