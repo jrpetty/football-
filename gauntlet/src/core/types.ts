@@ -395,7 +395,21 @@ export type ScorerSpec =
   /** case.expected: Constraint[]. Partial credit = fraction of constraints satisfied. */
   | { type: 'constraints'; allOrNothing?: boolean }
   /** case.expected: object. Partial credit = fraction of expected leaf fields matched. */
-  | { type: 'json'; unorderedArrays?: boolean; numberTolerance?: number; allOrNothing?: boolean; aliases?: Record<string, string> }
+  | {
+      type: 'json';
+      unorderedArrays?: boolean;
+      numberTolerance?: number;
+      allOrNothing?: boolean;
+      aliases?: Record<string, string>;
+      /** Forgive presentation (key case, "£1,234.56" as text, code punctuation, date-time separators); see src/scoring/json-sets.ts. */
+      lenient?: boolean;
+      /** Top-level keys whose lists are scored as sets (F1 overlap: an extra item costs as much as a missing one). */
+      sets?: string[];
+      /** Top-level keys whose lists of groups are scored pair by pair (pairwise F1 over the partition). */
+      partitions?: string[];
+      /** [answerKey, keyKey]: listing under answerKey an item the key lists under keyKey scores the case 0. */
+      forbidOverlap?: Array<[string, string]>;
+    }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }
   /** LLM-judge (or judge panel) grading against a rubric; case.expected is an optional reference answer. */
