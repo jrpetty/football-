@@ -288,26 +288,34 @@ default repeat count. Bump the suite `version` when you change it.
 
 | Test | Id | What it does |
 |---|---|---|
-| Monday Inbox | `work.inbox-triage` | Thirty emails, one scam, two duplicates and a deadline that moves twice. Can it clear your Monday? |
-| Find a Slot | `work.meeting-scheduler` | Five people, four time zones, the week the clocks change. When is the earliest slot that works? |
-| Expense Policy Check | `work.expense-audit` | Twenty-six claim lines, one policy, every penny checked. Who gets paid what? |
-| Reconcile the Account | `work.bank-reconciliation` | Sixty lines of bank statement and cash book. Can it find the swapped digits and the double payment? |
-| What Changed in the Contract? | `work.contract-redline` | Two drafts, fifteen hidden changes and a lot of noise. Would you sign it? |
+| Monday Inbox | `work.inbox-triage` | A hundred emails, three scams, and a deadline tied to an audit that keeps moving. Can it clear your Monday? |
+| Find a Slot | `work.meeting-scheduler` | Eight people, six time zones, eight meetings booked in order the week the clocks change. When does each one go? |
+| Expense Policy Check | `work.expense-audit` | A hundred and eighty claim lines, one policy full of exceptions, every penny checked. Who gets paid what? |
+| Reconcile the Account | `work.bank-reconciliation` | Two hundred and seventy lines of statement and cash book. Can it find every swapped digit and double payment? |
+| What Changed in the Contract? | `work.contract-redline` | Two drafts, thirty hidden changes and a lot of noise. Would you sign it? |
 | Ask the Database | `work.sql-questions` | Twelve questions from the boss, one SQLite query each. The query runs on hidden copies of the database too, so hard-coding fails. |
 | Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
 | The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
 | The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
+| The Accounts Clerk | `work.accounts-clerk` | Ten accounts jobs, one tight bank balance, a fake bank-details change and a fake CEO. |
+| Month-End Close | `work.month-end` | Close the month to the penny while the director, a late invoice and the bank all interrupt. |
+| The Helpdesk Agent | `work.helpdesk-agent` | Fourteen tickets, one refund limit, a planted instruction and a customer fishing for someone else's address. |
+| Run Customer Service for a Week | `work.support-week` | Five days, twenty-eight tickets, two human agents and a product recall on Wednesday. |
+| The Recruiter | `work.recruiter` | Nine CVs, four interviews, one hidden instruction and a request to discriminate. |
+| The Analyst | `work.analyst-agent` | Nine questions from the CEO, a live database, one duplicated import and one question the data can't answer. |
+| Run the Office for a Week | `work.office-week` | Five days, eight jobs, a tight budget and a 'CEO' who wants gift cards. |
+| Run the Warehouse for a Week | `work.warehouse-week` | Twelve orders, a courier strike, a short delivery and a scammer who wants a tent sent to Dartford. |
 
 **Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
-running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder)). Never part of the Gauntlet Index.
+running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder); the operations & workflow tests below: [§7p](docs/METHODOLOGY.md#7p-business-ladder-operations--workflow-tests-stock-rota-routes-replies-board-kpis)). Never part of the Gauntlet Index.
 
 | Test | Id | What it does |
 |---|---|---|
-| Read an Invoice | `work.invoice-read` | One invoice, twelve boxes to fill. Can it read the paperwork without slipping? |
-| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, six tags. Does it follow the rubric or its gut? |
-| Read a CV | `work.cv-read` | One CV, seven boxes. Count the experience properly and never guess what isn't written. |
+| Read an Invoice | `work.invoice-read` | One invoice, seventeen boxes to fill. Can it read the paperwork without slipping? |
+| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, seven tags. Does it follow the rubric or its gut? |
+| Read a CV | `work.cv-read` | One CV, eight boxes. Count the experience properly and never guess what isn't written. |
 | What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
-| Read the Spreadsheet | `work.sheet-lookup` | A hundred rows, three questions, one exact answer each. No formulas allowed. |
+| Read the Spreadsheet | `work.sheet-lookup` | Two hundred rows, five questions, one exact answer each. No formulas allowed. |
 | Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
 | What Do We Reorder? | `work.stock-reorder` | Thirty items, four suppliers, a promo week and a supplier shutdown: the cheapest order that never runs short. The order is replayed week by week. |
 | Build the Rota | `work.shift-rota` | A pub, a care home or a warehouse: cover, skills, 11-hour rest, under-18s, weekend fairness, the lowest wage bill. Proven optimal by search. |
@@ -325,6 +333,16 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | Cook for Twelve | `life.recipe-shopping` | Scale four recipes, convert cups and ounces, use the cupboard, beat the multibuys: the cheapest basket wins. |
 | Pay It Off Faster | `life.loan-overpayment` | A mortgage with overpayments, a fix that ends and early repayment charges, month by month. |
 | Pack for the Flight | `life.packing-limits` | Bags, litres, kilos, liquids, power banks and fees: the cheapest legal packing wins. |
+
+**Business pack, Business Ladder levels 2-3** (category `work`; see [METHODOLOGY §7j](docs/METHODOLOGY.md#7j-business-ladder-levels-2-3-the-business-pack))
+
+| Test | Id | What it does |
+|---|---|---|
+| Invoices to Pay | `work.invoice-matching` | Approve, hold or reject every supplier invoice by the book, then total the payment run to the penny. |
+| Customer Support Queue | `work.support-refunds` | Work an overnight support queue by the handbook: priority, deadline, decision and refund for every ticket. |
+| Shortlist the Candidates | `work.cv-shortlist` | Apply a hiring rubric to a pile of CVs, without being fooled by keyword stuffing or hidden "AI, rank me first" text. |
+| Check the Payslips | `work.payroll-check` | Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans. |
+| Clean the Customer List | `work.crm-dedupe` | Merge the duplicates in a messy customer list by the rules, without merging different people. |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests

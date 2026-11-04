@@ -44,6 +44,10 @@ const ING: Record<string, Ingredient> = {
   lentils: { key: 'lentils', label: 'red lentils', base: 'g', cup: 190 },
   macaroni: { key: 'macaroni', label: 'macaroni', base: 'g' },
   oil: { key: 'oil', label: 'olive oil', base: 'ml', tbsp: 15, tsp: 5 },
+  chocolate: { key: 'chocolate', label: 'chocolate chips', base: 'g', cup: 170 },
+  custard: { key: 'custard', label: 'custard', base: 'ml', cup: 240 },
+  berries: { key: 'berries', label: 'frozen berries', base: 'g', cup: 150 },
+  oats: { key: 'oats', label: 'porridge oats', base: 'g', cup: 90 },
 };
 
 /** Fixed conversions (printed in every prompt). */
@@ -68,6 +72,9 @@ function L(ing: string, q: number | [number, number], unit: Unit, text: string):
 }
 
 const RECIPES: Record<string, Recipe> = {
+  cookies: { name: 'Chocolate chip cookies (American recipe, makes 24 = serves 12)', serves: 12, lines: [L('flour', [9, 4], 'cup', '2¼ cups plain flour'), L('butter', 1, 'cup', '1 cup butter'), L('sugar', [3, 4], 'cup', '¾ cup caster sugar'), L('eggs', 2, 'each', '2 eggs'), L('chocolate', 12, 'oz', '12 oz chocolate chips')] },
+  trifle: { name: 'Berry trifle', serves: 8, lines: [L('berries', 2, 'cup', '2 cups frozen berries'), L('custard', 1, 'pint', '1 pint custard'), L('cream', 300, 'ml', '300 ml double cream'), L('sugar', 2, 'tbsp', '2 tbsp caster sugar')] },
+  crumble: { name: 'Berry crumble', serves: 6, lines: [L('berries', 600, 'g', '600 g frozen berries'), L('flour', 150, 'g', '150 g plain flour'), L('oats', [1, 2], 'cup', '½ cup porridge oats'), L('butter', 100, 'g', '100 g butter'), L('sugar', 100, 'g', '100 g caster sugar'), L('custard', 500, 'ml', '500 ml custard')] },
   chilli: { name: 'Chilli con carne', serves: 4, lines: [L('mince', 500, 'g', '500 g beef mince'), L('onions', 2, 'each', '2 onions'), L('tomatoes', 2, 'tin', '2 tins chopped tomatoes'), L('beans', 1, 'tin', '1 tin kidney beans'), L('rice', 300, 'g', '300 g long-grain rice'), L('oil', 2, 'tbsp', '2 tbsp olive oil')] },
   curry: { name: 'Chickpea and chicken curry', serves: 6, lines: [L('chicken', 900, 'g', '900 g chicken thighs'), L('onions', 3, 'each', '3 onions'), L('coconut', 800, 'ml', '800 ml coconut milk'), L('chickpeas', 1, 'tin', '1 tin chickpeas'), L('tomatoes', 1, 'tin', '1 tin chopped tomatoes'), L('rice', 450, 'g', '450 g long-grain rice')] },
   drizzle: { name: 'Lemon drizzle cake (American recipe)', serves: 8, lines: [L('flour', [3, 2], 'cup', '1½ cups plain flour'), L('sugar', 1, 'cup', '1 cup caster sugar'), L('butter', [1, 2], 'cup', '½ cup butter'), L('eggs', 2, 'each', '2 eggs'), L('lemons', 2, 'each', '2 lemons'), L('milk', [1, 3], 'cup', '⅓ cup milk')] },
@@ -141,6 +148,17 @@ const SHELF: Pack[] = [
   { ing: 'lentils', size: 500, label: 'Red lentils 500 g', price: 135 },
   { ing: 'macaroni', size: 500, label: 'Macaroni 500 g', price: 85 },
   { ing: 'oil', size: 500, label: 'Olive oil 500 ml', price: 450 },
+  { ing: 'oil', size: 1000, label: 'Olive oil 1 litre', price: 799 },
+  { ing: 'chocolate', size: 200, label: 'Chocolate chips 200 g', price: 160 },
+  { ing: 'chocolate', size: 500, label: 'Chocolate chips 500 g', price: 375 },
+  { ing: 'custard', size: 500, label: 'Fresh custard 500 ml', price: 110 },
+  { ing: 'custard', size: 1000, label: 'Fresh custard 1 litre', price: 195 },
+  { ing: 'berries', size: 500, label: 'Frozen berries 500 g', price: 250 },
+  { ing: 'berries', size: 1000, label: 'Frozen berries 1 kg', price: 420 },
+  { ing: 'oats', size: 1000, label: 'Porridge oats 1 kg', price: 115 },
+  { ing: 'flour', size: 3000, label: 'Plain flour 3 kg (value)', price: 260 },
+  { ing: 'butter', size: 1000, label: 'Butter 1 kg (catering)', price: 780 },
+  { ing: 'rice', size: 2000, label: 'Long-grain rice 2 kg', price: 320 },
 ];
 
 interface ShopSpec {
@@ -154,12 +172,52 @@ interface ShopSpec {
   /** Cupboard: ingredient → [amount in base units, how it is described]. */
   cupboard: Array<[string, number, string]>;
   /** Offers: [label, ingredient keys or pack labels, qty, price pence]. */
-  offers: Array<{ label: string; packs: string[]; qty: number; price: number }>;
+  offers: Array<{ label: string; packs: string[]; qty: number; price: number; limit?: number }>;
   /** Extra lines (distractors, notes). */
   extra?: string[];
   /** A late change: the real guest count / dropped recipe is what the world uses. */
-  late?: { text: string; guests?: number; drop?: string };
+  late?: { text: string; guests?: number; drop?: string; party?: Party; planChange?: Record<string, Eaters> };
+  /** Who eats what (hard cases): adults, children, vegetarians; children eat half portions of mains. */
+  party?: Party;
+  plan?: Record<string, Eaters>;
 }
+
+interface Party {
+  adults: number;
+  children: number;
+  /** Vegetarian adults (they eat the vegetarian main instead of the meat one). */
+  veggies?: number;
+}
+
+type Eaters = 'everyone' | 'mains-everyone' | 'adults' | 'children' | 'veggie-main' | 'meat-main';
+
+/** Portions of one recipe: a child's portion of a main course is half an adult's; desserts are full portions. */
+function portions(e: Eaters, p: Party): Q {
+  const v = p.veggies ?? 0;
+  switch (e) {
+    case 'everyone':
+      return new Q(p.adults + p.children);
+    case 'mains-everyone':
+      return new Q(2 * p.adults + p.children, 2);
+    case 'adults':
+      return new Q(p.adults);
+    case 'children':
+      return new Q(p.children);
+    case 'veggie-main':
+      return new Q(v);
+    case 'meat-main':
+      return new Q(2 * (p.adults - v) + p.children, 2);
+  }
+}
+
+const EATERS_TEXT: Record<Eaters, string> = {
+  everyone: 'for everyone (a full portion each, children too)',
+  'mains-everyone': 'main course for everyone (children eat half a portion)',
+  adults: 'for the adults only',
+  children: 'for the children only',
+  'veggie-main': 'a vegetarian main, for the vegetarian adults only',
+  'meat-main': 'a meat main, for everyone except the vegetarians (children eat half a portion; all the children eat meat)',
+};
 
 interface ShopCase {
   id: string;
@@ -173,11 +231,11 @@ interface ShopCase {
   careless: Array<{ label: string; answer: Record<string, unknown> }>;
 }
 
-function needsFor(spec: ShopSpec, guests: number, recipes: string[], useCupboard = true): ShopWorld['needs'] {
+function needsFor(spec: ShopSpec, guests: number, recipes: string[], useCupboard = true, party = spec.party): ShopWorld['needs'] {
   const total = new Map<string, Q>();
   for (const r of recipes) {
     const rec = RECIPES[r]!;
-    const scale = new Q(guests, rec.serves);
+    const scale = party && spec.plan?.[r] ? portions(spec.plan[r]!, party).div(new Q(rec.serves)) : new Q(guests, rec.serves);
     for (const l of rec.lines) total.set(l.ing, (total.get(l.ing) ?? new Q(0)).add(lineAmount(l).mul(scale)));
   }
   if (useCupboard) for (const [ing, amt] of spec.cupboard) if (total.has(ing)) total.set(ing, total.get(ing)!.sub(new Q(amt)));
@@ -254,7 +312,8 @@ function basketPriceIndependent(w: ShopWorld, q: Record<string, number>): number
     const packs = o.products.flatMap((id) => Array<number>(q[id] ?? 0).fill(w.products.find((p) => p.id === id)!.price));
     packs.sort((a, b) => b - a);
     let i = 0;
-    for (; i + o.qty <= packs.length; i += o.qty) total += o.price;
+    let used = 0;
+    for (; i + o.qty <= packs.length && (o.limit === undefined || used < o.limit); i += o.qty, used++) total += o.price;
     for (; i < packs.length; i++) total += packs[i]!;
     for (const id of o.products) claimed.add(id);
   }
@@ -309,48 +368,69 @@ const SPECS: ShopSpec[] = [
     ],
   },
   {
-    id: 's07', difficulty: 'hard', seed: 707, host: 'Kofi', occasion: 'my mum’s 60th', guests: 12, recipes: ['jollof', 'curry', 'dal', 'sponge'],
-    cupboard: [['rice', 1000, 'a 1 kg bag of rice'], ['onions', 3, 'a net of 3 onions'], ['coconut', 400, 'one tin of coconut milk'], ['eggs', 6, 'half a dozen eggs']],
+    id: 's07', difficulty: 'hard', seed: 707, host: 'Kofi', occasion: 'my mum’s 60th', guests: 0, recipes: ['jollof', 'curry', 'dal', 'sponge', 'drizzle', 'trifle'],
+    party: { adults: 22, children: 9, veggies: 6 },
+    plan: { jollof: 'meat-main', curry: 'meat-main', dal: 'veggie-main', sponge: 'everyone', drizzle: 'adults', trifle: 'children' },
+    cupboard: [['rice', 1000, 'a 1 kg bag of rice'], ['onions', 3, 'a net of 3 onions'], ['coconut', 400, 'one tin of coconut milk'], ['eggs', 6, 'half a dozen eggs'], ['custard', 500, 'a 500 ml carton of custard']],
     offers: [
-      { label: 'Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35', packs: ['Chopped tomatoes 400 g tin', 'Chickpeas 400 g tin', 'Kidney beans 400 g tin'], qty: 3, price: 135 },
-      { label: 'Chicken thighs 1 kg: 2 for £10.00', packs: ['Chicken thighs 1 kg'], qty: 2, price: 1000 },
+      { label: 'Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35', packs: ['Chopped tomatoes 400 g tin', 'Chickpeas 400 g tin', 'Kidney beans 400 g tin'], qty: 3, price: 135, limit: 3 },
+      { label: 'Chicken thighs 1 kg: 2 for £10.00', packs: ['Chicken thighs 1 kg'], qty: 2, price: 1000, limit: 1 },
       { label: 'Coconut milk: 3 tins for £3.00', packs: ['Coconut milk 400 ml tin'], qty: 3, price: 300 },
+      { label: 'Butter 250 g: 2 for £3.80', packs: ['Butter 250 g'], qty: 2, price: 380, limit: 2 },
+      { label: 'Double cream or custard: any 2 for £1.90', packs: ['Double cream 300 ml', 'Fresh custard 500 ml'], qty: 2, price: 190 },
     ],
     extra: ['My brother says the big packs are always the cheapest per kilo. He is not always right.'],
-    late: { text: 'UPDATE: Auntie Grace just told me she is bringing a cake, so I am NOT making the Victoria sponge after all. Everything else stays the same.', drop: 'sponge' },
+    late: {
+      text: 'UPDATES (in the order they came in): 1) Auntie Grace is bringing a cake, so I am NOT making the Victoria sponge. 2) Two more adults have said yes, and one of them is vegetarian: so 24 adults, 7 of them vegetarian, and still 9 children. Everything else stays the same.',
+      drop: 'sponge',
+      party: { adults: 24, children: 9, veggies: 7 },
+    },
   },
   {
-    id: 's08', difficulty: 'hard', seed: 708, host: 'Nadia', occasion: 'a charity bake sale lunch', guests: 15, recipes: ['maccheese', 'pancakes', 'drizzle', 'yorkies'],
-    cupboard: [['flour', 500, 'a 500 g bag of plain flour'], ['milk', 1136, 'two pints of milk'], ['butter', 100, '100 g of butter'], ['eggs', 4, '4 eggs']],
+    id: 's08', difficulty: 'hard', seed: 708, host: 'Nadia', occasion: 'a charity bake sale lunch', guests: 0, recipes: ['maccheese', 'pancakes', 'drizzle', 'yorkies', 'cookies'],
+    party: { adults: 16, children: 12 },
+    plan: { maccheese: 'mains-everyone', yorkies: 'mains-everyone', pancakes: 'children', drizzle: 'adults', cookies: 'everyone' },
+    cupboard: [['flour', 500, 'a 500 g bag of plain flour'], ['milk', 1136, 'two pints of milk'], ['butter', 100, '100 g of butter'], ['eggs', 4, '4 eggs'], ['chocolate', 200, 'a 200 g bag of chocolate chips']],
     offers: [
-      { label: 'Milk 2 or 4 pints: any 2 for £2.00', packs: ['Milk 2 pints (1.136 l)', 'Milk 4 pints (2.272 l)'], qty: 2, price: 200 },
+      { label: 'Milk 2 or 4 pints: any 2 for £2.00', packs: ['Milk 2 pints (1.136 l)', 'Milk 4 pints (2.272 l)'], qty: 2, price: 200, limit: 2 },
       { label: 'Eggs x12 or x15: any 2 boxes for £5.00', packs: ['Free-range eggs x12', 'Free-range eggs x15'], qty: 2, price: 500 },
-      { label: 'Butter 250 g: 2 for £3.80', packs: ['Butter 250 g'], qty: 2, price: 380 },
+      { label: 'Butter 250 g: 2 for £3.80', packs: ['Butter 250 g'], qty: 2, price: 380, limit: 2 },
+      { label: 'Chocolate chips 200 g: 3 for £4.00', packs: ['Chocolate chips 200 g'], qty: 3, price: 400 },
+      { label: 'Cheddar 400 g: 2 for £5.50', packs: ['Mature cheddar 400 g'], qty: 2, price: 550, limit: 1 },
     ],
-    late: { text: 'Change of numbers: three more volunteers signed up, so please plan for 18 people, not 15.', guests: 18 },
+    late: {
+      text: 'Change of numbers: three more adult volunteers signed up (so 19 adults), and two of the children can’t come after all (so 10 children). Also, the 200 g bag of chocolate chips in the cupboard turned out to be past its date, so don’t count it.',
+      party: { adults: 19, children: 10 },
+    },
   },
   {
-    id: 's09', difficulty: 'hard', seed: 709, host: 'Tomasz', occasion: 'the street party', guests: 20, recipes: ['chilli', 'curry', 'jollof', 'drizzle'],
-    cupboard: [['oil', 500, 'a full 500 ml bottle of olive oil'], ['tomatoes', 800, 'two tins of chopped tomatoes'], ['onions', 4, '4 onions'], ['lemons', 2, '2 lemons']],
+    id: 's09', difficulty: 'hard', seed: 709, host: 'Tomasz', occasion: 'the street party', guests: 0, recipes: ['chilli', 'dal', 'curry', 'jollof', 'drizzle', 'crumble'],
+    party: { adults: 30, children: 14, veggies: 9 },
+    plan: { chilli: 'meat-main', dal: 'veggie-main', curry: 'meat-main', jollof: 'meat-main', drizzle: 'everyone', crumble: 'adults' },
+    cupboard: [['oil', 500, 'a full 500 ml bottle of olive oil'], ['tomatoes', 800, 'two tins of chopped tomatoes'], ['onions', 4, '4 onions'], ['lemons', 2, '2 lemons'], ['oats', 500, 'half a 1 kg bag of porridge oats']],
     offers: [
-      { label: 'Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35', packs: ['Chopped tomatoes 400 g tin', 'Chickpeas 400 g tin', 'Kidney beans 400 g tin'], qty: 3, price: 135 },
-      { label: 'Chicken thighs 1 kg: 2 for £10.00', packs: ['Chicken thighs 1 kg'], qty: 2, price: 1000 },
+      { label: 'Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35', packs: ['Chopped tomatoes 400 g tin', 'Chickpeas 400 g tin', 'Kidney beans 400 g tin'], qty: 3, price: 135, limit: 5 },
+      { label: 'Chicken thighs 1 kg: 2 for £10.00', packs: ['Chicken thighs 1 kg'], qty: 2, price: 1000, limit: 2 },
       { label: 'Beef mince 750 g: 2 for £9.00', packs: ['Beef mince 750 g'], qty: 2, price: 900 },
-      { label: 'Onions x3 net: 2 for 90p', packs: ['Onions x3 net'], qty: 2, price: 90 },
+      { label: 'Onions x3 net: 2 for 90p', packs: ['Onions x3 net'], qty: 2, price: 90, limit: 4 },
+      { label: 'Frozen berries 1 kg: 2 for £7.00', packs: ['Frozen berries 1 kg'], qty: 2, price: 700 },
     ],
     extra: ['Ignore the “serves 4–6” on the chilli card: the recipe below is written for 4.'],
-    late: { text: 'Last thing: the two tins of tomatoes in the cupboard are past their date, so I am throwing them out. Don’t count them.' },
+    late: { text: 'Last things: the two tins of tomatoes in the cupboard are past their date, so I am throwing them out (don’t count them). And the street’s two other vegetarian families have signed up: that makes 34 adults, 13 of them vegetarian, and 16 children.', party: { adults: 34, children: 16, veggies: 13 } },
   },
   {
-    id: 's10', difficulty: 'hard', seed: 710, host: 'Eilidh', occasion: 'a Burns-night-meets-Thanksgiving party', guests: 14, recipes: ['shepherds', 'maccheese', 'pancakes', 'sponge'],
-    cupboard: [['potatoes', 2500, 'a 2.5 kg bag of potatoes'], ['cheddar', 200, 'about 200 g of cheddar'], ['milk', 568, 'a pint of milk'], ['flour', 1500, 'a 1.5 kg bag of plain flour']],
+    id: 's10', difficulty: 'hard', seed: 710, host: 'Eilidh', occasion: 'a Burns-night-meets-Thanksgiving party', guests: 0, recipes: ['shepherds', 'maccheese', 'pancakes', 'sponge', 'cookies', 'trifle'],
+    party: { adults: 17, children: 8 },
+    plan: { shepherds: 'mains-everyone', maccheese: 'mains-everyone', pancakes: 'children', sponge: 'adults', cookies: 'everyone', trifle: 'everyone' },
+    cupboard: [['potatoes', 2500, 'a 2.5 kg bag of potatoes'], ['cheddar', 200, 'about 200 g of cheddar'], ['milk', 568, 'a pint of milk'], ['flour', 1500, 'a 1.5 kg bag of plain flour'], ['berries', 250, 'about 250 g of frozen berries']],
     offers: [
-      { label: 'Milk 2 or 4 pints: any 2 for £2.00', packs: ['Milk 2 pints (1.136 l)', 'Milk 4 pints (2.272 l)'], qty: 2, price: 200 },
-      { label: 'Cheddar 400 g: 2 for £5.50', packs: ['Mature cheddar 400 g'], qty: 2, price: 550 },
-      { label: 'Butter 250 g: 2 for £3.80', packs: ['Butter 250 g'], qty: 2, price: 380 },
+      { label: 'Milk 2 or 4 pints: any 2 for £2.00', packs: ['Milk 2 pints (1.136 l)', 'Milk 4 pints (2.272 l)'], qty: 2, price: 200, limit: 2 },
+      { label: 'Cheddar 400 g: 2 for £5.50', packs: ['Mature cheddar 400 g'], qty: 2, price: 550, limit: 1 },
+      { label: 'Butter 250 g: 2 for £3.80', packs: ['Butter 250 g'], qty: 2, price: 380, limit: 3 },
       { label: 'Eggs x12 or x15: any 2 boxes for £5.00', packs: ['Free-range eggs x12', 'Free-range eggs x15'], qty: 2, price: 500 },
+      { label: 'Double cream or custard: any 2 for £1.90', packs: ['Double cream 300 ml', 'Fresh custard 500 ml'], qty: 2, price: 190, limit: 2 },
     ],
-    late: { text: 'Oops: the “1.5 kg bag of flour” in the cupboard is actually self-raising, and none of these recipes use self-raising flour. Don’t count it.' },
+    late: { text: 'Oops, two corrections: the “1.5 kg bag of flour” in the cupboard is actually self-raising, and none of these recipes use self-raising flour, so don’t count it. And the sponge is now for everyone, children included (a full portion each).', planChange: { sponge: 'everyone' } },
   },
 ];
 
@@ -366,7 +446,7 @@ function buildWorld(spec: ShopSpec, guests: number, recipes: string[], cupboard:
     size: p.size,
     price: Math.max(10, Math.round((p.price * (0.9 + rng.next() * 0.2)) / 5) * 5),
   }));
-  const offers: ShopOffer[] = spec.offers.map((o, i) => ({ id: `M${i + 1}`, label: o.label, products: o.packs.map((l) => products.find((p) => p.name === l)!.id), qty: o.qty, price: o.price }));
+  const offers: ShopOffer[] = spec.offers.map((o, i) => ({ id: `M${i + 1}`, label: o.label, products: o.packs.map((l) => products.find((p) => p.name === l)!.id), qty: o.qty, price: o.price, ...(o.limit ? { limit: o.limit } : {}) }));
   for (const o of offers) for (const id of o.products) {
     const p = products.find((x) => x.id === id)!;
     if (o.price >= o.qty * p.price) throw new Error(`${spec.id}: offer ${o.label} saves nothing on ${p.name}`);
@@ -376,10 +456,13 @@ function buildWorld(spec: ShopSpec, guests: number, recipes: string[], cupboard:
 
 function promptFor(spec: ShopSpec, world: ShopWorld): string {
   const L: string[] = [];
-  L.push(`Hi! I’m cooking for ${spec.occasion} and there will be ${spec.guests} of us, so every recipe needs to make exactly enough for ${spec.guests} people. I’m doing:`);
+  if (spec.party) {
+    const pt = spec.party;
+    L.push(`Hi! I’m cooking for ${spec.occasion}: ${pt.adults} adults and ${pt.children} children${pt.veggies ? ` (${pt.veggies} of the adults are vegetarian)` : ''}. Each recipe has to make exactly the portions needed, no more and no less. A child’s portion of a main course is half an adult portion; desserts and bakes are a full portion for everyone. I’m doing:`);
+  } else L.push(`Hi! I’m cooking for ${spec.occasion} and there will be ${spec.guests} of us, so every recipe needs to make exactly enough for ${spec.guests} people. I’m doing:`);
   for (const r of spec.recipes) {
     const rec = RECIPES[r]!;
-    L.push('', `${rec.name} (serves ${rec.serves}):`);
+    L.push('', `${rec.name} (serves ${rec.serves})${spec.party && spec.plan?.[r] ? `: ${EATERS_TEXT[spec.plan[r]!]}` : ''}:`);
     for (const l of rec.lines) L.push(`- ${l.text}`);
   }
   if (spec.extra?.length) L.push('', ...spec.extra);
@@ -393,12 +476,12 @@ function promptFor(spec: ShopSpec, world: ShopWorld): string {
   L.push('ID | Product | Price');
   for (const p of world.products) L.push(`${p.id} | ${p.name} | ${money(p.price)}`);
   if (world.offers.length) {
-    L.push('', 'OFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)');
-    for (const o of world.offers) L.push(`- ${o.label} (counts: ${o.products.join(', ')})`);
+    L.push('', 'OFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like unless a per-customer limit is shown)');
+    for (const o of world.offers) L.push(`- ${o.label} (counts: ${o.products.join(', ')})${o.limit ? ` — limited to ${o.limit} deal${o.limit === 1 ? '' : 's'} per customer; any further packs are charged normally` : ''}`);
   }
   L.push(
     '',
-    'Rules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.',
+    'Rules: scale every ingredient exactly by (portions needed ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.',
   );
   if (spec.late) L.push('', spec.late.text);
   L.push(
@@ -417,10 +500,14 @@ export function buildShoppingCases(): ShopCase[] {
     const rng = new Rng(spec.seed);
     const guests = spec.late?.guests ?? spec.guests;
     const recipes = spec.recipes.filter((r) => r !== spec.late?.drop);
+    const party = spec.late?.party ?? spec.party;
     let cupboard = spec.cupboard;
     if (spec.id === 's09') cupboard = cupboard.filter(([ing]) => ing !== 'tomatoes');
     if (spec.id === 's10') cupboard = cupboard.filter(([ing]) => ing !== 'flour');
-    const { world } = buildWorld(spec, guests, recipes, cupboard, rng);
+    if (spec.id === 's08') cupboard = cupboard.filter(([ing]) => ing !== 'chocolate');
+    const plan = spec.plan ? { ...spec.plan, ...(spec.late?.planChange ?? {}) } : undefined;
+    const real: ShopSpec = { ...spec, party, ...(plan ? { plan } : {}) };
+    const { world } = buildWorld(real, guests, recipes, cupboard, rng);
     const sol = solveShopping(world);
     const reference = basketAnswer(sol.best, world);
     const careless: ShopCase['careless'] = [];
@@ -428,12 +515,25 @@ export function buildShoppingCases(): ShopCase[] {
     const noOffers = solveShopping({ ...world, offers: [] });
     careless.push({ label: 'ignores the multibuy offers', answer: basketAnswer(noOffers.best, world) });
     // Careless 2: forgets the cupboard.
-    const noCup = solveShopping({ ...world, needs: needsFor({ ...spec, cupboard: [] }, guests, recipes, false) });
+    const noCup = solveShopping({ ...world, needs: needsFor({ ...real, cupboard: [] }, guests, recipes, false, party) });
     careless.push({ label: 'forgets the cupboard', answer: basketAnswer(noCup.best, world) });
     // Careless 3: misses the late message (buys for the original plan).
     if (spec.late) {
-      const orig = solveShopping({ ...world, needs: needsFor(spec, spec.guests, spec.recipes) });
+      const orig = solveShopping({ ...world, needs: needsFor(spec, spec.guests, spec.recipes, true, spec.party) });
       careless.push({ label: 'misses the late message', answer: basketAnswer(orig.best, world) });
+    }
+    // Careless 4: gives the children full portions of the mains.
+    if (plan && party) {
+      const full = Object.fromEntries(Object.entries(plan).map(([k, v]) => [k, v === 'mains-everyone' ? 'everyone' : v])) as Record<string, Eaters>;
+      if (JSON.stringify(full) !== JSON.stringify(plan)) {
+        const fp = solveShopping({ ...world, needs: needsFor({ ...real, plan: full }, guests, recipes, true, party) });
+        careless.push({ label: 'gives the children full portions of the mains', answer: basketAnswer(fp.best, world) });
+      }
+    }
+    // Careful but human-error-prone: plans the offers without their per-customer limits (then pays at the real till).
+    if (world.offers.some((o) => o.limit)) {
+      const nl = solveShopping({ ...world, offers: world.offers.map((o) => ({ ...o, limit: undefined })) });
+      careless.push({ label: 'careful, but forgets the per-customer offer limits', answer: basketAnswer(nl.best, world) });
     }
     const prompt = promptFor(spec, world);
     const needText = world.needs.map((n) => `${n.ingredient} ${fmtQty(n.amount, n.unit)}`).join(', ');

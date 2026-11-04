@@ -136,7 +136,7 @@ export function boardTest(): Record<string, unknown> {
     estimate: { inputTokens: inputTokens(cases.map((c) => c.prompt)), outputTokens: 12000 },
     ...META,
     // Exact to the stated rounding: the relative tolerance only absorbs floating-point noise (1e-9 of £1m is 0.1p).
-    scorer: { type: 'json', loose: true, numberTolerance: 1e-9, weights: BOARD_WEIGHTS },
+    scorer: { type: 'json', lenient: true, numberTolerance: 1e-9, weights: BOARD_WEIGHTS },
     cases: cases.map((c) => ({ id: c.id, prompt: c.prompt, expected: c.expected, notes: c.notes })),
   };
 }

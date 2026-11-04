@@ -9,6 +9,9 @@ instead of per day, an approval claimed on the form taken at its word, mileage a
 line), which gives the scripted careless answer.
 """
 import random
+
+# Points per field for fields where a trap sits (routine fields are worth 1). Stated in the prompt.
+TRAP_WEIGHT = 3
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from wk import uk, uky, people, money, DOW, MON
@@ -28,21 +31,26 @@ CUR = {'London': 'GBP', 'Manchester': 'GBP', 'Leeds': 'GBP', 'Bristol': 'GBP', '
 SYM = {'GBP': '£', 'EUR': '€', 'USD': '$'}
 UK_CITIES = ['London', 'Manchester', 'Leeds', 'Bristol', 'Glasgow']
 
-POLICY = """Expenses policy (Finance, version 7) — apply every rule exactly as written.
+POLICY = """Expenses policy (Finance, version 8) — apply every rule exactly as written.
 
 A. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.
 B. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.
- 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.
+ 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0, unless the register holds a late-submission approval (type LATE) for that claim number.
  2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.
  3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.
- 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).
- 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).
+ 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved under rule 7, where alcohol is paid up to £15 per head and only the excess is deducted.
+ 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. The limit is £20 higher on a day when the same employee has a hotel stay in that city in this batch covering the night of that day (a hotel line dated D for N nights covers the nights of D to D+N-1, not the morning of departure). When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).
  6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.
- 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.
+ 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included), after any alcohol deduction. It is approved only if the line's approval reference is in the register as type ENT for the same employee; an approval mentioned on a claim but missing from the register, or registered for someone else, does not count. Approved entertainment is paid in full (alcohol as in rule 4) up to the approval's limit, if the register gives one.
  8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.
- 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.
-C. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.
+ 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that, plus 5p a mile for each colleague carried as a passenger (the passenger supplement does not count towards the 10,000). The tax year runs 6 April to 5 April. Count each employee's miles in date order across all their claims in this batch, starting from the miles paid before this batch in the tax year named on their claims (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.
+C. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full (or more) are compliant and must not be listed; a mileage line claimed below the correct amount is paid the correct amount and is compliant.
 D. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT."""
+
+# The careless reviewer's mistakes, one flag each (audit(..., ALL) is the scripted careless answer); SLIP is a strong
+# reviewer who forgets the hotel-night uplift of the meal limit.
+ALL = frozenset({'late', 'dup', 'receipt', 'approval', 'alc_cap', 'approval_limit', 'uplift', 'percap', 'passengers', 'mileage', 'vat'})
+SLIP = frozenset({'uplift'})
 
 
 class Line:
@@ -54,30 +62,59 @@ def gbp(line, rates):
     return r2(line.amount * rates[line.cur]) if line.cur != 'GBP' else line.amount
 
 
-def audit(claims, lines, rates, register, careless=False):
+def audit(claims, lines, rates, register, F=frozenset()):
+    if F is True:
+        F = ALL
     pay = {}
     rule = {}
     seen = {}
     day_used = {}
     miles_done = {}  # (employee, tax year) -> miles
+    ent_ok = {(r['ref'], r['emp']): r for r in register if r['type'] == 'ENT'}
+    late_ok = {r['claim'] for r in register if r['type'] == 'LATE'}
+    # nights covered by hotel stays: (employee, city, night date)
+    nights = set()
+    for ln in lines:
+        if ln.kind == 'hotel':
+            for i in range(ln.nights):
+                nights.add((claims[ln.claim]['emp'], ln.city, ln.date + timedelta(days=i)))
+    # mileage: each employee's journeys in date order across all their claims
+    mile_pay = {}
+    for ln in sorted((l for l in lines if l.kind == 'mileage'), key=lambda l: (l.date, l.n)):
+        c = claims[ln.claim]
+        ty = ln.date.year if ln.date >= date(ln.date.year, 4, 6) else ln.date.year - 1
+        k = (c['emp'], ty)
+        if k not in miles_done:
+            if 'mileage' in F:
+                miles_done[k] = c['miles_before']
+            else:
+                miles_done[k] = c['miles_before'] if ty == c['miles_year'] else 0
+        before = miles_done[k]
+        hi = max(0, min(ln.miles, 10000 - before))
+        lo = ln.miles - hi
+        correct = r2(D(hi) * D('0.45') + D(lo) * D('0.25')) if 'mileage' not in F else r2(D(ln.miles) * D('0.45'))
+        if 'passengers' not in F and getattr(ln, 'passengers', 0):
+            correct += r2(D(ln.miles) * D('0.05') * ln.passengers)
+        miles_done[k] = before + ln.miles
+        mile_pay[ln.n] = correct
     for ln in sorted(lines, key=lambda l: l.n):
         c = claims[ln.claim]
         claimed = gbp(ln, rates)
         reasons = []
         amt = claimed
         # 1 late
-        if not careless and (c['submitted'] - ln.date).days > 60:
+        if 'late' not in F and (c['submitted'] - ln.date).days > 60 and c['id'] not in late_ok:
             reasons.append('LATE')
             amt = D('0')
         # 2 duplicate
         key = (c['emp'], ln.date, ln.merchant, ln.amount)
-        if key in seen and not careless:
+        if key in seen and 'dup' not in F:
             if not reasons:
                 reasons.append('DUPLICATE')
             amt = D('0')
         seen.setdefault(key, ln.n)
         # 3 receipt
-        need = (claimed > D('25')) if careless else (claimed >= D('25'))
+        need = (claimed > D('25')) if 'receipt' in F else (claimed >= D('25'))
         if ln.kind != 'mileage' and need and not ln.receipt:
             if not reasons:
                 reasons.append('NO_RECEIPT')
@@ -86,14 +123,27 @@ def audit(claims, lines, rates, register, careless=False):
             pay[ln.n] = D('0')
             rule[ln.n] = reasons[0]
             continue
-        approved = bool(ln.kind == 'entertainment' and ln.approval and (ln.approval in {r[0] for r in register} or careless))
+        reg = None
+        if ln.kind == 'entertainment' and ln.approval:
+            reg = ent_ok.get((ln.approval, c['emp']))
+            if reg is None and 'approval' in F:
+                reg = {'limit': None}
+        approved = reg is not None
         # 4 alcohol
-        if ln.alcohol and not approved:
-            amt -= (r2(ln.alcohol * rates[ln.cur]) if ln.cur != 'GBP' else ln.alcohol)
-            reasons.append('ALCOHOL')
+        if ln.alcohol:
+            alc = r2(ln.alcohol * rates[ln.cur]) if ln.cur != 'GBP' else ln.alcohol
+            if approved:
+                excess = max(D('0'), alc - D('15') * ln.heads) if 'alc_cap' not in F else D('0')
+            else:
+                excess = alc
+            if excess > 0:
+                amt -= excess
+                reasons.append('ALCOHOL')
         if ln.kind == 'meal':
             cap = MEAL_CAP[ln.city]
-            if careless:
+            if 'uplift' not in F and (c['emp'], ln.city, ln.date) in nights:
+                cap += D('20')
+            if 'percap' in F:
                 left = cap
             else:
                 left = cap - day_used.get((c['emp'], ln.date), D('0'))
@@ -107,9 +157,12 @@ def audit(claims, lines, rates, register, careless=False):
             if amt > cap:
                 amt = cap
                 reasons.append('HOTEL_CAP')
-        if ln.kind == 'entertainment' and not approved:
-            cap = D('60') * ln.heads
-            if amt > cap:
+        if ln.kind == 'entertainment':
+            if not approved:
+                cap = D('60') * ln.heads
+            else:
+                cap = reg['limit'] if (reg['limit'] is not None and 'approval_limit' not in F) else None
+            if cap is not None and amt > cap:
                 amt = cap
                 reasons.append('ENTERTAINMENT_CAP')
         if ln.kind == 'rail' and ln.first_class:
@@ -118,19 +171,8 @@ def audit(claims, lines, rates, register, careless=False):
                 amt = std
                 reasons.append('RAIL_CLASS')
         if ln.kind == 'mileage':
-            ty = ln.date.year if ln.date >= date(ln.date.year, 4, 6) else ln.date.year - 1
-            k = (c['emp'], ty)
-            if k not in miles_done:
-                if careless:
-                    miles_done[k] = c['miles_before']
-                else:
-                    miles_done[k] = c['miles_before'] if ty == c['miles_year'] else 0
-            before = miles_done[k]
-            hi = max(0, min(ln.miles, 10000 - before))
-            lo = ln.miles - hi
-            correct = r2(D(hi) * D('0.45') + D(lo) * D('0.25')) if not careless else r2(D(ln.miles) * D('0.45'))
-            miles_done[k] = before + ln.miles
-            if correct != amt:
+            correct = mile_pay[ln.n]
+            if correct < amt:
                 reasons.append('MILEAGE_RATE')
             amt = correct
         pay[ln.n] = amt
@@ -140,7 +182,7 @@ def audit(claims, lines, rates, register, careless=False):
     vat = D('0')
     for ln in lines:
         claimed = gbp(ln, rates)
-        if careless:
+        if 'vat' in F:
             if ln.vat:
                 vat += ln.vat if ln.cur == 'GBP' else r2(ln.vat * rates[ln.cur])
             continue
@@ -150,11 +192,15 @@ def audit(claims, lines, rates, register, careless=False):
     for ln in lines:
         e = claims[ln.claim]['emp']
         by_emp[e] = by_emp.get(e, D('0')) + pay[ln.n]
-    nc = {f"L{n:02d}": {'rule': rule[n], 'pay': float(pay[n])} for n in sorted(rule)}
+    nc = {line_id(n, len(lines)): {'rule': rule[n], 'pay': float(pay[n])} for n in sorted(rule)}
     return {'non_compliant': nc,
             'pay_by_employee': {e: float(v) for e, v in by_emp.items()},
             'total_pay': float(sum(pay.values())),
             'vat_reclaimable': float(vat)}, pay, rule
+
+
+def line_id(n, total):
+    return f"L{n:03d}" if total >= 100 else f"L{n:02d}"
 
 
 MERCH = {
@@ -262,7 +308,7 @@ def gen(seed, tier):
         if approved is not None:
             ref = f"DA-{rng.randint(100, 499)}"
             if approved:
-                register.append((ref, rng.choice(directors), c['emp']))
+                register.append(dict(ref=ref, type='ENT', director=rng.choice(directors), emp=c['emp'], limit=None))
         add(claim=c['id'], date=edate(c), kind='entertainment', city='London', merchant=rng.choice(['Guildhall Grill', 'Brasserie Aubert, Covent Garden', 'The Fenwick Dining Room']),
             desc=f"Client dinner, {heads} people (incl. {rng.randint(1, 2)} staff)", amount=amt, cur='GBP', receipt=True, alcohol=alc, heads=heads, approval=ref,
             vat=vat_of(amt), note=(f"approved by director, ref {ref}" if ref else ''))
@@ -352,23 +398,207 @@ def gen(seed, tier):
     return claims, lines, rates, register, directors
 
 
+def gen_big(seed, tier):
+    """Medium and hard batches: many employees, trips with hotels and the meals around them, mileage near the 10,000
+    mark with passengers, entertainment with every approval state, receipts at the £25.00 edge, late lines with and
+    without a late-submission approval, and duplicates."""
+    rng = random.Random(seed)
+    n_emp = {'medium': 5, 'hard': 8}[tier]
+    names = people(rng, n_emp + 3)
+    emps = names[:n_emp]
+    directors = names[n_emp:n_emp + 3]
+    rates = {'GBP': D('1'), 'EUR': D(str(rng.choice(['0.84', '0.85', '0.86', '0.87']))), 'USD': D(str(rng.choice(['0.74', '0.76', '0.78', '0.79'])))}
+    month = {'medium': 9, 'hard': 4}[tier]
+    base = date(2026, month, 1)
+    claims = {}
+    lines = []
+    register = []
+    used_ids = set()
+    for i, e in enumerate(emps):
+        for k in range(2 if (tier == 'hard' and i < 3) else 1):
+            while True:
+                cid = f"C-{rng.randint(3100, 3999)}"
+                if cid not in used_ids:
+                    used_ids.add(cid)
+                    break
+            sub = base + timedelta(days=rng.randint(18, 26) - (9 if k == 0 and tier == 'hard' and i < 3 else 0))
+            while sub.weekday() >= 5:
+                sub += timedelta(days=1)
+            miles_year = 2026 if month >= 5 else 2025
+            claims[cid] = dict(id=cid, emp=e, dept=DEPTS[(seed + i) % len(DEPTS)], submitted=sub,
+                               miles_before=rng.choice([1200, 4300, 7650, 9480, 9720, 9890, 9935]), miles_year=miles_year)
+    C = list(claims.values())
+    first_of = {}
+    for c in C:
+        if c['emp'] in first_of:
+            c['miles_before'] = first_of[c['emp']]['miles_before']
+        else:
+            first_of[c['emp']] = c
+
+    def add(**k):
+        k.setdefault('alcohol', None)
+        k.setdefault('approval', None)
+        k.setdefault('vat', None)
+        k.setdefault('first_class', False)
+        k.setdefault('note', '')
+        k.setdefault('passengers', 0)
+        lines.append(Line(**k))
+        return lines[-1]
+
+    def wday(d, back=True):
+        while d.weekday() >= 5:
+            d += timedelta(days=-1 if back else 1)
+        return d
+
+    def edate(c, lo=3, hi=30):
+        return wday(c['submitted'] - timedelta(days=rng.randint(lo, hi)))
+
+    def vat_of(gross):
+        return r2(gross / D(6))
+
+    def money(lo, hi):
+        return r2(D(rng.randint(int(lo * 100), int(hi * 100))) / 100)
+
+    def to_local(gbp_amt, cur):
+        return r2(gbp_amt / rates[cur]) if cur != 'GBP' else gbp_amt
+
+    def meal_line(c, d, city, kind, amt_gbp, alcohol_gbp=None, receipt=True):
+        cur = CUR[city]
+        amt = to_local(amt_gbp, cur)
+        alc = to_local(alcohol_gbp, cur) if alcohol_gbp else None
+        return add(claim=c['id'], date=d, kind='meal', city=city, merchant=rng.choice(MERCH['meal'][city]), desc=kind, amount=amt, cur=cur,
+                   receipt=receipt, alcohol=alc, vat=vat_of(amt) if cur == 'GBP' and receipt else None)
+
+    def trip(c):
+        city = rng.choice(list(HOTEL_CAP))
+        n = rng.choice([1, 2, 2, 3])
+        d0 = edate(c, 8, 40)
+        cap = HOTEL_CAP[city]
+        per = cap + money(4, 45) if rng.random() < 0.5 else cap - money(3, 40)
+        amt = to_local(r2(per * n), CUR[city])
+        add(claim=c['id'], date=d0, kind='hotel', city=city, merchant=rng.choice(MERCH['hotel'][city]), desc=f"Hotel, {n} night{'s' if n > 1 else ''}",
+            amount=amt, cur=CUR[city], receipt=True, nights=n, vat=vat_of(amt) if CUR[city] == 'GBP' else None)
+        base_cap = MEAL_CAP[city]
+        for i in range(n + 1):  # the departure day is not covered by a night
+            d = d0 + timedelta(days=i)
+            if d.weekday() >= 5 and rng.random() < 0.5:
+                continue
+            kinds = rng.sample(['Breakfast', 'Lunch', 'Dinner'], rng.choice([1, 2, 2, 3]))
+            kinds.sort(key=['Breakfast', 'Lunch', 'Dinner'].index)
+            # day totals land between the plain limit and the uplifted limit more often than not
+            target = base_cap + money(-8, 26)
+            parts = [rng.random() + 0.3 for _ in kinds]
+            for kd, w in zip(kinds, parts):
+                a = r2(target * D(str(round(w / sum(parts), 3))))
+                alc = r2(a * D('0.2')) if kd == 'Dinner' and rng.random() < 0.35 else None
+                meal_line(c, d, city, kd, max(a, D('4.50')), alc)
+        if city in UK_CITIES and city != 'London':
+            a, b, std, fc = rng.choice([r for r in RAIL if city.split()[0] in r[1] or city.split()[0] in r[0]] or RAIL)
+            first = rng.random() < 0.4
+            add(claim=c['id'], date=d0, kind='rail', city='London', merchant='National Rail (LNER/Avanti/GWR)', desc=f"Rail {a} – {b} return, {'first' if first else 'standard'} class",
+                amount=fc if first else std, cur='GBP', receipt=True, first_class=first, standard=std)
+
+    def local_meals(c):
+        d = edate(c)
+        for kd in sorted(rng.sample(['Breakfast', 'Lunch', 'Dinner'], rng.choice([1, 2])), key=['Breakfast', 'Lunch', 'Dinner'].index):
+            meal_line(c, d, 'London', kd, money(6, 32), money(3, 9) if kd == 'Dinner' and rng.random() < 0.5 else None, receipt=rng.random() < 0.85)
+
+    def mileage_run(c):
+        k = rng.choice([1, 2, 3])
+        dates = sorted(edate(c, 2, 40) for _ in range(k))
+        for d in dates:
+            miles = rng.choice([46, 84, 126, 157, 212, 264, 318])
+            pas = rng.choice([0, 0, 1, 2])
+            claimed = r2(D(miles) * D('0.45') + D(miles) * D('0.05') * pas) if rng.random() < 0.7 else r2(D(miles) * D('0.45'))
+            add(claim=c['id'], date=d, kind='mileage', city='', merchant='Own car',
+                desc=f"Mileage, {miles} miles (client visits)" + (f", {pas} colleague{'s' if pas > 1 else ''} as passenger{'s' if pas > 1 else ''}" if pas else ''),
+                amount=claimed, cur='GBP', receipt=False, miles=miles, passengers=pas)
+
+    def ent(c, state):
+        heads = rng.randint(3, 7)
+        per = money(48, 98)
+        amt = r2(per * heads)
+        alc = r2(amt * D(rng.choice(['0.15', '0.22', '0.28', '0.34'])))
+        ref = f"DA-{rng.randint(100, 899)}" if state != 'none' else None
+        if state == 'approved':
+            register.append(dict(ref=ref, type='ENT', director=rng.choice(directors), emp=c['emp'], limit=None))
+        elif state == 'limit':
+            register.append(dict(ref=ref, type='ENT', director=rng.choice(directors), emp=c['emp'], limit=r2(amt * D(rng.choice(['0.7', '0.8', '0.9'])))))
+        elif state == 'other':  # registered, but for another employee
+            register.append(dict(ref=ref, type='ENT', director=rng.choice(directors), emp=rng.choice([e for e in emps if e != c['emp']]), limit=None))
+        add(claim=c['id'], date=edate(c), kind='entertainment', city='London', merchant=rng.choice(['Guildhall Grill', 'Brasserie Aubert, Covent Garden', 'The Fenwick Dining Room', 'Quayside Oyster Bar']),
+            desc=f"Client dinner, {heads} people (incl. {rng.randint(1, 2)} staff)", amount=amt, cur='GBP', receipt=True, alcohol=alc, heads=heads, approval=ref,
+            vat=vat_of(amt), note=(f"approved by director, ref {ref}" if ref else ''))
+
+    def small(c, edge=False):
+        what = rng.choice([('Stationery World', 'Printer paper and folders'), ('City Car Parks', 'Parking, client visit'), ('Royal Mail', 'Special Delivery postage'),
+                           ('High Street Pharmacy', 'First-aid kit restock'), ('Citylink Cars', 'Taxi to client site'), ('Metro Cabs', 'Taxi to the station')])
+        amt = rng.choice([D('25.00'), D('24.99'), D('25.01')]) if edge else money(6, 48)
+        receipt = (not edge) and rng.random() < 0.8
+        taxi = 'Taxi' in what[1]
+        add(claim=c['id'], date=edate(c), kind='taxi' if taxi else 'misc', city='London', merchant=what[0], desc=what[1], amount=amt, cur='GBP', receipt=receipt,
+            vat=vat_of(amt) if (not taxi and what[0] != 'Royal Mail' and receipt) else None)
+
+    states = ['approved', 'limit', 'other', 'claimed', 'none']
+    rng.shuffle(states)
+    for i, c in enumerate(C):
+        blocks = [trip, mileage_run, local_meals, small, lambda c: small(c, True)]
+        if tier == 'hard':
+            blocks += [small, local_meals]
+        rng.shuffle(blocks)
+        for b in blocks:
+            b(c)
+        ent(c, states[i % len(states)]) if i < len(states) + (2 if tier == 'hard' else 0) else None
+    # late lines: one claim with a LATE approval, one where the approval names a different claim
+    late_claims = rng.sample(C, 2 if tier == 'medium' else 3)
+    for j, c in enumerate(late_claims):
+        ln = [l for l in lines if l.claim == c['id'] and l.kind in ('misc', 'taxi', 'meal')][0]
+        ln.date = wday(c['submitted'] - timedelta(days=rng.choice([61, 63, 70, 85])))
+        if j == 0:
+            register.append(dict(ref=f"LS-{rng.randint(10, 99)}", type='LATE', director=rng.choice(directors), claim=c['id']))
+        elif j == 1:
+            others = [x for x in C if x['id'] != c['id']]
+            register.append(dict(ref=f"LS-{rng.randint(10, 99)}", type='LATE', director=rng.choice(directors), claim=rng.choice(others)['id']))
+    # duplicates (the same employee; in the hard tier sometimes in their other claim)
+    for _ in range({'medium': 2, 'hard': 4}[tier]):
+        src = rng.choice([l for l in lines if l.kind in ('meal', 'taxi', 'misc', 'hotel')])
+        cand = [x for x in C if x['emp'] == claims[src.claim]['emp'] and x['submitted'] > src.date + timedelta(days=1 if src.kind != 'hotel' else src.nights)]
+        dup = Line(**dict(src.__dict__))
+        dup.claim = rng.choice(cand)['id']
+        dup.receipt = True
+        lines.append(dup)
+    # mileage across the tax year: the hard batch sits in April
+    order = {cid: i for i, cid in enumerate(claims)}
+    lines.sort(key=lambda l: (order[l.claim], l.date if l.kind == 'mileage' else date(2000, 1, 1)))
+    # keep each claim's lines in a stable, readable order: by date
+    lines.sort(key=lambda l: (order[l.claim], l.date))
+    for i, ln in enumerate(lines, 1):
+        ln.n = i
+    # a duplicate must come after its original: renumbering by date keeps exact copies adjacent, so put the copy last
+    return claims, lines, rates, register, directors
+
+
 def render(claims, lines, rates, register):
     out = []
     out.append(f"Rate table: €1 = £{rates['EUR']}, $1 = £{rates['USD']}.")
     out.append("")
-    out.append("Director approvals register (written approvals for client entertainment):")
+    out.append("Approvals register (written approvals; type ENT = client entertainment, type LATE = late submission of a claim):")
     if register:
-        for ref, d, e in register:
-            out.append(f"  - {ref}: approved by {d} for {e}")
+        for r in register:
+            if r['type'] == 'ENT':
+                lim = f", up to £{r['limit']:,.2f}" if r.get('limit') is not None else ''
+                out.append(f"  - {r['ref']} (ENT): approved by {r['director']} for {r['emp']}{lim}")
+            else:
+                out.append(f"  - {r['ref']} (LATE): {r['director']} approves late submission of claim {r['claim']}")
     else:
         out.append("  - (no approvals this period)")
     out.append("")
     for cid, c in claims.items():
-        out.append(f"Claim {cid} — {c['emp']} ({c['dept']}), submitted {uky(c['submitted'])}. Business miles already paid in tax year {c['miles_year']}/{str(c['miles_year'] + 1)[2:]} before this claim: {c['miles_before']:,}.")
+        out.append(f"Claim {cid} — {c['emp']} ({c['dept']}), submitted {uky(c['submitted'])}. Business miles paid to this employee in tax year {c['miles_year']}/{str(c['miles_year'] + 1)[2:]} before this batch: {c['miles_before']:,}.")
         for ln in lines:
             if ln.claim != cid:
                 continue
-            bits = [f"L{ln.n:02d}", uky(ln.date), ln.merchant + (f", {ln.city}" if ln.city and ln.kind in ('hotel', 'meal') else ''), ln.desc, money_cur(ln.amount, ln.cur)]
+            bits = [line_id(ln.n, len(lines)), uky(ln.date), ln.merchant + (f", {ln.city}" if ln.city and ln.kind in ('hotel', 'meal') else ''), ln.desc, money_cur(ln.amount, ln.cur)]
             if ln.alcohol:
                 bits.append(f"includes alcohol {money_cur(ln.alcohol, ln.cur)}")
             if ln.kind == 'rail' and ln.first_class:
@@ -392,8 +622,9 @@ def prompt(claims, lines, rates, register):
             "- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, "
             "ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n"
             "- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\n"
-            "All amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; "
-            "every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. "
+            "All amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line has two fields (rule, amount) and each total is a field. "
+            f"Routine fields are worth 1 point; fields that need extra care (shared or uplifted meal limits, approvals and their limits, mileage thresholds and passengers, late or duplicate lines, the £25.00 edge, the totals) are worth {TRAP_WEIGHT}. "
+            f"Every line you list that should not be listed costs two fields at {TRAP_WEIGHT} points each. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. "
             "Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.")
 
 
@@ -405,12 +636,19 @@ CASES = [('x01', 501, 'easy'), ('x02', 502, 'easy'), ('x03', 503, 'easy'),
 def make_cases():
     out = []
     for cid, seed, tier in CASES:
-        claims, lines, rates, register, directors = gen(seed, tier)
+        claims, lines, rates, register, directors = (gen if tier == 'easy' else gen_big)(seed, tier)
         key, pay, rule = audit(claims, lines, rates, register)
-        careless, _, _ = audit(claims, lines, rates, register, careless=True)
-        # the same expense twice must be the same employee's
+        careless, _, _ = audit(claims, lines, rates, register, ALL)
+        slip, _, _ = audit(claims, lines, rates, register, SLIP)
         assert key['non_compliant'], cid
-        out.append(dict(id=cid, tier=tier, prompt=prompt(claims, lines, rates, register), expected=key, careless=careless, n=len(lines)))
+        # every exact copy is a deliberate duplicate of the same employee's line, and it comes after the original
+        seen = {}
+        for ln in lines:
+            k = (claims[ln.claim]['emp'], ln.date, ln.merchant, ln.amount)
+            if k in seen:
+                assert rule.get(ln.n) == 'DUPLICATE' or rule.get(ln.n) in ('LATE',) or pay[ln.n] == 0, (cid, ln.n)
+            seen.setdefault(k, ln.n)
+        out.append(dict(id=cid, tier=tier, prompt=prompt(claims, lines, rates, register), expected=key, careless=careless, slip=slip, n=len(lines)))
     return out
 
 

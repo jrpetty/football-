@@ -41,6 +41,8 @@ export interface WorkWorldData {
   events: WWEvent[];
   steps: WWStep[];
   tasks: Array<{ label: string; level: string; outcome: string; value: number; detail: string }>;
+  /** Title of the records card (scenarios without bookings: payments, postings, refunds …). */
+  recordsLabel?: string;
 }
 
 export function workWorldData(replay: ReplayData): WorkWorldData | null {
@@ -143,7 +145,7 @@ export function WorkWorldStage({ data, frames, idx, video }: { data: WorkWorldDa
           ))}
         </div>
       ) : null}
-      <div className="ww-cols">
+      <div className={cx('ww-cols', data.calendars.length === 0 && 'solo')}>
         <div className="vz-card ww-inbox" aria-label="Inbox">
           <div className="vz-card-k">Inbox · {st.opened.size} of {data.inbox.length} opened</div>
           <ul>
@@ -158,7 +160,7 @@ export function WorkWorldStage({ data, frames, idx, video }: { data: WorkWorldDa
             ))}
           </ul>
         </div>
-        <Week data={data} events={st.events} current={current} />
+        {data.calendars.length > 0 && <Week data={data} events={st.events} current={current} />}
       </div>
       <div className="ww-cols even">
         <div className="vz-card">
@@ -179,7 +181,7 @@ export function WorkWorldStage({ data, frames, idx, video }: { data: WorkWorldDa
           )}
         </div>
         <div className="vz-card">
-          <div className="vz-card-k">Bookings and notes to {data.owner.split(' ')[0]}</div>
+          <div className="vz-card-k">{data.recordsLabel ?? `Bookings and notes to ${data.owner.split(' ')[0]}`}</div>
           {st.bookings.length || st.notes.length ? (
             <ul className="ww-list">
               {st.bookings.map(([ref, s]) => (
@@ -194,7 +196,7 @@ export function WorkWorldStage({ data, frames, idx, video }: { data: WorkWorldDa
               ))}
             </ul>
           ) : (
-            <p className="vz-fine">No bookings or notes yet.</p>
+            <p className="vz-fine">{data.recordsLabel ? 'Nothing recorded yet.' : 'No bookings or notes yet.'}</p>
           )}
         </div>
       </div>

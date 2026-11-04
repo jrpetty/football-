@@ -18,6 +18,9 @@
 .ww-cols.even {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
+.ww-cols.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
 @media (max-width: 1000px) {
   .ww-cols,
   .ww-cols.even {

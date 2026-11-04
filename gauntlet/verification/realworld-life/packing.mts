@@ -18,7 +18,7 @@ const CATALOGUE: Cat[] = [
   C('meds', 'Prescription medicine', 0.2, 0.4, [12, 8, 6], null),
   C('clothes', 'Clothes for the trip (rolled)', 3.4, 16, [40, 30, 14], 18000),
   C('clothes-light', 'Summer clothes (rolled)', 2.2, 11, [35, 25, 12], 12000),
-  C('outfit', 'Wedding outfit in a garment cover', 1.6, 9, [60, 40, 6], null),
+  C('outfit', 'Wedding outfit in a folding garment cover', 1.6, 9, [52, 38, 6], null),
   C('suitbag', 'Suit in a folding garment bag', 1.9, 10, [52, 38, 8], 25000),
   C('shoes', 'Smart shoes', 1.1, 6, [32, 22, 12], 6500),
   C('trainers', 'Trainers', 0.9, 7, [32, 22, 13], 6000, { wearable: true }),
@@ -55,7 +55,7 @@ const CATALOGUE: Cat[] = [
   C('boardgame', 'Board game', 1.1, 4.5, [30, 30, 7], 3500),
   C('babyclothes', 'Baby clothes and nappies', 2.5, 15, [40, 30, 15], 6000),
   C('formula', 'Baby formula (powder tin)', 0.9, 1.6, [13, 13, 18], 1400),
-  C('babymilk', 'Ready-made baby milk 200 ml', 0.22, 0.2, [12, 6, 6], 250, { liquidMl: 200 }),
+  C('babymilk', 'Ready-made baby milk 200 ml', 0.22, 0.2, [12, 6, 6], 250, { liquidMl: 200, medical: true }),
   C('pillow', 'Travel pillow', 0.3, 4, [30, 28, 10], 1500, { wearable: true }),
   C('skisuit', 'Ski jacket and trousers', 2.6, 18, [50, 40, 15], 22000, { wearable: true }),
   C('skiboots', 'Ski boots', 3.6, 16, [42, 32, 28], 8000),
@@ -68,6 +68,31 @@ const CATALOGUE: Cat[] = [
   C('tent', 'Festival tent', 2.4, 14, [58, 18, 18], 6000),
   C('sleepingbag', 'Sleeping bag', 1.4, 12, [40, 25, 25], 4500),
   C('wellies', 'Wellies', 1.8, 12, [40, 30, 12], 2500, { wearable: true }),
+  C('eyedrops', 'Prescription eye drops 15 ml', 0.03, 0.03, [7, 3, 3], null, { liquidMl: 15, medical: true }),
+  C('antibiotic', 'Liquid antibiotics 250 ml (prescribed)', 0.35, 0.3, [14, 7, 7], null, { liquidMl: 250, medical: true }),
+  C('hoodie', 'Hoodie', 0.7, 5, [35, 30, 8], 3500, { wearable: true }),
+  C('jeans', 'Spare jeans', 0.8, 4, [35, 30, 5], 4500),
+  C('cables', 'Phone charger and cables', 0.2, 0.4, [12, 8, 4], 2000),
+  C('headphones', 'Noise-cancelling headphones', 0.3, 1.5, [20, 18, 6], 15000),
+  C('tablet', 'Tablet', 0.5, 0.6, [25, 17, 1], 30000),
+  C('umbrella', 'Folding umbrella', 0.4, 0.8, [30, 6, 6], 800),
+  C('adapter', 'Travel adapter', 0.15, 0.2, [7, 6, 5], 1200),
+  C('swimwear', 'Swimwear', 0.3, 1.5, [25, 20, 4], 3000),
+  C('flipflops', 'Flip-flops', 0.3, 2, [28, 11, 4], 1000, { wearable: true }),
+  C('shortbread', 'Tin of shortbread (gift)', 0.8, 2, [20, 20, 6], 1200),
+  C('teabags', 'Box of 240 tea bags for my aunt', 0.75, 3, [22, 14, 12], 900),
+  C('marmite', 'Jar of Marmite 250 g (paste)', 0.4, 0.3, [11, 8, 8], 600, { liquidMl: 250 }),
+  C('firstaid', 'First-aid kit', 0.4, 1.5, [20, 13, 6], 1500),
+  C('shaver', 'Electric shaver', 0.3, 0.6, [16, 7, 5], 6000),
+  C('curling', 'Curling tongs', 0.5, 1, [32, 5, 5], 3500),
+  C('yogamat', 'Yoga mat (rolled)', 1.2, 8, [61, 12, 12], 2500),
+  C('babycarrier', 'Baby carrier', 0.9, 6, [40, 30, 10], 7000, { wearable: true }),
+  C('toys', 'Bag of toys and picture books', 1.5, 7, [35, 25, 12], 3000),
+  C('kneebrace', 'Knee brace', 0.4, 1.5, [30, 15, 6], 4500, { wearable: true }),
+  C('gloves', 'Ski gloves and neck warmer', 0.4, 2, [28, 15, 6], 4000, { wearable: true }),
+  C('suncream-face', 'Face sun cream 40 ml', 0.05, 0.05, [9, 4, 2], 1600, { liquidMl: 40 }),
+  C('handcream', 'Hand cream 75 ml', 0.09, 0.09, [12, 5, 3], 800, { liquidMl: 75 }),
+  C('deodorant', 'Spray deodorant 150 ml', 0.18, 0.2, [16, 5, 5], 450, { liquidMl: 150 }),
 ];
 
 interface PackSpec {
@@ -78,7 +103,7 @@ interface PackSpec {
   items: string[];
   /** Overrides on catalogue items: replacement price changes etc. */
   tweaks?: Record<string, Partial<PackItem>>;
-  airline: { cabinFee: number; holdFee: number; hold2Fee: number; overPerKg: number; cabinKg: number; holdFreeKg?: number; personalLitres?: number };
+  airline: { cabinFee: number; holdFee: number; hold2Fee: number; overPerKg: number; cabinKg: number; holdFreeKg?: number; personalLitres?: number; cabinTotalKg?: number };
   late?: { text: string; tweaks?: Record<string, Partial<PackItem>>; airline?: Partial<PackSpec['airline']> };
 }
 
@@ -104,48 +129,49 @@ const SPECS: PackSpec[] = [
   {
     id: 'p04', difficulty: 'medium', seed: 804,
     intro: 'My cousin’s wedding in Kraków, flying from Luton. I’m doing the readings, so the outfit has to come.',
-    items: ['passport', 'phone', 'meds', 'outfit', 'shoes', 'clothes-light', 'washbag', 'toothpaste', 'perfume', 'moisturiser', 'shampoo', 'gin', 'gifts', 'hairdryer', 'powerbank', 'pillow'],
-    airline: { cabinFee: 3000, holdFee: 5400, hold2Fee: 5600, overPerKg: 1200, cabinKg: 10 },
+    items: ['passport', 'phone', 'meds', 'outfit', 'shoes', 'clothes-light', 'washbag', 'toothpaste', 'perfume', 'moisturiser', 'shampoo', 'gin', 'gifts', 'hairdryer', 'powerbank', 'pillow', 'curling', 'deodorant', 'cables', 'shortbread'],
+    airline: { cabinFee: 3000, holdFee: 11900, hold2Fee: 12900, overPerKg: 1200, cabinKg: 10 },
   },
   {
     id: 'p05', difficulty: 'medium', seed: 805,
     intro: 'Hiking in Norway for five days from Edinburgh. Some of this kit is expensive to replace out there.',
-    items: ['passport', 'phone', 'boots', 'jacket', 'clothes', 'washbag', 'toothpaste', 'suncream-mini', 'lenses', 'lenses-mini', 'multitool', 'camera', 'tripod', 'powerbank', 'book'],
-    airline: { cabinFee: 2600, holdFee: 5600, hold2Fee: 6200, overPerKg: 1500, cabinKg: 8 },
+    items: ['passport', 'phone', 'boots', 'jacket', 'clothes', 'washbag', 'toothpaste', 'suncream-mini', 'lenses', 'lenses-mini', 'multitool', 'camera', 'tripod', 'powerbank', 'book', 'hoodie', 'firstaid', 'kneebrace', 'handcream', 'cables'],
+    airline: { cabinFee: 2600, holdFee: 13900, hold2Fee: 14900, overPerKg: 1500, cabinKg: 8 },
   },
   {
     id: 'p06', difficulty: 'medium', seed: 806,
     intro: 'Christmas with family in Toronto from Heathrow. Lots of presents.',
-    items: ['passport', 'phone', 'meds', 'coat', 'clothes', 'trainers', 'washbag', 'toothpaste', 'shampoo-mini', 'gifts', 'boardgame', 'whisky', 'jam', 'kindle', 'charger', 'powerbank'],
-    airline: { cabinFee: 0, holdFee: 6500, hold2Fee: 8500, overPerKg: 1800, cabinKg: 10 },
+    items: ['passport', 'phone', 'meds', 'coat', 'clothes', 'trainers', 'washbag', 'toothpaste', 'shampoo-mini', 'gifts', 'boardgame', 'whisky', 'jam', 'kindle', 'charger', 'powerbank', 'shortbread', 'teabags', 'marmite', 'jeans'],
+    airline: { cabinFee: 0, holdFee: 7500, hold2Fee: 8500, overPerKg: 1800, cabinKg: 10 },
   },
   {
     id: 'p07', difficulty: 'hard', seed: 807,
     intro: 'Ski week in Geneva from Birmingham. Ski hire is booked, but not boots or clothing.',
-    items: ['passport', 'phone', 'meds', 'skisuit', 'skiboots', 'goggles', 'thermals', 'clothes', 'boots', 'coat', 'washbag', 'toothpaste', 'suncream-mini', 'moisturiser', 'lenses', 'camera', 'laptop', 'charger', 'powerbank', 'book', 'gin', 'boardgame'],
-    airline: { cabinFee: 2500, holdFee: 8900, hold2Fee: 9900, overPerKg: 1300, cabinKg: 10, holdFreeKg: 20 },
+    items: ['passport', 'phone', 'meds', 'eyedrops', 'skisuit', 'skiboots', 'goggles', 'gloves', 'thermals', 'clothes', 'jeans', 'boots', 'coat', 'hoodie', 'washbag', 'toothpaste', 'suncream-mini', 'suncream-face', 'moisturiser', 'handcream', 'lenses', 'camera', 'laptop', 'charger', 'cables', 'powerbank', 'book', 'gin', 'boardgame', 'headphones'],
+    airline: { cabinFee: 2500, holdFee: 14900, hold2Fee: 15900, overPerKg: 1300, cabinKg: 10, holdFreeKg: 20, cabinTotalKg: 14 },
     late: { text: 'UPDATE: the airline has just emailed new rules from this month: the cabin bag limit is 8 kg, not 10 kg, and each hold bag now includes only 15 kg (not 20 kg) before the overweight fee. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.', airline: { cabinKg: 8, holdFreeKg: 15 }, tweaks: { skiboots: { replace: 4000 } } },
   },
   {
     id: 'p08', difficulty: 'hard', seed: 808,
     intro: 'I’m a bridesmaid in Malaga and flying from Newcastle with the bride’s present. The dress and my medicine absolutely have to come.',
-    items: ['passport', 'phone', 'meds', 'dress', 'heels', 'clothes-light', 'trainers', 'jacket', 'washbag', 'toothpaste', 'shampoo', 'suncream', 'perfume', 'moisturiser', 'straighteners', 'hairdryer', 'gifts', 'whisky', 'speaker', 'powerbank', 'scissors', 'towel', 'snorkel'],
-    airline: { cabinFee: 2800, holdFee: 7400, hold2Fee: 8400, overPerKg: 1200, cabinKg: 10, holdFreeKg: 15 },
+    items: ['passport', 'phone', 'meds', 'antibiotic', 'dress', 'heels', 'clothes-light', 'trainers', 'flipflops', 'jacket', 'swimwear', 'washbag', 'toothpaste', 'shampoo', 'shampoo-mini', 'suncream', 'suncream-mini', 'perfume', 'moisturiser', 'deodorant', 'straighteners', 'hairdryer', 'curling', 'gifts', 'whisky', 'speaker', 'powerbank', 'scissors', 'towel', 'snorkel', 'adapter', 'headphones'],
+    airline: { cabinFee: 2800, holdFee: 7400, hold2Fee: 8400, overPerKg: 1200, cabinKg: 10, holdFreeKg: 15, cabinTotalKg: 13 },
     late: { text: 'Good news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them). And her mum is driving out, so she will take the wrapped presents and the bottle of whisky in the car: they do not need to come with me and cost me nothing to leave behind.', tweaks: { hairdryer: { replace: 0 }, straighteners: { replace: 0 }, gifts: { replace: 0 }, whisky: { replace: 0 } } },
   },
   {
     id: 'p09', difficulty: 'hard', seed: 809,
     intro: 'Taking our baby to see her grandparents in Lagos, flying from Heathrow. I’m carrying everything.',
-    items: ['passport', 'phone', 'meds', 'babyclothes', 'formula', 'babymilk', 'clothes', 'trainers', 'coat', 'washbag', 'toothpaste', 'moisturiser', 'lenses', 'gifts', 'boardgame', 'whisky', 'gin', 'perfume', 'kindle', 'powerbank', 'charger', 'pillow', 'jacket'],
+    items: ['passport', 'phone', 'meds', 'babyclothes', 'formula', 'babymilk', 'babycarrier', 'toys', 'clothes', 'trainers', 'coat', 'washbag', 'toothpaste', 'moisturiser', 'lenses', 'gifts', 'boardgame', 'whisky', 'gin', 'perfume', 'shortbread', 'teabags', 'kindle', 'tablet', 'powerbank', 'charger', 'cables', 'pillow', 'jacket', 'firstaid'],
     tweaks: { gifts: { replace: null, name: 'Wrapped presents for the family (they must come)' } },
-    airline: { cabinFee: 0, holdFee: 7000, hold2Fee: 9500, overPerKg: 2000, cabinKg: 7, holdFreeKg: 20 },
+    late: { text: 'Two updates. First, the airline says that on this route the cabin bag limit is 10 kg, not 7 kg (the 12 kg limit for the personal item and cabin bag together stays). Second, my sister is visiting next week and will take the toys and picture books over for us, so they cost nothing to leave behind.', airline: { cabinKg: 10 }, tweaks: { toys: { replace: 0 } } },
+    airline: { cabinFee: 0, holdFee: 13500, hold2Fee: 14500, overPerKg: 2000, cabinKg: 7, holdFreeKg: 20, cabinTotalKg: 12 },
   },
   {
     id: 'p10', difficulty: 'hard', seed: 810,
     intro: 'Glastonbury? No — a music festival near Barcelona, flying from Stansted, camping for four nights.',
-    items: ['passport', 'phone', 'tent', 'sleepingbag', 'wellies', 'jacket', 'clothes-light', 'trainers', 'washbag', 'toothpaste', 'suncream', 'suncream-mini', 'shampoo-mini', 'speaker', 'powerbank', 'multitool', 'towel', 'camera', 'pillow', 'book', 'gin'],
+    items: ['passport', 'phone', 'tent', 'sleepingbag', 'wellies', 'jacket', 'hoodie', 'clothes-light', 'trainers', 'flipflops', 'swimwear', 'washbag', 'toothpaste', 'suncream', 'suncream-mini', 'suncream-face', 'shampoo-mini', 'deodorant', 'speaker', 'powerbank', 'cables', 'multitool', 'towel', 'camera', 'pillow', 'book', 'gin', 'umbrella', 'headphones', 'yogamat'],
     tweaks: { camera: { replace: 25000, name: 'Camera and lens (nice to have)' } },
-    airline: { cabinFee: 2900, holdFee: 7900, hold2Fee: 8900, overPerKg: 1400, cabinKg: 10, holdFreeKg: 15 },
+    airline: { cabinFee: 2900, holdFee: 12900, hold2Fee: 13900, overPerKg: 1400, cabinKg: 10, holdFreeKg: 15, cabinTotalKg: 14 },
     late: { text: 'Correction from the festival site: they now rent out tents AND sleeping bags, £25 each for the whole festival, so replacing either there would only cost £25, not the prices on my list. And the airline has just put the first hold bag up to £99.00 (the second to £109.00).', tweaks: { tent: { replace: 2500 }, sleepingbag: { replace: 2500 } }, airline: { holdFee: 9900, hold2Fee: 10900 } },
   },
 ];
@@ -168,80 +194,122 @@ function makeWorld(spec: PackSpec, useLate: boolean): PackWorld {
     { id: 'hold1', label: 'Hold bag 1', maxDims: [75, 50, 30], litres: 95, maxKg: 32, fee: airline.holdFee, freeKg: airline.holdFreeKg ?? 23, overPerKg: airline.overPerKg, hold: true },
     { id: 'hold2', label: 'Hold bag 2', maxDims: [75, 50, 30], litres: 95, maxKg: 32, fee: airline.hold2Fee, freeKg: airline.holdFreeKg ?? 23, overPerKg: airline.overPerKg, hold: true },
   ];
-  return { items, bags, liquidMaxMl: 100, liquidBagMl: 1000 };
+  return { items, bags, liquidMaxMl: 100, liquidBagMl: 1000, ...(airline.cabinTotalKg !== undefined ? { cabinTotalKg: airline.cabinTotalKg } : {}) };
 }
 
-/** Exact optimum by branch and bound over places. Returns the plan and its cost (pence). */
+/**
+ * Exact optimum. For every set of paid bags (none, cabin, hold 1, cabin + hold 1, two hold bags, all three; the hold
+ * bags are interchangeable), a branch-and-bound places every item (largest first) in an open bag, on the body or at
+ * home. Bound: fees + overweight so far + replacements so far + the cheapest way (fractionally) to free the litres
+ * the remaining items cannot fit, so no branch that could still win is ever cut. Returns the cheapest legal plan.
+ */
 export function solvePacking(w: PackWorld): { plan: Record<string, PackPlace>; optimum: number } {
-  const order = w.items.slice().sort((a, b) => (b.replace ?? 1e9) - (a.replace ?? 1e9) || b.kg - a.kg);
-  const places: PackPlace[] = ['personal', 'cabin', 'hold1', 'hold2', 'wear', 'leave'];
-  const bag = (id: string) => w.bags.find((b) => b.id === id)!;
-  const kg: Record<string, number> = { personal: 0, cabin: 0, hold1: 0, hold2: 0 };
-  const litres: Record<string, number> = { personal: 0, cabin: 0, hold1: 0, hold2: 0 };
-  const count: Record<string, number> = { personal: 0, cabin: 0, hold1: 0, hold2: 0 };
-  let cabinMl = 0;
-  const assign: Record<string, PackPlace> = {};
+  const bagOf = (id: string) => w.bags.find((b) => b.id === id)!;
+  const sets: string[][] = [[], ['cabin'], ['hold1'], ['cabin', 'hold1'], ['hold1', 'hold2'], ['cabin', 'hold1', 'hold2']];
+  const sd = (d: number[]) => d.slice().sort((x, y) => y - x);
+  const fits = (it: PackItem, b: PackBag) => {
+    const a = sd(it.dims);
+    const c = sd(b.maxDims);
+    if (a.some((x, k) => x > c[k]!)) return false;
+    if (b.hold && it.battery) return false;
+    if (!b.hold && it.sharp) return false;
+    if (!b.hold && it.liquidMl !== undefined && !it.medical && it.liquidMl > w.liquidMaxMl) return false;
+    if (b.maxKg !== null && it.kg > b.maxKg) return false;
+    return true;
+  };
   let best = Number.POSITIVE_INFINITY;
   let bestPlan: Record<string, PackPlace> = {};
-  const fees = () => {
-    let c = 0;
-    for (const id of ['personal', 'cabin', 'hold1', 'hold2']) {
-      if (!count[id]) continue;
-      const b = bag(id);
-      c += b.fee;
-      if (b.freeKg !== undefined && kg[id]! > b.freeKg + 1e-9) c += Math.ceil(kg[id]! - b.freeKg - 1e-9) * (b.overPerKg ?? 0);
+  const order = w.items.slice().sort((a, b) => b.litres - a.litres || b.kg - a.kg || a.id.localeCompare(b.id));
+  for (const set of sets) {
+    const open = ['personal', ...set].map(bagOf);
+    const fee = set.reduce((s, id) => s + bagOf(id).fee, 0);
+    if (fee >= best) continue;
+    const kg: Record<string, number> = {};
+    const litres: Record<string, number> = {};
+    const count: Record<string, number> = {};
+    for (const b of open) {
+      kg[b.id] = 0;
+      litres[b.id] = 0;
+      count[b.id] = 0;
     }
-    return c;
-  };
-  const rec = (i: number, leftCost: number) => {
-    const now = leftCost + fees();
-    if (now >= best) return;
-    if (i === order.length) {
-      best = now;
-      bestPlan = { ...assign };
-      return;
-    }
-    const it = order[i]!;
-    for (const p of places) {
-      if (p === 'leave') {
-        if (it.replace === null) continue;
-        assign[it.id] = 'leave';
-        rec(i + 1, leftCost + it.replace);
-        delete assign[it.id];
-        continue;
+    let cabinMl = 0;
+    const assign: Record<string, PackPlace> = {};
+    const over = () => open.reduce((s, b) => s + (b.freeKg !== undefined && kg[b.id]! > b.freeKg + 1e-9 ? Math.ceil(kg[b.id]! - b.freeKg - 1e-9) * (b.overPerKg ?? 0) : 0), 0);
+    const bound = (i: number, left: number): number => {
+      let lb = fee + left + over();
+      let cap = open.reduce((s, b) => s + (b.litres - litres[b.id]!), 0);
+      const cand: PackItem[] = [];
+      for (let k = i; k < order.length; k++) {
+        const it = order[k]!;
+        if (it.wearable) continue;
+        if (!open.some((b) => fits(it, b))) {
+          if (it.replace === null) return Number.POSITIVE_INFINITY;
+          lb += it.replace;
+          continue;
+        }
+        cand.push(it);
       }
-      if (p === 'wear') {
-        if (!it.wearable) continue;
+      let need = cand.reduce((s, it) => s + it.litres, 0) - cap;
+      if (need > 1e-9) {
+        const leavable = cand.filter((it) => it.replace !== null).sort((a, b) => a.replace! / a.litres - b.replace! / b.litres);
+        for (const it of leavable) {
+          if (need <= 1e-9) break;
+          const take = Math.min(it.litres, need);
+          lb += (it.replace! * take) / it.litres;
+          need -= take;
+        }
+        if (need > 1e-9) return Number.POSITIVE_INFINITY;
+      }
+      void cap;
+      return lb;
+    };
+    const rec = (i: number, left: number) => {
+      if (bound(i, left) >= best - 1e-9) return;
+      if (i === order.length) {
+        // Actual cost: only bags with something in them are paid for.
+        let c = left;
+        for (const b of open) if (count[b.id]) c += b.fee;
+        c += over();
+        if (c < best) {
+          best = c;
+          bestPlan = { ...assign };
+        }
+        return;
+      }
+      const it = order[i]!;
+      for (const b of open) {
+        if (b.id === 'hold2' && !count.hold1) continue;
+        if (!fits(it, b)) continue;
+        if (litres[b.id]! + it.litres > b.litres + 1e-9) continue;
+        if (b.maxKg !== null && kg[b.id]! + it.kg > b.maxKg + 1e-9) continue;
+        if (!b.hold && w.cabinTotalKg !== undefined && (kg.personal ?? 0) + (kg.cabin ?? 0) + it.kg > w.cabinTotalKg + 1e-9) continue;
+        const liq = !b.hold && it.liquidMl !== undefined && !it.medical;
+        if (liq && cabinMl + it.liquidMl! > w.liquidBagMl) continue;
+        kg[b.id]! += it.kg;
+        litres[b.id]! += it.litres;
+        count[b.id]!++;
+        if (liq) cabinMl += it.liquidMl!;
+        assign[it.id] = b.id;
+        rec(i + 1, left);
+        delete assign[it.id];
+        if (liq) cabinMl -= it.liquidMl!;
+        count[b.id]!--;
+        litres[b.id]! -= it.litres;
+        kg[b.id]! -= it.kg;
+      }
+      if (it.wearable) {
         assign[it.id] = 'wear';
-        rec(i + 1, leftCost);
+        rec(i + 1, left);
         delete assign[it.id];
-        continue;
       }
-      if (p === 'hold2' && !count.hold1) continue; // the hold bags are interchangeable
-      const b = bag(p);
-      const sd = it.dims.slice().sort((x, y) => y - x);
-      const bd = b.maxDims.slice().sort((x, y) => y - x);
-      if (sd.some((x, k) => x > bd[k]!)) continue;
-      if (litres[p]! + it.litres > b.litres + 1e-9) continue;
-      if (b.maxKg !== null && kg[p]! + it.kg > b.maxKg + 1e-9) continue;
-      if (b.hold && it.battery) continue;
-      if (!b.hold && it.sharp) continue;
-      const liquidCabin = !b.hold && it.liquidMl !== undefined;
-      if (liquidCabin && (it.liquidMl! > w.liquidMaxMl || cabinMl + it.liquidMl! > w.liquidBagMl)) continue;
-      kg[p]! += it.kg;
-      litres[p]! += it.litres;
-      count[p]!++;
-      if (liquidCabin) cabinMl += it.liquidMl!;
-      assign[it.id] = p;
-      rec(i + 1, leftCost);
-      delete assign[it.id];
-      if (liquidCabin) cabinMl -= it.liquidMl!;
-      count[p]!--;
-      litres[p]! -= it.litres;
-      kg[p]! -= it.kg;
-    }
-  };
-  rec(0, 0);
+      if (it.replace !== null) {
+        assign[it.id] = 'leave';
+        rec(i + 1, left + it.replace);
+        delete assign[it.id];
+      }
+    };
+    rec(0, 0);
+  }
   if (!Number.isFinite(best)) throw new Error('no legal plan');
   return { plan: bestPlan, optimum: best };
 }
@@ -261,7 +329,7 @@ function promptFor(spec: PackSpec, shown: PackWorld): string {
   const L: string[] = [spec.intro, '', 'Here is everything I’d like to take. "Replace" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.', ''];
   L.push('ID | Item | Weight | Volume | Size (cm) | Replace | Notes');
   for (const it of shown.items) {
-    const notes = [it.liquidMl !== undefined ? `liquid, ${it.liquidMl} ml container` : '', it.battery ? 'spare lithium battery' : '', it.sharp ? 'sharp' : '', it.wearable ? 'can be worn' : ''].filter(Boolean).join('; ');
+    const notes = [it.liquidMl !== undefined ? `liquid, ${it.liquidMl} ml container${it.medical ? ' (medicine/baby milk)' : ''}` : '', it.battery ? 'spare lithium battery' : '', it.sharp ? 'sharp' : '', it.wearable ? 'can be worn' : ''].filter(Boolean).join('; ');
     L.push(`${it.id} | ${it.name} | ${kgText(it.kg)} | ${it.litres} l | ${it.dims.join(' × ')} | ${it.replace === null ? 'MUST' : money(it.replace)} | ${notes || '-'}`);
   }
   L.push('', 'AIRLINE RULES (fees are for the whole return trip; the same things come home with me)');
@@ -270,6 +338,8 @@ function promptFor(spec: PackSpec, shown: PackWorld): string {
   L.push(`- Hold bags (at most 2): first ${money(a.holdFee)}, second ${money(a.hold2Fee)}. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes ${a.holdFreeKg ?? 23} kg; every kg or part of a kg over that costs ${money(a.overPerKg)}.`);
   L.push('- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.');
   L.push('- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.');
+  if (shown.items.some((it) => it.medical)) L.push('- Exception: medicines and baby milk (marked "medicine/baby milk") may go in the cabin in any size, outside the 1-litre bag; they do not count towards the 1,000 ml. (In the hold, any liquid is fine anyway.)');
+  if (shown.cabinTotalKg !== undefined) L.push(`- On this airline the personal item and the cabin bag together may weigh at most ${shown.cabinTotalKg} kg (as well as the cabin bag’s own limit).`);
   L.push('- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.');
   L.push('- Things marked "can be worn" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.');
   L.push('- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the "Replace" price of everything left at home.');
@@ -338,10 +408,11 @@ function firstFit(w: PackWorld): Record<string, unknown> {
       if (sd.some((x, k) => x > bd[k]!)) continue;
       if (litres[b.id]! + it.litres > b.litres || (b.maxKg !== null && kg[b.id]! + it.kg > Math.min(b.maxKg, b.freeKg ?? b.maxKg))) continue;
       if ((b.hold && it.battery) || (!b.hold && it.sharp)) continue;
-      if (!b.hold && it.liquidMl !== undefined && (it.liquidMl > w.liquidMaxMl || ml + it.liquidMl > w.liquidBagMl)) continue;
+      if (!b.hold && it.liquidMl !== undefined && !it.medical && (it.liquidMl > w.liquidMaxMl || ml + it.liquidMl > w.liquidBagMl)) continue;
+      if (!b.hold && w.cabinTotalKg !== undefined && kg.personal! + kg.cabin! + it.kg > w.cabinTotalKg) continue;
       kg[b.id]! += it.kg;
       litres[b.id]! += it.litres;
-      if (!b.hold && it.liquidMl !== undefined) ml += it.liquidMl;
+      if (!b.hold && it.liquidMl !== undefined && !it.medical) ml += it.liquidMl;
       plan[it.id] = b.id;
       done = true;
       break;

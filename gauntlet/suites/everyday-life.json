@@ -1,0 +1,27 @@
+{
+  "id": "everyday-life",
+  "version": "1.0.0",
+  "name": "Everyday Life",
+  "description": "Personal admin people ask an AI for help with: a weekend away on the cheapest tickets, splitting bills, the cheapest tariff, a shopping list for twelve, a mortgage overpayment and packing within airline limits. Every plan is replayed and every number checked exactly. Never mixed into the Gauntlet Index.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "life.bill-split"
+    },
+    {
+      "id": "life.loan-overpayment"
+    },
+    {
+      "id": "life.packing-limits"
+    },
+    {
+      "id": "life.recipe-shopping"
+    },
+    {
+      "id": "life.tariff-chooser"
+    },
+    {
+      "id": "life.trip-planner"
+    }
+  ]
+}

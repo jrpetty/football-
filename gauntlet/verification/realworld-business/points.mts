@@ -1,0 +1,15 @@
+// Prints how many marking points each case of the business pack carries, and its prompt size:
+// node verification/realworld-business/points.mts
+import { loadTests } from '../../src/core/registry.ts';
+import { compareJson } from '../../src/scoring/json-compare.ts';
+import type { PromptTest } from '../../src/core/types.ts';
+
+for (const t of loadTests().filter((x) => /^work\.(invoice-matching|support-refunds|cv-shortlist|payroll-check|crm-dedupe)$/.test(x.definition.id))) {
+  const def = t.definition as PromptTest;
+  const rows = def.cases.map((c) => {
+    const sc = (c.scorer ?? def.scorer) as { sets?: Record<string, number>; partitions?: string[]; weights?: Record<string, number> };
+    const r = compareJson(c.expected, c.expected, { sets: sc.sets, partitions: sc.partitions, weights: sc.weights, lenient: true });
+    return `${c.id} ${Math.round(r.total)}pts ~${Math.ceil(c.prompt!.length / 3.6)}tok`;
+  });
+  console.log(`${def.id} (est. input ${def.estimate?.inputTokens} tok/case)\n  ${rows.join(' | ')}`);
+}

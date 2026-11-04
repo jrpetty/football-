@@ -218,6 +218,20 @@ function balancedEnd(text: string, start: number): number {
   return -1;
 }
 
+/**
+ * JSON.parse, and only if that fails, once more with trailing commas before a closing bracket removed (a common
+ * hand-written slip: `{"a": 1,}`). Text that already parses is never changed, so no other answer can be affected.
+ */
+function parseJsonTolerant(src: string): unknown {
+  try {
+    return JSON.parse(src);
+  } catch (err) {
+    const tidy = src.replace(/,(\s*[}\]])/g, '$1');
+    if (tidy === src) throw err;
+    return JSON.parse(tidy);
+  }
+}
+
 /** Every top-level JSON object or array embedded in prose, in order of appearance. */
 function embeddedJsonValues(text: string): unknown[] {
   const out: unknown[] = [];
@@ -230,7 +244,7 @@ function embeddedJsonValues(text: string): unknown[] {
     const end = balancedEnd(text, i);
     if (end < 0) continue;
     try {
-      out.push(JSON.parse(text.slice(i, end + 1)));
+      out.push(parseJsonTolerant(text.slice(i, end + 1)));
       i = end;
     } catch {
       /* a bracket in prose, e.g. "[see above]": try the next opener */
@@ -240,7 +254,7 @@ function embeddedJsonValues(text: string): unknown[] {
 }
 
 /**
- * Remove ``` fences around JSON and parse it. Returns undefined when invalid.
+ * Remove ``` fences around JSON and parse it (a trailing comma before a closing bracket is tolerated). Returns undefined when invalid.
  * Order: the last ```json (or unlabelled) block, the whole reply, then the JSON values embedded in the
  * prose. Among embedded values the LAST one counts (a reply may echo the requested format or a draft
  * before its final answer); with `expected`, the last value of the same kind (object/array) that shares
@@ -251,7 +265,7 @@ export function parseJsonLoose(text: string, expected?: unknown): unknown {
   for (const c of [block?.code, text]) {
     if (!c) continue;
     try {
-      return JSON.parse(c.trim());
+      return parseJsonTolerant(c.trim());
     } catch {
       /* fall through */
     }

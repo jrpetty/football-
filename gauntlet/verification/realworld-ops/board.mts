@@ -28,6 +28,8 @@ interface Order {
   dupe?: boolean;
   /** A late correction says this Web order was really Wholesale (amount ex VAT). */
   rekey?: boolean;
+  /** A Wholesale order invoiced in euros: the amount (and any refund on it) is euro cents, ex VAT. */
+  eur?: boolean;
 }
 
 interface Refund {
@@ -49,6 +51,8 @@ interface Person {
   leave: string | null;
   /** Payroll cost per month Jul, Aug, Sep (pence). */
   pay: [number, number, number];
+  /** Unpaid leave inside the quarter (both days included): not employment for FTE. */
+  unpaid?: [string, string];
 }
 
 interface Payline {
@@ -72,6 +76,10 @@ export interface Misread {
   cashOrderDate?: boolean;
   reversedCounted?: boolean;
   rekeyMissed?: boolean;
+  eurNotConverted?: boolean;
+  mergesIgnored?: boolean;
+  oncostsMissed?: boolean;
+  unpaidLeaveIgnored?: boolean;
 }
 
 interface Data {
@@ -81,6 +89,10 @@ interface Data {
   payroll: Payline[];
   q2Restated: number;
   q2Old: number;
+  /** Account pairs that are the same customer: [kept, duplicate]. */
+  merges: Array<[string, string]>;
+  /** Employer on-costs (NI and pension) per person and month. */
+  oncosts: Payline[];
 }
 
 const inQ = (d: string) => d >= Q_START && d <= Q_END;
@@ -124,13 +136,14 @@ export function kpis(d: Data, m: Misread = {}): Kpis {
   const cancelled = (o: Order) => (m.cancelExactOnly ? o.status === 'Cancelled' : o.status === 'Cancelled' || o.status === 'CANCELED' || o.status === 'Void');
   const test = (o: Order) => !m.testIncluded && (o.channel === 'Internal' || o.customer.startsWith('TEST'));
   const isWeb = (o: Order) => o.channel === 'Web' && !(o.rekey && !m.rekeyMissed);
-  const ex = (o: Order) => (isWeb(o) && !m.vatLeftIn ? exVat(o.amount) : o.amount);
+  const conv = (o: Order, amt: number) => (o.eur && !m.eurNotConverted ? divRound(amt * 85, 100, 'EUR') : amt);
+  const ex = (o: Order) => (isWeb(o) && !m.vatLeftIn ? exVat(o.amount) : conv(o, o.amount));
   const rows = m.dupesTwice ? d.orders.flatMap((o) => (o.dupe ? [o, o] : [o])) : d.orders;
   const valid = rows.filter((o) => inQ(o.date) && !cancelled(o) && !test(o));
   const byId = new Map(d.orders.map((o) => [o.id, o]));
   const refundEx = (r: Refund) => {
     const o = byId.get(r.order)!;
-    return isWeb(o) && !m.vatLeftIn ? exVat(r.amount) : r.amount;
+    return isWeb(o) && !m.vatLeftIn ? exVat(r.amount) : conv(o, r.amount);
   };
   const counted = (r: Refund) => (m.reversedCounted || r.status === 'Processed') && !test(byId.get(r.order)!);
   const qRefunds = d.refunds.filter((r) => counted(r) && (m.refundsByOrderDate ? inQ(byId.get(r.order)!.date) : inQ(r.date)));
@@ -140,7 +153,8 @@ export function kpis(d: Data, m: Misread = {}): Kpis {
   const cogs = valid.reduce((a, o) => a + o.cost, 0);
   // Active: a valid quarter order not refunded in full (refunds on it up to the export date).
   const refundedOn = (id: string) => d.refunds.filter((r) => r.order === id && r.status === 'Processed').reduce((a, r) => a + r.amount, 0);
-  const activeSet = new Set(valid.filter((o) => m.activeAnyOrder || refundedOn(o.id) < o.amount).map((o) => o.customer));
+  const canon = new Map(m.mergesIgnored ? [] : d.merges.map(([keep, dup]) => [dup, keep]));
+  const activeSet = new Set(valid.filter((o) => m.activeAnyOrder || refundedOn(o.id) < o.amount).map((o) => canon.get(o.customer) ?? o.customer));
   // FTE: contracted hours ÷ 37.5, weighted by days employed in the quarter ÷ 92; contractors excluded.
   let fteNum = 0; // Σ hours×2 × days
   for (const p of d.people) {
@@ -148,10 +162,15 @@ export function kpis(d: Data, m: Misread = {}): Kpis {
     const from = m.fullQuarterFte || p.start < Q_START ? Q_START : p.start;
     const to = m.fullQuarterFte || !p.leave || p.leave > Q_END ? Q_END : p.leave;
     if (from > Q_END || to < Q_START) continue;
-    fteNum += p.hours * 2 * days(from, to);
+    let worked = days(from, to);
+    if (p.unpaid && !m.unpaidLeaveIgnored && !m.fullQuarterFte) worked -= days(p.unpaid[0], p.unpaid[1]);
+    fteNum += p.hours * 2 * worked;
   }
   const fteDen = 75 * Q_DAYS; // 37.5 × 2 × 92
-  const payroll = d.payroll.filter((l) => (m.rerunIncluded || l.note !== 'RERUN') && (m.contractorCounted || d.people.find((p) => p.name === l.name)?.type !== 'Contractor')).reduce((a, l) => a + l.amount, 0);
+  const staffLine = (l: Payline) => m.contractorCounted || d.people.find((p) => p.name === l.name)?.type !== 'Contractor';
+  const payroll =
+    d.payroll.filter((l) => (m.rerunIncluded || l.note !== 'RERUN') && staffLine(l)).reduce((a, l) => a + l.amount, 0) +
+    (m.oncostsMissed ? 0 : d.oncosts.filter(staffLine).reduce((a, l) => a + l.amount, 0));
   // Cash: ex-VAT value of every order paid in the quarter (whatever its order date), less refunds processed in the quarter.
   const paidRows = d.orders.filter((o) => !test(o) && o.paid && (m.cashOrderDate ? inQ(o.date) : inQ(o.paid)));
   const cash = paidRows.reduce((a, o) => a + ex(o), 0) - refunds;
@@ -194,6 +213,11 @@ interface Spec {
   oldQ2: boolean;
   rekey: boolean;
   allRefunded: boolean;
+  /** Hard cases: euro invoices, merged customer accounts, employer on-costs, unpaid leave. */
+  eur?: number;
+  merges?: number;
+  oncosts?: boolean;
+  unpaid?: boolean;
 }
 
 const COMPANY = 'Northbank Roasters Ltd';
@@ -235,6 +259,15 @@ function genData(spec: Spec, rng: Rng): Data {
   }
   const live = () => orders.map((o, i) => (inQ(o.date) && o.status !== 'Cancelled' && o.status !== 'CANCELED' && o.status !== 'Void' && o.channel !== 'Internal' && !o.customer.startsWith('TEST') ? i : -1)).filter((i) => i >= 0);
   for (const i of rng.sample(live(), spec.dupes)) orders[i]!.dupe = true;
+  if (spec.eur) {
+    // Irish wholesale customers invoiced in euros (amounts nudged so £ conversion never lands on half a penny).
+    for (const o of rng.sample(orders.filter((x) => x.channel === 'Wholesale' && !x.rekey), spec.eur)) {
+      o.eur = true;
+      o.amount = Math.round(o.amount / 0.85);
+      if ((o.amount * 85) % 100 === 50) o.amount += 1;
+      o.customer = `IE${o.customer.slice(1)}`;
+    }
+  }
   if (spec.rekey) {
     const web = live().filter((i) => orders[i]!.channel === 'Web' && orders[i]!.amount > 6000);
     orders[rng.pick(web)]!.rekey = true;
@@ -246,7 +279,8 @@ function genData(spec: Spec, rng: Rng): Data {
   picks.forEach((o, k) => {
     const full = k % 3 === 0;
     const part = Math.round(o.amount * (0.1 + 0.4 * rng.next()));
-    const amount = full ? o.amount : part % 6 === 3 ? part + 1 : part;
+    let amount = full ? o.amount : part % 6 === 3 ? part + 1 : part;
+    if (o.eur && !full && (amount * 85) % 100 === 50) amount += 1;
     const date = iso(o.date, rng.int(3, 25));
     refunds.push({ id: `RF-${7700 + k * 5}`, order: o.id, date, amount, status: 'Processed' });
   });
@@ -289,7 +323,21 @@ function genData(spec: Spec, rng: Rng): Data {
     const r = aug[Math.min(2, aug.length - 1)]!;
     payroll.splice(payroll.indexOf(r) + 1, 0, { ...r, note: 'RERUN' });
   }
-  const tmp: Data = { orders, refunds, people, payroll, q2Restated: 0, q2Old: 0 };
+  if (spec.unpaid) {
+    const p = people.find((x, i) => i >= 3 && x.type === 'Employee' && !x.leave && x.start < Q_START)!;
+    const from = iso(Q_START, rng.int(15, 50));
+    p.unpaid = [from, iso(from, rng.int(9, 24))];
+  }
+  const oncosts: Payline[] = [];
+  if (spec.oncosts) for (const l of payroll) if (l.note !== 'RERUN') oncosts.push({ name: l.name, month: l.month, amount: Math.round(l.amount * (0.13 + 0.03 * rng.next())) });
+  // Merged accounts: a customer who also ordered under a second account number.
+  const merges: Array<[string, string]> = [];
+  if (spec.merges) {
+    const quarterCustomers = [...new Set(live().map((i) => orders[i]!.customer))];
+    const pairs = rng.sample(quarterCustomers, Math.min(quarterCustomers.length - 1, spec.merges * 2));
+    for (let k = 0; k + 1 < pairs.length && merges.length < spec.merges; k += 2) merges.push([pairs[k]!, pairs[k + 1]!]);
+  }
+  const tmp: Data = { orders, refunds, people, payroll, q2Restated: 0, q2Old: 0, merges, oncosts };
   const k = kpis({ ...tmp, q2Restated: 100, q2Old: 100 });
   const q2Restated = Math.round(k.net_revenue * 100 * (0.82 + 0.3 * rng.next()));
   const q2Old = q2Restated + rng.int(80000, 300000);
@@ -336,23 +384,36 @@ function writePrompt(spec: Spec, d: Data, rng: Rng): string {
   L.push('12. Revenue per FTE = net revenue ÷ average FTE (use the unrounded average FTE).');
   L.push('13. Payroll cost = the payroll export’s lines for employees for July, August and September. A line marked RERUN is a duplicate of the line above it and is not counted.');
   L.push('14. Cash conversion = cash collected ÷ net revenue × 100, where cash collected = the ex-VAT amounts of every non-test order whose payment date falls in the quarter (whatever its order date; cancelled orders have no payment), less refunds processed in the quarter.');
+  const eur = d.orders.some((o) => o.eur);
+  if (eur) L.push('15. Euro invoices: our Irish wholesale customers are invoiced in euros (currency EUR in the orders export). An EUR amount, and any refund on that order, is in euros and ex VAT: convert it at €1 = £0.85, rounding to the penny order by order and refund by refund. Cost of goods is always in pounds. Everything else in this memo then applies as usual.');
+  if (d.merges.length) L.push(`16. Duplicate customer accounts: the CRM clean-up found these pairs of accounts belong to the same customer, so each pair counts as ONE customer wherever customers are counted: ${d.merges.map(([a, b]) => `${a} = ${b}`).join('; ')}.`);
+  if (d.oncosts.length) L.push('17. Payroll cost also includes the employer on-costs (employer National Insurance and pension) in export 3c, for employees only.');
+  if (d.people.some((p) => p.unpaid)) L.push('18. Unpaid leave (export 3a, last column, both days included) is not employment: take those days out of that person’s days employed for FTE. Their payroll lines already reflect it.');
   L.push('Rounding: money to the penny, revenue per FTE to the nearest pound, percentages to 1 decimal place, average FTE to 2 decimal places; round only the final figure (half up).');
   L.push('');
-  L.push('EXPORT 1: ORDERS (order_id, order_date, channel, customer, status, amount, cost_of_goods_ex_vat, payment_date)');
+  L.push(`EXPORT 1: ORDERS (order_id, order_date, channel, customer, status, amount${eur ? ', currency' : ''}, cost_of_goods_ex_vat, payment_date)`);
   for (const o of d.orders) {
-    const line = `${o.id}, ${ds(o.date)}, ${o.channel}, ${o.customer}, ${o.status}, ${fmtMoney(o.amount, spec.moneyStrings && rng.next() < 0.5)}, ${fmtMoney(o.cost, false)}, ${o.paid ? ds(o.paid) : ''}`;
+    const amt = o.eur ? (o.amount / 100).toFixed(2) : fmtMoney(o.amount, spec.moneyStrings && rng.next() < 0.5);
+    const line = `${o.id}, ${ds(o.date)}, ${o.channel}, ${o.customer}, ${o.status}, ${amt}${eur ? `, ${o.eur ? 'EUR' : 'GBP'}` : ''}, ${fmtMoney(o.cost, false)}, ${o.paid ? ds(o.paid) : ''}`;
     L.push(line);
     if (o.dupe) L.push(line);
   }
   L.push('');
   L.push('EXPORT 2: REFUNDS (refund_id, order_id, refund_date, amount, status)');
-  for (const r of d.refunds) L.push(`${r.id}, ${r.order}, ${ds(r.date)}, ${fmtMoney(r.amount, spec.moneyStrings && rng.next() < 0.5)}, ${r.status}`);
+  const eurOrder = new Set(d.orders.filter((o) => o.eur).map((o) => o.id));
+  for (const r of d.refunds) L.push(`${r.id}, ${r.order}, ${ds(r.date)}, ${eurOrder.has(r.order) ? `€${(r.amount / 100).toFixed(2)}` : fmtMoney(r.amount, spec.moneyStrings && rng.next() < 0.5)}, ${r.status}`);
   L.push('');
-  L.push('EXPORT 3a: PEOPLE (name, department, type, contracted_hours_per_week, start_date, leaving_date)');
-  for (const p of d.people) L.push(`${p.name}, ${p.dept}, ${p.type}, ${p.hours}, ${ds(p.start)}, ${p.leave ? ds(p.leave) : ''}`);
+  const unpaidCol = d.people.some((p) => p.unpaid);
+  L.push(`EXPORT 3a: PEOPLE (name, department, type, contracted_hours_per_week, start_date, leaving_date${unpaidCol ? ', unpaid_leave' : ''})`);
+  for (const p of d.people) L.push(`${p.name}, ${p.dept}, ${p.type}, ${p.hours}, ${ds(p.start)}, ${p.leave ? ds(p.leave) : ''}${unpaidCol ? `, ${p.unpaid ? `${ds(p.unpaid[0])} to ${ds(p.unpaid[1])}` : ''}` : ''}`);
   L.push('');
   L.push('EXPORT 3b: PAYROLL (name, month, payroll_cost, note)');
   for (const l of d.payroll) L.push(`${l.name}, ${l.month} 2026, ${fmtMoney(l.amount, spec.moneyStrings && rng.next() < 0.5)}, ${l.note ?? ''}`);
+  if (d.oncosts.length) {
+    L.push('');
+    L.push('EXPORT 3c: EMPLOYER ON-COSTS (name, month, employer_ni_and_pension)');
+    for (const l of d.oncosts) L.push(`${l.name}, ${l.month} 2026, ${fmtMoney(l.amount, false)}`);
+  }
   const rekeyed = d.orders.find((o) => o.rekey);
   if (rekeyed) {
     L.push('');
@@ -399,6 +460,10 @@ function buildCase(spec: Spec): BoardCase {
         ['cash taken from orders dated in the quarter', { cashOrderDate: true }],
         ['reversed refund counted', { reversedCounted: true }],
         ['late re-keying note missed', { rekeyMissed: true }],
+        ['euro invoices taken as pounds', { eurNotConverted: true }],
+        ['merged customer accounts counted twice', { mergesIgnored: true }],
+        ['employer on-costs left out of payroll', { oncostsMissed: true }],
+        ['unpaid leave counted as employment', { unpaidLeaveIgnored: true }],
       ];
       for (const [label, m] of mis) {
         const k = kpis(d, m);
@@ -426,9 +491,9 @@ const SPECS: Spec[] = [
   { id: 'b04', difficulty: 'medium', seed: 1204, orders: 35, refunds: 6, people: 7, mixedDates: true, moneyStrings: false, dupes: 1, tests: 1, cancels: 3, reversed: 1, contractor: true, rerun: false, oldQ2: true, rekey: false, allRefunded: true },
   { id: 'b05', difficulty: 'medium', seed: 1205, orders: 40, refunds: 7, people: 8, mixedDates: true, moneyStrings: true, dupes: 2, tests: 2, cancels: 3, reversed: 1, contractor: true, rerun: true, oldQ2: true, rekey: false, allRefunded: true },
   { id: 'b06', difficulty: 'medium', seed: 1206, orders: 45, refunds: 8, people: 8, mixedDates: true, moneyStrings: true, dupes: 2, tests: 2, cancels: 4, reversed: 1, contractor: true, rerun: true, oldQ2: true, rekey: false, allRefunded: true },
-  { id: 'b07', difficulty: 'hard', seed: 1307, orders: 60, refunds: 10, people: 10, mixedDates: true, moneyStrings: true, dupes: 3, tests: 2, cancels: 5, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
-  { id: 'b08', difficulty: 'hard', seed: 1308, orders: 70, refunds: 12, people: 11, mixedDates: true, moneyStrings: true, dupes: 3, tests: 3, cancels: 6, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
-  { id: 'b09', difficulty: 'hard', seed: 1309, orders: 90, refunds: 14, people: 12, mixedDates: true, moneyStrings: true, dupes: 4, tests: 3, cancels: 7, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
+  { id: 'b07', difficulty: 'hard', seed: 1307, eur: 3, merges: 2, oncosts: false, unpaid: true, orders: 70, refunds: 10, people: 10, mixedDates: true, moneyStrings: true, dupes: 3, tests: 2, cancels: 5, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
+  { id: 'b08', difficulty: 'hard', seed: 1308, eur: 4, merges: 2, oncosts: true, unpaid: true, orders: 68, refunds: 12, people: 11, mixedDates: true, moneyStrings: true, dupes: 3, tests: 3, cancels: 6, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
+  { id: 'b09', difficulty: 'hard', seed: 1309, eur: 5, merges: 3, oncosts: true, unpaid: true, orders: 105, refunds: 14, people: 12, mixedDates: true, moneyStrings: true, dupes: 4, tests: 3, cancels: 7, reversed: 2, contractor: true, rerun: true, oldQ2: true, rekey: true, allRefunded: true },
 ];
 
 export function buildBoardCases(): BoardCase[] {

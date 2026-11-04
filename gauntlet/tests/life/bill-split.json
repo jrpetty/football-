@@ -15,8 +15,8 @@
   "hook": "Who owes whom, to the penny, when everyone moved in on different days?",
   "maxOutputTokens": 32000,
   "estimate": {
-    "inputTokens": 1000,
-    "outputTokens": 12000
+    "inputTokens": 1500,
+    "outputTokens": 16000
   },
   "category": "life",
   "author": "Gauntlet Real-World Pack",
@@ -191,7 +191,7 @@
     },
     {
       "id": "b04",
-      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Tue 30 Jun 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nBilal | 15 m² | Thu 1 Jan – Tue 30 Jun | no | yes\nInes | 12 m² | Thu 1 Jan – Tue 30 Jun | yes (full-time) | no, opted out\nNadia | 12 m² | Thu 1 Jan – Fri 20 Mar | no | yes\nMateusz | 13 m² | Sat 21 Mar – Tue 30 Jun | yes (full-time) | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,480.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Netflix is £12.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.20 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n\nBILLS AND WHO PAID THEM\n- Bilal paid the landlord the rent for every month.\n- Everyone else pays Bilal a standing order on the 1st of every month on which they live here: Ines £760.00, Nadia £760.00, Mateusz £810.00.\n- Netflix is on Mateusz’s card (every charge).\n- Bilal paid the council tax in full.\n- Electricity and gas, 1 Jan – 31 Mar: £712.40, paid by Nadia.\n- Electricity and gas, 1 Apr – 30 Jun: £401.18, paid by Ines.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Tue 30 Jun 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nBilal | 15 m² | Thu 1 Jan – Tue 30 Jun | no | yes\nInes | 12 m² | Thu 1 Jan – Tue 30 Jun | yes (full-time) | no, opted out\nNadia | 12 m² | Thu 1 Jan – Fri 20 Mar | no | yes\nMateusz | 13 m² | Sat 21 Mar – Tue 30 Jun | yes (full-time) | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,480.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Netflix is £12.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.20 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n\nBILLS AND WHO PAID THEM\n- Bilal paid the landlord the rent for every month.\n- Everyone else pays Bilal a standing order on the 1st of every month on which they live here: Ines £760.00, Nadia £760.00, Mateusz £810.00.\n- Netflix is on Mateusz’s card (every charge).\n- Bilal paid the council tax in full.\n- Electricity and gas, 1 Jan – 31 Mar: £712.40, paid by Nadia.\n- Electricity and gas, 1 Apr – 30 Jun: £401.18, paid by Ines.\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Sun 4 Jan | Bilal | big shop (Tesco) | £12.66 | household\n2 | Tue 10 Mar | Nadia | takeaway curry | £49.49 | household\n3 | Fri 13 Mar | Bilal | Sunday roast ingredients | £86.46 | Bilal, Ines, Nadia\n4 | Fri 27 Mar | Mateusz | party snacks | £19.77 | household\n5 | Sat 11 Apr | Mateusz | party snacks | £35.23 | household\n6 | Tue 28 Apr | Bilal | Aldi run | £51.96 | household\n7 | Sat 9 May | Ines | takeaway curry | £30.45 | household\n8 | Sat 16 May | Mateusz | pizza night | £63.04 | personal (not shared)\n9 | Fri 22 May | Mateusz | milk and bread | £4.83 | household\n10 | Thu 28 May | Mateusz | refund: milk and bread | -£3.04 | household (refund of line 9)\n11 | Wed 3 Jun | Mateusz | dishwasher tablets | £67.07 | household\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
@@ -201,60 +201,60 @@
             "Mateusz"
           ],
           "balances": {
-            "Bilal": -23784,
-            "Ines": 7553,
-            "Nadia": 54061,
-            "Mateusz": -37830
+            "Bilal": -20505,
+            "Ines": -1232,
+            "Nadia": 54056,
+            "Mateusz": -32319
           },
           "transfers": [
             {
               "from": "Mateusz",
               "to": "Nadia",
-              "amount": 37830
+              "amount": 32319
             },
             {
               "from": "Bilal",
               "to": "Nadia",
-              "amount": 16231
+              "amount": 20505
             },
             {
-              "from": "Bilal",
-              "to": "Ines",
-              "amount": 7553
+              "from": "Ines",
+              "to": "Nadia",
+              "amount": 1232
             }
           ]
         },
         "reference": {
           "balances": {
-            "Bilal": -237.84,
-            "Ines": 75.53,
-            "Nadia": 540.61,
-            "Mateusz": -378.3
+            "Bilal": -205.05,
+            "Ines": -12.32,
+            "Nadia": 540.56,
+            "Mateusz": -323.19
           },
           "transfers": [
             {
               "from": "Mateusz",
               "to": "Nadia",
-              "amount": 378.3
+              "amount": 323.19
             },
             {
               "from": "Bilal",
               "to": "Nadia",
-              "amount": 162.31
+              "amount": 205.05
             },
             {
-              "from": "Bilal",
-              "to": "Ines",
-              "amount": 75.53
+              "from": "Ines",
+              "to": "Nadia",
+              "amount": 12.32
             }
           ]
         }
       },
-      "notes": "[medium] Exact shares (fractions) rounded only at the end: Bilal -£237.84, Ines £75.53, Nadia £540.61, Mateusz -£378.30 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Mateusz→Nadia £378.30; Bilal→Nadia £162.31; Bilal→Ines £75.53. Generator attempt 0."
+      "notes": "[medium] Exact shares (fractions) rounded only at the end: Bilal -£205.05, Ines -£12.32, Nadia £540.56, Mateusz -£323.19 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Mateusz→Nadia £323.19; Bilal→Nadia £205.05; Ines→Nadia £12.32. Generator attempt 0."
     },
     {
       "id": "b05",
-      "prompt": "Hi! Our flat needs to settle up for Sun 1 Mar to Mon 31 Aug 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nLeah | 11 m² | Sun 1 Mar – Mon 31 Aug | no | -\nMalik | 14 m² | Sun 1 Mar – Mon 31 Aug | no | -\nVikram | 10 m² | Sun 1 Mar – Fri 15 May | no | -\nKai | 10 m² | Sat 16 May – Mon 31 Aug | no | -\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,120.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £39.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Council tax is £4.80 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Malik paid the landlord the rent for every month.\n- Everyone else pays Malik a standing order on the 1st of every month on which they live here: Leah £670.00, Vikram £610.00, Kai £610.00.\n- Leah paid the broadband every month.\n- Malik paid the council tax in full.\n- Electricity, 1 Mar – 31 May: £289.50, paid by Kai.\n- Electricity, 1 Jun – 31 Aug: £197.20, paid by Kai.\n- Boiler repair: the invoice was £318.00; the landlord covered £180.00 and Malik paid the engineer the rest. Vikram admits it was their fault (they turned the pressure valve the wrong way).\n\n(The £300 deposit each of us paid is held by the landlord and has nothing to do with this.)\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Sun 1 Mar to Mon 31 Aug 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share? | Away on holiday\nLeah | 11 m² | Sun 1 Mar – Mon 31 Aug | no | - | -\nMalik | 14 m² | Sun 1 Mar – Mon 31 Aug | no | - | Sat 4 Apr – Sat 18 Apr\nVikram | 10 m² | Sun 1 Mar – Fri 15 May | no | - | -\nKai | 10 m² | Sat 16 May – Mon 31 Aug | no | - | -\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,120.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £39.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Council tax is £4.80 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Malik paid the landlord the rent for every month.\n- Everyone else pays Malik a standing order on the 1st of every month on which they live here: Leah £670.00, Vikram £610.00, Kai £610.00.\n- Leah paid the broadband every month.\n- Malik paid the council tax in full.\n- Electricity, 1 Mar – 31 May: £289.50, paid by Kai.\n- Electricity, 1 Jun – 31 Aug: £197.20, paid by Kai.\n- Boiler repair: the invoice was £318.00; the landlord covered £180.00 and Malik paid the engineer the rest. Vikram admits it was their fault (they turned the pressure valve the wrong way).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Sat 14 Mar | Vikram | milk and bread | £37.51 | household\n2 | Wed 18 Mar | Malik | coffee beans | £41.99 | household\n3 | Fri 20 Mar | Vikram | refund: milk and bread | -£36.38 | household (refund of line 1)\n4 | Tue 24 Mar | Malik | loo roll and kitchen roll | £79.32 | household\n5 | Sun 29 Mar | Malik | milk and bread | £7.33 | Malik, Leah\n6 | Sat 2 May | Leah | milk and bread | £76.84 | Leah, Malik\n7 | Sat 30 May | Leah | loo roll and kitchen roll | £15.20 | household\n8 | Sat 13 Jun | Malik | Co-op top-up | £89.69 | Malik, Kai, Leah\n9 | Mon 29 Jun | Kai | new mop | £47.96 | household\n10 | Sat 11 Jul | Kai | new mop | £80.51 | Kai, Leah, Malik\n11 | Wed 15 Jul | Malik | cleaning stuff | £52.86 | Malik, Kai, Leah\n12 | Thu 30 Jul | Leah | fruit and veg box | £63.18 | Leah, Kai, Malik\n13 | Thu 27 Aug | Malik | dishwasher tablets | £42.96 | Malik, Kai\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\n(The £300 deposit each of us paid is held by the landlord and has nothing to do with this.)\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
@@ -264,275 +264,275 @@
             "Kai"
           ],
           "balances": {
-            "Leah": -27835,
-            "Malik": 43857,
-            "Vikram": -4612,
-            "Kai": -11410
+            "Leah": -32249,
+            "Malik": 53187,
+            "Vikram": -8581,
+            "Kai": -12357
           },
           "transfers": [
             {
               "from": "Leah",
               "to": "Malik",
-              "amount": 27835
+              "amount": 32249
             },
             {
               "from": "Kai",
               "to": "Malik",
-              "amount": 11410
+              "amount": 12357
             },
             {
               "from": "Vikram",
               "to": "Malik",
-              "amount": 4612
+              "amount": 8581
             }
           ]
         },
         "reference": {
           "balances": {
-            "Leah": -278.35,
-            "Malik": 438.57,
-            "Vikram": -46.12,
-            "Kai": -114.1
+            "Leah": -322.49,
+            "Malik": 531.87,
+            "Vikram": -85.81,
+            "Kai": -123.57
           },
           "transfers": [
             {
               "from": "Leah",
               "to": "Malik",
-              "amount": 278.35
+              "amount": 322.49
             },
             {
               "from": "Kai",
               "to": "Malik",
-              "amount": 114.1
+              "amount": 123.57
             },
             {
               "from": "Vikram",
               "to": "Malik",
-              "amount": 46.12
+              "amount": 85.81
             }
           ]
         }
       },
-      "notes": "[medium] Exact shares (fractions) rounded only at the end: Leah -£278.35, Malik £438.57, Vikram -£46.12, Kai -£114.10 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Leah→Malik £278.35; Kai→Malik £114.10; Vikram→Malik £46.12. Generator attempt 0."
+      "notes": "[medium] Exact shares (fractions) rounded only at the end: Leah -£322.49, Malik £531.87, Vikram -£85.81, Kai -£123.57 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Leah→Malik £322.49; Kai→Malik £123.57; Vikram→Malik £85.81. Generator attempt 0."
     },
     {
       "id": "b06",
-      "prompt": "Hi! Our flat needs to settle up for Wed 1 Jul to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nInes | 13 m² | Wed 1 Jul – Thu 31 Dec | yes (full-time) | yes\nNadia | 13 m² | Wed 1 Jul – Wed 30 Sep | no | yes\nBilal | 9 m² | Wed 1 Jul – Thu 31 Dec | yes (full-time) | no, opted out\nAoife | 13 m² | Thu 1 Oct – Thu 31 Dec | no | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £1,710.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Netflix is £10.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.60 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n\nBILLS AND WHO PAID THEM\n- Ines paid the landlord the rent for every month.\n- Everyone else pays Ines a standing order on the 1st of every month on which they live here: Nadia £640.00, Bilal £440.00, Aoife £640.00.\n- Netflix is on Nadia’s card (every charge).\n- Bilal paid the council tax in full.\n- Electricity and gas, 1 Jul – 30 Sep: £228.50, paid by Aoife.\n- Electricity and gas, 1 Oct – 31 Dec: £584.27, paid by Ines.\n- Nadia already sent Ines £855.00 (a one-off payment towards the bills).\n- Bilal already sent Ines £600.00 (a one-off payment towards the bills).\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Wed 1 Jul to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nDalia | 13 m² | Wed 1 Jul – Thu 31 Dec | yes (full-time) | yes\nCallum | 13 m² | Wed 1 Jul – Wed 30 Sep | no | yes\nHamza | 9 m² | Wed 1 Jul – Thu 31 Dec | yes (full-time) | no, opted out\nFemi | 13 m² | Thu 1 Oct – Thu 31 Dec | no | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £1,710.00 a calendar month for the whole flat (until the rise below). Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- The landlord put the rent up to £1,795.00 a month from 1 Oct (shared the same way). The standing orders below were NOT changed.\n- Netflix is £10.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.60 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n\nBILLS AND WHO PAID THEM\n- Dalia paid the landlord the rent for every month.\n- Everyone else pays Dalia a standing order on the 1st of every month on which they live here: Callum £640.00, Hamza £440.00, Femi £640.00.\n- Netflix is on Callum’s card (every charge).\n- Hamza paid the council tax in full.\n- Electricity and gas, 1 Jul – 30 Sep: £228.70, paid by Femi.\n- Electricity and gas, 1 Oct – 31 Dec: £584.30, paid by Dalia.\n- Callum already sent Dalia £855.00 (a one-off payment towards the bills).\n- Hamza already sent Dalia £600.00 (a one-off payment towards the bills).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Thu 2 Jul | Hamza | washing-up liquid and bin bags | £25.56 | household\n2 | Tue 14 Jul | Callum | cleaning stuff | £42.37 | household\n3 | Mon 27 Jul | Callum | loo roll and kitchen roll | £32.74 | household\n4 | Sun 2 Aug | Dalia | loo roll and kitchen roll | £8.26 | personal (not shared)\n5 | Wed 5 Aug | Callum | Aldi run | £21.18 | household\n6 | Sat 8 Aug | Dalia | Co-op top-up | £11.88 | household\n7 | Sat 8 Aug | Callum | refund: Aldi run | -£15.89 | household (refund of line 5)\n8 | Wed 26 Aug | Hamza | Co-op top-up | £23.56 | household\n9 | Thu 3 Sep | Hamza | Sunday roast ingredients | £63.00 | household\n10 | Wed 23 Sep | Callum | light bulbs | £64.79 | household\n11 | Thu 3 Dec | Dalia | milk and bread | £46.04 | Dalia, Femi\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
-            "Ines",
-            "Nadia",
-            "Bilal",
-            "Aoife"
+            "Dalia",
+            "Callum",
+            "Hamza",
+            "Femi"
           ],
           "balances": {
-            "Ines": -120548,
-            "Nadia": 45646,
-            "Bilal": 110359,
-            "Aoife": -35457
+            "Dalia": -110007,
+            "Callum": 51185,
+            "Hamza": 106033,
+            "Femi": -47211
           },
           "transfers": [
             {
-              "from": "Ines",
-              "to": "Bilal",
-              "amount": 110359
+              "from": "Dalia",
+              "to": "Hamza",
+              "amount": 106033
             },
             {
-              "from": "Aoife",
-              "to": "Nadia",
-              "amount": 35457
+              "from": "Femi",
+              "to": "Callum",
+              "amount": 47211
             },
             {
-              "from": "Ines",
-              "to": "Nadia",
-              "amount": 10189
+              "from": "Dalia",
+              "to": "Callum",
+              "amount": 3974
             }
           ]
         },
         "reference": {
           "balances": {
-            "Ines": -1205.48,
-            "Nadia": 456.46,
-            "Bilal": 1103.59,
-            "Aoife": -354.57
+            "Dalia": -1100.07,
+            "Callum": 511.85,
+            "Hamza": 1060.33,
+            "Femi": -472.11
           },
           "transfers": [
             {
-              "from": "Ines",
-              "to": "Bilal",
-              "amount": 1103.59
+              "from": "Dalia",
+              "to": "Hamza",
+              "amount": 1060.33
             },
             {
-              "from": "Aoife",
-              "to": "Nadia",
-              "amount": 354.57
+              "from": "Femi",
+              "to": "Callum",
+              "amount": 472.11
             },
             {
-              "from": "Ines",
-              "to": "Nadia",
-              "amount": 101.89
+              "from": "Dalia",
+              "to": "Callum",
+              "amount": 39.74
             }
           ]
         }
       },
-      "notes": "[medium] Exact shares (fractions) rounded only at the end: Ines -£1,205.48, Nadia £456.46, Bilal £1,103.59, Aoife -£354.57 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Ines→Bilal £1,103.59; Aoife→Nadia £354.57; Ines→Nadia £101.89. Generator attempt 2."
+      "notes": "[medium] Exact shares (fractions) rounded only at the end: Dalia -£1,100.07, Callum £511.85, Hamza £1,060.33, Femi -£472.11 (sum £0.00). Settle-up by the stated method, 3 transfers = the proven minimum: Dalia→Hamza £1,060.33; Femi→Callum £472.11; Dalia→Callum £39.74. Generator attempt 0."
     },
     {
       "id": "b07",
-      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nHamza | 16 m² | Thu 1 Jan – Thu 31 Dec | no | yes\nFarah | 12 m² | Thu 1 Jan – Tue 30 Jun | yes (full-time) | no, opted out\nHana | 12 m² | Thu 1 Jan – Thu 31 Dec | yes (full-time) | yes\nBilal | 10 m² | Sat 14 Feb – Thu 31 Dec | no | no, opted out\nPriya | 12 m² | Wed 1 Jul – Thu 31 Dec | no | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,875.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £45.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £18.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £6.00 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Hamza paid the landlord the rent for every month.\n- Everyone else pays Hamza a standing order on the 1st of every month on which they live here: Farah £860.00, Hana £860.00, Bilal £580.00, Priya £690.00.\n- Hana paid the broadband every month.\n- Netflix is on Hamza’s card (every charge).\n- Bilal paid the council tax in full.\n- Electricity and gas, 1 Jan – 31 Mar: £923.10, paid by Hana.\n- Electricity and gas, 1 Apr – 30 Jun: £438.90, paid by Bilal.\n- Electricity and gas, 1 Jul – 30 Sep: £273.40, paid by Priya.\n- Electricity and gas, 1 Oct – 31 Dec: £801.05, paid by Hamza.\n- Boiler repair: the invoice was £420.00; the landlord covered £250.00 and Hamza paid the engineer the rest. Bilal admits it was their fault (they turned the pressure valve the wrong way).\n- Farah already sent Hamza £1,200.00 (a one-off payment towards the bills).\n- Priya already sent Hana £40.00 (towards broadband).\n\nCORRECTION from the energy company: the Apr–Jun bill was re-issued after a meter reading. The real amount is £412.60 (not the £438.90 on the first bill), and that is what was taken from the card.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share? | Away on holiday\nPriya | 16 m² | Thu 1 Jan – Thu 31 Dec | no | yes | Mon 3 Aug – Sun 23 Aug\nNiamh | 12 m² | Thu 1 Jan – Tue 30 Jun | yes (full-time) | no, opted out | -\nBongani | 12 m² | Thu 1 Jan – Thu 31 Dec | yes (full-time) until Tue 30 Jun, when the course ended; not a student after that | yes | -\nZara | 10 m² | Sat 14 Feb – Thu 31 Dec | no | no, opted out | -\nJoanna | 12 m² | Wed 1 Jul – Thu 31 Dec | no | yes | Sat 19 Dec – Thu 31 Dec\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,875.00 a calendar month for the whole flat (until the rise below). Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- The landlord put the rent up to £2,990.00 a month from 1 Sep (shared the same way). The standing orders below were NOT changed.\n- Broadband is £45.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £18.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £6.00 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Priya paid the landlord the rent for every month.\n- Everyone else pays Priya a standing order on the 1st of every month on which they live here: Niamh £860.00, Bongani £860.00, Zara £580.00, Joanna £690.00.\n- Bongani paid the broadband every month.\n- Netflix is on Priya’s card (every charge).\n- Zara paid the council tax in full.\n- Electricity and gas, 1 Jan – 31 Mar: £922.86, paid by Bongani.\n- Electricity and gas, 1 Apr – 30 Jun: £438.90, paid by Zara.\n- Electricity and gas, 1 Jul – 30 Sep: £273.20, paid by Joanna.\n- Electricity and gas, 1 Oct – 31 Dec: £800.89, paid by Priya.\n- Boiler repair: the invoice was £420.00; the landlord covered £250.00 and Priya paid the engineer the rest. Zara admits it was their fault (they turned the pressure valve the wrong way).\n- Niamh already sent Priya £1,200.00 (a one-off payment towards the bills).\n- Joanna already sent Bongani £40.00 (towards broadband).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Sun 4 Jan | Priya | pizza night | £58.31 | household\n2 | Fri 9 Jan | Niamh | pizza night | £83.13 | Niamh, Priya\n3 | Sun 11 Jan | Niamh | cleaning stuff | £11.98 | household\n4 | Sun 8 Feb | Bongani | takeaway curry | £52.39 | Bongani, Niamh, Priya\n5 | Tue 10 Feb | Bongani | refund: takeaway curry | -£18.86 | Bongani, Niamh, Priya (refund of line 4)\n6 | Sat 28 Feb | Niamh | loo roll and kitchen roll | £86.98 | Niamh, Priya, Zara\n7 | Sat 14 Mar | Niamh | cleaning stuff | £47.24 | Niamh, Bongani, Zara\n8 | Mon 16 Mar | Zara | new mop | £80.82 | Zara, Bongani, Niamh\n9 | Wed 1 Apr | Zara | loo roll and kitchen roll | £41.68 | Zara, Bongani, Niamh, Priya\n10 | Sun 12 Apr | Niamh | plants for the balcony | £59.77 | household\n11 | Wed 15 Apr | Priya | coffee beans | £17.47 | household\n12 | Sun 10 May | Bongani | party snacks | £63.44 | household\n13 | Mon 18 May | Bongani | Co-op top-up | £54.60 | household\n14 | Wed 20 May | Bongani | refund: Co-op top-up | -£40.40 | household (refund of line 13)\n15 | Mon 25 May | Bongani | olive oil and spices | £22.78 | household\n16 | Mon 25 May | Bongani | loo roll and kitchen roll | £21.87 | Bongani, Niamh, Zara\n17 | Mon 1 Jun | Niamh | loo roll and kitchen roll | £80.59 | household\n18 | Thu 4 Jun | Bongani | pizza night | £57.84 | personal (not shared)\n19 | Sat 13 Jun | Niamh | Sunday roast ingredients | £57.02 | household\n20 | Sun 14 Jun | Niamh | plants for the balcony | £25.71 | household\n21 | Sun 21 Jun | Bongani | dishwasher tablets | £7.43 | Bongani, Niamh, Priya\n22 | Mon 29 Jun | Bongani | fruit and veg box | £3.53 | Bongani, Niamh, Priya\n23 | Sat 4 Jul | Joanna | fruit and veg box | £61.85 | personal (not shared)\n24 | Fri 10 Jul | Joanna | refund: fruit and veg box | -£47.01 | personal (not shared) (refund of line 23)\n25 | Thu 16 Jul | Priya | Sunday roast ingredients | £74.80 | personal (not shared)\n26 | Mon 20 Jul | Priya | Sunday roast ingredients | £9.16 | Priya, Joanna, Zara\n27 | Fri 24 Jul | Zara | new mop | £19.96 | personal (not shared)\n28 | Wed 5 Aug | Joanna | birthday cake | £21.35 | household\n29 | Tue 11 Aug | Bongani | party snacks | £53.49 | personal (not shared)\n30 | Tue 18 Aug | Zara | fruit and veg box | £41.56 | Zara, Joanna\n31 | Fri 21 Aug | Bongani | birthday cake | £88.52 | Bongani, Zara\n32 | Sun 30 Aug | Joanna | cleaning stuff | £31.96 | household\n33 | Sat 12 Sep | Priya | pizza night | £84.49 | household\n34 | Fri 18 Sep | Priya | Aldi run | £43.01 | household\n35 | Sat 19 Sep | Bongani | Aldi run | £77.24 | household\n36 | Fri 16 Oct | Bongani | light bulbs | £54.75 | household\n37 | Tue 20 Oct | Joanna | Lidl shop | £61.31 | Joanna, Bongani, Priya\n38 | Thu 22 Oct | Zara | dishwasher tablets | £4.92 | personal (not shared)\n39 | Thu 22 Oct | Bongani | refund: light bulbs | -£52.01 | household (refund of line 36)\n40 | Sat 7 Nov | Bongani | Lidl shop | £4.47 | Bongani, Joanna, Zara\n41 | Fri 13 Nov | Bongani | new mop | £61.40 | Bongani, Zara\n42 | Wed 25 Nov | Bongani | dishwasher tablets | £22.83 | Bongani, Priya\n43 | Sat 19 Dec | Bongani | cleaning stuff | £40.46 | household\n44 | Thu 24 Dec | Zara | new mop | £47.55 | household\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nCORRECTION from the energy company: the Apr–Jun bill was re-issued after a meter reading. The real amount is £412.60 (not the £438.90 on the first bill), and that is what was taken from the card.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
-            "Hamza",
-            "Farah",
-            "Hana",
-            "Bilal",
-            "Priya"
+            "Priya",
+            "Niamh",
+            "Bongani",
+            "Zara",
+            "Joanna"
           ],
           "balances": {
-            "Hamza": -415044,
-            "Farah": 152289,
-            "Hana": 233492,
-            "Bilal": 72132,
-            "Priya": -42869
+            "Priya": -386179,
+            "Niamh": 172092,
+            "Bongani": 202437,
+            "Zara": 56182,
+            "Joanna": -44532
           },
           "transfers": [
             {
-              "from": "Hamza",
-              "to": "Hana",
-              "amount": 233492
-            },
-            {
-              "from": "Hamza",
-              "to": "Farah",
-              "amount": 152289
+              "from": "Priya",
+              "to": "Bongani",
+              "amount": 202437
             },
             {
               "from": "Priya",
-              "to": "Bilal",
-              "amount": 42869
+              "to": "Niamh",
+              "amount": 172092
             },
             {
-              "from": "Hamza",
-              "to": "Bilal",
-              "amount": 29263
+              "from": "Joanna",
+              "to": "Zara",
+              "amount": 44532
+            },
+            {
+              "from": "Priya",
+              "to": "Zara",
+              "amount": 11650
             }
           ]
         },
         "reference": {
           "balances": {
-            "Hamza": -4150.44,
-            "Farah": 1522.89,
-            "Hana": 2334.92,
-            "Bilal": 721.32,
-            "Priya": -428.69
+            "Priya": -3861.79,
+            "Niamh": 1720.92,
+            "Bongani": 2024.37,
+            "Zara": 561.82,
+            "Joanna": -445.32
           },
           "transfers": [
             {
-              "from": "Hamza",
-              "to": "Hana",
-              "amount": 2334.92
-            },
-            {
-              "from": "Hamza",
-              "to": "Farah",
-              "amount": 1522.89
+              "from": "Priya",
+              "to": "Bongani",
+              "amount": 2024.37
             },
             {
               "from": "Priya",
-              "to": "Bilal",
-              "amount": 428.69
+              "to": "Niamh",
+              "amount": 1720.92
             },
             {
-              "from": "Hamza",
-              "to": "Bilal",
-              "amount": 292.63
+              "from": "Joanna",
+              "to": "Zara",
+              "amount": 445.32
+            },
+            {
+              "from": "Priya",
+              "to": "Zara",
+              "amount": 116.5
             }
           ]
         }
       },
-      "notes": "[hard] Exact shares (fractions) rounded only at the end: Hamza -£4,150.44, Farah £1,522.89, Hana £2,334.92, Bilal £721.32, Priya -£428.69 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Hamza→Hana £2,334.92; Hamza→Farah £1,522.89; Priya→Bilal £428.69; Hamza→Bilal £292.63. Generator attempt 0."
+      "notes": "[hard] Exact shares (fractions) rounded only at the end: Priya -£3,861.79, Niamh £1,720.92, Bongani £2,024.37, Zara £561.82, Joanna -£445.32 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Priya→Bongani £2,024.37; Priya→Niamh £1,720.92; Joanna→Zara £445.32; Priya→Zara £116.50. Generator attempt 1."
     },
     {
       "id": "b08",
-      "prompt": "Hi! Our flat needs to settle up for Sun 1 Feb to Wed 30 Sep 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nInes | 14 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) | yes\nXavier | 14 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) | yes\nMalik | 11 m² | Sun 1 Feb – Sun 31 May | no | no, opted out\nRosa | 9 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) | no, opted out\nKai | 11 m² | Mon 1 Jun – Wed 30 Sep | no | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,600.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £33.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £15.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.40 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Xavier paid the landlord the rent for every month.\n- Everyone else pays Xavier a standing order on the 1st of every month on which they live here: Ines £760.00, Malik £600.00, Rosa £490.00, Kai £600.00.\n- Kai paid the broadband every month.\n- Netflix is on Ines’s card (every charge).\n- Malik paid the council tax in full.\n- Gas and electricity, 1 Feb – 30 Apr: £689.20, paid by Rosa.\n- Gas and electricity, 1 May – 31 Jul: £331.15, paid by Ines.\n- Gas and electricity, 1 Aug – 30 Sep: £187.60, paid by Kai.\n- Boiler repair: the invoice was £265.00; the landlord covered £100.00 and Rosa paid the engineer the rest. Ines admits it was their fault (they turned the pressure valve the wrong way).\n- Malik already sent Xavier £750.00 (a one-off payment towards the bills).\n- Rosa already sent Xavier £520.00 (a one-off payment towards the bills).\n\nMy friend Wen stayed on the sofa for two weeks in April. She was a guest, not a flatmate, so she pays nothing and is not part of the split.\n\nJust confirming the boiler figures above are right: the £265.00 invoice already includes VAT, and the landlord paid £100.00 of it.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Sun 1 Feb to Wed 30 Sep 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share? | Away on holiday\nSana | 14 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) | yes | -\nRosa | 14 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) until Fri 12 Jun, when the course ended; not a student after that | yes | Mon 20 Jul – Sun 9 Aug\nHana | 11 m² | Sun 1 Feb – Sun 31 May | no | no, opted out | -\nGethin | 9 m² | Sun 1 Feb – Wed 30 Sep | yes (full-time) | no, opted out | Wed 1 Apr – Sun 12 Apr\nChloe | 11 m² | Mon 1 Jun – Wed 30 Sep | no | yes | -\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,600.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £33.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £15.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £5.40 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Rosa paid the landlord the rent for every month.\n- Everyone else pays Rosa a standing order on the 1st of every month on which they live here: Sana £760.00, Hana £600.00, Gethin £490.00, Chloe £600.00.\n- Chloe paid the broadband every month.\n- Netflix is on Sana’s card (every charge).\n- Hana paid the council tax in full.\n- Gas and electricity, 1 Feb – 30 Apr: £689.03, paid by Gethin.\n- Gas and electricity, 1 May – 31 Jul: £331.55, paid by Sana.\n- Gas and electricity, 1 Aug – 30 Sep: £187.37, paid by Chloe.\n- Boiler repair: the invoice was £265.00; the landlord covered £100.00 and Gethin paid the engineer the rest. Sana admits it was their fault (they turned the pressure valve the wrong way).\n- Hana already sent Rosa £750.00 (a one-off payment towards the bills).\n- Gethin already sent Rosa £520.00 (a one-off payment towards the bills).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Wed 4 Feb | Gethin | new mop | £89.62 | Gethin, Hana, Rosa\n2 | Wed 4 Feb | Hana | takeaway curry | £88.54 | household\n3 | Wed 11 Feb | Sana | dishwasher tablets | £36.56 | household\n4 | Thu 12 Feb | Hana | washing-up liquid and bin bags | £84.40 | Hana, Gethin, Sana\n5 | Wed 18 Feb | Gethin | dishwasher tablets | £43.79 | household\n6 | Mon 23 Feb | Sana | takeaway curry | £86.97 | household\n7 | Tue 3 Mar | Rosa | coffee beans | £27.24 | household\n8 | Fri 6 Mar | Gethin | Aldi run | £22.85 | household\n9 | Fri 6 Mar | Sana | big shop (Tesco) | £83.49 | household\n10 | Sat 7 Mar | Hana | coffee beans | £42.45 | Hana, Gethin\n11 | Sat 14 Mar | Rosa | olive oil and spices | £71.04 | household\n12 | Thu 19 Mar | Rosa | light bulbs | £30.43 | household\n13 | Fri 27 Mar | Sana | light bulbs | £14.85 | household\n14 | Thu 2 Apr | Rosa | new mop | £52.54 | household\n15 | Sat 4 Apr | Rosa | milk and bread | £57.27 | Rosa, Hana, Sana\n16 | Tue 7 Apr | Sana | light bulbs | £59.43 | household\n17 | Mon 13 Apr | Sana | refund: light bulbs | -£26.15 | household (refund of line 16)\n18 | Sat 18 Apr | Rosa | washing-up liquid and bin bags | £24.24 | household\n19 | Sun 19 Apr | Gethin | olive oil and spices | £76.69 | household\n20 | Mon 27 Apr | Rosa | refund: washing-up liquid and bin bags | -£23.76 | household (refund of line 18)\n21 | Wed 29 Apr | Gethin | Aldi run | £58.49 | household\n22 | Thu 30 Apr | Rosa | big shop (Tesco) | £50.12 | household\n23 | Mon 4 May | Sana | Co-op top-up | £34.02 | household\n24 | Tue 5 May | Hana | plants for the balcony | £33.12 | household\n25 | Wed 13 May | Rosa | cleaning stuff | £49.55 | household\n26 | Sat 23 May | Gethin | plants for the balcony | £86.89 | Gethin, Hana, Rosa\n27 | Sat 30 May | Gethin | party snacks | £69.53 | household\n28 | Mon 8 Jun | Chloe | pizza night | £64.47 | personal (not shared)\n29 | Fri 19 Jun | Sana | loo roll and kitchen roll | £65.93 | personal (not shared)\n30 | Tue 23 Jun | Gethin | plants for the balcony | £81.47 | personal (not shared)\n31 | Wed 24 Jun | Sana | loo roll and kitchen roll | £58.72 | household\n32 | Sat 27 Jun | Sana | refund: loo roll and kitchen roll | -£57.55 | household (refund of line 31)\n33 | Tue 7 Jul | Sana | party snacks | £19.17 | household\n34 | Wed 22 Jul | Chloe | cleaning stuff | £37.65 | Chloe, Gethin, Sana\n35 | Sat 25 Jul | Sana | big shop (Tesco) | £84.13 | household\n36 | Wed 5 Aug | Gethin | fruit and veg box | £15.81 | Gethin, Sana\n37 | Thu 6 Aug | Gethin | birthday cake | £54.65 | Gethin, Sana\n38 | Mon 10 Aug | Rosa | Sunday roast ingredients | £48.31 | Rosa, Chloe, Gethin, Sana\n39 | Sun 16 Aug | Rosa | Aldi run | £2.84 | Rosa, Gethin, Sana\n40 | Sat 22 Aug | Rosa | coffee beans | £84.06 | personal (not shared)\n41 | Tue 1 Sep | Gethin | takeaway curry | £57.49 | household\n42 | Tue 1 Sep | Rosa | olive oil and spices | £34.41 | household\n43 | Fri 4 Sep | Gethin | Lidl shop | £73.67 | household\n44 | Sat 5 Sep | Rosa | Lidl shop | £52.07 | Rosa, Chloe, Gethin\n45 | Tue 8 Sep | Chloe | Sunday roast ingredients | £10.83 | household\n46 | Fri 11 Sep | Chloe | dishwasher tablets | £49.95 | household\n47 | Fri 25 Sep | Chloe | fruit and veg box | £80.20 | household\n48 | Tue 29 Sep | Chloe | coffee beans | £80.95 | household\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nMy friend Wen stayed on the sofa for two weeks in April. She was a guest, not a flatmate, so she pays nothing and is not part of the split.\n\nJust confirming the boiler figures above are right: the £265.00 invoice already includes VAT, and the landlord paid £100.00 of it.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
-            "Ines",
-            "Xavier",
-            "Malik",
+            "Sana",
             "Rosa",
-            "Kai"
+            "Hana",
+            "Gethin",
+            "Chloe"
           ],
           "balances": {
-            "Ines": -11388,
-            "Xavier": -175795,
-            "Malik": 102757,
-            "Rosa": 102621,
-            "Kai": -18195
+            "Sana": -20592,
+            "Rosa": -203697,
+            "Hana": 104926,
+            "Gethin": 113972,
+            "Chloe": 5391
           },
           "transfers": [
             {
-              "from": "Xavier",
-              "to": "Malik",
-              "amount": 102757
+              "from": "Rosa",
+              "to": "Gethin",
+              "amount": 113972
             },
             {
-              "from": "Xavier",
-              "to": "Rosa",
-              "amount": 73038
+              "from": "Rosa",
+              "to": "Hana",
+              "amount": 89725
             },
             {
-              "from": "Kai",
-              "to": "Rosa",
-              "amount": 18195
+              "from": "Sana",
+              "to": "Hana",
+              "amount": 15201
             },
             {
-              "from": "Ines",
-              "to": "Rosa",
-              "amount": 11388
+              "from": "Sana",
+              "to": "Chloe",
+              "amount": 5391
             }
           ]
         },
         "reference": {
           "balances": {
-            "Ines": -113.88,
-            "Xavier": -1757.95,
-            "Malik": 1027.57,
-            "Rosa": 1026.21,
-            "Kai": -181.95
+            "Sana": -205.92,
+            "Rosa": -2036.97,
+            "Hana": 1049.26,
+            "Gethin": 1139.72,
+            "Chloe": 53.91
           },
           "transfers": [
             {
-              "from": "Xavier",
-              "to": "Malik",
-              "amount": 1027.57
+              "from": "Rosa",
+              "to": "Gethin",
+              "amount": 1139.72
             },
             {
-              "from": "Xavier",
-              "to": "Rosa",
-              "amount": 730.38
+              "from": "Rosa",
+              "to": "Hana",
+              "amount": 897.25
             },
             {
-              "from": "Kai",
-              "to": "Rosa",
-              "amount": 181.95
+              "from": "Sana",
+              "to": "Hana",
+              "amount": 152.01
             },
             {
-              "from": "Ines",
-              "to": "Rosa",
-              "amount": 113.88
+              "from": "Sana",
+              "to": "Chloe",
+              "amount": 53.91
             }
           ]
         }
       },
-      "notes": "[hard] Exact shares (fractions) rounded only at the end: Ines -£113.88, Xavier -£1,757.95, Malik £1,027.57, Rosa £1,026.21, Kai -£181.95 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Xavier→Malik £1,027.57; Xavier→Rosa £730.38; Kai→Rosa £181.95; Ines→Rosa £113.88. Generator attempt 0."
+      "notes": "[hard] Exact shares (fractions) rounded only at the end: Sana -£205.92, Rosa -£2,036.97, Hana £1,049.26, Gethin £1,139.72, Chloe £53.91 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Rosa→Gethin £1,139.72; Rosa→Hana £897.25; Sana→Hana £152.01; Sana→Chloe £53.91. Generator attempt 1."
     },
     {
       "id": "b09",
-      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nJun | 15 m² | Thu 1 Jan – Thu 31 Dec | no | yes\nBilal | 12 m² | Thu 1 Jan – Thu 30 Apr | no | yes\nHamza | 12 m² | Thu 1 Jan – Thu 31 Dec | yes (full-time) | no, opted out\nQuinn | 11 m² | Thu 1 Jan – Mon 31 Aug | yes (full-time) | yes\nUche | 12 m² | Fri 1 May – Thu 31 Dec | no | no, opted out\nLeah | 11 m² | Tue 15 Sep – Thu 31 Dec | yes (full-time) | yes\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £3,100.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £50.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £18.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £6.40 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Jun paid the landlord the rent for every month.\n- Everyone else pays Jun a standing order on the 1st of every month on which they live here: Bilal £740.00, Hamza £740.00, Quinn £680.00, Uche £740.00, Leah £680.00.\n- Uche paid the broadband every month.\n- Netflix is on Quinn’s card (every charge).\n- Jun paid the council tax in full.\n- Energy, 1 Jan – 28 Feb: £718.90, paid by Bilal.\n- Energy, 1 Mar – 31 May: £601.20, paid by Hamza.\n- Energy, 1 Jun – 31 Aug: £305.15, paid by Quinn.\n- Energy, 1 Sep – 31 Dec: £984.60, paid by Leah.\n- Boiler repair: the invoice was £388.00; the landlord covered £200.00 and Uche paid the engineer the rest. Hamza admits it was their fault (they turned the pressure valve the wrong way).\n- Bilal already sent Jun £1,400.00 (a one-off payment towards the bills).\n- Hamza already sent Jun £700.00 (a one-off payment towards the bills).\n- Leah already sent Uche £90.00 (broadband, Sep–Dec).\n\nCorrection: the Sep–Dec energy bill above is a typo. The final bill was £948.60, and that is what was paid.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Thu 1 Jan to Thu 31 Dec 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share? | Away on holiday\nJun | 15 m² | Thu 1 Jan – Thu 31 Dec | no | yes | Sat 25 Jul – Fri 14 Aug\nBilal | 12 m² | Thu 1 Jan – Thu 30 Apr | no | yes | -\nHamza | 12 m² | Thu 1 Jan – Thu 31 Dec | yes (full-time) | no, opted out | -\nQuinn | 11 m² | Thu 1 Jan – Mon 31 Aug | yes (full-time) until Fri 29 May, when the course ended; not a student after that | yes | -\nUche | 12 m² | Fri 1 May – Thu 31 Dec | no | no, opted out | Sat 10 Oct – Sat 24 Oct\nLeah | 11 m² | Tue 15 Sep – Thu 31 Dec | yes (full-time) | yes | -\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £3,100.00 a calendar month for the whole flat (until the rise below). Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- The landlord put the rent up to £3,240.00 a month from 1 Jul (shared the same way). The standing orders below were NOT changed.\n- Broadband is £50.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £18.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n- Council tax is £6.40 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Jun paid the landlord the rent for every month.\n- Everyone else pays Jun a standing order on the 1st of every month on which they live here: Bilal £740.00, Hamza £740.00, Quinn £680.00, Uche £740.00, Leah £680.00.\n- Uche paid the broadband every month.\n- Netflix is on Quinn’s card (every charge).\n- Jun paid the council tax in full.\n- Energy, 1 Jan – 28 Feb: £718.90, paid by Bilal.\n- Energy, 1 Mar – 31 May: £601.20, paid by Hamza.\n- Energy, 1 Jun – 31 Aug: £305.15, paid by Quinn.\n- Energy, 1 Sep – 31 Dec: £984.60, paid by Leah.\n- Boiler repair: the invoice was £388.00; the landlord covered £200.00 and Uche paid the engineer the rest. Hamza admits it was their fault (they turned the pressure valve the wrong way).\n- Bilal already sent Jun £1,400.00 (a one-off payment towards the bills).\n- Hamza already sent Jun £700.00 (a one-off payment towards the bills).\n- Leah already sent Uche £90.00 (broadband, Sep–Dec).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Thu 15 Jan | Jun | cleaning stuff | £87.70 | household\n2 | Sat 31 Jan | Bilal | washing-up liquid and bin bags | £64.99 | household\n3 | Mon 2 Feb | Jun | plants for the balcony | £84.37 | household\n4 | Tue 3 Feb | Quinn | milk and bread | £29.53 | household\n5 | Mon 9 Feb | Hamza | Co-op top-up | £14.63 | household\n6 | Fri 13 Feb | Bilal | milk and bread | £59.80 | household\n7 | Sat 21 Feb | Jun | cleaning stuff | £26.11 | Jun, Bilal, Hamza\n8 | Fri 6 Mar | Bilal | coffee beans | £23.37 | household\n9 | Sun 8 Mar | Jun | light bulbs | £32.31 | Jun, Quinn\n10 | Sun 22 Mar | Hamza | new mop | £60.87 | Hamza, Bilal, Jun, Quinn\n11 | Wed 25 Mar | Jun | loo roll and kitchen roll | £17.63 | household\n12 | Wed 25 Mar | Quinn | Aldi run | £15.58 | Quinn, Bilal, Hamza\n13 | Thu 2 Apr | Quinn | refund: Aldi run | -£7.01 | Quinn, Bilal, Hamza (refund of line 12)\n14 | Sun 12 Apr | Quinn | light bulbs | £13.93 | Quinn, Bilal, Jun\n15 | Fri 17 Apr | Bilal | loo roll and kitchen roll | £62.43 | Bilal, Hamza, Quinn\n16 | Sun 19 Apr | Hamza | plants for the balcony | £80.18 | household\n17 | Sun 19 Apr | Quinn | washing-up liquid and bin bags | £52.87 | household\n18 | Mon 20 Apr | Hamza | plants for the balcony | £27.15 | personal (not shared)\n19 | Tue 21 Apr | Quinn | refund: washing-up liquid and bin bags | -£11.10 | household (refund of line 17)\n20 | Fri 8 May | Jun | big shop (Tesco) | £60.32 | Jun, Uche\n21 | Wed 20 May | Hamza | light bulbs | £43.22 | household\n22 | Fri 12 Jun | Hamza | olive oil and spices | £3.92 | Hamza, Jun, Uche\n23 | Sat 27 Jun | Quinn | dishwasher tablets | £67.19 | household\n24 | Thu 2 Jul | Quinn | plants for the balcony | £79.72 | household\n25 | Sun 5 Jul | Hamza | fruit and veg box | £78.54 | Hamza, Quinn\n26 | Fri 10 Jul | Jun | new mop | £67.13 | Jun, Hamza, Quinn, Uche\n27 | Sun 12 Jul | Jun | refund: new mop | -£34.91 | Jun, Hamza, Quinn, Uche (refund of line 26)\n28 | Mon 13 Jul | Uche | olive oil and spices | £21.85 | household\n29 | Wed 15 Jul | Uche | Aldi run | £60.23 | personal (not shared)\n30 | Sat 18 Jul | Quinn | party snacks | £54.82 | personal (not shared)\n31 | Tue 21 Jul | Jun | Lidl shop | £38.36 | household\n32 | Tue 21 Jul | Uche | coffee beans | £13.90 | household\n33 | Wed 22 Jul | Uche | refund: Aldi run | -£15.66 | personal (not shared) (refund of line 29)\n34 | Tue 4 Aug | Quinn | party snacks | £58.26 | household\n35 | Wed 5 Aug | Hamza | Sunday roast ingredients | £88.11 | personal (not shared)\n36 | Thu 6 Aug | Uche | Aldi run | £9.90 | Uche, Hamza, Quinn\n37 | Sun 9 Aug | Uche | plants for the balcony | £38.82 | Uche, Hamza, Quinn\n38 | Sun 16 Aug | Quinn | dishwasher tablets | £60.24 | household\n39 | Wed 19 Aug | Jun | loo roll and kitchen roll | £34.10 | personal (not shared)\n40 | Thu 27 Aug | Hamza | party snacks | £59.96 | personal (not shared)\n41 | Fri 11 Sep | Uche | loo roll and kitchen roll | £16.95 | household\n42 | Sat 12 Sep | Hamza | birthday cake | £44.99 | household\n43 | Sun 20 Sep | Uche | loo roll and kitchen roll | £65.60 | household\n44 | Tue 29 Sep | Uche | Sunday roast ingredients | £85.43 | Uche, Hamza, Leah\n45 | Thu 1 Oct | Uche | refund: Sunday roast ingredients | -£38.44 | Uche, Hamza, Leah (refund of line 44)\n46 | Sat 3 Oct | Hamza | Sunday roast ingredients | £46.94 | household\n47 | Mon 5 Oct | Uche | Sunday roast ingredients | £27.37 | household\n48 | Fri 23 Oct | Jun | birthday cake | £6.71 | household\n49 | Tue 27 Oct | Hamza | loo roll and kitchen roll | £29.25 | Hamza, Leah, Uche\n50 | Sun 1 Nov | Jun | Lidl shop | £27.27 | Jun, Hamza, Uche\n51 | Sun 1 Nov | Jun | milk and bread | £2.36 | household\n52 | Tue 10 Nov | Uche | pizza night | £39.60 | personal (not shared)\n53 | Thu 19 Nov | Leah | olive oil and spices | £31.57 | personal (not shared)\n54 | Sat 21 Nov | Leah | dishwasher tablets | £9.45 | household\n55 | Thu 26 Nov | Jun | Sunday roast ingredients | £71.93 | household\n56 | Sat 12 Dec | Uche | pizza night | £87.13 | Uche, Hamza, Jun, Leah\n57 | Mon 14 Dec | Hamza | birthday cake | £18.28 | household\n58 | Sun 27 Dec | Hamza | Co-op top-up | £26.03 | personal (not shared)\n59 | Sun 27 Dec | Uche | coffee beans | £80.16 | household\n60 | Mon 28 Dec | Hamza | coffee beans | £58.06 | personal (not shared)\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nCorrection: the Sep–Dec energy bill above is a typo. The final bill was £948.60, and that is what was paid.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
@@ -544,84 +544,84 @@
             "Leah"
           ],
           "balances": {
-            "Jun": -116966,
-            "Bilal": 136420,
-            "Hamza": 16279,
-            "Quinn": -5258,
-            "Uche": -69103,
-            "Leah": 38628
+            "Jun": -42527,
+            "Bilal": 139657,
+            "Hamza": -12109,
+            "Quinn": -30529,
+            "Uche": -70187,
+            "Leah": 15695
           },
           "transfers": [
             {
+              "from": "Uche",
+              "to": "Bilal",
+              "amount": 70187
+            },
+            {
               "from": "Jun",
               "to": "Bilal",
-              "amount": 116966
-            },
-            {
-              "from": "Uche",
-              "to": "Leah",
-              "amount": 38628
-            },
-            {
-              "from": "Uche",
-              "to": "Bilal",
-              "amount": 19454
-            },
-            {
-              "from": "Uche",
-              "to": "Hamza",
-              "amount": 11021
+              "amount": 42527
             },
             {
               "from": "Quinn",
-              "to": "Hamza",
-              "amount": 5258
+              "to": "Bilal",
+              "amount": 26943
+            },
+            {
+              "from": "Hamza",
+              "to": "Leah",
+              "amount": 12109
+            },
+            {
+              "from": "Quinn",
+              "to": "Leah",
+              "amount": 3586
             }
           ]
         },
         "reference": {
           "balances": {
-            "Jun": -1169.66,
-            "Bilal": 1364.2,
-            "Hamza": 162.79,
-            "Quinn": -52.58,
-            "Uche": -691.03,
-            "Leah": 386.28
+            "Jun": -425.27,
+            "Bilal": 1396.57,
+            "Hamza": -121.09,
+            "Quinn": -305.29,
+            "Uche": -701.87,
+            "Leah": 156.95
           },
           "transfers": [
             {
+              "from": "Uche",
+              "to": "Bilal",
+              "amount": 701.87
+            },
+            {
               "from": "Jun",
               "to": "Bilal",
-              "amount": 1169.66
-            },
-            {
-              "from": "Uche",
-              "to": "Leah",
-              "amount": 386.28
-            },
-            {
-              "from": "Uche",
-              "to": "Bilal",
-              "amount": 194.54
-            },
-            {
-              "from": "Uche",
-              "to": "Hamza",
-              "amount": 110.21
+              "amount": 425.27
             },
             {
               "from": "Quinn",
-              "to": "Hamza",
-              "amount": 52.58
+              "to": "Bilal",
+              "amount": 269.43
+            },
+            {
+              "from": "Hamza",
+              "to": "Leah",
+              "amount": 121.09
+            },
+            {
+              "from": "Quinn",
+              "to": "Leah",
+              "amount": 35.86
             }
           ]
         }
       },
-      "notes": "[hard] Exact shares (fractions) rounded only at the end: Jun -£1,169.66, Bilal £1,364.20, Hamza £162.79, Quinn -£52.58, Uche -£691.03, Leah £386.28 (sum £0.00). Settle-up by the stated method, 5 transfers = the proven minimum: Jun→Bilal £1,169.66; Uche→Leah £386.28; Uche→Bilal £194.54; Uche→Hamza £110.21; Quinn→Hamza £52.58. Generator attempt 0."
+      "notes": "[hard] Exact shares (fractions) rounded only at the end: Jun -£425.27, Bilal £1,396.57, Hamza -£121.09, Quinn -£305.29, Uche -£701.87, Leah £156.95 (sum £0.00). Settle-up by the stated method, 5 transfers = the proven minimum: Uche→Bilal £701.87; Jun→Bilal £425.27; Quinn→Bilal £269.43; Hamza→Leah £121.09; Quinn→Leah £35.86. Generator attempt 0."
     },
     {
       "id": "b10",
-      "prompt": "Hi! Our flat needs to settle up for Wed 1 Apr to Mon 30 Nov 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share?\nRosa | 13 m² | Wed 1 Apr – Mon 30 Nov | yes (full-time) | yes\nLucia | 13 m² | Wed 1 Apr – Sun 12 Jul | no | yes\nNiamh | 10 m² | Wed 1 Apr – Mon 30 Nov | yes (full-time) | yes\nMalik | 15 m² | Wed 1 Apr – Thu 3 Sep | yes (full-time) | no, opted out\nXavier | 12 m² | Mon 13 Jul – Mon 30 Nov | no | no, opted out\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,540.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £38.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £10.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n  (Netflix put the price up to £12.99 from the Jul charge onwards.)\n- Council tax is £5.90 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Niamh paid the landlord the rent for every month.\n- Everyone else pays Niamh a standing order on the 1st of every month on which they live here: Rosa £650.00, Lucia £650.00, Malik £750.00, Xavier £610.00.\n- Rosa paid the broadband every month.\n- Netflix is on Lucia’s card (every charge).\n- Xavier paid the council tax in full.\n- Energy, 1 Apr – 30 Jun: £452.10, paid by Malik.\n- Energy, 1 Jul – 30 Sep: £268.80, paid by Lucia.\n- Energy, 1 Oct – 30 Nov: £397.45, paid by Xavier.\n- Boiler repair: the invoice was £299.00; the landlord covered £150.00 and Rosa paid the engineer the rest. Xavier admits it was their fault (they turned the pressure valve the wrong way).\n- Malik already sent Niamh £300.00 (a one-off top-up towards rent).\n- Lucia already sent Rosa £25.00 (broadband, July).\n\nIgnore the £45 takeaway on 3 September: that was a leaving do and we sorted it out on the night.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Hi! Our flat needs to settle up for Wed 1 Apr to Mon 30 Nov 2026 (both days included) and I want it exactly right. Here’s everything.\n\nFLATMATES\nName | Room size | Lived here | Student? | In the Netflix share? | Away on holiday\nRosa | 13 m² | Wed 1 Apr – Mon 30 Nov | yes (full-time) until Fri 26 Jun, when the course ended; not a student after that | yes | Sat 8 Aug – Sat 22 Aug\nLucia | 13 m² | Wed 1 Apr – Sun 12 Jul | no | yes | -\nNiamh | 10 m² | Wed 1 Apr – Mon 30 Nov | yes (full-time) | yes | -\nMalik | 15 m² | Wed 1 Apr – Thu 3 Sep | yes (full-time) | no, opted out | -\nXavier | 12 m² | Mon 13 Jul – Mon 30 Nov | no | no, opted out | Fri 30 Oct – Fri 6 Nov\nA day counts for someone if they lived here that day (first and last days included).\n\nHOW WE SPLIT THINGS (agreed rules)\n- Rent is £2,540.00 a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.\n- Broadband is £38.00 a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.\n- Netflix is £10.99, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.\n  (Netflix put the price up to £12.99 from the Jul charge onwards.)\n- Council tax is £5.90 a day for the flat. Full-time students don’t count and pay none of it. On a day when exactly one non-student lives here, that day’s council tax is 25% less (single person discount) and that person pays it; on a day with no non-students it is £0. Otherwise each day’s council tax is shared equally by the non-students living here that day.\n- Each energy bill covers the dates shown. Each day of a bill (bill ÷ days it covers) is shared equally by the people living here that day.\n- The boiler repair is paid in full by whoever caused it (after the landlord’s contribution).\n\nBILLS AND WHO PAID THEM\n- Niamh paid the landlord the rent for every month.\n- Everyone else pays Niamh a standing order on the 1st of every month on which they live here: Rosa £650.00, Lucia £650.00, Malik £750.00, Xavier £610.00.\n- Rosa paid the broadband every month.\n- Netflix is on Lucia’s card (every charge).\n- Xavier paid the council tax in full.\n- Energy, 1 Apr – 30 Jun: £452.10, paid by Malik.\n- Energy, 1 Jul – 30 Sep: £268.80, paid by Lucia.\n- Energy, 1 Oct – 30 Nov: £397.45, paid by Xavier.\n- Boiler repair: the invoice was £299.00; the landlord covered £150.00 and Rosa paid the engineer the rest. Xavier admits it was their fault (they turned the pressure valve the wrong way).\n- Malik already sent Niamh £300.00 (a one-off top-up towards rent).\n- Lucia already sent Rosa £25.00 (broadband, July).\n\nSHARED SHOPPING LOG (everything bought for the flat, with who paid)\nLine | Date | Paid by | What | Amount | Shared by\n1 | Wed 1 Apr | Malik | cleaning stuff | £60.31 | household\n2 | Fri 3 Apr | Niamh | plants for the balcony | £86.89 | Niamh, Malik, Rosa\n3 | Sun 5 Apr | Malik | refund: cleaning stuff | -£29.55 | household (refund of line 1)\n4 | Thu 9 Apr | Rosa | cleaning stuff | £2.89 | household\n5 | Tue 14 Apr | Lucia | light bulbs | £81.92 | personal (not shared)\n6 | Wed 22 Apr | Malik | takeaway curry | £77.14 | household\n7 | Wed 22 Apr | Malik | olive oil and spices | £68.49 | household\n8 | Thu 30 Apr | Malik | cleaning stuff | £23.01 | personal (not shared)\n9 | Thu 30 Apr | Niamh | takeaway curry | £48.76 | personal (not shared)\n10 | Sun 3 May | Lucia | birthday cake | £26.77 | household\n11 | Sat 9 May | Niamh | party snacks | £69.10 | Niamh, Lucia, Malik, Rosa\n12 | Sun 10 May | Malik | big shop (Tesco) | £43.45 | Malik, Niamh, Rosa\n13 | Thu 14 May | Malik | fruit and veg box | £89.46 | household\n14 | Tue 2 Jun | Rosa | takeaway curry | £35.84 | household\n15 | Sun 7 Jun | Niamh | loo roll and kitchen roll | £52.66 | household\n16 | Mon 8 Jun | Lucia | pizza night | £1.97 | household\n17 | Tue 9 Jun | Niamh | loo roll and kitchen roll | £48.92 | household\n18 | Sun 28 Jun | Lucia | plants for the balcony | £2.93 | Lucia, Niamh, Rosa\n19 | Mon 29 Jun | Malik | milk and bread | £86.88 | Malik, Niamh, Rosa\n20 | Fri 3 Jul | Lucia | refund: plants for the balcony | -£2.05 | Lucia, Niamh, Rosa (refund of line 18)\n21 | Sun 5 Jul | Niamh | olive oil and spices | £80.15 | household\n22 | Mon 6 Jul | Niamh | olive oil and spices | £35.71 | Niamh, Lucia, Rosa\n23 | Tue 7 Jul | Niamh | washing-up liquid and bin bags | £56.38 | personal (not shared)\n24 | Wed 8 Jul | Malik | Sunday roast ingredients | £26.78 | household\n25 | Fri 10 Jul | Rosa | pizza night | £50.29 | household\n26 | Fri 10 Jul | Rosa | fruit and veg box | £78.61 | household\n27 | Sun 12 Jul | Rosa | party snacks | £10.17 | household\n28 | Mon 13 Jul | Malik | cleaning stuff | £88.47 | household\n29 | Tue 21 Jul | Xavier | plants for the balcony | £60.31 | Xavier, Malik, Niamh, Rosa\n30 | Mon 27 Jul | Niamh | birthday cake | £16.93 | Niamh, Malik, Rosa, Xavier\n31 | Sun 2 Aug | Malik | washing-up liquid and bin bags | £23.69 | household\n32 | Wed 5 Aug | Xavier | coffee beans | £83.06 | Xavier, Malik\n33 | Thu 6 Aug | Niamh | Sunday roast ingredients | £64.86 | household\n34 | Sun 9 Aug | Malik | coffee beans | £50.83 | household\n35 | Sat 5 Sep | Rosa | washing-up liquid and bin bags | £35.24 | Rosa, Niamh\n36 | Mon 7 Sep | Xavier | loo roll and kitchen roll | £13.80 | household\n37 | Thu 10 Sep | Xavier | Aldi run | £34.40 | Xavier, Rosa\n38 | Mon 21 Sep | Xavier | Aldi run | £88.46 | Xavier, Niamh, Rosa\n39 | Mon 28 Sep | Niamh | dishwasher tablets | £49.99 | Niamh, Rosa, Xavier\n40 | Thu 8 Oct | Xavier | pizza night | £3.82 | household\n41 | Mon 12 Oct | Niamh | plants for the balcony | £45.69 | Niamh, Rosa, Xavier\n42 | Sat 17 Oct | Xavier | takeaway curry | £44.65 | household\n43 | Wed 21 Oct | Niamh | party snacks | £33.20 | household\n44 | Sat 24 Oct | Xavier | milk and bread | £85.84 | Xavier, Rosa\n45 | Mon 26 Oct | Niamh | fruit and veg box | £77.13 | household\n46 | Thu 29 Oct | Rosa | new mop | £17.40 | Rosa, Xavier\n47 | Sat 31 Oct | Niamh | new mop | £52.50 | household\n48 | Wed 18 Nov | Xavier | light bulbs | £76.91 | Xavier, Rosa\n49 | Fri 20 Nov | Niamh | loo roll and kitchen roll | £47.19 | personal (not shared)\n50 | Sun 22 Nov | Xavier | refund: light bulbs | -£68.45 | Xavier, Rosa (refund of line 48)\n51 | Wed 25 Nov | Niamh | Co-op top-up | £17.53 | Niamh, Rosa, Xavier\n52 | Thu 26 Nov | Rosa | pizza night | £14.50 | household\n53 | Sat 28 Nov | Niamh | Aldi run | £19.36 | household\nShopping rules: a \"household\" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a \"personal\" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.\n\nIgnore the £45 takeaway on 3 September: that was a leaving do and we sorted it out on the night.\n\nWork out each person’s balance: everything they paid (to the landlord, suppliers or engineer, plus money they sent to flatmates) minus their fair share of everything, minus money flatmates sent them. A positive balance means they are owed money. Keep exact amounts throughout and round each balance to the nearest penny only at the end.\nThen settle up with as few bank transfers as possible, using our method (it makes the answer unique): the person who owes the most pays the person who is owed the most, as much as possible (the smaller of the two amounts); repeat until everyone is square. If two people owe (or are owed) exactly the same, take them in alphabetical order.\n\nAnswer in this JSON format (amounts in pounds, two decimals; list the transfers in the order the method makes them):\n```json\n{\"balances\": {\"<name>\": 0.00}, \"transfers\": [{\"from\": \"<name>\", \"to\": \"<name>\", \"amount\": 0.00}]}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "people": [
@@ -632,68 +632,68 @@
             "Xavier"
           ],
           "balances": {
-            "Rosa": -87789,
-            "Lucia": 17368,
-            "Niamh": 17260,
-            "Malik": 120755,
-            "Xavier": -67594
+            "Rosa": -168473,
+            "Lucia": 2720,
+            "Niamh": 39070,
+            "Malik": 141156,
+            "Xavier": -14473
           },
           "transfers": [
             {
               "from": "Rosa",
               "to": "Malik",
-              "amount": 87789
+              "amount": 141156
             },
             {
-              "from": "Xavier",
-              "to": "Malik",
-              "amount": 32966
-            },
-            {
-              "from": "Xavier",
-              "to": "Lucia",
-              "amount": 17368
+              "from": "Rosa",
+              "to": "Niamh",
+              "amount": 27317
             },
             {
               "from": "Xavier",
               "to": "Niamh",
-              "amount": 17260
+              "amount": 11753
+            },
+            {
+              "from": "Xavier",
+              "to": "Lucia",
+              "amount": 2720
             }
           ]
         },
         "reference": {
           "balances": {
-            "Rosa": -877.89,
-            "Lucia": 173.68,
-            "Niamh": 172.6,
-            "Malik": 1207.55,
-            "Xavier": -675.94
+            "Rosa": -1684.73,
+            "Lucia": 27.2,
+            "Niamh": 390.7,
+            "Malik": 1411.56,
+            "Xavier": -144.73
           },
           "transfers": [
             {
               "from": "Rosa",
               "to": "Malik",
-              "amount": 877.89
+              "amount": 1411.56
             },
             {
-              "from": "Xavier",
-              "to": "Malik",
-              "amount": 329.66
-            },
-            {
-              "from": "Xavier",
-              "to": "Lucia",
-              "amount": 173.68
+              "from": "Rosa",
+              "to": "Niamh",
+              "amount": 273.17
             },
             {
               "from": "Xavier",
               "to": "Niamh",
-              "amount": 172.6
+              "amount": 117.53
+            },
+            {
+              "from": "Xavier",
+              "to": "Lucia",
+              "amount": 27.2
             }
           ]
         }
       },
-      "notes": "[hard] Exact shares (fractions) rounded only at the end: Rosa -£877.89, Lucia £173.68, Niamh £172.60, Malik £1,207.55, Xavier -£675.94 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Rosa→Malik £877.89; Xavier→Malik £329.66; Xavier→Lucia £173.68; Xavier→Niamh £172.60. Generator attempt 0."
+      "notes": "[hard] Exact shares (fractions) rounded only at the end: Rosa -£1,684.73, Lucia £27.20, Niamh £390.70, Malik £1,411.56, Xavier -£144.73 (sum £0.00). Settle-up by the stated method, 4 transfers = the proven minimum: Rosa→Malik £1,411.56; Rosa→Niamh £273.17; Xavier→Niamh £117.53; Xavier→Lucia £27.20. Generator attempt 0."
     }
   ]
 }

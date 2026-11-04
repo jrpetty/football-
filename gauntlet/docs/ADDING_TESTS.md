@@ -119,7 +119,9 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "contains", "all": [...], "any": [...], "none": [...] }` | or put the lists in `expected` | Partial credit |
 | `{ "type": "constraints", "allOrNothing": false }` | array of constraints (below) | Partial credit |
 | `{ "type": "json", "unorderedArrays": false, "numberTolerance": 1e-6 }` | the exact expected object | Field-level partial credit |
-| `{ "type": "json", "loose": true, "sets": { "non_compliant": 2 } }` | the exact expected object | `loose` forgives presentation (key case/spacing, `"£1,234.50"`, `"Clause 9.2"`, `T`/"London" in date-times, `"none"` for null, one-item lists); each `sets` path is an id-keyed object where an extra item costs that many fields, as a missing one does; `weights` (path → points, longest prefix wins) and `aboveConstant` (patterns like `messages.*.category`, scored only above a constant guess) (see `tests/work/`) |
+| `{ "type": "json", "lenient": true, "sets": { "non_compliant": 2 } }` | the exact expected object | `lenient` forgives presentation only (key spelling, `"£1,234.50"`, `"HOLD_PRICE"`, `T` in date-times, yes/no, `"n/a"`, one-item lists); each `sets` path is an id-keyed object or a list of ids where every extra item costs as many points as a real one (see `tests/work/`) |
+| `{ "type": "json", "lenient": true, "weights": { "messages.M07.category": 3 }, "aboveConstant": ["messages.*.category"] }` | the exact expected object | `weights`: points per field by path (longest prefix wins); `aboveConstant`: a group of fields earns only the points above giving them all one value |
+| `{ "type": "json", "lenient": true, "partitions": ["clusters"], "sets": { "masters": 1 }, "forbidOverlap": [["shortlist", "flagged"]] }` | the exact expected object | `partitions`: a list of id groups marked pair by pair (pairwise F1); `forbidOverlap`: listing a forbidden id scores 0. Every option is described once in [METHODOLOGY §5.1a](METHODOLOGY.md#51a-the-json-scorers-options) |
 | `{ "type": "code-js", "timeoutMs": 2000 }` | `{ "functionName": "f", "tests": [{ "args": [1, 2], "expected": 3 }] }` | Tell the model to reply with one ```` ```javascript ```` block |
 | `{ "type": "judge", "rubric": "...", "passThreshold": 0.7 }` | optional reference answer | Judge panel, 0–10 |
 | `{ "type": "judge-classify", "instructions": "...", "labels": [{ "id": "CORRECT", "description": "...", "score": 1 }] }` | reference for the judge | Label ids in UPPER_SNAKE_CASE |
@@ -394,9 +396,10 @@ worked example. The pieces:
 | `time.ts` | One UK week: `fmtDay` ("Thu 12 Mar"), `fmtTime`, and generous parsers (`parseDay`, `parseTime`, `parseRange`) that accept "Thursday 12 March", "12/03", "2pm to 2:30pm", "14:00 for 45 min" and reject contradictions. |
 | `protocol.ts` | `parseAction`: the last `ACTION:` line, its arguments (split on `\|`), the text after it (fences removed), a `MEMO:` line; tolerant of markdown, case and spelling ("CREATE EVENT"). Never throws. |
 | `world.ts` | `WorkWorld`: mailbox, calendars, contacts, notes, bookable `Service`s, notes to the owner, and the **effect log** (every change, stamped with its action number). Extend the class to add your own modules (a ledger, tickets). |
-| `tools.ts` | Ready-made tool sets: `mailTools()`, `calendarTools()`, `contactTools()`, `noteTools()`, `bookingTools()`, `userTools(owner)`. A `Tool` is `{ name, aliases, usage, readOnly?, takesBody?, run(world, call, n) }`; write your own the same way. |
+| `tools.ts` | Ready-made tool sets: `mailTools()`, `calendarTools()`, `contactTools()`, `noteTools()`, `bookingTools()`, `userTools(owner)`. A `Tool` is `{ name, aliases, usage, readOnly?, takesBody?, run(world, call, n) }`; write your own the same way. `run` may be async (The Analyst's `QUERY` runs the sandboxed sql worker). |
 | `engine.ts` | `runWorkWorld(ctx, spec)`: the turn loop (budget, invalid actions, cut-off bodies, older results shortened, memo, status line, backticked read-only options for the Random Baseline) and the replay frames. `actionsHelp(tools)` writes the ACTIONS block of your system prompt. |
 | `score.ts` | The shared formula (`computeScore`, `taskValue`, `WORKWORLD_FORMULA`): requests valued by the share of their checks, −0.5 when done wrongly, efficiency against a par, a 5% reporting share, safety penalties with a cap at 20, over-action penalties. |
+| `kit.ts` | Helpers for new scenarios: reading amounts, clock times and days out of free text in any style (`amountsIn`, `timesIn`, `mentionsDay`, `reportNumber`), `noteMentioning` for trap reports, `withAfter` (run something after every action: an email that arrives mid-run, the clock moving on), `pickTools`, `arrivalDay` (working-day lead times), `formulaText` and `workWorldResult` (the program result every scenario returns). The Recruiter, The Analyst, Run the Office and Run the Warehouse use it. |
 | `replay.ts` | `buildVisual(world, …)`: display-only data for the dashboard's work-world stage (`ui/src/components/viz/WorkWorldStage.tsx`): inbox, calendar week, sent items, bookings, flags, final checklist. |
 
 A new scenario is a program plus three library files:
@@ -418,6 +421,14 @@ A new scenario is a program plus three library files:
    spread and fingerprints the generated worlds, and `test/program.<id>.test.ts` (reference ≥ 95, gullible ≤ 20,
    do-nothing and Random Baseline 0, specific wrong answers marked as intended, style-insensitive parsing,
    determinism, fair-play check silent on the scripted replies).
+
+More worked examples: The Accounts Clerk (`accounts-clerk.ts`, `lib/clerk/`: an accounts system and a bank with a
+clock and a cut-off), Month-End Close (`month-end.ts`, `lib/monthend/`: a double-entry ledger, emails that arrive
+mid-run) and the customer-service pair (`helpdesk-agent.ts`, `support-week.ts`, `lib/support/` shared by
+`lib/helpdesk/` and `lib/supportweek/`: tickets, orders, a refund limit, human agents and days). Their shared helpers
+are in `lib/bizsim/common.ts`: money in pence and a reader for every amount in free text, date mentions in any style,
+`withHook` (run something before each action: a clock tick, arrivals), `displayRecord` (an entry for the stage's
+records card) and `bizResult` (the result, items and replay). The stage hides the calendar when a scenario has none.
 
 The whole `lib/workworld/` folder is imported by each scenario, so it is part of every scenario's program hash: a
 change to the engine invalidates their old results (bump their versions).

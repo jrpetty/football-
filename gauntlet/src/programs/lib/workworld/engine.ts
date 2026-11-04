@@ -115,7 +115,7 @@ export async function runWorkWorld<W extends WorkWorld>(ctx: ProgramContext, spe
       invalid++;
       out = { ok: false, text: `Your reply was cut off at the output limit, so the ${tool.name} was not carried out. Write less before the ACTION line.`, outcome: 'Reply cut off at the output limit; not carried out.', tone: 'bad' };
     } else {
-      out = tool.run(world, parsed, n);
+      out = await tool.run(world, parsed, n);
       if (!out.ok) invalid++;
     }
     const line = parsed.line || '(no action)';

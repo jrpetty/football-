@@ -48,7 +48,7 @@ export const ANSWER_RULES = `== HOW TO ANSWER ==
 - Each database scores the share of result rows that match the correct result (half of that if the question asks for an order and the rows are in the wrong order); the question scores the average over the databases. You may explain your reasoning before the code block.`;
 
 /** Tables whose sample rows are named by their first two columns. */
-const COMPOSITE = new Set(['order_items', 'fx_rates', 'fact_order_lines', 'dim_price_history', 'promotion_products', 'subscription_status_daily']);
+const COMPOSITE = new Set(['order_items', 'fx_rates', 'fact_order_lines', 'dim_price_history', 'promotion_products', 'subscription_status_daily', 'dim_product_category_history']);
 
 function samples(tables: Tables, ids: Record<string, Array<string | number>>): string {
   const parts: string[] = [];
@@ -93,7 +93,7 @@ function shopMeta(): PackMeta {
     id: 'work.sql-questions',
     name: 'Ask the Database',
     description:
-      'Twelve questions a manager at a UK outdoor-gear retailer actually asks ("which shop had the highest refund rate last quarter?", "monthly recurring revenue on 31 March", "who bought twice but never again after a refund?"), answered with one SQLite query each. The prompt shows the schema, the business rules (test accounts, soft deletes, guest checkouts, euros, refunds, what counts as active) and about thirty sample rows; the query is run read-only on the full live database and on three hidden copies with different data and compared with a reference query on each, so hard-coding fails. Easy to hard: date ranges and anti-joins, then fan-out-safe revenue, MRR and RANK(), then month-on-month change with LAG, refund behaviour, product pairs with ties and churn windows.',
+      'Twelve questions a manager at a UK outdoor-gear retailer actually asks, answered with one SQLite query each. The prompt shows the schema, the business rules (test accounts, soft deletes, guest checkouts, euros, refunds, what counts as active) and about thirty sample rows; the query is run read-only on the full live database and on three hidden copies with different data and compared with a reference query on each, so hard-coding fails. Easy: date ranges, anti-joins, a location with no sales. Medium: revenue per store and month without fan-out, MRR at every month end, early-refund rates per quarter, a RANK() leaderboard. Hard: a board KPI table built from a finance memo with two amendments (a 23:00 website cut-off, fully refunded sales, refunds by the month they were made), customer segments from an ordered rule list with exceptions, a commission run with cover shifts, bands, first-month thresholds, manager overrides and leavers, and membership spells merged from overlapping subscriptions.',
     difficulty: 'hard',
     tags: ['sql', 'sqlite', 'data-analysis', 'business', 'real-world', 'work'],
     hook: 'Twelve questions from the boss, one database, no hard-coding: the query runs on hidden copies too.',
@@ -164,7 +164,7 @@ export function buildPack(pack: Pack, opts: { collect?: string[] } = {}): Built 
     category: 'work',
     version: '1.0.0',
     maxOutputTokens: 16000,
-    estimate: { inputTokens: tok(preamble) + Math.round(tok('x'.repeat(longest)) * 0.8), outputTokens: pack.meta.id === 'work.sql-hard' ? 6000 : 3500 },
+    estimate: { inputTokens: tok(preamble) + Math.round(tok('x'.repeat(longest)) * 0.8), outputTokens: pack.meta.id === 'work.sql-hard' ? 8000 : 5000 },
     author: 'Gauntlet Core',
     createdAt: '2026-11-04',
     preamble,

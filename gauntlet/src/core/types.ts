@@ -401,12 +401,14 @@ export type ScorerSpec =
       numberTolerance?: number;
       allOrNothing?: boolean;
       aliases?: Record<string, string>;
-      /** Format-tolerant keys, numbers ("£1,234.50"), strings and nulls (see src/scoring/json-compare.ts). */
-      loose?: boolean;
-      /** Id-keyed objects (dotted path → fields per item): extra items cost as much as missing ones. */
-      sets?: Record<string, number>;
-      /** Format can't cost marks: keys match ignoring case/spaces/underscores, "£1,234.50" counts as 1234.5, "yes"/"no" as booleans, "n/a"/"none" as null. */
+      /** Presentation never costs marks (key spelling, "£1,234.50", code punctuation, date-time separators, yes/no, n/a); see JsonCompareOptions in src/scoring/json-compare.ts. */
       lenient?: boolean;
+      /** Collections marked as sets (dotted path → points per item; id-keyed object or list of ids): an extra item costs as much as a missing one. */
+      sets?: Record<string, number>;
+      /** Groupings (dotted paths to lists of id lists) marked pair by pair with pairwise F1. */
+      partitions?: string[];
+      /** [answerPath, keyPath]: listing under answerPath an id the key lists under keyPath scores the case 0. */
+      forbidOverlap?: Array<[string, string]>;
       /** Points per field by dotted path (longest prefix wins, default 1). */
       weights?: Record<string, number>;
       /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */

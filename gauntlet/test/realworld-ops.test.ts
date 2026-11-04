@@ -60,7 +60,9 @@ test('each test: 8–12 cases, at least two easy, medium and hard, category work
     assert.equal(d.category, 'work');
     assert.ok(explainerFor(d.id), `${d.id} explainer`);
     assert.ok((d.estimate?.inputTokens ?? 0) > 500 && (d.estimate?.outputTokens ?? 0) > 1000, `${d.id} estimate`);
-    for (const c of d.cases) assert.ok(c.prompt!.length / 3.6 < 4200, `${d.id}/${c.id}: prompt about ${Math.round(c.prompt!.length / 3.6)} tokens`);
+    // Most prompts under ~4k tokens; at most one long-document case per test.
+    const long = d.cases.filter((c) => c.prompt!.length / 3.6 >= 4200);
+    assert.ok(long.length <= 1 && long.every((c) => c.prompt!.length / 3.6 < 5500), `${d.id}: long prompts ${long.map((c) => c.id)}`);
     for (const c of d.cases) assert.match(c.prompt!, /two different answers|two numbers/, `${d.id}/${c.id}: anti-hedging sentence`);
   }
 });
@@ -104,8 +106,7 @@ test('presentation never changes the score', async () => {
       JSON.stringify(r), // no code fence
       'My working… quite a lot of it.\n' + asReply(r) + '\nHope that helps!', // text around the JSON
       asReply(Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toUpperCase(), v]))), // key case
-      // A trailing comma: the plan/answer checkers tolerate it; the shared json scorer reads strict JSON.
-      ...(isVerifier(d) ? ['```json\n' + JSON.stringify(r, null, 2).replace(/\n}$/, ',\n}') + '\n```'] : []),
+      '```json\n' + JSON.stringify(r, null, 2).replace(/\n}$/, ',\n}') + '\n```', // a trailing comma (every json test tolerates it too)
     ];
     for (const v of variants) assert.equal(await full(d, i, v), 1, `${d.id}: ${v.slice(0, 50)}`);
   }

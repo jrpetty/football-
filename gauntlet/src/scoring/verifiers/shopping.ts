@@ -24,6 +24,8 @@ export interface ShopOffer {
   /** Any `qty` of them for `price` pence. */
   qty: number;
   price: number;
+  /** At most this many deals per customer (further packs at their own price). */
+  limit?: number;
 }
 
 export interface ShopWorld {
@@ -48,7 +50,7 @@ export function basketPrice(w: ShopWorld, qty: Record<string, number>): number {
       for (let i = 0; i < (qty[id] ?? 0); i++) units.push(p.price);
     }
     units.sort((a, b) => b - a);
-    const groups = Math.floor(units.length / o.qty);
+    const groups = Math.min(Math.floor(units.length / o.qty), o.limit ?? Number.POSITIVE_INFINITY);
     total += groups * o.price + units.slice(groups * o.qty).reduce((s, x) => s + x, 0);
   }
   return total;
@@ -106,7 +108,7 @@ export const shopping: PlanVerifier<ShopWorld> = {
   quotesTotal: true,
   marking: [
     'The basket must be listed products in whole packs, and must give at least the amount of every ingredient the meal still needs after scaling every recipe, converting the units, adding them up and taking off what is already in the cupboard. Running short of anything scores 0.',
-    'The basket is priced at the till with the multibuy offers applied as stated. The cheapest basket that covers everything (found by trying every combination of packs) scores 100; one that covers everything but costs more scores 50 × (cheapest ÷ its cost)², always under 50.',
+    'The basket is priced at the till with the multibuy offers applied as stated (most expensive qualifying packs grouped first, within any per-customer limit). The cheapest basket that covers everything (found by trying every combination of packs) scores 100; one that covers everything but costs more scores 50 × (cheapest ÷ its cost)², always under 50.',
     'The total quoted must be the real till total: a missing or wrong total halves the score.',
   ],
   formatValue: gbp,

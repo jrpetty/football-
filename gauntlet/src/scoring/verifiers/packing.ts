@@ -23,6 +23,8 @@ export interface PackItem {
   sharp?: boolean;
   /** Can be worn onto the plane instead of packed. */
   wearable?: boolean;
+  /** A medicine or baby milk: in the cabin it is exempt from the 100 ml limit and the 1-litre bag. */
+  medical?: boolean;
 }
 
 export interface PackBag {
@@ -47,6 +49,8 @@ export interface PackWorld {
   /** Cabin liquids: largest container and the one clear bag's total. */
   liquidMaxMl: number;
   liquidBagMl: number;
+  /** Personal item and cabin bag together at most this many kg (when set). */
+  cabinTotalKg?: number;
 }
 
 export type PackPlace = PackBag['id'] | 'wear' | 'leave';
@@ -143,8 +147,13 @@ export function checkPacking(w: PackWorld, answer: Record<string, unknown>): Pla
     }
     cost += bagCost(bag, kg);
   }
-  // Liquids in the cabin.
-  const cabinLiquids = w.items.filter((it) => it.liquidMl !== undefined && ['personal', 'cabin', 'wear'].includes(where(it)));
+  // Personal item and cabin bag together.
+  if (w.cabinTotalKg !== undefined) {
+    const kg = Math.round(w.items.filter((it) => where(it) === 'personal' || where(it) === 'cabin').reduce((s, it) => s + it.kg, 0) * 1000) / 1000;
+    items.push({ label: `personal item and cabin bag together within ${w.cabinTotalKg} kg`, passed: kg <= w.cabinTotalKg + 1e-9, hard: true, detail: `${kg} kg in the cabin` });
+  }
+  // Liquids in the cabin (medicines and baby milk are exempt).
+  const cabinLiquids = w.items.filter((it) => it.liquidMl !== undefined && !it.medical && ['personal', 'cabin', 'wear'].includes(where(it)));
   const big = cabinLiquids.filter((it) => it.liquidMl! > w.liquidMaxMl);
   const totalMl = cabinLiquids.reduce((s, it) => s + it.liquidMl!, 0);
   items.push({
@@ -165,7 +174,7 @@ export const packing: PlanVerifier<PackWorld> = {
   answerKeys: ['personal', 'cabin', 'hold', 'hold1', 'wear', 'leave'],
   quotesTotal: true,
   marking: [
-    'Every bag is checked against the airline’s rules: item sizes, litres, weight limits, no spare lithium batteries in the hold, no sharp items in the cabin, cabin liquids at most 100 ml each in one 1-litre bag, only wearable things worn, and every must-bring item comes. Breaking any rule scores 0.',
+    'Every bag is checked against the airline’s rules: item sizes, litres, weight limits, no spare lithium batteries in the hold, no sharp items in the cabin, cabin liquids at most 100 ml each in one 1-litre bag (medicines and baby milk exempt), any combined cabin weight limit, only wearable things worn, and every must-bring item comes. Breaking any rule scores 0.',
     'The plan is priced: bag fees + overweight fees + the cost of replacing at the destination everything left at home. The cheapest possible plan (proven by a computer search of every packing) scores 100; a legal but dearer plan scores 50 × (cheapest ÷ its cost)², always under 50.',
     'The total quoted must be the real total: a missing or wrong total halves the score.',
   ],

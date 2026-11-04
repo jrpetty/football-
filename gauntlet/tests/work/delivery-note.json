@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "name": "Check the Delivery",
   "category": "work",
-  "description": "Business Ladder, Operations, Level 1 (Assist). A purchase order, the supplier’s delivery note and our goods-in check per case: for every line on the order, how many units arrived, how many are damaged, what is short or over and what was substituted, all counted in single units although the documents use cases and eaches. Later deliveries bring a whole crushed case, a recount that corrects the note, part of a line substituted with a look-alike product, an item out of stock \"to follow\", and something delivered that nobody ordered.",
+  "description": "Business Ladder, Operations, Level 1 (Assist). A purchase order, the supplier’s delivery note and our goods-in check per case: for every line on the order, how many units arrived, how many are damaged, what is short or over and what was substituted, all counted in single units although the documents use cases and eaches. Later deliveries bring a whole crushed case, a recount that corrects the note, part of a line substituted with a look-alike product, an item out of stock \"to follow\", something delivered that nobody ordered, and in the hard third long orders with inner packs, a second same-day delivery note and units the driver took back.",
   "difficulty": "easy",
   "tags": [
     "business-ladder",
@@ -17,7 +17,7 @@
   "hook": "Cases of 12, a crushed box and a sneaky substitute. What actually arrived?",
   "maxOutputTokens": 8000,
   "estimate": {
-    "inputTokens": 704,
+    "inputTokens": 881,
     "outputTokens": 1500
   },
   "author": "Gauntlet Core",
@@ -25,68 +25,107 @@
   "scorer": {
     "type": "json",
     "lenient": true,
-    "unorderedArrays": true
+    "unorderedArrays": true,
+    "aboveConstant": [
+      "lines.*.damaged",
+      "lines.*.short",
+      "lines.*.over",
+      "lines.*.substitute"
+    ]
   },
   "cases": [
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.SYR-VAN.received": 2,
+          "lines.NAP-2P.received": 2,
+          "lines.STR-PP.received": 2
+        }
+      },
       "id": "c01",
-      "prompt": "I run the stockroom at Moorland Leisure Centre café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-45820   Date: 07/03/2026\nDeliver to: Moorland Leisure Centre café   Ordered by: Rosa Barker\nSKU | Item | Pack size | Quantity ordered\nCOF-1K | Espresso beans 1kg | case of 6 | 11 each\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 5 each\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 9 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN750708   Your order: PO-45820   Delivered: Tue 10 Mar 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCOF-1K | Espresso beans 1kg | 11 ea\nLID-12 | Sip lids 12oz (sleeve of 50) | 3 ea\nCHO-2K | Hot chocolate powder 2kg | 9 ea\nDriver: Zofia Iqbal\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nAll items checked against the note; no damage found.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"COF-1K\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Moorland Leisure Centre café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-38566   Date: 03/06/2026\nDeliver to: Moorland Leisure Centre café   Ordered by: Rosa Barker\nSKU | Item | Pack size | Quantity ordered\nSYR-VAN | Vanilla syrup 1L | case of 6 | 30 each\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 19 each\nSTR-PP | Paper straws (box of 250) | case of 12 | 18 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN772614   Your order: PO-38566   Delivered: Mon 8 Jun 2026\nSKU | Item | Qty  (cs = case, ea = each)\nSYR-VAN | Vanilla syrup 1L | 30 ea\nNAP-2P | Napkins 2-ply (pack of 100) | 17 ea\nSTR-PP | Paper straws (box of 250) | 18 ea\nDriver: Zofia Iqbal\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nAll items checked against the note; no damage found.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"SYR-VAN\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "COF-1K": {
+          "SYR-VAN": {
+            "received": 30,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "NAP-2P": {
+            "received": 17,
+            "damaged": 0,
+            "short": 2,
+            "over": 0,
+            "substitute": null
+          },
+          "STR-PP": {
+            "received": 18,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          }
+        },
+        "not_ordered": []
+      },
+      "notes": "SYR-VAN: ordered 30, received 30, damaged 0; NAP-2P: ordered 19, received 17, damaged 0; STR-PP: ordered 18, received 18, damaged 0"
+    },
+    {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.CLG-450.received": 2,
+          "lines.OIL-5L.received": 2,
+          "lines.GLV-M.received": 2,
+          "lines.STR-PP.received": 2
+        }
+      },
+      "id": "c02",
+      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-41544   Date: 18/09/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Ewan Ahmed\nSKU | Item | Pack size | Quantity ordered\nCLG-450 | Cling film 450mm | case of 6 | 24 each\nOIL-5L | Rapeseed oil 5L | case of 3 | 13 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 11 each\nSTR-PP | Paper straws (box of 250) | case of 12 | 5 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN713901   Your order: PO-41544   Delivered: Wed 23 Sep 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCLG-450 | Cling film 450mm | 4 cs\nOIL-5L | Rapeseed oil 5L | 14 ea\nGLV-M | Vinyl gloves medium (box of 100) | 11 ea\nSTR-PP | Paper straws (box of 250) | 4 ea\nDriver: Grace Evans\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nAll items checked against the note; no damage found.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CLG-450\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "expected": {
+        "lines": {
+          "CLG-450": {
+            "received": 24,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "OIL-5L": {
+            "received": 14,
+            "damaged": 0,
+            "short": 0,
+            "over": 1,
+            "substitute": null
+          },
+          "GLV-M": {
             "received": 11,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "LID-12": {
-            "received": 3,
-            "damaged": 0,
-            "short": 2,
-            "over": 0,
-            "substitute": null
-          },
-          "CHO-2K": {
-            "received": 9,
-            "damaged": 0,
-            "short": 0,
-            "over": 0,
-            "substitute": null
-          }
-        },
-        "not_ordered": []
-      },
-      "notes": "COF-1K: ordered 11, received 11, damaged 0; LID-12: ordered 5, received 3, damaged 0; CHO-2K: ordered 9, received 9, damaged 0"
-    },
-    {
-      "id": "c02",
-      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-48863   Date: 23/09/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Ewan Ahmed\nSKU | Item | Pack size | Quantity ordered\nSTR-PP | Paper straws (box of 250) | case of 12 | 72 each\nSYR-VAN | Vanilla syrup 1L | case of 6 | 24 each\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 26 each\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 17 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN794482   Your order: PO-48863   Delivered: Mon 28 Sep 2026\nSKU | Item | Qty  (cs = case, ea = each)\nSTR-PP | Paper straws (box of 250) | 6 cs\nSYR-VAN | Vanilla syrup 1L | 25 ea\nBAG-KR | Kraft carrier bags (pack of 250) | 26 ea\nLID-12 | Sip lids 12oz (sleeve of 50) | 16 ea\nDriver: Grace Evans\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nAll items checked against the note; no damage found.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"STR-PP\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
-      "expected": {
-        "lines": {
           "STR-PP": {
-            "received": 72,
-            "damaged": 0,
-            "short": 0,
-            "over": 0,
-            "substitute": null
-          },
-          "SYR-VAN": {
-            "received": 25,
-            "damaged": 0,
-            "short": 0,
-            "over": 1,
-            "substitute": null
-          },
-          "BAG-KR": {
-            "received": 26,
-            "damaged": 0,
-            "short": 0,
-            "over": 0,
-            "substitute": null
-          },
-          "LID-12": {
-            "received": 16,
+            "received": 4,
             "damaged": 0,
             "short": 1,
             "over": 0,
@@ -95,36 +134,53 @@
         },
         "not_ordered": []
       },
-      "notes": "STR-PP: ordered 72, received 72, damaged 0; SYR-VAN: ordered 24, received 25, damaged 0; BAG-KR: ordered 26, received 26, damaged 0; LID-12: ordered 17, received 16, damaged 0"
+      "notes": "CLG-450: ordered 24, received 24, damaged 0; OIL-5L: ordered 13, received 14, damaged 0; GLV-M: ordered 11, received 11, damaged 0; STR-PP: ordered 5, received 4, damaged 0"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.GLV-M.received": 2,
+          "lines.BAG-KR.received": 2,
+          "lines.CUP-12.received": 2,
+          "lines.FRK-W.received": 2
+        }
+      },
       "id": "c03",
-      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-40077   Date: 02/05/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Callum Iqbal\nSKU | Item | Pack size | Quantity ordered\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 2 cases\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 24 each\nOAT-1L | Oat milk 1L | case of 6 | 19 each\nSAN-5L | Surface sanitiser 5L | case of 4 | 12 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN794955   Your order: PO-40077   Delivered: Tue 5 May 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCUP-12 | Paper cups 12oz (sleeve of 50) | 2 cs\nNAP-2P | Napkins 2-ply (pack of 100) | 24 ea\nOAT-1L | Oat milk 1L | 15 ea\nSAN-5L | Surface sanitiser 5L | 12 ea\nDriver: Oluwaseun Iqbal\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nPaper cups 12oz (sleeve of 50): 3 damaged (crushed), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CUP-12\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-42978   Date: 05/05/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Callum Iqbal\nSKU | Item | Pack size | Quantity ordered\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 3 cases\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 24 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 14 each\nFRK-W | Wooden forks (box of 1000) | case of 5 | 10 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN759710   Your order: PO-42978   Delivered: Fri 8 May 2026\nSKU | Item | Qty  (cs = case, ea = each)\nGLV-M | Vinyl gloves medium (box of 100) | 3 cs\nBAG-KR | Kraft carrier bags (pack of 250) | 24 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 10 ea\nFRK-W | Wooden forks (box of 1000) | 10 ea\nDriver: Oluwaseun Iqbal\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nVinyl gloves medium (box of 100): 3 damaged (split), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"GLV-M\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "CUP-12": {
-            "received": 40,
+          "GLV-M": {
+            "received": 30,
             "damaged": 3,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "NAP-2P": {
+          "BAG-KR": {
             "received": 24,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "OAT-1L": {
-            "received": 15,
+          "CUP-12": {
+            "received": 10,
             "damaged": 0,
             "short": 4,
             "over": 0,
             "substitute": null
           },
-          "SAN-5L": {
-            "received": 12,
+          "FRK-W": {
+            "received": 10,
             "damaged": 0,
             "short": 0,
             "over": 0,
@@ -133,43 +189,61 @@
         },
         "not_ordered": []
       },
-      "notes": "CUP-12: ordered 40, received 40, damaged 3; NAP-2P: ordered 24, received 24, damaged 0; OAT-1L: ordered 19, received 15, damaged 0; SAN-5L: ordered 12, received 12, damaged 0"
+      "notes": "GLV-M: ordered 30, received 30, damaged 3; BAG-KR: ordered 24, received 24, damaged 0; CUP-12: ordered 14, received 10, damaged 0; FRK-W: ordered 10, received 10, damaged 0"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.CHO-2K.received": 2,
+          "lines.CLG-450.received": 2,
+          "lines.CUP-12.received": 2,
+          "lines.PLT-9.received": 2,
+          "lines.LID-12.received": 2
+        }
+      },
       "id": "c04",
-      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-39266   Date: 19/08/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Chloe Clarke\nSKU | Item | Pack size | Quantity ordered\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 16 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 4 cases\nOAT-1L | Oat milk 1L | case of 6 | 15 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 30 each\nSAN-5L | Surface sanitiser 5L | case of 4 | 6 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN792577   Your order: PO-39266   Delivered: Fri 21 Aug 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCHO-2KV | Hot chocolate powder 2kg vegan | 16 ea  ** SUBSTITUTE for CHO-2K **\nTOM-400 | Chopped tomatoes 400g tin | 48 ea\nOAT-1L | Oat milk 1L | 15 ea\nGLV-M | Vinyl gloves medium (box of 100) | 30 ea\nSAN-5L | Surface sanitiser 5L | 6 ea\nDriver: Kofi Tanaka\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nVinyl gloves medium (box of 100): 2 damaged (dented), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CHO-2K\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-32524   Date: 04/09/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Chloe Clarke\nSKU | Item | Pack size | Quantity ordered\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 15 each\nCLG-450 | Cling film 450mm | case of 6 | 3 cases\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 17 each\nPLT-9 | Paper plates 9in (pack of 50) | case of 10 | 13 each\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 8 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN740017   Your order: PO-32524   Delivered: Thu 10 Sep 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCHO-2KV | Hot chocolate powder 2kg vegan | 15 ea  ** SUBSTITUTE for CHO-2K **\nCLG-450 | Cling film 450mm | 18 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 17 ea\nPLT-9 | Paper plates 9in (pack of 50) | 13 ea\nLID-12 | Sip lids 12oz (sleeve of 50) | 8 ea\nDriver: Kofi Tanaka\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nPaper plates 9in (pack of 50): 2 damaged (crushed), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CHO-2K\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
           "CHO-2K": {
             "received": 0,
             "damaged": 0,
-            "short": 16,
+            "short": 15,
             "over": 0,
             "substitute": "CHO-2KV"
           },
-          "TOM-400": {
-            "received": 48,
+          "CLG-450": {
+            "received": 18,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "OAT-1L": {
-            "received": 15,
+          "CUP-12": {
+            "received": 17,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "GLV-M": {
-            "received": 30,
+          "PLT-9": {
+            "received": 13,
             "damaged": 2,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "SAN-5L": {
-            "received": 6,
+          "LID-12": {
+            "received": 8,
             "damaged": 0,
             "short": 0,
             "over": 0,
@@ -178,22 +252,40 @@
         },
         "not_ordered": []
       },
-      "notes": "CHO-2K: ordered 16, received 0, damaged 0, substitute CHO-2KV x16; TOM-400: ordered 48, received 48, damaged 0; OAT-1L: ordered 15, received 15, damaged 0; GLV-M: ordered 30, received 30, damaged 2; SAN-5L: ordered 6, received 6, damaged 0"
+      "notes": "CHO-2K: ordered 15, received 0, damaged 0, substitute CHO-2KV x15; CLG-450: ordered 18, received 18, damaged 0; CUP-12: ordered 17, received 17, damaged 0; PLT-9: ordered 13, received 13, damaged 2; LID-12: ordered 8, received 8, damaged 0"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.SAN-5L.received": 2,
+          "lines.NAP-2P.received": 2,
+          "lines.SYR-VAN.received": 2,
+          "lines.LID-12.received": 2,
+          "lines.OIL-5L.received": 2
+        }
+      },
       "id": "c05",
-      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-44598   Date: 11/03/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Daniel Ferreira\nSKU | Item | Pack size | Quantity ordered\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 3 cases\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 72 each\nSYR-VAN | Vanilla syrup 1L | case of 6 | 7 each\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 24 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 4 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN706088   Your order: PO-44598   Delivered: Fri 13 Mar 2026\nSKU | Item | Qty  (cs = case, ea = each)\nGLV-M | Vinyl gloves medium (box of 100) | 2 cs\nTOM-400 | Chopped tomatoes 400g tin | 7 cs\nSYR-VSF | Vanilla syrup 1L sugar-free | 7 ea  ** SUBSTITUTE for SYR-VAN **\nCHO-2K | Hot chocolate powder 2kg | 24 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 3 ea\nDriver: Tariq Doyle\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nPaper cups 12oz (sleeve of 50): 1 damaged (dented), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"GLV-M\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Harbourside Deli. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-34003   Date: 07/06/2026\nDeliver to: Harbourside Deli, Bristol   Ordered by: Daniel Ferreira\nSKU | Item | Pack size | Quantity ordered\nSAN-5L | Surface sanitiser 5L | case of 4 | 3 cases\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 40 each\nSYR-VAN | Vanilla syrup 1L | case of 6 | 23 each\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 13 each\nOIL-5L | Rapeseed oil 5L | case of 3 | 18 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN727340   Your order: PO-34003   Delivered: Wed 10 Jun 2026\nSKU | Item | Qty  (cs = case, ea = each)\nSAN-5L | Surface sanitiser 5L | 2 cs\nNAP-2P | Napkins 2-ply (pack of 100) | 5 cs + 2 ea\nSYR-VSF | Vanilla syrup 1L sugar-free | 23 ea  ** SUBSTITUTE for SYR-VAN **\nLID-12 | Sip lids 12oz (sleeve of 50) | 13 ea\nOIL-5L | Rapeseed oil 5L | 17 ea\nDriver: Tariq Doyle\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nRapeseed oil 5L: 1 damaged (leaking), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"SAN-5L\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "GLV-M": {
-            "received": 20,
+          "SAN-5L": {
+            "received": 8,
             "damaged": 0,
-            "short": 10,
+            "short": 4,
             "over": 0,
             "substitute": null
           },
-          "TOM-400": {
-            "received": 84,
+          "NAP-2P": {
+            "received": 52,
             "damaged": 0,
             "short": 0,
             "over": 12,
@@ -202,19 +294,19 @@
           "SYR-VAN": {
             "received": 0,
             "damaged": 0,
-            "short": 7,
+            "short": 23,
             "over": 0,
             "substitute": "SYR-VSF"
           },
-          "CHO-2K": {
-            "received": 24,
+          "LID-12": {
+            "received": 13,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "CUP-12": {
-            "received": 3,
+          "OIL-5L": {
+            "received": 17,
             "damaged": 1,
             "short": 1,
             "over": 0,
@@ -223,49 +315,68 @@
         },
         "not_ordered": []
       },
-      "notes": "GLV-M: ordered 30, received 20, damaged 0; TOM-400: ordered 72, received 84, damaged 0; SYR-VAN: ordered 7, received 0, damaged 0, substitute SYR-VSF x7; CHO-2K: ordered 24, received 24, damaged 0; CUP-12: ordered 4, received 3, damaged 1"
+      "notes": "SAN-5L: ordered 12, received 8, damaged 0; NAP-2P: ordered 40, received 52, damaged 0; SYR-VAN: ordered 23, received 0, damaged 0, substitute SYR-VSF x23; LID-12: ordered 13, received 13, damaged 0; OIL-5L: ordered 18, received 17, damaged 1"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.FOI-450.received": 2,
+          "lines.STI-W.received": 2,
+          "lines.CLG-450.received": 2,
+          "lines.OIL-5L.received": 2,
+          "lines.PLT-9.received": 2,
+          "lines.FLR-1K.received": 2
+        }
+      },
       "id": "c06",
-      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-42252   Date: 19/06/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Mei Ferreira\nSKU | Item | Pack size | Quantity ordered\nOAT-1L | Oat milk 1L | case of 6 | 15 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 2 cases\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 6 each\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 12 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 48 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 13 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN793454   Your order: PO-42252   Delivered: Wed 24 Jun 2026\nSKU | Item | Qty  (cs = case, ea = each)\nOAT-1L | Oat milk 1L | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nCUP-12 | Paper cups 12oz (sleeve of 50) | 37 ea\nLID-12 | Sip lids 12oz (sleeve of 50) | 6 ea\nTEA-EB | English breakfast tea (box of 160) | 1 cs\nCHO-2K | Hot chocolate powder 2kg | 12 ea\nTOM-400 | Chopped tomatoes 400g tin | 4 cs\nGLV-M | Vinyl gloves medium (box of 100) | 13 ea\nDriver: Imran Evans\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nHot chocolate powder 2kg: 2 damaged (split), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"OAT-1L\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-51570   Date: 12/06/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Mei Ferreira\nSKU | Item | Pack size | Quantity ordered\nFOI-450 | Catering foil 450mm | case of 6 | 21 each\nSTI-W | Wooden stirrers (box of 1000) | case of 10 | 2 cases\nCLG-450 | Cling film 450mm | case of 6 | 16 each\nOIL-5L | Rapeseed oil 5L | case of 3 | 27 each\nPLT-9 | Paper plates 9in (pack of 50) | case of 10 | 40 each\nFLR-1K | Plain flour 1kg | case of 10 | 13 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN794703   Your order: PO-51570   Delivered: Tue 16 Jun 2026\nSKU | Item | Qty  (cs = case, ea = each)\nFOI-450 | Catering foil 450mm | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nTEA-EB | English breakfast tea (box of 160) | 1 cs\nSTI-W | Wooden stirrers (box of 1000) | 17 ea\nCLG-450 | Cling film 450mm | 16 ea\nOIL-5L | Rapeseed oil 5L | 27 ea\nPLT-9 | Paper plates 9in (pack of 50) | 4 cs\nFLR-1K | Plain flour 1kg | 13 ea\nDriver: Imran Evans\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nRapeseed oil 5L: 2 damaged (crushed), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"FOI-450\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "OAT-1L": {
+          "FOI-450": {
             "received": 0,
             "damaged": 0,
-            "short": 15,
+            "short": 21,
             "over": 0,
             "substitute": null
           },
-          "CUP-12": {
-            "received": 37,
+          "STI-W": {
+            "received": 17,
             "damaged": 0,
             "short": 3,
             "over": 0,
             "substitute": null
           },
-          "LID-12": {
-            "received": 6,
+          "CLG-450": {
+            "received": 16,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "CHO-2K": {
-            "received": 12,
+          "OIL-5L": {
+            "received": 27,
             "damaged": 2,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "TOM-400": {
-            "received": 48,
+          "PLT-9": {
+            "received": 40,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "GLV-M": {
+          "FLR-1K": {
             "received": 13,
             "damaged": 0,
             "short": 0,
@@ -277,15 +388,38 @@
           "TEA-EB"
         ]
       },
-      "notes": "OAT-1L: ordered 15, received 0, damaged 0; CUP-12: ordered 40, received 37, damaged 0; LID-12: ordered 6, received 6, damaged 0; CHO-2K: ordered 12, received 12, damaged 2; TOM-400: ordered 48, received 48, damaged 0; GLV-M: ordered 13, received 13, damaged 0; not ordered: TEA-EB"
+      "notes": "FOI-450: ordered 21, received 0, damaged 0; STI-W: ordered 20, received 17, damaged 0; CLG-450: ordered 16, received 16, damaged 0; OIL-5L: ordered 27, received 27, damaged 2; PLT-9: ordered 40, received 40, damaged 0; FLR-1K: ordered 13, received 13, damaged 0; not ordered: TEA-EB"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.JUI-250.received": 2,
+          "lines.LID-12.received": 2,
+          "lines.RIC-5K.received": 2,
+          "lines.COF-1K.received": 2,
+          "lines.OAT-1L.received": 2,
+          "lines.FOI-450.received": 2,
+          "lines.BAK-PAP.received": 2,
+          "lines.CUP-12.received": 2,
+          "lines.GLV-M.received": 2,
+          "lines.SUG-1K.received": 2
+        }
+      },
       "id": "c07",
-      "prompt": "I run the stockroom at Riverside Hotel kitchen. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-42845   Date: 02/04/2026\nDeliver to: Riverside Hotel kitchen, Cardiff   Ordered by: Kofi Rahman\nSKU | Item | Pack size | Quantity ordered\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 6 cases\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 29 each\nOAT-1L | Oat milk 1L | case of 6 | 5 cases\nSTR-PP | Paper straws (box of 250) | case of 12 | 13 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 11 each\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 20 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN706445   Your order: PO-42845   Delivered: Sun 5 Apr 2026\nSKU | Item | Qty  (cs = case, ea = each)\nBAG-KR | Kraft carrier bags (pack of 250) | 6 cs + 2 ea\nLID-12F | Flat lids 12oz (sleeve of 50) | 29 ea  ** SUBSTITUTE for LID-12 **\nOAT-1L | Oat milk 1L | 30 ea\nSTR-PP | Paper straws (box of 250) | 13 ea\nTOM-400 | Chopped tomatoes 400g tin | 5 ea\nNAP-2P | Napkins 2-ply (pack of 100) | 2 cs + 6 ea\nDriver: Ines Price\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nRecounted Kraft carrier bags (pack of 250): we actually received 6 cs, not the 6 cs + 2 ea on the note.\nOat milk 1L: 4 damaged (leaking), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"BAG-KR\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Riverside Hotel kitchen. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-47692   Date: 02/05/2026\nDeliver to: Riverside Hotel kitchen, Cardiff   Ordered by: Kofi Rahman\nSKU | Item | Pack size | Quantity ordered\nJUI-250 | Apple juice cartons 250ml | case of 27 (3 packs of 9) | 9 packs\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 5 each\nRIC-5K | Basmati rice 5kg | case of 4 | 6 cases\nCOF-1K | Espresso beans 1kg | case of 6 | 23 each\nOAT-1L | Oat milk 1L | case of 6 | 23 each\nFOI-450 | Catering foil 450mm | case of 6 | 30 each\nBAK-PAP | Baking paper roll 450mm | case of 6 | 6 cases\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 29 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 13 each\nSUG-1K | Granulated sugar 1kg | case of 10 | 26 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN733765   Your order: PO-47692   Delivered: Fri 8 May 2026\nSKU | Item | Qty  (cs = case, ea = each)\nJUI-250 | Apple juice cartons 250ml | 3 cs\nLID-12F | Flat lids 12oz (sleeve of 50) | 5 ea  ** SUBSTITUTE for LID-12 **\nRIC-5K | Basmati rice 5kg | 24 ea\nCOF-1K | Espresso beans 1kg | 23 ea\nOAT-1L | Oat milk 1L | 17 ea\nFOI-450 | Catering foil 450mm | 6 cs\nBAK-PAP | Baking paper roll 450mm | 6 cs + 2 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nGLV-M | Vinyl gloves medium (box of 100) | 13 ea\nSUG-1K | Granulated sugar 1kg | 26 ea\nDriver: Ines Price\n\nSECOND DELIVERY NOTE DN-B733765   Your order: PO-47692   Delivered: Fri 8 May 2026 (later the same day)\nSKU | Item | Qty\nCUP-12 | Paper cups 12oz (sleeve of 50) | 29 ea  (the item to follow from DN733765)\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nBasmati rice 5kg: 4 damaged (leaking), kept aside for the driver to collect.\nCatering foil 450mm: too many were sent, so the driver took 6 ea back on the van.\nRecounted Baking paper roll 450mm: we actually received 6 cs, not the 6 cs + 2 ea on the note.\nGranulated sugar 1kg: 1 damaged (leaking), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"JUI-250\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "BAG-KR": {
-            "received": 24,
+          "JUI-250": {
+            "received": 81,
             "damaged": 0,
             "short": 0,
             "over": 0,
@@ -294,198 +428,419 @@
           "LID-12": {
             "received": 0,
             "damaged": 0,
-            "short": 29,
+            "short": 5,
             "over": 0,
             "substitute": "LID-12F"
           },
-          "OAT-1L": {
-            "received": 30,
+          "RIC-5K": {
+            "received": 24,
             "damaged": 4,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "STR-PP": {
-            "received": 13,
-            "damaged": 0,
-            "short": 0,
-            "over": 0,
-            "substitute": null
-          },
-          "TOM-400": {
-            "received": 5,
-            "damaged": 0,
-            "short": 6,
-            "over": 0,
-            "substitute": null
-          },
-          "NAP-2P": {
-            "received": 26,
-            "damaged": 0,
-            "short": 0,
-            "over": 6,
-            "substitute": null
-          }
-        },
-        "not_ordered": []
-      },
-      "notes": "BAG-KR: ordered 24, received 24 (note claimed 26), damaged 0; LID-12: ordered 29, received 0, damaged 0, substitute LID-12F x29; OAT-1L: ordered 30, received 30, damaged 4; STR-PP: ordered 13, received 13, damaged 0; TOM-400: ordered 11, received 5, damaged 0; NAP-2P: ordered 20, received 26, damaged 0"
-    },
-    {
-      "id": "c08",
-      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-36547   Date: 29/03/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Oluwaseun Nowak\nSKU | Item | Pack size | Quantity ordered\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 27 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 3 cases\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 13 each\nCOF-1K | Espresso beans 1kg | case of 6 | 18 each\nOAT-1L | Oat milk 1L | case of 6 | 5 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 27 each\nSYR-VAN | Vanilla syrup 1L | case of 6 | 9 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN775679   Your order: PO-36547   Delivered: Thu 2 Apr 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCHO-2K | Hot chocolate powder 2kg | 15 ea\nCHO-2KV | Hot chocolate powder 2kg vegan | 12 ea  ** SUBSTITUTE for CHO-2K **\nCUP-12 | Paper cups 12oz (sleeve of 50) | 3 cs\nBAG-KR | Kraft carrier bags (pack of 250) | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nCOF-1K | Espresso beans 1kg | 2 cs\nOAT-1L | Oat milk 1L | 5 ea\nGLV-M | Vinyl gloves medium (box of 100) | 29 ea\nTEA-EB | English breakfast tea (box of 160) | 1 cs\nSYR-VAN | Vanilla syrup 1L | 9 ea\nDriver: Jamal Kaur\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nPaper cups 12oz (sleeve of 50): one whole case (20 units) arrived crushed and unusable.\nVanilla syrup 1L: 1 damaged (dented), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CHO-2K\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
-      "expected": {
-        "lines": {
-          "CHO-2K": {
-            "received": 15,
-            "damaged": 0,
-            "short": 12,
-            "over": 0,
-            "substitute": "CHO-2KV"
-          },
-          "CUP-12": {
-            "received": 60,
-            "damaged": 20,
-            "short": 0,
-            "over": 0,
-            "substitute": null
-          },
-          "BAG-KR": {
-            "received": 0,
-            "damaged": 0,
-            "short": 13,
-            "over": 0,
-            "substitute": null
-          },
           "COF-1K": {
-            "received": 12,
+            "received": 23,
             "damaged": 0,
-            "short": 6,
+            "short": 0,
             "over": 0,
             "substitute": null
           },
           "OAT-1L": {
-            "received": 5,
+            "received": 17,
+            "damaged": 0,
+            "short": 6,
+            "over": 0,
+            "substitute": null
+          },
+          "FOI-450": {
+            "received": 30,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "BAK-PAP": {
+            "received": 36,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "CUP-12": {
+            "received": 29,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
           "GLV-M": {
-            "received": 29,
+            "received": 13,
             "damaged": 0,
             "short": 0,
-            "over": 2,
+            "over": 0,
             "substitute": null
           },
-          "SYR-VAN": {
-            "received": 9,
+          "SUG-1K": {
+            "received": 26,
             "damaged": 1,
             "short": 0,
             "over": 0,
             "substitute": null
           }
         },
-        "not_ordered": [
-          "TEA-EB"
-        ]
+        "not_ordered": []
       },
-      "notes": "CHO-2K: ordered 27, received 15, damaged 0, substitute CHO-2KV x12; CUP-12: ordered 60, received 60, damaged 20; BAG-KR: ordered 13, received 0, damaged 0; COF-1K: ordered 18, received 12, damaged 0; OAT-1L: ordered 5, received 5, damaged 0; GLV-M: ordered 27, received 29, damaged 0; SYR-VAN: ordered 9, received 9, damaged 1; not ordered: TEA-EB"
+      "notes": "JUI-250: ordered 81, received 81, damaged 0; LID-12: ordered 5, received 0, damaged 0, substitute LID-12F x5; RIC-5K: ordered 24, received 24, damaged 4; COF-1K: ordered 23, received 23, damaged 0; OAT-1L: ordered 23, received 17, damaged 0; FOI-450: ordered 30, received 30, damaged 0; BAK-PAP: ordered 36, received 36 (note claimed 38), damaged 0; CUP-12: ordered 29, received 29, damaged 0; GLV-M: ordered 13, received 13, damaged 0; SUG-1K: ordered 26, received 26, damaged 1"
     },
     {
-      "id": "c09",
-      "prompt": "I run the stockroom at Moorland Leisure Centre café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-30742   Date: 30/05/2026\nDeliver to: Moorland Leisure Centre café   Ordered by: Aisha Reid\nSKU | Item | Pack size | Quantity ordered\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 2 cases\nOAT-1L | Oat milk 1L | case of 6 | 15 each\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 5 cases\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 7 each\nSTR-PP | Paper straws (box of 250) | case of 12 | 28 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 60 each\nSAN-5L | Surface sanitiser 5L | case of 4 | 5 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN797268   Your order: PO-30742   Delivered: Wed 3 Jun 2026\nSKU | Item | Qty  (cs = case, ea = each)\nGLV-M | Vinyl gloves medium (box of 100) | 24 ea\nOAT-1L | Oat milk 1L | 9 ea\nOAT-1LB | Oat milk 1L (barista edition) | 6 ea  ** SUBSTITUTE for OAT-1L **\nBAG-KR | Kraft carrier bags (pack of 250) | 5 cs + 3 ea\nTOM-400 | Chopped tomatoes 400g tin | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nSTR-PP | Paper straws (box of 250) | 28 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 3 cs\nDriver: Niamh Taylor\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nVinyl gloves medium (box of 100): 2 damaged (split), kept aside for the driver to collect.\nRecounted Kraft carrier bags (pack of 250): we actually received 5 cs, not the 5 cs + 3 ea on the note.\nPaper cups 12oz (sleeve of 50): one whole case (20 units) arrived crushed and unusable.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"GLV-M\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.CHO-2K.received": 2,
+          "lines.JUI-250.received": 2,
+          "lines.SYR-VAN.received": 2,
+          "lines.BAK-PAP.received": 2,
+          "lines.NAP-2P.received": 2,
+          "lines.SUG-1K.received": 2,
+          "lines.FOI-450.received": 2,
+          "lines.FRK-W.received": 2,
+          "lines.SAN-5L.received": 2,
+          "lines.PLT-9.received": 2,
+          "lines.STI-W.received": 2,
+          "lines.GLV-M.received": 2,
+          "lines.TOM-400.received": 2
+        }
+      },
+      "id": "c08",
+      "prompt": "I run the stockroom at The Copper Kettle café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-44907   Date: 06/09/2026\nDeliver to: The Copper Kettle café, Leeds   Ordered by: Oluwaseun Nowak\nSKU | Item | Pack size | Quantity ordered\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 24 each\nJUI-250 | Apple juice cartons 250ml | case of 27 (3 packs of 9) | 6 packs\nSYR-VAN | Vanilla syrup 1L | case of 6 | 4 cases\nBAK-PAP | Baking paper roll 450mm | case of 6 | 27 each\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 60 each\nSUG-1K | Granulated sugar 1kg | case of 10 | 5 each\nFOI-450 | Catering foil 450mm | case of 6 | 28 each\nFRK-W | Wooden forks (box of 1000) | case of 5 | 16 each\nSAN-5L | Surface sanitiser 5L | case of 4 | 6 cases\nPLT-9 | Paper plates 9in (pack of 50) | case of 10 | 17 each\nSTI-W | Wooden stirrers (box of 1000) | case of 10 | 60 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 16 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 30 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN711897   Your order: PO-44907   Delivered: Sat 12 Sep 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCHO-2K | Hot chocolate powder 2kg | 12 ea\nCHO-2KV | Hot chocolate powder 2kg vegan | 12 ea  ** SUBSTITUTE for CHO-2K **\nJUI-250 | Apple juice cartons 250ml | 1 cs + 21 ea\nSYR-VAN | Vanilla syrup 1L | 4 cs\nBAK-PAP | Baking paper roll 450mm | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nNAP-2P | Napkins 2-ply (pack of 100) | 5 cs\nSUG-1K | Granulated sugar 1kg | 5 ea\nMUG-CER | Ceramic mug 12oz | 1 cs\nFOI-450 | Catering foil 450mm | 30 ea\nFRK-W | Wooden forks (box of 1000) | 16 ea\nSAN-5L | Surface sanitiser 5L | 27 ea\nPLT-9 | Paper plates 9in (pack of 50) | 17 ea\nSTI-W | Wooden stirrers (box of 1000) | 7 cs + 2 ea\nGLV-M | Vinyl gloves medium (box of 100) | 16 ea\nTOM-400 | Chopped tomatoes 400g tin | 26 ea\nDriver: Jamal Kaur\n\nSECOND DELIVERY NOTE DN-B711897   Your order: PO-44907   Delivered: Sat 12 Sep 2026 (later the same day)\nSKU | Item | Qty\nBAK-PAP | Baking paper roll 450mm | 12 ea  (the item to follow from DN711897)\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nVanilla syrup 1L: one whole case (6 units) arrived crushed and unusable.\nWooden forks (box of 1000): 1 damaged (dented), kept aside for the driver to collect.\nRecounted Surface sanitiser 5L: we actually received 24 ea, not the 27 ea on the note.\nWooden stirrers (box of 1000): too many were sent, so the driver took 6 ea back on the van.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CHO-2K\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
-          "GLV-M": {
+          "CHO-2K": {
+            "received": 12,
+            "damaged": 0,
+            "short": 12,
+            "over": 0,
+            "substitute": "CHO-2KV"
+          },
+          "JUI-250": {
+            "received": 48,
+            "damaged": 0,
+            "short": 6,
+            "over": 0,
+            "substitute": null
+          },
+          "SYR-VAN": {
             "received": 24,
+            "damaged": 6,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "BAK-PAP": {
+            "received": 12,
+            "damaged": 0,
+            "short": 15,
+            "over": 0,
+            "substitute": null
+          },
+          "NAP-2P": {
+            "received": 50,
+            "damaged": 0,
+            "short": 10,
+            "over": 0,
+            "substitute": null
+          },
+          "SUG-1K": {
+            "received": 5,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "FOI-450": {
+            "received": 30,
+            "damaged": 0,
+            "short": 0,
+            "over": 2,
+            "substitute": null
+          },
+          "FRK-W": {
+            "received": 16,
+            "damaged": 1,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "SAN-5L": {
+            "received": 24,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "PLT-9": {
+            "received": 17,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "STI-W": {
+            "received": 66,
+            "damaged": 0,
+            "short": 0,
+            "over": 6,
+            "substitute": null
+          },
+          "GLV-M": {
+            "received": 16,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "TOM-400": {
+            "received": 26,
+            "damaged": 0,
+            "short": 4,
+            "over": 0,
+            "substitute": null
+          }
+        },
+        "not_ordered": [
+          "MUG-CER"
+        ]
+      },
+      "notes": "CHO-2K: ordered 24, received 12, damaged 0, substitute CHO-2KV x12; JUI-250: ordered 54, received 48, damaged 0; SYR-VAN: ordered 24, received 24, damaged 6; BAK-PAP: ordered 27, received 12, damaged 0; NAP-2P: ordered 60, received 50, damaged 0; SUG-1K: ordered 5, received 5, damaged 0; FOI-450: ordered 28, received 30, damaged 0; FRK-W: ordered 16, received 16, damaged 1; SAN-5L: ordered 24, received 24 (note claimed 27), damaged 0; PLT-9: ordered 17, received 17, damaged 0; STI-W: ordered 60, received 66, damaged 0; GLV-M: ordered 16, received 16, damaged 0; TOM-400: ordered 30, received 26, damaged 0; not ordered: MUG-CER"
+    },
+    {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.CUP-12.received": 2,
+          "lines.OAT-1L.received": 2,
+          "lines.JUI-250.received": 2,
+          "lines.GLV-M.received": 2,
+          "lines.FLR-1K.received": 2,
+          "lines.BAK-PAP.received": 2,
+          "lines.CLG-450.received": 2,
+          "lines.RIC-5K.received": 2,
+          "lines.CHO-2K.received": 2,
+          "lines.PLT-9.received": 2,
+          "lines.FOI-450.received": 2,
+          "lines.OIL-5L.received": 2,
+          "lines.TOM-400.received": 2,
+          "lines.YOG-125.received": 2,
+          "lines.NAP-2P.received": 2,
+          "lines.COF-1K.received": 2
+        }
+      },
+      "id": "c09",
+      "prompt": "I run the stockroom at Moorland Leisure Centre café. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-44774   Date: 18/04/2026\nDeliver to: Moorland Leisure Centre café   Ordered by: Aisha Reid\nSKU | Item | Pack size | Quantity ordered\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 2 cases\nOAT-1L | Oat milk 1L | case of 6 | 17 each\nJUI-250 | Apple juice cartons 250ml | case of 27 (3 packs of 9) | 12 packs\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 2 cases\nFLR-1K | Plain flour 1kg | case of 10 | 28 each\nBAK-PAP | Baking paper roll 450mm | case of 6 | 30 each\nCLG-450 | Cling film 450mm | case of 6 | 12 each\nRIC-5K | Basmati rice 5kg | case of 4 | 16 each\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 8 each\nPLT-9 | Paper plates 9in (pack of 50) | case of 10 | 2 cases\nFOI-450 | Catering foil 450mm | case of 6 | 16 each\nOIL-5L | Rapeseed oil 5L | case of 3 | 15 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 48 each\nYOG-125 | Yoghurt pots 125g | case of 24 (4 packs of 6) | 8 packs\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 7 each\nCOF-1K | Espresso beans 1kg | case of 6 | 13 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN774808   Your order: PO-44774   Delivered: Tue 21 Apr 2026\nSKU | Item | Qty  (cs = case, ea = each)\nCUP-12 | Paper cups 12oz (sleeve of 50) | 44 ea\nOAT-1L | Oat milk 1L | 11 ea\nOAT-1LB | Oat milk 1L (barista edition) | 6 ea  ** SUBSTITUTE for OAT-1L **\nJUI-250 | Apple juice cartons 250ml | 4 cs\nGLV-M | Vinyl gloves medium (box of 100) | 2 cs + 3 ea\nFLR-1K | Plain flour 1kg | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nBAK-PAP | Baking paper roll 450mm | 30 ea\nCLG-450 | Cling film 450mm | 2 cs\nRIC-5K | Basmati rice 5kg | 11 ea\nCHO-2KV | Hot chocolate powder 2kg vegan | 8 ea  ** SUBSTITUTE for CHO-2K **\nPLT-9 | Paper plates 9in (pack of 50) | 1 cs\nFOI-450 | Catering foil 450mm | 16 ea\nOIL-5L | Rapeseed oil 5L | 15 ea\nTOM-400 | Chopped tomatoes 400g tin | 4 cs + 6 ea\nYOG-125 | Yoghurt pots 125g | 2 cs\nNAP-2P | Napkins 2-ply (pack of 100) | 7 ea\nCOF-1K | Espresso beans 1kg | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nDriver: Niamh Taylor\n\nSECOND DELIVERY NOTE DN-B774808   Your order: PO-44774   Delivered: Tue 21 Apr 2026 (later the same day)\nSKU | Item | Qty\nFLR-1K | Plain flour 1kg | 28 ea  (the item to follow from DN774808)\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nPaper cups 12oz (sleeve of 50): 2 damaged (leaking), kept aside for the driver to collect.\nApple juice cartons 250ml: one whole case (3 packs of 9) arrived crushed and unusable.\nRecounted Vinyl gloves medium (box of 100): we actually received 2 cs, not the 2 cs + 3 ea on the note.\nCling film 450mm: one whole case (6 units) arrived crushed and unusable.\nRapeseed oil 5L: 3 damaged (leaking), kept aside for the driver to collect.\nChopped tomatoes 400g tin: too many were sent, so the driver took 3 ea back on the van.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"CUP-12\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "expected": {
+        "lines": {
+          "CUP-12": {
+            "received": 44,
             "damaged": 2,
             "short": 0,
             "over": 4,
             "substitute": null
           },
           "OAT-1L": {
-            "received": 9,
+            "received": 11,
             "damaged": 0,
             "short": 6,
             "over": 0,
             "substitute": "OAT-1LB"
           },
-          "BAG-KR": {
+          "JUI-250": {
+            "received": 108,
+            "damaged": 27,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "GLV-M": {
             "received": 20,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "TOM-400": {
-            "received": 0,
-            "damaged": 0,
-            "short": 7,
-            "over": 0,
-            "substitute": null
-          },
-          "STR-PP": {
+          "FLR-1K": {
             "received": 28,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "CUP-12": {
-            "received": 60,
-            "damaged": 20,
+          "BAK-PAP": {
+            "received": 30,
+            "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "SAN-5L": {
-            "received": 0,
+          "CLG-450": {
+            "received": 12,
+            "damaged": 6,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "RIC-5K": {
+            "received": 11,
             "damaged": 0,
             "short": 5,
+            "over": 0,
+            "substitute": null
+          },
+          "CHO-2K": {
+            "received": 0,
+            "damaged": 0,
+            "short": 8,
+            "over": 0,
+            "substitute": "CHO-2KV"
+          },
+          "PLT-9": {
+            "received": 10,
+            "damaged": 0,
+            "short": 10,
+            "over": 0,
+            "substitute": null
+          },
+          "FOI-450": {
+            "received": 16,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "OIL-5L": {
+            "received": 15,
+            "damaged": 3,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "TOM-400": {
+            "received": 51,
+            "damaged": 0,
+            "short": 0,
+            "over": 3,
+            "substitute": null
+          },
+          "YOG-125": {
+            "received": 48,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "NAP-2P": {
+            "received": 7,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "COF-1K": {
+            "received": 0,
+            "damaged": 0,
+            "short": 13,
             "over": 0,
             "substitute": null
           }
         },
         "not_ordered": []
       },
-      "notes": "GLV-M: ordered 20, received 24, damaged 2; OAT-1L: ordered 15, received 9, damaged 0, substitute OAT-1LB x6; BAG-KR: ordered 20, received 20 (note claimed 23), damaged 0; TOM-400: ordered 7, received 0, damaged 0; STR-PP: ordered 28, received 28, damaged 0; CUP-12: ordered 60, received 60, damaged 20; SAN-5L: ordered 5, received 0, damaged 0"
+      "notes": "CUP-12: ordered 40, received 44, damaged 2; OAT-1L: ordered 17, received 11, damaged 0, substitute OAT-1LB x6; JUI-250: ordered 108, received 108, damaged 27; GLV-M: ordered 20, received 20 (note claimed 23), damaged 0; FLR-1K: ordered 28, received 28, damaged 0; BAK-PAP: ordered 30, received 30, damaged 0; CLG-450: ordered 12, received 12, damaged 6; RIC-5K: ordered 16, received 11, damaged 0; CHO-2K: ordered 8, received 0, damaged 0, substitute CHO-2KV x8; PLT-9: ordered 20, received 10, damaged 0; FOI-450: ordered 16, received 16, damaged 0; OIL-5L: ordered 15, received 15, damaged 3; TOM-400: ordered 48, received 51, damaged 0; YOG-125: ordered 48, received 48, damaged 0; NAP-2P: ordered 7, received 7, damaged 0; COF-1K: ordered 13, received 0, damaged 0"
     },
     {
+      "scorer": {
+        "type": "json",
+        "lenient": true,
+        "unorderedArrays": true,
+        "aboveConstant": [
+          "lines.*.damaged",
+          "lines.*.short",
+          "lines.*.over",
+          "lines.*.substitute"
+        ],
+        "weights": {
+          "lines.LID-12.received": 2,
+          "lines.FOI-450.received": 2,
+          "lines.BAK-PAP.received": 2,
+          "lines.SUG-1K.received": 2,
+          "lines.BAG-KR.received": 2,
+          "lines.CHO-2K.received": 2,
+          "lines.FLR-1K.received": 2,
+          "lines.CUP-12.received": 2,
+          "lines.YOG-125.received": 2,
+          "lines.CRS-25.received": 2,
+          "lines.PLT-9.received": 2,
+          "lines.SAN-5L.received": 2,
+          "lines.CLG-450.received": 2,
+          "lines.NAP-2P.received": 2,
+          "lines.OAT-1L.received": 2,
+          "lines.TOM-400.received": 2,
+          "lines.STR-PP.received": 2,
+          "lines.FRK-W.received": 2,
+          "lines.COF-1K.received": 2,
+          "lines.SYR-VAN.received": 2
+        }
+      },
       "id": "c10",
-      "prompt": "I run the stockroom at Northfield Primary School kitchen. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-34759   Date: 28/03/2026\nDeliver to: Northfield Primary School kitchen   Ordered by: Mei Hughes\nSKU | Item | Pack size | Quantity ordered\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 30 each\nSAN-5L | Surface sanitiser 5L | case of 4 | 6 cases\nOAT-1L | Oat milk 1L | case of 6 | 9 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 80 each\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 3 cases\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 26 each\nGLV-M | Vinyl gloves medium (box of 100) | case of 10 | 29 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 6 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN720581   Your order: PO-34759   Delivered: Mon 30 Mar 2026\nSKU | Item | Qty  (cs = case, ea = each)\nLID-12 | Sip lids 12oz (sleeve of 50) | 10 ea\nLID-12F | Flat lids 12oz (sleeve of 50) | 20 ea  ** SUBSTITUTE for LID-12 **\nSAN-5L | Surface sanitiser 5L | 28 ea\nOAT-1L | Oat milk 1L | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nCUP-12 | Paper cups 12oz (sleeve of 50) | 4 cs + 12 ea\nTEA-EB | English breakfast tea (box of 160) | 1 cs\nBAG-KR | Kraft carrier bags (pack of 250) | 3 cs\nCHO-2KV | Hot chocolate powder 2kg vegan | 26 ea  ** SUBSTITUTE for CHO-2K **\nGLV-M | Vinyl gloves medium (box of 100) | 26 ea\nTOM-400 | Chopped tomatoes 400g tin | 6 ea\nDriver: Declan Gallagher\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nRecounted Surface sanitiser 5L: we actually received 24 ea, not the 28 ea on the note.\nSurface sanitiser 5L: 2 damaged (leaking), kept aside for the driver to collect.\nKraft carrier bags (pack of 250): one whole case (4 units) arrived crushed and unusable.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units). For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"LID-12\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
+      "prompt": "I run the stockroom at Northfield Primary School kitchen. Please check today's delivery against our purchase order and tell me, for each line on the order, what actually arrived.\n\nPurchase order:\n<<<\nPURCHASE ORDER PO-37076   Date: 10/08/2026\nDeliver to: Northfield Primary School kitchen   Ordered by: Mei Hughes\nSKU | Item | Pack size | Quantity ordered\nLID-12 | Sip lids 12oz (sleeve of 50) | case of 20 | 6 each\nFOI-450 | Catering foil 450mm | case of 6 | 2 cases\nBAK-PAP | Baking paper roll 450mm | case of 6 | 10 each\nSUG-1K | Granulated sugar 1kg | case of 10 | 20 each\nBAG-KR | Kraft carrier bags (pack of 250) | case of 4 | 4 cases\nCHO-2K | Hot chocolate powder 2kg | case of 6 | 18 each\nFLR-1K | Plain flour 1kg | case of 10 | 18 each\nCUP-12 | Paper cups 12oz (sleeve of 50) | case of 20 | 5 each\nYOG-125 | Yoghurt pots 125g | case of 24 (4 packs of 6) | 8 packs\nCRS-25 | Crisps 25g | case of 32 (4 packs of 8) | 8 packs\nPLT-9 | Paper plates 9in (pack of 50) | case of 10 | 5 cases\nSAN-5L | Surface sanitiser 5L | case of 4 | 8 each\nCLG-450 | Cling film 450mm | case of 6 | 5 each\nNAP-2P | Napkins 2-ply (pack of 100) | case of 10 | 11 each\nOAT-1L | Oat milk 1L | case of 6 | 4 each\nTOM-400 | Chopped tomatoes 400g tin | case of 12 | 9 each\nSTR-PP | Paper straws (box of 250) | case of 12 | 6 cases\nFRK-W | Wooden forks (box of 1000) | case of 5 | 16 each\nCOF-1K | Espresso beans 1kg | case of 6 | 9 each\nSYR-VAN | Vanilla syrup 1L | case of 6 | 36 each\n>>>\n\nSupplier’s delivery note:\n<<<\nDELIVERY NOTE DN790823   Your order: PO-37076   Delivered: Thu 13 Aug 2026\nSKU | Item | Qty  (cs = case, ea = each)\nLID-12 | Sip lids 12oz (sleeve of 50) | 3 ea\nLID-12F | Flat lids 12oz (sleeve of 50) | 3 ea  ** SUBSTITUTE for LID-12 **\nFOI-450 | Catering foil 450mm | 16 ea\nBAK-PAP | Baking paper roll 450mm | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nMUG-CER | Ceramic mug 12oz | 1 cs\nSUG-1K | Granulated sugar 1kg | 3 cs + 2 ea\nBAG-KR | Kraft carrier bags (pack of 250) | 4 cs\nCHO-2KV | Hot chocolate powder 2kg vegan | 18 ea  ** SUBSTITUTE for CHO-2K **\nFLR-1K | Plain flour 1kg | 15 ea\nCUP-12 | Paper cups 12oz (sleeve of 50) | 5 ea\nYOG-125 | Yoghurt pots 125g | 1 cs + 15 ea\nCRS-25 | Crisps 25g | 2 cs\nPLT-9 | Paper plates 9in (pack of 50) | 5 cs + 2 ea\nSAN-5L | Surface sanitiser 5L | 3 cs + 2 ea\nCLG-450 | Cling film 450mm | 5 ea\nNAP-2P | Napkins 2-ply (pack of 100) | 11 ea\nOAT-1L | Oat milk 1L | 2 ea\nOAT-1LB | Oat milk 1L (barista edition) | 2 ea  ** SUBSTITUTE for OAT-1L **\nTOM-400 | Chopped tomatoes 400g tin | 0 ea  ** OUT OF STOCK, to follow on next delivery **\nSTR-PP | Paper straws (box of 250) | 60 ea\nFRK-W | Wooden forks (box of 1000) | 16 ea\nCOF-1K | Espresso beans 1kg | 7 ea\nSYR-VAN | Vanilla syrup 1L | 6 cs + 3 ea\nDriver: Declan Gallagher\n\nSECOND DELIVERY NOTE DN-B790823   Your order: PO-37076   Delivered: Thu 13 Aug 2026 (later the same day)\nSKU | Item | Qty\nBAK-PAP | Baking paper roll 450mm | 6 ea  (the item to follow from DN790823)\nTOM-400 | Chopped tomatoes 400g tin | 9 ea  (the item to follow from DN790823)\n>>>\n\nOur goods-in check (done by us when unpacking; where it differs from the delivery note, it is right):\n<<<\nRecounted Catering foil 450mm: we actually received 12 ea, not the 16 ea on the note.\nCatering foil 450mm: 2 damaged (leaking), kept aside for the driver to collect.\nKraft carrier bags (pack of 250): one whole case (4 units) arrived crushed and unusable.\nCrisps 25g: one whole case (4 packs of 8) arrived crushed and unusable.\nRecounted Paper plates 9in (pack of 50): we actually received 5 cs, not the 5 cs + 2 ea on the note.\nPaper plates 9in (pack of 50): 1 damaged (leaking), kept aside for the driver to collect.\nSurface sanitiser 5L: too many were sent, so the driver took 6 ea back on the van.\nNapkins 2-ply (pack of 100): 2 damaged (dented), kept aside for the driver to collect.\n>>>\n\nRules: count everything in single units (\"each\"), using the pack sizes on the purchase order (a case of 12 is 12 units; a pack is the stated number of units). Everything on any delivery note for this order counts, except units the driver took away again. For each PO line:\n- received: units of exactly the ordered product (same SKU) that arrived, INCLUDING damaged ones; a substitute product is not the ordered product;\n- damaged: how many of those received units are damaged;\n- short: ordered minus received if positive, else 0; over: received minus ordered if positive, else 0;\n- substitute: the SKU of a different product sent in its place (all or part), or null.\nAlso list in not_ordered the SKU of anything delivered that is neither on the order nor a substitute ([] if none).\n\nReply with ONE JSON object (a ```json block is fine):\n{\"lines\": {\"LID-12\": {\"received\": n, \"damaged\": n, \"short\": n, \"over\": n, \"substitute\": string or null}, ... one entry per PO line ...}, \"not_ordered\": [SKU, ...]}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every number is checked separately.",
       "expected": {
         "lines": {
           "LID-12": {
-            "received": 10,
+            "received": 3,
             "damaged": 0,
-            "short": 20,
+            "short": 3,
             "over": 0,
             "substitute": "LID-12F"
           },
-          "SAN-5L": {
-            "received": 24,
+          "FOI-450": {
+            "received": 12,
             "damaged": 2,
             "short": 0,
             "over": 0,
             "substitute": null
           },
-          "OAT-1L": {
-            "received": 0,
+          "BAK-PAP": {
+            "received": 6,
             "damaged": 0,
-            "short": 9,
+            "short": 4,
             "over": 0,
             "substitute": null
           },
-          "CUP-12": {
-            "received": 92,
+          "SUG-1K": {
+            "received": 32,
             "damaged": 0,
             "short": 0,
             "over": 12,
             "substitute": null
           },
           "BAG-KR": {
-            "received": 12,
+            "received": 16,
             "damaged": 4,
             "short": 0,
             "over": 0,
@@ -494,30 +849,114 @@
           "CHO-2K": {
             "received": 0,
             "damaged": 0,
-            "short": 26,
+            "short": 18,
             "over": 0,
             "substitute": "CHO-2KV"
           },
-          "GLV-M": {
-            "received": 26,
+          "FLR-1K": {
+            "received": 15,
             "damaged": 0,
             "short": 3,
             "over": 0,
             "substitute": null
           },
-          "TOM-400": {
-            "received": 6,
+          "CUP-12": {
+            "received": 5,
             "damaged": 0,
             "short": 0,
             "over": 0,
             "substitute": null
+          },
+          "YOG-125": {
+            "received": 39,
+            "damaged": 0,
+            "short": 9,
+            "over": 0,
+            "substitute": null
+          },
+          "CRS-25": {
+            "received": 64,
+            "damaged": 32,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "PLT-9": {
+            "received": 50,
+            "damaged": 1,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "SAN-5L": {
+            "received": 8,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "CLG-450": {
+            "received": 5,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "NAP-2P": {
+            "received": 11,
+            "damaged": 2,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "OAT-1L": {
+            "received": 2,
+            "damaged": 0,
+            "short": 2,
+            "over": 0,
+            "substitute": "OAT-1LB"
+          },
+          "TOM-400": {
+            "received": 9,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "STR-PP": {
+            "received": 60,
+            "damaged": 0,
+            "short": 12,
+            "over": 0,
+            "substitute": null
+          },
+          "FRK-W": {
+            "received": 16,
+            "damaged": 0,
+            "short": 0,
+            "over": 0,
+            "substitute": null
+          },
+          "COF-1K": {
+            "received": 7,
+            "damaged": 0,
+            "short": 2,
+            "over": 0,
+            "substitute": null
+          },
+          "SYR-VAN": {
+            "received": 39,
+            "damaged": 0,
+            "short": 0,
+            "over": 3,
+            "substitute": null
           }
         },
         "not_ordered": [
-          "TEA-EB"
+          "MUG-CER"
         ]
       },
-      "notes": "LID-12: ordered 30, received 10, damaged 0, substitute LID-12F x20; SAN-5L: ordered 24, received 24 (note claimed 28), damaged 2; OAT-1L: ordered 9, received 0, damaged 0; CUP-12: ordered 80, received 92, damaged 0; BAG-KR: ordered 12, received 12, damaged 4; CHO-2K: ordered 26, received 0, damaged 0, substitute CHO-2KV x26; GLV-M: ordered 29, received 26, damaged 0; TOM-400: ordered 6, received 6, damaged 0; not ordered: TEA-EB"
+      "notes": "LID-12: ordered 6, received 3, damaged 0, substitute LID-12F x3; FOI-450: ordered 12, received 12 (note claimed 16), damaged 2; BAK-PAP: ordered 10, received 6, damaged 0; SUG-1K: ordered 20, received 32, damaged 0; BAG-KR: ordered 16, received 16, damaged 4; CHO-2K: ordered 18, received 0, damaged 0, substitute CHO-2KV x18; FLR-1K: ordered 18, received 15, damaged 0; CUP-12: ordered 5, received 5, damaged 0; YOG-125: ordered 48, received 39, damaged 0; CRS-25: ordered 64, received 64, damaged 32; PLT-9: ordered 50, received 50 (note claimed 52), damaged 1; SAN-5L: ordered 8, received 8, damaged 0; CLG-450: ordered 5, received 5, damaged 0; NAP-2P: ordered 11, received 11, damaged 2; OAT-1L: ordered 4, received 2, damaged 0, substitute OAT-1LB x2; TOM-400: ordered 9, received 9, damaged 0; STR-PP: ordered 72, received 60, damaged 0; FRK-W: ordered 16, received 16, damaged 0; COF-1K: ordered 9, received 7, damaged 0; SYR-VAN: ordered 36, received 39, damaged 0; not ordered: MUG-CER"
     }
   ]
 }

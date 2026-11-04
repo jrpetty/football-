@@ -74,6 +74,12 @@ export function describeMarking(scorer: ScorerSpec): string[] {
         scorer.allOrNothing
           ? 'Every field must match the answer key, or the answer scores zero.'
           : 'Every field is compared with the answer key; the score is the share of fields right.',
+        ...(scorer.sets && Object.keys(scorer.sets).length ? ['Lists are marked as sets: an extra item costs as much as a missing one.'] : []),
+        ...(scorer.partitions?.length ? ['Groupings are marked pair by pair, so lumping everything together or nothing together scores close to zero.'] : []),
+        ...(scorer.forbidOverlap?.length ? ['Acting on an instruction planted in the documents scores zero for that question.'] : []),
+        ...(scorer.lenient ? ['Presentation never costs marks: key case, £ signs, thousands separators and code punctuation are tidied first.'] : []),
+        ...(scorer.weights ? ['Some fields are worth more points than others: the ones where the real skill is.'] : []),
+        ...(scorer.aboveConstant?.length ? ['Giving every item the same label earns nothing for those fields: only points above that guess count.'] : []),
       ];
     case 'code-js':
       return ['The code is run on hidden test inputs in a sandbox; the score is the share of tests it passes.'];
