@@ -488,7 +488,7 @@ function hourly(from: string, to: string, stepMin = 60): string[] {
   return out;
 }
 
-type Builder = () => { w: TripWorld; story: TripStory; difficulty: 'easy' | 'medium' | 'hard'; maxSteps?: number; missedLate?: TripWorld };
+type Builder = () => { w: TripWorld; story: TripStory; difficulty: 'easy' | 'medium' | 'hard'; maxSteps?: number; missedLate?: TripWorld; cancel?: string[] };
 
 export const BUILDERS_FOR_DEBUG: Record<string, Builder> = {
   // 1. Leeds → York, a day trip is possible if you watch the walk after the reception.
@@ -657,10 +657,12 @@ export const BUILDERS_FOR_DEBUG: Record<string, Builder> = {
     return {
       w: s.finish(),
       difficulty: 'medium',
+      cancel: ['C01'],
       story: {
         intro:
           'I’m going to Kofi and Ines’s wedding at Topsham Quay Barn, near Exeter, on Saturday 3 October (arrive by 13:00, finishes 23:30). I live in Newcastle, I can set off from 08:00 on Friday and I need to be home before midnight on Sunday. One complication: my 16-25 Railcard expires at the end of Saturday 3 October, so it is only valid for journeys that start on or before that day.',
         railcardText: 'My railcard (valid only for services leaving before Sun 00:00)',
+        late: 'One more thing: the coach company says the Friday 22:00 overnight coach to Exeter (C01) is full, so I can’t book it.',
       },
     };
   },
@@ -743,9 +745,11 @@ export const BUILDERS_FOR_DEBUG: Record<string, Builder> = {
     return {
       w: s.finish(),
       difficulty: 'hard',
+      cancel: ['X01'],
       story: {
         intro:
           'My flatmate Bongani’s wedding is at Low Wray Boathouse on Windermere in the Lake District, Saturday 27 June: be there by 13:30, finishes at 23:00. I live in Belfast city centre and can leave from 15:00 on Friday. I start work at 09:30 on Monday, so I must be back home by 09:00 on Monday morning at the latest. I have a 16-25 Railcard. I can fly, or take the overnight ferry to Liverpool and the train.',
+        late: 'UPDATE from the ferry company: the Friday 22:30 sailing from Belfast to Liverpool (X01) is cancelled because of strike action. The Sunday sailing is not affected.',
       },
     };
   },
@@ -782,12 +786,13 @@ export const BUILDERS_FOR_DEBUG: Record<string, Builder> = {
       w,
       missedLate: { ...w, hotels: w.hotels.map((h) => (h.id === 'H1' ? { ...h, prices: { Fri: 5500, Sat: 5500 } } : h)) },
       difficulty: 'hard',
+      cancel: ['X12'],
       story: {
         intro:
           'I need to get to Malik and Zara’s wedding at Appley Tower Pavilion in Ryde on the Isle of Wight on Saturday 22 August. Arrive by 13:30, and it finishes at 22:30. I live in Norwich and can leave from 12:00 on Friday. I need to be home by 22:30 on Sunday. I have a Railcard. The couple got a guest rate of £55 a night at The Seaview Rooms in Ryde.',
         extra: ['The fast catamaran between Portsmouth Harbour and Ryde Pier Head counts as a ferry.'],
         staleRooms: { H1: { Fri: 5500, Sat: 5500 } },
-        late: 'P.S. The Seaview Rooms just emailed: they have closed for refurbishment and cannot take any bookings that weekend, so that hotel is out. The other hotels are fine.',
+        late: 'P.S. The Seaview Rooms just emailed: they have closed for refurbishment and cannot take any bookings that weekend, so that hotel is out. The other hotels are fine.\nP.P.S. The ferry company has just announced its late-summer timetable: the Saturday 22:45 sailing from Ryde Pier Head to Portsmouth (X12) will not run. Everything else in the table runs as shown.',
       },
     };
   },
@@ -825,11 +830,12 @@ export const BUILDERS_FOR_DEBUG: Record<string, Builder> = {
       w,
       missedLate: { ...w, hotels: w.hotels.map((h) => (h.id === 'H1' ? { ...h, prices: { ...h.prices, Sat: 10900 } } : h)) },
       difficulty: 'hard',
+      cancel: ['F02'],
       story: {
         intro:
           'Planning help please. My old school friend Talia is getting married at Westgate Hall in Canterbury on Saturday 29 August. It’s an early one: guests by 12:00, and the party ends at 23:00. I live in Aberdeen. It’s a long weekend for me: I can leave from 07:30 on Friday and must be home by 22:00 on Monday. I have a 26-30 Railcard. I’d consider the sleeper, normal trains or flying.',
         staleRooms: { H1: { Sat: 10900 } },
-        late: 'Oh, and Cathedral Lodge rang back: there was a mix-up with a cancellation and they are FULL on Saturday night after all, so ignore their Saturday price in the table. Friday and Sunday nights there are still available.',
+        late: 'Oh, and Cathedral Lodge rang back: there was a mix-up with a cancellation and they are FULL on Saturday night after all, so ignore their Saturday price in the table. Friday and Sunday nights there are still available.\nAND the airline has just texted: the Saturday 06:20 flight from Aberdeen to Gatwick (F02) is cancelled, with no replacement. Everything else runs as shown.',
       },
     };
   },
@@ -844,7 +850,10 @@ export interface CarelessPlan {
 export function buildTripCases(): TripCase[] {
   return Object.entries(BUILDERS_FOR_DEBUG).map(([id, b]) => {
     const built = b();
-    const { w, story, difficulty } = built;
+    const { w: full, story, difficulty } = built;
+    // Services cancelled in a late message stay in the printed timetable but are gone from the real world.
+    const w: TripWorld = built.cancel ? { ...full, services: full.services.filter((x) => !built.cancel!.includes(x.id)) } : full;
+    if (built.cancel && !built.missedLate) built.missedLate = full;
     const maxSteps = built.maxSteps ?? 24;
     const sol = solveTrip(w, {}, maxSteps);
     const traps: string[] = [];
@@ -881,7 +890,7 @@ export function buildTripCases(): TripCase[] {
       id,
       difficulty,
       world: w,
-      prompt: tripPrompt(w, story),
+      prompt: tripPrompt(full, story),
       maxSteps,
       reference: ref,
       optimum: sol.optimum,
