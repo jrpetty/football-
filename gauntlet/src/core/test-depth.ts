@@ -5,6 +5,7 @@
  * scoring code the way hand-written text can.
  */
 import type { ArtifactCheck, ScorerSpec, TestDefinition } from './types.ts';
+import { VERIFIERS } from '../scoring/verifiers/index.ts';
 
 export interface DepthStep {
   title: string;
@@ -98,6 +99,12 @@ export function describeMarking(scorer: ScorerSpec): string[] {
             ? 'The whole grid is compared cell by cell with the one correct solution.'
             : 'The number is checked exactly against the correct answer.',
       ];
+    case 'verifier': {
+      const v = Object.prototype.hasOwnProperty.call(VERIFIERS, scorer.verifier) ? VERIFIERS[scorer.verifier] : undefined;
+      const lead = 'The answer must be one block of data (JSON) in the format asked for; two different answers in one reply score zero.';
+      if (!v) return [lead, 'A checker replays the answer against the hidden facts of the case.'];
+      return [lead, ...v.marking];
+    }
   }
 }
 

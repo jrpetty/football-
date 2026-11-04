@@ -1,0 +1,2952 @@
+{
+  "kind": "prompt",
+  "id": "life.recipe-shopping",
+  "version": "1.0.0",
+  "name": "Cook for Twelve",
+  "description": "Turn two to four recipes with different serving sizes and units (cups, ounces, pounds, pints, tablespoons) into the cheapest shopping basket: scale, convert, merge, take off the cupboard, then buy whole packs with multibuy offers. The basket is checked for every ingredient and compared with the cheapest basket found by trying every combination.",
+  "difficulty": "hard",
+  "tags": [
+    "real-world",
+    "everyday-life",
+    "cooking",
+    "optimisation",
+    "verifier"
+  ],
+  "hook": "Scale the recipes, convert the cups, and spend as little as possible.",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 1000,
+    "outputTokens": 9000
+  },
+  "category": "life",
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "shopping"
+  },
+  "cases": [
+    {
+      "id": "s01",
+      "prompt": "Hi! I’m cooking for a family Sunday lunch and there will be 12 of us, so every recipe needs to make exactly enough for 12 people. I’m doing:\n\nChilli con carne (serves 4):\n- 500 g beef mince\n- 2 onions\n- 2 tins chopped tomatoes\n- 1 tin kidney beans\n- 300 g long-grain rice\n- 2 tbsp olive oil\n\nYorkshire puddings (serves 6):\n- 140 g plain flour\n- 4 eggs\n- 200 ml milk\n- 4 tbsp olive oil\n\nAlready in my cupboard (use it up before buying more):\n- about half a 500 ml bottle of olive oil (250 ml)\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.75\nP02 | Plain flour 1.5 kg | £1.55\nP03 | Free-range eggs x6 | £1.85\nP04 | Free-range eggs x12 | £3.10\nP05 | Free-range eggs x15 | £4.25\nP06 | Milk 1 pint (568 ml) | £0.80\nP07 | Milk 2 pints (1.136 l) | £1.20\nP08 | Milk 4 pints (2.272 l) | £1.55\nP09 | Long-grain rice 500 g | £1.00\nP10 | Long-grain rice 1 kg | £1.75\nP11 | Onion (loose, each) | £0.20\nP12 | Onions x3 net | £0.55\nP13 | Chopped tomatoes 400 g tin | £0.50\nP14 | Kidney beans 400 g tin | £0.65\nP15 | Beef mince 500 g | £3.50\nP16 | Beef mince 750 g | £5.65\nP17 | Olive oil 500 ml | £4.55\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "beef mince",
+              "unit": "g",
+              "amount": 1500
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 2400
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 8
+            },
+            {
+              "ingredient": "kidney beans",
+              "unit": "g",
+              "amount": 1200
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 900
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 400
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 6
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 280
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 75
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 155
+            },
+            {
+              "id": "P03",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 185
+            },
+            {
+              "id": "P04",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 310
+            },
+            {
+              "id": "P05",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 425
+            },
+            {
+              "id": "P06",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 80
+            },
+            {
+              "id": "P07",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 120
+            },
+            {
+              "id": "P08",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 155
+            },
+            {
+              "id": "P09",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 100
+            },
+            {
+              "id": "P10",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 175
+            },
+            {
+              "id": "P11",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P12",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 55
+            },
+            {
+              "id": "P13",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 50
+            },
+            {
+              "id": "P14",
+              "name": "Kidney beans 400 g tin",
+              "ingredient": "kidney beans",
+              "size": 400,
+              "price": 65
+            },
+            {
+              "id": "P15",
+              "name": "Beef mince 500 g",
+              "ingredient": "beef mince",
+              "size": 500,
+              "price": 350
+            },
+            {
+              "id": "P16",
+              "name": "Beef mince 750 g",
+              "ingredient": "beef mince",
+              "size": 750,
+              "price": 565
+            },
+            {
+              "id": "P17",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 455
+            }
+          ],
+          "offers": []
+        },
+        "optimum": 2295,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P04",
+              "qty": 1
+            },
+            {
+              "item": "P06",
+              "qty": 1
+            },
+            {
+              "item": "P10",
+              "qty": 1
+            },
+            {
+              "item": "P12",
+              "qty": 2
+            },
+            {
+              "item": "P13",
+              "qty": 6
+            },
+            {
+              "item": "P14",
+              "qty": 3
+            },
+            {
+              "item": "P15",
+              "qty": 3
+            }
+          ],
+          "total": 22.95
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[easy] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): beef mince 1500 g, chopped tomatoes 2400 g, eggs 8, kidney beans 1200 g, long-grain rice 900 g, milk 400 ml, onions 6, plain flour 280 g. Cheapest basket £22.95 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P04\",\"qty\":1},{\"item\":\"P06\",\"qty\":1},{\"item\":\"P10\",\"qty\":1},{\"item\":\"P12\",\"qty\":2},{\"item\":\"P13\",\"qty\":6},{\"item\":\"P14\",\"qty\":3},{\"item\":\"P15\",\"qty\":3}],\"total\":22.95}. Ignoring the offers the best basket costs £22.95."
+    },
+    {
+      "id": "s02",
+      "prompt": "Hi! I’m cooking for my flat-warming and there will be 12 of us, so every recipe needs to make exactly enough for 12 people. I’m doing:\n\nChickpea and chicken curry (serves 6):\n- 900 g chicken thighs\n- 3 onions\n- 800 ml coconut milk\n- 1 tin chickpeas\n- 1 tin chopped tomatoes\n- 450 g long-grain rice\n\nVictoria sponge (serves 10):\n- 200 g butter\n- 200 g caster sugar\n- 4 eggs\n- 200 g plain flour\n- 2 tbsp milk\n- 150 ml double cream\n\nAlready in my cupboard (use it up before buying more):\n- 200 g of rice\n- 3 eggs\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.75\nP02 | Plain flour 1.5 kg | £1.50\nP03 | Caster sugar 500 g | £0.95\nP04 | Caster sugar 1 kg | £1.55\nP05 | Butter 250 g | £2.30\nP06 | Butter 500 g | £4.45\nP07 | Free-range eggs x6 | £1.85\nP08 | Free-range eggs x12 | £3.25\nP09 | Free-range eggs x15 | £3.70\nP10 | Milk 1 pint (568 ml) | £0.70\nP11 | Milk 2 pints (1.136 l) | £1.20\nP12 | Milk 4 pints (2.272 l) | £1.70\nP13 | Double cream 300 ml | £1.50\nP14 | Double cream 600 ml | £2.75\nP15 | Long-grain rice 500 g | £0.90\nP16 | Long-grain rice 1 kg | £1.75\nP17 | Onion (loose, each) | £0.20\nP18 | Onions x3 net | £0.50\nP19 | Chopped tomatoes 400 g tin | £0.55\nP20 | Coconut milk 400 ml tin | £1.25\nP21 | Chickpeas 400 g tin | £0.70\nP22 | Chicken thighs 500 g | £3.50\nP23 | Chicken thighs 1 kg | £5.75\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Coconut milk: 3 tins for £3.00 (counts: P20)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 240
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 240
+            },
+            {
+              "ingredient": "chicken thighs",
+              "unit": "g",
+              "amount": 1800
+            },
+            {
+              "ingredient": "chickpeas",
+              "unit": "g",
+              "amount": 800
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 800
+            },
+            {
+              "ingredient": "coconut milk",
+              "unit": "ml",
+              "amount": 1600
+            },
+            {
+              "ingredient": "double cream",
+              "unit": "ml",
+              "amount": 180
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 2
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 700
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 36
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 6
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 240
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 75
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 150
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 95
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 155
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 230
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 445
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 185
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 325
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 370
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 70
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 120
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 170
+            },
+            {
+              "id": "P13",
+              "name": "Double cream 300 ml",
+              "ingredient": "double cream",
+              "size": 300,
+              "price": 150
+            },
+            {
+              "id": "P14",
+              "name": "Double cream 600 ml",
+              "ingredient": "double cream",
+              "size": 600,
+              "price": 275
+            },
+            {
+              "id": "P15",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 90
+            },
+            {
+              "id": "P16",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 175
+            },
+            {
+              "id": "P17",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P18",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 50
+            },
+            {
+              "id": "P19",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P20",
+              "name": "Coconut milk 400 ml tin",
+              "ingredient": "coconut milk",
+              "size": 400,
+              "price": 125
+            },
+            {
+              "id": "P21",
+              "name": "Chickpeas 400 g tin",
+              "ingredient": "chickpeas",
+              "size": 400,
+              "price": 70
+            },
+            {
+              "id": "P22",
+              "name": "Chicken thighs 500 g",
+              "ingredient": "chicken thighs",
+              "size": 500,
+              "price": 350
+            },
+            {
+              "id": "P23",
+              "name": "Chicken thighs 1 kg",
+              "ingredient": "chicken thighs",
+              "size": 1000,
+              "price": 575
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Coconut milk: 3 tins for £3.00",
+              "products": [
+                "P20"
+              ],
+              "qty": 3,
+              "price": 300
+            }
+          ]
+        },
+        "optimum": 2905,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P05",
+              "qty": 1
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P10",
+              "qty": 1
+            },
+            {
+              "item": "P13",
+              "qty": 1
+            },
+            {
+              "item": "P16",
+              "qty": 1
+            },
+            {
+              "item": "P18",
+              "qty": 2
+            },
+            {
+              "item": "P19",
+              "qty": 2
+            },
+            {
+              "item": "P20",
+              "qty": 4
+            },
+            {
+              "item": "P21",
+              "qty": 2
+            },
+            {
+              "item": "P23",
+              "qty": 2
+            }
+          ],
+          "total": 29.05
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[easy] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 240 g, caster sugar 240 g, chicken thighs 1800 g, chickpeas 800 g, chopped tomatoes 800 g, coconut milk 1600 ml, double cream 180 ml, eggs 2, long-grain rice 700 g, milk 36 ml, onions 6, plain flour 240 g. Cheapest basket £29.05 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P03\",\"qty\":1},{\"item\":\"P05\",\"qty\":1},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P10\",\"qty\":1},{\"item\":\"P13\",\"qty\":1},{\"item\":\"P16\",\"qty\":1},{\"item\":\"P18\",\"qty\":2},{\"item\":\"P19\",\"qty\":2},{\"item\":\"P20\",\"qty\":4},{\"item\":\"P21\",\"qty\":2},{\"item\":\"P23\",\"qty\":2}],\"total\":29.05}. Ignoring the offers the best basket costs £29.05."
+    },
+    {
+      "id": "s03",
+      "prompt": "Hi! I’m cooking for a birthday tea and there will be 8 of us, so every recipe needs to make exactly enough for 8 people. I’m doing:\n\nJollof rice (serves 6):\n- 400 g long-grain rice\n- 2 tins chopped tomatoes\n- 2 onions\n- 600 g chicken thighs\n- 3 tbsp olive oil\n\nVictoria sponge (serves 10):\n- 200 g butter\n- 200 g caster sugar\n- 4 eggs\n- 200 g plain flour\n- 2 tbsp milk\n- 150 ml double cream\n\nAlready in my cupboard (use it up before buying more):\n- 100 g of caster sugar\n- half a 250 g block of butter\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.75\nP02 | Plain flour 1.5 kg | £1.45\nP03 | Caster sugar 500 g | £1.05\nP04 | Caster sugar 1 kg | £1.80\nP05 | Butter 250 g | £1.95\nP06 | Butter 500 g | £4.10\nP07 | Free-range eggs x6 | £1.85\nP08 | Free-range eggs x12 | £3.40\nP09 | Free-range eggs x15 | £3.80\nP10 | Milk 1 pint (568 ml) | £0.70\nP11 | Milk 2 pints (1.136 l) | £1.25\nP12 | Milk 4 pints (2.272 l) | £1.60\nP13 | Double cream 300 ml | £1.40\nP14 | Double cream 600 ml | £2.65\nP15 | Long-grain rice 500 g | £0.85\nP16 | Long-grain rice 1 kg | £1.90\nP17 | Onion (loose, each) | £0.20\nP18 | Onions x3 net | £0.50\nP19 | Chopped tomatoes 400 g tin | £0.50\nP20 | Chicken thighs 500 g | £3.15\nP21 | Chicken thighs 1 kg | £5.85\nP22 | Olive oil 500 ml | £4.15\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Butter 250 g: 2 for £3.80 (counts: P05)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 35
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 60
+            },
+            {
+              "ingredient": "chicken thighs",
+              "unit": "g",
+              "amount": 800
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 1067
+            },
+            {
+              "ingredient": "double cream",
+              "unit": "ml",
+              "amount": 120
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 4
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 534
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 24
+            },
+            {
+              "ingredient": "olive oil",
+              "unit": "ml",
+              "amount": 60
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 160
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 75
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 145
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 105
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 180
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 195
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 410
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 185
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 340
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 380
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 70
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 125
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 160
+            },
+            {
+              "id": "P13",
+              "name": "Double cream 300 ml",
+              "ingredient": "double cream",
+              "size": 300,
+              "price": 140
+            },
+            {
+              "id": "P14",
+              "name": "Double cream 600 ml",
+              "ingredient": "double cream",
+              "size": 600,
+              "price": 265
+            },
+            {
+              "id": "P15",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 85
+            },
+            {
+              "id": "P16",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 190
+            },
+            {
+              "id": "P17",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P18",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 50
+            },
+            {
+              "id": "P19",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 50
+            },
+            {
+              "id": "P20",
+              "name": "Chicken thighs 500 g",
+              "ingredient": "chicken thighs",
+              "size": 500,
+              "price": 315
+            },
+            {
+              "id": "P21",
+              "name": "Chicken thighs 1 kg",
+              "ingredient": "chicken thighs",
+              "size": 1000,
+              "price": 585
+            },
+            {
+              "id": "P22",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 415
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Butter 250 g: 2 for £3.80",
+              "products": [
+                "P05"
+              ],
+              "qty": 2,
+              "price": 380
+            }
+          ]
+        },
+        "optimum": 2140,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P05",
+              "qty": 1
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P10",
+              "qty": 1
+            },
+            {
+              "item": "P13",
+              "qty": 1
+            },
+            {
+              "item": "P15",
+              "qty": 2
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            },
+            {
+              "item": "P19",
+              "qty": 3
+            },
+            {
+              "item": "P21",
+              "qty": 1
+            },
+            {
+              "item": "P22",
+              "qty": 1
+            }
+          ],
+          "total": 21.4
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[easy] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 35 g, caster sugar 60 g, chicken thighs 800 g, chopped tomatoes 1067 g, double cream 120 ml, eggs 4, long-grain rice 534 g, milk 24 ml, olive oil 60 ml, onions 3, plain flour 160 g. Cheapest basket £21.40 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P03\",\"qty\":1},{\"item\":\"P05\",\"qty\":1},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P10\",\"qty\":1},{\"item\":\"P13\",\"qty\":1},{\"item\":\"P15\",\"qty\":2},{\"item\":\"P18\",\"qty\":1},{\"item\":\"P19\",\"qty\":3},{\"item\":\"P21\",\"qty\":1},{\"item\":\"P22\",\"qty\":1}],\"total\":21.4}. Ignoring the offers the best basket costs £21.40."
+    },
+    {
+      "id": "s04",
+      "prompt": "Hi! I’m cooking for Diwali dinner for the neighbours and there will be 12 of us, so every recipe needs to make exactly enough for 12 people. I’m doing:\n\nTarka dal (serves 6):\n- 300 g red lentils\n- 1 tin chopped tomatoes\n- 400 ml coconut milk\n- 2 onions\n- 30 g butter\n\nChickpea and chicken curry (serves 6):\n- 900 g chicken thighs\n- 3 onions\n- 800 ml coconut milk\n- 1 tin chickpeas\n- 1 tin chopped tomatoes\n- 450 g long-grain rice\n\nLemon drizzle cake (American recipe) (serves 8):\n- 1½ cups plain flour\n- 1 cup caster sugar\n- ½ cup butter\n- 2 eggs\n- 2 lemons\n- ⅓ cup milk\n\nAlready in my cupboard (use it up before buying more):\n- half a 1.5 kg bag of plain flour\n- 2 onions\n- a pint of milk\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.70\nP02 | Plain flour 1.5 kg | £1.50\nP03 | Caster sugar 500 g | £0.90\nP04 | Caster sugar 1 kg | £1.50\nP05 | Butter 250 g | £2.00\nP06 | Butter 500 g | £3.80\nP07 | Free-range eggs x6 | £1.60\nP08 | Free-range eggs x12 | £3.40\nP09 | Free-range eggs x15 | £3.65\nP10 | Milk 1 pint (568 ml) | £0.75\nP11 | Milk 2 pints (1.136 l) | £1.35\nP12 | Milk 4 pints (2.272 l) | £1.80\nP13 | Long-grain rice 500 g | £0.95\nP14 | Long-grain rice 1 kg | £1.75\nP15 | Onion (loose, each) | £0.20\nP16 | Onions x3 net | £0.55\nP17 | Lemon (loose, each) | £0.35\nP18 | Lemons x4 pack | £1.10\nP19 | Chopped tomatoes 400 g tin | £0.50\nP20 | Coconut milk 400 ml tin | £1.35\nP21 | Chickpeas 400 g tin | £0.65\nP22 | Kidney beans 400 g tin | £0.55\nP23 | Chicken thighs 500 g | £2.95\nP24 | Chicken thighs 1 kg | £6.40\nP25 | Red lentils 500 g | £1.25\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35 (counts: P19, P21, P22)\n- Coconut milk: 3 tins for £3.00 (counts: P20)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 229
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 300
+            },
+            {
+              "ingredient": "chicken thighs",
+              "unit": "g",
+              "amount": 1800
+            },
+            {
+              "ingredient": "chickpeas",
+              "unit": "g",
+              "amount": 800
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 1600
+            },
+            {
+              "ingredient": "coconut milk",
+              "unit": "ml",
+              "amount": 2400
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "lemons",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 900
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 8
+            },
+            {
+              "ingredient": "red lentils",
+              "unit": "g",
+              "amount": 600
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 70
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 150
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 90
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 150
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 200
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 380
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 160
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 340
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 365
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 75
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 135
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 180
+            },
+            {
+              "id": "P13",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 95
+            },
+            {
+              "id": "P14",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 175
+            },
+            {
+              "id": "P15",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P16",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 55
+            },
+            {
+              "id": "P17",
+              "name": "Lemon (loose, each)",
+              "ingredient": "lemons",
+              "size": 1,
+              "price": 35
+            },
+            {
+              "id": "P18",
+              "name": "Lemons x4 pack",
+              "ingredient": "lemons",
+              "size": 4,
+              "price": 110
+            },
+            {
+              "id": "P19",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 50
+            },
+            {
+              "id": "P20",
+              "name": "Coconut milk 400 ml tin",
+              "ingredient": "coconut milk",
+              "size": 400,
+              "price": 135
+            },
+            {
+              "id": "P21",
+              "name": "Chickpeas 400 g tin",
+              "ingredient": "chickpeas",
+              "size": 400,
+              "price": 65
+            },
+            {
+              "id": "P22",
+              "name": "Kidney beans 400 g tin",
+              "ingredient": "kidney beans",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P23",
+              "name": "Chicken thighs 500 g",
+              "ingredient": "chicken thighs",
+              "size": 500,
+              "price": 295
+            },
+            {
+              "id": "P24",
+              "name": "Chicken thighs 1 kg",
+              "ingredient": "chicken thighs",
+              "size": 1000,
+              "price": 640
+            },
+            {
+              "id": "P25",
+              "name": "Red lentils 500 g",
+              "ingredient": "red lentils",
+              "size": 500,
+              "price": 125
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35",
+              "products": [
+                "P19",
+                "P21",
+                "P22"
+              ],
+              "qty": 3,
+              "price": 135
+            },
+            {
+              "id": "M2",
+              "label": "Coconut milk: 3 tins for £3.00",
+              "products": [
+                "P20"
+              ],
+              "qty": 3,
+              "price": 300
+            }
+          ]
+        },
+        "optimum": 3180,
+        "reference": {
+          "basket": [
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P05",
+              "qty": 1
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P14",
+              "qty": 1
+            },
+            {
+              "item": "P15",
+              "qty": 2
+            },
+            {
+              "item": "P16",
+              "qty": 2
+            },
+            {
+              "item": "P17",
+              "qty": 3
+            },
+            {
+              "item": "P19",
+              "qty": 4
+            },
+            {
+              "item": "P20",
+              "qty": 6
+            },
+            {
+              "item": "P21",
+              "qty": 2
+            },
+            {
+              "item": "P23",
+              "qty": 4
+            },
+            {
+              "item": "P25",
+              "qty": 2
+            }
+          ],
+          "total": 31.8
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[medium] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 229 g, caster sugar 300 g, chicken thighs 1800 g, chickpeas 800 g, chopped tomatoes 1600 g, coconut milk 2400 ml, eggs 3, lemons 3, long-grain rice 900 g, onions 8, red lentils 600 g. Cheapest basket £31.80 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P03\",\"qty\":1},{\"item\":\"P05\",\"qty\":1},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P14\",\"qty\":1},{\"item\":\"P15\",\"qty\":2},{\"item\":\"P16\",\"qty\":2},{\"item\":\"P17\",\"qty\":3},{\"item\":\"P19\",\"qty\":4},{\"item\":\"P20\",\"qty\":6},{\"item\":\"P21\",\"qty\":2},{\"item\":\"P23\",\"qty\":4},{\"item\":\"P25\",\"qty\":2}],\"total\":31.8}. Ignoring the offers the best basket costs £31.80."
+    },
+    {
+      "id": "s05",
+      "prompt": "Hi! I’m cooking for the rugby club supper and there will be 12 of us, so every recipe needs to make exactly enough for 12 people. I’m doing:\n\nShepherd’s pie (Grandma’s imperial recipe) (serves 4):\n- 1 lb lamb mince\n- 2 lb potatoes\n- 1 onion\n- 8 oz carrots\n- 2 oz butter\n- ¼ pint milk\n\nAmerican pancakes (serves 4):\n- 1½ cups plain flour\n- 1¼ cups milk\n- 1 egg\n- 3 tbsp butter, melted\n- 1 tbsp caster sugar\n\nAlready in my cupboard (use it up before buying more):\n- a 1 kg bag of potatoes\n- 2 eggs\n- a full 500 g bag of caster sugar\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.70\nP02 | Plain flour 1.5 kg | £1.50\nP03 | Caster sugar 500 g | £0.90\nP04 | Caster sugar 1 kg | £1.60\nP05 | Butter 250 g | £1.90\nP06 | Butter 500 g | £4.20\nP07 | Free-range eggs x6 | £1.85\nP08 | Free-range eggs x12 | £3.00\nP09 | Free-range eggs x15 | £4.00\nP10 | Milk 1 pint (568 ml) | £0.80\nP11 | Milk 2 pints (1.136 l) | £1.20\nP12 | Milk 4 pints (2.272 l) | £1.80\nP13 | Onion (loose, each) | £0.20\nP14 | Onions x3 net | £0.60\nP15 | Lamb mince 500 g | £4.65\nP16 | Potatoes 2.5 kg bag | £1.60\nP17 | Potatoes 1 kg bag | £0.95\nP18 | Carrots 1 kg | £0.60\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Milk 2 or 4 pints: any 2 for £2.00 (counts: P11, P12)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 294
+            },
+            {
+              "ingredient": "carrots",
+              "unit": "g",
+              "amount": 672
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 1
+            },
+            {
+              "ingredient": "lamb mince",
+              "unit": "g",
+              "amount": 1362
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 1326
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 563
+            },
+            {
+              "ingredient": "potatoes",
+              "unit": "g",
+              "amount": 1724
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 70
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 150
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 90
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 160
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 190
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 420
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 185
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 300
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 400
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 80
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 120
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 180
+            },
+            {
+              "id": "P13",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P14",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 60
+            },
+            {
+              "id": "P15",
+              "name": "Lamb mince 500 g",
+              "ingredient": "lamb mince",
+              "size": 500,
+              "price": 465
+            },
+            {
+              "id": "P16",
+              "name": "Potatoes 2.5 kg bag",
+              "ingredient": "potatoes",
+              "size": 2500,
+              "price": 160
+            },
+            {
+              "id": "P17",
+              "name": "Potatoes 1 kg bag",
+              "ingredient": "potatoes",
+              "size": 1000,
+              "price": 95
+            },
+            {
+              "id": "P18",
+              "name": "Carrots 1 kg",
+              "ingredient": "carrots",
+              "size": 1000,
+              "price": 60
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Milk 2 or 4 pints: any 2 for £2.00",
+              "products": [
+                "P11",
+                "P12"
+              ],
+              "qty": 2,
+              "price": 200
+            }
+          ]
+        },
+        "optimum": 2560,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 2
+            },
+            {
+              "item": "P05",
+              "qty": 2
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P12",
+              "qty": 1
+            },
+            {
+              "item": "P14",
+              "qty": 1
+            },
+            {
+              "item": "P15",
+              "qty": 3
+            },
+            {
+              "item": "P16",
+              "qty": 1
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            }
+          ],
+          "total": 25.6
+        },
+        "optimalPlans": 2
+      },
+      "notes": "[medium] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 294 g, carrots 672 g, eggs 1, lamb mince 1362 g, milk 1326 ml, onions 3, plain flour 563 g, potatoes 1724 g. Cheapest basket £25.60 (every pack combination tried; 2 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":2},{\"item\":\"P05\",\"qty\":2},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P12\",\"qty\":1},{\"item\":\"P14\",\"qty\":1},{\"item\":\"P15\",\"qty\":3},{\"item\":\"P16\",\"qty\":1},{\"item\":\"P18\",\"qty\":1}],\"total\":25.6}. Ignoring the offers the best basket costs £25.60."
+    },
+    {
+      "id": "s06",
+      "prompt": "Hi! I’m cooking for a games night and there will be 10 of us, so every recipe needs to make exactly enough for 10 people. I’m doing:\n\nMac and cheese (American recipe) (serves 4):\n- 8 oz macaroni\n- 2 cups milk\n- 2 cups grated cheddar\n- 3 tbsp butter\n- 3 tbsp plain flour\n\nChilli con carne (serves 4):\n- 500 g beef mince\n- 2 onions\n- 2 tins chopped tomatoes\n- 1 tin kidney beans\n- 300 g long-grain rice\n- 2 tbsp olive oil\n\nLemon drizzle cake (American recipe) (serves 8):\n- 1½ cups plain flour\n- 1 cup caster sugar\n- ½ cup butter\n- 2 eggs\n- 2 lemons\n- ⅓ cup milk\n\nAlready in my cupboard (use it up before buying more):\n- a 250 g block of butter\n- one lemon\n- a 500 g bag of rice\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.70\nP02 | Plain flour 1.5 kg | £1.35\nP03 | Caster sugar 500 g | £1.00\nP04 | Caster sugar 1 kg | £1.60\nP05 | Butter 250 g | £2.00\nP06 | Butter 500 g | £4.15\nP07 | Free-range eggs x6 | £1.75\nP08 | Free-range eggs x12 | £3.10\nP09 | Free-range eggs x15 | £4.40\nP10 | Milk 1 pint (568 ml) | £0.80\nP11 | Milk 2 pints (1.136 l) | £1.35\nP12 | Milk 4 pints (2.272 l) | £1.50\nP13 | Mature cheddar 400 g | £3.15\nP14 | Mature cheddar 800 g | £5.65\nP15 | Long-grain rice 500 g | £1.00\nP16 | Long-grain rice 1 kg | £1.60\nP17 | Onion (loose, each) | £0.20\nP18 | Onions x3 net | £0.50\nP19 | Lemon (loose, each) | £0.35\nP20 | Lemons x4 pack | £1.20\nP21 | Chopped tomatoes 400 g tin | £0.55\nP22 | Chickpeas 400 g tin | £0.65\nP23 | Kidney beans 400 g tin | £0.55\nP24 | Beef mince 500 g | £3.95\nP25 | Beef mince 750 g | £5.40\nP26 | Macaroni 500 g | £0.85\nP27 | Olive oil 500 ml | £4.25\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Cheddar 400 g: 2 for £5.50 (counts: P13)\n- Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35 (counts: P21, P22, P23)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "beef mince",
+              "unit": "g",
+              "amount": 1250
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 250
+            },
+            {
+              "ingredient": "cheddar",
+              "unit": "g",
+              "amount": 500
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 2000
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "kidney beans",
+              "unit": "g",
+              "amount": 1000
+            },
+            {
+              "ingredient": "lemons",
+              "unit": "each",
+              "amount": 2
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 250
+            },
+            {
+              "ingredient": "macaroni",
+              "unit": "g",
+              "amount": 560
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 1300
+            },
+            {
+              "ingredient": "olive oil",
+              "unit": "ml",
+              "amount": 75
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 5
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 295
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 70
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 135
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 100
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 160
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 200
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 415
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 175
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 310
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 440
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 80
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 135
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 150
+            },
+            {
+              "id": "P13",
+              "name": "Mature cheddar 400 g",
+              "ingredient": "cheddar",
+              "size": 400,
+              "price": 315
+            },
+            {
+              "id": "P14",
+              "name": "Mature cheddar 800 g",
+              "ingredient": "cheddar",
+              "size": 800,
+              "price": 565
+            },
+            {
+              "id": "P15",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 100
+            },
+            {
+              "id": "P16",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 160
+            },
+            {
+              "id": "P17",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P18",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 50
+            },
+            {
+              "id": "P19",
+              "name": "Lemon (loose, each)",
+              "ingredient": "lemons",
+              "size": 1,
+              "price": 35
+            },
+            {
+              "id": "P20",
+              "name": "Lemons x4 pack",
+              "ingredient": "lemons",
+              "size": 4,
+              "price": 120
+            },
+            {
+              "id": "P21",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P22",
+              "name": "Chickpeas 400 g tin",
+              "ingredient": "chickpeas",
+              "size": 400,
+              "price": 65
+            },
+            {
+              "id": "P23",
+              "name": "Kidney beans 400 g tin",
+              "ingredient": "kidney beans",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P24",
+              "name": "Beef mince 500 g",
+              "ingredient": "beef mince",
+              "size": 500,
+              "price": 395
+            },
+            {
+              "id": "P25",
+              "name": "Beef mince 750 g",
+              "ingredient": "beef mince",
+              "size": 750,
+              "price": 540
+            },
+            {
+              "id": "P26",
+              "name": "Macaroni 500 g",
+              "ingredient": "macaroni",
+              "size": 500,
+              "price": 85
+            },
+            {
+              "id": "P27",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 425
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Cheddar 400 g: 2 for £5.50",
+              "products": [
+                "P13"
+              ],
+              "qty": 2,
+              "price": 550
+            },
+            {
+              "id": "M2",
+              "label": "Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35",
+              "products": [
+                "P21",
+                "P22",
+                "P23"
+              ],
+              "qty": 3,
+              "price": 135
+            }
+          ]
+        },
+        "optimum": 3215,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P12",
+              "qty": 1
+            },
+            {
+              "item": "P13",
+              "qty": 2
+            },
+            {
+              "item": "P15",
+              "qty": 1
+            },
+            {
+              "item": "P17",
+              "qty": 2
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            },
+            {
+              "item": "P19",
+              "qty": 2
+            },
+            {
+              "item": "P21",
+              "qty": 5
+            },
+            {
+              "item": "P23",
+              "qty": 3
+            },
+            {
+              "item": "P24",
+              "qty": 1
+            },
+            {
+              "item": "P25",
+              "qty": 1
+            },
+            {
+              "item": "P26",
+              "qty": 2
+            },
+            {
+              "item": "P27",
+              "qty": 1
+            }
+          ],
+          "total": 32.15
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[medium] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): beef mince 1250 g, caster sugar 250 g, cheddar 500 g, chopped tomatoes 2000 g, eggs 3, kidney beans 1000 g, lemons 2, long-grain rice 250 g, macaroni 560 g, milk 1300 ml, olive oil 75 ml, onions 5, plain flour 295 g. Cheapest basket £32.15 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P03\",\"qty\":1},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P12\",\"qty\":1},{\"item\":\"P13\",\"qty\":2},{\"item\":\"P15\",\"qty\":1},{\"item\":\"P17\",\"qty\":2},{\"item\":\"P18\",\"qty\":1},{\"item\":\"P19\",\"qty\":2},{\"item\":\"P21\",\"qty\":5},{\"item\":\"P23\",\"qty\":3},{\"item\":\"P24\",\"qty\":1},{\"item\":\"P25\",\"qty\":1},{\"item\":\"P26\",\"qty\":2},{\"item\":\"P27\",\"qty\":1}],\"total\":32.15}. Ignoring the offers the best basket costs £32.30."
+    },
+    {
+      "id": "s07",
+      "prompt": "Hi! I’m cooking for my mum’s 60th and there will be 12 of us, so every recipe needs to make exactly enough for 12 people. I’m doing:\n\nJollof rice (serves 6):\n- 400 g long-grain rice\n- 2 tins chopped tomatoes\n- 2 onions\n- 600 g chicken thighs\n- 3 tbsp olive oil\n\nChickpea and chicken curry (serves 6):\n- 900 g chicken thighs\n- 3 onions\n- 800 ml coconut milk\n- 1 tin chickpeas\n- 1 tin chopped tomatoes\n- 450 g long-grain rice\n\nTarka dal (serves 6):\n- 300 g red lentils\n- 1 tin chopped tomatoes\n- 400 ml coconut milk\n- 2 onions\n- 30 g butter\n\nVictoria sponge (serves 10):\n- 200 g butter\n- 200 g caster sugar\n- 4 eggs\n- 200 g plain flour\n- 2 tbsp milk\n- 150 ml double cream\n\nMy brother says the big packs are always the cheapest per kilo. He is not always right.\n\nAlready in my cupboard (use it up before buying more):\n- a 1 kg bag of rice\n- a net of 3 onions\n- one tin of coconut milk\n- half a dozen eggs\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Butter 250 g | £2.00\nP02 | Butter 500 g | £4.35\nP03 | Long-grain rice 500 g | £1.05\nP04 | Long-grain rice 1 kg | £1.65\nP05 | Onion (loose, each) | £0.20\nP06 | Onions x3 net | £0.50\nP07 | Chopped tomatoes 400 g tin | £0.60\nP08 | Coconut milk 400 ml tin | £1.30\nP09 | Chickpeas 400 g tin | £0.65\nP10 | Kidney beans 400 g tin | £0.60\nP11 | Chicken thighs 500 g | £3.30\nP12 | Chicken thighs 1 kg | £5.70\nP13 | Red lentils 500 g | £1.40\nP14 | Olive oil 500 ml | £4.85\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35 (counts: P07, P09, P10)\n- Chicken thighs 1 kg: 2 for £10.00 (counts: P12)\n- Coconut milk: 3 tins for £3.00 (counts: P08)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nUPDATE: Auntie Grace just told me she is bringing a cake, so I am NOT making the Victoria sponge after all. Everything else stays the same.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 60
+            },
+            {
+              "ingredient": "chicken thighs",
+              "unit": "g",
+              "amount": 3000
+            },
+            {
+              "ingredient": "chickpeas",
+              "unit": "g",
+              "amount": 800
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 3200
+            },
+            {
+              "ingredient": "coconut milk",
+              "unit": "ml",
+              "amount": 2000
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 700
+            },
+            {
+              "ingredient": "olive oil",
+              "unit": "ml",
+              "amount": 90
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 11
+            },
+            {
+              "ingredient": "red lentils",
+              "unit": "g",
+              "amount": 600
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 200
+            },
+            {
+              "id": "P02",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 435
+            },
+            {
+              "id": "P03",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 105
+            },
+            {
+              "id": "P04",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 165
+            },
+            {
+              "id": "P05",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P06",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 50
+            },
+            {
+              "id": "P07",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 60
+            },
+            {
+              "id": "P08",
+              "name": "Coconut milk 400 ml tin",
+              "ingredient": "coconut milk",
+              "size": 400,
+              "price": 130
+            },
+            {
+              "id": "P09",
+              "name": "Chickpeas 400 g tin",
+              "ingredient": "chickpeas",
+              "size": 400,
+              "price": 65
+            },
+            {
+              "id": "P10",
+              "name": "Kidney beans 400 g tin",
+              "ingredient": "kidney beans",
+              "size": 400,
+              "price": 60
+            },
+            {
+              "id": "P11",
+              "name": "Chicken thighs 500 g",
+              "ingredient": "chicken thighs",
+              "size": 500,
+              "price": 330
+            },
+            {
+              "id": "P12",
+              "name": "Chicken thighs 1 kg",
+              "ingredient": "chicken thighs",
+              "size": 1000,
+              "price": 570
+            },
+            {
+              "id": "P13",
+              "name": "Red lentils 500 g",
+              "ingredient": "red lentils",
+              "size": 500,
+              "price": 140
+            },
+            {
+              "id": "P14",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 485
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35",
+              "products": [
+                "P07",
+                "P09",
+                "P10"
+              ],
+              "qty": 3,
+              "price": 135
+            },
+            {
+              "id": "M2",
+              "label": "Chicken thighs 1 kg: 2 for £10.00",
+              "products": [
+                "P12"
+              ],
+              "qty": 2,
+              "price": 1000
+            },
+            {
+              "id": "M3",
+              "label": "Coconut milk: 3 tins for £3.00",
+              "products": [
+                "P08"
+              ],
+              "qty": 3,
+              "price": 300
+            }
+          ]
+        },
+        "optimum": 3915,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P04",
+              "qty": 1
+            },
+            {
+              "item": "P05",
+              "qty": 2
+            },
+            {
+              "item": "P06",
+              "qty": 3
+            },
+            {
+              "item": "P07",
+              "qty": 8
+            },
+            {
+              "item": "P08",
+              "qty": 5
+            },
+            {
+              "item": "P09",
+              "qty": 2
+            },
+            {
+              "item": "P12",
+              "qty": 3
+            },
+            {
+              "item": "P13",
+              "qty": 2
+            },
+            {
+              "item": "P14",
+              "qty": 1
+            }
+          ],
+          "total": 39.15
+        },
+        "optimalPlans": 1
+      },
+      "notes": "[hard] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 60 g, chicken thighs 3000 g, chickpeas 800 g, chopped tomatoes 3200 g, coconut milk 2000 ml, long-grain rice 700 g, olive oil 90 ml, onions 11, red lentils 600 g. Cheapest basket £39.15 (every pack combination tried; 1 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P04\",\"qty\":1},{\"item\":\"P05\",\"qty\":2},{\"item\":\"P06\",\"qty\":3},{\"item\":\"P07\",\"qty\":8},{\"item\":\"P08\",\"qty\":5},{\"item\":\"P09\",\"qty\":2},{\"item\":\"P12\",\"qty\":3},{\"item\":\"P13\",\"qty\":2},{\"item\":\"P14\",\"qty\":1}],\"total\":39.15}. Ignoring the offers the best basket costs £39.15."
+    },
+    {
+      "id": "s08",
+      "prompt": "Hi! I’m cooking for a charity bake sale lunch and there will be 15 of us, so every recipe needs to make exactly enough for 15 people. I’m doing:\n\nMac and cheese (American recipe) (serves 4):\n- 8 oz macaroni\n- 2 cups milk\n- 2 cups grated cheddar\n- 3 tbsp butter\n- 3 tbsp plain flour\n\nAmerican pancakes (serves 4):\n- 1½ cups plain flour\n- 1¼ cups milk\n- 1 egg\n- 3 tbsp butter, melted\n- 1 tbsp caster sugar\n\nLemon drizzle cake (American recipe) (serves 8):\n- 1½ cups plain flour\n- 1 cup caster sugar\n- ½ cup butter\n- 2 eggs\n- 2 lemons\n- ⅓ cup milk\n\nYorkshire puddings (serves 6):\n- 140 g plain flour\n- 4 eggs\n- 200 ml milk\n- 4 tbsp olive oil\n\nAlready in my cupboard (use it up before buying more):\n- a 500 g bag of plain flour\n- two pints of milk\n- 100 g of butter\n- 4 eggs\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.70\nP02 | Plain flour 1.5 kg | £1.60\nP03 | Caster sugar 500 g | £0.85\nP04 | Caster sugar 1 kg | £1.80\nP05 | Butter 250 g | £2.05\nP06 | Butter 500 g | £4.30\nP07 | Free-range eggs x6 | £1.75\nP08 | Free-range eggs x12 | £3.25\nP09 | Free-range eggs x15 | £4.30\nP10 | Milk 1 pint (568 ml) | £0.70\nP11 | Milk 2 pints (1.136 l) | £1.25\nP12 | Milk 4 pints (2.272 l) | £1.70\nP13 | Mature cheddar 400 g | £3.05\nP14 | Mature cheddar 800 g | £5.95\nP15 | Lemon (loose, each) | £0.35\nP16 | Lemons x4 pack | £1.05\nP17 | Macaroni 500 g | £0.85\nP18 | Olive oil 500 ml | £4.85\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Milk 2 or 4 pints: any 2 for £2.00 (counts: P11, P12)\n- Eggs x12 or x15: any 2 boxes for £5.00 (counts: P08, P09)\n- Butter 250 g: 2 for £3.80 (counts: P05)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nChange of numbers: three more volunteers signed up, so please plan for 18 people, not 15.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 532
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 504
+            },
+            {
+              "ingredient": "cheddar",
+              "unit": "g",
+              "amount": 900
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 17
+            },
+            {
+              "ingredient": "lemons",
+              "unit": "each",
+              "amount": 5
+            },
+            {
+              "ingredient": "macaroni",
+              "unit": "g",
+              "amount": 1008
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 3154
+            },
+            {
+              "ingredient": "olive oil",
+              "unit": "ml",
+              "amount": 180
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 1294
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 70
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 160
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 85
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 180
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 205
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 430
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 175
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 325
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 430
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 70
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 125
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 170
+            },
+            {
+              "id": "P13",
+              "name": "Mature cheddar 400 g",
+              "ingredient": "cheddar",
+              "size": 400,
+              "price": 305
+            },
+            {
+              "id": "P14",
+              "name": "Mature cheddar 800 g",
+              "ingredient": "cheddar",
+              "size": 800,
+              "price": 595
+            },
+            {
+              "id": "P15",
+              "name": "Lemon (loose, each)",
+              "ingredient": "lemons",
+              "size": 1,
+              "price": 35
+            },
+            {
+              "id": "P16",
+              "name": "Lemons x4 pack",
+              "ingredient": "lemons",
+              "size": 4,
+              "price": 105
+            },
+            {
+              "id": "P17",
+              "name": "Macaroni 500 g",
+              "ingredient": "macaroni",
+              "size": 500,
+              "price": 85
+            },
+            {
+              "id": "P18",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 485
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Milk 2 or 4 pints: any 2 for £2.00",
+              "products": [
+                "P11",
+                "P12"
+              ],
+              "qty": 2,
+              "price": 200
+            },
+            {
+              "id": "M2",
+              "label": "Eggs x12 or x15: any 2 boxes for £5.00",
+              "products": [
+                "P08",
+                "P09"
+              ],
+              "qty": 2,
+              "price": 500
+            },
+            {
+              "id": "M3",
+              "label": "Butter 250 g: 2 for £3.80",
+              "products": [
+                "P05"
+              ],
+              "qty": 2,
+              "price": 380
+            }
+          ]
+        },
+        "optimum": 3395,
+        "reference": {
+          "basket": [
+            {
+              "item": "P02",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 2
+            },
+            {
+              "item": "P05",
+              "qty": 3
+            },
+            {
+              "item": "P09",
+              "qty": 2
+            },
+            {
+              "item": "P12",
+              "qty": 2
+            },
+            {
+              "item": "P13",
+              "qty": 1
+            },
+            {
+              "item": "P14",
+              "qty": 1
+            },
+            {
+              "item": "P15",
+              "qty": 1
+            },
+            {
+              "item": "P16",
+              "qty": 1
+            },
+            {
+              "item": "P17",
+              "qty": 3
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            }
+          ],
+          "total": 33.95
+        },
+        "optimalPlans": 8
+      },
+      "notes": "[hard] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 532 g, caster sugar 504 g, cheddar 900 g, eggs 17, lemons 5, macaroni 1008 g, milk 3154 ml, olive oil 180 ml, plain flour 1294 g. Cheapest basket £33.95 (every pack combination tried; 8 optimal). One optimal basket: {\"basket\":[{\"item\":\"P02\",\"qty\":1},{\"item\":\"P03\",\"qty\":2},{\"item\":\"P05\",\"qty\":3},{\"item\":\"P09\",\"qty\":2},{\"item\":\"P12\",\"qty\":2},{\"item\":\"P13\",\"qty\":1},{\"item\":\"P14\",\"qty\":1},{\"item\":\"P15\",\"qty\":1},{\"item\":\"P16\",\"qty\":1},{\"item\":\"P17\",\"qty\":3},{\"item\":\"P18\",\"qty\":1}],\"total\":33.95}. Ignoring the offers the best basket costs £33.95."
+    },
+    {
+      "id": "s09",
+      "prompt": "Hi! I’m cooking for the street party and there will be 20 of us, so every recipe needs to make exactly enough for 20 people. I’m doing:\n\nChilli con carne (serves 4):\n- 500 g beef mince\n- 2 onions\n- 2 tins chopped tomatoes\n- 1 tin kidney beans\n- 300 g long-grain rice\n- 2 tbsp olive oil\n\nChickpea and chicken curry (serves 6):\n- 900 g chicken thighs\n- 3 onions\n- 800 ml coconut milk\n- 1 tin chickpeas\n- 1 tin chopped tomatoes\n- 450 g long-grain rice\n\nJollof rice (serves 6):\n- 400 g long-grain rice\n- 2 tins chopped tomatoes\n- 2 onions\n- 600 g chicken thighs\n- 3 tbsp olive oil\n\nLemon drizzle cake (American recipe) (serves 8):\n- 1½ cups plain flour\n- 1 cup caster sugar\n- ½ cup butter\n- 2 eggs\n- 2 lemons\n- ⅓ cup milk\n\nIgnore the “serves 4–6” on the chilli card: the recipe below is written for 4.\n\nAlready in my cupboard (use it up before buying more):\n- a full 500 ml bottle of olive oil\n- two tins of chopped tomatoes\n- 4 onions\n- 2 lemons\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.75\nP02 | Plain flour 1.5 kg | £1.45\nP03 | Caster sugar 500 g | £1.05\nP04 | Caster sugar 1 kg | £1.65\nP05 | Butter 250 g | £1.90\nP06 | Butter 500 g | £3.65\nP07 | Free-range eggs x6 | £1.70\nP08 | Free-range eggs x12 | £3.15\nP09 | Free-range eggs x15 | £3.95\nP10 | Milk 1 pint (568 ml) | £0.70\nP11 | Milk 2 pints (1.136 l) | £1.25\nP12 | Milk 4 pints (2.272 l) | £1.50\nP13 | Long-grain rice 500 g | £0.90\nP14 | Long-grain rice 1 kg | £1.65\nP15 | Onion (loose, each) | £0.20\nP16 | Onions x3 net | £0.60\nP17 | Lemon (loose, each) | £0.35\nP18 | Lemons x4 pack | £1.05\nP19 | Chopped tomatoes 400 g tin | £0.55\nP20 | Coconut milk 400 ml tin | £1.20\nP21 | Chickpeas 400 g tin | £0.70\nP22 | Kidney beans 400 g tin | £0.55\nP23 | Beef mince 500 g | £4.10\nP24 | Beef mince 750 g | £5.90\nP25 | Chicken thighs 500 g | £3.10\nP26 | Chicken thighs 1 kg | £6.50\nP27 | Olive oil 500 ml | £4.70\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35 (counts: P19, P21, P22)\n- Chicken thighs 1 kg: 2 for £10.00 (counts: P26)\n- Beef mince 750 g: 2 for £9.00 (counts: P24)\n- Onions x3 net: 2 for 90p (counts: P16)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nLast thing: the two tins of tomatoes in the cupboard are past their date, so I am throwing them out. Don’t count them.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "beef mince",
+              "unit": "g",
+              "amount": 2500
+            },
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 282
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 500
+            },
+            {
+              "ingredient": "chicken thighs",
+              "unit": "g",
+              "amount": 5000
+            },
+            {
+              "ingredient": "chickpeas",
+              "unit": "g",
+              "amount": 1334
+            },
+            {
+              "ingredient": "chopped tomatoes",
+              "unit": "g",
+              "amount": 8000
+            },
+            {
+              "ingredient": "coconut milk",
+              "unit": "ml",
+              "amount": 2667
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 5
+            },
+            {
+              "ingredient": "kidney beans",
+              "unit": "g",
+              "amount": 2000
+            },
+            {
+              "ingredient": "lemons",
+              "unit": "each",
+              "amount": 3
+            },
+            {
+              "ingredient": "long-grain rice",
+              "unit": "g",
+              "amount": 4334
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 200
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 23
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 469
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 75
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 145
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 105
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 165
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 190
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 365
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 170
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 315
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 395
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 70
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 125
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 150
+            },
+            {
+              "id": "P13",
+              "name": "Long-grain rice 500 g",
+              "ingredient": "long-grain rice",
+              "size": 500,
+              "price": 90
+            },
+            {
+              "id": "P14",
+              "name": "Long-grain rice 1 kg",
+              "ingredient": "long-grain rice",
+              "size": 1000,
+              "price": 165
+            },
+            {
+              "id": "P15",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P16",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 60
+            },
+            {
+              "id": "P17",
+              "name": "Lemon (loose, each)",
+              "ingredient": "lemons",
+              "size": 1,
+              "price": 35
+            },
+            {
+              "id": "P18",
+              "name": "Lemons x4 pack",
+              "ingredient": "lemons",
+              "size": 4,
+              "price": 105
+            },
+            {
+              "id": "P19",
+              "name": "Chopped tomatoes 400 g tin",
+              "ingredient": "chopped tomatoes",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P20",
+              "name": "Coconut milk 400 ml tin",
+              "ingredient": "coconut milk",
+              "size": 400,
+              "price": 120
+            },
+            {
+              "id": "P21",
+              "name": "Chickpeas 400 g tin",
+              "ingredient": "chickpeas",
+              "size": 400,
+              "price": 70
+            },
+            {
+              "id": "P22",
+              "name": "Kidney beans 400 g tin",
+              "ingredient": "kidney beans",
+              "size": 400,
+              "price": 55
+            },
+            {
+              "id": "P23",
+              "name": "Beef mince 500 g",
+              "ingredient": "beef mince",
+              "size": 500,
+              "price": 410
+            },
+            {
+              "id": "P24",
+              "name": "Beef mince 750 g",
+              "ingredient": "beef mince",
+              "size": 750,
+              "price": 590
+            },
+            {
+              "id": "P25",
+              "name": "Chicken thighs 500 g",
+              "ingredient": "chicken thighs",
+              "size": 500,
+              "price": 310
+            },
+            {
+              "id": "P26",
+              "name": "Chicken thighs 1 kg",
+              "ingredient": "chicken thighs",
+              "size": 1000,
+              "price": 650
+            },
+            {
+              "id": "P27",
+              "name": "Olive oil 500 ml",
+              "ingredient": "olive oil",
+              "size": 500,
+              "price": 470
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Any 3 tins of chopped tomatoes, chickpeas or kidney beans for £1.35",
+              "products": [
+                "P19",
+                "P21",
+                "P22"
+              ],
+              "qty": 3,
+              "price": 135
+            },
+            {
+              "id": "M2",
+              "label": "Chicken thighs 1 kg: 2 for £10.00",
+              "products": [
+                "P26"
+              ],
+              "qty": 2,
+              "price": 1000
+            },
+            {
+              "id": "M3",
+              "label": "Beef mince 750 g: 2 for £9.00",
+              "products": [
+                "P24"
+              ],
+              "qty": 2,
+              "price": 900
+            },
+            {
+              "id": "M4",
+              "label": "Onions x3 net: 2 for 90p",
+              "products": [
+                "P16"
+              ],
+              "qty": 2,
+              "price": 90
+            }
+          ]
+        },
+        "optimum": 8505,
+        "reference": {
+          "basket": [
+            {
+              "item": "P01",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P06",
+              "qty": 1
+            },
+            {
+              "item": "P07",
+              "qty": 1
+            },
+            {
+              "item": "P10",
+              "qty": 1
+            },
+            {
+              "item": "P13",
+              "qty": 1
+            },
+            {
+              "item": "P14",
+              "qty": 4
+            },
+            {
+              "item": "P16",
+              "qty": 8
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            },
+            {
+              "item": "P19",
+              "qty": 20
+            },
+            {
+              "item": "P20",
+              "qty": 7
+            },
+            {
+              "item": "P21",
+              "qty": 4
+            },
+            {
+              "item": "P22",
+              "qty": 5
+            },
+            {
+              "item": "P23",
+              "qty": 2
+            },
+            {
+              "item": "P24",
+              "qty": 2
+            },
+            {
+              "item": "P25",
+              "qty": 2
+            },
+            {
+              "item": "P26",
+              "qty": 4
+            }
+          ],
+          "total": 85.05
+        },
+        "optimalPlans": 2
+      },
+      "notes": "[hard] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): beef mince 2500 g, butter 282 g, caster sugar 500 g, chicken thighs 5000 g, chickpeas 1334 g, chopped tomatoes 8000 g, coconut milk 2667 ml, eggs 5, kidney beans 2000 g, lemons 3, long-grain rice 4334 g, milk 200 ml, onions 23, plain flour 469 g. Cheapest basket £85.05 (every pack combination tried; 2 optimal). One optimal basket: {\"basket\":[{\"item\":\"P01\",\"qty\":1},{\"item\":\"P03\",\"qty\":1},{\"item\":\"P06\",\"qty\":1},{\"item\":\"P07\",\"qty\":1},{\"item\":\"P10\",\"qty\":1},{\"item\":\"P13\",\"qty\":1},{\"item\":\"P14\",\"qty\":4},{\"item\":\"P16\",\"qty\":8},{\"item\":\"P18\",\"qty\":1},{\"item\":\"P19\",\"qty\":20},{\"item\":\"P20\",\"qty\":7},{\"item\":\"P21\",\"qty\":4},{\"item\":\"P22\",\"qty\":5},{\"item\":\"P23\",\"qty\":2},{\"item\":\"P24\",\"qty\":2},{\"item\":\"P25\",\"qty\":2},{\"item\":\"P26\",\"qty\":4}],\"total\":85.05}. Ignoring the offers the best basket costs £89.95."
+    },
+    {
+      "id": "s10",
+      "prompt": "Hi! I’m cooking for a Burns-night-meets-Thanksgiving party and there will be 14 of us, so every recipe needs to make exactly enough for 14 people. I’m doing:\n\nShepherd’s pie (Grandma’s imperial recipe) (serves 4):\n- 1 lb lamb mince\n- 2 lb potatoes\n- 1 onion\n- 8 oz carrots\n- 2 oz butter\n- ¼ pint milk\n\nMac and cheese (American recipe) (serves 4):\n- 8 oz macaroni\n- 2 cups milk\n- 2 cups grated cheddar\n- 3 tbsp butter\n- 3 tbsp plain flour\n\nAmerican pancakes (serves 4):\n- 1½ cups plain flour\n- 1¼ cups milk\n- 1 egg\n- 3 tbsp butter, melted\n- 1 tbsp caster sugar\n\nVictoria sponge (serves 10):\n- 200 g butter\n- 200 g caster sugar\n- 4 eggs\n- 200 g plain flour\n- 2 tbsp milk\n- 150 ml double cream\n\nAlready in my cupboard (use it up before buying more):\n- a 2.5 kg bag of potatoes\n- about 200 g of cheddar\n- a pint of milk\n- a 1.5 kg bag of plain flour\n\nConversions to use (and only these): 1 oz = 28 g; 1 lb = 454 g; 1 pint = 568 ml; 1 tin = 400 g (or 400 ml for coconut milk).\n1 cup plain flour = 125 g; 1 tbsp plain flour = 8 g; 1 cup caster sugar = 200 g; 1 tbsp caster sugar = 12 g; 1 tsp caster sugar = 4 g; 1 cup butter = 225 g; 1 tbsp butter = 14 g; 1 cup milk = 240 ml; 1 tbsp milk = 15 ml; 1 cup double cream = 240 ml; 1 tbsp double cream = 15 ml; 1 cup cheddar = 100 g; 1 cup long-grain rice = 185 g; 1 cup red lentils = 190 g; 1 tbsp olive oil = 15 ml; 1 tsp olive oil = 5 ml.\n\nTHE SHOP (price per pack)\nID | Product | Price\nP01 | Plain flour 500 g | £0.70\nP02 | Plain flour 1.5 kg | £1.30\nP03 | Caster sugar 500 g | £0.90\nP04 | Caster sugar 1 kg | £1.80\nP05 | Butter 250 g | £2.30\nP06 | Butter 500 g | £4.10\nP07 | Free-range eggs x6 | £1.75\nP08 | Free-range eggs x12 | £3.25\nP09 | Free-range eggs x15 | £3.75\nP10 | Milk 1 pint (568 ml) | £0.70\nP11 | Milk 2 pints (1.136 l) | £1.30\nP12 | Milk 4 pints (2.272 l) | £1.80\nP13 | Double cream 300 ml | £1.45\nP14 | Double cream 600 ml | £2.65\nP15 | Mature cheddar 400 g | £3.25\nP16 | Mature cheddar 800 g | £5.85\nP17 | Onion (loose, each) | £0.20\nP18 | Onions x3 net | £0.60\nP19 | Lamb mince 500 g | £4.60\nP20 | Potatoes 2.5 kg bag | £1.70\nP21 | Potatoes 1 kg bag | £0.90\nP22 | Carrots 1 kg | £0.65\nP23 | Macaroni 500 g | £0.80\n\nOFFERS (applied automatically at the till: the qualifying packs are grouped most expensive first, each full group costs the offer price, any packs left over are charged normally; an offer can be used as many times as you like)\n- Milk 2 or 4 pints: any 2 for £2.00 (counts: P11, P12)\n- Cheddar 400 g: 2 for £5.50 (counts: P15)\n- Butter 250 g: 2 for £3.80 (counts: P05)\n- Eggs x12 or x15: any 2 boxes for £5.00 (counts: P08, P09)\n\nRules: scale every ingredient exactly by (people ÷ servings) — no rounding until the end; add the same ingredient up across recipes; take off what is in the cupboard; then buy whole packs so I have at least enough of everything. A recipe’s “1 onion” scales like any other amount; you can’t buy part of a pack or part of an egg. Buying more than I need is fine if it is cheaper.\n\nOops: the “1.5 kg bag of flour” in the cupboard is actually self-raising, and none of these recipes use self-raising flour. Don’t count it.\n\nWhat should I buy to spend as little as possible? Answer with the packs and how many of each, and the till total in pounds, in this JSON format:\n```json\n{\"basket\": [{\"item\": \"<product ID>\", \"qty\": 1}], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "needs": [
+            {
+              "ingredient": "butter",
+              "unit": "g",
+              "amount": 770
+            },
+            {
+              "ingredient": "carrots",
+              "unit": "g",
+              "amount": 784
+            },
+            {
+              "ingredient": "caster sugar",
+              "unit": "g",
+              "amount": 322
+            },
+            {
+              "ingredient": "cheddar",
+              "unit": "g",
+              "amount": 500
+            },
+            {
+              "ingredient": "double cream",
+              "unit": "ml",
+              "amount": 210
+            },
+            {
+              "ingredient": "eggs",
+              "unit": "each",
+              "amount": 10
+            },
+            {
+              "ingredient": "lamb mince",
+              "unit": "g",
+              "amount": 1589
+            },
+            {
+              "ingredient": "macaroni",
+              "unit": "g",
+              "amount": 784
+            },
+            {
+              "ingredient": "milk",
+              "unit": "ml",
+              "amount": 2701
+            },
+            {
+              "ingredient": "onions",
+              "unit": "each",
+              "amount": 4
+            },
+            {
+              "ingredient": "plain flour",
+              "unit": "g",
+              "amount": 1021
+            },
+            {
+              "ingredient": "potatoes",
+              "unit": "g",
+              "amount": 678
+            }
+          ],
+          "products": [
+            {
+              "id": "P01",
+              "name": "Plain flour 500 g",
+              "ingredient": "plain flour",
+              "size": 500,
+              "price": 70
+            },
+            {
+              "id": "P02",
+              "name": "Plain flour 1.5 kg",
+              "ingredient": "plain flour",
+              "size": 1500,
+              "price": 130
+            },
+            {
+              "id": "P03",
+              "name": "Caster sugar 500 g",
+              "ingredient": "caster sugar",
+              "size": 500,
+              "price": 90
+            },
+            {
+              "id": "P04",
+              "name": "Caster sugar 1 kg",
+              "ingredient": "caster sugar",
+              "size": 1000,
+              "price": 180
+            },
+            {
+              "id": "P05",
+              "name": "Butter 250 g",
+              "ingredient": "butter",
+              "size": 250,
+              "price": 230
+            },
+            {
+              "id": "P06",
+              "name": "Butter 500 g",
+              "ingredient": "butter",
+              "size": 500,
+              "price": 410
+            },
+            {
+              "id": "P07",
+              "name": "Free-range eggs x6",
+              "ingredient": "eggs",
+              "size": 6,
+              "price": 175
+            },
+            {
+              "id": "P08",
+              "name": "Free-range eggs x12",
+              "ingredient": "eggs",
+              "size": 12,
+              "price": 325
+            },
+            {
+              "id": "P09",
+              "name": "Free-range eggs x15",
+              "ingredient": "eggs",
+              "size": 15,
+              "price": 375
+            },
+            {
+              "id": "P10",
+              "name": "Milk 1 pint (568 ml)",
+              "ingredient": "milk",
+              "size": 568,
+              "price": 70
+            },
+            {
+              "id": "P11",
+              "name": "Milk 2 pints (1.136 l)",
+              "ingredient": "milk",
+              "size": 1136,
+              "price": 130
+            },
+            {
+              "id": "P12",
+              "name": "Milk 4 pints (2.272 l)",
+              "ingredient": "milk",
+              "size": 2272,
+              "price": 180
+            },
+            {
+              "id": "P13",
+              "name": "Double cream 300 ml",
+              "ingredient": "double cream",
+              "size": 300,
+              "price": 145
+            },
+            {
+              "id": "P14",
+              "name": "Double cream 600 ml",
+              "ingredient": "double cream",
+              "size": 600,
+              "price": 265
+            },
+            {
+              "id": "P15",
+              "name": "Mature cheddar 400 g",
+              "ingredient": "cheddar",
+              "size": 400,
+              "price": 325
+            },
+            {
+              "id": "P16",
+              "name": "Mature cheddar 800 g",
+              "ingredient": "cheddar",
+              "size": 800,
+              "price": 585
+            },
+            {
+              "id": "P17",
+              "name": "Onion (loose, each)",
+              "ingredient": "onions",
+              "size": 1,
+              "price": 20
+            },
+            {
+              "id": "P18",
+              "name": "Onions x3 net",
+              "ingredient": "onions",
+              "size": 3,
+              "price": 60
+            },
+            {
+              "id": "P19",
+              "name": "Lamb mince 500 g",
+              "ingredient": "lamb mince",
+              "size": 500,
+              "price": 460
+            },
+            {
+              "id": "P20",
+              "name": "Potatoes 2.5 kg bag",
+              "ingredient": "potatoes",
+              "size": 2500,
+              "price": 170
+            },
+            {
+              "id": "P21",
+              "name": "Potatoes 1 kg bag",
+              "ingredient": "potatoes",
+              "size": 1000,
+              "price": 90
+            },
+            {
+              "id": "P22",
+              "name": "Carrots 1 kg",
+              "ingredient": "carrots",
+              "size": 1000,
+              "price": 65
+            },
+            {
+              "id": "P23",
+              "name": "Macaroni 500 g",
+              "ingredient": "macaroni",
+              "size": 500,
+              "price": 80
+            }
+          ],
+          "offers": [
+            {
+              "id": "M1",
+              "label": "Milk 2 or 4 pints: any 2 for £2.00",
+              "products": [
+                "P11",
+                "P12"
+              ],
+              "qty": 2,
+              "price": 200
+            },
+            {
+              "id": "M2",
+              "label": "Cheddar 400 g: 2 for £5.50",
+              "products": [
+                "P15"
+              ],
+              "qty": 2,
+              "price": 550
+            },
+            {
+              "id": "M3",
+              "label": "Butter 250 g: 2 for £3.80",
+              "products": [
+                "P05"
+              ],
+              "qty": 2,
+              "price": 380
+            },
+            {
+              "id": "M4",
+              "label": "Eggs x12 or x15: any 2 boxes for £5.00",
+              "products": [
+                "P08",
+                "P09"
+              ],
+              "qty": 2,
+              "price": 500
+            }
+          ]
+        },
+        "optimum": 4435,
+        "reference": {
+          "basket": [
+            {
+              "item": "P02",
+              "qty": 1
+            },
+            {
+              "item": "P03",
+              "qty": 1
+            },
+            {
+              "item": "P05",
+              "qty": 4
+            },
+            {
+              "item": "P08",
+              "qty": 1
+            },
+            {
+              "item": "P12",
+              "qty": 2
+            },
+            {
+              "item": "P13",
+              "qty": 1
+            },
+            {
+              "item": "P15",
+              "qty": 2
+            },
+            {
+              "item": "P17",
+              "qty": 1
+            },
+            {
+              "item": "P18",
+              "qty": 1
+            },
+            {
+              "item": "P19",
+              "qty": 4
+            },
+            {
+              "item": "P21",
+              "qty": 1
+            },
+            {
+              "item": "P22",
+              "qty": 1
+            },
+            {
+              "item": "P23",
+              "qty": 2
+            }
+          ],
+          "total": 44.35
+        },
+        "optimalPlans": 4
+      },
+      "notes": "[hard] To buy (exact, after scaling, conversion, merging and the cupboard; rounded up to whole g/ml/items): butter 770 g, carrots 784 g, caster sugar 322 g, cheddar 500 g, double cream 210 ml, eggs 10, lamb mince 1589 g, macaroni 784 g, milk 2701 ml, onions 4, plain flour 1021 g, potatoes 678 g. Cheapest basket £44.35 (every pack combination tried; 4 optimal). One optimal basket: {\"basket\":[{\"item\":\"P02\",\"qty\":1},{\"item\":\"P03\",\"qty\":1},{\"item\":\"P05\",\"qty\":4},{\"item\":\"P08\",\"qty\":1},{\"item\":\"P12\",\"qty\":2},{\"item\":\"P13\",\"qty\":1},{\"item\":\"P15\",\"qty\":2},{\"item\":\"P17\",\"qty\":1},{\"item\":\"P18\",\"qty\":1},{\"item\":\"P19\",\"qty\":4},{\"item\":\"P21\",\"qty\":1},{\"item\":\"P22\",\"qty\":1},{\"item\":\"P23\",\"qty\":2}],\"total\":44.35}. Ignoring the offers the best basket costs £45.80."
+    }
+  ]
+}

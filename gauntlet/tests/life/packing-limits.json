@@ -1,0 +1,3153 @@
+{
+  "kind": "prompt",
+  "id": "life.packing-limits",
+  "version": "1.0.0",
+  "name": "Pack for the Flight",
+  "description": "Decide what goes in the personal item, cabin bag and hold bags, what to wear and what to leave behind, under real airline rules: sizes, litres, weight limits and overweight fees, the 100 ml liquids rule, power banks and sharp items, and must-bring items. The plan is checked rule by rule and compared with the cheapest plan a computer search can find.",
+  "difficulty": "hard",
+  "tags": [
+    "real-world",
+    "everyday-life",
+    "travel",
+    "optimisation",
+    "verifier"
+  ],
+  "hook": "Beat the baggage fees without breaking a single airline rule.",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 1100,
+    "outputTokens": 8000
+  },
+  "category": "life",
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "packing"
+  },
+  "cases": [
+    {
+      "id": "p01",
+      "prompt": "Weekend in Lisbon, Friday to Sunday, flying from Manchester. Just me, sightseeing and a nice dinner.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £124.00 | -\nI04 | Smart shoes | 1.1 kg | 6 l | 32 × 22 × 12 | £69.50 | -\nI05 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £19.00 | -\nI06 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI07 | Shampoo 250 ml | 0.3 kg | 0.3 l | 18 × 7 × 4 | £4.00 | liquid, 250 ml container\nI08 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £6.00 | liquid, 50 ml container\nI09 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £8.50 | -\nI10 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £29.00 | spare lithium battery\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £36.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £48.00, second £55.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £12.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Summer clothes (rolled)",
+              "kg": 2.2,
+              "litres": 11,
+              "dims": [
+                35,
+                25,
+                12
+              ],
+              "replace": 12400
+            },
+            {
+              "id": "I04",
+              "name": "Smart shoes",
+              "kg": 1.1,
+              "litres": 6,
+              "dims": [
+                32,
+                22,
+                12
+              ],
+              "replace": 6950
+            },
+            {
+              "id": "I05",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 1900
+            },
+            {
+              "id": "I06",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I07",
+              "name": "Shampoo 250 ml",
+              "kg": 0.3,
+              "litres": 0.3,
+              "dims": [
+                18,
+                7,
+                4
+              ],
+              "replace": 400,
+              "liquidMl": 250
+            },
+            {
+              "id": "I08",
+              "name": "Sun cream 50 ml",
+              "kg": 0.07,
+              "litres": 0.07,
+              "dims": [
+                10,
+                4,
+                3
+              ],
+              "replace": 600,
+              "liquidMl": 50
+            },
+            {
+              "id": "I09",
+              "name": "Paperback book",
+              "kg": 0.35,
+              "litres": 0.6,
+              "dims": [
+                20,
+                13,
+                3
+              ],
+              "replace": 850
+            },
+            {
+              "id": "I10",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 2900,
+              "battery": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 3600,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 4800,
+              "freeKg": 23,
+              "overPerKg": 1200,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 5500,
+              "freeKg": 23,
+              "overPerKg": 1200,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 2150,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I04",
+            "I05",
+            "I10"
+          ],
+          "cabin": [],
+          "hold": [],
+          "wear": [],
+          "leave": [
+            "I06",
+            "I07",
+            "I08",
+            "I09"
+          ],
+          "total": 21.5
+        }
+      },
+      "notes": "[easy] Cheapest legal plan £21.50 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I04\",\"I05\",\"I10\"],\"cabin\":[],\"hold\":[],\"wear\":[],\"leave\":[\"I06\",\"I07\",\"I08\",\"I09\"],\"total\":21.5}."
+    },
+    {
+      "id": "p02",
+      "prompt": "Four nights in Dublin for a work conference, flying from Bristol.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Laptop | 1.6 kg | 2.5 l | 36 × 25 × 2 | MUST | -\nI04 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £61.50 | -\nI05 | Conference badge and printed papers | 0.4 kg | 0.8 l | 31 × 22 × 2 | MUST | -\nI06 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £176.00 | -\nI07 | Suit in a folding garment bag | 1.9 kg | 10 l | 52 × 38 × 8 | £259.50 | -\nI08 | Smart shoes | 1.1 kg | 6 l | 32 × 22 × 12 | £66.50 | -\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £9.00 | liquid, 360 ml container\nI12 | Nail scissors (blades over 6 cm) | 0.05 kg | 0.05 l | 12 × 5 × 1 | £5.50 | sharp\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £28.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £42.00, second £52.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £11.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Laptop",
+              "kg": 1.6,
+              "litres": 2.5,
+              "dims": [
+                36,
+                25,
+                2
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Laptop charger",
+              "kg": 0.4,
+              "litres": 0.6,
+              "dims": [
+                15,
+                8,
+                4
+              ],
+              "replace": 6150
+            },
+            {
+              "id": "I05",
+              "name": "Conference badge and printed papers",
+              "kg": 0.4,
+              "litres": 0.8,
+              "dims": [
+                31,
+                22,
+                2
+              ],
+              "replace": null
+            },
+            {
+              "id": "I06",
+              "name": "Clothes for the trip (rolled)",
+              "kg": 3.4,
+              "litres": 16,
+              "dims": [
+                40,
+                30,
+                14
+              ],
+              "replace": 17600
+            },
+            {
+              "id": "I07",
+              "name": "Suit in a folding garment bag",
+              "kg": 1.9,
+              "litres": 10,
+              "dims": [
+                52,
+                38,
+                8
+              ],
+              "replace": 25950
+            },
+            {
+              "id": "I08",
+              "name": "Smart shoes",
+              "kg": 1.1,
+              "litres": 6,
+              "dims": [
+                32,
+                22,
+                12
+              ],
+              "replace": 6650
+            },
+            {
+              "id": "I09",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2150
+            },
+            {
+              "id": "I10",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I11",
+              "name": "Contact lens solution 360 ml",
+              "kg": 0.4,
+              "litres": 0.4,
+              "dims": [
+                19,
+                7,
+                5
+              ],
+              "replace": 900,
+              "liquidMl": 360
+            },
+            {
+              "id": "I12",
+              "name": "Nail scissors (blades over 6 cm)",
+              "kg": 0.05,
+              "litres": 0.05,
+              "dims": [
+                12,
+                5,
+                1
+              ],
+              "replace": 550,
+              "sharp": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 2800,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 4200,
+              "freeKg": 23,
+              "overPerKg": 1100,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 5200,
+              "freeKg": 23,
+              "overPerKg": 1100,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 4200,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I05",
+            "I06",
+            "I10"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I04",
+              "I07",
+              "I08",
+              "I09",
+              "I11",
+              "I12"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 42
+        }
+      },
+      "notes": "[easy] Cheapest legal plan £42.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I10\"],\"cabin\":[],\"hold\":[[\"I04\",\"I07\",\"I08\",\"I09\",\"I11\",\"I12\"]],\"wear\":[],\"leave\":[],\"total\":42}."
+    },
+    {
+      "id": "p03",
+      "prompt": "A week of beach in Mallorca from Gatwick. I’ll mostly live in shorts.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £121.50 | -\nI04 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £60.00 | can be worn\nI05 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £19.50 | -\nI06 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI07 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £13.00 | liquid, 200 ml container\nI08 | Travel shampoo 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 3 | £3.00 | liquid, 100 ml container\nI09 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £14.50 | -\nI10 | Snorkel and mask | 0.8 kg | 4 l | 40 × 20 × 12 | £38.50 | -\nI11 | E-reader | 0.2 kg | 0.2 l | 16 × 11 × 1 | £87.00 | -\nI12 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £31.00 | spare lithium battery\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £45.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £39.00, second £49.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £10.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Summer clothes (rolled)",
+              "kg": 2.2,
+              "litres": 11,
+              "dims": [
+                35,
+                25,
+                12
+              ],
+              "replace": 12150
+            },
+            {
+              "id": "I04",
+              "name": "Trainers",
+              "kg": 0.9,
+              "litres": 7,
+              "dims": [
+                32,
+                22,
+                13
+              ],
+              "replace": 6000,
+              "wearable": true
+            },
+            {
+              "id": "I05",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 1950
+            },
+            {
+              "id": "I06",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I07",
+              "name": "Sun cream 200 ml",
+              "kg": 0.25,
+              "litres": 0.25,
+              "dims": [
+                16,
+                6,
+                4
+              ],
+              "replace": 1300,
+              "liquidMl": 200
+            },
+            {
+              "id": "I08",
+              "name": "Travel shampoo 100 ml",
+              "kg": 0.12,
+              "litres": 0.12,
+              "dims": [
+                12,
+                5,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 100
+            },
+            {
+              "id": "I09",
+              "name": "Beach towel",
+              "kg": 0.9,
+              "litres": 6,
+              "dims": [
+                40,
+                30,
+                8
+              ],
+              "replace": 1450
+            },
+            {
+              "id": "I10",
+              "name": "Snorkel and mask",
+              "kg": 0.8,
+              "litres": 4,
+              "dims": [
+                40,
+                20,
+                12
+              ],
+              "replace": 3850
+            },
+            {
+              "id": "I11",
+              "name": "E-reader",
+              "kg": 0.2,
+              "litres": 0.2,
+              "dims": [
+                16,
+                11,
+                1
+              ],
+              "replace": 8700
+            },
+            {
+              "id": "I12",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3100,
+              "battery": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 4500,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 3900,
+              "freeKg": 23,
+              "overPerKg": 1000,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 4900,
+              "freeKg": 23,
+              "overPerKg": 1000,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 2750,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I05",
+            "I06",
+            "I08",
+            "I10",
+            "I11",
+            "I12"
+          ],
+          "cabin": [],
+          "hold": [],
+          "wear": [
+            "I04"
+          ],
+          "leave": [
+            "I07",
+            "I09"
+          ],
+          "total": 27.5
+        }
+      },
+      "notes": "[easy] Cheapest legal plan £27.50 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I08\",\"I10\",\"I11\",\"I12\"],\"cabin\":[],\"hold\":[],\"wear\":[\"I04\"],\"leave\":[\"I07\",\"I09\"],\"total\":27.5}."
+    },
+    {
+      "id": "p04",
+      "prompt": "My cousin’s wedding in Kraków, flying from Luton. I’m doing the readings, so the outfit has to come.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Wedding outfit in a garment cover | 1.6 kg | 9 l | 60 × 40 × 6 | MUST | -\nI05 | Smart shoes | 1.1 kg | 6 l | 32 × 22 × 12 | £70.50 | -\nI06 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £120.00 | -\nI07 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £19.00 | -\nI08 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI09 | Perfume 50 ml | 0.2 kg | 0.15 l | 10 × 6 × 4 | £69.50 | liquid, 50 ml container\nI10 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £17.00 | liquid, 100 ml container\nI11 | Shampoo 250 ml | 0.3 kg | 0.3 l | 18 × 7 × 4 | £4.50 | liquid, 250 ml container\nI12 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £30.50 | liquid, 700 ml container\nI13 | Wrapped presents for the family | 2.2 kg | 10 l | 40 × 30 × 15 | £85.50 | -\nI14 | Hairdryer | 0.7 kg | 3 l | 25 × 22 × 9 | £24.00 | -\nI15 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £31.50 | spare lithium battery\nI16 | Travel pillow | 0.3 kg | 4 l | 30 × 28 × 10 | £14.50 | can be worn\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £30.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £54.00, second £56.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £12.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Prescription medicine",
+              "kg": 0.2,
+              "litres": 0.4,
+              "dims": [
+                12,
+                8,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Wedding outfit in a garment cover",
+              "kg": 1.6,
+              "litres": 9,
+              "dims": [
+                60,
+                40,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I05",
+              "name": "Smart shoes",
+              "kg": 1.1,
+              "litres": 6,
+              "dims": [
+                32,
+                22,
+                12
+              ],
+              "replace": 7050
+            },
+            {
+              "id": "I06",
+              "name": "Summer clothes (rolled)",
+              "kg": 2.2,
+              "litres": 11,
+              "dims": [
+                35,
+                25,
+                12
+              ],
+              "replace": 12000
+            },
+            {
+              "id": "I07",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 1900
+            },
+            {
+              "id": "I08",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I09",
+              "name": "Perfume 50 ml",
+              "kg": 0.2,
+              "litres": 0.15,
+              "dims": [
+                10,
+                6,
+                4
+              ],
+              "replace": 6950,
+              "liquidMl": 50
+            },
+            {
+              "id": "I10",
+              "name": "Moisturiser 100 ml",
+              "kg": 0.15,
+              "litres": 0.12,
+              "dims": [
+                9,
+                6,
+                5
+              ],
+              "replace": 1700,
+              "liquidMl": 100
+            },
+            {
+              "id": "I11",
+              "name": "Shampoo 250 ml",
+              "kg": 0.3,
+              "litres": 0.3,
+              "dims": [
+                18,
+                7,
+                4
+              ],
+              "replace": 450,
+              "liquidMl": 250
+            },
+            {
+              "id": "I12",
+              "name": "Bottle of gin (gift, 700 ml)",
+              "kg": 1.2,
+              "litres": 1.1,
+              "dims": [
+                30,
+                9,
+                9
+              ],
+              "replace": 3050,
+              "liquidMl": 700
+            },
+            {
+              "id": "I13",
+              "name": "Wrapped presents for the family",
+              "kg": 2.2,
+              "litres": 10,
+              "dims": [
+                40,
+                30,
+                15
+              ],
+              "replace": 8550
+            },
+            {
+              "id": "I14",
+              "name": "Hairdryer",
+              "kg": 0.7,
+              "litres": 3,
+              "dims": [
+                25,
+                22,
+                9
+              ],
+              "replace": 2400
+            },
+            {
+              "id": "I15",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3150,
+              "battery": true
+            },
+            {
+              "id": "I16",
+              "name": "Travel pillow",
+              "kg": 0.3,
+              "litres": 4,
+              "dims": [
+                30,
+                28,
+                10
+              ],
+              "replace": 1450,
+              "wearable": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 3000,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 5400,
+              "freeKg": 23,
+              "overPerKg": 1200,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 5600,
+              "freeKg": 23,
+              "overPerKg": 1200,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 5400,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I05",
+            "I06",
+            "I08",
+            "I09",
+            "I10",
+            "I15"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I04",
+              "I07",
+              "I11",
+              "I12",
+              "I13",
+              "I14",
+              "I16"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 54
+        }
+      },
+      "notes": "[medium] Cheapest legal plan £54.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I08\",\"I09\",\"I10\",\"I15\"],\"cabin\":[],\"hold\":[[\"I04\",\"I07\",\"I11\",\"I12\",\"I13\",\"I14\",\"I16\"]],\"wear\":[],\"leave\":[],\"total\":54}."
+    },
+    {
+      "id": "p05",
+      "prompt": "Hiking in Norway for five days from Edinburgh. Some of this kit is expensive to replace out there.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Walking boots | 1.6 kg | 9 l | 33 × 25 × 18 | £96.00 | can be worn\nI04 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £59.00 | can be worn\nI05 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £173.00 | -\nI06 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.50 | -\nI07 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI08 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £5.50 | liquid, 50 ml container\nI09 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £8.00 | liquid, 360 ml container\nI10 | Contact lens solution 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 4 | £4.00 | liquid, 100 ml container\nI11 | Pocket multitool with a knife | 0.2 kg | 0.1 l | 11 × 4 × 3 | £45.00 | sharp\nI12 | Camera and lens | 1.3 kg | 3 l | 20 × 15 × 12 | MUST | -\nI13 | Camera tripod (folded) | 1.5 kg | 2.5 l | 62 × 10 × 10 | £76.50 | -\nI14 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.00 | spare lithium battery\nI15 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £8.50 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £26.00. Up to 55 × 40 × 20 cm, 40 litres, 8 kg.\n- Hold bags (at most 2): first £56.00, second £62.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £15.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Walking boots",
+              "kg": 1.6,
+              "litres": 9,
+              "dims": [
+                33,
+                25,
+                18
+              ],
+              "replace": 9600,
+              "wearable": true
+            },
+            {
+              "id": "I04",
+              "name": "Waterproof jacket",
+              "kg": 0.6,
+              "litres": 5,
+              "dims": [
+                30,
+                25,
+                8
+              ],
+              "replace": 5900,
+              "wearable": true
+            },
+            {
+              "id": "I05",
+              "name": "Clothes for the trip (rolled)",
+              "kg": 3.4,
+              "litres": 16,
+              "dims": [
+                40,
+                30,
+                14
+              ],
+              "replace": 17300
+            },
+            {
+              "id": "I06",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2150
+            },
+            {
+              "id": "I07",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I08",
+              "name": "Sun cream 50 ml",
+              "kg": 0.07,
+              "litres": 0.07,
+              "dims": [
+                10,
+                4,
+                3
+              ],
+              "replace": 550,
+              "liquidMl": 50
+            },
+            {
+              "id": "I09",
+              "name": "Contact lens solution 360 ml",
+              "kg": 0.4,
+              "litres": 0.4,
+              "dims": [
+                19,
+                7,
+                5
+              ],
+              "replace": 800,
+              "liquidMl": 360
+            },
+            {
+              "id": "I10",
+              "name": "Contact lens solution 100 ml",
+              "kg": 0.12,
+              "litres": 0.12,
+              "dims": [
+                12,
+                5,
+                4
+              ],
+              "replace": 400,
+              "liquidMl": 100
+            },
+            {
+              "id": "I11",
+              "name": "Pocket multitool with a knife",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                11,
+                4,
+                3
+              ],
+              "replace": 4500,
+              "sharp": true
+            },
+            {
+              "id": "I12",
+              "name": "Camera and lens",
+              "kg": 1.3,
+              "litres": 3,
+              "dims": [
+                20,
+                15,
+                12
+              ],
+              "replace": null
+            },
+            {
+              "id": "I13",
+              "name": "Camera tripod (folded)",
+              "kg": 1.5,
+              "litres": 2.5,
+              "dims": [
+                62,
+                10,
+                10
+              ],
+              "replace": 7650
+            },
+            {
+              "id": "I14",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3000,
+              "battery": true
+            },
+            {
+              "id": "I15",
+              "name": "Paperback book",
+              "kg": 0.35,
+              "litres": 0.6,
+              "dims": [
+                20,
+                13,
+                3
+              ],
+              "replace": 850
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 8,
+              "fee": 2600,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 5600,
+              "freeKg": 23,
+              "overPerKg": 1500,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 6200,
+              "freeKg": 23,
+              "overPerKg": 1500,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 5600,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I05",
+            "I07",
+            "I08",
+            "I10",
+            "I12",
+            "I14"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I03",
+              "I04",
+              "I06",
+              "I09",
+              "I11",
+              "I13",
+              "I15"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 56
+        }
+      },
+      "notes": "[medium] Cheapest legal plan £56.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I05\",\"I07\",\"I08\",\"I10\",\"I12\",\"I14\"],\"cabin\":[],\"hold\":[[\"I03\",\"I04\",\"I06\",\"I09\",\"I11\",\"I13\",\"I15\"]],\"wear\":[],\"leave\":[],\"total\":56}."
+    },
+    {
+      "id": "p06",
+      "prompt": "Christmas with family in Toronto from Heathrow. Lots of presents.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Winter coat | 1.8 kg | 14 l | 50 × 40 × 15 | £112.00 | can be worn\nI05 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £191.50 | -\nI06 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £65.50 | can be worn\nI07 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.00 | -\nI08 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI09 | Travel shampoo 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 3 | £3.00 | liquid, 100 ml container\nI10 | Wrapped presents for the family | 2.2 kg | 10 l | 40 × 30 × 15 | £74.50 | -\nI11 | Board game | 1.1 kg | 4.5 l | 30 × 30 × 7 | £34.00 | -\nI12 | Bottle of single malt (gift, 700 ml) | 1.3 kg | 1.2 l | 32 × 9 × 9 | £47.00 | liquid, 700 ml container\nI13 | Jar of homemade jam for my host (300 ml) | 0.5 kg | 0.4 l | 10 × 9 × 9 | £4.50 | liquid, 300 ml container\nI14 | E-reader | 0.2 kg | 0.2 l | 16 × 11 × 1 | £92.00 | -\nI15 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £66.50 | -\nI16 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.50 | spare lithium battery\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: included in my ticket (free). Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £65.00, second £85.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 23 kg; every kg or part of a kg over that costs £18.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Prescription medicine",
+              "kg": 0.2,
+              "litres": 0.4,
+              "dims": [
+                12,
+                8,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Winter coat",
+              "kg": 1.8,
+              "litres": 14,
+              "dims": [
+                50,
+                40,
+                15
+              ],
+              "replace": 11200,
+              "wearable": true
+            },
+            {
+              "id": "I05",
+              "name": "Clothes for the trip (rolled)",
+              "kg": 3.4,
+              "litres": 16,
+              "dims": [
+                40,
+                30,
+                14
+              ],
+              "replace": 19150
+            },
+            {
+              "id": "I06",
+              "name": "Trainers",
+              "kg": 0.9,
+              "litres": 7,
+              "dims": [
+                32,
+                22,
+                13
+              ],
+              "replace": 6550,
+              "wearable": true
+            },
+            {
+              "id": "I07",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2100
+            },
+            {
+              "id": "I08",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I09",
+              "name": "Travel shampoo 100 ml",
+              "kg": 0.12,
+              "litres": 0.12,
+              "dims": [
+                12,
+                5,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 100
+            },
+            {
+              "id": "I10",
+              "name": "Wrapped presents for the family",
+              "kg": 2.2,
+              "litres": 10,
+              "dims": [
+                40,
+                30,
+                15
+              ],
+              "replace": 7450
+            },
+            {
+              "id": "I11",
+              "name": "Board game",
+              "kg": 1.1,
+              "litres": 4.5,
+              "dims": [
+                30,
+                30,
+                7
+              ],
+              "replace": 3400
+            },
+            {
+              "id": "I12",
+              "name": "Bottle of single malt (gift, 700 ml)",
+              "kg": 1.3,
+              "litres": 1.2,
+              "dims": [
+                32,
+                9,
+                9
+              ],
+              "replace": 4700,
+              "liquidMl": 700
+            },
+            {
+              "id": "I13",
+              "name": "Jar of homemade jam for my host (300 ml)",
+              "kg": 0.5,
+              "litres": 0.4,
+              "dims": [
+                10,
+                9,
+                9
+              ],
+              "replace": 450,
+              "liquidMl": 300
+            },
+            {
+              "id": "I14",
+              "name": "E-reader",
+              "kg": 0.2,
+              "litres": 0.2,
+              "dims": [
+                16,
+                11,
+                1
+              ],
+              "replace": 9200
+            },
+            {
+              "id": "I15",
+              "name": "Laptop charger",
+              "kg": 0.4,
+              "litres": 0.6,
+              "dims": [
+                15,
+                8,
+                4
+              ],
+              "replace": 6650
+            },
+            {
+              "id": "I16",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3050,
+              "battery": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 6500,
+              "freeKg": 23,
+              "overPerKg": 1800,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 8500,
+              "freeKg": 23,
+              "overPerKg": 1800,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 5150,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I05",
+            "I08",
+            "I09",
+            "I14",
+            "I15",
+            "I16"
+          ],
+          "cabin": [
+            "I04",
+            "I06",
+            "I07",
+            "I10",
+            "I11"
+          ],
+          "hold": [],
+          "wear": [],
+          "leave": [
+            "I12",
+            "I13"
+          ],
+          "total": 51.5
+        }
+      },
+      "notes": "[medium] Cheapest legal plan £51.50 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I08\",\"I09\",\"I14\",\"I15\",\"I16\"],\"cabin\":[\"I04\",\"I06\",\"I07\",\"I10\",\"I11\"],\"hold\":[],\"wear\":[],\"leave\":[\"I12\",\"I13\"],\"total\":51.5}."
+    },
+    {
+      "id": "p07",
+      "prompt": "Ski week in Geneva from Birmingham. Ski hire is booked, but not boots or clothing.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Ski jacket and trousers | 2.6 kg | 18 l | 50 × 40 × 15 | £207.00 | can be worn\nI05 | Ski boots | 3.6 kg | 16 l | 42 × 32 × 28 | £72.50 | -\nI06 | Ski goggles and helmet | 1 kg | 9 l | 30 × 25 × 20 | £86.50 | -\nI07 | Thermals and ski socks | 1 kg | 5 l | 30 × 25 × 8 | £74.50 | -\nI08 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £188.50 | -\nI09 | Walking boots | 1.6 kg | 9 l | 33 × 25 × 18 | £84.50 | can be worn\nI10 | Winter coat | 1.8 kg | 14 l | 50 × 40 × 15 | £118.50 | can be worn\nI11 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.00 | -\nI12 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI13 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £6.00 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £9.00 | liquid, 360 ml container\nI16 | Camera and lens | 1.3 kg | 3 l | 20 × 15 × 12 | MUST | -\nI17 | Laptop | 1.6 kg | 2.5 l | 36 × 25 × 2 | MUST | -\nI18 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £67.00 | -\nI19 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £31.50 | spare lithium battery\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £8.50 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £29.00 | liquid, 700 ml container\nI22 | Board game | 1.1 kg | 4.5 l | 30 × 30 × 7 | £38.00 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £25.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £89.00, second £99.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 20 kg; every kg or part of a kg over that costs £13.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nUPDATE: the airline has just emailed that from this month the cabin bag limit is 8 kg, not 10 kg. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Prescription medicine",
+              "kg": 0.2,
+              "litres": 0.4,
+              "dims": [
+                12,
+                8,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Ski jacket and trousers",
+              "kg": 2.6,
+              "litres": 18,
+              "dims": [
+                50,
+                40,
+                15
+              ],
+              "replace": 20700,
+              "wearable": true
+            },
+            {
+              "id": "I05",
+              "name": "Ski boots",
+              "kg": 3.6,
+              "litres": 16,
+              "dims": [
+                42,
+                32,
+                28
+              ],
+              "replace": 4000
+            },
+            {
+              "id": "I06",
+              "name": "Ski goggles and helmet",
+              "kg": 1,
+              "litres": 9,
+              "dims": [
+                30,
+                25,
+                20
+              ],
+              "replace": 8650
+            },
+            {
+              "id": "I07",
+              "name": "Thermals and ski socks",
+              "kg": 1,
+              "litres": 5,
+              "dims": [
+                30,
+                25,
+                8
+              ],
+              "replace": 7450
+            },
+            {
+              "id": "I08",
+              "name": "Clothes for the trip (rolled)",
+              "kg": 3.4,
+              "litres": 16,
+              "dims": [
+                40,
+                30,
+                14
+              ],
+              "replace": 18850
+            },
+            {
+              "id": "I09",
+              "name": "Walking boots",
+              "kg": 1.6,
+              "litres": 9,
+              "dims": [
+                33,
+                25,
+                18
+              ],
+              "replace": 8450,
+              "wearable": true
+            },
+            {
+              "id": "I10",
+              "name": "Winter coat",
+              "kg": 1.8,
+              "litres": 14,
+              "dims": [
+                50,
+                40,
+                15
+              ],
+              "replace": 11850,
+              "wearable": true
+            },
+            {
+              "id": "I11",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2100
+            },
+            {
+              "id": "I12",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I13",
+              "name": "Sun cream 50 ml",
+              "kg": 0.07,
+              "litres": 0.07,
+              "dims": [
+                10,
+                4,
+                3
+              ],
+              "replace": 600,
+              "liquidMl": 50
+            },
+            {
+              "id": "I14",
+              "name": "Moisturiser 100 ml",
+              "kg": 0.15,
+              "litres": 0.12,
+              "dims": [
+                9,
+                6,
+                5
+              ],
+              "replace": 1900,
+              "liquidMl": 100
+            },
+            {
+              "id": "I15",
+              "name": "Contact lens solution 360 ml",
+              "kg": 0.4,
+              "litres": 0.4,
+              "dims": [
+                19,
+                7,
+                5
+              ],
+              "replace": 900,
+              "liquidMl": 360
+            },
+            {
+              "id": "I16",
+              "name": "Camera and lens",
+              "kg": 1.3,
+              "litres": 3,
+              "dims": [
+                20,
+                15,
+                12
+              ],
+              "replace": null
+            },
+            {
+              "id": "I17",
+              "name": "Laptop",
+              "kg": 1.6,
+              "litres": 2.5,
+              "dims": [
+                36,
+                25,
+                2
+              ],
+              "replace": null
+            },
+            {
+              "id": "I18",
+              "name": "Laptop charger",
+              "kg": 0.4,
+              "litres": 0.6,
+              "dims": [
+                15,
+                8,
+                4
+              ],
+              "replace": 6700
+            },
+            {
+              "id": "I19",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3150,
+              "battery": true
+            },
+            {
+              "id": "I20",
+              "name": "Paperback book",
+              "kg": 0.35,
+              "litres": 0.6,
+              "dims": [
+                20,
+                13,
+                3
+              ],
+              "replace": 850
+            },
+            {
+              "id": "I21",
+              "name": "Bottle of gin (gift, 700 ml)",
+              "kg": 1.2,
+              "litres": 1.1,
+              "dims": [
+                30,
+                9,
+                9
+              ],
+              "replace": 2900,
+              "liquidMl": 700
+            },
+            {
+              "id": "I22",
+              "name": "Board game",
+              "kg": 1.1,
+              "litres": 4.5,
+              "dims": [
+                30,
+                30,
+                7
+              ],
+              "replace": 3800
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 8,
+              "fee": 2500,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 8900,
+              "freeKg": 20,
+              "overPerKg": 1300,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 9900,
+              "freeKg": 20,
+              "overPerKg": 1300,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 8900,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I06",
+            "I11",
+            "I12",
+            "I13",
+            "I14",
+            "I16",
+            "I17",
+            "I18",
+            "I19",
+            "I20"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I04",
+              "I05",
+              "I07",
+              "I08",
+              "I09",
+              "I10",
+              "I15",
+              "I21",
+              "I22"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 89
+        }
+      },
+      "notes": "[hard] Cheapest legal plan £89.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I06\",\"I11\",\"I12\",\"I13\",\"I14\",\"I16\",\"I17\",\"I18\",\"I19\",\"I20\"],\"cabin\":[],\"hold\":[[\"I04\",\"I05\",\"I07\",\"I08\",\"I09\",\"I10\",\"I15\",\"I21\",\"I22\"]],\"wear\":[],\"leave\":[],\"total\":89}."
+    },
+    {
+      "id": "p08",
+      "prompt": "I’m a bridesmaid in Malaga and flying from Newcastle with the bride’s present. The dress and my medicine absolutely have to come.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Bridesmaid dress | 0.9 kg | 6 l | 45 × 35 × 6 | MUST | -\nI05 | High heels | 0.8 kg | 5 l | 26 × 20 × 10 | £73.00 | -\nI06 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £129.50 | -\nI07 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £64.00 | can be worn\nI08 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £53.00 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £18.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Shampoo 250 ml | 0.3 kg | 0.3 l | 18 × 7 × 4 | £4.50 | liquid, 250 ml container\nI12 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI13 | Perfume 50 ml | 0.2 kg | 0.15 l | 10 × 6 × 4 | £63.50 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Hair straighteners | 0.4 kg | 1 l | 30 × 5 × 4 | £39.50 | -\nI16 | Hairdryer | 0.7 kg | 3 l | 25 × 22 × 9 | £27.00 | -\nI17 | Wrapped presents for the family | 2.2 kg | 10 l | 40 × 30 × 15 | £84.00 | -\nI18 | Bottle of single malt (gift, 700 ml) | 1.3 kg | 1.2 l | 32 × 9 × 9 | £44.50 | liquid, 700 ml container\nI19 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £40.50 | -\nI20 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.00 | spare lithium battery\nI21 | Nail scissors (blades over 6 cm) | 0.05 kg | 0.05 l | 12 × 5 × 1 | £5.00 | sharp\nI22 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI23 | Snorkel and mask | 0.8 kg | 4 l | 40 × 20 × 12 | £33.50 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £28.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £74.00, second £84.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £12.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nGood news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them).\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Prescription medicine",
+              "kg": 0.2,
+              "litres": 0.4,
+              "dims": [
+                12,
+                8,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Bridesmaid dress",
+              "kg": 0.9,
+              "litres": 6,
+              "dims": [
+                45,
+                35,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I05",
+              "name": "High heels",
+              "kg": 0.8,
+              "litres": 5,
+              "dims": [
+                26,
+                20,
+                10
+              ],
+              "replace": 7300
+            },
+            {
+              "id": "I06",
+              "name": "Summer clothes (rolled)",
+              "kg": 2.2,
+              "litres": 11,
+              "dims": [
+                35,
+                25,
+                12
+              ],
+              "replace": 12950
+            },
+            {
+              "id": "I07",
+              "name": "Trainers",
+              "kg": 0.9,
+              "litres": 7,
+              "dims": [
+                32,
+                22,
+                13
+              ],
+              "replace": 6400,
+              "wearable": true
+            },
+            {
+              "id": "I08",
+              "name": "Waterproof jacket",
+              "kg": 0.6,
+              "litres": 5,
+              "dims": [
+                30,
+                25,
+                8
+              ],
+              "replace": 5300,
+              "wearable": true
+            },
+            {
+              "id": "I09",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 1850
+            },
+            {
+              "id": "I10",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I11",
+              "name": "Shampoo 250 ml",
+              "kg": 0.3,
+              "litres": 0.3,
+              "dims": [
+                18,
+                7,
+                4
+              ],
+              "replace": 450,
+              "liquidMl": 250
+            },
+            {
+              "id": "I12",
+              "name": "Sun cream 200 ml",
+              "kg": 0.25,
+              "litres": 0.25,
+              "dims": [
+                16,
+                6,
+                4
+              ],
+              "replace": 1150,
+              "liquidMl": 200
+            },
+            {
+              "id": "I13",
+              "name": "Perfume 50 ml",
+              "kg": 0.2,
+              "litres": 0.15,
+              "dims": [
+                10,
+                6,
+                4
+              ],
+              "replace": 6350,
+              "liquidMl": 50
+            },
+            {
+              "id": "I14",
+              "name": "Moisturiser 100 ml",
+              "kg": 0.15,
+              "litres": 0.12,
+              "dims": [
+                9,
+                6,
+                5
+              ],
+              "replace": 1900,
+              "liquidMl": 100
+            },
+            {
+              "id": "I15",
+              "name": "Hair straighteners",
+              "kg": 0.4,
+              "litres": 1,
+              "dims": [
+                30,
+                5,
+                4
+              ],
+              "replace": 0
+            },
+            {
+              "id": "I16",
+              "name": "Hairdryer",
+              "kg": 0.7,
+              "litres": 3,
+              "dims": [
+                25,
+                22,
+                9
+              ],
+              "replace": 0
+            },
+            {
+              "id": "I17",
+              "name": "Wrapped presents for the family",
+              "kg": 2.2,
+              "litres": 10,
+              "dims": [
+                40,
+                30,
+                15
+              ],
+              "replace": 8400
+            },
+            {
+              "id": "I18",
+              "name": "Bottle of single malt (gift, 700 ml)",
+              "kg": 1.3,
+              "litres": 1.2,
+              "dims": [
+                32,
+                9,
+                9
+              ],
+              "replace": 4450,
+              "liquidMl": 700
+            },
+            {
+              "id": "I19",
+              "name": "Bluetooth speaker",
+              "kg": 0.6,
+              "litres": 1.2,
+              "dims": [
+                20,
+                8,
+                8
+              ],
+              "replace": 4050
+            },
+            {
+              "id": "I20",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3000,
+              "battery": true
+            },
+            {
+              "id": "I21",
+              "name": "Nail scissors (blades over 6 cm)",
+              "kg": 0.05,
+              "litres": 0.05,
+              "dims": [
+                12,
+                5,
+                1
+              ],
+              "replace": 500,
+              "sharp": true
+            },
+            {
+              "id": "I22",
+              "name": "Beach towel",
+              "kg": 0.9,
+              "litres": 6,
+              "dims": [
+                40,
+                30,
+                8
+              ],
+              "replace": 1550
+            },
+            {
+              "id": "I23",
+              "name": "Snorkel and mask",
+              "kg": 0.8,
+              "litres": 4,
+              "dims": [
+                40,
+                20,
+                12
+              ],
+              "replace": 3350
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 2800,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 7400,
+              "freeKg": 15,
+              "overPerKg": 1200,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 8400,
+              "freeKg": 15,
+              "overPerKg": 1200,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 7400,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I05",
+            "I06",
+            "I10",
+            "I13",
+            "I14",
+            "I15",
+            "I19",
+            "I20"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I04",
+              "I07",
+              "I08",
+              "I09",
+              "I11",
+              "I12",
+              "I16",
+              "I17",
+              "I18",
+              "I21",
+              "I22",
+              "I23"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 74
+        }
+      },
+      "notes": "[hard] Cheapest legal plan £74.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I10\",\"I13\",\"I14\",\"I15\",\"I19\",\"I20\"],\"cabin\":[],\"hold\":[[\"I04\",\"I07\",\"I08\",\"I09\",\"I11\",\"I12\",\"I16\",\"I17\",\"I18\",\"I21\",\"I22\",\"I23\"]],\"wear\":[],\"leave\":[],\"total\":74}."
+    },
+    {
+      "id": "p09",
+      "prompt": "Taking our baby to see her grandparents in Lagos, flying from Heathrow. I’m carrying everything.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Baby clothes and nappies | 2.5 kg | 15 l | 40 × 30 × 15 | £58.00 | -\nI05 | Baby formula (powder tin) | 0.9 kg | 1.6 l | 13 × 13 × 18 | £13.00 | -\nI06 | Ready-made baby milk 200 ml | 0.22 kg | 0.2 l | 12 × 6 × 6 | £2.50 | liquid, 200 ml container\nI07 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £170.00 | -\nI08 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £55.50 | can be worn\nI09 | Winter coat | 1.8 kg | 14 l | 50 × 40 × 15 | £109.50 | can be worn\nI10 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £20.00 | -\nI11 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI12 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £17.50 | liquid, 100 ml container\nI13 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £8.50 | liquid, 360 ml container\nI14 | Wrapped presents for the family (they must come) | 2.2 kg | 10 l | 40 × 30 × 15 | MUST | -\nI15 | Board game | 1.1 kg | 4.5 l | 30 × 30 × 7 | £37.50 | -\nI16 | Bottle of single malt (gift, 700 ml) | 1.3 kg | 1.2 l | 32 × 9 × 9 | £48.00 | liquid, 700 ml container\nI17 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £29.00 | liquid, 700 ml container\nI18 | Perfume 50 ml | 0.2 kg | 0.15 l | 10 × 6 × 4 | £62.00 | liquid, 50 ml container\nI19 | E-reader | 0.2 kg | 0.2 l | 16 × 11 × 1 | £90.50 | -\nI20 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £32.00 | spare lithium battery\nI21 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £60.50 | -\nI22 | Travel pillow | 0.3 kg | 4 l | 30 × 28 × 10 | £16.00 | can be worn\nI23 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £55.00 | can be worn\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: included in my ticket (free). Up to 55 × 40 × 20 cm, 40 litres, 7 kg.\n- Hold bags (at most 2): first £70.00, second £95.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 20 kg; every kg or part of a kg over that costs £20.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Prescription medicine",
+              "kg": 0.2,
+              "litres": 0.4,
+              "dims": [
+                12,
+                8,
+                6
+              ],
+              "replace": null
+            },
+            {
+              "id": "I04",
+              "name": "Baby clothes and nappies",
+              "kg": 2.5,
+              "litres": 15,
+              "dims": [
+                40,
+                30,
+                15
+              ],
+              "replace": 5800
+            },
+            {
+              "id": "I05",
+              "name": "Baby formula (powder tin)",
+              "kg": 0.9,
+              "litres": 1.6,
+              "dims": [
+                13,
+                13,
+                18
+              ],
+              "replace": 1300
+            },
+            {
+              "id": "I06",
+              "name": "Ready-made baby milk 200 ml",
+              "kg": 0.22,
+              "litres": 0.2,
+              "dims": [
+                12,
+                6,
+                6
+              ],
+              "replace": 250,
+              "liquidMl": 200
+            },
+            {
+              "id": "I07",
+              "name": "Clothes for the trip (rolled)",
+              "kg": 3.4,
+              "litres": 16,
+              "dims": [
+                40,
+                30,
+                14
+              ],
+              "replace": 17000
+            },
+            {
+              "id": "I08",
+              "name": "Trainers",
+              "kg": 0.9,
+              "litres": 7,
+              "dims": [
+                32,
+                22,
+                13
+              ],
+              "replace": 5550,
+              "wearable": true
+            },
+            {
+              "id": "I09",
+              "name": "Winter coat",
+              "kg": 1.8,
+              "litres": 14,
+              "dims": [
+                50,
+                40,
+                15
+              ],
+              "replace": 10950,
+              "wearable": true
+            },
+            {
+              "id": "I10",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2000
+            },
+            {
+              "id": "I11",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I12",
+              "name": "Moisturiser 100 ml",
+              "kg": 0.15,
+              "litres": 0.12,
+              "dims": [
+                9,
+                6,
+                5
+              ],
+              "replace": 1750,
+              "liquidMl": 100
+            },
+            {
+              "id": "I13",
+              "name": "Contact lens solution 360 ml",
+              "kg": 0.4,
+              "litres": 0.4,
+              "dims": [
+                19,
+                7,
+                5
+              ],
+              "replace": 850,
+              "liquidMl": 360
+            },
+            {
+              "id": "I14",
+              "name": "Wrapped presents for the family (they must come)",
+              "kg": 2.2,
+              "litres": 10,
+              "dims": [
+                40,
+                30,
+                15
+              ],
+              "replace": null
+            },
+            {
+              "id": "I15",
+              "name": "Board game",
+              "kg": 1.1,
+              "litres": 4.5,
+              "dims": [
+                30,
+                30,
+                7
+              ],
+              "replace": 3750
+            },
+            {
+              "id": "I16",
+              "name": "Bottle of single malt (gift, 700 ml)",
+              "kg": 1.3,
+              "litres": 1.2,
+              "dims": [
+                32,
+                9,
+                9
+              ],
+              "replace": 4800,
+              "liquidMl": 700
+            },
+            {
+              "id": "I17",
+              "name": "Bottle of gin (gift, 700 ml)",
+              "kg": 1.2,
+              "litres": 1.1,
+              "dims": [
+                30,
+                9,
+                9
+              ],
+              "replace": 2900,
+              "liquidMl": 700
+            },
+            {
+              "id": "I18",
+              "name": "Perfume 50 ml",
+              "kg": 0.2,
+              "litres": 0.15,
+              "dims": [
+                10,
+                6,
+                4
+              ],
+              "replace": 6200,
+              "liquidMl": 50
+            },
+            {
+              "id": "I19",
+              "name": "E-reader",
+              "kg": 0.2,
+              "litres": 0.2,
+              "dims": [
+                16,
+                11,
+                1
+              ],
+              "replace": 9050
+            },
+            {
+              "id": "I20",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3200,
+              "battery": true
+            },
+            {
+              "id": "I21",
+              "name": "Laptop charger",
+              "kg": 0.4,
+              "litres": 0.6,
+              "dims": [
+                15,
+                8,
+                4
+              ],
+              "replace": 6050
+            },
+            {
+              "id": "I22",
+              "name": "Travel pillow",
+              "kg": 0.3,
+              "litres": 4,
+              "dims": [
+                30,
+                28,
+                10
+              ],
+              "replace": 1600,
+              "wearable": true
+            },
+            {
+              "id": "I23",
+              "name": "Waterproof jacket",
+              "kg": 0.6,
+              "litres": 5,
+              "dims": [
+                30,
+                25,
+                8
+              ],
+              "replace": 5500,
+              "wearable": true
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 7,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 7000,
+              "freeKg": 20,
+              "overPerKg": 2000,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 9500,
+              "freeKg": 20,
+              "overPerKg": 2000,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 7000,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I03",
+            "I08",
+            "I11",
+            "I12",
+            "I14",
+            "I18",
+            "I19",
+            "I20",
+            "I21"
+          ],
+          "cabin": [
+            "I07",
+            "I09",
+            "I15",
+            "I23"
+          ],
+          "hold": [
+            [
+              "I04",
+              "I05",
+              "I06",
+              "I10",
+              "I13",
+              "I16",
+              "I17",
+              "I22"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 70
+        }
+      },
+      "notes": "[hard] Cheapest legal plan £70.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I08\",\"I11\",\"I12\",\"I14\",\"I18\",\"I19\",\"I20\",\"I21\"],\"cabin\":[\"I07\",\"I09\",\"I15\",\"I23\"],\"hold\":[[\"I04\",\"I05\",\"I06\",\"I10\",\"I13\",\"I16\",\"I17\",\"I22\"]],\"wear\":[],\"leave\":[],\"total\":70}."
+    },
+    {
+      "id": "p10",
+      "prompt": "Glastonbury? No — a music festival near Barcelona, flying from Stansted, camping for four nights.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Festival tent | 2.4 kg | 14 l | 58 × 18 × 18 | £60.50 | -\nI04 | Sleeping bag | 1.4 kg | 12 l | 40 × 25 × 25 | £45.00 | -\nI05 | Wellies | 1.8 kg | 12 l | 40 × 30 × 12 | £24.50 | can be worn\nI06 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £57.00 | can be worn\nI07 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £110.00 | -\nI08 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £58.50 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £20.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI12 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £5.50 | liquid, 50 ml container\nI13 | Travel shampoo 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 3 | £3.50 | liquid, 100 ml container\nI14 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £36.50 | -\nI15 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.50 | spare lithium battery\nI16 | Pocket multitool with a knife | 0.2 kg | 0.1 l | 11 × 4 × 3 | £45.00 | sharp\nI17 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI18 | Camera and lens (nice to have) | 1.3 kg | 3 l | 20 × 15 × 12 | £250.00 | -\nI19 | Travel pillow | 0.3 kg | 4 l | 30 × 28 × 10 | £16.00 | can be worn\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £10.00 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £35.00 | liquid, 700 ml container\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £29.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £79.00, second £89.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £14.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nCorrection from the festival site: they now rent out tents for £25 for the whole festival, so replacing my tent there would only cost £25, not the price on my list. Nothing else changes.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "items": [
+            {
+              "id": "I01",
+              "name": "Passport",
+              "kg": 0.05,
+              "litres": 0.1,
+              "dims": [
+                13,
+                9,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I02",
+              "name": "Phone",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                15,
+                7,
+                1
+              ],
+              "replace": null
+            },
+            {
+              "id": "I03",
+              "name": "Festival tent",
+              "kg": 2.4,
+              "litres": 14,
+              "dims": [
+                58,
+                18,
+                18
+              ],
+              "replace": 2500
+            },
+            {
+              "id": "I04",
+              "name": "Sleeping bag",
+              "kg": 1.4,
+              "litres": 12,
+              "dims": [
+                40,
+                25,
+                25
+              ],
+              "replace": 4500
+            },
+            {
+              "id": "I05",
+              "name": "Wellies",
+              "kg": 1.8,
+              "litres": 12,
+              "dims": [
+                40,
+                30,
+                12
+              ],
+              "replace": 2450,
+              "wearable": true
+            },
+            {
+              "id": "I06",
+              "name": "Waterproof jacket",
+              "kg": 0.6,
+              "litres": 5,
+              "dims": [
+                30,
+                25,
+                8
+              ],
+              "replace": 5700,
+              "wearable": true
+            },
+            {
+              "id": "I07",
+              "name": "Summer clothes (rolled)",
+              "kg": 2.2,
+              "litres": 11,
+              "dims": [
+                35,
+                25,
+                12
+              ],
+              "replace": 11000
+            },
+            {
+              "id": "I08",
+              "name": "Trainers",
+              "kg": 0.9,
+              "litres": 7,
+              "dims": [
+                32,
+                22,
+                13
+              ],
+              "replace": 5850,
+              "wearable": true
+            },
+            {
+              "id": "I09",
+              "name": "Washbag (toothbrush, razor, dry items)",
+              "kg": 0.6,
+              "litres": 2.5,
+              "dims": [
+                24,
+                14,
+                10
+              ],
+              "replace": 2050
+            },
+            {
+              "id": "I10",
+              "name": "Toothpaste 75 ml",
+              "kg": 0.1,
+              "litres": 0.1,
+              "dims": [
+                16,
+                4,
+                3
+              ],
+              "replace": 300,
+              "liquidMl": 75
+            },
+            {
+              "id": "I11",
+              "name": "Sun cream 200 ml",
+              "kg": 0.25,
+              "litres": 0.25,
+              "dims": [
+                16,
+                6,
+                4
+              ],
+              "replace": 1150,
+              "liquidMl": 200
+            },
+            {
+              "id": "I12",
+              "name": "Sun cream 50 ml",
+              "kg": 0.07,
+              "litres": 0.07,
+              "dims": [
+                10,
+                4,
+                3
+              ],
+              "replace": 550,
+              "liquidMl": 50
+            },
+            {
+              "id": "I13",
+              "name": "Travel shampoo 100 ml",
+              "kg": 0.12,
+              "litres": 0.12,
+              "dims": [
+                12,
+                5,
+                3
+              ],
+              "replace": 350,
+              "liquidMl": 100
+            },
+            {
+              "id": "I14",
+              "name": "Bluetooth speaker",
+              "kg": 0.6,
+              "litres": 1.2,
+              "dims": [
+                20,
+                8,
+                8
+              ],
+              "replace": 3650
+            },
+            {
+              "id": "I15",
+              "name": "Power bank (spare lithium battery)",
+              "kg": 0.35,
+              "litres": 0.3,
+              "dims": [
+                15,
+                7,
+                3
+              ],
+              "replace": 3050,
+              "battery": true
+            },
+            {
+              "id": "I16",
+              "name": "Pocket multitool with a knife",
+              "kg": 0.2,
+              "litres": 0.1,
+              "dims": [
+                11,
+                4,
+                3
+              ],
+              "replace": 4500,
+              "sharp": true
+            },
+            {
+              "id": "I17",
+              "name": "Beach towel",
+              "kg": 0.9,
+              "litres": 6,
+              "dims": [
+                40,
+                30,
+                8
+              ],
+              "replace": 1550
+            },
+            {
+              "id": "I18",
+              "name": "Camera and lens (nice to have)",
+              "kg": 1.3,
+              "litres": 3,
+              "dims": [
+                20,
+                15,
+                12
+              ],
+              "replace": 25000
+            },
+            {
+              "id": "I19",
+              "name": "Travel pillow",
+              "kg": 0.3,
+              "litres": 4,
+              "dims": [
+                30,
+                28,
+                10
+              ],
+              "replace": 1600,
+              "wearable": true
+            },
+            {
+              "id": "I20",
+              "name": "Paperback book",
+              "kg": 0.35,
+              "litres": 0.6,
+              "dims": [
+                20,
+                13,
+                3
+              ],
+              "replace": 1000
+            },
+            {
+              "id": "I21",
+              "name": "Bottle of gin (gift, 700 ml)",
+              "kg": 1.2,
+              "litres": 1.1,
+              "dims": [
+                30,
+                9,
+                9
+              ],
+              "replace": 3500,
+              "liquidMl": 700
+            }
+          ],
+          "bags": [
+            {
+              "id": "personal",
+              "label": "Personal item (under the seat)",
+              "maxDims": [
+                40,
+                30,
+                20
+              ],
+              "litres": 20,
+              "maxKg": null,
+              "fee": 0,
+              "hold": false
+            },
+            {
+              "id": "cabin",
+              "label": "Cabin bag",
+              "maxDims": [
+                55,
+                40,
+                20
+              ],
+              "litres": 40,
+              "maxKg": 10,
+              "fee": 2900,
+              "hold": false
+            },
+            {
+              "id": "hold1",
+              "label": "Hold bag 1",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 7900,
+              "freeKg": 15,
+              "overPerKg": 1400,
+              "hold": true
+            },
+            {
+              "id": "hold2",
+              "label": "Hold bag 2",
+              "maxDims": [
+                75,
+                50,
+                30
+              ],
+              "litres": 95,
+              "maxKg": 32,
+              "fee": 8900,
+              "freeKg": 15,
+              "overPerKg": 1400,
+              "hold": true
+            }
+          ],
+          "liquidMaxMl": 100,
+          "liquidBagMl": 1000
+        },
+        "optimum": 7900,
+        "reference": {
+          "personal": [
+            "I01",
+            "I02",
+            "I06",
+            "I07",
+            "I10",
+            "I12",
+            "I13",
+            "I15",
+            "I18"
+          ],
+          "cabin": [],
+          "hold": [
+            [
+              "I03",
+              "I04",
+              "I05",
+              "I08",
+              "I09",
+              "I11",
+              "I14",
+              "I16",
+              "I17",
+              "I19",
+              "I20",
+              "I21"
+            ]
+          ],
+          "wear": [],
+          "leave": [],
+          "total": 79
+        }
+      },
+      "notes": "[hard] Cheapest legal plan £79.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I06\",\"I07\",\"I10\",\"I12\",\"I13\",\"I15\",\"I18\"],\"cabin\":[],\"hold\":[[\"I03\",\"I04\",\"I05\",\"I08\",\"I09\",\"I11\",\"I14\",\"I16\",\"I17\",\"I19\",\"I20\",\"I21\"]],\"wear\":[],\"leave\":[],\"total\":79}."
+    }
+  ]
+}

@@ -284,6 +284,17 @@ default repeat count. Bump the suite `version` when you change it.
 | False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
+**Everyday Life (`life`)**: personal admin, every answer checked by an exact solver or a plan checker (see [METHODOLOGY.md](docs/METHODOLOGY.md#7e-everyday-life-tests-checked-plans-and-exact-money)).
+
+| Test | Id | What it does |
+|---|---|---|
+| Weekend Away | `life.trip-planner` | Get to the wedding and back on the cheapest tickets: railcard hours, connections, sleepers, hotels. The plan is replayed. |
+| Splitting the Bills | `life.bill-split` | Rent by room size, people moving in and out, council tax rules: who pays whom, to the penny. |
+| Cheapest Deal | `life.tariff-chooser` | Energy tariffs and phone contracts with price caps, VAT, exit fees and April rises: every total exact. |
+| Cook for Twelve | `life.recipe-shopping` | Scale four recipes, convert cups and ounces, use the cupboard, beat the multibuys: the cheapest basket wins. |
+| Pay It Off Faster | `life.loan-overpayment` | A mortgage with overpayments, a fix that ends and early repayment charges, month by month. |
+| Pack for the Flight | `life.packing-limits` | Bags, litres, kilos, liquids, power banks and fees: the cheapest legal packing wins. |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

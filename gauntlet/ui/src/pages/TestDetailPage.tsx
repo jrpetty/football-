@@ -46,6 +46,8 @@ export function describeScorer(s: ScorerSpec | undefined): string {
         : s.answer === 'grid'
           ? 'Horizon ladder: the whole grid after FINAL ANSWER must match the unique solution (all or nothing).'
           : 'Horizon ladder: the exact whole number on the FINAL ANSWER line (any size, compared digit by digit).';
+    case 'verifier':
+      return `Checker "${s.verifier}": the JSON answer is replayed against the hidden facts of the case. Plans: a broken rule scores 0, the proven best 1, a workable but worse plan under 0.5; exact answers: share of checks right. Two answers in one reply score 0.`;
   }
 }
 

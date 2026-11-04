@@ -111,6 +111,15 @@ export function answerForViewer(test: PromptTest, c: PromptTestCase): { answer: 
     }
     case 'judge':
       return typeof e === 'string' ? { answer: short(e), note: 'A reference answer for the judges.' } : null;
+    case 'verifier': {
+      // Show the reference answer only, never the hidden world it is checked against.
+      const x = e as { reference?: unknown; optimum?: unknown } | undefined;
+      if (!x?.reference) return null;
+      return {
+        answer: short(JSON.stringify(x.reference, null, 1).replace(/\n\s*/g, ' '), 600),
+        note: typeof x.optimum === 'number' ? 'One best plan. Any other plan that keeps every rule and is just as good also scores full marks.' : 'The answer key: each part is checked on its own.',
+      };
+    }
     default:
       return null;
   }

@@ -420,7 +420,13 @@ export type ScorerSpec =
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string }
   /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
-  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' };
+  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' }
+  /**
+   * A registered checker (src/scoring/verifiers/<verifier>.ts) replays the JSON answer against the case's hidden
+   * world (case.expected = { world, optimum?, reference }): plans are checked for feasibility and against the
+   * solver's proven optimum; exact multi-part answers check by check (src/scoring/verifier.ts).
+   */
+  | { type: 'verifier'; verifier: string };
 
 /** Genre playtest + checklist judging for game artifacts (The Game Jam). */
 export interface PlaytestSpec {

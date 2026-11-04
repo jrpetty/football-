@@ -415,6 +415,82 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'document',
   },
 
+  // ─────────────── Everyday Life ───────────────
+  'life.trip-planner': {
+    hook: 'Can it get you to a wedding and back on the cheapest tickets without missing a train?',
+    whatItTests: 'Planning a real weekend trip from a timetable, railcard rules, connection times and hotel rules, at the lowest possible price.',
+    whyHard: 'The cheapest-looking options break a rule (too early for the railcard, a connection too tight, a hotel that closes its doors first), and late messages change the facts.',
+    howScored: [
+      { icon: 'route', text: 'The trip is replayed step by step against the timetable' },
+      { icon: 'zero', text: 'Any broken rule (missed connection, no bed): 0' },
+      { icon: 'trophy', text: 'Cheapest possible trip: 100; dearer ones under 50' },
+      { icon: 'dollar', text: 'A wrong quoted total halves the score' },
+    ],
+    goodScore: '100 means the cheapest workable trip every time; each of the 10 trips is worth 10 points.',
+    icon: 'route',
+  },
+  'life.bill-split': {
+    hook: 'Can it settle up a flat share to the penny when everyone moved in on different days?',
+    whatItTests: 'Splitting rent, bills, council tax and a repair fairly between flatmates and working out who pays whom.',
+    whyHard: 'Every share depends on who lived there which day, room sizes, students, opt-outs and a corrected bill, and one slip changes every balance.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: balances and transfers' },
+      { icon: 'check', text: 'Each balance and each transfer checked to the penny' },
+      { icon: 'percent', text: 'Points for every check right; extra transfers cost' },
+    ],
+    goodScore: '100 means every balance and every transfer exactly right in all 10 flats.',
+    icon: 'receipt',
+  },
+  'life.tariff-chooser': {
+    hook: 'Which energy or phone deal is really cheapest once every fee is counted?',
+    whatItTests: 'Working out the exact cost of each energy tariff or phone contract for a household and picking the cheapest.',
+    whyHard: 'Standing charges, price-cap changes, VAT left out of one quote, exit fees, April price rises and promos all change the order.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: every option’s total' },
+      { icon: 'check', text: 'Each total checked to the penny, plus the winner' },
+      { icon: 'percent', text: 'Points for every number right' },
+    ],
+    goodScore: '100 means every total and every winner right; each of the 10 households is worth 10 points.',
+    icon: 'chart',
+  },
+  'life.recipe-shopping': {
+    hook: 'Can it scale four recipes for twelve people and buy the cheapest packs?',
+    whatItTests: 'Scaling recipes, converting cups, ounces and pints, using up the cupboard and buying whole packs with multibuy offers for the least money.',
+    whyHard: 'Every unit is different, the cupboard and late changes alter the amounts, and the offers make the obvious basket not the cheapest.',
+    howScored: [
+      { icon: 'check', text: 'Short of any ingredient: 0' },
+      { icon: 'trophy', text: 'Cheapest basket that covers everything: 100' },
+      { icon: 'percent', text: 'A dearer basket scores under 50, less the dearer it is' },
+      { icon: 'dollar', text: 'A wrong till total halves the score' },
+    ],
+    goodScore: '100 means the cheapest complete basket every time; each of the 10 meals is worth 10 points.',
+    icon: 'receipt',
+  },
+  'life.loan-overpayment': {
+    hook: 'Overpay the mortgage: exactly when is it gone, and what does it save?',
+    whatItTests: 'Running a loan or mortgage month by month with overpayments, rate changes, a recalculated payment and early repayment charges.',
+    whyHard: 'Hundreds of months must be worked out to the penny, and a missed recalculation, allowance or late rate change throws every number off.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: month, payments, interest, charges' },
+      { icon: 'check', text: 'Each number checked against an exact simulation' },
+      { icon: 'percent', text: 'Points for every number right' },
+    ],
+    goodScore: '100 means every number right for all 10 loans; each number is worth an equal share of its loan.',
+    icon: 'growth',
+  },
+  'life.packing-limits': {
+    hook: 'Can it pack for a flight within every airline rule and pay the least?',
+    whatItTests: 'Choosing what goes in which bag, what to wear and what to leave behind under real size, weight, liquids, battery and sharp-item rules.',
+    whyHard: 'Each choice affects several limits at once, and the cheapest plan balances bag fees, overweight fees and the cost of replacing what stays at home.',
+    howScored: [
+      { icon: 'rules', text: 'Every airline rule checked; one broken: 0' },
+      { icon: 'trophy', text: 'Cheapest legal plan: 100; dearer ones under 50' },
+      { icon: 'dollar', text: 'A wrong quoted total halves the score' },
+    ],
+    goodScore: '100 means the cheapest legal packing every time; each of the 10 trips is worth 10 points.',
+    icon: 'ruler',
+  },
+
   // ─────────────── Honesty ───────────────
   'honesty.honesty-trap': {
     hook: 'Will it make things up about people and papers that don’t exist?',
@@ -904,6 +980,11 @@ function scorerSteps(sc: ScorerSpec): ExplainStep[] {
       return [
         { icon: 'target', text: 'One exact answer per level' },
         { icon: 'check', text: 'Checked by machine: right or wrong' },
+      ];
+    case 'verifier':
+      return [
+        { icon: 'document', text: 'Answer must be data (JSON) in a set format' },
+        { icon: 'check', text: 'A checker replays it against the hidden facts' },
       ];
   }
 }

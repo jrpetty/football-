@@ -5,6 +5,7 @@ import { compareJson } from './json-compare.ts';
 import { promptExampleArgs, runCodeTests, trivialSolutionReason, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
+import { scoreVerifier } from './verifier.ts';
 import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { checkReply, fairPlaySummary } from './integrity.ts';
@@ -410,6 +411,8 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
     case 'ladder':
       return scoreLadder(scorer.answer, expected, response);
+    case 'verifier':
+      return scoreVerifier(scorer.verifier, expected, response, input.taskText);
   }
 }
 

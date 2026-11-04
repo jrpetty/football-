@@ -125,6 +125,7 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "artifact", "format": "html", "checks": [...], "rubric": "...", "judgeWeight": 0.5 }` | – | Checks: `parses`, `contains`, `max_bytes`, `no_external_requests`, `runs_without_errors`, `has_canvas_or_svg`, `responds_to_input` |
 | `{ "type": "human", "rubric": "..." }` | – | Scored in Blind Review |
 | `{ "type": "ladder", "answer": "integer" \| "plan" \| "grid" }` | a digit string · `{ rows, cols, start, optimal, plan }` · rows of `#`/`.` | Horizon ladders (case ids `L01`…): exact big integers; sliding plans replayed (minimum = 1, longer ≤ 0.25); whole grids. See METHODOLOGY §7c |
+| `{ "type": "verifier", "verifier": "trip" }` | `{ "world": {…}, "optimum": 1234, "reference": {…} }` | A checker in `src/scoring/verifiers/<name>.ts` replays the JSON answer against the hidden world: plans (`trip`, `shopping`, `packing`) must keep every rule, optimum = 1, worse ≤ 0.5; exact answers (`settle`, `fields`) score per check. Register new checkers in `verifiers/index.ts`; their source is hashed with the test. See METHODOLOGY §7e |
 
 ### Constraint reference (`constraints` scorer)
 
