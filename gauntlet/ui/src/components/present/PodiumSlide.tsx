@@ -125,7 +125,7 @@ function PodiumBlock({ row, place, shown, drum }: { row: LeaderboardRow | undefi
   );
 }
 
-export function PodiumSlide({ rows, tests, baseline, reveal }: { rows: LeaderboardRow[]; tests: Array<{ id: string; name: string }>; baseline: number | null; reveal: number }) {
+export function PodiumSlide({ rows, tests, baseline, reveal, scoreName = 'Gauntlet Index' }: { rows: LeaderboardRow[]; tests: Array<{ id: string; name: string }>; baseline: number | null; reveal: number; scoreName?: string }) {
   const n = rows.length;
   const st = revealState(n, reveal);
   const reduced = usePrefersReducedMotion();
@@ -152,7 +152,7 @@ export function PodiumSlide({ rows, tests, baseline, reveal }: { rows: Leaderboa
         <div className="p-eyebrow">The verdict</div>
         <h1 className="p-title">{st.winner ? `${rows[0]?.label ?? ''} wins!` : 'And the winner is…'}</h1>
         <div className="p-sub">
-          Final ranking by Gauntlet Index, revealed from last place to first · {n} {n === 1 ? 'model' : 'models'}
+          Final ranking by {scoreName}, revealed from last place to first · {n} {n === 1 ? 'model' : 'models'}
         </div>
       </div>
       <div className="pd-grid">
@@ -181,7 +181,7 @@ export function PodiumSlide({ rows, tests, baseline, reveal }: { rows: Leaderboa
             <div className="pd-spot pd-intro">
               <div className="pd-intro-n tnum">{n}</div>
               <div className="pd-intro-t">{n === 1 ? 'model' : 'models'} · one winner</div>
-              <p>We count down from last place. The overall score is the Gauntlet Index: every category averaged into one number out of 100.</p>
+              <p>We count down from last place. The overall score is the {scoreName}: every category averaged into one number out of 100.</p>
             </div>
           )}
         </div>

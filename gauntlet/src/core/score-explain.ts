@@ -13,6 +13,7 @@
  * grade are left out (never counted as 0); tests that were not run don't count.
  */
 import type { CaseResult, Leaderboard, LeaderboardRow, ResultStatus } from './types.ts';
+import { scoreNameFor } from './areas.ts';
 
 export type TestStatus = 'scored' | 'not-run' | 'no-score';
 
@@ -98,6 +99,9 @@ function bandWord(score: number): string {
 export function explainScore(lb: Leaderboard, contestantId: string): ScoreExplanation | null {
   const row = lb.rows.find((r) => r.contestantId === contestantId);
   if (!row) return null;
+  // "Gauntlet Index" for the benchmark, "Business Score" / "Everyday Life Score" for those areas (src/core/areas.ts).
+  const scoreName = scoreNameFor(lb.tests);
+  const short = scoreName === 'Gauntlet Index' ? 'the Index' : `the ${scoreName}`;
   const baselineRow = lb.rows.find((r) => isBaselineRow(r));
   const isBaseline = isBaselineRow(row);
   const real = lb.rows.filter((r) => !isBaselineRow(r));
@@ -160,7 +164,7 @@ export function explainScore(lb: Leaderboard, contestantId: string): ScoreExplan
     const points: string[] = [];
     let headline: string;
     if (score === null) {
-      headline = `No ${cat.name} score: none of its tests produced a markable answer for ${row.label}, so this category is left out of the Gauntlet Index.`;
+      headline = `No ${cat.name} score: none of its tests produced a markable answer for ${row.label}, so this category is left out of the ${scoreName}.`;
     } else {
       const parts = counted.map((t) => `${t.name} ${fmt(t.score!)}`).join(', ');
       headline =
@@ -212,11 +216,11 @@ export function explainScore(lb: Leaderboard, contestantId: string): ScoreExplan
   const points: string[] = [];
   let headline: string;
   if (index === null) {
-    headline = `${row.label} has no Gauntlet Index yet: none of its answers could be marked.`;
+    headline = `${row.label} has no ${scoreName} yet: none of its answers could be marked.`;
   } else if (isBaseline) {
     headline = `This is not an AI. The Random Baseline answers every question by guessing, so ${fmt(index)} is what pure luck scores on these tests. Every real model should be well above it.`;
   } else {
-    headline = `${row.label}’s Gauntlet Index of ${fmt(index)} is the average of its ${plural(scoredCats.length, 'category score')} (${bandWord(index)} overall).`;
+    headline = `${row.label}’s ${scoreName} of ${fmt(index)} is the average of its ${plural(scoredCats.length, 'category score')} (${bandWord(index)} overall).`;
     if (scoredCats.length > 1) {
       const sorted = [...scoredCats].sort((a, b) => b.score! - a.score!);
       points.push(`Best category: ${sorted[0]!.name} (${fmt(sorted[0]!.score!)}). Weakest: ${sorted[sorted.length - 1]!.name} (${fmt(sorted[sorted.length - 1]!.score!)}).`);
@@ -224,8 +228,8 @@ export function explainScore(lb: Leaderboard, contestantId: string): ScoreExplan
     if (typeof baselineRow?.index === 'number') points.push(`Random guessing scored ${fmt(baselineRow.index)} overall, so this model is ${fmt(index - baselineRow.index)} points above pure luck.`);
   }
   const missing = categories.filter((c) => c.score === null).length;
-  if (missing > 0 && index !== null) points.push(`${plural(missing, 'category', 'categories')} had no markable answers and ${missing === 1 ? 'is' : 'are'} left out — the Index only averages what was actually scored.`);
-  if (index !== null && row.indexCi95) points.push(`Margin of luck: with these questions the Index could reasonably sit anywhere from ${fmt(row.indexCi95[0])} to ${fmt(row.indexCi95[1])}. Two models closer than that are effectively tied.`);
+  if (missing > 0 && index !== null) points.push(`${plural(missing, 'category', 'categories')} had no markable answers and ${missing === 1 ? 'is' : 'are'} left out — ${short} only averages what was actually scored.`);
+  if (index !== null && row.indexCi95) points.push(`Margin of luck: with these questions ${short} could reasonably sit anywhere from ${fmt(row.indexCi95[0])} to ${fmt(row.indexCi95[1])}. Two models closer than that are effectively tied.`);
 
   return {
     contestantId: row.contestantId,

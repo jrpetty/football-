@@ -107,9 +107,12 @@ function Week({ data, events, current }: { data: WorkWorldData; events: ReturnTy
                 .map((e) => {
                   const ci = Math.max(0, data.calendars.findIndex((c) => c.id === e.cal));
                   const now = current?.event?.id === e.id;
+                  // Short events get one line (ellipsis); every event shows its full details on hover or keyboard focus.
+                  const short = e.end - e.start <= 45;
+                  const full = `${hhmm(e.start)}–${hhmm(e.end)} ${e.title}${e.cancelled ? ' (cancelled)' : ''}`;
                   return (
-                    <div key={e.id} className={cx('ww-ev', `cal-${ci}`, e.cancelled && 'cancelled', now && 'is-now')} style={pos(e)} title={`${e.id} ${hhmm(e.start)}–${hhmm(e.end)} ${e.title}`}>
-                      <b>{hhmm(e.start)}</b> {e.title}
+                    <div key={e.id} tabIndex={0} aria-label={full} className={cx('ww-ev', `cal-${ci}`, short && 'short', e.cancelled && 'cancelled', now && 'is-now')} style={pos(e)} title={`${e.id} ${full}`}>
+                      <b>{hhmm(e.start)}</b> <span className="ww-ev-t">{e.title}</span>
                     </div>
                   );
                 })}

@@ -11,7 +11,7 @@ import { ToneMark, VizFrame, type VizMode } from './VizFrame.tsx';
 
 const show = (v: unknown) => (typeof v === 'string' ? `"${v}"` : JSON.stringify(v));
 
-export function JsonTruthDiff({ v, mode, score }: { v: ExtractionVisual; mode: VizMode; score?: number | null }) {
+export function JsonTruthDiff({ v, mode, score, violation }: { v: ExtractionVisual; mode: VizMode; score?: number | null; violation?: { rule: string } }) {
   // Start on the first wrong field, so its document line is in view.
   const [focus, setFocus] = useState<JsonLeaf | null>(() => v.leaves.find((l) => !l.passed && (l.wrongLines.length > 0 || l.sourceLine !== null)) ?? v.leaves.find((l) => !l.passed) ?? null);
   const docRef = useRef<HTMLOListElement>(null);
@@ -20,7 +20,7 @@ export function JsonTruthDiff({ v, mode, score }: { v: ExtractionVisual; mode: V
   const traps = useMemo(() => new Set(v.trapLines), [v.trapLines]);
   // Slides show the wrong fields first (and only as many as fit).
   const nodes = mode === 'slide' ? v.nodes.filter((n) => n.leaf && !n.leaf.passed).slice(0, 9) : v.nodes;
-  const tone = !v.parsedOk ? 'bad' : v.matched === v.total ? 'good' : (score ?? 0) > 0 ? 'half' : 'bad';
+  const tone = violation || !v.parsedOk ? 'bad' : v.matched === v.total ? 'good' : (score ?? 0) > 0 ? 'half' : 'bad';
   const target = focus?.sourceLine ?? focus?.wrongLines[0] ?? null;
   // On a slide, only the lines that matter: traps, and where wrong and right values sit.
   const docLines = useMemo(() => {
@@ -43,9 +43,13 @@ export function JsonTruthDiff({ v, mode, score }: { v: ExtractionVisual; mode: V
       mode={mode}
       tone={tone}
       eyebrow="Messy text → exact JSON"
-      headline={extractionHeadline(v)}
-      big={`${v.matched}/${v.total}`}
-      bigSub={v.matched === v.total ? 'fields exact' : (score ?? 0) > 0 ? 'checks right · partial credit' : 'checks right · all needed'}
+      headline={
+        violation
+          ? `Fields as answered: ${v.matched} of ${v.total} right. But the reply ${violation.rule}, which breaks the fair-play rules, so the answer scores 0.`
+          : extractionHeadline(v)
+      }
+      big={violation ? '0' : `${v.matched}/${v.total}`}
+      bigSub={violation ? 'scored 0 · fair-play violation' : v.matched === v.total ? 'fields exact' : (score ?? 0) > 0 ? 'checks right · partial credit' : 'checks right · all needed'}
       legend={[
         { tone: 'good', label: 'Field matches the key' },
         { tone: 'bad', label: 'Wrong value (struck) · key value beside it' },

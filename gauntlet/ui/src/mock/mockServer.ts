@@ -31,7 +31,7 @@ import type { RunStreamHandlers } from '../api.ts';
 import { ApiError } from '../api.ts';
 import { mockArtifactUrls } from './registry.ts';
 import { handleBusinessLadder } from './businessLadderMock.ts';
-import { AREA_RUN_ID } from './areaDemo.ts';
+import { AREA_RUN_ID, LIFE_RUN_ID } from './areaDemo.ts';
 import { BUSINESS_SUITE_ID, LIFE_SUITE_ID } from '../../../src/core/areas.ts';
 import {
   CONTESTANTS,
@@ -39,7 +39,7 @@ import {
   META,
   PROGRAMS,
   RUN_SPECS,
-  AREA_RUN_SPEC,
+  AREA_RUN_SPECS,
   SUITES,
   TESTS,
   artifactContent,
@@ -76,7 +76,7 @@ const customIds = new Set(['reasoning.calendar-puzzle']);
 const sourceOf = (id: string) => (customIds.has(id) ? 'custom' : PRIVATE_IDS.has(id) ? 'private' : 'builtin');
 const runs = new Map<string, MockRun>();
 const specs = new Map<string, RunSpec>();
-for (const s of [...RUN_SPECS, AREA_RUN_SPEC]) specs.set(s.id, s);
+for (const s of [...RUN_SPECS, ...AREA_RUN_SPECS]) specs.set(s.id, s);
 
 function getRun(id: string): MockRun {
   let run = runs.get(id);
@@ -930,14 +930,14 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     }
     case 'GET score-answers': {
       const scope = q.get('scope') ?? '';
-      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : scope === `suite:${BUSINESS_SUITE_ID}` || scope === `suite:${LIFE_SUITE_ID}` ? AREA_RUN_ID : 'run-2026-09-21-core');
+      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : scope === `suite:${BUSINESS_SUITE_ID}` ? AREA_RUN_ID : scope === `suite:${LIFE_SUITE_ID}` ? LIFE_RUN_ID : 'run-2026-09-21-core');
       return run.results.filter((r) => r.contestantId === q.get('contestant') && r.testId === q.get('test')).map((r) => toScoreAnswer(detailFor(r)));
     }
     case 'GET leaderboard': {
       const suiteId = q.get('suite') ?? 'core';
       const ids = new Set(suiteTests(suiteId));
       // Business and Everyday Life have their own results (the demo area run); the benchmark suites use the core run.
-      const core = getRun(suiteId === BUSINESS_SUITE_ID || suiteId === LIFE_SUITE_ID ? AREA_RUN_ID : 'run-2026-09-21-core');
+      const core = getRun(suiteId === BUSINESS_SUITE_ID ? AREA_RUN_ID : suiteId === LIFE_SUITE_ID ? LIFE_RUN_ID : 'run-2026-09-21-core');
       const manifest = { ...core.manifest, tests: core.manifest.tests.filter((t) => ids.has(t.id)), fingerprint: SUITES.find((s) => s.id === suiteId)?.fingerprint ?? core.manifest.fingerprint };
       return buildLeaderboard(manifest, core.results.filter((r) => ids.has(r.testId)), { kind: 'combined', suiteId }, suiteId === 'core' ? 17 : 0);
     }

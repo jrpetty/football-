@@ -59,3 +59,41 @@ export function areaOfSuite(suite: { id: string; tests?: ReadonlyArray<{ id: str
 export function areaInfo(id: AreaId): AreaInfo {
   return AREAS.find((a) => a.id === id)!;
 }
+
+/**
+ * The name of a leaderboard's headline number. Only the benchmark's is the Gauntlet Index; Business and
+ * Everyday Life results have their own score and are never called the Index. One rule for every screen
+ * (leaderboards, runs, Presenter, Studio cards, OBS overlay, exports, score explanations).
+ */
+export const SCORE_NAMES: Readonly<Record<AreaId | 'mixed', string>> = {
+  benchmark: 'Gauntlet Index',
+  business: 'Business Score',
+  life: 'Everyday Life Score',
+  // A run that mixes areas: its average is not the Index (that only ever covers benchmark tests).
+  mixed: 'Overall Score',
+};
+
+/** The area a set of tests belongs to: one area, or 'mixed'. No tests: the benchmark. */
+export function areaOfTests(tests: ReadonlyArray<{ id: string; category?: string | null }>): AreaId | 'mixed' {
+  const kinds = new Set(tests.map((t) => areaOfTest(t)));
+  if (kinds.size === 0) return 'benchmark';
+  return kinds.size === 1 ? [...kinds][0]! : 'mixed';
+}
+
+/** The headline score's name for a leaderboard, run or deck with these tests ("Gauntlet Index", "Business Score" …). */
+export function scoreNameFor(tests: ReadonlyArray<{ id: string; category?: string | null }> | null | undefined): string {
+  return SCORE_NAMES[areaOfTests(tests ?? [])];
+}
+
+/** The same, for a suite id (the Business and Everyday Life suites are named directly; anything else by its tests). */
+export function scoreNameForSuite(suite: { id: string; tests?: ReadonlyArray<{ id: string }> }): string {
+  const own = AREAS.find((a) => a.suiteId === suite.id);
+  if (own) return SCORE_NAMES[own.id];
+  const ids = (suite.tests ?? []).filter((t) => t.id !== '*');
+  return ids.length ? scoreNameFor(ids) : SCORE_NAMES.benchmark;
+}
+
+/** "a Business Score" / "an Everyday Life Score" / "a Gauntlet Index" (for sentences). */
+export function withArticle(name: string): string {
+  return `${/^[AEIOU]/i.test(name) ? 'an' : 'a'} ${name}`;
+}

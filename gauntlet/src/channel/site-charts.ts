@@ -64,7 +64,8 @@ function fmtUsdTick(v: number): string {
 }
 
 /** Score (Index) vs average cost per case, log x, with the Pareto frontier. */
-export function scatterSvg(rows: LeaderboardRow[], opts: { isBaseline: (r: LeaderboardRow) => boolean; manual: (r: LeaderboardRow) => boolean }): string {
+export function scatterSvg(rows: LeaderboardRow[], opts: { isBaseline: (r: LeaderboardRow) => boolean; manual: (r: LeaderboardRow) => boolean; scoreName?: string }): string {
+  const scoreName = esc(opts.scoreName ?? 'Gauntlet Index');
   const pts = rows
     .filter((r) => r.index !== null && !opts.isBaseline(r) && !opts.manual(r) && r.totals.cases > 0 && r.totals.costUsd > 0)
     .map((r) => ({ r, cost: r.totals.costUsd / r.totals.cases, index: r.index! }));
@@ -97,7 +98,7 @@ export function scatterSvg(rows: LeaderboardRow[], opts: { isBaseline: (r: Leade
     }
   }
   parts.push(`<text x="${(m.l + W - m.r) / 2}" y="${H - 6}" text-anchor="middle">Average cost per case (USD, log scale)</text>`);
-  parts.push(`<text x="14" y="${(m.t + H - m.b) / 2}" text-anchor="middle" transform="rotate(-90 14 ${(m.t + H - m.b) / 2})">Gauntlet Index</text>`);
+  parts.push(`<text x="14" y="${(m.t + H - m.b) / 2}" text-anchor="middle" transform="rotate(-90 14 ${(m.t + H - m.b) / 2})">${scoreName}</text>`);
   // Pareto frontier: cheapest-first, keep every model that beats all cheaper ones.
   const sorted = pts.slice().sort((a, b) => a.cost - b.cost || b.index - a.index);
   const frontier: typeof pts = [];
@@ -115,7 +116,7 @@ export function scatterSvg(rows: LeaderboardRow[], opts: { isBaseline: (r: Leade
   }
   const labels = placeLabels(pts.map((p) => ({ x: sx(p.cost), y: sy(p.index), text: p.r.label })), { w: W, h: H - m.b, top: m.t });
   labels.forEach((l) => l && parts.push(`<text class="lbl" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}">${esc(l.text)}</text>`));
-  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gauntlet Index against average cost per case">${parts.join('')}</svg></div>`;
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${scoreName} against average cost per case">${parts.join('')}</svg></div>`;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

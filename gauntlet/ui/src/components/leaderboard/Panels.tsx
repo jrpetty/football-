@@ -12,6 +12,7 @@ import { costOf } from '../charts/ScoreCostScatter.tsx';
 import { isBaseline, olympicCompare, shortCat } from './util.ts';
 import { ModelMonogram } from '../viz/ModelBadge.tsx';
 import { Jargon } from '../clarity/Jargon.tsx';
+import { useScoreName } from './scoreName.tsx';
 
 // ───────────────────────────── Medal table ─────────────────────────────
 
@@ -144,6 +145,7 @@ export function MedalTable({ lb }: { lb: Leaderboard }) {
 // ───────────────────────────── Podium ─────────────────────────────
 
 export function Podium({ rows, big }: { rows: LeaderboardRow[]; big?: boolean }) {
+  const scoreName = useScoreName();
   const top = rows
     .filter((r) => !isBaseline(r) && typeof r.index === 'number')
     .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
@@ -167,7 +169,7 @@ export function Podium({ rows, big }: { rows: LeaderboardRow[]; big?: boolean })
             <div className="podium-vendor">{r.vendor}</div>
             <div className="podium-index">{fmtIndex(r.index)}</div>
             <div className="podium-ci">
-              {r.indexCi95 ? <Jargon dev={`95% CI ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} plain={`out of 100 · likely range ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} /> : 'Gauntlet Index · out of 100'}
+              {r.indexCi95 ? <Jargon dev={`95% CI ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} plain={`out of 100 · likely range ${fmtIndex(r.indexCi95[0])}–${fmtIndex(r.indexCi95[1])}`} /> : `${scoreName} · out of 100`}
             </div>
             <div className="podium-bar" />
           </div>
@@ -180,12 +182,13 @@ export function Podium({ rows, big }: { rows: LeaderboardRow[]; big?: boolean })
 // ───────────────────────────── Score vs cost ─────────────────────────────
 
 export function ScatterPanel({ lb, tall }: { lb: Leaderboard; tall?: boolean }) {
+  const scoreName = useScoreName();
   const [mode, setMode] = useState<CostMode>('total');
   const plotted = lb.rows.filter((r) => !isBaseline(r));
   return (
     <ChartCard
       title="Score vs cost"
-      desc="Gauntlet Index against spend (log scale). The frontier links models nobody beats on both price and score."
+      desc={`${scoreName} against spend (log scale). The frontier links models nobody beats on both price and score.`}
       controls={
         <Seg
           small

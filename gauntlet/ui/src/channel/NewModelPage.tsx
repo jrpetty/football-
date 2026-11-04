@@ -14,6 +14,7 @@ import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtMs } from '../format.ts';
 import { channelApi, type NewModelHeadline, type NewModelInput, type NewModelPrepared, type NewModelSuiteCost } from './channelApi.ts';
 import './channel.css';
+import { scoreNameForSuite } from '../../../src/core/areas.ts';
 
 type Stage = 'model' | 'ping' | 'cost' | 'running' | 'done';
 const ORDER: Stage[] = ['model', 'ping', 'cost', 'running', 'done'];
@@ -339,7 +340,7 @@ export default function NewModelPage() {
                 <div className="ch-verdict-main">
                   <span className="eyebrow">{h.suiteName}</span>
                   <div className="ch-rank">{h.rank ? `#${h.rank}` : '—'}<small>{h.rank ? ` of ${h.of}` : ''}</small></div>
-                  <div className="ch-idx">{h.index?.toFixed(1) ?? '—'} <small>Gauntlet Index{h.indexCi95 ? ` (95% CI ${h.indexCi95[0].toFixed(1)}–${h.indexCi95[1].toFixed(1)})` : ''}</small></div>
+                  <div className="ch-idx">{h.index?.toFixed(1) ?? '—'} <small>{scoreNameForSuite({ id: h.suiteId })}{h.indexCi95 ? ` (95% CI ${h.indexCi95[0].toFixed(1)}–${h.indexCi95[1].toFixed(1)})` : ''}</small></div>
                   <p className="ch-headline">{h.headline}</p>
                   {h.bestCategory && (
                     <p className="muted">

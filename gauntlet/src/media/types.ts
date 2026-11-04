@@ -163,6 +163,8 @@ export interface OverlayData {
   status: string;
   /** "index" = final Gauntlet Index; "average" = mean score so far (live runs). */
   scoreKind: 'index' | 'average';
+  /** The final score's name: "Gauntlet Index", or "Business Score" / "Everyday Life Score" for those areas (src/core/areas.ts). */
+  scoreName?: string;
   standings: Array<{ id: string; label: string; color: string; score: number | null; done: number; total: number }>;
   ticker: Array<{ key: string; contestantId: string; label: string; color: string; testName: string; score: number | null; status: string; summary: string; at: string }>;
   /** Best guess at the test being played now (the UI refines it from live job.started events). */

@@ -18,6 +18,7 @@ import { TweenNumber } from '../components/viz/TweenNumber.tsx';
 import { FinishMoment } from '../components/viz/FinishMoment.tsx';
 import '../styles/live-visual.css';
 import type { FinishedCase, Leaderboard, ManualRequest, ReplayFrame, RunDetail, RunEvent, RunManifest, RunStatus, TestSummary } from '../types.ts';
+import { scoreNameFor } from '../../../src/core/areas.ts';
 
 const STREAM_MAX = 1500;
 const TICKER_MAX = 40;
@@ -578,7 +579,7 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
       ? null
       : active
         ? `Live: ${laneCount} AI ${laneCount === 1 ? 'model takes' : 'models take'} the same tests side by side. Each lane shows a model’s answer as it’s written and its average score so far, out of 100.`
-        : 'The finish line: the final standings for this run, ranked by the Gauntlet Index — each model’s average score out of 100 across every category.',
+        : `The finish line: the final standings for this run, ranked by the ${scoreNameFor(s.manifest?.tests)} — each model’s average score out of 100 across every category.`,
     active ? 'Every model gets identical prompts · scores update as each answer is graded' : 'Index whiskers = 95% bootstrap confidence interval',
   );
 
@@ -770,7 +771,7 @@ export default function LiveArenaPage({ runId }: { runId: string }) {
             .filter((r) => !isBaseline(r))
             .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
             .slice(0, 3)
-            .map((r) => ({ label: r.label, color: r.color, value: `Gauntlet Index ${fmtIndex(r.index)}` }))}
+            .map((r) => ({ label: r.label, color: r.color, value: `${scoreNameFor(m.tests)} ${fmtIndex(r.index)}` }))}
           caption={`${m.name || m.id}: ${m.tests.length} tests, ${m.contestants.length} models, identical prompts for every model.`}
           onDone={closeMoment}
         />

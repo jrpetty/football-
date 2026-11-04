@@ -17,6 +17,7 @@ import type { RunDetail } from '../types.ts';
 import { LiveRaceCard } from '../components/LiveRaceCard.tsx';
 import { LiveWatchPanel } from '../components/live/LiveWatchPanel.tsx';
 import { SummaryToolbar, TestSummaries } from '../grading/RunSummaries.tsx';
+import { scoreNameFor } from '../../../src/core/areas.ts';
 
 type Tab = 'leaderboard' | 'matrix' | 'config';
 
@@ -46,7 +47,7 @@ export default function RunDetailPage({ runId }: { runId: string }) {
         ? `Every result in this run: one row per test, one column per model. Green is mostly right, amber partly right, red mostly wrong; any cell opens the model’s actual answers.`
         : tab === 'config'
           ? 'The exact tests and model settings used in this run — each one pinned by a hash, so anyone can re-run it and get the same test.'
-          : `The results of this run: ${nModels} ${nModels === 1 ? 'model' : 'models'} on ${nTests} ${nTests === 1 ? 'test' : 'tests'}, ranked by the Gauntlet Index — the average score out of 100 across every category.`,
+          : `The results of this run: ${nModels} ${nModels === 1 ? 'model' : 'models'} on ${nTests} ${nTests === 1 ? 'test' : 'tests'}, ranked by the ${scoreNameFor(d.manifest.tests)} — the average score out of 100 across every category.`,
     tab === 'matrix' ? 'Cells: average score out of 100 over every question and try' : tab === 'config' ? `Fingerprint ${shortHash(d?.manifest.fingerprint, 12)}` : 'Scores out of 100 · thin brackets = likely range',
   );
 

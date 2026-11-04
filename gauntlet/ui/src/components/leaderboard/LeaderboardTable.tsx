@@ -1,5 +1,5 @@
 /** The ranked leaderboard table: index with CI, category heatmap, medals, economics, speed, reliability. */
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { CategoryInfo, Leaderboard, LeaderboardRow } from '../../types.ts';
 import { fmtCost, fmtIndex, fmtMs, fmtPct, fmtRate, fmtScore100 } from '../../format.ts';
@@ -7,6 +7,7 @@ import { MedalsInline, ModelCell, SortHeader, cx } from '../ui.tsx';
 import { errorRate, isBaseline, olympicCompare, shortCat } from './util.ts';
 import { ScoreHint, ScoreScale } from '../clarity/Jargon.tsx';
 import { copiedByHandText } from '../../../../src/manual-models/identity.ts';
+import { useScoreName } from './scoreName.tsx';
 
 type Group = 'categories' | 'economics' | 'speed' | 'reliability';
 type SortKey = string;
@@ -45,6 +46,9 @@ function sortValue(row: LeaderboardRow, key: SortKey): number | string | null {
       return null;
   }
 }
+
+/** Column groups folded away first when the table would not fit its width (until the viewer turns them on). */
+const FOLD_ORDER: Group[] = ['reliability', 'speed'];
 
 const DEFAULT_DIR: Record<string, 1 | -1> = { rank: 1, label: 1, cost: 1, cpp: 1, latency: 1, ttft: 1, reliability: 1 };
 
@@ -98,6 +102,7 @@ const Row = memo(function Row({
 }) {
   const baseline = isBaseline(row);
   const err = errorRate(row);
+  const scoreName = useScoreName();
   return (
     <tr className={cx(baseline && 'is-baseline', onSelect && 'clickable', selected && 'selected')} onClick={onSelect ? () => onSelect(row.contestantId) : undefined}>
       <td className="c-rank sticky-1">
@@ -126,7 +131,7 @@ const Row = memo(function Row({
           <button
             type="button"
             className="why-cell"
-            title={`Why ${fmtIndex(row.index)}? See how ${row.label}'s Gauntlet Index was worked out`}
+            title={`Why ${fmtIndex(row.index)}? See how ${row.label}'s ${scoreName} was worked out`}
             onClick={(e) => {
               e.stopPropagation();
               onExplain(row.contestantId, null);
@@ -227,7 +232,31 @@ export function LeaderboardTable({
   onExplain?: ExplainHandler;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'rank', dir: 1 });
-  const [show, setShow] = useState<Record<Group, boolean>>({ categories: true, economics: true, speed: true, reliability: true });
+  const scoreName = useScoreName();
+  // Every group is on until the viewer chooses; groups the width can't hold fold away (lowest priority first).
+  const [chosen, setChosen] = useState<Record<Group, boolean> | null>(null);
+  const [folded, setFolded] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const autoHidden = new Set<Group>(chosen ? [] : FOLD_ORDER.slice(0, folded));
+  const show: Record<Group, boolean> = chosen ?? { categories: true, economics: true, speed: !autoHidden.has('speed'), reliability: !autoHidden.has('reliability') };
+  const toggle = (g: Group) => setChosen({ ...show, [g]: !show[g] });
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el || chosen || folded >= FOLD_ORDER.length) return;
+    if (el.scrollWidth > el.clientWidth + 1) setFolded((n) => n + 1);
+  });
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let w = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      if (Math.abs(el.clientWidth - w) < 8) return;
+      w = el.clientWidth;
+      setFolded(0); // re-fit from the full set at the new width
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const cats = useMemo(() => {
     const used = new Set<string>();
@@ -285,24 +314,29 @@ export function LeaderboardTable({
         <span className="eyebrow">Columns</span>
         <div className="chip-list">
           {GROUPS.map((g) => (
-            <button key={g.id} type="button" className={cx('toggle-chip', show[g.id] && 'on')} aria-pressed={show[g.id]} onClick={() => setShow((s) => ({ ...s, [g.id]: !s[g.id] }))}>
+            <button key={g.id} type="button" className={cx('toggle-chip', show[g.id] && 'on')} aria-pressed={show[g.id]} onClick={() => toggle(g.id)}>
               {g.label}
             </button>
           ))}
         </div>
+        {autoHidden.size > 0 && (
+          <span className="lb-folded" role="note">
+            {GROUPS.filter((g) => autoHidden.has(g.id)).map((g) => g.label).join(' and ')} folded away to fit · turn {autoHidden.size === 1 ? 'it' : 'them'} on to see more
+          </span>
+        )}
         <span className="spacer" />
         <span className="muted" style={{ fontSize: '0.8rem' }}>
           Category cells: average test score out of 100 · <span className="best-key">outlined</span> = category leader{onExplain ? ' · click any score to see why' : ''}
         </span>
       </div>
       <ScoreScale className="lb-scale" what="full marks on every test in every category" baseline={lb.rows.find(isBaseline)?.index} />
-      <div className="table-wrap scroll-shadow">
+      <div className="table-wrap scroll-shadow" ref={wrapRef}>
         <table className="table lb">
           <thead>
             <tr>
-              <th className="c-rank sticky-1">{S('rank', '#', 'Rank by Gauntlet Index')}</th>
+              <th className="c-rank sticky-1">{S('rank', '#', `Rank by ${scoreName}`)}</th>
               <th className="c-model sticky-2">{S('label', 'Model')}</th>
-              <th className="c-index">{S('index', 'Gauntlet Index', 'Weighted mean of category scores × 100, with 95% bootstrap CI')}
+              <th className="c-index">{S('index', scoreName, 'Weighted mean of category scores × 100, with 95% bootstrap CI')}
                 <ScoreHint text="The overall score out of 100: the average of the category scores. 100 would mean full marks on every test. The thin bracket shows how much the score could move by chance." />
               </th>
               {show.categories &&
@@ -317,7 +351,7 @@ export function LeaderboardTable({
               {show.economics && (
                 <>
                   <th className="num">{S('cost', 'Cost', 'Total contestant spend (judge cost excluded)')}</th>
-                  <th className="num g-cpp">{S('cpp', '$/pt', 'USD per Gauntlet Index point (lower is better)')}</th>
+                  <th className="num g-cpp">{S('cpp', '$/pt', `USD per ${scoreName} point (lower is better)`)}</th>
                 </>
               )}
               {show.speed && (

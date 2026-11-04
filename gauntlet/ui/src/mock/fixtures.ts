@@ -44,7 +44,7 @@ import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizo
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
 import { AREA_TESTS, LIFE_TESTS, WORK_TESTS } from './areaTests.ts';
-import { AREA_MODELS, AREA_RUN_ID, applyAreaDemo, businessSimReplay } from './areaDemo.ts';
+import { AREA_MODELS, AREA_RUN_ID, LIFE_RUN_ID, applyAreaDemo, businessSimReplay } from './areaDemo.ts';
 import businessSuiteJson from '../../../suites/business.json';
 import lifeSuiteJson from '../../../suites/everyday-life.json';
 
@@ -1446,6 +1446,9 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   if (vis) return vis;
   const r = rngFrom(`detail|${lite.key}`);
   const score = lite.score;
+  // A fair-play violation scores 0, but its fields are still shown as answered (demo: the score before the violation).
+  const cheat = lite.scoreDetail?.integrity?.verdict === 'cheating';
+  const answered = cheat && typeof lite.scoreDetail.answeredScore === 'number' ? lite.scoreDetail.answeredScore : score;
   const transcript: TranscriptEntry[] = [];
   const usage = (inT: number, outT: number) => ({ inputTokens: inT, outputTokens: outT, reasoningTokens: Math.round(outT * (PERSONA[lite.contestantId]?.thinking ?? 0)), cachedInputTokens: 0, cacheWriteTokens: 0 });
   const m = lite.metrics;
@@ -1456,7 +1459,7 @@ export function detailFor(lite: CaseResultLite): CaseResult {
     turns.forEach((turn, i) => {
       messages.push({ role: 'user', content: turn, ...mockTurnImages(t, lite.caseId, i) });
       const last = i === turns.length - 1;
-      const resp = last ? responseFor(t, lite.caseId, score) : 'Understood — noted. Continue.';
+      const resp = last ? `${responseFor(t, lite.caseId, answered)}${cheat && lite.scoreDetail.integrity ? `\n\n${lite.scoreDetail.integrity.excerpt.replace(/^… /, '')}` : ''}` : 'Understood — noted. Continue.';
       transcript.push({
         label: turns.length > 1 ? `turn ${i + 1}` : 'answer',
         system: t.system,
@@ -1532,7 +1535,7 @@ export function detailFor(lite: CaseResultLite): CaseResult {
       detail.items = Array.from({ length: 5 }, (_, i) => ({ label: `unit test ${i + 1}`, passed: i < Math.round((score ?? 0) * 5), detail: i >= Math.round((score ?? 0) * 5) ? 'expected [[1,5]] but got [[1,4],[4,5]]' : undefined }));
     } else if ((t.category === 'work' || t.category === 'life') && c?.expected && typeof c.expected === 'object') {
       detail.expected = c.expected;
-      detail.items = areaAnswer(t, lite.caseId, score).items;
+      detail.items = areaAnswer(t, lite.caseId, answered).items;
     } else if (type === 'json') {
       detail.expected = c?.expected;
       detail.items = ['vendor', 'date', 'total', 'currency'].map((f, i) => ({ label: f, passed: (score ?? 0) > i * 0.24, detail: (score ?? 0) > i * 0.24 ? undefined : 'mismatch' }));
@@ -1601,17 +1604,31 @@ SUITES.push(
   { ...(businessSuiteJson as unknown as Omit<SuiteView, 'fingerprint' | 'testCount'>), fingerprint: fakeHash('suite:business'), testCount: businessSuiteJson.tests.length },
   { ...(lifeSuiteJson as unknown as Omit<SuiteView, 'fingerprint' | 'testCount'>), fingerprint: fakeHash('suite:everyday-life'), testCount: lifeSuiteJson.tests.length },
 );
-/** The demo run behind the Business and Everyday Life pages (served by the mock server, not in RUN_SPECS). */
-export const AREA_RUN_SPEC: RunSpec = {
-  id: AREA_RUN_ID,
-  name: 'Business Ladder + Everyday Life · demo',
-  status: 'completed',
-  contestantIds: AREA_MODELS,
-  testIds: [...WORK_TESTS, ...LIFE_TESTS].map((t) => t.id),
-  repeats: 1,
-  createdAt: '2026-10-02T08:30:00Z',
-  notes: 'Demo data: invented scores for the invented demo models. Not real results.',
-};
+/** The demo runs behind the Business and Everyday Life pages (served by the mock server, not in RUN_SPECS). */
+export const AREA_RUN_SPECS: RunSpec[] = [
+  {
+    id: AREA_RUN_ID,
+    name: 'Business Ladder · demo',
+    status: 'completed',
+    contestantIds: AREA_MODELS,
+    testIds: WORK_TESTS.map((t) => t.id),
+    repeats: 1,
+    suiteId: 'business',
+    createdAt: '2026-10-02T08:30:00Z',
+    notes: 'Demo data: invented scores for the invented demo models. Not real results.',
+  },
+  {
+    id: LIFE_RUN_ID,
+    name: 'Everyday Life · demo',
+    status: 'completed',
+    contestantIds: AREA_MODELS,
+    testIds: LIFE_TESTS.map((t) => t.id),
+    repeats: 1,
+    suiteId: 'everyday-life',
+    createdAt: '2026-10-03T09:10:00Z',
+    notes: 'Demo data: invented scores for the invented demo models. Not real results.',
+  },
+];
 
 /**
  * A demo answer for a Business or Everyday Life case, and the per-field marks that go with it: the checked

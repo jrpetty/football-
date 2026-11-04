@@ -6,6 +6,16 @@
  */
 import type { ContestantSnapshot } from '../core/types.ts';
 import type { StudioInput, StudioResult, StudioTestInfo } from './types.ts';
+import { SCORE_NAMES, scoreNameFor } from '../core/areas.ts';
+
+/**
+ * The run's headline score in words: `name` ("Gauntlet Index", "Business Score" …) and `short` for tight
+ * phrases ("Index points" for the benchmark, "Business Score points" otherwise). One rule: src/core/areas.ts.
+ */
+export function scoreWords(ctx: { input: StudioInput }): { name: string; short: string } {
+  const name = scoreNameFor(ctx.input.manifest.tests);
+  return { name, short: name === SCORE_NAMES.benchmark ? 'Index' : name };
+}
 
 // ─────────────────────────────── Formatters ───────────────────────────────
 

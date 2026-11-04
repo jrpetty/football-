@@ -195,7 +195,7 @@ function Scoreboard({ d, flash }: { d: OverlayData; flash: string | null }) {
     <div className="ov-panel ov-scoreboard">
       <div className="ov-head">
         <Brand live={d.status === 'running'} />
-        <span className="ov-sub">{d.scoreKind === 'index' ? 'Gauntlet Index' : 'Average score so far'}</span>
+        <span className="ov-sub">{d.scoreKind === 'index' ? d.scoreName ?? 'Gauntlet Index' : 'Average score so far'}</span>
       </div>
       <ol className="ov-rows">
         {rows.map((r, i) => (

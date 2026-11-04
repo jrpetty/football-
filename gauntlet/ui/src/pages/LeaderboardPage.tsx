@@ -8,7 +8,7 @@ import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { fmtDate, fmtInt } from '../format.ts';
 import type { Leaderboard, RunListItem, SuiteView } from '../types.ts';
-import { AREAS, areaInfo, areaOfSuite, type AreaId } from '../../../src/core/areas.ts';
+import { AREAS, areaInfo, areaOfSuite, scoreNameFor, type AreaId } from '../../../src/core/areas.ts';
 
 /**
  * `area` (Business results, #/business/results) pins the page to that area's suite. Otherwise the area follows
@@ -49,9 +49,9 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
   const nModels = (lb?.rows ?? []).length;
   useViewerCaption(
     lb && nModels
-      ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: the Gauntlet Index is each model’s average score out of 100 across every category. Thin lines show uncertainty — overlaps are too close to call.`
+      ? `The overall ranking${scope === 'run' ? ' for this run' : ''}: the ${scoreNameFor(lb.tests)} is each model’s average score out of 100 across every category. Thin lines show uncertainty — overlaps are too close to call.`
       : 'The Gauntlet leaderboard: AI models ranked by their average score across every category of tests.',
-    'Index = average of the category scores, out of 100 · thin brackets = likely range',
+    `${lb ? scoreNameFor(lb.tests) : 'Index'} = average of the category scores, out of 100 · thin brackets = likely range`,
   );
 
   return (
