@@ -87,8 +87,8 @@
       "category": "math",
       "basedOn": "math.olympiad",
       "passMark": 1,
-      "grows": "Length and depth of a multi-step exact problem: bigger Markov chains, more counting constraints, longer exact fraction chains.",
-      "planned": true
+      "grows": "Board 10→64 squares, 0→6 snake loops, more ladders and traps; exact answer 3→30-digit denominator.",
+      "rungs": ["10 squares · 3-digit answer", "12 squares · 4-digit", "14 squares · 1 snake · 5-digit", "18 squares · 1 snake · 7-digit", "22 squares · 2 snakes · 11-digit", "28 squares · 2 snakes · 14-digit", "34 squares · 3 snakes · 15-digit", "42 squares · 4 snakes · 18-digit", "52 squares · 5 snakes · 27-digit", "64 squares · 6 snakes · 30-digit"]
     },
     {
       "id": "coding.engineering-ladder",
@@ -97,8 +97,8 @@
       "category": "coding",
       "basedOn": "coding.frontier",
       "passMark": 1,
-      "grows": "Spec size, edge cases and input size: at the top, large hidden inputs with time limits need the efficient algorithm.",
-      "planned": true
+      "grows": "Spec 3→21 commands, store 100→200,000 keys; large hidden inputs need the efficient design.",
+      "rungs": ["SET/GET/DEL · 200 commands", "+counts, bulk load · 2k keys", "+big-integer INCR · 5k keys", "+nested transactions · 10k keys", "+ordered scans · 20k keys", "+expiry clock · 40k keys", "+rename · 60k keys", "+snapshots · 100k keys", "+bulk delete · 150k keys", "+range counts · 200k keys"]
     },
 
     {
@@ -108,8 +108,8 @@
       "category": "work",
       "basedOn": "work.invoice-matching",
       "passMark": 0.9,
-      "grows": "Volume and stacked rules: a handful of invoices under two rule families, up to the full payment policy at maximum volume.",
-      "rungs": ["5 documents · 2 rules", "8 documents · 4 rules", "14 documents · 7 rules", "24 documents · 10 rules", "46 documents · full policy", "65 documents · chains", "80 documents · chains", "96 documents · chains", "113 documents · chains", "130 documents · chains"]
+      "grows": "Dependency depth: from a handful of invoices under two rules to ten pools of eight documents each drawing on what the ones before them left, under the full payment policy.",
+      "rungs": ["5 documents · 2 rules", "1 pool of 3 · 4 rules", "2 pools of 4 · 7 rules", "3 pools of 5 · 10 rules", "4 pools of 5 · full policy", "5 pools of 6", "6 pools of 6", "7 pools of 7", "8 pools of 8", "10 pools of 8"]
     },
     {
       "id": "work.payroll-ladder",
@@ -118,8 +118,8 @@
       "category": "work",
       "basedOn": "work.payroll-check",
       "passMark": 0.9,
-      "grows": "Payslips and pay rules: a few payslips with two rule families, up to a whole payroll with every rule interacting.",
-      "rungs": ["4 staff · 2 rules", "6 staff · 4 rules", "9 staff · 6 rules", "12 staff · 8 rules", "20 staff · full rates", "32 staff · 30% combined", "46 staff · combined", "64 staff · combined", "88 staff · combined", "120 staff · 80% combined"]
+      "grows": "Months that rest on each other: one month's payslips, up to six months of a payroll on the cumulative basis with code changes, P45s, directors and linked sickness.",
+      "rungs": ["1 month · 4 staff", "1 month · 6 staff", "2 months · 6 staff", "3 months · 8 staff", "3 months · full rules", "4 months · 12 staff", "5 months · 14 staff", "5 months · 16 staff", "6 months · 18 staff", "6 months · 22 staff"]
     },
     {
       "id": "work.expenses-ladder",
@@ -128,8 +128,8 @@
       "category": "work",
       "basedOn": "work.expense-audit",
       "passMark": 0.9,
-      "grows": "Claims and policy clauses: a few claims under two clauses, up to a month of claims under the full policy.",
-      "rungs": ["8 lines · 2 rules", "21 lines · 4 rules", "28 lines · 7 rules", "57 lines · 10 rules", "168 lines · full policy", "262 lines", "497 lines", "614 lines", "772 lines", "931 lines"]
+      "grows": "Months that rest on each other: one batch under two rules, up to six monthly batches for one team with mileage, duplicates, late lines and cash advances carried through.",
+      "rungs": ["1 month · 2 rules", "1 month · 4 rules", "2 months · 8 rules", "2 months · 11 rules", "3 months · full policy", "3 months · 5 people", "4 months · 5 people", "4 months · 6 people", "5 months · 6 people", "6 months · 7 people"]
     },
     {
       "id": "work.reconciliation-ladder",
@@ -138,8 +138,8 @@
       "category": "work",
       "basedOn": "work.bank-reconciliation",
       "passMark": 0.9,
-      "grows": "Bank lines and matching rules: a short statement with exact matches, up to a long statement with splits, fees and timing differences.",
-      "rungs": ["28 lines · 1 rule", "49 lines · 3 rules", "73 lines · 5 rules", "95 lines · 8 rules", "275 lines · all rules", "455 lines", "628 lines", "831 lines", "1,075 lines", "1,416 lines"]
+      "grows": "Months that rest on each other: one month's statement, up to six unreconciled months where items clear late and every balance carries all earlier corrections.",
+      "rungs": ["1 month · 1 rule", "1 month · 3 rules", "2 months · 5 rules", "2 months · 8 rules", "3 months · all rules", "3 months · denser", "4 months", "4 months · denser", "5 months", "6 months"]
     },
     {
       "id": "work.crm-ladder",
@@ -148,8 +148,8 @@
       "category": "work",
       "basedOn": "work.crm-dedupe",
       "passMark": 0.9,
-      "grows": "Records and duplicate rules: a short list with obvious duplicates, up to a large list where every matching rule interacts.",
-      "planned": true
+      "grows": "Records merged one pair at a time: 24 records to about 950, with link records, refused merges and survivorship precedence.",
+      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "79 records · 4 refused merges", "131 records · 11 refused merges", "234 records · 15 refused merges", "349 records · 37 refused merges", "492 records · 56 refused merges", "620 records · 73 refused merges", "774 records · 99 refused merges", "949 records · 106 refused merges"]
     },
     {
       "id": "work.contract-ladder",
@@ -158,8 +158,8 @@
       "category": "work",
       "basedOn": "work.contract-redline",
       "passMark": 0.9,
-      "grows": "Contract length and kinds of change: a short clause list with plain edits, up to a long contract with moved, split and reworded clauses.",
-      "planned": true
+      "grows": "Draft length and settlement: 3 accepted changes to 114 changes settled by about 100 replies, keyed by the agreed numbering.",
+      "rungs": ["3 changes · all accepted", "7 changes · 2 replies", "12 changes · 12 replies", "18 changes · 20 replies", "33 changes · 35 replies", "45 changes · 46 replies", "58 changes · 58 replies", "78 changes · 78 replies", "93 changes · 92 replies", "114 changes · 106 replies"]
     },
     {
       "id": "work.sql-ladder",
@@ -168,8 +168,8 @@
       "category": "work",
       "basedOn": "work.sql-questions",
       "passMark": 0.9,
-      "grows": "Tables and query depth: one table and a filter, up to many joined tables with grouping, windows and edge cases (checked on hidden variant databases).",
-      "planned": true
+      "grows": "Query depth: semantics one query must compose, from a filter to state carried row by row (as-of balances, a budget run).",
+      "rungs": ["1 rule · a count", "2 rules · dedup, UK week", "4 rules · ranks with ties", "5 rules · reversal chains", "6 rules · sessions", "7 rules · as-known balances", "8 rules · session orders", "10 rules · budget run", "13 rules · one use each", "16 rules · partial budgets"]
     },
     {
       "id": "work.support-ladder",
@@ -178,8 +178,8 @@
       "category": "work",
       "basedOn": "work.support-refunds",
       "passMark": 0.9,
-      "grows": "Tickets and policy rules: a few tickets under two refund rules, up to a full queue under the whole support policy.",
-      "planned": true
+      "grows": "Tickets and history: 4 independent returns to 120 tickets from 36 accounts whose limits are used up in date order.",
+      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 3 accounts", "15 tickets · 6 accounts", "29 tickets · 9 accounts", "40 tickets · 14 accounts", "54 tickets · 16 accounts", "70 tickets · 22 accounts", "90 tickets · 25 accounts", "120 tickets · 36 accounts"]
     }
   ]
 }

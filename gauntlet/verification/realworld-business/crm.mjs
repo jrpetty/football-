@@ -144,6 +144,9 @@ export function generate(spec) {
   const records = [];
   let pid = 0;
   const usedPhones = new Set();
+  // Ladder knob (verification/ladders-data-support/): every generated email address is unique, so two different
+  // people can never share one by chance (only the planted shared mailboxes are shared).
+  const usedEmails = spec.unique ? new Set() : null;
   const mobile = () => {
     for (;;) {
       const p = `07${r.int(100, 999)}${String(r.int(0, 999999)).padStart(6, '0')}`;
@@ -164,11 +167,18 @@ export function generate(spec) {
   };
   const address = () => ({ address: `${r.int(1, 240)} ${r.pick(STREETS)}`, postcode: `${r.pick(DISTRICTS)} ${r.int(1, 9)}${String.fromCharCode(65 + r.int(0, 25))}${String.fromCharCode(65 + r.int(0, 25))}` });
   const dob = () => iso(D(r.int(1950, 2005), r.int(1, 12), r.int(1, 28)));
-  const emailFor = (first, last, employer) => {
+  const emailOnce = (first, last) => {
     const dom = r.pick(['gmail.com', 'outlook.com', 'btinternet.com', 'yahoo.co.uk', 'hotmail.co.uk', 'icloud.com', 'sky.com']);
     const l = last.toLowerCase().replace(/[^a-z]/g, '');
     const f = first.toLowerCase();
     return r.pick([`${f}.${l}@${dom}`, `${f[0]}${l}${r.int(1, 99)}@${dom}`, `${f}${l}@${dom}`, `${l}.${f}${r.int(70, 99)}@${dom}`]);
+  };
+  const emailFor = (first, last) => {
+    if (!usedEmails) return emailOnce(first, last);
+    for (;;) {
+      const e = emailOnce(first, last);
+      if (!usedEmails.has(e)) return usedEmails.add(e), e;
+    }
   };
   const activity = () => iso(addDays(D(2026, 10, 31), -r.int(0, 900)));
   const newPerson = (overrides = {}) => {
@@ -240,14 +250,36 @@ export function generate(spec) {
     if (!last.phone || p.records.length < 2) return variants.moved(p);
     return rec(p, 'B', { first: nickOf(last.first) ?? last.first, last: last.last, phone: fmtPhone(phoneNorm(last.phone), r.int(0, 3)), email: '', dob: '', address: '', postcode: '' });
   };
-  const easyOps = ['copy', 'nickname', 'phone44', 'emailCase', 'mac'];
-  const hardOps = ['typo', 'swapped', 'moved', 'married', 'nickname', 'mac', 'chain'];
+  // A record that links ONLY to the person's latest record, by a different rule from the one that linked that
+  // record (same phone, same email or same address), with fresh values everywhere else: repeated, it builds long
+  // chains whose two ends share nothing (ladder levels only).
+  variants.hop = (p) => {
+    const last = p.records[p.records.length - 1];
+    const modes = [];
+    if (last.phone) modes.push('phone');
+    if (last.email && !isShared(last.email)) modes.push('email');
+    if (last.address && last.postcode) modes.push('address');
+    const pool = modes.filter((m) => m !== last.hop);
+    if (!pool.length) return variants.moved(p);
+    const mode = r.pick(pool);
+    const f = { first: nickOf(last.first) ?? last.first, last: last.last, dob: '', email: emailFor(p.first, p.last), phone: fmtPhone(mobile(), r.int(0, 3)), ...address() };
+    if (mode === 'phone') f.phone = fmtPhone(phoneNorm(last.phone), r.int(0, 3));
+    if (mode === 'email') f.email = r.chance(0.5) ? last.email.toUpperCase() : last.email;
+    if (mode === 'address') Object.assign(f, { address: last.address, postcode: last.postcode });
+    const x = rec(p, r.pick(['M', 'B']), f);
+    x.hop = mode;
+    return x;
+  };
+  const easyOps = spec.easyOps ?? ['copy', 'nickname', 'phone44', 'emailCase', 'mac'];
+  const hardOps = spec.hardOps ?? ['typo', 'swapped', 'moved', 'married', 'nickname', 'mac', 'chain'];
+  const plants = (d, dflt) => (spec.distract ? spec.distract.includes(d) : dflt);
 
   // Planted distractors first.
   const distractors = [];
   const notes = [];
-  const nDistract = Math.max(1, Math.min(4, Math.round(spec.n / 80)));
+  const nDistract = spec.nDistract ?? Math.max(1, Math.min(4, Math.round(spec.n / 80)));
   for (let k = 0; k < nDistract; k++) {
+    if (plants('shared-mailbox', true)) {
     // Shared office mailbox: two different people at one firm.
     const firm = r.pick(['Calder Engineering Ltd', 'Pennine Print Works', 'Holme Logistics']);
     const box = `${r.pick(SHARED)}@${firm.toLowerCase().split(' ')[0]}-${firm.toLowerCase().split(' ')[1]}.co.uk`;
@@ -256,13 +288,16 @@ export function generate(spec) {
     rec(a, 'B', { dob: '' });
     rec(b, 'B', { dob: '' });
     distractors.push('shared-mailbox');
+    }
+    if (plants('same-name', true)) {
     // Same name, different person at another company.
     const c = newPerson({ employer: r.pick(['Kirklees Council', 'Colne Valley Mills']) });
     const d = newPerson({ first: c.first, last: c.last, employer: 'Huddersfield Royal Infirmary' });
     rec(c, 'M');
     rec(d, 'B', { dob: '' });
     distractors.push('same-name');
-    if (spec.tricky >= 0.4) {
+    }
+    if (plants('same-name-same-dob', spec.tricky >= 0.4)) {
       // Two different people with the same name and date of birth: R3 would merge them, but staff checked.
       const e1 = newPerson();
       const e2 = newPerson({ first: e1.first, last: e1.last, dob: e1.dob });
@@ -271,7 +306,7 @@ export function generate(spec) {
       notes.push([r2, r1]);
       distractors.push('same-name-same-dob');
     }
-    if (spec.tricky >= 0.3) {
+    if (plants('father-son', spec.tricky >= 0.3)) {
       // Father and son at one address with one landline; both have their DOB in MemberHub.
       const home = address();
       const phone = landline();
@@ -289,14 +324,14 @@ export function generate(spec) {
     const p = newPerson();
     rec(p, r.chance(0.6) ? 'M' : 'B');
     if (r.chance(spec.dupShare)) {
-      const extra = r.chance(0.2) ? 2 : 1;
+      const extra = spec.extras ? r.pick(spec.extras) : r.chance(0.2) ? 2 : 1;
       for (let k = 0; k < extra && records.length < spec.n; k++) {
         const op = r.chance(spec.tricky) ? r.pick(k > 0 ? hardOps : hardOps.filter((o) => o !== 'chain')) : r.pick(easyOps);
         variants[op](p);
       }
       // Mail returned "gone away" on a group's most recent record: it can no longer be the master.
-      if (p.records.length > 1 && r.chance(spec.tricky * 0.35)) p.records.slice().sort((a, b) => b.activity.localeCompare(a.activity))[0].status = 'gone away';
-    } else if (r.chance(0.03)) p.records[0].status = 'gone away';
+      if (p.records.length > 1 && r.chance(spec.goneAway ?? spec.tricky * 0.35)) p.records.slice().sort((a, b) => b.activity.localeCompare(a.activity))[0].status = 'gone away';
+    } else if (r.chance(spec.goneAwaySingle ?? 0.03)) p.records[0].status = 'gone away';
   }
   // Ids: MemberHub M-1xxxx, BookIt B-2xxxx, then shuffle the export order.
   const shuffled = r.shuffle(records);
@@ -305,7 +340,7 @@ export function generate(spec) {
   for (const x of shuffled) x.id = x.sys === 'M' ? `M-${(m += r.int(1, 9))}` : `B-${(b += r.int(1, 9))}`;
   shuffled.sort((x, y) => x.id.localeCompare(y.id));
   for (const [x, other] of notes) x.note = `checked by phone ${r.pick(['3 Sep', '17 Jun', '22 Oct', '9 Feb'])}: not the same person as ${other.id}`;
-  for (const x of shuffled) if (!x.note && r.chance(0.04)) x.note = r.pick(['prefers email', 'VIP - corporate scheme', 'asked for paper invoices', 'photo ID seen']);
+  for (const x of shuffled) if (!x.note && r.chance(spec.noteNoise ?? 0.04)) x.note = r.pick(['prefers email', 'VIP - corporate scheme', 'asked for paper invoices', 'photo ID seen']);
   return { spec, records: shuffled, people, distractors };
 }
 
@@ -368,13 +403,15 @@ export function selfCheck(world, sol) {
     const top = recs.map((x) => x.activity).sort().pop();
     if (recs.filter((x) => x.activity === top).length > 1) bad.push(`activity tie in ${c.join(',')}`);
   }
-  for (const d of ['shared-mailbox', 'same-name']) if (!world.distractors.includes(d)) bad.push(`missing ${d}`);
-  if (world.spec.tier !== 'easy') {
-    const same = (f) => JSON.stringify(flawedSolve(world, f)) === JSON.stringify(sol);
-    if (same({ noGoneAway: true })) bad.push('gone-away rule changes nothing');
-    if (same({ goldenFromMaster: true })) bad.push('survivorship rule changes nothing');
-    if (world.distractors.includes('same-name-same-dob') && same({ noNotes: true })) bad.push('notes change nothing');
-  }
+  for (const d of world.spec.distract ?? ['shared-mailbox', 'same-name']) if (!world.distractors.includes(d)) bad.push(`missing ${d}`);
+  // Which rules must change the answer when ignored (ladder levels say so explicitly; the test's own cases by tier).
+  const must = world.spec.mustMatter ?? (world.spec.tier !== 'easy' ? ['goneAway', 'survivorship', 'notes'] : []);
+  const same = (f) => JSON.stringify(flawedSolve(world, f)) === JSON.stringify(sol);
+  if (must.includes('goneAway') && same({ noGoneAway: true })) bad.push('gone-away rule changes nothing');
+  if (must.includes('survivorship') && same({ goldenFromMaster: true })) bad.push('survivorship rule changes nothing');
+  if (must.includes('notes') && world.distractors.includes('same-name-same-dob') && same({ noNotes: true })) bad.push('notes change nothing');
+  if (must.includes('names') && same({ noNick: true, noMac: true, noTypo: true })) bad.push('name rules change nothing');
+  if (must.includes('sharedBlock') && same({ noBlock: true, sharedOk: true })) bad.push('block and shared-mailbox rules change nothing');
   return bad;
 }
 

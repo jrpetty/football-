@@ -438,8 +438,8 @@ export type ScorerSpec =
     }
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string }
-  /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
-  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' }
+  /** Ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, a whole grid, or an exact fraction p/q. */
+  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' | 'fraction' }
   /**
    * A registered checker (src/scoring/verifiers/<verifier>.ts) replays the JSON answer against the case's hidden
    * world (case.expected = { world, optimum?, reference }): plans are checked for feasibility and against the

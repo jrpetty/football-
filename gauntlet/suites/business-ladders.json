@@ -9,9 +9,9 @@
     { "id": "work.payroll-ladder" },
     { "id": "work.expenses-ladder" },
     { "id": "work.reconciliation-ladder" },
-    { "id": "work.crm-ladder", "planned": true },
-    { "id": "work.contract-ladder", "planned": true },
-    { "id": "work.sql-ladder", "planned": true },
-    { "id": "work.support-ladder", "planned": true }
+    { "id": "work.crm-ladder" },
+    { "id": "work.contract-ladder" },
+    { "id": "work.sql-ladder" },
+    { "id": "work.support-ladder" }
   ]
 }

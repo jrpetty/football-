@@ -254,6 +254,124 @@ export function generate(spec) {
     return cands.length ? r.pick(cands) : null;
   }
 
+  /**
+   * (Ladder) A pool: one PO line delivered in parts and billed by `n` documents in turn, each drawing on what is left
+   * of the received quantity. Between the approved invoices sit documents held for their own reason (price, VAT, bank
+   * details: they use up nothing), duplicates (nothing), an invoice for more than is left (held for quantity) and
+   * credit notes that give quantity back. The outcome of every document and the quantity left at the end are planted
+   * by a simulation of the policy written here, independently of solve(); selfCheck() and the ladder compare them.
+   */
+  function plantPool(n) {
+    const fams = new Set(spec.families ?? FAMILIES);
+    const sup = pickSupplier((s) => s.terms.kind === 'net' && s.layout !== 'scan' && s.products.some((p) => p.hi >= 8));
+    const prod = r.pick(sup.products.filter((p) => p.hi >= 8));
+    poNo += r.int(1, 9);
+    const st = site();
+    const Q = Math.max(prod.hi, 24) * 2 + r.int(0, 12);
+    const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(44, 52)), raisedBy: st.lead, site: st, lines: [{ code: prod.code, desc: prod.desc, qty: Q, price: prod.price, vat: prod.vat, invoicedToDate: 0 }] };
+    world.pos.push(po);
+    const l = po.lines[0];
+    const gs = [];
+    let R = 0;
+    const nG = r.int(2, 3);
+    for (let g = 0; g < nG; g++) {
+      const q = Math.floor((Q * r.int(26, 36)) / 100);
+      gs.push(makeGRN(po, [[l.code, q]], { note: g < nG - 1 ? 'Part delivery - balance to follow' : null }));
+      R += q;
+    }
+    if (fams.has('grn-emails') && r.chance(0.6)) {
+      const g = r.pick(gs);
+      const was = g.lines[0].qty;
+      const now = was - r.int(1, Math.max(1, Math.floor(was / 5)));
+      world.emails.push({ kind: 'grn-correction', grn: g.no, code: l.code, desc: l.desc, from: po.site.lead, site: po.site, was, now, up: false });
+      R += now - was;
+    }
+    const kinds = ['ok', 'ok', 'short'];
+    if (fams.has('price')) kinds.push('price');
+    if (fams.has('vat')) kinds.push('vat');
+    if (fams.has('bank') && sup.layout !== 'scan') kinds.push('bank');
+    if (fams.has('dup')) kinds.push('dup');
+    if (fams.has('credit')) kinds.push('cn');
+    let avail = R;
+    let d = addDays(run, -r.int(30, 36));
+    let prev = null;
+    let lastOk = null;
+    let heldQ = 0;
+    const credited = new Set();
+    const grosses = new Set(); // two invoices of one pool with the same total would be duplicates by check 2
+    const between = (lo, hi) => r.int(Math.max(1, Math.min(lo, hi)), Math.max(1, hi));
+    const grossOf = (q, price, vatOverride) => {
+      const lines = [{ qty: q, price, vat: l.vat }];
+      return q * price + (vatOverride ?? correctVat(lines));
+    };
+    /** A quantity from `pickQ` whose invoice total no earlier document of the pool has. */
+    const fresh = (pickQ, price = l.price) => {
+      for (let t = 0; t < 30; t++) {
+        const q = pickQ();
+        if (!grosses.has(grossOf(q, price))) return q;
+      }
+      assert(false, 'pool: no fresh quantity');
+      return 0;
+    };
+    for (let i = 0; i < n; i++) {
+      let t = i === 0 ? 'ok' : r.pick(kinds);
+      if (t === 'dup' && !lastOk) t = 'ok';
+      if (t === 'cn' && (!lastOk || prev !== lastOk.doc || credited.has(lastOk.doc.docId) || lastOk.q < 2)) t = 'ok';
+      if (t !== 'short' && t !== 'cn' && t !== 'dup' && avail < 2) t = 'short';
+      d = addDays(d, r.int(1, 3));
+      let doc;
+      let intent;
+      if (t === 'ok') {
+        const q = fresh(() => (heldQ && avail - heldQ + 1 <= avail ? between(avail - heldQ + 1, avail) : between(Math.ceil(avail * 0.25), Math.ceil(avail * 0.5))));
+        doc = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: q, price: l.price, vat: l.vat }], { date: d });
+        intent = 'approve';
+        avail -= q;
+        lastOk = { doc, q };
+        heldQ = 0;
+      } else if (t === 'short') {
+        const q = fresh(() => avail + r.int(1, 4));
+        doc = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: q, price: l.price, vat: l.vat }], { date: d });
+        intent = 'hold-qty';
+        heldQ = 0;
+      } else if (t === 'price' || t === 'vat' || t === 'bank') {
+        const q = t === 'bank' ? fresh(() => between(Math.ceil(avail * 0.3), avail)) : between(Math.ceil(avail * 0.3), avail);
+        const opts = { date: d };
+        let price = l.price;
+        if (t === 'price') price += deltaIn(q, Math.max(tolerance(q * l.price) * 2, 700), q * l.price * 0.25) ?? Math.ceil((tolerance(q * l.price) + 800) / q);
+        const lines = [{ code: l.code, desc: l.desc, qty: q, price, vat: l.vat }];
+        if (t === 'vat') opts.vatOverride = correctVat(lines) + r.int(300, 1500);
+        if (t === 'bank') {
+          opts.bank = { sort: `${r.int(10, 99)}-${r.int(10, 99)}-${r.int(10, 99)}`, acct: String(r.int(10000000, 99999999)), style: 0 };
+          world.emails.push({ kind: 'bank-change', supplier: sup.id, bank: opts.bank });
+        }
+        doc = makeDoc(sup, po, lines, opts);
+        intent = t === 'price' ? 'hold-price' : t === 'vat' ? 'hold-vat' : 'hold-bank-details';
+        heldQ = q;
+      } else if (t === 'dup') {
+        doc = makeDoc(sup, po, lastOk.doc.lines.map((x) => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price, vat: x.vat })), { date: d, reissue: true });
+        intent = 'reject-duplicate';
+        heldQ = lastOk.q;
+      } else {
+        const k = r.int(1, Math.min(3, lastOk.q - 1));
+        doc = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: k, price: l.price, vat: l.vat, cnKind: 'return' }], { kind: 'credit', number: `CN-${lastOk.doc.number}`, creditFor: lastOk.doc.number, date: d, reason: r.pick(['damaged in transit, returned with driver', 'short-dated stock returned', 'wrong size sent and collected']) });
+        intent = 'approve';
+        credited.add(lastOk.doc.docId);
+        avail += k;
+        lastOk = { ...lastOk, q: lastOk.q - k };
+        heldQ = 0;
+      }
+      if (doc.kind === 'invoice' && intent !== 'reject-duplicate') {
+        assert(!grosses.has(doc.gross), 'pool: same total twice');
+        grosses.add(doc.gross);
+      }
+      if (prev) doc.after = prev;
+      prev = doc;
+      world.intent[doc.docId] = intent;
+    }
+    (world.pools ??= []).push({ po: po.no, code: l.code, remaining: avail });
+    return [];
+  }
+
   function plant(intent) {
     switch (intent) {
       case 'ok':
@@ -686,6 +804,7 @@ export function generate(spec) {
         return [];
       }
       default:
+        if (intent.startsWith('pool:')) return plantPool(Number(intent.slice(5)));
         throw new Error(`unknown intent ${intent}`);
     }
   }
@@ -900,7 +1019,18 @@ export function solve(world, flags = {}) {
   for (const x of inRun) bySupplier[x.doc.supplier] = (bySupplier[x.doc.supplier] ?? 0) + x.amount;
   let total = 0;
   for (const x of inRun) if (flags.noSupplierNet || bySupplier[x.doc.supplier] > 0) total += x.amount;
-  return { documents: docs, total_payable_this_run: Math.round(total) / 100 };
+  const res = { documents: docs, total_payable_this_run: Math.round(total) / 100 };
+  // (ladder) the received quantity still not invoiced on each pool's PO line after this run
+  if (world.pools) {
+    res.remaining_received = Object.fromEntries(
+      world.pools.map((p) => {
+        const k = `${p.po}:${p.code}`;
+        const pl = world.pos.find((x) => x.no === p.po).lines.find((x) => x.code === p.code);
+        return [`${p.po} ${p.code}`, (grnQty[k] ?? 0) - pl.invoicedToDate - (consumed[k] ?? 0)];
+      }),
+    );
+  }
+  return res;
 }
 
 /** A careless clerk: approves everything at face value, net 30 from the invoice date, pays it all now. */
@@ -1168,11 +1298,16 @@ Reply with one JSON object in this shape, with one entry for every DOC in the in
     "DOC-12345": { "outcome": "approve", "amount_to_pay": 123.45, "pay_by": "YYYY-MM-DD" },
     "DOC-12346": { "outcome": "hold-price", "amount_to_pay": 0, "pay_by": null }
   },
-  "total_payable_this_run": 0.00
+  "total_payable_this_run": 0.00${world.pools ? `,
+  "remaining_received": { "${world.pools[0].po} ${world.pools[0].code}": 0, ... }` : ''}
 }
-outcome is one of: ${outcomesFor(fams).join(', ')}. Amounts are in pounds as numbers with two decimals${fams.has('credit') ? ' (credit notes negative)' : ''}. ${ONE_ANSWER} Each field is marked separately against the policy's answer.`);
+outcome is one of: ${outcomesFor(fams).join(', ')}. Amounts are in pounds as numbers with two decimals${fams.has('credit') ? ' (credit notes negative)' : ''}.${world.pools ? ` remaining_received: for each of these PO lines, the quantity received (all GRNs, as corrected) that is still not invoiced after this run, i.e. minus the quantity invoiced to date and minus the quantities of the documents in this inbox that you approve (after their credit notes): ${world.pools.map((p) => `${p.po} ${p.code}`).join(', ')}. Each is worth 4 points.` : ''} ${ONE_ANSWER} Each field is marked separately against the policy's answer.`);
   return out.join('\n\n');
 }
+
+/** (Ladder) helpers for scripted answers. */
+export const correctVatOf = (lines) => correctVat(lines);
+export const supplierOf = (world, d) => world.biz.suppliers.find((x) => x.id === d.supplier);
 
 /** Planted intent vs the rules engine: the list of disagreements (must be empty). */
 export function selfCheck(world, sol) {

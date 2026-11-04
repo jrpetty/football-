@@ -1419,89 +1419,166 @@ without moving the old ones.
 
 ## 7r. Business ladders: finance (invoices, payslips, expenses, reconciliation)
 
-Four tests in the `work` category turn the finance tests of the business pack into **ten-rung ladders**, in the
-style of the Horizon tier (§7d): the same task on every rung, ten frozen levels `L01`–`L10`, each strictly bigger
-than the one below. They are new tests; Invoices to Pay, Check the Payslips, Expense Policy Check and Reconcile the
-Account stay exactly as they were, so old results stay comparable.
+Four tests in the `work` category turn the finance tests of the business pack into **ten-rung ladders** (§7q). They
+are new tests; Invoices to Pay, Check the Payslips, Expense Policy Check and Reconcile the Account stay exactly as
+they were (their generators gained optional ladder parameters and still rebuild them byte for byte).
 
-| Test | Growth parameter, L01 → L10 | Rule families printed (beyond the basics), L01 → L05 | Input tokens, L01 → L05 → L10 |
-|---|---|---|---|
-| Invoices to Pay: Ladder (`work.invoices-ladder`) | inbox documents 5, 8, 14, 24, 46, 65, 80, 96, 113, 130 | 2, 4, 7, 10, 14 (all) | 2.4k → 15.6k → 33.9k |
-| Check the Payslips: Ladder (`work.payroll-ladder`) | staff 4, 6, 9, 12, 20, 32, 46, 64, 88, 120 | 2, 4, 6, 8, 11 (all) | 2.1k → 7.1k → 36.5k |
-| Expense Policy Check: Ladder (`work.expenses-ladder`) | claim lines 8, 21, 28, 57, 168, 262, 497, 614, 772, 931 | 2, 4, 7, 10, 11 (all) | 0.9k → 7.3k → 31.7k |
-| Reconcile the Account: Ladder (`work.reconciliation-ladder`) | statement + cash-book lines 28, 49, 73, 95, 275, 455, 628, 831, 1,075, 1,416 | 1, 3, 5, 8, 9 (all) | 1.4k → 7.5k → 33.5k |
+**What makes a rung harder: dependency depth, not volume.** A first build grew volume and stacked rules; blind play
+showed that careful models clear it, because its items were independent: a small model cleared level 5 and the top
+model level 8. The rebuilt ladders make each item's answer depend on state built up from earlier items, processed
+in a stated order, so one early mistake knocks on into later items; higher rungs make the chains deeper (more
+documents in a pool, more months resting on each other) and add rule families, at moderate volume.
 
-**Volume and rules grow together.** A level prints only the rule families it uses, and each clause is printed word
-for word as in the full test's policy (renumbered in the same order). Level 1 is a handful of items and one or two
-families; level 5 is the full policy at about the size of the current hardest case; levels 6 to 10 keep the full
-policy and grow in volume and in interacting rules:
+| Test | Chain, L01 → L10 | Items, L01 → L10 | Rule families (beyond the basics), L01 → L05 | Input tokens, L01 → L05 → L10 |
+|---|---|---|---|---|
+| Invoices to Pay: Ladder (`work.invoices-ladder`) | pools × documents: none, 1×3, 2×4, 3×5, 4×5, 5×6, 6×6, 7×7, 8×8, 10×8 | inbox documents 5, 9, 17, 30, 46, 58, 67, 82, 97, 115 | 2, 4, 7, 10, 14 (all) | 2.4k → 14.2k → 28.0k |
+| Check the Payslips: Ladder (`work.payroll-ladder`) | months 1, 1, 2, 3, 3, 4, 5, 5, 6, 6 | payslips 4, 6, 12, 24, 30, 48, 69, 78, 103, 127 | 2, 4, 5, 7, 13 (all) | 2.2k → 8.7k → 27.8k |
+| Expense Policy Check: Ladder (`work.expenses-ladder`) | months 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 | claim lines 8, 24, 59, 88, 209, 304, 382, 519, 645, 879 | 2, 4, 8, 11, 13 (all) | 0.9k → 9.1k → 30.5k |
+| Reconcile the Account: Ladder (`work.reconciliation-ladder`) | months 1, 1, 2, 2, 3, 3, 4, 4, 5, 6 | statement + cash-book lines 28, 38, 86, 109, 194, 218, 292, 324, 406, 518 | 1, 3, 5, 8, 10 (all) | 1.5k → 6.0k → 13.4k |
 
-* Invoices: price tolerance and quantity received (L01); + entity and VAT (L02); + duplicates, bank details and the PO
-  check with OCR (L03); + discounts, credit notes and GRN correction emails (L04); + inbox consumption, the £10
-  document cap, PO amendments and the supplier-net exception (L05). From L06, chains of documents on one PO line:
-  four invoices that use up a part delivery in turn (one held for price, so the next fits), a credit note that
-  frees quantity for a later invoice, an invoice held for VAT, re-sent (a duplicate) and then re-issued.
-* Payslips: the basics (salary, auto-enrolment pension, cumulative PAYE, NI category A) with overtime and student
-  loans (L01); + NI categories C and H and BR/K codes (L02); + Cycle to Work and SSP (L03); + starters (P45, M1,
-  mid-month) and late items (L04); + directors, pension by salary sacrifice and Sunday overtime (L05). From L06 a
-  growing share of staff (30% to 80%) combine two features on one payslip (salary sacrifice with a student loan, a
-  late coding notice on an overtime worker, a P45 starter with a loan, ...).
-* Expenses: receipts from £25.00 and hotel limits (L01); + meal limits shared per employee, city and day and
-  first-class rail (L02); + alcohol, the 60-day limit with late-submission approvals and duplicates (L03); +
-  entertainment and its approvals, mileage 45p/25p with passengers, euro and dollar conversion (L04); + the
-  hotel-night meal uplift (L05). From L06 more claims per person (mileage, duplicates and late lines across claims),
-  late lines claimed again, and foreign taxis without a receipt either side of £25.00 after conversion.
-* Reconciliation: one-to-one matches, timing items, fees and interest, with a keyed-in error (L01); + unrecorded
-  direct debits and duplicates on either side (L02); + instalments, part-payments and a reversed charge (L03); +
-  BACS runs, a returned cheque and dollar payments (L04); + last month's outstanding items (L05). From L06 every
-  trap scales up, with look-alike payments (same supplier and amount, another invoice) and an instalment the bank
-  paid twice.
+**The chains.**
 
-**One truth, the same engine.** Every key comes from the rules engine of the existing test, unchanged
-(`verification/realworld-business/invoices.mjs` and `payroll.mjs`, `verification/realworld-work/expenses.py` and
-`bankrec.py`; the generators gained optional ladder parameters that leave the existing tests byte-identical), and is
-cross-checked as the existing test is: planted intent = engine for every invoice and every planted rule changes the
-answer when ignored; every planted payroll mistake changes its draft (mistakes are chosen so that they do) and every
-net pay adds up; every exact copy of an expense line is a planted duplicate; every reconciliation match is re-derived
-from the printed fields alone and the adjusted cash book equals the adjusted bank balance. The ladder adds its own
-checks: every rule family a level does not print changes nothing when the engine switches it off, and the features
-it governs do not occur; and the full-policy wording printed from L05 on equals the existing test's, byte for byte
-(asserted by the builders and by `test/finance-ladders.test.ts`).
+* **Invoices: pools.** A pool is one PO line delivered in parts and billed by several documents in turn, each drawing
+  on what the approved documents before it (lower DOC numbers) left. Between the approved invoices sit documents held
+  for their own reason (price, VAT, changed bank details: they use up nothing), duplicates (nothing), an invoice for
+  more than is left (held for quantity), credit notes assessed with their invoice (they give quantity back) and a site
+  manager's recount of a delivery. Misjudge one document and every later document of its pool can draw a different
+  amount. The answer adds, for each pool, the quantity received and still not invoiced after the run.
+* **Payslips: months on the cumulative basis.** From level 3 a level is two to six consecutive months of one
+  payroll. Each month's tax is worked out from the corrected pay and tax of the earlier months, while the bureau's
+  drafts run on its own (wrong) year-to-date figures, so one wrong draft makes the bureau's later months wrong too.
+  Directors' NI is cumulative over the annual earnings period, K codes collect later what the 50% limit held back,
+  an HMRC notice changes a code mid-period (refunds through the cumulative basis) or moves a month-1 starter onto the
+  cumulative basis, a P45 stays in the year-to-date, an apprentice turns 25 (category H to A), and sickness periods 56
+  days or less apart are linked so the waiting days are served once. The answer adds everyone's taxable pay and tax
+  to date at the end.
+* **Expenses: months for one team.** Mileage at 45p then 25p after 10,000 miles is counted in date order through the
+  months and restarts on 6 April; expenses come back as duplicates in later months; late lines need an approval for
+  their own claim; meal limits are shared with earlier lines of the same day; from level 5 cash advances are set off
+  month by month and the rest carried on. The answer is each month's payout per person, the advances left and each
+  person's miles to date.
+* **Reconciliation: months nobody reconciled.** Cheques, paying-ins and keyed-in payments clear in a later month (an
+  entry is matched with the line that clears it, in whichever month); instalment plans run across months; charges are
+  reversed and cheques returned the month after. The cash book was never corrected, so each month's adjusted balance
+  must allow for every correction found in that month and every earlier one, and count every entry still not
+  through at that month's end (an instalment plan by the part not yet paid).
 
-**Scoring.** The `json` scorer exactly as in the existing tests (`lenient`, `sets`, the same `weights` and trap
-weights, §5.1a), so a case score is the share of its points. A rung is **passed at 90% of its points**; the headline
-is the ladder height (the highest level L with every level 1..L passed reliably, as in §7d) and the test score is
-the mean over the ten levels. Output limit 64,000 tokens, 30 minutes per level, one retry.
+**One truth, the same engines, an independent second derivation for every new mechanic.** Keys come from the
+existing rules engines (`verification/realworld-business/invoices.mjs` and `payroll.mjs`,
+`verification/realworld-work/expenses.py` and `bankrec.py`) and keep their existing cross-checks (planted intent =
+engine; every planted rule or mistake changes the answer; every family a level does not print changes nothing; every
+exact copy of an expense line is planted; every reconciliation match is the only candidate the printed fields
+allow). The new mechanics are each derived a second, independent way:
+
+| Mechanic | Second derivation |
+|---|---|
+| Invoice pools | While planting a pool, the generator simulates the policy itself, document by document in DOC order (outcome, quantity drawn, quantity left); the build refuses a level unless the engine agrees on every document and every pool's quantity left. |
+| Payroll months | `check_payroll.py`: a separate payroll in Python, written from the prompt's rules with exact fractions, recomputes every payslip of every month, every employer NI total and every year-to-date figure from the month inputs (`payroll-inputs.json`) with its own year-to-date chain; it must agree to the penny (it does on all 501 payslips). |
+| Expense months | Each month audited again with only the lines of that month and the months before it must give every line the same result as the audit of all months; advances set off step by step must equal a closed form (outstanding = the largest sum of advances minus amounts owed over any run of recent months, floored at 0); miles to date summed directly from the lines. |
+| Reconciliation months | Every month's adjusted balance computed from the cash-book side (printed cash book plus every correction so far) and from the bank side (statement plus everything not yet through at that month's end) must agree; every one-to-one match is re-derived from the printed fields across months and must be the only candidate. |
+
+**Scoring rewards the chained state.** The `json` scorer as in the existing tests (`lenient`, `sets`, the same trap
+weights, §5.1a), plus points on the carried figures: each pool's quantity left (4 points; invoices), the year-to-date
+figures (about a quarter of a level's points; payroll), the monthly payouts, advances and miles (about 30%;
+expenses), each month's balance (about a quarter; reconciliation). A broken chain therefore costs well over the 10% a
+rung can lose and still pass, while a single root error is not multiplied into a zero (each carried figure counts
+once, other items keep their own points, nothing is all-or-nothing). A rung is passed at 90% of its points; the
+headline is the ladder height (§7q). Output limit 64,000 tokens, 30 minutes per level, one retry.
 
 **Measured spread** (`node verification/finance-ladders/spread.mts`, scripted answers through the real scorer).
 Reference 100% and do-nothing, copy-the-prompt and random filler 0% on every level. "Slip" is a careful answer with
-one subtle slip (one penny of rounding on one payment, OCR O/0, a settlement discount on the gross, the
-supplier-net exception; an hourly rate or the half-penny employer NI rounded the wrong way; "over £25" for "£25.00
-or more", an approval's limit ignored; a keying difference's or FX difference's sign, a returned cheque booked as a
-bank charge). "Careless" is each generator's careless answer (face value; trust the drafts; meal limits per meal,
-approvals from the claim form, 45p throughout; exact-amount matching only).
+one slip (invoices: one pool document misread as fine and the rest of its pool worked out from it; payroll: £1 of
+tax on one payslip in the first month, carried by the cumulative basis; expenses: an approval's limit ignored or the
+receipt rule read as "over £25"; reconciliation: the first keying difference's sign flipped, carried into every later
+balance). "Chain error" is one reasoning error that spreads (held invoices taken to use up their pool; later months
+worked out from the bureau's year-to-date figures; each month audited on its own; earlier months' corrections left
+out of later balances). "Careless" is each generator's careless answer.
 
-| Level | Invoices: slip / careless | Payslips: slip / careless | Expenses: slip / careless | Reconciliation: slip / careless |
+| Level | Invoices: slip / chain / careless | Payslips: slip / chain / careless | Expenses: slip / chain / careless | Reconciliation: slip / chain / careless |
 |---|---:|---:|---:|---:|
-| L01 | 78 / 27 | 57 / 0 | 25 / 14 | 93 / 63 |
-| L02 | 82 / 26 | 83 / 17 | 68 / 27 | 92 / 54 |
-| L03 | 93 / 32 | 83 / 0 | 74 / 22 | 95 / 45 |
-| L04 | 95 / 40 | 94 / 0 | 93 / 13 | 96 / 45 |
-| L05 | 99 / 41 | 95 / 0 | 96 / 21 | 97 / 38 |
-| L06 | 99 / 48 | 97 / 0 | 97 / 22 | 97 / 38 |
-| L07 | 99 / 45 | 98 / 0 | 97 / 26 | 97 / 37 |
-| L08 | 99 / 51 | 98 / 0 | 97 / 21 | 97 / 37 |
-| L09 | 99 / 48 | 99 / 0 | 98 / 22 | 97 / 38 |
-| L10 | 99 / 51 | 99 / 0 | 98 / 23 | 97 / 38 |
+| L01 | 78 / – / 27 | 88 / – / 29 | 47 / – / 29 | 69 / – / 51 |
+| L02 | 85 / 100 / 48 | 92 / – / 17 | 82 / – / 13 | 71 / – / 49 |
+| L03 | 87 / 93 / 18 | 95 / 100 / 27 | 72 / 91 / 20 | 75 / 88 / 32 |
+| L04 | 89 / 88 / 37 | 96 / 88 / 19 | 91 / 89 / 14 | 77 / 89 / 25 |
+| L05 | 93 / 84 / 31 | 98 / 86 / 16 | 95 / 89 / 16 | 77 / 85 / 21 |
+| L06 | 93 / 83 / 44 | 99 / 86 / 16 | 97 / 78 / 13 | 77 / 85 / 23 |
+| L07 | 94 / 86 / 32 | 99 / 78 / 16 | 96 / 84 / 16 | 77 / 83 / 22 |
+| L08 | 97 / 85 / 43 | 99 / 77 / 15 | 94 / 79 / 14 | 77 / 83 / 25 |
+| L09 | 95 / 79 / 39 | 99 / 82 / 19 | 95 / 76 / 12 | 77 / 82 / 23 |
+| L10 | 97 / 80 / 34 | 99 / 70 / 15 | 95 / 70 / 15 | 77 / 81 / 22 |
 
-A careless answer fails every rung. On the low rungs a single slip already fails (a few items, so every field
-counts); on the high rungs one slip costs 1–3% and the rung is lost only through many slips, which is what volume
-and interacting rules produce. These scripted answers bound the scale; they are not models. The calibration targets
-(L01–L02 a small model passes, L05–L07 the limit of today's top model, L08–L10 beyond it) are by design and still
-need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
-verification/finance-ladders/build.py` (`--check` proves both byte for byte); never regenerate a released version.
+A careless answer fails every rung, and from level 5 so does one error that spreads through a chain
+(`test/finance-ladders.test.ts` pins both). These scripted answers bound the scale; they are not models. The
+calibration targets (small model to about L02–L03, mid-sized to L04–L05, today's top model to L05–L07, L08–L10
+beyond) are by design and need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
+verification/finance-ladders/build.py` (`--check` proves both byte for byte; `python3 check_payroll.py` re-derives the
+payroll); never regenerate a released version.
 
-## 7s. Frontier Ladders: Deduction Grid, Knights & Knaves and Shortest Plans
+## 7s. Business ladders: data and support
+
+Four Business tests (category `work`) rebuilt as ten-rung difficulty ladders under the contract of §7q (frozen cases
+`L01`…`L10`, `passMark` 0.9, height = highest level with every level below passed reliably). The originals stay
+unchanged. **Rework after blind calibration:** the first version grew only in volume and every item could be decided on
+its own, so a small model cleared level 5 and the top model level 10. The rebuilt ladders keep levels 1–2 small and
+plain and, from level 3, make answers depend on **state built up across items**: decisions taken one at a time in a
+stated order, where each depends on the outcome of the earlier ones, and rules with exceptions to exceptions that are
+stated once and needed many times. Carried figures (golden records, account totals, agreed clause numbers, remaining
+budgets) carry real weight, so a broken chain costs well over 10%; scoring stays partial (pairs, fields, rows), so a
+single slip is never all or nothing.
+
+| Test | What carries over from item to item | Growth per level (L01 → L10) | Input tokens per level |
+|---|---|---|---|
+| Clean the Customer List: Ladder (`work.crm-ladder`) | From L03 groups are built by a **merge procedure**: every matching pair (R1–R5) is processed in order (rule, then the lower id, then the higher id) and a merge is **refused** when the merged group would hold two different dates of birth or a record noted "not the same person as" another. Planted link records match two different people (one's email and a namesake's phone; chains of two to four links; bookings that join two existing customers), so where they end up depends on earlier decisions. From L04 survivorship has precedence rules (a mobile beats a landline; address and postcode from the most recent MemberHub record that is not gone away, else BookIt), from L05 a corporate-scheme VIP record is the master | records 24 / 40 / 79 / 131 / 234 / 349 / 492 / 620 / 774 / 949; refused merges 0 / 0 / 4 / 11 / 15 / 37 / 56 / 73 / 99 / 106 | 2.0k / 2.6k / 4.1k / 6.0k / 9.6k / 13.3k / 18.1k / 22.0k / 27.3k / 32.9k |
+| What Changed in the Contract?: Ladder (`work.contract-ladder`) | Version 2 is **settled** by the customer's response (accept, reject, "accepted, but with X", general statements about a schedule that specific items override, a whole new section rejected) and the supplier's final note (counter-proposals agreed or not, withdrawals, corrections that stand unless rejected). Changes are keyed by the **agreed** version's numbering, so every rejected addition or kept deletion renumbers what follows | version-2 changes 3 / 7 / 12 / 18 / 33 / 45 / 58 / 78 / 93 / 114; response items 1 / 2 / 11 / 15 / 28 / 37 / 46 / 60 / 70 / 79; note items 0 / 0 / 1 / 5 / 7 / 9 / 12 / 18 / 22 / 27; clauses numbered differently from version 2 0 / 1 / 1 / 7 / 33 / 85 / 155 / 196 / 228 / 280 | 3.0k / 4.5k / 5.3k / 7.3k / 9.7k / 13.4k / 17.1k / 21.6k / 26.8k / 33.3k |
+| Ask the Database: Ladder (`work.sql-ladder`) | Query depth as **composed semantics** (1 / 2 / 4 / 5 / 6 / 7 / 8 / 10 / 13 / 16): L01 a count, L02 deduplicated events in a UK week, L03–L05 sql-hard's h04 (ranks with ties across a category move), h07 (reversal chains, running minimum, UK end of day) and h09 (sessions after deduplication with the earliest ingestion and fast-clock correction); L06 wallet balances **as known each April evening** against the restated books (rule 6 evaluated as of every date, on a calendar carrying balances over empty days); L07 the sessions joined to the paid app orders in [first event, last event + 30 min] at historical prices; L08 a **promotion budget run**: lines in time order, each taking the best promotion whose remaining budget still covers it, falling back otherwise (a recursive CTE carrying seven budgets); L09 + one use per customer per promotion (later orders blocked, the same order not), gift lines by the category at the order moment, a memo override; L10 + partial last use of a budget unless under £0.50 (then skipped but kept for smaller lines) and the 23:00 UK quarter cut-off | tables read 1 / 1 / 5 / 1 / 1 / 1 / 4 / 6 / 6 / 6 | 3.2k / 3.2k / 3.3k / 3.3k / 3.4k / 3.4k / 3.5k / 3.6k / 3.8k / 3.9k |
+| Customer Support Queue: Ladder (`work.support-ladder`) | From L03 customers have several tickets and an account history, and handbook section 4.15 applies **account limits** to each customer's tickets in received order, counting the history and the final outcomes of earlier tickets: (a) at most 2 change-of-mind refunds in 90 days (else escalate); from L04 (b) a £10 yearly goodwill cap on late-delivery partials (pay what is left, or decline) and (d) escalation memory (an escalated customer's later tickets are at least P2, which moves their SLA); from L05 (c) repeat-fault escalation over 180 days; from L06 (e) Fernbrook Plus members (no allowance limit, £20 cap) and from L07 memberships that expire during the year. The answer also carries each account's refunded total and remaining goodwill | tickets 4 / 6 / 10 / 15 / 29 / 40 / 54 / 70 / 90 / 120; accounts 0 / 0 / 3 / 6 / 9 / 14 / 16 / 22 / 25 / 36; tickets changed by the account limits 0 / 0 / 1 / 3 / 9 / 14 / 14 / 28 / 36 / 52 | 3.0k / 3.3k / 4.5k / 5.9k / 9.2k / 11.8k / 14.4k / 18.4k / 22.3k / 29.5k |
+
+**Keys, each new mechanic derived twice** (`verification/ladders-data-support/`; `node build.mjs`, `python3
+contract_ladder.py`, `node sql-ladder.mts`, each with `--check`, all run by `test/ladders-data-support.test.ts`):
+
+* Customer list: the business pack builds the world and checks its planted people (§7j); `crm-ladder.mjs` plants the
+  link records, `mergeGroups()` (union-find with per-group date-of-birth and note sets) gives the key, `mergeCheck()`
+  replays the same ordered pairs with explicit groups and a from-scratch conflict test, `goldenCheck()` re-derives every
+  golden record with its own precedence sort; every planted link must cause a refused merge, and the procedure, the
+  survivorship rules and the VIP rule must each change the answer.
+* Contract: `contract.py`'s diff gives version 2's changes; `contract_settle.py` builds the agreed version and diffs it
+  against version 1 (`settle()`), `predict()` derives the same key independently from version 2's own diff and the
+  statuses alone (numbers mapped to the agreed numbering, counter values substituted), and `check_unique()` re-checks
+  it from the rendered agreed text. Each level is accepted only when the settlement rules it uses change the answer.
+* SQL: `buildPack()` of §7f on every level: reference query = independent JavaScript solver on all four databases, no
+  dependence on scan order, a different answer on every database, hidden copies sharing at most a fifth of their rows
+  with the live answer, every careless query wrong somewhere. Budgets are fixed in the question at about 55% of the
+  smallest unconstrained spend over the four databases, so every budget runs out part-way on every copy. Planted rows
+  make each rule bite (chargebacks undone days later, orders exactly 30:00 and 30:01 after a session, ties in units,
+  orders either side of the cut-offs, products that move in or out of Gifts inside a promotion window).
+* Support: the business pack's engine decides each ticket on its own facts (checked against the planted intent);
+  `support-accounts.mjs` groups tickets into customers with histories, `applyAccounts()` runs the limits with a running
+  state per customer, and `checkAccounts()` recounts every ticket from scratch over the history and the result's own
+  earlier tickets. Every active limit (and the membership expiry) must change at least one ticket.
+
+**Marking** is the original tests' (§7j, §7e, §7f) plus the carried figures: golden records keyed by master with four
+fields from L04, each field worth W = key pairs ÷ (fields × groups) points so grouping and golden records weigh about
+the same (stated in the prompt); support tickets changed by the account limits weigh 5 / 5 / 4 / 4 (decision, refund,
+priority, SLA) and every account total 8; contract fields where the agreed version differs from version 2 weigh 2.
+
+**Measured spread** (`node verification/ladders-data-support/spread.mts`, scripted answers through the real scorers,
+%, L01 → L10; pinned by the regression test):
+
+| Test | Reference | Ignores the chained rule (fails the rung) | One slip in the chained rules | Careless | Do-nothing |
+|---|---|---|---|---|---|
+| Customer list | 100 | plain union-find from L03: 92 / 87 / 88 / 85 / 81 / 79 / 82 / 80; old survivorship from L04: 62 / 64 / 73 / 76 / 74 / 75 / 73 | VIP master missed from L05: 91 / 91 / 91 / 87 / 89 / 89 | 26 / 52 / 39 / 17 / 21 / 20 / 24 / 18 / 19 / 12 | 0 |
+| Contract | 100 | version 2 read as agreed: 100 / 75 / 50 / 35 / 10 / 12 / 6 / 6 / 4 / 5; version 2's numbering kept from L05: 24 / 27 / 9 / 13 / 8 / 14; a general statement beats a specific item from L05: 66 / 58 / 50 / 45 / 35 / 42 | counter taken without the supplier's agreement: 80 / 84 / 92 / 77 / 85 / 88 / 76 / 78 (L03–L10); unanswered taken as agreed: 80 / 73 / 85 / 82 / 73 / 88 / 84 / 83 | original careless reader: 60 / 50 / 30 / 22 / 21 / 18 / 16 / 14 / 10 / 9 | 0 |
+| SQL | 100 | — | the mildest single slip: 0 / 56 / 89 / 88 / 93 / 92 / 75 / 64 / 75 / 92; the worst: 0 / 0 / 53 / 19 / 54 / 4 / 21 / 0 / 29 / 33 | — | `SELECT *` 0 |
+| Support | 100 | each ticket on its own facts from L03: 87 / 68 / 66 / 62 / 70 / 60 / 59 / 60 | declined returns counted: 100 / 100 / 97 / 97 / 94 / 94 / 98 / 98; no escalation memory: 100 / 97 / 93 / 95 / 96 / 94 / 95 / 93; expired membership still counted (L06–L10): 100 / 99 / 94 / 93 / 98 | refund everyone, P3, UTC as UK time: 83 / 59 / 49 / 37 / 42 / 32 / 35 / 28 / 23 / 27 | 0 |
+
+Random filler, `{}`, an empty reply and a copy of the prompt score at most 5% on every ladder. These scripted answers
+bound the scale; they are not models: the calibration targets (a small model tops out around L02–L03, a mid model
+around L04–L05, today's top model around L06–L07, L08–L10 beyond it) are by design and need blind play again.
+
+**Cost.** L01 is 2.0k–3.2k input tokens, L10 at most 33k (the contract). Test estimates are the level means; every
+model gets the same 32,000-token output limit and no answer-time limit.
+
+## 7u. Frontier Ladders: Deduction Grid, Knights & Knaves and Shortest Plans
 
 Calibration showed the Frontier logic tests saturating for the strongest models (Deduction Grid: Extreme, Knights,
 Knaves, Spies & Alternators: Extreme and Shortest Plans: Extreme at 90–100% for Opus), while the Horizon ladders

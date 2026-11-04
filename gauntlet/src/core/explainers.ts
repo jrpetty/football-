@@ -364,6 +364,20 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'code',
   },
 
+  'coding.engineering-ladder': {
+    hook: 'Build a database one feature at a time: how far up does it get before something breaks?',
+    whatItTests: 'Engineering from a written spec: a mini database that gains commands, rules and bigger inputs at every level.',
+    whyHard: 'The top levels need every rule right in every combination AND a design fast enough for 200,000 keys.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten levels, each adding to the same spec' },
+      { icon: 'hidden', text: '15-24 hidden unit tests per level, run for real' },
+      { icon: 'clock', text: 'Each test must finish in 2-15 seconds' },
+      { icon: 'percent', text: 'Level score = share of its tests passed' },
+    ],
+    goodScore: 'Every level is worth 10 points. A level counts as climbed only when all its hidden tests pass, so the headline is how far up it gets with nothing broken.',
+    icon: 'code',
+  },
+
   // ─────────────── Creative ───────────────
   'creative.one-shot-games': {
     hook: 'Can it build a complete, playable browser game from a single prompt?',
@@ -671,6 +685,14 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'Trying cases by hand is hopeless on most of them, and a single arithmetic slip in a long derivation gives the wrong integer.',
     howScored: NUMBER_STEPS('One whole-number answer per problem'),
     goodScore: '100 means all 12 right; each problem is worth about 8 points.',
+    icon: 'sigma',
+  },
+  'math.exact-ladder': {
+    hook: 'Snakes, ladders and traps: what is the exact chance of winning?',
+    whatItTests: 'Exact probability: the chance of winning a board game, as a fraction, on boards that grow level by level.',
+    whyHard: 'Snakes send the counter back, so it means solving simultaneous equations exactly, with fractions up to 30 digits long.',
+    howScored: LADDER_STEPS('The exact fraction (any equal fraction counts)'),
+    goodScore: LADDER_SCORE,
     icon: 'sigma',
   },
   'math.word-problems': {
@@ -1016,34 +1038,34 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
 
   // ─────────────── Real-World Work: finance ladders (ten frozen levels each) ───────────────
   'work.invoices-ladder': {
-    hook: 'How far up a ladder of supplier invoices can it go, paying only the right ones to the penny?',
-    whatItTests: 'Accounts-payable work at growing scale: matching invoices to purchase orders and delivery notes under a written policy that gains rules level by level.',
-    whyHard: 'Each level adds documents and rules, and the top levels chain them: invoices that use up a delivery in turn, credit notes that free quantity, a held invoice re-sent and then re-issued.',
-    howScored: BUSINESS_LADDER_STEPS('Outcome, amount and pay-by date per document'),
+    hook: 'Deliveries drawn down invoice by invoice: can it pay only the right ones, all the way up?',
+    whatItTests: 'Accounts-payable work where each document depends on the ones before it: matching invoices to orders and deliveries under a written policy that gains rules level by level.',
+    whyHard: 'Up to ten deliveries are each billed by eight documents in turn, with holds, duplicates and credit notes between them, so one misjudged invoice changes what every later one can draw.',
+    howScored: BUSINESS_LADDER_STEPS('Each document, the run total and what each delivery has left'),
     goodScore: BUSINESS_LADDER_SCORE,
     icon: 'receipt',
   },
   'work.payroll-ladder': {
-    hook: 'How far up a ladder of payslips, from 4 staff to 120, can it find and fix every mistake?',
-    whatItTests: 'UK monthly payroll checking at growing scale: tax codes, National Insurance, pensions, student loans, sick pay and starters, with every rate given in the prompt.',
-    whyHard: 'Each level adds staff and rules, and the top levels stack several rules on one payslip, so one rounding or ordering slip spreads through every figure after it.',
-    howScored: BUSINESS_LADDER_STEPS('Wrong payslips as a set; six corrected figures each'),
+    hook: 'Six months of payslips, each month resting on the last: can it put the whole payroll right?',
+    whatItTests: 'UK payroll checking over several months on the cumulative basis: tax codes, National Insurance, pensions, student loans, sick pay and starters, with every rate given.',
+    whyHard: 'Each month’s tax comes from the corrected months before it while the bureau runs on its own wrong figures, and codes change, P45s carry, directors’ NI and linked sickness run on.',
+    howScored: BUSINESS_LADDER_STEPS('Wrong payslips per month, fixes, year-to-date figures'),
     goodScore: BUSINESS_LADDER_SCORE,
     icon: 'dollar',
   },
   'work.expenses-ladder': {
-    hook: 'How far up a ladder of expense claims, from 8 lines to 900, can it pay everyone exactly right?',
-    whatItTests: 'Checking expense claims against a written policy that gains rules level by level, and working out exactly what to pay each person and how much VAT to reclaim.',
-    whyHard: 'Each level adds lines and rules: meal limits shared across a day, approvals that count only for the right person, mileage across claims and the tax-year reset, conversion before the £25 receipt rule.',
-    howScored: BUSINESS_LADDER_STEPS('Flagged lines with rule and amount, totals and VAT'),
+    hook: 'Six months of expense claims for one team: can it pay everyone exactly right, month after month?',
+    whatItTests: 'Checking expense claims against a written policy over consecutive months, and working out what to pay each person each month and how much VAT to reclaim.',
+    whyHard: 'Mileage drops to 25p after 10,000 miles counted through the months, expenses come back as duplicates, late lines need the right approval, and advances are set off and carried on.',
+    howScored: BUSINESS_LADDER_STEPS('Flagged lines, monthly payouts, advances and miles'),
     goodScore: BUSINESS_LADDER_SCORE,
     icon: 'receipt',
   },
   'work.reconciliation-ladder': {
-    hook: 'How far up a ladder of bank reconciliations, from 28 lines to 1,400, can it match every line?',
-    whatItTests: 'A month-end bank reconciliation at growing scale: matching every statement line to the books, explaining what is left over and landing the true balance.',
-    whyHard: 'Each level adds lines and rules: swapped digits, instalments, BACS runs, payments made twice, returned cheques, dollar rates and last month’s loose ends, all mixed together.',
-    howScored: BUSINESS_LADDER_STEPS('Every line matched or explained, plus the balance'),
+    hook: 'Six months of bank statements nobody reconciled: can it land every month’s balance?',
+    whatItTests: 'Bank reconciliation over consecutive months: matching every statement line to the books, explaining what is left over and working out each month’s true balance.',
+    whyHard: 'Cheques and payments clear months later, instalments run across months, charges are reversed next month, and every balance must carry every correction found so far.',
+    howScored: BUSINESS_LADDER_STEPS('Every line matched or explained, each month’s balance'),
     goodScore: BUSINESS_LADDER_SCORE,
     icon: 'chart',
   },
@@ -1058,6 +1080,40 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     ],
     goodScore: '100 means every substantive change found with the right values and nothing extra listed; the nine contract pairs count equally.',
     icon: 'diff',
+  },
+
+  // ─────────────── Business ladders: data & support ───────────────
+  'work.crm-ladder': {
+    hook: "From 24 records to 950, merged one decision at a time: can an early merge send a later one wrong?",
+    whatItTests: "Cleaning a customer list by a stated merge procedure at ten growing sizes, and choosing each customer’s surviving record and golden details by precedence rules.",
+    whyHard: "Merges are decided one pair at a time and refused when they would join two different people, so link records end up wherever the earlier decisions put them, and every golden record depends on those decisions.",
+    howScored: BUSINESS_LADDER_STEPS('Groups pair by pair (F1); golden records as a set'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'grid',
+  },
+  'work.contract-ladder': {
+    hook: "Two drafts, a response and a final note: what was actually agreed, clause by clause?",
+    whatItTests: "Working out the agreed version of a contract from a revised draft, the customer’s response and the supplier’s final note, and listing every change that matters by its agreed clause number.",
+    whyHard: "Rejections, counter-proposals, corrections, withdrawals and general statements with exceptions decide which changes survive, and every rejected addition or kept deletion renumbers the clauses after it.",
+    howScored: BUSINESS_LADDER_STEPS('Each change: clause, type, old and new; traps 2 points'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'diff',
+  },
+  'work.sql-ladder': {
+    hook: "From one count to a budget run where every pick changes the next: how deep a query can it write?",
+    whatItTests: "Writing one database query per level, from a simple count to queries that carry state from row to row: balances as known each evening, session windows and promotion budgets used up in order.",
+    whyHard: "Each level composes more subtle semantics: UK time, price and category history, reversal chains evaluated as of a date, sessions after deduplication, and a budget that one wrong pick throws off for every later line.",
+    howScored: BUSINESS_LADDER_STEPS('Rows that match on the real DB and 3 hidden copies'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'chart',
+  },
+  'work.support-ladder': {
+    hook: "Four easy returns up to 120 tickets that hang on each customer’s history: how far can it climb?",
+    whatItTests: "Working a shop’s support queue at ten growing sizes, where account limits make each ticket’s outcome depend on that customer’s earlier tickets and history.",
+    whyHard: "Return allowances, a yearly goodwill cap, repeat-fault escalation and escalation memory are used up in date order, with member exceptions that expire, on top of the full handbook.",
+    howScored: BUSINESS_LADDER_STEPS('Five fields per ticket; trap decisions worth more'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'persona',
   },
 
   // ─────────────── Arena (head-to-head) ───────────────

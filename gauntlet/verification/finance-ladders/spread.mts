@@ -48,6 +48,8 @@ export interface Row {
   reference: number;
   slip: number;
   slipKind: string;
+  /** One reasoning error that spreads through the chain (null on one-month levels without chains). */
+  chain: number | null;
   careless: number;
   nothing: number;
   copy: number;
@@ -66,11 +68,12 @@ export async function spread(): Promise<Row[]> {
       const reference = (await scoreReply(sc, c.expected, asJson(c.expected), task)).score ?? 0;
       const slip = (await scoreReply(sc, c.expected, asJson(s.slip), task)).score ?? 0;
       const careless = (await scoreReply(sc, c.expected, asJson(s.careless), task)).score ?? 0;
+      const chain = s.chain ? (await scoreReply(sc, c.expected, asJson(s.chain), task)).score ?? 0 : null;
       const nothing = (await scoreReply(sc, c.expected, '{}', task)).score ?? 0;
       const copy = (await scoreReply(sc, c.expected, task, task)).score ?? 0;
       let rnd = 0;
       for (let k = 0; k < 4; k++) rnd += (await scoreReply(sc, c.expected, filler(311 + k * 17 + rows.length), task)).score ?? 0;
-      rows.push({ test: t.id, level: c.id, points: Math.round(points(t, c)), tokens: Math.ceil(c.prompt!.length / 3.6) + 20, reference, slip, slipKind: s.slip_kind, careless, nothing, copy, random: rnd / 4 });
+      rows.push({ test: t.id, level: c.id, points: Math.round(points(t, c)), tokens: Math.ceil(c.prompt!.length / 3.6) + 20, reference, slip, slipKind: s.slip_kind, chain, careless, nothing, copy, random: rnd / 4 });
     }
   }
   return rows;
@@ -80,8 +83,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const rows = await spread();
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   for (const id of LADDER_IDS) {
-    console.log(`\n${id}\nlevel | points | input tokens | reference | slip | careless | do-nothing | copy-prompt | random | slip`);
+    console.log(`\n${id}\nlevel | points | input tokens | reference | slip | chain error | careless | do-nothing | copy-prompt | random | slip`);
     for (const r of rows.filter((x) => x.test === id))
-      console.log(`${r.level} | ${r.points} | ${r.tokens} | ${pct(r.reference)} | ${pct(r.slip)}${r.slip >= PASS_MARK ? ' (passes)' : ''} | ${pct(r.careless)} | ${pct(r.nothing)} | ${pct(r.copy)} | ${pct(r.random)} | ${r.slipKind}`);
+      console.log(`${r.level} | ${r.points} | ${r.tokens} | ${pct(r.reference)} | ${pct(r.slip)}${r.slip >= PASS_MARK ? ' (passes)' : ''} | ${r.chain === null ? '-' : pct(r.chain)} | ${pct(r.careless)} | ${pct(r.nothing)} | ${pct(r.copy)} | ${pct(r.random)} | ${r.slipKind}`);
   }
 }

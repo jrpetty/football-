@@ -1,0 +1,206 @@
+{
+ "work.crm-ladder": [
+  {
+   "level": "L01",
+   "tokens": 2015,
+   "records": 24,
+   "groups": 8,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 0,
+   "refusedMerges": 0
+  },
+  {
+   "level": "L02",
+   "tokens": 2646,
+   "records": 40,
+   "groups": 10,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 1,
+   "refusedMerges": 0
+  },
+  {
+   "level": "L03",
+   "tokens": 4133,
+   "records": 79,
+   "groups": 24,
+   "chainDepth": 2,
+   "chainOnlyPairs": 3,
+   "distractors": 2,
+   "refusedMerges": 4
+  },
+  {
+   "level": "L04",
+   "tokens": 5980,
+   "records": 131,
+   "groups": 35,
+   "chainDepth": 3,
+   "chainOnlyPairs": 13,
+   "distractors": 8,
+   "refusedMerges": 11
+  },
+  {
+   "level": "L05",
+   "tokens": 9604,
+   "records": 234,
+   "groups": 64,
+   "chainDepth": 3,
+   "chainOnlyPairs": 33,
+   "distractors": 12,
+   "refusedMerges": 15
+  },
+  {
+   "level": "L06",
+   "tokens": 13251,
+   "records": 349,
+   "groups": 74,
+   "chainDepth": 5,
+   "chainOnlyPairs": 122,
+   "distractors": 32,
+   "refusedMerges": 37
+  },
+  {
+   "level": "L07",
+   "tokens": 18102,
+   "records": 492,
+   "groups": 94,
+   "chainDepth": 6,
+   "chainOnlyPairs": 277,
+   "distractors": 48,
+   "refusedMerges": 56
+  },
+  {
+   "level": "L08",
+   "tokens": 21997,
+   "records": 620,
+   "groups": 99,
+   "chainDepth": 10,
+   "chainOnlyPairs": 549,
+   "distractors": 64,
+   "refusedMerges": 73
+  },
+  {
+   "level": "L09",
+   "tokens": 27321,
+   "records": 774,
+   "groups": 126,
+   "chainDepth": 7,
+   "chainOnlyPairs": 855,
+   "distractors": 80,
+   "refusedMerges": 99
+  },
+  {
+   "level": "L10",
+   "tokens": 32892,
+   "records": 949,
+   "groups": 146,
+   "chainDepth": 11,
+   "chainOnlyPairs": 1255,
+   "distractors": 104,
+   "refusedMerges": 106
+  }
+ ],
+ "work.support-ladder": [
+  {
+   "level": "L01",
+   "tokens": 2962,
+   "tickets": 4,
+   "trapTickets": 0,
+   "families": 2,
+   "accounts": 0,
+   "multiTicketCustomers": 0,
+   "changedByAccounts": 0
+  },
+  {
+   "level": "L02",
+   "tokens": 3342,
+   "tickets": 6,
+   "trapTickets": 0,
+   "families": 4,
+   "accounts": 0,
+   "multiTicketCustomers": 0,
+   "changedByAccounts": 0
+  },
+  {
+   "level": "L03",
+   "tokens": 4471,
+   "tickets": 10,
+   "trapTickets": 0,
+   "families": 6,
+   "accounts": 3,
+   "multiTicketCustomers": 6,
+   "changedByAccounts": 1
+  },
+  {
+   "level": "L04",
+   "tokens": 5911,
+   "tickets": 15,
+   "trapTickets": 9,
+   "families": 8,
+   "accounts": 6,
+   "multiTicketCustomers": 6,
+   "changedByAccounts": 3
+  },
+  {
+   "level": "L05",
+   "tokens": 9242,
+   "tickets": 29,
+   "trapTickets": 22,
+   "families": 15,
+   "accounts": 9,
+   "multiTicketCustomers": 14,
+   "changedByAccounts": 9
+  },
+  {
+   "level": "L06",
+   "tokens": 11752,
+   "tickets": 40,
+   "trapTickets": 32,
+   "families": 16,
+   "accounts": 14,
+   "multiTicketCustomers": 25,
+   "changedByAccounts": 14
+  },
+  {
+   "level": "L07",
+   "tokens": 14412,
+   "tickets": 54,
+   "trapTickets": 43,
+   "families": 16,
+   "accounts": 16,
+   "multiTicketCustomers": 34,
+   "changedByAccounts": 14
+  },
+  {
+   "level": "L08",
+   "tokens": 18447,
+   "tickets": 70,
+   "trapTickets": 59,
+   "families": 16,
+   "accounts": 22,
+   "multiTicketCustomers": 44,
+   "changedByAccounts": 28
+  },
+  {
+   "level": "L09",
+   "tokens": 22324,
+   "tickets": 90,
+   "trapTickets": 77,
+   "families": 16,
+   "accounts": 25,
+   "multiTicketCustomers": 62,
+   "changedByAccounts": 36
+  },
+  {
+   "level": "L10",
+   "tokens": 29451,
+   "tickets": 120,
+   "trapTickets": 105,
+   "families": 16,
+   "accounts": 36,
+   "multiTicketCustomers": 83,
+   "changedByAccounts": 52
+  }
+ ]
+}

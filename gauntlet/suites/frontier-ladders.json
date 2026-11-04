@@ -8,7 +8,7 @@
     { "id": "reasoning.grid-ladder", "planned": true },
     { "id": "reasoning.truth-ladder", "planned": true },
     { "id": "reasoning.plans-ladder", "planned": true },
-    { "id": "math.exact-ladder", "planned": true },
-    { "id": "coding.engineering-ladder", "planned": true }
+    { "id": "math.exact-ladder" },
+    { "id": "coding.engineering-ladder" }
   ]
 }
