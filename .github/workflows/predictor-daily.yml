@@ -269,6 +269,17 @@ jobs:
           mkdir -p dist/world
           cp -r world/dist/. dist/world/
 
+      # Quartet (four AI minds in real-world scenarios) lives under /quartet/.
+      - name: Build Quartet
+        working-directory: quartet
+        run: |
+          npm ci
+          npm run build
+      - name: Place Quartet under /quartet
+        run: |
+          mkdir -p dist/quartet
+          cp -r quartet/dist/. dist/quartet/
+
       # NOTE: actions/configure-pages with enablement: true was tried here and
       # cannot work on this repository — GITHUB_TOKEN gets "Resource not
       # accessible by integration" from the create-Pages-site API, which is an

@@ -23,9 +23,28 @@ Or open **`genesis.html`** (repo root) directly in a browser. It's the whole app
 in one file (`npm run build:single` regenerates it). Once GitHub Pages is
 enabled, it's also published at **`/world/`** next to the other apps.
 
-Then click **✦ Add API key** and paste an Anthropic API key. The key is stored
-only in your browser's `localStorage` and sent only to `api.anthropic.com`.
-Without a key the world still runs: everyone acts on a built-in instinct brain.
+The app opens on a **title screen** over the living world. Click **Minds &
+providers** to connect AI. Every person can be driven by:
+
+- **Claude**: Opus 5.5 (default), Sonnet 5.5, Haiku 5.5 or Fable 5.1, through the official Anthropic SDK
+- **Chinese model APIs**: DeepSeek, Qwen (Alibaba Cloud), Kimi (Moonshot AI), GLM (Zhipu AI)
+- **Models you download and run yourself**: Ollama, LM Studio, llama.cpp, vLLM, or any OpenAI-compatible server
+- **Instinct**: no key needed. A built-in brain keeps everyone alive and busy.
+
+Assign a different mind to each tribe, or to individual people, and see which
+civilisation does best. Keys stay in your browser's `localStorage` and go only
+to the provider you chose.
+
+Most cloud APIs (DeepSeek, Qwen, Kimi, GLM) refuse calls made directly from a
+web page. Run `npm run proxy` in this folder and tick **Use local proxy** on
+those minds. The proxy listens only on `localhost:8787`. For Ollama on the
+hosted site, start it with `OLLAMA_ORIGINS=*`. For LM Studio, enable CORS in
+its server settings. **Test connection** and **List models** in the settings
+check your setup.
+
+**No two histories are the same.** A map seed reproduces the land, but the
+people, their choices and their discoveries are new on every run. Untick
+*Unique history* when creating a world to replay a seed exactly.
 
 ## What's in the world
 
@@ -45,16 +64,40 @@ sand on beaches and deserts, ore (copper, tin, iron, coal, gold) in hills and
 mountains, and oil in deserts and marshes. Trees and bushes regrow; ore runs out.
 A tribe can only harvest land it has explored.
 
-**Ten eras, 53 technologies, 32 building types, 24 recipes.** Knowledge runs
-from fire and stone tools through agriculture, bronze, writing, iron,
-philosophy, steel, printing, steam, electricity, computing and rocketry.
+**Ten eras and 62 technologies, learnt the way humans learnt them.** Early
+knowledge comes from practice. Every hour of relevant work brings an idea
+closer:
+
+- working clay by a fire teaches pottery
+- tending wild plants teaches farming
+- twisting fibre teaches cordage
+
+Half-understood ideas sometimes click in a **flash of insight**.
+Deliberate study drives the harder ideas, but before Writing it is only half
+as effective.
+
+**Geography shapes what comes first.** Coasts suggest boats, ore in the hills
+suggests metalwork, and fertile river land suggests farming. **Knowledge is
+fragile:** a people that dwindles to a handful before inventing writing can
+forget what it knew. Each era is harder to reach than the last. The Stone Age
+lasts about a decade of game time, and the space age takes generations.
+
 Production chains are real: ore → metal → tools; sand → glass; steel + iron →
-machinery; copper + glass + gold → electronics. The workshop, kiln, smithy,
-factory and similar buildings are the stations those recipes need. Libraries,
-universities, labs and data centres multiply research.
+machinery; copper + glass + gold → electronics. Boats progress from canoes on
+lakes, to sail on the open sea, to deep-ocean navigation.
 
 **Lives and lineages.** Personalities use the Big Five plus intelligence and
-strength. Children inherit their parents' traits with mutation. Skills grow with
+strength. Everyone looks like an individual:
+
+- skin and hair inherited from their parents
+- their own hairstyle, beard, build and height
+- face paint and scars
+- clothing that changes with the era
+- a circlet for leaders, a cane for elders
+
+Emotes show discoveries, love, grief and anger. Painted portraits read each
+person's temperament, mood, tiredness, sickness and age. Children inherit
+looks and traits with mutation. Skills grow with
 practice. People keep memories, relationships (affinity and familiarity), homes
 and partners. They age and die of old age, illness, starvation, thirst, cold or
 violence, and the people who loved them grieve.
@@ -97,11 +140,9 @@ plenty, earthquakes and golden ages.
 - **Ask them anything.** Select a person to ask them a question. The answer
   comes from their own perspective, and it doesn't change the world: they won't
   remember you asked.
-- **Mixed minds.** Choose a model per tribe, or per person, and see which
-  civilisation does best: Claude Opus 5.5 (default), Sonnet 5.5, Haiku 5.5 or
-  Fable 5.1.
+- **Mixed minds.** Choose a mind per tribe or per person, mixing Claude, DeepSeek, Qwen, Kimi, GLM and local models, and see which civilisation does best.
 
-Requests go through the official `@anthropic-ai/sdk` from the browser. They use
+Claude requests go through the official `@anthropic-ai/sdk` from the browser. Other providers use the standard `/chat/completions` endpoint in JSON mode, and any reasoning a local model writes out inline is stripped from its replies. Claude requests use
 adaptive thinking at a chosen effort, structured outputs (a strict JSON schema),
 a cached system prompt, and server-side refusal fallbacks where the model
 supports them.
@@ -153,6 +194,7 @@ src/
     data.ts · buildings.ts · tech.ts · time.ts · names.ts · save.ts
   ai/
     client.ts     Anthropic SDK calls, models, pricing, errors
+    providers.ts  mind profiles: Claude + OpenAI-compatible (DeepSeek, Qwen, Kimi, GLM, Ollama, LM Studio)
     prompts.ts    system prompt, per-person context, JSON schemas
     mind.ts       scheduler: who thinks when, rate limit, budget, applying decisions
   render/
