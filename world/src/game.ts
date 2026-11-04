@@ -5,6 +5,8 @@
 import { World, DEFAULT_CONFIG, type WorldConfig } from './sim/world.ts'
 import { REAL_SEC_PER_HOUR, HOUR } from './sim/time.ts'
 import { Renderer } from './render/renderer.ts'
+import { Renderer3D, webglAvailable } from './render3d/renderer3d.ts'
+import type { MapView, ViewMode } from './render/view.ts'
 import { mind } from './ai/mind.ts'
 import { saveToSlot, loadSlot } from './sim/save.ts'
 import type { ChronicleEntry } from './sim/types.ts'
@@ -22,7 +24,8 @@ export interface Toast {
 
 class Game {
   world: World
-  renderer: Renderer | null = null
+  renderer: MapView | null = null
+  view: ViewMode = '3d'
   speed = 3
   paused = false
   version = 0
@@ -68,10 +71,41 @@ class Game {
     this.unlisten = () => this.world.listeners.delete(onLog)
   }
 
-  attachCanvas(c: HTMLCanvasElement) {
+  attachCanvas(c: HTMLCanvasElement, view: ViewMode = '3d') {
+    // keep the camera where it was when switching between 2D and 3D
+    const prev = this.renderer
+    const want: ViewMode = view === '3d' && webglAvailable() ? '3d' : '2d'
+    if (prev && this.canvas === c && this.view === want) {
+      // re-attached to the same canvas (React strict mode): keep the renderer
+      this.startLoop()
+      return
+    }
+    prev?.dispose?.()
     this.canvas = c
-    this.renderer = new Renderer(c, this.world)
+    this.view = want
+    let r: MapView
+    try {
+      r = this.view === '3d' ? new Renderer3D(c, this.world) : new Renderer(c, this.world)
+    } catch (e) {
+      console.warn('3D view unavailable, falling back to 2D', e)
+      this.view = '2d'
+      r = new Renderer(c, this.world)
+    }
+    if (prev) {
+      r.cam.x = prev.cam.x
+      r.cam.y = prev.cam.y
+      r.cam.zoom = prev.cam.zoom
+      r.selection = prev.selection
+      r.overlay = prev.overlay
+      r.showNames = prev.showNames
+      r.cinematic = prev.cinematic
+    }
+    this.renderer = r
     this.resize()
+    this.startLoop()
+  }
+
+  private startLoop() {
     cancelAnimationFrame(this.raf)
     this.last = performance.now()
     const loop = (now: number) => {

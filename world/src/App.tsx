@@ -4,6 +4,7 @@ import { mind } from './ai/mind.ts'
 import { ERAS } from './sim/tech.ts'
 import { formatClock, SEASONS, SEASON_ICONS, dayInSeason, yearOf, seasonOf, partOfDay } from './sim/time.ts'
 import type { Overlay } from './render/renderer.ts'
+import { preferredView, setPreferredView, type ViewMode } from './render/view.ts'
 import { useGameVersion, useMindVersion } from './ui/common.tsx'
 import { PeoplePanel, TribesPanel, MindsPanel, ChroniclePanel, TechPanel, StatsPanel } from './ui/panels.tsx'
 import { Inspector } from './ui/Inspector.tsx'
@@ -24,18 +25,29 @@ export default function App() {
     try { return !new URLSearchParams(location.search).has('play') } catch { return true }
   })
 
+  const [view, setView] = useState<ViewMode>(preferredView)
+  useEffect(() => {
+    const onView = (e: Event) => {
+      const v = (e as CustomEvent<ViewMode>).detail
+      setPreferredView(v)
+      setView(v)
+    }
+    window.addEventListener('genesis:view', onView)
+    return () => window.removeEventListener('genesis:view', onView)
+  }, [])
+
   useEffect(() => {
     const c = canvasRef.current!
-    game.attachCanvas(c)
+    game.attachCanvas(c, view)
     const onResize = () => game.resize()
     window.addEventListener('resize', onResize)
     return () => {
       window.removeEventListener('resize', onResize)
       game.detach()
     }
-  }, [])
+  }, [view])
 
-  useMapControls(canvasRef)
+  useMapControls(canvasRef, view)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -60,7 +72,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <canvas ref={canvasRef} className="map" />
+      <canvas key={view} ref={canvasRef} className="map" />
       {menu && <MainMenu onGo={(g) => { if (g === 'play') setMenu(false); else setModal(g) }} />}
       {!menu && <>
       <TopBar onModal={setModal} onMenu={() => setMenu(true)} />
@@ -158,6 +170,7 @@ function TopBar({ onModal, onMenu }: { onModal: (m: ModalKind) => void; onMenu: 
           <button key={s} className={!game.paused && game.speed === s ? 'on' : ''} onClick={() => game.setSpeed(s)} title={`${s}× (key ${i + 1})`}>{s}×</button>
         ))}
       </div>
+      <button className="icon-btn" onClick={() => window.dispatchEvent(new CustomEvent('genesis:view', { detail: game.view === '3d' ? '2d' : '3d' }))} title={game.view === '3d' ? 'Switch to the classic 2D map' : 'Switch to the 3D world'}>{game.view === '3d' ? '🗺️' : '🧊'}<span className="hide-md">{game.view === '3d' ? '2D' : '3D'}</span></button>
       <button className="icon-btn hide-sm" onClick={() => onModal('saves')} title="Save / load">💾</button>
       <button className="icon-btn" onClick={onMenu} title="Main menu">☰</button>
       <button className="icon-btn" onClick={() => onModal('new')} title="New world">🌍<span className="hide-md">New</span></button>
@@ -213,10 +226,10 @@ function Toasts() {
 }
 
 /** Drag to pan, wheel / pinch to zoom, click to select, hover highlight. */
-function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>) {
+function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>, view: string) {
   useEffect(() => {
     const c = ref.current!
-    let down: { x: number; y: number; moved: boolean } | null = null
+    let down: { x: number; y: number; moved: boolean; turn: boolean } | null = null
     const pointers = new Map<number, { x: number; y: number }>()
     let pinch: { d: number } | null = null
     const pos = (e: PointerEvent | WheelEvent) => {
@@ -230,7 +243,7 @@ function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>) {
         const [a, b] = [...pointers.values()]
         pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }
         down = null
-      } else down = { ...pos(e), moved: false }
+      } else down = { ...pos(e), moved: false, turn: e.button === 2 || (e.button === 0 && e.altKey) }
     }
     const onMove = (e: PointerEvent) => {
       const p = pos(e)
@@ -249,7 +262,8 @@ function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>) {
         if (down.moved || Math.hypot(dx, dy) > 4) {
           down.moved = true
           c.classList.add('dragging')
-          r.pan(dx, dy)
+          if (down.turn && r.rotate) r.rotate(dx)
+          else r.pan(dx, dy)
           down.x = p.x
           down.y = p.y
         }
@@ -263,7 +277,7 @@ function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>) {
       if (pointers.size < 2) pinch = null
       c.classList.remove('dragging')
       const r = game.renderer
-      if (down && !down.moved && r) {
+      if (down && !down.moved && !down.turn && r) {
         const sel = r.pick(down.x, down.y)
         r.selection = sel
         r.follow = false
@@ -291,5 +305,5 @@ function useMapControls(ref: React.RefObject<HTMLCanvasElement | null>) {
       c.removeEventListener('pointerleave', onLeave)
       c.removeEventListener('wheel', onWheel)
     }
-  }, [ref])
+  }, [ref, view])
 }

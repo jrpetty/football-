@@ -4,8 +4,10 @@
 
 import type { Run } from '../engine/engine.ts'
 import type { Person } from '../engine/types.ts'
-import { useRef } from 'react'
-import { Figure, Face, mix } from './Figure.tsx'
+import { useEffect, useRef, useState } from 'react'
+import { Figure, Face, mix, moodOf } from './Figure.tsx'
+import { Cast3D, webgl, type CastEntry } from './cast3d.ts'
+import type { State } from './rig3d.ts'
 import { Backdrop } from './Backdrop.tsx'
 
 const W = 1000, H = 620
@@ -30,6 +32,15 @@ function hourOf(clock: string): number | null {
 
 export function Stage({ run, selected, onSelect, now }: { run: Run; selected: number | null; onSelect: (id: number) => void; now: number }) {
   const sc = run.sc
+  const stageRef = useRef<HTMLDivElement>(null)
+  const castCanvas = useRef<HTMLCanvasElement>(null)
+  const cast = useRef<Cast3D | null>(null)
+  const [three] = useState(() => webgl() && localStorage.getItem('quartet.view') !== '2d')
+  useEffect(() => {
+    if (!three || !castCanvas.current || !stageRef.current) return
+    try { cast.current = new Cast3D(castCanvas.current, stageRef.current) } catch { cast.current = null }
+    return () => { cast.current?.dispose(); cast.current = null }
+  }, [three])
   const moved = useRef(new Map<number, { place: string; at: number; from: number }>())
   for (const p of run.people) {
     const m = moved.current.get(p.id)
@@ -50,8 +61,9 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
       slots.set(p.id, { x, y, k })
     })
   }
+  const entries: CastEntry[] = []
   return (
-    <div className="stage" style={{ aspectRatio: `${W} / ${H}` }}>
+    <div ref={stageRef} className="stage" style={{ aspectRatio: `${W} / ${H}` }}>
       <Backdrop sc={sc} night={night} />
       <svg viewBox={`0 0 ${W} ${H}`} className="stage-svg" preserveAspectRatio="xMidYMid slice">
         <defs>
@@ -80,6 +92,7 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
           )
         })}
       </svg>
+      {three && <canvas ref={castCanvas} className="cast3d" />}
       {run.people.map((p, i) => {
         const s = slots.get(p.id) ?? { x: W / 2, y: H / 2, k: 0 }
         const speaking = p.lastSay !== '' && now < p.bubbleUntil
@@ -87,8 +100,12 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
         const mv = moved.current.get(p.id)
         const walking = !!mv && mv.at > 0 && now - mv.at < 1700
         const working = !!p.lastAction && !['rested', 'talked', 'moved'].includes(p.lastAction) && now < p.emoteUntil + 2500
+        const state: State = gone ? 'gone' : walking ? 'walking' : speaking ? 'talking' : working ? 'working' : p.thinking ? 'pondering' : p.energy < 22 ? 'tired' : moodOf(p)
+        const to = speaking && p.lastSayTo ? run.people.find((q) => q.name === p.lastSayTo || p.lastSayTo.startsWith(q.name))?.id ?? null : null
+        entries.push({ p, state, talking: speaking, color: COLORS[i % 4], selected: selected === p.id, faceTo: to })
+        if (cast.current) { cast.current.entries = entries; cast.current.scenario = sc.id; cast.current.night = night / 0.55; cast.current.accent = sc.theme.accent }
         return (
-          <div key={p.id} className={`actor ${selected === p.id ? 'sel' : ''} ${walking ? 'walking' : ''}`}
+          <div key={p.id} data-id={p.id} className={`actor ${selected === p.id ? 'sel' : ''} ${walking ? 'walking' : ''} ${three ? 'in3d' : ''}`}
             style={{ left: `${(s.x / W) * 100}%`, top: `${(s.y / H) * 100}%`, ['--c' as string]: COLORS[i % 4] }}
             onClick={() => onSelect(p.id)}>
             {speaking && (
@@ -98,7 +115,7 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
             )}
             {!speaking && p.thinking && <div className="thinking-dots"><span /><span /><span /></div>}
             {now < p.emoteUntil && <div className="emote">{p.emote}</div>}
-            <div className="actor-body"><Figure p={p} scenario={sc.id} talking={speaking} walking={walking} working={working} gone={gone} /></div>
+            <div className="actor-body">{!three && <Figure p={p} scenario={sc.id} talking={speaking} walking={walking} working={working} gone={gone} />}</div>
             <div className="actor-name">{p.name}</div>
           </div>
         )

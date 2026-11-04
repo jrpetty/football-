@@ -9,8 +9,8 @@
 
 import type { Agent, Animal } from '../sim/types.ts'
 
-const SKIN = ['#f3cfae', '#e3b089', '#c98d5e', '#a06b44', '#7c4f31', '#5a3923']
-const HAIR = ['#2b1d14', '#4d3020', '#7d4b25', '#b57c3d', '#dcb56b', '#161616', '#8f3b22']
+export const SKIN = ['#f3cfae', '#e3b089', '#c98d5e', '#a06b44', '#7c4f31', '#5a3923']
+export const HAIR = ['#2b1d14', '#4d3020', '#7d4b25', '#b57c3d', '#dcb56b', '#161616', '#8f3b22']
 const INK = 'rgba(24,16,12,0.78)'
 
 export function shadeHex(hex: string, f: number): string {
@@ -21,7 +21,7 @@ export function shadeHex(hex: string, f: number): string {
   return `rgb(${r | 0},${g | 0},${b | 0})`
 }
 
-function hash(n: number): number {
+export function hash(n: number): number {
   let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b)
   h ^= h >>> 13
   h = Math.imul(h, 0xc2b2ae35)
@@ -62,7 +62,7 @@ export function animFor(a: Agent): { anim: Anim; tool: 'axe' | 'pick' | 'hammer'
   }
 }
 
-interface Pose {
+export interface Pose {
   lean: number
   bob: number
   hipDrop: number
@@ -78,7 +78,7 @@ function ease(x: number) {
   return x * x * (3 - 2 * x)
 }
 
-function pose(anim: Anim, t: number, seed: number): Pose {
+export function pose(anim: Anim, t: number, seed: number): Pose {
   const P: Pose = { lean: 0, bob: 0, hipDrop: 0, legs: [[0.03, 0.02], [-0.03, 0.02]], arms: [[0.1, 0.18], [-0.05, 0.22]], head: 0, mouth: 0, impact: false, hop: 0 }
   const breathe = Math.sin(t * 2.2 + seed * 6) * 0.006
   switch (anim) {
@@ -396,9 +396,9 @@ export function drawPerson(ctx: CanvasRenderingContext2D, o: DrawPersonOpts): { 
   return { impact, headY: o.y + (hy - headR - P.hop) * H }
 }
 
-interface Outfit { body: string; sleeve: string; legs: string; shoes: string; trim: string; belt: boolean; long: boolean; short: boolean; fur: boolean; cape: boolean; jacket: boolean; hat: string | null }
+export interface Outfit { body: string; sleeve: string; legs: string; shoes: string; trim: string; belt: boolean; long: boolean; short: boolean; fur: boolean; cape: boolean; jacket: boolean; hat: string | null }
 
-function clothesFor(era: number, a: Agent, tribe: string, child: boolean): Outfit {
+export function clothesFor(era: number, a: Agent, tribe: string, child: boolean): Outfit {
   const L = a.look
   const skin = SKIN[L.skin % SKIN.length]
   const dress = a.sex === 'female' && hash(a.id * 7) < 0.6
