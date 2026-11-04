@@ -214,13 +214,26 @@ const DRAW_STEPS = (weights: string): ExplainStep[] => [
   { icon: 'cross', text: 'Digits in the words or extra shapes cost points' },
 ];
 
-const LADDER_STEPS = (what: string): ExplainStep[] => [
+/**
+ * How a difficulty ladder is scored (every test in config/ladders.json; the rule is src/core/ladders.ts).
+ * `passMark` below 1: a partial-credit ladder, whose rung is passed at that share of its points.
+ */
+export const LADDER_STEPS = (what: string, passMark = 1): ExplainStep[] => [
   { icon: 'ladder', text: 'Ten levels, each harder than the last' },
   { icon: 'target', text: what },
-  { icon: 'check', text: 'Checked by machine against a double-proven key' },
+  passMark >= 1 ? { icon: 'check', text: 'Checked by machine against a double-proven key' } : { icon: 'percent', text: `A level counts as passed at ${Math.round(passMark * 100)}% of its marks` },
   { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
 ];
-const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+export const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+/** Partial-credit business ladders: same task at every level, more items and more rules each time. */
+const BUSINESS_LADDER_STEPS = (what: string): ExplainStep[] => [
+  { icon: 'ladder', text: 'Ten levels: more items and more rules each time' },
+  { icon: 'target', text: what },
+  { icon: 'percent', text: 'A level is passed at 90% of its points' },
+  { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+];
+const BUSINESS_LADDER_SCORE =
+  'The score is the share of points over all ten levels; the headline is the highest level passed (90% of its points) with every level below it passed too. Level 5 is the full policy at the size of today’s hardest case.';
 
 const ASSISTANT_STEPS: ExplainStep[] = [
   { icon: 'check', text: '85%: each request checked in the final inbox, diary, bookings' },
@@ -975,6 +988,40 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
     icon: 'chart',
   },
+
+  // ─────────────── Real-World Work: finance ladders (ten frozen levels each) ───────────────
+  'work.invoices-ladder': {
+    hook: 'How far up a ladder of supplier invoices can it go, paying only the right ones to the penny?',
+    whatItTests: 'Accounts-payable work at growing scale: matching invoices to purchase orders and delivery notes under a written policy that gains rules level by level.',
+    whyHard: 'Each level adds documents and rules, and the top levels chain them: invoices that use up a delivery in turn, credit notes that free quantity, a held invoice re-sent and then re-issued.',
+    howScored: BUSINESS_LADDER_STEPS('Outcome, amount and pay-by date per document'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'receipt',
+  },
+  'work.payroll-ladder': {
+    hook: 'How far up a ladder of payslips, from 4 staff to 120, can it find and fix every mistake?',
+    whatItTests: 'UK monthly payroll checking at growing scale: tax codes, National Insurance, pensions, student loans, sick pay and starters, with every rate given in the prompt.',
+    whyHard: 'Each level adds staff and rules, and the top levels stack several rules on one payslip, so one rounding or ordering slip spreads through every figure after it.',
+    howScored: BUSINESS_LADDER_STEPS('Wrong payslips as a set; six corrected figures each'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'dollar',
+  },
+  'work.expenses-ladder': {
+    hook: 'How far up a ladder of expense claims, from 8 lines to 900, can it pay everyone exactly right?',
+    whatItTests: 'Checking expense claims against a written policy that gains rules level by level, and working out exactly what to pay each person and how much VAT to reclaim.',
+    whyHard: 'Each level adds lines and rules: meal limits shared across a day, approvals that count only for the right person, mileage across claims and the tax-year reset, conversion before the £25 receipt rule.',
+    howScored: BUSINESS_LADDER_STEPS('Flagged lines with rule and amount, totals and VAT'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'receipt',
+  },
+  'work.reconciliation-ladder': {
+    hook: 'How far up a ladder of bank reconciliations, from 28 lines to 1,400, can it match every line?',
+    whatItTests: 'A month-end bank reconciliation at growing scale: matching every statement line to the books, explaining what is left over and landing the true balance.',
+    whyHard: 'Each level adds lines and rules: swapped digits, instalments, BACS runs, payments made twice, returned cheques, dollar rates and last month’s loose ends, all mixed together.',
+    howScored: BUSINESS_LADDER_STEPS('Every line matched or explained, plus the balance'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'chart',
+  },
   'work.contract-redline': {
     hook: 'Two drafts of a contract and thirty hidden changes: would it let you sign the wrong one?',
     whatItTests: 'Comparing two versions of a services agreement and listing every change that matters, by clause, with the old and new values.',
@@ -993,52 +1040,32 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     hook: 'From 24 customer records to 1,000: how far up can it merge duplicates without merging two people?',
     whatItTests: 'Cleaning a customer list by exact written matching rules at ten growing sizes, from capitals and phone formats to long chains of matches.',
     whyHard: 'Every level adds records and rule families (nicknames, typos, shared mailboxes, married names, staff notes, gone-away masters), and the top levels join records only through chains of up to six matches.',
-    howScored: [
-      { icon: 'ladder', text: 'Ten levels of the same clean-up, each bigger and deeper' },
-      { icon: 'check', text: 'Groups pair by pair (F1); golden records as a set' },
-      { icon: 'percent', text: 'A level is passed at 90% of its points' },
-      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
-    ],
-    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    howScored: BUSINESS_LADDER_STEPS('Groups pair by pair (F1); golden records as a set'),
+    goodScore: BUSINESS_LADDER_SCORE,
     icon: 'grid',
   },
   'work.contract-ladder': {
     hook: 'From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change?',
     whatItTests: 'Comparing two drafts of a services agreement at ten growing lengths and listing every change that matters, by clause, with its old and new values.',
     whyHard: 'Each level adds length and kinds of edit, and the top levels hide about a hundred changes, re-pointed cross-references and a “shall” turned “may” among hundreds of renumbered clauses and re-sorted schedules.',
-    howScored: [
-      { icon: 'ladder', text: 'Ten pairs of drafts, each longer with more edits' },
-      { icon: 'diff', text: 'Each change: clause, type, old and new; traps 2 points' },
-      { icon: 'cross', text: 'Listing a non-change costs as much as missing one' },
-      { icon: 'flag', text: 'A level is passed at 90%; headline = rungs climbed' },
-    ],
-    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    howScored: BUSINESS_LADDER_STEPS('Each change: clause, type, old and new; traps 2 points'),
+    goodScore: BUSINESS_LADDER_SCORE,
     icon: 'diff',
   },
   'work.sql-ladder': {
     hook: 'From one table and one rule to ten tables and a five-point memo: how deep a query can it get right?',
     whatItTests: 'Writing one database query per level, from a simple count to a customer review that applies every warehouse rule and a finance memo at once.',
     whyHard: 'Each level adds tables, rules and memo amendments: UK time across the clock change, price and category history, best promotions, reversal chains, a lost day of data, duplicate events and ranks with ties.',
-    howScored: [
-      { icon: 'ladder', text: 'Ten questions, each one query deeper' },
-      { icon: 'hidden', text: 'Run on the real database and 3 hidden copies' },
-      { icon: 'percent', text: 'Share of result rows that match; pass at 90%' },
-      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
-    ],
-    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    howScored: BUSINESS_LADDER_STEPS('Rows that match on the real DB and 3 hidden copies'),
+    goodScore: BUSINESS_LADDER_SCORE,
     icon: 'chart',
   },
   'work.support-ladder': {
     hook: 'From four easy returns to 120 tangled tickets: how far up the queue can it climb by the handbook?',
     whatItTests: 'Working a shop’s overnight support queue at ten growing sizes: category, priority, response deadline, decision and exact refund for every ticket.',
     whyHard: 'Every level adds tickets and handbook rules; the top levels are mostly interacting traps (split parcels, minimum-spend codes, corrections, reopened tickets, fraud) across clock changes and bank holidays.',
-    howScored: [
-      { icon: 'ladder', text: 'Ten queues under the same handbook, each longer' },
-      { icon: 'check', text: 'Five fields per ticket; trap decisions worth more' },
-      { icon: 'percent', text: 'A level is passed at 90% of its points' },
-      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
-    ],
-    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    howScored: BUSINESS_LADDER_STEPS('Five fields per ticket; trap decisions worth more'),
+    goodScore: BUSINESS_LADDER_SCORE,
     icon: 'persona',
   },
 

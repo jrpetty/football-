@@ -426,6 +426,11 @@ at least two of three attempts, or on the single attempt when running one repeat
 is shown ("once solved level 7") but never lifts the climber past a rung it missed. Random filler scores 0
 (regression-tested).
 
+Horizon is the first family of **difficulty ladders**: the contract, the per-test pass marks, the height rule and
+the ladder suites are in [§7q Difficulty ladders](#7q-difficulty-ladders); the Horizon tests are listed in
+`config/ladders.json` with pass mark 1 (full marks), and their heights are computed by the same function as
+every other ladder (`src/core/ladders.ts`).
+
 **Reproducible for years.** The ten levels of each test are frozen in the test files and covered by the test
 hash. Never regenerate a published version: a model measured in 2030 must meet the very same rungs. When
 models top out, add levels L11, L12, … in a new version and keep L01–L10 unchanged, so old and new heights stay
@@ -1344,15 +1349,167 @@ the night premium left out of the total (50); the break rule, capacities or wind
 (about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
 misread on its own (18–94).
 
-## 7q. Business ladders: data and support
+## 7q. Difficulty ladders
 
-Four Business tests (category `work`) turned into ten-rung difficulty ladders, Horizon-style (§7d): the same task and
+Standard, Frontier and the Business Ladder's levels 1–3 saturate: the strongest models score 99–100% and stop
+separating. A **difficulty ladder** keeps separating them, and keeps doing so for years. The Horizon tier
+(§7d) was the first family; the Frontier logic, maths and coding tests and the Business level 2–3 jobs are being
+rebuilt the same way. Every ladder test, built or planned, is listed in `config/ladders.json`, checked by
+`test/ladders.test.ts`.
+
+**The contract (every ladder test).**
+
+* A **new** test. The test it is built from stays untouched, so its old results stay comparable.
+* Exactly ten cases, `L01` … `L10`, **frozen forever** once released. New levels later are `L11`, `L12`, … in a
+  new version; `L01`–`L10` never change.
+* Each level is **strictly harder** than the one below along one documented size or depth parameter (more items,
+  more rules interacting, longer chains, a bigger state space, larger inputs), never through trick wording. The
+  task and the rules are the same on every level; only scale and depth grow. A unit test asserts the growth, and
+  `config/ladders.json` names it (`grows`) and labels every rung (`rungs`, e.g. "3×3 · 20 moves").
+* **Calibration targets**, checked by blind play: L01–L02 a small model passes; L03–L05 is a mid-sized model's
+  limit; L05–L07 today's top model's limit; L08–L10 beyond any model today, but solvable in principle by a patient
+  expert. Every level has exactly one correct answer, computed by a solver and, ideally, double-checked by an
+  independent second method. The ladder view shows these bands down its left edge.
+* Random filler and the Random Baseline score about 0 on every level; the reference answer scores 100 on every
+  level; levels regenerate byte-identically from fixed seeds.
+
+**Pass marks.** A rung is passed by an attempt that scores at least the test's `passMark`:
+
+| Ladders | `passMark` | Why |
+|---|---|---|
+| Horizon (5) and the five Frontier Ladders (`reasoning.grid-ladder`, `reasoning.truth-ladder`, `reasoning.plans-ladder`, `math.exact-ladder`, `coding.engineering-ladder`) | 1 (full marks) | One exact answer: anything less is not solved. |
+| The eight Business Ladders (`work.invoices-ladder`, `work.payroll-ladder`, `work.expenses-ladder`, `work.reconciliation-ladder`, `work.crm-ladder`, `work.contract-ladder`, `work.sql-ladder`, `work.support-ladder`) | 0.9 | Partial-credit jobs (points per line, field or row): 90% of a rung's points is work a person would sign off. |
+
+Full marks allow a rounding hair (a score of 0.999 counts), exactly as Horizon always has.
+
+**The height rule** (`climbLadder` in `src/core/ladders.ts`; one function for every screen):
+
+* A rung is passed **reliably** when at least two thirds of its attempts pass (2 of 3; with one repeat, the single
+  attempt). Errors and cancelled answers are not attempts; a refusal or a timeout scores 0.
+* The **ladder height** is the highest level L such that every level 1..L was passed reliably (0: not even level
+  1). It is the headline. A missing or failed rung stops the climb: a pass higher up is shown as **"once solved
+  L7"** (a dashed ghost on the ladder) but never lifts the height.
+* **Borderline**: the height rests on a rung passed by only some of its attempts, or (partial-credit ladders) on an
+  attempt within 5 points of the pass mark. **Just short**: the next rung up was passed by some attempt, or missed
+  by less than 5 points. Both are flagged (a `~` on leaderboards), so luck is never sold as a clear result, and a
+  one-rung lead that rests on either is described as "within the noise".
+* The **test score** stays the mean over the levels (the share of the ladder climbed), so a ladder test sits in a
+  leaderboard like any other test.
+* With several ladder tests, a model's **Height** column is the mean height over the ladder tests it ran.
+
+**Where heights appear.** The test's own page ("How high can it climb?": every model's lane, every attempt's chip
+on every rung, the growth per rung); the Result Inspector; the Presenter's "How high can it climb?" slide for every
+ladder test in a run; a sortable **Height** column and a "How high each model climbs" panel on every leaderboard
+with ladder tests; the Studio script; the public site's leaderboards and test pages. Comparisons are said in plain
+English ("Atlas climbs 2 rungs higher than Nova (level 5 vs 3)").
+
+**Ladder suites.** `horizon`, `frontier-ladders` ("Frontier Ladders", the five benchmark ladders) and
+`business-ladders` ("Business Ladders", the eight work ladders; its headline score is the Business Score, §7h,
+with heights alongside). Each has its own leaderboard and is never mixed into the Standard or Frontier Index
+or the Business Ladder's adoption levels; in the app the Business ones are labelled "difficulty ladder". Default
+repeats: 1 (cost); run 3 for published heights, so "reliably" means 2 of 3. A ladder still being built is listed with
+`"planned": true` in `config/ladders.json` and in its suite: it shows as "coming soon" and is never run. When it
+lands, delete both flags and add its ten `rungs` labels; the validator (`npm run validate`, `npm test`) says so.
+
+**Why ladders stay comparable for years.** The rungs are frozen and covered by the test hash, the pass mark and
+the height rule are fixed per test in a versioned config, and the top rungs are deliberately beyond today's
+models. A model measured in 2030 climbs exactly the same rungs under exactly the same rule as one measured today,
+so its height is directly comparable; when models reach the top, new rungs are added above (L11+, new version)
+without moving the old ones.
+
+## 7r. Business ladders: finance (invoices, payslips, expenses, reconciliation)
+
+Four tests in the `work` category turn the finance tests of the business pack into **ten-rung ladders**, in the
+style of the Horizon tier (§7d): the same task on every rung, ten frozen levels `L01`–`L10`, each strictly bigger
+than the one below. They are new tests; Invoices to Pay, Check the Payslips, Expense Policy Check and Reconcile the
+Account stay exactly as they were, so old results stay comparable.
+
+| Test | Growth parameter, L01 → L10 | Rule families printed (beyond the basics), L01 → L05 | Input tokens, L01 → L05 → L10 |
+|---|---|---|---|
+| Invoices to Pay: Ladder (`work.invoices-ladder`) | inbox documents 5, 8, 14, 24, 46, 65, 80, 96, 113, 130 | 2, 4, 7, 10, 14 (all) | 2.4k → 15.6k → 33.9k |
+| Check the Payslips: Ladder (`work.payroll-ladder`) | staff 4, 6, 9, 12, 20, 32, 46, 64, 88, 120 | 2, 4, 6, 8, 11 (all) | 2.1k → 7.1k → 36.5k |
+| Expense Policy Check: Ladder (`work.expenses-ladder`) | claim lines 8, 21, 28, 57, 168, 262, 497, 614, 772, 931 | 2, 4, 7, 10, 11 (all) | 0.9k → 7.3k → 31.7k |
+| Reconcile the Account: Ladder (`work.reconciliation-ladder`) | statement + cash-book lines 28, 49, 73, 95, 275, 455, 628, 831, 1,075, 1,416 | 1, 3, 5, 8, 9 (all) | 1.4k → 7.5k → 33.5k |
+
+**Volume and rules grow together.** A level prints only the rule families it uses, and each clause is printed word
+for word as in the full test's policy (renumbered in the same order). Level 1 is a handful of items and one or two
+families; level 5 is the full policy at about the size of the current hardest case; levels 6 to 10 keep the full
+policy and grow in volume and in interacting rules:
+
+* Invoices: price tolerance and quantity received (L01); + entity and VAT (L02); + duplicates, bank details and the PO
+  check with OCR (L03); + discounts, credit notes and GRN correction emails (L04); + inbox consumption, the £10
+  document cap, PO amendments and the supplier-net exception (L05). From L06, chains of documents on one PO line:
+  four invoices that use up a part delivery in turn (one held for price, so the next fits), a credit note that
+  frees quantity for a later invoice, an invoice held for VAT, re-sent (a duplicate) and then re-issued.
+* Payslips: the basics (salary, auto-enrolment pension, cumulative PAYE, NI category A) with overtime and student
+  loans (L01); + NI categories C and H and BR/K codes (L02); + Cycle to Work and SSP (L03); + starters (P45, M1,
+  mid-month) and late items (L04); + directors, pension by salary sacrifice and Sunday overtime (L05). From L06 a
+  growing share of staff (30% to 80%) combine two features on one payslip (salary sacrifice with a student loan, a
+  late coding notice on an overtime worker, a P45 starter with a loan, ...).
+* Expenses: receipts from £25.00 and hotel limits (L01); + meal limits shared per employee, city and day and
+  first-class rail (L02); + alcohol, the 60-day limit with late-submission approvals and duplicates (L03); +
+  entertainment and its approvals, mileage 45p/25p with passengers, euro and dollar conversion (L04); + the
+  hotel-night meal uplift (L05). From L06 more claims per person (mileage, duplicates and late lines across claims),
+  late lines claimed again, and foreign taxis without a receipt either side of £25.00 after conversion.
+* Reconciliation: one-to-one matches, timing items, fees and interest, with a keyed-in error (L01); + unrecorded
+  direct debits and duplicates on either side (L02); + instalments, part-payments and a reversed charge (L03); +
+  BACS runs, a returned cheque and dollar payments (L04); + last month's outstanding items (L05). From L06 every
+  trap scales up, with look-alike payments (same supplier and amount, another invoice) and an instalment the bank
+  paid twice.
+
+**One truth, the same engine.** Every key comes from the rules engine of the existing test, unchanged
+(`verification/realworld-business/invoices.mjs` and `payroll.mjs`, `verification/realworld-work/expenses.py` and
+`bankrec.py`; the generators gained optional ladder parameters that leave the existing tests byte-identical), and is
+cross-checked as the existing test is: planted intent = engine for every invoice and every planted rule changes the
+answer when ignored; every planted payroll mistake changes its draft (mistakes are chosen so that they do) and every
+net pay adds up; every exact copy of an expense line is a planted duplicate; every reconciliation match is re-derived
+from the printed fields alone and the adjusted cash book equals the adjusted bank balance. The ladder adds its own
+checks: every rule family a level does not print changes nothing when the engine switches it off, and the features
+it governs do not occur; and the full-policy wording printed from L05 on equals the existing test's, byte for byte
+(asserted by the builders and by `test/finance-ladders.test.ts`).
+
+**Scoring.** The `json` scorer exactly as in the existing tests (`lenient`, `sets`, the same `weights` and trap
+weights, §5.1a), so a case score is the share of its points. A rung is **passed at 90% of its points**; the headline
+is the ladder height (the highest level L with every level 1..L passed reliably, as in §7d) and the test score is
+the mean over the ten levels. Output limit 64,000 tokens, 30 minutes per level, one retry.
+
+**Measured spread** (`node verification/finance-ladders/spread.mts`, scripted answers through the real scorer).
+Reference 100% and do-nothing, copy-the-prompt and random filler 0% on every level. "Slip" is a careful answer with
+one subtle slip (one penny of rounding on one payment, OCR O/0, a settlement discount on the gross, the
+supplier-net exception; an hourly rate or the half-penny employer NI rounded the wrong way; "over £25" for "£25.00
+or more", an approval's limit ignored; a keying difference's or FX difference's sign, a returned cheque booked as a
+bank charge). "Careless" is each generator's careless answer (face value; trust the drafts; meal limits per meal,
+approvals from the claim form, 45p throughout; exact-amount matching only).
+
+| Level | Invoices: slip / careless | Payslips: slip / careless | Expenses: slip / careless | Reconciliation: slip / careless |
+|---|---:|---:|---:|---:|
+| L01 | 78 / 27 | 57 / 0 | 25 / 14 | 93 / 63 |
+| L02 | 82 / 26 | 83 / 17 | 68 / 27 | 92 / 54 |
+| L03 | 93 / 32 | 83 / 0 | 74 / 22 | 95 / 45 |
+| L04 | 95 / 40 | 94 / 0 | 93 / 13 | 96 / 45 |
+| L05 | 99 / 41 | 95 / 0 | 96 / 21 | 97 / 38 |
+| L06 | 99 / 48 | 97 / 0 | 97 / 22 | 97 / 38 |
+| L07 | 99 / 45 | 98 / 0 | 97 / 26 | 97 / 37 |
+| L08 | 99 / 51 | 98 / 0 | 97 / 21 | 97 / 37 |
+| L09 | 99 / 48 | 99 / 0 | 98 / 22 | 97 / 38 |
+| L10 | 99 / 51 | 99 / 0 | 98 / 23 | 97 / 38 |
+
+A careless answer fails every rung. On the low rungs a single slip already fails (a few items, so every field
+counts); on the high rungs one slip costs 1–3% and the rung is lost only through many slips, which is what volume
+and interacting rules produce. These scripted answers bound the scale; they are not models. The calibration targets
+(L01–L02 a small model passes, L05–L07 the limit of today's top model, L08–L10 beyond it) are by design and still
+need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
+verification/finance-ladders/build.py` (`--check` proves both byte for byte); never regenerate a released version.
+
+## 7s. Business ladders: data and support
+
+Four Business tests (category `work`) turned into ten-rung difficulty ladders under the contract of §7q: the same task and
 the same written rules on every level, ten frozen cases `L01`…`L10`, each level strictly bigger or deeper than the one
 below. The original tests stay unchanged, so old results stay comparable. Every level's key comes from the same
 generators, rules engines and scorers as the original test, so a level is marked exactly as that test marks a case;
-a level is **passed at 90% of its points** (partial credit, so the pass mark is per test in `config/ladders.json`),
-the test score is the mean over the levels, and the headline is the ladder height (§7d: the highest level L with
-every level 1..L passed reliably).
+a level is **passed at 90% of its points** (`passMark` 0.9 in `config/ladders.json`), the test score is the mean
+over the levels, and the headline is the ladder height (§7q: the highest level L with every level 1..L passed
+reliably).
 
 | Test | Built from | The growth parameter, level 1 → 10 | Input tokens per level |
 |---|---|---|---|

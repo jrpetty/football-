@@ -20,10 +20,21 @@ import { buildHistory, simulatedIds } from './history.ts';
 import { loadSiteConfig } from './site-config.ts';
 import type { PublicData, PublicModel, PublicSuite, PublicTest, SiteConfig } from './types.ts';
 
+import { ladderSpec } from '../core/ladders.ts';
+import { loadLadders } from '../core/ladders-file.ts';
+
 const MAX_PROMPT_CHARS = 6000;
 
-/** Plain-English "how it's scored" (mirrors the Presenter's wording). */
+/** Plain-English "how it's scored" (mirrors the Presenter's wording). Difficulty ladders add the height rule. */
 export function scoringText(def: TestDefinition): string {
+  const base = scorerText(def);
+  const ladder = ladderSpec(loadLadders(), def.id);
+  if (!ladder || ladder.planned || def.kind !== 'prompt' || def.scorer.type === 'ladder') return base;
+  const mark = ladder.passMark >= 1 ? 'full marks' : `${Math.round(ladder.passMark * 100)}% of its marks`;
+  return `${base} A difficulty ladder: ten levels, each harder than the last; a level is passed at ${mark}, and the headline is the highest level passed reliably with every level below it.`;
+}
+
+function scorerText(def: TestDefinition): string {
   if (def.kind === 'program') return PROGRAMS[def.program]?.scoring || 'Scored by the simulation itself: the same world for every model.';
   const sc = def.scorer;
   switch (sc.type) {

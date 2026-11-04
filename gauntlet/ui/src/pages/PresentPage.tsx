@@ -33,7 +33,7 @@ import { selectTrickHighlights, type TrickHighlight } from '../../../src/present
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
 import { LadderSlide } from '../components/present/LadderSlide.tsx';
 import { BusinessLadderSlide, runHasBusinessLadder } from '../business/BusinessLadderSlide.tsx';
-import { isHorizonTest } from '../../../src/presenter/visuals/horizon.ts';
+import { isLadderTest, ladderSpecOf } from '../ladders.ts';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
 import { runningStandings, revealSteps, revealState, type StandingsStep } from '../../../src/presenter/standings.ts';
@@ -330,9 +330,9 @@ function trickSlides(deck: Deck, test: DeckTest): Slide[] {
   return hs.map((h, i) => ({ kind: 'trick', test, h, i: i + 1, of: hs.length }));
 }
 
-/** "How far up the ladder" for a Horizon test that has recorded results (components/present/LadderSlide.tsx). */
+/** "How high can it climb?" for any difficulty-ladder test with recorded results (components/present/LadderSlide.tsx). */
 function ladderSlides(deck: Deck, test: DeckTest): Slide[] {
-  if (!isHorizonTest(test.snap.id)) return [];
+  if (!isLadderTest(test.snap.id)) return [];
   return (deck.d.results ?? []).some((r) => r.testId === test.snap.id && typeof r.score === 'number') ? [{ kind: 'ladder', test }] : [];
 }
 
@@ -523,11 +523,14 @@ function captionFor(slide: Slide, deck: Deck): Caption {
         text: 'How far up the Business Ladder: five levels of real company work, from reading one document to running a department. Each model stands on the highest level where it scored at least 70 on every test, and on every level below.',
         fine: 'From this run’s results only · dashed levels are still being built · bars show each score’s 95% range against the 70 line',
       };
-    case 'ladder':
+    case 'ladder': {
+      const pm = ladderSpecOf(slide.test.snap.id)?.passMark ?? 1;
+      const mark = pm >= 1 ? 'full marks' : `at least ${Math.round(pm * 100)}% of the marks`;
       return {
-        text: 'How far up the ladder: ten levels, each harder than the last. Each model stands on the highest rung it reached without missing one below; the dots show every level’s result.',
-        fine: `Solved reliably = full marks on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · a lucky solve higher up is listed but does not lift the climber · the levels are frozen, so future models climb the same ladder`,
+        text: 'How high can it climb? Ten levels, each harder than the last. Each model’s lane is filled up to the highest rung it passed without missing one below; the chips show every attempt on every rung.',
+        fine: `Passed reliably = ${mark} on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · a lucky pass higher up shows as a dashed “once” but does not lift the height · the levels are frozen, so future models climb the same ladder`,
       };
+    }
     case 'jam-genre': {
       const r = (deck.d.results ?? []).find((x) => x.testId === slide.test.snap.id && x.caseId === slide.caseId);
       return jamGenreCaption(r ? entryOf(r).genre : 'flappy');
@@ -607,7 +610,7 @@ function sectionFor(slide: Slide, deck: Deck): string {
     case 'gallery-winner':
       return 'The Gallery · Masterpiece of the Show';
     case 'ladder':
-      return `Test ${slide.test.n} of ${deck.tests.length} · How far up the ladder`;
+      return `Test ${slide.test.n} of ${deck.tests.length} · How high can it climb?`;
     case 'business-ladder':
       return 'Business · How far up the ladder?';
   }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSuites, loadTests, renderCase, caseScorer, validateTest } from '../src/core/registry.ts';
+import { loadSuites, loadTests, renderCase, caseScorer, suiteProblems, validateTest } from '../src/core/registry.ts';
 import { scoreResponse } from '../src/scoring/index.ts';
 import type { ArtifactRef } from '../src/core/types.ts';
 
@@ -25,23 +25,9 @@ test('every test definition validates', () => {
   assert.deepEqual(problems, []);
 });
 
-test('every suite references existing tests and cases', () => {
-  const byId = new Map(all.map((t) => [t.definition.id, t]));
-  const missing: string[] = [];
-  for (const s of loadSuites()) {
-    for (const e of s.tests) {
-      if (e.id === '*') continue;
-      const t = byId.get(e.id);
-      if (!t) {
-        missing.push(`${s.id} → ${e.id}`);
-        continue;
-      }
-      const d = t.definition;
-      const known = d.kind === 'prompt' ? d.cases.map((c) => c.id) : d.seeds.map((x) => `seed-${x}`);
-      for (const cid of e.cases ?? []) if (!known.includes(cid)) missing.push(`${s.id} → ${e.id}/${cid}`);
-    }
-  }
-  assert.deepEqual(missing, []);
+test('every suite references existing tests and cases (planned difficulty ladders excepted until they land)', () => {
+  // A planned entry may name a test that is still being built; once it exists, delete its "planned": true.
+  assert.deepEqual(suiteProblems(loadSuites(), all), []);
 });
 
 const noJudges = { ids: [], ask: async () => [] };

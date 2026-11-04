@@ -1,0 +1,17 @@
+{
+  "id": "business-ladders",
+  "version": "1.0.0",
+  "name": "Business Ladders",
+  "description": "Eight Business tests rebuilt as ten-rung difficulty ladders (not the Business Ladder's adoption levels): invoices, payslips, expenses, reconciliation, the customer list, contract changes, database questions and the support queue. Each rung adds volume and stacks more policy rules; a rung is passed at 90% of its points. The headline is the ladder height alongside the Business Score. Every answer is machine-checked against a solver. Never mixed into the Gauntlet Index. Tests still being built appear as coming soon.",
+  "repeats": 1,
+  "tests": [
+    { "id": "work.invoices-ladder" },
+    { "id": "work.payroll-ladder" },
+    { "id": "work.expenses-ladder" },
+    { "id": "work.reconciliation-ladder" },
+    { "id": "work.crm-ladder", "planned": true },
+    { "id": "work.contract-ladder", "planned": true },
+    { "id": "work.sql-ladder", "planned": true },
+    { "id": "work.support-ladder", "planned": true }
+  ]
+}

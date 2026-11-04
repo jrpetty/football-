@@ -8,6 +8,8 @@ import { errorRate, isBaseline, olympicCompare, shortCat } from './util.ts';
 import { ScoreHint, ScoreScale } from '../clarity/Jargon.tsx';
 import { copiedByHandText } from '../../../../src/manual-models/identity.ts';
 import { useScoreName } from './scoreName.tsx';
+import { RungMeter } from '../viz/DifficultyLadder.tsx';
+import { ladderSpecOf } from '../../ladders.ts';
 
 type Group = 'categories' | 'economics' | 'speed' | 'reliability';
 type SortKey = string;
@@ -27,6 +29,8 @@ function sortValue(row: LeaderboardRow, key: SortKey): number | string | null {
       return row.label.toLowerCase();
     case 'index':
       return row.index;
+    case 'height':
+      return row.ladderHeight ?? null;
     case 'cost':
       return row.totals?.costUsd ?? null;
     case 'cpp':
@@ -81,6 +85,36 @@ function heatStyle(score: number | null | undefined, cat: CategoryInfo): CSSProp
   return { background: `color-mix(in srgb, ${cat.color} ${pct}%, transparent)` };
 }
 
+/** "4.2" for a mean over several ladders, "5" for one. */
+export function fmtHeight(h: number | null | undefined, tests = 1): string {
+  if (typeof h !== 'number') return '—';
+  return tests > 1 && !Number.isInteger(h) ? h.toFixed(1) : String(Math.round(h * 10) / 10);
+}
+
+/** The ladder height cell: the mean height over this model's ladder tests, a ten-rung meter, and each test on hover. */
+function HeightCell({ row, names }: { row: LeaderboardRow; names: Map<string, string> }) {
+  const per = Object.values(row.tests ?? {}).filter((t) => t.ladder);
+  const n = row.ladderTests ?? per.length;
+  const title = per.length
+    ? `${per.map((t) => `${names.get(t.testId) ?? t.testId}: level ${t.ladder!.height}${t.ladder!.onceSolved.length ? ` (once L${t.ladder!.onceSolved[t.ladder!.onceSolved.length - 1]})` : ''}`).join(' · ')}`
+    : 'No ladder results';
+  const borderline = per.some((t) => t.ladder!.borderline);
+  return (
+    <div className="height-cell" title={title}>
+      <span className="height-value tnum">
+        {typeof row.ladderHeight === 'number' ? <>L{fmtHeight(row.ladderHeight, n)}</> : '—'}
+        {borderline && (
+          <span className="height-warn" aria-label="includes a borderline rung">
+            ~
+          </span>
+        )}
+      </span>
+      <RungMeter height={row.ladderHeight ?? null} color={row.color} label={title} />
+      {n > 1 && <span className="height-sub">avg of {n}</span>}
+    </div>
+  );
+}
+
 const Row = memo(function Row({
   row,
   cats,
@@ -90,6 +124,7 @@ const Row = memo(function Row({
   onSelect,
   selected,
   onExplain,
+  heights,
 }: {
   row: LeaderboardRow;
   cats: CategoryInfo[];
@@ -99,6 +134,8 @@ const Row = memo(function Row({
   onSelect?: (id: string) => void;
   selected?: boolean;
   onExplain?: ExplainHandler;
+  /** Ladder boards: test id → name, for the Height column (absent: no column). */
+  heights?: Map<string, string>;
 }) {
   const baseline = isBaseline(row);
   const err = errorRate(row);
@@ -143,6 +180,11 @@ const Row = memo(function Row({
           <IndexCell row={row} maxCi={maxCi} />
         )}
       </td>
+      {heights && (
+        <td className="c-height">
+          <HeightCell row={row} names={heights} />
+        </td>
+      )}
       {show.categories &&
         cats.map((c) => {
           const v = row.categoryScores?.[c.id];
@@ -280,6 +322,12 @@ export function LeaderboardTable({
   }, [cats, lb.rows]);
 
   const maxCi = 100;
+  // Difficulty-ladder boards lead with the ladder height (src/core/ladders.ts), next to the headline score.
+  const heights = useMemo(() => {
+    const ladderTests = (lb.tests ?? []).filter((t) => ladderSpecOf(t.id));
+    if (!ladderTests.length || !lb.rows.some((r) => typeof r.ladderHeight === 'number')) return undefined;
+    return new Map(ladderTests.map((t) => [t.id, t.name]));
+  }, [lb]);
 
   const rows = useMemo(() => {
     const list = [...(lb.rows ?? [])];
@@ -339,6 +387,12 @@ export function LeaderboardTable({
               <th className="c-index">{S('index', scoreName, 'Weighted mean of category scores × 100, with 95% bootstrap CI')}
                 <ScoreHint text="The overall score out of 100: the average of the category scores. 100 would mean full marks on every test. The thin bracket shows how much the score could move by chance." />
               </th>
+              {heights && (
+                <th className="c-height">
+                  {S('height', 'Height', 'Ladder height: the highest level passed reliably with every level below it (mean over the ladder tests)')}
+                  <ScoreHint text="How high up the ten-rung difficulty ladders the model climbs: the highest level it passed reliably with every level below it. With several ladders, the average. ~ means a rung in the climb was within the noise." />
+                </th>
+              )}
               {show.categories &&
                 cats.map((c) => (
                   <th key={c.id} className="c-heat num" title={`${c.name} (weight ${lb.categoryWeights?.[c.id] ?? c.weight})`}>
@@ -371,7 +425,7 @@ export function LeaderboardTable({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <Row key={r.contestantId} row={r} cats={cats} show={show} maxCi={maxCi} best={best} onSelect={onSelect} selected={selectedId === r.contestantId} onExplain={onExplain} />
+              <Row key={r.contestantId} row={r} cats={cats} show={show} maxCi={maxCi} best={best} onSelect={onSelect} selected={selectedId === r.contestantId} onExplain={onExplain} heights={heights} />
             ))}
           </tbody>
         </table>

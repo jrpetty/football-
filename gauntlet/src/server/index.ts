@@ -34,7 +34,7 @@ import {
 } from '../core/registry.ts';
 import type { CaseResult, RunEvent, RunRequest, TestDefinition } from '../core/types.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
-import { businessLadder, combinedLeaderboard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
+import { businessLadder, combinedLeaderboard, ladderBoard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
 import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRuns, resumeRun, startRun, subscribe } from '../engine/runner.ts';
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
@@ -263,7 +263,7 @@ route('GET', '/api/suites', () => {
   const all = loadTests();
   return loadSuites().map((s) => {
     const tests = resolveTests({ suiteId: s.id }, all);
-    return { ...s, fingerprint: fingerprint(tests), testCount: tests.length };
+    return { ...s, fingerprint: fingerprint(tests), testCount: tests.length, plannedCount: s.tests.filter((t) => t.planned).length };
   });
 });
 
@@ -543,6 +543,7 @@ route('GET', '/api/costs', async ({ query }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 route('GET', '/api/leaderboard', ({ query }) => combinedLeaderboard(query.get('suite') || 'core'));
+route('GET', '/api/ladders/:testId', ({ params }) => ladderBoard(params.testId!));
 
 // The Business Ladder: per model, per business scenario, how far up the five levels it climbs (docs/METHODOLOGY.md).
 route('GET', '/api/business-ladder', ({ query }) =>

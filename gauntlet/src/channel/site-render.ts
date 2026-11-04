@@ -129,6 +129,9 @@ function ciBar(r: LeaderboardRow): string {
 function leaderboardTable(ctx: Ctx, suite: PublicSuite): string {
   const rows = suite.leaderboard.rows;
   if (!rows.length) return '<div class="card"><p class="muted">No results for this suite yet.</p></div>';
+  // Difficulty ladders: the mean ladder height over the suite's ladder tests (src/core/ladders.ts).
+  const hasHeight = rows.some((r) => typeof r.ladderHeight === 'number');
+  const height = (r: LeaderboardRow) => (typeof r.ladderHeight === 'number' ? `L${(r.ladderTests ?? 1) > 1 && !Number.isInteger(r.ladderHeight) ? r.ladderHeight.toFixed(1) : r.ladderHeight}` : '—');
   const body = rows
     .map((r) => {
       const base = isBaselineRow(r, ctx.models);
@@ -137,6 +140,7 @@ function leaderboardTable(ctx: Ctx, suite: PublicSuite): string {
 <td data-v="${esc(r.label)}">${modelCell(ctx, '', r)}</td>
 <td data-v="${r.index ?? -1}">${ciBar(r)}</td>
 <td class="num" data-v="${r.indexCi95 ? r.indexCi95[0] : ''}">${r.indexCi95 ? `${fmtIdx(r.indexCi95[0])}–${fmtIdx(r.indexCi95[1])}` : '—'}</td>
+${hasHeight ? `<td class="num" data-v="${r.ladderHeight ?? -1}"><b>${height(r)}</b></td>` : ''}
 <td class="num" data-v="${r.medals.gold * 10000 + r.medals.silver * 100 + r.medals.bronze}">${r.medals.gold}·${r.medals.silver}·${r.medals.bronze}</td>
 <td class="num" data-v="${r.totals.cases ? r.totals.costUsd / r.totals.cases : ''}">${r.manual ? '<span class="muted">n/a</span>' : fmtCost(r.totals.cases ? r.totals.costUsd / r.totals.cases : null)}</td>
 <td class="num" data-v="${r.costPerPoint ?? ''}">${r.manual ? '<span class="muted">n/a</span>' : fmtCost(r.costPerPoint)}</td>
@@ -146,7 +150,7 @@ function leaderboardTable(ctx: Ctx, suite: PublicSuite): string {
     })
     .join('');
   return `<div class="card"><h2>${esc(scoreNameFor(suite.leaderboard.tests))}</h2><p class="desc">Weighted mean of the category scores, 0–100. The bar shows the 95% confidence interval: models whose bars overlap are statistically tied. Click a column to sort.</p>
-<div class="scroll"><table data-sortable><thead><tr><th data-sort>#</th><th data-sort>Model</th><th data-sort>Index</th><th class="num" data-sort>95% CI</th><th class="num" data-sort title="Gold · silver · bronze test wins">Medals</th><th class="num" data-sort>Cost / case</th><th class="num" data-sort title="USD per Index point">$ / point</th><th class="num" data-sort>Median case</th><th class="num" data-sort title="Share of suite tests with results">Coverage</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+<div class="scroll"><table data-sortable><thead><tr><th data-sort>#</th><th data-sort>Model</th><th data-sort>Index</th><th class="num" data-sort>95% CI</th>${hasHeight ? '<th class="num" data-sort title="Ladder height: the highest of ten levels passed reliably with every level below it (mean over the ladder tests)">Height</th>' : ''}<th class="num" data-sort title="Gold · silver · bronze test wins">Medals</th><th class="num" data-sort>Cost / case</th><th class="num" data-sort title="USD per Index point">$ / point</th><th class="num" data-sort>Median case</th><th class="num" data-sort title="Share of suite tests with results">Coverage</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
 
 function podium(ctx: Ctx, suite: PublicSuite): string {
@@ -306,10 +310,16 @@ function testPage(ctx: Ctx, t: PublicTest): string {
       if (!rows.length) return `<section class="card"><h2>${esc(s.name)}</h2><p class="muted">No results yet.</p></section>`;
       const medal = s.leaderboard.medals.find((m) => m.testId === t.id);
       const medalFor = (id: string) => (medal?.gold === id ? '<span class="medal g">1</span>' : medal?.silver === id ? '<span class="medal s">2</span>' : medal?.bronze === id ? '<span class="medal b">3</span>' : '');
-      return `<section class="card"><h2>${esc(s.name)}</h2><div class="scroll"><table><thead><tr><th>Model</th><th class="num">Score</th><th class="num">95% CI</th><th style="width:35%"></th><th class="num">Pass rate</th><th></th></tr></thead><tbody>${rows
+      const ladder = rows.some((r) => r.tests[t.id]!.ladder);
+      const heightCell = (r: LeaderboardRow) => {
+        const l = r.tests[t.id]!.ladder;
+        const once = l?.onceSolved[l.onceSolved.length - 1];
+        return l ? `<td class="num"><b>L${l.height}</b>${once ? ` <span class="muted small">once L${once}</span>` : ''}</td>` : '<td class="num">—</td>';
+      };
+      return `<section class="card"><h2>${esc(s.name)}</h2>${ladder ? '<p class="desc">Height: the highest of the ten levels passed reliably with every level below it. A pass higher up (“once”) does not count.</p>' : ''}<div class="scroll"><table><thead><tr><th>Model</th>${ladder ? '<th class="num">Height</th>' : ''}<th class="num">Score</th><th class="num">95% CI</th><th style="width:35%"></th><th class="num">Pass rate</th><th></th></tr></thead><tbody>${rows
         .map((r) => {
           const a = r.tests[t.id]!;
-          return `<tr><td>${modelCell(ctx, root, r)}</td><td class="num"><b>${fmtPct(a.score)}</b></td><td class="num">${a.ci95 ? `${fmtPct(a.ci95[0])}–${fmtPct(a.ci95[1])}` : '—'}</td><td><div class="bar" style="--c:${esc(r.color)}"><i style="width:${Math.round((a.score ?? 0) * 100)}%"></i></div></td><td class="num">${fmtPct(a.passRate)}%</td><td>${medalFor(r.contestantId)}</td></tr>`;
+          return `<tr><td>${modelCell(ctx, root, r)}</td>${ladder ? heightCell(r) : ''}<td class="num"><b>${fmtPct(a.score)}</b></td><td class="num">${a.ci95 ? `${fmtPct(a.ci95[0])}–${fmtPct(a.ci95[1])}` : '—'}</td><td><div class="bar" style="--c:${esc(r.color)}"><i style="width:${Math.round((a.score ?? 0) * 100)}%"></i></div></td><td class="num">${fmtPct(a.passRate)}%</td><td>${medalFor(r.contestantId)}</td></tr>`;
         })
         .join('')}</tbody></table></div></section>`;
     })

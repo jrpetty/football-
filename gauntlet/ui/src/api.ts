@@ -34,6 +34,7 @@ import type { CardSpec, CardStyle, ExportResult, OverlayData, PolishEstimate, Po
 import type { TestExplainer, TestSample } from './types.ts';
 import { mockArtifactUrls } from './mock/registry.ts';
 import type { ScoreAnswer } from '../../src/core/score-explain.ts';
+import type { LadderBoard } from '../../src/core/ladders.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -136,6 +137,8 @@ export const api = {
 
   // Leaderboard
   leaderboard: (suiteId: string) => request<Leaderboard>('GET', `/api/leaderboard?suite=${enc(suiteId)}`),
+  /** Every model's climb on one difficulty ladder, pooled across runs (src/core/ladders.ts). */
+  ladder: (testId: string) => request<LadderBoard>('GET', `/api/ladders/${enc(testId)}`),
   /** Every answer behind one leaderboard cell; scope is `run:<id>` or `suite:<id>`. */
   scoreAnswers: (scope: string, contestantId: string, testId: string) => request<ScoreAnswer[]>('GET', `/api/score-answers?scope=${enc(scope)}&contestant=${enc(contestantId)}&test=${enc(testId)}`),
 
