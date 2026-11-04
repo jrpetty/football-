@@ -8,6 +8,7 @@ import { scoreLadder } from './ladder.ts';
 import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { checkReply, fairPlaySummary } from './integrity.ts';
+import { scoreSql } from './sql.ts';
 
 export interface JudgeCall {
   judgeId: string;
@@ -410,6 +411,8 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
     case 'ladder':
       return scoreLadder(scorer.answer, expected, response);
+    case 'sql':
+      return scoreSql(scorer, expected as never, response, input.signal);
   }
 }
 

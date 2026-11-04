@@ -9,6 +9,7 @@ import { writeJsonAtomic, loadCategories } from './config.ts';
 import { JUDGE_PROMPT_FINGERPRINT } from '../scoring/judge-prompts.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { validateGameJamCase } from '../scoring/game-jam-shared.ts';
+import { sqlScorerSourceHash, unsafeReason } from '../scoring/sql.ts';
 import { caseImageRefs, resolveTestImage, testBaseDir, testHasImages, testImageDigests, testsRelativePath, validateCaseImages } from './vision.ts';
 import type { PromptTest, PromptTestCase, ScorerSpec, Suite, TestDefinition } from './types.ts';
 
@@ -120,6 +121,8 @@ export function computeTestHash(def: TestDefinition, baseDir?: string): string {
     return contentHash({ def, program: programSourceHash(def.program), fairPlay: FAIR_PLAY_FINGERPRINT });
   }
   if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()), fairPlay: FAIR_PLAY_FINGERPRINT });
+  // The sql scorer's code decides what counts as the same result: a change to it changes these tests' hashes.
+  if (def.scorer?.type === 'sql' || def.cases?.some((c) => c.scorer?.type === 'sql')) return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT, scorer: sqlScorerSourceHash() });
   return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT });
 }
 
@@ -235,7 +238,7 @@ export function summarize(t: LoadedTest): TestSummary {
 
 const TEST_ID_RE = /^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9.-]*$/;
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
-const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human', 'ladder']);
+const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human', 'ladder', 'sql']);
 const CONSTRAINT_CHECKS = new Set([
   'word_count', 'sentence_count', 'paragraph_count', 'line_count', 'bullet_count', 'include', 'exclude', 'no_letter',
   'starts_with', 'ends_with', 'all_lowercase', 'all_uppercase', 'no_commas', 'json', 'json_keys', 'regex',
@@ -259,6 +262,12 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
     }
   }
   if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
+  if (s.type === 'sql') {
+    if (s.dialect !== 'sqlite') errors.push(`${where}: sql scorer dialect must be "sqlite"`);
+    if (typeof s.schema !== 'string' || !/CREATE\s+TABLE/i.test(s.schema)) errors.push(`${where}: sql scorer needs a schema with CREATE TABLE statements`);
+    if (!Array.isArray(s.databases) || s.databases.length < 3) errors.push(`${where}: sql scorer needs the live database and at least 2 hidden copies`);
+    else if (s.databases[0]?.id !== 'live' || s.databases.some((d) => !d || typeof d.tables !== 'object')) errors.push(`${where}: sql databases need ids (the first "live") and tables`);
+  }
   if (s.type === 'judge' && !s.rubric?.trim()) errors.push(`${where}: judge scorer needs a rubric`);
   if (s.type === 'human' && !s.rubric?.trim()) errors.push(`${where}: human scorer needs a rubric`);
   if (s.type === 'judge-classify') {
@@ -330,6 +339,14 @@ function validateExpected(s: ScorerSpec, expected: unknown, where: string, error
           if (!Array.isArray(t?.args)) errors.push(`${where}: code-js test #${i + 1} needs args[]`);
           if (!('expected' in (t as object))) errors.push(`${where}: code-js test #${i + 1} needs expected`);
         });
+      break;
+    }
+    case 'sql': {
+      const e = expected as { reference?: unknown; ordered?: unknown; tolerance?: unknown } | undefined;
+      if (!e || typeof e.reference !== 'string') errors.push(`${where}: sql scorer needs expected.reference (the reference query)`);
+      else if (unsafeReason(e.reference)) errors.push(`${where}: sql reference query is refused by the safety check (${unsafeReason(e.reference)})`);
+      if (e && e.ordered !== undefined && typeof e.ordered !== 'boolean') errors.push(`${where}: sql expected.ordered must be true or false`);
+      if (e && e.tolerance !== undefined && !(typeof e.tolerance === 'number' && e.tolerance >= 0)) errors.push(`${where}: sql expected.tolerance must be a number ≥ 0`);
       break;
     }
     case 'contains':

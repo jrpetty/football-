@@ -211,6 +211,8 @@ export function friendlyScoring(def: TestDefinition | undefined, program: Progra
     }
     case 'human':
       return { text: 'Rated blind by people who never see which model made which answer.', tech: 'human blind review' };
+    case 'sql':
+      return { text: 'Each model writes a database query. It is run on the real database and on hidden copies with different data, and must return the same rows as the reference.', tech: 'SQL result match (read-only SQLite)' };
     default:
       return { text: 'Scored automatically by the Gauntlet harness.', tech: 'custom scorer' };
   }

@@ -90,6 +90,13 @@ export function describeMarking(scorer: ScorerSpec): string[] {
     }
     case 'human':
       return [`A person grades it in Blind Review against this rubric: ${trimRubric(scorer.rubric)}`];
+    case 'sql':
+      return [
+        'The answer is one SQLite query. Only a single read-only SELECT (or WITH) statement is run; anything that writes, attaches or chains a second statement scores zero.',
+        `The query runs on the database the question shows and on ${Math.max(0, (scorer.databases?.length ?? 1) - 1)} hidden copies with the same tables but different data, and is compared with a reference query on each, so hard-coding an answer does not work.`,
+        `On each database the result must have the same number of columns (names and column order don't matter); numbers count as equal within ±${scorer.tolerance ?? 0.01} unless the question says otherwise, and NULL only equals NULL. Row order counts only when the question asks for one.`,
+        'Each database scores the share of rows that are right (out of the larger of the two row counts), halved if the question asked for an order and the rows come in the wrong order; the question scores the average over the databases.',
+      ];
     case 'ladder':
       return [
         scorer.answer === 'plan'
@@ -116,7 +123,9 @@ function stepsFor(def: TestDefinition, programScoring?: string): DepthStep[] {
   const replyRule =
     def.scorer.type === 'exact' || def.scorer.type === 'number' || def.scorer.type === 'choice' || def.scorer.type === 'regex'
       ? 'Models are asked to finish with a line “FINAL ANSWER: …”, so the answer can be read reliably.'
-      : 'Models reply in the format the question asks for.';
+      : def.scorer.type === 'sql'
+        ? 'Models reply with one SQL query, which the checker runs.'
+        : 'Models reply in the format the question asks for.';
   return [
     { title: 'The questions', detail: `${plural(n, 'question')} from this test. Each one is sent on its own, in a fresh chat, with exactly the wording shown.` },
     ...(multi ? [{ title: 'Several turns', detail: 'Some questions continue over several messages, so the model must remember earlier replies.' }] : []),

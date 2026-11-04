@@ -389,6 +389,32 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     opening: 'The same written museum commission as The Gallery Masterpiece, with one extra rule: the painting must be a single SVG file, 1536 × 1024, with no text, images or scripts.',
   },
 
+  // ─────────────── Real-World Work: SQL ───────────────
+  'work.sql-questions': {
+    hook: 'Twelve questions from the boss: can it write the database query that answers each one?',
+    whatItTests: 'Turning a manager’s plain-English question into one correct database query, following the company’s business rules.',
+    whyHard: 'Test accounts, deleted rows, guest orders, euros and refunds all have to be handled, and a careless join quietly double-counts.',
+    howScored: [
+      { icon: 'play', text: 'Its query is run on the real database' },
+      { icon: 'hidden', text: 'And on 3 hidden copies with different data' },
+      { icon: 'percent', text: 'Score = share of result rows that match' },
+    ],
+    goodScore: '100 means every answer right on all four databases; each question is worth about 8 points.',
+    icon: 'chart',
+  },
+  'work.sql-hard': {
+    hook: 'Time zones, price history, duplicate events: can it answer an analyst’s hardest questions?',
+    whatItTests: 'Writing advanced database queries (cohorts, rankings with ties, streaks, sessions, running balances) on a messy data warehouse.',
+    whyHard: 'Every question hides a trap a real analyst falls into: UK clock changes, old prices, duplicated events, reversed payments.',
+    howScored: [
+      { icon: 'play', text: 'Its query is run on the real database' },
+      { icon: 'hidden', text: 'And on 3 hidden copies with different data' },
+      { icon: 'percent', text: 'Score = share of result rows that match' },
+    ],
+    goodScore: '100 means all nine answers right on all four databases; each question is worth about 11 points.',
+    icon: 'chart',
+  },
+
   // ─────────────── Extraction ───────────────
   'extraction.structured-json': {
     hook: 'Can it turn messy invoices and emails into exact, machine-readable data?',
@@ -900,6 +926,12 @@ function scorerSteps(sc: ScorerSpec): ExplainStep[] {
       return [{ icon: 'play', text: 'What it builds is opened and checked' }, ...(sc.rubric && (sc.judgeWeight ?? 0) > 0 ? [{ icon: 'scale' as const, text: 'AI judges rate it too' }] : [])];
     case 'human':
       return [{ icon: 'scale', text: 'Rated blind by people' }];
+    case 'sql':
+      return [
+        { icon: 'play', text: 'Its query is run on the real database' },
+        { icon: 'hidden', text: 'And on hidden copies with different data' },
+        { icon: 'percent', text: 'Score = share of result rows that match' },
+      ];
     case 'ladder':
       return [
         { icon: 'target', text: 'One exact answer per level' },
