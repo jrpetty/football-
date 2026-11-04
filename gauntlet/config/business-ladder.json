@@ -20,8 +20,8 @@
       "tests": [
         { "id": "work.invoice-read", "level": 1 },
         { "id": "work.invoice-matching", "level": 2, "planned": true },
-        { "id": "work.expense-audit", "level": 3, "planned": true },
-        { "id": "work.bank-reconciliation", "level": 3, "planned": true },
+        { "id": "work.expense-audit", "level": 3 },
+        { "id": "work.bank-reconciliation", "level": 3 },
         { "id": "work.accounts-clerk", "level": 4, "planned": true },
         { "id": "work.month-end", "level": 5, "planned": true }
       ]
@@ -61,11 +61,11 @@
       "summary": "Emails, diaries, contracts and an assistant's whole week.",
       "tests": [
         { "id": "work.email-actions", "level": 1 },
-        { "id": "work.inbox-triage", "level": 2, "planned": true },
-        { "id": "work.meeting-scheduler", "level": 2, "planned": true },
-        { "id": "work.contract-redline", "level": 3, "planned": true },
-        { "id": "work.assistant", "level": 4, "planned": true },
-        { "id": "work.assistant-hard", "level": 5, "planned": true },
+        { "id": "work.inbox-triage", "level": 2 },
+        { "id": "work.meeting-scheduler", "level": 2 },
+        { "id": "work.contract-redline", "level": 3 },
+        { "id": "work.assistant", "level": 4 },
+        { "id": "work.assistant-hard", "level": 5 },
         { "id": "work.office-week", "level": 5, "planned": true }
       ]
     },
@@ -78,8 +78,8 @@
       "tests": [
         { "id": "work.sheet-lookup", "level": 1 },
         { "id": "work.crm-dedupe", "level": 2, "planned": true },
-        { "id": "work.sql-questions", "level": 2, "planned": true },
-        { "id": "work.sql-hard", "level": 3, "planned": true },
+        { "id": "work.sql-questions", "level": 2 },
+        { "id": "work.sql-hard", "level": 3 },
         { "id": "work.board-report", "level": 3, "planned": true },
         { "id": "work.analyst-agent", "level": 4, "planned": true }
       ]
