@@ -4662,10 +4662,6 @@
       "pay": 30.0,
       "rule": "MEAL_CAP"
      },
-     "L44": {
-      "pay": 10.0,
-      "rule": "MEAL_CAP"
-     },
      "L46": {
       "pay": 9.16,
       "rule": "MEAL_CAP"
@@ -4703,11 +4699,11 @@
      "Hamza Novak": 950.75,
      "Hiroshi Demir": 895.37,
      "Oluwaseun Navarro": 1236.12,
-     "Rhys Nowak": 994.66,
+     "Rhys Nowak": 997.44,
      "Sofia Lindqvist": 768.95
     },
-    "total_pay": 4845.85,
-    "vat_reclaimable": 160.99
+    "total_pay": 4848.63,
+    "vat_reclaimable": 163.12
    }
   },
   "x05": {
@@ -4898,12 +4894,8 @@
       "pay": 3.19,
       "rule": "MEAL_CAP"
      },
-     "L46": {
-      "pay": 10.0,
-      "rule": "MEAL_CAP"
-     },
      "L47": {
-      "pay": 0.0,
+      "pay": 16.38,
       "rule": "MEAL_CAP"
      },
      "L50": {
@@ -4941,13 +4933,13 @@
     },
     "pay_by_employee": {
      "Agnieszka Eze": 667.81,
-     "Joaquin Iyer": 820.72,
+     "Joaquin Iyer": 850.72,
      "Sofia Pritchard": 1078.28,
      "Yasmin Park": 1074.58,
      "Yusuf Doyle": 909.11
     },
-    "total_pay": 4550.5,
-    "vat_reclaimable": 126.62
+    "total_pay": 4580.5,
+    "vat_reclaimable": 130.56
    }
   },
   "x06": {
@@ -5622,7 +5614,7 @@
       "rule": "HOTEL_CAP"
      },
      "L153": {
-      "pay": 20.0,
+      "pay": 60.0,
       "rule": "MEAL_CAP"
      },
      "L156": {
@@ -5659,12 +5651,12 @@
      "Callum Eze": 1253.54,
      "Ewan Novak": 623.63,
      "Hamza Sharma": 528.62,
-     "Omar Achterberg": 469.07,
+     "Omar Achterberg": 509.07,
      "Ravi Pritchard": 459.0,
      "Rosa Kim": 1796.39,
      "Vikram Chen": 1925.27
     },
-    "total_pay": 9442.36,
+    "total_pay": 9482.36,
     "vat_reclaimable": 230.1
    }
   },
@@ -5907,10 +5899,6 @@
       "pay": 44.0,
       "rule": "MEAL_CAP"
      },
-     "L006": {
-      "pay": 0.0,
-      "rule": "MEAL_CAP"
-     },
      "L009": {
       "pay": 14.04,
       "rule": "MEAL_CAP"
@@ -6023,12 +6011,8 @@
       "pay": 0.0,
       "rule": "NO_RECEIPT"
      },
-     "L060": {
-      "pay": 10.0,
-      "rule": "MEAL_CAP"
-     },
      "L061": {
-      "pay": 0.0,
+      "pay": 20.5,
       "rule": "ALCOHOL"
      },
      "L062": {
@@ -6195,12 +6179,8 @@
       "pay": 4.54,
       "rule": "ALCOHOL"
      },
-     "L164": {
-      "pay": 10.0,
-      "rule": "MEAL_CAP"
-     },
      "L165": {
-      "pay": 0.0,
+      "pay": 12.0,
       "rule": "MEAL_CAP"
      },
      "L167": {
@@ -6210,16 +6190,16 @@
     },
     "pay_by_employee": {
      "Ayodele Pritchard": 1117.86,
-     "Callum Kowalski": 704.13,
-     "Hiroshi Okafor": 1879.67,
-     "Hyun-woo Nwosu": 1665.82,
+     "Callum Kowalski": 734.13,
+     "Hiroshi Okafor": 1909.67,
+     "Hyun-woo Nwosu": 1681.43,
      "Ines Patel": 986.82,
      "Mateo Ahmadi": 856.68,
      "Sanjay Qureshi": 1175.9,
      "Saoirse Hughes": 1910.06
     },
-    "total_pay": 10296.94,
-    "vat_reclaimable": 240.59
+    "total_pay": 10372.55,
+    "vat_reclaimable": 251.11
    }
   },
   "x09": {
@@ -6534,7 +6514,7 @@
       "rule": "MEAL_CAP"
      },
      "L052": {
-      "pay": 0.0,
+      "pay": 30.0,
       "rule": "MEAL_CAP"
      },
      "L053": {
@@ -6552,14 +6532,6 @@
      "L057": {
       "pay": 63.6,
       "rule": "MILEAGE_RATE"
-     },
-     "L060": {
-      "pay": 0.0,
-      "rule": "MEAL_CAP"
-     },
-     "L061": {
-      "pay": 0.0,
-      "rule": "MEAL_CAP"
      },
      "L062": {
       "pay": 86.7,
@@ -6733,12 +6705,8 @@
       "pay": 12.43,
       "rule": "ALCOHOL"
      },
-     "L154": {
-      "pay": 10.0,
-      "rule": "MEAL_CAP"
-     },
      "L155": {
-      "pay": 0.0,
+      "pay": 7.81,
       "rule": "ALCOHOL"
      },
      "L157": {
@@ -6771,8 +6739,8 @@
      }
     },
     "pay_by_employee": {
-     "Bogdan Takahashi": 1784.03,
-     "Dmitri Haddad": 667.68,
+     "Bogdan Takahashi": 1839.12,
+     "Dmitri Haddad": 687.54,
      "Gareth Rahman": 773.05,
      "Ines Malik": 539.97,
      "Niamh Lindgren": 1913.99,
@@ -6780,8 +6748,8 @@
      "Rhys Mbeki": 994.87,
      "Yusuf Morgan": 2159.81
     },
-    "total_pay": 9249.89,
-    "vat_reclaimable": 262.9
+    "total_pay": 9324.84,
+    "vat_reclaimable": 270.77
    }
   }
  },
