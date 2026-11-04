@@ -92,6 +92,8 @@ export interface PublicTest {
   /** True for held-out tests: listed anonymously ("Held-out test 1"), nothing else published. */
   heldOut: boolean;
   promptWithheld: boolean;
+  /** Difficulty ladders: what the blind test measured (config/ladders.json "calibration"), or the design target. */
+  ladderCalibration?: { verdict: string; tiers: string[]; note?: string } | { designTarget: string };
 }
 
 export interface PublicSuite {

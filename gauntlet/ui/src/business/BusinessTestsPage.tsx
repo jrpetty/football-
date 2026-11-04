@@ -14,7 +14,7 @@ import { businessApi } from './businessApi.ts';
 import { DemoNote, LevelTag, ScenarioGlyph, scenarioStyle } from './LadderParts.tsx';
 import { runBusinessHref } from './BusinessHomePage.tsx';
 import './business.css';
-import { LadderList } from '../components/leaderboard/LadderSuiteSoon.tsx';
+import { BusinessLaddersNote, LadderList } from '../components/leaderboard/LadderSuiteSoon.tsx';
 import { LADDERS } from '../ladders.ts';
 import { BUSINESS_LADDERS_SUITE_ID } from '../../../src/core/areas.ts';
 
@@ -141,14 +141,16 @@ export default function BusinessTestsPage() {
           <div>
             <h2>Difficulty ladders</h2>
             <p>
-              Eight of these jobs rebuilt as ten-rung difficulty ladders: each rung adds more volume and stacks more policy rules, from a handful of items to the full policy at maximum
-              volume. A rung is passed at 90% of its marks; the result is how high a model climbs. These are not the Business Ladder’s five adoption levels above.
+              Eight of these jobs rebuilt as ten-rung difficulty ladders: on each rung more of the answer depends on earlier work (documents drawing on the same order, months
+              resting on each other, records merged in order), from a handful of items to the full policy. A rung is passed at 90% of its marks; the result is how high a model
+              climbs. These are not the Business Ladder’s five adoption levels above.
             </p>
           </div>
           <Link to={`/business/results?suite=${BUSINESS_LADDERS_SUITE_ID}`} className="btn no-broadcast">
             See the heights
           </Link>
         </header>
+        <BusinessLaddersNote />
         <LadderList ids={LADDERS.tests.filter((t) => t.area === 'business').map((t) => t.id)} />
       </section>
     </div>

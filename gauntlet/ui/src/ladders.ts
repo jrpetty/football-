@@ -6,6 +6,7 @@
 import ladderJson from '../../config/ladders.json';
 import type { LaddersConfig, LadderRule, LadderTestSpec } from '../../src/core/ladders.ts';
 import { LADDER_SUITE_IDS } from '../../src/core/areas.ts';
+import { DESIGN_TARGET_TEXT, calibrationVerdictText } from '../../src/core/ladders.ts';
 
 export const LADDERS = ladderJson as unknown as LaddersConfig;
 
@@ -35,7 +36,15 @@ export function passMarkText(passMark: number): string {
   return passMark >= 1 ? 'Full marks to pass a rung' : `${Math.round(passMark * 100)}% of a rung’s marks to pass`;
 }
 
-/** The calibration band a level was built for (METHODOLOGY "Difficulty ladders"). */
+/** The one-line blind-test verdict of a ladder (null: not blind-tested yet, the view shows its design targets). */
+export function ladderVerdictOf(testId: string | null | undefined): string | null {
+  const s = ladderSpecOf(testId);
+  return s?.calibration ? calibrationVerdictText(s.calibration, s.area) : null;
+}
+
+export { DESIGN_TARGET_TEXT };
+
+/** The design target a level was built for (METHODOLOGY §7q). Shown only on ladders without a blind test. */
 export function levelBand(level: number): { id: 'small' | 'mid' | 'top' | 'future'; label: string; short: string } {
   if (level <= 2) return { id: 'small', label: 'Small models', short: 'Small' };
   if (level <= 4) return { id: 'mid', label: 'Mid-sized models', short: 'Mid' };

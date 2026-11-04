@@ -9,7 +9,7 @@ import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { fmtDate, fmtInt } from '../format.ts';
 import type { Leaderboard, RunListItem, SuiteView } from '../types.ts';
 import { AREAS, BUSINESS_LADDERS_SUITE_ID, areaInfo, areaOfSuite, scoreNameFor, type AreaId } from '../../../src/core/areas.ts';
-import { LadderSuiteSoon } from '../components/leaderboard/LadderSuiteSoon.tsx';
+import { BusinessLaddersNote, LadderSuiteSoon } from '../components/leaderboard/LadderSuiteSoon.tsx';
 import { isLadderSuiteId } from '../ladders.ts';
 
 /**
@@ -138,8 +138,12 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
       <DemoBanner show={MOCK && (area !== 'benchmark' || (ladderSuite && suiteId !== 'horizon')) && !!lb?.rows.length}>
         {ladderSuite && planned.length
           ? 'These ladder heights are made up, on placeholder levels, to show the layout (demo mode). The ladders are still being built.'
-          : `These ${areaInfo(area).name} scores are made up to show the layout (demo mode). Run the ${areaInfo(area).name} tests to see your own.`}
+          : ladderSuite
+            ? 'These ladder heights are invented, for invented demo models, to show the layout (demo mode). What real models managed in the blind test is on each ladder’s left-hand strip.'
+            : `These ${areaInfo(area).name} scores are made up to show the layout (demo mode). Run the ${areaInfo(area).name} tests to see your own.`}
       </DemoBanner>
+
+      {suiteId === BUSINESS_LADDERS_SUITE_ID && <BusinessLaddersNote />}
 
       {lb && (
         <div className="only-broadcast flex broadcast-meta">
@@ -203,7 +207,7 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
         </div>
       ) : (
         <div style={{ opacity: lbState.loading ? 0.55 : 1, transition: 'opacity 200ms' }}>
-          <LeaderboardView lb={lb} planned={planned} demo={MOCK && planned.length > 0} />
+          <LeaderboardView lb={lb} planned={planned} demo={MOCK && (planned.length > 0 || ladderSuite)} />
         </div>
       )}
     </div>

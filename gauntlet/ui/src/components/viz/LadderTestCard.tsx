@@ -5,7 +5,7 @@
 import { api } from '../../api.ts';
 import { useAsync } from '../../hooks.ts';
 import type { TestDetail } from '../../types.ts';
-import { ladderSpecOf } from '../../ladders.ts';
+import { LADDERS, ladderSpecOf, ladderVerdictOf } from '../../ladders.ts';
 import { DifficultyLadder } from './DifficultyLadder.tsx';
 import { isBaselineId, ladderRungs } from './LadderPanel.tsx';
 
@@ -27,6 +27,9 @@ export function LadderTestCard({ testId, detail }: { testId: string; detail?: Te
           rungs={rungs}
           climbers={climbers}
           comingSoon={spec.planned}
+          calibration={spec.calibration}
+          verdict={ladderVerdictOf(testId)}
+          calibrationMethod={LADDERS.calibrationMethod}
         />
       </div>
     </section>

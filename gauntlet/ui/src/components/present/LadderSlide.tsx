@@ -1,13 +1,14 @@
 /**
  * Presenter slide for a difficulty-ladder test (Horizon, Frontier Ladders, Business Ladders): "How high can it
  * climb?". Every model's lane is filled up to the highest level it passed reliably, with every attempt's chip
- * on every rung. Drawn only from the run's recorded results, with the test's pass mark (config/ladders.json).
+ * on every rung. Drawn only from the run's recorded results, with the test's pass mark (config/ladders.json); the
+ * blind-test verdict and the measured strip say what today's models of each size were found to manage.
  */
 import type { CSSProperties } from 'react';
 import type { CategoryInfo, CaseResultLite, TestDetail } from '../../types.ts';
 import { LadderPanel, type LadderContestant } from '../viz/LadderPanel.tsx';
 import { ladderClimbs } from '../../../../src/core/ladders.ts';
-import { ladderRuleOf, ladderSpecOf, passMarkText } from '../../ladders.ts';
+import { ladderRuleOf, ladderSpecOf, ladderVerdictOf, passMarkText } from '../../ladders.ts';
 
 export const LADDER_SLIDE_TITLE = 'How high can it climb?';
 
@@ -40,6 +41,8 @@ export function LadderSlide({
   contenders: LadderContestant[];
 }) {
   const spec = ladderSpecOf(testId);
+  // What the blind test measured (config/ladders.json "calibration"); the strip down the ladder's left edge shows it per rung.
+  const verdict = ladderVerdictOf(testId);
   return (
     <div className="s-ladder">
       <div className="tr-top">
@@ -57,6 +60,7 @@ export function LadderSlide({
           <b>What grows:</b> {spec.grows} <span>· {passMarkText(spec.passMark)}</span>
         </p>
       )}
+      {verdict && <p className="s-ladder-verdict">{verdict}</p>}
       <div className="s-ladder-main">
         <LadderPanel testId={testId} results={results} contestants={contenders} mode="slide" detail={detail} showHead={false} />
       </div>

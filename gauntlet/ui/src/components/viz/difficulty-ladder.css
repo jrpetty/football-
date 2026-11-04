@@ -171,6 +171,153 @@
 .dl-rung.b-future .dl-cell {
   background-color: var(--band-future);
 }
+/* not blind-tested yet: the corner says the bands are a design target ("Built for") */
+.dl-corner.design > span {
+  color: var(--text-3);
+  opacity: 0.85;
+}
+/* blind-tested: what was MEASURED, a slot per model size (S · M · T) on every rung, marked where it was tested */
+.dl.dl-calibrated {
+  --band-w: 54px;
+}
+.dl-bandcol.cal {
+  padding: 0 3px;
+  box-shadow: none;
+}
+.dl-bandcol.cal::before,
+.dl-calibrated .dl-corner::before {
+  display: none;
+}
+.dl-bandcol.cal > span {
+  writing-mode: horizontal-tb;
+  transform: none;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.dl-cal {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+}
+.dl-corner.cal {
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--border);
+}
+.dl-corner.cal > small {
+  font-size: 8.5px;
+  line-height: 1.15;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--text-3);
+}
+.dl-corner.cal b {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-2);
+}
+.dl-cm {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+.dl-cm.k-passed {
+  background: color-mix(in srgb, var(--good) 24%, transparent);
+  color: var(--good-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 65%, transparent);
+}
+.dl-cm.k-failed {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 60%, transparent);
+}
+.dl-cm.k-pending {
+  border: 1.5px dashed color-mix(in srgb, var(--text-3) 80%, transparent);
+}
+.dl-cm.k-none {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-3) 40%, transparent);
+}
+
+/* the key under the ladder: what the left strip shows */
+.dl-calkey {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.dl-calkey > p {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--s-4);
+}
+p.dl-calkey.design {
+  display: block;
+  max-width: var(--measure);
+}
+.dl-calkey-k {
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-1);
+  margin-right: 4px;
+}
+.dl-calkey-tiers,
+.dl-calkey-marks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--s-3);
+}
+.dl-calkey-tiers b {
+  font-weight: 800;
+  color: var(--text-1);
+}
+.dl-calkey-marks > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dl-calkey-how {
+  color: var(--text-3);
+}
+.dl-calkey > p.dl-calkey-note {
+  display: block;
+  margin: 0;
+  color: var(--text-2);
+}
+.dl-calkey-note::before {
+  content: 'Note: ';
+  font-weight: 700;
+}
+/* the one-line verdict under the title */
+.dl-titles .dl-verdict {
+  margin-top: var(--s-2);
+  padding: 2px 0 2px 10px;
+  border-left: 3px solid var(--area-accent, var(--accent));
+  font-size: var(--fs-small);
+  font-weight: 650;
+  color: var(--text-1);
+}
 .dl-rung.hl .dl-axis {
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -587,6 +734,44 @@
   width: 3px;
   left: 6px;
 }
+.dl-slide.dl-calibrated {
+  --band-w: 96px;
+}
+.dl-slide .dl-cm {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.dl-slide .dl-cm.k-none {
+  width: 5px;
+  height: 5px;
+}
+.dl-slide .dl-corner.cal > small {
+  font-size: 13px;
+}
+.dl-slide .dl-corner.cal b {
+  font-size: 17px;
+}
+.dl-cal-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--text-2);
+}
+.dl-cal-legend b {
+  font-size: 14px;
+  color: var(--text-1);
+}
+.dl-slide .dl-calkey {
+  font-size: 16px;
+}
+.dl-slide .dl-calkey-how,
+.dl-slide .dl-calkey > p.dl-calkey-note {
+  display: none;
+}
 .dl-slide .dl-chip {
   width: 26px;
   height: 26px;
@@ -656,6 +841,30 @@ html[data-broadcast='on'] .dl-card .dl-flag {
 html[data-broadcast='on'] .dl-card .dl-bandcol > span {
   font-size: 11px;
 }
+html[data-broadcast='on'] .dl-card.dl-calibrated {
+  --band-w: 66px;
+}
+html[data-broadcast='on'] .dl-card .dl-cm {
+  width: 16px;
+  height: 16px;
+  font-size: 11px;
+}
+html[data-broadcast='on'] .dl-card .dl-cm.k-none {
+  width: 4px;
+  height: 4px;
+}
+html[data-broadcast='on'] .dl-card .dl-corner.cal b {
+  font-size: 12px;
+}
+html[data-broadcast='on'] .dl-card .dl-corner.cal > small {
+  font-size: 10px;
+}
+html[data-broadcast='on'] .dl-card .dl-calkey {
+  font-size: var(--fs-small);
+}
+html[data-broadcast='on'] .dl-card .dl-verdict {
+  font-size: var(--fs-body);
+}
 html[data-broadcast='on'] .dl-card .dl-note {
   font-size: var(--fs-h3);
 }
@@ -670,6 +879,26 @@ html[data-broadcast='on'] .dl-card .dl-note {
   }
   .dl-card .dl-bandcol > span {
     font-size: 8.5px;
+  }
+  .dl-card.dl-calibrated {
+    --band-w: 44px;
+  }
+  .dl-card .dl-bandcol.cal {
+    padding: 0 1px;
+  }
+  .dl-card .dl-cm {
+    width: 12px;
+    height: 12px;
+    font-size: 8px;
+    border-radius: 3px;
+  }
+  .dl-card .dl-cm.k-none {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+  }
+  .dl-card .dl-corner.cal > small {
+    font-size: 7.5px;
   }
   .dl-card .dl-chips {
     margin-right: 16px;
@@ -786,6 +1015,15 @@ html[data-broadcast='on'] .dl-card .dl-note {
   font-size: 24px;
   color: var(--text-2);
 }
+.s-ladder-verdict {
+  margin: -6px 0 0;
+  padding-left: 14px;
+  border-left: 4px solid var(--area-accent, var(--accent));
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 650;
+  color: var(--text-1);
+}
 .s-ladder-grows b {
   color: var(--text-1);
 }
@@ -884,6 +1122,15 @@ html[data-broadcast='on'] .dl-card .dl-note {
 .lh-table tr.is-baseline {
   opacity: 0.72;
 }
+.lh-calnote {
+  margin: var(--s-2) 0 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--area-accent, var(--accent));
+  font-size: var(--fs-small);
+  font-weight: 650;
+  color: var(--text-1);
+  max-width: var(--measure);
+}
 .lh-note {
   margin: var(--s-3) 0 0;
 }
@@ -934,6 +1181,14 @@ html[data-broadcast='on'] .dl-card .dl-note {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px var(--s-2);
+}
+.lh-soon-list p.lh-verdict {
+  margin: 6px 0 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--area-accent, var(--accent));
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  color: var(--text-1);
 }
 .lh-status small {
   font-size: var(--fs-micro);

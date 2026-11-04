@@ -1369,9 +1369,24 @@ rebuilt the same way. Every ladder test, built or planned, is listed in `config/
 * **Calibration targets**, checked by blind play: L01–L02 a small model passes; L03–L05 is a mid-sized model's
   limit; L05–L07 today's top model's limit; L08–L10 beyond any model today, but solvable in principle by a patient
   expert. Every level has exactly one correct answer, computed by a solver and, ideally, double-checked by an
-  independent second method. The ladder view shows these bands down its left edge.
+  independent second method. These are design targets; blind play checks them (below).
 * Random filler and the Random Baseline score about 0 on every level; the reference answer scores 100 on every
   level; levels regenerate byte-identically from fixed seeds.
+
+**What was measured: `calibration`.** A ladder that has been blind-tested carries an optional `calibration` object in
+`config/ladders.json`: `{ "date": "2026-11", "tiers": { "small": { "passed": [2], "failed": [4, 6, 8] }, "mid": …,
+"top": … }, "note"?: "…", "verdict"?: "…" }`. Each tier lists the levels that model size passed and failed, one attempt
+each; `"pending": [9, 10]` marks levels still being tested (when the numbers arrive, move each level into `passed` or
+`failed` and delete `pending`: one edit). `validateLadders` checks it: levels 1..10, no level both passed and failed
+(or pending) for one tier, tiers small, mid and top only, the date as `YYYY-MM`. The verdict is worked out unless given
+(`calibrationVerdict` in `src/core/ladders.ts`): **top-clears** when the top model passed every level it was tested
+on, **separates** when the highest level passed rises from small to mid to top, otherwise **partly**. Where a ladder has
+a calibration, the strip down the ladder view's left edge shows what was measured, not the targets: a slot per model
+size (S, M, T) on every rung, ✓ where it passed and ✕ where it failed, blank where it was not tested; the card, the test
+page, the Presenter slide and the public site add the one-line verdict ("Blind test, Nov 2026: separates small, mid and
+top models"). A ladder without one (the five Horizon ladders, calibrated separately in `docs/AUDIT.md`) keeps the
+design-target bands, labelled "Built for (design target)". The November 2026 results are in `docs/AUDIT.md`
+("Difficulty ladders: blind calibration").
 
 **Pass marks.** A rung is passed by an attempt that scores at least the test's `passMark`:
 
@@ -1510,7 +1525,9 @@ out of later balances). "Careless" is each generator's careless answer.
 A careless answer fails every rung, and from level 5 so does one error that spreads through a chain
 (`test/finance-ladders.test.ts` pins both). These scripted answers bound the scale; they are not models. The
 calibration targets (small model to about L02–L03, mid-sized to L04–L05, today's top model to L05–L07, L08–L10
-beyond) are by design and need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
+beyond) are by design. **Blind play (November 2026) did not bear them out:** a small model passed L03 and L05, and the
+mid-sized and top models scored 99–100% on every level they were tested on (L05, L07, L09), so today's top models clear
+these four ladders; they are kept as a measure of reliability at scale, and the app says so (`docs/AUDIT.md`). Regenerate with `node verification/finance-ladders/build.mjs` and `python3
 verification/finance-ladders/build.py` (`--check` proves both byte for byte; `python3 check_payroll.py` re-derives the
 payroll); never regenerate a released version.
 
@@ -1573,7 +1590,11 @@ priority, SLA) and every account total 8; contract fields where the agreed versi
 
 Random filler, `{}`, an empty reply and a copy of the prompt score at most 5% on every ladder. These scripted answers
 bound the scale; they are not models: the calibration targets (a small model tops out around L02–L03, a mid model
-around L04–L05, today's top model around L06–L07, L08–L10 beyond it) are by design and need blind play again.
+around L04–L05, today's top model around L06–L07, L08–L10 beyond it) are by design. **Blind play of the rebuilt
+ladders (November 2026) did not bear them out:** the mid-sized and top models scored 96–100% on every level they were
+tested on, up to L09, and the small model passed L05 of the database and support ladders but failed it on the customer
+list (58%) and the contract (88%); today's top models clear these four ladders, which are kept as a measure of
+reliability at scale that separates smaller models (`docs/AUDIT.md`).
 
 **Cost.** L01 is 2.0k–3.2k input tokens, L10 at most 33k (the contract). Test estimates are the level means; every
 model gets the same 32,000-token output limit and no answer-time limit.
@@ -1582,7 +1603,9 @@ model gets the same 32,000-token output limit and no answer-time limit.
 
 The maths and coding rungs of the Frontier Ladders (§7q: ten frozen levels, pass mark full marks, height rule).
 Both ask for each model's own maximum output (`"maxOutputTokens": "model-max"`, one retry at most, one hour per
-level).
+level). Blind play (November 2026, `docs/AUDIT.md`): on Exact Maths the small and mid-sized models both stopped at
+L08 and the top model at L09; Engineering was cleared to L10 by the mid-sized and top models and separates small
+models only.
 
 ### Exact Maths: Ladder (`math.exact-ladder`)
 
@@ -1771,7 +1794,9 @@ real scorer: the key 100; one slip (two neighbours swapped, one islander's type 
 **Calibration targets** (by design; to be confirmed by blind play): levels 1–2 for small models, 3–5 the limit of
 mid-sized models, 5–7 the limit of today's strongest model (Deduction Grid: Extreme sits between grid levels 6 and 7,
 Knights, Knaves, Spies & Alternators: Extreme around truth level 4–5, both solved by Opus), and 8–10 beyond any model
-today but solvable in principle by a patient expert.
+today but solvable in principle by a patient expert. Blind play (November 2026) found all three separating small,
+mid-sized and top models, lower down than targeted: the top model stopped at L08 of the grid and truth ladders and at
+L09 of the plans ladder (`docs/AUDIT.md`).
 
 **Budgets.** Like Horizon, the ladders ask for each model's own maximum output (`"maxOutputTokens": "model-max"`,
 `maxRetries: 1`, one hour per level). Estimated output per level (thinking included), from a few thousand tokens at

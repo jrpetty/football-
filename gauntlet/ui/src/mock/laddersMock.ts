@@ -1,11 +1,13 @@
 /**
  * DEMO data (?mock=1) for the two difficulty-ladder suites, Frontier Ladders and Business Ladders.
  *
- * The thirteen ladder tests are still being built (config/ladders.json lists them as planned), so the tests here
- * are PLACEHOLDERS: ten levels named after the real ones, with no real questions. The heights are invented for
- * the invented demo models, with a believable spread (small models L1–L3, mid-sized L3–L5, top L5–L7, nobody
- * above L8), to show the layout. They say nothing about any real model. Every run note, banner and test
- * description says so. When a ladder lands, its real test replaces its placeholder (see fixtures.ts).
+ * The thirteen ladder tests are built, but their files are large (up to a megabyte each), so the demo does not bundle
+ * them: each is a STAND-IN here, ten levels named after the real ones with no real questions. The heights are invented
+ * for the invented demo models and say nothing about any real model. They are shaped by what the November 2026 blind
+ * test measured (config/ladders.json "calibration"; docs/AUDIT.md), so the demo does not tell a story reality
+ * contradicts: on the eight Business ladders today's top models clear (nearly) every rung, mid-sized models get to
+ * about L7–L9 and small ones to about L3–L5; on the Frontier ladders the sizes separate as the blind test found.
+ * Every run note, banner and test description says it is demo data.
  */
 import frontierSuiteJson from '../../../suites/frontier-ladders.json';
 import businessSuiteJson from '../../../suites/business-ladders.json';
@@ -17,27 +19,27 @@ import { ladderLevel, type LadderRule } from '../../../src/core/ladders.ts';
 export const LADDER_DEMO_FRONTIER_RUN = 'run-2026-10-20-frontier-ladders';
 export const LADDER_DEMO_BUSINESS_RUN = 'run-2026-10-21-business-ladders';
 
-const PLANNED = LADDERS.tests.filter((t) => t.planned);
-/** The thirteen new ladders in config order (fixed, so a ladder landing never shifts the demo heights). */
-const ORDER = LADDERS.tests.filter((t) => t.category !== 'horizon').map((t) => t.id);
-const DEMO_NOTE = 'Demo placeholder: this difficulty ladder is still being built. The ten levels shown here are not the real questions.';
+/** The thirteen Frontier and Business ladders in config order (Horizon has its own demo, horizonMock.ts). */
+const LADDER_SPECS = LADDERS.tests.filter((t) => t.category !== 'horizon');
+const ORDER = LADDER_SPECS.map((t) => t.id);
+const DEMO_NOTE = 'Demo data — not real results. In demo mode this ladder is a stand-in: the ten levels carry the real names but not the real questions.';
 
-/** Placeholder tests for the planned ladders (the real tests replace them when they land). */
-export const LADDER_DEMO_TESTS: PromptTest[] = PLANNED.map((s) => ({
+/** Stand-in tests for the ladders (the real test files are not bundled into the demo). */
+export const LADDER_DEMO_TESTS: PromptTest[] = LADDER_SPECS.map((s) => ({
   kind: 'prompt',
   id: s.id,
   version: '0.0.0-demo',
   name: s.name,
   category: s.category,
   difficulty: 'extreme',
-  description: `Coming soon. ${s.grows} ${DEMO_NOTE}`,
+  description: `${s.grows} ${DEMO_NOTE}`,
   hook: s.grows,
   tags: ['difficulty-ladder', 'demo'],
   scorer: s.area === 'business' ? { type: 'json' } : { type: 'exact' },
   estimate: s.area === 'business' ? { inputTokens: 14000, outputTokens: 2500 } : { inputTokens: 1500, outputTokens: 30000 },
   cases: Array.from({ length: LADDERS.levels }, (_, i) => ({
     id: `L${String(i + 1).padStart(2, '0')}`,
-    prompt: `Level ${i + 1} of ${LADDERS.levels} of ${s.name}: ${DEMO_NOTE}`,
+    prompt: `Level ${i + 1} of ${LADDERS.levels} of ${s.name}${s.rungs?.[i] ? ` (${s.rungs[i]})` : ''}. ${DEMO_NOTE}`,
     expected: 'demo',
     notes: DEMO_NOTE,
   })),
@@ -59,7 +61,7 @@ export const LADDER_DEMO_RUN_SPECS: RunSpec[] = [
     repeats: 3,
     suiteId: 'frontier-ladders',
     createdAt: '2026-10-20T09:00:00Z',
-    notes: 'Demo data: invented heights for the invented demo models on placeholder levels. The five Frontier difficulty ladders are still being built. Open a cell for the ladder; the Presenter has a “How high can it climb?” slide per test.',
+    notes: 'Demo data — not real results: invented heights for the invented demo models on stand-in levels, shaped like the November 2026 blind test (each ladder’s left-hand strip shows what was really measured). Open a cell for the ladder; the Presenter has a “How high can it climb?” slide per test.',
   },
   {
     id: LADDER_DEMO_BUSINESS_RUN,
@@ -70,7 +72,7 @@ export const LADDER_DEMO_RUN_SPECS: RunSpec[] = [
     repeats: 3,
     suiteId: 'business-ladders',
     createdAt: '2026-10-21T09:00:00Z',
-    notes: 'Demo data: invented heights for the invented demo models on placeholder levels. The eight Business difficulty ladders are still being built. A rung is passed at 90% of its marks.',
+    notes: 'Demo data — not real results: invented heights for the invented demo models on stand-in levels. Shaped like the November 2026 blind test: today’s top models clear these ladders, so the demo top models reach L9–L10, mid-sized ones about L7–L9 and small ones about L3–L5. A rung is passed at 90% of its marks.',
   },
 ];
 
@@ -80,17 +82,24 @@ const suiteView = (json: unknown, fp: string): SuiteView => {
 };
 export const LADDER_DEMO_SUITES: SuiteView[] = [suiteView(frontierSuiteJson, 'fl4dd3r5demo'), suiteView(businessSuiteJson, 'bl4dd3r5demo')];
 
-/** Every ladder's rule for the demo, planned ones included (the server only measures built ladders). */
+/** Every ladder's rule for the demo. */
 export const LADDER_DEMO_RULES = new Map<string, LadderRule>(LADDERS.tests.map((t) => [t.id, { passMark: t.passMark, levels: t.rungs?.length ?? LADDERS.levels }]));
 
-/** Demo heights per model, in config order (benchmark: grid, truth, plans, maths, engineering; business: the eight work ladders). */
+/**
+ * Demo heights per model, in config order: grid, truth, plans, maths, engineering; then invoices, payroll, expenses,
+ * reconciliation, customer list, contract, SQL, support. Two top, two mid-sized and two small demo models, shaped by
+ * the blind test: grid and truth separate the sizes (small about L2–L3, mid L4–L5, top L6–L7); on plans the small and
+ * mid models stall early while top ones reach L8; on maths small and mid both reach about L6, top L8; on
+ * engineering small reach about L4–L5, mid and top L9–L10. Business: top L9–L10, mid L7–L9, small L3–L5 (lower on the
+ * customer list and contract ladders, where the small model failed L5).
+ */
 const HEIGHTS: Record<string, number[]> = {
-  'kestrel-kite-reasoner': [7, 6, 5, 6, 5, 6, 7, 6, 5, 7, 6, 5, 6],
-  'meridian-atlas-4-ultra': [6, 7, 5, 5, 6, 7, 6, 6, 6, 6, 7, 6, 5],
-  'helios-nova-3-pro': [4, 5, 3, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5],
-  'obsidian-sable-large': [3, 4, 4, 3, 4, 4, 4, 3, 4, 4, 3, 5, 4],
-  'meridian-atlas-4-mini': [2, 3, 1, 2, 2, 3, 2, 2, 2, 3, 2, 2, 3],
-  'helios-quill-flash': [1, 2, 1, 1, 0, 2, 1, 2, 1, 2, 1, 1, 2],
+  'kestrel-kite-reasoner': [7, 6, 8, 8, 10, 10, 9, 10, 10, 9, 10, 10, 9],
+  'meridian-atlas-4-ultra': [6, 7, 8, 8, 10, 9, 10, 9, 10, 10, 9, 10, 10],
+  'helios-nova-3-pro': [5, 4, 3, 6, 10, 8, 9, 8, 9, 8, 7, 9, 8],
+  'obsidian-sable-large': [4, 5, 2, 7, 9, 9, 8, 7, 8, 7, 8, 8, 9],
+  'meridian-atlas-4-mini': [3, 2, 1, 6, 5, 5, 4, 5, 5, 4, 3, 5, 4],
+  'helios-quill-flash': [2, 3, 0, 5, 4, 4, 5, 4, 3, 3, 4, 4, 5],
 };
 
 function hash(s: string): number {
@@ -115,7 +124,7 @@ function demoScore(contestantId: string, testId: string, level: number, repeat: 
   const h = HEIGHTS[contestantId]?.[idx] ?? 0;
   const per = hash(`${contestantId}|${testId}`);
   const shakyTop = per < 0.22 && h > 1;
-  const lucky = per > 0.86 && h + 2 <= 8 ? h + 2 : 0;
+  const lucky = per > 0.86 && h + 2 <= 9 ? h + 2 : 0;
   let pass: boolean;
   if (level < h) pass = u > 0.04 || repeat !== 1; // at most one slip below the top, never two
   else if (level === h) pass = shakyTop ? repeat !== 2 : true;
@@ -128,7 +137,7 @@ function demoScore(contestantId: string, testId: string, level: number, repeat: 
   return Math.max(0, Math.round((0.86 - gap * 0.12 - u * 0.1) * 100) / 100);
 }
 
-/** Replace the generic mock outcome of a placeholder ladder case with its demo score. */
+/** Replace the generic mock outcome of a stand-in ladder case with its demo score. */
 export function decorateLadderDemo(lite: CaseResultLite, t: TestDefinition | undefined): CaseResultLite {
   if (!isLadderDemoTest(t)) return lite;
   const level = ladderLevel(lite.caseId);
