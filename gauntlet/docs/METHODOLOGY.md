@@ -1344,6 +1344,90 @@ the night premium left out of the total (50); the break rule, capacities or wind
 (about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
 misread on its own (18–94).
 
+## 7q. Business ladders: finance (invoices, payslips, expenses, reconciliation)
+
+Four tests in the `work` category turn the finance tests of the business pack into **ten-rung ladders**, in the
+style of the Horizon tier (§7d): the same task on every rung, ten frozen levels `L01`–`L10`, each strictly bigger
+than the one below. They are new tests; Invoices to Pay, Check the Payslips, Expense Policy Check and Reconcile the
+Account stay exactly as they were, so old results stay comparable.
+
+| Test | Growth parameter, L01 → L10 | Rule families printed (beyond the basics), L01 → L05 | Input tokens, L01 → L05 → L10 |
+|---|---|---|---|
+| Invoices to Pay: Ladder (`work.invoices-ladder`) | inbox documents 5, 8, 14, 24, 46, 65, 80, 96, 113, 130 | 2, 4, 7, 10, 14 (all) | 2.4k → 15.6k → 33.9k |
+| Check the Payslips: Ladder (`work.payroll-ladder`) | staff 4, 6, 9, 12, 20, 32, 46, 64, 88, 120 | 2, 4, 6, 8, 11 (all) | 2.1k → 7.1k → 36.5k |
+| Expense Policy Check: Ladder (`work.expenses-ladder`) | claim lines 8, 21, 28, 57, 168, 262, 497, 614, 772, 931 | 2, 4, 7, 10, 11 (all) | 0.9k → 7.3k → 31.7k |
+| Reconcile the Account: Ladder (`work.reconciliation-ladder`) | statement + cash-book lines 28, 49, 73, 95, 275, 455, 628, 831, 1,075, 1,416 | 1, 3, 5, 8, 9 (all) | 1.4k → 7.5k → 33.5k |
+
+**Volume and rules grow together.** A level prints only the rule families it uses, and each clause is printed word
+for word as in the full test's policy (renumbered in the same order). Level 1 is a handful of items and one or two
+families; level 5 is the full policy at about the size of the current hardest case; levels 6 to 10 keep the full
+policy and grow in volume and in interacting rules:
+
+* Invoices: price tolerance and quantity received (L01); + entity and VAT (L02); + duplicates, bank details and the PO
+  check with OCR (L03); + discounts, credit notes and GRN correction emails (L04); + inbox consumption, the £10
+  document cap, PO amendments and the supplier-net exception (L05). From L06, chains of documents on one PO line:
+  four invoices that use up a part delivery in turn (one held for price, so the next fits), a credit note that
+  frees quantity for a later invoice, an invoice held for VAT, re-sent (a duplicate) and then re-issued.
+* Payslips: the basics (salary, auto-enrolment pension, cumulative PAYE, NI category A) with overtime and student
+  loans (L01); + NI categories C and H and BR/K codes (L02); + Cycle to Work and SSP (L03); + starters (P45, M1,
+  mid-month) and late items (L04); + directors, pension by salary sacrifice and Sunday overtime (L05). From L06 a
+  growing share of staff (30% to 80%) combine two features on one payslip (salary sacrifice with a student loan, a
+  late coding notice on an overtime worker, a P45 starter with a loan, ...).
+* Expenses: receipts from £25.00 and hotel limits (L01); + meal limits shared per employee, city and day and
+  first-class rail (L02); + alcohol, the 60-day limit with late-submission approvals and duplicates (L03); +
+  entertainment and its approvals, mileage 45p/25p with passengers, euro and dollar conversion (L04); + the
+  hotel-night meal uplift (L05). From L06 more claims per person (mileage, duplicates and late lines across claims),
+  late lines claimed again, and foreign taxis without a receipt either side of £25.00 after conversion.
+* Reconciliation: one-to-one matches, timing items, fees and interest, with a keyed-in error (L01); + unrecorded
+  direct debits and duplicates on either side (L02); + instalments, part-payments and a reversed charge (L03); +
+  BACS runs, a returned cheque and dollar payments (L04); + last month's outstanding items (L05). From L06 every
+  trap scales up, with look-alike payments (same supplier and amount, another invoice) and an instalment the bank
+  paid twice.
+
+**One truth, the same engine.** Every key comes from the rules engine of the existing test, unchanged
+(`verification/realworld-business/invoices.mjs` and `payroll.mjs`, `verification/realworld-work/expenses.py` and
+`bankrec.py`; the generators gained optional ladder parameters that leave the existing tests byte-identical), and is
+cross-checked as the existing test is: planted intent = engine for every invoice and every planted rule changes the
+answer when ignored; every planted payroll mistake changes its draft (mistakes are chosen so that they do) and every
+net pay adds up; every exact copy of an expense line is a planted duplicate; every reconciliation match is re-derived
+from the printed fields alone and the adjusted cash book equals the adjusted bank balance. The ladder adds its own
+checks: every rule family a level does not print changes nothing when the engine switches it off, and the features
+it governs do not occur; and the full-policy wording printed from L05 on equals the existing test's, byte for byte
+(asserted by the builders and by `test/finance-ladders.test.ts`).
+
+**Scoring.** The `json` scorer exactly as in the existing tests (`lenient`, `sets`, the same `weights` and trap
+weights, §5.1a), so a case score is the share of its points. A rung is **passed at 90% of its points**; the headline
+is the ladder height (the highest level L with every level 1..L passed reliably, as in §7d) and the test score is
+the mean over the ten levels. Output limit 64,000 tokens, 30 minutes per level, one retry.
+
+**Measured spread** (`node verification/finance-ladders/spread.mts`, scripted answers through the real scorer).
+Reference 100% and do-nothing, copy-the-prompt and random filler 0% on every level. "Slip" is a careful answer with
+one subtle slip (one penny of rounding on one payment, OCR O/0, a settlement discount on the gross, the
+supplier-net exception; an hourly rate or the half-penny employer NI rounded the wrong way; "over £25" for "£25.00
+or more", an approval's limit ignored; a keying difference's or FX difference's sign, a returned cheque booked as a
+bank charge). "Careless" is each generator's careless answer (face value; trust the drafts; meal limits per meal,
+approvals from the claim form, 45p throughout; exact-amount matching only).
+
+| Level | Invoices: slip / careless | Payslips: slip / careless | Expenses: slip / careless | Reconciliation: slip / careless |
+|---|---:|---:|---:|---:|
+| L01 | 78 / 27 | 57 / 0 | 25 / 14 | 93 / 63 |
+| L02 | 82 / 26 | 83 / 17 | 68 / 27 | 92 / 54 |
+| L03 | 93 / 32 | 83 / 0 | 74 / 22 | 95 / 45 |
+| L04 | 95 / 40 | 94 / 0 | 93 / 13 | 96 / 45 |
+| L05 | 99 / 41 | 95 / 0 | 96 / 21 | 97 / 38 |
+| L06 | 99 / 48 | 97 / 0 | 97 / 22 | 97 / 38 |
+| L07 | 99 / 45 | 98 / 0 | 97 / 26 | 97 / 37 |
+| L08 | 99 / 51 | 98 / 0 | 97 / 21 | 97 / 37 |
+| L09 | 99 / 48 | 99 / 0 | 98 / 22 | 97 / 38 |
+| L10 | 99 / 51 | 99 / 0 | 98 / 23 | 97 / 38 |
+
+A careless answer fails every rung. On the low rungs a single slip already fails (a few items, so every field
+counts); on the high rungs one slip costs 1–3% and the rung is lost only through many slips, which is what volume
+and interacting rules produce. These scripted answers bound the scale; they are not models. The calibration targets
+(L01–L02 a small model passes, L05–L07 the limit of today's top model, L08–L10 beyond it) are by design and still
+need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
+verification/finance-ladders/build.py` (`--check` proves both byte for byte); never regenerate a released version.
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or
