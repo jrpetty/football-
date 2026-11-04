@@ -1,0 +1,3825 @@
+{
+  "kind": "prompt",
+  "id": "work.shift-rota",
+  "version": "1.0.0",
+  "name": "Build the Rota",
+  "description": "Business Ladder, Operations, Level 3 (Run a workflow). A week’s rota for a pub, a care home or a warehouse: 5 to 12 staff with contracted hours, pay rates, skills (keyholder, personal licence, medication, first aid, forklift), availability and leave, 11 hours’ rest between shifts (12 for under-18s, counting last week’s last shift), a 48-hour cap, under-18 limits, exact cover per shift, a weekend fairness rule and a late message. The rota is checked rule by rule and its wage cost compared with the cheapest legal rota an exact branch-and-bound search can prove.",
+  "difficulty": "hard",
+  "tags": [
+    "business-ladder",
+    "operations",
+    "level-3",
+    "scheduling",
+    "optimisation",
+    "verifier"
+  ],
+  "hook": "Cover every shift, break no working-time rule, and spend the least on wages.",
+  "category": "work",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 880,
+    "outputTokens": 10000
+  },
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "rota"
+  },
+  "cases": [
+    {
+      "id": "r01",
+      "prompt": "From: Callum Reid\nSubject: Rota for the week of Mon 2 Nov 2026\n\nHi, can you build next week’s rota for The Fox & Fiddle in Shrewsbury? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Open (O): 10:00–17:30, 7 paid hours (the rest is an unpaid break).\n- Close (C): 17:30–01:00 (finishes the next morning), 7 paid hours (the rest is an unpaid break).\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nOpen | 1 | 1 | 1 | 1 | 1 | 2 | 2\nClose | 2 | 2 | 2 | 2 | 2 | 3 | 2\nEvery Open shift needs at least 1 keyholder on it.\nEvery Close shift needs at least 1 keyholder and 1 personal licence holder on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nCallum Reid | Manager | £15.20 | 26–48 | keyholder, personal licence holder | any shift\nNadia Hussain | Deputy manager | £13.90 | 20–40 | keyholder, personal licence holder | any shift\nTomasz Wójcik | Bar staff | £12.71 | 14–40 | keyholder | not Tuesdays\nInes Carvalho | Bar staff | £12.71 | 0–28 | - | evenings only\nRhys Morgan | Bar staff | £10.85 | 0–28 | - | on holiday Mon–Wed\nHamza Ali | Bar staff | £12.71 | 0–21 | - | any shift\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-O\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-O\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-O",
+              "day": 0,
+              "name": "Open",
+              "start": 600,
+              "end": 1050,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-C",
+              "day": 0,
+              "name": "Close",
+              "start": 1050,
+              "end": 1500,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-O",
+              "day": 1,
+              "name": "Open",
+              "start": 2040,
+              "end": 2490,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-C",
+              "day": 1,
+              "name": "Close",
+              "start": 2490,
+              "end": 2940,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-O",
+              "day": 2,
+              "name": "Open",
+              "start": 3480,
+              "end": 3930,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-C",
+              "day": 2,
+              "name": "Close",
+              "start": 3930,
+              "end": 4380,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-O",
+              "day": 3,
+              "name": "Open",
+              "start": 4920,
+              "end": 5370,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-C",
+              "day": 3,
+              "name": "Close",
+              "start": 5370,
+              "end": 5820,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-O",
+              "day": 4,
+              "name": "Open",
+              "start": 6360,
+              "end": 6810,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-C",
+              "day": 4,
+              "name": "Close",
+              "start": 6810,
+              "end": 7260,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-O",
+              "day": 5,
+              "name": "Open",
+              "start": 7800,
+              "end": 8250,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-C",
+              "day": 5,
+              "name": "Close",
+              "start": 8250,
+              "end": 8700,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-O",
+              "day": 6,
+              "name": "Open",
+              "start": 9240,
+              "end": 9690,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-C",
+              "day": 6,
+              "name": "Close",
+              "start": 9690,
+              "end": 10140,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Callum Reid",
+              "rate": 1520,
+              "min": 26,
+              "max": 48,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Nadia Hussain",
+              "rate": 1390,
+              "min": 20,
+              "max": 40,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Tomasz Wójcik",
+              "rate": 1271,
+              "min": 14,
+              "max": 40,
+              "skills": [
+                "KH"
+              ],
+              "under18": false,
+              "off": [
+                "Tue-O",
+                "Tue-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Ines Carvalho",
+              "rate": 1271,
+              "min": 0,
+              "max": 28,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-O",
+                "Tue-O",
+                "Wed-O",
+                "Thu-O",
+                "Fri-O",
+                "Sat-O",
+                "Sun-O"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Rhys Morgan",
+              "rate": 1085,
+              "min": 0,
+              "max": 28,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-O",
+                "Mon-C",
+                "Tue-O",
+                "Tue-C",
+                "Wed-O",
+                "Wed-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Hamza Ali",
+              "rate": 1271,
+              "min": 0,
+              "max": 21,
+              "skills": [],
+              "under18": false,
+              "off": [],
+              "fair": true
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "KH": "keyholder",
+            "PLH": "personal licence holder"
+          }
+        },
+        "optimum": 219457,
+        "reference": {
+          "rota": {
+            "Mon-O": [
+              "Tomasz"
+            ],
+            "Mon-C": [
+              "Ines",
+              "Nadia"
+            ],
+            "Tue-O": [
+              "Callum"
+            ],
+            "Tue-C": [
+              "Ines",
+              "Nadia"
+            ],
+            "Wed-O": [
+              "Tomasz"
+            ],
+            "Wed-C": [
+              "Ines",
+              "Nadia"
+            ],
+            "Thu-O": [
+              "Tomasz"
+            ],
+            "Thu-C": [
+              "Rhys",
+              "Callum"
+            ],
+            "Fri-O": [
+              "Nadia"
+            ],
+            "Fri-C": [
+              "Rhys",
+              "Callum"
+            ],
+            "Sat-O": [
+              "Tomasz",
+              "Hamza"
+            ],
+            "Sat-C": [
+              "Rhys",
+              "Ines",
+              "Nadia"
+            ],
+            "Sun-O": [
+              "Tomasz",
+              "Hamza"
+            ],
+            "Sun-C": [
+              "Rhys",
+              "Callum"
+            ]
+          },
+          "total": 2194.57
+        }
+      },
+      "notes": "[easy] pub, 6 staff, 14 shifts, 24 slots. Cheapest legal rota £2,194.57 (exact branch-and-bound, 101 nodes)."
+    },
+    {
+      "id": "r02",
+      "prompt": "From: Joanna Mensah\nSubject: Rota for the week of Mon 9 Nov 2026\n\nHi, can you build next week’s rota for Willow Bank care home in Ipswich? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Day (D): 08:00–20:00, 12 paid hours.\n- Night (N): 20:00–08:00 (finishes the next morning), 12 paid hours, plus a £1.20 an hour premium for whoever works it.\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nDay | 2 | 2 | 2 | 2 | 2 | 2 | 2\nNight | 1 | 1 | 1 | 1 | 1 | 1 | 1\nEvery Day shift needs at least 1 medication-trained on it.\nEvery Night shift needs at least 1 medication-trained on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nJoanna Mensah | Senior carer | £14.80 | 24–48 | medication-trained, first aider | any shift\nBilal Chaudhry | Senior carer | £14.50 | 24–48 | medication-trained | no nights\nGrace Achterberg | Carer | £12.71 | 36–48 | first aider | any shift\nKofi Asante | Carer | £12.71 | 12–48 | - | annual leave Thu–Sun\nLucia Romero | Carer | £13.00 | 0–48 | medication-trained | nights only\nSunil Varma | Bank carer (bank staff) | £16.50 | 0–48 | medication-trained | any shift\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-D\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-D\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-D",
+              "day": 0,
+              "name": "Day",
+              "start": 480,
+              "end": 1200,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-N",
+              "day": 0,
+              "name": "Night",
+              "start": 1200,
+              "end": 1920,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Tue-D",
+              "day": 1,
+              "name": "Day",
+              "start": 1920,
+              "end": 2640,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-N",
+              "day": 1,
+              "name": "Night",
+              "start": 2640,
+              "end": 3360,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Wed-D",
+              "day": 2,
+              "name": "Day",
+              "start": 3360,
+              "end": 4080,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-N",
+              "day": 2,
+              "name": "Night",
+              "start": 4080,
+              "end": 4800,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Thu-D",
+              "day": 3,
+              "name": "Day",
+              "start": 4800,
+              "end": 5520,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-N",
+              "day": 3,
+              "name": "Night",
+              "start": 5520,
+              "end": 6240,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Fri-D",
+              "day": 4,
+              "name": "Day",
+              "start": 6240,
+              "end": 6960,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-N",
+              "day": 4,
+              "name": "Night",
+              "start": 6960,
+              "end": 7680,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sat-D",
+              "day": 5,
+              "name": "Day",
+              "start": 7680,
+              "end": 8400,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-N",
+              "day": 5,
+              "name": "Night",
+              "start": 8400,
+              "end": 9120,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sun-D",
+              "day": 6,
+              "name": "Day",
+              "start": 9120,
+              "end": 9840,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-N",
+              "day": 6,
+              "name": "Night",
+              "start": 9840,
+              "end": 10560,
+              "paid": 12,
+              "need": 1,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Joanna Mensah",
+              "rate": 1480,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Bilal Chaudhry",
+              "rate": 1450,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N",
+                "Sat-N",
+                "Sun-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Grace Achterberg",
+              "rate": 1271,
+              "min": 36,
+              "max": 48,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Kofi Asante",
+              "rate": 1271,
+              "min": 12,
+              "max": 48,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Thu-D",
+                "Thu-N",
+                "Fri-D",
+                "Fri-N",
+                "Sat-D",
+                "Sat-N",
+                "Sun-D",
+                "Sun-N"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S05",
+              "name": "Lucia Romero",
+              "rate": 1300,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-D",
+                "Tue-D",
+                "Wed-D",
+                "Thu-D",
+                "Fri-D",
+                "Sat-D",
+                "Sun-D"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Sunil Varma",
+              "rate": 1650,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "MED": "medication-trained",
+            "FA": "first aider"
+          }
+        },
+        "optimum": 359484,
+        "reference": {
+          "rota": {
+            "Mon-D": [
+              "Kofi",
+              "Bilal"
+            ],
+            "Mon-N": [
+              "Lucia"
+            ],
+            "Tue-D": [
+              "Kofi",
+              "Bilal"
+            ],
+            "Tue-N": [
+              "Lucia"
+            ],
+            "Wed-D": [
+              "Kofi",
+              "Joanna"
+            ],
+            "Wed-N": [
+              "Lucia"
+            ],
+            "Thu-D": [
+              "Grace",
+              "Joanna"
+            ],
+            "Thu-N": [
+              "Sunil"
+            ],
+            "Fri-D": [
+              "Grace",
+              "Joanna"
+            ],
+            "Fri-N": [
+              "Sunil"
+            ],
+            "Sat-D": [
+              "Grace",
+              "Bilal"
+            ],
+            "Sat-N": [
+              "Lucia"
+            ],
+            "Sun-D": [
+              "Grace",
+              "Bilal"
+            ],
+            "Sun-N": [
+              "Joanna"
+            ]
+          },
+          "total": 3594.84
+        }
+      },
+      "notes": "[easy] care, 6 staff, 14 shifts, 21 slots. Cheapest legal rota £3,594.84 (exact branch-and-bound, 159 nodes)."
+    },
+    {
+      "id": "r03",
+      "prompt": "From: Aoife Byrne\nSubject: Rota for the week of Mon 16 Nov 2026\n\nHi, can you build next week’s rota for The Crown at Hebden Bridge? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Open (O): 10:00–17:30, 7 paid hours (the rest is an unpaid break).\n- Close (C): 17:30–01:00 (finishes the next morning), 7 paid hours (the rest is an unpaid break).\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nOpen | 1 | 1 | 1 | 1 | 1 | 2 | 2\nClose | 2 | 2 | 2 | 2 | 3 | 3 | 2\nEvery Open shift needs at least 1 keyholder on it.\nEvery Close shift needs at least 1 keyholder and 1 personal licence holder on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nAoife Byrne | Manager | £15.50 | 30–48 | keyholder, personal licence holder | any shift\nKai Thompson | Supervisor | £13.40 | 20–40 | keyholder, personal licence holder | any shift\nZara Malik | Bar staff | £12.71 | 13–39 | keyholder | any shift\nOskar Lindqvist | Bar staff | £12.71 | 0–26 | - | can’t do Sundays\nFemi Bello | Bar staff | £10.85 | 0–28 | - | any shift\nYasmin Haddad | Glass collector / waiter (aged 17) | £8.00 | 0–28 | - | school days: not before 17:00 Mon–Fri\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-O\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-O\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-O",
+              "day": 0,
+              "name": "Open",
+              "start": 600,
+              "end": 1050,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-C",
+              "day": 0,
+              "name": "Close",
+              "start": 1050,
+              "end": 1500,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-O",
+              "day": 1,
+              "name": "Open",
+              "start": 2040,
+              "end": 2490,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-C",
+              "day": 1,
+              "name": "Close",
+              "start": 2490,
+              "end": 2940,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-O",
+              "day": 2,
+              "name": "Open",
+              "start": 3480,
+              "end": 3930,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-C",
+              "day": 2,
+              "name": "Close",
+              "start": 3930,
+              "end": 4380,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-O",
+              "day": 3,
+              "name": "Open",
+              "start": 4920,
+              "end": 5370,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-C",
+              "day": 3,
+              "name": "Close",
+              "start": 5370,
+              "end": 5820,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-O",
+              "day": 4,
+              "name": "Open",
+              "start": 6360,
+              "end": 6810,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-C",
+              "day": 4,
+              "name": "Close",
+              "start": 6810,
+              "end": 7260,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-O",
+              "day": 5,
+              "name": "Open",
+              "start": 7800,
+              "end": 8250,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-C",
+              "day": 5,
+              "name": "Close",
+              "start": 8250,
+              "end": 8700,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-O",
+              "day": 6,
+              "name": "Open",
+              "start": 9240,
+              "end": 9690,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-C",
+              "day": 6,
+              "name": "Close",
+              "start": 9690,
+              "end": 10140,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Aoife Byrne",
+              "rate": 1550,
+              "min": 30,
+              "max": 48,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Kai Thompson",
+              "rate": 1340,
+              "min": 20,
+              "max": 40,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Zara Malik",
+              "rate": 1271,
+              "min": 13,
+              "max": 39,
+              "skills": [
+                "KH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Oskar Lindqvist",
+              "rate": 1271,
+              "min": 0,
+              "max": 26,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Sun-O",
+                "Sun-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Femi Bello",
+              "rate": 1085,
+              "min": 0,
+              "max": 28,
+              "skills": [],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Yasmin Haddad",
+              "rate": 800,
+              "min": 0,
+              "max": 28,
+              "skills": [],
+              "under18": true,
+              "off": [
+                "Mon-O",
+                "Tue-O",
+                "Wed-O",
+                "Thu-O",
+                "Fri-O"
+              ],
+              "fair": true
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "KH": "keyholder",
+            "PLH": "personal licence holder"
+          }
+        },
+        "optimum": 224756,
+        "reference": {
+          "rota": {
+            "Mon-O": [
+              "Zara"
+            ],
+            "Mon-C": [
+              "Femi",
+              "Aoife"
+            ],
+            "Tue-O": [
+              "Kai"
+            ],
+            "Tue-C": [
+              "Femi",
+              "Aoife"
+            ],
+            "Wed-O": [
+              "Kai"
+            ],
+            "Wed-C": [
+              "Zara",
+              "Aoife"
+            ],
+            "Thu-O": [
+              "Kai"
+            ],
+            "Thu-C": [
+              "Oskar",
+              "Aoife"
+            ],
+            "Fri-O": [
+              "Zara"
+            ],
+            "Fri-C": [
+              "Oskar",
+              "Kai",
+              "Aoife"
+            ],
+            "Sat-O": [
+              "Yasmin",
+              "Zara"
+            ],
+            "Sat-C": [
+              "Femi",
+              "Oskar",
+              "Kai"
+            ],
+            "Sun-O": [
+              "Yasmin",
+              "Zara"
+            ],
+            "Sun-C": [
+              "Femi",
+              "Aoife"
+            ]
+          },
+          "total": 2247.56
+        }
+      },
+      "notes": "[easy] pub, 6 staff, 14 shifts, 25 slots. Cheapest legal rota £2,247.56 (exact branch-and-bound, 64 nodes)."
+    },
+    {
+      "id": "r04",
+      "prompt": "From: Joanna Mensah\nSubject: Rota for the week of Mon 23 Nov 2026\n\nHi, can you build next week’s rota for Willow Bank care home in Ipswich? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Day (D): 08:00–20:00, 12 paid hours.\n- Night (N): 20:00–08:00 (finishes the next morning), 12 paid hours, plus a £1.20 an hour premium for whoever works it.\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nDay | 3 | 3 | 3 | 3 | 3 | 2 | 2\nNight | 2 | 2 | 2 | 2 | 2 | 2 | 2\nEvery Day shift needs at least 1 medication-trained and 1 first aider on it.\nEvery Night shift needs at least 1 medication-trained on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nJoanna Mensah | Senior carer | £14.80 | 24–48 | medication-trained, first aider | any shift\nBilal Chaudhry | Senior carer | £14.50 | 24–48 | medication-trained | no nights\nGrace Achterberg | Carer | £12.71 | 36–48 | first aider | any shift\nKofi Asante | Carer | £12.71 | 24–48 | - | not Mon or Tue\nLucia Romero | Carer | £13.00 | 24–48 | medication-trained | nights only\nHana Kobayashi | Carer | £12.71 | 0–36 | first aider | days only\nEmeka Obi | Carer | £13.00 | 12–48 | medication-trained | any shift\nUche Eze | Carer | £12.71 | 0–36 | - | any shift\nSunil Varma | Bank carer (bank staff) | £16.50 | 0–48 | medication-trained, first aider | any shift\nDalia Petrova | Agency nurse (bank staff) | £24.00 | 0–48 | medication-trained, first aider | any shift\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nUpdate (Friday 15:10): Kofi has just told me he is at a family wedding on Saturday 28th, so he cannot work Saturday (day or night).\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-D\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-D\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-D",
+              "day": 0,
+              "name": "Day",
+              "start": 480,
+              "end": 1200,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-N",
+              "day": 0,
+              "name": "Night",
+              "start": 1200,
+              "end": 1920,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Tue-D",
+              "day": 1,
+              "name": "Day",
+              "start": 1920,
+              "end": 2640,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-N",
+              "day": 1,
+              "name": "Night",
+              "start": 2640,
+              "end": 3360,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Wed-D",
+              "day": 2,
+              "name": "Day",
+              "start": 3360,
+              "end": 4080,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-N",
+              "day": 2,
+              "name": "Night",
+              "start": 4080,
+              "end": 4800,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Thu-D",
+              "day": 3,
+              "name": "Day",
+              "start": 4800,
+              "end": 5520,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-N",
+              "day": 3,
+              "name": "Night",
+              "start": 5520,
+              "end": 6240,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Fri-D",
+              "day": 4,
+              "name": "Day",
+              "start": 6240,
+              "end": 6960,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-N",
+              "day": 4,
+              "name": "Night",
+              "start": 6960,
+              "end": 7680,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sat-D",
+              "day": 5,
+              "name": "Day",
+              "start": 7680,
+              "end": 8400,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-N",
+              "day": 5,
+              "name": "Night",
+              "start": 8400,
+              "end": 9120,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sun-D",
+              "day": 6,
+              "name": "Day",
+              "start": 9120,
+              "end": 9840,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-N",
+              "day": 6,
+              "name": "Night",
+              "start": 9840,
+              "end": 10560,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1
+              },
+              "premium": 120
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Joanna Mensah",
+              "rate": 1480,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Bilal Chaudhry",
+              "rate": 1450,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N",
+                "Sat-N",
+                "Sun-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Grace Achterberg",
+              "rate": 1271,
+              "min": 36,
+              "max": 48,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Kofi Asante",
+              "rate": 1271,
+              "min": 24,
+              "max": 48,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-D",
+                "Mon-N",
+                "Tue-D",
+                "Tue-N",
+                "Sat-D",
+                "Sat-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Lucia Romero",
+              "rate": 1300,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-D",
+                "Tue-D",
+                "Wed-D",
+                "Thu-D",
+                "Fri-D",
+                "Sat-D",
+                "Sun-D"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Hana Kobayashi",
+              "rate": 1271,
+              "min": 0,
+              "max": 36,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N",
+                "Sat-N",
+                "Sun-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Emeka Obi",
+              "rate": 1300,
+              "min": 12,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S08",
+              "name": "Uche Eze",
+              "rate": 1271,
+              "min": 0,
+              "max": 36,
+              "skills": [],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S09",
+              "name": "Sunil Varma",
+              "rate": 1650,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            },
+            {
+              "id": "S10",
+              "name": "Dalia Petrova",
+              "rate": 2400,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "MED": "medication-trained",
+            "FA": "first aider"
+          }
+        },
+        "optimum": 558528,
+        "reference": {
+          "rota": {
+            "Mon-D": [
+              "Grace",
+              "Hana",
+              "Emeka"
+            ],
+            "Mon-N": [
+              "Uche",
+              "Lucia"
+            ],
+            "Tue-D": [
+              "Grace",
+              "Hana",
+              "Emeka"
+            ],
+            "Tue-N": [
+              "Uche",
+              "Lucia"
+            ],
+            "Wed-D": [
+              "Kofi",
+              "Bilal",
+              "Joanna"
+            ],
+            "Wed-N": [
+              "Grace",
+              "Sunil"
+            ],
+            "Thu-D": [
+              "Kofi",
+              "Bilal",
+              "Joanna"
+            ],
+            "Thu-N": [
+              "Lucia",
+              "Sunil"
+            ],
+            "Fri-D": [
+              "Emeka",
+              "Bilal",
+              "Joanna"
+            ],
+            "Fri-N": [
+              "Kofi",
+              "Sunil"
+            ],
+            "Sat-D": [
+              "Grace",
+              "Emeka"
+            ],
+            "Sat-N": [
+              "Uche",
+              "Lucia"
+            ],
+            "Sun-D": [
+              "Hana",
+              "Bilal"
+            ],
+            "Sun-N": [
+              "Kofi",
+              "Joanna"
+            ]
+          },
+          "total": 5585.28
+        }
+      },
+      "notes": "[medium] care, 10 staff, 14 shifts, 33 slots. Cheapest legal rota £5,585.28 (exact branch-and-bound, 768 nodes)."
+    },
+    {
+      "id": "r05",
+      "prompt": "From: Callum Reid\nSubject: Rota for the week of Mon 30 Nov 2026\n\nHi, can you build next week’s rota for The Fox & Fiddle in Shrewsbury? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Open (O): 10:00–17:30, 7 paid hours (the rest is an unpaid break).\n- Close (C): 17:30–01:00 (finishes the next morning), 7 paid hours (the rest is an unpaid break).\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nOpen | 1 | 1 | 1 | 2 | 2 | 3 | 3\nClose | 2 | 2 | 2 | 3 | 4 | 4 | 2\nEvery Open shift needs at least 1 keyholder on it.\nEvery Close shift needs at least 1 keyholder and 1 personal licence holder on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nCallum Reid | Manager | £15.20 | 26–48 | keyholder, personal licence holder | off Mon and Tue\nNadia Hussain | Deputy manager | £13.90 | 26–45 | keyholder, personal licence holder | any shift\nTomasz Wójcik | Supervisor | £13.10 | 20–40 | keyholder, personal licence holder | not Tuesdays\nInes Carvalho | Bar staff | £12.71 | 14–30 | - | evenings only\nRhys Morgan | Bar staff | £10.85 | 0–30 | keyholder | any shift\nWen Li | Bar staff | £12.71 | 12–26 | - | days only (lectures in the evening)\nMalik Johnson | Bar staff | £12.71 | 0–21 | - | any shift\nTalia Rosen | Waiter (aged 17) | £8.00 | 0–28 | - | school days: not before 17:00 Mon–Fri\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-O\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-O\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-O",
+              "day": 0,
+              "name": "Open",
+              "start": 600,
+              "end": 1050,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-C",
+              "day": 0,
+              "name": "Close",
+              "start": 1050,
+              "end": 1500,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-O",
+              "day": 1,
+              "name": "Open",
+              "start": 2040,
+              "end": 2490,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-C",
+              "day": 1,
+              "name": "Close",
+              "start": 2490,
+              "end": 2940,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-O",
+              "day": 2,
+              "name": "Open",
+              "start": 3480,
+              "end": 3930,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-C",
+              "day": 2,
+              "name": "Close",
+              "start": 3930,
+              "end": 4380,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-O",
+              "day": 3,
+              "name": "Open",
+              "start": 4920,
+              "end": 5370,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-C",
+              "day": 3,
+              "name": "Close",
+              "start": 5370,
+              "end": 5820,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-O",
+              "day": 4,
+              "name": "Open",
+              "start": 6360,
+              "end": 6810,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-C",
+              "day": 4,
+              "name": "Close",
+              "start": 6810,
+              "end": 7260,
+              "paid": 7,
+              "need": 4,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-O",
+              "day": 5,
+              "name": "Open",
+              "start": 7800,
+              "end": 8250,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-C",
+              "day": 5,
+              "name": "Close",
+              "start": 8250,
+              "end": 8700,
+              "paid": 7,
+              "need": 4,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-O",
+              "day": 6,
+              "name": "Open",
+              "start": 9240,
+              "end": 9690,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-C",
+              "day": 6,
+              "name": "Close",
+              "start": 9690,
+              "end": 10140,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Callum Reid",
+              "rate": 1520,
+              "min": 26,
+              "max": 48,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-O",
+                "Mon-C",
+                "Tue-O",
+                "Tue-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Nadia Hussain",
+              "rate": 1390,
+              "min": 26,
+              "max": 45,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Tomasz Wójcik",
+              "rate": 1310,
+              "min": 20,
+              "max": 40,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [
+                "Tue-O",
+                "Tue-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Ines Carvalho",
+              "rate": 1271,
+              "min": 14,
+              "max": 30,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-O",
+                "Tue-O",
+                "Wed-O",
+                "Thu-O",
+                "Fri-O",
+                "Sat-O",
+                "Sun-O"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Rhys Morgan",
+              "rate": 1085,
+              "min": 0,
+              "max": 30,
+              "skills": [
+                "KH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Wen Li",
+              "rate": 1271,
+              "min": 12,
+              "max": 26,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-C",
+                "Tue-C",
+                "Wed-C",
+                "Thu-C",
+                "Fri-C",
+                "Sat-C",
+                "Sun-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Malik Johnson",
+              "rate": 1271,
+              "min": 0,
+              "max": 21,
+              "skills": [],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S08",
+              "name": "Talia Rosen",
+              "rate": 800,
+              "min": 0,
+              "max": 28,
+              "skills": [],
+              "under18": true,
+              "off": [
+                "Mon-O",
+                "Tue-O",
+                "Wed-O",
+                "Thu-O",
+                "Fri-O"
+              ],
+              "fair": true
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "KH": "keyholder",
+            "PLH": "personal licence holder"
+          }
+        },
+        "optimum": 287980,
+        "reference": {
+          "rota": {
+            "Mon-O": [
+              "Rhys"
+            ],
+            "Mon-C": [
+              "Tomasz",
+              "Nadia"
+            ],
+            "Tue-O": [
+              "Rhys"
+            ],
+            "Tue-C": [
+              "Ines",
+              "Nadia"
+            ],
+            "Wed-O": [
+              "Tomasz"
+            ],
+            "Wed-C": [
+              "Nadia",
+              "Callum"
+            ],
+            "Thu-O": [
+              "Malik",
+              "Tomasz"
+            ],
+            "Thu-C": [
+              "Ines",
+              "Nadia",
+              "Callum"
+            ],
+            "Fri-O": [
+              "Wen",
+              "Tomasz"
+            ],
+            "Fri-C": [
+              "Ines",
+              "Malik",
+              "Nadia",
+              "Callum"
+            ],
+            "Sat-O": [
+              "Talia",
+              "Rhys",
+              "Wen"
+            ],
+            "Sat-C": [
+              "Ines",
+              "Malik",
+              "Tomasz",
+              "Callum"
+            ],
+            "Sun-O": [
+              "Talia",
+              "Rhys",
+              "Wen"
+            ],
+            "Sun-C": [
+              "Nadia",
+              "Callum"
+            ]
+          },
+          "total": 2879.8
+        }
+      },
+      "notes": "[medium] pub, 8 staff, 14 shifts, 32 slots. Cheapest legal rota £2,879.80 (exact branch-and-bound, 81 nodes)."
+    },
+    {
+      "id": "r06",
+      "prompt": "From: Sana Iqbal\nSubject: Rota for the week of Mon 7 Dec 2026\n\nHi, can you build next week’s rota for the goods-in team at Brightwell Logistics, Daventry? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Early (E): 06:00–14:00, 8 paid hours.\n- Late (L): 14:00–22:00, 8 paid hours.\n- Night (N): 22:00–06:00 (finishes the next morning), 8 paid hours, plus a £1.50 an hour premium for whoever works it.\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nEarly | 2 | 2 | 2 | 2 | 2 | 1 | 1\nLate | 2 | 2 | 2 | 2 | 2 | 1 | 0\nNight | 1 | 1 | 1 | 1 | 0 | 0 | 0\nEvery Early shift needs at least 1 forklift (FLT) licence and 1 first aider on it.\nEvery Late shift needs at least 1 forklift (FLT) licence on it.\nEvery Night shift needs at least 1 forklift (FLT) licence on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nSana Iqbal | Shift lead | £15.80 | 32–48 | forklift (FLT) licence, first aider | any shift\nGethin Evans | FLT driver | £14.20 | 32–48 | forklift (FLT) licence, first aider | any shift\nAmara Nwosu | FLT driver | £13.90 | 16–48 | forklift (FLT) licence | no nights\nMateusz Kowal | Warehouse operative | £12.71 | 32–48 | first aider | any shift\nPriya Desai | Warehouse operative | £12.71 | 24–40 | - | earlies only\nIbrahim Saleh | Warehouse operative | £10.85 | 0–40 | forklift (FLT) licence | any shift\nChloe Barker | Apprentice (aged 17) | £8.00 | 16–40 | - | any shift\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-E\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-E\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-E",
+              "day": 0,
+              "name": "Early",
+              "start": 360,
+              "end": 840,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-L",
+              "day": 0,
+              "name": "Late",
+              "start": 840,
+              "end": 1320,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-N",
+              "day": 0,
+              "name": "Night",
+              "start": 1320,
+              "end": 1800,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Tue-E",
+              "day": 1,
+              "name": "Early",
+              "start": 1800,
+              "end": 2280,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-L",
+              "day": 1,
+              "name": "Late",
+              "start": 2280,
+              "end": 2760,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-N",
+              "day": 1,
+              "name": "Night",
+              "start": 2760,
+              "end": 3240,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Wed-E",
+              "day": 2,
+              "name": "Early",
+              "start": 3240,
+              "end": 3720,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-L",
+              "day": 2,
+              "name": "Late",
+              "start": 3720,
+              "end": 4200,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-N",
+              "day": 2,
+              "name": "Night",
+              "start": 4200,
+              "end": 4680,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Thu-E",
+              "day": 3,
+              "name": "Early",
+              "start": 4680,
+              "end": 5160,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-L",
+              "day": 3,
+              "name": "Late",
+              "start": 5160,
+              "end": 5640,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-N",
+              "day": 3,
+              "name": "Night",
+              "start": 5640,
+              "end": 6120,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Fri-E",
+              "day": 4,
+              "name": "Early",
+              "start": 6120,
+              "end": 6600,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-L",
+              "day": 4,
+              "name": "Late",
+              "start": 6600,
+              "end": 7080,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-E",
+              "day": 5,
+              "name": "Early",
+              "start": 7560,
+              "end": 8040,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-L",
+              "day": 5,
+              "name": "Late",
+              "start": 8040,
+              "end": 8520,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-E",
+              "day": 6,
+              "name": "Early",
+              "start": 9000,
+              "end": 9480,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Sana Iqbal",
+              "rate": 1580,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FLT",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S02",
+              "name": "Gethin Evans",
+              "rate": 1420,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FLT",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Amara Nwosu",
+              "rate": 1390,
+              "min": 16,
+              "max": 48,
+              "skills": [
+                "FLT"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Mateusz Kowal",
+              "rate": 1271,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Priya Desai",
+              "rate": 1271,
+              "min": 24,
+              "max": 40,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-L",
+                "Mon-N",
+                "Tue-L",
+                "Tue-N",
+                "Wed-L",
+                "Wed-N",
+                "Thu-L",
+                "Thu-N",
+                "Fri-L",
+                "Sat-L"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Ibrahim Saleh",
+              "rate": 1085,
+              "min": 0,
+              "max": 40,
+              "skills": [
+                "FLT"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Chloe Barker",
+              "rate": 800,
+              "min": 16,
+              "max": 40,
+              "skills": [],
+              "under18": true,
+              "off": [],
+              "fair": true
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "FLT": "forklift (FLT) licence",
+            "FA": "first aider"
+          }
+        },
+        "optimum": 279056,
+        "reference": {
+          "rota": {
+            "Mon-E": [
+              "Chloe",
+              "Gethin"
+            ],
+            "Mon-L": [
+              "Ibrahim",
+              "Mateusz"
+            ],
+            "Mon-N": [
+              "Sana"
+            ],
+            "Tue-E": [
+              "Chloe",
+              "Gethin"
+            ],
+            "Tue-L": [
+              "Mateusz",
+              "Amara"
+            ],
+            "Tue-N": [
+              "Ibrahim"
+            ],
+            "Wed-E": [
+              "Priya",
+              "Gethin"
+            ],
+            "Wed-L": [
+              "Chloe",
+              "Amara"
+            ],
+            "Wed-N": [
+              "Ibrahim"
+            ],
+            "Thu-E": [
+              "Priya",
+              "Sana"
+            ],
+            "Thu-L": [
+              "Mateusz",
+              "Amara"
+            ],
+            "Thu-N": [
+              "Ibrahim"
+            ],
+            "Fri-E": [
+              "Priya",
+              "Sana"
+            ],
+            "Fri-L": [
+              "Mateusz",
+              "Amara"
+            ],
+            "Sat-E": [
+              "Gethin"
+            ],
+            "Sat-L": [
+              "Ibrahim"
+            ],
+            "Sun-E": [
+              "Sana"
+            ]
+          },
+          "total": 2790.56
+        }
+      },
+      "notes": "[medium] warehouse, 7 staff, 17 shifts, 27 slots. Cheapest legal rota £2,790.56 (exact branch-and-bound, 117 nodes)."
+    },
+    {
+      "id": "r07",
+      "prompt": "From: Sana Iqbal\nSubject: Rota for the week of Mon 14 Dec 2026\n\nHi, can you build next week’s rota for the goods-in team at Brightwell Logistics, Daventry? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Early (E): 06:00–14:00, 8 paid hours.\n- Late (L): 14:00–22:00, 8 paid hours.\n- Night (N): 22:00–06:00 (finishes the next morning), 8 paid hours, plus a £1.50 an hour premium for whoever works it.\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nEarly | 3 | 3 | 3 | 3 | 3 | 2 | 1\nLate | 2 | 2 | 2 | 2 | 3 | 1 | 1\nNight | 1 | 1 | 2 | 2 | 1 | 0 | 0\nEvery Early shift needs at least 1 forklift (FLT) licence and 1 first aider on it.\nEvery Late shift needs at least 1 forklift (FLT) licence and 1 first aider on it.\nEvery Night shift needs at least 1 forklift (FLT) licence on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nSana Iqbal | Shift lead | £15.80 | 32–48 | forklift (FLT) licence, first aider | any shift\nGethin Evans | FLT driver | £14.20 | 32–48 | forklift (FLT) licence, first aider | any shift\nAmara Nwosu | FLT driver | £13.90 | 24–48 | forklift (FLT) licence | no nights\nBongani Dlamini | FLT driver | £13.90 | 0–40 | forklift (FLT) licence | on leave Thu–Sun\nMateusz Kowal | Warehouse operative | £12.71 | 32–48 | first aider | any shift\nPriya Desai | Warehouse operative | £12.71 | 24–40 | - | earlies only\nIbrahim Saleh | Warehouse operative | £10.85 | 0–40 | first aider | any shift\nEilidh Fraser | Warehouse operative | £12.71 | 16–32 | - | not weekends\nChloe Barker | Apprentice (aged 17) | £8.00 | 8–40 | - | at college Mon–Thu until 15:00 (no Early or Late shifts those days)\nOmar Farouk | Agency FLT driver (bank staff) | £19.00 | 0–48 | forklift (FLT) licence, first aider | any shift\n\nLast week (for the rest rule): Sana finished Sun Late at 22:00; Gethin finished Sun Night at 06:00 this Monday; Mateusz finished Sun Late at 22:00; Chloe finished Sun Late at 22:00. Everyone else finished early enough to start any shift on Monday.\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nUpdate (Thursday 17:20): Gethin’s first-aid certificate expired last week and he is not booked on the refresher until January, so he does not count as a first aider this week. Everything else stands.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-E\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-E\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-E",
+              "day": 0,
+              "name": "Early",
+              "start": 360,
+              "end": 840,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-L",
+              "day": 0,
+              "name": "Late",
+              "start": 840,
+              "end": 1320,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-N",
+              "day": 0,
+              "name": "Night",
+              "start": 1320,
+              "end": 1800,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Tue-E",
+              "day": 1,
+              "name": "Early",
+              "start": 1800,
+              "end": 2280,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-L",
+              "day": 1,
+              "name": "Late",
+              "start": 2280,
+              "end": 2760,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-N",
+              "day": 1,
+              "name": "Night",
+              "start": 2760,
+              "end": 3240,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Wed-E",
+              "day": 2,
+              "name": "Early",
+              "start": 3240,
+              "end": 3720,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-L",
+              "day": 2,
+              "name": "Late",
+              "start": 3720,
+              "end": 4200,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-N",
+              "day": 2,
+              "name": "Night",
+              "start": 4200,
+              "end": 4680,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Thu-E",
+              "day": 3,
+              "name": "Early",
+              "start": 4680,
+              "end": 5160,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-L",
+              "day": 3,
+              "name": "Late",
+              "start": 5160,
+              "end": 5640,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-N",
+              "day": 3,
+              "name": "Night",
+              "start": 5640,
+              "end": 6120,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Fri-E",
+              "day": 4,
+              "name": "Early",
+              "start": 6120,
+              "end": 6600,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-L",
+              "day": 4,
+              "name": "Late",
+              "start": 6600,
+              "end": 7080,
+              "paid": 8,
+              "need": 3,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-N",
+              "day": 4,
+              "name": "Night",
+              "start": 7080,
+              "end": 7560,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1
+              },
+              "premium": 150
+            },
+            {
+              "id": "Sat-E",
+              "day": 5,
+              "name": "Early",
+              "start": 7560,
+              "end": 8040,
+              "paid": 8,
+              "need": 2,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-L",
+              "day": 5,
+              "name": "Late",
+              "start": 8040,
+              "end": 8520,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-E",
+              "day": 6,
+              "name": "Early",
+              "start": 9000,
+              "end": 9480,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-L",
+              "day": 6,
+              "name": "Late",
+              "start": 9480,
+              "end": 9960,
+              "paid": 8,
+              "need": 1,
+              "skills": {
+                "FLT": 1,
+                "FA": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Sana Iqbal",
+              "rate": 1580,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FLT",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": -120
+            },
+            {
+              "id": "S02",
+              "name": "Gethin Evans",
+              "rate": 1420,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FLT"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": 360
+            },
+            {
+              "id": "S03",
+              "name": "Amara Nwosu",
+              "rate": 1390,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "FLT"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S04",
+              "name": "Bongani Dlamini",
+              "rate": 1390,
+              "min": 0,
+              "max": 40,
+              "skills": [
+                "FLT"
+              ],
+              "under18": false,
+              "off": [
+                "Thu-E",
+                "Thu-L",
+                "Thu-N",
+                "Fri-E",
+                "Fri-L",
+                "Fri-N",
+                "Sat-E",
+                "Sat-L",
+                "Sun-E",
+                "Sun-L"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S05",
+              "name": "Mateusz Kowal",
+              "rate": 1271,
+              "min": 32,
+              "max": 48,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": -120
+            },
+            {
+              "id": "S06",
+              "name": "Priya Desai",
+              "rate": 1271,
+              "min": 24,
+              "max": 40,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-L",
+                "Mon-N",
+                "Tue-L",
+                "Tue-N",
+                "Wed-L",
+                "Wed-N",
+                "Thu-L",
+                "Thu-N",
+                "Fri-L",
+                "Fri-N",
+                "Sat-L",
+                "Sun-L"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Ibrahim Saleh",
+              "rate": 1085,
+              "min": 0,
+              "max": 40,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S08",
+              "name": "Eilidh Fraser",
+              "rate": 1271,
+              "min": 16,
+              "max": 32,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Sat-E",
+                "Sat-L",
+                "Sun-E",
+                "Sun-L"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S09",
+              "name": "Chloe Barker",
+              "rate": 800,
+              "min": 8,
+              "max": 40,
+              "skills": [],
+              "under18": true,
+              "off": [
+                "Mon-E",
+                "Mon-L",
+                "Tue-E",
+                "Tue-L",
+                "Wed-E",
+                "Wed-L",
+                "Thu-E",
+                "Thu-L"
+              ],
+              "fair": true,
+              "lastEnd": -120
+            },
+            {
+              "id": "S10",
+              "name": "Omar Farouk",
+              "rate": 1900,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "FLT",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "FLT": "forklift (FLT) licence",
+            "FA": "first aider"
+          }
+        },
+        "optimum": 416864,
+        "reference": {
+          "rota": {
+            "Mon-E": [
+              "Ibrahim",
+              "Priya",
+              "Amara"
+            ],
+            "Mon-L": [
+              "Mateusz",
+              "Bongani"
+            ],
+            "Mon-N": [
+              "Gethin"
+            ],
+            "Tue-E": [
+              "Ibrahim",
+              "Priya",
+              "Amara"
+            ],
+            "Tue-L": [
+              "Mateusz",
+              "Bongani"
+            ],
+            "Tue-N": [
+              "Gethin"
+            ],
+            "Wed-E": [
+              "Ibrahim",
+              "Priya",
+              "Amara"
+            ],
+            "Wed-L": [
+              "Eilidh",
+              "Sana"
+            ],
+            "Wed-N": [
+              "Mateusz",
+              "Bongani"
+            ],
+            "Thu-E": [
+              "Ibrahim",
+              "Priya",
+              "Amara"
+            ],
+            "Thu-L": [
+              "Eilidh",
+              "Sana"
+            ],
+            "Thu-N": [
+              "Mateusz",
+              "Gethin"
+            ],
+            "Fri-E": [
+              "Ibrahim",
+              "Priya",
+              "Amara"
+            ],
+            "Fri-L": [
+              "Chloe",
+              "Eilidh",
+              "Sana"
+            ],
+            "Fri-N": [
+              "Gethin"
+            ],
+            "Sat-E": [
+              "Mateusz",
+              "Amara"
+            ],
+            "Sat-L": [
+              "Omar"
+            ],
+            "Sun-E": [
+              "Sana"
+            ],
+            "Sun-L": [
+              "Omar"
+            ]
+          },
+          "total": 4168.64
+        }
+      },
+      "notes": "[hard] warehouse, 10 staff, 19 shifts, 38 slots. Cheapest legal rota £4,168.64 (exact branch-and-bound, 2834 nodes)."
+    },
+    {
+      "id": "r08",
+      "prompt": "From: Aoife Byrne\nSubject: Rota for the week of Mon 21 Dec 2026\n\nHi, can you build next week’s rota for The Crown at Hebden Bridge? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Open (O): 10:00–17:30, 7 paid hours (the rest is an unpaid break).\n- Close (C): 17:30–01:00 (finishes the next morning), 7 paid hours (the rest is an unpaid break).\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nOpen | 1 | 2 | 2 | 2 | 2 | 3 | 2\nClose | 2 | 3 | 3 | 3 | 4 | 4 | 3\nEvery Open shift needs at least 1 keyholder on it.\nEvery Close shift needs at least 1 keyholder and 1 personal licence holder on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nAoife Byrne | Manager | £15.50 | 30–48 | keyholder, personal licence holder | any shift\nKai Thompson | Supervisor | £13.40 | 26–45 | keyholder, personal licence holder | Christmas Day off: not Fri\nZara Malik | Bar staff | £12.71 | 20–40 | keyholder | any shift\nOskar Lindqvist | Bar staff | £12.71 | 13–33 | personal licence holder | can’t do Sundays\nFemi Bello | Bar staff | £10.85 | 0–33 | keyholder | any shift\nRosa Quintero | Bar staff | £12.71 | 12–26 | - | evenings only\nJun Park | Bar staff | £12.71 | 0–21 | - | home for Christmas from Thu\nYasmin Haddad | Glass collector / waiter (aged 17) | £8.00 | 6–20 | - | any shift\nXavier Dupont | Relief manager (bank staff) | £17.00 | 0–40 | keyholder, personal licence holder | any shift\n\nLast week (for the rest rule): Aoife closed on Sunday (finished at 01:00 this Monday); Zara closed on Sunday (finished at 01:00 this Monday). Everyone else finished early enough to start any shift on Monday.\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nUpdate (Saturday 11:05): the brewery has asked us to host their Christmas Eve quiz, so Thursday’s Close now needs 4 people instead of 3. Everything else stands.\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-O\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-O\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-O",
+              "day": 0,
+              "name": "Open",
+              "start": 600,
+              "end": 1050,
+              "paid": 7,
+              "need": 1,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-C",
+              "day": 0,
+              "name": "Close",
+              "start": 1050,
+              "end": 1500,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-O",
+              "day": 1,
+              "name": "Open",
+              "start": 2040,
+              "end": 2490,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-C",
+              "day": 1,
+              "name": "Close",
+              "start": 2490,
+              "end": 2940,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-O",
+              "day": 2,
+              "name": "Open",
+              "start": 3480,
+              "end": 3930,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-C",
+              "day": 2,
+              "name": "Close",
+              "start": 3930,
+              "end": 4380,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-O",
+              "day": 3,
+              "name": "Open",
+              "start": 4920,
+              "end": 5370,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-C",
+              "day": 3,
+              "name": "Close",
+              "start": 5370,
+              "end": 5820,
+              "paid": 7,
+              "need": 4,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-O",
+              "day": 4,
+              "name": "Open",
+              "start": 6360,
+              "end": 6810,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-C",
+              "day": 4,
+              "name": "Close",
+              "start": 6810,
+              "end": 7260,
+              "paid": 7,
+              "need": 4,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-O",
+              "day": 5,
+              "name": "Open",
+              "start": 7800,
+              "end": 8250,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-C",
+              "day": 5,
+              "name": "Close",
+              "start": 8250,
+              "end": 8700,
+              "paid": 7,
+              "need": 4,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-O",
+              "day": 6,
+              "name": "Open",
+              "start": 9240,
+              "end": 9690,
+              "paid": 7,
+              "need": 2,
+              "skills": {
+                "KH": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-C",
+              "day": 6,
+              "name": "Close",
+              "start": 9690,
+              "end": 10140,
+              "paid": 7,
+              "need": 3,
+              "skills": {
+                "KH": 1,
+                "PLH": 1
+              },
+              "premium": 0
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Aoife Byrne",
+              "rate": 1550,
+              "min": 30,
+              "max": 48,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": 60
+            },
+            {
+              "id": "S02",
+              "name": "Kai Thompson",
+              "rate": 1340,
+              "min": 26,
+              "max": 45,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [
+                "Fri-O",
+                "Fri-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Zara Malik",
+              "rate": 1271,
+              "min": 20,
+              "max": 40,
+              "skills": [
+                "KH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": 60
+            },
+            {
+              "id": "S04",
+              "name": "Oskar Lindqvist",
+              "rate": 1271,
+              "min": 13,
+              "max": 33,
+              "skills": [
+                "PLH"
+              ],
+              "under18": false,
+              "off": [
+                "Sun-O",
+                "Sun-C"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Femi Bello",
+              "rate": 1085,
+              "min": 0,
+              "max": 33,
+              "skills": [
+                "KH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S06",
+              "name": "Rosa Quintero",
+              "rate": 1271,
+              "min": 12,
+              "max": 26,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Mon-O",
+                "Tue-O",
+                "Wed-O",
+                "Thu-O",
+                "Fri-O",
+                "Sat-O",
+                "Sun-O"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Jun Park",
+              "rate": 1271,
+              "min": 0,
+              "max": 21,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Thu-O",
+                "Thu-C",
+                "Fri-O",
+                "Fri-C",
+                "Sat-O",
+                "Sat-C",
+                "Sun-O",
+                "Sun-C"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S08",
+              "name": "Yasmin Haddad",
+              "rate": 800,
+              "min": 6,
+              "max": 20,
+              "skills": [],
+              "under18": true,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S09",
+              "name": "Xavier Dupont",
+              "rate": 1700,
+              "min": 0,
+              "max": 40,
+              "skills": [
+                "KH",
+                "PLH"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "KH": "keyholder",
+            "PLH": "personal licence holder"
+          }
+        },
+        "optimum": 344015,
+        "reference": {
+          "rota": {
+            "Mon-O": [
+              "Kai"
+            ],
+            "Mon-C": [
+              "Jun",
+              "Aoife"
+            ],
+            "Tue-O": [
+              "Zara",
+              "Kai"
+            ],
+            "Tue-C": [
+              "Jun",
+              "Aoife",
+              "Xavier"
+            ],
+            "Wed-O": [
+              "Oskar",
+              "Kai"
+            ],
+            "Wed-C": [
+              "Jun",
+              "Aoife",
+              "Xavier"
+            ],
+            "Thu-O": [
+              "Femi",
+              "Zara"
+            ],
+            "Thu-C": [
+              "Oskar",
+              "Kai",
+              "Aoife",
+              "Xavier"
+            ],
+            "Fri-O": [
+              "Femi",
+              "Zara"
+            ],
+            "Fri-C": [
+              "Oskar",
+              "Rosa",
+              "Aoife",
+              "Xavier"
+            ],
+            "Sat-O": [
+              "Yasmin",
+              "Femi",
+              "Zara"
+            ],
+            "Sat-C": [
+              "Oskar",
+              "Rosa",
+              "Kai",
+              "Aoife"
+            ],
+            "Sun-O": [
+              "Yasmin",
+              "Femi"
+            ],
+            "Sun-C": [
+              "Zara",
+              "Rosa",
+              "Kai"
+            ]
+          },
+          "total": 3440.15
+        }
+      },
+      "notes": "[hard] pub, 9 staff, 14 shifts, 37 slots. Cheapest legal rota £3,440.15 (exact branch-and-bound, 462 nodes)."
+    },
+    {
+      "id": "r09",
+      "prompt": "From: Joanna Mensah\nSubject: Rota for the week of Mon 28 Dec 2026\n\nHi, can you build next week’s rota for Willow Bank care home in Ipswich? It has to keep every rule below, and I want it as cheap as possible on wages.\n\nSHIFTS\n- Day (D): 08:00–20:00, 12 paid hours.\n- Night (N): 20:00–08:00 (finishes the next morning), 12 paid hours, plus a £1.20 an hour premium for whoever works it.\n\nCOVER (exactly this many people on each shift: no more, no fewer)\nShift | Mon | Tue | Wed | Thu | Fri | Sat | Sun\nDay | 3 | 3 | 3 | 3 | 3 | 3 | 3\nNight | 2 | 2 | 2 | 2 | 2 | 2 | 2\nEvery Day shift needs at least 1 medication-trained and 1 first aider on it.\nEvery Night shift needs at least 1 medication-trained and 1 first aider on it.\n\nSTAFF (pay is per paid hour; contracted hours are the least and most each person must be given this week)\nName | Role | Pay | Contracted hours | Skills | Availability\nJoanna Mensah | Senior carer | £14.80 | 24–48 | medication-trained, first aider | any shift\nBilal Chaudhry | Senior carer | £14.50 | 24–48 | medication-trained | no nights\nGrace Achterberg | Carer | £12.71 | 36–48 | first aider | any shift\nKofi Asante | Carer | £12.71 | 24–48 | - | New Year’s Day off: not Fri\nLucia Romero | Carer | £13.00 | 24–48 | medication-trained | nights only\nHana Kobayashi | Carer | £12.71 | 0–36 | first aider | days only\nEmeka Obi | Carer | £13.00 | 12–48 | medication-trained, first aider | any shift\nFarah Siddiqui | Carer | £12.71 | 24–48 | - | not weekends\nUche Eze | Carer | £12.71 | 0–36 | first aider | any shift\nMalik Osei | Senior carer | £14.80 | 12–48 | medication-trained, first aider | nights only\nSunil Varma | Bank carer (bank staff) | £16.50 | 0–48 | medication-trained, first aider | any shift\nDalia Petrova | Agency nurse (bank staff) | £24.00 | 0–48 | medication-trained, first aider | any shift\n\nLast week (for the rest rule): Joanna finished Sun Night at 08:00 this Monday; Grace finished Sun Night at 08:00 this Monday. Everyone else finished early enough to start any shift on Monday.\n\nRULES FOR THIS ROTA\n1. At least 11 hours’ rest between the end of one shift and the start of the next (12 hours for anyone under 18). This includes the last shift someone worked last week.\n2. Nobody works more than 48 paid hours in the week (use this as a strict weekly cap for this exercise; no opt-outs).\n3. Under-18s: no work at all between 22:00 and 06:00, no more than 8 paid hours in a day and 40 in the week.\n4. Everyone gets between the least and the most of their contracted hours.\n5. Weekend fairness: a weekend shift is any shift that starts on a Saturday or Sunday. Among the staff who are available for at least one weekend shift (bank staff excepted), the number of weekend shifts each person works must be within one of each other (the most minus the least is 0 or 1).\n6. Nobody works a shift they are not available for, and nobody works two shifts at once.\n7. Wage cost = paid hours × (hourly pay + any shift premium), added up over every shift worked. Make it as low as possible.\n\nUpdate (Wednesday 09:30): Lucia has broken her wrist and is signed off all week. Please leave her off the rota (her contracted hours do not apply this week).\n\nAnswer with the rota as the people on every shift (shift codes are the day and the shift letter, e.g. \"Mon-D\"; first names are fine) and the total wage cost in pounds, in this JSON format:\n```json\n{\"rota\": {\"Mon-D\": [\"<name>\"]}, \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "shifts": [
+            {
+              "id": "Mon-D",
+              "day": 0,
+              "name": "Day",
+              "start": 480,
+              "end": 1200,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Mon-N",
+              "day": 0,
+              "name": "Night",
+              "start": 1200,
+              "end": 1920,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Tue-D",
+              "day": 1,
+              "name": "Day",
+              "start": 1920,
+              "end": 2640,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Tue-N",
+              "day": 1,
+              "name": "Night",
+              "start": 2640,
+              "end": 3360,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Wed-D",
+              "day": 2,
+              "name": "Day",
+              "start": 3360,
+              "end": 4080,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Wed-N",
+              "day": 2,
+              "name": "Night",
+              "start": 4080,
+              "end": 4800,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Thu-D",
+              "day": 3,
+              "name": "Day",
+              "start": 4800,
+              "end": 5520,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Thu-N",
+              "day": 3,
+              "name": "Night",
+              "start": 5520,
+              "end": 6240,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Fri-D",
+              "day": 4,
+              "name": "Day",
+              "start": 6240,
+              "end": 6960,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Fri-N",
+              "day": 4,
+              "name": "Night",
+              "start": 6960,
+              "end": 7680,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sat-D",
+              "day": 5,
+              "name": "Day",
+              "start": 7680,
+              "end": 8400,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sat-N",
+              "day": 5,
+              "name": "Night",
+              "start": 8400,
+              "end": 9120,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            },
+            {
+              "id": "Sun-D",
+              "day": 6,
+              "name": "Day",
+              "start": 9120,
+              "end": 9840,
+              "paid": 12,
+              "need": 3,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 0
+            },
+            {
+              "id": "Sun-N",
+              "day": 6,
+              "name": "Night",
+              "start": 9840,
+              "end": 10560,
+              "paid": 12,
+              "need": 2,
+              "skills": {
+                "MED": 1,
+                "FA": 1
+              },
+              "premium": 120
+            }
+          ],
+          "staff": [
+            {
+              "id": "S01",
+              "name": "Joanna Mensah",
+              "rate": 1480,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": 480
+            },
+            {
+              "id": "S02",
+              "name": "Bilal Chaudhry",
+              "rate": 1450,
+              "min": 24,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N",
+                "Sat-N",
+                "Sun-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S03",
+              "name": "Grace Achterberg",
+              "rate": 1271,
+              "min": 36,
+              "max": 48,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true,
+              "lastEnd": 480
+            },
+            {
+              "id": "S04",
+              "name": "Kofi Asante",
+              "rate": 1271,
+              "min": 24,
+              "max": 48,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Fri-D",
+                "Fri-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S05",
+              "name": "Lucia Romero",
+              "rate": 1300,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-D",
+                "Mon-N",
+                "Tue-D",
+                "Tue-N",
+                "Wed-D",
+                "Wed-N",
+                "Thu-D",
+                "Thu-N",
+                "Fri-D",
+                "Fri-N",
+                "Sat-D",
+                "Sat-N",
+                "Sun-D",
+                "Sun-N"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S06",
+              "name": "Hana Kobayashi",
+              "rate": 1271,
+              "min": 0,
+              "max": 36,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-N",
+                "Tue-N",
+                "Wed-N",
+                "Thu-N",
+                "Fri-N",
+                "Sat-N",
+                "Sun-N"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S07",
+              "name": "Emeka Obi",
+              "rate": 1300,
+              "min": 12,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S08",
+              "name": "Farah Siddiqui",
+              "rate": 1271,
+              "min": 24,
+              "max": 48,
+              "skills": [],
+              "under18": false,
+              "off": [
+                "Sat-D",
+                "Sat-N",
+                "Sun-D",
+                "Sun-N"
+              ],
+              "fair": false
+            },
+            {
+              "id": "S09",
+              "name": "Uche Eze",
+              "rate": 1271,
+              "min": 0,
+              "max": 36,
+              "skills": [
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": true
+            },
+            {
+              "id": "S10",
+              "name": "Malik Osei",
+              "rate": 1480,
+              "min": 12,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [
+                "Mon-D",
+                "Tue-D",
+                "Wed-D",
+                "Thu-D",
+                "Fri-D",
+                "Sat-D",
+                "Sun-D"
+              ],
+              "fair": true
+            },
+            {
+              "id": "S11",
+              "name": "Sunil Varma",
+              "rate": 1650,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            },
+            {
+              "id": "S12",
+              "name": "Dalia Petrova",
+              "rate": 2400,
+              "min": 0,
+              "max": 48,
+              "skills": [
+                "MED",
+                "FA"
+              ],
+              "under18": false,
+              "off": [],
+              "fair": false
+            }
+          ],
+          "rest": 11,
+          "youngRest": 12,
+          "cap": 48,
+          "youngCap": 40,
+          "youngDaily": 8,
+          "skillNames": {
+            "MED": "medication-trained",
+            "FA": "first aider"
+          }
+        },
+        "optimum": 588576,
+        "reference": {
+          "rota": {
+            "Mon-D": [
+              "Kofi",
+              "Hana",
+              "Emeka"
+            ],
+            "Mon-N": [
+              "Grace",
+              "Joanna"
+            ],
+            "Tue-D": [
+              "Kofi",
+              "Hana",
+              "Emeka"
+            ],
+            "Tue-N": [
+              "Farah",
+              "Joanna"
+            ],
+            "Wed-D": [
+              "Grace",
+              "Uche",
+              "Bilal"
+            ],
+            "Wed-N": [
+              "Farah",
+              "Malik"
+            ],
+            "Thu-D": [
+              "Uche",
+              "Emeka",
+              "Bilal"
+            ],
+            "Thu-N": [
+              "Farah",
+              "Malik"
+            ],
+            "Fri-D": [
+              "Bilal",
+              "Joanna",
+              "Sunil"
+            ],
+            "Fri-N": [
+              "Farah",
+              "Malik"
+            ],
+            "Sat-D": [
+              "Grace",
+              "Kofi",
+              "Emeka"
+            ],
+            "Sat-N": [
+              "Uche",
+              "Joanna"
+            ],
+            "Sun-D": [
+              "Grace",
+              "Hana",
+              "Bilal"
+            ],
+            "Sun-N": [
+              "Kofi",
+              "Malik"
+            ]
+          },
+          "total": 5885.76
+        }
+      },
+      "notes": "[hard] care, 12 staff, 14 shifts, 35 slots. Cheapest legal rota £5,885.76 (exact branch-and-bound, 520 nodes)."
+    }
+  ]
+}

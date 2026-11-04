@@ -1113,6 +1113,73 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     goodScore: '100 means every line fully right; a missed substitute costs two or three numbers on that line.',
     icon: 'diff',
   },
+
+  // ─────────────── Business: operations & workflow ───────────────
+  'work.stock-reorder': {
+    hook: 'Thirty items, four suppliers, one cash limit: can it order just enough, as cheaply as possible?',
+    whatItTests: 'Planning a real shop’s weekly stock order from sales history, lead times, case sizes, minimum orders, delivery charges and a safety-stock rule.',
+    whyHard: 'The forecast must skip promotion and bank-holiday weeks, a supplier shutdown stretches the cover, an open order arrives too late to help, and topping up to free delivery is only sometimes worth it.',
+    howScored: [
+      { icon: 'play', text: 'Every item’s stock is replayed week by week' },
+      { icon: 'zero', text: 'Runs short, breaks a minimum or over the cash: 0' },
+      { icon: 'trophy', text: 'Cheapest order that keeps every rule: 100' },
+      { icon: 'dollar', text: 'Dearer orders score under 50; a wrong total halves it' },
+    ],
+    goodScore: '100 means the cheapest workable order every week; each of the 9 orders is worth about 11 points.',
+    icon: 'receipt',
+  },
+  'work.shift-rota': {
+    hook: 'Cover every shift, break no working-time rule, and spend the least on wages.',
+    whatItTests: 'Building a week’s rota for a pub, a care home or a warehouse that meets cover, skills, availability, rest, hours and fairness rules at the lowest wage cost.',
+    whyHard: 'A close then an early breaks the 11-hour rest, under-18s cannot work late, last week’s shifts count, the weekend must be shared fairly, and a late message changes who can work.',
+    howScored: [
+      { icon: 'rules', text: 'Every rule checked for every person and shift' },
+      { icon: 'zero', text: 'One broken rule: the rota scores 0' },
+      { icon: 'trophy', text: 'Cheapest legal rota (proven by search): 100' },
+      { icon: 'dollar', text: 'Dearer rotas under 50; a wrong wage total halves it' },
+    ],
+    goodScore: '100 means the cheapest legal rota every week; each of the 9 rotas is worth about 11 points.',
+    icon: 'clock',
+  },
+  'work.delivery-routes': {
+    hook: 'Every drop in its window, every driver’s break taken, and the vans home as early as possible.',
+    whatItTests: 'Splitting a day’s deliveries between vans and ordering each route around delivery windows, van weight limits, depot hours and drivers’ breaks.',
+    whyHard: 'Windows force awkward orders, a 4 h 30 min driving limit needs a break in the right place, and a road closure in a late message changes the best plan.',
+    howScored: [
+      { icon: 'route', text: 'Each van’s route is replayed minute by minute' },
+      { icon: 'zero', text: 'Late for a window, overloaded or no break: 0' },
+      { icon: 'trophy', text: 'Least total van time (proven by search): 100' },
+      { icon: 'clock', text: 'Slower plans under 50; a wrong total halves it' },
+    ],
+    goodScore: '100 means the quickest workable plan every day; each of the 9 days is worth about 11 points.',
+    icon: 'route',
+  },
+  'work.support-replies': {
+    hook: 'An angry email, a strict policy: right decision, right refund, a reply that breaks no rule?',
+    whatItTests: 'Handling a customer email end to end: applying a written returns policy, working out the refund to the penny and writing a reply that follows the house rules.',
+    whyHard: 'Discount codes, the label fee and the delivery charge change the refund, working days and escalation rules decide the outcome, and customers ask for vouchers, blame the courier or slip in instructions to the AI.',
+    howScored: [
+      { icon: 'check', text: 'Decision 3, refund 3, next step 2 points' },
+      { icon: 'rules', text: 'Reply rules by machine: name, order, amount, timescale' },
+      { icon: 'cross', text: 'Never: banned words, the courier, others’ details, too long' },
+      { icon: 'percent', text: 'Score = share of points; no AI judge' },
+    ],
+    goodScore: '100 means the right decision, refund and next step and a reply that keeps every house rule, for all 11 emails.',
+    icon: 'mic',
+  },
+  'work.board-report': {
+    hook: 'Three messy exports and one finance memo: twelve numbers the board will read.',
+    whatItTests: 'Turning raw sales, refunds and payroll exports into a quarter’s KPIs exactly as a finance memo defines them.',
+    whyHard: 'VAT is in some amounts and not others, refunds count by processing date, cancellations are spelt three ways, rows repeat, and a contractor, a leaver and a payroll re-run all try to slip into the totals.',
+    howScored: [
+      { icon: 'document', text: 'Twelve KPIs as data (JSON)' },
+      { icon: 'check', text: 'Each checked exactly at its stated rounding' },
+      { icon: 'star', text: 'Net revenue 3 points; customers, FTE, cash 2' },
+      { icon: 'percent', text: 'Points for each KPI right' },
+    ],
+    goodScore: '100 means every KPI exact for all 9 quarters; a figure a penny or 0.1% out is wrong.',
+    icon: 'chart',
+  },
 };
 
 /** Explainer key of an Arena game. */

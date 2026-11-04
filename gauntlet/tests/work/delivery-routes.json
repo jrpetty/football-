@@ -1,0 +1,2931 @@
+{
+  "kind": "prompt",
+  "id": "work.delivery-routes",
+  "version": "1.0.0",
+  "name": "Plan the Van Routes",
+  "description": "Business Ladder, Operations, Level 4 (Agent). Tomorrow’s delivery routes for a Derbyshire food wholesaler or a Worcestershire florist supplier: 2 to 4 vans with weight limits, 8 to 15 drops with delivery windows and unloading times, a full travel-time matrix, depot hours, a drivers’-hours break rule (45 minutes before more than 4 h 30 min of driving) and a late message with a road closure or a cancelled drop. Every route is replayed minute by minute and the total van time compared with the least an exact search can prove.",
+  "difficulty": "extreme",
+  "tags": [
+    "business-ladder",
+    "operations",
+    "level-4",
+    "routing",
+    "optimisation",
+    "verifier"
+  ],
+  "hook": "Every drop in its window, every driver’s break taken, and the vans home as early as possible.",
+  "category": "work",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 1070,
+    "outputTokens": 12000
+  },
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "routes"
+  },
+  "cases": [
+    {
+      "id": "v01",
+      "prompt": "From: Gethin Price\nSubject: Van routes for Tue 10 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Peak Pantry Wholesale? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Matlock. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,000 kg.\n- V2 (Van 2): carries up to 1,000 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | The Granary, Chesterfield | 38 kg | 10 min | any time\nD02 | Wheatsheaf Inn, Ripley | 74 kg | 10 min | any time\nD03 | Millstone tea rooms, Dronfield | 59 kg | 10 min | any time\nD04 | Saddler’s Arms, Clay Cross | 155 kg | 15 min | any time\nD05 | The Larder, Belper | 149 kg | 15 min | any time\nD06 | Bluebell Bistro, Wirksworth | 53 kg | 10 min | any time\nD07 | Corner Pantry, Bakewell | 123 kg | 15 min | from 13:00\nD08 | The Old Bakehouse café, Youlgreave | 168 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08\nDepot | - | 35 | 35 | 49 | 24 | 30 | 21 | 24 | 24\nD01 | 35 | - | 47 | 24 | 21 | 48 | 48 | 44 | 49\nD02 | 35 | 47 | - | 66 | 32 | 13 | 29 | 53 | 51\nD03 | 49 | 24 | 66 | - | 39 | 67 | 64 | 51 | 59\nD04 | 24 | 21 | 32 | 39 | - | 33 | 35 | 40 | 43\nD05 | 30 | 48 | 13 | 67 | 33 | - | 22 | 48 | 45\nD06 | 21 | 48 | 29 | 64 | 35 | 22 | - | 34 | 29\nD07 | 24 | 44 | 53 | 51 | 40 | 48 | 34 | - | 13\nD08 | 24 | 49 | 51 | 59 | 43 | 45 | 29 | 13 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Peak Pantry Wholesale depot, Matlock",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1000
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1000
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "The Granary, Chesterfield",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 38
+            },
+            {
+              "id": "D02",
+              "name": "Wheatsheaf Inn, Ripley",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 74
+            },
+            {
+              "id": "D03",
+              "name": "Millstone tea rooms, Dronfield",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 59
+            },
+            {
+              "id": "D04",
+              "name": "Saddler’s Arms, Clay Cross",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 155
+            },
+            {
+              "id": "D05",
+              "name": "The Larder, Belper",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 149
+            },
+            {
+              "id": "D06",
+              "name": "Bluebell Bistro, Wirksworth",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 53
+            },
+            {
+              "id": "D07",
+              "name": "Corner Pantry, Bakewell",
+              "open": 780,
+              "close": 990,
+              "service": 15,
+              "kg": 123
+            },
+            {
+              "id": "D08",
+              "name": "The Old Bakehouse café, Youlgreave",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 168
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              35,
+              35,
+              49,
+              24,
+              30,
+              21,
+              24,
+              24
+            ],
+            [
+              35,
+              0,
+              47,
+              24,
+              21,
+              48,
+              48,
+              44,
+              49
+            ],
+            [
+              35,
+              47,
+              0,
+              66,
+              32,
+              13,
+              29,
+              53,
+              51
+            ],
+            [
+              49,
+              24,
+              66,
+              0,
+              39,
+              67,
+              64,
+              51,
+              59
+            ],
+            [
+              24,
+              21,
+              32,
+              39,
+              0,
+              33,
+              35,
+              40,
+              43
+            ],
+            [
+              30,
+              48,
+              13,
+              67,
+              33,
+              0,
+              22,
+              48,
+              45
+            ],
+            [
+              21,
+              48,
+              29,
+              64,
+              35,
+              22,
+              0,
+              34,
+              29
+            ],
+            [
+              24,
+              44,
+              53,
+              51,
+              40,
+              48,
+              34,
+              0,
+              13
+            ],
+            [
+              24,
+              49,
+              51,
+              59,
+              43,
+              45,
+              29,
+              13,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 369,
+        "reference": {
+          "routes": {
+            "V1": [],
+            "V2": [
+              "D03",
+              "D01",
+              "D04",
+              "D02",
+              "D05",
+              "D06",
+              "D08",
+              "D07"
+            ]
+          },
+          "total_minutes": 369
+        }
+      },
+      "notes": "[easy] 8 drops (generator attempt 0), 2 vans (1 used in the best plan, 0 breaks). Least total van time 369 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v02",
+      "prompt": "From: Amara Osei\nSubject: Van routes for Wed 11 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Severn Vale Florist Supplies? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Worcester. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 900 kg.\n- V2 (Van 2): carries up to 900 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | The Tuck Box, Evesham | 260 kg | 20 min | any time\nD02 | Rowan Tree deli, Pershore | 151 kg | 15 min | any time\nD03 | Nook & Cranny, Bromsgrove | 200 kg | 15 min | any time\nD04 | Hilltop Stores, Malvern | 72 kg | 10 min | 10:30–12:00\nD05 | Fern & Feather café, Inkberrow | 163 kg | 15 min | any time\nD06 | Village Post Office stores, Alcester | 194 kg | 15 min | any time\nD07 | Station Road Spar, Tewkesbury | 198 kg | 15 min | 09:00–11:00\nD08 | Riverside Kitchen, Redditch | 195 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08\nDepot | - | 59 | 36 | 47 | 33 | 34 | 54 | 52 | 51\nD01 | 59 | - | 28 | 88 | 70 | 47 | 51 | 37 | 77\nD02 | 36 | 28 | - | 70 | 49 | 32 | 46 | 32 | 62\nD03 | 47 | 88 | 70 | - | 72 | 47 | 55 | 92 | 27\nD04 | 33 | 70 | 49 | 72 | - | 60 | 80 | 47 | 79\nD05 | 34 | 47 | 32 | 47 | 60 | - | 25 | 59 | 35\nD06 | 54 | 51 | 46 | 55 | 80 | 25 | - | 72 | 36\nD07 | 52 | 37 | 32 | 92 | 47 | 59 | 72 | - | 88\nD08 | 51 | 77 | 62 | 27 | 79 | 35 | 36 | 88 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Severn Vale Florist Supplies depot, Worcester",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 900
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 900
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "The Tuck Box, Evesham",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 260
+            },
+            {
+              "id": "D02",
+              "name": "Rowan Tree deli, Pershore",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 151
+            },
+            {
+              "id": "D03",
+              "name": "Nook & Cranny, Bromsgrove",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 200
+            },
+            {
+              "id": "D04",
+              "name": "Hilltop Stores, Malvern",
+              "open": 630,
+              "close": 720,
+              "service": 10,
+              "kg": 72
+            },
+            {
+              "id": "D05",
+              "name": "Fern & Feather café, Inkberrow",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 163
+            },
+            {
+              "id": "D06",
+              "name": "Village Post Office stores, Alcester",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 194
+            },
+            {
+              "id": "D07",
+              "name": "Station Road Spar, Tewkesbury",
+              "open": 540,
+              "close": 660,
+              "service": 15,
+              "kg": 198
+            },
+            {
+              "id": "D08",
+              "name": "Riverside Kitchen, Redditch",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 195
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              59,
+              36,
+              47,
+              33,
+              34,
+              54,
+              52,
+              51
+            ],
+            [
+              59,
+              0,
+              28,
+              88,
+              70,
+              47,
+              51,
+              37,
+              77
+            ],
+            [
+              36,
+              28,
+              0,
+              70,
+              49,
+              32,
+              46,
+              32,
+              62
+            ],
+            [
+              47,
+              88,
+              70,
+              0,
+              72,
+              47,
+              55,
+              92,
+              27
+            ],
+            [
+              33,
+              70,
+              49,
+              72,
+              0,
+              60,
+              80,
+              47,
+              79
+            ],
+            [
+              34,
+              47,
+              32,
+              47,
+              60,
+              0,
+              25,
+              59,
+              35
+            ],
+            [
+              54,
+              51,
+              46,
+              55,
+              80,
+              25,
+              0,
+              72,
+              36
+            ],
+            [
+              52,
+              37,
+              32,
+              92,
+              47,
+              59,
+              72,
+              0,
+              88
+            ],
+            [
+              51,
+              77,
+              62,
+              27,
+              79,
+              35,
+              36,
+              88,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 470,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D02",
+              "D01",
+              "D07",
+              "D04"
+            ],
+            "V2": [
+              "D05",
+              "D06",
+              "D08",
+              "D03"
+            ]
+          },
+          "total_minutes": 470
+        }
+      },
+      "notes": "[easy] 8 drops (generator attempt 0), 2 vans (2 used in the best plan, 0 breaks). Least total van time 470 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v03",
+      "prompt": "From: Gethin Price\nSubject: Van routes for Thu 12 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Peak Pantry Wholesale? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Matlock. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,200 kg.\n- V2 (Van 2): carries up to 800 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | The Granary, Tideswell | 127 kg | 15 min | any time\nD02 | Corner Pantry, Baslow | 209 kg | 15 min | any time\nD03 | Fern & Feather café, Alfreton | 117 kg | 10 min | any time\nD04 | The Larder, Youlgreave | 104 kg | 10 min | 11:00–12:00\nD05 | Nook & Cranny, Leek | 112 kg | 10 min | 09:00–11:00\nD06 | Station Road Spar, Ripley | 114 kg | 10 min | from 12:00\nD07 | The Old Bakehouse café, Hartington | 152 kg | 15 min | any time\nD08 | Millstone tea rooms, Eyam | 209 kg | 15 min | 10:00–11:30\nD09 | Hilltop Stores, Wirksworth | 212 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09\nDepot | - | 43 | 29 | 30 | 24 | 66 | 35 | 44 | 41 | 21\nD01 | 43 | - | 28 | 68 | 27 | 45 | 72 | 36 | 19 | 51\nD02 | 29 | 28 | - | 51 | 27 | 64 | 58 | 48 | 19 | 43\nD03 | 30 | 68 | 51 | - | 49 | 89 | 17 | 66 | 64 | 32\nD04 | 24 | 27 | 27 | 49 | - | 47 | 51 | 27 | 32 | 29\nD05 | 66 | 45 | 64 | 89 | 47 | - | 87 | 28 | 59 | 63\nD06 | 35 | 72 | 58 | 17 | 51 | 87 | - | 64 | 70 | 29\nD07 | 44 | 36 | 48 | 66 | 27 | 28 | 64 | - | 47 | 40\nD08 | 41 | 19 | 19 | 64 | 32 | 59 | 70 | 47 | - | 53\nD09 | 21 | 51 | 43 | 32 | 29 | 63 | 29 | 40 | 53 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Peak Pantry Wholesale depot, Matlock",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1200
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 800
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "The Granary, Tideswell",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 127
+            },
+            {
+              "id": "D02",
+              "name": "Corner Pantry, Baslow",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 209
+            },
+            {
+              "id": "D03",
+              "name": "Fern & Feather café, Alfreton",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 117
+            },
+            {
+              "id": "D04",
+              "name": "The Larder, Youlgreave",
+              "open": 660,
+              "close": 720,
+              "service": 10,
+              "kg": 104
+            },
+            {
+              "id": "D05",
+              "name": "Nook & Cranny, Leek",
+              "open": 540,
+              "close": 660,
+              "service": 10,
+              "kg": 112
+            },
+            {
+              "id": "D06",
+              "name": "Station Road Spar, Ripley",
+              "open": 720,
+              "close": 990,
+              "service": 10,
+              "kg": 114
+            },
+            {
+              "id": "D07",
+              "name": "The Old Bakehouse café, Hartington",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 152
+            },
+            {
+              "id": "D08",
+              "name": "Millstone tea rooms, Eyam",
+              "open": 600,
+              "close": 690,
+              "service": 15,
+              "kg": 209
+            },
+            {
+              "id": "D09",
+              "name": "Hilltop Stores, Wirksworth",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 212
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              43,
+              29,
+              30,
+              24,
+              66,
+              35,
+              44,
+              41,
+              21
+            ],
+            [
+              43,
+              0,
+              28,
+              68,
+              27,
+              45,
+              72,
+              36,
+              19,
+              51
+            ],
+            [
+              29,
+              28,
+              0,
+              51,
+              27,
+              64,
+              58,
+              48,
+              19,
+              43
+            ],
+            [
+              30,
+              68,
+              51,
+              0,
+              49,
+              89,
+              17,
+              66,
+              64,
+              32
+            ],
+            [
+              24,
+              27,
+              27,
+              49,
+              0,
+              47,
+              51,
+              27,
+              32,
+              29
+            ],
+            [
+              66,
+              45,
+              64,
+              89,
+              47,
+              0,
+              87,
+              28,
+              59,
+              63
+            ],
+            [
+              35,
+              72,
+              58,
+              17,
+              51,
+              87,
+              0,
+              64,
+              70,
+              29
+            ],
+            [
+              44,
+              36,
+              48,
+              66,
+              27,
+              28,
+              64,
+              0,
+              47,
+              40
+            ],
+            [
+              41,
+              19,
+              19,
+              64,
+              32,
+              59,
+              70,
+              47,
+              0,
+              53
+            ],
+            [
+              21,
+              51,
+              43,
+              32,
+              29,
+              63,
+              29,
+              40,
+              53,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 469,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D07",
+              "D05",
+              "D01",
+              "D08",
+              "D02",
+              "D04",
+              "D06"
+            ],
+            "V2": [
+              "D09",
+              "D03"
+            ]
+          },
+          "total_minutes": 469
+        }
+      },
+      "notes": "[easy] 9 drops (generator attempt 0), 2 vans (2 used in the best plan, 0 breaks). Least total van time 469 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v04",
+      "prompt": "From: Amara Osei\nSubject: Van routes for Fri 13 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Severn Vale Florist Supplies? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Worcester. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,000 kg.\n- V2 (Van 2): carries up to 1,000 kg.\n- V3 (Van 3): carries up to 600 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Saddler’s Arms, Evesham | 170 kg | 15 min | from 13:00\nD02 | The Old Bakehouse café, Redditch | 265 kg | 20 min | any time\nD03 | Fern & Feather café, Ledbury | 110 kg | 10 min | 10:00–11:30\nD04 | Millstone tea rooms, Pershore | 107 kg | 10 min | any time\nD05 | Riverside Kitchen, Inkberrow | 392 kg | 25 min | any time\nD06 | Copper Pot café, Upton-upon-Severn | 396 kg | 25 min | any time\nD07 | Hilltop Stores, Tenbury Wells | 149 kg | 15 min | any time\nD08 | Bluebell Bistro, Bromsgrove | 133 kg | 15 min | 08:30–10:30\nD09 | Dale View farm shop, Tewkesbury | 357 kg | 20 min | any time\nD10 | Nook & Cranny, Malvern | 369 kg | 25 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10\nDepot | - | 75 | 65 | 72 | 45 | 43 | 48 | 82 | 60 | 66 | 42\nD01 | 75 | - | 98 | 102 | 35 | 60 | 67 | 152 | 113 | 47 | 89\nD02 | 65 | 98 | - | 132 | 79 | 45 | 104 | 112 | 33 | 114 | 101\nD03 | 72 | 102 | 132 | - | 81 | 104 | 41 | 96 | 123 | 62 | 36\nD04 | 45 | 35 | 79 | 81 | - | 40 | 45 | 122 | 89 | 40 | 62\nD05 | 43 | 60 | 45 | 104 | 40 | - | 71 | 115 | 59 | 75 | 77\nD06 | 48 | 67 | 104 | 41 | 45 | 71 | - | 103 | 103 | 33 | 31\nD07 | 82 | 152 | 112 | 96 | 122 | 115 | 103 | - | 86 | 131 | 78\nD08 | 60 | 113 | 33 | 123 | 89 | 59 | 103 | 86 | - | 119 | 92\nD09 | 66 | 47 | 114 | 62 | 40 | 75 | 33 | 131 | 119 | - | 59\nD10 | 42 | 89 | 101 | 36 | 62 | 77 | 31 | 78 | 92 | 59 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Severn Vale Florist Supplies depot, Worcester",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1000
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1000
+            },
+            {
+              "id": "V3",
+              "name": "Van 3",
+              "capacity": 600
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Saddler’s Arms, Evesham",
+              "open": 780,
+              "close": 990,
+              "service": 15,
+              "kg": 170
+            },
+            {
+              "id": "D02",
+              "name": "The Old Bakehouse café, Redditch",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 265
+            },
+            {
+              "id": "D03",
+              "name": "Fern & Feather café, Ledbury",
+              "open": 600,
+              "close": 690,
+              "service": 10,
+              "kg": 110
+            },
+            {
+              "id": "D04",
+              "name": "Millstone tea rooms, Pershore",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 107
+            },
+            {
+              "id": "D05",
+              "name": "Riverside Kitchen, Inkberrow",
+              "open": 450,
+              "close": 990,
+              "service": 25,
+              "kg": 392
+            },
+            {
+              "id": "D06",
+              "name": "Copper Pot café, Upton-upon-Severn",
+              "open": 450,
+              "close": 990,
+              "service": 25,
+              "kg": 396
+            },
+            {
+              "id": "D07",
+              "name": "Hilltop Stores, Tenbury Wells",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 149
+            },
+            {
+              "id": "D08",
+              "name": "Bluebell Bistro, Bromsgrove",
+              "open": 510,
+              "close": 630,
+              "service": 15,
+              "kg": 133
+            },
+            {
+              "id": "D09",
+              "name": "Dale View farm shop, Tewkesbury",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 357
+            },
+            {
+              "id": "D10",
+              "name": "Nook & Cranny, Malvern",
+              "open": 450,
+              "close": 990,
+              "service": 25,
+              "kg": 369
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              75,
+              65,
+              72,
+              45,
+              43,
+              48,
+              82,
+              60,
+              66,
+              42
+            ],
+            [
+              75,
+              0,
+              98,
+              102,
+              35,
+              60,
+              67,
+              152,
+              113,
+              47,
+              89
+            ],
+            [
+              65,
+              98,
+              0,
+              132,
+              79,
+              45,
+              104,
+              112,
+              33,
+              114,
+              101
+            ],
+            [
+              72,
+              102,
+              132,
+              0,
+              81,
+              104,
+              41,
+              96,
+              123,
+              62,
+              36
+            ],
+            [
+              45,
+              35,
+              79,
+              81,
+              0,
+              40,
+              45,
+              122,
+              89,
+              40,
+              62
+            ],
+            [
+              43,
+              60,
+              45,
+              104,
+              40,
+              0,
+              71,
+              115,
+              59,
+              75,
+              77
+            ],
+            [
+              48,
+              67,
+              104,
+              41,
+              45,
+              71,
+              0,
+              103,
+              103,
+              33,
+              31
+            ],
+            [
+              82,
+              152,
+              112,
+              96,
+              122,
+              115,
+              103,
+              0,
+              86,
+              131,
+              78
+            ],
+            [
+              60,
+              113,
+              33,
+              123,
+              89,
+              59,
+              103,
+              86,
+              0,
+              119,
+              92
+            ],
+            [
+              66,
+              47,
+              114,
+              62,
+              40,
+              75,
+              33,
+              131,
+              119,
+              0,
+              59
+            ],
+            [
+              42,
+              89,
+              101,
+              36,
+              62,
+              77,
+              31,
+              78,
+              92,
+              59,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 958,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D04",
+              "D09",
+              "D06",
+              "D03"
+            ],
+            "V2": [
+              "D08",
+              "D02",
+              "D05",
+              "BREAK",
+              "D01"
+            ],
+            "V3": [
+              "D10",
+              "D07"
+            ]
+          },
+          "total_minutes": 958
+        }
+      },
+      "notes": "[medium] 10 drops (generator attempt 0), 3 vans (3 used in the best plan, 1 break). Least total van time 958 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v05",
+      "prompt": "From: Gethin Price\nSubject: Van routes for Mon 16 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Peak Pantry Wholesale? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Matlock. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,200 kg.\n- V2 (Van 2): carries up to 1,000 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Fern & Feather café, Clay Cross | 55 kg | 10 min | 08:30–10:30\nD02 | Saddler’s Arms, Eyam | 78 kg | 10 min | any time\nD03 | Nook & Cranny, Leek | 233 kg | 15 min | any time\nD04 | The Tuck Box, Cromford | 176 kg | 15 min | any time\nD05 | Green Lane greengrocer, Dronfield | 199 kg | 15 min | any time\nD06 | Hilltop Stores, Youlgreave | 167 kg | 15 min | any time\nD07 | Village Post Office stores, Alfreton | 113 kg | 10 min | 09:00–11:00\nD08 | The Larder, Buxton | 81 kg | 10 min | 10:30–12:00\nD09 | Millstone tea rooms, Chesterfield | 82 kg | 10 min | any time\nD10 | Dale View farm shop, Castleton | 208 kg | 15 min | 10:00–11:00\nD11 | Bluebell Bistro, Baslow | 138 kg | 15 min | from 13:00\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11\nDepot | - | 32 | 55 | 90 | 16 | 67 | 32 | 41 | 72 | 47 | 77 | 39\nD01 | 32 | - | 70 | 117 | 34 | 53 | 58 | 27 | 94 | 27 | 92 | 51\nD02 | 55 | 70 | - | 81 | 66 | 64 | 42 | 88 | 39 | 66 | 28 | 24\nD03 | 90 | 117 | 81 | - | 93 | 136 | 64 | 123 | 51 | 126 | 82 | 88\nD04 | 16 | 34 | 66 | 93 | - | 75 | 38 | 35 | 80 | 52 | 88 | 50\nD05 | 67 | 53 | 64 | 136 | 75 | - | 81 | 74 | 98 | 32 | 80 | 53\nD06 | 32 | 58 | 42 | 64 | 38 | 81 | - | 67 | 47 | 67 | 61 | 36\nD07 | 41 | 27 | 88 | 123 | 35 | 74 | 67 | - | 107 | 48 | 110 | 69\nD08 | 72 | 94 | 39 | 51 | 80 | 98 | 47 | 107 | - | 96 | 36 | 53\nD09 | 47 | 27 | 66 | 126 | 52 | 32 | 67 | 48 | 96 | - | 86 | 48\nD10 | 77 | 92 | 28 | 82 | 88 | 80 | 61 | 110 | 36 | 86 | - | 47\nD11 | 39 | 51 | 24 | 88 | 50 | 53 | 36 | 69 | 53 | 48 | 47 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nUpdate from Gethin at 16:45: a road is closed after a burst water main, so every trip between the depot and D02 (Eyam), or between D02 (Eyam) and D05 (Dronfield) now takes 25 minutes longer than in the table (either direction). Everything else in the table is unchanged.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Peak Pantry Wholesale depot, Matlock",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1200
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1000
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Fern & Feather café, Clay Cross",
+              "open": 510,
+              "close": 630,
+              "service": 10,
+              "kg": 55
+            },
+            {
+              "id": "D02",
+              "name": "Saddler’s Arms, Eyam",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 78
+            },
+            {
+              "id": "D03",
+              "name": "Nook & Cranny, Leek",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 233
+            },
+            {
+              "id": "D04",
+              "name": "The Tuck Box, Cromford",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 176
+            },
+            {
+              "id": "D05",
+              "name": "Green Lane greengrocer, Dronfield",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 199
+            },
+            {
+              "id": "D06",
+              "name": "Hilltop Stores, Youlgreave",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 167
+            },
+            {
+              "id": "D07",
+              "name": "Village Post Office stores, Alfreton",
+              "open": 540,
+              "close": 660,
+              "service": 10,
+              "kg": 113
+            },
+            {
+              "id": "D08",
+              "name": "The Larder, Buxton",
+              "open": 630,
+              "close": 720,
+              "service": 10,
+              "kg": 81
+            },
+            {
+              "id": "D09",
+              "name": "Millstone tea rooms, Chesterfield",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 82
+            },
+            {
+              "id": "D10",
+              "name": "Dale View farm shop, Castleton",
+              "open": 600,
+              "close": 660,
+              "service": 15,
+              "kg": 208
+            },
+            {
+              "id": "D11",
+              "name": "Bluebell Bistro, Baslow",
+              "open": 780,
+              "close": 990,
+              "service": 15,
+              "kg": 138
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              32,
+              80,
+              90,
+              16,
+              67,
+              32,
+              41,
+              72,
+              47,
+              77,
+              39
+            ],
+            [
+              32,
+              0,
+              70,
+              117,
+              34,
+              53,
+              58,
+              27,
+              94,
+              27,
+              92,
+              51
+            ],
+            [
+              80,
+              70,
+              0,
+              81,
+              66,
+              89,
+              42,
+              88,
+              39,
+              66,
+              28,
+              24
+            ],
+            [
+              90,
+              117,
+              81,
+              0,
+              93,
+              136,
+              64,
+              123,
+              51,
+              126,
+              82,
+              88
+            ],
+            [
+              16,
+              34,
+              66,
+              93,
+              0,
+              75,
+              38,
+              35,
+              80,
+              52,
+              88,
+              50
+            ],
+            [
+              67,
+              53,
+              89,
+              136,
+              75,
+              0,
+              81,
+              74,
+              98,
+              32,
+              80,
+              53
+            ],
+            [
+              32,
+              58,
+              42,
+              64,
+              38,
+              81,
+              0,
+              67,
+              47,
+              67,
+              61,
+              36
+            ],
+            [
+              41,
+              27,
+              88,
+              123,
+              35,
+              74,
+              67,
+              0,
+              107,
+              48,
+              110,
+              69
+            ],
+            [
+              72,
+              94,
+              39,
+              51,
+              80,
+              98,
+              47,
+              107,
+              0,
+              96,
+              36,
+              53
+            ],
+            [
+              47,
+              27,
+              66,
+              126,
+              52,
+              32,
+              67,
+              48,
+              96,
+              0,
+              86,
+              48
+            ],
+            [
+              77,
+              92,
+              28,
+              82,
+              88,
+              80,
+              61,
+              110,
+              36,
+              86,
+              0,
+              47
+            ],
+            [
+              39,
+              51,
+              24,
+              88,
+              50,
+              53,
+              36,
+              69,
+              53,
+              48,
+              47,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 705,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D06",
+              "D03",
+              "D10",
+              "D08",
+              "D02",
+              "BREAK",
+              "D11"
+            ],
+            "V2": [
+              "D05",
+              "D09",
+              "D01",
+              "D07",
+              "D04"
+            ]
+          },
+          "total_minutes": 705
+        }
+      },
+      "notes": "[medium] 11 drops (generator attempt 0), 2 vans (2 used in the best plan, 1 break). Least total van time 705 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v06",
+      "prompt": "From: Amara Osei\nSubject: Van routes for Tue 17 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Severn Vale Florist Supplies? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Worcester. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,000 kg.\n- V2 (Van 2): carries up to 1,000 kg.\n- V3 (Van 3): carries up to 700 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Station Road Spar, Broadway | 167 kg | 15 min | any time\nD02 | Nook & Cranny, Upton-upon-Severn | 342 kg | 20 min | any time\nD03 | The Granary, Ledbury | 143 kg | 15 min | any time\nD04 | The Larder, Bromsgrove | 344 kg | 20 min | any time\nD05 | Rowan Tree deli, Bewdley | 101 kg | 10 min | any time\nD06 | Corner Pantry, Redditch | 86 kg | 10 min | any time\nD07 | Bluebell Bistro, Malvern | 251 kg | 20 min | any time\nD08 | Wheatsheaf Inn, Pershore | 174 kg | 15 min | any time\nD09 | Saddler’s Arms, Tewkesbury | 142 kg | 15 min | any time\nD10 | Fern & Feather café, Alcester | 129 kg | 15 min | by 09:30\nD11 | Village Post Office stores, Tenbury Wells | 198 kg | 15 min | any time\nD12 | Market Place café, Evesham | 144 kg | 15 min | from 13:30\nD13 | Riverside Kitchen, Kidderminster | 193 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11 | D12 | D13\nDepot | - | 110 | 54 | 82 | 69 | 76 | 74 | 47 | 51 | 76 | 78 | 94 | 86 | 71\nD01 | 110 | - | 96 | 134 | 153 | 180 | 133 | 123 | 64 | 68 | 91 | 198 | 29 | 174\nD02 | 54 | 96 | - | 46 | 118 | 114 | 120 | 35 | 51 | 37 | 108 | 119 | 76 | 114\nD03 | 82 | 134 | 46 | - | 141 | 119 | 151 | 41 | 92 | 71 | 147 | 110 | 116 | 123\nD04 | 69 | 153 | 118 | 141 | - | 63 | 37 | 106 | 102 | 136 | 80 | 99 | 130 | 51\nD05 | 76 | 180 | 114 | 119 | 63 | - | 93 | 89 | 122 | 143 | 128 | 42 | 156 | 17\nD06 | 74 | 133 | 120 | 151 | 37 | 93 | - | 116 | 91 | 130 | 52 | 128 | 112 | 82\nD07 | 47 | 123 | 35 | 41 | 106 | 89 | 116 | - | 71 | 68 | 117 | 89 | 102 | 91\nD08 | 51 | 64 | 51 | 92 | 102 | 122 | 91 | 71 | - | 46 | 66 | 139 | 40 | 117\nD09 | 76 | 68 | 37 | 71 | 136 | 143 | 130 | 68 | 46 | - | 106 | 150 | 54 | 140\nD10 | 78 | 91 | 108 | 147 | 80 | 128 | 52 | 117 | 66 | 106 | - | 158 | 74 | 118\nD11 | 94 | 198 | 119 | 110 | 99 | 42 | 128 | 89 | 139 | 150 | 158 | - | 174 | 54\nD12 | 86 | 29 | 76 | 116 | 130 | 156 | 112 | 102 | 40 | 54 | 74 | 174 | - | 150\nD13 | 71 | 174 | 114 | 123 | 51 | 17 | 82 | 91 | 117 | 140 | 118 | 54 | 150 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nUpdate from Amara at 16:45: D13 (Riverside Kitchen, Kidderminster) has just cancelled: they are closed tomorrow for a family funeral. Take them off the plan.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Severn Vale Florist Supplies depot, Worcester",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1000
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1000
+            },
+            {
+              "id": "V3",
+              "name": "Van 3",
+              "capacity": 700
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Station Road Spar, Broadway",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 167
+            },
+            {
+              "id": "D02",
+              "name": "Nook & Cranny, Upton-upon-Severn",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 342
+            },
+            {
+              "id": "D03",
+              "name": "The Granary, Ledbury",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 143
+            },
+            {
+              "id": "D04",
+              "name": "The Larder, Bromsgrove",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 344
+            },
+            {
+              "id": "D05",
+              "name": "Rowan Tree deli, Bewdley",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 101
+            },
+            {
+              "id": "D06",
+              "name": "Corner Pantry, Redditch",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 86
+            },
+            {
+              "id": "D07",
+              "name": "Bluebell Bistro, Malvern",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 251
+            },
+            {
+              "id": "D08",
+              "name": "Wheatsheaf Inn, Pershore",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 174
+            },
+            {
+              "id": "D09",
+              "name": "Saddler’s Arms, Tewkesbury",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 142
+            },
+            {
+              "id": "D10",
+              "name": "Fern & Feather café, Alcester",
+              "open": 450,
+              "close": 570,
+              "service": 15,
+              "kg": 129
+            },
+            {
+              "id": "D11",
+              "name": "Village Post Office stores, Tenbury Wells",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 198
+            },
+            {
+              "id": "D12",
+              "name": "Market Place café, Evesham",
+              "open": 810,
+              "close": 990,
+              "service": 15,
+              "kg": 144
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              110,
+              54,
+              82,
+              69,
+              76,
+              74,
+              47,
+              51,
+              76,
+              78,
+              94,
+              86
+            ],
+            [
+              110,
+              0,
+              96,
+              134,
+              153,
+              180,
+              133,
+              123,
+              64,
+              68,
+              91,
+              198,
+              29
+            ],
+            [
+              54,
+              96,
+              0,
+              46,
+              118,
+              114,
+              120,
+              35,
+              51,
+              37,
+              108,
+              119,
+              76
+            ],
+            [
+              82,
+              134,
+              46,
+              0,
+              141,
+              119,
+              151,
+              41,
+              92,
+              71,
+              147,
+              110,
+              116
+            ],
+            [
+              69,
+              153,
+              118,
+              141,
+              0,
+              63,
+              37,
+              106,
+              102,
+              136,
+              80,
+              99,
+              130
+            ],
+            [
+              76,
+              180,
+              114,
+              119,
+              63,
+              0,
+              93,
+              89,
+              122,
+              143,
+              128,
+              42,
+              156
+            ],
+            [
+              74,
+              133,
+              120,
+              151,
+              37,
+              93,
+              0,
+              116,
+              91,
+              130,
+              52,
+              128,
+              112
+            ],
+            [
+              47,
+              123,
+              35,
+              41,
+              106,
+              89,
+              116,
+              0,
+              71,
+              68,
+              117,
+              89,
+              102
+            ],
+            [
+              51,
+              64,
+              51,
+              92,
+              102,
+              122,
+              91,
+              71,
+              0,
+              46,
+              66,
+              139,
+              40
+            ],
+            [
+              76,
+              68,
+              37,
+              71,
+              136,
+              143,
+              130,
+              68,
+              46,
+              0,
+              106,
+              150,
+              54
+            ],
+            [
+              78,
+              91,
+              108,
+              147,
+              80,
+              128,
+              52,
+              117,
+              66,
+              106,
+              0,
+              158,
+              74
+            ],
+            [
+              94,
+              198,
+              119,
+              110,
+              99,
+              42,
+              128,
+              89,
+              139,
+              150,
+              158,
+              0,
+              174
+            ],
+            [
+              86,
+              29,
+              76,
+              116,
+              130,
+              156,
+              112,
+              102,
+              40,
+              54,
+              74,
+              174,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 1110,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D05",
+              "D11",
+              "D09",
+              "BREAK",
+              "D01",
+              "D12",
+              "D08"
+            ],
+            "V2": [
+              "D07",
+              "D03",
+              "D02"
+            ],
+            "V3": [
+              "D10",
+              "D06",
+              "D04"
+            ]
+          },
+          "total_minutes": 1110
+        }
+      },
+      "notes": "[medium] 12 drops (generator attempt 0), 3 vans (3 used in the best plan, 1 break). Least total van time 1110 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v07",
+      "prompt": "From: Gethin Price\nSubject: Van routes for Wed 18 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Peak Pantry Wholesale? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Matlock. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,200 kg.\n- V2 (Van 2): carries up to 1,000 kg.\n- V3 (Van 3): carries up to 800 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Corner Pantry, Glossop | 87 kg | 10 min | any time\nD02 | Riverside Kitchen, Hartington | 135 kg | 15 min | any time\nD03 | Green Lane greengrocer, Youlgreave | 179 kg | 15 min | any time\nD04 | The Larder, Ripley | 290 kg | 20 min | from 13:30\nD05 | Fern & Feather café, Hathersage | 316 kg | 20 min | any time\nD06 | Wheatsheaf Inn, Buxton | 208 kg | 15 min | from 12:00\nD07 | Hilltop Stores, Bakewell | 223 kg | 15 min | 10:30–11:30\nD08 | Village Post Office stores, Baslow | 179 kg | 15 min | 09:00–11:00\nD09 | Market Place café, Leek | 203 kg | 15 min | 09:00–11:00\nD10 | The Old Bakehouse café, Alfreton | 98 kg | 10 min | by 09:30\nD11 | The Granary, Ashbourne | 325 kg | 20 min | by 10:00\nD12 | Bluebell Bistro, Tideswell | 311 kg | 20 min | by 09:30\nD13 | Copper Pot café, Castleton | 177 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11 | D12 | D13\nDepot | - | 130 | 67 | 36 | 52 | 74 | 81 | 35 | 43 | 102 | 46 | 62 | 66 | 88\nD01 | 130 | - | 127 | 113 | 177 | 65 | 78 | 103 | 93 | 126 | 166 | 166 | 79 | 49\nD02 | 67 | 127 | - | 40 | 99 | 95 | 54 | 52 | 74 | 42 | 102 | 52 | 55 | 85\nD03 | 36 | 113 | 40 | - | 79 | 67 | 52 | 19 | 40 | 73 | 76 | 60 | 40 | 68\nD04 | 52 | 177 | 99 | 79 | - | 119 | 127 | 82 | 89 | 136 | 24 | 67 | 113 | 135\nD05 | 74 | 65 | 95 | 67 | 119 | - | 62 | 54 | 36 | 113 | 106 | 121 | 48 | 35\nD06 | 81 | 78 | 54 | 52 | 127 | 62 | - | 51 | 60 | 57 | 122 | 98 | 23 | 40\nD07 | 35 | 103 | 52 | 19 | 82 | 54 | 51 | - | 27 | 82 | 76 | 72 | 35 | 59\nD08 | 43 | 93 | 74 | 40 | 89 | 36 | 60 | 27 | - | 100 | 78 | 92 | 41 | 52\nD09 | 102 | 126 | 42 | 73 | 136 | 113 | 57 | 82 | 100 | - | 139 | 84 | 70 | 93\nD10 | 46 | 166 | 102 | 76 | 24 | 106 | 122 | 76 | 78 | 139 | - | 78 | 106 | 125\nD11 | 62 | 166 | 52 | 60 | 67 | 121 | 98 | 72 | 92 | 84 | 78 | - | 92 | 122\nD12 | 66 | 79 | 55 | 40 | 113 | 48 | 23 | 35 | 41 | 70 | 106 | 92 | - | 35\nD13 | 88 | 49 | 85 | 68 | 135 | 35 | 40 | 59 | 52 | 93 | 125 | 122 | 35 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nUpdate from Gethin at 16:45: a road is closed after snow, so every trip between D03 (Youlgreave) and D06 (Buxton), between D03 (Youlgreave) and D09 (Leek), or between the depot and D03 (Youlgreave) now takes 30 minutes longer than in the table (either direction). Everything else in the table is unchanged.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Peak Pantry Wholesale depot, Matlock",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1200
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1000
+            },
+            {
+              "id": "V3",
+              "name": "Van 3",
+              "capacity": 800
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Corner Pantry, Glossop",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 87
+            },
+            {
+              "id": "D02",
+              "name": "Riverside Kitchen, Hartington",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 135
+            },
+            {
+              "id": "D03",
+              "name": "Green Lane greengrocer, Youlgreave",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 179
+            },
+            {
+              "id": "D04",
+              "name": "The Larder, Ripley",
+              "open": 810,
+              "close": 990,
+              "service": 20,
+              "kg": 290
+            },
+            {
+              "id": "D05",
+              "name": "Fern & Feather café, Hathersage",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 316
+            },
+            {
+              "id": "D06",
+              "name": "Wheatsheaf Inn, Buxton",
+              "open": 720,
+              "close": 990,
+              "service": 15,
+              "kg": 208
+            },
+            {
+              "id": "D07",
+              "name": "Hilltop Stores, Bakewell",
+              "open": 630,
+              "close": 690,
+              "service": 15,
+              "kg": 223
+            },
+            {
+              "id": "D08",
+              "name": "Village Post Office stores, Baslow",
+              "open": 540,
+              "close": 660,
+              "service": 15,
+              "kg": 179
+            },
+            {
+              "id": "D09",
+              "name": "Market Place café, Leek",
+              "open": 540,
+              "close": 660,
+              "service": 15,
+              "kg": 203
+            },
+            {
+              "id": "D10",
+              "name": "The Old Bakehouse café, Alfreton",
+              "open": 450,
+              "close": 570,
+              "service": 10,
+              "kg": 98
+            },
+            {
+              "id": "D11",
+              "name": "The Granary, Ashbourne",
+              "open": 450,
+              "close": 600,
+              "service": 20,
+              "kg": 325
+            },
+            {
+              "id": "D12",
+              "name": "Bluebell Bistro, Tideswell",
+              "open": 450,
+              "close": 570,
+              "service": 20,
+              "kg": 311
+            },
+            {
+              "id": "D13",
+              "name": "Copper Pot café, Castleton",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 177
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              130,
+              67,
+              66,
+              52,
+              74,
+              81,
+              35,
+              43,
+              102,
+              46,
+              62,
+              66,
+              88
+            ],
+            [
+              130,
+              0,
+              127,
+              113,
+              177,
+              65,
+              78,
+              103,
+              93,
+              126,
+              166,
+              166,
+              79,
+              49
+            ],
+            [
+              67,
+              127,
+              0,
+              40,
+              99,
+              95,
+              54,
+              52,
+              74,
+              42,
+              102,
+              52,
+              55,
+              85
+            ],
+            [
+              66,
+              113,
+              40,
+              0,
+              79,
+              67,
+              82,
+              19,
+              40,
+              103,
+              76,
+              60,
+              40,
+              68
+            ],
+            [
+              52,
+              177,
+              99,
+              79,
+              0,
+              119,
+              127,
+              82,
+              89,
+              136,
+              24,
+              67,
+              113,
+              135
+            ],
+            [
+              74,
+              65,
+              95,
+              67,
+              119,
+              0,
+              62,
+              54,
+              36,
+              113,
+              106,
+              121,
+              48,
+              35
+            ],
+            [
+              81,
+              78,
+              54,
+              82,
+              127,
+              62,
+              0,
+              51,
+              60,
+              57,
+              122,
+              98,
+              23,
+              40
+            ],
+            [
+              35,
+              103,
+              52,
+              19,
+              82,
+              54,
+              51,
+              0,
+              27,
+              82,
+              76,
+              72,
+              35,
+              59
+            ],
+            [
+              43,
+              93,
+              74,
+              40,
+              89,
+              36,
+              60,
+              27,
+              0,
+              100,
+              78,
+              92,
+              41,
+              52
+            ],
+            [
+              102,
+              126,
+              42,
+              103,
+              136,
+              113,
+              57,
+              82,
+              100,
+              0,
+              139,
+              84,
+              70,
+              93
+            ],
+            [
+              46,
+              166,
+              102,
+              76,
+              24,
+              106,
+              122,
+              76,
+              78,
+              139,
+              0,
+              78,
+              106,
+              125
+            ],
+            [
+              62,
+              166,
+              52,
+              60,
+              67,
+              121,
+              98,
+              72,
+              92,
+              84,
+              78,
+              0,
+              92,
+              122
+            ],
+            [
+              66,
+              79,
+              55,
+              40,
+              113,
+              48,
+              23,
+              35,
+              41,
+              70,
+              106,
+              92,
+              0,
+              35
+            ],
+            [
+              88,
+              49,
+              85,
+              68,
+              135,
+              35,
+              40,
+              59,
+              52,
+              93,
+              125,
+              122,
+              35,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 1193,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D12",
+              "D13",
+              "D01",
+              "D05",
+              "BREAK",
+              "D04"
+            ],
+            "V2": [
+              "D11",
+              "D02",
+              "D09",
+              "BREAK",
+              "D06"
+            ],
+            "V3": [
+              "D10",
+              "D08",
+              "D03",
+              "D07"
+            ]
+          },
+          "total_minutes": 1193
+        }
+      },
+      "notes": "[hard] 13 drops (generator attempt 0), 3 vans (3 used in the best plan, 2 breaks). Least total van time 1193 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v08",
+      "prompt": "From: Amara Osei\nSubject: Van routes for Thu 19 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Severn Vale Florist Supplies? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Worcester. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,100 kg.\n- V2 (Van 2): carries up to 1,100 kg.\n- V3 (Van 3): carries up to 800 kg.\n- V4 (Van 4): carries up to 600 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Village Post Office stores, Bromsgrove | 93 kg | 10 min | from 13:30\nD02 | Fern & Feather café, Pershore | 210 kg | 15 min | by 10:30\nD03 | Saddler’s Arms, Inkberrow | 118 kg | 10 min | any time\nD04 | Millstone tea rooms, Upton-upon-Severn | 288 kg | 20 min | by 10:30\nD05 | Dale View farm shop, Tewkesbury | 401 kg | 25 min | 10:30–11:30\nD06 | Hilltop Stores, Malvern | 418 kg | 25 min | from 12:00\nD07 | The Old Bakehouse café, Tenbury Wells | 293 kg | 20 min | 08:30–10:30\nD08 | The Tuck Box, Bewdley | 150 kg | 15 min | any time\nD09 | Corner Pantry, Evesham | 298 kg | 20 min | 10:30–11:30\nD10 | The Larder, Ledbury | 175 kg | 15 min | any time\nD11 | Wheatsheaf Inn, Broadway | 151 kg | 15 min | any time\nD12 | Nook & Cranny, Kidderminster | 229 kg | 15 min | from 13:30\nD13 | Green Lane greengrocer, Redditch | 239 kg | 15 min | by 10:00\nD14 | Market Place café, Stourport-on-Severn | 407 kg | 25 min | 10:30–12:00\nD15 | Rowan Tree deli, Alcester | 360 kg | 25 min | from 13:00\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11 | D12 | D13 | D14 | D15\nDepot | - | 77 | 58 | 54 | 61 | 85 | 53 | 106 | 85 | 97 | 92 | 124 | 80 | 83 | 67 | 88\nD01 | 77 | - | 115 | 76 | 133 | 154 | 119 | 112 | 70 | 147 | 160 | 173 | 57 | 42 | 61 | 90\nD02 | 58 | 115 | - | 51 | 57 | 51 | 79 | 157 | 138 | 44 | 104 | 72 | 132 | 102 | 119 | 74\nD03 | 54 | 76 | 51 | - | 92 | 97 | 99 | 148 | 118 | 76 | 134 | 102 | 108 | 57 | 100 | 39\nD04 | 61 | 133 | 57 | 92 | - | 42 | 39 | 134 | 129 | 86 | 52 | 108 | 128 | 135 | 112 | 122\nD05 | 85 | 154 | 51 | 97 | 42 | - | 76 | 170 | 161 | 60 | 80 | 76 | 159 | 147 | 144 | 120\nD06 | 53 | 119 | 79 | 99 | 39 | 76 | - | 100 | 100 | 115 | 45 | 139 | 102 | 131 | 86 | 132\nD07 | 106 | 112 | 157 | 148 | 134 | 170 | 100 | - | 47 | 197 | 124 | 224 | 60 | 145 | 57 | 178\nD08 | 85 | 70 | 138 | 118 | 129 | 161 | 100 | 47 | - | 176 | 134 | 204 | 18 | 105 | 23 | 144\nD09 | 97 | 147 | 44 | 76 | 86 | 60 | 115 | 197 | 176 | - | 131 | 32 | 170 | 127 | 158 | 83\nD10 | 92 | 160 | 104 | 134 | 52 | 80 | 45 | 124 | 134 | 131 | - | 151 | 138 | 170 | 122 | 166\nD11 | 124 | 173 | 72 | 102 | 108 | 76 | 139 | 224 | 204 | 32 | 151 | - | 197 | 150 | 185 | 102\nD12 | 80 | 57 | 132 | 108 | 128 | 159 | 102 | 60 | 18 | 170 | 138 | 197 | - | 92 | 21 | 133\nD13 | 83 | 42 | 102 | 57 | 135 | 147 | 131 | 145 | 105 | 127 | 170 | 150 | 92 | - | 93 | 58\nD14 | 67 | 61 | 119 | 100 | 112 | 144 | 86 | 57 | 23 | 158 | 122 | 185 | 21 | 93 | - | 128\nD15 | 88 | 90 | 74 | 39 | 122 | 120 | 132 | 178 | 144 | 83 | 166 | 102 | 133 | 58 | 128 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nUpdate from Amara at 16:45: a road is closed after flooding, so every trip between D04 (Upton-upon-Severn) and D07 (Tenbury Wells), or between the depot and D04 (Upton-upon-Severn) now takes 35 minutes longer than in the table (either direction). Everything else in the table is unchanged. Also, D15 (Rowan Tree deli, Alcester) has just cancelled: they are closed tomorrow for a family funeral. Take them off the plan.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Severn Vale Florist Supplies depot, Worcester",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1100
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1100
+            },
+            {
+              "id": "V3",
+              "name": "Van 3",
+              "capacity": 800
+            },
+            {
+              "id": "V4",
+              "name": "Van 4",
+              "capacity": 600
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Village Post Office stores, Bromsgrove",
+              "open": 810,
+              "close": 990,
+              "service": 10,
+              "kg": 93
+            },
+            {
+              "id": "D02",
+              "name": "Fern & Feather café, Pershore",
+              "open": 450,
+              "close": 630,
+              "service": 15,
+              "kg": 210
+            },
+            {
+              "id": "D03",
+              "name": "Saddler’s Arms, Inkberrow",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 118
+            },
+            {
+              "id": "D04",
+              "name": "Millstone tea rooms, Upton-upon-Severn",
+              "open": 450,
+              "close": 630,
+              "service": 20,
+              "kg": 288
+            },
+            {
+              "id": "D05",
+              "name": "Dale View farm shop, Tewkesbury",
+              "open": 630,
+              "close": 690,
+              "service": 25,
+              "kg": 401
+            },
+            {
+              "id": "D06",
+              "name": "Hilltop Stores, Malvern",
+              "open": 720,
+              "close": 990,
+              "service": 25,
+              "kg": 418
+            },
+            {
+              "id": "D07",
+              "name": "The Old Bakehouse café, Tenbury Wells",
+              "open": 510,
+              "close": 630,
+              "service": 20,
+              "kg": 293
+            },
+            {
+              "id": "D08",
+              "name": "The Tuck Box, Bewdley",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 150
+            },
+            {
+              "id": "D09",
+              "name": "Corner Pantry, Evesham",
+              "open": 630,
+              "close": 690,
+              "service": 20,
+              "kg": 298
+            },
+            {
+              "id": "D10",
+              "name": "The Larder, Ledbury",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 175
+            },
+            {
+              "id": "D11",
+              "name": "Wheatsheaf Inn, Broadway",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 151
+            },
+            {
+              "id": "D12",
+              "name": "Nook & Cranny, Kidderminster",
+              "open": 810,
+              "close": 990,
+              "service": 15,
+              "kg": 229
+            },
+            {
+              "id": "D13",
+              "name": "Green Lane greengrocer, Redditch",
+              "open": 450,
+              "close": 600,
+              "service": 15,
+              "kg": 239
+            },
+            {
+              "id": "D14",
+              "name": "Market Place café, Stourport-on-Severn",
+              "open": 630,
+              "close": 720,
+              "service": 25,
+              "kg": 407
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              77,
+              58,
+              54,
+              96,
+              85,
+              53,
+              106,
+              85,
+              97,
+              92,
+              124,
+              80,
+              83,
+              67
+            ],
+            [
+              77,
+              0,
+              115,
+              76,
+              133,
+              154,
+              119,
+              112,
+              70,
+              147,
+              160,
+              173,
+              57,
+              42,
+              61
+            ],
+            [
+              58,
+              115,
+              0,
+              51,
+              57,
+              51,
+              79,
+              157,
+              138,
+              44,
+              104,
+              72,
+              132,
+              102,
+              119
+            ],
+            [
+              54,
+              76,
+              51,
+              0,
+              92,
+              97,
+              99,
+              148,
+              118,
+              76,
+              134,
+              102,
+              108,
+              57,
+              100
+            ],
+            [
+              96,
+              133,
+              57,
+              92,
+              0,
+              42,
+              39,
+              169,
+              129,
+              86,
+              52,
+              108,
+              128,
+              135,
+              112
+            ],
+            [
+              85,
+              154,
+              51,
+              97,
+              42,
+              0,
+              76,
+              170,
+              161,
+              60,
+              80,
+              76,
+              159,
+              147,
+              144
+            ],
+            [
+              53,
+              119,
+              79,
+              99,
+              39,
+              76,
+              0,
+              100,
+              100,
+              115,
+              45,
+              139,
+              102,
+              131,
+              86
+            ],
+            [
+              106,
+              112,
+              157,
+              148,
+              169,
+              170,
+              100,
+              0,
+              47,
+              197,
+              124,
+              224,
+              60,
+              145,
+              57
+            ],
+            [
+              85,
+              70,
+              138,
+              118,
+              129,
+              161,
+              100,
+              47,
+              0,
+              176,
+              134,
+              204,
+              18,
+              105,
+              23
+            ],
+            [
+              97,
+              147,
+              44,
+              76,
+              86,
+              60,
+              115,
+              197,
+              176,
+              0,
+              131,
+              32,
+              170,
+              127,
+              158
+            ],
+            [
+              92,
+              160,
+              104,
+              134,
+              52,
+              80,
+              45,
+              124,
+              134,
+              131,
+              0,
+              151,
+              138,
+              170,
+              122
+            ],
+            [
+              124,
+              173,
+              72,
+              102,
+              108,
+              76,
+              139,
+              224,
+              204,
+              32,
+              151,
+              0,
+              197,
+              150,
+              185
+            ],
+            [
+              80,
+              57,
+              132,
+              108,
+              128,
+              159,
+              102,
+              60,
+              18,
+              170,
+              138,
+              197,
+              0,
+              92,
+              21
+            ],
+            [
+              83,
+              42,
+              102,
+              57,
+              135,
+              147,
+              131,
+              145,
+              105,
+              127,
+              170,
+              150,
+              92,
+              0,
+              93
+            ],
+            [
+              67,
+              61,
+              119,
+              100,
+              112,
+              144,
+              86,
+              57,
+              23,
+              158,
+              122,
+              185,
+              21,
+              93,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 1690,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D07",
+              "D14",
+              "D08",
+              "BREAK",
+              "D12"
+            ],
+            "V2": [
+              "D02",
+              "D04",
+              "D10",
+              "D06"
+            ],
+            "V3": [
+              "D13",
+              "D09",
+              "D11",
+              "BREAK",
+              "D01"
+            ],
+            "V4": [
+              "D03",
+              "D05"
+            ]
+          },
+          "total_minutes": 1690
+        }
+      },
+      "notes": "[hard] 14 drops (generator attempt 0), 4 vans (4 used in the best plan, 2 breaks). Least total van time 1690 min (exact DP over every drop set, then over every split between vans)."
+    },
+    {
+      "id": "v09",
+      "prompt": "From: Gethin Price\nSubject: Van routes for Fri 20 Nov 2026\n\nHi, can you plan tomorrow’s delivery routes for Peak Pantry Wholesale? Our drivers are paid from when the depot opens until they get back, so I want the plan with the least total van time that keeps every rule.\n\nDEPOT: Matlock. Opens 07:30 (all vans leave at 07:30; they are loaded the night before). Every van must be back by 17:30. A van we don’t need can stay at the depot and costs nothing.\n\nVANS\n- V1 (Van 1): carries up to 1,200 kg.\n- V2 (Van 2): carries up to 1,200 kg.\n- V3 (Van 3): carries up to 900 kg.\n\nDROPS (unloading time is spent at the drop; the van must ARRIVE no later than the window’s end; if it arrives before the window opens it waits, and unloading starts when the window opens)\nDrop | Customer | Weight | Unloading | Window\nD01 | Corner Pantry, Hartington | 160 kg | 15 min | by 09:30\nD02 | The Tuck Box, Tideswell | 180 kg | 15 min | any time\nD03 | Riverside Kitchen, Eyam | 240 kg | 20 min | any time\nD04 | Dale View farm shop, Chesterfield | 368 kg | 25 min | any time\nD05 | Wheatsheaf Inn, Hathersage | 321 kg | 20 min | 08:30–10:30\nD06 | Fern & Feather café, Leek | 105 kg | 10 min | any time\nD07 | Village Post Office stores, Cromford | 296 kg | 20 min | from 13:30\nD08 | Nook & Cranny, Wirksworth | 92 kg | 10 min | any time\nD09 | Rowan Tree deli, Dronfield | 215 kg | 15 min | by 10:00\nD10 | Market Place café, Clay Cross | 155 kg | 15 min | any time\nD11 | The Larder, Belper | 220 kg | 15 min | by 10:00\nD12 | The Granary, Youlgreave | 349 kg | 20 min | any time\nD13 | Green Lane greengrocer, Castleton | 104 kg | 10 min | any time\nD14 | Copper Pot café, Bakewell | 208 kg | 15 min | any time\nD15 | Hilltop Stores, Baslow | 228 kg | 15 min | any time\n\nTRAVEL TIMES (minutes, either direction)\nFrom \\ To | Depot | D01 | D02 | D03 | D04 | D05 | D06 | D07 | D08 | D09 | D10 | D11 | D12 | D13 | D14 | D15\nDepot | - | 61 | 60 | 57 | 48 | 68 | 93 | 16 | 28 | 69 | 33 | 42 | 33 | 80 | 33 | 40\nD01 | 61 | - | 50 | 67 | 101 | 86 | 39 | 63 | 56 | 115 | 89 | 80 | 37 | 77 | 48 | 67\nD02 | 60 | 50 | - | 25 | 82 | 44 | 64 | 69 | 72 | 85 | 82 | 95 | 37 | 33 | 33 | 38\nD03 | 57 | 67 | 25 | - | 68 | 25 | 83 | 68 | 75 | 67 | 72 | 94 | 44 | 28 | 33 | 25\nD04 | 48 | 101 | 82 | 68 | - | 65 | 131 | 54 | 68 | 33 | 28 | 68 | 69 | 89 | 61 | 49\nD05 | 68 | 86 | 44 | 25 | 65 | - | 102 | 79 | 88 | 55 | 76 | 104 | 61 | 33 | 49 | 33\nD06 | 93 | 39 | 64 | 83 | 131 | 102 | - | 96 | 89 | 141 | 121 | 113 | 67 | 84 | 75 | 91\nD07 | 16 | 63 | 69 | 68 | 54 | 79 | 96 | - | 19 | 78 | 35 | 31 | 40 | 91 | 42 | 51\nD08 | 28 | 56 | 72 | 75 | 68 | 88 | 89 | 19 | - | 91 | 48 | 30 | 40 | 96 | 47 | 60\nD09 | 69 | 115 | 85 | 67 | 33 | 55 | 141 | 78 | 91 | - | 55 | 95 | 83 | 82 | 72 | 54\nD10 | 33 | 89 | 82 | 72 | 28 | 76 | 121 | 35 | 48 | 55 | - | 45 | 60 | 95 | 56 | 52\nD11 | 42 | 80 | 95 | 94 | 68 | 104 | 113 | 31 | 30 | 95 | 45 | - | 64 | 117 | 68 | 77\nD12 | 33 | 37 | 37 | 44 | 69 | 61 | 67 | 40 | 40 | 83 | 60 | 64 | - | 63 | 17 | 37\nD13 | 80 | 77 | 33 | 28 | 89 | 33 | 84 | 91 | 96 | 82 | 95 | 117 | 63 | - | 54 | 48\nD14 | 33 | 48 | 33 | 33 | 61 | 49 | 75 | 42 | 47 | 72 | 56 | 68 | 17 | 54 | - | 25\nD15 | 40 | 67 | 38 | 25 | 49 | 33 | 91 | 51 | 60 | 54 | 52 | 77 | 37 | 48 | 25 | -\n\nRULES\n1. Each drop is delivered by exactly one van, in one visit. A van’s load (the total weight of its drops) must not be more than it carries.\n2. Drivers’ hours (company rule for this exercise): no more than 4 h 30 min (270 minutes) of driving in total before a 45-minute break, and again after each break. A break is taken at a drop after unloading, and is shown in the route as \"BREAK\". Only time actually driving counts towards the 270 minutes; waiting and unloading do not, and waiting does not count as a break.\n3. Van time = from 07:30 until that van is back at the depot (driving, waiting, unloading and breaks all count). Total van time = the sum over the vans that go out.\n\nUpdate from Gethin at 16:45: a road is closed after a crash, so every trip between D01 (Hartington) and D08 (Wirksworth), or between D08 (Wirksworth) and D11 (Belper) now takes 40 minutes longer than in the table (either direction). Everything else in the table is unchanged.\n\nAnswer with each van’s drops in order (put BREAK where the driver takes a break; leave a van’s list empty if it stays at the depot) and the total van time in minutes, in this JSON format:\n```json\n{\"routes\": {\"V1\": [\"<drop>\", \"BREAK\", \"<drop>\"], \"V2\": []}, \"total_minutes\": 0}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or a value that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "depot": "Peak Pantry Wholesale depot, Matlock",
+          "depotOpen": 450,
+          "depotClose": 1050,
+          "vans": [
+            {
+              "id": "V1",
+              "name": "Van 1",
+              "capacity": 1200
+            },
+            {
+              "id": "V2",
+              "name": "Van 2",
+              "capacity": 1200
+            },
+            {
+              "id": "V3",
+              "name": "Van 3",
+              "capacity": 900
+            }
+          ],
+          "drops": [
+            {
+              "id": "D01",
+              "name": "Corner Pantry, Hartington",
+              "open": 450,
+              "close": 570,
+              "service": 15,
+              "kg": 160
+            },
+            {
+              "id": "D02",
+              "name": "The Tuck Box, Tideswell",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 180
+            },
+            {
+              "id": "D03",
+              "name": "Riverside Kitchen, Eyam",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 240
+            },
+            {
+              "id": "D04",
+              "name": "Dale View farm shop, Chesterfield",
+              "open": 450,
+              "close": 990,
+              "service": 25,
+              "kg": 368
+            },
+            {
+              "id": "D05",
+              "name": "Wheatsheaf Inn, Hathersage",
+              "open": 510,
+              "close": 630,
+              "service": 20,
+              "kg": 321
+            },
+            {
+              "id": "D06",
+              "name": "Fern & Feather café, Leek",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 105
+            },
+            {
+              "id": "D07",
+              "name": "Village Post Office stores, Cromford",
+              "open": 810,
+              "close": 990,
+              "service": 20,
+              "kg": 296
+            },
+            {
+              "id": "D08",
+              "name": "Nook & Cranny, Wirksworth",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 92
+            },
+            {
+              "id": "D09",
+              "name": "Rowan Tree deli, Dronfield",
+              "open": 450,
+              "close": 600,
+              "service": 15,
+              "kg": 215
+            },
+            {
+              "id": "D10",
+              "name": "Market Place café, Clay Cross",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 155
+            },
+            {
+              "id": "D11",
+              "name": "The Larder, Belper",
+              "open": 450,
+              "close": 600,
+              "service": 15,
+              "kg": 220
+            },
+            {
+              "id": "D12",
+              "name": "The Granary, Youlgreave",
+              "open": 450,
+              "close": 990,
+              "service": 20,
+              "kg": 349
+            },
+            {
+              "id": "D13",
+              "name": "Green Lane greengrocer, Castleton",
+              "open": 450,
+              "close": 990,
+              "service": 10,
+              "kg": 104
+            },
+            {
+              "id": "D14",
+              "name": "Copper Pot café, Bakewell",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 208
+            },
+            {
+              "id": "D15",
+              "name": "Hilltop Stores, Baslow",
+              "open": 450,
+              "close": 990,
+              "service": 15,
+              "kg": 228
+            }
+          ],
+          "matrix": [
+            [
+              0,
+              61,
+              60,
+              57,
+              48,
+              68,
+              93,
+              16,
+              28,
+              69,
+              33,
+              42,
+              33,
+              80,
+              33,
+              40
+            ],
+            [
+              61,
+              0,
+              50,
+              67,
+              101,
+              86,
+              39,
+              63,
+              96,
+              115,
+              89,
+              80,
+              37,
+              77,
+              48,
+              67
+            ],
+            [
+              60,
+              50,
+              0,
+              25,
+              82,
+              44,
+              64,
+              69,
+              72,
+              85,
+              82,
+              95,
+              37,
+              33,
+              33,
+              38
+            ],
+            [
+              57,
+              67,
+              25,
+              0,
+              68,
+              25,
+              83,
+              68,
+              75,
+              67,
+              72,
+              94,
+              44,
+              28,
+              33,
+              25
+            ],
+            [
+              48,
+              101,
+              82,
+              68,
+              0,
+              65,
+              131,
+              54,
+              68,
+              33,
+              28,
+              68,
+              69,
+              89,
+              61,
+              49
+            ],
+            [
+              68,
+              86,
+              44,
+              25,
+              65,
+              0,
+              102,
+              79,
+              88,
+              55,
+              76,
+              104,
+              61,
+              33,
+              49,
+              33
+            ],
+            [
+              93,
+              39,
+              64,
+              83,
+              131,
+              102,
+              0,
+              96,
+              89,
+              141,
+              121,
+              113,
+              67,
+              84,
+              75,
+              91
+            ],
+            [
+              16,
+              63,
+              69,
+              68,
+              54,
+              79,
+              96,
+              0,
+              19,
+              78,
+              35,
+              31,
+              40,
+              91,
+              42,
+              51
+            ],
+            [
+              28,
+              96,
+              72,
+              75,
+              68,
+              88,
+              89,
+              19,
+              0,
+              91,
+              48,
+              70,
+              40,
+              96,
+              47,
+              60
+            ],
+            [
+              69,
+              115,
+              85,
+              67,
+              33,
+              55,
+              141,
+              78,
+              91,
+              0,
+              55,
+              95,
+              83,
+              82,
+              72,
+              54
+            ],
+            [
+              33,
+              89,
+              82,
+              72,
+              28,
+              76,
+              121,
+              35,
+              48,
+              55,
+              0,
+              45,
+              60,
+              95,
+              56,
+              52
+            ],
+            [
+              42,
+              80,
+              95,
+              94,
+              68,
+              104,
+              113,
+              31,
+              70,
+              95,
+              45,
+              0,
+              64,
+              117,
+              68,
+              77
+            ],
+            [
+              33,
+              37,
+              37,
+              44,
+              69,
+              61,
+              67,
+              40,
+              40,
+              83,
+              60,
+              64,
+              0,
+              63,
+              17,
+              37
+            ],
+            [
+              80,
+              77,
+              33,
+              28,
+              89,
+              33,
+              84,
+              91,
+              96,
+              82,
+              95,
+              117,
+              63,
+              0,
+              54,
+              48
+            ],
+            [
+              33,
+              48,
+              33,
+              33,
+              61,
+              49,
+              75,
+              42,
+              47,
+              72,
+              56,
+              68,
+              17,
+              54,
+              0,
+              25
+            ],
+            [
+              40,
+              67,
+              38,
+              25,
+              49,
+              33,
+              91,
+              51,
+              60,
+              54,
+              52,
+              77,
+              37,
+              48,
+              25,
+              0
+            ]
+          ],
+          "driveLimit": 270,
+          "breakMinutes": 45
+        },
+        "optimum": 1025,
+        "reference": {
+          "routes": {
+            "V1": [
+              "D11",
+              "D10",
+              "D04",
+              "D15",
+              "D14"
+            ],
+            "V2": [
+              "D01",
+              "D06",
+              "D02",
+              "D12",
+              "D08",
+              "BREAK",
+              "D07"
+            ],
+            "V3": [
+              "D09",
+              "D05",
+              "D13",
+              "D03"
+            ]
+          },
+          "total_minutes": 1025
+        }
+      },
+      "notes": "[hard] 15 drops (generator attempt 0), 3 vans (3 used in the best plan, 1 break). Least total van time 1025 min (exact DP over every drop set, then over every split between vans)."
+    }
+  ]
+}

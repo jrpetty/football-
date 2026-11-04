@@ -35,7 +35,7 @@
       "tests": [
         { "id": "work.ticket-tag", "level": 1 },
         { "id": "work.support-refunds", "level": 2, "planned": true },
-        { "id": "work.support-replies", "level": 3, "planned": true },
+        { "id": "work.support-replies", "level": 3 },
         { "id": "work.helpdesk-agent", "level": 4, "planned": true },
         { "id": "work.support-week", "level": 5, "planned": true }
       ]
@@ -80,7 +80,7 @@
         { "id": "work.crm-dedupe", "level": 2, "planned": true },
         { "id": "work.sql-questions", "level": 2 },
         { "id": "work.sql-hard", "level": 3 },
-        { "id": "work.board-report", "level": 3, "planned": true },
+        { "id": "work.board-report", "level": 3 },
         { "id": "work.analyst-agent", "level": 4, "planned": true }
       ]
     },
@@ -92,9 +92,9 @@
       "summary": "Deliveries, stock, rotas, van routes and running the warehouse.",
       "tests": [
         { "id": "work.delivery-note", "level": 1 },
-        { "id": "work.stock-reorder", "level": 2, "planned": true },
-        { "id": "work.shift-rota", "level": 3, "planned": true },
-        { "id": "work.delivery-routes", "level": 4, "planned": true },
+        { "id": "work.stock-reorder", "level": 2 },
+        { "id": "work.shift-rota", "level": 3 },
+        { "id": "work.delivery-routes", "level": 4 },
         { "id": "work.warehouse-week", "level": 5, "planned": true }
       ]
     }

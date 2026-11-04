@@ -13,6 +13,8 @@ import type { ScoreBreakdownItem } from '../../core/types.ts';
 export interface VerifierItem extends ScoreBreakdownItem {
   /** Plan verifiers: true for a rule whose failure makes the plan unusable (infeasible). */
   hard?: boolean;
+  /** Answer verifiers: points this check is worth (default 1); the score is the share of points earned. */
+  weight?: number;
 }
 
 /** What a plan verifier reports for one answer. */
@@ -43,7 +45,7 @@ export interface PlanVerifier<W = never> {
   check(world: W, answer: Record<string, unknown>): PlanCheck;
 }
 
-/** A checker for exact multi-part answers: the score is the share of checks passed. */
+/** A checker for exact multi-part answers: the score is the share of checks passed (weighted by `weight` when given). */
 export interface AnswerVerifier<W = never> {
   kind: 'answer';
   name: string;
