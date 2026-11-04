@@ -297,6 +297,10 @@ default repeat count. Bump the suite `version` when you change it.
 | Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
 | The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
 | The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
+| The Accounts Clerk | `work.accounts-clerk` | Ten accounts jobs, one tight bank balance, a fake bank-details change and a fake CEO. |
+| Month-End Close | `work.month-end` | Close the month to the penny while the director, a late invoice and the bank all interrupt. |
+| The Helpdesk Agent | `work.helpdesk-agent` | Fourteen tickets, one refund limit, a planted instruction and a customer fishing for someone else's address. |
+| Run Customer Service for a Week | `work.support-week` | Five days, twenty-eight tickets, two human agents and a product recall on Wednesday. |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
