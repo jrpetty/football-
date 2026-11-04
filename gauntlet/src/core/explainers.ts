@@ -741,6 +741,68 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'shapes',
   },
 
+  // ─────────────── Real-World Work ───────────────
+  'work.inbox-triage': {
+    hook: 'Thirty emails, a scam and a deadline that moves twice: can it clear your Monday inbox?',
+    whatItTests: 'Sorting a real-looking inbox by a written rubric and pulling out every action with its owner, due date and priority.',
+    whyHard: 'Scams use lookalike addresses, deadlines are corrected or cancelled in later emails, duplicates and an email that tries to instruct the AI must be ignored, and dates like "next Wednesday" cross bank holidays.',
+    howScored: [
+      { icon: 'document', text: 'Answer is data (JSON): a category for every email' },
+      { icon: 'check', text: 'Each action: owner, due date and priority, a point each' },
+      { icon: 'cross', text: 'An invented action costs as much as a missed one' },
+    ],
+    goodScore: '100 means every category and every action exactly right; each of the nine inboxes counts equally and each point is a share of its inbox.',
+    icon: 'document',
+  },
+  'work.meeting-scheduler': {
+    hook: 'Five people, four time zones, the week the clocks change: when is the earliest slot?',
+    whatItTests: 'Finding the earliest meeting time that fits everyone’s calendar, working hours, travel time, the meeting room and the company rules.',
+    whyHard: 'Clocks change on different dates in the UK, the US and Australia, a calendar update arrives late, and in the hardest cases each booking blocks the next.',
+    howScored: [
+      { icon: 'target', text: 'Four meetings per case: the earliest valid start for each' },
+      { icon: 'check', text: 'Each start must equal the proven earliest slot exactly' },
+      { icon: 'percent', text: 'Each meeting is a quarter of the case; hedges are wrong' },
+    ],
+    goodScore: '100 means all 36 meetings booked at the earliest legal time; each meeting is worth about 3 points.',
+    icon: 'clock',
+  },
+  'work.expense-audit': {
+    hook: 'Twenty-six claim lines, one expenses policy: who gets paid what, to the penny?',
+    whatItTests: 'Checking expense claims against a written policy and working out exactly what to pay each person and how much VAT can be reclaimed.',
+    whyHard: 'Meal limits are shared across a day’s meals, mileage drops to 25p after 10,000 miles and resets on 6 April, foreign receipts need converting, and an approval on the claim form only counts if it is in the register.',
+    howScored: [
+      { icon: 'receipt', text: 'List the lines paid less than claimed, with rule and amount' },
+      { icon: 'check', text: 'A point each for the rule, the amount and every total' },
+      { icon: 'cross', text: 'Flagging a line that is fine costs as much as missing one' },
+    ],
+    goodScore: '100 means every flagged line, every total and the VAT exactly right; the nine batches count equally.',
+    icon: 'receipt',
+  },
+  'work.bank-reconciliation': {
+    hook: 'Sixty lines of bank statement and cash book: can it find the swapped digits and the double payment?',
+    whatItTests: 'A month-end bank reconciliation: matching every statement line to the books, explaining what is left over and working out the true balance.',
+    whyHard: 'One payment was keyed with two digits swapped, a dollar payment cost more than booked, payments are split or made twice, and a look-alike payment with the same amount is a different invoice.',
+    howScored: [
+      { icon: 'swap', text: 'Every statement line and cash-book entry: match or reason' },
+      { icon: 'check', text: 'A point per line, per difference field and the balance' },
+      { icon: 'cross', text: 'An invented difference costs as much as a missed one' },
+    ],
+    goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
+    icon: 'chart',
+  },
+  'work.contract-redline': {
+    hook: 'Two drafts of a contract and fifteen hidden changes: would it let you sign the wrong one?',
+    whatItTests: 'Comparing two versions of a services agreement and listing every change that matters, by clause, with the old and new values.',
+    whyHard: 'Real changes like a lower liability cap or one inserted "not" hide among renumbered clauses, moved paragraphs and reformatted numbers that change nothing.',
+    howScored: [
+      { icon: 'diff', text: 'List each real change: clause, type, old and new value' },
+      { icon: 'check', text: 'Up to three points per change, checked by machine' },
+      { icon: 'cross', text: 'Listing a non-change costs as much as missing a change' },
+    ],
+    goodScore: '100 means every substantive change found with the right values and nothing extra listed; the nine contract pairs count equally.',
+    icon: 'diff',
+  },
+
   // ─────────────── Arena (head-to-head) ───────────────
   'arena.connect4': {
     hook: 'Can it plan ahead and block its opponent in four-in-a-row?',

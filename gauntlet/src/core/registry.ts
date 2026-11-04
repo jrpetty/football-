@@ -258,6 +258,8 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
       errors.push(`${where}: invalid regex (${(e as Error).message})`);
     }
   }
+  if (s.type === 'json' && s.sets !== undefined && (typeof s.sets !== 'object' || !Object.values(s.sets).every((n) => Number.isInteger(n) && n >= 1)))
+    errors.push(`${where}: json sets must map paths to a whole number of fields per item (at least 1)`);
   if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
   if (s.type === 'judge' && !s.rubric?.trim()) errors.push(`${where}: judge scorer needs a rubric`);
   if (s.type === 'human' && !s.rubric?.trim()) errors.push(`${where}: human scorer needs a rubric`);

@@ -1,0 +1,2519 @@
+{
+ "work.bank-reconciliation": {
+  "r01": {
+   "careless": {
+    "adjusted_balance": 44679.39,
+    "bank": {
+     "B01": "L01",
+     "B02": "L03",
+     "B03": "L02",
+     "B04": "L04",
+     "B05": "L05",
+     "B06": "L08",
+     "B07": "L07",
+     "B08": "L06",
+     "B09": "L10",
+     "B10": "L09",
+     "B11": "bank_charge",
+     "B12": "L12",
+     "B13": "bank_charge",
+     "B14": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B01",
+     "L02": "B03",
+     "L03": "B02",
+     "L04": "B04",
+     "L05": "B05",
+     "L06": "B08",
+     "L07": "B07",
+     "L08": "B06",
+     "L09": "B10",
+     "L10": "B09",
+     "L11": "unpresented_cheque",
+     "L12": "B12",
+     "L13": "unpresented_cheque",
+     "L14": "deposit_in_transit"
+    }
+   }
+  },
+  "r02": {
+   "careless": {
+    "adjusted_balance": 44724.66,
+    "bank": {
+     "B01": "L01",
+     "B02": "L03",
+     "B03": "L02",
+     "B04": "L04",
+     "B05": "L05",
+     "B06": "L06",
+     "B07": "L07",
+     "B08": "L08",
+     "B09": "bank_charge",
+     "B10": "L11",
+     "B11": "L09",
+     "B12": "L12",
+     "B13": "bank_charge",
+     "B14": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B01",
+     "L02": "B03",
+     "L03": "B02",
+     "L04": "B04",
+     "L05": "B05",
+     "L06": "B06",
+     "L07": "B07",
+     "L08": "B08",
+     "L09": "B11",
+     "L10": "unpresented_cheque",
+     "L11": "B10",
+     "L12": "B12",
+     "L13": "unpresented_cheque",
+     "L14": "deposit_in_transit"
+    }
+   }
+  },
+  "r03": {
+   "careless": {
+    "adjusted_balance": 50169.08,
+    "bank": {
+     "B01": "L01",
+     "B02": "L03",
+     "B03": "L02",
+     "B04": "L05",
+     "B05": "L04",
+     "B06": "bank_charge",
+     "B07": "L07",
+     "B08": "L08",
+     "B09": "L09",
+     "B10": "L10",
+     "B11": "L11",
+     "B12": "L12",
+     "B13": "bank_charge",
+     "B14": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B01",
+     "L02": "B03",
+     "L03": "B02",
+     "L04": "B05",
+     "L05": "B04",
+     "L06": "unpresented_cheque",
+     "L07": "B07",
+     "L08": "B08",
+     "L09": "B09",
+     "L10": "B10",
+     "L11": "B11",
+     "L12": "B12",
+     "L13": "unpresented_cheque",
+     "L14": "deposit_in_transit"
+    }
+   }
+  },
+  "r04": {
+   "careless": {
+    "adjusted_balance": 22740.02,
+    "bank": {
+     "B01": "bank_charge",
+     "B02": "interest",
+     "B03": "L03",
+     "B04": "bank_charge",
+     "B05": "L05",
+     "B06": "bank_charge",
+     "B07": "L06",
+     "B08": "L07",
+     "B09": "L08",
+     "B10": "L09",
+     "B11": "interest",
+     "B12": "L10",
+     "B13": "L11",
+     "B14": "L12",
+     "B15": "L13",
+     "B16": "L14",
+     "B17": "L16",
+     "B18": "L17",
+     "B19": "L18",
+     "B20": "L19",
+     "B21": "bank_charge"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "deposit_in_transit",
+     "L02": "deposit_in_transit",
+     "L03": "B03",
+     "L04": "unpresented_cheque",
+     "L05": "B05",
+     "L06": "B07",
+     "L07": "B08",
+     "L08": "B09",
+     "L09": "B10",
+     "L10": "B12",
+     "L11": "B13",
+     "L12": "B14",
+     "L13": "B15",
+     "L14": "B16",
+     "L15": "unpresented_cheque",
+     "L16": "B17",
+     "L17": "B18",
+     "L18": "B19",
+     "L19": "B20",
+     "L20": "unpresented_cheque",
+     "L21": "deposit_in_transit"
+    }
+   }
+  },
+  "r05": {
+   "careless": {
+    "adjusted_balance": 62256.14,
+    "bank": {
+     "B01": "interest",
+     "B02": "L04",
+     "B03": "L05",
+     "B04": "bank_charge",
+     "B05": "bank_charge",
+     "B06": "L03",
+     "B07": "L07",
+     "B08": "L08",
+     "B09": "L10",
+     "B10": "L09",
+     "B11": "L12",
+     "B12": "L13",
+     "B13": "bank_charge",
+     "B14": "L11",
+     "B15": "interest",
+     "B16": "L16",
+     "B17": "L15",
+     "B18": "L17",
+     "B19": "L19",
+     "B20": "L18",
+     "B21": "bank_charge"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "deposit_in_transit",
+     "L02": "deposit_in_transit",
+     "L03": "B06",
+     "L04": "B02",
+     "L05": "B03",
+     "L06": "unpresented_cheque",
+     "L07": "B07",
+     "L08": "B08",
+     "L09": "B10",
+     "L10": "B09",
+     "L11": "B14",
+     "L12": "B11",
+     "L13": "B12",
+     "L14": "unpresented_cheque",
+     "L15": "B17",
+     "L16": "B16",
+     "L17": "B18",
+     "L18": "B20",
+     "L19": "B19",
+     "L20": "unpresented_cheque",
+     "L21": "deposit_in_transit"
+    }
+   }
+  },
+  "r06": {
+   "careless": {
+    "adjusted_balance": 17317.12,
+    "bank": {
+     "B01": "L01",
+     "B02": "bank_charge",
+     "B03": "bank_charge",
+     "B04": "L03",
+     "B05": "L04",
+     "B06": "L05",
+     "B07": "bank_charge",
+     "B08": "L08",
+     "B09": "L09",
+     "B10": "L07",
+     "B11": "L10",
+     "B12": "L11",
+     "B13": "L13",
+     "B14": "L12",
+     "B15": "bank_charge",
+     "B16": "L14",
+     "B17": "interest",
+     "B18": "L16",
+     "B19": "L17",
+     "B20": "L15",
+     "B21": "bank_charge",
+     "B22": "bank_charge"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B01",
+     "L02": "unpresented_cheque",
+     "L03": "B04",
+     "L04": "B05",
+     "L05": "B06",
+     "L06": "unpresented_cheque",
+     "L07": "B10",
+     "L08": "B08",
+     "L09": "B09",
+     "L10": "B11",
+     "L11": "B12",
+     "L12": "B14",
+     "L13": "B13",
+     "L14": "B16",
+     "L15": "B20",
+     "L16": "B18",
+     "L17": "B19",
+     "L18": "unpresented_cheque",
+     "L19": "unpresented_cheque",
+     "L20": "deposit_in_transit"
+    }
+   }
+  },
+  "r07": {
+   "careless": {
+    "adjusted_balance": -10496.23,
+    "bank": {
+     "B01": "L01",
+     "B02": "L03",
+     "B03": "L02",
+     "B04": "L04",
+     "B05": "bank_charge",
+     "B06": "bank_charge",
+     "B07": "bank_charge",
+     "B08": "L08",
+     "B09": "L10",
+     "B10": "L07",
+     "B11": "L09",
+     "B12": "bank_charge",
+     "B13": "bank_charge",
+     "B14": "L11",
+     "B15": "L12",
+     "B16": "L13",
+     "B17": "interest",
+     "B18": "L14",
+     "B19": "L15",
+     "B20": "bank_charge",
+     "B21": "L19",
+     "B22": "L17",
+     "B23": "bank_charge",
+     "B24": "L20",
+     "B25": "L22",
+     "B26": "L21",
+     "B27": "bank_charge",
+     "B28": "L24",
+     "B29": "bank_charge",
+     "B30": "L25",
+     "B31": "bank_charge",
+     "B32": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B01",
+     "L02": "B03",
+     "L03": "B02",
+     "L04": "B04",
+     "L05": "unpresented_cheque",
+     "L06": "unpresented_cheque",
+     "L07": "B10",
+     "L08": "B08",
+     "L09": "B11",
+     "L10": "B09",
+     "L11": "B14",
+     "L12": "B15",
+     "L13": "B16",
+     "L14": "B18",
+     "L15": "B19",
+     "L16": "unpresented_cheque",
+     "L17": "B22",
+     "L18": "unpresented_cheque",
+     "L19": "B21",
+     "L20": "B24",
+     "L21": "B26",
+     "L22": "B25",
+     "L23": "unpresented_cheque",
+     "L24": "B28",
+     "L25": "B30",
+     "L26": "unpresented_cheque",
+     "L27": "deposit_in_transit",
+     "L28": "unpresented_cheque"
+    }
+   }
+  },
+  "r08": {
+   "careless": {
+    "adjusted_balance": 1040.57,
+    "bank": {
+     "B01": "L02",
+     "B02": "L01",
+     "B03": "L03",
+     "B04": "L04",
+     "B05": "L05",
+     "B06": "L08",
+     "B07": "L07",
+     "B08": "bank_charge",
+     "B09": "L10",
+     "B10": "L12",
+     "B11": "L11",
+     "B12": "L13",
+     "B13": "L09",
+     "B14": "bank_charge",
+     "B15": "interest",
+     "B16": "bank_charge",
+     "B17": "L16",
+     "B18": "bank_charge",
+     "B19": "bank_charge",
+     "B20": "bank_charge",
+     "B21": "L19",
+     "B22": "L21",
+     "B23": "bank_charge",
+     "B24": "L20",
+     "B25": "L17",
+     "B26": "bank_charge",
+     "B27": "L22",
+     "B28": "L23",
+     "B29": "bank_charge",
+     "B30": "L26",
+     "B31": "bank_charge",
+     "B32": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B02",
+     "L02": "B01",
+     "L03": "B03",
+     "L04": "B04",
+     "L05": "B05",
+     "L06": "unpresented_cheque",
+     "L07": "B07",
+     "L08": "B06",
+     "L09": "B13",
+     "L10": "B09",
+     "L11": "B11",
+     "L12": "B10",
+     "L13": "B12",
+     "L14": "unpresented_cheque",
+     "L15": "unpresented_cheque",
+     "L16": "B17",
+     "L17": "B25",
+     "L18": "unpresented_cheque",
+     "L19": "B21",
+     "L20": "B24",
+     "L21": "B22",
+     "L22": "B27",
+     "L23": "B28",
+     "L24": "unpresented_cheque",
+     "L25": "unpresented_cheque",
+     "L26": "B30",
+     "L27": "unpresented_cheque",
+     "L28": "deposit_in_transit"
+    }
+   }
+  },
+  "r09": {
+   "careless": {
+    "adjusted_balance": 23019.39,
+    "bank": {
+     "B01": "bank_charge",
+     "B02": "L02",
+     "B03": "L05",
+     "B04": "L03",
+     "B05": "L01",
+     "B06": "L04",
+     "B07": "L06",
+     "B08": "bank_charge",
+     "B09": "bank_charge",
+     "B10": "L09",
+     "B11": "bank_charge",
+     "B12": "bank_charge",
+     "B13": "L10",
+     "B14": "bank_charge",
+     "B15": "L12",
+     "B16": "L13",
+     "B17": "L14",
+     "B18": "L16",
+     "B19": "L15",
+     "B20": "bank_charge",
+     "B21": "L19",
+     "B22": "L17",
+     "B23": "interest",
+     "B24": "L21",
+     "B25": "L22",
+     "B26": "interest",
+     "B27": "L24",
+     "B28": "L25",
+     "B29": "L26",
+     "B30": "bank_charge",
+     "B31": "interest"
+    },
+    "differences": {},
+    "ledger": {
+     "L01": "B05",
+     "L02": "B02",
+     "L03": "B04",
+     "L04": "B06",
+     "L05": "B03",
+     "L06": "B07",
+     "L07": "unpresented_cheque",
+     "L08": "unpresented_cheque",
+     "L09": "B10",
+     "L10": "B13",
+     "L11": "unpresented_cheque",
+     "L12": "B15",
+     "L13": "B16",
+     "L14": "B17",
+     "L15": "B19",
+     "L16": "B18",
+     "L17": "B22",
+     "L18": "deposit_in_transit",
+     "L19": "B21",
+     "L20": "deposit_in_transit",
+     "L21": "B24",
+     "L22": "B25",
+     "L23": "unpresented_cheque",
+     "L24": "B27",
+     "L25": "B28",
+     "L26": "B29",
+     "L27": "unpresented_cheque",
+     "L28": "deposit_in_transit",
+     "L29": "unpresented_cheque"
+    }
+   }
+  }
+ },
+ "work.contract-redline": {
+  "k01": {
+   "careless": {
+    "changes": {
+     "10.1": {
+      "new": 60,
+      "old": 180,
+      "type": "days"
+     },
+     "10.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     },
+     "4.1": {
+      "new": 98.5,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 3,
+      "old": 7.5,
+      "type": "percent"
+     },
+     "9.2": {
+      "new": 1000000,
+      "old": 250000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "k02": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     },
+     "3.3": {
+      "new": 4,
+      "old": 8,
+      "type": "hours"
+     },
+     "5.2": {
+      "new": 60,
+      "old": 45,
+      "type": "days"
+     },
+     "5.4": {
+      "new": 8,
+      "old": 3,
+      "type": "percent"
+     },
+     "6.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "k03": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 8,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "6.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     }
+    }
+   }
+  },
+  "k04": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 21,
+      "old": 30,
+      "type": "days"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "12.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.1": {
+      "new": 99.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 9250,
+      "old": 8450,
+      "type": "amount"
+     },
+     "6.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "7.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 1000000,
+      "old": 250000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "k05": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "11.1": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "5.1": {
+      "new": 12600,
+      "old": 8450,
+      "type": "amount"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 8,
+      "type": "percent"
+     },
+     "7.2": {
+      "new": 2,
+      "old": 3,
+      "type": "years"
+     },
+     "7.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 500000,
+      "old": 1000000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "k06": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 30,
+      "old": 21,
+      "type": "days"
+     },
+     "11.1": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 8,
+      "type": "hours"
+     },
+     "4.1": {
+      "new": 98.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "7.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     }
+    }
+   }
+  },
+  "k07": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 21,
+      "old": 30,
+      "type": "days"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "11.1": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "11.2": {
+      "new": 21,
+      "old": 21,
+      "type": "days"
+     },
+     "12.4": {
+      "new": "Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 8,
+      "type": "hours"
+     },
+     "5.2": {
+      "new": 45,
+      "old": 60,
+      "type": "days"
+     },
+     "5.4": {
+      "new": 3,
+      "old": 8,
+      "type": "percent"
+     },
+     "6.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.2": {
+      "new": 1000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 3,
+      "old": 5,
+      "type": "years"
+     },
+     "9.2": {
+      "new": 500000,
+      "old": 1000000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "k08": {
+   "careless": {
+    "changes": {
+     "10.1": {
+      "new": 60,
+      "old": 180,
+      "type": "days"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "11.2": {
+      "new": 21,
+      "old": 21,
+      "type": "days"
+     },
+     "12.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.1": {
+      "new": 99,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 8450,
+      "old": 12600,
+      "type": "amount"
+     },
+     "5.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "6.1": {
+      "new": 2000000,
+      "old": 10000000,
+      "type": "amount"
+     },
+     "6.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     }
+    }
+   }
+  },
+  "k09": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 14,
+      "old": 30,
+      "type": "days"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "11.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     },
+     "12.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 2,
+      "type": "hours"
+     },
+     "4.2": {
+      "new": 2.5,
+      "old": 10,
+      "type": "percent"
+     },
+     "5.2": {
+      "new": 45,
+      "old": 30,
+      "type": "days"
+     },
+     "5.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "6.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.2": {
+      "new": 1000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 3,
+      "old": 5,
+      "type": "years"
+     },
+     "9.2": {
+      "new": 1000000,
+      "old": 500000,
+      "type": "amount"
+     }
+    }
+   }
+  }
+ },
+ "work.expense-audit": {
+  "x01": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 180.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L02": {
+      "pay": 30.0,
+      "rule": "MEAL_CAP"
+     },
+     "L04": {
+      "pay": 0.0,
+      "rule": "NO_RECEIPT"
+     },
+     "L07": {
+      "pay": 25.3,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Callum Hughes": 403.2,
+     "Elif Patel": 411.76
+    },
+    "total_pay": 814.96,
+    "vat_reclaimable": 68.85
+   }
+  },
+  "x02": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 240.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L04": {
+      "pay": 0.0,
+      "rule": "NO_RECEIPT"
+     },
+     "L07": {
+      "pay": 25.3,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Leila Kowalski": 379.97,
+     "Nkechi O'Brien": 197.06
+    },
+    "total_pay": 577.03,
+    "vat_reclaimable": 89.07
+   }
+  },
+  "x03": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 180.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L04": {
+      "pay": 0.0,
+      "rule": "NO_RECEIPT"
+     },
+     "L06": {
+      "pay": 25.3,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Rhys Navarro": 597.55,
+     "Tariq Tanaka": 299.79
+    },
+    "total_pay": 897.34,
+    "vat_reclaimable": 131.93
+   }
+  },
+  "x04": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 360.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L03": {
+      "pay": 24.4,
+      "rule": "ALCOHOL"
+     },
+     "L04": {
+      "pay": 92.4,
+      "rule": "RAIL_CLASS"
+     },
+     "L07": {
+      "pay": 40.32,
+      "rule": "ALCOHOL"
+     },
+     "L11": {
+      "pay": 40.32,
+      "rule": "ALCOHOL"
+     },
+     "L14": {
+      "pay": 190.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L15": {
+      "pay": 203.52,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Hamza Novak": 994.07,
+     "Hiroshi Demir": 484.38,
+     "Sofia Lindqvist": 499.76
+    },
+    "total_pay": 1978.21,
+    "vat_reclaimable": 198.06
+   }
+  },
+  "x05": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 120.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L03": {
+      "pay": 24.4,
+      "rule": "ALCOHOL"
+     },
+     "L04": {
+      "pay": 86.7,
+      "rule": "RAIL_CLASS"
+     },
+     "L06": {
+      "pay": 40.8,
+      "rule": "ALCOHOL"
+     },
+     "L10": {
+      "pay": 40.8,
+      "rule": "ALCOHOL"
+     },
+     "L14": {
+      "pay": 340.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L15": {
+      "pay": 157.55,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Agnieszka Eze": 247.5,
+     "Sofia Pritchard": 585.29,
+     "Yusuf Doyle": 592.96
+    },
+    "total_pay": 1425.75,
+    "vat_reclaimable": 99.33
+   }
+  },
+  "x06": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 180.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L03": {
+      "pay": 24.4,
+      "rule": "ALCOHOL"
+     },
+     "L04": {
+      "pay": 92.4,
+      "rule": "RAIL_CLASS"
+     },
+     "L06": {
+      "pay": 40.32,
+      "rule": "ALCOHOL"
+     },
+     "L10": {
+      "pay": 40.32,
+      "rule": "ALCOHOL"
+     },
+     "L14": {
+      "pay": 120.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L15": {
+      "pay": 300.0,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Bogdan Doyle": 687.82,
+     "Joaquin Nowak": 313.2,
+     "Maryam Bianchi": 618.28
+    },
+    "total_pay": 1619.3,
+    "vat_reclaimable": 230.86
+   }
+  },
+  "x07": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 120.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L04": {
+      "pay": 23.68,
+      "rule": "ALCOHOL"
+     },
+     "L05": {
+      "pay": 64.5,
+      "rule": "RAIL_CLASS"
+     },
+     "L12": {
+      "pay": 41.16,
+      "rule": "ALCOHOL"
+     },
+     "L20": {
+      "pay": 570.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L24": {
+      "pay": 137.08,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Anjali Kowalski": 1005.25,
+     "Callum Eze": 394.48,
+     "Rosa Kim": 893.45,
+     "Vikram Chen": 985.1
+    },
+    "total_pay": 3278.28,
+    "vat_reclaimable": 201.95
+   }
+  },
+  "x08": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 480.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L04": {
+      "pay": 23.68,
+      "rule": "ALCOHOL"
+     },
+     "L05": {
+      "pay": 92.4,
+      "rule": "RAIL_CLASS"
+     },
+     "L11": {
+      "pay": 41.65,
+      "rule": "ALCOHOL"
+     },
+     "L21": {
+      "pay": 180.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L25": {
+      "pay": 114.0,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Hiroshi Okafor": 781.07,
+     "Hyun-woo Nwosu": 1009.54,
+     "Mateo Ahmadi": 289.43,
+     "Saoirse Hughes": 693.14
+    },
+    "total_pay": 2773.18,
+    "vat_reclaimable": 195.09
+   }
+  },
+  "x09": {
+   "careless": {
+    "non_compliant": {
+     "L01": {
+      "pay": 120.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L04": {
+      "pay": 24.96,
+      "rule": "ALCOHOL"
+     },
+     "L05": {
+      "pay": 64.5,
+      "rule": "RAIL_CLASS"
+     },
+     "L11": {
+      "pay": 42.63,
+      "rule": "ALCOHOL"
+     },
+     "L21": {
+      "pay": 240.0,
+      "rule": "HOTEL_CAP"
+     },
+     "L25": {
+      "pay": 137.83,
+      "rule": "ALCOHOL"
+     }
+    },
+    "pay_by_employee": {
+     "Bogdan Takahashi": 653.4,
+     "Niamh Lindgren": 692.28,
+     "Rhys Mbeki": 366.45,
+     "Yusuf Morgan": 587.28
+    },
+    "total_pay": 2299.41,
+    "vat_reclaimable": 264.03
+   }
+  }
+ },
+ "work.inbox-triage": {
+  "t01": {
+   "careless": {
+    "actions": {
+     "M04": {
+      "due": "2026-03-03",
+      "owner": "Declan Kim",
+      "priority": "P1"
+     },
+     "M05": {
+      "due": "2026-03-11",
+      "owner": "Declan Kim",
+      "priority": "P2"
+     },
+     "M09": {
+      "due": "2026-03-09",
+      "owner": "Declan Kim",
+      "priority": "P1"
+     },
+     "M10": {
+      "due": "2026-03-05",
+      "owner": "Declan Kim",
+      "priority": "P1"
+     },
+     "M11": {
+      "due": "2026-03-05",
+      "owner": "Declan Kim",
+      "priority": "P1"
+     },
+     "M12": {
+      "due": "2026-03-24",
+      "owner": "Declan Kim",
+      "priority": "P3"
+     },
+     "M13": {
+      "due": "2026-03-23",
+      "owner": "Declan Kim",
+      "priority": "P3"
+     },
+     "M15": {
+      "due": "2026-03-10",
+      "owner": "Declan Kim",
+      "priority": "P1"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "newsletter"
+     },
+     "M02": {
+      "category": "supplier"
+     },
+     "M03": {
+      "category": "newsletter"
+     },
+     "M04": {
+      "category": "client"
+     },
+     "M05": {
+      "category": "hr"
+     },
+     "M06": {
+      "category": "internal"
+     },
+     "M07": {
+      "category": "internal"
+     },
+     "M08": {
+      "category": "hr"
+     },
+     "M09": {
+      "category": "meeting"
+     },
+     "M10": {
+      "category": "client"
+     },
+     "M11": {
+      "category": "internal"
+     },
+     "M12": {
+      "category": "manager"
+     },
+     "M13": {
+      "category": "supplier"
+     },
+     "M14": {
+      "category": "internal"
+     },
+     "M15": {
+      "category": "internal"
+     }
+    }
+   }
+  },
+  "t02": {
+   "careless": {
+    "actions": {
+     "M01": {
+      "due": "2026-03-25",
+      "owner": "Abena Bianchi",
+      "priority": "P3"
+     },
+     "M02": {
+      "due": "2026-03-11",
+      "owner": "Abena Bianchi",
+      "priority": "P1"
+     },
+     "M04": {
+      "due": "2026-03-12",
+      "owner": "Abena Bianchi",
+      "priority": "P1"
+     },
+     "M06": {
+      "due": "2026-03-27",
+      "owner": "Abena Bianchi",
+      "priority": "P3"
+     },
+     "M07": {
+      "due": "2026-03-26",
+      "owner": "Abena Bianchi",
+      "priority": "P3"
+     },
+     "M08": {
+      "due": "2026-03-26",
+      "owner": "Abena Bianchi",
+      "priority": "P3"
+     },
+     "M09": {
+      "due": "2026-03-23",
+      "owner": "Abena Bianchi",
+      "priority": "P2"
+     },
+     "M13": {
+      "due": "2026-03-13",
+      "owner": "Abena Bianchi",
+      "priority": "P1"
+     },
+     "M14": {
+      "due": "2026-03-17",
+      "owner": "Abena Bianchi",
+      "priority": "P1"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "client"
+     },
+     "M02": {
+      "category": "meeting"
+     },
+     "M03": {
+      "category": "newsletter"
+     },
+     "M04": {
+      "category": "supplier"
+     },
+     "M05": {
+      "category": "internal"
+     },
+     "M06": {
+      "category": "manager"
+     },
+     "M07": {
+      "category": "hr"
+     },
+     "M08": {
+      "category": "hr"
+     },
+     "M09": {
+      "category": "client"
+     },
+     "M10": {
+      "category": "supplier"
+     },
+     "M11": {
+      "category": "internal"
+     },
+     "M12": {
+      "category": "hr"
+     },
+     "M13": {
+      "category": "internal"
+     },
+     "M14": {
+      "category": "internal"
+     },
+     "M15": {
+      "category": "newsletter"
+     }
+    }
+   }
+  },
+  "t03": {
+   "careless": {
+    "actions": {
+     "M01": {
+      "due": "2026-04-20",
+      "owner": "Aisha Park",
+      "priority": "P1"
+     },
+     "M02": {
+      "due": "2026-04-15",
+      "owner": "Aisha Park",
+      "priority": "P1"
+     },
+     "M03": {
+      "due": "2026-05-06",
+      "owner": "Aisha Park",
+      "priority": "P3"
+     },
+     "M06": {
+      "due": "2026-04-28",
+      "owner": "Aisha Park",
+      "priority": "P2"
+     },
+     "M10": {
+      "due": "2026-04-17",
+      "owner": "Aisha Park",
+      "priority": "P1"
+     },
+     "M11": {
+      "due": "2026-04-17",
+      "owner": "Aisha Park",
+      "priority": "P1"
+     },
+     "M14": {
+      "due": "2026-04-29",
+      "owner": "Aisha Park",
+      "priority": "P3"
+     },
+     "M15": {
+      "due": "2026-04-20",
+      "owner": "Aisha Park",
+      "priority": "P1"
+     },
+     "M16": {
+      "due": "2026-05-07",
+      "owner": "Aisha Park",
+      "priority": "P3"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "meeting"
+     },
+     "M02": {
+      "category": "client"
+     },
+     "M03": {
+      "category": "supplier"
+     },
+     "M04": {
+      "category": "hr"
+     },
+     "M05": {
+      "category": "supplier"
+     },
+     "M06": {
+      "category": "manager"
+     },
+     "M07": {
+      "category": "internal"
+     },
+     "M08": {
+      "category": "hr"
+     },
+     "M09": {
+      "category": "newsletter"
+     },
+     "M10": {
+      "category": "internal"
+     },
+     "M11": {
+      "category": "client"
+     },
+     "M12": {
+      "category": "internal"
+     },
+     "M13": {
+      "category": "newsletter"
+     },
+     "M14": {
+      "category": "client"
+     },
+     "M15": {
+      "category": "internal"
+     },
+     "M16": {
+      "category": "hr"
+     }
+    }
+   }
+  },
+  "t04": {
+   "careless": {
+    "actions": {
+     "M01": {
+      "due": "2026-03-25",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M03": {
+      "due": "2026-03-27",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M04": {
+      "due": "2026-03-24",
+      "owner": "Kwame Okafor",
+      "priority": "P1"
+     },
+     "M05": {
+      "due": "2026-03-27",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M06": {
+      "due": "2026-04-07",
+      "owner": "Abena Iyer",
+      "priority": "P2"
+     },
+     "M12": {
+      "due": "2026-03-26",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M13": {
+      "due": "2026-03-30",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M15": {
+      "due": "2026-04-01",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M17": {
+      "due": "2026-04-17",
+      "owner": "Aisha Kim",
+      "priority": "P3"
+     },
+     "M18": {
+      "due": "2026-03-30",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     },
+     "M22": {
+      "due": "2026-04-01",
+      "owner": "Abena Iyer",
+      "priority": "P1"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "client"
+     },
+     "M02": {
+      "category": "hr"
+     },
+     "M03": {
+      "category": "meeting"
+     },
+     "M04": {
+      "category": "manager"
+     },
+     "M05": {
+      "category": "hr"
+     },
+     "M06": {
+      "category": "manager"
+     },
+     "M07": {
+      "category": "supplier"
+     },
+     "M08": {
+      "category": "meeting"
+     },
+     "M09": {
+      "category": "supplier"
+     },
+     "M10": {
+      "category": "manager"
+     },
+     "M11": {
+      "category": "newsletter"
+     },
+     "M12": {
+      "category": "client"
+     },
+     "M13": {
+      "category": "supplier"
+     },
+     "M14": {
+      "category": "internal"
+     },
+     "M15": {
+      "category": "internal"
+     },
+     "M16": {
+      "category": "internal"
+     },
+     "M17": {
+      "category": "manager"
+     },
+     "M18": {
+      "category": "supplier"
+     },
+     "M19": {
+      "category": "manager"
+     },
+     "M20": {
+      "category": "manager"
+     },
+     "M21": {
+      "category": "newsletter"
+     },
+     "M22": {
+      "category": "manager"
+     }
+    }
+   }
+  },
+  "t05": {
+   "careless": {
+    "actions": {
+     "M02": {
+      "due": "2026-05-14",
+      "owner": "Keisha Alvarez",
+      "priority": "P1"
+     },
+     "M03": {
+      "due": "2026-05-15",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M06": {
+      "due": "2026-05-14",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M07": {
+      "due": "2026-05-14",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M08": {
+      "due": "2026-05-14",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M10": {
+      "due": "2026-05-14",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M13": {
+      "due": "2026-06-10",
+      "owner": "Keisha Alvarez",
+      "priority": "P3"
+     },
+     "M14": {
+      "due": "2026-05-20",
+      "owner": "Callum Gallagher",
+      "priority": "P1"
+     },
+     "M18": {
+      "due": "2026-05-28",
+      "owner": "Callum Gallagher",
+      "priority": "P3"
+     },
+     "M19": {
+      "due": "2026-05-27",
+      "owner": "Callum Gallagher",
+      "priority": "P2"
+     },
+     "M20": {
+      "due": "2026-05-27",
+      "owner": "Callum Gallagher",
+      "priority": "P2"
+     },
+     "M21": {
+      "due": "2026-05-26",
+      "owner": "Callum Gallagher",
+      "priority": "P2"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "newsletter"
+     },
+     "M02": {
+      "category": "manager"
+     },
+     "M03": {
+      "category": "meeting"
+     },
+     "M04": {
+      "category": "hr"
+     },
+     "M05": {
+      "category": "meeting"
+     },
+     "M06": {
+      "category": "manager"
+     },
+     "M07": {
+      "category": "client"
+     },
+     "M08": {
+      "category": "client"
+     },
+     "M09": {
+      "category": "internal"
+     },
+     "M10": {
+      "category": "supplier"
+     },
+     "M11": {
+      "category": "newsletter"
+     },
+     "M12": {
+      "category": "internal"
+     },
+     "M13": {
+      "category": "manager"
+     },
+     "M14": {
+      "category": "supplier"
+     },
+     "M15": {
+      "category": "supplier"
+     },
+     "M16": {
+      "category": "manager"
+     },
+     "M17": {
+      "category": "manager"
+     },
+     "M18": {
+      "category": "internal"
+     },
+     "M19": {
+      "category": "client"
+     },
+     "M20": {
+      "category": "manager"
+     },
+     "M21": {
+      "category": "hr"
+     },
+     "M22": {
+      "category": "manager"
+     }
+    }
+   }
+  },
+  "t06": {
+   "careless": {
+    "actions": {
+     "M03": {
+      "due": "2026-05-12",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P3"
+     },
+     "M05": {
+      "due": "2026-04-28",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M06": {
+      "due": "2026-05-12",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P3"
+     },
+     "M08": {
+      "due": "2026-04-21",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M09": {
+      "due": "2026-05-05",
+      "owner": "Kenji Park",
+      "priority": "P2"
+     },
+     "M11": {
+      "due": "2026-04-29",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M13": {
+      "due": "2026-04-24",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M14": {
+      "due": "2026-04-29",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M17": {
+      "due": "2026-04-29",
+      "owner": "Carmen Farahani",
+      "priority": "P1"
+     },
+     "M18": {
+      "due": "2026-04-29",
+      "owner": "Carmen Farahani",
+      "priority": "P1"
+     },
+     "M20": {
+      "due": "2026-04-29",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M21": {
+      "due": "2026-04-29",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P1"
+     },
+     "M22": {
+      "due": "2026-05-05",
+      "owner": "Agnieszka Tanaka",
+      "priority": "P2"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "newsletter"
+     },
+     "M02": {
+      "category": "hr"
+     },
+     "M03": {
+      "category": "hr"
+     },
+     "M04": {
+      "category": "supplier"
+     },
+     "M05": {
+      "category": "meeting"
+     },
+     "M06": {
+      "category": "hr"
+     },
+     "M07": {
+      "category": "newsletter"
+     },
+     "M08": {
+      "category": "client"
+     },
+     "M09": {
+      "category": "manager"
+     },
+     "M10": {
+      "category": "meeting"
+     },
+     "M11": {
+      "category": "client"
+     },
+     "M12": {
+      "category": "internal"
+     },
+     "M13": {
+      "category": "supplier"
+     },
+     "M14": {
+      "category": "manager"
+     },
+     "M15": {
+      "category": "internal"
+     },
+     "M16": {
+      "category": "manager"
+     },
+     "M17": {
+      "category": "manager"
+     },
+     "M18": {
+      "category": "manager"
+     },
+     "M19": {
+      "category": "manager"
+     },
+     "M20": {
+      "category": "internal"
+     },
+     "M21": {
+      "category": "manager"
+     },
+     "M22": {
+      "category": "supplier"
+     }
+    }
+   }
+  },
+  "t07": {
+   "careless": {
+    "actions": {
+     "M02": {
+      "due": "2026-03-27",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M04": {
+      "due": "2026-03-26",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M05": {
+      "due": "2026-03-26",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M08": {
+      "due": "2026-04-01",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M09": {
+      "due": "2026-03-27",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M13": {
+      "due": "2026-04-01",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M15": {
+      "due": "2026-03-27",
+      "owner": "Joaquin Mbeki",
+      "priority": "P1"
+     },
+     "M17": {
+      "due": "2026-03-30",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M18": {
+      "due": "2026-04-01",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M22": {
+      "due": "2026-03-30",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M23": {
+      "due": "2026-04-13",
+      "owner": "Abena Gallagher",
+      "priority": "P3"
+     },
+     "M27": {
+      "due": "2026-03-30",
+      "owner": "Saoirse Zhang",
+      "priority": "P1"
+     },
+     "M29": {
+      "due": "2026-04-01",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     },
+     "M30": {
+      "due": "2026-04-01",
+      "owner": "Abena Gallagher",
+      "priority": "P1"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "newsletter"
+     },
+     "M02": {
+      "category": "meeting"
+     },
+     "M03": {
+      "category": "internal"
+     },
+     "M04": {
+      "category": "internal"
+     },
+     "M05": {
+      "category": "internal"
+     },
+     "M06": {
+      "category": "meeting"
+     },
+     "M07": {
+      "category": "meeting"
+     },
+     "M08": {
+      "category": "hr"
+     },
+     "M09": {
+      "category": "manager"
+     },
+     "M10": {
+      "category": "internal"
+     },
+     "M11": {
+      "category": "supplier"
+     },
+     "M12": {
+      "category": "supplier"
+     },
+     "M13": {
+      "category": "internal"
+     },
+     "M14": {
+      "category": "supplier"
+     },
+     "M15": {
+      "category": "manager"
+     },
+     "M16": {
+      "category": "manager"
+     },
+     "M17": {
+      "category": "client"
+     },
+     "M18": {
+      "category": "client"
+     },
+     "M19": {
+      "category": "internal"
+     },
+     "M20": {
+      "category": "internal"
+     },
+     "M21": {
+      "category": "client"
+     },
+     "M22": {
+      "category": "supplier"
+     },
+     "M23": {
+      "category": "client"
+     },
+     "M24": {
+      "category": "hr"
+     },
+     "M25": {
+      "category": "internal"
+     },
+     "M26": {
+      "category": "client"
+     },
+     "M27": {
+      "category": "manager"
+     },
+     "M28": {
+      "category": "newsletter"
+     },
+     "M29": {
+      "category": "internal"
+     },
+     "M30": {
+      "category": "supplier"
+     }
+    }
+   }
+  },
+  "t08": {
+   "careless": {
+    "actions": {
+     "M01": {
+      "due": "2026-05-15",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M02": {
+      "due": "2026-05-20",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M03": {
+      "due": "2026-05-14",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M04": {
+      "due": "2026-05-14",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M05": {
+      "due": "2026-05-20",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M11": {
+      "due": "2026-05-15",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M12": {
+      "due": "2026-05-28",
+      "owner": "Keisha Novak",
+      "priority": "P2"
+     },
+     "M15": {
+      "due": "2026-05-20",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M16": {
+      "due": "2026-05-21",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M18": {
+      "due": "2026-05-22",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M19": {
+      "due": "2026-05-19",
+      "owner": "Keisha Novak",
+      "priority": "P1"
+     },
+     "M20": {
+      "due": "2026-05-22",
+      "owner": "Vikram Kim",
+      "priority": "P1"
+     },
+     "M22": {
+      "due": "2026-05-29",
+      "owner": "Keisha Novak",
+      "priority": "P3"
+     },
+     "M26": {
+      "due": "2026-06-02",
+      "owner": "Sofia Lindqvist",
+      "priority": "P3"
+     },
+     "M28": {
+      "due": "2026-06-15",
+      "owner": "Keisha Novak",
+      "priority": "P3"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "manager"
+     },
+     "M02": {
+      "category": "meeting"
+     },
+     "M03": {
+      "category": "internal"
+     },
+     "M04": {
+      "category": "internal"
+     },
+     "M05": {
+      "category": "client"
+     },
+     "M06": {
+      "category": "meeting"
+     },
+     "M07": {
+      "category": "internal"
+     },
+     "M08": {
+      "category": "meeting"
+     },
+     "M09": {
+      "category": "internal"
+     },
+     "M10": {
+      "category": "meeting"
+     },
+     "M11": {
+      "category": "internal"
+     },
+     "M12": {
+      "category": "internal"
+     },
+     "M13": {
+      "category": "newsletter"
+     },
+     "M14": {
+      "category": "internal"
+     },
+     "M15": {
+      "category": "client"
+     },
+     "M16": {
+      "category": "internal"
+     },
+     "M17": {
+      "category": "internal"
+     },
+     "M18": {
+      "category": "hr"
+     },
+     "M19": {
+      "category": "supplier"
+     },
+     "M20": {
+      "category": "manager"
+     },
+     "M21": {
+      "category": "newsletter"
+     },
+     "M22": {
+      "category": "manager"
+     },
+     "M23": {
+      "category": "supplier"
+     },
+     "M24": {
+      "category": "supplier"
+     },
+     "M25": {
+      "category": "hr"
+     },
+     "M26": {
+      "category": "manager"
+     },
+     "M27": {
+      "category": "internal"
+     },
+     "M28": {
+      "category": "supplier"
+     },
+     "M29": {
+      "category": "manager"
+     },
+     "M30": {
+      "category": "manager"
+     }
+    }
+   }
+  },
+  "t09": {
+   "careless": {
+    "actions": {
+     "M01": {
+      "due": "2026-03-20",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M02": {
+      "due": "2026-03-19",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M04": {
+      "due": "2026-03-24",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M06": {
+      "due": "2026-04-01",
+      "owner": "Ingrid Navarro",
+      "priority": "P2"
+     },
+     "M11": {
+      "due": "2026-03-23",
+      "owner": "Bronwen Wojcik",
+      "priority": "P1"
+     },
+     "M14": {
+      "due": "2026-03-26",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M17": {
+      "due": "2026-03-24",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M18": {
+      "due": "2026-03-26",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M20": {
+      "due": "2026-03-27",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M21": {
+      "due": "2026-03-25",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M22": {
+      "due": "2026-04-01",
+      "owner": "Ravi Takahashi",
+      "priority": "P2"
+     },
+     "M24": {
+      "due": "2026-03-24",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M26": {
+      "due": "2026-03-26",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     },
+     "M30": {
+      "due": "2026-03-26",
+      "owner": "Ingrid Navarro",
+      "priority": "P1"
+     }
+    },
+    "messages": {
+     "M01": {
+      "category": "client"
+     },
+     "M02": {
+      "category": "manager"
+     },
+     "M03": {
+      "category": "supplier"
+     },
+     "M04": {
+      "category": "client"
+     },
+     "M05": {
+      "category": "internal"
+     },
+     "M06": {
+      "category": "internal"
+     },
+     "M07": {
+      "category": "internal"
+     },
+     "M08": {
+      "category": "manager"
+     },
+     "M09": {
+      "category": "client"
+     },
+     "M10": {
+      "category": "manager"
+     },
+     "M11": {
+      "category": "manager"
+     },
+     "M12": {
+      "category": "client"
+     },
+     "M13": {
+      "category": "supplier"
+     },
+     "M14": {
+      "category": "meeting"
+     },
+     "M15": {
+      "category": "meeting"
+     },
+     "M16": {
+      "category": "meeting"
+     },
+     "M17": {
+      "category": "manager"
+     },
+     "M18": {
+      "category": "supplier"
+     },
+     "M19": {
+      "category": "newsletter"
+     },
+     "M20": {
+      "category": "manager"
+     },
+     "M21": {
+      "category": "hr"
+     },
+     "M22": {
+      "category": "manager"
+     },
+     "M23": {
+      "category": "manager"
+     },
+     "M24": {
+      "category": "internal"
+     },
+     "M25": {
+      "category": "newsletter"
+     },
+     "M26": {
+      "category": "client"
+     },
+     "M27": {
+      "category": "manager"
+     },
+     "M28": {
+      "category": "internal"
+     },
+     "M29": {
+      "category": "hr"
+     },
+     "M30": {
+      "category": "supplier"
+     }
+    }
+   }
+  }
+ },
+ "work.meeting-scheduler": {
+  "s01": {
+   "careless": {
+    "a": "2026-06-16 12:30",
+    "b": "2026-06-16 12:45",
+    "c": "2026-06-16 10:45",
+    "d": "2026-06-16 12:30"
+   }
+  },
+  "s02": {
+   "careless": {
+    "a": "2026-07-07 09:30",
+    "b": "2026-07-08 10:00",
+    "c": "2026-07-07 10:45",
+    "d": "2026-07-08 10:00"
+   }
+  },
+  "s03": {
+   "careless": {
+    "a": "2026-09-15 09:00",
+    "b": null,
+    "c": "2026-09-15 14:45",
+    "d": "2026-09-15 13:30"
+   }
+  },
+  "s04": {
+   "careless": {
+    "a": "2026-03-09 16:15",
+    "b": null,
+    "c": "2026-03-12 13:00",
+    "d": null
+   }
+  },
+  "s05": {
+   "careless": {
+    "a": "2026-03-27 09:30",
+    "b": "2026-03-26 16:00",
+    "c": "2026-03-31 10:30",
+    "d": "2026-03-27 09:30"
+   }
+  },
+  "s06": {
+   "careless": {
+    "a": "2026-10-28 13:00",
+    "b": "2026-10-26 09:00",
+    "c": "2026-10-27 13:00",
+    "d": "2026-10-27 15:45"
+   }
+  },
+  "s07": {
+   "careless": {
+    "a": "2026-04-02 09:30",
+    "b": "2026-03-31 06:00",
+    "c": "2026-04-01 09:45",
+    "d": "2026-03-30 10:00"
+   }
+  },
+  "s08": {
+   "careless": {
+    "a": "2026-10-29 13:00",
+    "b": "2026-10-27 09:30",
+    "c": "2026-10-27 16:45",
+    "d": "2026-10-22 07:30"
+   }
+  },
+  "s09": {
+   "careless": {
+    "a": null,
+    "b": null,
+    "c": null,
+    "d": "2026-03-26 09:30"
+   }
+  }
+ }
+}

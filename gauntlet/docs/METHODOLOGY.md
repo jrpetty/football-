@@ -135,7 +135,7 @@ These differences are small but real, which is why published comparisons should 
 | `regex` | 1 if the pattern matches the answer (or the full text). Full-text patterns can demand a one-line reply, as in the Lightning Traps. |
 | `contains` | Fraction of required / forbidden phrases satisfied. |
 | `constraints` | Fraction of machine-verifiable constraints satisfied (or all-or-nothing). Definitions: a *word* is a whitespace-separated token containing a letter or digit; a *sentence* ends in `.`, `!` or `?` followed by whitespace or the end; *paragraphs* are separated by blank lines; *bullets* start with `-`, `*`, `•`, `1.` or `1)`. |
-| `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). |
+| `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). With `loose`, presentation is forgiven: key case and spacing, numbers written as `"£1,234.50"`, `"T"` or `"London"` in date-times, `"none"` for null, a one-item list for its item. With `sets`, an object keyed by item ids (e.g. the non-compliant lines) is a set: every extra item costs as many fields as a real item is worth, so listing everything scores no better than listing nothing. |
 | `code-js` | Fraction of hidden unit tests passed. Code runs in a separate Node.js process under the permission model (no file writes, no child processes, no workers), 256 MB heap, with string code generation disabled and a per-test timeout (default 2 s). |
 | `judge` | Mean of the judge panel's 0–10 grades ÷ 10. |
 | `judge-classify` | Mean of the scores of the labels chosen by each judge (e.g. `CAUGHT_TRAP` = 1, `HALLUCINATED` = 0). |
@@ -418,6 +418,58 @@ inside a budget.
 score clearly above zero on the first rungs and well under a third overall); the per-level results are in
 [AUDIT.md](AUDIT.md#horizon-tier-blind-calibration). Two ladders (Picture Logic and Count Every Tiling) were made
 steeper from level 4 and level 5 after the first calibration showed Opus climbing them too easily.
+
+## 7e. Real-World Work (category `work`)
+
+Five tests built from the jobs people hand to an assistant at work. Each has nine cases, generated from fixed seeds
+by `verification/realworld-work/` (`python3 build.py` rewrites every file byte for byte; `test/realworld-work.test.ts`
+checks that it does). Cases 1–3 are easy, 4–6 medium and 7–9 hard. Every name, company and email address is
+invented, from many backgrounds; places, bank holidays, clock-change dates and tax rules are real. No AI judge and no
+human opinion is involved: every mark is a machine check against a key computed by a solver.
+
+| Test | The task | Where the key comes from |
+|---|---|---|
+| Monday Inbox (`work.inbox-triage`) | 15–30 emails: a category for each (fixed list, first rule that applies) and every action with its owner, due date (ISO) and priority (fixed rubric). | The generator keeps each email's structured intent; `solve()` applies the stated rules: due-date phrases ("by next Wednesday", "within five working days", "by the end of the month") resolved against England's bank holidays, corrections, reassignments and cancellations applied to the original request, exact copies marked duplicate, lookalike-domain scams marked phishing. |
+| Find a Slot (`work.meeting-scheduler`) | The earliest start (London time, quarter hours) of four meetings for a team in up to six time zones. | Two independent solvers (a scan of every 5-minute start against every rule, and interval arithmetic) must agree. Real time-zone rules (`zoneinfo`) decide the offsets, including weeks when the UK, Europe, the US or Sydney change their clocks; the prompt states the clock-change rules, not the offsets (the easy cases state the offsets). |
+| Expense Policy Check (`work.expense-audit`) | Every claim line paid less than claimed, with the first rule it breaks and the amount to pay; totals per employee, the batch total and reclaimable VAT. | `audit()` applies the written policy to the structured lines with exact decimal arithmetic (half-up to the penny): conversion first, then the rules in order, daily meal limits shared across a day's meals, 45p/25p mileage counted across the 6 April tax-year reset. |
+| Reconcile the Account (`work.bank-reconciliation`) | Every bank line and cash-book entry matched or given a reason from a fixed list, every explained difference (keying error, FX) with its amount, and the adjusted balance. | The key is the generator's own transaction list. `check_unique()` re-derives every one-to-one match from the printed amounts, dates and references alone and asserts there is exactly one; `balance()` proves the adjusted cash book equals the adjusted bank balance. |
+| What Changed in the Contract? (`work.contract-redline`) | Every substantive change between two drafts of a services agreement, by clause number in the new draft, with its type and old and new values. | The diff of the two STRUCTURED versions (clause lists and parameters), so formatting noise (renumbering, moved clauses, renumbered cross-references, "thirty (30) days" written "30 days", recased headings, American spellings) cannot enter the key. |
+
+**Scoring.** All five use the `json` scorer with `loose` (presentation never costs a point: key case and spacing,
+`£` signs and thousands separators, `"Clause 9.2"` for `"9.2"`, a `T` or "London" in a time, a one-item list, prose
+around the JSON). Credit is fine-grained and every point is stated in the prompt:
+
+| Test | Points in a case | Extra items |
+|---|---|---|
+| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 36–63 | An action on an email that has none costs 3 (`sets: {actions: 3}`) |
+| Find a Slot | 1 per meeting: 4 | — |
+| Expense Policy Check | 2 per non-compliant line (rule, amount) + 1 per employee total + total + VAT: 12–34 | A compliant line listed costs 2 (`sets: {non_compliant: 2}`) |
+| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69 | An invented difference costs 2 (`sets: {differences: 2}`) |
+| What Changed in the Contract? | 3 per change (type, old, new): 12–45 | A listed non-change costs 3 (`sets: {changes: 3}`) |
+
+**Measured spread** (`node verification/realworld-work/spread.mts`, scripted answers through the real scorer; the
+"careless" answer is each generator's careless solver: first-stated deadlines, the nearest Wednesday for "next
+Wednesday", bank holidays and duplicates missed, scams believed; fixed "usual" UTC offsets, later updates and travel
+time ignored; meal limits per meal, approvals taken from the claim form, 45p throughout; exact-amount matching only;
+old clause numbers, negations and definition changes missed):
+
+| Test | Careful (key) | Careless (easy / medium / hard) | Do-nothing `{}` | Copy the prompt | Random filler |
+|---|---:|---:|---:|---:|---:|
+| Monday Inbox | 100% | 78% (86 / 76 / 73) | 0% | 0% | 0% |
+| Find a Slot | 100% | 36% (67 / 17 / 25) | 0% | 0% | 0% |
+| Expense Policy Check | 100% | 51% (60 / 57 / 36) | 0% | 0% | 0% |
+| Reconcile the Account | 100% | 73% (84 / 70 / 65) | 0% | 0% | 0% |
+| What Changed in the Contract? | 100% | 61% (80 / 62 / 42) | 0% | 0% | 0% |
+
+A constant answer that reads nothing (every email "internal", no actions) scores 4–13% on Monday Inbox and 0% on the
+other four.
+
+**Anti-cheat.** Answers never appear in the prompts; distractors are built in (a lookalike sender with a real
+supplier's name, a genuine "we never change bank details" notice next to the scam, a newsletter telling the AI how to
+classify it, an approval quoted on a claim but missing from the register, a same-supplier same-amount payment for a
+different invoice, a clause moved word for word). Extra items cost as much as missing ones, a field with two values is
+wrong, and only the last JSON answer counts. There is no answer-time limit and no vendor-specific wording; every model
+gets the same 32,000-token output limit.
 
 ## 8. The random baseline
 
