@@ -1,47 +1,284 @@
 """work.reconciliation-ladder — "Reconcile the Account: Ladder".
 
-Ten frozen levels of the same month-end bank reconciliation as work.bank-reconciliation, built with the SAME
-transaction generator (the `Rec` class), the SAME uniqueness proof (`check_unique()`: every 1:1 match re-derived from
-the printed amounts, dates and references alone) and the SAME balance proof (`balance()`: adjusted cash book =
-adjusted bank), and the SAME rules wording (verification/realworld-work/bankrec.py). A level prints only the rules
-it uses, word for word as in the full list, and each level adds rules and lines:
+Ten frozen levels of month-end bank reconciliation for one company, built on the transaction generator of
+work.bank-reconciliation (verification/realworld-work/bankrec.py, class `Rec`) and its matching rules and wording.
+From level 3 on a level covers SEVERAL consecutive months of one account, and the months depend on each other:
 
-  L01  ~14 lines a side: one-to-one matches, unpresented cheques, deposits in transit, bank fees and interest, a
-       payment keyed with two digits swapped
-  L02  + direct debits nobody entered, payments made twice by the bank or entered twice in the cash book
-  L03  + instalments and part-payments, a charge and its reversal
-  L04  + BACS runs, a customer cheque returned unpaid, dollar payments at a different rate (the medium case's size)
-  L05  + last month's outstanding items: the full rules at the size of the hardest Reconcile the Account case
-  L06-L10  the full rules, up to ~600 lines a side, with more of every trap and two more interactions: a
-           look-alike payment (same supplier and amount, different invoice) and an instalment the bank paid twice.
+  * a cheque, a paying-in or the second half of a keyed-in payment can clear in a later month, so a cash-book entry
+    is matched with a bank line of another month, and every month's balance must know which of the earlier entries
+    are still outstanding at that month's end;
+  * the cash book is never corrected: bank charges, interest, direct debits, duplicates, reversed charges, returned
+    cheques and keying or FX differences found in one month still have to be allowed for in every later month's
+    adjusted balance;
+  * an instalment plan pays one cash-book entry across several months, outstanding by the part not yet through;
+  * a charge reversed, or a cheque returned unpaid, in the month after the original line.
 
-The key is the generator's own transaction list; every level passes check_unique() and balance(). Ladder checks:
-every reason, difference, split and prior item in the key belongs to a printed rule; the full-rules prompt is
-byte-identical to bankrec.prompt(); cheque numbers are unique.
+One early mistake (a missed charge, a wrong difference, an item called outstanding that cleared) therefore carries
+into every later month's balance. The balances are worth a quarter of a level's points.
+
+Key: the generator's transaction list. Second derivation, independent of it: every month's adjusted balance is
+computed twice, from the cash-book side (printed cash book + every correction so far) and from the bank side
+(statement + every entry not yet through at that month end), and they must agree; and every one-to-one match is
+re-derived from the printed fields alone and must be the only candidate (check_unique, across months).
 """
 import json
 import os
 import sys
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'realworld-work'))
-import bankrec as R  # noqa: E402
-from bankrec import Rec, SUPPLIERS, check_unique, balance, careless, slip, fmt, TRAP_WEIGHT  # noqa: E402
+from bankrec import Rec, SUPPLIERS, CUSTOMERS, transpose, linked, fmt, TRAP_WEIGHT, r2  # noqa: E402
 from wk import uk  # noqa: E402
 
 D = Decimal
+MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-FAMILIES = ['keying', 'dd', 'duplicates', 'splits', 'reversal', 'batch', 'returned', 'fx', 'prior']
-FAMS = {1: FAMILIES[:1], 2: FAMILIES[:3], 3: FAMILIES[:5], 4: FAMILIES[:8]}
-for _l in range(5, 11):
-    FAMS[_l] = FAMILIES[:]
-REASON_FAMILY = {'bank_charge': None, 'interest': None, 'unpresented_cheque': None, 'deposit_in_transit': None, 'unrecorded_direct_debit': 'dd',
-                 'duplicate_payment': 'duplicates', 'duplicate_entry': 'duplicates', 'reversed_charge': 'reversal', 'returned_cheque': 'returned',
-                 'keying_error': 'keying', 'fx_difference': 'fx'}
-SCALE = {6: 1.6, 7: 2.2, 8: 2.9, 9: 3.8, 10: 5.0}
-SEEDS = {l: 5200 + 31 * l for l in range(1, 11)}
+FAMILIES = ['keying', 'dd', 'duplicates', 'carry', 'splits', 'reversal', 'returned', 'batch', 'fx', 'instalments']
+# level: (months, families printed, sizes per month)
+LEVELS = {
+    1: (1, 1), 2: (1, 3), 3: (2, 5), 4: (2, 8), 5: (3, 10), 6: (3, 10), 7: (4, 10), 8: (4, 10), 9: (5, 10), 10: (6, 10),
+}
+# ordinary payments, receipts, and cross-month items per month (cheques, paying-in, keying, reversal, returned, instalments)
+SIZES = {
+    1: dict(pay=6, rec=4, cross=0), 2: dict(pay=8, rec=5, cross=0), 3: dict(pay=8, rec=5, cross=1), 4: dict(pay=9, rec=5, cross=1),
+    5: dict(pay=10, rec=6, cross=2), 6: dict(pay=12, rec=6, cross=3), 7: dict(pay=12, rec=6, cross=3), 8: dict(pay=14, rec=7, cross=4),
+    9: dict(pay=14, rec=7, cross=4), 10: dict(pay=15, rec=7, cross=5),
+}
+SEEDS = {l: 6100 + 37 * l for l in range(1, 11)}
+BANK_ONLY = ('bank_charge', 'interest', 'unrecorded_direct_debit', 'duplicate_payment', 'reversed_charge', 'returned_cheque')
+
+
+class MRec(Rec):
+    """A Rec over several consecutive months: `window(m)` points Rec's own same-month methods at month m."""
+
+    def __init__(self, seed, months):
+        super().__init__(seed, 'ladder')
+        self.n_months = months
+        start = self.rng.choice([1, 3, 5, 6] if months <= 4 else [1, 3, 5])
+        self.windows = []
+        for k in range(months):
+            m = start + k
+            first = date(self.year, m, 1)
+            nxt = date(self.year + (m == 12), m % 12 + 1, 1)
+            self.windows.append((m, first, nxt - timedelta(days=1)))
+        self.opening = r2(self.opening + D(30000 * months))
+        self.bank_opening = self.opening
+        self.cur = 0
+
+    def window(self, k):
+        self.cur = k
+        self.month, self.first, self.last = self.windows[k]
+        lw = self.last
+        while lw.weekday() >= 5:
+            lw -= timedelta(days=1)
+        self.lastwd = lw
+
+    def wd(self, d, back=False):
+        while d.weekday() >= 5:
+            d += timedelta(days=-1 if back else 1)
+        return d
+
+    def late_day(self, k):
+        """A working day in the last few days of month k."""
+        m, first, last = self.windows[k]
+        return self.wd(last - timedelta(days=self.rng.randint(1, 4)), back=True)
+
+    def early_day(self, k, lo=1, hi=8):
+        m, first, last = self.windows[k]
+        return self.wd(first + timedelta(days=self.rng.randint(lo, hi) - 1))
+
+    # cross-month transactions ---------------------------------------------------------------------
+    def cheque_cross(self, k, clears):
+        """A cheque written late in month k that clears `clears` months later (None: not yet through)."""
+        sup = self.rng.choice(SUPPLIERS)
+        amt = self.amount(150, 2900)
+        no = f"{self.rng.randint(100200, 100899):06d}"
+        L = self.add_ledger(self.late_day(k), f"Cheque {no} to {sup[0]}", f"CHQ {no}", -amt, dict(kind='chq'))
+        if clears is None or k + clears >= self.n_months:
+            self.truth_ledger[L] = 'unpresented_cheque'
+            return
+        B = self.add_bank(self.early_day(k + clears, 1, 20), f"CHQ {no}", -amt, dict(kind='chq'))
+        self.link(B, L)
+
+    def paid_in_cross(self, k):
+        """Takings paid in at the branch on the last working day of month k, on the statement next month."""
+        cus = self.rng.choice(CUSTOMERS)
+        amt = self.amount(300, 6400)
+        slip = self.rng.randint(4400, 4999)
+        _, first, last = self.windows[k]
+        L = self.add_ledger(self.wd(last, back=True), f"Cash and cheques paid in at branch (paying-in slip {slip}) — {cus[0]}", f"PIS {slip}", amt, dict(kind='dit'))
+        if k + 1 >= self.n_months:
+            self.truth_ledger[L] = 'deposit_in_transit'
+            return
+        B = self.add_bank(self.early_day(k + 1, 1, 3), f"PAID IN AT BRANCH PIS {slip}", amt, dict(kind='dit'))
+        self.link(B, L)
+
+    def keying_cross(self, k):
+        """A payment keyed wrongly in the cash book late in month k that the bank pays early in month k + 1."""
+        sup = self.rng.choice(SUPPLIERS)
+        real = self.amount(1100, 8800)
+        wrong = transpose(real, self.rng)
+        inv = self.ref('INV-')
+        _, first, last = self.windows[k]
+        d = self.wd(last - timedelta(days=1), back=True)
+        L = self.add_ledger(d, f"{sup[0]} — invoice {inv}", inv, -wrong, dict(kind='key'))
+        c = self.wd(d + timedelta(days=self.rng.randint(2, 4)))
+        if c <= last:
+            c = self.early_day(k + 1, 1, 2)
+        B = self.add_bank(c, f"FP OUT {sup[1]} REF {inv.replace('-', '')}", -real, dict(kind='key'))
+        self.link(B, L)
+        self.diffs[B] = ('keying_error', -real - (-wrong))
+
+    def reversal_cross(self, k):
+        amt = self.amount(15, 35)
+        B1 = self.add_bank(self.late_day(k), 'UNPAID ITEM CHARGE', -amt, dict(kind='rev'))
+        B2 = self.add_bank(self.early_day(k + 1, 1, 6), 'REVERSAL OF UNPAID ITEM CHARGE', amt, dict(kind='rev'))
+        self.truth_bank[B1] = 'reversed_charge'
+        self.truth_bank[B2] = 'reversed_charge'
+
+    def returned_cross(self, k):
+        cus = self.rng.choice(CUSTOMERS)
+        amt = self.amount(200, 2600)
+        no = f"{self.rng.randint(300100, 300899):06d}"
+        d = self.late_day(k)
+        L = self.add_ledger(d, f"Cheque {no} from {cus[0]} paid in", f"CHQ {no}", amt, dict(kind='rtn'))
+        c = self.wd(d + timedelta(days=1))
+        if c > self.windows[k][2]:
+            c = d
+        B = self.add_bank(c, f"CHQ PAID IN {no}", amt, dict(kind='rtn'))
+        self.link(B, L)
+        B2 = self.add_bank(self.early_day(k + 1, 2, 8), f"RETURNED CHQ {no} UNPAID REFER TO DRAWER", -amt, dict(kind='rtn2'))
+        self.truth_bank[B2] = 'returned_cheque'
+
+    def instalments(self, k, parts):
+        """One cash-book payment in month k paid by the bank in `parts` monthly instalments (k, k + 1, ...)."""
+        sup = self.rng.choice(SUPPLIERS)
+        each = self.amount(700, 2600)
+        total = each * parts
+        inv = self.ref('INV-')
+        d = self.early_day(k, 2, 12)
+        L = self.add_ledger(d, f"{sup[0]} — invoice {inv} (paid in {parts} monthly instalments)", inv, -total, dict(kind='inst'))
+        Bs = []
+        for i in range(parts):
+            bd = d if i == 0 else self.wd(self.windows[k + i][1] + timedelta(days=d.day - 1 if d.day <= 25 else 24))
+            Bs.append(self.add_bank(self.wd(bd), f"FP OUT {sup[1]} REF {inv.replace('-', '')} {i + 1}OF{parts}", -each, dict(kind='inst')))
+        for B in Bs:
+            self.truth_bank[B] = L
+        self.truth_ledger[L] = Bs
+
+    # numbering and balances ------------------------------------------------------------------------
+    def month_of(self, d):
+        for k, (m, first, last) in enumerate(self.windows):
+            if first <= d <= last:
+                return k
+        raise AssertionError(f'date {d} outside the months')
+
+    def finish(self):
+        for x in self.bank + self.ledger:
+            x['k'] = self.month_of(x['date'])
+        bo = sorted(range(len(self.bank)), key=lambda i: (self.bank[i]['date'], i))
+        lo = sorted(range(len(self.ledger)), key=lambda i: (self.ledger[i]['date'], i))
+        width = 3 if max(sum(1 for x in self.bank if x['k'] == k) for k in range(self.n_months)) >= 100 or max(sum(1 for x in self.ledger if x['k'] == k) for k in range(self.n_months)) >= 100 else 2
+        bid, lid = {}, {}
+        cnt = {}
+        for i in bo:
+            k = self.bank[i]['k']
+            cnt[('B', k)] = cnt.get(('B', k), 0) + 1
+            bid[i] = f"B{k + 1}{cnt[('B', k)]:0{width}d}"
+        for i in lo:
+            k = self.ledger[i]['k']
+            cnt[('L', k)] = cnt.get(('L', k), 0) + 1
+            lid[i] = f"L{k + 1}{cnt[('L', k)]:0{width}d}"
+
+        def m(v, ids):
+            if isinstance(v, list):
+                return sorted(ids[x] for x in v)
+            if isinstance(v, int):
+                return ids[v]
+            return v
+        self.key_bank = {bid[i]: m(self.truth_bank[i], lid) for i in bo}
+        self.key_ledger = {lid[i]: m(self.truth_ledger[i], bid) for i in lo}
+        self.key_diffs = {bid[i]: {'reason': r, 'amount': float(a)} for i, (r, a) in sorted(self.diffs.items(), key=lambda kv: bid[kv[0]])}
+        self.B = [dict(self.bank[i], id=bid[i]) for i in bo]
+        self.L = [dict(self.ledger[i], id=lid[i]) for i in lo]
+        self.bank_month = {b['id']: b['k'] for b in self.B}
+        bal = self.opening
+        self.bank_close = []
+        for k in range(self.n_months):
+            for b in self.B:
+                if b['k'] == k:
+                    bal += b['amount']
+                    b['balance'] = bal
+                    assert bal > 500, 'overdrawn'
+            self.bank_close.append(bal)
+        cb = self.opening
+        self.ledger_close = []
+        for k in range(self.n_months):
+            cb += sum((l['amount'] for l in self.L if l['k'] == k), D('0'))
+            self.ledger_close.append(cb)
+
+    def month_label(self, k):
+        m = self.windows[k][0]
+        return f"{MONTH_NAMES[m - 1]} {self.year}"
+
+
+def balances(rec):
+    """Every month's adjusted balance, from both sides; they must agree (raises otherwise)."""
+    out = []
+    for k in range(rec.n_months):
+        # cash-book side: printed cash book to the end of month k + every correction found in months 1..k
+        cb = rec.ledger_close[k]
+        for b in rec.B:
+            if b['k'] <= k and rec.key_bank[b['id']] in BANK_ONLY:
+                cb += b['amount']
+        for bid_, v in rec.key_diffs.items():
+            if rec.bank_month[bid_] <= k:
+                cb += D(str(v['amount']))
+        for l in rec.L:
+            if l['k'] <= k and rec.key_ledger[l['id']] == 'duplicate_entry':
+                cb -= l['amount']
+        # bank side: statement at the end of month k + every cash-book entry (to month k) not yet through by then
+        bk = rec.bank_close[k]
+        amounts = {b['id']: b['amount'] for b in rec.B}
+        for l in rec.L:
+            if l['k'] > k:
+                continue
+            v = rec.key_ledger[l['id']]
+            if v == 'duplicate_entry':
+                continue
+            if isinstance(v, list):
+                through = sum((amounts[x] for x in v if rec.bank_month[x] <= k), D('0'))
+                bk += l['amount'] - through
+            elif isinstance(v, str) and v.startswith('B'):
+                if rec.bank_month[v] > k:
+                    bk += l['amount']
+            else:
+                bk += l['amount']  # unpresented cheque / deposit in transit
+        assert cb == bk, ('balance', k, cb, bk)
+        out.append(cb)
+    return out
+
+
+def check_unique(rec):
+    """Every 1:1 match is the only cash-book entry the printed fields allow: equal (or explained) amount, the bank
+    date on or after the cash-book date (within 7 days, cheques any time later), a shared reference or counterparty."""
+    for b in rec.B:
+        v = rec.key_bank[b['id']]
+        if not (isinstance(v, str) and v.startswith('L')) or isinstance(rec.key_ledger[v], list):
+            continue
+        cands = []
+        for l in rec.L:
+            late = (b['date'] - l['date']).days
+            if late < 0 or (late > 7 and not l['ref'].startswith('CHQ')):
+                continue
+            shared = linked(b, l)
+            if shared and (l['amount'] == b['amount'] or b['id'] in rec.key_diffs):
+                cands.append(l['id'])
+        cands = [c for c in cands if rec.key_ledger[c] != 'duplicate_entry']
+        assert cands == [v], (b['id'], v, cands)
+
 
 # ───────────────────────────── the rules, family by family ─────────────────────────────
 
@@ -54,42 +291,51 @@ def join_and(xs):
     return xs[0] if len(xs) == 1 else ', '.join(xs[:-1]) + ' and ' + xs[-1]
 
 
-def rules_text(fams, prior):
+def rules_text(fams, months):
     on = lambda f: f in fams  # noqa: E731
-    r1 = '1. Match a bank line with cash-book entries for the same transaction: same counterparty and reference, the bank date on or up to 7 days after the cash-book date, and the same amount.'
+    multi = months > 1
+    r1 = ('1. Match a bank line with cash-book entries for the same transaction: same counterparty and reference, the bank date on or up to 7 days after the cash-book date'
+          + (' (a cheque can take longer: any time after its cash-book date, in a later month too)' if on('carry') else '') + ', and the same amount.')
     if on('splits'):
-        r1 += (' A payment or receipt can be split: one cash-book entry may match several bank lines (instalments sharing its reference), or several cash-book entries one bank line (two part-payments sharing a reference'
+        r1 += (' A payment or receipt can be split: one cash-book entry may match several bank lines (instalments sharing its reference'
+               + (', which can run over several months' if on('instalments') else '') + '), or several cash-book entries one bank line (two part-payments sharing a reference'
                + (", or the payments of one BACS run, which the cash book marks with the run's date" if on('batch') else '') + '), when they add up exactly.')
+    if on('carry'):
+        r1 += (' Statement lines and cash-book entries are numbered through the months (B1.. and L1.. in the first month, B2.. and L2.. in the second, ...). '
+               'An entry is matched with the line that clears it in whichever month that is.')
     expl = (['"keying_error" (the cash book was keyed wrongly, e.g. two digits swapped)'] if on('keying') else []) + (['"fx_difference" (a foreign-currency payment cost a different amount in pounds than the cash book\'s booked rate)'] if on('fx') else [])
-    r2 = (f'2. A match whose amounts differ is still a match when it is the same transaction and the difference is explained: {" or ".join(expl)}. The bank figure is right{" in both cases" if len(expl) == 2 else ""}. '
-          'List each in "differences" with amount = bank amount minus cash-book amount (money in positive, money out negative).')
+    r2_ = (f'2. A match whose amounts differ is still a match when it is the same transaction and the difference is explained: {" or ".join(expl)}. The bank figure is right{" in both cases" if len(expl) == 2 else ""}. '
+           'List each in "differences" with amount = bank amount minus cash-book amount (money in positive, money out negative).')
     bank = ['"bank_charge" (fees the bank charged)', '"interest"']
     if on('dd'):
         bank.append('"unrecorded_direct_debit" (a direct debit nobody entered in the cash book)')
     if on('duplicates'):
         bank.append('"duplicate_payment" (the bank paid the same payment twice: the later line is the duplicate)')
     if on('reversal'):
-        bank.append('"reversed_charge" (a charge and its reversal on the statement: give both lines this reason)')
+        bank.append('"reversed_charge" (a charge and its reversal on the statement' + (', in the same month or the next' if on('carry') else '') + ': give both lines this reason)')
     if on('returned'):
-        bank.append('"returned_cheque" (a cheque paid in that the bank has returned unpaid; the paying-in itself is matched normally)')
+        bank.append('"returned_cheque" (a cheque paid in that the bank has returned unpaid' + (', in the same month or later' if on('carry') else '') + '; the paying-in itself is matched normally)')
     led = ['"unpresented_cheque" (a cheque not yet through the bank)', '"deposit_in_transit" (money paid in but not yet on the statement)']
     if on('duplicates'):
         led.append('"duplicate_entry" (the same payment entered twice in the cash book: the later entry is the duplicate; the earlier one is matched)')
+    r4 = f'4. Cash-book entries with no bank line get a reason: {join_or(led)}.'
+    if on('carry'):
+        r4 += f' Use these reasons only for entries still not through the bank at the end of {"the last month" if multi else "the month"}.'
     adj = ['every bank-only item'] + (['every difference'] if expl else []) + (['every duplicate entry'] if on('duplicates') else [])
-    lines = ['How to reconcile (apply exactly):', r1, r2,
-             f'3. Bank lines with no cash-book entry get a reason: {join_or(bank)}.',
-             f'4. Cash-book entries with no bank line get a reason: {join_or(led)}.',
-             f'5. The adjusted balance is the cash-book closing balance corrected for {join_and(adj)}. (It must equal the statement closing balance plus deposits in transit minus unpresented cheques, including any from last month still outstanding.)']
-    text = '\n'.join(lines)
-    if prior:
-        text += """
-6. Items outstanding at the end of last month (P1, P2, …) are not in this month's cash book. A bank line that clears one gets that item's id (e.g. "P1") as its value; in "prior", give each item the bank line that cleared it, or "unpresented_cheque" / "deposit_in_transit" if it is still outstanding."""
-    return text
+    if on('carry'):
+        r5 = (f'5. The cash book has never been corrected. Each month\'s adjusted balance is that month\'s cash-book closing balance corrected for {join_and(adj)} found in that month AND in every earlier month. '
+              'It must equal that month\'s statement closing balance plus the money paid in and minus the payments in the cash book (that month or before) not yet through the bank at that month\'s end'
+              + (', counting a payment made in instalments by the part not yet through' if on('instalments') else '') + '.')
+    else:
+        r5 = (f'5. The adjusted balance is the cash-book closing balance corrected for {join_and(adj)}. (It must equal the statement closing balance plus deposits in transit minus unpresented cheques, including any from last month still outstanding.)')
+    return '\n'.join(['How to reconcile (apply exactly):', r1, r2_, f'3. Bank lines with no cash-book entry get a reason: {join_or(bank)}.', r4, r5])
 
 
 def care_list(fams):
     on = lambda f: f in fams  # noqa: E731
     xs = []
+    if on('carry'):
+        xs.append('an entry cleared in another month')
     if on('splits'):
         xs.append('a split')
     if on('duplicates'):
@@ -97,221 +343,220 @@ def care_list(fams):
     if on('reversal'):
         xs.append('a reversal')
     xs.append('a keying or FX difference' if on('fx') else 'a keying difference')
-    xs += ['a timing item', 'the balance']
+    xs.append('a timing item')
     return ', '.join(xs)
 
 
-def prompt(rec, fams):
-    """bankrec.prompt() with the rules of the level's families (identical to it with every family)."""
+def prompt(rec, fams, bal_weight):
     on = lambda f: f in fams  # noqa: E731
-    tb = ["Date        | Description                                   | Paid out  | Paid in   | Balance"]
-    for b in rec.B:
-        out = fmt(b['amount']) if b['amount'] < 0 else ''
-        inn = fmt(b['amount']) if b['amount'] > 0 else ''
-        tb.append(f"{b['id']} {uk(b['date'])} | {b['desc']} | {out} | {inn} | {fmt(b['balance'])}")
-    tl = ["Date | Ref | Details | Payments | Receipts"]
-    for l in rec.L:
-        pay = fmt(l['amount']) if l['amount'] < 0 else ''
-        rc = fmt(l['amount']) if l['amount'] > 0 else ''
-        tl.append(f"{l['id']} {uk(l['date'])} | {l['ref']} | {l['desc']} | {pay} | {rc}")
-    month = rec.last.strftime('%B %Y')
-    rules = rules_text(fams, bool(rec.prior))
-    schema = ('{"bank": {"B01": "L02", "B02": "bank_charge", "B05": ["L06", "L07"], ...}, '
-              '"ledger": {"L01": "B03", "L02": "B01", "L06": "B05", "L09": "unpresented_cheque", ...}, '
-              if on('splits') else
-              '{"bank": {"B01": "L02", "B02": "bank_charge", ...}, '
-              '"ledger": {"L01": "B03", "L02": "B01", "L09": "unpresented_cheque", ...}, ')
-    schema += ('"differences": {"B07": {"reason": "keying_error", "amount": -270.00}}, '
-               + ('"prior": {"P1": "B04", "P2": "unpresented_cheque", ...}, ' if rec.prior else '') +
-               '"adjusted_balance": 12345.67}')
-    if rec.prior:
-        pl = '\n'.join(f"  {it['id']} {uk(it['date'])} | {it['ref']} | {it['desc']} | " + (f"payment {fmt(it['amount'])}" if it['amount'] < 0 else f"receipt {fmt(it['amount'])}") for it in rec.prior)
-        opening = (f"Last month's reconciliation left these cash-book items not yet through the bank:\n{pl}\n"
-                   f"So this month the cash book opened at £{fmt(rec.opening)} and the statement at £{fmt(rec.bank_opening)}.")
-    else:
-        opening = f"The account was fully reconciled at the end of last month, so the statement and the cash book both opened the month at £{fmt(rec.opening)}."
+    multi = rec.n_months > 1
+    names = [rec.month_label(k) for k in range(rec.n_months)]
+    period = names[0] if not multi else f"{names[0]} to {names[-1]}"
+    out = [f"Can you do the bank reconciliation{'s' if multi else ''} for {rec.company}, {period}? The account was fully reconciled at the end of the month before, so the statement and the cash book both opened at £{fmt(rec.opening)}."
+           + (" Our bookkeeper has been off, so nothing has been reconciled or corrected since: every month is below." if multi else ''), '', rules_text(fams, rec.n_months), '']
+    for k in range(rec.n_months):
+        tb = ["Date        | Description                                   | Paid out  | Paid in   | Balance"]
+        for b in rec.B:
+            if b['k'] == k:
+                o = fmt(b['amount']) if b['amount'] < 0 else ''
+                i = fmt(b['amount']) if b['amount'] > 0 else ''
+                tb.append(f"{b['id']} {uk(b['date'])} | {b['desc']} | {o} | {i} | {fmt(b['balance'])}")
+        tl = ["Date | Ref | Details | Payments | Receipts"]
+        for l in rec.L:
+            if l['k'] == k:
+                p = fmt(l['amount']) if l['amount'] < 0 else ''
+                rc = fmt(l['amount']) if l['amount'] > 0 else ''
+                tl.append(f"{l['id']} {uk(l['date'])} | {l['ref']} | {l['desc']} | {p} | {rc}")
+        out.append(f"Bank statement, {names[k]} (Business Current Account):\n" + '\n'.join(tb) + f"\nClosing balance £{fmt(rec.bank_close[k])}")
+        out.append('')
+        out.append(f"Cash book, {names[k]}:\n" + '\n'.join(tl) + f"\nCash-book closing balance £{fmt(rec.ledger_close[k])}")
+        out.append('')
+    sch_bal = ', '.join(f'"{n}": 12345.67' for n in names[:2]) + (', ...' if multi else '')
+    schema = ('{"bank": {"B101": "L102", "B102": "bank_charge", ' + ('"B105": ["L106", "L107"], ' if on('splits') else '') + '...}, '
+              '"ledger": {"L101": "B103", "L102": "B101", "L109": "unpresented_cheque", ...}, '
+              '"differences": {"B107": {"reason": "keying_error", "amount": -270.00}}, '
+              f'"adjusted_balance": {{{sch_bal}}}}}')
     split_note = (' (a list for a split or a BACS run)' if on('batch') else ' (a list for a split)') if on('splits') else ''
-    return (f"Can you do the {month} bank reconciliation for {rec.company}? {opening}\n\n{rules}\n\n"
-            f"Bank statement, {month} (Business Current Account):\n" + '\n'.join(tb) + f"\nClosing balance £{fmt(rec.bank_close)}\n\n"
-            f"Cash book, {month}:\n" + '\n'.join(tl) + f"\nCash-book closing balance £{fmt(rec.ledger_close)}\n\n"
-            "Answer with one JSON object in exactly this shape:\n" + schema + "\n"
-            f"- bank: every statement line, with the cash-book entry it matches{split_note} or its reason from rule 3" + (" or last month's item id" if rec.prior else '') + ".\n"
-            f"- ledger: every cash-book entry, with the bank line it matches{' (a list for a split)' if on('splits') else ''} or its reason from rule 4.\n"
-            "- differences: one entry per matched bank line whose amount differs from the cash book (rule 2); leave it empty ({}) if there are none.\n"
-            "- adjusted_balance: in pounds, to the penny.\n"
-            f"Marking: each bank line, each cash-book entry, each difference's reason and amount and the adjusted balance is a field. Routine fields (a straightforward match) are worth 1 point; "
-            f"fields that need extra care ({care_list(fams)}) are worth {TRAP_WEIGHT}. Every difference you list that is not one costs two fields at {TRAP_WEIGHT} points each. "
-            "Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter, and amounts may have a £ sign. "
-            "Give one value per field: a field with two answers is marked wrong, and if you give more than one JSON answer only the last one counts.")
+    out.append("Answer with one JSON object in exactly this shape:\n" + schema + "\n"
+               f"- bank: every statement line, with the cash-book entry it matches{split_note} or its reason from rule 3.\n"
+               f"- ledger: every cash-book entry, with the bank line it matches{' (a list for a split)' if on('splits') else ''} or its reason from rule 4.\n"
+               "- differences: one entry per matched bank line whose amount differs from the cash book (rule 2); leave it empty ({}) if there are none.\n"
+               f"- adjusted_balance: the adjusted balance at the end of {'each month, keyed by the month as written above' if multi else 'the month, keyed by the month as written above'} (rule 5), in pounds to the penny.\n"
+               f"Marking: each bank line, each cash-book entry, each difference's reason and amount and each adjusted balance is a field. Routine fields (a straightforward match) are worth 1 point; "
+               f"fields that need extra care ({care_list(fams)}) are worth {TRAP_WEIGHT}, and each adjusted balance is worth {bal_weight} (the balances together are about a quarter of the points). "
+               f"Every difference you list that is not one costs two fields at {TRAP_WEIGHT} points each. "
+               "Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter, and amounts may have a £ sign. "
+               "Give one value per field: a field with two answers is marked wrong, and if you give more than one JSON answer only the last one counts.")
+    return '\n'.join(out)
 
 
 # ───────────────────────────── the levels ─────────────────────────────
 
 
-def dup_instalment(rec):
-    """An instalment the bank paid twice: a split payment, then a second copy of its first instalment the next day."""
-    before = len(rec.bank)
-    rec.split(bank_split=True)
-    b = rec.bank[before]
-    d2 = b['date'] + timedelta(days=1)
-    while d2.weekday() >= 5:
-        d2 += timedelta(days=1)
-    if d2 > rec.last:
-        d2 = b['date']
-    B2 = rec.add_bank(d2, b['desc'], b['amount'], dict(kind='bdup'))
-    rec.truth_bank[B2] = 'duplicate_payment'
-
-
-def lookalike(rec):
-    """Same supplier and same amount as an earlier ordinary payment, a different invoice, later in the month."""
-    pays = [i for i, l in enumerate(rec.ledger) if l['tx']['kind'] == 'pay']
-    L0 = rec.ledger[rec.rng.choice(pays)]
-    sup = next(s for s in SUPPLIERS if s[0] in L0['desc'])
-    rec.payment(amt=-L0['amount'], sup=sup, d=min(L0['date'] + timedelta(days=rec.rng.randint(5, 9)), rec.last - timedelta(days=4)))
-
-
-def build_small(seed, level):
-    rec = Rec(seed, 'ladder')
+def build_rec(seed, level):
+    months, nf = LEVELS[level]
+    fams = set(FAMILIES[:nf])
+    sz = SIZES[level]
+    rec = MRec(seed, months)
     rng = rec.rng
-    n_pay, n_rec = {1: (6, 4), 2: (10, 6), 3: (15, 8), 4: (22, 10)}[level]
-    rec.opening += {1: 0, 2: 8000, 3: 15000, 4: 25000}[level]
-    rec.bank_opening = rec.opening
-    for _ in range(n_pay):
-        rec.payment()
-    for _ in range(n_rec):
-        rec.receipt()
-    rec.cheque(True)
-    rec.cheque(False)
-    rec.deposit_in_transit()
-    rec.bank_only('bank_charge')
-    if level < 4:
-        rec.bank_only('interest')
-    rec.keying_error()
-    if level >= 2:
-        rec.bank_only('unrecorded_direct_debit')
-        rec.ledger_duplicate()
-        if level < 4:
-            rec.bank_duplicate()
-            rec.keying_error()
-    if level >= 3:
+    for k in range(months):
+        rec.window(k)
+        for _ in range(sz['pay']):
+            rec.payment()
+        for _ in range(sz['rec']):
+            rec.receipt()
         rec.cheque(True)
-        rec.split(bank_split=True)
-        rec.split(bank_split=level == 4 and rng.random() < 0.5)
-        rec.reversed_charge()
-    if level == 4:
-        rec.batch(3)
-        rec.returned_cheque()
-        rec.fx()
         rec.bank_only('bank_charge')
-    rec.finish()
-    return rec
-
-
-def build_big(seed, level):
-    """bankrec.build(seed, 'hard') with every count scaled by SCALE[level] (level 5 is exactly the hard build)."""
-    if level == 5:
-        return R.build(seed, 'hard')[0]
-    s = SCALE[level]
-    n = lambda k: max(1, round(k * s))  # noqa: E731
-    rec = Rec(seed, 'hard')
-    rec.opening += round(140000 * s)
-    rec.bank_opening = rec.opening
-    rec.prior_items()
-    for _ in range(n(60)):
-        rec.payment()
-    for _ in range(n(28)):
-        rec.receipt()
-    for _ in range(n(4)):
-        rec.cheque(True)
-    for _ in range(n(2)):
-        rec.cheque(False)
-    for _ in range(n(2)):
-        rec.deposit_in_transit()
-    for _ in range(n(2)):
-        rec.bank_only('bank_charge')
-    for _ in range(n(1)):
-        rec.bank_only('interest')
-    for _ in range(n(2)):
-        rec.bank_only('unrecorded_direct_debit')
-    for _ in range(n(6)):
+        if k == months - 1 or rng.random() < 0.5:
+            rec.bank_only('interest')
         rec.keying_error()
-    for _ in range(n(3)):
-        rec.fx()
-    for _ in range(n(3)):
-        rec.bank_duplicate()
-    for _ in range(n(3)):
-        rec.ledger_duplicate()
-    for k in range(n(4)):
-        rec.split(bank_split=k % 4 < 2, parts=3 if k % 4 == 0 else 2)
-    for k in range(n(4)):
-        rec.batch(3 + k % 3)
-    for _ in range(n(3)):
-        rec.returned_cheque()
-    for _ in range(n(2)):
-        rec.reversed_charge()
-    for _ in range(n(2)):
-        lookalike(rec)
-    for _ in range(n(1)):
-        dup_instalment(rec)
+        if months == 1:
+            rec.cheque(False)
+            rec.deposit_in_transit()
+        if 'dd' in fams:
+            rec.bank_only('unrecorded_direct_debit')
+        if 'duplicates' in fams:
+            (rec.ledger_duplicate if k % 2 == 0 else rec.bank_duplicate)()
+            if level >= 6:
+                (rec.bank_duplicate if k % 2 == 0 else rec.ledger_duplicate)()
+        if 'splits' in fams:
+            rec.split(bank_split=rng.random() < 0.5)
+        if 'reversal' in fams and k == months - 1:
+            rec.reversed_charge()
+        if 'returned' in fams and k == months - 1:
+            rec.returned_cheque()
+        if 'batch' in fams:
+            rec.batch(3 + k % 3)
+        if 'fx' in fams:
+            rec.fx()
+        # cross-month items: they clear in a later month, or are still outstanding at the end
+        if 'carry' in fams:
+            rec.paid_in_cross(k)
+            for j in range(sz['cross']):
+                rec.cheque_cross(k, rng.choice([1, 1, 2, None]) if j else 1)
+            if k < months - 1:
+                rec.keying_cross(k)
+                if 'reversal' in fams and rng.random() < 0.7:
+                    rec.reversal_cross(k)
+                if 'returned' in fams and rng.random() < 0.7:
+                    rec.returned_cross(k)
+                if 'instalments' in fams and k + 2 <= months:
+                    rec.instalments(k, min(months - k, rng.choice([2, 3])))
+            elif months == 1:
+                pass
+        if 'carry' not in fams and k == months - 1:
+            pass
+    if 'carry' in fams:
+        rec.window(months - 1)
+        rec.cheque(False)
+    rec.window(0)
     rec.finish()
-    return rec
+    return rec, fams
+
+
+def careless(rec):
+    """A hurried bookkeeper: each month on its own, exact amounts only, within that month's statement; leftovers are
+    timing items or bank charges; each month's balance corrected for that month's bank-only lines only."""
+    kb, kl = {}, {}
+    for k in range(rec.n_months):
+        used = set()
+        for b in [x for x in rec.B if x['k'] == k]:
+            best = next((l for l in rec.L if l['k'] == k and l['id'] not in used and l['amount'] == b['amount'] and 0 <= (b['date'] - l['date']).days <= 7), None)
+            if best:
+                used.add(best['id'])
+                kb[b['id']] = best['id']
+                kl[best['id']] = b['id']
+            else:
+                kb[b['id']] = 'bank_charge' if b['amount'] < 0 else 'interest'
+    for l in rec.L:
+        kl.setdefault(l['id'], 'unpresented_cheque' if l['amount'] < 0 else 'deposit_in_transit')
+    bals = {}
+    for k in range(rec.n_months):
+        bals[rec.month_label(k)] = float(rec.ledger_close[k] + sum((b['amount'] for b in rec.B if b['k'] == k and not str(kb[b['id']]).startswith('L')), D('0')))
+    return {'bank': kb, 'ledger': kl, 'differences': {}, 'adjusted_balance': bals}
+
+
+def slip(rec, exp):
+    """A strong bookkeeper's one slip: the first keying difference's sign flipped, and with it every balance from that
+    month on (the slip carries, as it would in real books)."""
+    out = json.loads(json.dumps(exp))
+    first = min(out['differences'])
+    v = out['differences'][first]
+    v['amount'] = -v['amount']
+    k0 = rec.bank_month[first]
+    for k in range(k0, rec.n_months):
+        out['adjusted_balance'][rec.month_label(k)] = float(D(str(out['adjusted_balance'][rec.month_label(k)])) - 2 * D(str(exp['differences'][first]['amount'])))
+    return out
+
+
+def chain_error(rec, exp):
+    """The reasoning error that spreads: every line right, but each month's balance corrected only for that month's
+    own items (the corrections of earlier months forgotten, as if the cash book had been put right)."""
+    out = json.loads(json.dumps(exp))
+    for k in range(rec.n_months):
+        cb = rec.ledger_close[k]
+        for b in rec.B:
+            if b['k'] == k and rec.key_bank[b['id']] in BANK_ONLY:
+                cb += b['amount']
+        for bid_, v in rec.key_diffs.items():
+            if rec.bank_month[bid_] == k:
+                cb += D(str(v['amount']))
+        for l in rec.L:
+            if l['k'] == k and rec.key_ledger[l['id']] == 'duplicate_entry':
+                cb -= l['amount']
+        out['adjusted_balance'][rec.month_label(k)] = float(cb)
+    return out
 
 
 def check(rec, key, fams):
     bad = []
-    vals = list(key['bank'].values()) + list(key['ledger'].values()) + [v['reason'] for v in key['differences'].values()]
+    vals = list(key['bank'].values()) + list(key['ledger'].values())
+    if any(isinstance(v, list) for v in vals) and 'splits' not in fams:
+        bad.append('a split without its rule')
+    reason_family = {'unrecorded_direct_debit': 'dd', 'duplicate_payment': 'duplicates', 'duplicate_entry': 'duplicates', 'reversed_charge': 'reversal', 'returned_cheque': 'returned'}
     for v in vals:
-        if isinstance(v, list):
-            if 'splits' not in fams:
-                bad.append('a split without the split rule')
-        elif v in REASON_FAMILY and REASON_FAMILY[v] and REASON_FAMILY[v] not in fams:
+        if isinstance(v, str) and reason_family.get(v) and reason_family[v] not in fams:
             bad.append(f'{v} without its rule')
-    if any(l['tx']['kind'] == 'batch' for l in rec.L) and 'batch' not in fams:
-        bad.append('a BACS run without its rule')
-    if rec.prior and 'prior' not in fams:
-        bad.append('prior items without their rule')
-    chq = [l['ref'] for l in rec.L if l['ref'].startswith('CHQ')] + [it['ref'] for it in rec.prior if it['ref'].startswith('CHQ')]
+    if any(v['reason'] == 'fx_difference' for v in key['differences'].values()) and 'fx' not in fams:
+        bad.append('fx without its rule')
+    cross = sum(1 for l in rec.L for v in [key['ledger'][l['id']]] if isinstance(v, str) and v.startswith('B') and rec.bank_month[v] != l['k'])
+    if rec.n_months > 1 and cross < rec.n_months:
+        bad.append('too few cross-month clearings')
+    chq = [l['ref'] for l in rec.L if l['ref'].startswith('CHQ')]
     if len(chq) != len(set(chq)):
         bad.append('cheque numbers repeat')
+    if not key['differences']:
+        bad.append('no difference')
     return bad
 
 
+def bal_weight_for(exp, months, sc_weights):
+    """Each balance's weight: the balances together are about a quarter of the level's points."""
+    other = sum(sc_weights.get(f'bank.{k}', 1) for k in exp['bank']) + sum(sc_weights.get(f'ledger.{k}', 1) for k in exp['ledger']) + 2 * TRAP_WEIGHT * len(exp['differences'])
+    return max(TRAP_WEIGHT, round(other / 3 / months))
+
+
 def build_level(level):
-    fams = set(FAMS[level])
-    for k in range(60):
+    for k in range(80):
         try:
-            rec = (build_small if level < 5 else build_big)(SEEDS[level] * 100 + k, level)
+            rec, fams = build_rec(SEEDS[level] * 100 + k, level)
             check_unique(rec)
-            bal = balance(rec)
+            bals = balances(rec)
         except AssertionError:
             continue
-        exp = {'bank': rec.key_bank, 'ledger': rec.key_ledger, 'differences': rec.key_diffs, 'adjusted_balance': float(bal)}
-        if rec.prior:
-            exp['prior'] = rec.key_prior
+        exp = {'bank': rec.key_bank, 'ledger': rec.key_ledger, 'differences': rec.key_diffs,
+               'adjusted_balance': {rec.month_label(i): float(b) for i, b in enumerate(bals)}}
         if not check(rec, exp, fams):
             break
     else:
-        raise AssertionError(f'L{level:02d}: no valid month')
-    s, kind = slip(rec, exp), 'returned cheque booked as a bank charge, FX difference sign flipped'
-    if s == exp:
-        # no returned cheque or FX payment yet: the strong bookkeeper's slip is the keying difference's sign
-        s = json.loads(json.dumps(exp))
-        for v in s['differences'].values():
-            v['amount'] = -v['amount']
-        kind = 'keying difference sign flipped'
-    return dict(id=f'L{level:02d}', level=level, prompt=prompt(rec, fams), expected=exp, careless=careless(rec), slip=s, slip_kind=kind,
-                n_bank=len(rec.B), n_ledger=len(rec.L), attempt=k, fams=FAMS[level], rec=rec)
-
-
-def self_test():
-    """With every family, the prompt is bankrec.prompt() byte for byte (with and without last month's items)."""
-    for tier in ('hard', 'medium'):
-        rec, _ = R.build(100700 if tier == 'hard' else 90500, tier)
-        assert prompt(rec, set(FAMILIES)) == R.prompt(rec), f'full prompt differs from bankrec.prompt() ({tier})'
+        raise AssertionError(f'L{level:02d}: no valid set of months')
+    months, nf = LEVELS[level]
+    return dict(id=f'L{level:02d}', level=level, rec=rec, fams=FAMILIES[:nf], months=months, expected=exp, careless=careless(rec), slip=slip(rec, exp),
+                slip_kind='the first keying difference\'s sign flipped (and every balance from that month on)', chain=chain_error(rec, exp) if months > 1 else None, n_bank=len(rec.B), n_ledger=len(rec.L), attempt=k,
+                cross=sum(1 for l in rec.L for v in [exp['ledger'][l['id']]] if isinstance(v, str) and v.startswith('B') and rec.bank_month[v] != l['k']))
 
 
 def make_cases():
-    self_test()
     return [build_level(l) for l in range(1, 11)]
 
 
@@ -319,4 +564,5 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.join(HERE, '..'))
     from common import tok
     for c in make_cases():
-        print(c['id'], c['n_bank'], 'bank', c['n_ledger'], 'ledger', tok(c['prompt']), 'tokens', len(c['expected']['differences']), 'differences', 'attempt', c['attempt'])
+        p = prompt(c['rec'], set(c['fams']), 9)
+        print(c['id'], c['months'], 'months', c['n_bank'], 'bank', c['n_ledger'], 'ledger', c['cross'], 'cross-month', tok(p), 'tokens', len(c['expected']['differences']), 'diffs', 'attempt', c['attempt'])
