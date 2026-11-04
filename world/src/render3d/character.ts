@@ -98,6 +98,9 @@ function limb(g: THREE.BufferGeometry, m: THREE.Material, len: number): { pivot:
   return { pivot, end }
 }
 
+/** Scale from the rig's model units to world units (tiles). */
+export const PERSON_SCALE = 0.5
+
 export class Person3D {
   root = new THREE.Group()
   private body = new THREE.Group()
@@ -233,7 +236,7 @@ export class Person3D {
     // tool in the right hand
     this.toolHolder = new THREE.Group()
     this.arms[1].hand.add(this.toolHolder)
-    if (tool) this.toolHolder.add(makeTool(tool, a.toolTier, era))
+    if (tool) this.toolHolder.add(makeTool(tool, Math.max(a.toolTier, tool === 'sword' ? Math.min(4, era >= 4 ? 4 : era >= 2 ? 3 : 2) : a.toolTier), era, tribeColor))
     // carried load on the back
     this.load = new THREE.Group()
     this.load.position.set(0, 0.12, -0.08)
@@ -259,7 +262,8 @@ export class Person3D {
     this.build(a, era, tribeColor, leader, child, tool)
     const grow = (child ? 0.55 + (age / 14) * 0.38 : 1) * a.look.height
     this.root.position.set(x, y, z)
-    this.root.scale.setScalar(grow * 1.55)
+    // a tile is about six metres: an adult stands ~0.3 tiles tall, a cottage ~0.8
+    this.root.scale.setScalar(grow * PERSON_SCALE)
     // face the direction of travel
     if (!Number.isNaN(this.lastX)) {
       const dx = x - this.lastX, dz = z - this.lastZ
@@ -329,7 +333,9 @@ export class Person3D {
 
 const METAL = ['#8d8f93', '#8d8f93', '#c27a3a', '#9aa3ad', '#c9d1d9', '#f2c94c']
 
-function makeTool(tool: string, tier: number, era: number): THREE.Group {
+let tribeFlag = '#ffffff'
+function makeTool(tool: string, tier: number, era: number, color = '#ffffff'): THREE.Group {
+  tribeFlag = color
   const g = new THREE.Group()
   const wood = mat('#7a5230', 0.7)
   const metal = mat(METAL[Math.min(5, tier)], 0.35)
@@ -351,6 +357,33 @@ function makeTool(tool: string, tier: number, era: number): THREE.Group {
     case 'staff': { const h = mesh(geo.handle, mat('#6b4a2b'), 0, 0.15, 0); h.scale.y = 1.6; h.rotation.x = Math.PI; g.add(h); break }
     case 'rod': { const r = mesh(geo.rod, mat(era >= 6 ? '#2d2d2d' : '#9a7a4a', 0.5), 0, 0, 0); r.rotation.x = Math.PI; g.add(r); break }
     case 'book': { const b = mesh(geo.book, mat(era >= 2 ? '#7b3f2a' : '#d9c79a', 0.8), 0, 0.03, 0.02); g.add(b); break }
+    case 'club': { const h = mesh(geo.handle, wood, 0, 0.15, 0); h.rotation.x = Math.PI; h.scale.set(1.8, 1, 1.8); g.add(h); g.add(mesh(geo.sack, mat('#6b4a2b', 0.9), 0, 0.3, 0)).scale.setScalar(0.4); break }
+    case 'sword': {
+      const blade = mesh(geo.axeHead, metal, 0, 0.2, 0); blade.scale.set(0.5, 4.2, 0.45); g.add(blade)
+      g.add(mesh(geo.hammerHead, mat('#6b4a2b', 0.6), 0, 0.04, 0)).scale.set(1.6, 0.25, 0.4)
+      // a round shield on the off arm is implied by the pose; a guard on the hilt
+      break
+    }
+    case 'bow': {
+      const arc = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.008, 4, 14, Math.PI), wood)
+      arc.rotation.z = Math.PI / 2
+      arc.position.y = 0.05
+      g.add(arc)
+      break
+    }
+    case 'rifle': {
+      const stock = mesh(geo.hammerHead, mat(era >= 8 ? '#2a2c30' : '#5a3d26', 0.6), 0, 0.05, 0); stock.scale.set(0.5, 1.6, 0.6); g.add(stock)
+      const barrel = mesh(geo.handle, mat('#3a3a40', 0.3), 0, 0.12, 0); barrel.rotation.x = Math.PI; barrel.scale.set(0.8, 1.1, 0.8); g.add(barrel)
+      break
+    }
+    case 'flag': {
+      const pole = mesh(geo.handle, mat('#d9c9a0', 0.6), 0, 0.15, 0); pole.rotation.x = Math.PI; pole.scale.y = 2.4; g.add(pole)
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.14), new THREE.MeshStandardMaterial({ color: tribeFlag, roughness: 0.9, side: THREE.DoubleSide }))
+      cloth.position.set(0, 0.62, 0.11)
+      cloth.rotation.y = Math.PI / 2
+      g.add(cloth)
+      break
+    }
   }
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true })
   return g
@@ -387,7 +420,7 @@ export class Animal3D {
     const m = mat(col, 0.85)
     const s = rabbit ? 0.45 : an.kind === 'boar' ? 0.9 : 1
     this.root.add(this.bodyG)
-    this.bodyG.scale.setScalar(s)
+    this.bodyG.scale.setScalar(s * 0.5)
     const legH = deer ? 0.2 : rabbit ? 0.08 : 0.12
     const body = mesh(agio.body, m, 0, legH + 0.1, 0)
     body.scale.set(deer ? 0.9 : 1.1, deer ? 0.9 : 1.1, rabbit ? 0.6 : 1)
@@ -416,7 +449,7 @@ export class Animal3D {
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true })
     const blob = new THREE.Mesh(geo.blob, blobMat)
     blob.position.y = 0.01
-    blob.scale.setScalar(s * 1.2)
+    blob.scale.setScalar(s * 0.6)
     this.root.add(blob)
   }
   update(x: number, y: number, z: number, t: number) {

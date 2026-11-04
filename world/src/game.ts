@@ -10,6 +10,7 @@ import type { MapView, ViewMode } from './render/view.ts'
 import { mind } from './ai/mind.ts'
 import { saveToSlot, loadSlot } from './sim/save.ts'
 import type { ChronicleEntry } from './sim/types.ts'
+import * as dip from './sim/diplomacy.ts'
 
 export const SPEEDS = [1, 3, 10, 30, 100]
 
@@ -183,7 +184,7 @@ class Game {
     if (!r) return
     r.selection = { kind: 'agent', id }
     const a = this.world.agentById.get(id)
-    if (a && fly) r.flyTo(a.x, a.y, Math.max(r.cam.zoom, 2))
+    if (a && fly) r.flyTo(a.x, a.y, Math.max(r.cam.zoom, this.view === '3d' ? 3.4 : 2))
     this.emit()
   }
   selectBuilding(id: number) {
@@ -207,3 +208,4 @@ class Game {
 export const game = new Game()
 // handy for debugging from the console
 ;(globalThis as unknown as { genesis: Game }).genesis = game
+;(globalThis as unknown as { genesisDiplomacy: typeof dip }).genesisDiplomacy = dip

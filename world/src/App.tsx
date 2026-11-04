@@ -155,6 +155,12 @@ function TopBar({ onModal, onMenu }: { onModal: (m: ModalKind) => void; onMenu: 
       </div>
       <span className="era-badge hide-sm" style={{ color: era.color, borderColor: era.color + '66', background: era.color + '14' }}>{era.name}</span>
       <div className="stat-chip hide-md"><span className="lbl">Population</span>{w.living.length}</div>
+      {(() => {
+        const wars = w.dip.wars.filter((x) => !x.ended)
+        if (!wars.length) return null
+        const names = wars.map((x) => `${w.tribeById(x.a)?.name} vs ${w.tribeById(x.b)?.name}`).join(' · ')
+        return <div className="stat-chip war-chip" title={names}><span className="lbl">At war</span>⚔️ {wars.length}</div>
+      })()}
       <div className="stat-chip hide-md"><span className="lbl">Tribes</span>{w.tribes.filter((x) => x.alive).length}</div>
       <div className="spacer" />
       <button
@@ -198,6 +204,7 @@ function Minimap({ wide }: { wide: boolean }) {
     <div className={`minimap glass ${wide ? 'wide' : ''}`}>
       <canvas ref={ref} onMouseDown={jump} onMouseMove={(e) => e.buttons === 1 && jump(e)} />
       {overlay === 'geology' && <div className="legend">{DEPOSITS.filter((d) => d.id).map((d) => <span key={d.id}><i style={{ background: d.map }} />{d.name.split(' ')[0]}</span>)}<small>bright = found by the selected people</small></div>}
+      {overlay === 'diplomacy' && <div className="legend"><span><i style={{ background: '#ff3b3b' }} />war</span><span><i style={{ background: '#4ade80' }} />alliance</span><span><i style={{ background: '#fbbf24' }} />trade</span><span><i style={{ background: '#c084fc' }} />tribute</span></div>}
       {overlay === 'fish' && <div className="legend"><span><i style={{ background: '#00e6c8' }} />plentiful</span><span><i style={{ background: '#ff5a50' }} />fished out</span></div>}
       <div className="controls">
         <select value={overlay} onChange={(e) => { const v = e.target.value as Overlay; setOverlay(v); if (game.renderer) game.renderer.overlay = v }}>
@@ -208,6 +215,7 @@ function Minimap({ wide }: { wide: boolean }) {
           <option value="explored">Explored (selected tribe)</option>
           <option value="geology">Geology: what lies underground</option>
           <option value="fish">Fish stocks</option>
+          <option value="diplomacy">Diplomacy: alliances & wars</option>
         </select>
         <button className="icon-btn" onClick={() => game.renderer?.zoomAt(game.renderer.vw / 2, game.renderer.vh / 2, 1.25)}>＋</button>
         <button className="icon-btn" onClick={() => game.renderer?.zoomAt(game.renderer.vw / 2, game.renderer.vh / 2, 0.8)}>－</button>

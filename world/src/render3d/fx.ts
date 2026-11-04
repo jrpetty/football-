@@ -132,7 +132,7 @@ export class Weather {
     this.snowPos = new Float32Array(this.N * 3)
     const sg = new THREE.BufferGeometry()
     sg.setAttribute('position', new THREE.BufferAttribute(this.snowPos, 3).setUsage(THREE.DynamicDrawUsage))
-    this.snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 0.09, transparent: true, opacity: 0.9, depthWrite: false }))
+    this.snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 0.035, transparent: true, opacity: 0.9, depthWrite: false }))
     this.snow.frustumCulled = false
     this.group.add(this.rain, this.snow)
   }
@@ -157,7 +157,7 @@ export class Weather {
         continue
       }
       if (rain) {
-        const L = 0.5 * sp
+        const L = 0.22 * sp
         this.rainPos[k * 6] = x; this.rainPos[k * 6 + 1] = y; this.rainPos[k * 6 + 2] = z
         this.rainPos[k * 6 + 3] = x - (kind === 'storm' ? 0.12 : 0.04); this.rainPos[k * 6 + 4] = y - L; this.rainPos[k * 6 + 5] = z
       } else {

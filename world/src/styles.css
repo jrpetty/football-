@@ -302,3 +302,14 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .minimap .legend span { display: inline-flex; align-items: center; gap: 4px; }
 .minimap .legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 .minimap .legend small { width: 100%; opacity: 0.8; }
+
+.rel-row { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; }
+.rel-status { font-size: 11px; font-weight: 700; border: 1px solid; border-radius: 999px; padding: 1px 8px; }
+.rel-bar { position: relative; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.rel-bar::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.35); }
+.rel-bar > div { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.rel-war { grid-column: 1 / -1; }
+.rel-bar.war { margin-top: 3px; }
+
+.war-chip { border-color: rgba(255, 82, 82, 0.6) !important; color: #ffb4b4; animation: war-pulse 2s ease-in-out infinite; }
+@keyframes war-pulse { 50% { box-shadow: 0 0 0 3px rgba(255, 82, 82, 0.2); } }

@@ -12,12 +12,13 @@ import { hash2, clamp, smoothstep, Noise2D } from '../sim/rng.ts'
 import type { World } from '../sim/world.ts'
 import type { Agent, Building } from '../sim/types.ts'
 import { featureSprite, buildingSprite, SPR } from './sprites.ts'
+import { status as dipStatus } from '../sim/diplomacy.ts'
 import { drawPerson, drawCreature } from './people.ts'
 
 export const TP = 16 // screen px per tile at zoom 1
 const CHUNK = 32
 
-export type Overlay = 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish'
+export type Overlay = 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish' | 'diplomacy'
 
 export interface Selection {
   kind: 'agent' | 'building' | 'tile' | 'tribe' | null
@@ -592,7 +593,7 @@ export class Renderer {
     }
 
     // overlays
-    if (this.overlay === 'territory') {
+    if (this.overlay === 'territory' || this.overlay === 'diplomacy') {
       if (!this.terr || (w.territoryDirty && now - this.terrT > 800)) {
         this.renderTerritory()
         w.territoryDirty = false
@@ -706,8 +707,42 @@ export class Renderer {
     ctx.fillStyle = vg
     ctx.fillRect(0, 0, this.vw, this.vh)
 
+    // --- relations between peoples, and armies on the march
+    this.drawDiplomacy(ox, oy, S, now)
+
     // --- labels & speech on top of everything
     this.drawLabels(ox, oy, S, now, left, right, top, bottom)
+  }
+
+  private drawDiplomacy(ox: number, oy: number, S: number, now: number) {
+    const w = this.world
+    const ctx = this.ctx
+    const live = w.tribes.filter((t) => t.alive)
+    if (this.overlay === 'diplomacy') {
+      const col: Record<string, string> = { war: '#ff3b3b', alliance: '#4ade80', trade: '#fbbf24', tribute: '#c084fc', hostile: 'rgba(248,113,113,0.7)', tense: 'rgba(251,146,60,0.5)', friendly: 'rgba(134,239,172,0.5)' }
+      for (const a of live) for (const b of live) {
+        if (a.id >= b.id) continue
+        const st = dipStatus(w, a.id, b.id)
+        if (!col[st]) continue
+        ctx.strokeStyle = col[st]
+        ctx.lineWidth = st === 'war' ? 4 : 2.5
+        ctx.setLineDash(st === 'war' ? [10, 7] : st === 'alliance' ? [] : [4, 6])
+        ctx.lineDashOffset = st === 'war' ? -now / 30 : 0
+        ctx.beginPath(); ctx.moveTo(ox + (a.center.x + 0.5) * S, oy + (a.center.y + 0.5) * S); ctx.lineTo(ox + (b.center.x + 0.5) * S, oy + (b.center.y + 0.5) * S); ctx.stroke()
+      }
+      ctx.setLineDash([])
+    }
+    for (const c of w.dip.campaigns) {
+      if (c.kind === 'defend' || !c.units.length) continue
+      let sx = 0, sy = 0, n = 0
+      for (const id of c.units) { const a = w.agentById.get(id); if (a?.alive) { sx += a.x; sy += a.y; n++ } }
+      if (!n) continue
+      ctx.strokeStyle = w.tribeById(c.side)?.color ?? '#f33'
+      ctx.lineWidth = 3
+      ctx.setLineDash([10, 7]); ctx.lineDashOffset = -now / 25
+      ctx.beginPath(); ctx.moveTo(ox + (sx / n) * S, oy + (sy / n) * S); ctx.lineTo(ox + (c.tx + 0.5) * S, oy + (c.ty + 0.5) * S); ctx.stroke()
+      ctx.setLineDash([])
+    }
   }
 
   private drawBuilding(b: Building, ox: number, oy: number, S: number, now: number) {
@@ -826,7 +861,7 @@ export class Renderer {
     const t = w.tribeById(a.tribeId)
     const x = ox + a.x * S, y = oy + a.y * S + S * 0.3
     const r = drawPerson(ctx, {
-      x, y, h: S * 1.45, t: now / 1000, a, era: t ? eraOf(w.techs(t.id)) : 0, tribeColor: t?.color ?? '#ccc',
+      x, y, h: S * 0.95, t: now / 1000, a, era: t ? eraOf(w.techs(t.id)) : 0, tribeColor: t?.color ?? '#ccc',
       leader: t?.leaderId === a.id, age: w.age(a), toolTier: a.toolTier,
     })
     if (r.impact && Math.random() < 0.7) {

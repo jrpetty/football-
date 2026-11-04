@@ -143,6 +143,44 @@ Production chains are real:
 Industry needs power: coal plants, then wind turbines, solar farms and nuclear
 stations. Later come airports, radio masts and harbours.
 
+**Peoples, alliances and war.** Tribes meet when their lands touch, and each
+holds an opinion of the others that moves with real causes:
+
+- settlements and borders pressing together, and a filling world
+- competition for the same ore and fishing grounds
+- hunger beside plenty
+- trade and marriages across the line
+- shared enemies, old grievances, cultural kinship
+- the temper of their leaders
+
+**What leaders can do.** Trade pacts move surplus goods and ideas between
+peoples. Alliances call allies to arms. Leaders also send gifts, demand tribute
+from the weak and sue for peace. They go to war over grudges, hunger, ore they
+need, or ambition.
+
+**How wars are fought.** Wars are fought by the people themselves:
+
+- warriors muster at their hub and march on the enemy as a visible column with
+  a banner bearer
+- they fight battles decided by numbers, health, weapons, barracks, walls and
+  home ground
+- weapons follow technology: clubs, spears, bows, bronze, iron and steel
+  blades, muskets, rifles, armour, aircraft, guided weapons, drones
+
+**How wars end.** Victorious raiders carry off stores and set buildings alight,
+and the fallen are really dead. Peace brings tribute for the winner, and a
+broken people can be conquered outright, its homes, stores and knowledge
+passing to the victor. AI leaders make these decisions through a `diplomacy`
+action; instinct leaders follow their temperament.
+
+**Seeing it.** A Diplomacy overlay draws alliances, trade, tribute and war
+between towns, armies on the march are always shown, and the Tribes panel shows
+every relationship, the balance of power and how each war is going.
+
+**True scale.** A tile is about six metres. People stand about a third as tall
+as a cottage, trees tower over them, doors fit them, and animals, grass and
+crops are life-sized.
+
 **Lives and lineages.** Personalities use the Big Five plus intelligence and
 strength. Everyone looks like an individual:
 

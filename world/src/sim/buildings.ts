@@ -8,7 +8,7 @@ export type BuildingType =
   | 'university' | 'hospital' | 'factory' | 'power_plant' | 'lab' | 'data_center'
   | 'road' | 'launch_pad' | 'monument'
   | 'oil_well' | 'offshore_rig' | 'evaporation_ponds' | 'refinery' | 'fish_farm' | 'wind_farm' | 'solar_farm'
-  | 'nuclear_plant' | 'airport' | 'radio_tower' | 'harbour'
+  | 'nuclear_plant' | 'airport' | 'radio_tower' | 'harbour' | 'walls' | 'barracks'
 
 /** deposit = on a known ore body this people can reach; offshore = on the sea above one */
 export type Placement = 'land' | 'coast' | 'hills' | 'fertile' | 'any' | 'deposit' | 'offshore'
@@ -78,6 +78,8 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   airport: { id: 'airport', name: 'Airport', size: 2, cost: { concrete: 40, steel: 20, electronics: 10, fuel: 10 }, hours: 40, tech: 'flight', placement: 'land', light: 4, happiness: 3, walkable: true, desc: 'A runway and terminal: people and goods fly.' },
   radio_tower: { id: 'radio_tower', name: 'Radio mast', size: 1, cost: { steel: 10, electronics: 6 }, hours: 12, tech: 'radio', placement: 'land', research: 1.3, light: 2, happiness: 2, desc: 'Broadcasts news, music and lessons to everyone.' },
   harbour: { id: 'harbour', name: 'Harbour', size: 2, cost: { concrete: 30, steel: 16, planks: 20 }, hours: 36, tech: 'steamships', placement: 'coast', light: 3, desc: 'Quays, cranes and a fishing fleet: big boats, big catches.' },
+  walls: { id: 'walls', name: 'Town walls', size: 2, cost: { stone: 40, wood: 16 }, hours: 30, tech: 'masonry', placement: 'land', walkable: true, desc: 'A palisade, then stone walls and towers, then concrete: defenders fight far harder behind them.' },
+  barracks: { id: 'barracks', name: 'Barracks', size: 1, cost: { stone: 14, planks: 10 }, hours: 14, tech: 'bronze_working', placement: 'land', desc: 'Drilled, armed and trained warriors: the whole people fights a quarter better.' },
   launch_pad: { id: 'launch_pad', name: 'Launch pad', size: 2, cost: { concrete: 40, steel: 40, electronics: 25, fuel: 40, machinery: 10, aluminium: 20 }, hours: 60, tech: 'rocketry', placement: 'land', light: 4, desc: 'Send your people to the stars.' },
 }
 

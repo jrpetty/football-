@@ -6,6 +6,7 @@
 import { DEPOSITS, FOOD_ITEMS, invCount, invTotal, type Item } from './data.ts'
 import { BUILDINGS, RECIPES, type BuildingType } from './buildings.ts'
 import { oreStep } from './actions.ts'
+import { enemies, met } from './diplomacy.ts'
 import { availableTechs, eraOf } from './tech.ts'
 import { isNight, hourOf } from './time.ts'
 import type { Agent, PlanStep } from './types.ts'
@@ -84,7 +85,10 @@ export function instinctStep(w: World, a: Agent): PlanStep {
   if (availableTechs(known).length && r < researchWeight) return step('research')
 
   // build the next useful thing the tribe lacks
+  // threatened peoples fortify and train
+  const threat = enemies(w, t.id).length > 0 || w.tribes.some((o) => o.alive && o.id !== t.id && met(w, t.id, o.id) && w.tribeRelation(t.id, o.id) < -35)
   const wishlist: BuildingType[] = [
+    ...(threat ? (['barracks', 'walls'] as BuildingType[]) : []),
     'stockpile', 'farm', 'workshop', 'kiln', 'granary', 'well', 'farm', 'pasture', 'smithy', 'library', 'temple',
     'market', 'town_hall', 'mill', 'dock', 'farm', 'house', 'university', 'hospital', 'watchtower', 'factory',
     known.has('nuclear_power') ? 'nuclear_plant' : known.has('solar_power') ? 'solar_farm' : known.has('wind_power') ? 'wind_farm' : 'power_plant',

@@ -1,3 +1,4 @@
+import { met, status as dipStatus, strength as dipStrength, militaryTier, type Status } from '../sim/diplomacy.ts'
 import { useMemo, useState } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
@@ -67,6 +68,44 @@ export function PeoplePanel() {
 
 // ------------------------------------------------------------------ Tribes
 
+const STATUS_LOOK: Record<Status, [string, string]> = {
+  war: ['⚔️ At war', '#ff6b6b'], alliance: ['🤝 Allies', '#4ade80'], trade: ['🐫 Trading', '#fbbf24'], tribute: ['💰 Tribute', '#c084fc'],
+  friendly: ['🙂 Friendly', '#86efac'], neutral: ['😐 Neutral', '#cbd5e1'], tense: ['😠 Tense', '#fb923c'], hostile: ['😡 Hostile', '#f87171'], unknown: ['', ''],
+}
+
+/** How one people stands with every other it has met: opinion, pacts, strength and any war. */
+function Relations({ tribe }: { tribe: number }) {
+  const w = game.world
+  const mine = dipStrength(w, tribe)
+  const rows = w.tribes.filter((o) => o.alive && o.id !== tribe && met(w, tribe, o.id))
+  const wars = w.dip.wars.filter((x) => !x.ended && (x.a === tribe || x.b === tribe))
+  if (!rows.length) return <div className="meta" style={{ marginTop: 8 }}>Has not met another people yet.</div>
+  return (
+    <div style={{ marginTop: 10 }} onClick={(e) => e.stopPropagation()}>
+      <div className="meta">Relations · fights with {militaryTier(w.techs(tribe)).name}</div>
+      {rows.map((o) => {
+        const st = dipStatus(w, tribe, o.id)
+        const r = Math.round(w.tribeRelation(tribe, o.id))
+        const ratio = mine / Math.max(1, dipStrength(w, o.id))
+        const [label, col] = STATUS_LOOK[st]
+        const war = wars.find((x) => x.a === o.id || x.b === o.id)
+        const score = war ? (war.a === tribe ? war.score : -war.score) : 0
+        const trib = w.dip.pacts.find((p) => p.kind === 'tribute' && ((p.a === tribe && p.b === o.id) || (p.b === tribe && p.a === o.id)))
+        return (
+          <div key={o.id} className="rel-row">
+            <span style={{ color: o.color, fontWeight: 700 }}>{o.emblem} {o.name}</span>
+            <span className="rel-status" style={{ color: col, borderColor: col }}>{label}</span>
+            <div className="rel-bar" title={`Opinion ${r}`}><div style={{ left: r < 0 ? `${50 + r / 2}%` : '50%', width: `${Math.abs(r) / 2}%`, background: r < 0 ? '#f87171' : '#4ade80' }} /></div>
+            <span className="meta" title="Military strength compared with theirs">{ratio > 1.5 ? '💪 far stronger' : ratio > 1.1 ? '💪 stronger' : ratio > 0.9 ? '⚖️ even' : ratio > 0.6 ? '⚠️ weaker' : '⚠️ far weaker'}</span>
+            {war && <div className="meta rel-war">{war.reason} · {war.battles} battles · dead {war.dead[tribe] ?? 0} vs {war.dead[o.id] ?? 0} · {score > 20 ? 'winning' : score < -20 ? 'losing' : 'undecided'}<div className="rel-bar war"><div style={{ left: '50%', width: `${Math.abs(score) / 2}%`, transform: score < 0 ? 'translateX(-100%)' : undefined, background: score < 0 ? '#f87171' : '#4ade80' }} /></div></div>}
+            {trib && <div className="meta">{trib.payer === tribe ? 'Pays them tribute' : 'Receives their tribute'} until {formatDate(trib.until)}</div>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function TribesPanel() {
   useGameVersion()
   const w = game.world
@@ -117,15 +156,7 @@ export function TribesPanel() {
                 {stores.map(([k, n]) => <span key={k}>{ITEMS[k as Item].icon} {Math.floor(n ?? 0)}</span>)}
               </div>
             )}
-            {Object.keys(t.relations).length > 0 && (
-              <div className="filters" style={{ marginTop: 8, marginBottom: 0 }}>
-                {Object.entries(t.relations).map(([id, v]) => {
-                  const o = w.tribeById(+id)
-                  if (!o || !o.alive) return null
-                  return <span key={id} className={`tag ${v > 30 ? 'good' : v < -30 ? 'bad' : ''}`}>{o.emblem} {o.name} {v > 30 ? 'allies' : v < -30 ? 'rivals' : 'neutral'} ({Math.round(v)})</span>
-                })}
-              </div>
-            )}
+            {t.alive && <Relations tribe={t.id} />}
             {t.works.length > 0 && (
               <details style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
                 <summary className="meta" style={{ cursor: 'pointer' }}>📜 {t.works.length} written works</summary>

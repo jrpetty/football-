@@ -11,6 +11,7 @@ import { HOUR, hourOf, isNight } from './time.ts'
 import type { Agent, PlanStep, Task, SkillName, ActionKind } from './types.ts'
 import type { World } from './world.ts'
 import { CARRY_CAP } from './world.ts'
+import { militaryTier, propose, type Proposal } from './diplomacy.ts'
 
 type Result = 'continue' | 'done' | 'fail'
 
@@ -175,7 +176,7 @@ function wearTools(w: World, a: Agent, dtH: number) {
 const norm = (s: string) => s.toLowerCase().trim().replace(/[\s-]+/g, '_').replace(/[^a-z_0-9]/g, '')
 
 const ACTION_ALIASES: Record<string, ActionKind> = {
-  collect: 'gather', chop: 'gather', mine: 'gather', survey: 'prospect', prospecting: 'prospect', dig: 'gather', drill: 'gather', harvest: 'farm', plant: 'farm', forage: 'gather', cut: 'gather',
+  collect: 'gather', chop: 'gather', mine: 'gather', survey: 'prospect', prospecting: 'prospect', negotiate: 'diplomacy', envoy: 'diplomacy', treaty: 'diplomacy', declare_war: 'diplomacy', dig: 'gather', drill: 'gather', harvest: 'farm', plant: 'farm', forage: 'gather', cut: 'gather',
   construct: 'build', make: 'craft', smelt: 'craft', forge: 'craft', study: 'research', invent: 'research',
   deposit: 'store', withdraw: 'take', say: 'talk', speak: 'talk', chat: 'talk', gift: 'give', propose: 'court',
   romance: 'court', woo: 'court', travel: 'explore', scout: 'explore', home: 'go_home', return_home: 'go_home',
@@ -343,6 +344,18 @@ function oreAdvice(w: World, a: Agent, item: Item): string | null {
   if (reachable) return `We know where ${item.replace('_', ' ')} lies underground — we need to build a ${site} over it.`
   if (known) return dep.via === 'well' ? 'We know where oil lies, but we cannot drill for it yet.' : `We know of ${item.replace('_', ' ')} deep underground, but cannot dig that deep yet.`
   return w.hasTech(a.tribeId, 'prospecting') ? `I couldn't find ${item.replace('_', ' ')} at the surface. Someone should go prospecting.` : null
+}
+
+/** Move a warrior to where their campaign needs them: the muster point, the enemy's hearth, or home to defend it. */
+function warMove(w: World, a: Agent, t: Task, c: { phase: string; kind: string; side: number; enemy: number; tx: number; ty: number }): boolean {
+  const home = w.tribeHub(a.tribeId)
+  const enemy = w.tribeById(c.enemy)?.name ?? 'enemy'
+  const toEnemy = c.kind !== 'defend' && (c.phase === 'march' || c.phase === 'battle')
+  const x = toEnemy ? c.tx : home.x, y = toEnemy ? c.ty : home.y
+  t.label = c.kind === 'defend' ? `Defending against the ${enemy}` : c.phase === 'muster' ? 'Mustering for war' : `Marching on the ${enemy}`
+  // spread out a little, like a real band
+  const jx = Math.round((Math.random() - 0.5) * 4), jy = Math.round((Math.random() - 0.5) * 4)
+  return travel(w, a, t, Math.max(0, Math.min(w.W - 1, x + jx)), Math.max(0, Math.min(w.H - 1, y + jy)), true) || true
 }
 
 function personTarget(w: World, a: Agent, t: Task): Agent | undefined {
@@ -1059,7 +1072,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       const geo = def ? Math.sqrt(geographyAffinity(def.id, w.landscape(tr))) : 1
       // without writing there is no systematic study: ideas must be held in memory
       const literate = w.techs(tr.id).has('writing') ? 1 : 0.5
-      const pts = dtH * (0.55 + a.traits.intelligence * 0.9) * (0.8 + a.skills.research / 100) * mult * geo * literate * techResearchBonus(w.techs(tr.id))
+      const pts = dtH * 1.2 * (0.55 + a.traits.intelligence * 0.9) * (0.8 + a.skills.research / 100) * mult * geo * literate * techResearchBonus(w.techs(tr.id))
       rs.progress += pts
       a.stats.research += pts
       skillUp(a, 'research', dtH)
@@ -1556,6 +1569,55 @@ const HANDLERS: Record<ActionKind, Handler> = {
       tg.urgentThink = true
       for (const o of w.living) if (o !== a && o !== tg && Math.hypot(o.x - a.x, o.y - a.y) < 8) { w.bump(o, a, -15, 2); w.remember(o, `I saw ${a.name} attack ${tg.name}.`, 6) }
       if (loser.health <= 0) w.kill(loser, `wounds from a fight with ${winner.name}`)
+      return 'done'
+    },
+  },
+
+  war: {
+    init(w, a, t) {
+      const c = w.dip.campaigns.find((x) => x.units.includes(a.id))
+      if (!c) return false
+      t.text = militaryTier(w.techs(a.tribeId)).weapon
+      // the strongest of the column carries the people's banner
+      if (c.kind !== 'defend' && c.units[0] === a.id) t.text = 'flag'
+      return warMove(w, a, t, c)
+    },
+    work(w, a, t) {
+      const c = w.dip.campaigns.find((x) => x.units.includes(a.id))
+      if (!c) return 'done'
+      const enemy = w.tribeById(c.enemy)?.name ?? 'enemy'
+      if (c.phase === 'battle') {
+        t.label = `Fighting the ${enemy}`
+        // keep close to the fighting
+        const tx = c.kind === 'defend' ? w.tribeHub(a.tribeId).x : c.tx, ty = c.kind === 'defend' ? w.tribeHub(a.tribeId).y : c.ty
+        if (Math.hypot(a.x - tx, a.y - ty) > 6) warMove(w, a, t, c)
+        return 'continue'
+      }
+      if (Math.hypot(a.x - t.tx, a.y - t.ty) > 3 || (c.phase === 'march' && t.label.startsWith('Mustering'))) warMove(w, a, t, c)
+      return 'continue'
+    },
+  },
+
+  diplomacy: {
+    init(_w, _a, t) {
+      t.label = 'Sending envoys'
+      return true
+    },
+    work(w, a, t) {
+      const tr = w.tribeById(a.tribeId)
+      const other = w.findTribeByName(t.target)
+      if (!tr || !other) { fail(w, a, `There is no people called ${t.target}.`); return 'fail' }
+      const words = t.text.trim()
+      const first = norm(words.split(/\s+/)[0] ?? '')
+      const kinds: Record<string, Proposal> = {
+        alliance: 'alliance', ally: 'alliance', trade: 'trade', peace: 'peace', truce: 'peace', war: 'war', attack: 'war', raid: 'war',
+        tribute: 'tribute', demand: 'tribute', gift: 'gift', gifts: 'gift', break: 'break', end: 'break',
+      }
+      const kind = kinds[first] ?? (/(alliance|ally)/i.test(words) ? 'alliance' : /peace|truce/i.test(words) ? 'peace' : /war|attack|raid/i.test(words) ? 'war' : /tribute/i.test(words) ? 'tribute' : /trade/i.test(words) ? 'trade' : 'gift')
+      if (kind !== 'gift' && tr.leaderId !== a.id) { fail(w, a, `Only our leader can make ${kind} with another people.`); return 'fail' }
+      const r = propose(w, tr.id, other.id, kind, a, words.replace(/^\w+\s*[:,-]?\s*/, ''))
+      w.remember(a, r.text, 7)
+      w.emote(a, kind === 'war' ? '⚔️' : r.ok ? '🤝' : '✋', 5000)
       return 'done'
     },
   },

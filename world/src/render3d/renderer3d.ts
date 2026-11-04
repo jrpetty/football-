@@ -30,6 +30,7 @@ import { Flora, wind } from './flora.ts'
 import { Building3D, glowMat } from './buildings3d.ts'
 import { Person3D, Animal3D } from './character.ts'
 import { Particles, PK, Weather, Clouds, Birds } from './fx.ts'
+import { status, militaryTier } from '../sim/diplomacy.ts'
 
 const FOV = 40
 
@@ -241,7 +242,7 @@ export class Renderer3D {
   // ---------------------------------------------------------------- camera
 
   private get dist(): number {
-    return 44 / this.cam.zoom
+    return 30 / this.cam.zoom
   }
   private get pitch(): number {
     const base = 0.46 + 0.64 * smoothstep(6, 110, this.dist)
@@ -300,7 +301,7 @@ export class Renderer3D {
   zoomAt(sx: number, sy: number, factor: number) {
     this.placeCamera()
     const before = this.screenToWorld(sx, sy)
-    this.cam.zoom = clamp(this.cam.zoom * factor, 0.3, 4.5)
+    this.cam.zoom = clamp(this.cam.zoom * factor, 0.3, 7)
     this.placeCamera()
     const after = this.screenToWorld(sx, sy)
     this.cam.x = clamp(this.cam.x + before.x - after.x, 0, this.world.W)
@@ -473,6 +474,13 @@ export class Renderer3D {
           else this.particles.emit(kind === 2 ? PK.STEAM : PK.SMOKE, v.x, v.y, v.z, 0.05 + Math.random() * 0.1, 0.45 + Math.random() * 0.2, (Math.random() - 0.5) * 0.1, 3.5 + Math.random() * 2)
         }
       }
+      if (b.hp < 60 && b.type !== 'farm' && b.type !== 'pasture' && Math.random() < dt * 10) {
+        // a building burning after a raid
+        v.set(0.3 + Math.random() * 0.5 * size, (info.height ?? 0.8) * 0.8, 0.3 + Math.random() * 0.5 * size)
+        m.root.localToWorld(v)
+        this.particles.emit(Math.random() < 0.5 ? PK.EMBER : PK.SMOKE, v.x, v.y, v.z, (Math.random() - 0.5) * 0.2, 0.6 + Math.random() * 0.5, (Math.random() - 0.5) * 0.2, Math.random() < 0.5 ? 1.2 : 4)
+        if (lights.length < 12) lights.push([v.x, v.y, v.z, 3, 1, (v.x - cx) ** 2 + (v.z - cz) ** 2])
+      }
       if (b.type === 'campfire' && Math.random() < dt * 1.2) {
         v.set(0.5, 0.4, 0.5)
         m.root.localToWorld(v)
@@ -538,6 +546,22 @@ export class Renderer3D {
       if (bm) { this.worldGroup.remove(bm); this.boats.delete(id) }
     }
 
+    // --- the clash of battle: sparks for blades, smoke and flashes for guns
+    for (const c of w.dip.campaigns) {
+      if (c.phase !== 'battle') continue
+      const guns = militaryTier(w.techs(c.side)).weapon === 'rifle'
+      for (const id of c.units) {
+        const p = this.people.get(id)
+        if (!p || !p.root.visible || Math.random() > dt * (guns ? 3 : 2.2)) continue
+        p.headTop(v)
+        v.y -= p.root.scale.y * 0.25
+        if (guns) {
+          this.particles.burst(PK.SPARK, v.x, v.y, v.z, 2, 0.3)
+          this.particles.emit(PK.SMOKE, v.x, v.y, v.z, (Math.random() - 0.5) * 0.3, 0.2, (Math.random() - 0.5) * 0.3, 2.5)
+        } else this.particles.burst(Math.random() < 0.7 ? PK.SPARK : PK.DUST, v.x, v.y, v.z, 3, 0.6)
+      }
+    }
+
     // --- animals
     const live = new Set<number>()
     for (const an of w.animals) {
@@ -560,7 +584,7 @@ export class Renderer3D {
       this.ring.position.copy(sa.root.position)
       this.ring.position.y += 0.05
       const pulse = 1 + Math.sin(t * 4) * 0.06
-      this.ring.scale.setScalar(pulse * Math.max(1, sa.root.scale.x * 0.7))
+      this.ring.scale.setScalar(pulse * sa.root.scale.x * 0.8)
       const a = w.agentById.get(sel.id)
       ;(this.ring.material as THREE.MeshBasicMaterial).color.set(a ? w.tribeById(a.tribeId)?.color ?? '#ffffff' : '#ffffff')
     }
@@ -598,7 +622,8 @@ export class Renderer3D {
       mx = Math.max(mx, g)
     }
     if (type === 'offshore_rig') return Math.max(0, mx)
-    return type === 'farm' || type === 'pasture' ? sum / 5 : Math.max(sum / 5, mx - 0.15)
+    // sit on the average ground; the plinth buries the high side and fills the low
+    return type === 'farm' || type === 'pasture' ? sum / 5 : Math.max(sum / 5, mx - 0.3) - 0.02
   }
   private dockDir(x: number, y: number, s = 1): number {
     const w = this.world
@@ -829,6 +854,8 @@ export class Renderer3D {
       }
     }
 
+    this.drawDiplomacy(now)
+
     // a soft cinematic vignette, deeper at night
     const vg = ctx.createRadialGradient(this.vw / 2, this.vh / 2, Math.min(this.vw, this.vh) * 0.4, this.vw / 2, this.vh / 2, Math.max(this.vw, this.vh) * 0.75)
     vg.addColorStop(0, 'rgba(0,0,0,0)')
@@ -838,6 +865,71 @@ export class Renderer3D {
     if (this.flash > 0.5) {
       ctx.fillStyle = `rgba(230,236,255,${(this.flash - 0.5) * 0.5})`
       ctx.fillRect(0, 0, this.vw, this.vh)
+    }
+  }
+
+  /** Lines of alliance, trade, tribute and war between peoples; arrows for armies on the move. */
+  private drawDiplomacy(now: number) {
+    const w = this.world
+    const ctx = this.octx
+    const hs = this.terrain.heights
+    const live = w.tribes.filter((t) => t.alive)
+    const at = (x: number, y: number, lift = 2.2) => this.worldToScreen(x + 0.5, y + 0.5, hs.surface(x + 0.5, y + 0.5) + lift)
+    if (this.overlay === 'diplomacy') {
+      const style: Record<string, [string, number[], number]> = {
+        war: ['#ff3b3b', [10, 7], 4], alliance: ['#4ade80', [], 3.5], trade: ['#fbbf24', [4, 6], 2.5], tribute: ['#c084fc', [2, 5], 2.5],
+        friendly: ['rgba(134,239,172,0.6)', [2, 8], 1.5], tense: ['rgba(251,146,60,0.6)', [2, 8], 1.5], hostile: ['rgba(248,113,113,0.8)', [2, 6], 2],
+      }
+      for (const a of live) for (const b of live) {
+        if (a.id >= b.id) continue
+        const st = status(w, a.id, b.id)
+        const s = style[st]
+        if (!s) continue
+        const p = at(a.center.x, a.center.y), q = at(b.center.x, b.center.y)
+        if (p.behind || q.behind) continue
+        ctx.strokeStyle = s[0]
+        ctx.lineWidth = s[2]
+        ctx.setLineDash(s[1])
+        ctx.lineDashOffset = st === 'war' ? -now / 30 : 0
+        ctx.beginPath()
+        const mx = (p.x + q.x) / 2, my = Math.min(p.y, q.y) - Math.abs(p.x - q.x) * 0.15 - 30
+        ctx.moveTo(p.x, p.y); ctx.quadraticCurveTo(mx, my, q.x, q.y); ctx.stroke()
+        ctx.setLineDash([])
+        const icon = { war: '⚔️', alliance: '🤝', trade: '🐫', tribute: '💰', friendly: '🙂', tense: '😠', hostile: '😡' }[st as 'war']
+        ctx.font = '18px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+        ctx.fillStyle = 'rgba(8,12,22,0.8)'
+        ctx.beginPath(); ctx.arc((p.x + 2 * mx + q.x) / 4, (p.y + 2 * my + q.y) / 4, 14, 0, Math.PI * 2); ctx.fill()
+        ctx.fillText(icon, (p.x + 2 * mx + q.x) / 4, (p.y + 2 * my + q.y) / 4 + 1)
+        ctx.textBaseline = 'alphabetic'
+      }
+    }
+    // armies on the march (always shown)
+    for (const c of w.dip.campaigns) {
+      if (c.kind === 'defend' || !c.units.length) continue
+      let sx = 0, sy = 0, n = 0
+      for (const id of c.units) { const a = w.agentById.get(id); if (a?.alive) { sx += a.x; sy += a.y; n++ } }
+      if (!n) continue
+      const p = at(sx / n - 0.5, sy / n - 0.5, 0.8), q = at(c.tx, c.ty, 0.8)
+      if (p.behind || q.behind) continue
+      const col = w.tribeById(c.side)?.color ?? '#ff3b3b'
+      ctx.strokeStyle = col
+      ctx.lineWidth = 3
+      ctx.setLineDash([12, 8])
+      ctx.lineDashOffset = -now / 25
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke()
+      ctx.setLineDash([])
+      const ang = Math.atan2(q.y - p.y, q.x - p.x)
+      ctx.fillStyle = col
+      ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - Math.cos(ang - 0.4) * 16, q.y - Math.sin(ang - 0.4) * 16); ctx.lineTo(q.x - Math.cos(ang + 0.4) * 16, q.y - Math.sin(ang + 0.4) * 16); ctx.closePath(); ctx.fill()
+      ctx.font = '700 12px Inter, sans-serif'
+      ctx.textAlign = 'center'
+      const label = `${c.phase === 'battle' ? '⚔️ ' : '🛡️ '}${n} ${w.tribeById(c.side)?.name ?? ''}`
+      const tw = ctx.measureText(label).width + 14
+      ctx.fillStyle = 'rgba(8,12,22,0.8)'
+      roundRect(ctx, p.x - tw / 2, p.y - 32, tw, 20, 10); ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.fillText(label, p.x, p.y - 18)
     }
   }
 

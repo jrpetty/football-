@@ -728,6 +728,21 @@ function makeBuilding(type: BuildingType, color: string, size: number, era: numb
       c.fillStyle = '#f4f4f2'; c.fillRect(cx + 2, y1 - 16, 8, 8)
       break
     }
+    case 'walls': {
+      const col = era <= 1 ? '#8a6038' : era <= 5 ? '#a8a197' : '#9a9a94'
+      c.strokeStyle = col; c.lineWidth = era <= 1 ? 3 : 4
+      c.strokeRect(x0 + 3, y1 - T + 3, T - 6, T - 9)
+      c.clearRect(cx - 6, y1 - 9, 12, 6)
+      if (era > 1) for (const [x, y] of [[x0 + 3, y1 - T + 3], [x0 + T - 3, y1 - T + 3], [x0 + 3, y1 - 6], [x0 + T - 3, y1 - 6]]) blob(c, x, y, 4.5, '#b4ad9f')
+      break
+    }
+    case 'barracks': {
+      c.fillStyle = era >= 6 ? '#7a7f6a' : '#a8a197'; c.fillRect(x0 + 3, y1 - 16, T - 6, 13)
+      c.fillStyle = color; c.beginPath(); c.moveTo(x0 + 1, y1 - 16); c.lineTo(cx, y1 - 24); c.lineTo(x0 + T - 1, y1 - 16); c.closePath(); c.fill()
+      c.strokeStyle = '#ddd'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0 + T - 4, y1 - 3); c.lineTo(x0 + T - 4, y1 - 34); c.stroke()
+      c.fillStyle = color; c.fillRect(x0 + T - 4, y1 - 34, 8, 5)
+      break
+    }
     case 'launch_pad': {
       c.fillStyle = '#7d8187'
       c.fillRect(x0 + 2, y1 - 8, T - 4, 6)

@@ -513,7 +513,8 @@ export class Terrain {
   }
 
   /** Territory borders or a data layer, sampled by the ground shader. */
-  setOverlay(kind: 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish', selTribe: number) {
+  setOverlay(kind: 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish' | 'diplomacy', selTribe: number) {
+    if (kind === 'diplomacy') kind = 'territory'
     const w = this.w
     const d = this.overTex.image.data as Uint8Array
     d.fill(0)

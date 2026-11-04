@@ -3,6 +3,7 @@
 // live in IndexedDB, which comfortably holds large worlds, and can be
 // exported/imported as JSON files.
 
+import { newDiplomacy, type Diplomacy } from './diplomacy.ts'
 import { World, type WorldConfig, type Weather } from './world.ts'
 import type { Agent, Tribe, Building, Animal, ChronicleEntry, Chapter, WorldEvent, Sample } from './types.ts'
 
@@ -32,6 +33,7 @@ export interface SaveFile {
   maps: Record<string, string>
   explored: Record<string, string>
   known?: Record<string, string>
+  dip?: Diplomacy
   regrow: World['regrow']
   agents: Agent[]
   tribes: Tribe[]
@@ -62,6 +64,7 @@ export function serialize(w: World): SaveFile {
       deposit: b64(w.deposit), depAmt: b64(w.depAmt), depDepth: b64(w.depDepth), fish: b64(w.fish),
     },
     explored,
+    dip: w.dip,
     known: Object.fromEntries([...w.known].map(([id, arr]) => [id, b64(arr)])),
     regrow: w.regrow,
     agents: w.agents.map((a) => ({ ...a, task: null, aiPending: false, speech: null, emote: null })),
@@ -99,6 +102,7 @@ export function deserialize(s: SaveFile): World {
   w.initFish()
   if (s.maps.fish) w.fish = f32('fish')
   for (const id in s.known ?? {}) w.known.set(+id, unb64(s.known![id]))
+  if (s.dip) w.dip = { ...newDiplomacy(), ...s.dip }
   w.time = s.time
   w.rng.state = s.rng
   w.nextId = s.nextId

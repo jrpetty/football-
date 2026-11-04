@@ -31,10 +31,17 @@ export function hash(n: number): number {
 export type Anim = 'idle' | 'walk' | 'chop' | 'mine' | 'pick' | 'fish' | 'read' | 'craft' | 'eat' | 'talk' | 'cheer' | 'kneel' | 'hunt' | 'sleep' | 'carry'
 
 /** What animation a person's current activity calls for. */
-export function animFor(a: Agent): { anim: Anim; tool: 'axe' | 'pick' | 'hammer' | 'spear' | 'rod' | 'book' | 'hoe' | 'staff' | null } {
+export type ToolKind = 'axe' | 'pick' | 'hammer' | 'spear' | 'rod' | 'book' | 'hoe' | 'staff' | 'sword' | 'bow' | 'rifle' | 'flag' | 'club'
+export function animFor(a: Agent): { anim: Anim; tool: ToolKind | null } {
   const t = a.task
   if (!t) return { anim: 'idle', tool: null }
   if (t.action === 'sleep' && t.phase === 'work') return { anim: 'sleep', tool: null }
+  if (t.action === 'war') {
+    // warriors carry their era's weapon; the first of a column carries the banner
+    const tool = (['sword', 'bow', 'rifle', 'flag', 'club', 'spear'].includes(t.text) ? t.text : 'spear') as ToolKind
+    if (t.phase === 'travel' || a.moving) return { anim: 'walk', tool }
+    return { anim: t.label.startsWith('Fighting') && tool !== 'flag' ? 'hunt' : 'idle', tool }
+  }
   if (t.phase === 'travel' || a.moving) {
     if (t.action === 'hunt') return { anim: 'walk', tool: 'spear' }
     if (t.action === 'explore') return { anim: 'walk', tool: 'staff' }
@@ -54,7 +61,7 @@ export function animFor(a: Agent): { anim: Anim; tool: 'axe' | 'pick' | 'hammer'
     case 'research': case 'write': case 'teach': return { anim: 'read', tool: 'book' }
     case 'craft': return { anim: 'craft', tool: 'hammer' }
     case 'eat': case 'drink': return { anim: 'eat', tool: null }
-    case 'talk': case 'court': case 'trade': case 'give': case 'decree': case 'join_tribe': return { anim: 'talk', tool: null }
+    case 'talk': case 'court': case 'trade': case 'give': case 'decree': case 'join_tribe': case 'diplomacy': return { anim: 'talk', tool: null }
     case 'celebrate': return { anim: 'cheer', tool: null }
     case 'heal': return { anim: 'kneel', tool: null }
     case 'attack': return { anim: 'hunt', tool: 'spear' }

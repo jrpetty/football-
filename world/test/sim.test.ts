@@ -109,3 +109,30 @@ test('fish stocks fall when fished and recover slowly', () => {
   const later = w.fishNear(x, y, 2)
   assert.ok(later > low && later < full * 0.6, 'recovering, but not at once')
 })
+
+test('peoples meet, ally, go to war, fight battles and make peace', async () => {
+  const { declareWar, propose, warBetween, pactBetween, met, status } = await import('../src/sim/diplomacy.ts')
+  const w = new World({ ...DEFAULT_CONFIG, seed: 5, tribes: 3, perTribe: 8 })
+  const [a, b, c] = w.tribes
+  for (const [x, y] of [[a, b], [a, c], [b, c]]) { w.dip.contact[x.id < y.id ? `${x.id}|${y.id}` : `${y.id}|${x.id}`] = 0; x.relations[y.id] = 0; y.relations[x.id] = 0 }
+  assert.ok(met(w, a.id, b.id))
+  // b and c are friends and ally
+  b.relations[c.id] = c.relations[b.id] = 60
+  assert.ok(propose(w, b.id, c.id, 'alliance').ok, 'friends ally')
+  assert.ok(pactBetween(w, b.id, c.id, 'alliance'))
+  // a attacks b; b's ally c is drawn in
+  for (const t of [a, b, c]) { t.techs.push('hunting'); w.techSets.set(t.id, new Set(t.techs)) }
+  declareWar(w, a.id, b.id, 'test', 'raid')
+  assert.ok(warBetween(w, a.id, b.id), 'at war')
+  assert.ok(warBetween(w, c.id, a.id), 'the ally joins')
+  assert.equal(status(w, a.id, b.id), 'war')
+  // warriors march and fight
+  let battles = 0
+  for (let d = 0; d < 30 && !battles; d++) { w.tick(DAY); battles = w.dip.wars.reduce((s, x) => s + x.battles, 0) }
+  assert.ok(battles > 0, 'battles are fought')
+  // peace, eventually, when one side asks and the other is tired or winning
+  const war = warBetween(w, a.id, b.id)
+  if (war) { war.dead[b.id] = 10; propose(w, a.id, b.id, 'peace') }
+  assert.ok(!warBetween(w, a.id, b.id), 'peace is made')
+  assert.ok(!warBetween(w, c.id, a.id), 'the allied war ends with it')
+})

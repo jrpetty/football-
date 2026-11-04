@@ -100,7 +100,8 @@ class Kit {
     }
   }
   door(x: number, y: number, z: number, c = '#3a2a1c', w = 0.12, h = 0.2) {
-    this.box(w, h, 0.02, x, y, z, c)
+    // a doorway a person can walk through (~2.1 m)
+    this.box(Math.max(w * 1.2, 0.14), Math.max(h * 1.45, 0.34), 0.02, x, y, z, c)
   }
 }
 
@@ -173,9 +174,9 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
     case 'hut': {
       plinth(0.8, '#6e5a40')
       if (era <= 1) {
-        k.cyl(0.34, 0.36, 0.42, c, 0, c, P.wall, 12)
-        k.cone(0.5, 0.48, c, 0.4, c, P.roof, 12)
-        k.cone(0.1, 0.12, c, 0.82, c, '#a8874a', 8)
+        k.cyl(0.34, 0.36, 0.46, c, 0, c, P.wall, 12)
+        k.cone(0.5, 0.48, c, 0.44, c, P.roof, 12)
+        k.cone(0.1, 0.12, c, 0.86, c, '#a8874a', 8)
         k.door(c, 0, c + 0.345, '#2a1d12', 0.14, 0.24)
         k.win(0.07, 0.07, c + 0.2, 0.22, c + 0.27, 0)
         smoke.push([c + 0.05, 0.9, c, 0])
@@ -574,11 +575,11 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
       const cols = [P.trim, '#e8d8a8', '#c0504d', '#4f81bd']
       const spots: [number, number][] = [[-0.25, -0.22], [0.25, -0.22], [-0.25, 0.25], [0.25, 0.25]]
       spots.forEach(([x, z], i) => {
-        k.box(0.3, 0.12, 0.18, c + x, 0, c + z, '#8a6038')
-        for (const [px, pz] of [[-0.13, -0.08], [0.13, -0.08], [-0.13, 0.08], [0.13, 0.08]]) k.box(0.02, 0.3, 0.02, c + x + px, 0, c + z + pz, P.wood)
-        k.gable(0.34, 0.24, 0.1, c + x, 0.3, c + z, cols[i % cols.length])
-        k.sph(0.04, c + x - 0.06, 0.15, c + z, ['#e53935', '#fb8c00', '#7cb342', '#fdd835'][i], 0.8, false, 6)
-        k.sph(0.04, c + x + 0.06, 0.15, c + z, ['#fdd835', '#7cb342', '#e53935', '#8e24aa'][i], 0.8, false, 6)
+        k.box(0.3, 0.15, 0.18, c + x, 0, c + z, '#8a6038')
+        for (const [px, pz] of [[-0.13, -0.08], [0.13, -0.08], [-0.13, 0.08], [0.13, 0.08]]) k.box(0.02, 0.42, 0.02, c + x + px, 0, c + z + pz, P.wood)
+        k.gable(0.34, 0.24, 0.1, c + x, 0.42, c + z, cols[i % cols.length])
+        k.sph(0.04, c + x - 0.06, 0.18, c + z, ['#e53935', '#fb8c00', '#7cb342', '#fdd835'][i], 0.8, false, 6)
+        k.sph(0.04, c + x + 0.06, 0.18, c + z, ['#fdd835', '#7cb342', '#e53935', '#8e24aa'][i], 0.8, false, 6)
       })
       light = [c, 0.3, c, 2.4, 0.7]
       height = 0.5
@@ -781,6 +782,57 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
       anim = 'rocket'
       light = [c, 0.4, c, 5, 0.3]
       height = 3
+      break
+    }
+    case 'walls': {
+      // a ring of defences around the 2×2 plot, with a gate on the front
+      const ring = (h: number, col: string, thick: number) => {
+        k.box(2 - thick, h, thick, c, 0, thick / 2, col)
+        k.box(thick, h, 2, thick / 2, 0, c, col)
+        k.box(thick, h, 2, 2 - thick / 2, 0, c, col)
+        k.box(0.7, h, thick, 0.35, 0, 2 - thick / 2, col)
+        k.box(0.7, h, thick, 1.65, 0, 2 - thick / 2, col)
+      }
+      if (era <= 1) {
+        // a palisade of sharpened stakes
+        for (let i = 0; i <= 16; i++) {
+          const t = i / 16 * 2
+          for (const [x, z] of [[t, 0.05], [0.05, t], [1.95, t]]) k.cone(0.045, 0.62, x, 0, z, i % 2 ? '#7a5530' : '#8a6038', 5)
+          if (t < 0.7 || t > 1.3) k.cone(0.045, 0.62, t, 0, 1.95, i % 2 ? '#7a5530' : '#8a6038', 5)
+        }
+        k.box(0.06, 0.7, 0.06, 0.7, 0, 1.95, P.wood); k.box(0.06, 0.7, 0.06, 1.3, 0, 1.95, P.wood); k.box(0.7, 0.06, 0.06, c, 0.66, 1.95, P.wood)
+        height = 0.7
+      } else if (era <= 5) {
+        ring(0.55, '#a8a197', 0.12)
+        for (let i = 0; i < 12; i++) { const t = 0.08 + i * 0.16; k.box(0.07, 0.08, 0.14, t, 0.55, 0.06, '#9a948a'); k.box(0.14, 0.08, 0.07, 0.06, 0.55, t, '#9a948a'); k.box(0.14, 0.08, 0.07, 1.94, 0.55, t, '#9a948a') }
+        for (const [x, z] of [[0.12, 0.12], [1.88, 0.12], [0.12, 1.88], [1.88, 1.88]]) { k.cyl(0.16, 0.18, 0.85, x, 0, z, '#b4ad9f', 10); k.cone(0.2, 0.3, x, 0.85, z, P.roof, 10) }
+        // the gatehouse
+        k.box(0.12, 0.8, 0.2, 0.68, 0, 1.92, '#9a948a'); k.box(0.12, 0.8, 0.2, 1.32, 0, 1.92, '#9a948a'); k.box(0.76, 0.2, 0.2, c, 0.6, 1.92, '#9a948a')
+        k.box(0.5, 0.5, 0.03, c, 0, 1.94, '#5a3d26')
+        k.box(0.01, 0.2, 0.14, 0.68, 0.85, 1.92, P.trim)
+        height = 1.15
+      } else {
+        ring(0.4, '#9a9a94', 0.16)
+        for (let i = 0; i < 8; i++) k.sph(0.07, 0.2 + i * 0.22, 0.42, 0.08, '#b8a77a', 0.6, false, 6)
+        for (const [x, z] of [[0.15, 0.15], [1.85, 0.15]]) { k.box(0.3, 0.45, 0.3, x, 0, z, '#8a8a84'); k.win(0.18, 0.04, x, 0.32, z + 0.151, 0) }
+        k.box(0.04, 0.6, 0.04, 0.68, 0, 1.92, '#6a6e74'); k.box(0.04, 0.6, 0.04, 1.32, 0, 1.92, '#6a6e74'); k.box(0.64, 0.04, 0.04, c, 0.3, 1.92, '#c0392b')
+        height = 0.6
+      }
+      break
+    }
+    case 'barracks': {
+      plinth(0.92)
+      k.box(0.8, era >= 6 ? 0.5 : 0.42, 0.5, c, 0, c - 0.1, era >= 6 ? '#7a7f6a' : era <= 3 ? P.wall : P.stone)
+      k.gable(0.9, 0.62, 0.22, c, era >= 6 ? 0.5 : 0.42, c - 0.1, era >= 6 ? '#5a604a' : P.roof)
+      k.door(c, 0, c + 0.151, P.dark, 0.16, 0.24)
+      k.winRow(0.8, 0.5, c, c - 0.1, 0.18, 3, 0.08, 0.08, [1, 2, 3])
+      // a practice yard: a post with a straw target, and a weapon rack
+      k.box(0.03, 0.28, 0.03, c - 0.32, 0, c + 0.36, P.wood); k.sph(0.06, c - 0.32, 0.26, c + 0.36, '#d9c27a', 1.2)
+      k.box(0.24, 0.03, 0.04, c + 0.25, 0.22, c + 0.36, P.wood)
+      for (let i = 0; i < 4; i++) k.box(0.012, 0.3, 0.012, c + 0.16 + i * 0.06, 0, c + 0.36, era >= 6 ? '#3a3a40' : '#8a8f96')
+      k.cyl(0.008, 0.008, 0.55, c + 0.36, 0, c - 0.32, '#d9d9d9', 5)
+      k.box(0.16, 0.1, 0.01, c + 0.44, 0.44, c - 0.32, P.trim)
+      height = 0.75
       break
     }
     case 'road': default: {

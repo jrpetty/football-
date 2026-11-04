@@ -373,6 +373,11 @@ export class Flora {
         list.forEach((a, k) => {
           let s = a.s
           if (f === GRASS || f === F.ROCK) s *= 0.8 + a.h * 0.5
+          // grass knee-high, bushes chest-high, reeds just over head height
+          if (f === GRASS) s *= 0.45
+          else if (f === F.FLOWERS) s *= 0.55
+          else if (f === F.BUSH) s *= 0.7
+          else if (f === F.FIBER) s *= 0.6
           // decorative rocks scattered on bare ground are small
           if (f === F.ROCK && a.biome !== undefined && w.feature[a.ty * w.W + a.tx] !== F.ROCK) s *= 0.5
           let sx = s, sy = s, sz = s

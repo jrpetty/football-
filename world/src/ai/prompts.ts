@@ -9,6 +9,7 @@ import { ACTION_KINDS, type Agent } from '../sim/types.ts'
 import { formatDate, formatClock, partOfDay, SEASONS } from '../sim/time.ts'
 import type { World } from '../sim/world.ts'
 import { CARRY_CAP } from '../sim/world.ts'
+import { describeRelations } from '../sim/diplomacy.ts'
 
 const costStr = (c: Partial<Record<Item, number>>) => Object.entries(c).map(([k, v]) => `${v} ${k}`).join(' + ')
 
@@ -76,6 +77,7 @@ Humanity in this world began with nothing: a few small bands, bare hands, and th
 - Geology: most minerals lie hidden underground, where the rocks that hold them formed — copper, gold, tin and uranium in the roots of mountain ranges; great iron ores in old worn-down hills; coal under low basins of ancient swamp forest; oil deep under deserts, marshes, plains and the sea floor; bauxite under hot, wet forests; lithium brine under desert salt flats. Only a few bodies show at the surface as outcrops (which can be dug by hand once you know Mining). To find the rest, "prospect" — follow stained rock and odd gravels; with Geology you read the strata; with Seismic Surveying you can see kilometres down and under the sea. To work a known body, build a mine over it (pits and short tunnels reach shallow ore; Shaft Mining reaches deep ore; Deep Mining with steam pumps reaches very deep ore), an oil well (Oil Drilling), an offshore platform (Offshore Drilling) or evaporation ponds; then "gather" the mineral and you will go and work it. Bodies run out. Mines are dangerous.
 - The sea: fish live where the water is rich — coastal shallows and the edge of the continental shelf most of all, open ocean less, lakes and rivers least. Without boats you fish from the bank; canoes reach lakes and shallows, sailing boats the open sea, ocean ships the deep water, and steam and diesel trawlers catch far more — but stocks only regrow so fast, and an overfished sea can collapse. Fish farms (Aquaculture) raise fish without emptying the sea.
 - Farming: farm fields are planted in spring/summer, tended, and harvested when ripe; nothing grows in winter. Pastures breed animals for meat and hides.
+- Peoples and power: tribes meet when their lands touch. Each holds an opinion of the others that moves with real causes — borders pressing together, competing for the same ore or fishing grounds, hunger beside plenty, trade, marriages across the line, shared enemies, old wounds and the temper of leaders. Leaders can offer trade (goods and ideas flow both ways), alliances (allies are called to fight for each other), gifts, demand tribute from the weak, declare war, or sue for peace. War is fought by your people: warriors muster at the hub, march on the enemy and fight battles decided by numbers, health, weapons (clubs → spears → bows → bronze → iron → steel → guns → machines), barracks and walls. Victorious raiders carry off stores and set buildings alight; the dead are really dead. A war that goes badly ends in tribute — or, for a broken people, being swallowed whole by the victor. Peace and trade make everyone richer; war is a gamble.
 - Society: partners (from courting someone who likes you back) can have children if they have food and a home. The leader of a tribe can issue decrees (laws, values, beliefs, even a new name). Anyone can found a new tribe or ask to join another. Violence is possible but damages trust and can kill.
 - The world has weather, droughts, harsh winters, plagues and other events.
 
@@ -101,6 +103,7 @@ Humanity in this world began with nothing: a few small bands, bare hands, and th
 - decree — leaders only: target "law", "values", "beliefs" or "name"; text: the decree
 - write — once your tribe knows Writing: target: title, text: the work itself (poem, history, law code, scripture, science…)
 - attack — target: person, text: why
+- diplomacy — target: another tribe's name; text: begins with alliance, trade, peace, war, tribute (a demand), gift or break, followed by your message. Only your tribe's leader can make war, peace, alliances, trade and demands; anyone can carry gifts.
 
 ${catalog()}
 
@@ -334,6 +337,11 @@ export function buildContext(w: World, a: Agent): string {
     if (tribe.lost.length) lines.push(`Knowledge your people once had but lost: ${tribe.lost.map((x) => TECH_BY_ID[x]?.name ?? x).join(', ')}.`)
     lines.push(`Communal stores (${Math.floor(w.storageUsed(tribe))}/${w.storageCap(tribe.id)}): ${invToString(tribe.storage)}.`)
     lines.push(depositSummary(w, tribe.id, a))
+    const rel = describeRelations(w, tribe.id)
+    lines.push(rel.length ? `Other peoples you know:\n${rel.map((r) => `- ${r}`).join('\n')}` : 'Other peoples: none met yet.')
+    if (tribe.leaderId === a.id && rel.length) lines.push('You lead your people: war, peace, alliances, trade and tribute are your decisions (use "diplomacy").')
+    const camp = w.dip.campaigns.find((c) => c.units.includes(a.id))
+    if (camp) lines.push(`You are ${camp.kind === 'defend' ? 'defending your home against' : camp.phase === 'muster' ? 'mustering for war against' : camp.phase === 'battle' ? 'in battle against' : 'marching on'} the ${w.tribeById(camp.enemy)?.name}.`)
     const tb = w.tribeBuildings(tribe.id, undefined, false)
     const counts = new Map<string, number>()
     for (const b of tb) {

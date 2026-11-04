@@ -17,6 +17,7 @@ import type {
 import { SKILL_NAMES } from './types.ts'
 import { updateTask, startTask, cancelTask } from './actions.ts'
 import { instinctStep } from './instinct.ts'
+import { newDiplomacy, diplomacyDaily, diplomacyHourly, type Diplomacy } from './diplomacy.ts'
 
 export interface WorldConfig {
   name: string
@@ -68,6 +69,8 @@ export class World implements PathGrid {
   /** the same, as a list of tiles (derived) */
   private knownTiles = new Map<number, number[]>()
   private powerCache = new Map<number, { v: number; on: boolean }>()
+  /** relations between peoples: contact, pacts, wars, campaigns */
+  dip: Diplomacy = newDiplomacy()
   /** fish in each water tile, and what that water can support */
   fish!: Float32Array
   fishCap!: Float32Array
@@ -671,6 +674,12 @@ export class World implements PathGrid {
     this.depDepth = g.depDepth
   }
 
+  /** Put someone to a task right now (orders from their people, not their own plan). */
+  order(a: Agent, step: PlanStep) {
+    cancelTask(this, a)
+    startTask(this, a, step, false)
+  }
+
   /** Does this people's town have electricity? */
   hasPower(tribeId: number): boolean {
     const c = this.powerCache.get(tribeId)
@@ -1025,6 +1034,7 @@ export class World implements PathGrid {
   // ---------------------------------------------------------------- periodic
 
   private hourly() {
+    diplomacyHourly(this)
     // weather
     if (this.time >= this.weatherUntil) {
       const s = this.season
@@ -1082,6 +1092,7 @@ export class World implements PathGrid {
 
   private daily() {
     this.growFish()
+    diplomacyDaily(this)
     // fish farms put a steady harvest into the stores
     for (const b of this.buildings) {
       if (!b.done || b.type !== 'fish_farm') continue
@@ -1488,7 +1499,7 @@ export class World implements PathGrid {
     const av = this.available(t)
     if (!av.length) return
     const l = this.landscape(t)
-    const knack = 0.07 * (0.5 + a.traits.intelligence) * (0.7 + a.traits.openness * 0.6)
+    const knack = 0.09 * (0.5 + a.traits.intelligence) * (0.7 + a.traits.openness * 0.6)
     for (const d of av) {
       if (!inspires(d.id, key)) continue
       // practical insight fades for advanced ideas: you can't stumble on electricity
