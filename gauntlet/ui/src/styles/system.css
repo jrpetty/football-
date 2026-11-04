@@ -379,8 +379,9 @@ details > summary {
 html[data-broadcast='on'] .broadcast-backdrop .scan {
   display: none;
 }
-/* Slide-in reveals never push the page sideways on camera. */
-html[data-broadcast='on'] .main {
+/* Slide-in reveals (Head to Head) never push the page sideways. */
+html[data-broadcast='on'] .main,
+.vx-page {
   overflow-x: clip;
 }
 .nav-count {
