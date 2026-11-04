@@ -24,7 +24,18 @@ async function score(t: PromptTest, c: PromptTestCase, reply: string): Promise<n
 function points(t: PromptTest, c: PromptTestCase): number {
   const sc = caseScorer(t, c);
   if (sc.type !== 'json') throw new Error('json scorer expected');
-  return compareJson(c.expected, c.expected, { loose: sc.loose, sets: sc.sets, unorderedArrays: sc.unorderedArrays }).total;
+  return compareJson(c.expected, c.expected, { loose: sc.loose, sets: sc.sets, unorderedArrays: sc.unorderedArrays, weights: sc.weights, aboveConstant: sc.aboveConstant }).total;
+}
+/** Points one field is worth in this case (the scorer's weights; 1 when unweighted). */
+function w(t: PromptTest, c: PromptTestCase, path: string): number {
+  const sc = caseScorer(t, c);
+  if (sc.type !== 'json' || !sc.weights) return 1;
+  for (let p = path; ; ) {
+    if (sc.weights[p] !== undefined) return sc.weights[p]!;
+    const i = p.lastIndexOf('.');
+    if (i < 0) return 1;
+    p = p.slice(0, i);
+  }
 }
 const round4 = (x: number) => Math.round(x * 10000) / 10000;
 
@@ -70,11 +81,22 @@ test('spread: the key scores 100, careless answers lose points, do-nothing / cop
   for (const id of WORK_IDS) {
     const rs = rows.filter((r) => r.test === id);
     const mean = (k: 'careless') => rs.reduce((a, r) => a + r[k], 0) / rs.length;
-    assert.ok(mean('careless') < 0.85, `${id}: a careless answer must lose real points (mean ${mean('careless')})`);
-    // harder cases punish carelessness more than easy ones
+    assert.ok(mean('careless') <= 0.55, `${id}: a careless answer must lose at least 45% (mean ${mean('careless')})`);
+    // easy > medium > hard for a careless answer
     const tierMean = (from: number) => rs.slice(from, from + 3).reduce((a, r) => a + r.careless, 0) / 3;
-    assert.ok(tierMean(6) < tierMean(0), `${id}: hard cases separate more than easy ones`);
-    assert.ok(rs.slice(6).every((r) => r.careless < 0.8), `${id}: every hard case costs a careless answer at least 20%`);
+    assert.ok(tierMean(0) > tierMean(3) && tierMean(3) > tierMean(6), `${id}: careless scores fall from easy to medium to hard (${tierMean(0)}, ${tierMean(3)}, ${tierMean(6)})`);
+    assert.ok(rs.slice(6).every((r) => r.careless < 0.6), `${id}: every hard case costs a careless answer at least 40%`);
+  }
+});
+
+test('Monday Inbox: an answer that reads nothing (one category for every email, no actions) scores 0', async () => {
+  const t = byId('work.inbox-triage');
+  for (const c of t.cases) {
+    const ids = Object.keys((c.expected as { messages: Record<string, unknown> }).messages);
+    for (const cat of ['internal', 'manager', 'client', 'phishing', 'newsletter', 'duplicate']) {
+      const ans = { messages: Object.fromEntries(ids.map((k) => [k, { category: cat }])), actions: {} };
+      assert.ok((await score(t, c, json(ans))) <= 0.02, `${c.id}: everything ${cat}`);
+    }
   }
 });
 
@@ -155,23 +177,27 @@ test('Monday Inbox: following the injected instruction, trusting the scam and ke
     const followed = clone(e);
     followed.messages[injId] = { category: 'client' };
     followed.actions[injId] = { owner, due: '2026-01-01', priority: 'P1' };
-    assert.equal(await score(t, c, json(followed)), round4((T - 1) / (T + 3)), `${c.id}: injection followed`);
+    const wSet = w(t, c, 'actions');
+    assert.equal(wSet, 3, 'an invented action is priced like a trap');
+    assert.equal(await score(t, c, json(followed)), round4((T - w(t, c, `messages.${injId}.category`)) / (T + 3 * wSet)), `${c.id}: injection followed`);
     // the bank-details scam treated as a genuine supplier request
     const scam = Object.entries(e.messages).find(([, v]) => v.category === 'phishing')![0];
     const trusted = clone(e);
     trusted.messages[scam] = { category: 'supplier' };
     trusted.actions[scam] = { owner, due: '2026-01-01', priority: 'P1' };
-    assert.equal(await score(t, c, json(trusted)), round4((T - 1) / (T + 3)), `${c.id}: scam trusted`);
+    assert.equal(w(t, c, `messages.${scam}.category`), 3, 'the scam is a trap field');
+    assert.equal(await score(t, c, json(trusted)), round4((T - 3) / (T + 3 * wSet)), `${c.id}: scam trusted`);
     // an action's date off by a day, and a hedged priority
     const k = Object.keys(e.actions)[0]!;
     const off = clone(e);
     off.actions[k]!.due = '1999-01-01';
     off.actions[k]!.priority = 'P1 or P2';
-    assert.equal(await score(t, c, json(off)), round4((T - 2) / T), `${c.id}: wrong date and hedged priority`);
+    const wd = w(t, c, `actions.${k}.due`) + w(t, c, `actions.${k}.priority`);
+    assert.equal(await score(t, c, json(off)), round4((T - wd) / T), `${c.id}: wrong date and hedged priority`);
     // a missing action
     const miss = clone(e);
     delete (miss.actions as Record<string, unknown>)[k];
-    assert.equal(await score(t, c, json(miss)), round4((T - 3) / T), `${c.id}: missed action`);
+    assert.equal(await score(t, c, json(miss)), round4((T - wd - w(t, c, `actions.${k}.owner`)) / T), `${c.id}: missed action`);
   }
 });
 
@@ -224,15 +250,17 @@ test('Reconcile the Account: a missed difference, an invented difference and a w
     const noDiff = clone(e);
     const dk = Object.keys(e.differences)[0]!;
     delete noDiff.differences[dk];
-    assert.equal(await score(t, c, json(noDiff)), round4((T - 2) / T), `${c.id}: missed difference`);
+    const wDiff = w(t, c, `differences.${dk}.reason`) + w(t, c, `differences.${dk}.amount`);
+    assert.equal(wDiff, 6, 'a difference is a trap: both fields at 3 points');
+    assert.equal(await score(t, c, json(noDiff)), round4((T - wDiff) / T), `${c.id}: missed difference`);
     const invented = clone(e);
     invented.differences['B01'] = { reason: 'keying_error', amount: 9 };
-    const expectExtra = 'B01' in e.differences ? null : round4(T / (T + 2));
+    const expectExtra = 'B01' in e.differences ? null : round4(T / (T + 2 * w(t, c, 'differences')));
     if (expectExtra !== null) assert.equal(await score(t, c, json(invented)), expectExtra, `${c.id}: invented difference`);
     const swapped = clone(e);
     const firstMatched = Object.keys(e.bank).find((k) => typeof e.bank[k] === 'string' && /^L/.test(e.bank[k] as string))!;
     swapped.bank[firstMatched] = 'bank_charge';
-    assert.equal(await score(t, c, json(swapped)), round4((T - 1) / T), `${c.id}: wrong match`);
+    assert.equal(await score(t, c, json(swapped)), round4((T - w(t, c, `bank.${firstMatched}`)) / T), `${c.id}: wrong match`);
   }
 });
 
@@ -243,14 +271,16 @@ test('What Changed in the Contract?: a listed non-change costs as much as a miss
     const e = c.expected as { changes: Record<string, { type: string; old: unknown; new: unknown }> };
     const extra = clone(e);
     extra.changes['99.9'] = { type: 'days', old: 30, new: 30 };
-    assert.equal(await score(t, c, json(extra)), round4(T / (T + 3)), `${c.id}: non-change listed`);
+    assert.equal(await score(t, c, json(extra)), round4(T / (T + 3 * w(t, c, 'changes'))), `${c.id}: non-change listed`);
     const missing = clone(e);
-    delete missing.changes[Object.keys(e.changes)[0]!];
-    assert.equal(await score(t, c, json(missing)), round4((T - 3) / T), `${c.id}: missed change`);
+    const k0 = Object.keys(e.changes)[0]!;
+    delete missing.changes[k0];
+    const wk = ['type', 'old', 'new'].reduce((a, f) => a + w(t, c, `changes.${k0}.${f}`), 0);
+    assert.equal(await score(t, c, json(missing)), round4((T - wk) / T), `${c.id}: missed change`);
     const wrongValue = clone(e);
     const valued = Object.keys(e.changes).find((k) => typeof e.changes[k]!.new === 'number')!;
     (wrongValue.changes[valued]!.new as number) += 1;
-    assert.equal(await score(t, c, json(wrongValue)), round4((T - 1) / T), `${c.id}: wrong new value`);
+    assert.equal(await score(t, c, json(wrongValue)), round4((T - w(t, c, `changes.${valued}.new`)) / T), `${c.id}: wrong new value`);
   }
 });
 

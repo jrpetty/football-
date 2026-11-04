@@ -9,6 +9,9 @@ Americanised. The key is the diff of the two STRUCTURED versions, so noise can n
 also asserts that each version's text renders every parameter value exactly once where expected.
 """
 import random
+
+# Points per field for fields where a trap sits (routine fields are worth 1). Stated in the prompt.
+TRAP_WEIGHT = 2
 import re
 from wk import people
 
@@ -329,7 +332,8 @@ Only list a clause whose own wording changed (or that was added or removed); a c
     return (f"Our supplier has sent back a revised draft of our services agreement. Before I sign, tell me exactly what they changed.\n\n{rules}\n\n"
             f"<<< VERSION 1\n{b['t1']}\n>>>\n\n<<< VERSION 2\n{b['t2']}\n>>>\n\n"
             f"Answer with one JSON object in exactly this shape:\n{schema}\n"
-            "Marking: each change you list correctly earns up to three points (type, old, new); a change you miss loses them, and each clause you list that has no substantive change costs three points. "
+            f"Marking: each change has three fields (type, old, new). Fields of a plainly visible change are worth 1 point; fields that need extra care (a renumbered or moved clause, a negation, a definition) are worth {TRAP_WEIGHT}. "
+            f"A change you miss loses its points, and each clause you list that has no substantive change costs three fields at {TRAP_WEIGHT} points each. "
             "Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter, clause keys may be written \"9.2\" or \"Clause 9.2\", and amounts may have a £ sign. "
             "Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.")
 

@@ -407,6 +407,10 @@ export type ScorerSpec =
       sets?: Record<string, number>;
       /** Format can't cost marks: keys match ignoring case/spaces/underscores, "£1,234.50" counts as 1234.5, "yes"/"no" as booleans, "n/a"/"none" as null. */
       lenient?: boolean;
+      /** Points per field by dotted path (longest prefix wins, default 1). */
+      weights?: Record<string, number>;
+      /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */
+      aboveConstant?: string[];
     }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }

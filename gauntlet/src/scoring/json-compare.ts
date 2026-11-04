@@ -26,14 +26,48 @@ export interface JsonCompareOptions {
    * counts as its number; an identifier containing a digit matches ignoring spaces and hyphens ("GB 123 4567 89"); "yes"/"no"/"true"/"false" count as booleans; "", "n/a", "none" and "null" count as null.
    */
   lenient?: boolean;
+  /**
+   * Points per field, by dotted path (e.g. "messages.M07.category", or "actions" for everything under it): the
+   * longest matching prefix wins, default 1. A set's extra item costs its `sets` count times the set path's weight.
+   */
+  weights?: Record<string, number>;
+  /**
+   * Leaf patterns ("messages.*.category") scored above a constant guess: those fields earn only the points they get
+   * beyond the best answer that gives every one of them the same value, so labelling everything alike earns nothing.
+   */
+  aboveConstant?: string[];
 }
 
-type Opts = Required<Omit<JsonCompareOptions, 'aliases' | 'sets' | 'lenient'>> & Pick<JsonCompareOptions, 'aliases' | 'sets' | 'lenient'>;
+type Opts = Required<Omit<JsonCompareOptions, 'aliases' | 'sets' | 'lenient' | 'weights' | 'aboveConstant'>> & Pick<JsonCompareOptions, 'aliases' | 'sets' | 'lenient' | 'weights'>;
+
+interface Leaf {
+  path: string;
+  exp: unknown;
+  ok: boolean;
+  w: number;
+}
 
 interface Tally {
   matched: number;
   total: number;
   items: ScoreBreakdownItem[];
+  leaves: Leaf[];
+}
+
+/** The weight of a field: its own path or the longest weighted prefix of it (array indexes ignored). */
+function weightOf(path: string, weights?: Record<string, number>): number {
+  if (!weights) return 1;
+  let p = path.replace(/\[\d+\]/g, '');
+  for (;;) {
+    if (weights[p] !== undefined) return weights[p]!;
+    const i = p.lastIndexOf('.');
+    if (i < 0) return 1;
+    p = p.slice(0, i);
+  }
+}
+
+function wl(label: string, w: number): string {
+  return w === 1 ? label : `${label} (×${w})`;
 }
 
 function normStr(s: string): string {
@@ -156,15 +190,16 @@ function compareSet(exp: Record<string, unknown>, act: unknown, path: string, op
     compare(exp[k], ak === undefined ? undefined : obj[ak], path ? `${path}.${k}` : k, opts, out, ak === undefined);
   }
   const extras = Object.keys(obj).filter((k) => !wanted.has(normSetId(k)));
+  const w = weightOf(path, opts.weights);
   if (keys.length === 0) {
-    out.total++;
+    out.total += w;
     const ok = !absent && act !== undefined && act !== null && extras.length === 0;
-    if (ok) out.matched++;
-    out.items.push({ label: `${path} has no items`, passed: ok, detail: ok ? undefined : extras.length ? `got ${extras.length}` : 'missing' });
+    if (ok) out.matched += w;
+    out.items.push({ label: wl(`${path} has no items`, w), passed: ok, detail: ok ? undefined : extras.length ? `got ${extras.length}` : 'missing' });
   }
   for (const k of extras) {
-    out.total += cost;
-    out.items.push({ label: `${path}: extra item ${JSON.stringify(k).slice(0, 40)} (not in the answer key)`, passed: false, detail: `costs ${cost} field${cost === 1 ? '' : 's'}` });
+    out.total += cost * w;
+    out.items.push({ label: `${path}: extra item ${JSON.stringify(k).slice(0, 40)} (not in the answer key)`, passed: false, detail: `costs ${cost * w} point${cost * w === 1 ? '' : 's'}` });
   }
 }
 
@@ -178,10 +213,11 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
   if (Array.isArray(exp)) {
     const arr = Array.isArray(act) ? act : [];
     // Length is one checkable fact of its own.
-    out.total++;
+    const lw = weightOf(path, opts.weights);
+    out.total += lw;
     const lenOk = Array.isArray(act) && act.length === exp.length;
-    if (lenOk) out.matched++;
-    out.items.push({ label: `${path || '$'} has ${exp.length} items`, passed: lenOk, detail: lenOk ? undefined : `got ${Array.isArray(act) ? act.length : fmt(act)}` });
+    if (lenOk) out.matched += lw;
+    out.items.push({ label: wl(`${path || '$'} has ${exp.length} items`, lw), passed: lenOk, detail: lenOk ? undefined : `got ${Array.isArray(act) ? act.length : fmt(act)}` });
     if (opts.unorderedArrays) {
       const used = new Set<number>();
       exp.forEach((e, i) => {
@@ -189,7 +225,7 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
         let bestTally: Tally | null = null;
         arr.forEach((a, j) => {
           if (used.has(j)) return;
-          const t: Tally = { matched: 0, total: 0, items: [] };
+          const t: Tally = { matched: 0, total: 0, items: [], leaves: [] };
           compare(e, a, `${path}[${i}]`, opts, t);
           if (!bestTally || t.matched > bestTally.matched) {
             bestTally = t;
@@ -202,6 +238,7 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
           out.matched += t.matched;
           out.total += t.total;
           out.items.push(...t.items);
+          out.leaves.push(...t.leaves);
         } else compare(e, undefined, `${path}[${i}]`, opts, out, true);
       });
     } else {
@@ -223,26 +260,57 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
       obj = remapped;
     }
     if (keys.length === 0) {
-      out.total++;
+      const ew = weightOf(path, opts.weights);
+      out.total += ew;
       const ok = act !== null && typeof act === 'object' && !Array.isArray(act) && Object.keys(act as object).length === 0;
-      if (ok) out.matched++;
-      out.items.push({ label: `${path || '$'} is {}`, passed: ok });
+      if (ok) out.matched += ew;
+      out.items.push({ label: wl(`${path || '$'} is {}`, ew), passed: ok });
       return;
     }
     const present = !absent && keys.some((k) => pick(obj, k, opts.loose) !== undefined || Object.prototype.hasOwnProperty.call(obj, k));
     for (const k of keys) compare((exp as Record<string, unknown>)[k], pick(obj, k, opts.loose), path ? `${path}.${k}` : k, opts, out, !present);
     return;
   }
-  out.total++;
+  const w = weightOf(path, opts.weights);
+  out.total += w;
   const ok = !(absent && act === undefined) && leafEqual(exp, opts.lenient ? lenientValue(exp, act) : act, opts.numberTolerance, opts.aliases, opts.loose);
-  if (ok) out.matched++;
-  out.items.push({ label: path || '$', passed: ok, detail: ok ? undefined : `expected ${fmt(exp)}, got ${fmt(act)}` });
+  if (ok) out.matched += w;
+  out.leaves.push({ path, exp, ok, w });
+  out.items.push({ label: wl(path || '$', w), passed: ok, detail: ok ? undefined : `expected ${fmt(exp)}, got ${fmt(act)}` });
+}
+
+/** Points above the best constant guess for the fields matching each pattern (see `aboveConstant`). */
+function applyAboveConstant(t: Tally, patterns: string[]): void {
+  for (const pat of patterns) {
+    const re = new RegExp(`^${pat.split('.').map((seg) => (seg === '*' ? '[^.]+' : seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('\\.')}$`);
+    const group = t.leaves.filter((l) => re.test(l.path));
+    if (!group.length) continue;
+    const total = group.reduce((a, l) => a + l.w, 0);
+    const got = group.reduce((a, l) => a + (l.ok ? l.w : 0), 0);
+    const byValue = new Map<string, number>();
+    for (const l of group) byValue.set(JSON.stringify(l.exp), (byValue.get(JSON.stringify(l.exp)) ?? 0) + l.w);
+    let base = 0;
+    let baseValue = '';
+    for (const [v, w] of byValue) if (w > base) [base, baseValue] = [w, v];
+    t.matched += Math.max(0, got - base) - got;
+    t.total += total - base - total;
+    t.items.push({
+      label: `${pat}: only points above labelling every one ${baseValue} count`,
+      passed: got >= total,
+      detail: `${round(got)} of ${round(total)} correct; ${round(base)} would come from the constant answer, so ${round(Math.max(0, got - base))} of ${round(total - base)} count`,
+    });
+  }
+}
+
+function round(n: number): number {
+  return Math.round(n * 10000) / 10000;
 }
 
 /** Field-level comparison: score = matched leaves / expected leaves. */
 export function compareJson(expected: unknown, actual: unknown, options: JsonCompareOptions = {}): { score: number; items: ScoreBreakdownItem[]; matched: number; total: number } {
-  const opts: Opts = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6, aliases: options.aliases, loose: options.loose ?? false, sets: options.sets, lenient: options.lenient };
-  const tally: Tally = { matched: 0, total: 0, items: [] };
+  const opts: Opts = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6, aliases: options.aliases, loose: options.loose ?? false, sets: options.sets, lenient: options.lenient, weights: options.weights };
+  const tally: Tally = { matched: 0, total: 0, items: [], leaves: [] };
   compare(expected, actual, '', opts, tally);
-  return { score: tally.total ? tally.matched / tally.total : 0, items: tally.items, matched: tally.matched, total: tally.total };
+  if (options.aboveConstant?.length) applyAboveConstant(tally, options.aboveConstant);
+  return { score: tally.total > 0 ? Math.max(0, tally.matched) / tally.total : 0, items: tally.items, matched: round(tally.matched), total: round(tally.total) };
 }
