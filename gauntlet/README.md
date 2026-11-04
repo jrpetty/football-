@@ -307,7 +307,7 @@ default repeat count. Bump the suite `version` when you change it.
 | Run the Warehouse for a Week | `work.warehouse-week` | Twelve orders, a courier strike, a short delivery and a scammer who wants a tent sent to Dartford. |
 
 **Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
-running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder)). Never part of the Gauntlet Index.
+running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder); the operations & workflow tests below: [§7p](docs/METHODOLOGY.md#7p-business-ladder-operations--workflow-tests-stock-rota-routes-replies-board-kpis)). Never part of the Gauntlet Index.
 
 | Test | Id | What it does |
 |---|---|---|
@@ -317,6 +317,11 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
 | Read the Spreadsheet | `work.sheet-lookup` | Two hundred rows, five questions, one exact answer each. No formulas allowed. |
 | Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
+| What Do We Reorder? | `work.stock-reorder` | Thirty items, four suppliers, a promo week and a supplier shutdown: the cheapest order that never runs short. The order is replayed week by week. |
+| Build the Rota | `work.shift-rota` | A pub, a care home or a warehouse: cover, skills, 11-hour rest, under-18s, weekend fairness, the lowest wage bill. Proven optimal by search. |
+| Plan the Van Routes | `work.delivery-routes` | Up to four vans and fifteen drops with windows, weights, drivers' breaks and a road closure: the least total van time. |
+| Reply Within Policy | `work.support-replies` | One customer email, one strict returns policy: the right decision and refund, and a reply that breaks no house rule. No AI judge. |
+| Numbers for the Board | `work.board-report` | Orders, refunds and payroll exports plus a finance memo: twelve KPIs for the quarter, every one exact. |
 
 **Everyday Life (`life`)**: personal admin, every answer checked by an exact solver or a plan checker (see [METHODOLOGY.md](docs/METHODOLOGY.md#7i-everyday-life-tests-checked-plans-and-exact-money)).
 

@@ -9,6 +9,10 @@ import { shopping } from './shopping.ts';
 import { packing } from './packing.ts';
 import { settle } from './settle.ts';
 import { fields } from './fields.ts';
+import { reorder } from './reorder.ts';
+import { rota } from './rota.ts';
+import { routes } from './routes.ts';
+import { reply } from './reply.ts';
 
 export const VERIFIERS: Record<string, Verifier> = {
   trip: trip as unknown as Verifier,
@@ -16,6 +20,10 @@ export const VERIFIERS: Record<string, Verifier> = {
   packing: packing as unknown as Verifier,
   settle: settle as unknown as Verifier,
   fields: fields as unknown as Verifier,
+  reorder: reorder as unknown as Verifier,
+  rota: rota as unknown as Verifier,
+  routes: routes as unknown as Verifier,
+  reply: reply as unknown as Verifier,
 };
 
 export const VERIFIER_NAMES: readonly string[] = Object.keys(VERIFIERS);

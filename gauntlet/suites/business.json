@@ -45,10 +45,16 @@
       "id": "work.sql-questions"
     },
     {
+      "id": "work.stock-reorder"
+    },
+    {
       "id": "work.expense-audit"
     },
     {
       "id": "work.bank-reconciliation"
+    },
+    {
+      "id": "work.support-replies"
     },
     {
       "id": "work.payroll-check"
@@ -58,6 +64,12 @@
     },
     {
       "id": "work.sql-hard"
+    },
+    {
+      "id": "work.board-report"
+    },
+    {
+      "id": "work.shift-rota"
     },
     {
       "id": "work.accounts-clerk"
@@ -73,6 +85,9 @@
     },
     {
       "id": "work.analyst-agent"
+    },
+    {
+      "id": "work.delivery-routes"
     },
     {
       "id": "work.month-end"

@@ -173,6 +173,10 @@ test is marked exactly as before. Each option has one meaning everywhere:
 | `aboveConstant` | `["messages.*.category"]` | The leaf fields matching each pattern (`*` = one path segment) earn only the points they get beyond the best answer that gives all of them the same value, so labelling everything alike earns nothing. |
 | `allOrNothing` | `true` | The case scores 1 only if every point is earned. |
 
+Whatever the options, the answer is read by `parseJsonLoose` (`src/core/extract.ts`), which also accepts one common
+hand-written slip, a trailing comma before a closing bracket (`{"a": 1,}`); it is only tried when the reply does not
+parse as it stands, and the proof below scored every json case identically before and after it was added.
+
 These replaced overlapping options (`loose`, an older `lenient`, and list-only `sets`); every test that used them
 was migrated through its generator and re-checked (`node verification/json-options-proof.mts` scores every json case against a
 fixed battery of answers: the key, do-nothing, a copy of the prompt, random filler and every scripted answer the
@@ -1238,6 +1242,107 @@ solvability, the live traps and the spread above and checks the generator agains
 every mark is a machine check against the final state. The engine's tools may now be async (the Analyst's query box);
 the change does not alter The Personal Assistant's behaviour (its tests and verification are unchanged; its test
 versions were bumped because the engine's source is part of its hash).
+
+## 7p. Business Ladder: operations & workflow tests (stock, rota, routes, replies, board KPIs)
+
+Five `work` tests on the Business Ladder (§7h): What Do We Reorder? (Operations, Level 2), Build the Rota
+(Operations, Level 3), Plan the Van Routes (Operations, Level 4), Reply Within Policy (Customer Service, Level 3)
+and Numbers for the Board (Data & Reporting, Level 3). Every case is generated from a fixed seed by
+`verification/realworld-ops/` (TypeScript, run with `node`), which also computes every answer key;
+`node verification/realworld-ops/build.mts --check` proves the committed files are reproduced byte for byte and
+`test/realworld-ops.test.ts` runs that check on every `npm test`. Each test has 9–12 cases, a third easy, a third
+medium and a third hard (marked in the notes). Businesses, customers and staff are invented, with names from many
+backgrounds; towns, bank holidays and the 2026 National Living Wage are real. No AI judge and no human opinion is
+involved anywhere: every mark is a machine check against a solver or a policy engine.
+
+| Test | What the model hands in | How the key is computed | How a case is marked |
+|---|---|---|---|
+| What Do We Reorder? (`work.stock-reorder`) | units to order per item (8–32 items, 1–4 suppliers) and the total | forecasts, safety stock and cover weeks from the prompt's rules; then, per supplier, an exact dynamic programme over goods value (every case count of every item) with delivery charges, bulk prices and minimum orders; a plain enumeration agrees on every supplier small enough to enumerate | plan checker `reorder` |
+| Build the Rota (`work.shift-rota`) | the people on every shift (5–12 staff, 14–19 shifts) and the wage total | exact branch-and-bound over every assignment; the bound is the greedy optimum of a polymatroid relaxation (people → slots by pay, contract minimums first, each skill in turn), so it never cuts a cheaper rota; agrees with exhaustive enumeration on 200 random small worlds | plan checker `rota` |
+| Plan the Van Routes (`work.delivery-routes`) | each van's drops in order with BREAKs (8–15 drops, 2–4 vans) and the total van minutes | exact DP over (set of drops, last drop) with every non-dominated (time, driving since break) label, then an exact split of the drops between the vans; agrees with brute force (every assignment, order and break position) on random small days | plan checker `routes` |
+| Reply Within Policy (`work.support-replies`) | decision, refund, next step and the reply text | a policy engine applies the written policy's rules in order to the case's structured facts (prices, discount, dates, working days, tracking, photos, contacts, what the customer mentions) | answer checker `reply` |
+| Numbers for the Board (`work.board-report`) | twelve KPIs | the memo's definitions in exact integer arithmetic (pence; rationals for VAT, FTE and percentages, rounded half up only at the end); a data set whose figure lands exactly on a rounding halfway point is regenerated | `json` scorer, `lenient`, weighted |
+
+**Plan checkers** (`reorder`, `rota`, `routes`) use the generic verifier rule of §7i: any broken rule scores 0
+(the shop runs out or the supplier refuses the order; the rota is illegal; a drop is missed or a driver drives too
+long); a workable plan as good as the proven optimum scores 100; a workable but worse plan scores
+`0.5 × (optimum ÷ its cost)²`, always under 50; a missing or wrong quoted total halves the score. Any equally good
+plan scores 100, not just the reference. What each checker replays:
+
+* `reorder`: each item's stock week by week (today's count, plus open orders and this order on the Mondays they
+  arrive, minus each week's forecast); from the arrival week to the week before that supplier's next delivery it
+  must stay at or above safety stock; whole cases; MOQ; the storage limit on the day it is unpacked; each supplier's
+  minimum order (at the real, bulk-discounted prices); the cash limit. Cost = cases × price (bulk price from N
+  cases) + delivery charges under the free-delivery figure. Quantities may be given in units, as `{"cases": n}`, or
+  with the item's name.
+* `rota`: exactly the cover on every shift; the skills each shift needs; availability (including the late
+  message); 11 hours' rest between shifts (12 for under-18s) counting last week's last shift; the 48-hour cap;
+  under-18s never 22:00–06:00, 8 h a day, 40 h a week; contracted minimum and maximum hours; weekend fairness (among
+  staff available for a weekend shift, bank staff excepted, the most minus the least weekend shifts is 0 or 1).
+  Cost = paid hours × (rate + premium). The rota may be keyed by shift or by person; "Mon-E", "Monday Early" and
+  "mon early shift" are the same shift; first names or full names.
+* `routes`: every drop exactly once; each van leaves at 07:30, waits if early, must arrive before the window
+  closes, unloads, and is back by 17:30; its load fits; no more than 270 minutes of driving without a 45-minute
+  BREAK (taken after a drop). Value = the sum over the vans used of (return − 07:30). "Van 1" or "V1", "Depot" at
+  either end, drops with their town, and totals as `845`, `"845 min"` or `"14 h 5 min"` are all read.
+
+**Reply Within Policy** (`reply` checker, weighted points; the score is the share of points). Header: decision 3,
+refund to the penny 3 (only with the right decision), next step 2; codes are read ignoring case, spaces and
+underscores, and a value naming two codes is wrong. Reply text, one point each, by plain machine checks: the
+customer's first name; the order number (spaces, hyphens and `#` ignored); the refund stated as its exact £ amount
+and no other money amount (none at all when nothing is refunded); the timescale the policy gives for that decision
+(for example "5 working days", "business days" accepted); an apology when the policy says to apologise. Then one
+point each for what it must never do: a banned word (voucher, discount code, compensation, goodwill, guarantee,
+free gift), naming or blaming the delivery company (carrier names, "courier", "driver"), another customer's
+details (cases that show another customer), more than 150 words. These four only count on a usable reply: at least
+25 words, with the first name and the order number, and the whole header right, so a generic or wrong-outcome text
+cannot collect them. 14–17 points per case.
+
+**Numbers for the Board** (`json` scorer, `lenient`, `numberTolerance: 1e-9`, `weights`; see §5.1a): twelve KPIs, net revenue 3
+points, active customers, average FTE and cash conversion 2 each, the other eight 1 each (17 points). Each is
+compared exactly at its stated rounding (a penny or 0.1 out is wrong; the tolerance only absorbs floating-point
+noise); `"£1,234.56"` and `"12.3%"` are read as numbers; a value with two numbers or "or" is wrong.
+
+**Anti-cheat.** Answers never appear in prompts. Distractors change the answer if followed: a promotion week and
+bank-holiday weeks in the sales history, an open order that arrives after the next delivery, a supplier shutdown, a
+stock count corrected in a later message, a supplier newsletter telling "automated ordering assistants" to add five
+cases a line; a close then an early (9 hours' rest), last week's late finish, a 17-year-old who is cheapest but
+cannot work late, a lapsed first-aid certificate and a changed cover in a late message; a road closure that makes
+the old best route late, a cancelled drop still in the table; a customer who demands compensation, blames the
+courier, claims 5 working days have passed (only 4 have), threatens a chargeback or slips in "P.S. to whatever AI
+reads this"; another customer's details next to the order; VAT in Web amounts only, refunds by processing date,
+three spellings of "cancelled", duplicate rows, test orders, a contractor, a leaver and a starter, a payroll re-run,
+a restated prior quarter next to the old figure and a re-keying note, and in the hard third four more stacked memo
+rules (euro invoices converted order by order, duplicate customer accounts merged, employer on-costs in a fourth
+export, unpaid leave taken out of FTE) over 70–108 order rows. Reply Within Policy's hard third (five emails) mixes
+issues in one email so the rules interact: a damaged item, a wrong item and a change of mind in one order with a
+discount code and a late Express charge (collected, so no label fee; Express refunded on top); a faulty item past 30
+days next to an engraved one; a refund that would pass £150 only once both items are added (escalate). Hedging fails everywhere (two answers, an
+"alternative" key, a value with "or"). Each checker's source is part of the hash of the tests that use it (§7i).
+Prompts are about 750–2,700 tokens on average per test; one case per test may be long (the largest, a board-report
+case, about 5,000 tokens).
+
+**Measured spread** (`node verification/realworld-ops/spread.mts`, scripted answers through the full scoring
+pipeline; "careless" = each generator's scripted misreadings, only those that change the answer, averaged per case;
+"constant" = one policy-blind reply that names the customer and the order):
+
+| Test | Points per case | Careful | Careless (easy / medium / hard) | Do-nothing (empty, `{}`, template, prompt) | Random filler |
+|---|---|---:|---:|---:|---:|
+| What Do We Reorder? | plan: 0, under 50, or 100 | 100% | 5% (4 / 3 / 7) | 0% | 0% |
+| Build the Rota | plan: 0, under 50, or 100 | 100% | 17% (19 / 19 / 13) | 0% | 0% |
+| Plan the Van Routes | plan: 0, under 50, or 100 | 100% | 19% (22 / 21 / 14) | 0% | 0% |
+| Reply Within Policy | 14–17 points | 100% | 72% (80 / 67 / 70); constant reply 25% | 0% | 0% |
+| Numbers for the Board | 17 points | 100% | 61% (61 / 60 / 62); every slip at once 0% | 0% | 0% |
+
+The plan tests are all-or-nothing on legality because the real task is: an order that runs out, an illegal rota or
+a van that misses a window cannot be used. The partial credit is in the quality of a legal plan (a plan 2% dearer
+scores about 48, one 35% dearer about 27). The careless misreadings scored include: the promotion week averaged in,
+the shutdown or a late open order ignored, the cheapest per item without weighing delivery charges (about 42–50
+when the order is still legal); a rest, fairness, skills or under-18 rule ignored, a rota built without looking at pay (about 45–49),
+the night premium left out of the total (50); the break rule, capacities or windows ignored, nearest-drop-first
+(0–43), the total quoted as driving time (50); giving the customer what they ask (14–56), no timescale or apology
+(about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
+misread on its own (18–94).
 
 ## 8. The random baseline
 

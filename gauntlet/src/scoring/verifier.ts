@@ -15,7 +15,8 @@
  *       × (yours ÷ best)² for values): always under 0.5, so only an optimal plan scores 100, while a plan 1% off
  *       (0.49) still visibly beats one that costs twice as much (0.125). When the answer must quote its total, a
  *       missing or wrong total halves the score.
- *     - Answer verifiers: the score is the share of checks passed (field by field, pair by pair).
+ *     - Answer verifiers: the score is the share of checks passed (field by field, pair by pair), or the share of
+ *       points when the checks carry weights.
  *
  * The verifier's source is part of the test hash (registry.ts), so changing a checker changes every test using it.
  */
@@ -201,12 +202,17 @@ export function scoreVerifier(name: string, expected: unknown, response: string,
       items = [{ label: 'answer could be read', passed: false, detail: (err as Error).message.slice(0, 120) }];
     }
     const passedN = items.filter((i) => i.passed).length;
-    const score = items.length ? round4(passedN / items.length) : 0;
+    const weighted = items.some((i) => i.weight !== undefined && i.weight !== 1);
+    const pts = (xs: VerifierItem[]) => xs.reduce((s, i) => s + (i.weight ?? 1), 0);
+    const totalPts = pts(items);
+    const gotPts = pts(items.filter((i) => i.passed));
+    const score = totalPts > 0 ? round4(gotPts / totalPts) : 0;
     const all = items.length > 0 && passedN === items.length;
+    const tally = weighted ? `${gotPts}/${totalPts} points` : `${passedN}/${items.length} checks right`;
     return {
       score,
       passed: all,
-      summary: all ? `All ${items.length} checks right` : `${passedN}/${items.length} checks right · ${firstFailures(items, false)}`,
+      summary: all ? (weighted ? `All ${items.length} checks right (${totalPts} points)` : `All ${items.length} checks right`) : `${tally} · ${firstFailures(items, false)}`,
       detail: { formatOk, items, extracted, verdict: all ? 'correct' : 'partly' },
     };
   }

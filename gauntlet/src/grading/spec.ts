@@ -506,7 +506,7 @@ function answerRule(sc: ScorerSpec): string {
       const v = Object.prototype.hasOwnProperty.call(VERIFIERS, sc.verifier) ? VERIFIERS[sc.verifier] : undefined;
       return v?.kind === 'plan'
         ? `The ${v.noun} is replayed by the "${v.name}" checker: a broken rule scores 0, the proven best scores 1, a workable but worse one 0.5 × (best ÷ its value)² (always under 0.5)${v.quotesTotal ? '; a wrong quoted total halves it' : ''}. Two answers in one reply score 0.`
-        : `The answer is checked part by part by the "${sc.verifier}" checker; score = share of checks right. Two answers in one reply score 0.`;
+        : `The answer is checked part by part by the "${sc.verifier}" checker; score = share of checks right (share of points where checks carry weights). Two answers in one reply score 0.`;
     }
   }
 }
