@@ -1,4 +1,4 @@
-// Spread solution "do nothing": replies "OK" to every command (the stub gate scores it 0).
-function runStore(commands) {
-  return commands.map(() => 'OK');
+// Spread solution "do nothing": always [0, 0].
+function runEngine(input) {
+  return [0, 0];
 }

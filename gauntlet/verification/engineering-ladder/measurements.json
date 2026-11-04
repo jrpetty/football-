@@ -2,581 +2,581 @@
  "L01": {
   "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
   "ref": {
-   "maxMs": 1
+   "maxMs": 21
   },
   "spread": {
    "ref": {
     "score": 1,
-    "passed": 15,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": 1
-   },
-   "alt": {
-    "score": 1,
-    "passed": 15,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": 8
+    "passed": 14,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 21
    },
    "slips": {
     "score": 1,
-    "passed": 15,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": 1
+    "passed": 14,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 23
+   },
+   "plain": {
+    "score": 1,
+    "passed": 14,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 16
+   },
+   "careless": {
+    "score": 0.5,
+    "passed": 7,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 38
    },
    "naive": {
     "score": 1,
-    "passed": 15,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": 4
-   },
-   "careless": {
-    "score": 1,
-    "passed": 15,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": 8
+    "passed": 14,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 15
    },
    "stub": {
     "score": 0,
-    "passed": 0,
-    "total": 15,
-    "timeouts": 0,
-    "maxMs": null
+    "passed": 1,
+    "total": 14,
+    "outOfTime": 0,
+    "maxMs": 3
    },
    "empty": {
     "score": 0,
     "passed": 0,
-    "total": 15,
-    "timeouts": 0,
+    "total": 14,
+    "outOfTime": 0,
     "maxMs": null
    }
   },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 100%, naive.js (correct, copies and scans) 100%, careless.js 100%, do-nothing stubs 0%/0%"
+  "summary": "slips.js (careful with slips) 100%, plain.js (plain lazy segment tree) 100%, careless.js 50%, naive.js (a loop per operation) 100%, do-nothing stubs 0%/0%"
  },
  "L02": {
   "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
   "ref": {
-   "maxMs": 3
+   "maxMs": 219
   },
   "spread": {
    "ref": {
     "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 3
-   },
-   "alt": {
-    "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 11
+    "passed": 16,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 219
    },
    "slips": {
     "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 11
+    "passed": 16,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 247
    },
-   "naive": {
+   "plain": {
     "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 32
+    "passed": 16,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 1325
    },
    "careless": {
-    "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 168
+    "score": 0.25,
+    "passed": 4,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 16
+   },
+   "naive": {
+    "score": 0.8125,
+    "passed": 13,
+    "total": 16,
+    "outOfTime": 3,
+    "maxMs": 56
    },
    "stub": {
     "score": 0,
     "passed": 0,
-    "total": 19,
-    "timeouts": 0,
+    "total": 16,
+    "outOfTime": 0,
     "maxMs": null
    },
    "empty": {
     "score": 0,
     "passed": 0,
-    "total": 19,
-    "timeouts": 0,
+    "total": 16,
+    "outOfTime": 0,
     "maxMs": null
    }
   },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 100%, naive.js (correct, copies and scans) 100%, careless.js 100%, do-nothing stubs 0%/0%"
+  "summary": "slips.js (careful with slips) 100%, plain.js (plain lazy segment tree) 100%, careless.js 25%, naive.js (a loop per operation) 81% (3 out of time), do-nothing stubs 0%/0%"
  },
  "L03": {
   "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
   "ref": {
-   "maxMs": 14
+   "maxMs": 421
+  },
+  "spread": {
+   "ref": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 421
+   },
+   "slips": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 413
+   },
+   "plain": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1452
+   },
+   "careless": {
+    "score": 0.5882,
+    "passed": 10,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1848
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 20
+   },
+   "stub": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   },
+   "empty": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   }
+  },
+  "summary": "slips.js (careful with slips) 100%, plain.js (plain lazy segment tree) 100%, careless.js 59%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
+ },
+ "L04": {
+  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "ref": {
+   "maxMs": 621
+  },
+  "spread": {
+   "ref": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 621
+   },
+   "slips": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 611
+   },
+   "plain": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1702
+   },
+   "careless": {
+    "score": 0.5882,
+    "passed": 10,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1753
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 25
+   },
+   "stub": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   },
+   "empty": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   }
+  },
+  "summary": "slips.js (careful with slips) 100%, plain.js (plain lazy segment tree) 100%, careless.js 59%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
+ },
+ "L05": {
+  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "ref": {
+   "maxMs": 629
   },
   "spread": {
    "ref": {
     "score": 1,
     "passed": 18,
     "total": 18,
-    "timeouts": 0,
-    "maxMs": 14
-   },
-   "alt": {
-    "score": 1,
-    "passed": 18,
-    "total": 18,
-    "timeouts": 0,
-    "maxMs": 61
+    "outOfTime": 0,
+    "maxMs": 629
    },
    "slips": {
     "score": 0.6667,
     "passed": 12,
     "total": 18,
-    "timeouts": 0,
-    "maxMs": 54
+    "outOfTime": 0,
+    "maxMs": 6
    },
-   "naive": {
-    "score": 1,
-    "passed": 18,
+   "plain": {
+    "score": 0.9444,
+    "passed": 17,
     "total": 18,
-    "timeouts": 0,
-    "maxMs": 98
+    "outOfTime": 1,
+    "maxMs": 2857
    },
    "careless": {
-    "score": 0.3333,
-    "passed": 6,
+    "score": 0.4444,
+    "passed": 8,
     "total": 18,
-    "timeouts": 0,
-    "maxMs": 771
+    "outOfTime": 1,
+    "maxMs": 22
    },
-   "stub": {
-    "score": 0,
-    "passed": 0,
-    "total": 18,
-    "timeouts": 0,
-    "maxMs": null
-   },
-   "empty": {
-    "score": 0,
-    "passed": 0,
-    "total": 18,
-    "timeouts": 0,
-    "maxMs": null
-   }
-  },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 67%, naive.js (correct, copies and scans) 100%, careless.js 33%, do-nothing stubs 0%/0%"
- },
- "L04": {
-  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
-  "ref": {
-   "maxMs": 18
-  },
-  "spread": {
-   "ref": {
-    "score": 1,
-    "passed": 21,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 18
-   },
-   "alt": {
-    "score": 1,
-    "passed": 21,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 242
-   },
-   "slips": {
-    "score": 0.7143,
+   "naive": {
+    "score": 0.8333,
     "passed": 15,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 4
-   },
-   "naive": {
-    "score": 0.9524,
-    "passed": 20,
-    "total": 21,
-    "timeouts": 1,
-    "maxMs": 290
-   },
-   "careless": {
-    "score": 0.4762,
-    "passed": 10,
-    "total": 21,
-    "timeouts": 2,
-    "maxMs": 32
+    "total": 18,
+    "outOfTime": 3,
+    "maxMs": 25
    },
    "stub": {
     "score": 0,
     "passed": 0,
-    "total": 21,
-    "timeouts": 0,
+    "total": 18,
+    "outOfTime": 0,
     "maxMs": null
    },
    "empty": {
     "score": 0,
     "passed": 0,
-    "total": 21,
-    "timeouts": 0,
+    "total": 18,
+    "outOfTime": 0,
     "maxMs": null
    }
   },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 71%, naive.js (correct, copies and scans) 95% (1 time-outs), careless.js 48%, do-nothing stubs 0%/0%"
- },
- "L05": {
-  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
-  "ref": {
-   "maxMs": 61
-  },
-  "spread": {
-   "ref": {
-    "score": 1,
-    "passed": 16,
-    "total": 16,
-    "timeouts": 0,
-    "maxMs": 61
-   },
-   "alt": {
-    "score": 1,
-    "passed": 16,
-    "total": 16,
-    "timeouts": 0,
-    "maxMs": 794
-   },
-   "slips": {
-    "score": 0.75,
-    "passed": 12,
-    "total": 16,
-    "timeouts": 0,
-    "maxMs": 110
-   },
-   "naive": {
-    "score": 0.875,
-    "passed": 14,
-    "total": 16,
-    "timeouts": 2,
-    "maxMs": 11
-   },
-   "careless": {
-    "score": 0.3125,
-    "passed": 5,
-    "total": 16,
-    "timeouts": 2,
-    "maxMs": 5
-   },
-   "stub": {
-    "score": 0,
-    "passed": 0,
-    "total": 16,
-    "timeouts": 0,
-    "maxMs": null
-   },
-   "empty": {
-    "score": 0,
-    "passed": 0,
-    "total": 16,
-    "timeouts": 0,
-    "maxMs": null
-   }
-  },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 75%, naive.js (correct, copies and scans) 88% (2 time-outs), careless.js 31%, do-nothing stubs 0%/0%"
+  "summary": "slips.js (careful with slips) 67%, plain.js (plain lazy segment tree) 94% (1 out of time), careless.js 44%, naive.js (a loop per operation) 83% (3 out of time), do-nothing stubs 0%/0%"
  },
  "L06": {
   "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
   "ref": {
-   "maxMs": 55
+   "maxMs": 683
   },
   "spread": {
    "ref": {
     "score": 1,
-    "passed": 24,
-    "total": 24,
-    "timeouts": 0,
-    "maxMs": 55
-   },
-   "alt": {
-    "score": 1,
-    "passed": 24,
-    "total": 24,
-    "timeouts": 0,
-    "maxMs": 289
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 683
    },
    "slips": {
-    "score": 0.375,
-    "passed": 9,
-    "total": 24,
-    "timeouts": 0,
-    "maxMs": 5
+    "score": 0.6471,
+    "passed": 11,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 3
    },
-   "naive": {
-    "score": 0.9583,
-    "passed": 23,
-    "total": 24,
-    "timeouts": 1,
-    "maxMs": 252
+   "plain": {
+    "score": 0.8824,
+    "passed": 15,
+    "total": 17,
+    "outOfTime": 2,
+    "maxMs": 3007
    },
    "careless": {
-    "score": 0.2917,
-    "passed": 7,
-    "total": 24,
-    "timeouts": 1,
-    "maxMs": 4
+    "score": 0.6471,
+    "passed": 11,
+    "total": 17,
+    "outOfTime": 2,
+    "maxMs": 3253
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 25
    },
    "stub": {
     "score": 0,
     "passed": 0,
-    "total": 24,
-    "timeouts": 0,
+    "total": 17,
+    "outOfTime": 0,
     "maxMs": null
    },
    "empty": {
     "score": 0,
     "passed": 0,
-    "total": 24,
-    "timeouts": 0,
+    "total": 17,
+    "outOfTime": 0,
     "maxMs": null
    }
   },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 38%, naive.js (correct, copies and scans) 96% (1 time-outs), careless.js 29%, do-nothing stubs 0%/0%"
+  "summary": "slips.js (careful with slips) 65%, plain.js (plain lazy segment tree) 88% (2 out of time), careless.js 65%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
  },
  "L07": {
   "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
   "ref": {
-   "maxMs": 68
-  },
-  "spread": {
-   "ref": {
-    "score": 1,
-    "passed": 21,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 68
-   },
-   "alt": {
-    "score": 1,
-    "passed": 21,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 466
-   },
-   "slips": {
-    "score": 0.5714,
-    "passed": 12,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": 195
-   },
-   "naive": {
-    "score": 0.9048,
-    "passed": 19,
-    "total": 21,
-    "timeouts": 2,
-    "maxMs": 8
-   },
-   "careless": {
-    "score": 0.2857,
-    "passed": 6,
-    "total": 21,
-    "timeouts": 2,
-    "maxMs": 8
-   },
-   "stub": {
-    "score": 0,
-    "passed": 0,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": null
-   },
-   "empty": {
-    "score": 0,
-    "passed": 0,
-    "total": 21,
-    "timeouts": 0,
-    "maxMs": null
-   }
-  },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 57%, naive.js (correct, copies and scans) 90% (2 time-outs), careless.js 29%, do-nothing stubs 0%/0%"
- },
- "L08": {
-  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
-  "ref": {
-   "maxMs": 114
-  },
-  "spread": {
-   "ref": {
-    "score": 1,
-    "passed": 20,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": 114
-   },
-   "alt": {
-    "score": 1,
-    "passed": 20,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": 401
-   },
-   "slips": {
-    "score": 0.6,
-    "passed": 12,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": 352
-   },
-   "naive": {
-    "score": 0.9,
-    "passed": 18,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": 12
-   },
-   "careless": {
-    "score": 0.4,
-    "passed": 8,
-    "total": 20,
-    "timeouts": 1,
-    "maxMs": 8
-   },
-   "stub": {
-    "score": 0,
-    "passed": 0,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": null
-   },
-   "empty": {
-    "score": 0,
-    "passed": 0,
-    "total": 20,
-    "timeouts": 0,
-    "maxMs": null
-   }
-  },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 60%, naive.js (correct, copies and scans) 90%, careless.js 40%, do-nothing stubs 0%/0%"
- },
- "L09": {
-  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
-  "ref": {
-   "maxMs": 276
-  },
-  "spread": {
-   "ref": {
-    "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 276
-   },
-   "alt": {
-    "score": 1,
-    "passed": 19,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 7643
-   },
-   "slips": {
-    "score": 0.5263,
-    "passed": 10,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": 4
-   },
-   "naive": {
-    "score": 0.8947,
-    "passed": 17,
-    "total": 19,
-    "timeouts": 1,
-    "maxMs": 10
-   },
-   "careless": {
-    "score": 0.3684,
-    "passed": 7,
-    "total": 19,
-    "timeouts": 2,
-    "maxMs": 17
-   },
-   "stub": {
-    "score": 0,
-    "passed": 0,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": null
-   },
-   "empty": {
-    "score": 0,
-    "passed": 0,
-    "total": 19,
-    "timeouts": 0,
-    "maxMs": null
-   }
-  },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 53%, naive.js (correct, copies and scans) 89% (1 time-outs), careless.js 37%, do-nothing stubs 0%/0%"
- },
- "L10": {
-  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
-  "ref": {
-   "maxMs": 467
+   "maxMs": 950
   },
   "spread": {
    "ref": {
     "score": 1,
     "passed": 17,
     "total": 17,
-    "timeouts": 0,
-    "maxMs": 467
-   },
-   "alt": {
-    "score": 1,
-    "passed": 17,
-    "total": 17,
-    "timeouts": 0,
-    "maxMs": 2215
+    "outOfTime": 0,
+    "maxMs": 950
    },
    "slips": {
-    "score": 0.2941,
-    "passed": 5,
+    "score": 0.1176,
+    "passed": 2,
     "total": 17,
-    "timeouts": 0,
-    "maxMs": 1
+    "outOfTime": 0,
+    "maxMs": 2
    },
-   "naive": {
+   "plain": {
     "score": 0.8824,
     "passed": 15,
     "total": 17,
-    "timeouts": 1,
-    "maxMs": 23
+    "outOfTime": 2,
+    "maxMs": 4436
    },
    "careless": {
     "score": 0.1176,
     "passed": 2,
     "total": 17,
-    "timeouts": 2,
-    "maxMs": 0
+    "outOfTime": 2,
+    "maxMs": 166
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 32
    },
    "stub": {
     "score": 0,
     "passed": 0,
     "total": 17,
-    "timeouts": 0,
+    "outOfTime": 0,
     "maxMs": null
    },
    "empty": {
     "score": 0,
     "passed": 0,
     "total": 17,
-    "timeouts": 0,
+    "outOfTime": 0,
     "maxMs": null
    }
   },
-  "summary": "alt.js (careful, simpler structures) 100%, slips.js (careful with slips) 29%, naive.js (correct, copies and scans) 88% (1 time-outs), careless.js 12%, do-nothing stubs 0%/0%"
+  "summary": "slips.js (careful with slips) 12%, plain.js (plain lazy segment tree) 88% (2 out of time), careless.js 12%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
+ },
+ "L08": {
+  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "ref": {
+   "maxMs": 1397
+  },
+  "spread": {
+   "ref": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1397
+   },
+   "slips": {
+    "score": 0.2941,
+    "passed": 5,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 2
+   },
+   "plain": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 576
+   },
+   "careless": {
+    "score": 0.1176,
+    "passed": 2,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 0
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 26
+   },
+   "stub": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   },
+   "empty": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   }
+  },
+  "summary": "slips.js (careful with slips) 29%, plain.js (plain lazy segment tree) 82% (3 out of time), careless.js 12%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
+ },
+ "L09": {
+  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "ref": {
+   "maxMs": 1163
+  },
+  "spread": {
+   "ref": {
+    "score": 1,
+    "passed": 16,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 1163
+   },
+   "slips": {
+    "score": 0.25,
+    "passed": 4,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": 2
+   },
+   "plain": {
+    "score": 0.8125,
+    "passed": 13,
+    "total": 16,
+    "outOfTime": 3,
+    "maxMs": 474
+   },
+   "careless": {
+    "score": 0,
+    "passed": 0,
+    "total": 16,
+    "outOfTime": 3,
+    "maxMs": null
+   },
+   "naive": {
+    "score": 0.8125,
+    "passed": 13,
+    "total": 16,
+    "outOfTime": 3,
+    "maxMs": 43
+   },
+   "stub": {
+    "score": 0,
+    "passed": 0,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": null
+   },
+   "empty": {
+    "score": 0,
+    "passed": 0,
+    "total": 16,
+    "outOfTime": 0,
+    "maxMs": null
+   }
+  },
+  "summary": "slips.js (careful with slips) 25%, plain.js (plain lazy segment tree) 81% (3 out of time), careless.js 0%, naive.js (a loop per operation) 81% (3 out of time), do-nothing stubs 0%/0%"
+ },
+ "L10": {
+  "platform": "linux Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "ref": {
+   "maxMs": 1298
+  },
+  "spread": {
+   "ref": {
+    "score": 1,
+    "passed": 17,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 1298
+   },
+   "slips": {
+    "score": 0.2353,
+    "passed": 4,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": 2
+   },
+   "plain": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 568
+   },
+   "careless": {
+    "score": 0.1176,
+    "passed": 2,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 2
+   },
+   "naive": {
+    "score": 0.8235,
+    "passed": 14,
+    "total": 17,
+    "outOfTime": 3,
+    "maxMs": 39
+   },
+   "stub": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   },
+   "empty": {
+    "score": 0,
+    "passed": 0,
+    "total": 17,
+    "outOfTime": 0,
+    "maxMs": null
+   }
+  },
+  "summary": "slips.js (careful with slips) 24%, plain.js (plain lazy segment tree) 82% (3 out of time), careless.js 12%, naive.js (a loop per operation) 82% (3 out of time), do-nothing stubs 0%/0%"
  }
 }

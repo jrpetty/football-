@@ -17,9 +17,9 @@ import type { PromptTest, ScorerSpec } from '../src/core/types.ts';
 // @ts-expect-error: plain JavaScript verification module
 import { parseBoard, winProbability } from '../verification/exact-ladder/solver.mjs';
 // @ts-expect-error: plain JavaScript verification module
-import { LEVELS, commandsUpTo } from '../verification/engineering-ladder/spec.mjs';
+import { LEVELS, opsUpTo } from '../verification/engineering-ladder/spec.mjs';
 // @ts-expect-error: plain JavaScript verification module
-import { checkWellFormed } from '../verification/engineering-ladder/gen.mjs';
+import { checkWellFormed, expand } from '../verification/engineering-ladder/gen.mjs';
 
 const ALL = loadTests();
 const def = (id: string) => ALL.find((t) => t.definition.id === id)!;
@@ -137,9 +137,10 @@ test('Exact Maths: the generator rebuilds the boards and the test file byte for 
 
 // ─────────────────────────────── Engineering: Ladder ───────────────────────────────
 
-type CodeKey = { functionName: string; tests: Array<{ args: unknown[]; expected: unknown }> };
+type CodeKey = { functionName: string; tests: Array<{ args: [Record<string, unknown>]; expected: unknown }> };
+const QUERY_OPS = new Set(['sum', 'min', 'max', 'hmax', 'hmin']);
 
-test('Engineering: each level adds commands, rules and input size on top of the level below', () => {
+test('Engineering: each level adds an operation and its rules on top of the level below', () => {
   for (let i = 0; i < 10; i++) {
     const c = CODE.cases[i]!;
     const L = LEVELS[i];
@@ -147,49 +148,55 @@ test('Engineering: each level adds commands, rules and input size on top of the 
     assert.equal(sc.type, 'code-js');
     assert.equal(sc.timeoutMs, L.timeoutMs, c.id);
     assert.match(c.prompt!, new RegExp(`time limit of about ${L.timeoutMs / 1000} seconds per test`), `${c.id}: the prompt states its time limit`);
-    assert.equal((c.expected as CodeKey).functionName, 'runStore');
+    assert.equal((c.expected as CodeKey).functionName, 'runEngine');
+    for (const op of L.adds) assert.ok(c.prompt!.includes(`["${op}"`), `${c.id} specifies ${op}`);
     if (i === 0) continue;
     const prev = CODE.cases[i - 1]!;
-    // every rule section of the level below appears word for word
     for (let l = 1; l <= i; l++) {
-      const head = `**Level ${l}:`;
+      const head = `**Level ${l}**`;
       const sec = prev.prompt!.slice(prev.prompt!.indexOf(head)).split('\n\n')[0]!;
-      assert.ok(c.prompt!.includes(sec), `${c.id} keeps the level ${l} section`);
+      assert.ok(c.prompt!.includes(sec), `${c.id} keeps the level ${l} section word for word`);
     }
-    assert.ok(c.prompt!.includes(`**Level ${i + 1}:`), `${c.id} adds its own section`);
-    assert.ok(commandsUpTo(i + 1).length > commandsUpTo(i).length, `${c.id}: more commands`);
-    assert.ok(L.maxCommands > LEVELS[i - 1].maxCommands && L.maxKeys > LEVELS[i - 1].maxKeys, `${c.id}: bigger inputs`);
+    assert.ok(opsUpTo(i + 1).length > opsUpTo(i).length, `${c.id}: more operations`);
+    assert.ok(L.maxN >= LEVELS[i - 1].maxN && L.maxQ >= LEVELS[i - 1].maxQ, `${c.id}: no smaller inputs`);
     assert.ok(L.timeoutMs >= LEVELS[i - 1].timeoutMs, `${c.id}: no tighter time limit`);
-    assert.ok(c.prompt!.length > prev.prompt!.length, `${c.id}: longer specification`);
-    const longest = (cc: typeof c) => Math.max(...(cc.expected as CodeKey).tests.map((t) => (t.args[0] as unknown[]).length));
-    assert.ok(longest(c) >= longest(prev), `${c.id}: no smaller largest test`);
   }
 });
 
-test('Engineering: every hidden test is well-formed, uses only its level\'s commands and has a reply per command', () => {
+test('Engineering: every hidden test is well-formed, uses only its level\'s operations, and the new ones appear', () => {
   for (const [i, c] of CODE.cases.entries()) {
     const key = c.expected as CodeKey;
-    assert.ok(key.tests.length >= 15 && key.tests.length <= 30, `${c.id}: ${key.tests.length} hidden tests`);
+    assert.ok(key.tests.length >= 10 && key.tests.length <= 30, `${c.id}: ${key.tests.length} hidden tests`);
+    const used = new Set<string>();
     for (const t of key.tests) {
-      const cmds = t.args[0] as string[][];
-      checkWellFormed(i + 1, cmds);
-      assert.ok(cmds.length <= LEVELS[i].maxCommands);
-      assert.equal((t.expected as string[]).length, cmds.length);
-      assert.ok(!(t.expected as string[]).every((r) => r === 'OK'), `${c.id}: a test only "OK" could pass`);
+      checkWellFormed(i + 1, t.args[0]);
+      const inp = t.args[0] as { ops?: string[][]; generate?: { mix: string[][] } };
+      for (const o of inp.ops ?? inp.generate!.mix) used.add(o[0]!);
+      const [count, checksum] = t.expected as [number, number];
+      assert.ok(Number.isInteger(count) && Number.isInteger(checksum) && checksum >= 0 && checksum < 1000000007);
     }
-    const allowed = new Set(commandsUpTo(i + 1));
-    const used = new Set(key.tests.flatMap((t) => (t.args[0] as string[][]).map((x) => x[0])));
-    for (const op of LEVELS[i].adds) assert.ok(used.has(op), `${c.id} tests its new command ${op}`);
-    for (const op of used) assert.ok(allowed.has(op as string), `${c.id}: ${op}`);
+    for (const op of LEVELS[i].adds) assert.ok(used.has(op), `${c.id} tests its new operation ${op}`);
+    assert.ok([...used].some((o) => QUERY_OPS.has(o)));
+    if (i >= 1) assert.ok(key.tests.some((t) => (t.args[0] as { generate?: { n: number } }).generate?.n === LEVELS[i].maxN), `${c.id}: the largest size is tested`);
   }
 });
 
-test('Engineering: the reference passes every hidden test of every level through the real scorer', { timeout: 300_000 }, async () => {
+test('Engineering: the prompt\'s generator example and checksum example are right', () => {
+  const p = CODE.cases[1]!.prompt!;
+  const m = /Example: `(\{"generate".*?\})` produces the array (\[.*?\]) and then the operations (\[\[.*?\]\]) /.exec(p)!;
+  const ex = expand(JSON.parse(m[1]!).generate);
+  assert.deepEqual([ex.values, ex.ops], [JSON.parse(m[2]!), JSON.parse(m[3]!)]);
+  let c = 0;
+  for (const v of [5, -1, 12]) c = (c * 1000003 + (((v % 1000000007) + 1000000007) % 1000000007)) % 1000000007;
+  assert.ok(p.includes(`the result is \`[3, ${c}]\``), 'checksum example');
+});
+
+test('Engineering: the reference passes every hidden test of every level through the real scorer', { timeout: 600_000 }, async () => {
   for (const c of CODE.cases) {
     const task = renderCase(CODE, c).turns.join('\n');
-    const reply = js('ref.js');
-    assert.equal(checkReply(reply, { taskText: task, code: [readFileSync(join(HERE, '..', 'verification', 'engineering-ladder', 'ref.js'), 'utf8')] }), null, `${c.id}: fair play`);
-    const out = await score(caseScorer(CODE, c), c.expected, reply, task);
+    const code = readFileSync(join(HERE, '..', 'verification', 'engineering-ladder', 'ref.js'), 'utf8');
+    assert.equal(checkReply('```javascript\n' + code + '\n```', { taskText: task, code: [code] }), null, `${c.id}: fair play`);
+    const out = await score(caseScorer(CODE, c), c.expected, js('ref.js'), task);
     assert.equal(out.score, 1, `${c.id}: ${out.summary}`);
   }
 });
@@ -199,45 +206,44 @@ test('Engineering: do-nothing and stub solutions score 0 on every level (stub ga
     const task = renderCase(CODE, c).turns.join('\n');
     for (const f of ['solutions/stub.js', 'solutions/empty.js']) assert.equal((await score(caseScorer(CODE, c), c.expected, js(f), task)).score, 0, `${c.id} ${f}`);
     // a lookup table of the prompt's own examples passes no hidden test that counts
-    const examples = [...c.prompt!.matchAll(/^runStore\((.*)\)\n\/\/ returns (.*)$/gm)].map((m) => [m[1], m[2]]);
-    const table = 'function runStore(commands) {\n  const k = JSON.stringify([commands]);\n' + examples.map(([a, e]) => `  if (k === JSON.stringify([${a}])) return ${e};`).join('\n') + '\n  return commands.map(() => "OK");\n}';
+    const examples = [...c.prompt!.matchAll(/^runEngine\((.*)\)\n\/\/ returns (\[[^\]]*\])/gm)].map((m) => [m[1], m[2]]);
+    const table = 'function runEngine(input) {\n  const k = JSON.stringify(input);\n' + examples.map(([a, e]) => `  if (k === JSON.stringify(${a})) return ${e};`).join('\n') + '\n  return [0, 0];\n}';
     assert.equal((await score(caseScorer(CODE, c), c.expected, '```javascript\n' + table + '\n```', task)).score, 0, `${c.id}: examples table`);
-    assert.equal((await score(caseScorer(CODE, c), c.expected, 'I would use a hash map.', task)).score, 0, `${c.id}: no code`);
+    assert.equal((await score(caseScorer(CODE, c), c.expected, 'I would use a segment tree.', task)).score, 0, `${c.id}: no code`);
   }
 });
 
-test('Engineering: careful-with-slips and careless solutions lose marks from level 3 on, and never on levels 1-2', { timeout: 300_000 }, async () => {
+test('Engineering: the scripted solutions behave as described on the cheap levels', { timeout: 300_000 }, async () => {
   const at = async (id: string, file: string) => {
     const c = CODE.cases.find((x) => x.id === id)!;
     return (await score(caseScorer(CODE, c), c.expected, js(file), renderCase(CODE, c).turns.join('\n'))).score ?? 0;
   };
-  for (const id of ['L01', 'L02']) {
+  // the plain lazy segment tree is right and fast enough below the specialist levels, and so is the reference design with slips
+  for (const id of ['L01', 'L02', 'L03', 'L04']) {
+    assert.equal(await at(id, 'solutions/plain.js'), 1, `${id} plain`);
     assert.equal(await at(id, 'solutions/slips.js'), 1, `${id} slips`);
-    assert.equal(await at(id, 'solutions/careless.js'), 1, `${id} careless`);
-    assert.equal(await at(id, 'solutions/naive.js'), 1, `${id} naive`);
   }
-  const slips = await at('L03', 'solutions/slips.js');
-  const careless = await at('L03', 'solutions/careless.js');
-  assert.ok(slips < 1 && slips > careless && careless > 0, `L03: slips ${slips}, careless ${careless}`);
-  assert.equal(await at('L03', 'solutions/naive.js'), 1, 'L03: no level-3 input is big enough to punish the naive design');
+  assert.ok((await at('L01', 'solutions/careless.js')) < 1, 'careless loses a test with a negative answer on level 1');
+  assert.equal(await at('L01', 'solutions/naive.js'), 1, 'a loop per operation is fine on level 1');
 });
 
-test('Engineering: the measured spread is recorded, and every limit is at least 8 times the reference\'s slowest test', () => {
+test('Engineering: the measured spread is recorded, and every limit is at least 16 times the reference\'s slowest test', () => {
   const meas = JSON.parse(readFileSync(join(HERE, '..', 'verification', 'engineering-ladder', 'measurements.json'), 'utf8')) as Record<string, { ref: { maxMs: number }; spread: Record<string, { score: number }> }>;
   for (const [i, c] of CODE.cases.entries()) {
     const m = meas[c.id]!;
     assert.ok(m, c.id);
     assert.equal(m.spread.ref!.score, 1, `${c.id}: reference 100%`);
-    assert.ok(m.ref.maxMs * 8 <= LEVELS[i].timeoutMs, `${c.id}: reference ${m.ref.maxMs} ms vs limit ${LEVELS[i].timeoutMs} ms`);
+    assert.ok(m.ref.maxMs * 16 <= LEVELS[i].timeoutMs, `${c.id}: reference ${m.ref.maxMs} ms vs limit ${LEVELS[i].timeoutMs} ms`);
     assert.equal(m.spread.stub!.score, 0);
     assert.equal(m.spread.empty!.score, 0);
-    if (i >= 3) assert.ok(m.spread.naive!.score < 1, `${c.id}: the naive design runs out of time`);
-    if (i >= 2) assert.ok(m.spread.careless!.score < m.spread.slips!.score || m.spread.careless!.score < 0.5, `${c.id}: careless below slips`);
-    assert.match(c.notes!, /reference max \d+ ms/, `${c.id}: notes carry the timing`);
+    if (i >= 4) assert.ok(m.spread.plain!.score < 1, `${c.id}: the plain lazy segment tree does not pass`);
+    if (i >= 4) assert.ok(m.spread.slips!.score < 1, `${c.id}: the slip of this level costs tests`);
+    if (i >= 1) assert.ok(m.spread.naive!.score < 1, `${c.id}: a loop per operation does not pass`);
+    assert.match(c.notes!, /reference slowest test \d+ ms/, `${c.id}: notes carry the timing`);
   }
 });
 
-test('Engineering: the generator rebuilds the test file byte for byte', { timeout: 180_000 }, () => {
+test('Engineering: the generator rebuilds the test file byte for byte', { timeout: 300_000 }, () => {
   const out = mkdtempSync(join(tmpdir(), 'gauntlet-eng-'));
   try {
     const r = spawnSync(process.execPath, ['gen.mjs', '--out', join(out, 't.json')], { cwd: join(HERE, '..', 'verification', 'engineering-ladder'), encoding: 'utf8' });

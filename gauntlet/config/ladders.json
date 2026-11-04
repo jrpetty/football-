@@ -97,8 +97,8 @@
       "category": "coding",
       "basedOn": "coding.frontier",
       "passMark": 1,
-      "grows": "Spec 3→21 commands, store 100→200,000 keys; large hidden inputs need the efficient design.",
-      "rungs": ["SET/GET/DEL · 200 commands", "+counts, bulk load · 2k keys", "+big-integer INCR · 5k keys", "+nested transactions · 10k keys", "+ordered scans · 20k keys", "+expiry clock · 40k keys", "+rename · 60k keys", "+snapshots · 100k keys", "+bulk delete · 150k keys", "+range counts · 200k keys"]
+      "grows": "One more range operation per level (2→12: add, assign, chmin, chmax, division, historic max/min, history reset) on up to 10^6 numbers; from level 5 only segment tree beats is fast enough.",
+      "rungs": ["set + range sum · n 2,000", "+min/max · n 10^6", "+range add", "+range assign", "+range chmin", "+range chmax", "+floor division", "+historic max", "+historic min", "+history reset"]
     },
 
     {

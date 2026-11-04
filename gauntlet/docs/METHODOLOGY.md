@@ -1619,78 +1619,81 @@ output from a few thousand tokens (level 1) to the model's maximum (levels 8–1
 
 ### Engineering: Ladder (`coding.engineering-ladder`)
 
-**The task, on every level.** Write `runStore(commands)`: a small in-memory key-value store (a mini Redis) that
-replays a list of commands and returns one reply per command, scored by hidden unit tests in the code sandbox
-(§5.1 `code-js`). Level L's prompt is the specification of levels 1..L, word for word, plus its examples, its size
-limits and its time limit; each level only adds commands and rules, and never changes what an earlier command
-does, so one reference solution serves every level.
+**The task, on every level.** Write `runEngine(input)`: an array engine that applies range operations to an array
+of integers and answers range queries, scored by hidden unit tests in the code sandbox (§5.1 `code-js`). It returns
+`[number of queries, checksum of the answers]`, the checksum being a stated polynomial hash mod 1,000,000,007, so a
+test of 40,000 operations has a two-number key. Large inputs are given as a **generator description** (a seed, n,
+the value range and a weighted mix of operations; the Park–Miller generator is specified step by step in the
+prompt, with a worked example), so a test of a million elements is a few bytes. Level L's prompt is the specification
+of levels 1..L word for word, plus its examples (with the individual answers), its sizes and its time limit. Each
+level adds one operation and nothing changes what an earlier one does, so one reference solution serves every level.
 
-| Level | Adds | Commands in all | Largest test | Largest store | Time limit / test | Hidden tests |
-|---|---|---:|---:|---:|---:|---:|
-| L01 | SET, GET, DEL | 3 | 200 | 100 keys | 2 s | 15 |
-| L02 | SETNX, COUNT, SIZE, POPULATE (bulk load) | 7 | 1,000 | 2,000 | 2 s | 19 |
-| L03 | INCR with exact big integers and canonical-integer rules | 8 | 2,000 | 5,000 | 2 s | 18 |
-| L04 | BEGIN / ROLLBACK / COMMIT, nested | 11 | 3,000 | 10,000 | 2 s | 21 |
-| L05 | SCAN (ordered prefix scan) | 12 | 4,000 | 20,000 | 2 s | 16 |
-| L06 | TIME / EXPIRE / TTL / PERSIST (a clock and deadlines) | 16 | 5,000 | 40,000 | 3 s | 24 |
-| L07 | RENAME (value and deadline move) | 17 | 6,000 | 60,000 | 4 s | 21 |
-| L08 | SNAPSHOT / GETAT (read the past) | 19 | 8,000 | 100,000 | 8 s | 20 |
-| L09 | DELPREFIX (bulk delete) | 20 | 10,000 | 150,000 | 12 s | 19 |
-| L10 | COUNTRANGE (ordered range counts) | 21 | 12,000 | 200,000 | 15 s | 17 |
+| Level | Adds | Operations in all | Largest test | Time limit / test | Hidden tests | What it takes |
+|---|---|---:|---|---:|---:|---|
+| L01 | set, sum | 2 | n 2,000, 2,000 ops | 2 s | 14 | loops |
+| L02 | min, max | 4 | n 10^6, 40,000 ops | 4 s | 16 | a segment tree (point update) |
+| L03 | add (range) | 5 | n 10^6, 40,000 ops | 7 s | 17 | lazy propagation |
+| L04 | assign (range) | 6 | n 10^6, 40,000 ops | 11 s | 17 | composed assign/add tags |
+| L05 | chmin (range) | 7 | n 10^6, 40,000 ops | 11 s | 18 | segment tree beats (max class) |
+| L06 | chmax (range) | 8 | n 10^6, 40,000 ops | 12 s | 17 | beats with max, min and other classes |
+| L07 | div (range floor division) | 9 | n 10^6, 40,000 ops | 18 s | 17 | division as a class-uniform addition |
+| L08 | hmax (historic maximum) | 10 | n 10^6, 40,000 ops | 27 s | 17 | per-class historic tags |
+| L09 | hmin (historic minimum) | 11 | n 10^6, 40,000 ops | 27 s | 16 | both histories at once |
+| L10 | hreset (restart the histories) | 12 | n 10^6, 40,000 ops | 27 s | 17 | history cuts through pending tags |
 
-Every level's hidden tests are hand-made rule tests for what it adds (and for its interplay with every earlier
-rule: an expired key restored by a rollback, a snapshot taken inside a rolled-back transaction, a rename that
-carries a deadline, …), random streams over a pool of near-collision keys (`a`, `a1`, `a:1`, `a_1`, `ab`, …) and
-values that look like integers but are not (`007`, `-0`, `+5`, `" 5"`), and from level 2 large tests built with
-POPULATE (cheap to store, expensive to process naively). The large tests are sized so that the obvious design for
-that level (copy the store at BEGIN or SNAPSHOT, scan every key for COUNT, SIZE, SCAN, DELPREFIX or COUNTRANGE,
-re-sort on each scan) runs out of time, while the reference needs a small fraction of the limit: the top levels
-need every rule right in every combination AND an efficient design. The growth (more commands, a superset
-specification, bigger limits, no tighter time limit) and well-formedness (every test uses only its level's commands,
-every argument of the stated form) are asserted by unit tests.
+Every level's hidden tests are hand-made tests of what it adds and of its interplay with every earlier rule (ties,
+one-element ranges, clipping to equal values, negative division, history through assign, chmin, div and hreset, a
+checksum with negative answers), random explicit inputs over narrow value bands (where tags interact most), a small
+and a medium generated input, and three large generated inputs of n = 10^6. From level 5 the large inputs are built
+against the shortcuts a competent engineer reaches for: values spread over ±10^9 are clipped into a band near 0 and
+pushed up again by small additions, so every chmin meets a big group of equal maxima scattered among much smaller
+values (and chmax the same from below); a node-by-node descent has to visit every one of them, while treating "all
+elements equal to the node's maximum" as one class touches a few nodes. One large test is the mirror image (from level
+7 with division), one mixes every operation. The growth (one more operation, the earlier sections word for word, no
+smaller inputs, no tighter limit) and well-formedness (every input of the stated form, only the level's operations,
+every new operation tested, the largest size tested) are asserted by unit tests.
 
-**Expected replies, checked three ways.** `verification/engineering-ladder/ref.js` (offline key compression, a
-Fenwick tree over keys in string order, a deadline heap, first-touch undo maps merged small-to-large, per-key
-history for snapshots) computes every expected reply; `gen.mjs` writes the test file byte-identically. `verify.mjs`
-re-checks every hidden test and example with `alt.js`, a second JavaScript implementation with different data
-structures (string-keyed maps, a sorted array, undo logs), and with `oracle.py`, a literal Python model written
-from the prompt text (copies the store at every BEGIN and SNAPSHOT, lazy expiry, full scans), on every test small
-enough for it. `fuzz.mjs` runs the three on 30,000 random streams (3,000 per level): all agree.
+**Expected results, checked three ways.** `verification/engineering-ladder/ref.js` (segment tree beats over blocks of
+64 elements: per node sum, max/second max/count, min/second min/count, historic max/min; class-wise addition tags
+with largest/smallest-prefix tags for the histories, and a reset flag for hreset; assign = chmin then chmax) computes
+every expected result; `gen.mjs` writes the test file byte-identically. `verify.mjs` re-checks every hidden test and
+example with `brute.c` (C, 64-bit integers, one loop per operation, its own generator; it also proves that no value or
+answer leaves ±2^50, as the prompt promises) and every one small enough with `brute.py` (Python integers); the
+prompt's generator example is re-expanded by `brute.py`. `fuzz.mjs` runs the reference (with blocks of 64 and with
+blocks of 2, so small inputs exercise a deep tree), `brute.py` and `brute.c` on 30,000 random inputs: all agree.
 
-**Time limits, measured.** Per-level limits are set from the reference's slowest hidden test in the real sandbox
-(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes) with at least 8× headroom
-(in practice 30× or more), so a slow laptop has room to spare; a unit test enforces the 8×. The prompt states each
-level's limit. The other side is measured too (`margins.mjs`, the large tests with a 60-second limit): the
-copy-and-scan design needs 2.6–4× the limit on the deciding large tests of levels 5–7 and runs out of memory, or
-runs past 60 seconds, on those of levels 4 and 8–10, so it does not pass by luck on a fast machine. Every other
-large test is light enough for any design (well under a third of its limit).
+**Time limits, measured.** Each level's limit is at least 16× the reference's slowest hidden test in the real sandbox
+(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes; a unit test enforces the
+16×): the reference needs 0.2–1.4 s, so a laptop twice as slow as the 2.1 GHz Xeon core used here still has 8×
+headroom. The other side is measured too (`margins.mjs`, the large tests with three times the limit): the plain lazy segment tree is still running at three times the limit on the deciding large tests of levels 5, 6 and 7 (run to the end outside the sandbox, the level-6 one takes over 9 minutes against the reference's half a second), and from level 8, where it keeps the histories element by element, on every large test; the loop per operation is still running at three times the limit on every large test of levels 2 and 3, needs 2.4–2.7× the limit on level 4 and runs out of time on every large test above. So neither passes by luck on a faster machine. (One large test of level 7, the mirror image with division, takes the plain tree 1.1× the limit: it fails here but could pass on a much faster machine; the level-7 rung is decided by the other large test either way.)
 
 **Scoring.** Each level is one case: the share of its hidden tests passed, after the fair-play check (§3) and the
-stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at
-full marks. Spread (scripted solutions through the real scorer and sandbox):
+stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at full
+marks. Spread (scripted solutions through the real scorer and sandbox):
 
-| Level | Reference (slowest test / limit) | alt.js (careful, simpler structures) | slips.js (careful with slips) | naive.js (correct, copies and scans) | careless.js | Do nothing (stub / no replies) |
+| Level | Reference (slowest test / limit) | slips.js (careful with slips) | plain.js (plain lazy segment tree) | careless.js | naive.js (a loop per operation) | Do nothing ([0, 0] / []) |
 |---|---|---:|---:|---:|---:|---|
-| L01 | 100% (1 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
-| L02 | 100% (3 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
-| L03 | 100% (14 ms / 2 s) | 100% | 67% | 100% | 33% | 0% / 0% |
-| L04 | 100% (18 ms / 2 s) | 100% | 71% | 95% | 48% | 0% / 0% |
-| L05 | 100% (61 ms / 2 s) | 100% | 75% | 88% | 31% | 0% / 0% |
-| L06 | 100% (55 ms / 3 s) | 100% | 38% | 96% | 29% | 0% / 0% |
-| L07 | 100% (68 ms / 4 s) | 100% | 57% | 90% | 29% | 0% / 0% |
-| L08 | 100% (114 ms / 8 s) | 100% | 60% | 90% | 40% | 0% / 0% |
-| L09 | 100% (276 ms / 12 s) | 100% | 53% | 89% | 37% | 0% / 0% |
-| L10 | 100% (467 ms / 15 s) | 100% | 29% | 88% | 12% | 0% / 0% |
+| L01 | 100% (21 ms / 2 s) | 100% | 100% | 50% | 100% | 0% / 0% |
+| L02 | 100% (219 ms / 4 s) | 100% | 100% | 25% | 81% | 0% / 0% |
+| L03 | 100% (421 ms / 7 s) | 100% | 100% | 59% | 82% | 0% / 0% |
+| L04 | 100% (621 ms / 11 s) | 100% | 100% | 59% | 82% | 0% / 0% |
+| L05 | 100% (629 ms / 11 s) | 67% | 94% | 44% | 83% | 0% / 0% |
+| L06 | 100% (683 ms / 12 s) | 65% | 88% | 65% | 82% | 0% / 0% |
+| L07 | 100% (950 ms / 18 s) | 12% | 88% | 12% | 82% | 0% / 0% |
+| L08 | 100% (1397 ms / 27 s) | 29% | 82% | 12% | 82% | 0% / 0% |
+| L09 | 100% (1163 ms / 27 s) | 25% | 81% | 0% | 81% | 0% / 0% |
+| L10 | 100% (1298 ms / 27 s) | 24% | 82% | 12% | 82% | 0% / 0% |
 
-`alt.js` is careful but uses simpler structures (it re-copies undo logs on every COMMIT and splices a sorted
-array key by key): it passes every level, but its slowest tests take 7.6 s and 2.2 s at levels 9 and 10, so a
-design that is quadratic in the worst case is close to the edge there; `slips.js` is a fast, well-designed solution with one plausible slip per level from level 3
-(an integer check that accepts `007`, POPULATE not undone, a key still alive at its deadline, RENAME onto itself
-deletes, GETAT checks today's clock, DELPREFIX leaves no history, COUNTRANGE includes the upper bound); `naive.js`
-gets every rule right with the obvious design (copies, scans) and loses the large tests; `careless.js` reads the
-specification loosely (Number arithmetic, COMMIT closes every transaction, expiry seen only by GET, …). Tokens:
-the prompt grows from about 640 to 2,500 input tokens; a full solution is 3,000–8,000 output tokens plus
-reasoning; estimate 30,000 output tokens per level.
+`plain.js` is the ordinary competent answer: a standard lazy segment tree in typed arrays (add and assign tags,
+sum/min/max) that is right everywhere, passes levels 1–4, and from level 5 descends to every element a chmin, chmax or
+div changes (or, from level 8, every element an update touches, to keep the histories), so it runs out of time on
+the large tests. `slips.js` is the reference design with one plausible slip per level from level 5 (a tied maximum
+counted once, the same for the minimum, division rounded toward zero, histories that ignore the elements that are
+neither the maximum nor the minimum, the same for minima, hreset that does not reach pending tags); `careless.js` is
+`plain.js` written in a hurry (negative answers not brought into the checksum range, truncating division, histories
+without the initial values); `naive.js` loops over the range for every operation. Tokens: the prompt grows from about
+700 to 1,700 input tokens; a full solution is 4,000–10,000 output tokens plus reasoning; estimate 30,000 output
+tokens per level.
 
 ## 8. The random baseline
 
