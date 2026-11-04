@@ -405,6 +405,8 @@ export type ScorerSpec =
       loose?: boolean;
       /** Id-keyed objects (dotted path → fields per item): extra items cost as much as missing ones. */
       sets?: Record<string, number>;
+      /** Format can't cost marks: keys match ignoring case/spaces/underscores, "£1,234.50" counts as 1234.5, "yes"/"no" as booleans, "n/a"/"none" as null. */
+      lenient?: boolean;
     }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }

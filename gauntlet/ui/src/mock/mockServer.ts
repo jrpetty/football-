@@ -30,6 +30,7 @@ import type {
 import type { RunStreamHandlers } from '../api.ts';
 import { ApiError } from '../api.ts';
 import { mockArtifactUrls } from './registry.ts';
+import { BUSINESS_MOCK_TESTS, handleBusinessLadder } from './businessLadderMock.ts';
 import {
   CONTESTANTS,
   DISCOVERABLE,
@@ -65,7 +66,7 @@ const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const syncManualContestants = () => {
   for (const c of mockManualContestants()) if (!contestants.some((x) => x.id === c.id)) contestants.push(c);
 };
-const tests: TestDefinition[] = [...TESTS];
+const tests: TestDefinition[] = [...TESTS, ...BUSINESS_MOCK_TESTS];
 const customIds = new Set(['reasoning.calendar-puzzle']);
 const sourceOf = (id: string) => (customIds.has(id) ? 'custom' : PRIVATE_IDS.has(id) ? 'private' : 'builtin');
 const runs = new Map<string, MockRun>();
@@ -737,6 +738,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const route = `${method} ${a ?? ''}`;
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
+  if (a === 'business-ladder') return handleBusinessLadder(q);
   if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
   syncManualContestants();
   if (a === 'manual-models' || a === 'best-per-test') return (await import('./manualModelsMock.ts')).handleManualModels(method, parts, q, body);

@@ -963,6 +963,79 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'persona',
     opening: 'Monday, 08:30. Eleven jobs in the owner’s email (one is called off later) and a follow-up that changes another. The model has 50 actions, one tool per turn, and only what it actually does counts.',
   },
+  // ── Business Ladder, Level 1 ("Assist"): one document in, a filled-in form out (verification/realworld-l1/) ──
+  'work.invoice-read': {
+    hook: 'Can it read a supplier invoice and fill in the accounts form without a slip?',
+    whatItTests: 'Reading one invoice and pulling out supplier, invoice number, dates, net, VAT, gross, VAT number, PO and bank details.',
+    whyHard: 'Later invoices hide our own VAT number, an old balance, a US date, an OCR scan that reads 0 as O and an amendment that changes the totals.',
+    howScored: [
+      { icon: 'document', text: 'Answer is the filled-in form (JSON), 12 boxes' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right; layout never costs' },
+    ],
+    goodScore: '100 means every box on every invoice right; one wrong box on one invoice costs under a point.',
+    icon: 'receipt',
+  },
+  'work.ticket-tag': {
+    hook: 'Can it tag a customer email by the rulebook, not by gut feeling?',
+    whatItTests: 'Tagging one support email with category, sentiment, product, order number, what the customer wants and urgency, using a written rubric.',
+    whyHard: 'Sarcasm, a hazard mentioned only as not happening, a real hazard reported calmly, three payments and an instruction hidden in the email.',
+    howScored: [
+      { icon: 'rules', text: 'Six tags, each defined by a written rule' },
+      { icon: 'check', text: 'Each tag compared with the rubric’s answer' },
+      { icon: 'percent', text: 'Points for each tag right' },
+    ],
+    goodScore: '100 means all six tags right on every ticket; each wrong tag costs about 1.7 points.',
+    icon: 'rules',
+  },
+  'work.cv-read': {
+    hook: 'Can it screen a CV fairly: count the experience, and never guess what isn’t written?',
+    whatItTests: 'Reading one CV and filling in a screening form: current job, months of relevant experience, top qualification, notice and right to work.',
+    whyHard: 'Overlapping jobs count once, a degree in progress does not count, and the right to work must never be guessed from someone’s background.',
+    howScored: [
+      { icon: 'persona', text: 'Seven boxes from the CV, by written rules' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right' },
+    ],
+    goodScore: '100 means every box right on every CV; a wrong experience count costs one box of seven on that CV.',
+    icon: 'persona',
+  },
+  'work.email-actions': {
+    hook: 'What do I actually need to do, and by when?',
+    whatItTests: 'Reading one email thread and saying which jobs are now yours and the exact due date of each, from phrases like “end of next week”.',
+    whyHard: 'Jobs get handed to someone else, deadlines move in a later reply, and bank holidays fall on the due dates.',
+    howScored: [
+      { icon: 'clock', text: 'For each job: mine or not, and its due date' },
+      { icon: 'check', text: 'Dates worked out by the stated rules' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every job and date right; claiming someone else’s job costs as much as missing your own.',
+    icon: 'clock',
+  },
+  'work.sheet-lookup': {
+    hook: 'A hundred rows, three questions: can it read a spreadsheet without formulas?',
+    whatItTests: 'Answering one to three exact questions (a filtered total, a count, the top rep) from one sales spreadsheet.',
+    whyHard: 'The export repeats rows, has subtotal rows that must not be counted twice, and products whose names start the same.',
+    howScored: [
+      { icon: 'chart', text: 'One exact answer per question' },
+      { icon: 'check', text: 'Totals to the penny, names exactly' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every answer exact; a total that is a penny out is wrong.',
+    icon: 'chart',
+  },
+  'work.delivery-note': {
+    hook: 'Cases of 12, a crushed box and a sneaky substitute: what actually arrived?',
+    whatItTests: 'Checking one delivery against the purchase order: what arrived, what is damaged, short, over or substituted, in single units.',
+    whyHard: 'The documents mix cases and single units, a recount corrects the note, and a look-alike product is sent in place of the real one.',
+    howScored: [
+      { icon: 'diff', text: 'Five numbers for every line on the order' },
+      { icon: 'check', text: 'Each compared with the computed delivery' },
+      { icon: 'percent', text: 'Points for each number right' },
+    ],
+    goodScore: '100 means every line fully right; a missed substitute costs two or three numbers on that line.',
+    icon: 'diff',
+  },
 };
 
 /** Explainer key of an Arena game. */

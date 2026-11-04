@@ -1,0 +1,207 @@
+{
+  "kind": "prompt",
+  "id": "work.cv-read",
+  "version": "1.0.0",
+  "name": "Read a CV",
+  "category": "work",
+  "description": "Business Ladder, Hiring & People, Level 1 (Assist). One CV per case for a Payroll Officer job: fill in the screening form by written rules (current paid job, months of relevant experience by a stated counting rule with overlaps counted once, highest completed qualification, notice period, and the right-to-work statement exactly as written). Later CVs add the real traps: a degree still in progress, a voluntary role running to \"Present\", an employer with \"Payroll\" in its name, payroll duties under another title, overlapping part-time roles, a promotion and a changed notice period noted at the end, and candidates whose right to work must never be guessed from their background.",
+  "difficulty": "easy",
+  "tags": [
+    "business-ladder",
+    "hiring",
+    "level-1",
+    "extraction",
+    "json",
+    "dates",
+    "fairness",
+    "uk"
+  ],
+  "hook": "One CV, seven boxes. Count the experience properly and never guess what isn’t written.",
+  "maxOutputTokens": 8000,
+  "estimate": {
+    "inputTokens": 857,
+    "outputTokens": 900
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "json",
+    "lenient": true,
+    "aliases": {
+      "bachelors degree": "Bachelor's degree",
+      "bachelor’s degree": "Bachelor's degree",
+      "bachelor's": "Bachelor's degree",
+      "masters degree": "Master's degree",
+      "master’s degree": "Master's degree",
+      "master's": "Master's degree",
+      "a-level": "A level",
+      "a levels": "A level",
+      "phd": "Doctorate",
+      "week": "weeks",
+      "month": "months",
+      "not specified": "not stated"
+    }
+  },
+  "cases": [
+    {
+      "id": "c01",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nHIROSHI MURPHY\nBelfast · hiroshi.murphy@example.com · CV updated April 2026\n\nPROFILE\nOrganised, accurate payroll professional who enjoys getting the detail right.\n\nEXPERIENCE\nPayroll Officer — Kestrel Engineering Ltd, Jun 2022 – Present\n  • Run the monthly payroll for 380 staff on Sage 200\n  • Process starters, leavers and statutory sick pay\nPayroll Assistant — Thornbury Retail Group, Sep 2019 – May 2022\n  • Checked timesheets and overtime claims\n  • Answered payslip queries\n\nEDUCATION & QUALIFICATIONS\n  • BSc (Hons) Accounting and Finance, University of Leeds, 2019\n  • A levels: Maths (A), Business (B), Economics (B)\n\nOTHER\n  • Notice period: 4 weeks\n  • Right to work: I have the right to work in the UK.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (April 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Officer",
+        "current_employer": "Kestrel Engineering Ltd",
+        "relevant_experience_months": 80,
+        "highest_qualification": "Bachelor's degree",
+        "notice_period": {
+          "amount": 4,
+          "unit": "weeks"
+        },
+        "right_to_work": "yes"
+      },
+      "notes": "relevant months 80 (naive sum without merging overlaps 80); roles: Payroll Officer Jun 2022-present [relevant]; Payroll Assistant Sep 2019-May 2022 [relevant]"
+    },
+    {
+      "id": "c02",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nCHLOE MORGAN\nBristol · chloe.morgan@example.com · CV updated February 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nPayroll Administrator — Calder Valley Housing Association, Jan 2023 – Present\n  • Weekly and monthly payrolls for 3 client companies\n  • RTI submissions to HMRC\nReceptionist — Harbour Insurance Services, Mar 2020 – Aug 2022\n  • Front desk for a busy dental practice\n  • Took card payments and handled the petty cash\n\nEDUCATION & QUALIFICATIONS\n  • A levels: Business Studies (B), English Literature (C), Psychology (C)\n  • 9 GCSEs including Maths and English\n\nOTHER\n  • Notice period: one month\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (February 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Administrator",
+        "current_employer": "Calder Valley Housing Association",
+        "relevant_experience_months": 38,
+        "highest_qualification": "A level",
+        "notice_period": {
+          "amount": 1,
+          "unit": "months"
+        },
+        "right_to_work": "not stated"
+      },
+      "notes": "relevant months 38 (naive sum without merging overlaps 38); roles: Payroll Administrator Jan 2023-present [relevant]; Receptionist Mar 2020-Aug 2022"
+    },
+    {
+      "id": "c03",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nELEANOR WALSH\nBristol · eleanor.walsh@example.com · CV updated May 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nSenior Payroll Administrator — Larchwood Care Homes, February 2024 – Present\n  • Lead on payroll year-end and P11D returns\nAccounts Assistant — Ashby & Webb LLP, July 2022 – January 2024\n  • Purchase ledger, supplier statements and bank reconciliations\nPensions Assistant — Pennine Health Partnership, October 2020 – June 2022\n  • Auto-enrolment assessments and pension contribution files\n\nEDUCATION & QUALIFICATIONS\n  • MSc Accounting, University of Strathclyde, 2020\n  • BA (Hons) Economics, University of Strathclyde, 2019\n\nOTHER\n  • Available immediately.\n  • Visa: I will need sponsorship under the Skilled Worker route.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (May 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Senior Payroll Administrator",
+        "current_employer": "Larchwood Care Homes",
+        "relevant_experience_months": 49,
+        "highest_qualification": "Master's degree",
+        "notice_period": {
+          "amount": 0,
+          "unit": "weeks"
+        },
+        "right_to_work": "needs sponsorship"
+      },
+      "notes": "relevant months 49 (naive sum without merging overlaps 49); roles: Senior Payroll Administrator February 2024-present [relevant]; Accounts Assistant July 2022-January 2024; Pensions Assistant October 2020-June 2022 [relevant]"
+    },
+    {
+      "id": "c04",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nARJUN DOYLE\nBelfast · arjun.doyle@example.com · CV updated March 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nPayroll Officer — Northgate Foods plc, Apr 2021 – Present\n  • End-to-end monthly payroll for 600 staff\nPayroll Clerk (part-time, evenings) — Ashby & Webb LLP, Jan 2020 – Sep 2021\n  • Kept on for six months after starting my full-time role to train my replacement\n\nEDUCATION & QUALIFICATIONS\n  • MSc Human Resource Management (Open University, in progress, expected 2027)\n  • BA (Hons) Business Management, Sheffield Hallam University, 2019\n\nOTHER\n  • Notice: 8 weeks\n  • I am a British citizen.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (March 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Officer",
+        "current_employer": "Northgate Foods plc",
+        "relevant_experience_months": 75,
+        "highest_qualification": "Bachelor's degree",
+        "notice_period": {
+          "amount": 8,
+          "unit": "weeks"
+        },
+        "right_to_work": "yes"
+      },
+      "notes": "relevant months 75 (naive sum without merging overlaps 81); roles: Payroll Officer Apr 2021-present [relevant]; Payroll Clerk (part-time, evenings) Jan 2020-Sep 2021 [relevant]"
+    },
+    {
+      "id": "c05",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nKOFI KOWALSKI\nGlasgow · kofi.kowalski@example.com · CV updated June 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nTreasurer (voluntary) — Stanmore Academy Trust, January 2022 – Present\n  • Keep the accounts for a junior football club\nOffice Manager — Payroll Partners Ltd, May 2023 – Present\n  • Run the office of a payroll bureau: facilities, IT and suppliers\n  • No payroll processing myself\nPayroll Assistant — Ashby & Webb LLP, February 2018 – April 2023\n  • BACS runs, deductions and attachment of earnings orders\n\nEDUCATION & QUALIFICATIONS\n  • HND Business, Edinburgh College, 2017\n\nOTHER\n  • Notice period: 1 month\n  • Right to work in the UK: yes\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (June 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Office Manager",
+        "current_employer": "Payroll Partners Ltd",
+        "relevant_experience_months": 63,
+        "highest_qualification": "HND or foundation degree",
+        "notice_period": {
+          "amount": 1,
+          "unit": "months"
+        },
+        "right_to_work": "yes"
+      },
+      "notes": "relevant months 63 (naive sum without merging overlaps 63); roles: Treasurer (voluntary) January 2022-present (voluntary); Office Manager May 2023-present; Payroll Assistant February 2018-April 2023 [relevant]"
+    },
+    {
+      "id": "c06",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nHIROSHI IQBAL\nCardiff · hiroshi.iqbal@example.com · CV updated January 2026\n\nPROFILE\nCalm under deadline pressure, with a strong eye for detail and a love of a reconciled payroll.\n\nEXPERIENCE\nPayroll and Benefits Specialist — Brightline Logistics Ltd, Nov 2021 – Present\n  • Payroll for 1,200 employees across Spain and Portugal\nHR Administrator — Severn Leisure Ltd, Jun 2019 – Oct 2021\n  • Contracts, absence records and onboarding\nPayroll Technician — Kestrel Engineering Ltd, Sep 2017 – May 2019\n  • Monthly payroll and social security filings\n\nEDUCATION & QUALIFICATIONS\n  • Licenciatura en Administración y Dirección de Empresas, Universidad Complutense de Madrid, 2017 (equivalent to a UK bachelor’s degree)\n\nOTHER\n  • Notice period: three months\n  • Languages: Spanish (native), English (fluent), Portuguese (good). Relocating to Bristol in the spring.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (January 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll and Benefits Specialist",
+        "current_employer": "Brightline Logistics Ltd",
+        "relevant_experience_months": 72,
+        "highest_qualification": "Bachelor's degree",
+        "notice_period": {
+          "amount": 3,
+          "unit": "months"
+        },
+        "right_to_work": "not stated"
+      },
+      "notes": "relevant months 72 (naive sum without merging overlaps 72); roles: Payroll and Benefits Specialist Nov 2021-present [relevant]; HR Administrator Jun 2019-Oct 2021; Payroll Technician Sep 2017-May 2019 [relevant]"
+    },
+    {
+      "id": "c07",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nINES CHEN\nLeeds · ines.chen@example.com · CV updated April 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nPayroll Officer — Severn Leisure Ltd, 01/2022 – Present\n  • Monthly payroll for 450 staff\n  • Statutory payments and salary sacrifice schemes\nFinance Assistant — Calder Valley Housing Association, 09/2019 – 12/2021\n  • Ran the weekly payroll for 40 warehouse staff\n  • Sales ledger and credit control\n\nEDUCATION & QUALIFICATIONS\n  • A levels: Accounting (A), Maths (B)\n  • CIPP Foundation Degree in Payroll Management (completed 2023)\n\nOTHER\n  • Notice period: 1 month\n  • Right to work: settled status under the EU Settlement Scheme.\n  • Full UK driving licence\n\nUpdate: since writing this CV I have been promoted to Payroll Team Leader at the same company, and my notice period is now 2 months.\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (April 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Team Leader",
+        "current_employer": "Severn Leisure Ltd",
+        "relevant_experience_months": 52,
+        "highest_qualification": "HND or foundation degree",
+        "notice_period": {
+          "amount": 2,
+          "unit": "months"
+        },
+        "right_to_work": "yes"
+      },
+      "notes": "relevant months 52 (naive sum without merging overlaps 52); roles: Payroll Officer 01/2022-present [relevant]; Finance Assistant 09/2019-12/2021"
+    },
+    {
+      "id": "c08",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nKOFI PATEL\nBelfast · kofi.patel@example.com · CV updated March 2026\n\nPROFILE\nDetail-focused payroll specialist looking for a role with more responsibility.\n\nEXPERIENCE\nPayroll Supervisor — Northgate Foods plc, 09/2023 – Present\n  • Supervise a team of 3; sign off the monthly payroll\nPensions Administrator (maternity cover) — Harbour Insurance Services, 01/2023 – 12/2023\n  • Covered a 12-month maternity leave\nPayroll Administrator — Kestrel Engineering Ltd, 02/2019 – 07/2022\n  • Payroll for a group of 6 schools\nAug 2022 – Dec 2022: career break (travelling).\n\nEDUCATION & QUALIFICATIONS\n  • PhD in Medieval History, University of York, 2018\n  • MA History, University of York, 2014\n\nOTHER\n  • Notice period: 6 weeks\n  • No visa sponsorship required.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (March 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Supervisor",
+        "current_employer": "Northgate Foods plc",
+        "relevant_experience_months": 81,
+        "highest_qualification": "Doctorate",
+        "notice_period": {
+          "amount": 6,
+          "unit": "weeks"
+        },
+        "right_to_work": "yes"
+      },
+      "notes": "relevant months 81 (naive sum without merging overlaps 85); roles: Payroll Supervisor 09/2023-present [relevant]; Pensions Administrator (maternity cover) 01/2023-12/2023 [relevant]; Payroll Administrator 02/2019-07/2022 [relevant]"
+    },
+    {
+      "id": "c09",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nKOFI NOWAK\nNorwich · kofi.nowak@example.com · CV updated July 2026\n\nPROFILE\nOrganised, accurate payroll professional who enjoys getting the detail right.\n\nEXPERIENCE\nPayroll Manager — Larchwood Care Homes, June 2024 – Present\n  • Own payroll for 2,000 staff; migrated us to a new payroll system\nInterim Payroll Consultant (self-employed) — Northgate Foods plc, March 2023 – September 2024\n  • Short contracts while job-hunting; overlapped my first months as manager\nCredit Controller — Kestrel Engineering Ltd, January 2021 – February 2023\n  • Chased overdue invoices; worked with the payroll team on expenses\nPensions Officer — Ashby & Webb LLP, April 2018 – November 2020\n  • Scheme administration for a local authority fund\n\nEDUCATION & QUALIFICATIONS\n  • BSc Mathematics, Cardiff University, 2017\n  • MBA (Cardiff Business School), started 2025, not completed\n\nOTHER\n  • Notice period: 3 months (I could negotiate an earlier release)\n  • I would need sponsorship to work in the UK.\n  • Full UK driving licence\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (July 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll Manager",
+        "current_employer": "Larchwood Care Homes",
+        "relevant_experience_months": 73,
+        "highest_qualification": "Bachelor's degree",
+        "notice_period": {
+          "amount": 3,
+          "unit": "months"
+        },
+        "right_to_work": "needs sponsorship"
+      },
+      "notes": "relevant months 73 (naive sum without merging overlaps 77); roles: Payroll Manager June 2024-present [relevant]; Interim Payroll Consultant (self-employed) March 2023-September 2024 [relevant]; Credit Controller January 2021-February 2023; Pensions Officer April 2018-November 2020 [relevant]"
+    },
+    {
+      "id": "c10",
+      "prompt": "We are hiring a Payroll Officer. Read this CV and fill in the screening form using the rules below. Use only what the CV says.\n\nCV:\n<<<\nCALLUM ADEYEMI\nBristol · callum.adeyemi@example.com · CV updated February 2026\n\nPROFILE\nOrganised, accurate payroll professional who enjoys getting the detail right.\n\nEXPERIENCE\nPayroll & Pensions Lead — Larchwood Care Homes, Nov 2024 – Present\n  • Payroll and pensions for a group of 9 care homes\nPensions Assistant (part-time) — Stanmore Academy Trust, Oct 2023 – Mar 2025\n  • Kept two days a week at my previous employer during handover\nPayroll Officer — Stanmore Academy Trust, May 2021 – Oct 2024\n  • Monthly payroll for 700 staff\nFinance Assistant — Ashby & Webb LLP, Aug 2019 – Apr 2021\n  • Processed the payroll for the head office alongside the purchase ledger\nVolunteer Payroll Mentor (voluntary) — Payroll Futures (charity), Jan 2022 – Present\n  • Mentor two apprentices through a charity scheme\n\nEDUCATION & QUALIFICATIONS\n  • BA (Hons) Accounting, University of Ulster, 2019\n  • Level 4 CIPP Diploma in Payroll Practice (in progress)\n\nOTHER\n  • Notice period: 12 weeks\n  • Previously lived and studied in Lagos; moved to the UK in 2015.\n  • Full UK driving licence\n\nNote added 3 Feb 2026: my notice period has changed to 1 month following a contract change.\n>>>\n\nRules:\n- current_role and current_employer: their current PAID job (the one running to \"Present\"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.\n- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains \"Payroll\" or \"Pensions\" (any capitals). The start month and the end month both count (\"Mar 2020 – Jun 2020\" is 4 months); \"Present\" means up to and including the month the CV was updated (February 2026). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.\n- highest_qualification: their highest COMPLETED qualification, one of: \"GCSE\", \"A level\", \"HND or foundation degree\", \"Bachelor's degree\", \"Master's degree\", \"Doctorate\". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.\n- notice_period: their current notice period as written, as {\"amount\": number, \"unit\": \"weeks\" or \"months\"}; \"available immediately\" is {\"amount\": 0, \"unit\": \"weeks\"}. If the CV says it has changed, use the new one.\n- right_to_work: \"yes\" if the CV states they can work in the UK without sponsorship (any wording, e.g. \"British citizen\", \"settled status\", \"no sponsorship required\"); \"needs sponsorship\" if it says they would need a visa sponsor; \"not stated\" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.\n\nReply with ONE JSON object (a ```json block is fine):\n{\"current_role\": string, \"current_employer\": string, \"relevant_experience_months\": number, \"highest_qualification\": string, \"notice_period\": {\"amount\": number, \"unit\": string}, \"right_to_work\": string}\nGive exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "current_role": "Payroll & Pensions Lead",
+        "current_employer": "Larchwood Care Homes",
+        "relevant_experience_months": 58,
+        "highest_qualification": "Bachelor's degree",
+        "notice_period": {
+          "amount": 1,
+          "unit": "months"
+        },
+        "right_to_work": "not stated"
+      },
+      "notes": "relevant months 58 (naive sum without merging overlaps 76); roles: Payroll & Pensions Lead Nov 2024-present [relevant]; Pensions Assistant (part-time) Oct 2023-Mar 2025 [relevant]; Payroll Officer May 2021-Oct 2024 [relevant]; Finance Assistant Aug 2019-Apr 2021; Volunteer Payroll Mentor (voluntary) Jan 2022-present (voluntary)"
+    }
+  ]
+}

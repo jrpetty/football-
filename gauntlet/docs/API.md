@@ -234,6 +234,12 @@ has no image output* or *Skipped — picture-only model*.
 |---|---|---|
 | GET | `/api/leaderboard?suite=core` | `Leaderboard` combining the most recent valid result for every (contestant, test, case, repeat) across all runs. Results whose test hash or contestant config hash no longer match are excluded (`staleExcluded`). |
 
+## Business Ladder
+
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/api/business-ladder?suite=business&models=a,b` | `BusinessLadderView` (`src/core/business-ladder.ts`): the ladder definition (`config/business-ladder.json`), every ladder test (`exists`, name, explainer summary), and for every model with results its ladder per scenario (per level: status, score, 95% range, tests; height reached, borderline / just short). `models` (2–4 ids) adds paired comparisons for every pair. `suite` defaults to `business` when that suite exists, else every test. Same pooled, hash-checked results as the combined leaderboard. |
+
 ## Studio (video kit) and OBS overlays
 
 `:runId` may be `latest` (the run in progress, else the newest run). Shapes are in

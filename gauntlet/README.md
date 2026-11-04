@@ -298,6 +298,18 @@ default repeat count. Bump the suite `version` when you change it.
 | The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
 | The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
 
+**Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
+running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7e-the-business-ladder)). Never part of the Gauntlet Index.
+
+| Test | Id | What it does |
+|---|---|---|
+| Read an Invoice | `work.invoice-read` | One invoice, twelve boxes to fill. Can it read the paperwork without slipping? |
+| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, six tags. Does it follow the rubric or its gut? |
+| Read a CV | `work.cv-read` | One CV, seven boxes. Count the experience properly and never guess what isn't written. |
+| What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
+| Read the Spreadsheet | `work.sheet-lookup` | A hundred rows, three questions, one exact answer each. No formulas allowed. |
+| Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

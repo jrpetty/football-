@@ -20,9 +20,15 @@ export interface JsonCompareOptions {
    * scores no better than listing nothing.
    */
   sets?: Record<string, number>;
+  /**
+   * Presentation never costs marks (content mistakes only): object keys match ignoring case, spaces, hyphens and
+   * underscores; a numeric string with a currency sign, code or thousands separators ("£1,234.50", "1 234.50 GBP")
+   * counts as its number; an identifier containing a digit matches ignoring spaces and hyphens ("GB 123 4567 89"); "yes"/"no"/"true"/"false" count as booleans; "", "n/a", "none" and "null" count as null.
+   */
+  lenient?: boolean;
 }
 
-type Opts = Required<Omit<JsonCompareOptions, 'aliases' | 'sets'>> & Pick<JsonCompareOptions, 'aliases' | 'sets'>;
+type Opts = Required<Omit<JsonCompareOptions, 'aliases' | 'sets' | 'lenient'>> & Pick<JsonCompareOptions, 'aliases' | 'sets' | 'lenient'>;
 
 interface Tally {
   matched: number;
@@ -32,6 +38,25 @@ interface Tally {
 
 function normStr(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Lenient reading of a presented value as the type the key expects (see `JsonCompareOptions.lenient`). */
+function lenientValue(exp: unknown, act: unknown): unknown {
+  if (typeof act !== 'string') return act;
+  const t = act.trim();
+  if (exp === null) return /^(?:n\/?a|none|null|-|—)?$/i.test(t) ? null : act;
+  if (typeof exp === 'boolean') return /^(?:yes|true|y)$/i.test(t) ? true : /^(?:no|false|n)$/i.test(t) ? false : act;
+  // Identifiers (anything with a digit: VAT numbers, sort codes, order numbers): spaces and hyphens are presentation.
+  if (typeof exp === 'string' && /\d/.test(exp) && t.replace(/[\s-]/g, '').toLowerCase() === exp.replace(/[\s-]/g, '').toLowerCase()) return exp;
+  if (typeof exp === 'number') {
+    const m = /^(?:GBP|USD|EUR)?\s*([-−]?)\s*[£$€]?\s*([-−]?)(\d{1,3}(?:[, ]\d{3})+|\d+)(\.\d+)?\s*(?:GBP|USD|EUR)?$/i.exec(t);
+    if (m && !(m[1] && m[2])) return Number(`${m[1] || m[2] ? '-' : ''}${m[3]!.replace(/[, ]/g, '')}${m[4] ?? ''}`);
+  }
+  return act;
+}
+
+function keyNorm(k: string): string {
+  return k.toLowerCase().replace(/[\s_-]+/g, '');
 }
 
 /** Key spelling for loose matching: case, spaces, "_" and "-" ignored. */
@@ -185,8 +210,18 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
     return;
   }
   if (exp && typeof exp === 'object') {
-    const obj = act && typeof act === 'object' && !Array.isArray(act) ? (act as Record<string, unknown>) : {};
+    let obj = act && typeof act === 'object' && !Array.isArray(act) ? (act as Record<string, unknown>) : {};
     const keys = Object.keys(exp);
+    if (opts.lenient) {
+      // Keys written as "Invoice Number" or "invoiceNumber" still find "invoice_number".
+      const remapped: Record<string, unknown> = { ...obj };
+      for (const k of keys) {
+        if (Object.prototype.hasOwnProperty.call(remapped, k)) continue;
+        const hit = Object.keys(obj).find((g) => keyNorm(g) === keyNorm(k));
+        if (hit !== undefined) remapped[k] = obj[hit];
+      }
+      obj = remapped;
+    }
     if (keys.length === 0) {
       out.total++;
       const ok = act !== null && typeof act === 'object' && !Array.isArray(act) && Object.keys(act as object).length === 0;
@@ -199,14 +234,14 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
     return;
   }
   out.total++;
-  const ok = !(absent && act === undefined) && leafEqual(exp, act, opts.numberTolerance, opts.aliases, opts.loose);
+  const ok = !(absent && act === undefined) && leafEqual(exp, opts.lenient ? lenientValue(exp, act) : act, opts.numberTolerance, opts.aliases, opts.loose);
   if (ok) out.matched++;
   out.items.push({ label: path || '$', passed: ok, detail: ok ? undefined : `expected ${fmt(exp)}, got ${fmt(act)}` });
 }
 
 /** Field-level comparison: score = matched leaves / expected leaves. */
 export function compareJson(expected: unknown, actual: unknown, options: JsonCompareOptions = {}): { score: number; items: ScoreBreakdownItem[]; matched: number; total: number } {
-  const opts: Opts = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6, aliases: options.aliases, loose: options.loose ?? false, sets: options.sets };
+  const opts: Opts = { unorderedArrays: options.unorderedArrays ?? false, numberTolerance: options.numberTolerance ?? 1e-6, aliases: options.aliases, loose: options.loose ?? false, sets: options.sets, lenient: options.lenient };
   const tally: Tally = { matched: 0, total: 0, items: [] };
   compare(expected, actual, '', opts, tally);
   return { score: tally.total ? tally.matched / tally.total : 0, items: tally.items, matched: tally.matched, total: tally.total };
