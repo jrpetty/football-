@@ -1035,6 +1035,40 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'diff',
   },
 
+  // ─────────────── Business ladders: data & support ───────────────
+  'work.crm-ladder': {
+    hook: 'From 24 customer records to 1,000: how far up can it merge duplicates without merging two people?',
+    whatItTests: 'Cleaning a customer list by exact written matching rules at ten growing sizes, from capitals and phone formats to long chains of matches.',
+    whyHard: 'Every level adds records and rule families (nicknames, typos, shared mailboxes, married names, staff notes, gone-away masters), and the top levels join records only through chains of up to six matches.',
+    howScored: BUSINESS_LADDER_STEPS('Groups pair by pair (F1); golden records as a set'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'grid',
+  },
+  'work.contract-ladder': {
+    hook: 'From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change?',
+    whatItTests: 'Comparing two drafts of a services agreement at ten growing lengths and listing every change that matters, by clause, with its old and new values.',
+    whyHard: 'Each level adds length and kinds of edit, and the top levels hide about a hundred changes, re-pointed cross-references and a “shall” turned “may” among hundreds of renumbered clauses and re-sorted schedules.',
+    howScored: BUSINESS_LADDER_STEPS('Each change: clause, type, old and new; traps 2 points'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'diff',
+  },
+  'work.sql-ladder': {
+    hook: 'From one table and one rule to ten tables and a five-point memo: how deep a query can it get right?',
+    whatItTests: 'Writing one database query per level, from a simple count to a customer review that applies every warehouse rule and a finance memo at once.',
+    whyHard: 'Each level adds tables, rules and memo amendments: UK time across the clock change, price and category history, best promotions, reversal chains, a lost day of data, duplicate events and ranks with ties.',
+    howScored: BUSINESS_LADDER_STEPS('Rows that match on the real DB and 3 hidden copies'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'chart',
+  },
+  'work.support-ladder': {
+    hook: 'From four easy returns to 120 tangled tickets: how far up the queue can it climb by the handbook?',
+    whatItTests: 'Working a shop’s overnight support queue at ten growing sizes: category, priority, response deadline, decision and exact refund for every ticket.',
+    whyHard: 'Every level adds tickets and handbook rules; the top levels are mostly interacting traps (split parcels, minimum-spend codes, corrections, reopened tickets, fraud) across clock changes and bank holidays.',
+    howScored: BUSINESS_LADDER_STEPS('Five fields per ticket; trap decisions worth more'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'persona',
+  },
+
   // ─────────────── Arena (head-to-head) ───────────────
   'arena.connect4': {
     hook: 'Can it plan ahead and block its opponent in four-in-a-row?',

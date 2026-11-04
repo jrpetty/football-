@@ -358,6 +358,15 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | Expense Policy Check: Ladder | `work.expenses-ladder` | Ten rungs of expense claims, from 8 lines to over 900. How far up can it pay every person exactly by the policy? |
 | Reconcile the Account: Ladder | `work.reconciliation-ladder` | Ten rungs of bank reconciliation, from 28 lines to 1,400. How far up can it match every line and land the balance to the penny? |
 
+**Business ladders: data & support** (category `work`; ten frozen levels each, a level is passed at 90%; see [METHODOLOGY §7s](docs/METHODOLOGY.md#7s-business-ladders-data-and-support))
+
+| Test | Id | What it does |
+|---|---|---|
+| Clean the Customer List: Ladder | `work.crm-ladder` | From 24 customer records to 1,000: how far up the clean-up ladder can it merge without merging two different people? |
+| What Changed in the Contract?: Ladder | `work.contract-ladder` | From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change or inventing one? |
+| Ask the Database: Ladder | `work.sql-ladder` | From one table and one rule to ten tables and a five-point memo: how deep a query can it get right? |
+| Customer Support Queue: Ladder | `work.support-ladder` | From four easy returns to 120 tangled tickets: how far up the support queue can it climb by the handbook? |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

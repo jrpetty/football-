@@ -52,6 +52,19 @@ const NAMES = [
   ['Lorenzo', 'Bianchi'], ['Mina', 'Park'], ['Noah', 'Fielding'], ['Olga', 'Sokolova'],
 ];
 const WELSH = [['Sian', 'Pritchard'], ['Gethin', 'Rees'], ['Bethan', 'Morgan']];
+// More customers for the longest ladder queues (verification/ladders-data-support/): used only when a queue has more
+// tickets than NAMES has people, so the test's own cases are unchanged.
+const MORE_NAMES = [
+  ['Abimbola', 'Ogunleye'], ['Bartosz', 'Zielinski'], ['Carys', 'Llewellyn'], ['Dimitra', 'Papadopoulos'], ['Eamon', 'Kavanagh'], ['Fatou', 'Diallo'],
+  ['Gurpreet', 'Sandhu'], ['Hiroshi', 'Tanaka'], ['Ilona', 'Varga'], ['Javier', 'Morales'], ['Kalinda', 'Perera'], ['Lucja', 'Mazur'], ['Malik', 'Oyelaran'],
+  ['Nadia', 'Rahimi'], ['Osian', 'Hughes'], ['Parveen', 'Akhtar'], ['Quentin', 'Marsh'], ['Rosalind', 'Achebe'], ['Sanjay', 'Gill'], ['Tamsin', 'Penrose'],
+  ['Uchenna', 'Okeke'], ['Valentina', 'Greco'], ['Wiktor', 'Nowicki'], ['Ximena', 'Ruiz'], ['Yasmin', 'Begum'], ['Zoltan', 'Horvath'], ['Ayesha', 'Malik'],
+  ['Bryony', 'Tait'], ['Chidi', 'Nnamdi'], ['Dorota', 'Wisniewska'], ['Efe', 'Oghene'], ['Fergus', 'Dunbar'], ['Grainne', 'Walsh'], ['Haruto', 'Sato'],
+  ['Ines', 'Carvalho'], ['Jovan', 'Petrovic'], ['Kirsty', 'Galbraith'], ['Lamar', 'Henry'], ['Mehmet', 'Aydin'], ['Nuala', 'Keane'], ['Oskar', 'Lindgren'],
+  ['Pooja', 'Iyer'], ['Rashid', 'Bakr'], ['Saoirse', 'Quinlan'], ['Thanh', 'Nguyen'], ['Usha', 'Pillai'], ['Viktor', 'Antonov'], ['Wanjiru', 'Kamau'],
+  ['Yusuf', 'Demir'], ['Zofia', 'Kaczmarek'], ['Adebayo', 'Lawal'], ['Beatriz', 'Almeida'], ['Cormac', 'Byrne'], ['Divya', 'Krishnan'], ['Emre', 'Celik'],
+  ['Fionnuala', 'Regan'], ['Godfrey', 'Mwangi'], ['Hollie', 'Sharpe'], ['Ivo', 'Novak'], ['Jasmin', 'Kaur'],
+];
 
 // ───────────────────────────── Case specs ─────────────────────────────
 // now = queue snapshot (UK local). Tickets arrive in the 1-4 days before it.
@@ -123,7 +136,7 @@ export function generate(spec) {
   const world = { spec, nowUtc, tickets: [], orders: [], stock: {}, approvals: [] };
   let ticketNo = 48000 + (spec.seed % 997) * 37;
   let orderNo = 207000 + (spec.seed % 997) * 113;
-  const names = r.shuffle(NAMES);
+  const names = r.shuffle(spec.kinds.length > NAMES.length ? NAMES.concat(MORE_NAMES) : NAMES);
   let nameIdx = 0;
   const welsh = r.shuffle(WELSH);
   const usedSku = new Set();
