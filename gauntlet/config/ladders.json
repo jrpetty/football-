@@ -149,7 +149,7 @@
       "basedOn": "work.crm-dedupe",
       "passMark": 0.9,
       "grows": "Records and duplicate rules: a short list with obvious duplicates, up to a large list where every matching rule interacts.",
-      "planned": true
+      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "70 records · 5 rules", "120 records · 8 rules", "220 records · all rules", "320 records · 3-hop chains", "450 records · 4-hop chains", "600 records · 5-hop chains", "780 records · 6-hop chains", "1,000 records · 6-hop chains"]
     },
     {
       "id": "work.contract-ladder",
@@ -159,7 +159,7 @@
       "basedOn": "work.contract-redline",
       "passMark": 0.9,
       "grows": "Contract length and kinds of change: a short clause list with plain edits, up to a long contract with moved, split and reworded clauses.",
-      "planned": true
+      "rungs": ["970 words · 3 changes", "1,900 words · 7 changes", "2,300 words · 12 changes", "3,500 words · 18 changes", "4,700 words · 33 changes", "6,800 words · 45 changes", "8,800 words · 58 changes", "11,200 words · 78 changes", "14,100 words · 93 changes", "17,500 words · 114 changes"]
     },
     {
       "id": "work.sql-ladder",
@@ -169,7 +169,7 @@
       "basedOn": "work.sql-questions",
       "passMark": 0.9,
       "grows": "Tables and query depth: one table and a filter, up to many joined tables with grouping, windows and edge cases (checked on hidden variant databases).",
-      "planned": true
+      "rungs": ["1 table · 1 rule", "1 table · 2 rules", "4 tables · 3 rules", "5 tables · 4 rules", "6 tables · 8 rules", "6 tables · 10 rules", "6 tables · 12 rules", "8 tables · 15 rules", "9 tables · 19 rules", "10 tables · 22 rules"]
     },
     {
       "id": "work.support-ladder",
@@ -179,7 +179,7 @@
       "basedOn": "work.support-refunds",
       "passMark": 0.9,
       "grows": "Tickets and policy rules: a few tickets under two refund rules, up to a full queue under the whole support policy.",
-      "planned": true
+      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 6 rules", "15 tickets · 8 rules", "29 tickets · full handbook", "40 tickets · 32 traps", "54 tickets · 43 traps", "70 tickets · 59 traps", "90 tickets · 77 traps", "120 tickets · 105 traps"]
     }
   ]
 }
