@@ -93,11 +93,14 @@ LEFT JOIN order_items oi ON oi.order_id = o.order_id
 GROUP BY st.store_id ORDER BY n DESC;`)),
     1,
   );
-  // q06 rounded with printf (text) instead of ROUND.
+  // q06 rounded with printf (text), the month ends from a recursive CTE, columns swapped.
   assert.equal(
-    await score(id, 'q06', fenced(`SELECT printf('%.2f', SUM(CASE plan WHEN 'annual' THEN price_gbp / 12 ELSE price_gbp END))
-FROM subscriptions s JOIN customers c USING (customer_id)
-WHERE c.is_test = 0 AND c.deleted_at IS NULL AND s.started_on <= '2026-03-31' AND COALESCE(s.ended_on, '9999-12-31') > '2026-03-31'`)),
+    await score(id, 'q06', fenced(`WITH RECURSIVE m(first) AS (SELECT '2026-02-01' UNION ALL SELECT date(first, '+1 month') FROM m WHERE first < '2026-07-01')
+SELECT printf('%.2f', SUM(CASE plan WHEN 'annual' THEN price_gbp / 12 ELSE price_gbp END)), date(m.first, '-1 day') AS d
+FROM m JOIN subscriptions s ON s.started_on <= date(m.first, '-1 day') AND COALESCE(s.ended_on, '9999-12-31') > date(m.first, '-1 day')
+JOIN customers c USING (customer_id)
+WHERE c.is_test = 0 AND c.deleted_at IS NULL
+GROUP BY d ORDER BY d`)),
     1,
   );
   // Two SQL blocks: only the last one counts (a hedge is not two chances).
@@ -106,10 +109,10 @@ WHERE c.is_test = 0 AND c.deleted_at IS NULL AND s.started_on <= '2026-03-31' AN
   assert.equal(await score(id, 'q01', `${fenced(q)}\n\nOr maybe:\n${fenced('SELECT 0')}`), 0);
 });
 
-test('a specific careless query: the fan-out join (items x refunds) is wrong where refunds exist, right elsewhere', async () => {
-  const fanOut = shop.QUESTIONS.find((q) => q.id === 'q05')!.careless[0]!;
-  const s = await score('work.sql-questions', 'q05', fenced(fanOut.sql));
-  assert.ok(s > 0 && s < 1, `fan-out scored ${s}`);
+test('a specific careless query: converting by the shop currency is wrong only where the website sold in euros', async () => {
+  const slip = shop.QUESTIONS.find((q) => q.id === 'q05')!.careless.find((c) => /store currency/.test(c.why))!;
+  const s = await score('work.sql-questions', 'q05', fenced(slip.sql));
+  assert.ok(s > 0 && s < 1, `store-currency slip scored ${s}`);
 });
 
 test('a hard-coded answer earns (almost) nothing beyond the one database it was copied from', async () => {
@@ -248,7 +251,11 @@ test('every careless query loses marks; expected spread: do-nothing 0, careless 
     }
     const mean = careless / carelessN;
     const lv = Object.fromEntries(Object.entries(byLevel).map(([k, v]) => [k, Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 100)]));
-    t.diagnostic(`${id}: careful ${Math.round((careful / qs.length) * 100)}%, careless ${Math.round(mean * 100)}% (easy ${lv.easy}%, medium ${lv.medium}%, hard ${lv.hard}%), do-nothing 0%`);
+    // Profiles: "strong but error-prone" = right on easy and medium, one realistic slip on each hard question;
+    // "mid" = right on easy, one slip on each medium and hard question; "careless" = a slip everywhere.
+    const per = qs.map((q, i) => ({ d: q.difficulty, slip: byLevel[q.difficulty]![qs.filter((x, j) => j < i && x.difficulty === q.difficulty).length]! }));
+    const profile = (right: string[]) => Math.round((per.reduce((a, x) => a + (right.includes(x.d) ? 1 : x.slip), 0) / per.length) * 100);
+    t.diagnostic(`${id}: careful ${Math.round((careful / qs.length) * 100)}%, strong-but-error-prone ${profile(['easy', 'medium'])}%, mid ${profile(['easy'])}%, careless ${profile([])}% (slip scores: easy ${lv.easy}%, medium ${lv.medium}%, hard ${lv.hard}%), do-nothing 0%`);
     assert.equal(careful, qs.length);
     assert.ok(mean > 0.1 && mean < 0.8, `${id}: careless mean ${mean}`);
   }

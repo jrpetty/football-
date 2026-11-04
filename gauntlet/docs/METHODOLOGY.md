@@ -512,20 +512,28 @@ Two tests (category `work`) ask the question a manager or analyst actually asks 
 answer:
 
 * **Ask the Database** (`work.sql-questions`, 12 questions): Northbound Outdoor, an invented UK outdoor-gear retailer
-  with four shops (one selling in euros) and a website. Customers, staff, orders, order lines, refunds, Trailhead Club
-  subscriptions and monthly exchange rates, with test accounts, soft-deleted accounts and orders, guest checkouts
-  (NULL customer), NULL discounts and staff covering shifts at other shops. Questions run from sign-up counts and
-  anti-joins, through fan-out-safe net revenue in pounds, MRR on a date, refund rates and a RANK() leaderboard, to
-  month-on-month change with LAG, "bought twice but never after their first refund", the most common product pair
-  (ties included) and membership churn with a 30-day return window.
+  with four shops (one selling in euros) and a website; about 160 customers, 500 orders and 1,100 order lines per
+  database. Customers, staff, orders, order lines, refunds, Trailhead Club subscriptions and monthly exchange rates,
+  with test accounts, soft-deleted accounts and orders, guest checkouts (NULL customer), NULL discounts and staff
+  covering shifts at other shops. Easy: sign-up counts, a location with no sales, top products, anti-joins. Medium:
+  net revenue per store and month without fan-out, MRR at every month end, early-refund rates per quarter, a RANK()
+  leaderboard. Hard, each a multi-step specification as a manager would hand it over: a board KPI table from a
+  finance memo whose two amendments override the main text (a 23:00 website cut-off at month ends, fully refunded
+  sales with a calendar-day window, refunds by the month they were made, new vs active customers); customer segments
+  from an ordered rule list with exceptions; a commission run (cover shifts at 50%, marginal bands, a lower
+  first-month threshold, manager overrides, leavers); and membership spells merged from overlapping and returning
+  subscriptions, with the paid value of each.
 * **Ask the Database: Hard** (`work.sql-hard`, 9 questions): Copperline Coffee's warehouse. UTC timestamps read in UK
-  local time across the BST change, a slowly changing price dimension, a many-to-many promotions table, an event
-  stream with duplicate deliveries, a daily subscription snapshot and a wallet ledger with reversals. Questions:
-  orders and revenue per UK day over the clock change, deduplicated event counts, revenue at historical prices,
-  top two per category with ties, cohort retention, pause streaks (gaps and islands), the lowest wallet balance with
-  reversals and same-second entries, the best single promotion per order line, and 30-minute sessionisation.
+  local time across the BST change, price and category history (slowly changing dimensions), a promotions table with
+  channel and minimum-basket rules, an event stream with duplicate deliveries and fast phone clocks, a daily
+  subscription snapshot that lost a day, and a wallet ledger whose reversals can themselves be reversed. Easy: orders
+  and revenue per UK day over the clock change, deduplicated event counts, revenue at historical prices and
+  categories. Medium: top two per category with ties across a category move, one- and two-month cohort retention,
+  pause streaks through the lost day. Hard: lowest and end-of-UK-day wallet balances through reversal chains and
+  same-second entries, the single best promotion per order line under four conditions, and 30-minute sessions with
+  checkouts after deduplication and clock correction.
 
-Each test is ordered easy → medium → hard, a third each. The prompt (about 3,000 tokens) gives the schema with
+Each test is ordered easy → medium → hard, a third each. The prompt (about 3,500 tokens plus the question; the hard questions add up to 700) gives the schema with
 comments, the business or warehouse rules (what counts as a sale, revenue net of refunds, how to convert currencies,
 quarter boundaries, what "active" means, how UK time works, what a duplicate is), 15–40 sample rows and the answer
 rules. Every question names the exact columns wanted, the rounding and the tolerance, the tie rule and whether the
@@ -562,15 +570,26 @@ rows must be in a given order.
 * Every key is computed twice: by the reference query and by an independent JavaScript solver over the raw rows
   (`verification/realworld-sql/`); the build fails if they disagree on any database, if a result depends on
   SQLite's scan order (re-run with `reverse_unordered_selects`), or if a result is empty.
-* Every question comes with 2–3 **careless queries**, each a real analyst mistake (BETWEEN on timestamps, NOT IN over
-  a NULL column, joining refunds to lines, a NULL discount, LAG after filtering, ROW_NUMBER instead of RANK, UTC
-  instead of UK days, the current price instead of the historical one, a RANGE window over same-second entries…).
+* Every question comes with 2–4 **careless queries**, each a real analyst mistake (BETWEEN on timestamps, NOT IN over
+  a NULL column, joining refunds to lines, a NULL discount, ROW_NUMBER instead of RANK, UTC instead of UK days, today's
+  price or category instead of the historical one, a RANGE window over same-second entries, ignoring a memo
+  amendment, a flat rate instead of bands, comparing with the previous subscription instead of the latest end…). On
+  the medium and hard questions most are the reference query with one detail changed, the way a careful analyst slips.
   The build asserts each one is wrong on at least one database, and the planted data (a sign-up on the afternoon of
   28 February, a refit month with only test-account till tests, an order at the exact moment of a price change, a
   gap of exactly 30 minutes, a top-up posted in the same second as a purchase…) makes sure each trap is live.
-* Measured through the real scorer (`test/realworld-sql.test.ts`): reference queries score 100% on both tests; the
-  careless queries average 35% on Ask the Database and 37% on the Hard test; `SELECT *`, the Random Baseline (which
-  answers `SELECT * FROM <first table>`) and random filler score 0.
+* Measured through the real scorer with scripted answers (`test/realworld-sql.test.ts`):
+
+  | Scripted answer | Ask the Database | Hard |
+  |---|---:|---:|
+  | Careful (the reference queries) | 100% | 100% |
+  | Strong but error-prone (right on easy and medium, one realistic slip on each hard question) | 87% | 86% |
+  | Mid (right on easy, one slip on each medium and hard question) | 69% | 70% |
+  | Careless (a slip on every question) | 44% | 44% |
+  | `SELECT *`, the Random Baseline (`SELECT * FROM <first table>`), random filler | 0% | 0% |
+
+  Hard questions are worth the same as easy ones (the harness averages questions equally); they carry their weight
+  through the many rules each one combines, so a single slip there costs a large share of that question.
 * Same conditions for every model: no answer-time limit, the same output limit, identical prompts; no judges.
 
 ## 7g. Work-world simulations: The Personal Assistant
