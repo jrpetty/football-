@@ -1,0 +1,185 @@
+{
+  "version": "1.0.0",
+  "title": "Difficulty ladders",
+  "about": "Every test built as a ten-rung difficulty ladder (case ids L01 to L10, frozen forever, each strictly harder than the one below along one documented size or depth). The headline is the ladder height: the highest level L such that every level 1..L was passed reliably. A rung is passed at passMark of its points (1 = full marks). src/core/ladders.ts validates this file and computes heights; docs/METHODOLOGY.md 'Difficulty ladders' is the contract. Planned tests are being built: when one lands, delete its \"planned\": true and add its ten rung labels.",
+  "levels": 10,
+  "tests": [
+    {
+      "id": "horizon.mind-runner",
+      "name": "Run It In Your Head",
+      "area": "benchmark",
+      "category": "horizon",
+      "passMark": 1,
+      "grows": "Program length: statements executed in your head, from about 150 to about 73,000.",
+      "rungs": ["155 steps", "275 steps", "551 steps", "1,168 steps", "2,187 steps", "4,376 steps", "10,262 steps", "21,708 steps", "36,951 steps", "73,119 steps"]
+    },
+    {
+      "id": "horizon.modpow-ladder",
+      "name": "No Calculator",
+      "area": "benchmark",
+      "category": "horizon",
+      "passMark": 1,
+      "grows": "Number size: a^e mod m with 8-digit numbers up to 44-digit numbers.",
+      "rungs": ["8-digit numbers", "10-digit numbers", "12-digit numbers", "14-digit numbers", "16-digit numbers", "20-digit numbers", "24-digit numbers", "30-digit numbers", "36-digit numbers", "44-digit numbers"]
+    },
+    {
+      "id": "horizon.sliding-ladder",
+      "name": "The Sliding Ladder",
+      "area": "benchmark",
+      "category": "horizon",
+      "passMark": 1,
+      "grows": "Board size and the proven-shortest plan: 20 moves on 3×3 up to 56 moves on 4×4.",
+      "rungs": ["3×3 · 20 moves", "3×3 · 24 moves", "3×3 · 27 moves", "3×3 · 30 moves", "3×4 · 36 moves", "3×4 · 42 moves", "4×4 · 46 moves", "4×4 · 50 moves", "4×4 · 53 moves", "4×4 · 56 moves"]
+    },
+    {
+      "id": "horizon.nonogram-ladder",
+      "name": "The Picture Logic Ladder",
+      "area": "benchmark",
+      "category": "horizon",
+      "passMark": 1,
+      "grows": "Grid size: an 8×8 picture up to 50×50 (2,500 cells), case analysis required from level 3.",
+      "rungs": ["8×8 grid", "10×10 grid", "12×12 grid", "20×20 grid", "25×25 grid", "30×30 grid", "35×35 grid", "40×40 grid", "45×45 grid", "50×50 grid"]
+    },
+    {
+      "id": "horizon.tiling-count",
+      "name": "Count Every Tiling",
+      "area": "benchmark",
+      "category": "horizon",
+      "passMark": 1,
+      "grows": "Board size: domino tilings of a 6×6 board (110) up to an 18×18 one (31 digits).",
+      "rungs": ["6×6 board", "6×8 board", "8×7 board", "8×8 board", "12×12 board", "14×12 board", "14×14 board", "16×14 board", "16×16 board", "18×18 board"]
+    },
+
+    {
+      "id": "reasoning.grid-ladder",
+      "name": "Deduction Grid: Ladder",
+      "area": "benchmark",
+      "category": "reasoning",
+      "basedOn": "reasoning.deduction-grid-extreme",
+      "passMark": 1,
+      "grows": "Grid size × attributes × clue depth: more people, more attributes and longer chains of clues to combine.",
+      "planned": true
+    },
+    {
+      "id": "reasoning.truth-ladder",
+      "name": "Knights & Knaves: Ladder",
+      "area": "benchmark",
+      "category": "reasoning",
+      "basedOn": "reasoning.truth-tellers-extreme",
+      "passMark": 1,
+      "grows": "Islanders and statement depth: more people, nested statements, then spies and alternators.",
+      "planned": true
+    },
+    {
+      "id": "reasoning.plans-ladder",
+      "name": "Shortest Plans: Ladder",
+      "area": "benchmark",
+      "category": "reasoning",
+      "basedOn": "reasoning.planning-extreme",
+      "passMark": 1,
+      "grows": "State-space size and the proven-minimum plan length.",
+      "planned": true
+    },
+    {
+      "id": "math.exact-ladder",
+      "name": "Exact Maths: Ladder",
+      "area": "benchmark",
+      "category": "math",
+      "basedOn": "math.olympiad",
+      "passMark": 1,
+      "grows": "Length and depth of a multi-step exact problem: bigger Markov chains, more counting constraints, longer exact fraction chains.",
+      "planned": true
+    },
+    {
+      "id": "coding.engineering-ladder",
+      "name": "Engineering: Ladder",
+      "area": "benchmark",
+      "category": "coding",
+      "basedOn": "coding.frontier",
+      "passMark": 1,
+      "grows": "Spec size, edge cases and input size: at the top, large hidden inputs with time limits need the efficient algorithm.",
+      "planned": true
+    },
+
+    {
+      "id": "work.invoices-ladder",
+      "name": "Invoices to Pay: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.invoice-matching",
+      "passMark": 0.9,
+      "grows": "Volume and stacked rules: a handful of invoices under two rule families, up to the full payment policy at maximum volume.",
+      "planned": true
+    },
+    {
+      "id": "work.payroll-ladder",
+      "name": "Check the Payslips: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.payroll-check",
+      "passMark": 0.9,
+      "grows": "Payslips and pay rules: a few payslips with two rule families, up to a whole payroll with every rule interacting.",
+      "planned": true
+    },
+    {
+      "id": "work.expenses-ladder",
+      "name": "Expense Policy Check: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.expense-audit",
+      "passMark": 0.9,
+      "grows": "Claims and policy clauses: a few claims under two clauses, up to a month of claims under the full policy.",
+      "planned": true
+    },
+    {
+      "id": "work.reconciliation-ladder",
+      "name": "Reconcile the Account: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.bank-reconciliation",
+      "passMark": 0.9,
+      "grows": "Bank lines and matching rules: a short statement with exact matches, up to a long statement with splits, fees and timing differences.",
+      "planned": true
+    },
+    {
+      "id": "work.crm-ladder",
+      "name": "Clean the Customer List: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.crm-dedupe",
+      "passMark": 0.9,
+      "grows": "Records and duplicate rules: a short list with obvious duplicates, up to a large list where every matching rule interacts.",
+      "planned": true
+    },
+    {
+      "id": "work.contract-ladder",
+      "name": "What Changed in the Contract?: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.contract-redline",
+      "passMark": 0.9,
+      "grows": "Contract length and kinds of change: a short clause list with plain edits, up to a long contract with moved, split and reworded clauses.",
+      "planned": true
+    },
+    {
+      "id": "work.sql-ladder",
+      "name": "Ask the Database: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.sql-questions",
+      "passMark": 0.9,
+      "grows": "Tables and query depth: one table and a filter, up to many joined tables with grouping, windows and edge cases (checked on hidden variant databases).",
+      "planned": true
+    },
+    {
+      "id": "work.support-ladder",
+      "name": "Customer Support Queue: Ladder",
+      "area": "business",
+      "category": "work",
+      "basedOn": "work.support-refunds",
+      "passMark": 0.9,
+      "grows": "Tickets and policy rules: a few tickets under two refund rules, up to a full queue under the whole support policy.",
+      "planned": true
+    }
+  ]
+}

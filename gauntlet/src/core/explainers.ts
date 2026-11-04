@@ -214,13 +214,17 @@ const DRAW_STEPS = (weights: string): ExplainStep[] => [
   { icon: 'cross', text: 'Digits in the words or extra shapes cost points' },
 ];
 
-const LADDER_STEPS = (what: string): ExplainStep[] => [
+/**
+ * How a difficulty ladder is scored (every test in config/ladders.json; the rule is src/core/ladders.ts).
+ * `passMark` below 1: a partial-credit ladder, whose rung is passed at that share of its points.
+ */
+export const LADDER_STEPS = (what: string, passMark = 1): ExplainStep[] => [
   { icon: 'ladder', text: 'Ten levels, each harder than the last' },
   { icon: 'target', text: what },
-  { icon: 'check', text: 'Checked by machine against a double-proven key' },
+  passMark >= 1 ? { icon: 'check', text: 'Checked by machine against a double-proven key' } : { icon: 'percent', text: `A level counts as passed at ${Math.round(passMark * 100)}% of its marks` },
   { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
 ];
-const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+export const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
 
 const ASSISTANT_STEPS: ExplainStep[] = [
   { icon: 'check', text: '85%: each request checked in the final inbox, diary, bookings' },

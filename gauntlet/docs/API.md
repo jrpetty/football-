@@ -58,7 +58,7 @@ Settings changed from the dashboard (currency, budget, grading policy, OpenRoute
 | POST | `/api/tests` | `{ definition: TestDefinition }` | `TestSummary` — saves to `tests/custom/<id>.json` (409 if id exists) |
 | PUT | `/api/tests/:id` | `{ definition: TestDefinition }` | `TestSummary` — custom tests only; version auto-bumped (patch) if content changed and version not changed |
 | DELETE | `/api/tests/:id` | – | `{ ok: true }` — custom tests only |
-| GET | `/api/suites` | – | `Array<Suite & { fingerprint: string, testCount: number }>` |
+| GET | `/api/suites` | – | `Array<Suite & { fingerprint: string, testCount: number, plannedCount: number }>` (`testCount` counts runnable tests; `plannedCount` the entries marked `"planned": true`, still being built) |
 
 ```ts
 interface TestSummary {
@@ -238,6 +238,7 @@ has no image output* or *Skipped — picture-only model*.
 
 | Method | Path | Returns |
 |---|---|---|
+| GET | `/api/ladders/:testId` | `LadderBoard` (`src/core/ladders.ts`): the difficulty ladder's config entry (`config/ladders.json`: pass mark, what grows, rung labels, planned) and every model's climb on it (per rung: attempt scores, passed per attempt, reliable; height, once-solved levels, borderline / just short), from the same pooled, hash-checked results as the combined leaderboard. Leaderboards carry the same heights: `rows[].tests[id].ladder` and `rows[].ladderHeight` (mean over the board's ladder tests). |
 | GET | `/api/business-ladder?suite=business&models=a,b` | `BusinessLadderView` (`src/core/business-ladder.ts`): the ladder definition (`config/business-ladder.json`), every ladder test (`exists`, name, explainer summary), and for every model with results its ladder per scenario (per level: status, score, 95% range, tests; height reached, borderline / just short). `models` (2–4 ids) adds paired comparisons for every pair. `suite` defaults to `business` when that suite exists, else every test. Same pooled, hash-checked results as the combined leaderboard. |
 
 ## Studio (video kit) and OBS overlays

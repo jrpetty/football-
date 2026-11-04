@@ -9,6 +9,8 @@ import { buildBusinessLadderView, ladderTestInfo, type BusinessLadderView, type 
 import { loadBusinessLadder } from '../core/business-ladder-file.ts';
 import { BUSINESS_SUITE_ID } from '../core/areas.ts';
 import { explainerFor } from '../core/explainers.ts';
+import { attachLadderHeights, ladderClimbs, ladderSpec, type LadderBoard } from '../core/ladders.ts';
+import { loadLadderRules, loadLadders } from '../core/ladders-file.ts';
 
 function markManual(board: Leaderboard, contestants: Contestant[]): Leaderboard {
   const providers = loadProviders();
@@ -27,15 +29,17 @@ export function runLeaderboard(runId: string): Leaderboard | null {
   if (!manifest) return null;
   const tests: AggregateTest[] = manifest.tests.map((t) => ({ id: t.id, name: t.name, category: t.category, weight: t.weight, version: t.version, hash: t.hash }));
   const suite = manifest.suiteId ? getSuite(manifest.suiteId) : undefined;
-  return markManual(buildLeaderboard({
+  const results = readResults(runId);
+  const board = buildLeaderboard({
     scope: { kind: 'run', runId },
     fingerprint: manifest.fingerprint,
     categories: loadCategories(),
     categoryWeights: suite?.categoryWeights,
     tests,
     contestants: manifest.contestants,
-    results: readResults(runId),
-  }), manifest.contestants);
+    results,
+  });
+  return markManual(attachLadderHeights(board, results, loadLadderRules()), manifest.contestants);
 }
 
 /** Leaderboard row id for a model's results that ran through OpenRouter. */
@@ -54,7 +58,7 @@ export function routedRowId(contestantId: string): string {
  */
 export function combinedLeaderboard(suiteId: string): Leaderboard {
   const { tests, suite, aggTests, board, results, stale } = combinedPool(suiteId);
-  return markManual(buildLeaderboard({
+  const lb = buildLeaderboard({
     scope: { kind: 'combined', suiteId },
     fingerprint: fingerprint(tests),
     categories: loadCategories(),
@@ -63,7 +67,24 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
     contestants: board,
     results,
     staleExcluded: stale,
-  }), board);
+  });
+  return markManual(attachLadderHeights(lb, results, loadLadderRules()), board);
+}
+
+/** GET /api/ladders/:testId: every model's climb on one difficulty ladder (pooled, hash-checked results). */
+export function ladderBoard(testId: string): LadderBoard {
+  const spec = ladderSpec(loadLadders(), testId) ?? null;
+  if (!spec || spec.planned) return { testId, spec, climbs: [] };
+  const { board, results } = combinedPool('all');
+  const climbs = ladderClimbs(results, testId, { passMark: spec.passMark, levels: spec.rungs?.length });
+  return {
+    testId,
+    spec,
+    climbs: climbs.flatMap((c) => {
+      const who = board.find((b) => b.id === c.contestantId);
+      return who ? [{ id: who.id, label: who.label, color: who.color, climb: c }] : [];
+    }),
+  };
 }
 
 /** The results a combined leaderboard counts (same filters), so drill-downs can never disagree with the scores. */

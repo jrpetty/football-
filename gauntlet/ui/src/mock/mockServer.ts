@@ -32,7 +32,11 @@ import { ApiError } from '../api.ts';
 import { mockArtifactUrls } from './registry.ts';
 import { handleBusinessLadder } from './businessLadderMock.ts';
 import { AREA_RUN_ID, LIFE_RUN_ID } from './areaDemo.ts';
-import { BUSINESS_SUITE_ID, LIFE_SUITE_ID } from '../../../src/core/areas.ts';
+import { BUSINESS_LADDERS_SUITE_ID, BUSINESS_SUITE_ID, FRONTIER_LADDERS_SUITE_ID, LIFE_SUITE_ID } from '../../../src/core/areas.ts';
+import { HORIZON_RUN_SPEC } from './horizonMock.ts';
+import { LADDER_DEMO_BUSINESS_RUN, LADDER_DEMO_FRONTIER_RUN, LADDER_DEMO_RULES } from './laddersMock.ts';
+import { ladderClimbs } from '../../../src/core/ladders.ts';
+import { ladderSpecOf } from '../ladders.ts';
 import {
   CONTESTANTS,
   DISCOVERABLE,
@@ -120,6 +124,16 @@ function runDetail(id: string): RunDetail {
     progress: { completed: run.results.length, total: run.manifest.totalJobs, costUsd: run.results.reduce((s, r) => s + r.metrics.costUsd, 0) },
     active: !!sim && sim.timer !== null,
   };
+}
+
+/** The demo run behind a suite's combined leaderboard. */
+function suiteRunId(suiteId: string): string {
+  if (suiteId === BUSINESS_SUITE_ID) return AREA_RUN_ID;
+  if (suiteId === LIFE_SUITE_ID) return LIFE_RUN_ID;
+  if (suiteId === 'horizon') return HORIZON_RUN_SPEC.id;
+  if (suiteId === FRONTIER_LADDERS_SUITE_ID) return LADDER_DEMO_FRONTIER_RUN;
+  if (suiteId === BUSINESS_LADDERS_SUITE_ID) return LADDER_DEMO_BUSINESS_RUN;
+  return 'run-2026-09-21-core';
 }
 
 function suiteTests(suiteId: string): string[] {
@@ -826,7 +840,19 @@ export async function handle(method: string, fullPath: string, body: unknown): P
       return { ok: true };
     }
     case 'GET suites':
-      return SUITES.map((s) => ({ ...s, testCount: s.tests.some((t) => t.id === '*') ? benchmarkTests().length : s.tests.length }));
+      return SUITES.map((s) => ({ ...s, testCount: s.tests.some((t) => t.id === '*') ? benchmarkTests().length : s.tests.filter((t) => !t.planned).length, plannedCount: s.tests.filter((t) => t.planned).length }));
+    case 'GET ladders': {
+      // Every model's climb on one ladder, from the demo runs that ran it (src/core/ladders.ts; DEMO data).
+      const spec = ladderSpecOf(b) ?? null;
+      const pool = [...specs.keys()].map((id) => getRun(id)).filter((r) => r.manifest.tests.some((t) => t.id === b));
+      const results = pool.flatMap((r) => r.results);
+      const rule = LADDER_DEMO_RULES.get(b ?? '') ?? { passMark: 1 };
+      const climbs = ladderClimbs(results, b ?? '', rule).flatMap((c) => {
+        const who = contestants.find((x) => x.id === c.contestantId);
+        return who ? [{ id: who.id, label: who.label, color: who.color, climb: c }] : [];
+      });
+      return { testId: b, spec, climbs, demo: true };
+    }
     case 'POST estimate':
       return estimateRun(body as RunRequest);
     case 'GET costs': {
@@ -930,14 +956,14 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     }
     case 'GET score-answers': {
       const scope = q.get('scope') ?? '';
-      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : scope === `suite:${BUSINESS_SUITE_ID}` ? AREA_RUN_ID : scope === `suite:${LIFE_SUITE_ID}` ? LIFE_RUN_ID : 'run-2026-09-21-core');
+      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : suiteRunId(scope.slice(6)));
       return run.results.filter((r) => r.contestantId === q.get('contestant') && r.testId === q.get('test')).map((r) => toScoreAnswer(detailFor(r)));
     }
     case 'GET leaderboard': {
       const suiteId = q.get('suite') ?? 'core';
       const ids = new Set(suiteTests(suiteId));
-      // Business and Everyday Life have their own results (the demo area run); the benchmark suites use the core run.
-      const core = getRun(suiteId === BUSINESS_SUITE_ID ? AREA_RUN_ID : suiteId === LIFE_SUITE_ID ? LIFE_RUN_ID : 'run-2026-09-21-core');
+      // Business, Everyday Life and the ladder suites have their own demo runs; the other benchmark suites use the core run.
+      const core = getRun(suiteRunId(suiteId));
       const manifest = { ...core.manifest, tests: core.manifest.tests.filter((t) => ids.has(t.id)), fingerprint: SUITES.find((s) => s.id === suiteId)?.fingerprint ?? core.manifest.fingerprint };
       return buildLeaderboard(manifest, core.results.filter((r) => ids.has(r.testId)), { kind: 'combined', suiteId }, suiteId === 'core' ? 17 : 0);
     }

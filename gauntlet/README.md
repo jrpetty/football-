@@ -206,6 +206,8 @@ node src/cli.ts arena new --game courtroom --models a,b --case missing-violin
 | `frontier` | **Frontier tier.** 17 extreme tests (extreme logic, olympiad maths, frontier coding, a Fix the Bug coding agent, adversarial system prompts, pressure honesty traps, hard variants of every simulation, the Fix the Bug coding agent) to separate the best models once they bunch up near the top of Core. |
 | `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (25 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
 | `art` | **The Gallery Masterpiece.** Eight museum commissions painted by image models (and, separately, by text models writing SVG: *Painted in Code*). Vision judges from other companies check every line of the brief and score the artistry; see [PLAYBOOK.md](docs/PLAYBOOK.md#running-the-gallery-test-ai-art). Models without image output are skipped. |
+| `frontier-ladders` | **Frontier Ladders.** The Frontier logic, maths and coding tests rebuilt as ten-rung difficulty ladders (deduction grids, knights and knaves, shortest plans, exact maths, engineering). Headline: the ladder height. Its own leaderboard, never mixed into an Index. Ladders still being built show as coming soon. |
+| `business-ladders` | **Business Ladders.** Eight Business tests rebuilt as ten-rung difficulty ladders (a rung passed at 90% of its marks). Shown under Business → Results → Difficulty ladders, with the Business Score and heights. Not the Business Ladder's adoption levels. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |
@@ -214,7 +216,10 @@ Expected spend for every suite, per test and per model, is in [docs/COSTS.md](do
 verified and blind-played before release is in [docs/AUDIT.md](docs/AUDIT.md).
 
 Suites live in `suites/*.json`. A suite lists test ids with optional weights, category weights and a
-default repeat count. Bump the suite `version` when you change it.
+default repeat count. Bump the suite `version` when you change it. An entry with `"planned": true` names a
+test that is still being built: it shows as coming soon and is never run; `npm run validate` and the tests tell
+you to delete the flag once the test exists. Every difficulty-ladder test is listed in `config/ladders.json`
+(pass mark, what grows, one label per rung; see METHODOLOGY "Difficulty ladders").
 
 ## The tests
 

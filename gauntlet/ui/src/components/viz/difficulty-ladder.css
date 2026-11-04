@@ -1,0 +1,973 @@
+/*
+ * The difficulty ladder (DifficultyLadder.tsx): ten rungs, a lane per model, its height marked. Colours come
+ * from tokens.css (model colours arrive as --c); spacing from the 8-point grid; type from the shared scale.
+ */
+
+.dl {
+  --axis-w: 150px;
+  --band-w: 22px;
+  --lane-min: 92px;
+  --rung-h: 34px;
+  --rail: color-mix(in srgb, var(--text-3) 34%, transparent);
+  --rung-line: color-mix(in srgb, var(--text-3) 26%, transparent);
+  --band-future: color-mix(in srgb, var(--accent-2) 9%, transparent);
+  --band-top: color-mix(in srgb, var(--accent) 5%, transparent);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  color: var(--text-1);
+}
+
+/* ─── header ─── */
+.dl-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-4);
+  flex-wrap: wrap;
+}
+.dl-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.dl-eyebrow {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--area-accent, var(--accent));
+}
+.dl-titles h3 {
+  margin: 0;
+  font-size: var(--fs-h3);
+}
+.dl-titles p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  max-width: var(--measure);
+}
+.dl-pass {
+  flex: none;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* ─── the grid: an axis column, then one lane per model; every row is a rung ─── */
+.dl-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+}
+.dl-grid {
+  display: grid;
+  grid-template-columns: var(--band-w) var(--axis-w) repeat(var(--lanes), minmax(var(--lane-min), 1fr));
+  grid-template-rows: auto repeat(var(--levels), var(--rung-h)) var(--rung-h);
+  min-width: min-content;
+}
+.dl-row {
+  display: contents;
+}
+
+/* axis */
+.dl-axis {
+  position: sticky;
+  left: var(--band-w);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  padding: 0 var(--s-3) 0 var(--s-4);
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+.dl-lv {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.dl-lv b {
+  font-size: var(--fs-small);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+  min-width: 2.2em;
+}
+.dl-lv small {
+  font-size: var(--fs-micro);
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-rung.b-future .dl-axis {
+  background: linear-gradient(var(--band-future), var(--band-future)), var(--surface-1);
+}
+/* the band strip: a rotated label per calibration band, pinned at the left edge */
+.dl-bandcol {
+  grid-column: 1;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+.dl-bandcol > span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 9.5px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.dl-bandcol::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--band-c, var(--border-strong));
+}
+.dl-bandcol.b-small {
+  --band-c: color-mix(in srgb, var(--text-3) 45%, transparent);
+}
+.dl-bandcol.b-mid {
+  --band-c: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.dl-bandcol.b-top {
+  --band-c: var(--accent);
+}
+.dl-bandcol.b-future {
+  --band-c: var(--accent-2);
+  background: linear-gradient(var(--band-future), var(--band-future)), var(--surface-1);
+}
+.dl-bandcol.b-future > span {
+  color: color-mix(in srgb, var(--accent-2) 80%, var(--text-2));
+}
+.dl-rung.b-future .dl-cell {
+  background-color: var(--band-future);
+}
+.dl-rung.hl .dl-axis {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.dl-rung.hl .dl-lv b {
+  color: var(--accent);
+}
+.dl-axis-h {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  justify-content: flex-end;
+  padding-bottom: var(--s-2);
+}
+
+/* lane headers: name, the height, tags */
+.dl-lane-h {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: var(--s-2) var(--s-2) var(--s-2);
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  align-items: center;
+}
+.dl-names > * {
+  min-height: 92px;
+}
+.dl-who {
+  /* two lines reserved, names sit on the bottom one: every lane's height number lines up */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 2.6em;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.3;
+}
+.dl-who b {
+  font-size: var(--fs-small);
+  font-weight: 650;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.dl-sw {
+  display: inline-block;
+  vertical-align: 0.05em;
+  margin-right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.dl-lane-h.baseline .dl-sw {
+  background: var(--text-3);
+}
+.dl-h {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.dl-h b {
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+.dl-lane-h.lead .dl-h b {
+  color: color-mix(in srgb, var(--c) 70%, var(--text-1));
+}
+.dl-h small {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.dl-lane-h.baseline {
+  opacity: 0.75;
+}
+.dl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.dl-tags span {
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 650;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.dl-tags .t-once {
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  color: color-mix(in srgb, var(--c) 55%, var(--text-1));
+}
+.dl-tags .t-warn {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+.dl-soon-h {
+  grid-column: 3 / -1;
+  align-items: flex-start;
+  text-align: left;
+  justify-content: center;
+  padding-left: var(--s-4);
+}
+.dl-soon-h b {
+  font-size: var(--fs-h3);
+}
+.dl-soon-h small {
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+
+/* a lane's cell on one rung: two rails, the rung across the middle, the attempt chips on it */
+.dl-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  background-image:
+    linear-gradient(var(--rail), var(--rail)), linear-gradient(var(--rail), var(--rail)), linear-gradient(var(--rung-line), var(--rung-line));
+  background-size:
+    2px 100%,
+    2px 100%,
+    calc(100% - 36px) 2px;
+  background-position:
+    18px 0,
+    calc(100% - 18px) 0,
+    center;
+  background-repeat: no-repeat;
+  transition: background-color var(--t-slow) var(--ease-out);
+}
+.dl-empty {
+  grid-column: 3 / -1;
+}
+.dl-cell.climbed {
+  --rail: color-mix(in srgb, var(--c) 75%, transparent);
+  --rung-line: color-mix(in srgb, var(--c) 60%, transparent);
+  background-color: color-mix(in srgb, var(--c) 15%, transparent);
+}
+.dl-rung.b-future .dl-cell.climbed {
+  background-color: color-mix(in srgb, var(--c) 18%, var(--band-future));
+}
+.dl-cell.top {
+  box-shadow: inset 0 3px 0 var(--c);
+}
+.dl-cell.ghost {
+  outline: 2px dashed color-mix(in srgb, var(--c) 60%, transparent);
+  outline-offset: -5px;
+  border-radius: 8px;
+}
+.dl-cell.baseline {
+  --c: var(--text-3);
+}
+.dl-cell.not-run {
+  --rail: color-mix(in srgb, var(--text-3) 16%, transparent);
+  --rung-line: color-mix(in srgb, var(--text-3) 12%, transparent);
+}
+.dl-rung.hl .dl-cell {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.dl-rung.hl .dl-cell.climbed {
+  background-color: color-mix(in srgb, var(--c) 15%, color-mix(in srgb, var(--accent) 10%, transparent));
+}
+
+.dl-chips {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  gap: 3px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.dl-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-style: normal;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 900;
+}
+.dl-chip.k-pass {
+  background: var(--good);
+  color: #ffffff;
+}
+.dl-chip.k-fail {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bad) 55%, transparent);
+}
+/* a marker (height flag, "once" ghost) sits on the right: the chips move left of it, never under it */
+.dl-cell.top:not(.baseline) .dl-chips,
+.dl-cell.ghost .dl-chips {
+  margin-right: 34px;
+}
+.dl-slide .dl-cell.top:not(.baseline) .dl-chips,
+.dl-slide .dl-cell.ghost .dl-chips {
+  margin-right: 64px;
+}
+/* above a model's height the failures recede, so the climb reads first; a lucky pass ("once") stays clear */
+.dl-cell:not(.climbed):not(.ghost) .dl-chips {
+  opacity: 0.5;
+  box-shadow: none;
+  background: transparent;
+}
+.dl-chip.k-part {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 55%, transparent);
+}
+.dl-more {
+  font-size: 10px;
+  color: var(--text-3);
+  align-self: center;
+}
+.dl-none {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--text-3) 60%, transparent);
+}
+
+/* the height marker on the top climbed rung; the "once" ghost above it */
+.dl-flag {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background: var(--c);
+  box-shadow: 0 0 0 2px var(--surface-1), 0 4px 12px -4px color-mix(in srgb, var(--c) 80%, transparent);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+.dl-flag.low {
+  opacity: 0.85;
+}
+.dl-ghost {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  height: 18px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1.5px dashed color-mix(in srgb, var(--c) 70%, transparent);
+  background: var(--surface-1);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 60%, var(--text-1));
+}
+.dl-ground > * {
+  border-top: 1px solid var(--border);
+}
+.dl-ground .dl-lv b {
+  color: var(--text-3);
+  font-weight: 650;
+}
+.dl-base.stuck {
+  background: color-mix(in srgb, var(--c) 8%, transparent);
+}
+
+/* rise in, rung by rung (off for reduced motion) */
+@media (prefers-reduced-motion: no-preference) {
+  .dl-cell.climbed {
+    animation: dl-rise 420ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 1) * 45ms);
+  }
+}
+@keyframes dl-rise {
+  from {
+    background-color: transparent;
+  }
+}
+
+/* ─── footer: the comparison in plain English, the key ─── */
+.dl-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
+}
+.dl-note {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 650;
+  color: var(--text-1);
+}
+.dl-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  font-size: var(--fs-micro);
+  color: var(--text-2);
+}
+.dl-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dl-legend .dl-chip {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+.dl-key-climb,
+.dl-key-ghost {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+}
+.dl-key-climb {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+.dl-key-ghost {
+  outline: 2px dashed color-mix(in srgb, var(--text-2) 60%, transparent);
+  outline-offset: -2px;
+}
+
+/* ─── coming soon ─── */
+.dl-soon .dl-cell.dl-empty {
+  background-image: linear-gradient(var(--rung-line), var(--rung-line));
+  background-size: calc(100% - 36px) 2px;
+  background-position: center;
+}
+
+/* ─── the Presenter slide: big type, the ladder fills the stage ─── */
+.dl-slide {
+  --axis-w: 250px;
+  --band-w: 40px;
+  --lane-min: 150px;
+  height: 100%;
+  min-height: 0;
+  gap: 16px;
+  font-size: 22px;
+}
+.dl-slide .dl-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.dl-slide .dl-grid {
+  height: 100%;
+  grid-template-rows: auto repeat(var(--levels), minmax(0, 1fr)) 40px;
+}
+.dl-slide .dl-names > * {
+  min-height: 0;
+  padding-top: 14px;
+  padding-bottom: 12px;
+}
+.dl-slide .dl-who b {
+  font-size: 22px;
+}
+.dl-slide .dl-sw {
+  width: 14px;
+  height: 14px;
+}
+.dl-slide .dl-h b {
+  font-size: 54px;
+}
+.dl-slide .dl-h small {
+  font-size: 18px;
+}
+.dl-slide .dl-tags span {
+  font-size: 15px;
+  padding: 2px 10px;
+}
+.dl-slide .dl-lv b {
+  font-size: 24px;
+}
+.dl-slide .dl-lv small {
+  font-size: 19px;
+}
+.dl-slide .dl-bandcol > span {
+  font-size: 14px;
+}
+.dl-slide .dl-bandcol::before {
+  width: 3px;
+  left: 6px;
+}
+.dl-slide .dl-chip {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+}
+.dl-slide .dl-chips {
+  gap: 5px;
+  padding: 3px 6px;
+}
+.dl-slide .dl-flag {
+  height: 30px;
+  min-width: 40px;
+  font-size: 15px;
+  right: 8px;
+}
+.dl-slide .dl-ghost {
+  font-size: 13px;
+  height: 28px;
+  padding: 0 10px;
+  right: 8px;
+}
+.dl-slide .dl-cell {
+  background-size:
+    3px 100%,
+    3px 100%,
+    calc(100% - 56px) 3px;
+  background-position:
+    28px 0,
+    calc(100% - 28px) 0,
+    center;
+}
+.dl-slide .dl-note {
+  font-size: 28px;
+}
+.dl-slide .dl-legend {
+  font-size: 17px;
+  gap: 6px 22px;
+}
+.dl-slide .dl-legend .dl-chip {
+  width: 22px;
+  height: 22px;
+  font-size: 13px;
+}
+
+/* ─── Broadcast mode: everything a notch bigger for video ─── */
+html[data-broadcast='on'] .dl-card {
+  --rung-h: 42px;
+  --lane-min: 120px;
+  --axis-w: 210px;
+}
+html[data-broadcast='on'] .dl-card .dl-lv b {
+  font-size: var(--fs-body);
+}
+html[data-broadcast='on'] .dl-card .dl-h b {
+  font-size: 2.2rem;
+}
+html[data-broadcast='on'] .dl-card .dl-chip {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+html[data-broadcast='on'] .dl-card .dl-tags span,
+html[data-broadcast='on'] .dl-card .dl-ghost,
+html[data-broadcast='on'] .dl-card .dl-flag {
+  font-size: 12px;
+}
+html[data-broadcast='on'] .dl-card .dl-bandcol > span {
+  font-size: 11px;
+}
+html[data-broadcast='on'] .dl-card .dl-note {
+  font-size: var(--fs-h3);
+}
+
+/* ─── phone: narrower axis, lanes scroll sideways inside the ladder ─── */
+@media (max-width: 640px) {
+  .dl-card {
+    --axis-w: 96px;
+    --band-w: 18px;
+    --lane-min: 96px;
+    --rung-h: 32px;
+  }
+  .dl-card .dl-bandcol > span {
+    font-size: 8.5px;
+  }
+  .dl-card .dl-chips {
+    margin-right: 16px;
+  }
+  .dl-card .dl-ghost {
+    font-size: 0;
+    width: 14px;
+    padding: 0;
+  }
+  .dl-card .dl-axis {
+    padding: 0 var(--s-2) 0 var(--s-3);
+  }
+  .dl-card .dl-lv {
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+  }
+  .dl-card .dl-lv small {
+    max-width: calc(var(--axis-w) - 20px);
+    font-size: 9.5px;
+  }
+  .dl-card .dl-names > * {
+    min-height: 84px;
+  }
+  .dl-card .dl-h b {
+    font-size: 1.45rem;
+  }
+  .dl-card .dl-flag {
+    right: 2px;
+    min-width: 22px;
+    font-size: 9px;
+  }
+  .dl-card .dl-chip {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+  .dl-card .dl-cell {
+    background-size:
+      2px 100%,
+      2px 100%,
+      calc(100% - 24px) 2px;
+    background-position:
+      12px 0,
+      calc(100% - 12px) 0,
+      center;
+  }
+  .dl-foot {
+    flex-direction: column;
+  }
+}
+
+/* ─── a ten-segment height meter for tables ─── */
+.dl-meter {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+.dl-meter i {
+  width: 5px;
+  height: 12px;
+  border-radius: 1.5px;
+  background: color-mix(in srgb, var(--text-3) 22%, transparent);
+}
+.dl-meter i.on {
+  background: var(--c);
+}
+.dl-meter i.part {
+  background: linear-gradient(to top, var(--c) var(--f), color-mix(in srgb, var(--text-3) 22%, transparent) var(--f));
+}
+.dl-meter i.once {
+  box-shadow: inset 0 0 0 1.5px var(--c);
+  background: transparent;
+}
+
+/* ─── Result Inspector panel and Presenter slide ─── */
+.dl-panel {
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 10px 14px 14px;
+  background: var(--surface-1);
+}
+.dl-panel > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 10px;
+}
+.dl-panel .dl-scroll {
+  background: var(--surface-2);
+}
+.dl-panel .dl-axis {
+  background: var(--surface-2);
+}
+.s-ladder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+.s-ladder-main {
+  flex: 1;
+  min-height: 0;
+}
+.s-ladder .tr-k {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-1);
+}
+.s-ladder-grows {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-2);
+}
+.s-ladder-grows b {
+  color: var(--text-1);
+}
+.s-ladder-grows span {
+  color: var(--text-3);
+}
+
+/* ─── leaderboard: the Height column and the "How high each model climbs" panel ─── */
+.table.lb th.c-height,
+.table.lb td.c-height {
+  min-width: 118px;
+}
+.height-cell {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: var(--s-2);
+  justify-content: start;
+}
+.height-value {
+  grid-row: 1 / span 2;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.height-sub {
+  font-size: 10px;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+.height-warn {
+  margin-left: 2px;
+  color: var(--warn-text);
+  font-weight: 800;
+}
+.lh-card .card-head .t {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lh-card h2 {
+  margin: 0;
+}
+.lh-table th.lh-test {
+  text-align: center;
+  min-width: 112px;
+  white-space: normal;
+  line-height: 1.25;
+  vertical-align: bottom;
+}
+.lh-table th.lh-test a {
+  color: var(--text-1);
+}
+.lh-table th.lh-test.soon {
+  color: var(--text-3);
+}
+.lh-soon {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.lh-model {
+  white-space: nowrap;
+}
+.lh-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+}
+.lh-cell {
+  text-align: center;
+}
+.lh-cell .lh-h {
+  display: block;
+  font-weight: 800;
+  font-size: var(--fs-body);
+  line-height: 1.2;
+}
+.lh-cell .dl-meter {
+  margin-top: 3px;
+}
+.lh-once {
+  display: block;
+  font-size: 10px;
+  color: var(--text-3);
+}
+.lh-cell.soon {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--text-3) 9%, transparent) 6px 7px);
+}
+.lh-table tr.is-baseline {
+  opacity: 0.72;
+}
+.lh-note {
+  margin: var(--s-3) 0 0;
+}
+.lh-key {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-micro);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.dl-card-wrap .card-body {
+  padding-top: var(--s-4);
+}
+
+/* ─── a ladder suite with no results yet ─── */
+.lh-soon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--s-3);
+}
+.lh-soon-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.lh-soon-list li.soon {
+  border-style: dashed;
+}
+.lh-soon-list b {
+  display: block;
+  font-size: var(--fs-body);
+}
+.lh-soon-list p {
+  margin: 2px 0 4px;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.lh-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--s-2);
+}
+.lh-status small {
+  font-size: var(--fs-micro);
+  color: var(--text-3);
+}
+.lh-tag {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-2);
+}
+.lh-tag.ok {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
+  color: var(--good-text);
+}
+.lh-mini {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  padding: 2px 4px;
+  border-left: 2px solid color-mix(in srgb, var(--text-3) 34%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--text-3) 34%, transparent);
+  align-self: start;
+}
+.lh-mini i {
+  width: 18px;
+  height: 2px;
+  background: color-mix(in srgb, var(--text-3) 40%, transparent);
+}
+.lh-soon-list li:not(.soon) .lh-mini i {
+  background: var(--area-accent, var(--accent));
+}

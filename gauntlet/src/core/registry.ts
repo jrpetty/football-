@@ -509,6 +509,33 @@ export function loadSuites(): Suite[] {
   return suites;
 }
 
+/**
+ * Problems with the suites' test lists (empty = valid): unknown tests and cases, and planned entries. A planned
+ * entry (`"planned": true`) may name a test that does not exist yet; once it exists the flag must be deleted.
+ */
+export function suiteProblems(suites: Suite[], all: LoadedTest[]): string[] {
+  const byId = new Map(all.map((t) => [t.definition.id, t]));
+  const out: string[] = [];
+  for (const s of suites) {
+    for (const e of s.tests) {
+      if (e.id === '*') continue;
+      const t = byId.get(e.id);
+      if (e.planned) {
+        if (t) out.push(`suite ${s.id}: "${e.id}" now exists, delete its "planned": true in suites/${s.id}.json`);
+        continue;
+      }
+      if (!t) {
+        out.push(`suite ${s.id}: unknown test "${e.id}"`);
+        continue;
+      }
+      const d = t.definition;
+      const known = d.kind === 'prompt' ? d.cases.map((c) => c.id) : d.seeds.map((x) => `seed-${x}`);
+      for (const cid of e.cases ?? []) if (!known.includes(cid)) out.push(`suite ${s.id}: test "${e.id}" has no case "${cid}"`);
+    }
+  }
+  return out;
+}
+
 export function getSuite(id: string): Suite | undefined {
   return loadSuites().find((s) => s.id === id);
 }
@@ -537,6 +564,7 @@ export function resolveTests(opts: { suiteId?: string; testIds?: string[] }, all
   const out: ResolvedTest[] = [];
   const seen = new Set<string>();
   for (const entry of suite.tests) {
+    if (entry.planned) continue; // a planned test: shown as coming soon, never run
     if (entry.id === '*') {
       for (const t of all) if (!seen.has(t.definition.id)) {
         seen.add(t.definition.id);
