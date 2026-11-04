@@ -3,6 +3,7 @@
 // stakes, things you can do, things that can go wrong, and a clock.
 
 import type { Scenario } from './types.ts'
+import { DRAMA } from './drama.ts'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 /** Day N, hh:00 — beats of `step` hours starting at `start` o'clock. */
@@ -709,7 +710,7 @@ export const SCENARIOS: Scenario[] = [
       { id: 'scandal', label: 'Scandal risk', icon: '💥', start: 20, max: 100, good: 'low', critical: true },
       { id: 'volunteers', label: 'Volunteer energy', icon: '🙋', start: 60, max: 100, good: 'high' },
     ],
-    upkeep: { funds: -4, volunteers: -3 },
+    upkeep: { funds: -4, volunteers: -3, polls: -0.5 },
     moves: [
       { id: 'canvass', label: 'Knock on doors', at: ['square', 'diner'], effects: { polls: 2, volunteers: 4 }, self: { energy: -10 }, trait: 'extraversion', verb: 'knocked on doors' },
       { id: 'phone', label: 'Run the phone bank', at: ['hq'], effects: { polls: 1, volunteers: 6 }, self: { energy: -6 }, verb: 'ran the phone bank' },
@@ -821,3 +822,6 @@ export const SCENARIOS: Scenario[] = [
 ]
 
 export const CATEGORIES = ['Survival', 'Work', 'Home & family', 'Crisis', 'Politics', 'Adventure'] as const
+
+// acts, dilemmas and items live in drama.ts
+for (const sc of SCENARIOS) Object.assign(sc, DRAMA[sc.id] ?? {})

@@ -3,14 +3,18 @@
 import type { Scenario } from '../engine/types.ts'
 import { mix } from './Figure.tsx'
 
-type Scene = 'beach' | 'storm' | 'office' | 'home' | 'hall' | 'hospital' | 'snow' | 'desert' | 'neon' | 'kitchen'
+type Scene = 'beach' | 'storm' | 'office' | 'home' | 'hall' | 'hospital' | 'snow' | 'desert' | 'neon' | 'kitchen' | 'garden' | 'shop' | 'manor' | 'studio'
 
 export function sceneFor(id: string): Scene {
   switch (id) {
     case 'stranded': return 'beach'
     case 'lifeboat': return 'storm'
     case 'startup': case 'newsroom': case 'campaign': return 'office'
-    case 'flatshare': case 'will': case 'house': case 'wedding': case 'bakery': return 'home'
+    case 'flatshare': return 'home'
+    case 'will': return 'manor'
+    case 'house': return 'studio'
+    case 'wedding': return 'garden'
+    case 'bakery': return 'shop'
     case 'jury': case 'summit': return 'hall'
     case 'er': return 'hospital'
     case 'antarctic': case 'snowbound': return 'snow'
@@ -52,6 +56,10 @@ export function Backdrop({ sc, night }: { sc: Scenario; night: number }) {
       {scene === 'desert' && <Desert />}
       {scene === 'neon' && <Neon />}
       {scene === 'kitchen' && <Kitchen />}
+      {scene === 'garden' && <Garden />}
+      {scene === 'shop' && <Shop />}
+      {scene === 'manor' && <Manor />}
+      {scene === 'studio' && <Studio />}
       {night > 0 && <rect width="1000" height="620" fill="#070d2a" opacity={night} style={{ transition: 'opacity 2s' }} />}
     </svg>
   )
@@ -279,6 +287,114 @@ function Kitchen() {
       <rect x="0" y="320" width="1000" height="300" fill="#4a4e57" />
       <rect x="0" y="320" width="1000" height="300" fill="url(#bg-floor)" opacity="0.3" />
       {Array.from({ length: 12 }, (_, k) => <path key={k} d={`M${k * 90} 320 L${k * 90 - 120} 620`} stroke="rgba(255,255,255,0.05)" strokeWidth="2" />)}
+    </g>
+  )
+}
+
+/** A country-house wedding: lawn, marquee, bunting and fairy lights. */
+function Garden() {
+  const bunting = ['#f8bbd0', '#fff59d', '#b2ebf2', '#c5e1a5', '#f8bbd0', '#d1c4e9']
+  return (
+    <g>
+      <rect width="1000" height="330" fill="url(#bg-sky)" />
+      <Clouds n={4} />
+      <path d="M0 250 Q160 200 330 236 T700 220 T1000 238 V330 H0 Z" fill="#7fb069" />
+      <path d="M0 280 Q200 250 420 270 T1000 262 V330 H0 Z" fill="#6aa159" />
+      {[70, 170, 860, 950].map((x, k) => <g key={x} transform={`translate(${x} ${262 - (k % 2) * 10})`}><rect x="-6" y="-10" width="12" height="60" fill="#6b4a2b" /><circle cy="-34" r={38 + (k % 2) * 8} fill="#4f8a3f" /><circle cx="-18" cy="-20" r="24" fill="#5c9a49" /><circle cx="20" cy="-46" r="22" fill="#5c9a49" /></g>)}
+      {/* the marquee */}
+      <g transform="translate(330 70)">
+        <path d="M0 150 L40 40 L300 40 L340 150 Z" fill="#fbf8f2" stroke="#e2d8c6" strokeWidth="3" />
+        <path d="M40 40 L170 -10 L300 40 Z" fill="#ffffff" stroke="#e2d8c6" strokeWidth="3" />
+        {[0, 1, 2, 3, 4, 5, 6].map((k) => <path key={k} d={`M${k * 48 + 24} 150 Q${k * 48 + 48} 120 ${k * 48 + 72} 150`} fill="none" stroke="#efe6d6" strokeWidth="3" />)}
+        <rect x="150" y="70" width="40" height="80" fill="#f6efe2" />
+        <path d="M170 -10 V-36" stroke="#bfa76a" strokeWidth="3" /><path d="M170 -36 l22 6 l-22 6 Z" fill="#f48fb1" className="sway" />
+      </g>
+      {/* bunting and fairy lights */}
+      <path d="M0 40 Q250 90 500 46 T1000 44" stroke="#9e8a6a" strokeWidth="2" fill="none" />
+      {Array.from({ length: 22 }, (_, k) => { const x = k * 47 + 12; const y = 42 + Math.sin((k / 21) * Math.PI * 2) * 20 + 14; return <path key={k} d={`M${x} ${y - 10} l12 0 l-6 16 Z`} fill={bunting[k % bunting.length]} /> })}
+      <g className="lights">{Array.from({ length: 30 }, (_, k) => <circle key={k} cx={k * 34 + 8} cy={112 + Math.sin(k * 0.7) * 10} r="3.5" fill="#fff3b0" style={{ animationDelay: `${(k % 5) * 0.4}s` }} />)}</g>
+      <rect x="0" y="330" width="1000" height="290" fill="#7cae5f" />
+      <rect x="0" y="330" width="1000" height="290" fill="url(#bg-floor)" opacity="0.25" />
+      {Array.from({ length: 40 }, (_, k) => <circle key={k} cx={rnd(k) * 1000} cy={340 + rnd(k + 50) * 270} r="2.5" fill={['#fff', '#f8bbd0', '#fff59d'][k % 3]} opacity="0.8" />)}
+    </g>
+  )
+}
+
+/** A corner bakery: shop window, striped awning, bread on the shelves. */
+function Shop() {
+  return (
+    <g>
+      <rect width="1000" height="320" fill="#f1e3c8" />
+      <rect width="1000" height="320" fill="url(#bg-wall)" opacity="0.35" />
+      {/* the shop window onto the square */}
+      <g transform="translate(60 40)">
+        <rect width="330" height="190" rx="8" fill="url(#bg-sky)" stroke="#5a3b26" strokeWidth="10" />
+        <path d="M30 190 V120 h60 v70 M120 190 V90 h80 v100 M230 190 V130 h70 v60" fill="#d8c2a0" opacity="0.7" />
+        <text x="165" y="60" textAnchor="middle" fontSize="26" fontWeight="800" fill="#7b3f2a" opacity="0.85" style={{ fontFamily: 'Georgia, serif' }}>BAKERY</text>
+      </g>
+      <g transform="translate(40 18)">{Array.from({ length: 12 }, (_, k) => <path key={k} d={`M${k * 31} 0 h31 v26 q-15.5 12 -31 0 Z`} fill={k % 2 ? '#fdf6e8' : '#c0504d'} />)}</g>
+      {/* shelves of bread */}
+      {[90, 170, 250].map((y, r) => (
+        <g key={y}>
+          <rect x="480" y={y} width="460" height="10" fill="#7a5232" />
+          {Array.from({ length: 9 }, (_, k) => <ellipse key={k} cx={505 + k * 50} cy={y - 12} rx={r === 1 ? 20 : 22} ry={r === 1 ? 14 : 11} fill={['#c98a3e', '#b9752e', '#d9a05a'][(k + r) % 3]} stroke="#8a5a26" strokeWidth="2" />)}
+        </g>
+      ))}
+      <g className="steam" transform="translate(700 40)"><path d="M0 0 q8 -10 0 -20 q-8 -10 0 -20" stroke="#fff" strokeWidth="3" fill="none" opacity="0.5" /><path d="M30 6 q8 -10 0 -20 q-8 -10 0 -20" stroke="#fff" strokeWidth="3" fill="none" opacity="0.5" style={{ animationDelay: '1.6s' }} /></g>
+      <rect x="0" y="300" width="1000" height="20" fill="#7a5232" />
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-tiles)" />
+      <rect x="0" y="320" width="1000" height="300" fill="#d9b98a" opacity="0.35" />
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-floor)" opacity="0.3" />
+    </g>
+  )
+}
+
+/** An old family house: dark panelling, a fireplace, portraits, a clock. */
+function Manor() {
+  return (
+    <g>
+      <rect width="1000" height="320" fill="url(#bg-wood)" />
+      <rect width="1000" height="140" fill="#6e4a5a" opacity="0.55" />
+      {/* fireplace */}
+      <g transform="translate(420 120)">
+        <rect x="-20" y="-20" width="200" height="200" fill="#c9bba4" stroke="#8a7a62" strokeWidth="5" />
+        <rect x="20" y="40" width="120" height="140" fill="#1c1410" />
+        <g className="flicker"><path d="M50 180 q30 -70 30 -90 q10 30 30 90 Z" fill="#ff8a1e" /><path d="M64 180 q16 -40 16 -56 q8 20 18 56 Z" fill="#ffd34a" /></g>
+        <rect x="-36" y="-30" width="232" height="14" fill="#8a7a62" />
+        <ellipse cx="80" cy="120" rx="140" ry="90" fill="url(#bg-lamp)" opacity="0.8" />
+      </g>
+      {/* portraits */}
+      {[[90, 50, 90, 110], [220, 70, 70, 90], [720, 46, 100, 120], [860, 74, 70, 90]].map(([x, y, w, h], k) => (
+        <g key={k}><rect x={x} y={y} width={w} height={h} fill="#b08a3e" /><rect x={x + 8} y={y + 8} width={w - 16} height={h - 16} fill={['#3d4a5a', '#5a3d3d', '#3d5a48', '#4a3d5a'][k]} /><ellipse cx={x + w / 2} cy={y + h * 0.45} rx={w * 0.18} ry={h * 0.18} fill="#e3c4a0" opacity="0.8" /><path d={`M${x + w * 0.25} ${y + h - 8} q${w * 0.25} ${-h * 0.35} ${w * 0.5} 0`} fill="#2a2a32" /></g>
+      ))}
+      {/* grandfather clock */}
+      <g transform="translate(640 120)"><rect width="50" height="200" fill="#5a3b26" stroke="#3e2818" strokeWidth="4" /><circle cx="25" cy="34" r="18" fill="#f4ecdc" stroke="#b08a3e" strokeWidth="3" /><path d="M25 34 v-12 M25 34 h9" stroke="#222" strokeWidth="2" /><path className="sway" d="M25 70 v80" stroke="#b08a3e" strokeWidth="3" /><circle className="sway" cx="25" cy="150" r="8" fill="#b08a3e" /></g>
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-planks)" />
+      <rect x="140" y="350" width="720" height="250" rx="12" fill="#7b2a2e" opacity="0.55" />
+      <rect x="160" y="370" width="680" height="210" rx="10" fill="none" stroke="#c9a24a" strokeWidth="4" opacity="0.5" />
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-floor)" opacity="0.35" />
+    </g>
+  )
+}
+
+/** A reality-TV house: bright walls, a pool, neon and cameras everywhere. */
+function Studio() {
+  return (
+    <g>
+      <rect width="1000" height="320" fill="#2a1f4a" />
+      <rect width="1000" height="320" fill="url(#bg-wall)" opacity="0.08" />
+      {/* the neon sign and cameras */}
+      <g transform="translate(500 36) scale(0.62)"><rect x="-150" y="-40" width="300" height="80" rx="40" fill="none" stroke="#ff4fd8" strokeWidth="6" opacity="0.9" /><text y="14" textAnchor="middle" fontSize="38" fontWeight="900" fill="#ffd6f6" style={{ fontFamily: 'Inter, sans-serif', letterSpacing: '0.2em' }}>THE HOUSE</text></g>
+      {[120, 880].map((x, k) => <g key={x} transform={`translate(${x} 40) scale(${k ? -1 : 1} 1)`}><rect x="-30" y="-14" width="60" height="34" rx="6" fill="#1a1a22" /><circle cx="34" cy="3" r="12" fill="#2a2a36" stroke="#555" strokeWidth="3" /><circle className="rec" cx="-20" cy="-4" r="4" fill="#ff3b3b" /><path d="M0 20 v30" stroke="#555" strokeWidth="5" /></g>)}
+      {/* a big sofa and a mirror wall */}
+      <rect x="0" y="120" width="1000" height="180" fill="#7a6ad8" opacity="0.08" />
+      <g transform="translate(700 190)"><rect width="240" height="70" rx="30" fill="#ff7ab6" /><rect y="40" width="240" height="40" rx="12" fill="#e85a9a" /><rect x="10" y="-20" width="60" height="50" rx="14" fill="#ffd166" /><rect x="170" y="-20" width="60" height="50" rx="14" fill="#7ee0d0" /></g>
+      <rect x="0" y="300" width="1000" height="20" fill="#16112c" />
+      <rect x="0" y="320" width="1000" height="300" fill="#e9e3f5" />
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-tiles)" opacity="0.5" />
+      {/* the pool */}
+      <g><rect x="700" y="470" width="215" height="92" rx="20" fill="#4fc3f7" stroke="#fff" strokeWidth="8" /><path className="ripple" d="M720 500 q20 -8 40 0 t40 0 t40 0 t40 0" stroke="#e1f5fe" strokeWidth="4" fill="none" opacity="0.8" /><path className="ripple" d="M726 535 q20 -8 40 0 t40 0 t40 0 t40 0" stroke="#e1f5fe" strokeWidth="4" fill="none" opacity="0.6" style={{ animationDelay: '-2s' }} /></g>
+      <rect x="0" y="320" width="1000" height="300" fill="url(#bg-floor)" opacity="0.25" />
     </g>
   )
 }

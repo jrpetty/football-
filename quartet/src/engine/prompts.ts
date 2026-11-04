@@ -23,7 +23,18 @@ ${moves}
 - talk: spend the moment talking (use "say")
 - rest: recover energy
 - go: move to another place (set "go_to" to its id)
-Doing something tied to a place takes you there automatically. Others in the same place hear what you say; you can address someone by name.
+
+# Things you can do with the others (set "target" to their name)
+- comfort: reassure someone who is struggling (eases their stress; they trust you more)
+- confront: have it out with someone (stress for both; pressure can drag their secret into the open)
+${sc.stances ? '- persuade: try to bring someone round to your position\n' : ''}- help: pitch in on whatever they are doing this turn (teamwork makes it far more likely to work)
+- give: hand them the item you are carrying
+- use: use your item (see what it does in your notes)
+- confess: tell everyone your secret (no target) — it may cost you, but carrying it costs too
+Doing something tied to a place, or going to someone, takes you there automatically. Others in the same place hear what you say; you can address someone by name.
+
+# Group choices
+Sometimes the group must decide something together. When a choice is open, put your answer in "vote" (an option id). The majority wins; people remember who voted against them.
 
 # What is at stake for the group
 ${stats}
@@ -50,6 +61,8 @@ export const DECISION_SCHEMA: Record<string, unknown> = {
     say_to: { type: 'string' },
     move: { type: 'string' },
     go_to: { type: 'string' },
+    target: { type: 'string' },
+    vote: { type: 'string' },
     detail: { type: 'string' },
     stance: { type: 'string' },
     opinions: {
@@ -62,7 +75,7 @@ export const DECISION_SCHEMA: Record<string, unknown> = {
       },
     },
   },
-  required: ['thought', 'feeling', 'say', 'say_to', 'move', 'go_to', 'detail', 'stance', 'opinions'],
+  required: ['thought', 'feeling', 'say', 'say_to', 'move', 'go_to', 'target', 'vote', 'detail', 'stance', 'opinions'],
   additionalProperties: false,
 }
 
@@ -77,10 +90,18 @@ export function buildPersonPrompt(run: Run, p: Person): string {
   L.push(p.role.brief)
   L.push(`Temperament: ${describeTraits(p.traits)}. You ${p.quirk}. You ${p.backstory}.`)
   L.push(`What you want: ${p.role.goal}`)
-  L.push(`Your secret (nobody knows unless you reveal it): ${p.role.secret}`)
-  if (p.items.length) L.push(`You have: ${p.items.join(', ')}.`)
+  L.push(p.secretOut ? `Your secret — now known to everyone (${p.secretHow}): ${p.role.secret}` : `Your secret (nobody knows unless you reveal it): ${p.role.secret}`)
+  if (p.items.length) {
+    const u = run.itemUse(p)
+    L.push(`You have: ${p.items.join(', ')}.${u ? ` (move "use": ${u.use.label}${u.use.once ? ' — only once' : ''})` : ''}`)
+  }
   L.push('')
-  L.push(`# Now: ${run.clock} (turn ${run.beat} of ${sc.beats})`)
+  L.push(`# Now: ${run.clock} (turn ${run.beat} of ${sc.beats}) — Act ${run.act}: ${run.actName(run.act)}`)
+  if (run.pending) {
+    const d = run.pending
+    L.push(`${d.finale ? 'THE FINAL CHOICE' : 'A GROUP CHOICE IS OPEN'} — ${d.title}: ${d.text}`)
+    L.push(`Options (vote with the id): ${d.options.map((o) => `${o.id} = ${o.label}`).join('; ')}.`)
+  }
   L.push(`You are at the ${run.placeName(p.place)}. ${here.length ? `With you: ${here.map((o) => `${o.name} (${o.role.title}${o.lastAction ? `, just ${o.lastAction}` : ''})`).join('; ')}.` : 'You are alone here.'}`)
   const away = others.filter((o) => o.place !== p.place && run.alive(o))
   if (away.length) L.push(`Elsewhere: ${away.map((o) => `${o.name} at the ${run.placeName(o.place)}`).join('; ')}.`)
@@ -89,6 +110,9 @@ export function buildPersonPrompt(run: Run, p: Person): string {
   L.push(`The situation: ${sc.stats.map((s) => `${s.label} ${Math.round(run.stats[s.id])}/${s.max}`).join(', ')}.`)
   L.push(`You: health ${level(p.health)}, energy ${level(p.energy)}, mood ${level(p.mood)}, stress ${level(p.stress)}${sc.score ? `, ${sc.score.label.toLowerCase()} ${Math.round(p.score)}` : ''}${sc.stances ? `. Your position: ${p.stance}` : ''}.`)
   if (sc.stances) L.push(`Positions: ${run.people.filter((o) => run.alive(o)).map((o) => `${o === p ? 'you' : o.name}: ${o.stance}`).join('; ')}.`)
+  const known = others.filter((o) => o.secretOut)
+  if (known.length) L.push(`Secrets out in the open: ${known.map((o) => `${o.name} — ${o.role.secret}`).join(' | ')}`)
+  L.push(`The group: ${run.cohesion > 25 ? 'close-knit' : run.cohesion > 0 ? 'getting along' : run.cohesion > -25 ? 'tense' : 'falling apart'}.`)
   L.push('')
   L.push('# How you feel about the others')
   for (const o of others) {
@@ -128,7 +152,7 @@ export function buildDirectorPrompt(run: Run, summary: string[]): string {
   const sc = run.sc
   return [
     `Story: ${sc.title} — ${sc.premise}`,
-    `Time: ${run.clock} (turn ${run.beat} of ${sc.beats}).`,
+    `Time: ${run.clock} (turn ${run.beat} of ${sc.beats}), Act ${run.act} — ${run.actName(run.act)}. Group cohesion ${Math.round(run.cohesion)} (-100..100).`,
     `Stats (ids in brackets): ${sc.stats.map((s) => `${s.label} [${s.id}] ${Math.round(run.stats[s.id])}/${s.max}`).join(', ')}.`,
     `People: ${run.people.map((p) => `${p.name} the ${p.role.title} (mood ${Math.round(p.mood)}, stress ${Math.round(p.stress)}, at ${run.placeName(p.place)})`).join('; ')}.`,
     `Previously: ${run.narrations.slice(-2).join(' ') || 'This is the beginning.'}`,
@@ -157,6 +181,7 @@ export function buildEpiloguePrompt(run: Run): string {
     `Outcome: ${run.ending?.tier} — ${run.ending?.title}`,
     `Final state: ${sc.stats.map((s) => `${s.label} ${Math.round(run.stats[s.id])}/${s.max}`).join(', ')}.`,
     `People:\n${run.people.map((p) => `- ${p.name}, ${p.age}, ${p.role.title}. Goal: ${p.role.goal}. Secret: ${p.role.secret}. ${run.alive(p) ? `Mood ${Math.round(p.mood)}, stress ${Math.round(p.stress)}` : 'Did not make it to the end'}.${sc.stances ? ` Position: ${p.stance}.` : ''} Feelings: ${Object.entries(p.opinions).map(([id, o]) => `${run.people.find((x) => x.id === +id)?.name} ${o.trust > 30 ? 'trusted' : o.trust < -30 ? 'distrusted' : 'mixed'}`).join(', ')}.`).join('\n')}`,
+    `Key moments:\n${run.highlights.map((h) => `- ${h}`).join('\n') || '- none'}`,
     `Story so far:\n${run.narrations.join('\n') || run.lines.filter((l) => l.kind !== 'say').slice(-20).map((l) => l.text).join('\n')}`,
     `Last words spoken:\n${said.join('\n')}`,
   ].join('\n\n')

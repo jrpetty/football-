@@ -106,6 +106,11 @@ function Setup({ sc, cast, setCast, onBack, onStart, onSettings }: { sc: Scenari
       <div className="setup-head" style={{ background: `linear-gradient(120deg, ${sc.theme.sky[0]}, ${sc.theme.sky[1]})` }}>
         <button className="btn ghost" onClick={onBack}>← Scenarios</button>
         <div className="setup-title"><span>{sc.emoji}</span><div><h1>{sc.title}</h1><p>{sc.premise}</p></div></div>
+        <div className="ahead">
+          {(sc.acts ?? []).map((a, k) => <div key={k} className="ahead-act"><small>Act {['I', 'II', 'III'][k]}</small><b>{a}</b></div>)}
+          <div className="ahead-act"><small>Hard choices</small><b>⚖️ {sc.dilemmas?.length ?? 0} group votes</b></div>
+          <div className="ahead-act"><small>Stakes</small><b>{sc.stats.map((s) => s.icon).join(' ')}{sc.win ? ` · goal: ${sc.stats.find((s) => s.id === sc.win!.stat)?.label}` : ''}</b></div>
+        </div>
       </div>
       <div className="cast">
         {cast.map((p, i) => (
@@ -125,6 +130,7 @@ function Setup({ sc, cast, setCast, onBack, onStart, onSettings }: { sc: Scenari
               <span>Life</span><span>{p.backstory}</span>
               <span>Wants</span><span>{p.role.goal}</span>
               <span>Secret</span><span className="secret">{p.role.secret}</span>
+              {p.items.length > 0 && <><span>Carrying</span><span>{p.items.join(', ')}{sc.items?.some((u) => p.items[0].toLowerCase().startsWith(u.item.toLowerCase())) ? ' ✦ usable' : ''}</span></>}
             </div>
             <label className="mind-pick">
               <span>Mind</span>
@@ -174,7 +180,9 @@ function Play({ run, onExit, onAgain, onSettings }: { run: Run; onExit: () => vo
   useEffect(() => { setShowEnd(true); setSel(null) }, [run])
   useEffect(() => {
     if (!playing || run.over || run.busy) return
-    const t = setTimeout(() => { void run.step(minds, rerender).then(rerender) }, run.beat === 0 ? 600 : pace * 1000)
+    // linger on big moments (acts, choices, votes, secrets) so they can be read
+    const hold = Math.min(12000, run.stepBanners * (pace < 1 ? 2600 : 3600))
+    const t = setTimeout(() => { void run.step(minds, rerender).then(rerender) }, (run.beat === 0 ? 600 : pace * 1000) + hold)
     return () => clearTimeout(t)
   }, [playing, run, run.beat, run.busy, run.over, pace])
   useEffect(() => { scriptRef.current?.scrollTo({ top: 1e9, behavior: 'smooth' }) }, [run.lines.length, tab])
@@ -186,6 +194,10 @@ function Play({ run, onExit, onAgain, onSettings }: { run: Run; onExit: () => vo
       <div className="topbar">
         <button className="btn ghost" onClick={onExit}>←</button>
         <div className="tb-title"><span>{sc.emoji}</span><div><b>{sc.title}</b><small>{run.clock} · turn {run.beat}/{sc.beats}</small></div></div>
+        <div className="act-pill" title="How close everything is to breaking">
+          <b>Act {['I', 'II', 'III'][run.act - 1]} · {run.actName(run.act)}</b>
+          <div className="tension"><div style={{ width: `${Math.round(run.tension * 100)}%` }} /></div>
+        </div>
         <div className="stats">
           {sc.stats.map((s) => {
             const v = run.stats[s.id]
@@ -196,6 +208,7 @@ function Play({ run, onExit, onAgain, onSettings }: { run: Run; onExit: () => vo
                 <span>{s.icon}</span>
                 <div className="stat-main"><small>{s.label}</small><div className="bar"><div style={{ width: `${frac * 100}%`, background: good > 0.6 ? '#5ee39a' : good > 0.3 ? '#ffb454' : '#ff6b6b' }} /></div></div>
                 <b>{Math.round(v)}</b>
+                {(() => { const d = v - (run.prev[s.id] ?? v); if (Math.abs(d) < 0.5) return null; const good = (s.good === 'high') === d > 0; return <span className={`delta ${good ? 'up' : 'down'}`}>{d > 0 ? '+' : '−'}{Math.round(Math.abs(d))}</span> })()}
               </div>
             )
           })}
@@ -219,7 +232,7 @@ function Play({ run, onExit, onAgain, onSettings }: { run: Run; onExit: () => vo
               <button key={p.id} className={`chip-person ${sel === p.id ? 'on' : ''}`} onClick={() => setSel(sel === p.id ? null : p.id)} style={{ ['--c' as string]: COLORS[i] }}>
                 <Portrait p={p} size={42} color={COLORS[i]} />
                 <div>
-                  <b>{p.name}</b> <small>{p.role.title}</small>
+                  <b>{p.name}</b> <small>{p.role.title}</small>{p.secretOut && <span className="badge-secret" title={`Secret ${p.secretHow}: ${p.role.secret}`}>🤫</span>}{p.items.length > 0 && <span className="badge-secret" title={p.items.join(', ')}>🎒</span>}
                   <div className="mini-bars">
                     <i title="Mood" style={{ width: `${p.mood}%`, background: '#ffcf6b' }} />
                     <i title="Energy" style={{ width: `${p.energy}%`, background: '#5ad1c4' }} />
@@ -278,7 +291,8 @@ function PersonPanel({ run, p, color, onClose }: { run: Run; p: Person; color: s
       <div className="kv">
         <span>Feeling</span><span>{p.feeling}</span>
         <span>Wants</span><span>{p.role.goal}</span>
-        <span>Secret</span><span className="secret">{p.role.secret}</span>
+        <span>Secret</span><span className="secret">{p.role.secret}{p.secretOut ? ` — ${p.secretHow} (everyone knows)` : ' — still hidden'}</span>
+        <span>Contribution</span><span>{p.contribution.toFixed(1)}</span>
         <span>Temperament</span><span>{describeTraits(p.traits)}; {p.quirk}</span>
         {p.items.length > 0 && <><span>Carrying</span><span>{p.items.join(', ')}</span></>}
         {run.sc.stances && <><span>Position</span><span>{p.stance}</span></>}
@@ -337,10 +351,16 @@ function EndingCard({ run, onAgain, onExit, onClose }: { run: Run; onAgain: (sam
         <div className="medal">{medal}</div>
         <div className="tier">{e.tier}</div>
         <h2>{e.title}</h2>
+        <div className="scorecard">
+          <div><b>{e.score}</b><small>outcome / 100</small></div>
+          <div><b>{e.cohesion > 25 ? '🤝' : e.cohesion > 0 ? '🙂' : e.cohesion > -25 ? '😬' : '💔'} {e.cohesion > 0 ? '+' : ''}{e.cohesion}</b><small>how close they ended</small></div>
+          <div><b>{run.people.filter((p) => p.secretOut).length}/4</b><small>secrets out</small></div>
+        </div>
         {e.text.split(/\n+/).map((t, k) => <p key={k}>{t}</p>)}
+        {e.highlights.length > 0 && <div className="moments"><h4>Moments</h4><ul>{e.highlights.map((h, k) => <li key={k}>{h}</li>)}</ul></div>}
         <div className="fates">
           {run.people.map((p, i) => (
-            <div key={p.id} className="fate"><Portrait p={p} size={52} color={COLORS[i]} /><div><b>{p.name}</b> <small>{p.role.title}</small><p>{e.fates.find((f) => f.id === p.id)?.text}</p></div></div>
+            <div key={p.id} className={`fate ${e.mvp === p.id ? 'mvp' : ''}`}><Portrait p={p} size={52} color={COLORS[i]} /><div><b>{p.name}</b> <small>{p.role.title}{e.mvp === p.id ? ' · 🏅 held it together' : ''}</small><p>{e.fates.find((f) => f.id === p.id)?.text}</p></div></div>
           ))}
         </div>
         <div className="row-btns">

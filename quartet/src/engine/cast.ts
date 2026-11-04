@@ -62,6 +62,7 @@ export function makePerson(id: number, role: RoleDef, startPlace: string, taken:
     stance: '', items: role.item ? [role.item] : [], opinions: {}, memory: [],
     thought: '', feeling: 'uneasy', lastSay: '', lastSayTo: '', lastAction: '', model: '', thinking: false, errors: 0,
     bubbleUntil: 0, emote: '', emoteUntil: 0,
+    secretOut: false, secretHow: '', contribution: 0, vote: '',
   }
 }
 

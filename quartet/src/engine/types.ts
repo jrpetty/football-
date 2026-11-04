@@ -58,6 +58,39 @@ export interface RoleDef {
   item?: string
 }
 
+export type SelfFx = { energy?: number; mood?: number; stress?: number; health?: number; score?: number }
+export type TraitId = 'openness' | 'conscientiousness' | 'extraversion' | 'agreeableness' | 'neuroticism'
+
+/** A choice the whole group must make together — they vote. */
+export interface Dilemma {
+  id: string
+  at: number // when it comes up, as a fraction of the run (0..1)
+  finale?: boolean
+  title: string
+  text: string
+  options: {
+    id: string
+    label: string
+    effects?: Effects
+    all?: SelfFx
+    /** temperaments drawn to this option (instinct voting) */
+    lean?: Partial<Record<TraitId, number>>
+    outcome: string // what happens when the group chooses it
+  }[]
+}
+
+/** What an item does when its holder uses it. */
+export interface ItemUse {
+  item: string // matches the start of an item's name
+  label: string
+  effects: Effects
+  self?: SelfFx
+  once?: boolean
+  /** heals everyone in the same place */
+  heal?: number
+  verb: string
+}
+
 export interface Scenario {
   id: string
   title: string
@@ -81,6 +114,12 @@ export interface Scenario {
   score?: { label: string; icon: string; start: number }
   win?: { stat: string; at: number; text: string }
   lines: string[] // instinct chatter, {name} = listener
+  /** group decisions, scheduled across the acts (the last is the finale) */
+  dilemmas?: Dilemma[]
+  /** what the cast's items can do */
+  items?: ItemUse[]
+  /** names of the three acts */
+  acts?: [string, string, string]
 }
 
 export interface Opinion {
@@ -119,6 +158,43 @@ export interface Person {
   bubbleUntil: number
   emote: string
   emoteUntil: number
+  /** their secret is known to the others */
+  secretOut: boolean
+  /** how it came out: confessed or exposed */
+  secretHow: '' | 'confessed' | 'exposed'
+  /** good work done for the group (successful actions, help, comfort) */
+  contribution: number
+  /** current vote on an open dilemma */
+  vote: string
+}
+
+/** Something on stage for the eyes: floating numbers, reactions. */
+export interface Fx {
+  id: number
+  who?: number
+  place?: string
+  text: string
+  kind: 'good' | 'bad' | 'social' | 'info'
+  at: number
+}
+
+/** A relationship moment drawn between two people. */
+export interface Link {
+  a: number
+  b: number
+  kind: 'warm' | 'hot' | 'help' | 'sway'
+  at: number
+}
+
+export interface Banner {
+  kind: 'event' | 'dilemma' | 'act' | 'reveal' | 'vote'
+  title: string
+  text: string
+  at: number
+  votes?: { option: string; label: string; ids: number[]; chosen: boolean }[]
+  chips?: string[]
+  /** for each chip: good news or bad */
+  tones?: ('up' | 'down')[]
 }
 
 export interface Line {
@@ -135,4 +211,8 @@ export interface Ending {
   title: string
   text: string
   fates: { id: number; text: string }[]
+  score: number // 0..100
+  mvp: number | null
+  cohesion: number // -100..100
+  highlights: string[]
 }

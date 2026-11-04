@@ -56,11 +56,37 @@ Each mind replies with:
 - a private **thought**
 - something to **say** (to someone, or to the room)
 - an **action** from the scenario (fish, pitch investors, re-examine the evidence…) or a move to another place
+- or something done **to someone**: comfort, confront, persuade, help, give, use their item, or confess
+- their **vote**, when the group faces a hard choice
 - changes in how much they trust the people around them
 - in vote and verdict scenarios, their **position**
 
 An optional **narrator** mind ties each turn together in prose. It can nudge the
 situation, and it writes the epilogue and what becomes of each person.
+
+## How a scenario plays
+
+Every scenario is told in **three acts**. Events come more often as the story
+goes on, the strain grows in the last act, and the run ends on a **finale**.
+
+- **Hard choices.** Each scenario has three dilemmas the group must vote on,
+  such as eating the spoiling food or rationing it, burning the shelter as a
+  beacon, or publishing on one source. The majority wins. Being outvoted
+  stings, and people remember who voted against them.
+- **Secrets.** Everyone carries one. Confessing it relieves the pressure and
+  may be forgiven. Being confronted while stressed can drag it out, and an
+  exposed secret costs trust.
+- **Items.** The flare gun, the satellite messenger, the first-aid kit, the
+  credit card and others do something real when used, or can be handed to
+  someone else.
+- **People act on people.** Comforting eases stress and builds trust.
+  Confronting wounds. Helping someone with their work makes it far likelier to
+  succeed. Persuading can change someone's position.
+- **Cohesion.** Trust across the group shapes how well they work together.
+  Strain and blame wear it down, and when bad blood runs deep, rows break out.
+- **Endings.** The ending weighs the stakes, the goal, how close they ended
+  up and who is still standing. It names the person who held things together
+  and lists the key moments of the run.
 
 ### Mix the minds
 
@@ -83,6 +109,10 @@ with Genesis, so a key you set up in one works in the other.
 
 ## Watching
 
+- **On stage:** act title cards, banners for events, choices, votes (with who
+  voted which way) and secrets, numbers that float up as work succeeds or
+  fails, arcs between people who comfort, confront, help or persuade each
+  other, storms that shake the stage, and a red edge as tension rises.
 - **Stage:** each scenario's places, with the four people, rendered in 3D,
   walking between them. Each is dressed for their job and posed for what
   they're doing and feeling: talking with their hands, working, thinking,
@@ -101,7 +131,8 @@ with Genesis, so a key you set up in one works in the other.
 ## Architecture
 
 ```
-src/engine/   scenarios.ts (the 18 situations) · cast.ts (people) ·
+src/engine/   scenarios.ts (the 18 situations) · drama.ts (acts, choices, items) ·
+              cast.ts (people) ·
               engine.ts (turns, actions, events, endings) · prompts.ts
 src/ai/       providers.ts + client.ts (shared with Genesis) · host.ts (settings, costs)
 src/ui/       Stage.tsx (the scene) · rig3d.ts + cast3d.ts (3D people) ·
