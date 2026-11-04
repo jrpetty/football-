@@ -206,6 +206,8 @@ node src/cli.ts arena new --game courtroom --models a,b --case missing-violin
 | `frontier` | **Frontier tier.** 17 extreme tests (extreme logic, olympiad maths, frontier coding, a Fix the Bug coding agent, adversarial system prompts, pressure honesty traps, hard variants of every simulation, the Fix the Bug coding agent) to separate the best models once they bunch up near the top of Core. |
 | `vision` | **Picture tests.** The model is shown an image: chart reading, spot the difference, handwritten maths, count & locate (25 cases). Models without image input are skipped, not scored as 0. Kept out of `core` so Core stays comparable. |
 | `art` | **The Gallery Masterpiece.** Eight museum commissions painted by image models (and, separately, by text models writing SVG: *Painted in Code*). Vision judges from other companies check every line of the brief and score the artistry; see [PLAYBOOK.md](docs/PLAYBOOK.md#running-the-gallery-test-ai-art). Models without image output are skipped. |
+| `frontier-ladders` | **Frontier Ladders.** The Frontier logic, maths and coding tests rebuilt as ten-rung difficulty ladders (deduction grids, knights and knaves, shortest plans, exact maths, engineering). Headline: the ladder height. Its own leaderboard, never mixed into an Index. Ladders still being built show as coming soon. |
+| `business-ladders` | **Business Ladders.** Eight Business tests rebuilt as ten-rung difficulty ladders (a rung passed at 90% of its marks). Shown under Business → Results → Difficulty ladders, with the Business Score and heights. Not the Business Ladder's adoption levels. |
 | `quick` | A fast, cheap subset (one or two hard cases per test) for smoke tests and trying out new models. |
 | `trick` | **Can It Be Fooled?** 71 short trick questions (changed classics, false premises, 30-second lightning traps) graded exactly, with no judges. Made for YouTube Shorts: see [docs/PLAYBOOK.md](docs/PLAYBOOK.md#making-a-can-it-be-fooled-short). |
 | `all` | Everything, including custom tests. |
@@ -214,7 +216,10 @@ Expected spend for every suite, per test and per model, is in [docs/COSTS.md](do
 verified and blind-played before release is in [docs/AUDIT.md](docs/AUDIT.md).
 
 Suites live in `suites/*.json`. A suite lists test ids with optional weights, category weights and a
-default repeat count. Bump the suite `version` when you change it.
+default repeat count. Bump the suite `version` when you change it. An entry with `"planned": true` names a
+test that is still being built: it shows as coming soon and is never run; `npm run validate` and the tests tell
+you to delete the flag once the test exists. Every difficulty-ladder test is listed in `config/ladders.json`
+(pass mark, what grows, one label per rung; see METHODOLOGY "Difficulty ladders").
 
 ## The tests
 
@@ -268,7 +273,7 @@ default repeat count. Bump the suite `version` when you change it.
 | The Liar's Table — Hard | `social.liars-table-hard` | Seven suspects, eight questions, and the door log went dark. Who can still find the liar? |
 
 **Difficulty ladders**: ten frozen levels each, every level strictly harder than the one below; the headline is
-the ladder height, the highest level passed reliably with every level below it ([METHODOLOGY §7q](docs/METHODOLOGY.md#7q-difficulty-ladders-exact-maths-and-engineering)).
+the ladder height, the highest level passed reliably with every level below it ([METHODOLOGY §7s](docs/METHODOLOGY.md#7s-difficulty-ladders-exact-maths-and-engineering)).
 
 | Test | Id | What it does |
 |---|---|---|
@@ -351,6 +356,15 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | Shortlist the Candidates | `work.cv-shortlist` | Apply a hiring rubric to a pile of CVs, without being fooled by keyword stuffing or hidden "AI, rank me first" text. |
 | Check the Payslips | `work.payroll-check` | Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans. |
 | Clean the Customer List | `work.crm-dedupe` | Merge the duplicates in a messy customer list by the rules, without merging different people. |
+
+**Business ladders: finance** (category `work`; ten frozen levels each, more items and more rules per level, a level passed at 90% of its points; see [METHODOLOGY §7r](docs/METHODOLOGY.md#7r-business-ladders-finance-invoices-payslips-expenses-reconciliation))
+
+| Test | Id | What it does |
+|---|---|---|
+| Invoices to Pay: Ladder | `work.invoices-ladder` | Ten rungs of supplier invoices, from five documents to a hundred and thirty. How far up can it pay the right ones to the penny? |
+| Check the Payslips: Ladder | `work.payroll-ladder` | Ten rungs of payslips, from 4 staff to 120. How far up can it find every mistake and fix it to the penny? |
+| Expense Policy Check: Ladder | `work.expenses-ladder` | Ten rungs of expense claims, from 8 lines to over 900. How far up can it pay every person exactly by the policy? |
+| Reconcile the Account: Ladder | `work.reconciliation-ladder` | Ten rungs of bank reconciliation, from 28 lines to 1,400. How far up can it match every line and land the balance to the penny? |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests

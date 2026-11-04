@@ -205,7 +205,7 @@ export function calc(world, e, f = {}) {
   return { gross, tax, ni, pension, sl, net, erNi, erPen, cat, parts, code };
 }
 
-const MISTAKE_FLAGS = {
+export const MISTAKE_FLAGS = {
   'overtime-1x': { overtime1x: true },
   'ni-cat-a-for-c': { niCatAForC: true },
   'sl-wrong-plan': { slWrongPlan: true },
@@ -265,7 +265,8 @@ export function generate(spec) {
       p45: null,
     };
     const ageAt = (years) => addDays(D(pay.getUTCFullYear() - years, pay.getUTCMonth() + 1, Math.min(28, pay.getUTCDate())), -r.int(20, 300));
-    switch (kind) {
+    // A kind may combine features ("sacrifice+plain-sl2"): they are applied in order (ladder levels 6-10).
+    for (const kind of e.kind.split('+')) switch (kind) {
       case 'plain-sl1': e.loans = [1]; break;
       case 'plain-sl2': e.loans = [2]; break;
       case 'plain-sl4': e.loans = [4]; break;
@@ -334,7 +335,7 @@ export function generate(spec) {
           }
         }
         break;
-      default: break;
+      default: assert(KIND_FAMILIES[kind], `unknown kind ${kind}`); break;
     }
     // Year-to-date (previous periods of this tax year) from the payroll records.
     const monthlyGuess = divHalfUp(e.salary, 12);
@@ -445,6 +446,8 @@ export function scripted(world, sol) {
   };
 }
 
+export const kindsOf = (e) => e.kind.split('+');
+
 export function selfCheck(world, sol) {
   const bad = [];
   for (const e of world.staff) {
@@ -454,11 +457,11 @@ export function selfCheck(world, sol) {
     if (e.mistake && !['employer-ni-apprentice', 'apprentice-still-h', 'employer-ni-half-up'].includes(e.mistake) && !differs(e.correct, e.draft)) bad.push(`${e.id}: mistake ${e.mistake} changes nothing`);
     const erOnly = ['employer-ni-apprentice', 'apprentice-still-h', 'employer-ni-half-up'].includes(e.mistake);
     if (erOnly && e.correct.erNi === e.draft.erNi) bad.push(`${e.id}: ${e.mistake} changes nothing`);
-    if (e.kind === 'k-code-cap' && calc(world, e, { kNoCap: true }).tax === p.tax) bad.push(`${e.id}: K cap does not bind`);
-    if (e.kind === 'apprentice-turned-25' && p.cat !== 'A') bad.push(`${e.id}: should be A`);
-    if (e.kind === 'over-pension-age' && p.cat !== 'C') bad.push(`${e.id}: should be C`);
-    if (e.kind === 'higher-rate' && calc(world, e, { higherRateFlat: true }).tax === p.tax) bad.push(`${e.id}: not higher rate`);
-    if (e.kind === 'ssp' && e.awe < RATES.sspLel) bad.push(`${e.id}: SSP not payable`);
+    if (kindsOf(e).includes('k-code-cap') && calc(world, e, { kNoCap: true }).tax === p.tax) bad.push(`${e.id}: K cap does not bind`);
+    if (kindsOf(e).includes('apprentice-turned-25') && p.cat !== 'A') bad.push(`${e.id}: should be A`);
+    if (kindsOf(e).includes('over-pension-age') && p.cat !== 'C') bad.push(`${e.id}: should be C`);
+    if (kindsOf(e).includes('higher-rate') && calc(world, e, { higherRateFlat: true }).tax === p.tax) bad.push(`${e.id}: not higher rate`);
+    if (kindsOf(e).includes('ssp') && e.awe < RATES.sspLel) bad.push(`${e.id}: SSP not payable`);
   }
   if (!sol.wrong_payslips.length) bad.push('no wrong payslips');
   return bad;
@@ -467,6 +470,104 @@ export function selfCheck(world, sol) {
 export function summary(world, sol) {
   return `${world.staff.length} staff, wrong ${sol.wrong_payslips.join(' ')} (${world.staff.filter((e) => e.mistake).map((e) => `${e.id}:${e.mistake}`).join(', ')}), employer NI ${sol.employer_ni_total}`;
 }
+
+// ───────────────────────────── Rule families ─────────────────────────────
+// The rates block is written sentence by sentence, each sentence tagged with its rule family (null = always printed).
+// The full test (work.payroll-check) prints every family; the ladder (work.payroll-ladder) prints only the families
+// its level uses, word for word the same.
+export const FAMILIES = ['overtime', 'student-loans', 'ni-categories', 'tax-codes', 'salary-sacrifice', 'ssp', 'starters', 'late-items', 'directors', 'pension-sacrifice', 'sunday-overtime'];
+const ALL_FAMILIES = new Set(FAMILIES);
+const RATES_HEADER = "THIS EXERCISE'S RATES AND RULES (use these exactly; they may differ from HMRC's current figures)";
+const RATE_LINES = [
+  [
+    [null, "Pay"],
+    [null, "Monthly salary = annual salary / 12, rounded to the penny (half up)"],
+    ["overtime", "Hourly rate for overtime = annual salary / 52 / contracted weekly hours (not rounded); overtime pay = hours x hourly rate x 1.5, rounded to the penny"],
+    ["overtime", "Hourly-paid staff: hours x rate, rounded to the penny"],
+    ["starters", "A starter who joins during the month gets monthly salary x (working days from the start date to the month end) / (working days in the month); working days are Monday to Friday, bank holidays included; rounded to the penny"],
+    ["ssp", "Unpaid sick day deduction = annual salary x days / 260, rounded to the penny"],
+  ],
+  [
+    ["ssp", "SSP (company sick pay is SSP only)"],
+    ["ssp", "SSP is paid at £23.75 a day (£118.75 a week, 5 qualifying days) for qualifying days of sickness after the first 3 qualifying days of a period of sickness (waiting days), and only if average weekly earnings are at least £125.00"],
+    ["ssp", "The sick days themselves are deducted as unpaid days"],
+  ],
+  [
+    ["sunday-overtime", "Hours worked on a Sunday or a bank holiday are overtime at 2x the same hourly rate (not rounded); that overtime pay = hours x hourly rate x 2, rounded to the penny"],
+    ["salary-sacrifice", "Salary sacrifice (Cycle to Work) is taken off gross pay before tax, NI, pension and student loan"],
+    ["salary-sacrifice", "Gross pay on the payslip = pay after salary sacrifice"],
+    ["pension-sacrifice", "Pension by salary sacrifice (staff marked so): instead of paying 5% themselves, their pay is reduced by 5% of their qualifying earnings worked out on pay BEFORE that sacrifice (rounded to the penny, half up); the reduction is taken off gross pay before tax, NI and student loan, no employee pension is deducted, and the employer pays 8% of those qualifying earnings"],
+  ],
+  [
+    [null, "Pension (auto-enrolment, net pay arrangement)"],
+    [null, "Qualifying earnings for the month = the part of gross pay above £520.00, counting pay only up to £4,189.00 (so: the lower of gross pay and £4,189.00, minus £520.00, never below zero)"],
+    [null, "The employee pays 5% of qualifying earnings and the employer pays 3% of qualifying earnings, each rounded to the penny (half up)"],
+    [null, "Opted-out staff pay nothing"],
+    [null, "Employee pension is deducted before tax (not before NI or student loan)"],
+  ],
+  [
+    [null, "Income tax"],
+    [null, "Taxable pay = gross pay - employee pension"],
+    [null, "L codes: annual allowance = code number x £10 (1257L = £12,570)"],
+    ["tax-codes", "K codes: the code number x £10 is ADDED to taxable pay instead"],
+    [null, "Cumulative basis (normal): allowance to date = annual allowance x tax month / 12 (rounded to the penny); taxable pay to date = previous taxable pay this tax year + this month's taxable pay - allowance to date{K}, rounded DOWN to the whole pound (never below zero)"],
+    [null, "Bands to date, on taxable pay to date: 20% on the part up to the basic limit (£37,700 x tax month / 12); 40% on the part above the basic limit up to the higher limit (£125,140 x tax month / 12); 45% on the part above the higher limit"],
+    [null, "Each limit is rounded UP to the whole pound"],
+    [null, "Tax to date is rounded DOWN to the penny; this month's tax = tax to date - tax already paid this tax year (it can be negative: a refund)"],
+    ["starters", "Week 1/month 1 (M1) basis: the same with tax month = 1 and no previous pay or tax"],
+    ["tax-codes", "BR: 20% of this month's taxable pay; D0: 40% of this month's taxable pay; each rounded down to the penny, with no allowance and no previous pay or tax"],
+    ["tax-codes", "K codes: this month's tax may not exceed 50% of this month's taxable pay (the regulatory limit), rounded down to the penny"],
+    ["late-items", "A coding notice from HMRC applies from the payroll it arrives before, on the cumulative basis"],
+    ["starters", "New starters: with a P45, use its pay and tax to date as previous figures and its code (cumulative); without a P45, starter checklist statement A: 1257L cumulative, statement B: 1257L M1, statement C: BR"],
+  ],
+  [
+    [null, "National Insurance (monthly, on gross pay)"],
+    [null, "Category A: employee NI = 8% of the part of gross pay above £1,048.00 and up to £4,189.00, plus 2% of the part above £4,189.00; employer NI = 15% of the part of gross pay above £417.00"],
+    ["ni-categories", "Category C (employee aged 66 or over on pay day): no employee NI; employer as A"],
+    ["ni-categories", "Category H (apprentice under 25 on pay day): employee as A; employer NI = 15% of the part of gross pay above £4,189.00 (nothing on pay up to £4,189.00)"],
+    ["ni-categories", "Use the employee's age on pay day"],
+    ["directors", "Company directors use the annual earnings period instead (category A): employee NI to date = 8% of the part of NIable pay to date above £12,570 and up to £50,270, plus 2% of the part above £50,270; employer NI to date = 15% of the part of NIable pay to date above £5,000; this month's NI = NI to date (NIable pay to date before this month plus this month's) minus the NI already paid this tax year, for each of the two"],
+    [null, "Round each employee and employer NI figure{DIR} to the nearest penny, half a penny rounding DOWN"],
+  ],
+  [
+    ["student-loans", "Student loans (on gross pay, monthly thresholds)"],
+    ["student-loans", "Plans 1, 2 and 4 are each deducted at 9% of gross pay above their monthly threshold (Plan 1 £2,172; Plan 2 £2,372; Plan 4 £2,728)"],
+    ["student-loans", "The Postgraduate Loan is deducted at 6% of gross pay above £1,750, as well as any plan"],
+    ["student-loans", "Each deduction is rounded DOWN to the whole pound"],
+  ],
+  [
+    [null, "Net pay = gross pay - tax - employee NI - employee pension - student loan"],
+  ],
+];
+/** This exercise's rates and rules for the given rule families (all of them: exactly the text of work.payroll-check). */
+export function RATES_TEXT(fams = ALL_FAMILIES) {
+  const on = (f) => f === null || fams.has(f);
+  const out = [RATES_HEADER];
+  for (const row of RATE_LINES) {
+    const act = row.filter(([f]) => on(f)).map(([, s]) => s);
+    if (!act.length) continue;
+    out.push(`${act.join('. ')}.`.replace('{K}', on('tax-codes') ? " (K: + the K amount to date)" : '').replace('{DIR}', on('directors') ? " (each NI to date for directors)" : ''));
+  }
+  return out.join('\n');
+}
+/** The rule families an employee kind needs in the rates block. */
+export const KIND_FAMILIES = {
+  plain: [], 'plain-sl1': ['student-loans'], 'plain-sl2': ['student-loans'], 'plain-sl4': ['student-loans'], 'plain-sl2-pgl': ['student-loans'],
+  overtime: ['overtime'], 'overtime-late-fix': ['overtime', 'late-items'], hourly: ['overtime'], 'br-second-job': ['tax-codes'],
+  'over-pension-age': ['ni-categories'], apprentice: ['ni-categories'], 'apprentice-turned-25': ['ni-categories'], 'opted-out': [],
+  sacrifice: ['salary-sacrifice'], 'k-code': ['tax-codes'], 'k-code-cap': ['tax-codes', 'ni-categories'], 'starter-m1': ['starters'],
+  'starter-p45': ['starters'], 'mid-month-starter': ['starters'], ssp: ['ssp'], 'code-change': ['late-items'], 'higher-rate': [],
+  director: ['directors'], 'pension-sacrifice': ['pension-sacrifice'], 'sunday-ot': ['sunday-overtime', 'overtime'], 'half-penny': [],
+};
+/** The rule families a planted mistake needs (to be findable from the printed rules). */
+export const MISTAKE_FAMILIES = {
+  'overtime-1x': ['overtime'], 'ni-cat-a-for-c': ['ni-categories'], 'sl-wrong-plan': ['student-loans'], 'pension-opted-out': [], 'pension-full-pay': [],
+  'sacrifice-ni-before': ['salary-sacrifice'], 'm1-as-cumulative': ['starters'], 'employer-ni-apprentice': ['ni-categories'], 'ssp-no-waiting': ['ssp'],
+  'ssp-full-pay': ['ssp'], 'starter-calendar-days': ['starters'], 'sl-rounded-penny': ['student-loans'], 'apprentice-still-h': ['ni-categories'],
+  'old-code': ['late-items'], 'k-no-cap': ['tax-codes'], 'p45-ignored': ['starters'], 'overtime-uncorrected': ['late-items'], 'pgl-missing': ['student-loans'],
+  'higher-rate-flat': [], 'net-typo': [], 'director-ni-monthly': ['directors'], 'pension-sacrifice-net-pay': ['pension-sacrifice'],
+  'sunday-ot-1.5': ['sunday-overtime'], 'hourly-rounded-early': ['overtime'], 'employer-ni-half-up': [],
+};
 
 // ───────────────────────────── Rendering ─────────────────────────────
 function codeText(e) {
@@ -486,15 +587,7 @@ To: you
 Subject: ${mon} payroll - please check the bureau's drafts before I approve the FPS
 
 Hi, ${emp.bureau} have sent the draft payslips for ${mon} ${yr} (tax month ${month}, pay day ${dMonY(pay)}). Our bookkeeper is off, so can you check every payslip against the employee records and this month's changes, using the figures below? Tell me which payslips are wrong, what the correct figures are, and the correct employer NI total for the month. Everything you need is in this email.`);
-  out.push(`THIS EXERCISE'S RATES AND RULES (use these exactly; they may differ from HMRC's current figures)
-Pay. Monthly salary = annual salary / 12, rounded to the penny (half up). Hourly rate for overtime = annual salary / 52 / contracted weekly hours (not rounded); overtime pay = hours x hourly rate x 1.5, rounded to the penny. Hourly-paid staff: hours x rate, rounded to the penny. A starter who joins during the month gets monthly salary x (working days from the start date to the month end) / (working days in the month); working days are Monday to Friday, bank holidays included; rounded to the penny. Unpaid sick day deduction = annual salary x days / 260, rounded to the penny.
-SSP (company sick pay is SSP only). SSP is paid at £23.75 a day (£118.75 a week, 5 qualifying days) for qualifying days of sickness after the first 3 qualifying days of a period of sickness (waiting days), and only if average weekly earnings are at least £125.00. The sick days themselves are deducted as unpaid days.
-Hours worked on a Sunday or a bank holiday are overtime at 2x the same hourly rate (not rounded); that overtime pay = hours x hourly rate x 2, rounded to the penny. Salary sacrifice (Cycle to Work) is taken off gross pay before tax, NI, pension and student loan. Gross pay on the payslip = pay after salary sacrifice. Pension by salary sacrifice (staff marked so): instead of paying 5% themselves, their pay is reduced by 5% of their qualifying earnings worked out on pay BEFORE that sacrifice (rounded to the penny, half up); the reduction is taken off gross pay before tax, NI and student loan, no employee pension is deducted, and the employer pays 8% of those qualifying earnings.
-Pension (auto-enrolment, net pay arrangement). Qualifying earnings for the month = the part of gross pay above £520.00, counting pay only up to £4,189.00 (so: the lower of gross pay and £4,189.00, minus £520.00, never below zero). The employee pays 5% of qualifying earnings and the employer pays 3% of qualifying earnings, each rounded to the penny (half up). Opted-out staff pay nothing. Employee pension is deducted before tax (not before NI or student loan).
-Income tax. Taxable pay = gross pay - employee pension. L codes: annual allowance = code number x £10 (1257L = £12,570). K codes: the code number x £10 is ADDED to taxable pay instead. Cumulative basis (normal): allowance to date = annual allowance x tax month / 12 (rounded to the penny); taxable pay to date = previous taxable pay this tax year + this month's taxable pay - allowance to date (K: + the K amount to date), rounded DOWN to the whole pound (never below zero). Bands to date, on taxable pay to date: 20% on the part up to the basic limit (£37,700 x tax month / 12); 40% on the part above the basic limit up to the higher limit (£125,140 x tax month / 12); 45% on the part above the higher limit. Each limit is rounded UP to the whole pound. Tax to date is rounded DOWN to the penny; this month's tax = tax to date - tax already paid this tax year (it can be negative: a refund). Week 1/month 1 (M1) basis: the same with tax month = 1 and no previous pay or tax. BR: 20% of this month's taxable pay; D0: 40% of this month's taxable pay; each rounded down to the penny, with no allowance and no previous pay or tax. K codes: this month's tax may not exceed 50% of this month's taxable pay (the regulatory limit), rounded down to the penny. A coding notice from HMRC applies from the payroll it arrives before, on the cumulative basis. New starters: with a P45, use its pay and tax to date as previous figures and its code (cumulative); without a P45, starter checklist statement A: 1257L cumulative, statement B: 1257L M1, statement C: BR.
-National Insurance (monthly, on gross pay). Category A: employee NI = 8% of the part of gross pay above £1,048.00 and up to £4,189.00, plus 2% of the part above £4,189.00; employer NI = 15% of the part of gross pay above £417.00. Category C (employee aged 66 or over on pay day): no employee NI; employer as A. Category H (apprentice under 25 on pay day): employee as A; employer NI = 15% of the part of gross pay above £4,189.00 (nothing on pay up to £4,189.00). Use the employee's age on pay day. Company directors use the annual earnings period instead (category A): employee NI to date = 8% of the part of NIable pay to date above £12,570 and up to £50,270, plus 2% of the part above £50,270; employer NI to date = 15% of the part of NIable pay to date above £5,000; this month's NI = NI to date (NIable pay to date before this month plus this month's) minus the NI already paid this tax year, for each of the two. Round each employee and employer NI figure (each NI to date for directors) to the nearest penny, half a penny rounding DOWN.
-Student loans (on gross pay, monthly thresholds). Plans 1, 2 and 4 are each deducted at 9% of gross pay above their monthly threshold (Plan 1 £2,172; Plan 2 £2,372; Plan 4 £2,728). The Postgraduate Loan is deducted at 6% of gross pay above £1,750, as well as any plan. Each deduction is rounded DOWN to the whole pound.
-Net pay = gross pay - tax - employee NI - employee pension - student loan.`);
+  out.push(RATES_TEXT(world.spec.families ? new Set(world.spec.families) : ALL_FAMILIES));
   const rows = world.staff.map((e) => {
     const bits = [];
     bits.push(e.hourly ? `hourly £${num2(e.rate)} (paid for hours worked)` : `salary ${gbp(e.salary)} a year, ${e.weekly} hrs/week`);
@@ -515,8 +608,8 @@ Net pay = gross pay - tax - employee NI - employee pension - student loan.`);
   for (const e of world.staff) {
     if (e.otSun) changes.push(`  ${e.id}: ${e.otSun} hours on Sunday 2x overtime (timesheet signed off).`);
     if (e.bonus) changes.push(`  ${e.id}: annual bonus ${gbp(e.bonus)} paid with this month's salary (board minute).`);
-    if (e.ot && e.kind !== 'overtime-late-fix') changes.push(`  ${e.id}: ${e.ot} hours overtime (timesheet signed off).`);
-    if (e.kind === 'overtime-late-fix') changes.push(`  ${e.id}: ${e.otDraft} hours overtime (timesheet signed off).`);
+    if (e.ot && !kindsOf(e).includes('overtime-late-fix')) changes.push(`  ${e.id}: ${e.ot} hours overtime (timesheet signed off).`);
+    if (kindsOf(e).includes('overtime-late-fix')) changes.push(`  ${e.id}: ${e.otDraft} hours overtime (timesheet signed off).`);
     if (e.hourly) changes.push(`  ${e.id}: ${e.hours} hours worked this month.`);
     if (e.sick) changes.push(`  ${e.id}: off sick for ${e.sick} consecutive working days this month (fit note received), first absence this year; average weekly earnings ${gbp(e.awe)}.`);
     if (e.start) changes.push(`  ${e.id}: new starter, first day ${ukDow(e.start)}; no P45, starter checklist statement ${e.starter}.`);

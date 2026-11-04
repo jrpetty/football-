@@ -8,7 +8,9 @@ import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { fmtDate, fmtInt } from '../format.ts';
 import type { Leaderboard, RunListItem, SuiteView } from '../types.ts';
-import { AREAS, areaInfo, areaOfSuite, scoreNameFor, type AreaId } from '../../../src/core/areas.ts';
+import { AREAS, BUSINESS_LADDERS_SUITE_ID, areaInfo, areaOfSuite, scoreNameFor, type AreaId } from '../../../src/core/areas.ts';
+import { LadderSuiteSoon } from '../components/leaderboard/LadderSuiteSoon.tsx';
+import { isLadderSuiteId } from '../ladders.ts';
 
 /**
  * `area` (Business results, #/business/results) pins the page to that area's suite. Otherwise the area follows
@@ -23,7 +25,9 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
 
   const suites = useAsync<SuiteView[]>(() => api.suites().catch(() => []), []);
   const runs = useAsync<RunListItem[]>(() => api.runs().catch(() => []), []);
-  const askedSuite = pinned ? areaInfo(pinned).suiteId : query.get('suite');
+  // A pinned area can also show its difficulty-ladder suite (Business results → Business Ladders).
+  const areaSuiteChoice = pinned === 'business' && query.get('suite') === BUSINESS_LADDERS_SUITE_ID ? BUSINESS_LADDERS_SUITE_ID : null;
+  const askedSuite = pinned ? areaSuiteChoice ?? areaInfo(pinned).suiteId : query.get('suite');
   const area: AreaId = pinned ?? (askedSuite ? areaOfSuite(suites.data?.find((x) => x.id === askedSuite) ?? { id: askedSuite }) : 'benchmark');
   const areaSuites = (suites.data ?? []).filter((x) => areaOfSuite(x) === area);
   const missingAreaSuite = area !== 'benchmark' && !!suites.data && !suites.data.some((x) => x.id === askedSuite);
@@ -46,6 +50,8 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
       : suite?.description ?? 'Combined standings: the most recent valid result for every model, test, case and repeat across all runs.';
 
   const lb = lbState.data;
+  const planned = (suite?.tests ?? []).filter((t) => t.planned).map((t) => t.id);
+  const ladderSuite = isLadderSuiteId(suiteId);
   const nModels = (lb?.rows ?? []).length;
   useViewerCaption(
     lb && nModels
@@ -78,6 +84,17 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
                 options={AREAS.map((a) => ({ value: a.id, label: a.name, title: a.blurb }))}
               />
             )}
+            {pinned === 'business' && (
+              <Seg
+                label="Business results"
+                value={suiteId === BUSINESS_LADDERS_SUITE_ID ? 'ladders' : 'all'}
+                onChange={(v) => setQuery({ suite: v === 'ladders' ? BUSINESS_LADDERS_SUITE_ID : null })}
+                options={[
+                  { value: 'all', label: 'Business Score', title: 'Every Business test, levels 1–5' },
+                  { value: 'ladders', label: 'Difficulty ladders', title: 'Eight Business tests rebuilt as ten-rung difficulty ladders (not the Business Ladder levels)' },
+                ]}
+              />
+            )}
             {!pinned && (
               <>
             <Seg
@@ -97,7 +114,7 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
                 {areaSuites.length === 0 && <option value={suiteId ?? ''}>{suiteId ?? '…'}</option>}
                 {areaSuites.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.testCount} tests)
+                    {s.name} ({s.testCount} tests{s.plannedCount ? ` · ${s.plannedCount} coming soon` : ''})
                   </option>
                 ))}
               </select>
@@ -118,8 +135,10 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
           </div>
         }
       />
-      <DemoBanner show={MOCK && area !== 'benchmark' && !!lb?.rows.length}>
-        These {areaInfo(area).name} scores are made up to show the layout (demo mode). Run the {areaInfo(area).name} tests to see your own.
+      <DemoBanner show={MOCK && (area !== 'benchmark' || (ladderSuite && suiteId !== 'horizon')) && !!lb?.rows.length}>
+        {ladderSuite && planned.length
+          ? 'These ladder heights are made up, on placeholder levels, to show the layout (demo mode). The ladders are still being built.'
+          : `These ${areaInfo(area).name} scores are made up to show the layout (demo mode). Run the ${areaInfo(area).name} tests to see your own.`}
       </DemoBanner>
 
       {lb && (
@@ -157,6 +176,8 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
         <LoadingPage />
       ) : lbState.error && !lb ? (
         <ErrorState error={lbState.error} onRetry={lbState.reload} title="Couldn’t load the leaderboard" />
+      ) : (!lb || lb.rows.length === 0) && ladderSuite && suite ? (
+        <LadderSuiteSoon suite={suite} />
       ) : !lb || lb.rows.length === 0 ? (
         <div className="card">
           <Empty
@@ -182,7 +203,7 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
         </div>
       ) : (
         <div style={{ opacity: lbState.loading ? 0.55 : 1, transition: 'opacity 200ms' }}>
-          <LeaderboardView lb={lb} />
+          <LeaderboardView lb={lb} planned={planned} demo={MOCK && planned.length > 0} />
         </div>
       )}
     </div>

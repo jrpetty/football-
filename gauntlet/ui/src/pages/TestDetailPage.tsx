@@ -12,6 +12,8 @@ import { Jargon } from '../components/clarity/Jargon.tsx';
 import { plainCaseName } from '../components/clarity/plain.ts';
 import { CaseImages, VisionBadge } from '../components/VisionImage.tsx';
 import { ExplainerCard } from '../components/ExplainerCard.tsx';
+import { LadderTestCard } from '../components/viz/LadderTestCard.tsx';
+import { isLadderTest } from '../ladders.ts';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
   if (!s) return '—';
@@ -150,6 +152,8 @@ export default function TestDetailPage({ testId }: { testId: string }) {
       />
 
       <ExplainerCard testId={testId} explainer={d.explainer} />
+
+      {isLadderTest(testId) && <LadderTestCard testId={testId} detail={d} />}
 
       {def.hook && (
         <blockquote className="hook-quote">

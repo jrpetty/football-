@@ -11,6 +11,8 @@ import { ImageGlyph } from '../VisionImage.tsx';
 import { BaselineExplainer, ScoreWhyPanel, type ScoreFocus } from './ScoreWhy.tsx';
 import { ScoreNameContext } from './scoreName.tsx';
 import { scoreNameFor } from '../../../../src/core/areas.ts';
+import { LadderHeightsPanel } from './LadderHeights.tsx';
+import { ladderSpecOf } from '../../ladders.ts';
 
 export function LeaderboardSummary({ lb }: { lb: Leaderboard }) {
   const scoreName = scoreNameFor(lb.tests);
@@ -159,7 +161,8 @@ function LeaderboardNotes({ lb }: { lb: Leaderboard }) {
   );
 }
 
-export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium?: boolean }) {
+export function LeaderboardView({ lb, podium = true, planned = [], demo }: { lb: Leaderboard; podium?: boolean; /** Ladder tests of this suite still being built ("coming soon"). */ planned?: string[]; demo?: boolean }) {
+  const hasLadders = planned.length > 0 || (lb.tests ?? []).some((t) => ladderSpecOf(t.id));
   const [focus, setFocus] = useState<ScoreFocus | null>(null);
   // "Gauntlet Index" only for the benchmark; Business / Everyday Life leaderboards have their own score name.
   const scoreName = useMemo(() => scoreNameFor(lb.tests), [lb.tests]);
@@ -178,6 +181,7 @@ export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium
         <section className="card lb-card">
           <LeaderboardTable lb={lb} onExplain={(contestantId, categoryId) => setFocus((f) => ({ contestantId, categoryId, nonce: (f?.nonce ?? 0) + 1 }))} />
         </section>
+        {hasLadders && <LadderHeightsPanel lb={lb} planned={planned} demo={demo} />}
         <ScoreWhyPanel lb={lb} focus={focus} />
         <div className="grid split-7-5 lb-charts">
           <ScatterPanel lb={lb} />

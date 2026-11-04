@@ -5,6 +5,7 @@
  * results, API payloads) is defined here so the engine, the programs, the
  * server and the UI all agree on one shape.
  */
+import type { LadderCell } from './ladders.ts';
 import type { SimFrame, SimWorld } from './sim-replay.ts';
 export type * from './sim-replay.ts';
 
@@ -551,7 +552,16 @@ export interface Suite {
    * Test ids with optional weight (default 1) and an optional subset of case ids
    * (or "seed-<n>" for programs) — e.g. a cheap "quick" suite. Use [{ "id": "*" }] for every test.
    */
-  tests: Array<{ id: string; weight?: number; cases?: string[] }>;
+  tests: Array<{
+    id: string;
+    weight?: number;
+    cases?: string[];
+    /**
+     * Not built yet (a planned difficulty ladder): listed so the suite shows it as "coming soon", skipped when
+     * the suite runs. When the test lands, delete the flag (the validator says so).
+     */
+    planned?: boolean;
+  }>;
   /** Optional per-category weight overrides for the Gauntlet Index. */
   categoryWeights?: Record<string, number>;
   /** Default repeats per case when running this suite. */
@@ -1034,6 +1044,8 @@ export interface TestAggregate {
   skipped?: number;
   /** Best one-line summary (for program tests: of the median case). */
   summary?: string;
+  /** Difficulty-ladder tests (config/ladders.json): the model's ladder height (src/core/ladders.ts). */
+  ladder?: LadderCell;
 }
 
 export interface LeaderboardRow {
@@ -1088,6 +1100,10 @@ export interface LeaderboardRow {
   manual?: boolean;
   /** Copy & paste contestants from the model catalogue: model, interface and settings (for the "copied by hand · …" label). */
   manualModel?: ManualModelInfo;
+  /** Mean ladder height over the board's difficulty-ladder tests this model has results on (null: none). */
+  ladderHeight?: number | null;
+  /** How many ladder tests `ladderHeight` averages. */
+  ladderTests?: number;
 }
 
 export interface MedalEntry {

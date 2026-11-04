@@ -2256,6 +2256,16 @@ html[data-broadcast='on'] .ticker .score-pill .ico {
   background: var(--accent-soft);
   box-shadow: 0 0 0 1px var(--accent) inset;
 }
+/* A suite whose tests are all still being built (a planned difficulty-ladder suite). */
+.suite-card.soon {
+  border-style: dashed;
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.suite-card.soon:hover {
+  border-color: var(--border-strong);
+}
 .picker {
   display: grid;
   gap: 14px;

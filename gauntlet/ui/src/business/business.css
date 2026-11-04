@@ -1359,3 +1359,32 @@ html[data-broadcast='on'] .biz-rung .rung-title b {
     margin: 0;
   }
 }
+
+/* Business tests: the difficulty ladders (not the Business Ladder's adoption levels) */
+.biz-dladders .biz-scn-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.biz-dladders .biz-scn-head > div {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+.biz-dl-glyph {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--area-business);
+  border-right: 3px solid var(--area-business);
+  border-radius: 2px;
+}
+.biz-dl-glyph i {
+  width: 26px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--area-business-line);
+}
+.biz-dl-glyph i:nth-child(n + 4) {
+  background: var(--area-business);
+}
