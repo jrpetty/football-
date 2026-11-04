@@ -421,6 +421,14 @@ A new scenario is a program plus three library files:
    do-nothing and Random Baseline 0, specific wrong answers marked as intended, style-insensitive parsing,
    determinism, fair-play check silent on the scripted replies).
 
+More worked examples: The Accounts Clerk (`accounts-clerk.ts`, `lib/clerk/`: an accounts system and a bank with a
+clock and a cut-off), Month-End Close (`month-end.ts`, `lib/monthend/`: a double-entry ledger, emails that arrive
+mid-run) and the customer-service pair (`helpdesk-agent.ts`, `support-week.ts`, `lib/support/` shared by
+`lib/helpdesk/` and `lib/supportweek/`: tickets, orders, a refund limit, human agents and days). Their shared helpers
+are in `lib/bizsim/common.ts`: money in pence and a reader for every amount in free text, date mentions in any style,
+`withHook` (run something before each action: a clock tick, arrivals), `displayRecord` (an entry for the stage's
+records card) and `bizResult` (the result, items and replay). The stage hides the calendar when a scenario has none.
+
 The whole `lib/workworld/` folder is imported by each scenario, so it is part of every scenario's program hash: a
 change to the engine invalidates their old results (bump their versions).
 

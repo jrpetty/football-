@@ -22,8 +22,8 @@
         { "id": "work.invoice-matching", "level": 2 },
         { "id": "work.expense-audit", "level": 3 },
         { "id": "work.bank-reconciliation", "level": 3 },
-        { "id": "work.accounts-clerk", "level": 4, "planned": true },
-        { "id": "work.month-end", "level": 5, "planned": true }
+        { "id": "work.accounts-clerk", "level": 4 },
+        { "id": "work.month-end", "level": 5 }
       ]
     },
     {
@@ -36,8 +36,8 @@
         { "id": "work.ticket-tag", "level": 1 },
         { "id": "work.support-refunds", "level": 2 },
         { "id": "work.support-replies", "level": 3, "planned": true },
-        { "id": "work.helpdesk-agent", "level": 4, "planned": true },
-        { "id": "work.support-week", "level": 5, "planned": true }
+        { "id": "work.helpdesk-agent", "level": 4 },
+        { "id": "work.support-week", "level": 5 }
       ]
     },
     {
