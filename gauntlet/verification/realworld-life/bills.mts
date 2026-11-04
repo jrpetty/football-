@@ -40,6 +40,25 @@ interface Person {
   to: number;
   student: boolean;
   netflix: boolean;
+  /** A student until this day (inclusive), then not (graduated / left the course). */
+  studentUntil?: number;
+  /** Away on holiday (inclusive days): left out of household shopping only. */
+  away?: [number, number];
+}
+
+/** One line of the shared shopping log. `group`: "house", "personal", or the names sharing it. */
+export interface Purchase {
+  day: number;
+  payer: string;
+  what: string;
+  amount: number;
+  group: 'house' | 'personal' | string[];
+  /** A refund of an earlier line (shared the same way, on that line's date). */
+  of?: Purchase;
+}
+
+function isStudent(p: Person, day: number): boolean {
+  return p.student && (p.studentUntil === undefined || day <= p.studentUntil);
 }
 
 interface FlatSpec {
@@ -62,6 +81,10 @@ interface FlatSpec {
   /** Notes added after the bills (corrections); `fix` edits the spec's real values. */
   late?: string;
   distractors?: string[];
+  /** Rent goes up from the 1st of this month (standing orders stay the same). */
+  rentRise?: { month: number; monthly: number };
+  /** Shared shopping log: number of lines and refunds (generated). */
+  shopping?: { lines: number; refunds: number };
 }
 
 interface Outcome {
@@ -75,7 +98,7 @@ function residents(people: Person[], day: number): Person[] {
 }
 
 /** The exact fair shares and payments, from the rules in the prompt. */
-function compute(spec: FlatSpec, people: Person[], energy: FlatSpec['energy']): Outcome {
+function compute(spec: FlatSpec, people: Person[], energy: FlatSpec['energy'], log: Purchase[] = []): Outcome {
   const share = new Map<string, Q>(people.map((p) => [p.name, new Q(0)]));
   const paid = new Map<string, Q>(people.map((p) => [p.name, new Q(0)]));
   const add = (m: Map<string, Q>, k: string, q: Q) => m.set(k, m.get(k)!.add(q));
@@ -87,10 +110,11 @@ function compute(spec: FlatSpec, people: Person[], energy: FlatSpec['energy']): 
     const dim = MONTH_DAYS[m - 1]!;
     // Rent by room size.
     const area = here.reduce((s, p) => s + p.room, 0);
-    for (const p of here) add(share, p.name, new Q(spec.rent.monthly * p.room, dim * area));
+    const rentNow = spec.rentRise && m >= spec.rentRise.month ? spec.rentRise.monthly : spec.rent.monthly;
+    for (const p of here) add(share, p.name, new Q(rentNow * p.room, dim * area));
     if (spec.broadband) for (const p of here) add(share, p.name, new Q(spec.broadband.monthly, dim * here.length));
     if (spec.councilTax) {
-      const payers = here.filter((p) => !p.student);
+      const payers = here.filter((p) => !isStudent(p, day));
       if (payers.length) {
         const daily = payers.length === 1 ? new Q(spec.councilTax.daily * 3, 4) : new Q(spec.councilTax.daily);
         for (const p of payers) add(share, p.name, daily.div(new Q(payers.length)));
@@ -108,7 +132,7 @@ function compute(spec: FlatSpec, people: Person[], energy: FlatSpec['energy']): 
   // Rent and broadband are paid monthly in full; the others' standing orders to the rent payer count as sent money.
   const orders = standingOrders(spec, people);
   for (let mo = md(spec.start).m; mo <= md(spec.end).m; mo++) {
-    add(paid, name(spec.rent.paidBy), new Q(spec.rent.monthly));
+    add(paid, name(spec.rent.paidBy), new Q(spec.rentRise && mo >= spec.rentRise.month ? spec.rentRise.monthly : spec.rent.monthly));
     for (const pr of residents(people, doy(mo, 1))) {
       const amt = orders[pr.name];
       if (!amt) continue;
@@ -129,6 +153,11 @@ function compute(spec: FlatSpec, people: Person[], energy: FlatSpec['energy']): 
     const net = spec.boiler.invoice - spec.boiler.landlord;
     add(share, name(spec.boiler.causedBy), new Q(net));
     add(paid, name(spec.boiler.paidBy), new Q(net));
+  }
+  for (const line of log) {
+    add(paid, line.payer, new Q(line.amount));
+    const sharers = shoppingSharers(people, line);
+    for (const n of sharers) add(share, n, new Q(line.amount, sharers.length));
   }
   for (const [f, t, amt] of spec.sent ?? []) {
     add(paid, name(f), new Q(amt));
@@ -159,6 +188,41 @@ function standingOrders(spec: FlatSpec, people: Person[]): Record<string, number
     out[pr.name] = Math.round((spec.rent.monthly * pr.room) / area / 1000) * 1000;
   }
   return out;
+}
+
+/** Who shares one shopping line: household = everyone living here that day and not away; names = those people; personal = the payer. */
+function shoppingSharers(people: Person[], line: Purchase): string[] {
+  if (line.group === 'personal') return [line.payer];
+  const day = line.of ? line.of.day : line.day;
+  if (line.group === 'house') return residents(people, day).filter((p) => !(p.away && day >= p.away[0] && day <= p.away[1])).map((p) => p.name);
+  return line.group;
+}
+
+const ITEMS = ['big shop (Tesco)', 'Aldi run', 'cleaning stuff', 'loo roll and kitchen roll', 'milk and bread', 'washing-up liquid and bin bags', 'Sunday roast ingredients', 'pizza night', 'coffee beans', 'light bulbs', 'olive oil and spices', 'birthday cake', 'Lidl shop', 'fruit and veg box', 'takeaway curry', 'dishwasher tablets', 'Co-op top-up', 'party snacks', 'plants for the balcony', 'new mop'];
+
+/** The shopping log: random but seeded; payers and sharers always live here that day. */
+function makeLog(rng: Rng, spec: FlatSpec, people: Person[]): Purchase[] {
+  const cfg = spec.shopping;
+  if (!cfg) return [];
+  const out: Purchase[] = [];
+  for (let i = 0; i < cfg.lines; i++) {
+    const day = rng.int(spec.start, spec.end);
+    const here = residents(people, day).filter((p) => !(p.away && day >= p.away[0] && day <= p.away[1]));
+    if (!here.length) continue;
+    const payer = rng.pick(here).name;
+    const r = rng.next();
+    const group: Purchase['group'] = r < 0.62 || here.length < 2 ? 'house' : r < 0.9 ? rng.sample(here.map((x) => x.name), Math.min(here.length, rng.int(2, 3))).sort((a, b) => (a === payer ? -1 : b === payer ? 1 : a.localeCompare(b))) : 'personal';
+    if (Array.isArray(group) && !group.includes(payer)) group.unshift(payer);
+    out.push({ day, payer, what: rng.pick(ITEMS), amount: rng.int(180, 8999), group });
+  }
+  out.sort((a, b) => a.day - b.day || a.payer.localeCompare(b.payer));
+  for (let k = 0; k < cfg.refunds; k++) {
+    const orig = out[rng.int(0, out.length - 1)]!;
+    if (orig.of || orig.amount < 0 || out.some((x) => x.of === orig)) continue;
+    const day = Math.min(spec.end, orig.day + rng.int(1, 9));
+    out.push({ day, payer: orig.payer, what: `refund: ${orig.what}`, amount: -Math.round((orig.amount * rng.int(20, 100)) / 100), group: orig.group, of: orig });
+  }
+  return out.sort((a, b) => a.day - b.day || (a.of ? 1 : 0) - (b.of ? 1 : 0) || a.payer.localeCompare(b.payer));
 }
 
 /** The stated method: the person who owes most pays the person owed most; ties alphabetical. */
@@ -196,7 +260,7 @@ export function minTransfers(balances: Record<string, number>): number {
   return n - dp[(1 << n) - 1]!;
 }
 
-const p = (_rng: Rng, name: string, room: number, from: number, to: number, student = false, netflix = true): Person => ({ name, room, from, to, student, netflix });
+const p = (_rng: Rng, name: string, room: number, from: number, to: number, student = false, netflix = true, more: Partial<Person> = {}): Person => ({ name, room, from, to, student, netflix, ...more });
 
 const SPECS: FlatSpec[] = [
   {
@@ -226,6 +290,7 @@ const SPECS: FlatSpec[] = [
     setup: (rng, n, s) => ({
       people: [p(rng, n[0]!, 15, s.start, s.end, false, true), p(rng, n[1]!, 12, s.start, s.end, true, false), p(rng, n[2]!, 12, s.start, doy(3, 20), false, true), p(rng, n[3]!, 13, doy(3, 21), s.end, true, true)],
     }),
+    shopping: { lines: 10, refunds: 1 },
     rent: { monthly: 248000, paidBy: 0 },
     netflix: { monthly: 1299, paidBy: 3 },
     councilTax: { daily: 520, paidBy: 0 },
@@ -237,8 +302,9 @@ const SPECS: FlatSpec[] = [
   {
     id: 'b05', difficulty: 'medium', seed: 905, start: doy(3, 1), end: doy(8, 31), people: 4,
     setup: (rng, n, s) => ({
-      people: [p(rng, n[0]!, 11, s.start, s.end, false, false), p(rng, n[1]!, 14, s.start, s.end, false, true), p(rng, n[2]!, 10, s.start, doy(5, 15), false, true), p(rng, n[3]!, 10, doy(5, 16), s.end, false, true)],
+      people: [p(rng, n[0]!, 11, s.start, s.end, false, false), p(rng, n[1]!, 14, s.start, s.end, false, true, { away: [doy(4, 4), doy(4, 18)] }), p(rng, n[2]!, 10, s.start, doy(5, 15), false, true), p(rng, n[3]!, 10, doy(5, 16), s.end, false, true)],
     }),
+    shopping: { lines: 12, refunds: 1 },
     rent: { monthly: 212000, paidBy: 1 },
     broadband: { monthly: 3900, paidBy: 0 },
     councilTax: { daily: 480, paidBy: 1 },
@@ -254,6 +320,8 @@ const SPECS: FlatSpec[] = [
     setup: (rng, n, s) => ({
       people: [p(rng, n[0]!, 13, s.start, s.end, true, true), p(rng, n[1]!, 13, s.start, doy(9, 30), false, true), p(rng, n[2]!, 9, s.start, s.end, true, false), p(rng, n[3]!, 13, doy(10, 1), s.end, false, true)],
     }),
+    shopping: { lines: 10, refunds: 1 },
+    rentRise: { month: 10, monthly: 179500 },
     rent: { monthly: 171000, paidBy: 0 },
     netflix: { monthly: 1099, paidBy: 1 },
     councilTax: { daily: 560, paidBy: 2 },
@@ -267,13 +335,15 @@ const SPECS: FlatSpec[] = [
     id: 'b07', difficulty: 'hard', seed: 907, start: doy(1, 1), end: doy(12, 31), people: 5,
     setup: (rng, n, s) => ({
       people: [
-        p(rng, n[0]!, 16, s.start, s.end, false, true),
+        p(rng, n[0]!, 16, s.start, s.end, false, true, { away: [doy(8, 3), doy(8, 23)] }),
         p(rng, n[1]!, 12, s.start, doy(6, 30), true, false),
-        p(rng, n[2]!, 12, s.start, s.end, true, true),
+        p(rng, n[2]!, 12, s.start, s.end, true, true, { studentUntil: doy(6, 30) }),
         p(rng, n[3]!, 10, doy(2, 14), s.end, false, false),
-        p(rng, n[4]!, 12, doy(7, 1), s.end, false, true),
+        p(rng, n[4]!, 12, doy(7, 1), s.end, false, true, { away: [doy(12, 19), doy(12, 31)] }),
       ],
     }),
+    shopping: { lines: 40, refunds: 4 },
+    rentRise: { month: 9, monthly: 299000 },
     rent: { monthly: 287500, paidBy: 0 },
     broadband: { monthly: 4500, paidBy: 2 },
     netflix: { monthly: 1899, paidBy: 0 },
@@ -293,12 +363,13 @@ const SPECS: FlatSpec[] = [
     setup: (rng, n, s) => ({
       people: [
         p(rng, n[0]!, 14, s.start, s.end, true, true),
-        p(rng, n[1]!, 14, s.start, s.end, true, true),
+        p(rng, n[1]!, 14, s.start, s.end, true, true, { studentUntil: doy(6, 12), away: [doy(7, 20), doy(8, 9)] }),
         p(rng, n[2]!, 11, s.start, doy(5, 31), false, false),
-        p(rng, n[3]!, 9, s.start, s.end, true, false),
+        p(rng, n[3]!, 9, s.start, s.end, true, false, { away: [doy(4, 1), doy(4, 12)] }),
         p(rng, n[4]!, 11, doy(6, 1), s.end, false, true),
       ],
     }),
+    shopping: { lines: 45, refunds: 4 },
     rent: { monthly: 260000, paidBy: 1 },
     broadband: { monthly: 3300, paidBy: 4 },
     netflix: { monthly: 1599, paidBy: 0 },
@@ -317,14 +388,16 @@ const SPECS: FlatSpec[] = [
     id: 'b09', difficulty: 'hard', seed: 909, start: doy(1, 1), end: doy(12, 31), people: 6,
     setup: (rng, n, s) => ({
       people: [
-        p(rng, n[0]!, 15, s.start, s.end, false, true),
+        p(rng, n[0]!, 15, s.start, s.end, false, true, { away: [doy(7, 25), doy(8, 14)] }),
         p(rng, n[1]!, 12, s.start, doy(4, 30), false, true),
         p(rng, n[2]!, 12, s.start, s.end, true, false),
-        p(rng, n[3]!, 11, s.start, doy(8, 31), true, true),
-        p(rng, n[4]!, 12, doy(5, 1), s.end, false, false),
+        p(rng, n[3]!, 11, s.start, doy(8, 31), true, true, { studentUntil: doy(5, 29) }),
+        p(rng, n[4]!, 12, doy(5, 1), s.end, false, false, { away: [doy(10, 10), doy(10, 24)] }),
         p(rng, n[5]!, 11, doy(9, 15), s.end, true, true),
       ],
     }),
+    shopping: { lines: 55, refunds: 5 },
+    rentRise: { month: 7, monthly: 324000 },
     rent: { monthly: 310000, paidBy: 0 },
     broadband: { monthly: 5000, paidBy: 4 },
     netflix: { monthly: 1899, paidBy: 3 },
@@ -343,13 +416,14 @@ const SPECS: FlatSpec[] = [
     id: 'b10', difficulty: 'hard', seed: 910, start: doy(4, 1), end: doy(11, 30), people: 5,
     setup: (rng, n, s) => ({
       people: [
-        p(rng, n[0]!, 13, s.start, s.end, true, true),
+        p(rng, n[0]!, 13, s.start, s.end, true, true, { studentUntil: doy(6, 26), away: [doy(8, 8), doy(8, 22)] }),
         p(rng, n[1]!, 13, s.start, doy(7, 12), false, true),
         p(rng, n[2]!, 10, s.start, s.end, true, true),
         p(rng, n[3]!, 15, s.start, doy(9, 3), true, false),
-        p(rng, n[4]!, 12, doy(7, 13), s.end, false, false),
+        p(rng, n[4]!, 12, doy(7, 13), s.end, false, false, { away: [doy(10, 30), doy(11, 6)] }),
       ],
     }),
+    shopping: { lines: 50, refunds: 4 },
     rent: { monthly: 254000, paidBy: 2 },
     broadband: { monthly: 3800, paidBy: 0 },
     netflix: { monthly: 1099, paidBy: 1, rise: { month: 7, monthly: 1299 } },
@@ -373,16 +447,20 @@ const LATE_FIX: Record<string, (s: FlatSpec) => FlatSpec> = {
 /** What the bill list in the prompt shows before the correction. */
 const SHOWN_AMOUNT: Record<string, Record<number, number>> = { b07: { 1: 43890 }, b09: { 3: 98460 } };
 
-function promptFor(spec: FlatSpec, people: Person[], extra: string[]): string {
+function promptFor(spec: FlatSpec, people: Person[], extra: string[], log: Purchase[] = []): string {
   const name = (i: number) => people[i]!.name;
   const L: string[] = [];
   L.push(`Hi! Our flat needs to settle up for ${dateText(spec.start)} to ${dateText(spec.end)} 2026 (both days included) and I want it exactly right. Here’s everything.`, '');
   L.push('FLATMATES');
-  L.push('Name | Room size | Lived here | Student? | In the Netflix share?');
-  for (const pr of people) L.push(`${pr.name} | ${pr.room} m² | ${dateText(pr.from)} – ${dateText(pr.to)} | ${pr.student ? 'yes (full-time)' : 'no'} | ${spec.netflix ? (pr.netflix ? 'yes' : 'no, opted out') : '-'}`);
+  L.push(`Name | Room size | Lived here | Student? | In the Netflix share?${people.some((x) => x.away) ? ' | Away on holiday' : ''}`);
+  for (const pr of people)
+    L.push(
+      `${pr.name} | ${pr.room} m² | ${dateText(pr.from)} – ${dateText(pr.to)} | ${pr.student ? (pr.studentUntil !== undefined ? `yes (full-time) until ${dateText(pr.studentUntil)}, when the course ended; not a student after that` : 'yes (full-time)') : 'no'} | ${spec.netflix ? (pr.netflix ? 'yes' : 'no, opted out') : '-'}${people.some((x) => x.away) ? ` | ${pr.away ? `${dateText(pr.away[0])} – ${dateText(pr.away[1])}` : '-'}` : ''}`,
+    );
   L.push('A day counts for someone if they lived here that day (first and last days included).');
   L.push('', 'HOW WE SPLIT THINGS (agreed rules)');
-  L.push(`- Rent is ${money(spec.rent.monthly)} a calendar month for the whole flat. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.`);
+  L.push(`- Rent is ${money(spec.rent.monthly)} a calendar month for the whole flat${spec.rentRise ? ` (until the rise below)` : ''}. Each day’s rent (that month’s rent ÷ the number of days in the month) is shared by the people living here that day, in proportion to their room sizes.`);
+  if (spec.rentRise) L.push(`- The landlord put the rent up to ${money(spec.rentRise.monthly)} a month from 1 ${MONTH[spec.rentRise.month - 1]} (shared the same way). The standing orders below were NOT changed.`);
   if (spec.broadband) L.push(`- Broadband is ${money(spec.broadband.monthly)} a calendar month. Each day’s broadband (month ÷ days in the month) is shared equally by the people living here that day.`);
   if (spec.netflix) L.push(`- Netflix is ${money(spec.netflix.monthly)}, charged on the 1st of every month. Each charge is shared equally by the people in the Netflix share who live here on that 1st.`);
   if (spec.netflix?.rise) L.push(`  (Netflix put the price up to ${money(spec.netflix.rise.monthly)} from the ${MONTH[spec.netflix.rise.month - 1]} charge onwards.)`);
@@ -400,6 +478,12 @@ function promptFor(spec: FlatSpec, people: Person[], extra: string[]): string {
   spec.energy.forEach((e, i) => L.push(`- ${e.label}: ${money(SHOWN_AMOUNT[spec.id]?.[i] ?? e.amount)}, paid by ${name(e.paidBy)}.`));
   if (spec.boiler) L.push(`- Boiler repair: the invoice was ${money(spec.boiler.invoice)}; the landlord covered ${money(spec.boiler.landlord)} and ${name(spec.boiler.paidBy)} paid the engineer the rest. ${name(spec.boiler.causedBy)} admits it was their fault (they turned the pressure valve the wrong way).`);
   for (const [f, t, amt, note] of spec.sent ?? []) L.push(`- ${name(f)} already sent ${name(t)} ${money(amt)} (${note}).`);
+  if (log.length) {
+    L.push('', 'SHARED SHOPPING LOG (everything bought for the flat, with who paid)');
+    L.push('Line | Date | Paid by | What | Amount | Shared by');
+    log.forEach((x, i) => L.push(`${i + 1} | ${dateText(x.day)} | ${x.payer} | ${x.what} | ${money(x.amount)} | ${x.group === 'house' ? 'household' : x.group === 'personal' ? 'personal (not shared)' : x.group.join(', ')}${x.of ? ` (refund of line ${log.indexOf(x.of) + 1})` : ''}`));
+    L.push('Shopping rules: a "household" line is shared equally by everyone living here that day, except anyone away on holiday that day; a line with names is shared equally by exactly those people (even if one of them is away); a "personal" line is not shared at all. A refund is shared exactly the way the line it refunds was shared, using the refunded line’s date. Being away on holiday changes nothing else: rent, bills, council tax, broadband and Netflix are shared as if they were here.');
+  }
   if (spec.distractors?.length) L.push('', ...spec.distractors);
   if (extra.length) L.push('', ...extra);
   if (spec.late) L.push('', spec.late);
@@ -441,9 +525,10 @@ export function buildBillCases(): BillCase[] {
       const fixedIdx = new Set(Object.keys(SHOWN_AMOUNT[spec0.id] ?? {}).map(Number));
       const jittered: FlatSpec = attempt === 0 ? spec0 : { ...spec0, energy: spec0.energy.map((e, i) => (fixedIdx.has(i) ? e : { ...e, amount: e.amount + rng.int(-40, 40) })) };
       const spec = LATE_FIX[spec0.id] ? LATE_FIX[spec0.id]!(jittered) : jittered;
+      const log = makeLog(rng, spec, people);
       let out: Outcome;
       try {
-        out = compute(spec, people, spec.energy);
+        out = compute(spec, people, spec.energy, log);
       } catch (err) {
         if (process.env.DEBUG_BILLS) console.error(spec0.id, attempt, (err as Error).message);
         continue; // rounding or coverage problem: try the next names / seed
@@ -454,14 +539,14 @@ export function buildBillCases(): BillCase[] {
       const careless: BillCase['careless'] = [];
       // Careless 1: splits everything equally per day (ignores room sizes).
       try {
-        careless.push({ label: 'ignores room sizes (rent split equally)', answer: answerOf(compute(spec, people.map((x) => ({ ...x, room: 1 })), spec.energy)) });
+        careless.push({ label: 'ignores room sizes (rent split equally)', answer: answerOf(compute(spec, people.map((x) => ({ ...x, room: 1 })), spec.energy, log)) });
       } catch {
         /* rounding: skip */
       }
       // Careless 2: council tax shared by everyone (forgets the student rule).
       if (spec.councilTax) {
         try {
-          careless.push({ label: 'forgets the student and single-person council tax rules', answer: answerOf(compute(spec, people.map((x) => ({ ...x, student: false })), spec.energy)) });
+          careless.push({ label: 'forgets the student and single-person council tax rules', answer: answerOf(compute(spec, people.map((x) => ({ ...x, student: false })), spec.energy, log)) });
         } catch {
           /* skip */
         }
@@ -470,7 +555,38 @@ export function buildBillCases(): BillCase[] {
       if (SHOWN_AMOUNT[spec0.id]) {
         try {
           const shownEnergy = spec.energy.map((e, i) => ({ ...e, amount: SHOWN_AMOUNT[spec0.id]?.[i] ?? e.amount }));
-          careless.push({ label: 'uses the bill before the correction', answer: answerOf(compute(spec, people, shownEnergy)) });
+          careless.push({ label: 'uses the bill before the correction', answer: answerOf(compute(spec, people, shownEnergy, log)) });
+        } catch {
+          /* skip */
+        }
+      }
+      if (people.some((x) => x.away)) {
+        try {
+          careless.push({ label: 'ignores who was away for household shopping', answer: answerOf(compute(spec, people.map((x) => ({ ...x, away: undefined })), spec.energy, log)) });
+        } catch {
+          /* skip */
+        }
+      }
+      if (people.some((x) => x.studentUntil !== undefined)) {
+        try {
+          careless.push({ label: 'misses the end of a student’s course', answer: answerOf(compute(spec, people.map((x) => ({ ...x, studentUntil: undefined })), spec.energy, log)) });
+        } catch {
+          /* skip */
+        }
+      }
+      if (log.some((x) => x.of)) {
+        // Careful but human-error-prone: shares refunds by the refund's own date instead of the original line's.
+        try {
+          careless.push({ label: 'careful, but shares refunds on the refund date', answer: answerOf(compute(spec, people, spec.energy, log.map((x) => (x.of ? { ...x, of: undefined } : x)))) });
+        } catch {
+          /* skip */
+        }
+      }
+      if (log.length) {
+        // Careful but human-error-prone: misses one line of the log (the 10th from the end).
+        const skip = log[Math.max(0, log.length - 10)]!;
+        try {
+          careless.push({ label: 'careful, but skips one shopping line', answer: answerOf(compute(spec, people, spec.energy, log.filter((x) => x !== skip && x.of !== skip))) });
         } catch {
           /* skip */
         }
@@ -480,7 +596,7 @@ export function buildBillCases(): BillCase[] {
         id: spec0.id,
         difficulty: spec0.difficulty,
         world,
-        prompt: promptFor({ ...spec, energy: jittered.energy }, people, extra),
+        prompt: promptFor({ ...spec, energy: jittered.energy }, people, extra, log),
         reference,
         careless,
         notes: `[${spec0.difficulty}] Exact shares (fractions) rounded only at the end: ${Object.entries(out.balances).map(([k, v]) => `${k} ${money(v)}`).join(', ')} (sum £0.00). Settle-up by the stated method, ${out.transfers.length} transfers = the proven minimum: ${out.transfers.map((t) => `${t.from}→${t.to} ${money(t.amount)}`).join('; ')}. Generator attempt ${attempt}.`,

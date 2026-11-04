@@ -488,7 +488,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'check', text: 'Each total checked to the penny, plus the winner' },
       { icon: 'percent', text: 'Points for every number right' },
     ],
-    goodScore: '100 means every total and every winner right; each of the 10 households is worth 10 points.',
+    goodScore: '100 means every total and every winner right; each of the 11 households is worth about 9 points.',
     icon: 'chart',
   },
   'life.recipe-shopping': {

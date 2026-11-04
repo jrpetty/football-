@@ -736,8 +736,8 @@ exactly the fields it touches.
 The `life` category holds six tests of personal admin people really ask an AI for. Every case is generated from a
 fixed seed by `verification/realworld-life/` (TypeScript, run with `node`), which also computes the answer key;
 `node verification/realworld-life/build.mts --check` proves the committed files are reproduced byte for byte, and
-`test/life.test.ts` runs that check on every `npm test`. Each test has 10 cases, roughly a third easy, a third medium
-and a third hard (marked in the notes); each case is worth 10 points of its test. No judges and no human opinion
+`test/life.test.ts` runs that check on every `npm test`. Each test has 10 cases (Cheapest Deal 11), roughly a third easy, a third medium
+and a third hard (marked in the notes); each case is worth an equal share of its test. No judges and no human opinion
 are involved anywhere in the pack.
 
 | Test | What the model hands in | How the key is computed | How a case is marked |
@@ -782,9 +782,23 @@ changes a score, and that the scripted wrong answers score as described.
 
 **Expected spread** (from scripted answers, `node verification/realworld-life/spread.mts`): do-nothing 0 on every
 test; careful (the reference) 100; careless answers (one rule ignored, a late message missed, no optimising, a
-typical arithmetic slip; only slips that change the answer for that case are counted) score about 22 on Weekend
-Away, 5 on Splitting the Bills, 55 on Cheapest Deal, 40 on Cook for Twelve, 46 on Pay It Off Faster and 28 on Pack
-for the Flight.
+typical arithmetic slip, and "careful but human-error-prone" answers that get everything right except one detail,
+such as one skipped shopping line or forgotten offer limits; only slips that change the answer for that case are
+counted) score about 20 on Weekend Away, 10 on Splitting the Bills, 53 on Cheapest Deal, 36 on Cook for Twelve, 46 on
+Pay It Off Faster and 21 on Pack for the Flight.
+
+**Hardening (after blind calibration).** A first blind calibration showed small, mid and top models all at 100 on
+the hard cases of three tests, so the hard third was rebuilt with much more volume and interacting rules:
+Splitting the Bills adds a 40–60-line shared shopping log (household / named / personal lines, partial refunds
+shared like the original line on its date, people away on holiday who skip household shopping only), a student
+whose course ends mid-year and a rent rise that the standing orders ignore; Cook for Twelve plans six recipes for
+adults, children (half portions of mains) and vegetarians, with per-customer offer limits and cascading late
+changes; Pack for the Flight has 30–32 items, a combined cabin weight limit, a medicines-and-baby-milk exception to
+the liquids rule and hold bags priced so the best plan is a tight knapsack. Weekend Away gained late cancellations of
+the very service the cheapest plan would use (t06, t08–t10), and Cheapest Deal gained a two-year, five-tariff,
+dual-fuel Economy 7 case with a correction that is itself corrected (e06); its rules now say explicitly that each fuel
+is billed and rounded on its own, and that promotional months cover any price rise already in force (both had been
+read two ways by calibration models).
 
 Stored answers to these tests are re-marked from their reply text like other objective tests (§5.6, `src/engine/remark.ts`).
 
