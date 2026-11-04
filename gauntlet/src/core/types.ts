@@ -395,7 +395,15 @@ export type ScorerSpec =
   /** case.expected: Constraint[]. Partial credit = fraction of constraints satisfied. */
   | { type: 'constraints'; allOrNothing?: boolean }
   /** case.expected: object. Partial credit = fraction of expected leaf fields matched. */
-  | { type: 'json'; unorderedArrays?: boolean; numberTolerance?: number; allOrNothing?: boolean; aliases?: Record<string, string> }
+  | {
+      type: 'json';
+      unorderedArrays?: boolean;
+      numberTolerance?: number;
+      allOrNothing?: boolean;
+      aliases?: Record<string, string>;
+      /** Format can't cost marks: keys match ignoring case/spaces/underscores, "£1,234.50" counts as 1234.5, "yes"/"no" as booleans, "n/a"/"none" as null. */
+      lenient?: boolean;
+    }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }
   /** LLM-judge (or judge panel) grading against a rubric; case.expected is an optional reference answer. */

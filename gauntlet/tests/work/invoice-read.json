@@ -1,0 +1,223 @@
+{
+  "kind": "prompt",
+  "id": "work.invoice-read",
+  "version": "1.0.0",
+  "name": "Read an Invoice",
+  "category": "work",
+  "description": "Business Ladder, Finance & Accounts, Level 1 (Assist). One supplier invoice per case, copied from a PDF: fill in the accounts-system form (supplier, invoice number, dates, net/VAT/gross, VAT number, PO reference, whether the bank details have changed, and the account to pay). Later cases add the traps real invoices have: our own VAT number next to the supplier’s, a delivery-note number that looks like the invoice number, an earlier balance added to the amount due, a US-format date flagged as such, an OCR scan that reads 0 as O, and an amendment that changes a line so the totals must be recalculated.",
+  "difficulty": "easy",
+  "tags": [
+    "business-ladder",
+    "finance",
+    "level-1",
+    "extraction",
+    "json",
+    "invoices",
+    "uk"
+  ],
+  "hook": "One invoice, twelve boxes to fill. Can it read the paperwork without slipping?",
+  "maxOutputTokens": 8000,
+  "estimate": {
+    "inputTokens": 900,
+    "outputTokens": 900
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "json",
+    "numberTolerance": 1e-8,
+    "lenient": true
+  },
+  "cases": [
+    {
+      "id": "c01",
+      "prompt": "I work in accounts payable at Larkspur Events Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nNORTHGATE SUPPLIES LTD\nUnit 22, Canal Street, Sheffield S3 8EN\nVAT Reg No: GB 820 3958 34    Company No: 29866475\n\nTAX INVOICE\n\nInvoice No: INV-36677        Invoice Date: 09/02/2026\nYour Order Ref: PO-93282\n\nInvoice to: Larkspur Events Ltd, Unit 15, Victoria Way, Cardiff CF10 4LJ\nFAO: Grace Kowalski, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n11 | A4 copier paper 80gsm (box of 5 reams) | £21.50 | 20% | £236.50\n18 | Nitrile gloves, blue, medium (box of 100) | £6.99 | 20% | £125.82\n\nNet total: £362.32\nVAT: £72.46\nInvoice total: £434.78\n\nPayment due by 9 March 2026.\nPlease pay by BACS to Northgate Supplies Ltd, sort code 45-90-36, account 75581965, quoting the invoice number.\nQueries: grace@northgate.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Northgate Supplies Ltd",
+        "invoice_number": "INV-36677",
+        "invoice_date": "2026-02-09",
+        "due_date": "2026-03-09",
+        "net": 362.32,
+        "vat": 72.46,
+        "gross": 434.78,
+        "supplier_vat_number": "GB820395834",
+        "po_reference": "PO-93282",
+        "bank_details_changed": false,
+        "sort_code": "45-90-36",
+        "account_number": "75581965"
+      },
+      "notes": "features: lines=2, terms=date; printed totals net 362.32 vat 72.46 gross 434.78"
+    },
+    {
+      "id": "c02",
+      "prompt": "I work in accounts payable at Brightwell Dental Group Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nTAMAR PACKAGING LTD\nUnit 20, Mill Lane, Norwich NR3 1RU\nVAT Reg No: GB 362 3097 12    Company No: 15198589\n\nTAX INVOICE\n\nInvoice No: INV-33555        Invoice Date: 11/08/2026\nYour Order Ref: PO-53607\n\nInvoice to: Brightwell Dental Group Ltd, Unit 24, Foundry Close, Cardiff CF10 4LJ\nCustomer VAT No: GB 283 3847 81\nFAO: Jamal Rahman, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n8 | A4 copier paper 80gsm (box of 5 reams) | £21.50 | 20% | £172.00\n7 | Hi-vis vest, yellow, XL | £3.85 | 20% | £26.95\n17 | Bubble wrap roll 750mm x 100m | £23.99 | 20% | £407.83\n1 | Delivery charge | £14.95 | 20% | £14.95\n\nNet total: £621.73\nVAT: £124.35\nInvoice total: £746.08\n\nPayment terms: 30 days from date of invoice.\nPlease pay by BACS to Tamar Packaging Ltd, sort code 27-60-46, account 76915899, quoting the invoice number.\nQueries: jamal@tamar.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Tamar Packaging Ltd",
+        "invoice_number": "INV-33555",
+        "invoice_date": "2026-08-11",
+        "due_date": "2026-09-10",
+        "net": 621.73,
+        "vat": 124.35,
+        "gross": 746.08,
+        "supplier_vat_number": "GB362309712",
+        "po_reference": "PO-53607",
+        "bank_details_changed": false,
+        "sort_code": "27-60-46",
+        "account_number": "76915899"
+      },
+      "notes": "features: lines=3, terms=days30, custVat=true; printed totals net 621.73 vat 124.35 gross 746.08; decoy: customer VAT GB283384781"
+    },
+    {
+      "id": "c03",
+      "prompt": "I work in accounts payable at Moorside Community Trust. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nBLACKWATER HYGIENE LTD\nUnit 10, Hope Street, Sheffield S3 8EN\nVAT Reg No: GB 450 7900 52    Company No: 97878049\n\nTAX INVOICE\n\nInvoice No: INV-39204        Invoice Date: 02/03/2026\nDelivery Note: DN-39202       Our Ref: SO-66000\nYour Order Ref: PO-89293\n\nInvoice to: Moorside Community Trust, Unit 10, Station Road, Cardiff CF10 4LJ\nCustomer VAT No: GB 656 9798 13\nFAO: Imran Kaur, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n11 | Corrugated boxes 450x350x300 (bundle of 25) | £18.50 | 20% | £203.50\n10 | Pallet wrap 400mm x 300m | £11.60 | 20% | £116.00\n18 | Thermal till rolls 80x80 (box of 20) | £24.75 | 20% | £445.50\n1 | Delivery charge | £9.95 | 20% | £9.95\n\nNet total: £774.95\nVAT: £154.99\nInvoice total: £929.94\n\nTerms: strictly 14 days from invoice date.\nPlease pay by BACS to Blackwater Hygiene Ltd, sort code 15-99-62, account 32804477, quoting the invoice number.\nFraud warning: our bank details have NOT changed. If you receive an email saying they have, call us before paying.\nQueries: imran@blackwater.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Blackwater Hygiene Ltd",
+        "invoice_number": "INV-39204",
+        "invoice_date": "2026-03-02",
+        "due_date": "2026-03-16",
+        "net": 774.95,
+        "vat": 154.99,
+        "gross": 929.94,
+        "supplier_vat_number": "GB450790052",
+        "po_reference": "PO-89293",
+        "bank_details_changed": false,
+        "sort_code": "15-99-62",
+        "account_number": "32804477"
+      },
+      "notes": "features: lines=3, terms=days14, custVat=true, refs=true, notChanged=true; printed totals net 774.95 vat 154.99 gross 929.94; decoy: customer VAT GB656979813; decoys: delivery note DN-39202, supplier order ref SO-66000"
+    },
+    {
+      "id": "c04",
+      "prompt": "I work in accounts payable at Fairhaven Hotels Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nELMSTEAD TIMBER LTD\nUnit 22, Foundry Close, Plymouth PL4 0RA\nVAT Reg No: GB 855 1198 22    Company No: 45917734\n\nTAX INVOICE\n\nInvoice No: INV-49239        Invoice Date: 04/08/2026\nDelivery Note: DN-49237       Our Ref: SO-78252\nYour Order Ref: PO-25694\n\nInvoice to: Fairhaven Hotels Ltd, Unit 6, Station Road, Leeds LS11 5QR\nFAO: Amara Rahman, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n3 | Hand sanitiser 5L | £18.90 | 20% | £56.70\n9 | Bubble wrap roll 750mm x 100m | £23.99 | 20% | £215.91\n3 | Blue centrefeed roll 2-ply (pack of 6) | £14.25 | 20% | £42.75\n1 | Delivery charge | £9.95 | 20% | £9.95\n\nNet total: £325.31\nVAT: £65.06\nInvoice total: £390.37\n\nPayment due by 25 August 2026.\nIMPORTANT: our bank details have changed. From now on please pay Elmstead Timber Ltd at sort code 16-27-45, account 33419265. Our old account (sort code 17-65-41, account 72414267) is closed.\nQueries: amara@elmstead.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Elmstead Timber Ltd",
+        "invoice_number": "INV-49239",
+        "invoice_date": "2026-08-04",
+        "due_date": "2026-08-25",
+        "net": 325.31,
+        "vat": 65.06,
+        "gross": 390.37,
+        "supplier_vat_number": "GB855119822",
+        "po_reference": "PO-25694",
+        "bank_details_changed": true,
+        "sort_code": "16-27-45",
+        "account_number": "33419265"
+      },
+      "notes": "features: lines=3, terms=date, changed=true, refs=true; printed totals net 325.31 vat 65.06 gross 390.37; decoys: delivery note DN-49237, supplier order ref SO-78252; decoy: old bank 17-65-41 72414267"
+    },
+    {
+      "id": "c05",
+      "prompt": "I work in accounts payable at Quayside Brewing Co Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nPENNINE OFFICE SOLUTIONS LTD\nUnit 19, Wharf Road, Norwich NR3 1RU\nVAT Reg No: GB 229 3945 70    Company No: 26380123\n\nTAX INVOICE\n\nInvoice No: INV-28994        Invoice Date: 12/10/2026\nYour Order Ref: PO-67496\n\nInvoice to: Quayside Brewing Co Ltd, Unit 7, Canal Street, Leeds LS11 5QR\nCustomer VAT No: GB 457 9277 46\nFAO: Kofi Reid, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n8 | Children’s hi-vis tabard, age 7-10 | £2.99 | 0% | £23.92\n11 | Corrugated boxes 450x350x300 (bundle of 25) | £18.50 | 20% | £203.50\n4 | Compostable coffee cups 12oz (case of 1000) | £64.50 | 20% | £258.00\n15 | Pallet wrap 400mm x 300m | £11.60 | 20% | £174.00\n\nNet total: £659.42\nVAT: £127.10\nInvoice total: £786.52\nPrevious balance outstanding (invoice INV-28932): £363.41\nTOTAL NOW DUE ON ACCOUNT: £1,149.93\n\nPayment terms: 30 days from date of invoice.\nPlease pay by BACS to Pennine Office Solutions Ltd, sort code 14-38-68, account 66336600, quoting the invoice number.\nQueries: kofi@pennine.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Pennine Office Solutions Ltd",
+        "invoice_number": "INV-28994",
+        "invoice_date": "2026-10-12",
+        "due_date": "2026-11-11",
+        "net": 659.42,
+        "vat": 127.1,
+        "gross": 786.52,
+        "supplier_vat_number": "GB229394570",
+        "po_reference": "PO-67496",
+        "bank_details_changed": false,
+        "sort_code": "14-38-68",
+        "account_number": "66336600"
+      },
+      "notes": "features: lines=4, terms=days30, zero=true, balance=true, custVat=true; printed totals net 659.42 vat 127.10 gross 786.52; decoy: total now due on account 1149.93 includes an earlier balance; decoy: customer VAT GB457927746"
+    },
+    {
+      "id": "c06",
+      "prompt": "I work in accounts payable at Larkspur Events Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nCALDER HYGIENE LTD\nUnit 12, Victoria Way, Leicester LE1 3PQ\nVAT Reg No: GB 327 9708 71    Company No: 32303395\n\nTAX INVOICE\n(Dates on this document are shown MM/DD/YYYY)\n\nInvoice No: INV-34187        Invoice Date: 05/11/2026\nDelivery Note: DN-34186       Our Ref: SO-86211\nYour Order Ref: (none quoted)\n\nInvoice to: Larkspur Events Ltd, Unit 17, Station Road, Leeds LS11 5QR\nFAO: Kwame Rahman, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n7 | Blue centrefeed roll 2-ply (pack of 6) | £14.25 | 20% | £99.75\n6 | Corrugated boxes 450x350x300 (bundle of 25) | £18.50 | 20% | £111.00\n6 | Compostable coffee cups 12oz (case of 1000) | £64.50 | 20% | £387.00\n\nNet total: £597.75\nVAT: £119.55\nInvoice total: £717.30\n\nTerms: Net 30 (payment due 30 days after the invoice date).\nPlease pay by BACS to Calder Hygiene Ltd, sort code 24-21-47, account 88918013, quoting the invoice number.\nQueries: kwame@calder.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Calder Hygiene Ltd",
+        "invoice_number": "INV-34187",
+        "invoice_date": "2026-05-11",
+        "due_date": "2026-06-10",
+        "net": 597.75,
+        "vat": 119.55,
+        "gross": 717.3,
+        "supplier_vat_number": "GB327970871",
+        "po_reference": null,
+        "bank_details_changed": false,
+        "sort_code": "24-21-47",
+        "account_number": "88918013"
+      },
+      "notes": "features: lines=3, terms=net30us, usDate=true, refs=true, noPo=true; printed totals net 597.75 vat 119.55 gross 717.30; decoys: delivery note DN-34186, supplier order ref SO-86211; US date 05/11/2026 = 2026-05-11 (UK reading would be wrong)"
+    },
+    {
+      "id": "c07",
+      "prompt": "I work in accounts payable at Brightwell Dental Group Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF, which was a scan read by OCR software). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nSALTMARSH WORKWEAR LTD\nUnit 14, Wharf Road, Plymouth PL4 0RA\nVAT Reg No: GB 317 O692 O2    Company No: 17561732\n\nTAX lNVOICE\n\nInvoice No: INV-38O93        Invoice Date: 07/09/2026\nDelivery Note: DN-38092       Our Ref: SO-84428\nYour Order Ref: PO-28905\n\nInvoice to: Brightwell Dental Group Ltd, Unit 16, Albion Park, Norwich NR3 1RU\nCustomer VAT No: GB 771 5846 05\nFAO: Rosa Brennan, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n7 | Blue centrefeed roll 2-ply (pack of 6) | £14.25 | 20% | £99.75\n11 | Compostable coffee cups 12oz (case of 1000) | £64.50 | 20% | £709.50\n4 | Pallet wrap 400mm x 300m | £11.60 | 20% | £46.40\n18 | Corrugated boxes 450x350x300 (bundle of 25) | £18.50 | 20% | £333.00\n\nNet total: £1,188.65\nVAT: £237.73\nInvoice total: £1,426.38\n\nPayment terms: 30 days from date of invoice.\nPlease pay by BACS to Saltmarsh Workwear Ltd, sort code 98-90-33, account 92744107, quoting the invoice number.\nQueries: rosa@saltmarsh.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- OCR note: the scanner sometimes reads the digit 0 as the letter O (and 1 as l). Invoice numbers are \"INV-\" followed by digits only, and VAT numbers are \"GB\" followed by 9 digits, so correct any such slips.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Saltmarsh Workwear Ltd",
+        "invoice_number": "INV-38093",
+        "invoice_date": "2026-09-07",
+        "due_date": "2026-10-07",
+        "net": 1188.65,
+        "vat": 237.73,
+        "gross": 1426.38,
+        "supplier_vat_number": "GB317069202",
+        "po_reference": "PO-28905",
+        "bank_details_changed": false,
+        "sort_code": "98-90-33",
+        "account_number": "92744107"
+      },
+      "notes": "features: lines=4, terms=days30, ocr=true, custVat=true, refs=true; printed totals net 1188.65 vat 237.73 gross 1426.38; decoy: customer VAT GB771584605; decoys: delivery note DN-38092, supplier order ref SO-84428; OCR: printed INV-38O93 / GB 317 O692 O2"
+    },
+    {
+      "id": "c08",
+      "prompt": "I work in accounts payable at Moorside Community Trust. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nKESTREL WORKWEAR LTD\nUnit 1, Albion Park, Leeds LS11 5QR\nVAT Reg No: GB 663 6552 20    Company No: 65267202\n\nTAX INVOICE\n\nInvoice No: INV-29280        Invoice Date: 04/04/2026\nDelivery Note: DN-29277       Our Ref: SO-76513\nYour Order Ref: PO-45396\n\nInvoice to: Moorside Community Trust, Unit 11, Wharf Road, Glasgow G40 2QH\nFAO: Eleanor Yilmaz, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n11 | Bubble wrap roll 750mm x 100m | £23.99 | 20% | £263.89\n8 | Hand sanitiser 5L | £18.90 | 20% | £151.20\n10 | Compostable coffee cups 12oz (case of 1000) | £64.50 | 20% | £645.00\n5 | Pallet wrap 400mm x 300m | £11.60 | 20% | £58.00\n1 | Delivery charge | £45.00 | 20% | £45.00\n\nNet total: £1,163.09\nVAT: £232.62\nInvoice total: £1,395.71\n\nAMENDMENT (credit control, 05/04/2026): the delivery charge on this invoice should be £25.00, not £45.00. The table above has not been reissued; please pay the amended amount.\nPayment terms: end of the month following the month of invoice.\nPlease pay by BACS to Kestrel Workwear Ltd, sort code 28-37-76, account 45777400, quoting the invoice number.\nFraud warning: our bank details have NOT changed. If you receive an email saying they have, call us before paying.\nQueries: eleanor@kestrel.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Kestrel Workwear Ltd",
+        "invoice_number": "INV-29280",
+        "invoice_date": "2026-04-04",
+        "due_date": "2026-05-31",
+        "net": 1143.09,
+        "vat": 228.62,
+        "gross": 1371.71,
+        "supplier_vat_number": "GB663655220",
+        "po_reference": "PO-45396",
+        "bank_details_changed": false,
+        "sort_code": "28-37-76",
+        "account_number": "45777400"
+      },
+      "notes": "features: lines=4, terms=eomf, correction=delivery, notChanged=true, refs=true; printed totals net 1163.09 vat 232.62 gross 1395.71; amended totals net 1143.09 vat 228.62 gross 1371.71; decoys: delivery note DN-29277, supplier order ref SO-76513"
+    },
+    {
+      "id": "c09",
+      "prompt": "I work in accounts payable at Fairhaven Hotels Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nCOPPERLEAF TRADE SUPPLIES LTD\nUnit 6, Victoria Way, Leeds LS11 5QR\nVAT Reg No: GB 458 1811 55    Company No: 19394120\n\nTAX INVOICE\n\nInvoice No: INV-35249        Invoice Date: 08/09/2026\nYour Order Ref: PO-16556\n\nInvoice to: Fairhaven Hotels Ltd, Unit 3, Market Place, Cardiff CF10 4LJ\nCustomer VAT No: GB 895 8015 61\nFAO: Marcus Murphy, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n8 | Nitrile gloves, blue, medium (box of 100) | £6.99 | 20% | £55.92\n11 | Brown parcel tape 48mm x 66m (pack of 6) | £7.95 | 20% | £87.45\n18 | Blue centrefeed roll 2-ply (pack of 6) | £14.25 | 20% | £256.50\n11 | Hand sanitiser 5L | £18.90 | 20% | £207.90\n12 | Children’s hi-vis tabard, age 7-10 | £2.99 | 0% | £35.88\n1 | Delivery charge | £9.95 | 20% | £9.95\n\nNet total: £653.60\nVAT: £123.54\nInvoice total: £777.14\nPrevious balance outstanding (invoice INV-35161): £445.34\nTOTAL NOW DUE ON ACCOUNT: £1,222.48\n\nAMENDMENT: only 7 of the 11 x \"Brown parcel tape 48mm x 66m (pack of 6)\" were delivered, so this line should be 7 x £7.95. The table above has not been reissued; please pay the amended amount.\nPayment terms: end of the month following the month of invoice.\nIMPORTANT: our bank details have changed. From now on please pay Copperleaf Trade Supplies Ltd at sort code 84-33-18, account 88288151. Our old account (sort code 78-40-94, account 21638516) is closed.\nQueries: marcus@copperleaf.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Copperleaf Trade Supplies Ltd",
+        "invoice_number": "INV-35249",
+        "invoice_date": "2026-09-08",
+        "due_date": "2026-10-31",
+        "net": 621.8,
+        "vat": 117.18,
+        "gross": 738.98,
+        "supplier_vat_number": "GB458181155",
+        "po_reference": "PO-16556",
+        "bank_details_changed": true,
+        "sort_code": "84-33-18",
+        "account_number": "88288151"
+      },
+      "notes": "features: lines=5, terms=eomf, zero=true, correction=qty, balance=true, custVat=true, changed=true; printed totals net 653.60 vat 123.54 gross 777.14; amended totals net 621.80 vat 117.18 gross 738.98; decoy: total now due on account 1222.48 includes an earlier balance; decoy: customer VAT GB895801561; decoy: old bank 78-40-94 21638516"
+    },
+    {
+      "id": "c10",
+      "prompt": "I work in accounts payable at Quayside Brewing Co Ltd. Here is a supplier invoice that has just arrived (text copied from the PDF, which was a scan read by OCR software). Please read it and fill in the form for our accounts system.\n\nInvoice:\n<<<\nASHBY FACILITIES LTD\nUnit 23, Foundry Close, Plymouth PL4 0RA\nVAT Reg No: GB 6OO O338 O1    Company No: 98542060\n\nTAX lNVOICE\n(Dates on this document are shown MM/DD/YYYY)\n\nInvoice No: INV-42O43        Invoice Date: 04/11/2026\nDelivery Note: DN-42042       Our Ref: SO-76733\nYour Order Ref: PO-71534\n\nInvoice to: Quayside Brewing Co Ltd, Unit 23, Mill Lane, Leeds LS11 5QR\nCustomer VAT No: GB 489 1838 82\nFAO: Fatima Yilmaz, Accounts Payable\n\nQty | Description | Unit price | VAT | Net\n10 | Pallet wrap 400mm x 300m | £11.60 | 20% | £116.00\n14 | Corrugated boxes 450x350x300 (bundle of 25) | £18.50 | 20% | £259.00\n8 | Milk, semi-skimmed 2 pint (crate of 12) | £11.88 | 0% | £95.04\n3 | Hand sanitiser 5L | £18.90 | 20% | £56.70\n10 | Bottled still water 500ml (case of 24) | £5.40 | 0% | £54.00\n1 | Delivery charge | £9.95 | 20% | £9.95\n\nNet total: £590.69\nVAT: £88.33\nInvoice total: £679.02\n\nAMENDMENT: only 12 of the 14 x \"Corrugated boxes 450x350x300 (bundle of 25)\" were delivered, so this line should be 12 x £18.50. The table above has not been reissued; please pay the amended amount.\nTerms: Net 30 (payment due 30 days after the invoice date).\nIMPORTANT: our bank details have changed. From now on please pay Ashby Facilities Ltd at sort code 24-17-34, account 94833026. Our old account (sort code 92-36-97, account 69404931) is closed.\nQueries: fatima@ashby.example.co.uk\n>>>\n\nForm (reply with this JSON object, filled in):\n{\n  \"supplier\": string,               // the supplier company name exactly as it is registered (e.g. \"Acme Widgets Ltd\")\n  \"invoice_number\": string,         // the supplier’s invoice number, e.g. \"INV-12345\"\n  \"invoice_date\": \"YYYY-MM-DD\",\n  \"due_date\": \"YYYY-MM-DD\",         // as stated, or worked out from the payment terms\n  \"net\": number,                    // amount before VAT, in pounds\n  \"vat\": number,                    // VAT, in pounds\n  \"gross\": number,                  // total of THIS invoice including VAT, in pounds\n  \"supplier_vat_number\": string,    // e.g. \"GB123456789\"\n  \"po_reference\": string or null,   // OUR purchase order number quoted on the invoice; null if none is quoted\n  \"bank_details_changed\": true or false,  // does the invoice say the supplier’s bank details have changed?\n  \"sort_code\": \"NN-NN-NN\",          // the account the invoice tells us to pay into now\n  \"account_number\": string\n}\n\nRules:\n- Dates on UK documents are day/month/year unless the document says otherwise.\n- Due dates: \"N days from the invoice date\" means the invoice date plus N calendar days. \"End of the month following\" means the last day of the next calendar month.\n- If the invoice states an amendment, use the amended figures: recalculate net, VAT (20% on standard-rated lines, 0% on zero-rated lines; delivery is standard-rated) and gross yourself, rounding VAT to the nearest penny.\n- gross is the total of this invoice only: do not add any earlier balance.\n- OCR note: the scanner sometimes reads the digit 0 as the letter O (and 1 as l). Invoice numbers are \"INV-\" followed by digits only, and VAT numbers are \"GB\" followed by 9 digits, so correct any such slips.\n- Reply with ONE JSON object (a ```json block is fine) and nothing else after it. Numbers as plain JSON numbers. Give exactly one value per field: a field holding two values, a range or an \"X or Y\" answer is marked wrong. Every field is checked separately.",
+      "expected": {
+        "supplier": "Ashby Facilities Ltd",
+        "invoice_number": "INV-42043",
+        "invoice_date": "2026-04-11",
+        "due_date": "2026-05-11",
+        "net": 553.69,
+        "vat": 80.93,
+        "gross": 634.62,
+        "supplier_vat_number": "GB600033801",
+        "po_reference": "PO-71534",
+        "bank_details_changed": true,
+        "sort_code": "24-17-34",
+        "account_number": "94833026"
+      },
+      "notes": "features: lines=5, terms=net30us, usDate=true, ocr=true, zero=true, correction=qty, changed=true, custVat=true, refs=true; printed totals net 590.69 vat 88.33 gross 679.02; amended totals net 553.69 vat 80.93 gross 634.62; decoy: customer VAT GB489183882; decoys: delivery note DN-42042, supplier order ref SO-76733; decoy: old bank 92-36-97 69404931; US date 04/11/2026 = 2026-04-11 (UK reading would be wrong); OCR: printed INV-42O43 / GB 6OO O338 O1"
+    }
+  ]
+}
