@@ -18,8 +18,9 @@ import { ModelBadge } from './viz/ModelBadge.tsx';
 import { AboutTestPanel } from './ExplainerCard.tsx';
 import { GalleryResultPanel } from './viz/GalleryResultPanel.tsx';
 import { briefForCase, isGalleryTest } from './viz/galleryModel.ts';
-import { HorizonLadderPanel, type LadderContestant } from './viz/HorizonLadderPanel.tsx';
-import { isHorizonTest, ladderLevel } from '../../../src/presenter/visuals/horizon.ts';
+import { LadderPanel, type LadderContestant } from './viz/LadderPanel.tsx';
+import { ladderLevel } from '../../../src/core/ladders.ts';
+import { isLadderTest } from '../ladders.ts';
 import { InspectorGrading, InspectorSummary } from '../grading/InspectorGrading.tsx';
 import { UniversalViewer } from './viewer/UniversalViewer.tsx';
 import { outputFilesFor, primaryFile } from './viewer/outputFiles.ts';
@@ -344,7 +345,7 @@ export function ResultInspector({
   onSelectKey?: (key: string | null) => void;
   /** contestant id → label, used to name judges. */
   names?: Map<string, string>;
-  /** Every contestant of the run (Horizon ladder: all models on one picture). */
+  /** Every contestant of the run (difficulty ladders: all models on one picture). */
   contestants?: LadderContestant[];
 }) {
   const rows = useMemo(
@@ -397,10 +398,11 @@ export function ResultInspector({
       }
     >
       {target && <AboutTestPanel testId={target.testId} model={{ label: target.contestantLabel, color: target.contestantColor, score: mean }} randomScore={randomMean} />}
-      {target && isHorizonTest(target.testId) && (
-        <details className="hz-panel" open>
-          <summary>How far up the ladder each model climbed</summary>
-          <HorizonLadderPanel
+      {target && isLadderTest(target.testId) && (
+        <details className="dl-panel" open>
+          <summary>How high each model climbed the difficulty ladder</summary>
+          <LadderPanel
+            showHead={false}
             testId={target.testId}
             results={results}
             contestants={contestants ?? [{ id: target.contestantId, label: target.contestantLabel, color: target.contestantColor }]}

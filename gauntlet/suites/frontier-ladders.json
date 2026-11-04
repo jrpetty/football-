@@ -1,0 +1,14 @@
+{
+  "id": "frontier-ladders",
+  "version": "1.0.0",
+  "name": "Frontier Ladders",
+  "description": "The Frontier logic, maths and coding tests rebuilt as ten-rung difficulty ladders: deduction grids, knights and knaves, shortest plans, exact maths and engineering. Level 1 is easy for a small model; level 10 is beyond any model today. The headline is the ladder height: the highest level passed reliably with every level below it. Its own leaderboard, never mixed into the Standard or Frontier Index. Tests still being built appear as coming soon. Long replies: check the Cost Planner first.",
+  "repeats": 1,
+  "tests": [
+    { "id": "reasoning.grid-ladder", "planned": true },
+    { "id": "reasoning.truth-ladder", "planned": true },
+    { "id": "reasoning.plans-ladder", "planned": true },
+    { "id": "math.exact-ladder", "planned": true },
+    { "id": "coding.engineering-ladder", "planned": true }
+  ]
+}

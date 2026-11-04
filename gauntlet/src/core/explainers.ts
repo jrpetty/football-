@@ -214,13 +214,26 @@ const DRAW_STEPS = (weights: string): ExplainStep[] => [
   { icon: 'cross', text: 'Digits in the words or extra shapes cost points' },
 ];
 
-const LADDER_STEPS = (what: string): ExplainStep[] => [
+/**
+ * How a difficulty ladder is scored (every test in config/ladders.json; the rule is src/core/ladders.ts).
+ * `passMark` below 1: a partial-credit ladder, whose rung is passed at that share of its points.
+ */
+export const LADDER_STEPS = (what: string, passMark = 1): ExplainStep[] => [
   { icon: 'ladder', text: 'Ten levels, each harder than the last' },
   { icon: 'target', text: what },
-  { icon: 'check', text: 'Checked by machine against a double-proven key' },
+  passMark >= 1 ? { icon: 'check', text: 'Checked by machine against a double-proven key' } : { icon: 'percent', text: `A level counts as passed at ${Math.round(passMark * 100)}% of its marks` },
   { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
 ];
-const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+export const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+/** Partial-credit business ladders: same task at every level, more items and more rules each time. */
+const BUSINESS_LADDER_STEPS = (what: string): ExplainStep[] => [
+  { icon: 'ladder', text: 'Ten levels: more items and more rules each time' },
+  { icon: 'target', text: what },
+  { icon: 'percent', text: 'A level is passed at 90% of its points' },
+  { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+];
+const BUSINESS_LADDER_SCORE =
+  'The score is the share of points over all ten levels; the headline is the highest level passed (90% of its points) with every level below it passed too. Level 5 is the full policy at the size of today’s hardest case.';
 const LOGIC_LADDER_SCORE = 'Every level is worth 10 points, so 50 means five levels solved. Small models should clear the first rungs, today’s best should stall around levels 5 to 7, and the top rungs are left for future models.';
 
 const ASSISTANT_STEPS: ExplainStep[] = [
@@ -998,6 +1011,40 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'cross', text: 'An invented difference costs as much as a missed one' },
     ],
     goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
+    icon: 'chart',
+  },
+
+  // ─────────────── Real-World Work: finance ladders (ten frozen levels each) ───────────────
+  'work.invoices-ladder': {
+    hook: 'How far up a ladder of supplier invoices can it go, paying only the right ones to the penny?',
+    whatItTests: 'Accounts-payable work at growing scale: matching invoices to purchase orders and delivery notes under a written policy that gains rules level by level.',
+    whyHard: 'Each level adds documents and rules, and the top levels chain them: invoices that use up a delivery in turn, credit notes that free quantity, a held invoice re-sent and then re-issued.',
+    howScored: BUSINESS_LADDER_STEPS('Outcome, amount and pay-by date per document'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'receipt',
+  },
+  'work.payroll-ladder': {
+    hook: 'How far up a ladder of payslips, from 4 staff to 120, can it find and fix every mistake?',
+    whatItTests: 'UK monthly payroll checking at growing scale: tax codes, National Insurance, pensions, student loans, sick pay and starters, with every rate given in the prompt.',
+    whyHard: 'Each level adds staff and rules, and the top levels stack several rules on one payslip, so one rounding or ordering slip spreads through every figure after it.',
+    howScored: BUSINESS_LADDER_STEPS('Wrong payslips as a set; six corrected figures each'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'dollar',
+  },
+  'work.expenses-ladder': {
+    hook: 'How far up a ladder of expense claims, from 8 lines to 900, can it pay everyone exactly right?',
+    whatItTests: 'Checking expense claims against a written policy that gains rules level by level, and working out exactly what to pay each person and how much VAT to reclaim.',
+    whyHard: 'Each level adds lines and rules: meal limits shared across a day, approvals that count only for the right person, mileage across claims and the tax-year reset, conversion before the £25 receipt rule.',
+    howScored: BUSINESS_LADDER_STEPS('Flagged lines with rule and amount, totals and VAT'),
+    goodScore: BUSINESS_LADDER_SCORE,
+    icon: 'receipt',
+  },
+  'work.reconciliation-ladder': {
+    hook: 'How far up a ladder of bank reconciliations, from 28 lines to 1,400, can it match every line?',
+    whatItTests: 'A month-end bank reconciliation at growing scale: matching every statement line to the books, explaining what is left over and landing the true balance.',
+    whyHard: 'Each level adds lines and rules: swapped digits, instalments, BACS runs, payments made twice, returned cheques, dollar rates and last month’s loose ends, all mixed together.',
+    howScored: BUSINESS_LADDER_STEPS('Every line matched or explained, plus the balance'),
+    goodScore: BUSINESS_LADDER_SCORE,
     icon: 'chart',
   },
   'work.contract-redline': {

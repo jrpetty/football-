@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { TESTS_DIR } from './core/paths.ts';
 import { getContestant, getProvider, hasApiKey, loadCategories, loadContestants, loadProviders, loadSettings, validateContestant } from './core/config.ts';
-import { fingerprint, getTest, loadSuites, loadTests, renderCase, resolveTests, summarize, validateTest } from './core/registry.ts';
+import { caseIds, fingerprint, getTest, loadSuites, loadTests, renderCase, resolveTests, suiteProblems, summarize, validateTest } from './core/registry.ts';
+import { validateLadders } from './core/ladders.ts';
+import { loadLadders } from './core/ladders-file.ts';
 import { CANARY, HARNESS_VERSION, PROTOCOL_VERSION } from './core/version.ts';
 import { FAIR_PLAY_NOTICE, FAIR_PLAY_VERSION } from './core/fair-play.ts';
 import type { RunEvent, RunRequest } from './core/types.ts';
@@ -481,21 +483,13 @@ async function main(): Promise<void> {
           for (const e of errs) console.log(`    ${e}`);
         } else console.log(c.green('✓ ') + `${t.definition.id.padEnd(40)} ${t.hash}`);
       }
-      for (const s of loadSuites()) {
-        for (const entry of s.tests) {
-          const t = all.find((x) => x.definition.id === entry.id);
-          if (entry.id !== '*' && !t) {
-            errors++;
-            console.log(c.red(`✗ suite ${s.id}: unknown test "${entry.id}"`));
-          }
-          const known = t ? (t.definition.kind === 'prompt' ? t.definition.cases.map((x) => x.id) : t.definition.seeds.map((x) => `seed-${x}`)) : [];
-          for (const cid of entry.cases ?? []) {
-            if (t && !known.includes(cid)) {
-              errors++;
-              console.log(c.red(`✗ suite ${s.id}: test "${entry.id}" has no case "${cid}"`));
-            }
-          }
-        }
+      for (const p of suiteProblems(loadSuites(), all)) {
+        errors++;
+        console.log(c.red(`✗ ${p}`));
+      }
+      for (const p of validateLadders(loadLadders(), new Map(all.map((t) => [t.definition.id, { category: t.definition.category, caseIds: caseIds(t.definition) }])))) {
+        errors++;
+        console.log(c.red(`✗ config/ladders.json: ${p}`));
       }
       for (const m of loadContestants()) {
         const errs = validateContestant(m);

@@ -494,7 +494,16 @@ export default function NewRunPage() {
                 {mode === 'suite' ? (
                   <div className="suite-grid" role="radiogroup" aria-label="Suite">
                     {[...suites].sort((a, b) => suiteOrder(a.id) - suiteOrder(b.id)).map((s) => (
-                      <button key={s.id} type="button" role="radio" aria-checked={s.id === suiteId} className={cx('suite-card', s.id === suiteId && 'on')} onClick={() => setSuiteId(s.id)}>
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={s.id === suiteId}
+                        className={cx('suite-card', s.id === suiteId && 'on', s.testCount === 0 && 'soon')}
+                        disabled={s.testCount === 0}
+                        title={s.testCount === 0 ? 'Every test in this suite is still being built' : undefined}
+                        onClick={() => setSuiteId(s.id)}
+                      >
                         <div className="row between">
                           <strong>{s.name}</strong>
                           <span className="badge outline">v{s.version}</span>
@@ -502,6 +511,7 @@ export default function NewRunPage() {
                         <p title={s.description}>{s.description}</p>
                         <div className="row wrap" style={{ gap: 6 }}>
                           <span className="badge">{s.testCount} tests</span>
+                          {s.plannedCount ? <span className="badge outline">{s.plannedCount} coming soon</span> : null}
                           {s.repeats ? <span className="badge">{s.repeats}× repeats</span> : null}
                           <span className="hash" data-dev>{s.fingerprint.slice(0, 8)}</span>
                         </div>

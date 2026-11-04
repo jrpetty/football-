@@ -25,6 +25,13 @@ export interface AreaInfo {
 /** Suite ids for the two non-benchmark areas (the suites themselves are added in suites/). */
 export const BUSINESS_SUITE_ID = 'business';
 export const LIFE_SUITE_ID = 'everyday-life';
+/**
+ * The difficulty-ladder suites (config/ladders.json): their own leaderboards, never mixed into an Index.
+ * Frontier Ladders is a benchmark suite; Business Ladders belongs to Business (headline: the Business Score).
+ */
+export const FRONTIER_LADDERS_SUITE_ID = 'frontier-ladders';
+export const BUSINESS_LADDERS_SUITE_ID = 'business-ladders';
+export const LADDER_SUITE_IDS: readonly string[] = ['horizon', FRONTIER_LADDERS_SUITE_ID, BUSINESS_LADDERS_SUITE_ID];
 
 export const AREAS: readonly AreaInfo[] = [
   { id: 'benchmark', name: 'Benchmark', blurb: 'Raw ability: the Gauntlet Index, the hard tiers, the Arena and the games.', suiteId: null, categories: [] },

@@ -41,6 +41,8 @@ import { VISUAL_RUN_SPEC, VISUAL_TESTS, decorateVisual, visualDetail } from './c
 import { simReplay } from './simReplayMock.ts';
 import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS, decorateGallery, galleryDetail } from './galleryMock.ts';
 import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
+import { LADDER_DEMO_RULES, LADDER_DEMO_RUN_SPECS, LADDER_DEMO_SUITES, LADDER_DEMO_TESTS, decorateLadderDemo } from './laddersMock.ts';
+import { attachLadderHeights } from '../../../src/core/ladders.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
 import { AREA_TESTS, LIFE_TESTS, WORK_TESTS } from './areaTests.ts';
@@ -903,7 +905,7 @@ export function buildRun(spec: RunSpec): MockRun {
           i++;
           const include = frac >= 1 || rngFrom(`${spec.id}|inc|${c.id}|${t.id}|${caseId}|${rep}`).next() < frac;
           if (!include) continue;
-          results.push(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t));
+          results.push(decorateLadderDemo(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t), t));
         }
       }
     }
@@ -915,7 +917,7 @@ export function newLiveResult(runId: string, contestantId: string, testId: strin
   const c = CONTESTANTS.find((x) => x.id === contestantId);
   const t = testById(testId);
   if (!c || !t) return null;
-  return applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t);
+  return decorateLadderDemo(applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t), t);
 }
 
 export const RUN_SPECS: RunSpec[] = [
@@ -1192,7 +1194,8 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     inc(e.bronze, 'bronze');
   }
 
-  return mockLeaderboardSkips({
+  // Difficulty ladders: every model's height per ladder test (the real rule, src/core/ladders.ts).
+  return attachLadderHeights(mockLeaderboardSkips({
     generatedAt: new Date().toISOString(),
     scope,
     fingerprint: manifest.fingerprint,
@@ -1202,7 +1205,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
     rows,
     medals,
     staleExcluded,
-  }, results);
+  }, results), results, LADDER_DEMO_RULES);
 }
 
 export function runListItem(run: MockRun): RunListItem {
@@ -1596,6 +1599,11 @@ SUITES.push({ id: 'art', version: '1.0.0', name: 'Art', description: 'The Galler
 TESTS.push(...HORIZON_TESTS);
 SUITES.push(HORIZON_SUITE);
 RUN_SPECS.push(HORIZON_RUN_SPEC);
+
+// Difficulty ladders: placeholder levels and invented heights for the two ladder suites (DEMO; see laddersMock.ts).
+TESTS.push(...LADDER_DEMO_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
+SUITES.push(...LADDER_DEMO_SUITES);
+RUN_SPECS.push(...LADDER_DEMO_RUN_SPECS);
 
 // Business and Everyday Life (every work.* and life.* test; invented demo scores, see areaDemo.ts). Added last so
 // the existing demo runs keep their test lists and the benchmark suites never include them.

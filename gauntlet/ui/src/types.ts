@@ -105,7 +105,7 @@ export interface ValidateResult {
   hash?: string;
 }
 
-export type SuiteView = Suite & { fingerprint: string; testCount: number };
+export type SuiteView = Suite & { fingerprint: string; testCount: number; /** Entries still being built (planned difficulty ladders). */ plannedCount?: number };
 
 export type EstimateBasis = 'measured' | 'measured-other-models' | 'definition';
 

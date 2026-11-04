@@ -14,6 +14,9 @@ import { businessApi } from './businessApi.ts';
 import { DemoNote, LevelTag, ScenarioGlyph, scenarioStyle } from './LadderParts.tsx';
 import { runBusinessHref } from './BusinessHomePage.tsx';
 import './business.css';
+import { LadderList } from '../components/leaderboard/LadderSuiteSoon.tsx';
+import { LADDERS } from '../ladders.ts';
+import { BUSINESS_LADDERS_SUITE_ID } from '../../../src/core/areas.ts';
 
 export default function BusinessTestsPage() {
   const state = useAsync(() => businessApi.ladder(), []);
@@ -54,6 +57,9 @@ export default function BusinessTestsPage() {
             {s.name}
           </a>
         ))}
+        <a href="#/business/tests?scenario=ladders" onClick={(e) => (e.preventDefault(), document.getElementById('biz-ladders')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))}>
+          Difficulty ladders
+        </a>
       </nav>
       {def.scenarios.map((s) => (
         <section key={s.id} id={`biz-${s.id}`} className="biz-scn" style={scenarioStyle(s)}>
@@ -125,6 +131,26 @@ export default function BusinessTestsPage() {
           </div>
         </section>
       ))}
+      <section id="biz-ladders" className="biz-scn biz-dladders">
+        <header className="biz-scn-head">
+          <span className="biz-dl-glyph" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, i) => (
+              <i key={i} />
+            ))}
+          </span>
+          <div>
+            <h2>Difficulty ladders</h2>
+            <p>
+              Eight of these jobs rebuilt as ten-rung difficulty ladders: each rung adds more volume and stacks more policy rules, from a handful of items to the full policy at maximum
+              volume. A rung is passed at 90% of its marks; the result is how high a model climbs. These are not the Business Ladder’s five adoption levels above.
+            </p>
+          </div>
+          <Link to={`/business/results?suite=${BUSINESS_LADDERS_SUITE_ID}`} className="btn no-broadcast">
+            See the heights
+          </Link>
+        </header>
+        <LadderList ids={LADDERS.tests.filter((t) => t.area === 'business').map((t) => t.id)} />
+      </section>
     </div>
   );
 }
