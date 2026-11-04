@@ -49,6 +49,11 @@ export type PageKey =
   | 'versus'
   | 'best'
   | 'present'
+  | 'business'
+  | 'business-ladder'
+  | 'business-tests'
+  | 'business-results'
+  | 'life'
   | 'unknown';
 
 function splitPath(path: string): string[] {
@@ -108,13 +113,21 @@ export function pageKeyFor(path: string): PageKey {
       return 'arena-tournament';
     case 'present':
       return b === 'versus' ? 'versus' : 'present';
+    case 'business':
+      if (!b) return 'business';
+      if (b === 'ladder') return 'business-ladder';
+      if (b === 'tests') return 'business-tests';
+      if (b === 'results') return 'business-results';
+      return 'unknown';
+    case 'life':
+      return 'life';
     default:
       return 'unknown';
   }
 }
 
 /** Icon names the sidebar knows how to draw (see simple/icons.tsx). */
-export type NavIconName = 'home' | 'run' | 'results' | 'video' | 'copy' | 'settings' | 'about';
+export type NavIconName = 'home' | 'run' | 'results' | 'business' | 'life' | 'video' | 'copy' | 'settings' | 'about';
 
 export interface SectionTab {
   label: string;
@@ -126,7 +139,9 @@ export interface SectionTab {
 }
 
 export interface NavSection {
-  id: 'home' | 'run' | 'results' | 'video' | 'copy' | 'settings' | 'about';
+  id: 'home' | 'run' | 'results' | 'business' | 'life' | 'video' | 'copy' | 'settings' | 'about';
+  /** A separate area of the app (its own accent colour): Business or Everyday Life. */
+  area?: 'business' | 'life';
   /** Sidebar label in simple mode; group heading in "all tools" mode. */
   label: string;
   icon: NavIconName;
@@ -184,6 +199,33 @@ export const SECTIONS: NavSection[] = [
       { label: 'History', to: '/history', keys: ['history'], hint: 'How models have changed over time' },
     ],
     paths: ['/leaderboard', '/best', '/runs', '/history'],
+  },
+  {
+    id: 'business',
+    label: 'Business',
+    icon: 'business',
+    area: 'business',
+    to: '/business',
+    blurb: 'The jobs companies hand to AI, from reading one invoice to running a department: the Business Ladder.',
+    keys: ['business', 'business-ladder', 'business-tests', 'business-results'],
+    tabs: [
+      { label: 'Business home', to: '/business', keys: ['business'], hint: 'What the Business area measures' },
+      { label: 'Business Ladder', to: '/business/ladder', keys: ['business-ladder'], hint: 'How far up the five levels each model climbs' },
+      { label: 'Business tests', to: '/business/tests', keys: ['business-tests'], hint: 'Every business test, by scenario and level' },
+      { label: 'Business results', to: '/business/results', keys: ['business-results'], hint: 'The Business leaderboard (never part of the Gauntlet Index)' },
+    ],
+    paths: ['/business'],
+  },
+  {
+    id: 'life',
+    label: 'Everyday Life',
+    icon: 'life',
+    area: 'life',
+    to: '/life',
+    blurb: 'Personal admin people ask an AI for help with: trips, bills, tariffs and recipes.',
+    keys: ['life'],
+    tabs: [],
+    paths: ['/life'],
   },
   {
     id: 'video',
@@ -324,4 +366,9 @@ export const ROUTE_EXAMPLES: Record<Exclude<PageKey, 'unknown'>, string> = {
   versus: '/versus',
   best: '/best',
   present: '/present',
+  business: '/business',
+  'business-ladder': '/business/ladder',
+  'business-tests': '/business/tests',
+  'business-results': '/business/results',
+  life: '/life',
 };

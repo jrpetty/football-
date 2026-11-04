@@ -247,7 +247,7 @@ export const META = {
     'Business Ladder, Hiring & People, Level 1 (Assist). One CV per case for a Payroll Officer job: fill in the screening form by written rules (current paid job, months of relevant experience by a stated counting rule with overlaps counted once, highest completed qualification, notice period, and the right-to-work statement exactly as written). Later CVs add the real traps: a degree still in progress, a voluntary role running to "Present", an employer with "Payroll" in its name, payroll duties under another title, overlapping part-time roles, a promotion and a changed notice period noted at the end, and candidates whose right to work must never be guessed from their background.',
   difficulty: 'easy',
   tags: ['business-ladder', 'hiring', 'level-1', 'extraction', 'json', 'dates', 'fairness', 'uk'],
-  hook: 'One CV, six boxes. Count the experience properly and never guess what isn’t written.',
+  hook: 'One CV, seven boxes. Count the experience properly and never guess what isn’t written.',
   outputTokens: 900,
   scorer: { type: 'json', lenient: true, aliases: { 'bachelors degree': "Bachelor's degree", 'bachelor’s degree': "Bachelor's degree", "bachelor's": "Bachelor's degree", 'masters degree': "Master's degree", 'master’s degree': "Master's degree", "master's": "Master's degree", 'a-level': 'A level', 'a levels': 'A level', 'phd': 'Doctorate', 'week': 'weeks', 'month': 'months', 'not specified': 'not stated' } },
 };

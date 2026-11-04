@@ -421,6 +421,65 @@ export const PAGE_HELP: Record<PageKey, PageHelp> = {
     links: [{ label: 'Leaderboard', to: '/leaderboard' }],
     guide: { text: 'See which model won each individual test.' },
   },
+  business: {
+    title: 'Business',
+    purpose: 'The Business area: how far up a five-level ladder an AI can go at real company work, from reading one invoice to running a department. It is kept separate from the benchmark and never feeds the Gauntlet Index.',
+    steps: [
+      'Read the five levels: each one hands the AI more of the job and leaves a person less to check.',
+      'Pick a business area (Finance, Customer Service, Hiring, Office, Data, Operations) to see its tests.',
+      'Press “Run the Business tests” to test your models, then open the Business Ladder to see how far each one climbed.',
+    ],
+    faqs: [
+      { q: 'Why do some levels say “coming soon”?', a: 'Those tests are still being built. A level with no tests is skipped, never counted as reached.' },
+      { q: 'Is this marked by AI judges?', a: 'No. Every Business test is checked by machine against answers worked out by a solver, the same for every model.' },
+    ],
+    links: [
+      { label: 'Business Ladder', to: '/business/ladder' },
+      { label: 'Business tests', to: '/business/tests' },
+    ],
+    guide: { text: 'The Business area tests the jobs companies really hand to AI, level by level.', next: { label: 'See the Business Ladder', to: '/business/ladder' } },
+  },
+  'business-ladder': {
+    title: 'The Business Ladder',
+    purpose: 'For each business area, how high each model climbed: a model reaches a level when it scores at least 70 on every test at that level and on every level below it.',
+    steps: [
+      'Pick one model to see its ladders, or two to four to compare them side by side.',
+      'Each card is one business area: Level 1 at the bottom, Level 5 at the top. The highlighted rung is the height reached.',
+      'The small range after a score is its 95% range: if two ranges overlap a lot, the gap could be luck.',
+    ],
+    faqs: [
+      { q: 'What does “borderline” mean?', a: 'The model passed, but only just: its range dips below 70, so another run might not pass.' },
+      { q: 'What does “just short” mean?', a: 'It scored under 70, but its range reaches 70, so it is within the noise of passing.' },
+      { q: 'What does “statistically tied” mean?', a: 'On the same questions, the gap between two models is small enough to be luck. A tie is never shown as a win.' },
+    ],
+    links: [
+      { label: 'Business tests', to: '/business/tests' },
+      { label: 'How scoring works', to: '/methodology' },
+    ],
+    doc: { file: 'docs/METHODOLOGY.md', section: 'The Business Ladder' },
+    guide: { text: 'How far up the ladder can each model go before a person has to check its work?' },
+  },
+  'business-tests': {
+    title: 'Business tests',
+    purpose: 'Every Business test, grouped by business area and then by level, with what the AI has to do and how it is marked.',
+    steps: ['Scroll to a business area.', 'Read what each level asks.', 'Press “See in depth” on a test for its sample question and every rule.'],
+    faqs: [{ q: 'Can a model cheat on these?', a: 'Every answer is computed by a solver and checked field by field; guessing, hedging or copying the question scores nothing.' }],
+    links: [{ label: 'Business Ladder', to: '/business/ladder' }],
+  },
+  'business-results': {
+    title: 'Business results',
+    purpose: 'The Business leaderboard: the average score on the Business tests. It is separate from the Gauntlet Index.',
+    steps: ['Run the Business tests first.', 'Click any cell to see why a model scored what it did.'],
+    faqs: [{ q: 'Why is it not in the Gauntlet Index?', a: 'The Index measures raw ability. Business results answer a different question, so they are kept apart.' }],
+    links: [{ label: 'Business Ladder', to: '/business/ladder' }],
+  },
+  life: {
+    title: 'Everyday Life',
+    purpose: 'Tests of the personal admin people ask an AI for help with: planning a trip, splitting bills, choosing a tariff. Kept separate from the benchmark.',
+    steps: ['See the Everyday Life tests.', 'Run them like any other test, then open the Everyday Life results.'],
+    faqs: [{ q: 'Do these count towards the Gauntlet Index?', a: 'No. Everyday Life has its own results.' }],
+    links: [{ label: 'Business', to: '/business' }],
+  },
   present: {
     title: 'Presenter (video slides)',
     purpose: 'Turn any run into full-screen 16:9 slides that explain themselves. Record them for your video.',

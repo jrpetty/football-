@@ -16,7 +16,7 @@
     "fairness",
     "uk"
   ],
-  "hook": "One CV, six boxes. Count the experience properly and never guess what isn’t written.",
+  "hook": "One CV, seven boxes. Count the experience properly and never guess what isn’t written.",
   "maxOutputTokens": 8000,
   "estimate": {
     "inputTokens": 857,

@@ -78,10 +78,30 @@ export const SimpleIcon = {
 };
 
 /** The sidebar/section icon for a section. */
+/** Business (a briefcase) and Everyday Life (a house with a heart): the two areas outside the benchmark. */
+export const AreaIcon = {
+  Business: (p: P) => (
+    <Svg {...p}>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M3 12.5h18M11 12.5v2h2v-2" />
+    </Svg>
+  ),
+  Life: (p: P) => (
+    <Svg {...p}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5.5 9v11h13V9" />
+      <path d="M12 17.2s-3-1.8-3-3.8a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.8-3 3.8Z" />
+    </Svg>
+  ),
+};
+
 export const SECTION_ICONS: Record<NavIconName, ComponentType<{ className?: string }>> = {
   home: SimpleIcon.Home,
   run: SimpleIcon.Play,
   results: Icon.Trophy,
+  business: AreaIcon.Business,
+  life: AreaIcon.Life,
   video: Icon.Clapper,
   copy: SimpleIcon.Clipboard,
   settings: SimpleIcon.Gear,
