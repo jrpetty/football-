@@ -87,8 +87,8 @@
       "category": "math",
       "basedOn": "math.olympiad",
       "passMark": 1,
-      "grows": "Length and depth of a multi-step exact problem: bigger Markov chains, more counting constraints, longer exact fraction chains.",
-      "planned": true
+      "grows": "Board 10→64 squares, 0→6 snake loops, more ladders and traps; exact answer 3→30-digit denominator.",
+      "rungs": ["10 squares · 3-digit answer", "12 squares · 4-digit", "14 squares · 1 snake · 5-digit", "18 squares · 1 snake · 7-digit", "22 squares · 2 snakes · 11-digit", "28 squares · 2 snakes · 14-digit", "34 squares · 3 snakes · 15-digit", "42 squares · 4 snakes · 18-digit", "52 squares · 5 snakes · 27-digit", "64 squares · 6 snakes · 30-digit"]
     },
     {
       "id": "coding.engineering-ladder",
@@ -97,8 +97,8 @@
       "category": "coding",
       "basedOn": "coding.frontier",
       "passMark": 1,
-      "grows": "Spec size, edge cases and input size: at the top, large hidden inputs with time limits need the efficient algorithm.",
-      "planned": true
+      "grows": "Spec 3→21 commands, store 100→200,000 keys; large hidden inputs need the efficient design.",
+      "rungs": ["SET/GET/DEL · 200 commands", "+counts, bulk load · 2k keys", "+big-integer INCR · 5k keys", "+nested transactions · 10k keys", "+ordered scans · 20k keys", "+expiry clock · 40k keys", "+rename · 60k keys", "+snapshots · 100k keys", "+bulk delete · 150k keys", "+range counts · 200k keys"]
     },
 
     {
