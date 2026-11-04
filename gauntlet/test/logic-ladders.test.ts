@@ -92,10 +92,11 @@ test('Deduction Grid: Ladder grows in grid size and clue count, and the same rul
     assert.match(c.prompt!, /"If P, then Q" is false only when P is true and Q is false/);
     assert.match(c.prompt!, /"Exactly one of these two statements is true: \(a\) \.\.\.; \(b\) \.\.\." means/);
   }
-  // clue depth: compound clues appear from level 3 and grow
+  // clue depth: compound clues appear from level 3 and never become fewer
   const compound = d.cases.map((c) => num(c.notes!, /clues \((\d+) compound\)/));
   assert.deepEqual(compound.slice(0, 2), [0, 0]);
-  increasing(compound.slice(2), 'compound clues');
+  compound.forEach((x, i) => i > 2 && assert.ok(x >= compound[i - 1]!, `compound clues: level ${i + 1}`));
+  assert.ok(compound[2]! > 0 && compound[9]! > 5 * compound[2]!);
 });
 
 test('Knights & Knaves: Ladder grows in islanders, statements and line-ups, under identical conventions', () => {

@@ -1501,6 +1501,137 @@ and interacting rules produce. These scripted answers bound the scale; they are 
 need blind play. Regenerate with `node verification/finance-ladders/build.mjs` and `python3
 verification/finance-ladders/build.py` (`--check` proves both byte for byte); never regenerate a released version.
 
+## 7s. Frontier Ladders: Deduction Grid, Knights & Knaves and Shortest Plans
+
+Calibration showed the Frontier logic tests saturating for the strongest models (Deduction Grid: Extreme, Knights,
+Knaves, Spies & Alternators: Extreme and Shortest Plans: Extreme at 90–100% for Opus), while the Horizon ladders
+(§7d) kept separating them. These three tests turn the Frontier logic tests into **difficulty ladders** under the contract of §7q: ten
+frozen levels (`L01` … `L10`) of exactly one task, under the same rules and the same definitions on every level, where
+only the size and depth grow. The Frontier tests stay untouched, so old results stay comparable.
+
+| Test | Id | What a level asks | Level 1 → level 10 |
+|---|---|---|---|
+| Deduction Grid: Ladder | `reasoning.grid-ladder` | Two complete orderings of a logic grid | 4 people × 3 categories, 10 clues → 12 × 8, 172 clues |
+| Knights & Knaves: Ladder | `reasoning.truth-ladder` | The type of every islander | 4 islanders, 4 statements → 24 islanders (4 spies, 3 alternators), 45 statements |
+| Shortest Plans: Ladder | `reasoning.plans-ladder` | The proven minimum number of moves | 4 disks, 256 positions, 6 moves → 13 disks, 67 million positions, 70 moves |
+
+**Same task, growing scale.** Each ladder reuses the generator and wording of the test it ladders, so the rules a
+model reads on level 10 are the rules it read on level 1:
+
+* *Grids* (`verification/grid_ladder/`) use the Extreme generator and renderer unchanged (`grid_extreme/gen.py`,
+  `grid_extreme/build.py`) with new themes of 12 values per category. Growth: people × categories (12, 15, 24, 28,
+  40, 45, 54, 60, 77, 96 attribute values), the number of minimal clues, and clue depth: levels 1–2 use only direct
+  clues (same person, position, next to, left of, and their negations), levels 3–4 add either/or, if-then,
+  betweenness, ordering chains and "of X and Y, one … the other …", from level 5 every kind is used (including
+  "exactly k of 3", distances and age arithmetic), levels 8–9 weight the compound kinds most heavily and level 10
+  the weakest ones (negations, betweenness, either/or, exactly k of 3), so each clue says little and 172 are needed. The
+  definitions block is identical on every level (the age definition appears whenever ages are a category).
+* *Knights & knaves* (`verification/truth_ladder/`) use the Extreme statement language and renderer
+  (`truth_extreme/lib.py`) and one fixed conventions block on every level. Growth: islanders (4, 5, 6, 9, 12, 14, 16,
+  19, 22, 24), stated spy/alternator counts (0/0 up to 4/3), statements (4 up to 45) and nesting: "X would say that
+  Y would say that Z would say that …" chains and chains of statements about other people's statements, up to three
+  deep.
+* *Plans* (`verification/plans_ladder/`) extend the Tower of Hanoi family of Shortest Plans to four pegs, worded as
+  before: a scattered start, every disk onto peg D. Growth: disks (4 to 13), positions (4^n, 256 to 67,108,864) and
+  the proven minimum (6, 10, 14, 19, 25, 32, 40, 48, 58, 70). The start is never the textbook full tower, the
+  largest disk is never already home and disks sit on at least three pegs.
+
+`test/logic-ladders.test.ts` asserts the growth (strictly increasing along each parameter) and that the rules text is
+the same on every level.
+
+**One answer, proven twice.**
+
+* Grids: OR-tools CP-SAT proves the intended arrangement is the only one (it is forbidden and the solver must prove no
+  other exists), and minimality is proved clue by clue. `grid_extreme/verify_sat.py` re-proves both independently: it
+  parses the legend and every clue back out of the prompt, builds a CNF encoding from scratch and enumerates every
+  model with a SAT solver (exactly one, equal to the key; `--minimal`: removing any clue admits a second model).
+* Knights & knaves: there are up to 1.6 trillion line-ups, too many to list, so CP-SAT proves uniqueness, and
+  `truth_ladder/verify.mjs` re-proves it with an exhaustive backtracking search in JavaScript over the English parsed
+  back from the prompt. Every statement is evaluated in three-valued logic (true, false, not yet known), so a branch
+  is dropped only when it is already impossible and the count of surviving line-ups is exact (one, the key, on every
+  level; 8 search nodes on level 1, 2.4 million on level 10). `--minimal` re-proves that every statement nothing else
+  refers to is needed.
+* Plans: a breadth-first search over every position (numpy, from the goal outwards) gives the exact distance of every
+  position; `plans_ladder/verify.mjs` re-proves each minimum with a forward breadth-first search in JavaScript from
+  the start parsed out of the prompt. Both searches first reproduce the known four-peg full-tower minima
+  (1, 3, 5, 9, 13, 17, 25, 33, 41, 49, 65, 81, 97 moves; Frame–Stewart, proven optimal by Bousch). One optimal plan
+  per level is stored in the notes, and the unit test replays it move by move.
+
+**Scoring.** The scorers of the laddered tests: `exact` (alnum normalisation, two orderings or every islander's type,
+all or nothing) and `number` (tolerance 0). A rung counts as passed only at full marks (`passMark` 1). Every level is
+worth the same, so the test score is the share of the ladder climbed; the headline is the ladder height (§7q). Spread on every level, scripted and scored with the
+real scorer: the key 100; one slip (two neighbours swapped, one islander's type flipped, a plan one move too long)
+0; careless (the orderings as the legend lists them, everyone a knight, the textbook full-tower number) 0; do-nothing
+0; a hedge (two answers) 0; random filler under 1%.
+
+**Calibration targets** (by design; to be confirmed by blind play): levels 1–2 for small models, 3–5 the limit of
+mid-sized models, 5–7 the limit of today's strongest model (Deduction Grid: Extreme sits between grid levels 6 and 7,
+Knights, Knaves, Spies & Alternators: Extreme around truth level 4–5, both solved by Opus), and 8–10 beyond any model
+today but solvable in principle by a patient expert.
+
+**Budgets.** Like Horizon, the ladders ask for each model's own maximum output (`"maxOutputTokens": "model-max"`,
+`maxRetries: 1`, one hour per level). Estimated output per level (thinking included), from a few thousand tokens at
+the bottom to the whole 128,000 at the top:
+
+| Level | L01 | L02 | L03 | L04 | L05 | L06 | L07 | L08 | L09 | L10 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Output estimate | 3,000 | 5,000–6,000 | 9,000–10,000 | 15,000–16,000 | 25,000 | 40,000 | 60,000 | 90,000 | 110,000 | 128,000 |
+
+Each test's `estimate.outputTokens` is the mean (about 48,500). Input is small: grids 1,007–6,130 tokens per level, knights
+& knaves 800–1,900, plans about 220. For Opus 5.5 the three ladders together are estimated at about $29 per repeat
+(30 levels × 48,500 output tokens at $20 per million), with an honest ceiling of about $77 if every level used the
+whole 128,000.
+
+*Deduction Grid: Ladder*
+
+| Level | Grid | Clues (compound) | Clue depth | Input tokens | Output estimate |
+|---|---|---:|---|---:|---:|
+| L01 | 4 x 3 | 10 (0) | direct clues only | 1,007 | 3,000 |
+| L02 | 5 x 3 | 16 (0) | direct clues only | 1,165 | 5,000 |
+| L03 | 6 x 4 | 23 (6) | direct + either/or, if-then, between, order, one-and-the-other | 1,507 | 9,000 |
+| L04 | 7 x 4 | 26 (9) | direct + either/or, if-then, between, order, one-and-the-other | 1,614 | 15,000 |
+| L05 | 8 x 5 | 29 (10) | every clue kind | 1,882 | 25,000 |
+| L06 | 9 x 5 | 46 (17) | every clue kind | 2,232 | 40,000 |
+| L07 | 9 x 6 | 52 (17) | every clue kind | 2,588 | 60,000 |
+| L08 | 10 x 6 | 71 (25) | every clue kind, compound clues weighted most | 3,162 | 90,000 |
+| L09 | 11 x 7 | 104 (43) | every clue kind, compound clues weighted most | 4,159 | 110,000 |
+| L10 | 12 x 8 | 172 (67) | every clue kind, the weakest (negations, between, either/or, exactly k) weighted most | 6,130 | 128,000 |
+
+*Knights & Knaves: Ladder*
+
+| Level | Islanders | Spies / alternators | Statements | Nesting ("would say" / about statements) | Line-ups allowed by the counts | Search nodes (verify.mjs) | Input tokens | Output estimate |
+|---|---:|---|---:|---|---:|---:|---:|---:|
+| L01 | 4 | 0 / 0 | 4 | 0 / 0 | 16 | 8 | 800 | 3,000 |
+| L02 | 5 | 0 / 0 | 5 | 0 / 0 | 32 | 11 | 821 | 5,000 |
+| L03 | 6 | 1 / 0 | 8 | 1 / 0 | 192 | 42 | 902 | 9,000 |
+| L04 | 9 | 1 / 1 | 13 | 1 / 1 | 9,216 | 400 | 1,000 | 16,000 |
+| L05 | 12 | 2 / 1 | 20 | 2 / 1 | 337,920 | 2,922 | 1,171 | 25,000 |
+| L06 | 14 | 2 / 2 | 24 | 2 / 2 | 6,150,144 | 3,980 | 1,287 | 40,000 |
+| L07 | 16 | 2 / 2 | 28 | 2 / 2 | 44,728,320 | 39,590 | 1,409 | 60,000 |
+| L08 | 19 | 3 / 2 | 34 | 3 / 3 | 1,905,131,520 | 91,656 | 1,495 | 90,000 |
+| L09 | 22 | 3 / 3 | 40 | 3 / 3 | 97,796,751,360 | 516,555 | 1,654 | 110,000 |
+| L10 | 24 | 4 / 3 | 45 | 3 / 3 | 1,587,759,022,080 | 2,394,129 | 1,807 | 128,000 |
+
+*Shortest Plans: Ladder*
+
+| Level | Disks | Positions | Proven minimum | Positions at that distance | Input tokens | Output estimate |
+|---|---:|---:|---:|---:|---:|---:|
+| L01 | 4 | 256 | 6 | 66 | 200 | 3,000 |
+| L02 | 5 | 1,024 | 10 | 282 | 210 | 6,000 |
+| L03 | 6 | 4,096 | 14 | 918 | 211 | 10,000 |
+| L04 | 7 | 16,384 | 19 | 2,568 | 221 | 16,000 |
+| L05 | 8 | 65,536 | 25 | 9,060 | 225 | 25,000 |
+| L06 | 9 | 262,144 | 32 | 31,638 | 225 | 40,000 |
+| L07 | 10 | 1,048,576 | 40 | 106,134 | 230 | 60,000 |
+| L08 | 11 | 4,194,304 | 48 | 236,076 | 236 | 90,000 |
+| L09 | 12 | 16,777,216 | 58 | 574,950 | 243 | 110,000 |
+| L10 | 13 | 67,108,864 | 70 | 1,791,714 | 242 | 128,000 |
+
+**Frozen.** The levels are covered by the test hash and never regenerated once released; harder levels are added as
+L11+ in a new version. `python3 write.py --check` in each folder proves the committed test file is reproduced byte for
+byte from the generator output (run by `npm test` when Python is available), and the generators are deterministic
+from their fixed seeds (CP-SAT is only asked yes/no questions, whose answers do not depend on timing).
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or

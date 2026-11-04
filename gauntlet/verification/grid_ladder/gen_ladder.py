@@ -7,8 +7,9 @@ grid_extreme/build.py: the English renderer and prompt layout). Only the scale g
   people (positions) x categories:  4x3, 5x3, 6x4, 7x4, 8x5, 9x5, 9x6, 10x6, 11x7, 12x8
   clue depth: levels 1-2 use only direct clues (same person, position, next to, left of, not ...); levels 3-4 add
   either/or, if-then, betweenness, ordering chains and "of X and Y, one ... the other ..."; from level 5 every
-  kind is in play including "exactly k of 3", distances and age arithmetic, and levels 8-10 weight the compound
-  kinds most heavily (each such clue says less, so many more are needed and they interact).
+  kind is in play including "exactly k of 3", distances and age arithmetic; levels 8-9 weight the compound kinds most
+  heavily and level 10 the weakest kinds (negations, betweenness, either/or, exactly k of 3): each such clue says
+  less, so many more are needed (172 at level 10) and they must be combined.
 
 Independent check: grid_extreme/verify_sat.py parses every prompt back from English and enumerates all models of a
 from-scratch CNF encoding with a SAT solver (exactly one model, equal to the key); --minimal re-proves every clue
@@ -42,8 +43,13 @@ DIRECT = {'same': 0.35, 'at': 0.15, 'notsame': 1.0, 'notat': 1.0, 'next': 1.2, '
 LINKED = dict(DIRECT, between=1.4, chain=1.4, xor=1.6, **{'if': 1.6}, ofxy=1.2, dist=0.8)
 ALL = dict(gx.WEIGHTS)  # every kind, exactly as Deduction Grid: Extreme
 DEEP = dict(ALL, notsame=1.4, notat=1.4, notnext=1.6, xor=3.2, exactly=3.2, **{'if': 3.2}, ofxy=2.0, between=2.0, chain=2.0)
+# Level 10: the weakest kinds weighted most (negations, "between", either/or, exactly-k), so each clue says little
+# and far more of them are needed and must be combined.
+WEAK = dict(ALL, same=0.1, at=0.05, notsame=2.0, notat=1.6, next=0.6, notnext=2.0, left=1.6, imm=0.3, dist=0.6, end=0.2,
+            between=2.0, chain=1.2, xor=3.0, exactly=3.0, **{'if': 3.0}, ofxy=1.2, numgt=1.6, numdiff=0.6)
 DEPTH_NAME = {id(DIRECT): 'direct clues only', id(LINKED): 'direct + either/or, if-then, between, order, one-and-the-other',
-              id(ALL): 'every clue kind', id(DEEP): 'every clue kind, compound clues weighted most'}
+              id(ALL): 'every clue kind', id(DEEP): 'every clue kind, compound clues weighted most',
+              id(WEAK): 'every clue kind, the weakest (negations, between, either/or, exactly k) weighted most'}
 
 # level, theme, n, categories (first = people, asked first), second asked category, seed, weights, pool size, check step
 PLAN = [
@@ -56,7 +62,7 @@ PLAN = [
     (7, 'marina', 9, ['Sailors', 'Boat colours', 'Home ports', 'Catches', 'Dogs', 'Ages'], 'Catches', 507, ALL, 2000, 4),
     (8, 'allotments', 10, ['Gardeners', 'Vegetables', 'Flowers', 'Tools', 'Lunches', 'Ages'], 'Flowers', 508, DEEP, 3000, 6),
     (9, 'office', 11, ['Colleagues', 'Departments', 'Desk plants', 'Languages', 'Lunches', 'Commutes', 'Ages'], 'Departments', 509, DEEP, 4000, 8),
-    (10, 'market', 12, ['Vendors', 'Dishes', 'Lantern colours', 'Home towns', 'Spices', 'Aprons', 'Music', 'Ages'], 'Spices', 510, DEEP, 5000, 8),
+    (10, 'market', 12, ['Vendors', 'Dishes', 'Lantern colours', 'Home towns', 'Spices', 'Aprons', 'Music', 'Ages'], 'Spices', 510, WEAK, 6000, 8),
 ]
 
 

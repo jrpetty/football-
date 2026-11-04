@@ -737,7 +737,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
   },
   'reasoning.grid-ladder': {
     hook: 'Logic grids that grow from 4 people to 12: how big a grid can it solve?',
-    whatItTests: 'Deduction at growing scale: the same kind of logic grid, from 4 people and 3 attributes with 10 clues up to 12 people and 8 attributes with well over a hundred clues.',
+    whatItTests: 'Deduction at growing scale: the same kind of logic grid, from 4 people and 3 attributes with 10 clues up to 12 people and 8 attributes with 172 clues.',
     whyHard: 'Every clue is needed and the clues get more tangled level by level (either/or, if-then, exactly two of three, ages), so the top grids need hundreds of linked steps without one slip.',
     howScored: LADDER_STEPS('Two complete orderings, every value right'),
     goodScore: LOGIC_LADDER_SCORE,

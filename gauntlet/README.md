@@ -277,7 +277,7 @@ model climbs without missing a rung ([METHODOLOGY §7q](docs/METHODOLOGY.md#7q-d
 
 | Test | Id | What it does |
 |---|---|---|
-| Deduction Grid: Ladder | `reasoning.grid-ladder` | Logic grids from 4 people and 10 clues to 12 people, 8 attributes and GRIDTOP clues. How big a grid can it solve? |
+| Deduction Grid: Ladder | `reasoning.grid-ladder` | Logic grids from 4 people and 10 clues to 12 people, 8 attributes and 172 clues. How big a grid can it solve? |
 | Knights & Knaves: Ladder | `reasoning.truth-ladder` | From 4 islanders to 24, with spies, alternators and liars quoting liars: how high can it climb? |
 | Shortest Plans: Ladder | `reasoning.plans-ladder` | A scattered four-peg Tower of Hanoi, from 4 disks (6 moves) to 13 (70 moves): one move too many scores zero. |
 
