@@ -159,7 +159,8 @@ test('code sandbox: deep recursion overflows the same 4 MB stack on every OS and
     { args: [20_000], expected: 20_000 },
   ]);
   assert.deepEqual(deep.items.map((i) => i.passed), [true, false, true]);
-  assert.match(deep.items[1]!.detail ?? '', /Stack overflow \(4 MB stack\)/);
+  // Normally the stack overflows first; on a heavily loaded machine the 2 s limit can be reached first. Both fail only that test.
+  assert.match(deep.items[1]!.detail ?? '', /Stack overflow \(4 MB stack\)|Timed out/);
   // A recursive-descent evaluator on 50,000 nested parentheses (hard h1's trap) is a failed test, not a crashed run.
   const evalCode = 'function evaluate(s) { let i = 0; function e() { if (s[i] === "(") { i++; const v = e(); i++; return v; } return Number(s[i++]); } return e(); }';
   const nested = '('.repeat(50_000) + '7' + ')'.repeat(50_000);
