@@ -426,6 +426,11 @@ at least two of three attempts, or on the single attempt when running one repeat
 is shown ("once solved level 7") but never lifts the climber past a rung it missed. Random filler scores 0
 (regression-tested).
 
+Horizon is the first family of **difficulty ladders**: the contract, the per-test pass marks, the height rule and
+the ladder suites are in [§7q Difficulty ladders](#7q-difficulty-ladders); the Horizon tests are listed in
+`config/ladders.json` with pass mark 1 (full marks), and their heights are computed by the same function as
+every other ladder (`src/core/ladders.ts`).
+
 **Reproducible for years.** The ten levels of each test are frozen in the test files and covered by the test
 hash. Never regenerate a published version: a model measured in 2030 must meet the very same rungs. When
 models top out, add levels L11, L12, … in a new version and keep L01–L10 unchanged, so old and new heights stay
@@ -1344,7 +1349,75 @@ the night premium left out of the total (50); the break rule, capacities or wind
 (about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
 misread on its own (18–94).
 
-## 7q. Business ladders: finance (invoices, payslips, expenses, reconciliation)
+## 7q. Difficulty ladders
+
+Standard, Frontier and the Business Ladder's levels 1–3 saturate: the strongest models score 99–100% and stop
+separating. A **difficulty ladder** keeps separating them, and keeps doing so for years. The Horizon tier
+(§7d) was the first family; the Frontier logic, maths and coding tests and the Business level 2–3 jobs are being
+rebuilt the same way. Every ladder test, built or planned, is listed in `config/ladders.json`, checked by
+`test/ladders.test.ts`.
+
+**The contract (every ladder test).**
+
+* A **new** test. The test it is built from stays untouched, so its old results stay comparable.
+* Exactly ten cases, `L01` … `L10`, **frozen forever** once released. New levels later are `L11`, `L12`, … in a
+  new version; `L01`–`L10` never change.
+* Each level is **strictly harder** than the one below along one documented size or depth parameter (more items,
+  more rules interacting, longer chains, a bigger state space, larger inputs), never through trick wording. The
+  task and the rules are the same on every level; only scale and depth grow. A unit test asserts the growth, and
+  `config/ladders.json` names it (`grows`) and labels every rung (`rungs`, e.g. "3×3 · 20 moves").
+* **Calibration targets**, checked by blind play: L01–L02 a small model passes; L03–L05 is a mid-sized model's
+  limit; L05–L07 today's top model's limit; L08–L10 beyond any model today, but solvable in principle by a patient
+  expert. Every level has exactly one correct answer, computed by a solver and, ideally, double-checked by an
+  independent second method. The ladder view shows these bands down its left edge.
+* Random filler and the Random Baseline score about 0 on every level; the reference answer scores 100 on every
+  level; levels regenerate byte-identically from fixed seeds.
+
+**Pass marks.** A rung is passed by an attempt that scores at least the test's `passMark`:
+
+| Ladders | `passMark` | Why |
+|---|---|---|
+| Horizon (5) and the five Frontier Ladders (`reasoning.grid-ladder`, `reasoning.truth-ladder`, `reasoning.plans-ladder`, `math.exact-ladder`, `coding.engineering-ladder`) | 1 (full marks) | One exact answer: anything less is not solved. |
+| The eight Business Ladders (`work.invoices-ladder`, `work.payroll-ladder`, `work.expenses-ladder`, `work.reconciliation-ladder`, `work.crm-ladder`, `work.contract-ladder`, `work.sql-ladder`, `work.support-ladder`) | 0.9 | Partial-credit jobs (points per line, field or row): 90% of a rung's points is work a person would sign off. |
+
+Full marks allow a rounding hair (a score of 0.999 counts), exactly as Horizon always has.
+
+**The height rule** (`climbLadder` in `src/core/ladders.ts`; one function for every screen):
+
+* A rung is passed **reliably** when at least two thirds of its attempts pass (2 of 3; with one repeat, the single
+  attempt). Errors and cancelled answers are not attempts; a refusal or a timeout scores 0.
+* The **ladder height** is the highest level L such that every level 1..L was passed reliably (0: not even level
+  1). It is the headline. A missing or failed rung stops the climb: a pass higher up is shown as **"once solved
+  L7"** (a dashed ghost on the ladder) but never lifts the height.
+* **Borderline**: the height rests on a rung passed by only some of its attempts, or (partial-credit ladders) on an
+  attempt within 5 points of the pass mark. **Just short**: the next rung up was passed by some attempt, or missed
+  by less than 5 points. Both are flagged (a `~` on leaderboards), so luck is never sold as a clear result, and a
+  one-rung lead that rests on either is described as "within the noise".
+* The **test score** stays the mean over the levels (the share of the ladder climbed), so a ladder test sits in a
+  leaderboard like any other test.
+* With several ladder tests, a model's **Height** column is the mean height over the ladder tests it ran.
+
+**Where heights appear.** The test's own page ("How high can it climb?": every model's lane, every attempt's chip
+on every rung, the growth per rung); the Result Inspector; the Presenter's "How high can it climb?" slide for every
+ladder test in a run; a sortable **Height** column and a "How high each model climbs" panel on every leaderboard
+with ladder tests; the Studio script; the public site's leaderboards and test pages. Comparisons are said in plain
+English ("Atlas climbs 2 rungs higher than Nova (level 5 vs 3)").
+
+**Ladder suites.** `horizon`, `frontier-ladders` ("Frontier Ladders", the five benchmark ladders) and
+`business-ladders` ("Business Ladders", the eight work ladders; its headline score is the Business Score, §7h,
+with heights alongside). Each has its own leaderboard and is never mixed into the Standard or Frontier Index
+or the Business Ladder's adoption levels; in the app the Business ones are labelled "difficulty ladder". Default
+repeats: 1 (cost); run 3 for published heights, so "reliably" means 2 of 3. A ladder still being built is listed with
+`"planned": true` in `config/ladders.json` and in its suite: it shows as "coming soon" and is never run. When it
+lands, delete both flags and add its ten `rungs` labels; the validator (`npm run validate`, `npm test`) says so.
+
+**Why ladders stay comparable for years.** The rungs are frozen and covered by the test hash, the pass mark and
+the height rule are fixed per test in a versioned config, and the top rungs are deliberately beyond today's
+models. A model measured in 2030 climbs exactly the same rungs under exactly the same rule as one measured today,
+so its height is directly comparable; when models reach the top, new rungs are added above (L11+, new version)
+without moving the old ones.
+
+## 7r. Business ladders: finance (invoices, payslips, expenses, reconciliation)
 
 Four tests in the `work` category turn the finance tests of the business pack into **ten-rung ladders**, in the
 style of the Horizon tier (§7d): the same task on every rung, ten frozen levels `L01`–`L10`, each strictly bigger

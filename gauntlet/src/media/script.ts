@@ -8,6 +8,7 @@
 import { buildCtx, count, idx, label, money, numberTokens, ordinal, perM, pts, rankedOnTest, scoreWords, standings, type Ctx } from './common.ts';
 import { presenterSlides, runningOrder, slideOf } from './slides.ts';
 import type { Highlight, ScriptSection, SlideRef, StudioInput, VideoScript } from './types.ts';
+import { heightsNote } from '../core/ladders.ts';
 
 const WPM = 150;
 
@@ -112,6 +113,13 @@ export function buildScript(input: StudioInput, highlights: Highlight[], slides:
         lines.push(`Bottom of the table: ${label(ctx, z.id)} with ${pts(z.score)}.`);
       }
     }
+    // Difficulty ladders: the height, in the same plain words as the Presenter's "How high can it climb?" slide.
+    const heights = (input.leaderboard?.rows ?? []).flatMap((row) => {
+      const cell = row.tests?.[testId]?.ladder;
+      return cell ? [{ label: label(ctx, row.contestantId), height: cell.height, borderline: cell.borderline, justShort: cell.justShort, baseline: ctx.baseline.has(row.contestantId) }] : [];
+    });
+    const climb = heights.length ? heightsNote(heights) : null;
+    if (climb) lines.push(`How high can it climb? ${climb}`);
     const h = highlights.find((x) => x.testId === testId && x.type !== 'big-win' && !used.has(x.id));
     if (h) {
       used.add(h.id);
@@ -268,6 +276,8 @@ export function allowedNumbers(input: StudioInput, highlights: Highlight[] = [],
     if (row.totals?.costUsd > 0) for (const n of numberTokens(money(row.totals.costUsd))) ok.add(n);
     for (const a of Object.values(row.tests ?? {})) if (typeof a?.score === 'number') ok.add(pts(a.score));
     ok.add(String(row.medals?.gold ?? 0));
+    // Ladder heights and the rung gaps between them ("level 5", "2 rungs higher").
+    for (const a of Object.values(row.tests ?? {})) if (a?.ladder) for (let i = 0; i <= a.ladder.levels; i++) ok.add(String(i));
   }
   const ctx = buildCtx(input);
   for (const mm of ctx.mean.values()) for (const v of mm.values()) ok.add(pts(v));

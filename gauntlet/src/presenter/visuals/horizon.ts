@@ -11,27 +11,16 @@
 import type { CaseVisualInput } from './common.ts';
 import { replayPlan, parsePlan, parseGrid, parseBigInteger, type PlanKey } from '../../scoring/ladder.ts';
 import { extractFinalAnswer } from '../../core/extract.ts';
+import { ladderClimbs as coreClimbs, ladderLevel, type LadderResultLike } from '../../core/ladders.ts';
 
 export const HORIZON_PREFIX = 'horizon.';
-export const LADDER_RELIABLE_SHARE = 2 / 3;
+export { LADDER_RELIABLE_SHARE, ladderLevel } from '../../core/ladders.ts';
 
 export function isHorizonTest(testId: string): boolean {
   return testId.startsWith(HORIZON_PREFIX);
 }
 
-/** "L07" → 7; anything else → null. */
-export function ladderLevel(caseId: string): number | null {
-  const m = /^L(\d{1,3})$/.exec(caseId);
-  return m ? Number(m[1]) : null;
-}
-
-export interface LadderResultLike {
-  contestantId: string;
-  testId: string;
-  caseId: string;
-  score: number | null;
-  status?: string;
-}
+export type { LadderResultLike } from '../../core/ladders.ts';
 
 export interface Rung {
   level: number;
@@ -55,40 +44,18 @@ export interface Climb {
   score: number | null;
 }
 
-/** How far up the ladder each contestant got on one test. Contestants in first-seen order. */
+/**
+ * How far up a Horizon ladder each contestant got (full marks needed). The general rule for every difficulty
+ * ladder, with per-test pass marks, is src/core/ladders.ts (ladderClimbs); this is that rule at passMark 1.
+ */
 export function ladderClimbs(results: LadderResultLike[], testId: string, levels = 10): Climb[] {
-  const by = new Map<string, Map<number, number[]>>();
-  for (const r of results) {
-    if (r.testId !== testId || typeof r.score !== 'number') continue;
-    if (r.status && r.status !== 'ok' && r.status !== 'timeout' && r.status !== 'refusal') continue;
-    const lv = ladderLevel(r.caseId);
-    if (lv === null) continue;
-    let m = by.get(r.contestantId);
-    if (!m) by.set(r.contestantId, (m = new Map()));
-    m.set(lv, [...(m.get(lv) ?? []), r.score]);
-  }
-  const maxLevel = Math.max(levels, ...[...by.values()].flatMap((m) => [...m.keys()]));
-  const out: Climb[] = [];
-  for (const [contestantId, m] of by) {
-    const rungs: Rung[] = [];
-    for (let level = 1; level <= maxLevel; level++) {
-      const s = m.get(level) ?? [];
-      const full = s.filter((x) => x >= 0.999).length;
-      const mean = s.length ? s.reduce((a, b) => a + b, 0) / s.length : 0;
-      rungs.push({ level, attempts: s.length, full, mean, reliable: s.length > 0 && full / s.length >= LADDER_RELIABLE_SHARE - 1e-9 });
-    }
-    const run = rungs.filter((r) => r.attempts > 0);
-    let height = 0;
-    while (height < rungs.length && rungs[height]!.reliable) height++;
-    out.push({
-      contestantId,
-      rungs,
-      height,
-      best: Math.max(0, ...rungs.filter((r) => r.full > 0).map((r) => r.level)),
-      score: run.length ? run.reduce((a, r) => a + r.mean, 0) / run.length : null,
-    });
-  }
-  return out;
+  return coreClimbs(results, testId, { passMark: 1, levels }).map((c) => ({
+    contestantId: c.contestantId,
+    rungs: c.rungs.map((r) => ({ level: r.level, attempts: r.attempts, full: r.passes, mean: r.mean, reliable: r.reliable })),
+    height: c.height,
+    best: c.best,
+    score: c.score,
+  }));
 }
 
 /** A short caption of what one rung asks, read from the case's auditor notes / prompt (display only). */
