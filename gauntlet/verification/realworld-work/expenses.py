@@ -408,7 +408,7 @@ def gen_big(seed, tier, p=None):
     rng = random.Random(seed)
     P = dict(n_emp={'medium': 5, 'hard': 8}.get(tier), multi=3 if tier == 'hard' else 0, month={'medium': 9, 'hard': 4}.get(tier),
              extra=['small', 'local_meals'] if tier == 'hard' else [], ents=5 + (2 if tier == 'hard' else 0),
-             n_late=2 if tier == 'medium' else 3, n_dup={'medium': 2, 'hard': 4}.get(tier), late_dups=0, edge_fx=0, fams=None)
+             n_late=2 if tier == 'medium' else 3, n_dup={'medium': 2, 'hard': 4}.get(tier), late_dups=0, edge_fx=0, fams=None, floor=None, rates=None, year=2026)
     P.update(p or {})
 
     def fam(f):
@@ -418,8 +418,9 @@ def gen_big(seed, tier, p=None):
     emps = names[:n_emp]
     directors = names[n_emp:n_emp + 3]
     rates = {'GBP': D('1'), 'EUR': D(str(rng.choice(['0.84', '0.85', '0.86', '0.87']))), 'USD': D(str(rng.choice(['0.74', '0.76', '0.78', '0.79'])))}
+    rates = P['rates'] or rates
     month = P['month']
-    base = date(2026, month, 1)
+    base = date(P['year'], month, 1)
     claims = {}
     lines = []
     register = []
@@ -434,7 +435,7 @@ def gen_big(seed, tier, p=None):
             sub = base + timedelta(days=rng.randint(18, 26) - (9 if k == 0 and i < P['multi'] else 0))
             while sub.weekday() >= 5:
                 sub += timedelta(days=1)
-            miles_year = 2026 if month >= 5 else 2025
+            miles_year = P['year'] if month >= 5 else P['year'] - 1
             claims[cid] = dict(id=cid, emp=e, dept=DEPTS[(seed + i) % len(DEPTS)], submitted=sub,
                                miles_before=rng.choice([1200, 4300, 7650, 9480, 9720, 9890, 9935]), miles_year=miles_year)
     C = list(claims.values())
@@ -461,7 +462,10 @@ def gen_big(seed, tier, p=None):
         return d
 
     def edate(c, lo=3, hi=30):
-        return wday(c['submitted'] - timedelta(days=rng.randint(lo, hi)))
+        d = wday(c['submitted'] - timedelta(days=rng.randint(lo, hi)))
+        if P['floor'] is not None and d < P['floor']:  # (ladder) no expense dated before the batch's month
+            d = wday(P['floor'] + timedelta(days=rng.randint(0, 5)), back=False)
+        return d
 
     def vat_of(gross):
         return r2(gross / D(6))

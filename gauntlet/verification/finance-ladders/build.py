@@ -9,6 +9,7 @@ Fixed seeds, no clock, no randomness outside random.Random(seed). (The invoice a
 import json
 import math
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -89,28 +90,43 @@ def write(meta, cases, out_dir):
     return os.path.join(out_dir, 'work', meta['id'].split('.', 1)[1] + '.json'), text + '\n'
 
 
+CHAIN = re.compile('^(paid_out|advances_left|miles_to_date|adjusted_balance)[.]')
+
+
+def chain_weights(exp, careless, W, sets, share):
+    """Trap weights, plus the chained figures (payouts, advances, miles, month balances) weighted so that together they
+    are `share` of the points: a broken chain costs well over the 10% a rung can lose and still pass."""
+    w = trap_weights(exp, careless, W, sets)
+    paths = ['.'.join(k) for k, _ in leaves(exp)]
+    chain = [p for p in paths if CHAIN.match(p)]
+    rest = sum(w.get(p, 1) for p in paths if not CHAIN.match(p))
+    cw = max(W, round(share / (1 - share) * rest / max(1, len(chain))))
+    for p in chain:
+        w[p] = cw
+    return w, cw
+
+
 def expenses_test():
     rows, scripted = [], {}
     for c in EX.make_cases():
         exp = jsonable(c['expected'])
         sc = {'type': 'json', 'lenient': True, 'numberTolerance': 1e-9, 'sets': {'non_compliant': 2}}
-        sc['weights'] = trap_weights(exp, jsonable(c['careless']), EX.TRAP_WEIGHT, ['non_compliant'])
-        notes = (f"[level {c['level']}] {c['n']} claim lines from {c['emps']} employees in {c['claims']} claims. Rules in play: {len(c['fams'])} families ({', '.join(c['fams'])}); "
-                 f"{len(exp['non_compliant'])} lines paid less than claimed. Key = audit() of verification/realworld-work/expenses.py over the structured lines with exact decimals (half-up to the penny); "
-                 "every rule family the level does not print changes nothing when switched off, every exact copy is a planted duplicate. "
-                 f"Fields where a trap sits are worth {EX.TRAP_WEIGHT} points, routine fields 1. {LADDER_NOTE}")
-        rows.append(dict(id=c['id'], prompt=c['prompt'], expected=exp, scorer=sc, notes=notes))
-        scripted[c['id']] = {'careless': jsonable(c['careless']), 'slip': jsonable(c['slip']), 'slip_kind': c['slip_kind']}
+        sc['weights'], cw = chain_weights(exp, jsonable(c['careless']), EX.TRAP_WEIGHT, ['non_compliant'], 0.3)
+        notes = (f"[level {c['level']}] {c['months']} month{'s' if c['months'] > 1 else ''}, {c['n']} claim lines from {c['emps']} employees in {c['claims']} claims. Rules in play: {len(c['fams'])} families ({', '.join(c['fams'])}); "
+                 f"{len(exp['non_compliant'])} lines paid less than claimed. Key = audit() of verification/realworld-work/expenses.py over every month's lines in order, exact decimals; "
+                 "second derivations: month-by-month audits over the months so far give every line the same result, the advance set-off step by step equals its closed form, miles summed directly. "
+                 f"Trap fields {EX.TRAP_WEIGHT} points, routine 1, each payout / advance / miles figure {cw}. {LADDER_NOTE}")
+        rows.append(dict(id=c['id'], prompt=c['make_prompt'](cw), expected=exp, scorer=sc, notes=notes))
+        scripted[c['id']] = {'careless': jsonable(c['careless']), 'slip': jsonable(c['slip']), 'slip_kind': c['slip_kind'], 'chain': jsonable(c['chain'])}
     meta = dict(
         id='work.expenses-ladder', name='Expense Policy Check: Ladder',
-        description=('Ten frozen levels of the same expenses audit: claim lines checked against a written policy, with every line paid less than claimed (the first rule it breaks and the amount to pay), '
-                     'the total per employee, the batch total and the reclaimable VAT, to the penny. Each level is strictly bigger and stacks more rules of the same policy: level 1 has 8 lines and two rules '
-                     '(receipts from £25.00, hotel limits per night); level 2 adds meal limits shared across a day per city and first-class rail; level 3 alcohol, the 60-day limit with late-submission approvals and duplicates; '
-                     'level 4 client entertainment and its approvals, mileage at 45p then 25p with passengers, and euro and dollar conversion; level 5 is the full policy (with the hotel-night meal uplift) at the size of the hardest '
-                     'Expense Policy Check case; levels 6 to 10 grow to over 900 lines from 27 employees with more claims per person, late lines claimed again and foreign taxis either side of £25.00 after conversion. '
-                     'A level is passed at 90% of its points; the headline is the highest level passed reliably.'),
+        description=('Ten frozen levels of expense auditing for one team, against a written policy with exceptions to the exceptions: every line paid less than claimed (rule and amount), what to pay each person, and the reclaimable VAT. '
+                     'Levels 1-2 are one monthly batch with two and four rules; from level 3 a level is two to six consecutive monthly batches for the same people, and the months depend on each other: mileage at 45p '
+                     'then 25p after 10,000 miles is counted through the months and restarts on 6 April, expenses come back as duplicates in later months, late lines need an approval for their own claim, meal limits are '
+                     "shared with earlier lines of the same day, and (from level 5) cash advances are set off month by month and carried on. The answer carries the state: each month's payout per person, the advances left "
+                     'and the miles to date, so one early slip moves every later month. A level is passed at 90% of its points; the headline is the highest level passed reliably.'),
         tags=['work', 'finance', 'expenses', 'policy', 'arithmetic', 'real-world', 'ladder'],
-        hook='Ten rungs of expense claims, from 8 lines to over 900. How far up can it pay every person exactly by the policy?',
+        hook='Six months of expense claims for one team, every month depending on the last. How far up can it pay everyone right?',
         scorer={'type': 'json', 'lenient': True, 'numberTolerance': 1e-9, 'sets': {'non_compliant': 2}},
     )
     return meta, rows, scripted
@@ -121,22 +137,23 @@ def reconciliation_test():
     for c in BR.make_cases():
         exp = jsonable(c['expected'])
         sc = {'type': 'json', 'lenient': True, 'numberTolerance': 1e-9, 'unorderedArrays': True, 'sets': {'differences': 2}}
-        sc['weights'] = trap_weights(exp, jsonable(c['careless']), BR.TRAP_WEIGHT, ['differences'])
-        notes = (f"[level {c['level']}] {c['n_bank']} statement lines and {c['n_ledger']} cash-book entries. Rules in play: the basics (one-to-one matches, timing items, fees, interest) + {len(c['fams'])} families ({', '.join(c['fams'])}); "
-                 f"{len(exp['differences'])} explained differences. Key = the generator's own transaction list (verification/realworld-work/bankrec.py); check_unique() re-derives every 1:1 match from the printed fields; "
-                 f"balance() proves adjusted cash book = adjusted bank = {exp['adjusted_balance']}; every reason in the key belongs to a printed rule. "
-                 f"Fields where a trap sits are worth {BR.TRAP_WEIGHT} points, routine fields 1. {LADDER_NOTE}")
-        rows.append(dict(id=c['id'], prompt=c['prompt'], expected=exp, scorer=sc, notes=notes))
-        scripted[c['id']] = {'careless': jsonable(c['careless']), 'slip': jsonable(c['slip']), 'slip_kind': c['slip_kind']}
+        sc['weights'], bw = chain_weights(exp, jsonable(c['careless']), BR.TRAP_WEIGHT, ['differences'], 0.25)
+        notes = (f"[level {c['level']}] {c['months']} month{'s' if c['months'] > 1 else ''}, {c['n_bank']} statement lines and {c['n_ledger']} cash-book entries, {c['cross']} entries cleared in a later month. "
+                 f"Rules in play: the basics (one-to-one matches, timing items, fees, interest) + {len(c['fams'])} families ({', '.join(c['fams'])}); {len(exp['differences'])} explained differences. "
+                 "Key = the generator's own transaction list (Rec of verification/realworld-work/bankrec.py over several months); second derivations: every month's adjusted balance computed from the cash-book side and "
+                 "from the bank side agrees, and every one-to-one match is re-derived from the printed fields alone and is the only candidate. "
+                 f"Trap fields {BR.TRAP_WEIGHT} points, routine 1, each month's balance {bw}. {LADDER_NOTE}")
+        rows.append(dict(id=c['id'], prompt=BR.prompt(c['rec'], set(c['fams']), bw), expected=exp, scorer=sc, notes=notes))
+        scripted[c['id']] = {'careless': jsonable(c['careless']), 'slip': jsonable(c['slip']), 'slip_kind': c['slip_kind'], 'chain': jsonable(c['chain'])}
     meta = dict(
         id='work.reconciliation-ladder', name='Reconcile the Account: Ladder',
-        description=('Ten frozen levels of the same month-end bank reconciliation: every statement line and cash-book entry matched or given a reason from a fixed list, every explained difference with its amount, '
-                     'and the adjusted balance. Each level is strictly bigger and stacks more rules of the same list: level 1 has 14 lines a side (one-to-one matches, timing items, fees and interest, a payment keyed '
-                     'with two digits swapped); level 2 adds direct debits nobody entered and payments made or entered twice; level 3 instalments, part-payments and a reversed charge; level 4 BACS runs, a returned cheque '
-                     "and dollar payments at a different rate; level 5 is the full rules (with last month's outstanding items) at the size of the hardest Reconcile the Account case; levels 6 to 10 grow to about 700 lines a "
-                     'side with more of every trap, look-alike payments and an instalment the bank paid twice. A level is passed at 90% of its points; the headline is the highest level passed reliably.'),
+        description=('Ten frozen levels of bank reconciliation for one account: every statement line and cash-book entry matched or given a reason, every explained difference, and the adjusted balance. '
+                     'Levels 1-2 are one month; from level 3 a level is two to six consecutive months nobody has reconciled, and the months depend on each other: cheques, paying-ins and keyed-in payments clear '
+                     'in a later month, instalment plans run across months, charges are reversed and cheques returned the month after, and because the cash book was never corrected every month\'s balance must '
+                     "allow for every correction found so far and every item still outstanding at that month's end. The month balances are a quarter of the points, so one early slip carries into every later month. "
+                     'A level is passed at 90% of its points; the headline is the highest level passed reliably.'),
         tags=['work', 'finance', 'bookkeeping', 'reconciliation', 'matching', 'real-world', 'ladder'],
-        hook='Ten rungs of bank reconciliation, from 28 lines to 1,400. How far up can it match every line and land the balance to the penny?',
+        hook='Six months of bank statements nobody reconciled, each month resting on the last. How far up can it land every balance?',
         scorer={'type': 'json', 'lenient': True, 'numberTolerance': 1e-9, 'unorderedArrays': True, 'sets': {'differences': 2}},
     )
     return meta, rows, scripted

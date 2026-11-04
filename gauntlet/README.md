@@ -357,14 +357,14 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | Check the Payslips | `work.payroll-check` | Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans. |
 | Clean the Customer List | `work.crm-dedupe` | Merge the duplicates in a messy customer list by the rules, without merging different people. |
 
-**Business ladders: finance** (category `work`; ten frozen levels each, more items and more rules per level, a level passed at 90% of its points; see [METHODOLOGY §7r](docs/METHODOLOGY.md#7r-business-ladders-finance-invoices-payslips-expenses-reconciliation))
+**Business ladders: finance** (category `work`; ten frozen levels each, deeper chains of dependent items and more rules per level, a level passed at 90% of its points; see [METHODOLOGY §7r](docs/METHODOLOGY.md#7r-business-ladders-finance-invoices-payslips-expenses-reconciliation))
 
 | Test | Id | What it does |
 |---|---|---|
-| Invoices to Pay: Ladder | `work.invoices-ladder` | Ten rungs of supplier invoices, from five documents to a hundred and thirty. How far up can it pay the right ones to the penny? |
-| Check the Payslips: Ladder | `work.payroll-ladder` | Ten rungs of payslips, from 4 staff to 120. How far up can it find every mistake and fix it to the penny? |
-| Expense Policy Check: Ladder | `work.expenses-ladder` | Ten rungs of expense claims, from 8 lines to over 900. How far up can it pay every person exactly by the policy? |
-| Reconcile the Account: Ladder | `work.reconciliation-ladder` | Ten rungs of bank reconciliation, from 28 lines to 1,400. How far up can it match every line and land the balance to the penny? |
+| Invoices to Pay: Ladder | `work.invoices-ladder` | Deliveries drawn down invoice by invoice, up to ten pools of eight documents. How far up can it pay the right ones? |
+| Check the Payslips: Ladder | `work.payroll-ladder` | Up to six months of payslips on the cumulative basis, each month resting on the last. How far up can it put the payroll right? |
+| Expense Policy Check: Ladder | `work.expenses-ladder` | Up to six months of expense claims for one team: mileage, duplicates and advances carried through. How far up can it pay everyone right? |
+| Reconcile the Account: Ladder | `work.reconciliation-ladder` | Up to six months of bank statements nobody reconciled, each balance resting on the last. How far up can it go? |
 
 **Business ladders: data & support** (category `work`; ten frozen levels each, a level is passed at 90%; see [METHODOLOGY §7s](docs/METHODOLOGY.md#7s-business-ladders-data-and-support))
 

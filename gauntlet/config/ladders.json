@@ -108,8 +108,8 @@
       "category": "work",
       "basedOn": "work.invoice-matching",
       "passMark": 0.9,
-      "grows": "Volume and stacked rules: a handful of invoices under two rule families, up to the full payment policy at maximum volume.",
-      "rungs": ["5 documents · 2 rules", "8 documents · 4 rules", "14 documents · 7 rules", "24 documents · 10 rules", "46 documents · full policy", "65 documents · chains", "80 documents · chains", "96 documents · chains", "113 documents · chains", "130 documents · chains"]
+      "grows": "Dependency depth: from a handful of invoices under two rules to ten pools of eight documents each drawing on what the ones before them left, under the full payment policy.",
+      "rungs": ["5 documents · 2 rules", "1 pool of 3 · 4 rules", "2 pools of 4 · 7 rules", "3 pools of 5 · 10 rules", "4 pools of 5 · full policy", "5 pools of 6", "6 pools of 6", "7 pools of 7", "8 pools of 8", "10 pools of 8"]
     },
     {
       "id": "work.payroll-ladder",
@@ -118,8 +118,8 @@
       "category": "work",
       "basedOn": "work.payroll-check",
       "passMark": 0.9,
-      "grows": "Payslips and pay rules: a few payslips with two rule families, up to a whole payroll with every rule interacting.",
-      "rungs": ["4 staff · 2 rules", "6 staff · 4 rules", "9 staff · 6 rules", "12 staff · 8 rules", "20 staff · full rates", "32 staff · 30% combined", "46 staff · combined", "64 staff · combined", "88 staff · combined", "120 staff · 80% combined"]
+      "grows": "Months that rest on each other: one month's payslips, up to six months of a payroll on the cumulative basis with code changes, P45s, directors and linked sickness.",
+      "rungs": ["1 month · 4 staff", "1 month · 6 staff", "2 months · 6 staff", "3 months · 8 staff", "3 months · full rules", "4 months · 12 staff", "5 months · 14 staff", "5 months · 16 staff", "6 months · 18 staff", "6 months · 22 staff"]
     },
     {
       "id": "work.expenses-ladder",
@@ -128,8 +128,8 @@
       "category": "work",
       "basedOn": "work.expense-audit",
       "passMark": 0.9,
-      "grows": "Claims and policy clauses: a few claims under two clauses, up to a month of claims under the full policy.",
-      "rungs": ["8 lines · 2 rules", "21 lines · 4 rules", "28 lines · 7 rules", "57 lines · 10 rules", "168 lines · full policy", "262 lines", "497 lines", "614 lines", "772 lines", "931 lines"]
+      "grows": "Months that rest on each other: one batch under two rules, up to six monthly batches for one team with mileage, duplicates, late lines and cash advances carried through.",
+      "rungs": ["1 month · 2 rules", "1 month · 4 rules", "2 months · 8 rules", "2 months · 11 rules", "3 months · full policy", "3 months · 5 people", "4 months · 5 people", "4 months · 6 people", "5 months · 6 people", "6 months · 7 people"]
     },
     {
       "id": "work.reconciliation-ladder",
@@ -138,8 +138,8 @@
       "category": "work",
       "basedOn": "work.bank-reconciliation",
       "passMark": 0.9,
-      "grows": "Bank lines and matching rules: a short statement with exact matches, up to a long statement with splits, fees and timing differences.",
-      "rungs": ["28 lines · 1 rule", "49 lines · 3 rules", "73 lines · 5 rules", "95 lines · 8 rules", "275 lines · all rules", "455 lines", "628 lines", "831 lines", "1,075 lines", "1,416 lines"]
+      "grows": "Months that rest on each other: one month's statement, up to six unreconciled months where items clear late and every balance carries all earlier corrections.",
+      "rungs": ["1 month · 1 rule", "1 month · 3 rules", "2 months · 5 rules", "2 months · 8 rules", "3 months · all rules", "3 months · denser", "4 months", "4 months · denser", "5 months", "6 months"]
     },
     {
       "id": "work.crm-ladder",
