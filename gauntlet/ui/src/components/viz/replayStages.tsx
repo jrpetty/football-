@@ -10,15 +10,17 @@ import type { ReplayData, ReplayFrame } from '../../types.ts';
 import { DrawStage } from './DrawStage.tsx';
 import { NeedleStage } from './NeedleStage.tsx';
 import { WhispersStage } from './WhispersStage.tsx';
+import { WorkWorldStage, workWorldData } from './WorkWorldStage.tsx';
 import { drawModel, needleModel, visualOf, whispersModel } from './vizModel.ts';
 
-export type StageKind = 'needle' | 'whispers' | 'draw';
+export type StageKind = 'needle' | 'whispers' | 'draw' | 'workworld';
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object';
 
 export function stageKind(replay: ReplayData, detail: unknown): StageKind | null {
   const kind = replay.visual?.kind;
+  if (kind === 'workworld' && workWorldData(replay)) return 'workworld';
   if (!isObj(detail)) return null;
   if ((kind === 'needle-haystack' || /^Needle in a Haystack/.test(replay.title)) && Array.isArray(detail.needles)) return 'needle';
   if ((kind === 'chain-of-whispers' || /^Chain of Whispers/.test(replay.title)) && Array.isArray(detail.facts) && Array.isArray(detail.rounds)) return 'whispers';
@@ -28,12 +30,14 @@ export function stageKind(replay: ReplayData, detail: unknown): StageKind | null
 
 export function CustomReplayStage({ kind, replay, frames, idx, video, detail }: { kind: StageKind; replay: ReplayData; frames: ReplayFrame[]; idx: number; video: boolean; detail: unknown }) {
   const model = useMemo(() => {
+    if (kind === 'workworld') return { workworld: workWorldData(replay) };
     if (kind === 'needle') return { needle: needleModel(detail, visualOf(replay, 'needle-haystack')) };
     if (kind === 'whispers') return { whispers: whispersModel(detail, visualOf(replay, 'chain-of-whispers')) };
     return { draw: drawModel(detail, replay) };
   }, [kind, replay, detail]);
   const frame = frames[Math.min(idx, frames.length - 1)];
   if (!frame) return null;
+  if (model.workworld) return <WorkWorldStage data={model.workworld} frames={frames} idx={idx} video={video} />;
   if (model.needle) return <NeedleStage model={model.needle} frame={frame} frames={frames} idx={idx} video={video} />;
   if (model.whispers) return <WhispersStage model={model.whispers} idx={idx} video={video} fallbackText={frame.observation} />;
   if (model.draw) return <DrawStage model={model.draw} idx={idx} video={video} />;

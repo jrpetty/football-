@@ -284,6 +284,13 @@ default repeat count. Bump the suite `version` when you change it.
 | False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
+**Real-World Work (`work`)**
+
+| Test | Id | What it does |
+|---|---|---|
+| The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
+| The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

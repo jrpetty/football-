@@ -1,0 +1,222 @@
+/* Work-world replay stage (WorkWorldStage.tsx): inbox, calendar week, outbox, bookings, checklist. */
+.ww {
+  --ww-cal-0: var(--accent);
+  --ww-cal-1: #db2777;
+}
+.ww-outcome {
+  margin: -0.4rem 0 0;
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.ww-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 1rem;
+  align-items: start;
+}
+.ww-cols.even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+@media (max-width: 1000px) {
+  .ww-cols,
+  .ww-cols.even {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ww-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.ww-flag {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+.ww-flag.k-severe,
+.ww-flag.k-outdated {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+}
+.ww-flag.k-report {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.ww-inbox ul,
+.ww-list,
+.ww-tasks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+.ww-inbox li {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 0.9fr) minmax(0, 1.4fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ww-inbox li.opened {
+  font-weight: 400;
+  color: var(--text-3);
+}
+.ww-inbox li.is-now,
+.ww-list li.is-now {
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+.ww-id {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.ww-from,
+.ww-subj {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ww-chip {
+  display: inline-block;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+.ww-chip.trap {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+}
+.ww-chip.brief {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ww-key {
+  margin-left: 0.5rem;
+  padding-left: 0.9rem;
+  position: relative;
+}
+.ww-key::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-top: -0.3rem;
+  border-radius: 2px;
+  background: var(--ww-cal-0);
+}
+.ww-key.cal-1::before {
+  background: var(--ww-cal-1);
+}
+.ww-grid {
+  display: grid;
+  grid-template-columns: 2.6rem repeat(var(--days), minmax(0, 1fr));
+  gap: 0.25rem;
+}
+.ww-hours {
+  position: relative;
+  margin-top: 1.5rem;
+  height: 26rem;
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+.ww-hours span {
+  position: absolute;
+  transform: translateY(-50%);
+}
+.ww-day-h {
+  height: 1.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ww-day-b {
+  position: relative;
+  height: 26rem;
+  border-radius: 6px;
+  background: repeating-linear-gradient(180deg, transparent 0 calc(100% / 13 - 1px), var(--border) calc(100% / 13 - 1px) calc(100% / 13)), var(--surface-inset);
+}
+.ww-ev {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  overflow: hidden;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  font-size: 0.66rem;
+  line-height: 1.25;
+  color: #fff;
+  background: color-mix(in srgb, var(--ww-cal-0) 80%, transparent);
+  border: 1px solid var(--surface-1);
+}
+.ww-ev.cal-1 {
+  left: 30%;
+  background: color-mix(in srgb, var(--ww-cal-1) 85%, transparent);
+}
+.ww-ev.cancelled {
+  background: transparent;
+  color: var(--text-3);
+  border: 1px dashed var(--border-strong);
+  text-decoration: line-through;
+}
+.ww-ev.ghost {
+  background: transparent;
+  border: 2px dashed var(--accent);
+}
+.ww-ev.is-now {
+  box-shadow: 0 0 0 2px var(--warn), 0 0 12px var(--warn);
+  z-index: 2;
+}
+.ww-list li {
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+.ww-list small,
+.ww-tasks small {
+  color: var(--text-3);
+}
+.ww-tasks li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.1rem 0.6rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.92rem;
+}
+.ww-tasks .ww-detail {
+  grid-column: 2;
+  color: var(--text-2);
+  font-size: 0.85rem;
+}
+.ww-tasks li.o-done .ww-chip {
+  background: var(--good-soft);
+  color: var(--good-text);
+}
+.ww-tasks li.o-partly .ww-chip {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+.ww-tasks li.o-wrongly .ww-chip {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+}
+.ww.video .ww-inbox li {
+  font-size: 0.95rem;
+}
