@@ -295,6 +295,8 @@ default repeat count. Bump the suite `version` when you change it.
 | What Changed in the Contract? | `work.contract-redline` | Two drafts, fifteen hidden changes and a lot of noise. Would you sign it? |
 | Ask the Database | `work.sql-questions` | Twelve questions from the boss, one SQLite query each. The query runs on hidden copies of the database too, so hard-coding fails. |
 | Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
+| The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
+| The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests

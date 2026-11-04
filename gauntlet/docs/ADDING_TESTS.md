@@ -381,6 +381,46 @@ could read `hidden/` or `fix/`. So don't play Fix the Bug through anything with 
 the test hash covers every fixture file, results produced after anyone edits a fixture (to cheat or by accident)
 carry a different hash and are left out of the leaderboard.
 
+### Adding a work-world scenario (tool simulations like The Personal Assistant)
+
+`src/programs/lib/workworld/` is a small engine for "do a job through tools" simulations: an accounts clerk with a
+ledger and a bank, a helpdesk agent with a knowledge base and a refund button, a recruiter, an office manager, an
+analyst with a query box, a warehouse. The Personal Assistant (`src/programs/assistant.ts` + `lib/assistant/`) is the
+worked example. The pieces:
+
+| File | What it gives you |
+|---|---|
+| `time.ts` | One UK week: `fmtDay` ("Thu 12 Mar"), `fmtTime`, and generous parsers (`parseDay`, `parseTime`, `parseRange`) that accept "Thursday 12 March", "12/03", "2pm to 2:30pm", "14:00 for 45 min" and reject contradictions. |
+| `protocol.ts` | `parseAction`: the last `ACTION:` line, its arguments (split on `\|`), the text after it (fences removed), a `MEMO:` line; tolerant of markdown, case and spelling ("CREATE EVENT"). Never throws. |
+| `world.ts` | `WorkWorld`: mailbox, calendars, contacts, notes, bookable `Service`s, notes to the owner, and the **effect log** (every change, stamped with its action number). Extend the class to add your own modules (a ledger, tickets). |
+| `tools.ts` | Ready-made tool sets: `mailTools()`, `calendarTools()`, `contactTools()`, `noteTools()`, `bookingTools()`, `userTools(owner)`. A `Tool` is `{ name, aliases, usage, readOnly?, takesBody?, run(world, call, n) }`; write your own the same way. |
+| `engine.ts` | `runWorkWorld(ctx, spec)`: the turn loop (budget, invalid actions, cut-off bodies, older results shortened, memo, status line, backticked read-only options for the Random Baseline) and the replay frames. `actionsHelp(tools)` writes the ACTIONS block of your system prompt. |
+| `score.ts` | The shared formula (`computeScore`, `taskValue`, `WORKWORLD_FORMULA`): requests valued by the share of their checks, −0.5 when done wrongly, efficiency against a par, a 5% reporting share, safety penalties with a cap at 20, over-action penalties. |
+| `replay.ts` | `buildVisual(world, …)`: display-only data for the dashboard's work-world stage (`ui/src/components/viz/WorkWorldStage.tsx`): inbox, calendar week, sent items, bookings, flags, final checklist. |
+
+A new scenario is a program plus three library files:
+
+1. **Generator** (`lib/<id>/world.ts`): `generate(rng, tier)` builds the seeded world AND the hidden spec each
+   request is checked against. Only `ctx.rng`. Give every week a third easy, medium and hard requests, put each trap's
+   rule in the system prompt, keep the answers out of the prompt.
+2. **Scenario** (`lib/<id>/scenario.ts`): `class MyWorld extends WorkWorld` (add services with `addService`, or new
+   modules), the tool list (`[...mailTools(), ...myTools()]`), the system prompt (`actionsHelp(tools)` lists the
+   actions) and the opening message.
+3. **Checks** (`lib/<id>/checks.ts`): one checker per request over the final world and `world.effects` (never the
+   model's words, except where the request is about meaning), returning `Check[]` plus a `wrongly` condition, then
+   safety violations, over-actions and reports, then `computeScore`.
+4. **Players** (`lib/<id>/players.ts`): solvers that prove each request solvable and a scripted reference (its
+   length is the par), plus careless and gullible scripts for the spread.
+5. **Program** (`src/programs/<id>.ts`): `runWorkWorld(ctx, spec)`, evaluate, return items per request, the frames
+   and `replay.visual = buildVisual(...)` (the stage draws any scenario that has an inbox and/or calendars).
+6. Register it, add `tests/<category>/<id>.json`, an explainer, a `verification/<id>/check.ts` that prints the
+   spread and fingerprints the generated worlds, and `test/program.<id>.test.ts` (reference ≥ 95, gullible ≤ 20,
+   do-nothing and Random Baseline 0, specific wrong answers marked as intended, style-insensitive parsing,
+   determinism, fair-play check silent on the scripted replies).
+
+The whole `lib/workworld/` folder is imported by each scenario, so it is part of every scenario's program hash: a
+change to the engine invalidates their old results (bump their versions).
+
 ---
 
 ## 3. Adding an Arena game
