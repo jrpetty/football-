@@ -1,0 +1,602 @@
+{
+  "kind": "prompt",
+  "id": "life.tariff-chooser",
+  "version": "1.0.0",
+  "name": "Cheapest Deal",
+  "description": "Pick the cheapest energy tariff or phone contract for a real household: monthly usage, standing charges, quarterly price-cap changes, Economy 7, prices quoted without VAT, exit fees, cashback, April price rises, half-price promos and roaming. Every option’s exact total and the winner are checked against an exact calculator.",
+  "difficulty": "hard",
+  "tags": [
+    "real-world",
+    "everyday-life",
+    "money",
+    "arithmetic",
+    "verifier"
+  ],
+  "hook": "Which deal is really cheapest once every fee and price rise is counted?",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 700,
+    "outputTokens": 10000
+  },
+  "category": "life",
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "fields"
+  },
+  "cases": [
+    {
+      "id": "e01",
+      "prompt": "I live alone in a one-bed flat with electricity only (no gas). I want the cheapest electricity deal for the next 12 months, January to December 2027.\n\nMY USAGE (from my smart meter, kWh per month)\nMonth | Electricity\nJanuary 2027 (31 days) | 253\nFebruary 2027 (28 days) | 251\nMarch 2027 (31 days) | 238\nApril 2027 (30 days) | 215\nMay 2027 (31 days) | 181\nJune 2027 (30 days) | 167\nJuly 2027 (31 days) | 146\nAugust 2027 (31 days) | 159\nSeptember 2027 (30 days) | 180\nOctober 2027 (31 days) | 227\nNovember 2027 (30 days) | 243\nDecember 2027 (31 days) | 246\n\nTHE TARIFFS\nA. BrightSpark Fix 12. Fixed for 12 months.\n   Electricity: 25.25p/kWh, standing charge 52.54p/day\nB. Volt Simple Saver. Fixed for 12 months.\n   Electricity: 22.86p/kWh, standing charge 65.92p/day\nC. Northern Lights Basic. Fixed for 12 months.\n   Electricity: 26.20p/kWh, standing charge 40.21p/day\n\nHOW TO WORK IT OUT: for each tariff, work out each month’s bill = kWh × unit rate + days in the month × standing charge (for Economy 7: the night share of that month’s kWh at the night rate and the rest at the day rate), add VAT at 5% where a tariff’s prices exclude it, and round each monthly bill to the nearest penny (halves round up). Then add up the months, subtract any monthly discounts and cashback that apply, and add any exit fee that applies.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (BrightSpark Fix 12)",
+              "kind": "money",
+              "value": 82452
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Volt Simple Saver)",
+              "kind": "money",
+              "value": 81348
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Northern Lights Basic)",
+              "kind": "money",
+              "value": 80334
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "C",
+              "choices": {
+                "A": "BrightSpark Fix 12",
+                "B": "Volt Simple Saver",
+                "C": "Northern Lights Basic"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 824.52,
+            "B": 813.48,
+            "C": 803.34
+          },
+          "cheapest": "C"
+        }
+      },
+      "notes": "[easy] Exact totals (monthly bills rounded to the penny, halves up): A £824.52, B £813.48, C £803.34. Cheapest: C."
+    },
+    {
+      "id": "m01",
+      "prompt": "I want the new Pixelon 9 phone and a 24-month deal starting with the January 2027 bill. I don’t travel. Which option is cheapest over the 24 months, including the phone?\n\nTHE OPTIONS\nA. Contract with the phone: £42.00 a month for 24 months, £30.00 upfront for the phone. No price rises.\nB. Buy the phone + SIM-only: Phone £699.00 from the shop. SIM-only £12.00 a month for 24 months, no price rises.\nC. Phone on 0% credit + SIM: Phone £719.00 paid in 24 equal monthly instalments (0% interest). SIM-only £10.50 a month, no price rises.\n\nHOW TO WORK IT OUT: the total for each option is everything paid over the 24 months (January 2027 to the end of the contract): every monthly bill, upfront costs, the phone, roaming and extras, minus any trade-in or sale money. A price rise applies to every bill from that April onwards (they add up: the second April adds another rise on top). Everything is exact to the penny.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Contract with the phone)",
+              "kind": "money",
+              "value": 103800
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Buy the phone + SIM-only)",
+              "kind": "money",
+              "value": 98700
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Phone on 0% credit + SIM)",
+              "kind": "money",
+              "value": 97100
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "C",
+              "choices": {
+                "A": "Contract with the phone",
+                "B": "Buy the phone + SIM-only",
+                "C": "Phone on 0% credit + SIM"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1038,
+            "B": 987,
+            "C": 971
+          },
+          "cheapest": "C"
+        }
+      },
+      "notes": "[easy] Exact totals: A £1,038.00, B £987.00, C £971.00. Cheapest: C."
+    },
+    {
+      "id": "e02",
+      "prompt": "We are a family of four in a semi with gas central heating. Which dual-fuel deal is cheapest for January to December 2027?\n\nMY USAGE (from my smart meter, kWh per month)\nMonth | Electricity | Gas\nJanuary 2027 (31 days) | 344 | 1460\nFebruary 2027 (28 days) | 345 | 1288\nMarch 2027 (31 days) | 317 | 1191\nApril 2027 (30 days) | 275 | 809\nMay 2027 (31 days) | 246 | 525\nJune 2027 (30 days) | 213 | 324\nJuly 2027 (31 days) | 220 | 255\nAugust 2027 (31 days) | 213 | 269\nSeptember 2027 (30 days) | 255 | 449\nOctober 2027 (31 days) | 307 | 768\nNovember 2027 (30 days) | 301 | 1262\nDecember 2027 (31 days) | 378 | 1498\n\nTHE TARIFFS\nA. HomeHeat Fixed. Fixed for 12 months.\n   Electricity: 24.78p/kWh, standing charge 50.82p/day\n   Gas: 6.44p/kWh, standing charge 31.74p/day\nB. GreenGrid Online. Fixed for 12 months.\n   Electricity: 24.26p/kWh, standing charge 61.23p/day\n   Gas: 6.71p/kWh, standing charge 32.18p/day\nC. Thrift Energy Value. Prices shown EXCLUDE VAT; add VAT at 5% to each monthly bill.\n   Electricity: 23.46p/kWh, standing charge 50.86p/day\n   Gas: 6.60p/kWh, standing charge 33.70p/day\n\nHOW TO WORK IT OUT: for each tariff, work out each month’s bill = kWh × unit rate + days in the month × standing charge (for Economy 7: the night share of that month’s kWh at the night rate and the rest at the day rate), add VAT at 5% where a tariff’s prices exclude it, and round each monthly bill to the nearest penny (halves round up). Then add up the months, subtract any monthly discounts and cashback that apply, and add any exit fee that applies.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (HomeHeat Fixed)",
+              "kind": "money",
+              "value": 179765
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (GreenGrid Online)",
+              "kind": "money",
+              "value": 184677
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Thrift Energy Value)",
+              "kind": "money",
+              "value": 186484
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "A",
+              "choices": {
+                "A": "HomeHeat Fixed",
+                "B": "GreenGrid Online",
+                "C": "Thrift Energy Value"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1797.65,
+            "B": 1846.77,
+            "C": 1864.84
+          },
+          "cheapest": "A"
+        }
+      },
+      "notes": "[easy] Exact totals (monthly bills rounded to the penny, halves up): A £1,797.65, B £1,846.77, C £1,864.84. Cheapest: A."
+    },
+    {
+      "id": "m02",
+      "prompt": "Phone upgrade time. The 24 months start with the November 2026 bill and end with October 2028. Networks put prices up every April — the April bill is the first one at the higher price. Which deal costs least in total, phone included?\n\nTHE OPTIONS\nA. Network One handset deal: £38.00 a month, £49.00 upfront. Goes up by £1.80 a month from each April bill.\nB. SIM-only 24 + phone outright: Phone £629.00. SIM-only £15.00 a month, half price (£7.50) for the first 6 months. Goes up by £1.50 a month from each April bill.\nC. Refurbished phone + rolling SIM: Refurbished phone £489.00. Rolling 30-day SIM £19.00 a month, no price rises.\n\nHOW TO WORK IT OUT: the total for each option is everything paid over the 24 months (November 2026 to the end of the contract): every monthly bill, upfront costs, the phone, roaming and extras, minus any trade-in or sale money. A price rise applies to every bill from that April onwards (they add up: the second April adds another rise on top). Everything is exact to the penny.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Network One handset deal)",
+              "kind": "money",
+              "value": 100780
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (SIM-only 24 + phone outright)",
+              "kind": "money",
+              "value": 98300
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Refurbished phone + rolling SIM)",
+              "kind": "money",
+              "value": 94500
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "C",
+              "choices": {
+                "A": "Network One handset deal",
+                "B": "SIM-only 24 + phone outright",
+                "C": "Refurbished phone + rolling SIM"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1007.8,
+            "B": 983,
+            "C": 945
+          },
+          "cheapest": "C"
+        }
+      },
+      "notes": "[medium] Exact totals: A £1,007.80, B £983.00, C £945.00. Cheapest: C."
+    },
+    {
+      "id": "e03",
+      "prompt": "Two of us, gas and electricity, January to December 2027. One tariff follows the price cap, which changes every quarter; I’ve put in the forecast cap rates.\n\nMY USAGE (from my smart meter, kWh per month)\nMonth | Electricity | Gas\nJanuary 2027 (31 days) | 368 | 1446\nFebruary 2027 (28 days) | 301 | 1218\nMarch 2027 (31 days) | 283 | 1057\nApril 2027 (30 days) | 239 | 810\nMay 2027 (31 days) | 221 | 556\nJune 2027 (30 days) | 201 | 300\nJuly 2027 (31 days) | 187 | 264\nAugust 2027 (31 days) | 205 | 262\nSeptember 2027 (30 days) | 222 | 445\nOctober 2027 (31 days) | 277 | 761\nNovember 2027 (30 days) | 313 | 1111\nDecember 2027 (31 days) | 360 | 1524\n\nTHE TARIFFS\nA. Fixed Freedom 12. Fixed for 12 months.\n   Electricity: 26.11p/kWh, standing charge 52.97p/day\n   Gas: 6.66p/kWh, standing charge 31.74p/day\nB. Standard Variable (price cap). Rates change with the price cap on 1 April, 1 July and 1 October (see the table).\n   Electricity: Jan–Mar 24.72p/kWh, standing charge 52.47p/day; Apr–Jun 25.59p/kWh, standing charge 53.39p/day; Jul–Sep 25.07p/kWh, standing charge 52.85p/day; Oct–Dec 26.20p/kWh, standing charge 54.04p/day\n   Gas: Jan–Mar 6.41p/kWh, standing charge 32.38p/day; Apr–Jun 6.54p/kWh, standing charge 32.70p/day; Jul–Sep 6.28p/kWh, standing charge 32.05p/day; Oct–Dec 6.65p/kWh, standing charge 33.01p/day\nC. Tracker Plus. Tracker: rates change every quarter (see the table).\n   Electricity: Jan–Mar 22.65p/kWh, standing charge 57.43p/day; Apr–Jun 24.01p/kWh, standing charge 59.15p/day; Jul–Sep 24.25p/kWh, standing charge 59.45p/day; Oct–Dec 25.46p/kWh, standing charge 60.93p/day\n   Gas: Jan–Mar 5.97p/kWh, standing charge 33.89p/day; Apr–Jun 6.27p/kWh, standing charge 34.74p/day; Jul–Sep 6.39p/kWh, standing charge 35.08p/day; Oct–Dec 6.84p/kWh, standing charge 36.31p/day\nD. Loyal Customer Fix. Fixed for 12 months, with £40 cashback credited at the end if you stay all 12 months.\n   Electricity: 26.79p/kWh, standing charge 48.10p/day\n   Gas: 6.54p/kWh, standing charge 30.22p/day\n\nHOW TO WORK IT OUT: for each tariff, work out each month’s bill = kWh × unit rate + days in the month × standing charge (for Economy 7: the night share of that month’s kWh at the night rate and the rest at the day rate), add VAT at 5% where a tariff’s prices exclude it, and round each monthly bill to the nearest penny (halves round up). Then add up the months, subtract any monthly discounts and cashback that apply, and add any exit fee that applies.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00, \"D\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Fixed Freedom 12)",
+              "kind": "money",
+              "value": 178831
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Standard Variable (price cap))",
+              "kind": "money",
+              "value": 175449
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Tracker Plus)",
+              "kind": "money",
+              "value": 173009
+            },
+            {
+              "path": "totals.D",
+              "label": "total for D (Loyal Customer Fix)",
+              "kind": "money",
+              "value": 173488
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "C",
+              "choices": {
+                "A": "Fixed Freedom 12",
+                "B": "Standard Variable (price cap)",
+                "C": "Tracker Plus",
+                "D": "Loyal Customer Fix"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1788.31,
+            "B": 1754.49,
+            "C": 1730.09,
+            "D": 1734.88
+          },
+          "cheapest": "C"
+        }
+      },
+      "notes": "[medium] Exact totals (monthly bills rounded to the penny, halves up): A £1,788.31, B £1,754.49, C £1,730.09, D £1,734.88. Cheapest: C."
+    },
+    {
+      "id": "e04",
+      "prompt": "We are moving abroad at the end of December 2027, so we only need energy from April to December 2027 (9 months). Some deals are 12-month fixes with an exit fee if you leave early.\n\nMY USAGE (from my smart meter, kWh per month)\nMonth | Electricity | Gas\nApril 2027 (30 days) | 240 | 745\nMay 2027 (31 days) | 214 | 536\nJune 2027 (30 days) | 211 | 298\nJuly 2027 (31 days) | 193 | 248\nAugust 2027 (31 days) | 201 | 268\nSeptember 2027 (30 days) | 224 | 406\nOctober 2027 (31 days) | 287 | 902\nNovember 2027 (30 days) | 332 | 1087\nDecember 2027 (31 days) | 395 | 1538\n\nTHE TARIFFS\nA. Fix & Forget 12. 12-month fix. Exit fee £75 per fuel (£150 in total) if you leave before the 12 months are up.\n   Electricity: 22.88p/kWh, standing charge 50.35p/day\n   Gas: 6.12p/kWh, standing charge 29.83p/day\nB. Flexi Variable. No exit fee. Rates change on 1 July and 1 October (see the table).\n   Electricity: Apr–Jun 24.55p/kWh, standing charge 52.07p/day; Jul–Sep 23.81p/kWh, standing charge 51.29p/day; Oct–Dec 24.77p/kWh, standing charge 52.31p/day\n   Gas: Apr–Jun 6.55p/kWh, standing charge 31.38p/day; Jul–Sep 6.42p/kWh, standing charge 31.07p/day; Oct–Dec 6.74p/kWh, standing charge 31.84p/day\nC. Fix 9 Smart. 9-month fix. Exit fee £30 per fuel if you leave before the 9 months are up.\n   Electricity: 25.69p/kWh, standing charge 52.91p/day\n   Gas: 6.82p/kWh, standing charge 32.91p/day\n\nHOW TO WORK IT OUT: for each tariff, work out each month’s bill = kWh × unit rate + days in the month × standing charge (for Economy 7: the night share of that month’s kWh at the night rate and the rest at the day rate), add VAT at 5% where a tariff’s prices exclude it, and round each monthly bill to the nearest penny (halves round up). Then add up the months, subtract any monthly discounts and cashback that apply, and add any exit fee that applies.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Fix & Forget 12)",
+              "kind": "money",
+              "value": 126496
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Flexi Variable)",
+              "kind": "money",
+              "value": 119104
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Fix 9 Smart)",
+              "kind": "money",
+              "value": 123722
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "B",
+              "choices": {
+                "A": "Fix & Forget 12",
+                "B": "Flexi Variable",
+                "C": "Fix 9 Smart"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1264.96,
+            "B": 1191.04,
+            "C": 1237.22
+          },
+          "cheapest": "B"
+        }
+      },
+      "notes": "[medium] Exact totals (monthly bills rounded to the penny, halves up): A £1,264.96, B £1,191.04, C £1,237.22. Cheapest: B."
+    },
+    {
+      "id": "m03",
+      "prompt": "I travel for work. 24-month deal from the March 2027 bill. Roaming matters: here are my planned trips. Which option is cheapest in total over the 24 months?\n\nMY TRIPS (days abroad; each day abroad counts once per person)\n- Paris: 4 days in May 2027 (contract month 3; EU)\n- Madrid: 5 days in September 2027 (contract month 7; EU)\n- New York: 6 days in November 2027 (contract month 9; USA)\n- Berlin: 3 days in May 2028 (contract month 15; EU)\n- Chicago: 5 days in October 2028 (contract month 20; USA)\n\nTHE OPTIONS\nA. Unlimited Plus (phone included): £54.00 a month, £0 upfront. EU and USA roaming included. Goes up £2.00 a month from each April bill.\nB. Value plan (phone included): £41.00 a month, £99.00 upfront. EU roaming £2.25 a day, USA £6.00 a day. Goes up £1.50 a month from each April bill.\nC. SIM-only + phone outright: Phone £749.00. SIM £14.00 a month; EU roaming included, USA £5.00 a day. Goes up £1.00 a month from each April bill.\nD. Budget SIM + phone outright: Phone £749.00. SIM £8.00 a month; EU roaming £2.00 a day, USA £7.50 a day. No price rises.\n\nHOW TO WORK IT OUT: the total for each option is everything paid over the 24 months (March 2027 to the end of the contract): every monthly bill, upfront costs, the phone, roaming and extras, minus any trade-in or sale money. A price rise applies to every bill from that April onwards (they add up: the second April adds another rise on top). Everything is exact to the penny.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00, \"D\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Unlimited Plus (phone included))",
+              "kind": "money",
+              "value": 136400
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Value plan (phone included))",
+              "kind": "money",
+              "value": 122700
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (SIM-only + phone outright)",
+              "kind": "money",
+              "value": 117400
+            },
+            {
+              "path": "totals.D",
+              "label": "total for D (Budget SIM + phone outright)",
+              "kind": "money",
+              "value": 104750
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "D",
+              "choices": {
+                "A": "Unlimited Plus (phone included)",
+                "B": "Value plan (phone included)",
+                "C": "SIM-only + phone outright",
+                "D": "Budget SIM + phone outright"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1364,
+            "B": 1227,
+            "C": 1174,
+            "D": 1047.5
+          },
+          "cheapest": "D"
+        }
+      },
+      "notes": "[medium] Exact totals: A £1,364.00, B £1,227.00, C £1,174.00, D £1,047.50. Cheapest: D."
+    },
+    {
+      "id": "e05",
+      "prompt": "Electric car + storage heaters, so I’m on Economy 7 meters (cheaper night rate). Electricity only, January to December 2027. I’ve listed what share of my electricity I use at night each month.\n\nMY USAGE (from my smart meter, kWh per month)\nMonth | Electricity | Share used at night\nJanuary 2027 (31 days) | 541 | 49%\nFebruary 2027 (28 days) | 538 | 53%\nMarch 2027 (31 days) | 490 | 49%\nApril 2027 (30 days) | 468 | 38%\nMay 2027 (31 days) | 385 | 50%\nJune 2027 (30 days) | 358 | 53%\nJuly 2027 (31 days) | 305 | 64%\nAugust 2027 (31 days) | 385 | 63%\nSeptember 2027 (30 days) | 415 | 37%\nOctober 2027 (31 days) | 450 | 40%\nNovember 2027 (30 days) | 523 | 64%\nDecember 2027 (31 days) | 662 | 53%\n\nTHE TARIFFS\nA. Night Owl E7 Fix. Economy 7, fixed for 12 months.\n   Electricity: day 31.20p/kWh, night 12.99p/kWh, standing charge 55.24p/day\nB. Single Rate Saver. One rate all day and night, fixed for 12 months.\n   Electricity: 23.67p/kWh, standing charge 47.50p/day\nC. EV Smart Charge. Economy 7 style day/night rates. Prices EXCLUDE VAT: add 5% to each monthly bill.\n   Electricity: day 31.41p/kWh, night 9.87p/kWh, standing charge 62.87p/day\nD. Cap Tracker E7. Economy 7 tracker: rates change every quarter (see the table). £1.50 off every monthly bill for paying by direct debit.\n   Electricity: Jan–Mar day 28.40p/kWh, night 12.10p/kWh, standing charge 53.00p/day; Apr–Jun day 29.60p/kWh, night 12.70p/kWh, standing charge 53.80p/day; Jul–Sep day 28.10p/kWh, night 11.90p/kWh, standing charge 54.20p/day; Oct–Dec day 30.20p/kWh, night 13.00p/kWh, standing charge 54.90p/day\n\nHOW TO WORK IT OUT: for each tariff, work out each month’s bill = kWh × unit rate + days in the month × standing charge (for Economy 7: the night share of that month’s kWh at the night rate and the rest at the day rate), add VAT at 5% where a tariff’s prices exclude it, and round each monthly bill to the nearest penny (halves round up). Then add up the months, subtract any monthly discounts and cashback that apply, and add any exit fee that applies.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00, \"D\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Night Owl E7 Fix)",
+              "kind": "money",
+              "value": 141267
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Single Rate Saver)",
+              "kind": "money",
+              "value": 147995
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (EV Smart Charge)",
+              "kind": "money",
+              "value": 142655
+            },
+            {
+              "path": "totals.D",
+              "label": "total for D (Cap Tracker E7)",
+              "kind": "money",
+              "value": 131919
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "D",
+              "choices": {
+                "A": "Night Owl E7 Fix",
+                "B": "Single Rate Saver",
+                "C": "EV Smart Charge",
+                "D": "Cap Tracker E7"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1412.67,
+            "B": 1479.95,
+            "C": 1426.55,
+            "D": 1319.19
+          },
+          "cheapest": "D"
+        }
+      },
+      "notes": "[hard] Exact totals (monthly bills rounded to the penny, halves up): A £1,412.67, B £1,479.95, C £1,426.55, D £1,319.19. Cheapest: D."
+    },
+    {
+      "id": "m04",
+      "prompt": "Family of three: we each need a phone line, but only I need a new phone. Contracts start with the September 2026 bill, 24 months (ending August 2028). Price rises come from each April bill. Work out the total for the whole family over the 24 months for each option.\n\nMY TRIPS (days abroad; each day abroad counts once per person)\n- Majorca (all three of us): 7 days in July 2027 (contract month 11; EU)\n- Florida (all three of us): 10 days in May 2028 (contract month 21; USA)\n\nTHE OPTIONS\nA. Family bundle: My line with the new phone £45.00 a month + two SIM-only lines at £9.00 each, all with 20% off the total monthly bill (before any price rises) for being a family. £60.00 upfront. Price rise: each line goes up £1.50 a month from each April bill (the 20% discount does not apply to the rises). EU roaming included; USA £5.00 a day per person.\nB. Three separate SIMs + phone outright: Phone £799.00. Three SIM-only lines at £11.00 a month each, the first 6 months at half price. Price rise: £1.00 per line per month from each April bill. EU and USA roaming included.\nC. Big Data Family: Phone included. £78.00 a month for all three lines together, £0 upfront, no price rises for the 24 months. EU roaming £2.50 a day per person, USA £6.00 a day per person.\n\nHOW TO WORK IT OUT: the total for each option is everything paid over the 24 months (September 2026 to the end of the contract): every monthly bill, upfront costs, the phone, roaming and extras, minus any trade-in or sale money. A price rise applies to every bill from that April onwards (they add up: the second April adds another rise on top). Everything is exact to the penny.\n\nNote: we will NOT go to Florida after all — we are going to Lisbon instead (same dates, 10 days, all three of us).\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Family bundle)",
+              "kind": "money",
+              "value": 136860
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Three separate SIMs + phone outright)",
+              "kind": "money",
+              "value": 155800
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Big Data Family)",
+              "kind": "money",
+              "value": 199950
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "A",
+              "choices": {
+                "A": "Family bundle",
+                "B": "Three separate SIMs + phone outright",
+                "C": "Big Data Family"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1368.6,
+            "B": 1558,
+            "C": 1999.5
+          },
+          "cheapest": "A"
+        }
+      },
+      "notes": "[hard] Exact totals: A £1,368.60, B £1,558.00, C £1,999.50. Cheapest: A."
+    },
+    {
+      "id": "m05",
+      "prompt": "Choosing between keeping my current phone and upgrading. 24 months from the February 2027 bill. Please include everything: trade-in, upfront, price rises from each April bill, promos, roaming, insurance.\n\nMY TRIPS (days abroad; each day abroad counts once per person)\n- Dublin: 3 days in March 2027 (contract month 2; EU)\n- Toronto: 9 days in September 2027 (contract month 8; rest of the world)\n- Rome: 4 days in March 2028 (contract month 14; EU)\n- Dubai: 5 days in November 2028 (contract month 22; rest of the world)\n\nTHE OPTIONS\nA. Upgrade on contract: £47.00 a month, £29.00 upfront, minus £120.00 trade-in credit for my old phone (paid back to me once). Phone insurance £7.00 a month (no rises). Price rise: £2.00 a month from each April bill on the plan only. EU roaming included; rest of world £6.00 a day.\nB. Keep my phone + SIM-only: SIM-only £11.00 a month, the first 3 months free. Price rise £1.00 a month from each April bill. I would need a new battery for my old phone: £89.00 once. EU roaming £2.00 a day; rest of world £5.00 a day.\nC. Buy outright + SIM with roaming pack: Phone £679.00, and I sell my old phone for £150.00. SIM £13.00 a month, no price rises, roaming everywhere included.\nD. Contract, no upfront: £52.00 a month, £0 upfront, no trade-in. Price rise £1.50 a month from each April bill. Roaming everywhere included for the first 12 months, then EU £2.00 a day and rest of world £6.00 a day.\n\nHOW TO WORK IT OUT: the total for each option is everything paid over the 24 months (February 2027 to the end of the contract): every monthly bill, upfront costs, the phone, roaming and extras, minus any trade-in or sale money. A price rise applies to every bill from that April onwards (they add up: the second April adds another rise on top). Everything is exact to the penny.\n\nAnswer in this JSON format, with every option’s exact total in pounds (to the penny) and the letter of the cheapest:\n```json\n{\"totals\": {\"A\": 0.00, \"B\": 0.00, \"C\": 0.00, \"D\": 0.00}, \"cheapest\": \"<letter>\"}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "totals.A",
+              "label": "total for A (Upgrade on contract)",
+              "kind": "money",
+              "value": 135300
+            },
+            {
+              "path": "totals.B",
+              "label": "total for B (Keep my phone + SIM-only)",
+              "kind": "money",
+              "value": 43600
+            },
+            {
+              "path": "totals.C",
+              "label": "total for C (Buy outright + SIM with roaming pack)",
+              "kind": "money",
+              "value": 84100
+            },
+            {
+              "path": "totals.D",
+              "label": "total for D (Contract, no upfront)",
+              "kind": "money",
+              "value": 133400
+            },
+            {
+              "path": "cheapest",
+              "aliases": [
+                "best",
+                "choice",
+                "winner",
+                "cheapestoption"
+              ],
+              "label": "the cheapest option",
+              "kind": "choice",
+              "value": "B",
+              "choices": {
+                "A": "Upgrade on contract",
+                "B": "Keep my phone + SIM-only",
+                "C": "Buy outright + SIM with roaming pack",
+                "D": "Contract, no upfront"
+              }
+            }
+          ]
+        },
+        "reference": {
+          "totals": {
+            "A": 1353,
+            "B": 436,
+            "C": 841,
+            "D": 1334
+          },
+          "cheapest": "B"
+        }
+      },
+      "notes": "[hard] Exact totals: A £1,353.00, B £436.00, C £841.00, D £1,334.00. Cheapest: B."
+    }
+  ]
+}

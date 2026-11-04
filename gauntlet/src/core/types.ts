@@ -437,6 +437,12 @@ export type ScorerSpec =
   | { type: 'human'; rubric: string }
   /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
   | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' }
+  /**
+   * A registered checker (src/scoring/verifiers/<verifier>.ts) replays the JSON answer against the case's hidden
+   * world (case.expected = { world, optimum?, reference }): plans are checked for feasibility and against the
+   * solver's proven optimum; exact multi-part answers check by check (src/scoring/verifier.ts).
+   */
+  | { type: 'verifier'; verifier: string }
   /** One SQLite query, run read-only on the test's database and hidden copies and compared with a reference query (src/scoring/sql.ts). */
   | SqlScorerSpec;
 

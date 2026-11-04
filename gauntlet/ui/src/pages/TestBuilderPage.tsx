@@ -67,6 +67,8 @@ function defaultScorer(type: ScorerType): ScorerSpec {
       return { type, rubric: '' };
     case 'ladder':
       return { type, answer: 'integer' };
+    case 'verifier':
+      return { type, verifier: 'trip' };
   }
 }
 

@@ -141,7 +141,8 @@ These differences are small but real, which is why published comparisons should 
 | `judge-classify` | Mean of the scores of the labels chosen by each judge (e.g. `CAUGHT_TRAP` = 1, `HALLUCINATED` = 0). |
 | `artifact` | `(1 − w) × automated checks + w × judge score`, where the checks run in headless Chromium (renders, no JavaScript errors, no network access, reacts to input) and `w` is the test's `judgeWeight`. |
 | `human` | Mean of human ratings (0–10 ÷ 10) from the Blind Review screen, where identities are hidden until rated. |
-| `sql` | One read-only SQLite query, run on the test's live database and on hidden copies with different data; each database scores the share of result rows that match the reference query's (order only when asked); the case scores the mean over the databases (§7e). |
+| `verifier` | A registered checker (`src/scoring/verifiers/<name>.ts`) replays the JSON answer against the case's hidden world. Plans: a broken rule → 0, the solver's proven optimum → 1, a workable but worse plan → 0.5 × (best ÷ its cost)² (always under 0.5); a wrong or missing quoted total halves it. Exact multi-part answers: the share of checks right. Two different answers in one reply, or an "alternative" key → 0 (§7i). |
+| `sql` | One read-only SQLite query, run on the test's live database and on hidden copies with different data; each database scores the share of result rows that match the reference query's (order only when asked); the case scores the mean over the databases (§7f). |
 | Programs | Each simulation documents its own formula (see the Methodology page in the app). |
 
 **Fair play.** Before any scorer runs, the reply goes through the fair-play check (§3). A violation scores 0 under every
@@ -706,6 +707,64 @@ twice, every job claimed, repeated rows counted twice, the delivery note trusted
 (invoice), 88% (ticket), 79% (CV), 77% (email), 68% (spreadsheet) and 87% (delivery) on average, and much less on
 the last cases (33–71%). These are Level 1 tests: a careful model should score near 100, and each trap costs
 exactly the fields it touches.
+
+## 7i. Everyday Life tests: checked plans and exact money
+
+The `life` category holds six tests of personal admin people really ask an AI for. Every case is generated from a
+fixed seed by `verification/realworld-life/` (TypeScript, run with `node`), which also computes the answer key;
+`node verification/realworld-life/build.mts --check` proves the committed files are reproduced byte for byte, and
+`test/life.test.ts` runs that check on every `npm test`. Each test has 10 cases, roughly a third easy, a third medium
+and a third hard (marked in the notes); each case is worth 10 points of its test. No judges and no human opinion
+are involved anywhere in the pack.
+
+| Test | What the model hands in | How the key is computed | How a case is marked |
+|---|---|---|---|
+| Weekend Away (`life.trip-planner`) | an itinerary (service and transfer IDs in order), hotel nights and the total | exhaustive branch-and-bound over every itinerary and hotel choice; every candidate is checked by an independent rule evaluator | plan checker `trip` |
+| Splitting the Bills (`life.bill-split`) | each flatmate's balance and the settle-up transfers | exact fractions day by day, rounded only at the end; the settle-up method is checked to use the fewest possible transfers | `settle`: one check per balance and per transfer; every extra transfer is one more failed check |
+| Cheapest Deal (`life.tariff-chooser`) | every option's total and the cheapest | exact month-by-month bills in hundredths of a penny, VAT, fees, rises; ties are refused | `fields`: one check per total plus the winner |
+| Cook for Twelve (`life.recipe-shopping`) | a basket of packs and the till total | exact fractions for scaling and conversion; every combination of pack counts tried | plan checker `shopping` |
+| Pay It Off Faster (`life.loan-overpayment`) | the last-payment month, number of payments, interest, interest saved, ERC | month-by-month simulation in whole pence | `fields`: one check per number |
+| Pack for the Flight (`life.packing-limits`) | where every item goes (bag, worn, left) and the total | exhaustive branch-and-bound over every place for every item | plan checker `packing` |
+
+**The verifier scorer** (`{ "type": "verifier", "verifier": "<name>" }`, `src/scoring/verifier.ts`). The case's
+`expected` holds the structured world (the timetable, the shop, the bags, the true balances…), the solver's
+proven optimum (plans) and one reference answer; the world is never sent to the model, and "Reveal answer" shows
+only the reference. Marking, in order:
+
+1. The fair-play check (§3) runs first, as for every scorer.
+2. The answer is every JSON object in the reply that has one of the checker's answer keys, in or out of a code fence,
+   with key case and punctuation ignored, trailing commas and `//` comments tolerated and one wrapper such as
+   `{"answer": {…}}` unwrapped. A copy of the prompt's own format example is ignored, and repeats of the same answer
+   count once. No answer → 0. **Two different answers → 0**, and so does a key that offers an alternative
+   (`alternative`, `plan_b`, `backup`, `option2`…). Values are read leniently: `"£1,234.50"` = 1234.5, `"Aug 2039"`
+   = `"2039-08"`, an item, hotel or tariff named by its ID or its full name. A value that says "or" is not read.
+3. **Plan checkers** replay the plan rule by rule (every check is listed in the result inspector). Any broken rule →
+   0, because the plan would not work in real life (a missed connection, an ingredient short, a power bank in the
+   hold). A workable plan as cheap as the proven optimum → 1; any other workable plan → `0.5 × (optimum ÷ its
+   cost)²`: 1% dearer scores 49, 10% dearer 41, twice the price 12.5, so near-misses visibly beat poor plans while
+   only an optimal plan scores 100. The plan's total is worked out by the checker; the model must quote it too, and a
+   missing or wrong quoted total halves the score. Any equally cheap plan scores 100, not just the reference.
+4. **Answer checkers** compare each part with the exact key and score the share right.
+
+**Cannot be cheated.** Answer keys are computed, never typed. Every prompt says that two answers score 0. Lists
+cannot be padded: an extra transfer costs a check, an extra pack costs money, an unlisted item is left at home.
+Prompts carry distractors that change the answer if followed: a corrected bill, a hotel that closes, a ceremony
+moved earlier, the railcard's morning limit and expiry, a brother's bad advice, offers that only look cheaper.
+The checker's source code (its file, the verifier files it imports and the generic scorer) is part of the hash of
+every test that uses it, like a program's source (`verifierSourceHash` in `src/core/registry.ts`), so editing a
+checker invalidates old results. `test/life.test.ts` proves the trip checker and the independent solver agree on
+every itinerary they both enumerate, that every reference scores 100 through the full pipeline, that the do-nothing
+answers (empty, `{}`, the copied template, the prompt itself) and random filler score 0, that presentation never
+changes a score, and that the scripted wrong answers score as described.
+
+**Expected spread** (from scripted answers, `node verification/realworld-life/spread.mts`): do-nothing 0 on every
+test; careful (the reference) 100; careless answers (one rule ignored, a late message missed, no optimising, a
+typical arithmetic slip; only slips that change the answer for that case are counted) score about 22 on Weekend
+Away, 5 on Splitting the Bills, 55 on Cheapest Deal, 40 on Cook for Twelve, 46 on Pay It Off Faster and 28 on Pack
+for the Flight.
+
+Stored answers to these tests are re-marked from their reply text like other objective tests (§5.6, `src/engine/remark.ts`).
+
 
 ## 8. The random baseline
 

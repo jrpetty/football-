@@ -5,7 +5,7 @@
  * What is re-marked: "ok" answers to prompt tests whose case still exists and asks the same question (the rendered
  * system prompt and user turns equal what the transcript shows was sent, ignoring an optional leading
  * "[Fair-play rules]" notice; the test hash need not match):
- *  - exact / number / choice / regex / contains / constraints / json / ladder: from the stored reply text;
+ *  - exact / number / choice / regex / contains / constraints / json / ladder / verifier: from the stored reply text;
  *  - code-js: the code is taken from the stored reply again and its hidden unit tests run in the sandbox;
  *  - judge / judge-classify: the stored judge replies are parsed again (a replay panel; no judge is called).
  * Never re-marked: simulations (their rule changes bumped test versions), artifact tests (they need a browser
@@ -29,7 +29,7 @@ import { gradingSpecFor } from '../grading/spec.ts';
 import { gradingPolicy } from '../grading/station.ts';
 import { appendResult, listRunIds, readManifest, readResults, runDir, saveArtifact } from './store.ts';
 
-const REMARKABLE = new Set<ScorerSpec['type']>(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'ladder', 'code-js', 'sql', 'judge', 'judge-classify']);
+const REMARKABLE = new Set<ScorerSpec['type']>(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'ladder', 'verifier', 'code-js', 'sql', 'judge', 'judge-classify']);
 
 /** Detail fields that belong to the result's history or to human/station grading, not to the scorer: kept as they are. */
 const CARRIED = ['timeLimitSec', 'responseMs', 'humanScore', 'official', 'arbitrated', 'automatedScore', 'autoScore', 'autoSummary', 'humanScored'];

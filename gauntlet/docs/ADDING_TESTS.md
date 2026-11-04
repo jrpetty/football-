@@ -127,6 +127,7 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "human", "rubric": "..." }` | – | Scored in Blind Review |
 | `{ "type": "sql", "dialect": "sqlite", "schema": "CREATE TABLE …", "databases": [{ "id": "live", "tables": {…} }, …] }` | `{ "reference": "SELECT …", "ordered": false, "tolerance": 0.01 }` | One read-only SQLite query, run on every database (the first is "live", the rest hidden copies); score = mean share of matching result rows. Generate the data with a script (see `verification/realworld-sql/`) |
 | `{ "type": "ladder", "answer": "integer" \| "plan" \| "grid" }` | a digit string · `{ rows, cols, start, optimal, plan }` · rows of `#`/`.` | Horizon ladders (case ids `L01`…): exact big integers; sliding plans replayed (minimum = 1, longer ≤ 0.25); whole grids. See METHODOLOGY §7c |
+| `{ "type": "verifier", "verifier": "trip" }` | `{ "world": {…}, "optimum": 1234, "reference": {…} }` | A checker in `src/scoring/verifiers/<name>.ts` replays the JSON answer against the hidden world: plans (`trip`, `shopping`, `packing`) must keep every rule, optimum = 1, worse ≤ 0.5; exact answers (`settle`, `fields`) score per check. Register new checkers in `verifiers/index.ts`; their source is hashed with the test. See METHODOLOGY §7i |
 
 ### Constraint reference (`constraints` scorer)
 
