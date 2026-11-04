@@ -86,8 +86,8 @@ export class Particles {
       this.pos[k * 3] = p.x; this.pos[k * 3 + 1] = p.y; this.pos[k * 3 + 2] = p.z
       let r = 1, g = 1, b = 1, a = 1, s = 0.1
       switch (p.kind) {
-        case PK.SMOKE: { const v = 0.42 + p.seed * 0.15 - night * 0.2; r = g = b = v; a = Math.min(1, (1 - f) * 4) * f * 0.5; s = 0.25 + (1 - f) * 0.9; break }
-        case PK.STEAM: r = g = b = 0.95 - night * 0.4; a = Math.min(1, (1 - f) * 4) * f * 0.45; s = 0.35 + (1 - f) * 1.3; break
+        case PK.SMOKE: { const v = (0.42 + p.seed * 0.15) * (1 - night * 0.75); r = g = b = v; a = Math.min(1, (1 - f) * 4) * f * (0.5 - night * 0.25); s = 0.25 + (1 - f) * 0.9; break }
+        case PK.STEAM: r = g = b = 0.9 * (1 - night * 0.75); a = Math.min(1, (1 - f) * 4) * f * (0.42 - night * 0.2); s = 0.35 + (1 - f) * 1.3; break
         case PK.EMBER: r = 3.2; g = 1.2 + f; b = 0.3; a = f; s = 0.05; break
         case PK.CHIP: r = 0.75; g = 0.56; b = 0.33; a = Math.min(1, f * 2); s = 0.06; break
         case PK.SPARK: r = 3.5; g = 2.4; b = 0.9; a = Math.min(1, f * 2); s = 0.045; break

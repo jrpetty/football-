@@ -491,7 +491,7 @@ export class Renderer3D {
       l.position.set(L[0], L[1] + 0.3, L[2])
       l.color.set(L[4] > 0.5 ? '#ff9a4a' : L[4] > 0.25 ? '#ffc98a' : '#d8e6ff')
       l.distance = L[3] * 1.6
-      l.intensity = night * fl * (1.6 + L[3] * 1.2)
+      l.intensity = night * fl * (0.9 + L[3] * 0.7)
     })
 
     // --- people

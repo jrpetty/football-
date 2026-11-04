@@ -166,12 +166,19 @@ The settings panel shows a live **$/hour** estimate and the spend so far.
 | | |
 |---|---|
 | Drag / scroll / pinch | pan / zoom |
+| Right-drag (or `Alt`+drag) · `Q` / `E` | turn the camera (3D view) |
 | Click | select a person, building or tile |
 | `Space` | pause |
 | `1`–`5` | speed 1× · 3× · 10× · 30× · 100× |
 | `F` | follow the selected person |
 | `WASD` / arrows | pan |
 | `Esc` | deselect |
+
+The world is drawn in **3D** (WebGL): sculpted terrain, rivers, lakes and sea,
+swaying seasonal forests, buildings modelled for each era, jointed people and
+animals, a sun that crosses the sky with real shadows, night lighting, weather
+and bloom. The **🗺️ 2D** button in the top bar switches to the classic
+hand-painted map (also used automatically if WebGL isn't available).
 
 Panels: **✦ Minds** (live feed of thoughts and speech), **People**, **Tribes**
 (values, laws, beliefs, stores, relations, written works), **Chronicle** (event
@@ -197,10 +204,18 @@ src/
     providers.ts  mind profiles: Claude + OpenAI-compatible (DeepSeek, Qwen, Kimi, GLM, Ollama, LM Studio)
     prompts.ts    system prompt, per-person context, JSON schemas
     mind.ts       scheduler: who thinks when, rate limit, budget, applying decisions
-  render/
+  render3d/   the 3D view (three.js)
+    renderer3d.ts camera, sky, sun & shadows, night lamps, picking, labels, minimap
+    terrain.ts    heightfield, seasonal colours, water levels, ocean, roads, borders
+    flora.ts      instanced trees, rocks, ores, grass with wind sway
+    buildings3d.ts  models for all 32 building types across the eras
+    character.ts  jointed 3D people and animals
+    fx.ts         particles, rain & snow, clouds, birds
+  render/     the classic 2D view
     renderer.ts   chunked per-pixel terrain (hill-shading, seasons, snow, coasts),
                   live entities, lightmap for night, weather, minimap
     sprites.ts    procedurally painted trees, rocks and 32 building types
+    people.ts     the animation library shared by both views
   ui/             React panels, inspector, dialogs
   game.ts         the loop tying world, minds and renderer together
 test/             node --test: worldgen, long instinct-only survival, AI layer, saves

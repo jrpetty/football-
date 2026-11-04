@@ -40,7 +40,30 @@ const geo = {
   log: new THREE.CylinderGeometry(0.018, 0.018, 0.2, 7),
   blanket: new THREE.BoxGeometry(0.2, 0.06, 0.5),
 }
+Object.assign(geo, {
+  ear: new THREE.SphereGeometry(0.016, 8, 6),
+  mouth: new THREE.TorusGeometry(0.016, 0.004, 5, 10, Math.PI),
+  brow: new THREE.CapsuleGeometry(0.004, 0.022, 2, 5),
+  shoulder: new THREE.SphereGeometry(0.034, 12, 9),
+  jaw: new THREE.SphereGeometry(0.058, 14, 10),
+})
 geo.blob.rotateX(-Math.PI / 2)
+const torsoCache = new Map<string, THREE.BufferGeometry>()
+/** A tapered torso: hips, waist, chest, shoulders (lathe, flattened front to back). */
+function torsoGeo(bw: number, woman: boolean): THREE.BufferGeometry {
+  const key = `${bw.toFixed(2)}|${woman}`
+  let g = torsoCache.get(key)
+  if (g) return g
+  const sh = (woman ? 0.074 : 0.086) * bw, wa = (woman ? 0.056 : 0.064) * bw, hp = (woman ? 0.07 : 0.066) * bw, h = 0.24
+  const pts = [
+    new THREE.Vector2(0.001, -0.01), new THREE.Vector2(hp * 0.9, 0), new THREE.Vector2(hp, h * 0.1), new THREE.Vector2(wa, h * 0.36),
+    new THREE.Vector2(sh * 0.93, h * 0.7), new THREE.Vector2(sh, h * 0.86), new THREE.Vector2(sh * 0.75, h * 0.97), new THREE.Vector2(0.03, h), new THREE.Vector2(0.001, h + 0.003),
+  ]
+  g = new THREE.LatheGeometry(pts, 18)
+  g.scale(1, 1, 0.68)
+  torsoCache.set(key, g)
+  return g
+}
 geo.foot.translate(0, 0, 0.02)
 geo.rod.translate(0, -0.3, 0)
 geo.handle.translate(0, -0.15, 0)
@@ -149,8 +172,8 @@ export class Person3D {
     this.spine = new THREE.Group()
     this.spine.position.y = 0.02
     this.hips.add(this.spine)
-    const torso = mesh(geo.torso, body, 0, 0.1, 0)
-    torso.scale.set(bw * 1.1, 1, 0.75)
+    const woman = a.sex === 'female'
+    const torso = mesh(torsoGeo(bw, woman), body, 0, -0.01, 0)
     this.spine.add(torso)
     if (o.belt) { const belt = mesh(geo.pelvis, mat(o.trim, 0.6), 0, 0.02, 0); belt.rotation.z = Math.PI / 2; belt.scale.set(0.35, bw * 1.12, 0.82); this.spine.add(belt) }
     if (o.cape) { const cape = mesh(geo.skirt, mat(o.trim, 0.85), 0, 0.06, -0.035); cape.scale.set(bw * 0.95, 1.3, 0.5); this.spine.add(cape) }
@@ -164,20 +187,34 @@ export class Person3D {
       hand.add(mesh(geo.hand, skin))
       fo.end.add(hand)
       this.spine.add(up.pivot)
+      const delt = mesh((geo as unknown as { shoulder: THREE.BufferGeometry }).shoulder, sleeve, side * 0.085 * bw, 0.195, 0)
+      delt.scale.set(1, 0.85, 0.9)
+      this.spine.add(delt)
       this.arms.push({ sh: up.pivot, el: fo.pivot, hand })
     }
     // neck & head
     this.neck = new THREE.Group()
     this.neck.position.y = 0.24
     this.spine.add(this.neck)
-    const headR = child ? 1.25 : 1
+    const headR = child ? 1.38 : 1.14
     const head = new THREE.Group()
     head.position.y = 0.07
     head.scale.setScalar(headR)
     this.neck.add(head)
     head.add(mesh(geo.head, skin))
-    const nose = mesh(geo.nose, skin, 0, -0.005, 0.068)
+    const nose = mesh(geo.nose, skin, 0, -0.008, 0.068)
     head.add(nose)
+    const G = geo as unknown as Record<string, THREE.BufferGeometry>
+    const jaw = mesh(G.jaw, skin, 0, -0.025, 0.008)
+    jaw.scale.set(woman ? 0.86 : 0.95, 0.78, 0.92)
+    head.add(jaw)
+    for (const side of [-1, 1]) { const ear = mesh(G.ear, skin, side * 0.064, -0.004, -0.006); ear.scale.set(0.5, 1, 0.8); head.add(ear) }
+    const mouth = mesh(G.mouth, mat('#7a3a34', 0.6), 0, -0.035, 0.062)
+    mouth.rotation.z = Math.PI
+    mouth.scale.y = 0.5
+    head.add(mouth)
+    this.detail.push(mouth)
+    for (const side of [-1, 1]) { const br = mesh(G.brow, hairCol, side * 0.026, 0.03, 0.064); br.rotation.z = Math.PI / 2 + side * 0.12; head.add(br); this.detail.push(br) }
     for (const side of [-1, 1]) { const e = mesh(geo.eye, eyeMat, side * 0.026, 0.012, 0.06); head.add(e); this.detail.push(e) }
     // hair
     if (L.style !== 4) {

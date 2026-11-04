@@ -83,9 +83,12 @@ with Genesis, so a key you set up in one works in the other.
 
 ## Watching
 
-- **Stage:** each scenario's places, with the four people walking between
-  them. Speech bubbles, "thinking…" dots and emotes. Faces change with mood
-  and stress, and the light follows the time of day.
+- **Stage:** each scenario's places, with the four people, rendered in 3D,
+  walking between them. Each is dressed for their job and posed for what
+  they're doing and feeling: talking with their hands, working, thinking,
+  slumped, arms crossed, hunched in fear. Faces blink and react, mouths move
+  with speech, and the light follows the time of day. Speech bubbles,
+  "thinking…" dots and emotes float above.
 - **Script tab:** the whole story as a play script.
 - **Thoughts tab:** what everyone is privately thinking.
 - **Bonds tab:** a 4×4 matrix of who trusts whom.
@@ -101,7 +104,8 @@ with Genesis, so a key you set up in one works in the other.
 src/engine/   scenarios.ts (the 18 situations) · cast.ts (people) ·
               engine.ts (turns, actions, events, endings) · prompts.ts
 src/ai/       providers.ts + client.ts (shared with Genesis) · host.ts (settings, costs)
-src/ui/       Stage.tsx (the scene) · Figure.tsx (bodies & faces)
+src/ui/       Stage.tsx (the scene) · rig3d.ts + cast3d.ts (3D people) ·
+              Figure.tsx (2D fallback & portraits)
 src/App.tsx   menu, cast setup, play, ending, settings
 test/         every scenario plays to an ending; mock-AI run; prompt sizes
 ```
