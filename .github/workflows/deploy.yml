@@ -56,6 +56,19 @@ jobs:
           mkdir -p dist/predictor
           cp -r predictor/dist/. dist/predictor/
 
+      # Genesis (the AI world simulation) is a third app, published under
+      # /world/. Its vite base is relative too.
+      - name: Build Genesis
+        working-directory: world
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Place Genesis under /world
+        run: |
+          mkdir -p dist/world
+          cp -r world/dist/. dist/world/
+
       # NOTE: actions/configure-pages with enablement: true was tried here and
       # cannot work on this repository — GITHUB_TOKEN gets "Resource not
       # accessible by integration" from the create-Pages-site API, which is an

@@ -9,6 +9,11 @@ Everything runs in the browser and saves to your device (no account, no server,
 no setup beyond `npm install`). It ships with a full sample team — *Riverside
 Athletic* — so every screen is populated the moment you open it.
 
+> **Also in this repo:** 🌍 **[Genesis](world/README.md)** — an AI civilisation
+> sandbox where every inhabitant is driven by its own Claude mind and a society
+> grows from the Stone Age to the stars. Open `genesis.html` directly, run
+> `cd world && npm install && npm run dev`, or visit `/world/` on the Pages site.
+
 ---
 
 ## Features
