@@ -273,10 +273,13 @@ you to delete the flag once the test exists. Every difficulty-ladder test is lis
 | The Liar's Table — Hard | `social.liars-table-hard` | Seven suspects, eight questions, and the door log went dark. Who can still find the liar? |
 
 **Difficulty ladders**: ten frozen levels each, every level strictly harder than the one below; the headline is
-the ladder height, the highest level passed reliably with every level below it ([METHODOLOGY §7t](docs/METHODOLOGY.md#7t-difficulty-ladders-exact-maths-and-engineering)).
+the ladder height, the highest level passed reliably with every level below it ([METHODOLOGY §7q](docs/METHODOLOGY.md#7q-difficulty-ladders); logic ladders: [§7u](docs/METHODOLOGY.md#7u-frontier-ladders-deduction-grid-knights--knaves-and-shortest-plans); maths and engineering: [§7t](docs/METHODOLOGY.md#7t-difficulty-ladders-exact-maths-and-engineering)).
 
 | Test | Id | What it does |
 |---|---|---|
+| Deduction Grid: Ladder | `reasoning.grid-ladder` | Logic grids from 4 people and 10 clues to 12 people, 8 attributes and 172 clues. How big a grid can it solve? |
+| Knights & Knaves: Ladder | `reasoning.truth-ladder` | From 4 islanders to 24, with spies, alternators and liars quoting liars: how high can it climb? |
+| Shortest Plans: Ladder | `reasoning.plans-ladder` | A scattered four-peg Tower of Hanoi, from 4 disks (6 moves) to 13 (70 moves): one move too many scores zero. |
 | Exact Maths: Ladder | `math.exact-ladder` | Snakes, ladders and traps: the exact chance of winning, as a fraction, on boards from 10 to 64 squares. |
 | Engineering: Ladder | `coding.engineering-ladder` | One array engine, one more range operation per level, hidden tests on a million numbers: only the specialist design survives the top. |
 

@@ -58,7 +58,7 @@
       "basedOn": "reasoning.deduction-grid-extreme",
       "passMark": 1,
       "grows": "Grid size × attributes × clue depth: more people, more attributes and longer chains of clues to combine.",
-      "planned": true
+      "rungs": ["4×3 grid · 10 clues", "5×3 grid · 16 clues", "6×4 grid · 23 clues", "7×4 grid · 26 clues", "8×5 grid · 29 clues", "9×5 grid · 46 clues", "9×6 grid · 52 clues", "10×6 grid · 71 clues", "11×7 grid · 104 clues", "12×8 grid · 172 clues"]
     },
     {
       "id": "reasoning.truth-ladder",
@@ -68,7 +68,7 @@
       "basedOn": "reasoning.truth-tellers-extreme",
       "passMark": 1,
       "grows": "Islanders and statement depth: more people, nested statements, then spies and alternators.",
-      "planned": true
+      "rungs": ["4 islanders · 4 statements", "5 islanders · 5 statements", "6 islanders · 8 statements", "9 islanders · 13 statements", "12 islanders · 20 statements", "14 islanders · 24 statements", "16 islanders · 28 statements", "19 islanders · 34 statements", "22 islanders · 40 statements", "24 islanders · 45 statements"]
     },
     {
       "id": "reasoning.plans-ladder",
@@ -78,7 +78,7 @@
       "basedOn": "reasoning.planning-extreme",
       "passMark": 1,
       "grows": "State-space size and the proven-minimum plan length.",
-      "planned": true
+      "rungs": ["4 disks · 6 moves", "5 disks · 10 moves", "6 disks · 14 moves", "7 disks · 19 moves", "8 disks · 25 moves", "9 disks · 32 moves", "10 disks · 40 moves", "11 disks · 48 moves", "12 disks · 58 moves", "13 disks · 70 moves"]
     },
     {
       "id": "math.exact-ladder",

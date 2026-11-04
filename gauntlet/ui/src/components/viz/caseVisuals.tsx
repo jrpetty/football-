@@ -114,10 +114,13 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
 const BY_ID: Record<string, CaseVisualFamily> = {
   'reasoning.deduction-grid': 'grid',
   'reasoning.deduction-grid-extreme': 'grid',
+  'reasoning.grid-ladder': 'grid',
   'reasoning.truth-tellers': 'islanders',
   'reasoning.truth-tellers-extreme': 'islanders',
+  'reasoning.truth-ladder': 'islanders',
   'reasoning.planning': 'plan',
   'reasoning.planning-extreme': 'plan',
+  'reasoning.plans-ladder': 'plan',
   'math.competition': 'maths',
   'math.olympiad': 'maths',
   'math.word-problems': 'maths',

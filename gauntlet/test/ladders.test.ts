@@ -72,7 +72,8 @@ test('Horizon rung labels in the config match what the test files say', () => {
 test('the validator: a planned test that now exists, a missing built test, bad cases, missing rungs, wrong area and pass mark', () => {
   const bad: LaddersConfig = JSON.parse(JSON.stringify(cfg));
   const fake = new Map(library);
-  fake.set('reasoning.grid-ladder', { category: 'reasoning', caseIds: ladderCaseIds(10) }); // it landed
+  bad.tests.push({ id: 'reasoning.landed-ladder', name: 'Landed', area: 'benchmark', category: 'reasoning', passMark: 1, grows: 'A planned test that has landed, just a test of the validator.', planned: true });
+  fake.set('reasoning.landed-ladder', { category: 'reasoning', caseIds: ladderCaseIds(10) }); // it landed
   bad.tests.find((t) => t.id === 'horizon.mind-runner')!.planned = undefined;
   bad.tests.push({ id: 'reasoning.not-built', name: 'Not built', area: 'benchmark', category: 'reasoning', passMark: 1, grows: 'Nothing yet, just a test of the validator.' });
   fake.set('math.odd-cases', { category: 'math', caseIds: ['L01', 'L02', 'c03', ...ladderCaseIds(10).slice(3)] });
@@ -81,7 +82,7 @@ test('the validator: a planned test that now exists, a missing built test, bad c
   bad.tests.find((t) => t.id === 'work.sql-ladder')!.area = 'benchmark';
   bad.tests.find((t) => t.id === 'work.crm-ladder')!.passMark = 90;
   const errs = validateLadders(bad, fake).join('\n');
-  assert.match(errs, /reasoning\.grid-ladder now exists in the test library: delete "planned": true and add its 10 "rungs"/);
+  assert.match(errs, /reasoning\.landed-ladder now exists in the test library: delete "planned": true and add its 10 "rungs"/);
   assert.match(errs, /reasoning\.not-built is not in the test library: mark it "planned": true/);
   assert.match(errs, /math\.odd-cases: cases must be exactly L01…L10/);
   assert.match(errs, /horizon\.tiling-count: needs "rungs"/);

@@ -47,11 +47,11 @@ export function parseAssignment(text: string, names: string[]): Map<string, Isla
 export function parseIsland(prompt: string): { names: string[]; roles: IslandRole[]; statements: Map<string, string[]>; rule: string | null } | null {
   const roles = ROLES.filter((r) => new RegExp(`^- An? ${r}:`, 'm').test(prompt));
   if (roles.length < 2) return null;
-  const meet = prompt.match(/You meet \w+ inhabitants?:\s*([^.]+)\./);
+  const meet = prompt.match(/You meet [\w-]+ inhabitants?:\s*([^.]+)\./);
   if (!meet) return null;
   const names = splitList(meet[1]!);
   if (names.length < 2 || names.some((n) => !/^[A-Z][a-z]+$/.test(n))) return null;
-  const rule = (prompt.match(/(Exactly one of them is a spy[^.]*\.|There may be any number of each type[^.]*\.)/) ?? [])[1] ?? null;
+  const rule = (prompt.match(/(Exactly one of them is a spy[^.]*\.|Exactly [\w-]+ of them are spies[^.]*\.|None of them is a spy[^.]*\.|There may be any number of each type[^.]*\.)/) ?? [])[1] ?? null;
   const start = prompt.indexOf('\nStatements:');
   if (start < 0) return null;
   const block = prompt.slice(start + 12).split(/\n\s*\n/)[0]!;
