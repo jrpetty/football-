@@ -1,0 +1,102 @@
+{
+  "version": "1.0.0",
+  "title": "The Business Ladder",
+  "tagline": "How far up the ladder can an AI go before a person has to check its work?",
+  "passMark": 70,
+  "levels": [
+    { "level": 1, "name": "Assist", "what": "Reads ONE document or message and pulls out or tags what matters.", "check": "A person checks every output." },
+    { "level": 2, "name": "Automate a step", "what": "Processes a BATCH against written rules and produces structured output a system can load.", "check": "A person spot-checks." },
+    { "level": 3, "name": "Run a workflow", "what": "Joins several documents and rules end to end: match, reconcile, decide, draft.", "check": "A person approves the result." },
+    { "level": 4, "name": "Agent", "what": "Uses real tools (inbox, accounts system, calendar, database, bank) over many steps, with traps such as scams, injected instructions and fake bank-detail changes.", "check": "A person reviews the log." },
+    { "level": 5, "name": "Autonomous department", "what": "Runs a whole function for a simulated week or month: volume, interruptions, priorities, KPIs and escalations.", "check": "A person sets goals and audits." }
+  ],
+  "scenarios": [
+    {
+      "id": "finance",
+      "name": "Finance & Accounts",
+      "color": "#2563EB",
+      "icon": "receipt",
+      "summary": "Invoices, expenses, bank reconciliations and the month-end close.",
+      "tests": [
+        { "id": "work.invoice-read", "level": 1 },
+        { "id": "work.invoice-matching", "level": 2, "planned": true },
+        { "id": "work.expense-audit", "level": 3, "planned": true },
+        { "id": "work.bank-reconciliation", "level": 3, "planned": true },
+        { "id": "work.accounts-clerk", "level": 4, "planned": true },
+        { "id": "work.month-end", "level": 5, "planned": true }
+      ]
+    },
+    {
+      "id": "customer-service",
+      "name": "Customer Service",
+      "color": "#DB2777",
+      "icon": "mic",
+      "summary": "Tagging tickets, refunds by policy, replies and running the helpdesk.",
+      "tests": [
+        { "id": "work.ticket-tag", "level": 1 },
+        { "id": "work.support-refunds", "level": 2, "planned": true },
+        { "id": "work.support-replies", "level": 3, "planned": true },
+        { "id": "work.helpdesk-agent", "level": 4, "planned": true },
+        { "id": "work.support-week", "level": 5, "planned": true }
+      ]
+    },
+    {
+      "id": "hiring",
+      "name": "Hiring & People",
+      "color": "#7C3AED",
+      "icon": "persona",
+      "summary": "Reading CVs, shortlisting fairly, checking payslips and recruiting.",
+      "tests": [
+        { "id": "work.cv-read", "level": 1 },
+        { "id": "work.cv-shortlist", "level": 2, "planned": true },
+        { "id": "work.payroll-check", "level": 3, "planned": true },
+        { "id": "work.recruiter", "level": 4, "planned": true }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Office & Admin",
+      "color": "#0D9488",
+      "icon": "clock",
+      "summary": "Emails, diaries, contracts and an assistant's whole week.",
+      "tests": [
+        { "id": "work.email-actions", "level": 1 },
+        { "id": "work.inbox-triage", "level": 2, "planned": true },
+        { "id": "work.meeting-scheduler", "level": 2, "planned": true },
+        { "id": "work.contract-redline", "level": 3, "planned": true },
+        { "id": "work.assistant", "level": 4, "planned": true },
+        { "id": "work.assistant-hard", "level": 5, "planned": true },
+        { "id": "work.office-week", "level": 5, "planned": true }
+      ]
+    },
+    {
+      "id": "data",
+      "name": "Data & Reporting",
+      "color": "#D97706",
+      "icon": "chart",
+      "summary": "Spreadsheets, clean customer lists, database questions and board numbers.",
+      "tests": [
+        { "id": "work.sheet-lookup", "level": 1 },
+        { "id": "work.crm-dedupe", "level": 2, "planned": true },
+        { "id": "work.sql-questions", "level": 2, "planned": true },
+        { "id": "work.sql-hard", "level": 3, "planned": true },
+        { "id": "work.board-report", "level": 3, "planned": true },
+        { "id": "work.analyst-agent", "level": 4, "planned": true }
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Operations",
+      "color": "#16A34A",
+      "icon": "route",
+      "summary": "Deliveries, stock, rotas, van routes and running the warehouse.",
+      "tests": [
+        { "id": "work.delivery-note", "level": 1 },
+        { "id": "work.stock-reorder", "level": 2, "planned": true },
+        { "id": "work.shift-rota", "level": 3, "planned": true },
+        { "id": "work.delivery-routes", "level": 4, "planned": true },
+        { "id": "work.warehouse-week", "level": 5, "planned": true }
+      ]
+    }
+  ]
+}
