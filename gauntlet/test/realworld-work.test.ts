@@ -49,7 +49,10 @@ test('the generators rebuild every test file and the scripted answers byte for b
     const r = spawnSync('python3', ['build.py', '--out', out], { cwd: join(import.meta.dirname, '..', 'verification', 'realworld-work'), encoding: 'utf8' });
     assert.equal(r.status, 0, r.stderr);
     const here = join(import.meta.dirname, '..', 'tests', 'work');
-    for (const f of readdirSync(here)) assert.equal(readFileSync(join(out, 'work', f), 'utf8'), readFileSync(join(here, f), 'utf8'), f);
+    // tests/work/ is shared with other generators (SQL, business pack…): compare exactly the files this generator writes.
+    const mine = readdirSync(join(out, 'work'));
+    assert.ok(mine.length >= 5, 'the generator wrote its test files');
+    for (const f of mine) assert.equal(readFileSync(join(out, 'work', f), 'utf8'), readFileSync(join(here, f), 'utf8'), f);
     assert.equal(readFileSync(join(out, 'scripted.json'), 'utf8'), readFileSync(join(import.meta.dirname, '..', 'verification', 'realworld-work', 'scripted.json'), 'utf8'));
   } finally {
     rmSync(out, { recursive: true, force: true });
