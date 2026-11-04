@@ -501,7 +501,9 @@ function answerRule(sc: ScorerSpec): string {
         ? 'The plan is replayed: the proven minimum scores 1, a longer plan that solves it at most 0.25, an illegal move 0.'
         : sc.answer === 'grid'
           ? 'The whole grid after FINAL ANSWER must match, every cell.'
-          : 'The FINAL ANSWER number must equal the key, every digit. Hedged or two numbers are wrong.';
+          : sc.answer === 'fraction'
+            ? 'The FINAL ANSWER fraction must equal the key exactly (any equal fraction counts, lowest terms not needed). A decimal, a hedge or two values are wrong.'
+            : 'The FINAL ANSWER number must equal the key, every digit. Hedged or two numbers are wrong.';
     case 'verifier': {
       const v = Object.prototype.hasOwnProperty.call(VERIFIERS, sc.verifier) ? VERIFIERS[sc.verifier] : undefined;
       return v?.kind === 'plan'

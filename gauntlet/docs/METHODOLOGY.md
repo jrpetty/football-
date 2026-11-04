@@ -1591,17 +1591,33 @@ from the prompt text (copies the store at every BEGIN and SNAPSHOT, lazy expiry,
 enough for it. `fuzz.mjs` runs the three on 30,000 random streams (3,000 per level): all agree.
 
 **Time limits, measured.** Per-level limits are set from the reference's slowest hidden test in the real sandbox
-(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes) with at least 8× headroom,
-so a slow laptop has room to spare; a unit test enforces the 8×. The prompt states each level's limit.
+(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes) with at least 8× headroom
+(in practice 30× or more), so a slow laptop has room to spare; a unit test enforces the 8×. The prompt states each
+level's limit. The other side is measured too (`margins.mjs`, the large tests with a 60-second limit): the
+copy-and-scan design needs 2.6–4× the limit on the deciding large tests of levels 5–7 and runs out of memory, or
+runs past 60 seconds, on those of levels 4 and 8–10, so it does not pass by luck on a fast machine. Every other
+large test is light enough for any design (well under a third of its limit).
 
 **Scoring.** Each level is one case: the share of its hidden tests passed, after the fair-play check (§3) and the
 stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at
 full marks. Spread (scripted solutions through the real scorer and sandbox):
 
-SPREAD_TABLE
+| Level | Reference (slowest test / limit) | alt.js (careful, simpler structures) | slips.js (careful with slips) | naive.js (correct, copies and scans) | careless.js | Do nothing (stub / no replies) |
+|---|---|---:|---:|---:|---:|---|
+| L01 | 100% (1 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
+| L02 | 100% (3 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
+| L03 | 100% (14 ms / 2 s) | 100% | 67% | 100% | 33% | 0% / 0% |
+| L04 | 100% (18 ms / 2 s) | 100% | 71% | 95% | 48% | 0% / 0% |
+| L05 | 100% (61 ms / 2 s) | 100% | 75% | 88% | 31% | 0% / 0% |
+| L06 | 100% (55 ms / 3 s) | 100% | 38% | 96% | 29% | 0% / 0% |
+| L07 | 100% (68 ms / 4 s) | 100% | 57% | 90% | 29% | 0% / 0% |
+| L08 | 100% (114 ms / 8 s) | 100% | 60% | 90% | 40% | 0% / 0% |
+| L09 | 100% (276 ms / 12 s) | 100% | 53% | 89% | 37% | 0% / 0% |
+| L10 | 100% (467 ms / 15 s) | 100% | 29% | 88% | 12% | 0% / 0% |
 
 `alt.js` is careful but uses simpler structures (it re-copies undo logs on every COMMIT and splices a sorted
-array key by key); `slips.js` is a fast, well-designed solution with one plausible slip per level from level 3
+array key by key): it passes every level, but its slowest tests take 7.6 s and 2.2 s at levels 9 and 10, so a
+design that is quadratic in the worst case is close to the edge there; `slips.js` is a fast, well-designed solution with one plausible slip per level from level 3
 (an integer check that accepts `007`, POPULATE not undone, a key still alive at its deadline, RENAME onto itself
 deletes, GETAT checks today's clock, DELPREFIX leaves no history, COUNTRANGE includes the upper bound); `naive.js`
 gets every rule right with the obvious design (copies, scans) and loses the large tests; `careless.js` reads the

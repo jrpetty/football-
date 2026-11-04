@@ -110,7 +110,9 @@ export function describeMarking(scorer: ScorerSpec): string[] {
           ? 'The plan is replayed step by step by the checker; it must be legal and reach the goal.'
           : scorer.answer === 'grid'
             ? 'The whole grid is compared cell by cell with the one correct solution.'
-            : 'The number is checked exactly against the correct answer.',
+            : scorer.answer === 'fraction'
+              ? 'The fraction is checked exactly against the correct answer (any equal fraction counts).'
+              : 'The number is checked exactly against the correct answer.',
       ];
     case 'verifier': {
       const v = Object.prototype.hasOwnProperty.call(VERIFIERS, scorer.verifier) ? VERIFIERS[scorer.verifier] : undefined;
