@@ -13,6 +13,7 @@ the rules allow, and `balance()` proves the adjusted cash-book balance equals th
 payment are left as unexplained items, the split payment and the reversed charge are missed, duplicates are
 not spotted, and every unmatched cash-book entry is called a timing difference.
 """
+import json
 import random
 
 # Points per field for fields where a trap sits (routine fields are worth 1). Stated in the prompt.
@@ -36,7 +37,7 @@ CUSTOMERS = [('Northgate Housing Trust', 'NORTHGATE HT'), ('Saltmarsh Hotels', '
              ('Pennine Dental Group', 'PENNINE DENTAL'), ('Gorse & Vale Solicitors', 'GORSE VALE')]
 COMPANIES = ['Hollins & Webb Joinery Ltd', 'Calder Valley Signs Ltd', 'Brindle Street Bakery Ltd', 'Marsh Lane Motors Ltd', 'Fairhaven Events Ltd']
 
-BANK_REASONS = ['bank_charge', 'interest', 'unrecorded_direct_debit', 'duplicate_payment', 'reversed_charge']
+BANK_REASONS = ['bank_charge', 'interest', 'unrecorded_direct_debit', 'duplicate_payment', 'reversed_charge', 'returned_cheque']
 LEDGER_REASONS = ['unpresented_cheque', 'deposit_in_transit', 'duplicate_entry']
 DIFF_REASONS = ['keying_error', 'fx_difference']
 
@@ -45,6 +46,7 @@ def transpose(amount, rng):
     s = f"{amount:.2f}".replace('.', '')
     digits = list(s)
     cands = [i for i in range(len(digits) - 3) if digits[i] != digits[i + 1]]
+    assert cands, 'no digits to swap'
     i = rng.choice(cands)
     digits[i], digits[i + 1] = digits[i + 1], digits[i]
     t = ''.join(digits)
@@ -73,6 +75,8 @@ class Rec:
         self.diffs = {}
         self.used_refs = set()
         self.names = people(rng, 4)
+        self.prior = []  # items outstanding at the end of last month: dict(id, desc, ref, amount, date, bank)
+        self.bank_opening = self.opening
 
     def day(self, lo=1, hi=None):
         hi = hi or self.last.day - 4
@@ -182,11 +186,11 @@ class Rec:
         c = self.clear(d, 1, 3)
         tx = dict(kind='fx')
         L = self.add_ledger(d, f"{sup[0]} — invoice {inv}, USD {usd:,.2f} booked at £{booked} per $", inv, -lamt, tx)
-        B = self.add_bank(c, f"INTL PAYMENT {sup[1]} USD {usd:,.2f} RATE {actual}", -bamt, tx)
+        B = self.add_bank(c, f"INTL PAYMENT {sup[1]} REF {inv.replace('-', '')} USD {usd:,.2f} RATE {actual}", -bamt, tx)
         self.link(B, L)
         self.diffs[B] = ('fx_difference', -bamt - (-lamt))
 
-    def split(self, bank_split=True):
+    def split(self, bank_split=True, parts=2):
         sup = self.rng.choice(SUPPLIERS)
         half = self.amount(900, 3600)
         total = half * 2
@@ -194,14 +198,18 @@ class Rec:
         inv = self.ref('INV-')
         tx = dict(kind='split')
         if bank_split:
-            L = self.add_ledger(d, f"{sup[0]} — invoice {inv} (paid in two instalments)", inv, -total, tx)
-            c1 = self.clear(d, 0, 1)
-            c2 = self.clear(d, 5, 7)
-            B1 = self.add_bank(c1, f"FP OUT {sup[1]} REF {inv.replace('-', '')} 1OF2", -half, tx)
-            B2 = self.add_bank(c2, f"FP OUT {sup[1]} REF {inv.replace('-', '')} 2OF2", -half, tx)
-            self.truth_bank[B1] = L
-            self.truth_bank[B2] = L
-            self.truth_ledger[L] = [B1, B2]
+            word = {2: 'two', 3: 'three'}[parts]
+            sizes = [half, half] if parts == 2 else [r2(total * D('0.4')), r2(total * D('0.35'))]
+            if parts == 3:
+                sizes.append(total - sizes[0] - sizes[1])
+            L = self.add_ledger(d, f"{sup[0]} — invoice {inv} (paid in {word} instalments)", inv, -total, tx)
+            Bs = []
+            for i, amt in enumerate(sizes):
+                ci = self.clear(d, [0, 5, 7][i] if parts == 3 else [0, 5][i], [1, 6, 7][i] if parts == 3 else [1, 7][i])
+                Bs.append(self.add_bank(ci, f"FP OUT {sup[1]} REF {inv.replace('-', '')} {i + 1}OF{parts}", -amt, tx))
+            for B in Bs:
+                self.truth_bank[B] = L
+            self.truth_ledger[L] = Bs
         else:
             cus = self.rng.choice(CUSTOMERS)
             L1 = self.add_ledger(d, f"Receipt from {cus[0]} — {inv} part payment 1", inv, half, tx)
@@ -210,6 +218,63 @@ class Rec:
             self.truth_bank[B] = [L1, L2]
             self.truth_ledger[L1] = B
             self.truth_ledger[L2] = B
+
+    def batch(self, k):
+        """One BACS run on the statement pays several cash-book payments."""
+        sups = self.rng.sample(SUPPLIERS, k)
+        d = self.day(1, self.last.day - 6)
+        c = self.clear(d, 1, 2)
+        tx = dict(kind='batch')
+        Ls = []
+        for sup in sups:
+            inv = self.ref('INV-')
+            amt = self.amount(80, 2400)
+            Ls.append(self.add_ledger(d, f"{sup[0]} — invoice {inv} (BACS run {d.day} {d.strftime('%b')})", inv, -amt, tx))
+        total = sum((self.ledger[i]['amount'] for i in Ls), D('0'))
+        B = self.add_bank(c, f"BACS BATCH RUN {d.day:02d}{d.strftime('%b').upper()} {k} ITEMS", total, tx)
+        self.truth_bank[B] = Ls
+        for L in Ls:
+            self.truth_ledger[L] = B
+
+    def returned_cheque(self):
+        cus = self.rng.choice(CUSTOMERS)
+        amt = self.amount(200, 2600)
+        d = self.day(1, self.last.day - 9)
+        no = f"{self.rng.randint(300100, 300899):06d}"
+        tx = dict(kind='rtn')
+        L = self.add_ledger(d, f"Cheque {no} from {cus[0]} paid in", f"CHQ {no}", amt, tx)
+        c = self.clear(d, 1, 2)
+        B = self.add_bank(c, f"CHQ PAID IN {no}", amt, tx)
+        self.link(B, L)
+        r = self.clear(c, 3, 5)
+        B2 = self.add_bank(r, f"RETURNED CHQ {no} UNPAID REFER TO DRAWER", -amt, dict(kind='rtn2'))
+        self.truth_bank[B2] = 'returned_cheque'
+
+    def prior_items(self):
+        """Last month's unpresented cheques and deposit: two clear this month, one is still outstanding."""
+        prev = self.first - timedelta(days=1)
+        while prev.weekday() >= 5:
+            prev -= timedelta(days=1)
+        items = []
+        for i, kind in enumerate(['chq', 'chq', 'dep']):
+            sup = self.rng.choice(SUPPLIERS)
+            cus = self.rng.choice(CUSTOMERS)
+            if kind == 'chq':
+                no = f"{self.rng.randint(100100, 100199):06d}"
+                items.append(dict(id=f"P{i + 1}", desc=f"Cheque {no} to {sup[0]}", ref=f"CHQ {no}", amount=-self.amount(150, 1900), date=prev, kind=kind, no=no))
+            else:
+                items.append(dict(id=f"P{i + 1}", desc=f"Cheques paid in at branch — {cus[0]}", ref='PIS', amount=self.amount(400, 3800), date=prev, kind=kind, no=None))
+        outstanding = self.rng.choice([0, 1])
+        for i, it in enumerate(items):
+            if i == outstanding:
+                it['bank'] = None
+                continue
+            d = self.day(1, 6)
+            desc = f"CHQ {it['no']}" if it['kind'] == 'chq' else 'CASH/CHQS PAID IN AT BRANCH'
+            it['bank'] = self.add_bank(d, desc, it['amount'], dict(kind='prior'))
+            self.truth_bank[it['bank']] = it['id']
+        self.prior = items
+        self.bank_opening = self.opening - sum((it['amount'] for it in items), D('0'))
 
     def ledger_duplicate(self):
         L, B = self.payment()
@@ -267,10 +332,11 @@ class Rec:
         self.key_bank = {bid[i]: m(self.truth_bank[i], lid) for i in bo}
         self.key_ledger = {lid[i]: m(self.truth_ledger[i], bid) for i in lo}
         self.key_diffs = {bid[i]: {'reason': r, 'amount': float(a)} for i, (r, a) in sorted(self.diffs.items(), key=lambda kv: bid[kv[0]])}
+        self.key_prior = {it['id']: (bid[it['bank']] if it['bank'] is not None else ('unpresented_cheque' if it['amount'] < 0 else 'deposit_in_transit')) for it in self.prior}
         self.B = [dict(self.bank[i], id=bid[i]) for i in bo]
         self.L = [dict(self.ledger[i], id=lid[i]) for i in lo]
         # running balances
-        bal = self.opening
+        bal = self.bank_opening
         for b in self.B:
             bal += b['amount']
             b['balance'] = bal
@@ -284,7 +350,7 @@ def balance(rec):
     adj_cb = rec.ledger_close
     for b in rec.B:
         r = rec.key_bank[b['id']]
-        if r in ('bank_charge', 'interest', 'unrecorded_direct_debit', 'duplicate_payment', 'reversed_charge'):
+        if r in ('bank_charge', 'interest', 'unrecorded_direct_debit', 'duplicate_payment', 'reversed_charge', 'returned_cheque'):
             adj_cb += b['amount']
     for k, v in rec.key_diffs.items():
         adj_cb += D(str(v['amount']))
@@ -296,6 +362,9 @@ def balance(rec):
         r = rec.key_ledger[l['id']]
         if r in ('unpresented_cheque', 'deposit_in_transit'):
             adj_bank += l['amount']
+    for it in rec.prior:
+        if it['bank'] is None:
+            adj_bank += it['amount']
     assert adj_cb == adj_bank, (adj_cb, adj_bank)
     return adj_cb
 
@@ -367,14 +436,33 @@ def careless(rec):
         if l['id'] not in kl:
             kl[l['id']] = 'unpresented_cheque' if l['amount'] < 0 else 'deposit_in_transit'
     timing = sum((l['amount'] for l in rec.L if not str(kl[l['id']]).startswith('B')), D('0'))
-    return {'bank': kb, 'ledger': kl, 'differences': {}, 'adjusted_balance': float(rec.bank_close + timing)}
+    out = {'bank': kb, 'ledger': kl, 'differences': {}, 'adjusted_balance': float(rec.bank_close + timing + sum((it['amount'] for it in rec.prior), D('0')))}
+    if rec.prior:
+        out['prior'] = {it['id']: ('unpresented_cheque' if it['amount'] < 0 else 'deposit_in_transit') for it in rec.prior}
+    return out
+
+
+def slip(rec, exp):
+    """A strong bookkeeper's two slips: the returned cheque booked as a bank charge, and the FX difference's sign flipped."""
+    out = json.loads(json.dumps(exp))
+    for k, v in out['bank'].items():
+        if v == 'returned_cheque':
+            out['bank'][k] = 'bank_charge'
+    for k, v in out['differences'].items():
+        if v['reason'] == 'fx_difference':
+            v['amount'] = -v['amount']
+    return out
 
 
 def build(seed, tier):
     rec = Rec(seed, tier)
     rng = rec.rng
-    n_pay = {'easy': 6, 'medium': 8, 'hard': 10}[tier]
-    n_rec = {'easy': 4, 'medium': 5, 'hard': 6}[tier]
+    n_pay = {'easy': 6, 'medium': 22, 'hard': 60}[tier]
+    n_rec = {'easy': 4, 'medium': 10, 'hard': 28}[tier]
+    rec.opening += {'easy': 0, 'medium': 25000, 'hard': 140000}[tier]
+    rec.bank_opening = rec.opening
+    if tier == 'hard':
+        rec.prior_items()
     for _ in range(n_pay):
         rec.payment()
     for _ in range(n_rec):
@@ -392,12 +480,43 @@ def build(seed, tier):
         rec.ledger_duplicate()
         rec.split(bank_split=rng.random() < 0.5)
         rec.reversed_charge()
+    if tier == 'medium':
+        rec.batch(3)
+        rec.returned_cheque()
+        rec.fx()
+        rec.cheque(True)
+        rec.bank_only('bank_charge')
     if tier == 'hard':
         rec.fx()
+        rec.fx()
         rec.bank_duplicate()
+        rec.bank_duplicate()
+        rec.ledger_duplicate()
+        rec.keying_error()
+        rec.keying_error()
         rec.cheque(False)
+        rec.cheque(True)
+        rec.cheque(True)
         rec.bank_only('interest')
-        rec.split(bank_split=True)
+        rec.bank_only('unrecorded_direct_debit')
+        rec.bank_only('bank_charge')
+        rec.split(bank_split=True, parts=3)
+        rec.split(bank_split=True, parts=2)
+        rec.split(bank_split=False)
+        rec.split(bank_split=False)
+        rec.batch(4)
+        rec.batch(5)
+        rec.batch(3)
+        rec.batch(4)
+        rec.fx()
+        rec.keying_error()
+        rec.keying_error()
+        rec.bank_duplicate()
+        rec.ledger_duplicate()
+        rec.returned_cheque()
+        rec.returned_cheque()
+        rec.reversed_charge()
+        rec.deposit_in_transit()
         # a look-alike: same supplier and same amount as an earlier payment, different invoice, later in the month
         L0 = rec.ledger[0]
         sup = next(s for s in SUPPLIERS if s[0] in L0['desc'])
@@ -425,22 +544,31 @@ def prompt(rec):
         tl.append(f"{l['id']} {uk(l['date'])} | {l['ref']} | {l['desc']} | {pay} | {rc}")
     month = rec.last.strftime('%B %Y')
     rules = f"""How to reconcile (apply exactly):
-1. Match a bank line with cash-book entries for the same transaction: same counterparty and reference, the bank date on or up to 7 days after the cash-book date, and the same amount. A payment or receipt can be split: one cash-book entry may match two bank lines, or two cash-book entries one bank line, when they share a reference and add up exactly.
+1. Match a bank line with cash-book entries for the same transaction: same counterparty and reference, the bank date on or up to 7 days after the cash-book date, and the same amount. A payment or receipt can be split: one cash-book entry may match several bank lines (instalments sharing its reference), or several cash-book entries one bank line (two part-payments sharing a reference, or the payments of one BACS run, which the cash book marks with the run's date), when they add up exactly.
 2. A match whose amounts differ is still a match when it is the same transaction and the difference is explained: "keying_error" (the cash book was keyed wrongly, e.g. two digits swapped) or "fx_difference" (a foreign-currency payment cost a different amount in pounds than the cash book's booked rate). The bank figure is right in both cases. List each in "differences" with amount = bank amount minus cash-book amount (money in positive, money out negative).
-3. Bank lines with no cash-book entry get a reason: "bank_charge" (fees the bank charged), "interest", "unrecorded_direct_debit" (a direct debit nobody entered in the cash book), "duplicate_payment" (the bank paid the same payment twice: the later line is the duplicate), or "reversed_charge" (a charge and its reversal on the statement: give both lines this reason).
+3. Bank lines with no cash-book entry get a reason: "bank_charge" (fees the bank charged), "interest", "unrecorded_direct_debit" (a direct debit nobody entered in the cash book), "duplicate_payment" (the bank paid the same payment twice: the later line is the duplicate), "reversed_charge" (a charge and its reversal on the statement: give both lines this reason), or "returned_cheque" (a cheque paid in that the bank has returned unpaid; the paying-in itself is matched normally).
 4. Cash-book entries with no bank line get a reason: "unpresented_cheque" (a cheque not yet through the bank), "deposit_in_transit" (money paid in but not yet on the statement), or "duplicate_entry" (the same payment entered twice in the cash book: the later entry is the duplicate; the earlier one is matched).
-5. The adjusted balance is the cash-book closing balance corrected for every bank-only item, every difference and every duplicate entry. (It must equal the statement closing balance plus deposits in transit minus unpresented cheques.)"""
+5. The adjusted balance is the cash-book closing balance corrected for every bank-only item, every difference and every duplicate entry. (It must equal the statement closing balance plus deposits in transit minus unpresented cheques, including any from last month still outstanding.)"""
+    if rec.prior:
+        rules += """
+6. Items outstanding at the end of last month (P1, P2, …) are not in this month's cash book. A bank line that clears one gets that item's id (e.g. "P1") as its value; in "prior", give each item the bank line that cleared it, or "unpresented_cheque" / "deposit_in_transit" if it is still outstanding."""
     schema = ('{"bank": {"B01": "L02", "B02": "bank_charge", "B05": ["L06", "L07"], ...}, '
               '"ledger": {"L01": "B03", "L02": "B01", "L06": "B05", "L09": "unpresented_cheque", ...}, '
               '"differences": {"B07": {"reason": "keying_error", "amount": -270.00}}, '
+              + ('"prior": {"P1": "B04", "P2": "unpresented_cheque", ...}, ' if rec.prior else '') +
               '"adjusted_balance": 12345.67}')
-    return (f"Can you do the {month} bank reconciliation for {rec.company}? The account was fully reconciled at the end of last month, so the statement and the cash book "
-            f"both opened the month at £{fmt(rec.opening)}.\n\n{rules}\n\n"
+    if rec.prior:
+        pl = '\n'.join(f"  {it['id']} {uk(it['date'])} | {it['ref']} | {it['desc']} | " + (f"payment {fmt(it['amount'])}" if it['amount'] < 0 else f"receipt {fmt(it['amount'])}") for it in rec.prior)
+        opening = (f"Last month's reconciliation left these cash-book items not yet through the bank:\n{pl}\n"
+                   f"So this month the cash book opened at £{fmt(rec.opening)} and the statement at £{fmt(rec.bank_opening)}.")
+    else:
+        opening = f"The account was fully reconciled at the end of last month, so the statement and the cash book both opened the month at £{fmt(rec.opening)}."
+    return (f"Can you do the {month} bank reconciliation for {rec.company}? {opening}\n\n{rules}\n\n"
             f"Bank statement, {month} (Business Current Account):\n" + '\n'.join(tb) + f"\nClosing balance £{fmt(rec.bank_close)}\n\n"
             f"Cash book, {month}:\n" + '\n'.join(tl) + f"\nCash-book closing balance £{fmt(rec.ledger_close)}\n\n"
             "Answer with one JSON object in exactly this shape:\n" + schema + "\n"
-            "- bank: every statement line, with the cash-book entry it matches (a list of two for a split) or its reason from rule 3.\n"
-            "- ledger: every cash-book entry, with the bank line it matches (a list of two for a split) or its reason from rule 4.\n"
+            "- bank: every statement line, with the cash-book entry it matches (a list for a split or a BACS run) or its reason from rule 3" + (" or last month's item id" if rec.prior else '') + ".\n"
+            "- ledger: every cash-book entry, with the bank line it matches (a list for a split) or its reason from rule 4.\n"
             "- differences: one entry per matched bank line whose amount differs from the cash book (rule 2); leave it empty ({}) if there are none.\n"
             "- adjusted_balance: in pounds, to the penny.\n"
             f"Marking: each bank line, each cash-book entry, each difference's reason and amount and the adjusted balance is a field. Routine fields (a straightforward match) are worth 1 point; "
@@ -466,7 +594,9 @@ def make_cases():
         else:
             raise AssertionError(cid)
         exp = {'bank': rec.key_bank, 'ledger': rec.key_ledger, 'differences': rec.key_diffs, 'adjusted_balance': float(bal)}
-        out.append(dict(id=cid, tier=tier, prompt=prompt(rec), expected=exp, careless=careless(rec), rec=rec, attempt=k))
+        if rec.prior:
+            exp['prior'] = rec.key_prior
+        out.append(dict(id=cid, tier=tier, prompt=prompt(rec), expected=exp, careless=careless(rec), slip=slip(rec, exp), rec=rec, attempt=k))
     return out
 
 
