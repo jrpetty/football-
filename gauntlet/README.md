@@ -307,11 +307,11 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 
 | Test | Id | What it does |
 |---|---|---|
-| Read an Invoice | `work.invoice-read` | One invoice, twelve boxes to fill. Can it read the paperwork without slipping? |
-| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, six tags. Does it follow the rubric or its gut? |
-| Read a CV | `work.cv-read` | One CV, seven boxes. Count the experience properly and never guess what isn't written. |
+| Read an Invoice | `work.invoice-read` | One invoice, seventeen boxes to fill. Can it read the paperwork without slipping? |
+| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, seven tags. Does it follow the rubric or its gut? |
+| Read a CV | `work.cv-read` | One CV, eight boxes. Count the experience properly and never guess what isn't written. |
 | What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
-| Read the Spreadsheet | `work.sheet-lookup` | A hundred rows, three questions, one exact answer each. No formulas allowed. |
+| Read the Spreadsheet | `work.sheet-lookup` | Two hundred rows, five questions, one exact answer each. No formulas allowed. |
 | Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
 
 **Everyday Life (`life`)**: personal admin, every answer checked by an exact solver or a plan checker (see [METHODOLOGY.md](docs/METHODOLOGY.md#7i-everyday-life-tests-checked-plans-and-exact-money)).
