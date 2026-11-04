@@ -7,13 +7,15 @@
  *               the minimum length scores 1, a longer plan that really solves the puzzle scores
  *               0.25 × minimum / length, anything illegal or unfinished scores 0.
  *  - `grid`:    a whole nonogram grid (# filled, . empty). All or nothing.
+ *  - `fraction`: an exact non-negative rational "p/q" of any size (Exact Maths: Ladder). Any fraction of the same value
+ *               counts (lowest terms are not required); decimals, two answers and hedges score 0.
  *
  * Parsing is lenient about decoration (markdown, spaces, thousands separators) and strict about content.
  */
 import type { ScoreDetail } from '../core/types.ts';
 import { extractFinalAnswer } from '../core/extract.ts';
 
-export type LadderAnswer = 'integer' | 'plan' | 'grid';
+export type LadderAnswer = 'integer' | 'plan' | 'grid' | 'fraction';
 
 export interface PlanKey {
   rows: number;
@@ -53,6 +55,35 @@ export function parseBigInteger(answer: string): string | null {
   const runs = a.match(/\d+/g) ?? [];
   if (runs.length !== 1) return null;
   return runs[0]!.replace(/^0+(?=\d)/, '');
+}
+
+/**
+ * A fraction answer as BigInt numerator and denominator, or null. Accepts "p/q" with spaces around the slash and
+ * thousands separators inside the numbers ("12,345 / 67,890"), LaTeX `\frac{p}{q}` (unwrapped by the answer
+ * extractor), a stated equation ("P = 3/8", "3/8 = 0.375": the exact side), a whole number ("1" = 1/1) and a trailing
+ * approximation ("3/8 ≈ 0.375", "3/8 (about 37.5%)"). Refuses decimals, negative numbers, a zero denominator and
+ * anything with more than one fraction.
+ */
+export function parseFraction(answer: string): { p: bigint; q: bigint } | null {
+  // "15/128 = 0.1171875", "P = 15/128", "a/b = c/d": every side of an equation that is an exact fraction must agree.
+  const sides = answer.split('=').map(parseOneFraction).filter((x): x is { p: bigint; q: bigint } => x !== null);
+  if (!sides.length) return null;
+  return sides.every((x) => x.p * sides[0]!.q === sides[0]!.p * x.q) ? sides[0]! : null;
+}
+
+function parseOneFraction(side: string): { p: bigint; q: bigint } | null {
+  const parts = fractionHead(side).split('/');
+  if (parts.length > 2) return null;
+  const p = parseBigInteger(parts[0]!);
+  const q = parts.length === 2 ? parseBigInteger(parts[1]!) : '1';
+  if (p === null || q === null || /^0+$/.test(q)) return null;
+  return { p: BigInt(p), q: BigInt(q) };
+}
+
+/** The part of a fraction answer that states it: outer brackets removed, a trailing approximation cut off. */
+function fractionHead(answer: string): string {
+  const a = answer.trim().replace(/^[([]\s*([^()[\]]*?)\s*[)\]]$/, '$1');
+  return a.split(/≈|≅|~|\\approx|\(|\[|,?\s*\b(?:approx(?:imately)?|about|roughly|which is|i\.e\.)\b/i)[0]!;
 }
 
 /** A stated move count, which is not a tile: "(20 moves)" anywhere, "20 moves:" before the plan, ", 20 moves" after it. */
@@ -130,6 +161,24 @@ export function scoreLadder(kind: LadderAnswer, expected: unknown, response: str
       passed: ok,
       summary: ok ? `Correct: ${want}` : got === null ? `No whole number in ${quote(answer)} · expected ${want}` : `Answered ${quote(got)} · expected ${want}`,
       detail: { extracted: got ?? answer, expected: want, formatOk },
+    };
+  }
+  if (kind === 'fraction') {
+    const { answer, formatOk } = extractFinalAnswer(response);
+    const want = String(expected);
+    const [wp, wq] = want.split('/').map((x) => BigInt(x));
+    const head = fractionHead(answer);
+    if (/\b(or|either|maybe|possibly|between)\b|±|\+\/-/i.test(head) && (head.match(/\d+/g) ?? []).length >= 3) {
+      return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected: want, formatOk, hedged: true } };
+    }
+    const got = parseFraction(answer);
+    const ok = got !== null && got.p * wq! === wp! * got.q;
+    const stated = got ? `${got.p}/${got.q}` : answer;
+    return {
+      score: ok ? 1 : 0,
+      passed: ok,
+      summary: ok ? `Correct: ${want}` : got === null ? `No exact fraction in ${quote(answer)} · expected ${want}` : `Answered ${quote(stated)} · expected ${want}`,
+      detail: { extracted: stated, expected: want, formatOk },
     };
   }
   if (kind === 'plan') {

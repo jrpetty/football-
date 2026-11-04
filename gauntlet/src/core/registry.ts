@@ -303,7 +303,7 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
     errors.push(`${where}: json sets must map paths to a whole number of fields per item (at least 1)`);
   if (s.type === 'json' && s.weights !== undefined && (typeof s.weights !== 'object' || !Object.values(s.weights).every((n) => typeof n === 'number' && n >= 0 && Number.isFinite(n))))
     errors.push(`${where}: json weights must map paths to points (0 or more)`);
-  if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
+  if (s.type === 'ladder' && !['integer', 'plan', 'grid', 'fraction'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan, grid or fraction`);
   if (s.type === 'verifier' && !verifierFor(String(s.verifier))) errors.push(`${where}: unknown verifier "${s.verifier}" (see src/scoring/verifiers/index.ts)`);
   if (s.type === 'sql') {
     if (s.dialect !== 'sqlite') errors.push(`${where}: sql scorer dialect must be "sqlite"`);
@@ -364,6 +364,7 @@ function validateExpected(s: ScorerSpec, expected: unknown, where: string, error
       break;
     case 'ladder': {
       if (s.answer === 'integer' && !(typeof expected === 'string' && /^\d+$/.test(expected))) errors.push(`${where}: ladder integer key must be a digit string`);
+      if (s.answer === 'fraction' && !(typeof expected === 'string' && /^\d+\/[1-9]\d*$/.test(expected))) errors.push(`${where}: ladder fraction key must be "p/q" (digits)`);
       if (s.answer === 'grid' && !(Array.isArray(expected) && expected.length > 0 && expected.every((r) => typeof r === 'string' && /^[#.]+$/.test(r) && r.length === (expected[0] as string).length)))
         errors.push(`${where}: ladder grid key must be equal-length rows of # and .`);
       if (s.answer === 'plan') {

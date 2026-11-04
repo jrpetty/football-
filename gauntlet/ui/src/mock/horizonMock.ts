@@ -65,6 +65,7 @@ const WORKING: Record<LadderAnswer, string> = {
   integer: 'Working through it step by step and keeping every intermediate value exact.',
   plan: 'Searching outward from the start position, and checking that no shorter sequence reaches the goal.',
   grid: 'Settling the forced cells line by line, then testing the remaining cells by case analysis.',
+  fraction: 'Setting up one equation per square and solving them with exact fractions.',
 };
 
 /** A plausible wrong reply of each kind (a digit slip, a detour or an illegal slide, a few wrong cells). */

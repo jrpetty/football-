@@ -350,6 +350,20 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'code',
   },
 
+  'coding.engineering-ladder': {
+    hook: 'Build a database one feature at a time: how far up does it get before something breaks?',
+    whatItTests: 'Engineering from a written spec: a mini database that gains commands, rules and bigger inputs at every level.',
+    whyHard: 'The top levels need every rule right in every combination AND a design fast enough for 200,000 keys.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten levels, each adding to the same spec' },
+      { icon: 'hidden', text: '15-24 hidden unit tests per level, run for real' },
+      { icon: 'clock', text: 'Each test must finish in 2-15 seconds' },
+      { icon: 'percent', text: 'Level score = share of its tests passed' },
+    ],
+    goodScore: 'Every level is worth 10 points. A level counts as climbed only when all its hidden tests pass, so the headline is how far up it gets with nothing broken.',
+    icon: 'code',
+  },
+
   // ─────────────── Creative ───────────────
   'creative.one-shot-games': {
     hook: 'Can it build a complete, playable browser game from a single prompt?',
@@ -657,6 +671,14 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'Trying cases by hand is hopeless on most of them, and a single arithmetic slip in a long derivation gives the wrong integer.',
     howScored: NUMBER_STEPS('One whole-number answer per problem'),
     goodScore: '100 means all 12 right; each problem is worth about 8 points.',
+    icon: 'sigma',
+  },
+  'math.exact-ladder': {
+    hook: 'Snakes, ladders and traps: what is the exact chance of winning?',
+    whatItTests: 'Exact probability: the chance of winning a board game, as a fraction, on boards that grow level by level.',
+    whyHard: 'Snakes send the counter back, so it means solving simultaneous equations exactly, with fractions up to 30 digits long.',
+    howScored: LADDER_STEPS('The exact fraction (any equal fraction counts)'),
+    goodScore: LADDER_SCORE,
     icon: 'sigma',
   },
   'math.word-problems': {

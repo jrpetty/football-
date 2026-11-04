@@ -1344,6 +1344,117 @@ the night premium left out of the total (50); the break rule, capacities or wind
 (about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
 misread on its own (18–94).
 
+## 7q. Difficulty ladders: Exact Maths and Engineering
+
+Two ten-rung ladders in the Horizon style (§7d): ten frozen levels `L01`…`L10`, each strictly more work than the
+one below along a documented parameter, the same task and rules on every level, every level worth the same (the
+test score is the share of the ladder climbed) and the headline **ladder height** (the highest level L such that
+every level 1..L was passed reliably). They output each model's own maximum (`"maxOutputTokens": "model-max"`,
+one retry at most, one hour per level). Calibration targets: levels 1–2 a small model passes, 3–5 a mid-sized
+model's limit, 5–7 today's top model's limit, 8–10 beyond any model today but solvable in principle.
+
+### Exact Maths: Ladder (`math.exact-ladder`)
+
+**The task, on every level.** A one-player game of snakes and ladders with traps: a fair spinner numbered 1 to d,
+a track 0..N, reaching N or beyond wins, landing on a trap loses, ladders climb, snakes slide back. The question is
+the exact probability of winning, as a fraction. The rules text is identical on every level; only the board grows.
+
+| Level | Track (N) | Spinner | Ladders | Snakes | Traps | Resting squares | Key (digits p/q) |
+|---|---:|---:|---:|---:|---:|---:|---|
+| L01 | 10 | 1–2 | 0 | 0 | 2 | 8 | 2/3 |
+| L02 | 12 | 1–3 | 1 | 0 | 2 | 9 | 4/4 |
+| L03 | 14 | 1–4 | 1 | 1 | 2 | 10 | 5/5 |
+| L04 | 18 | 1–4 | 2 | 1 | 3 | 12 | 6/7 |
+| L05 | 22 | 1–6 | 2 | 2 | 3 | 15 | 10/11 |
+| L06 | 28 | 1–6 | 3 | 2 | 4 | 19 | 13/14 |
+| L07 | 34 | 1–6 | 3 | 3 | 5 | 23 | 14/15 |
+| L08 | 42 | 1–6 | 4 | 4 | 5 | 29 | 18/18 |
+| L09 | 52 | 1–6 | 5 | 5 | 6 | 36 | 26/27 |
+| L10 | 64 | 1–6 | 6 | 6 | 8 | 44 | 29/30 |
+
+Without snakes (levels 1–2) the answer is a plain countdown from the finish. Every snake sends the counter back,
+so from level 3 the probabilities are fixed by simultaneous linear equations (one unknown per snake loop) that
+must be solved exactly; the fractions grow to 30-digit denominators. A patient expert can do every level by
+hand (backward recursion carrying the snake-tail values as unknowns, then elimination); it just takes longer.
+The growth (longer track, more special squares, no fewer loops, longer denominator) is asserted by a unit test.
+
+**Keys, computed twice.** `verification/exact-ladder/snakes.py` builds each board from a fixed seed (every snake
+and ladder must change the answer, the probability lies between 1/10 and 9/10, no run of d special squares) and
+solves the full system, one equation per resting square, by Gauss-Jordan elimination over Python `Fraction`s.
+`verify.mjs` parses every board back out of the prompt text the models see and re-solves it in JavaScript BigInt
+rationals by a different method (backward recursion with affine snake-tail unknowns, then a small elimination);
+it self-tests on hand-checked boards first. `build.py` writes the test file byte-identically.
+
+**Scoring** (`{ "type": "ladder", "answer": "fraction" }`): the FINAL ANSWER line must state one exact fraction.
+Any fraction of the same value scores (the prompt says lowest terms are not required, so nobody loses a level to a
+gcd of 30-digit numbers); spaces, thousands separators, LaTeX `\frac`, "P = …" and a trailing approximation
+("≈ 0.18") are forgiven; a decimal, a second value ("or"), a negative or a zero denominator scores 0. The
+comparison is exact (BigInt cross-multiplication), so one wrong digit anywhere is wrong.
+
+**Spread** (scripted answers through the real scorer, every level): the key 100%; the key in unreduced form or
+LaTeX 100%; one digit off, the decimal value, the answer that forgets the snakes, the answer that forgets the
+ladders, and a hedge all 0%; random filler and the Random Baseline 0%. Tokens: about 420 input tokens per level;
+output from a few thousand tokens (level 1) to the model's maximum (levels 8–10); estimate 45,000 per level.
+
+### Engineering: Ladder (`coding.engineering-ladder`)
+
+**The task, on every level.** Write `runStore(commands)`: a small in-memory key-value store (a mini Redis) that
+replays a list of commands and returns one reply per command, scored by hidden unit tests in the code sandbox
+(§5.1 `code-js`). Level L's prompt is the specification of levels 1..L, word for word, plus its examples, its size
+limits and its time limit; each level only adds commands and rules, and never changes what an earlier command
+does, so one reference solution serves every level.
+
+| Level | Adds | Commands in all | Largest test | Largest store | Time limit / test | Hidden tests |
+|---|---|---:|---:|---:|---:|---:|
+| L01 | SET, GET, DEL | 3 | 200 | 100 keys | 2 s | 15 |
+| L02 | SETNX, COUNT, SIZE, POPULATE (bulk load) | 7 | 1,000 | 2,000 | 2 s | 19 |
+| L03 | INCR with exact big integers and canonical-integer rules | 8 | 2,000 | 5,000 | 2 s | 18 |
+| L04 | BEGIN / ROLLBACK / COMMIT, nested | 11 | 3,000 | 10,000 | 2 s | 21 |
+| L05 | SCAN (ordered prefix scan) | 12 | 4,000 | 20,000 | 2 s | 16 |
+| L06 | TIME / EXPIRE / TTL / PERSIST (a clock and deadlines) | 16 | 5,000 | 40,000 | 3 s | 24 |
+| L07 | RENAME (value and deadline move) | 17 | 6,000 | 60,000 | 4 s | 21 |
+| L08 | SNAPSHOT / GETAT (read the past) | 19 | 8,000 | 100,000 | 8 s | 20 |
+| L09 | DELPREFIX (bulk delete) | 20 | 10,000 | 150,000 | 12 s | 19 |
+| L10 | COUNTRANGE (ordered range counts) | 21 | 12,000 | 200,000 | 15 s | 17 |
+
+Every level's hidden tests are hand-made rule tests for what it adds (and for its interplay with every earlier
+rule: an expired key restored by a rollback, a snapshot taken inside a rolled-back transaction, a rename that
+carries a deadline, …), random streams over a pool of near-collision keys (`a`, `a1`, `a:1`, `a_1`, `ab`, …) and
+values that look like integers but are not (`007`, `-0`, `+5`, `" 5"`), and from level 2 large tests built with
+POPULATE (cheap to store, expensive to process naively). The large tests are sized so that the obvious design for
+that level (copy the store at BEGIN or SNAPSHOT, scan every key for COUNT, SIZE, SCAN, DELPREFIX or COUNTRANGE,
+re-sort on each scan) runs out of time, while the reference needs a small fraction of the limit: the top levels
+need every rule right in every combination AND an efficient design. The growth (more commands, a superset
+specification, bigger limits, no tighter time limit) and well-formedness (every test uses only its level's commands,
+every argument of the stated form) are asserted by unit tests.
+
+**Expected replies, checked three ways.** `verification/engineering-ladder/ref.js` (offline key compression, a
+Fenwick tree over keys in string order, a deadline heap, first-touch undo maps merged small-to-large, per-key
+history for snapshots) computes every expected reply; `gen.mjs` writes the test file byte-identically. `verify.mjs`
+re-checks every hidden test and example with `alt.js`, a second JavaScript implementation with different data
+structures (string-keyed maps, a sorted array, undo logs), and with `oracle.py`, a literal Python model written
+from the prompt text (copies the store at every BEGIN and SNAPSHOT, lazy expiry, full scans), on every test small
+enough for it. `fuzz.mjs` runs the three on 30,000 random streams (3,000 per level): all agree.
+
+**Time limits, measured.** Per-level limits are set from the reference's slowest hidden test in the real sandbox
+(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes) with at least 8× headroom,
+so a slow laptop has room to spare; a unit test enforces the 8×. The prompt states each level's limit.
+
+**Scoring.** Each level is one case: the share of its hidden tests passed, after the fair-play check (§3) and the
+stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at
+full marks. Spread (scripted solutions through the real scorer and sandbox):
+
+SPREAD_TABLE
+
+`alt.js` is careful but uses simpler structures (it re-copies undo logs on every COMMIT and splices a sorted
+array key by key); `slips.js` is a fast, well-designed solution with one plausible slip per level from level 3
+(an integer check that accepts `007`, POPULATE not undone, a key still alive at its deadline, RENAME onto itself
+deletes, GETAT checks today's clock, DELPREFIX leaves no history, COUNTRANGE includes the upper bound); `naive.js`
+gets every rule right with the obvious design (copies, scans) and loses the large tests; `careless.js` reads the
+specification loosely (Number arithmetic, COMMIT closes every transaction, expiry seen only by GET, …). Tokens:
+the prompt grows from about 640 to 2,500 input tokens; a full solution is 3,000–8,000 output tokens plus
+reasoning; estimate 30,000 output tokens per level.
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or
