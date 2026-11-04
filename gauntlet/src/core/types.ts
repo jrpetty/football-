@@ -401,10 +401,18 @@ export type ScorerSpec =
       numberTolerance?: number;
       allOrNothing?: boolean;
       aliases?: Record<string, string>;
-      /** Format-tolerant keys, numbers ("£1,234.50"), strings and nulls (see src/scoring/json-compare.ts). */
-      loose?: boolean;
-      /** Id-keyed objects (dotted path → fields per item): extra items cost as much as missing ones. */
+      /** Presentation never costs marks (key spelling, "£1,234.50", code punctuation, date-time separators, yes/no, n/a); see JsonCompareOptions in src/scoring/json-compare.ts. */
+      lenient?: boolean;
+      /** Collections marked as sets (dotted path → points per item; id-keyed object or list of ids): an extra item costs as much as a missing one. */
       sets?: Record<string, number>;
+      /** Groupings (dotted paths to lists of id lists) marked pair by pair with pairwise F1. */
+      partitions?: string[];
+      /** [answerPath, keyPath]: listing under answerPath an id the key lists under keyPath scores the case 0. */
+      forbidOverlap?: Array<[string, string]>;
+      /** Points per field by dotted path (longest prefix wins, default 1). */
+      weights?: Record<string, number>;
+      /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */
+      aboveConstant?: string[];
     }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }
@@ -431,6 +439,12 @@ export type ScorerSpec =
   | { type: 'human'; rubric: string }
   /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
   | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' }
+  /**
+   * A registered checker (src/scoring/verifiers/<verifier>.ts) replays the JSON answer against the case's hidden
+   * world (case.expected = { world, optimum?, reference }): plans are checked for feasibility and against the
+   * solver's proven optimum; exact multi-part answers check by check (src/scoring/verifier.ts).
+   */
+  | { type: 'verifier'; verifier: string }
   /** One SQLite query, run read-only on the test's database and hidden copies and compared with a reference query (src/scoring/sql.ts). */
   | SqlScorerSpec;
 

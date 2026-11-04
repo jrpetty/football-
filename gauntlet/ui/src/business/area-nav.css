@@ -1,0 +1,43 @@
+/* The sidebar: Business and Everyday Life stand apart from the benchmark with their own accent (styles/tokens.css). */
+.nav a[data-area='business'] svg,
+.nav-group[data-area='business'] a svg {
+  color: var(--area-business);
+}
+.nav a[data-area='life'] svg,
+.nav-group[data-area='life'] a svg {
+  color: var(--area-life);
+}
+.nav a[data-area='business'][aria-current='page'],
+.nav-group[data-area='business'] a[aria-current='page'] {
+  background: var(--area-business-soft);
+}
+.nav a[data-area='business'][aria-current='page']::before,
+.nav-group[data-area='business'] a[aria-current='page']::before {
+  background: var(--area-business);
+}
+.nav a[data-area='life'][aria-current='page'],
+.nav-group[data-area='life'] a[aria-current='page'] {
+  background: var(--area-life-soft);
+}
+.nav a[data-area='life'][aria-current='page']::before,
+.nav-group[data-area='life'] a[aria-current='page']::before {
+  background: var(--area-life);
+}
+.nav-simple a[data-area='business'] {
+  margin-top: 10px;
+}
+.nav-simple a[data-area='business']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -6px;
+  border-top: 1px solid var(--border);
+}
+.nav-group[data-area='business'] .nav-section {
+  color: var(--area-business);
+}
+.nav-group[data-area='life'] .nav-section {
+  color: var(--area-life);
+}
+

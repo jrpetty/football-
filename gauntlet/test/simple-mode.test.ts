@@ -73,10 +73,10 @@ test('page help: every page key has plain help (purpose, steps) and short first-
 // ───────────── navigation model ─────────────
 
 test('simple mode: about six task-named items, Home first, each with tabs that point at real pages', () => {
-  assert.ok(SIMPLE_NAV.length >= 5 && SIMPLE_NAV.length <= 7, `simple menu has ${SIMPLE_NAV.length} items`);
+  assert.ok(SIMPLE_NAV.length >= 5 && SIMPLE_NAV.length <= 8, `simple menu has ${SIMPLE_NAV.length} items`);
   assert.deepEqual(
     SIMPLE_NAV.map((s) => s.label),
-    ['Home', 'Run a test', 'Results', 'Make a video', 'Copy & paste tests', 'Settings'],
+    ['Home', 'Run a test', 'Results', 'Business', 'Everyday Life', 'Make a video', 'Copy & paste tests', 'Settings'],
   );
   for (const s of SIMPLE_NAV) {
     assert.notEqual(pageKeyFor(s.to), 'unknown', s.label);
@@ -112,7 +112,7 @@ test('tabs: Results groups the leaderboard, best on each test, past runs and his
 test('all tools: every one of the app’s menu items is in a labelled group, none lost', () => {
   const items = appNav();
   const paths = items.map((i) => i.to);
-  for (const p of ['/', '/run/new', '/leaderboard', '/runs', '/arena', '/versus', '/best', '/present', '/studio', '/gallery', '/inbox', '/grading', '/review', '/tests', '/grade', '/keys', '/models', '/costs', '/budget', '/newmodel', '/history', '/challenge', '/publish', '/methodology', '/guide']) {
+  for (const p of ['/', '/run/new', '/leaderboard', '/business', '/business/ladder', '/business/tests', '/business/results', '/life', '/runs', '/arena', '/versus', '/best', '/present', '/studio', '/gallery', '/inbox', '/grading', '/review', '/tests', '/grade', '/keys', '/models', '/costs', '/budget', '/newmodel', '/history', '/challenge', '/publish', '/methodology', '/guide']) {
     assert.ok(paths.includes(p), `App.tsx NAV is missing ${p}`);
   }
   const groups = groupAllTools(items);

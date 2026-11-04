@@ -1,0 +1,734 @@
+{
+  "kind": "prompt",
+  "id": "life.loan-overpayment",
+  "version": "1.0.0",
+  "name": "Pay It Off Faster",
+  "description": "A loan or mortgage with overpayments: monthly interest rounded to the penny, a fix that ends and a recalculated payment, lump sums, a payment holiday and early repayment charges above the 10% allowance. When is it cleared, how much interest is paid and saved, and what do the charges come to? Checked against an exact month-by-month simulation.",
+  "difficulty": "extreme",
+  "tags": [
+    "real-world",
+    "everyday-life",
+    "money",
+    "long-calculation",
+    "verifier"
+  ],
+  "hook": "Overpay the mortgage: when is it gone, and what does it save?",
+  "maxOutputTokens": 64000,
+  "estimate": {
+    "inputTokens": 700,
+    "outputTokens": 24000
+  },
+  "category": "life",
+  "author": "Gauntlet Real-World Pack",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "verifier",
+    "verifier": "fields"
+  },
+  "cases": [
+    {
+      "id": "l01",
+      "prompt": "I took out a car loan of £9,000 at 7.90% a year. My first payment is in January 2027 and I pay £281.62 a month. I want to add £60 a month on top, from the very first month.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- The months are counted from the first payment (month 1 = January 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2029-06"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 30
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 91689
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 22113
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2029-06",
+          "months": 30,
+          "totalInterest": 916.89,
+          "interestSaved": 221.13
+        }
+      },
+      "notes": "[easy] Simulated month by month in whole pence. With overpayments: last payment June 2029 (30 payments), interest £916.89, ERC £0.00. Without overpayments: 36 payments, interest £1,138.02. Saved £221.13."
+    },
+    {
+      "id": "l02",
+      "prompt": "Personal loan for a new kitchen: £6,500 at 6.40% a year, first payment December 2026, £153.89 a month. I’ll overpay £100 every month from month 7 (when my pay rise starts), and put in a £500 bonus in month 12.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- The months are counted from the first payment (month 1 = December 2026).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2029-04"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 29
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 54691
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 33745
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2029-04",
+          "months": 29,
+          "totalInterest": 546.91,
+          "interestSaved": 337.45
+        }
+      },
+      "notes": "[easy] Simulated month by month in whole pence. With overpayments: last payment April 2029 (29 payments), interest £546.91, ERC £0.00. Without overpayments: 48 payments, interest £884.36. Saved £337.45."
+    },
+    {
+      "id": "l03",
+      "prompt": "Consolidation loan of £12,000 at 9.90% a year, £254.37 a month, first payment March 2027. I’m going to pay an extra £150 a month from the start, and stop the extra after month 24 (the loan carries on at the normal payment).\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- The months are counted from the first payment (month 1 = March 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2030-07"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 41
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 192857
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 133398
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2030-07",
+          "months": 41,
+          "totalInterest": 1928.57,
+          "interestSaved": 1333.98
+        }
+      },
+      "notes": "[easy] Simulated month by month in whole pence. With overpayments: last payment July 2030 (41 payments), interest £1,928.57, ERC £0.00. Without overpayments: 61 payments, interest £3,262.55. Saved £1,333.98."
+    },
+    {
+      "id": "l04",
+      "prompt": "Mortgage: £185,000 over 25 years (300 months), first payment January 2027. A 2-year fix at 4.29% with a payment of £1,006.62 a month, then the lender’s standard variable rate of 7.49%, at which point the payment is recalculated. I’ll overpay £250 a month from the start, all the way through. Overpayments of up to 10% of the balance each loan year are free during the fix (I’m well inside that).\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- The months are counted from the first payment (month 1 = January 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2044-07"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 211
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 13390505
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 7556209
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 0
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2044-07",
+          "months": 211,
+          "totalInterest": 133905.05,
+          "interestSaved": 75562.09,
+          "earlyRepaymentCharges": 0
+        }
+      },
+      "notes": "[medium] Simulated month by month in whole pence. With overpayments: last payment July 2044 (211 payments), interest £133,905.05, ERC £0.00. Without overpayments: 300 payments, interest £209,467.14. Saved £75,562.09."
+    },
+    {
+      "id": "l05",
+      "prompt": "Mortgage of £142,500 over 20 years (240 months), first payment October 2026. 3-year fix at 3.95% with a payment of £859.13, then 6.99% with the payment recalculated over the remaining term. Every March during the fix I want to pay a £4,000 lump sum from my bonus; no other overpayments.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- The months are counted from the first payment (month 1 = October 2026).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2046-09"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 240
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 9707208
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 980206
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 0
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2046-09",
+          "months": 240,
+          "totalInterest": 97072.08,
+          "interestSaved": 9802.06,
+          "earlyRepaymentCharges": 0
+        }
+      },
+      "notes": "[medium] Simulated month by month in whole pence. With overpayments: last payment September 2046 (240 payments), interest £97,072.08, ERC £0.00. Without overpayments: 240 payments, interest £106,874.14. Saved £9,802.06."
+    },
+    {
+      "id": "l06",
+      "prompt": "Remortgage of £120,000 over 15 years (180 months), first payment April 2027. 5-year fix at 3.89%, payment £880.15. After 5 years the rate goes to 6.74% and the payment is recalculated. Plan: overpay £400 a month from the start, plus a £15,000 inheritance in month 30. The fix has an early repayment charge: 3% in years 1–2, 2% in years 3–5, on any overpayment above 10% of the balance at the start of that loan year.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- The months are counted from the first payment (month 1 = April 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2037-01"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 118
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 2404088
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 2931765
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 20041
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2037-01",
+          "months": 118,
+          "totalInterest": 24040.88,
+          "interestSaved": 29317.65,
+          "earlyRepaymentCharges": 200.41
+        }
+      },
+      "notes": "[medium] Simulated month by month in whole pence. With overpayments: last payment January 2037 (118 payments), interest £24,040.88, ERC £200.41. Without overpayments: 180 payments, interest £53,358.53. Saved £29,317.65."
+    },
+    {
+      "id": "l07",
+      "prompt": "Tracker mortgage: £220,000 over 25 years, first payment November 2026. The rate is the Bank Rate plus 1.10%. Bank Rate is 3.75% now; the lender has told us it will be 4.00% from month 5 and 3.50% from month 17. The payment is recalculated at the start of month 5 and month 17 when the rate changes (first payment £1,258.43). No early repayment charges on this one. We’ll overpay £300 a month from month 3 and £10,000 in month 12.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- The months are counted from the first payment (month 1 = November 2026).\n\nCORRECTION (lender’s letter): the second change is a cut to 3.25% Bank Rate, not 3.50%, still from month 17. So from month 17 the rate is 3.25% + 1.10%.\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2044-06"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 212
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 9362753
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 5002524
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2044-06",
+          "months": 212,
+          "totalInterest": 93627.53,
+          "interestSaved": 50025.24
+        }
+      },
+      "notes": "[hard] Simulated month by month in whole pence. With overpayments: last payment June 2044 (212 payments), interest £93,627.53, ERC £0.00. Without overpayments: 300 payments, interest £143,652.77. Saved £50,025.24."
+    },
+    {
+      "id": "l08",
+      "prompt": "Our mortgage: £168,000 over 22 years (264 months), first payment February 2027. 2-year fix at 4.59%, payment £1,002.47; after that 7.24% with the payment recalculated over the remaining term. We’re taking a 3-month payment holiday in months 8–10 (baby on the way): no payments, but interest is still added each month. From month 13 we’ll overpay £350 a month, and £9,000 in month 20. During the fix, overpayments above 10% of the balance at the start of each loan year cost 2%.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- In a payment-holiday month no payment is taken, but interest is still added.\n- The months are counted from the first payment (month 1 = February 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2041-05"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 172
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 9135011
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 6906142
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 0
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2041-05",
+          "months": 172,
+          "totalInterest": 91350.11,
+          "interestSaved": 69061.42,
+          "earlyRepaymentCharges": 0
+        }
+      },
+      "notes": "[hard] Simulated month by month in whole pence. With overpayments: last payment May 2041 (172 payments), interest £91,350.11, ERC £0.00. Without overpayments: 264 payments, interest £160,411.53. Saved £69,061.42."
+    },
+    {
+      "id": "l09",
+      "prompt": "First-time buyers: £255,000 over 30 years (360 months), first payment September 2026. 5-year fix at 4.79%, payment £1,336.09, then 7.19% with the payment recalculated over the remaining term. ERC during the fix: 5% in year 1, 4% in year 2, 3% in year 3, 2% in year 4, 1% in year 5, on overpayments above 10% of the balance at the start of each loan year. Plan: £500 a month extra from month 1, plus lump sums of £20,000 in month 6, £12,000 in month 18 and £30,000 in month 49.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- The months are counted from the first payment (month 1 = September 2026).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2042-07"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 191
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 10403862
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 22469357
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 21036
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2042-07",
+          "months": 191,
+          "totalInterest": 104038.62,
+          "interestSaved": 224693.57,
+          "earlyRepaymentCharges": 210.36
+        }
+      },
+      "notes": "[hard] Simulated month by month in whole pence. With overpayments: last payment July 2042 (191 payments), interest £104,038.62, ERC £210.36. Without overpayments: 360 payments, interest £328,732.19. Saved £224,693.57."
+    },
+    {
+      "id": "l10",
+      "prompt": "Mortgage of £199,000 over 25 years, first payment January 2027. 3-year fix at 4.15%, payment £1,067.28, then two years at a 5.49% product (payment recalculated over the remaining term at the start of month 37), then the 7.29% standard rate (payment recalculated again at the start of month 61). ERC only in the 3-year fix: 3% on overpayments above 10% of the balance at the start of each loan year. We will overpay £600 a month in months 1–36 and £200 a month after that, and put in £25,000 in month 24.\n\nTHE RULES MY LENDER USES (and you must use)\n- Every month, interest = the balance × the annual rate ÷ 12, rounded to the nearest penny (halves round up), and is added to the balance. Then the monthly payment is taken (or the whole balance, if that is less). Then any overpayment for that month is taken (never more than what is left).\n- When the payment is recalculated at the start of a month, it becomes the fixed monthly payment that would clear the balance (before that month’s interest) over the months left in the original term at the new rate: payment = B × i ÷ (1 − (1 + i)^−n), with i = annual rate ÷ 1200 and n = months left including that month, rounded UP to the next penny. It then stays the same until the next recalculation.\n- Early repayment charges (ERC) apply only during the period stated. In each loan year (months 1–12, 13–24, …) the first 10% of the balance at the start of that loan year (rounded to the nearest penny) can be overpaid free; on every pound overpaid beyond that in the same loan year the ERC percentage for that year is charged (rounded to the nearest penny for each month’s overpayment). ERC is paid separately: it does not reduce the balance and it is not interest.\n- The months are counted from the first payment (month 1 = January 2027).\n\nWith the overpayments, in which month is the last payment made, how many monthly payments is that, how much interest is paid in total, and how much interest does that save compared with making no overpayments at all (same rates and recalculations, normal payments only)? And how much ERC is paid in total?\nAnswer in this JSON format (money in pounds to the penny; the month as YYYY-MM):\n```json\n{\"clearedMonth\": \"YYYY-MM\", \"months\": 0, \"totalInterest\": 0.00, \"interestSaved\": 0.00, \"earlyRepaymentCharges\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "expected": {
+        "world": {
+          "fields": [
+            {
+              "path": "clearedMonth",
+              "aliases": [
+                "cleared",
+                "finalmonth",
+                "lastpayment",
+                "paidoff",
+                "payoffmonth"
+              ],
+              "label": "the month of the last payment",
+              "kind": "month",
+              "value": "2045-12"
+            },
+            {
+              "path": "months",
+              "aliases": [
+                "numberofpayments",
+                "payments",
+                "monthstaken"
+              ],
+              "label": "the number of monthly payments",
+              "kind": "int",
+              "value": 228
+            },
+            {
+              "path": "totalInterest",
+              "aliases": [
+                "interest",
+                "interestpaid"
+              ],
+              "label": "total interest paid (with the overpayments)",
+              "kind": "money",
+              "value": 10933039
+            },
+            {
+              "path": "interestSaved",
+              "aliases": [
+                "saved",
+                "saving",
+                "interestsaving"
+              ],
+              "label": "interest saved compared with no overpayments",
+              "kind": "money",
+              "value": 9266741
+            },
+            {
+              "path": "earlyRepaymentCharges",
+              "aliases": [
+                "erc",
+                "ercs",
+                "charges",
+                "earlyrepaymentcharge",
+                "penalties"
+              ],
+              "label": "total early repayment charges",
+              "kind": "money",
+              "value": 40492
+            }
+          ]
+        },
+        "reference": {
+          "clearedMonth": "2045-12",
+          "months": 228,
+          "totalInterest": 109330.39,
+          "interestSaved": 92667.41,
+          "earlyRepaymentCharges": 404.92
+        }
+      },
+      "notes": "[hard] Simulated month by month in whole pence. With overpayments: last payment December 2045 (228 payments), interest £109,330.39, ERC £404.92. Without overpayments: 300 payments, interest £201,997.80. Saved £92,667.41."
+    }
+  ]
+}

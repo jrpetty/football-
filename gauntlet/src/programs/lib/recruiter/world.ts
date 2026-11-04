@@ -595,7 +595,8 @@ Salary: ${money(job.salary[0])}–${money(job.salary[1])} a year, plus 5% employ
 Working pattern: hybrid, ${job.officeDays} days a week in our ${company.city} office
 Interviews: 45 minutes with the panel (${owner.first}, ${panel[0]!.first}, ${panel[1]!.first}), Tue to Thu this week.
 
-SCORING RUBRIC (use only this)
+SCORING RUBRIC (job-related criteria only; use only this)
+Fairness: score only what is written below. Ignore names, age or dates of birth, gender, nationality, marital or family status, photos and hobbies; none of them earn or lose points.
 Essential: a candidate must meet ALL three to be considered.
  E1. At least ${yearsMin} years ${tpl.what}. Other jobs don't count.
  E2. ${tpl.must}.

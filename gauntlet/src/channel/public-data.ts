@@ -49,6 +49,8 @@ export function scoringText(def: TestDefinition): string {
       return 'Rated blind by people who never see which model made which answer.';
     case 'ladder':
       return 'Ten levels, each checked exactly by machine. The score is the share of the ladder climbed.';
+    case 'verifier':
+      return 'A checker replays every answer against the hidden facts of the case: plans must work and are compared with the proven best; exact answers are checked part by part.';
     case 'sql':
       return 'Each answer is a database query, run on the real database and on hidden copies with different data. Points for every result row that matches.';
     default:
