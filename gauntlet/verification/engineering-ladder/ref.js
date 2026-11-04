@@ -1,209 +1,306 @@
 // Reference solution for Engineering: Ladder (coding.engineering-ladder), every level.
 //
-// The level-10 specification is a superset of every lower level's, and no later feature changes what an earlier
-// command does, so this one implementation is the reference for all ten levels.
+// The level-10 specification is a superset of every lower level's (each level only adds operations), so this one
+// implementation is the reference for all ten levels.
 //
-// Design (all operations O(log n) or better, amortised):
-//  - Offline key compression: every key that can ever exist (SET, SETNX, INCR, RENAME target, POPULATE) is collected
-//    first, sorted in JavaScript string order and given an id = its rank. Per-key state lives in arrays by id.
-//  - A Fenwick tree over ids marks the keys that exist now: SIZE, SCAN, DELPREFIX and COUNTRANGE are rank queries.
-//  - A Map value -> number of existing keys holding it answers COUNT.
-//  - Deadlines: a binary min-heap of (deadline, id, version); TIME pops every due entry whose version is current and
-//    removes the key at once, so "exists" never needs a lazy check.
-//  - Transactions: one Map per open transaction, id -> the key's entry before its FIRST change in that transaction.
-//    ROLLBACK restores those entries; COMMIT merges the child map into its parent, keeping the parent's (older) entry,
-//    iterating over the smaller of the two maps (small-to-large), so deep nesting with big transactions stays fast.
-//  - Snapshots: only when the input has SNAPSHOT, every change appends (change number, value, deadline) to its key's
-//    history; GETAT binary-searches it and checks the deadline against the clock of the snapshot.
-function runStore(commands) {
-  // Globals copied into locals once: inside the test sandbox (a vm context) every global lookup is slow.
-  const Infinity = 1 / 0, String = globalThis.String, Number = globalThis.Number, BigInt = globalThis.BigInt, Map = globalThis.Map;
-
-  // ---------- offline: every key that can ever exist ----------
-  const cand = []; // candidate keys, possibly repeated
-  const popMax = new Map(); // POPULATE prefix -> largest count: its keys are prefix + 0 .. prefix + (count - 1)
-  let hasSnapshots = false;
-  for (const c of commands) {
-    const op = c[0];
-    if (op === 'SET' || op === 'SETNX' || op === 'INCR') cand.push(c[1]);
-    else if (op === 'RENAME') cand.push(c[2]);
-    else if (op === 'POPULATE') { const n = Number(c[2]); if (n > (popMax.get(c[1]) || 0)) popMax.set(c[1], n); }
-    else if (op === 'SNAPSHOT') hasSnapshots = true;
+// Design: a "segment tree beats" (Ji Ruyi) over blocks of 64 elements. Every node keeps sum, max, strict second max
+// and its count, min, strict second min and its count, and the historic max/min of its range. Elements fall into
+// three classes per node (equal to the node's max, equal to its min, the others), and every update is a class-wise
+// addition: chmin/chmax touch only the max (min) class whenever x lies above the second max (below the second min);
+// floor division is a uniform addition whenever every element of a node changes by the same amount (floor(v/x) - v
+// is monotone in v, so checking the node's min and max is enough); assign is chmin then chmax; set is assign on one
+// index. Historic max/min are carried as per-class "largest/smallest prefix of the pending additions"; hreset cuts
+// those prefixes (the history restarts from the current value, and a flag tells the children to drop theirs).
+// The leaves are blocks of raw elements: a partially covered block is pushed into its elements, updated element by
+// element and summarised again. Nodes are laid out in Euler-tour order (2 * blocks - 1 of them).
+function runEngine(input) {
+  // Globals copied into locals: inside the test sandbox (a vm context) every global lookup (Math, Float64Array...) is slow.
+  const INF = 1 / 0, MOD = 1000000007, floor = Math.floor;
+  const F64 = Float64Array, I32 = Int32Array, U8 = Uint8Array;
+  const max = (x, y) => (x > y ? x : y), min = (x, y) => (x < y ? x : y);
+  let A, ops = null, gen = null, n, rand = null;
+  if (input.generate) {
+    gen = input.generate;
+    n = gen.n;
+    let state = gen.seed;
+    rand = (k) => (state = (state * 48271) % 2147483647) % k;
+    A = new F64(n);
+    for (let i = 0; i < n; i++) A[i] = gen.lo + rand(gen.hi - gen.lo + 1);
+  } else {
+    A = F64.from(input.values);
+    n = A.length;
+    ops = input.ops;
   }
-  const popStr = new Map(); // prefix -> its key strings (the same string objects are used for every lookup)
-  for (const [p, n] of popMax) { const a = new Array(n); for (let i = 0; i < n; i++) cand.push((a[i] = p + i)); popStr.set(p, a); }
-  cand.sort();
-  const keys = [];
-  for (let i = 0; i < cand.length; i++) if (i === 0 || cand[i] !== cand[i - 1]) keys.push(cand[i]);
-  const M = keys.length;
-  const idOf = new Map();
-  for (let i = 0; i < M; i++) idOf.set(keys[i], i);
-  const popIds = new Map(); // prefix -> Int32Array of the ids of prefix + 0, prefix + 1, ...
-  for (const [p, a] of popStr) { const ids = new Int32Array(a.length); for (let i = 0; i < a.length; i++) ids[i] = idOf.get(a[i]); popIds.set(p, ids); }
-  const lowerBound = (s) => { let lo = 0, hi = M; while (lo < hi) { const mid = (lo + hi) >> 1; if (keys[mid] < s) lo = mid + 1; else hi = mid; } return lo; };
+  const HI = F64.from(A), LO = F64.from(A); // per-element historic max / min
+  // Histories only matter if a history is ever asked for (hmax/hmin); without, they are not maintained.
+  const HIST = ops ? ops.some((o) => o[0] === 'hmax' || o[0] === 'hmin') : gen.mix.some((e) => e[0] === 'hmax' || e[0] === 'hmin');
 
-  // ---------- per-key state ----------
-  const val = new Array(M).fill(undefined); // undefined = the key does not exist
-  const dl = new Float64Array(M).fill(Infinity); // deadline (Infinity = none)
-  const ver = new Int32Array(M); // bumped on every change, to recognise stale heap entries
-  const fen = new Int32Array(M + 1);
-  let size = 0;
-  const counts = new Map();
-  const fenAdd = (i, d) => { for (i++; i <= M; i += i & -i) fen[i] += d; };
-  const fenPrefix = (i) => { let s = 0; for (; i > 0; i -= i & -i) s += fen[i]; return s; }; // existing ids < i
-  let LOG = 1; while ((1 << LOG) <= M) LOG++;
-  const fenSelect = (k) => { // id of the k-th existing key (0-based)
-    let pos = 0;
-    for (let b = 1 << LOG; b > 0; b >>= 1) if (pos + b <= M && fen[pos + b] <= k) { pos += b; k -= fen[pos]; }
-    return pos;
-  };
+  const SH = 6, B = 1 << SH; // block size 64
+  const nb = ((n - 1) >> SH) + 1;
+  const M = 2 * nb;
+  const sum = new F64(M), mx = new F64(M), smx = new F64(M), mn = new F64(M), smn = new F64(M);
+  const cmx = new I32(M), cmn = new I32(M), hmx = new F64(M), hmn = new F64(M);
+  // pending tags for the children (or the block's elements), per class (1 = max, 2 = min, 3 = others)
+  const a1 = new F64(M), a2 = new F64(M), a3 = new F64(M);
+  const h1 = new F64(M), h2 = new F64(M), h3 = new F64(M);
+  const k1 = new F64(M), k2 = new F64(M), k3 = new F64(M);
+  const rst = new U8(M), dirty = new U8(M);
 
-  // ---------- deadlines ----------
-  let now = 0;
-  const hD = [], hI = [], hV = [];
-  const heapPush = (d, i, v) => {
-    let j = hD.length; hD.push(d); hI.push(i); hV.push(v);
-    while (j > 0) { const p = (j - 1) >> 1; if (hD[p] <= d) break; hD[j] = hD[p]; hI[j] = hI[p]; hV[j] = hV[p]; j = p; }
-    hD[j] = d; hI[j] = i; hV[j] = v;
-  };
-  const heapPop = () => {
-    const lastD = hD.pop(), lastI = hI.pop(), lastV = hV.pop();
-    if (!hD.length) return;
-    let j = 0; const n = hD.length;
-    for (;;) {
-      let c = 2 * j + 1; if (c >= n) break;
-      if (c + 1 < n && hD[c + 1] < hD[c]) c++;
-      if (hD[c] >= lastD) break;
-      hD[j] = hD[c]; hI[j] = hI[c]; hV[j] = hV[c]; j = c;
+  // ---------- blocks (leaves) ----------
+  function blockPull(v, b) {
+    const s = b << SH, e = min(n, s + B);
+    let S = 0, X = -INF, SX = -INF, CX = 0, N = INF, SN = INF, CN = 0, HX = -INF, HN = INF;
+    if (!HIST) {
+      for (let i = s; i < e; i++) {
+        const x = A[i];
+        S += x;
+        if (x > X) { SX = X; X = x; CX = 1; } else if (x === X) CX++; else if (x > SX) SX = x;
+        if (x < N) { SN = N; N = x; CN = 1; } else if (x === N) CN++; else if (x < SN) SN = x;
+      }
+      sum[v] = S; mx[v] = X; smx[v] = SX; cmx[v] = CX; mn[v] = N; smn[v] = SN; cmn[v] = CN; hmx[v] = X; hmn[v] = N;
+      return;
     }
-    hD[j] = lastD; hI[j] = lastI; hV[j] = lastV;
-  };
-
-  // ---------- transactions and history ----------
-  const tx = [];
-  let seq = 0;
-  // history: a key's first change in three flat arrays (most keys, e.g. POPULATE's, change once), later changes in a
-  // per-key flat array [seq, value, deadline, seq, value, deadline, ...]
-  const h1Seq = hasSnapshots ? new Float64Array(M) : null; // 0 = no change yet (change numbers start at 1)
-  const h1Val = hasSnapshots ? new Array(M) : null;
-  const h1Dl = hasSnapshots ? new Float64Array(M) : null;
-  const hist = hasSnapshots ? new Array(M) : null;
-  const snaps = []; // [seq, clock]
-
-  const present = (v) => { size++; counts.set(v, (counts.get(v) || 0) + 1); };
-  const absent = (v) => { size--; const n = counts.get(v) - 1; if (n) counts.set(v, n); else counts.delete(v); };
-
-  // The one way the store changes. v === undefined removes the key; a deadline the clock has reached also removes it.
-  function setEntry(i, v, d, logUndo) {
-    if (v !== undefined && d <= now) { v = undefined; d = Infinity; }
-    if (v === undefined) d = Infinity;
-    if (logUndo && tx.length) { const top = tx[tx.length - 1]; if (!top.has(i)) top.set(i, [val[i], dl[i]]); }
-    const old = val[i];
-    if (old !== undefined) absent(old);
-    if (v !== undefined) present(v);
-    if ((old === undefined) !== (v === undefined)) fenAdd(i, v === undefined ? -1 : 1);
-    val[i] = v; dl[i] = d; ver[i]++;
-    if (v !== undefined && d !== Infinity) heapPush(d, i, ver[i]);
-    if (hist) {
-      seq++;
-      if (h1Seq[i] === 0) { h1Seq[i] = seq; h1Val[i] = v; h1Dl[i] = d; } else (hist[i] || (hist[i] = [])).push(seq, v, d);
+    for (let i = s; i < e; i++) {
+      const x = A[i];
+      S += x;
+      if (x > X) { SX = X; X = x; CX = 1; } else if (x === X) CX++; else if (x > SX) SX = x;
+      if (x < N) { SN = N; N = x; CN = 1; } else if (x === N) CN++; else if (x < SN) SN = x;
+      if (HI[i] > HX) HX = HI[i];
+      if (LO[i] < HN) HN = LO[i];
     }
+    sum[v] = S; mx[v] = X; smx[v] = SX; cmx[v] = CX; mn[v] = N; smn[v] = SN; cmn[v] = CN; hmx[v] = HX; hmn[v] = HN;
+  }
+  function blockPush(v, b) {
+    if (!dirty[v]) return;
+    const s = b << SH, e = min(n, s + B);
+    const oldX = mx[v] - a1[v], oldN = mn[v] - a2[v], cut = rst[v] === 1;
+    if (!HIST) { // no history asked for anywhere in this input: only the values matter
+      const d1 = a1[v], d2 = a2[v], d3 = a3[v];
+      if (d1 === d2 && d2 === d3) { if (d1 !== 0) for (let i = s; i < e; i++) A[i] += d1; }
+      else for (let i = s; i < e; i++) { const x = A[i]; A[i] = x + (x === oldX ? d1 : x === oldN ? d2 : d3); }
+      a1[v] = a2[v] = a3[v] = h1[v] = h2[v] = h3[v] = k1[v] = k2[v] = k3[v] = 0;
+      rst[v] = 0; dirty[v] = 0;
+      return;
+    }
+    for (let i = s; i < e; i++) {
+      const x = A[i];
+      let d, hh, kk;
+      if (x === oldX) { d = a1[v]; hh = h1[v]; kk = k1[v]; }
+      else if (x === oldN) { d = a2[v]; hh = h2[v]; kk = k2[v]; }
+      else { d = a3[v]; hh = h3[v]; kk = k3[v]; }
+      if (cut) { HI[i] = x + hh; LO[i] = x + kk; }
+      else { if (x + hh > HI[i]) HI[i] = x + hh; if (x + kk < LO[i]) LO[i] = x + kk; }
+      A[i] = x + d;
+    }
+    a1[v] = a2[v] = a3[v] = h1[v] = h2[v] = h3[v] = k1[v] = k2[v] = k3[v] = 0;
+    rst[v] = 0; dirty[v] = 0;
   }
 
-  const CANON = /^(?:0|-?[1-9][0-9]*)$/;
-  const out = new Array(commands.length);
-  for (let n = 0; n < commands.length; n++) {
-    const c = commands[n];
-    let r;
-    switch (c[0]) {
-      case 'SET': setEntry(idOf.get(c[1]), c[2], Infinity, true); r = 'OK'; break;
-      case 'GET': { const i = idOf.get(c[1]); r = i === undefined || val[i] === undefined ? '(nil)' : val[i]; break; }
-      case 'DEL': { const i = idOf.get(c[1]); if (i !== undefined && val[i] !== undefined) { setEntry(i, undefined, Infinity, true); r = '1'; } else r = '0'; break; }
-      case 'SETNX': { const i = idOf.get(c[1]); if (val[i] === undefined) { setEntry(i, c[2], Infinity, true); r = '1'; } else r = '0'; break; }
-      case 'COUNT': r = String(counts.get(c[1]) || 0); break;
-      case 'SIZE': r = String(size); break;
-      case 'POPULATE': {
-        const cnt = Number(c[2]); let made = 0;
-        const ids = popIds.get(c[1]);
-        for (let k = 0; k < cnt; k++) { const i = ids[k]; if (val[i] === undefined) { setEntry(i, c[3], Infinity, true); made++; } }
-        r = String(made); break;
-      }
-      case 'INCR': {
-        const i = idOf.get(c[1]); const cur = val[i] === undefined ? '0' : val[i];
-        if (!CANON.test(cur)) { r = 'ERR not an integer'; break; }
-        const next = String(BigInt(cur) + BigInt(c[2]));
-        setEntry(i, next, val[i] === undefined ? Infinity : dl[i], true); r = next; break;
-      }
-      case 'BEGIN': tx.push(new Map()); r = 'OK'; break;
-      case 'ROLLBACK': {
-        if (!tx.length) { r = 'NO TRANSACTION'; break; }
-        for (const [i, e] of tx.pop()) setEntry(i, e[0], e[1], false);
-        r = 'OK'; break;
-      }
-      case 'COMMIT': {
-        if (!tx.length) { r = 'NO TRANSACTION'; break; }
-        const child = tx.pop();
-        if (tx.length) {
-          const parent = tx[tx.length - 1];
-          if (child.size > parent.size) { for (const [i, e] of parent) child.set(i, e); tx[tx.length - 1] = child; }
-          else for (const [i, e] of child) if (!parent.has(i)) parent.set(i, e);
-        }
-        r = 'OK'; break;
-      }
-      case 'SCAN': {
-        const p = c[1], limit = Number(c[2]);
-        const parts = [];
-        let k = fenPrefix(lowerBound(p));
-        while (parts.length < limit && k < size) { const i = fenSelect(k++); if (!keys[i].startsWith(p)) break; parts.push(keys[i]); }
-        r = parts.join(','); break;
-      }
-      case 'TIME': {
-        now = Number(c[1]);
-        while (hD.length && hD[0] <= now) {
-          const i = hI[0], v = hV[0]; heapPop();
-          if (ver[i] === v && val[i] !== undefined) {
-            // expiry is not a change: nothing to undo (a rolled-back key gets its old deadline back, also past) and no history entry
-            absent(val[i]); fenAdd(i, -1); val[i] = undefined; dl[i] = Infinity; ver[i]++;
-          }
-        }
-        r = 'OK'; break;
-      }
-      case 'EXPIRE': { const i = idOf.get(c[1]); if (i !== undefined && val[i] !== undefined) { setEntry(i, val[i], now + Number(c[2]), true); r = '1'; } else r = '0'; break; }
-      case 'TTL': { const i = idOf.get(c[1]); r = i === undefined || val[i] === undefined ? '-2' : dl[i] === Infinity ? '-1' : String(dl[i] - now); break; }
-      case 'PERSIST': { const i = idOf.get(c[1]); if (i !== undefined && val[i] !== undefined && dl[i] !== Infinity) { setEntry(i, val[i], Infinity, true); r = '1'; } else r = '0'; break; }
-      case 'RENAME': {
-        const s = idOf.get(c[1]);
-        if (s === undefined || val[s] === undefined) { r = 'ERR no such key'; break; }
-        if (c[1] !== c[2]) { const t = idOf.get(c[2]); const v = val[s], d = dl[s]; setEntry(t, v, d, true); setEntry(s, undefined, Infinity, true); }
-        r = 'OK'; break;
-      }
-      case 'SNAPSHOT': snaps.push([seq, now]); r = String(snaps.length); break;
-      case 'GETAT': {
-        const id = c[2].length > 15 ? Infinity : Number(c[2]);
-        if (!(id >= 1 && id <= snaps.length)) { r = 'ERR no such snapshot'; break; }
-        const [sq, clock] = snaps[id - 1];
-        const i = idOf.get(c[1]);
-        r = '(nil)';
-        if (i === undefined || h1Seq[i] === 0 || h1Seq[i] > sq) break; // no change to this key before the snapshot
-        let v = h1Val[i], d = h1Dl[i];
-        const h = hist[i];
-        if (h) {
-          let lo = 0, hi = h.length / 3; // last later change with seq <= sq
-          while (lo < hi) { const mid = (lo + hi) >> 1; if (h[3 * mid] <= sq) lo = mid + 1; else hi = mid; }
-          if (lo > 0) { v = h[3 * (lo - 1) + 1]; d = h[3 * (lo - 1) + 2]; }
-        }
-        if (v !== undefined && d > clock) r = v;
-        break;
-      }
-      case 'DELPREFIX': {
-        const p = c[1]; const k = fenPrefix(lowerBound(p)); let removed = 0;
-        while (k < size) { const i = fenSelect(k); if (!keys[i].startsWith(p)) break; setEntry(i, undefined, Infinity, true); removed++; }
-        r = String(removed); break;
-      }
-      case 'COUNTRANGE': { const lo = c[1], hi = c[2]; r = lo >= hi ? '0' : String(fenPrefix(lowerBound(hi)) - fenPrefix(lowerBound(lo))); break; }
-      default: r = 'ERR unknown command';
-    }
-    out[n] = r;
+  // ---------- internal nodes ----------
+  function pull(v, L, R) {
+    sum[v] = sum[L] + sum[R];
+    if (mx[L] > mx[R]) { mx[v] = mx[L]; cmx[v] = cmx[L]; smx[v] = max(smx[L], mx[R]); }
+    else if (mx[L] < mx[R]) { mx[v] = mx[R]; cmx[v] = cmx[R]; smx[v] = max(mx[L], smx[R]); }
+    else { mx[v] = mx[L]; cmx[v] = cmx[L] + cmx[R]; smx[v] = max(smx[L], smx[R]); }
+    if (mn[L] < mn[R]) { mn[v] = mn[L]; cmn[v] = cmn[L]; smn[v] = min(smn[L], mn[R]); }
+    else if (mn[L] > mn[R]) { mn[v] = mn[R]; cmn[v] = cmn[R]; smn[v] = min(mn[L], smn[R]); }
+    else { mn[v] = mn[L]; cmn[v] = cmn[L] + cmn[R]; smn[v] = min(smn[L], smn[R]); }
+    hmx[v] = max(hmx[L], hmx[R]);
+    hmn[v] = min(hmn[L], hmn[R]);
   }
-  return out;
+  function build(v, l, r) {
+    if (l === r) { blockPull(v, l); return; }
+    const m = (l + r) >> 1, L = v + 1, R = v + 2 * (m - l + 1);
+    build(L, l, m); build(R, m + 1, r); pull(v, L, R);
+  }
+  const lenOf = (l, r) => min(n, (r + 1) << SH) - (l << SH);
+
+  // Apply tags to node v (len elements): (d, e, f) per class = addition, largest prefix, smallest prefix; cut = the
+  // history restarts (an hreset above). A one-valued node takes class 1's tags for everything.
+  function apply(v, len, d1, d2, d3, e1, e2, e3, f1, f2, f3, cut) {
+    if (mx[v] === mn[v]) {
+      const x = mx[v];
+      hmx[v] = cut ? x + e1 : max(hmx[v], x + e1);
+      hmn[v] = cut ? x + f1 : min(hmn[v], x + f1);
+      sum[v] += d1 * len; mx[v] = mn[v] = x + d1;
+      d2 = d3 = d1; e2 = e3 = e1; f2 = f3 = f1;
+    } else {
+      const three = smx[v] > mn[v]; // there are elements that are neither the max nor the min
+      const hc = max(max(mx[v] + e1, mn[v] + e2), three ? smx[v] + e3 : -INF);
+      const lc = min(min(mn[v] + f2, mx[v] + f1), three ? smn[v] + f3 : INF);
+      hmx[v] = cut ? hc : max(hmx[v], hc);
+      hmn[v] = cut ? lc : min(hmn[v], lc);
+      sum[v] += d1 * cmx[v] + d2 * cmn[v] + d3 * (len - cmx[v] - cmn[v]);
+      smx[v] += three ? d3 : d2;
+      smn[v] += smn[v] < mx[v] ? d3 : d1;
+      mx[v] += d1; mn[v] += d2;
+    }
+    if (cut) {
+      h1[v] = a1[v] + e1; h2[v] = a2[v] + e2; h3[v] = a3[v] + e3;
+      k1[v] = a1[v] + f1; k2[v] = a2[v] + f2; k3[v] = a3[v] + f3;
+      rst[v] = 1;
+    } else {
+      h1[v] = max(h1[v], a1[v] + e1); h2[v] = max(h2[v], a2[v] + e2); h3[v] = max(h3[v], a3[v] + e3);
+      k1[v] = min(k1[v], a1[v] + f1); k2[v] = min(k2[v], a2[v] + f2); k3[v] = min(k3[v], a3[v] + f3);
+    }
+    a1[v] += d1; a2[v] += d2; a3[v] += d3;
+    dirty[v] = 1;
+  }
+  function pushChild(c, len, pmx, pmn, v, cut) {
+    if (mx[c] === mn[c]) {
+      if (mx[c] === pmx) apply(c, len, a1[v], 0, 0, h1[v], 0, 0, k1[v], 0, 0, cut);
+      else if (mn[c] === pmn) apply(c, len, a2[v], 0, 0, h2[v], 0, 0, k2[v], 0, 0, cut);
+      else apply(c, len, a3[v], 0, 0, h3[v], 0, 0, k3[v], 0, 0, cut);
+      return;
+    }
+    const top = mx[c] === pmx, bot = mn[c] === pmn;
+    apply(c, len,
+      top ? a1[v] : a3[v], bot ? a2[v] : a3[v], a3[v],
+      top ? h1[v] : h3[v], bot ? h2[v] : h3[v], h3[v],
+      top ? k1[v] : k3[v], bot ? k2[v] : k3[v], k3[v], cut);
+  }
+  function push(v, l, r) {
+    if (!dirty[v]) return;
+    const m = (l + r) >> 1, L = v + 1, R = v + 2 * (m - l + 1);
+    const cut = rst[v] === 1;
+    if (a1[v] === a2[v] && a2[v] === a3[v] && h1[v] === h2[v] && h2[v] === h3[v] && k1[v] === k2[v] && k2[v] === k3[v]) {
+      applyU(L, lenOf(l, m), a1[v], h1[v], k1[v], cut);
+      applyU(R, lenOf(m + 1, r), a1[v], h1[v], k1[v], cut);
+    } else {
+      const pmx = max(mx[L], mx[R]), pmn = min(mn[L], mn[R]);
+      pushChild(L, lenOf(l, m), pmx, pmn, v, cut);
+      pushChild(R, lenOf(m + 1, r), pmx, pmn, v, cut);
+    }
+    a1[v] = a2[v] = a3[v] = h1[v] = h2[v] = h3[v] = k1[v] = k2[v] = k3[v] = 0;
+    rst[v] = 0; dirty[v] = 0;
+  }
+  // The same tags for every class (the common case: plain additions): the node's max/min stay its max/min.
+  function applyU(v, len, d, e, f, cut) {
+    hmx[v] = cut ? mx[v] + e : max(hmx[v], mx[v] + e);
+    hmn[v] = cut ? mn[v] + f : min(hmn[v], mn[v] + f);
+    sum[v] += d * len; mx[v] += d; mn[v] += d; smx[v] += d; smn[v] += d;
+    if (cut) {
+      h1[v] = a1[v] + e; h2[v] = a2[v] + e; h3[v] = a3[v] + e;
+      k1[v] = a1[v] + f; k2[v] = a2[v] + f; k3[v] = a3[v] + f;
+      rst[v] = 1;
+    } else {
+      h1[v] = max(h1[v], a1[v] + e); h2[v] = max(h2[v], a2[v] + e); h3[v] = max(h3[v], a3[v] + e);
+      k1[v] = min(k1[v], a1[v] + f); k2[v] = min(k2[v], a2[v] + f); k3[v] = min(k3[v], a3[v] + f);
+    }
+    a1[v] += d; a2[v] += d; a3[v] += d;
+    dirty[v] = 1;
+  }
+  const addAll = (v, len, d) => applyU(v, len, d, d > 0 ? d : 0, d < 0 ? d : 0, false);
+
+  // ---------- updates and queries ----------
+  // op codes: 0 add, 1 chmin, 2 chmax, 3 div, 4 hreset; queries 0 sum, 1 min, 2 max, 3 hmax, 4 hmin
+  let ql = 0, qr = 0, qx = 0, qop = 0;
+  function tryTag(v, len) { // a fully covered node: true if the update was applied as a tag (or changes nothing)
+    switch (qop) {
+      case 0: addAll(v, len, qx); return true;
+      case 1:
+        if (mx[v] <= qx) return true;
+        if (smx[v] < qx) { const d = qx - mx[v]; if (mx[v] === mn[v]) addAll(v, len, d); else apply(v, len, d, 0, 0, 0, 0, 0, d, 0, 0, false); return true; }
+        return false;
+      case 2:
+        if (mn[v] >= qx) return true;
+        if (smn[v] > qx) { const d = qx - mn[v]; if (mx[v] === mn[v]) addAll(v, len, d); else apply(v, len, 0, d, 0, 0, d, 0, 0, 0, 0, false); return true; }
+        return false;
+      case 3: {
+        const dHi = floor(mx[v] / qx) - mx[v], dLo = floor(mn[v] / qx) - mn[v];
+        if (dHi === dLo) { if (dHi !== 0) addAll(v, len, dHi); return true; }
+        return false;
+      }
+      default:
+        hmx[v] = mx[v]; hmn[v] = mn[v];
+        h1[v] = k1[v] = a1[v]; h2[v] = k2[v] = a2[v]; h3[v] = k3[v] = a3[v];
+        rst[v] = 1; dirty[v] = 1;
+        return true;
+    }
+  }
+  function element(i) {
+    const x = A[i];
+    let y;
+    switch (qop) {
+      case 0: y = x + qx; break;
+      case 1: y = x < qx ? x : qx; break;
+      case 2: y = x > qx ? x : qx; break;
+      case 3: y = floor(x / qx); break;
+      default: HI[i] = LO[i] = x; return;
+    }
+    A[i] = y;
+    if (HIST) { if (y > HI[i]) HI[i] = y; if (y < LO[i]) LO[i] = y; }
+  }
+  function update(v, l, r) {
+    const s = l << SH, e = min(n, (r + 1) << SH) - 1;
+    if (qr < s || e < ql) return;
+    if ((qop === 1 && mx[v] <= qx) || (qop === 2 && mn[v] >= qx)) return;
+    if (ql <= s && e <= qr && tryTag(v, e - s + 1)) return;
+    if (l === r) {
+      blockPush(v, l);
+      const from = max(s, ql), to = min(e, qr);
+      for (let i = from; i <= to; i++) element(i);
+      blockPull(v, l);
+      return;
+    }
+    push(v, l, r);
+    const m = (l + r) >> 1, L = v + 1, R = v + 2 * (m - l + 1);
+    update(L, l, m); update(R, m + 1, r); pull(v, L, R);
+  }
+  let qk = 0;
+  function query(v, l, r) {
+    const s = l << SH, e = min(n, (r + 1) << SH) - 1;
+    if (ql <= s && e <= qr) return qk === 0 ? sum[v] : qk === 1 ? mn[v] : qk === 2 ? mx[v] : qk === 3 ? hmx[v] : hmn[v];
+    if (l === r) {
+      blockPush(v, l);
+      const from = max(s, ql), to = min(e, qr);
+      let acc = qk === 0 ? 0 : qk === 1 || qk === 4 ? INF : -INF;
+      for (let i = from; i <= to; i++) {
+        const x = qk === 3 ? HI[i] : qk === 4 ? LO[i] : A[i];
+        if (qk === 0) acc += x; else if (qk === 1 || qk === 4) { if (x < acc) acc = x; } else if (x > acc) acc = x;
+      }
+      return acc;
+    }
+    push(v, l, r);
+    const m = (l + r) >> 1, L = v + 1, R = v + 2 * (m - l + 1);
+    const mid = (m + 1) << SH;
+    if (qr < mid) return query(L, l, m);
+    if (ql >= mid) return query(R, m + 1, r);
+    const x = query(L, l, m), y = query(R, m + 1, r);
+    return qk === 0 ? x + y : qk === 1 || qk === 4 ? min(x, y) : max(x, y);
+  }
+
+  build(0, 0, nb - 1);
+  let count = 0, h = 0;
+  const UPD = { add: 0, chmin: 1, chmax: 2, div: 3, hreset: 4 };
+  const QRY = { sum: 0, min: 1, max: 2, hmax: 3, hmin: 4 };
+  function run(op, l, r, x) {
+    ql = l; qr = r; qx = x;
+    if (op === 'set' || op === 'assign') { qop = 1; update(0, 0, nb - 1); qop = 2; update(0, 0, nb - 1); return; }
+    const u = UPD[op];
+    if (u !== undefined) { qop = u; update(0, 0, nb - 1); return; }
+    qk = QRY[op];
+    const ans = query(0, 0, nb - 1);
+    count++;
+    h = (h * 1000003 + (((ans % MOD) + MOD) % MOD)) % MOD;
+  }
+  if (ops) {
+    for (const o of ops) {
+      if (o[0] === 'set') run('set', o[1], o[1], o[2]);
+      else run(o[0], o[1], o[2], o[3]);
+    }
+  } else {
+    const mix = gen.mix;
+    let W = 0;
+    for (const e of mix) W += e[1];
+    for (let j = 0; j < gen.q; j++) {
+      let w = rand(W), e = mix[0];
+      for (const c of mix) { if (w < c[1]) { e = c; break; } w -= c[1]; }
+      if (e[0] === 'set') { const i = rand(n); run('set', i, i, e[2] + rand(e[3] - e[2] + 1)); continue; }
+      const u = rand(n), t = rand(n);
+      const l = u < t ? u : t, r = u < t ? t : u;
+      run(e[0], l, r, e.length > 2 ? e[2] + rand(e[3] - e[2] + 1) : 0);
+    }
+  }
+  return [count, h];
 }

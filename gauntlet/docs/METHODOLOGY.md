@@ -1578,6 +1578,133 @@ around L04–L05, today's top model around L06–L07, L08–L10 beyond it) are b
 **Cost.** L01 is 2.0k–3.2k input tokens, L10 at most 33k (the contract). Test estimates are the level means; every
 model gets the same 32,000-token output limit and no answer-time limit.
 
+## 7t. Difficulty ladders: Exact Maths and Engineering
+
+The maths and coding rungs of the Frontier Ladders (§7q: ten frozen levels, pass mark full marks, height rule).
+Both ask for each model's own maximum output (`"maxOutputTokens": "model-max"`, one retry at most, one hour per
+level).
+
+### Exact Maths: Ladder (`math.exact-ladder`)
+
+**The task, on every level.** A one-player game of snakes and ladders with traps: a fair spinner numbered 1 to d,
+a track 0..N, reaching N or beyond wins, landing on a trap loses, ladders climb, snakes slide back. The question is
+the exact probability of winning, as a fraction. The rules text is identical on every level; only the board grows.
+
+| Level | Track (N) | Spinner | Ladders | Snakes | Traps | Resting squares | Key (digits p/q) |
+|---|---:|---:|---:|---:|---:|---:|---|
+| L01 | 10 | 1–2 | 0 | 0 | 2 | 8 | 2/3 |
+| L02 | 12 | 1–3 | 1 | 0 | 2 | 9 | 4/4 |
+| L03 | 14 | 1–4 | 1 | 1 | 2 | 10 | 5/5 |
+| L04 | 18 | 1–4 | 2 | 1 | 3 | 12 | 6/7 |
+| L05 | 22 | 1–6 | 2 | 2 | 3 | 15 | 10/11 |
+| L06 | 28 | 1–6 | 3 | 2 | 4 | 19 | 13/14 |
+| L07 | 34 | 1–6 | 3 | 3 | 5 | 23 | 14/15 |
+| L08 | 42 | 1–6 | 4 | 4 | 5 | 29 | 18/18 |
+| L09 | 52 | 1–6 | 5 | 5 | 6 | 36 | 26/27 |
+| L10 | 64 | 1–6 | 6 | 6 | 8 | 44 | 29/30 |
+
+Without snakes (levels 1–2) the answer is a plain countdown from the finish. Every snake sends the counter back,
+so from level 3 the probabilities are fixed by simultaneous linear equations (one unknown per snake loop) that
+must be solved exactly; the fractions grow to 30-digit denominators. A patient expert can do every level by
+hand (backward recursion carrying the snake-tail values as unknowns, then elimination); it just takes longer.
+The growth (longer track, more special squares, no fewer loops, longer denominator) is asserted by a unit test.
+
+**Keys, computed twice.** `verification/exact-ladder/snakes.py` builds each board from a fixed seed (every snake
+and ladder must change the answer, the probability lies between 1/10 and 9/10, no run of d special squares) and
+solves the full system, one equation per resting square, by Gauss-Jordan elimination over Python `Fraction`s.
+`verify.mjs` parses every board back out of the prompt text the models see and re-solves it in JavaScript BigInt
+rationals by a different method (backward recursion with affine snake-tail unknowns, then a small elimination);
+it self-tests on hand-checked boards first. `build.py` writes the test file byte-identically.
+
+**Scoring** (`{ "type": "ladder", "answer": "fraction" }`): the FINAL ANSWER line must state one exact fraction.
+Any fraction of the same value scores (the prompt says lowest terms are not required, so nobody loses a level to a
+gcd of 30-digit numbers); spaces, thousands separators, LaTeX `\frac`, "P = …" and a trailing approximation
+("≈ 0.18") are forgiven; a decimal, a second value ("or"), a negative or a zero denominator scores 0. The
+comparison is exact (BigInt cross-multiplication), so one wrong digit anywhere is wrong.
+
+**Spread** (scripted answers through the real scorer, every level): the key 100%; the key in unreduced form or
+LaTeX 100%; one digit off, the decimal value, the answer that forgets the snakes, the answer that forgets the
+ladders, and a hedge all 0%; random filler and the Random Baseline 0%. Tokens: about 420 input tokens per level;
+output from a few thousand tokens (level 1) to the model's maximum (levels 8–10); estimate 45,000 per level.
+
+### Engineering: Ladder (`coding.engineering-ladder`)
+
+**The task, on every level.** Write `runEngine(input)`: an array engine that applies range operations to an array
+of integers and answers range queries, scored by hidden unit tests in the code sandbox (§5.1 `code-js`). It returns
+`[number of queries, checksum of the answers]`, the checksum being a stated polynomial hash mod 1,000,000,007, so a
+test of 40,000 operations has a two-number key. Large inputs are given as a **generator description** (a seed, n,
+the value range and a weighted mix of operations; the Park–Miller generator is specified step by step in the
+prompt, with a worked example), so a test of a million elements is a few bytes. Level L's prompt is the specification
+of levels 1..L word for word, plus its examples (with the individual answers), its sizes and its time limit. Each
+level adds one operation and nothing changes what an earlier one does, so one reference solution serves every level.
+
+| Level | Adds | Operations in all | Largest test | Time limit / test | Hidden tests | What it takes |
+|---|---|---:|---|---:|---:|---|
+| L01 | set, sum | 2 | n 2,000, 2,000 ops | 2 s | 14 | loops |
+| L02 | min, max | 4 | n 10^6, 40,000 ops | 4 s | 16 | a segment tree (point update) |
+| L03 | add (range) | 5 | n 10^6, 40,000 ops | 7 s | 17 | lazy propagation |
+| L04 | assign (range) | 6 | n 10^6, 40,000 ops | 11 s | 17 | composed assign/add tags |
+| L05 | chmin (range) | 7 | n 10^6, 40,000 ops | 11 s | 18 | segment tree beats (max class) |
+| L06 | chmax (range) | 8 | n 10^6, 40,000 ops | 12 s | 17 | beats with max, min and other classes |
+| L07 | div (range floor division) | 9 | n 10^6, 40,000 ops | 18 s | 17 | division as a class-uniform addition |
+| L08 | hmax (historic maximum) | 10 | n 10^6, 40,000 ops | 27 s | 17 | per-class historic tags |
+| L09 | hmin (historic minimum) | 11 | n 10^6, 40,000 ops | 27 s | 16 | both histories at once |
+| L10 | hreset (restart the histories) | 12 | n 10^6, 40,000 ops | 27 s | 17 | history cuts through pending tags |
+
+Every level's hidden tests are hand-made tests of what it adds and of its interplay with every earlier rule (ties,
+one-element ranges, clipping to equal values, negative division, history through assign, chmin, div and hreset, a
+checksum with negative answers), random explicit inputs over narrow value bands (where tags interact most), a small
+and a medium generated input, and three large generated inputs of n = 10^6. From level 5 the large inputs are built
+against the shortcuts a competent engineer reaches for: values spread over ±10^9 are clipped into a band near 0 and
+pushed up again by small additions, so every chmin meets a big group of equal maxima scattered among much smaller
+values (and chmax the same from below); a node-by-node descent has to visit every one of them, while treating "all
+elements equal to the node's maximum" as one class touches a few nodes. One large test is the mirror image (from level
+7 with division), one mixes every operation. The growth (one more operation, the earlier sections word for word, no
+smaller inputs, no tighter limit) and well-formedness (every input of the stated form, only the level's operations,
+every new operation tested, the largest size tested) are asserted by unit tests.
+
+**Expected results, checked three ways.** `verification/engineering-ladder/ref.js` (segment tree beats over blocks of
+64 elements: per node sum, max/second max/count, min/second min/count, historic max/min; class-wise addition tags
+with largest/smallest-prefix tags for the histories, and a reset flag for hreset; assign = chmin then chmax) computes
+every expected result; `gen.mjs` writes the test file byte-identically. `verify.mjs` re-checks every hidden test and
+example with `brute.c` (C, 64-bit integers, one loop per operation, its own generator; it also proves that no value or
+answer leaves ±2^50, as the prompt promises) and every one small enough with `brute.py` (Python integers); the
+prompt's generator example is re-expanded by `brute.py`. `fuzz.mjs` runs the reference (with blocks of 64 and with
+blocks of 2, so small inputs exercise a deep tree), `brute.py` and `brute.c` on 30,000 random inputs: all agree.
+
+**Time limits, measured.** Each level's limit is at least 16× the reference's slowest hidden test in the real sandbox
+(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes; a unit test enforces the
+16×): the reference needs 0.2–1.4 s, so a laptop twice as slow as the 2.1 GHz Xeon core used here still has 8×
+headroom. The other side is measured too (`margins.mjs`, the large tests with three times the limit): the plain lazy segment tree is still running at three times the limit on the deciding large tests of levels 5, 6 and 7 (run to the end outside the sandbox, the level-6 one takes over 9 minutes against the reference's half a second), and from level 8, where it keeps the histories element by element, on every large test; the loop per operation is still running at three times the limit on every large test of levels 2 and 3, needs 2.4–2.7× the limit on level 4 and runs out of time on every large test above. So neither passes by luck on a faster machine. (One large test of level 7, the mirror image with division, takes the plain tree 1.1× the limit: it fails here but could pass on a much faster machine; the level-7 rung is decided by the other large test either way.)
+
+**Scoring.** Each level is one case: the share of its hidden tests passed, after the fair-play check (§3) and the
+stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at full
+marks. Spread (scripted solutions through the real scorer and sandbox):
+
+| Level | Reference (slowest test / limit) | slips.js (careful with slips) | plain.js (plain lazy segment tree) | careless.js | naive.js (a loop per operation) | Do nothing ([0, 0] / []) |
+|---|---|---:|---:|---:|---:|---|
+| L01 | 100% (21 ms / 2 s) | 100% | 100% | 50% | 100% | 0% / 0% |
+| L02 | 100% (219 ms / 4 s) | 100% | 100% | 25% | 81% | 0% / 0% |
+| L03 | 100% (421 ms / 7 s) | 100% | 100% | 59% | 82% | 0% / 0% |
+| L04 | 100% (621 ms / 11 s) | 100% | 100% | 59% | 82% | 0% / 0% |
+| L05 | 100% (629 ms / 11 s) | 67% | 94% | 44% | 83% | 0% / 0% |
+| L06 | 100% (683 ms / 12 s) | 65% | 88% | 65% | 82% | 0% / 0% |
+| L07 | 100% (950 ms / 18 s) | 12% | 88% | 12% | 82% | 0% / 0% |
+| L08 | 100% (1397 ms / 27 s) | 29% | 82% | 12% | 82% | 0% / 0% |
+| L09 | 100% (1163 ms / 27 s) | 25% | 81% | 0% | 81% | 0% / 0% |
+| L10 | 100% (1298 ms / 27 s) | 24% | 82% | 12% | 82% | 0% / 0% |
+
+`plain.js` is the ordinary competent answer: a standard lazy segment tree in typed arrays (add and assign tags,
+sum/min/max) that is right everywhere, passes levels 1–4, and from level 5 descends to every element a chmin, chmax or
+div changes (or, from level 8, every element an update touches, to keep the histories), so it runs out of time on
+the large tests. `slips.js` is the reference design with one plausible slip per level from level 5 (a tied maximum
+counted once, the same for the minimum, division rounded toward zero, histories that ignore the elements that are
+neither the maximum nor the minimum, the same for minima, hreset that does not reach pending tags); `careless.js` is
+`plain.js` written in a hurry (negative answers not brought into the checksum range, truncating division, histories
+without the initial values); `naive.js` loops over the range for every operation. Tokens: the prompt grows from about
+700 to 1,700 input tokens; a full solution is 4,000–10,000 output tokens plus reasoning; estimate 30,000 output
+tokens per level.
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or

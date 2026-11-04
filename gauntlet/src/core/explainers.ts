@@ -364,13 +364,13 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
   },
 
   'coding.engineering-ladder': {
-    hook: 'Build a database one feature at a time: how far up does it get before something breaks?',
-    whatItTests: 'Engineering from a written spec: a mini database that gains commands, rules and bigger inputs at every level.',
-    whyHard: 'The top levels need every rule right in every combination AND a design fast enough for 200,000 keys.',
+    hook: 'One array, one more operation per level: does its code still pass every hidden test in time?',
+    whatItTests: 'Engineering a fast data structure from a written spec: range updates and queries on up to a million numbers.',
+    whyHard: 'From level 5 only the specialist design finishes in time, and every new operation must work through all the earlier ones.',
     howScored: [
-      { icon: 'ladder', text: 'Ten levels, each adding to the same spec' },
-      { icon: 'hidden', text: '15-24 hidden unit tests per level, run for real' },
-      { icon: 'clock', text: 'Each test must finish in 2-15 seconds' },
+      { icon: 'ladder', text: 'Ten levels, each adding one operation' },
+      { icon: 'hidden', text: '14-18 hidden unit tests per level, run for real' },
+      { icon: 'clock', text: 'Each test must finish in 2-27 seconds' },
       { icon: 'percent', text: 'Level score = share of its tests passed' },
     ],
     goodScore: 'Every level is worth 10 points. A level counts as climbed only when all its hidden tests pass, so the headline is how far up it gets with nothing broken.',

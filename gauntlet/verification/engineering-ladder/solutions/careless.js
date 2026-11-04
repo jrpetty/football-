@@ -1,40 +1,103 @@
-// Spread solution "careless": a quick first draft that reads the specification loosely. Gets the basics right but:
-// INCR uses Number arithmetic and parseInt (so "007" counts and big values lose digits); COMMIT closes every open
-// transaction; ROLLBACK forgets deadlines; deadlines are only checked by GET and TTL (COUNT, SIZE, SCAN and the rest
-// still see expired keys); SCAN sorts with localeCompare; RENAME drops the deadline and RENAME a a deletes a;
-// GETAT ignores deadlines; DELPREFIX counts expired keys; COUNTRANGE includes the upper bound. Naive data structures.
-function runStore(commands) {
-  let store = {};
-  let ttl = {};
-  let clock = 0;
-  const stack = [];
-  const snaps = [];
-  const out = [];
-  const has = (k) => Object.prototype.hasOwnProperty.call(store, k);
-  for (const [op, a, b, c] of commands) {
-    let r = 'OK';
-    if (op === 'SET') { store[a] = b; delete ttl[a]; }
-    else if (op === 'GET') { if (ttl[a] !== undefined && clock >= ttl[a]) { delete store[a]; delete ttl[a]; } r = has(a) ? store[a] : '(nil)'; }
-    else if (op === 'DEL') { r = has(a) ? '1' : '0'; delete store[a]; }
-    else if (op === 'SETNX') { if (has(a)) r = '0'; else { store[a] = b; r = '1'; } }
-    else if (op === 'COUNT') r = String(Object.values(store).filter((v) => v === a).length);
-    else if (op === 'SIZE') r = String(Object.keys(store).length);
-    else if (op === 'POPULATE') { let n = 0; for (let i = 0; i < Number(b); i++) if (!has(a + i)) { store[a + i] = c; n++; } r = String(n); }
-    else if (op === 'INCR') { const cur = has(a) ? parseInt(store[a], 10) : 0; if (Number.isNaN(cur)) r = 'ERR not an integer'; else { store[a] = String(cur + Number(b)); r = store[a]; } }
-    else if (op === 'BEGIN') stack.push({ ...store });
-    else if (op === 'ROLLBACK') { if (!stack.length) r = 'NO TRANSACTION'; else store = stack.pop(); }
-    else if (op === 'COMMIT') { if (!stack.length) r = 'NO TRANSACTION'; else stack.length = 0; }
-    else if (op === 'SCAN') r = Object.keys(store).filter((k) => k.startsWith(a)).sort((x, y) => x.localeCompare(y)).slice(0, Number(b)).join(',');
-    else if (op === 'TIME') clock = Number(a);
-    else if (op === 'EXPIRE') { if (has(a)) { ttl[a] = clock + Number(b); r = '1'; } else r = '0'; }
-    else if (op === 'TTL') { if (ttl[a] !== undefined && clock >= ttl[a]) { delete store[a]; delete ttl[a]; } r = !has(a) ? '-2' : ttl[a] === undefined ? '-1' : String(ttl[a] - clock); }
-    else if (op === 'PERSIST') { if (has(a) && ttl[a] !== undefined) { delete ttl[a]; r = '1'; } else r = '0'; }
-    else if (op === 'RENAME') { if (!has(a)) r = 'ERR no such key'; else { store[b] = store[a]; delete store[a]; } }
-    else if (op === 'SNAPSHOT') { snaps.push({ ...store }); r = String(snaps.length); }
-    else if (op === 'GETAT') { const s = snaps[Number(b) - 1]; r = !s ? 'ERR no such snapshot' : Object.prototype.hasOwnProperty.call(s, a) ? s[a] : '(nil)'; }
-    else if (op === 'DELPREFIX') { let n = 0; for (const k of Object.keys(store)) if (k.startsWith(a)) { delete store[k]; n++; } r = String(n); }
-    else if (op === 'COUNTRANGE') r = String(Object.keys(store).filter((k) => k >= a && k <= b).length);
-    out.push(r);
+// Spread solution "careless": the plain lazy segment tree (plain.js) written in a hurry: the checksum does not bring
+// negative answers into 0..1000000006, division truncates toward zero, and the historic values leave out the
+// initial array.
+function runEngine(input) {
+  const MOD = 1000000007;
+  let a, ops = null, n, rand = null, g = input.generate;
+  if (g) {
+    n = g.n;
+    let state = g.seed;
+    rand = (k) => (state = (state * 48271) % 2147483647) % k;
+    a = new Float64Array(n);
+    for (let i = 0; i < n; i++) a[i] = g.lo + rand(g.hi - g.lo + 1);
+  } else {
+    a = Float64Array.from(input.values);
+    n = a.length;
+    ops = input.ops;
   }
-  return out;
+  const histNeeded = ops ? ops.some((o) => o[0] === 'hmax' || o[0] === 'hmin') : g.mix.some((e) => e[0] === 'hmax' || e[0] === 'hmin');
+  const size = 4 * n;
+  const sum = new Float64Array(size), mx = new Float64Array(size), mn = new Float64Array(size);
+  const hx = new Float64Array(size), hn = new Float64Array(size); // historic max/min of the range (exact at leaves)
+  const add = new Float64Array(size), asg = new Float64Array(size), hasAsg = new Uint8Array(size);
+
+  function pull(v) {
+    const L = 2 * v, R = L + 1;
+    sum[v] = sum[L] + sum[R];
+    mx[v] = Math.max(mx[L], mx[R]); mn[v] = Math.min(mn[L], mn[R]);
+    hx[v] = Math.max(hx[L], hx[R]); hn[v] = Math.min(hn[L], hn[R]);
+  }
+  function build(v, l, r) {
+    if (l === r) { sum[v] = mx[v] = mn[v] = a[l]; hx[v] = -Infinity; hn[v] = Infinity; return; } // careless: the initial value is not history
+    const m = (l + r) >> 1;
+    build(2 * v, l, m); build(2 * v + 1, m + 1, r); pull(v);
+  }
+  function applyAssign(v, len, x) { sum[v] = x * len; mx[v] = mn[v] = x; asg[v] = x; hasAsg[v] = 1; add[v] = 0; }
+  function applyAdd(v, len, x) { sum[v] += x * len; mx[v] += x; mn[v] += x; if (hasAsg[v]) asg[v] += x; else add[v] += x; }
+  function push(v, l, r) {
+    const m = (l + r) >> 1, L = 2 * v, R = L + 1;
+    if (hasAsg[v]) { applyAssign(L, m - l + 1, asg[v]); applyAssign(R, r - m, asg[v]); hasAsg[v] = 0; }
+    if (add[v] !== 0) { applyAdd(L, m - l + 1, add[v]); applyAdd(R, r - m, add[v]); add[v] = 0; }
+  }
+  function leafSet(v, y) { sum[v] = mx[v] = mn[v] = y; if (y > hx[v]) hx[v] = y; if (y < hn[v]) hn[v] = y; }
+
+  // kind: 0 add, 1 assign, 2 chmin, 3 chmax, 4 div, 5 hreset
+  function update(v, l, r, ql, qr, kind, x) {
+    if (qr < l || r < ql) return;
+    if (kind === 2 && mx[v] <= x) return;
+    if (kind === 3 && mn[v] >= x) return;
+    if (ql <= l && r <= qr && !histNeeded) {
+      const len = r - l + 1;
+      if (kind === 0) { applyAdd(v, len, x); return; }
+      if (kind === 1) { applyAssign(v, len, x); return; }
+      if (kind !== 5 && mx[v] === mn[v]) {
+        const y = kind === 2 ? Math.min(mx[v], x) : kind === 3 ? Math.max(mx[v], x) : Math.trunc(mx[v] / x);
+        applyAssign(v, len, y); return;
+      }
+    }
+    if (l === r) {
+      if (kind === 5) { hx[v] = hn[v] = mx[v]; return; }
+      const y = kind === 0 ? mx[v] + x : kind === 1 ? x : kind === 2 ? Math.min(mx[v], x) : kind === 3 ? Math.max(mx[v], x) : Math.trunc(mx[v] / x);
+      leafSet(v, y);
+      return;
+    }
+    push(v, l, r);
+    const m = (l + r) >> 1;
+    update(2 * v, l, m, ql, qr, kind, x); update(2 * v + 1, m + 1, r, ql, qr, kind, x); pull(v);
+  }
+  // kind: 0 sum, 1 min, 2 max, 3 hmax, 4 hmin
+  function query(v, l, r, ql, qr, kind) {
+    if (ql <= l && r <= qr) return kind === 0 ? sum[v] : kind === 1 ? mn[v] : kind === 2 ? mx[v] : kind === 3 ? hx[v] : hn[v];
+    push(v, l, r);
+    const m = (l + r) >> 1;
+    if (qr <= m) return query(2 * v, l, m, ql, qr, kind);
+    if (ql > m) return query(2 * v + 1, m + 1, r, ql, qr, kind);
+    const x = query(2 * v, l, m, ql, qr, kind), y = query(2 * v + 1, m + 1, r, ql, qr, kind);
+    return kind === 0 ? x + y : kind === 1 || kind === 4 ? Math.min(x, y) : Math.max(x, y);
+  }
+
+  build(1, 0, n - 1);
+  let count = 0, c = 0;
+  const U = { add: 0, assign: 1, chmin: 2, chmax: 3, div: 4, hreset: 5 }, Q = { sum: 0, min: 1, max: 2, hmax: 3, hmin: 4 };
+  function run(op, l, r, x) {
+    if (op === 'set') { update(1, 0, n - 1, l, l, 1, x); return; }
+    if (op in U) { update(1, 0, n - 1, l, r, U[op], x); return; }
+    const v = query(1, 0, n - 1, l, r, Q[op]);
+    count++;
+    c = (c * 1000003 + v) % MOD; // careless: a negative answer is not brought into 0..MOD-1
+  }
+  if (ops) {
+    for (const o of ops) { if (o[0] === 'set') run('set', o[1], o[1], o[2]); else run(o[0], o[1], o[2], o[3]); }
+  } else {
+    let W = 0;
+    for (const e of g.mix) W += e[1];
+    for (let j = 0; j < g.q; j++) {
+      let w = rand(W), e = g.mix[0];
+      for (const m of g.mix) { if (w < m[1]) { e = m; break; } w -= m[1]; }
+      if (e[0] === 'set') { const i = rand(n); run('set', i, i, e[2] + rand(e[3] - e[2] + 1)); continue; }
+      const u = rand(n), t = rand(n);
+      run(e[0], Math.min(u, t), Math.max(u, t), e.length > 2 ? e[2] + rand(e[3] - e[2] + 1) : 0);
+    }
+  }
+  return [count, c];
 }
