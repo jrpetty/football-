@@ -258,6 +258,61 @@ not retried: estimate $60 for Opus, ceiling $128; estimate $15 (real about $4) f
 single-attempt heights. The two blocked Opus levels. No non-Anthropic model was run. The timings come from the CLI,
 not the Gauntlet engine.
 
+## Business and Everyday Life: blind calibration (November 2026)
+
+**Method.** Fresh Claude agents of three strengths (a small, a mid-sized and a top-tier model) took two cases of every
+written-answer Business and Everyday Life test (a middle case and the hardest case), seeing **only** the rendered prompt a
+model receives through the API (fair-play notice included). No tools, no code execution, no files other than the prompt.
+Their replies were marked by Gauntlet's real scorers. Two rounds: before and after a hardening pass.
+
+**Limits of this calibration.** One model family only (Claude), so it measures how well a test separates
+*strengths*, not how vendors compare. Two cases per test, one reply each: a single slip moves a test's number a lot. The
+agent simulations (Business Ladder levels 4 and 5) and the five operations tests (stock reorder, rota, van routes, reply
+within policy, board report) were not blind-played; their spreads come from scripted players only.
+
+| Test | Round 1: small / mid / top | Round 2 (hardened): small / mid / top |
+|---|---|---|
+| Monday Inbox | 100 / 100 / 100 | 99 / 100 / 100 |
+| Find a Slot | 100 / 100 / 100 | 81 / 100 / 100 |
+| Expense Policy Check | 93 / 93 / 100 | 87 / 88 / 88 (ambiguity, fixed; re-check: mid 100 and 98) |
+| Reconcile the Account | 100 / 100 / 100 | 100 / 100 / 100 |
+| What Changed in the Contract? | 93 / 100 / 100 | 95 / 99 / 100 |
+| Invoices to Pay | 99 / 100 / 100 | 100 / 100 / 100 |
+| Customer Support Queue | 100 / 100 / 100 | 99 / 100 / 100 |
+| Shortlist the Candidates | 57 / 60 / 95 | 82 / 100 / 100 |
+| Check the Payslips | 100 / 100 / 100 | 46 / 98 / 100 |
+| Clean the Customer List | 99 / 99 / 100 | 58 / 100 / 100 |
+| Ask the Database | 100 / 100 / 100 | 100 / 100 / 100 |
+| Ask the Database: Hard | 100 / 100 / 100 | 100 / 100 / 100 |
+| Read an Invoice | 92 / 100 / 100 | 100 / 100 / 100 |
+| Tag the Ticket | 100 / 100 / 100 | 100 / 100 / 100 |
+| Read a CV | 100 / 100 / 100 | 100 / 100 / 100 |
+| What Do I Need to Do? | 100 / 100 / 100 | 100 / 100 / 100 |
+| Read the Spreadsheet | 100 / 100 / 100 | 90 / 100 / 100 |
+| Check the Delivery | 100 / 100 / 100 | 100 / 100 / 100 |
+| Weekend Away | 70 / 100 / 100 | 40 / 100 / 100 |
+| Splitting the Bills | 100 / 100 / 100 | 100 / 100 / 100 |
+| Cheapest Deal | 53 / 78 / 78 | 75 / 100 / 100 |
+| Cook for Twelve | 100 / 100 / 100 | 50 / 100 / 100 |
+| Pay It Off Faster | 20 / 60 / 70 | 20 / 90 / 90 |
+| Pack for the Flight | 100 / 100 / 100 | 100 / 100 / 100 |
+| **All 24 tests** | **91 / 95 / 98** | **84 / 99 / 99** |
+
+**What it found.**
+
+* **Answer keys corrected because the prompt could be read two ways.** Calibration's most useful result. When every
+  strength agrees against the key, the prompt is at fault: Cheapest Deal (how gas and electricity are rounded; whether a free
+  month includes a price rise), Expense Policy Check (one meal limit per day across cities, or one per city), Check the
+  Payslips (a rate that seemed to apply only to the last item in a list). All four were reworded so only one reading is
+  possible, every other rule block was re-read for the same pattern, and the keys were recomputed.
+* **The hardening separates smaller models.** After the hardening round the small model falls clearly behind on long,
+  exact work (payroll for 40 staff, 520 customer records, a cheapest trip with cancellations, a scaled shopping list,
+  20 years of month-by-month interest).
+* **Careful document work is close to solved for strong models.** The mid-sized and top models scored 99% even on
+  54-document invoice runs and 520-record de-duplications; where they lost points it was by pennies (a rounding step, a
+  long interest schedule). Separating the strongest models is the job of the Level 4–5 agent simulations and the Horizon
+  tier; real runs will show how well they do it.
+
 ## What the audit changed
 
 The blind play found real problems, and each was fixed before release:
