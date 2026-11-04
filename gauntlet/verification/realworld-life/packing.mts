@@ -124,14 +124,14 @@ const SPECS: PackSpec[] = [
     intro: 'Ski week in Geneva from Birmingham. Ski hire is booked, but not boots or clothing.',
     items: ['passport', 'phone', 'meds', 'skisuit', 'skiboots', 'goggles', 'thermals', 'clothes', 'boots', 'coat', 'washbag', 'toothpaste', 'suncream-mini', 'moisturiser', 'lenses', 'camera', 'laptop', 'charger', 'powerbank', 'book', 'gin', 'boardgame'],
     airline: { cabinFee: 2500, holdFee: 8900, hold2Fee: 9900, overPerKg: 1300, cabinKg: 10, holdFreeKg: 20 },
-    late: { text: 'UPDATE: the airline has just emailed that from this month the cabin bag limit is 8 kg, not 10 kg. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.', airline: { cabinKg: 8 }, tweaks: { skiboots: { replace: 4000 } } },
+    late: { text: 'UPDATE: the airline has just emailed new rules from this month: the cabin bag limit is 8 kg, not 10 kg, and each hold bag now includes only 15 kg (not 20 kg) before the overweight fee. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.', airline: { cabinKg: 8, holdFreeKg: 15 }, tweaks: { skiboots: { replace: 4000 } } },
   },
   {
     id: 'p08', difficulty: 'hard', seed: 808,
     intro: 'I’m a bridesmaid in Malaga and flying from Newcastle with the bride’s present. The dress and my medicine absolutely have to come.',
     items: ['passport', 'phone', 'meds', 'dress', 'heels', 'clothes-light', 'trainers', 'jacket', 'washbag', 'toothpaste', 'shampoo', 'suncream', 'perfume', 'moisturiser', 'straighteners', 'hairdryer', 'gifts', 'whisky', 'speaker', 'powerbank', 'scissors', 'towel', 'snorkel'],
     airline: { cabinFee: 2800, holdFee: 7400, hold2Fee: 8400, overPerKg: 1200, cabinKg: 10, holdFreeKg: 15 },
-    late: { text: 'Good news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them).', tweaks: { hairdryer: { replace: 0 }, straighteners: { replace: 0 } } },
+    late: { text: 'Good news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them). And her mum is driving out, so she will take the wrapped presents and the bottle of whisky in the car: they do not need to come with me and cost me nothing to leave behind.', tweaks: { hairdryer: { replace: 0 }, straighteners: { replace: 0 }, gifts: { replace: 0 }, whisky: { replace: 0 } } },
   },
   {
     id: 'p09', difficulty: 'hard', seed: 809,
@@ -146,7 +146,7 @@ const SPECS: PackSpec[] = [
     items: ['passport', 'phone', 'tent', 'sleepingbag', 'wellies', 'jacket', 'clothes-light', 'trainers', 'washbag', 'toothpaste', 'suncream', 'suncream-mini', 'shampoo-mini', 'speaker', 'powerbank', 'multitool', 'towel', 'camera', 'pillow', 'book', 'gin'],
     tweaks: { camera: { replace: 25000, name: 'Camera and lens (nice to have)' } },
     airline: { cabinFee: 2900, holdFee: 7900, hold2Fee: 8900, overPerKg: 1400, cabinKg: 10, holdFreeKg: 15 },
-    late: { text: 'Correction from the festival site: they now rent out tents for £25 for the whole festival, so replacing my tent there would only cost £25, not the price on my list. Nothing else changes.', tweaks: { tent: { replace: 2500 } } },
+    late: { text: 'Correction from the festival site: they now rent out tents AND sleeping bags, £25 each for the whole festival, so replacing either there would only cost £25, not the prices on my list. And the airline has just put the first hold bag up to £99.00 (the second to £109.00).', tweaks: { tent: { replace: 2500 }, sleepingbag: { replace: 2500 } }, airline: { holdFee: 9900, hold2Fee: 10900 } },
   },
 ];
 

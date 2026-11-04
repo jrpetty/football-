@@ -1615,7 +1615,7 @@
     },
     {
       "id": "p07",
-      "prompt": "Ski week in Geneva from Birmingham. Ski hire is booked, but not boots or clothing.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Ski jacket and trousers | 2.6 kg | 18 l | 50 × 40 × 15 | £207.00 | can be worn\nI05 | Ski boots | 3.6 kg | 16 l | 42 × 32 × 28 | £72.50 | -\nI06 | Ski goggles and helmet | 1 kg | 9 l | 30 × 25 × 20 | £86.50 | -\nI07 | Thermals and ski socks | 1 kg | 5 l | 30 × 25 × 8 | £74.50 | -\nI08 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £188.50 | -\nI09 | Walking boots | 1.6 kg | 9 l | 33 × 25 × 18 | £84.50 | can be worn\nI10 | Winter coat | 1.8 kg | 14 l | 50 × 40 × 15 | £118.50 | can be worn\nI11 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.00 | -\nI12 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI13 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £6.00 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £9.00 | liquid, 360 ml container\nI16 | Camera and lens | 1.3 kg | 3 l | 20 × 15 × 12 | MUST | -\nI17 | Laptop | 1.6 kg | 2.5 l | 36 × 25 × 2 | MUST | -\nI18 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £67.00 | -\nI19 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £31.50 | spare lithium battery\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £8.50 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £29.00 | liquid, 700 ml container\nI22 | Board game | 1.1 kg | 4.5 l | 30 × 30 × 7 | £38.00 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £25.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £89.00, second £99.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 20 kg; every kg or part of a kg over that costs £13.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nUPDATE: the airline has just emailed that from this month the cabin bag limit is 8 kg, not 10 kg. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Ski week in Geneva from Birmingham. Ski hire is booked, but not boots or clothing.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Ski jacket and trousers | 2.6 kg | 18 l | 50 × 40 × 15 | £207.00 | can be worn\nI05 | Ski boots | 3.6 kg | 16 l | 42 × 32 × 28 | £72.50 | -\nI06 | Ski goggles and helmet | 1 kg | 9 l | 30 × 25 × 20 | £86.50 | -\nI07 | Thermals and ski socks | 1 kg | 5 l | 30 × 25 × 8 | £74.50 | -\nI08 | Clothes for the trip (rolled) | 3.4 kg | 16 l | 40 × 30 × 14 | £188.50 | -\nI09 | Walking boots | 1.6 kg | 9 l | 33 × 25 × 18 | £84.50 | can be worn\nI10 | Winter coat | 1.8 kg | 14 l | 50 × 40 × 15 | £118.50 | can be worn\nI11 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £21.00 | -\nI12 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI13 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £6.00 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Contact lens solution 360 ml | 0.4 kg | 0.4 l | 19 × 7 × 5 | £9.00 | liquid, 360 ml container\nI16 | Camera and lens | 1.3 kg | 3 l | 20 × 15 × 12 | MUST | -\nI17 | Laptop | 1.6 kg | 2.5 l | 36 × 25 × 2 | MUST | -\nI18 | Laptop charger | 0.4 kg | 0.6 l | 15 × 8 × 4 | £67.00 | -\nI19 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £31.50 | spare lithium battery\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £8.50 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £29.00 | liquid, 700 ml container\nI22 | Board game | 1.1 kg | 4.5 l | 30 × 30 × 7 | £38.00 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £25.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £89.00, second £99.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 20 kg; every kg or part of a kg over that costs £13.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nUPDATE: the airline has just emailed new rules from this month: the cabin bag limit is 8 kg, not 10 kg, and each hold bag now includes only 15 kg (not 20 kg) before the overweight fee. Also, the ski hire shop says boots are £40 for the week, so replacing my ski boots there would only cost £40.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "items": [
@@ -1931,7 +1931,7 @@
               "litres": 95,
               "maxKg": 32,
               "fee": 8900,
-              "freeKg": 20,
+              "freeKg": 15,
               "overPerKg": 1300,
               "hold": true
             },
@@ -1946,7 +1946,7 @@
               "litres": 95,
               "maxKg": 32,
               "fee": 9900,
-              "freeKg": 20,
+              "freeKg": 15,
               "overPerKg": 1300,
               "hold": true
             }
@@ -1960,7 +1960,7 @@
             "I01",
             "I02",
             "I03",
-            "I06",
+            "I07",
             "I11",
             "I12",
             "I13",
@@ -1969,32 +1969,33 @@
             "I17",
             "I18",
             "I19",
-            "I20"
+            "I20",
+            "I22"
           ],
           "cabin": [],
           "hold": [
             [
               "I04",
               "I05",
-              "I07",
+              "I06",
               "I08",
-              "I09",
               "I10",
               "I15",
-              "I21",
-              "I22"
+              "I21"
             ]
           ],
-          "wear": [],
+          "wear": [
+            "I09"
+          ],
           "leave": [],
           "total": 89
         }
       },
-      "notes": "[hard] Cheapest legal plan £89.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I06\",\"I11\",\"I12\",\"I13\",\"I14\",\"I16\",\"I17\",\"I18\",\"I19\",\"I20\"],\"cabin\":[],\"hold\":[[\"I04\",\"I05\",\"I07\",\"I08\",\"I09\",\"I10\",\"I15\",\"I21\",\"I22\"]],\"wear\":[],\"leave\":[],\"total\":89}."
+      "notes": "[hard] Cheapest legal plan £89.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I07\",\"I11\",\"I12\",\"I13\",\"I14\",\"I16\",\"I17\",\"I18\",\"I19\",\"I20\",\"I22\"],\"cabin\":[],\"hold\":[[\"I04\",\"I05\",\"I06\",\"I08\",\"I10\",\"I15\",\"I21\"]],\"wear\":[\"I09\"],\"leave\":[],\"total\":89}."
     },
     {
       "id": "p08",
-      "prompt": "I’m a bridesmaid in Malaga and flying from Newcastle with the bride’s present. The dress and my medicine absolutely have to come.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Bridesmaid dress | 0.9 kg | 6 l | 45 × 35 × 6 | MUST | -\nI05 | High heels | 0.8 kg | 5 l | 26 × 20 × 10 | £73.00 | -\nI06 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £129.50 | -\nI07 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £64.00 | can be worn\nI08 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £53.00 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £18.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Shampoo 250 ml | 0.3 kg | 0.3 l | 18 × 7 × 4 | £4.50 | liquid, 250 ml container\nI12 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI13 | Perfume 50 ml | 0.2 kg | 0.15 l | 10 × 6 × 4 | £63.50 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Hair straighteners | 0.4 kg | 1 l | 30 × 5 × 4 | £39.50 | -\nI16 | Hairdryer | 0.7 kg | 3 l | 25 × 22 × 9 | £27.00 | -\nI17 | Wrapped presents for the family | 2.2 kg | 10 l | 40 × 30 × 15 | £84.00 | -\nI18 | Bottle of single malt (gift, 700 ml) | 1.3 kg | 1.2 l | 32 × 9 × 9 | £44.50 | liquid, 700 ml container\nI19 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £40.50 | -\nI20 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.00 | spare lithium battery\nI21 | Nail scissors (blades over 6 cm) | 0.05 kg | 0.05 l | 12 × 5 × 1 | £5.00 | sharp\nI22 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI23 | Snorkel and mask | 0.8 kg | 4 l | 40 × 20 × 12 | £33.50 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £28.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £74.00, second £84.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £12.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nGood news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them).\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "I’m a bridesmaid in Malaga and flying from Newcastle with the bride’s present. The dress and my medicine absolutely have to come.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Prescription medicine | 0.2 kg | 0.4 l | 12 × 8 × 6 | MUST | -\nI04 | Bridesmaid dress | 0.9 kg | 6 l | 45 × 35 × 6 | MUST | -\nI05 | High heels | 0.8 kg | 5 l | 26 × 20 × 10 | £73.00 | -\nI06 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £129.50 | -\nI07 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £64.00 | can be worn\nI08 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £53.00 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £18.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Shampoo 250 ml | 0.3 kg | 0.3 l | 18 × 7 × 4 | £4.50 | liquid, 250 ml container\nI12 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI13 | Perfume 50 ml | 0.2 kg | 0.15 l | 10 × 6 × 4 | £63.50 | liquid, 50 ml container\nI14 | Moisturiser 100 ml | 0.15 kg | 0.12 l | 9 × 6 × 5 | £19.00 | liquid, 100 ml container\nI15 | Hair straighteners | 0.4 kg | 1 l | 30 × 5 × 4 | £39.50 | -\nI16 | Hairdryer | 0.7 kg | 3 l | 25 × 22 × 9 | £27.00 | -\nI17 | Wrapped presents for the family | 2.2 kg | 10 l | 40 × 30 × 15 | £84.00 | -\nI18 | Bottle of single malt (gift, 700 ml) | 1.3 kg | 1.2 l | 32 × 9 × 9 | £44.50 | liquid, 700 ml container\nI19 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £40.50 | -\nI20 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.00 | spare lithium battery\nI21 | Nail scissors (blades over 6 cm) | 0.05 kg | 0.05 l | 12 × 5 × 1 | £5.00 | sharp\nI22 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI23 | Snorkel and mask | 0.8 kg | 4 l | 40 × 20 × 12 | £33.50 | -\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £28.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £74.00, second £84.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £12.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nGood news from the bride: the villa has a hairdryer and straighteners we can all use, so they are worth nothing to me there (I would not need to buy them). And her mum is driving out, so she will take the wrapped presents and the bottle of whisky in the car: they do not need to come with me and cost me nothing to leave behind.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "items": [
@@ -2207,7 +2208,7 @@
                 30,
                 15
               ],
-              "replace": 8400
+              "replace": 0
             },
             {
               "id": "I18",
@@ -2219,7 +2220,7 @@
                 9,
                 9
               ],
-              "replace": 4450,
+              "replace": 0,
               "liquidMl": 700
             },
             {
@@ -2346,7 +2347,7 @@
           "liquidMaxMl": 100,
           "liquidBagMl": 1000
         },
-        "optimum": 7400,
+        "optimum": 4900,
         "reference": {
           "personal": [
             "I01",
@@ -2361,29 +2362,28 @@
             "I19",
             "I20"
           ],
-          "cabin": [],
-          "hold": [
-            [
-              "I04",
-              "I07",
-              "I08",
-              "I09",
-              "I11",
-              "I12",
-              "I16",
-              "I17",
-              "I18",
-              "I21",
-              "I22",
-              "I23"
-            ]
+          "cabin": [
+            "I04",
+            "I07",
+            "I08",
+            "I09",
+            "I16",
+            "I22",
+            "I23"
           ],
+          "hold": [],
           "wear": [],
-          "leave": [],
-          "total": 74
+          "leave": [
+            "I11",
+            "I12",
+            "I17",
+            "I18",
+            "I21"
+          ],
+          "total": 49
         }
       },
-      "notes": "[hard] Cheapest legal plan £74.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I10\",\"I13\",\"I14\",\"I15\",\"I19\",\"I20\"],\"cabin\":[],\"hold\":[[\"I04\",\"I07\",\"I08\",\"I09\",\"I11\",\"I12\",\"I16\",\"I17\",\"I18\",\"I21\",\"I22\",\"I23\"]],\"wear\":[],\"leave\":[],\"total\":74}."
+      "notes": "[hard] Cheapest legal plan £49.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I03\",\"I05\",\"I06\",\"I10\",\"I13\",\"I14\",\"I15\",\"I19\",\"I20\"],\"cabin\":[\"I04\",\"I07\",\"I08\",\"I09\",\"I16\",\"I22\",\"I23\"],\"hold\":[],\"wear\":[],\"leave\":[\"I11\",\"I12\",\"I17\",\"I18\",\"I21\"],\"total\":49}."
     },
     {
       "id": "p09",
@@ -2783,7 +2783,7 @@
     },
     {
       "id": "p10",
-      "prompt": "Glastonbury? No — a music festival near Barcelona, flying from Stansted, camping for four nights.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Festival tent | 2.4 kg | 14 l | 58 × 18 × 18 | £60.50 | -\nI04 | Sleeping bag | 1.4 kg | 12 l | 40 × 25 × 25 | £45.00 | -\nI05 | Wellies | 1.8 kg | 12 l | 40 × 30 × 12 | £24.50 | can be worn\nI06 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £57.00 | can be worn\nI07 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £110.00 | -\nI08 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £58.50 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £20.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI12 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £5.50 | liquid, 50 ml container\nI13 | Travel shampoo 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 3 | £3.50 | liquid, 100 ml container\nI14 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £36.50 | -\nI15 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.50 | spare lithium battery\nI16 | Pocket multitool with a knife | 0.2 kg | 0.1 l | 11 × 4 × 3 | £45.00 | sharp\nI17 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI18 | Camera and lens (nice to have) | 1.3 kg | 3 l | 20 × 15 × 12 | £250.00 | -\nI19 | Travel pillow | 0.3 kg | 4 l | 30 × 28 × 10 | £16.00 | can be worn\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £10.00 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £35.00 | liquid, 700 ml container\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £29.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £79.00, second £89.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £14.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nCorrection from the festival site: they now rent out tents for £25 for the whole festival, so replacing my tent there would only cost £25, not the price on my list. Nothing else changes.\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
+      "prompt": "Glastonbury? No — a music festival near Barcelona, flying from Stansted, camping for four nights.\n\nHere is everything I’d like to take. \"Replace\" is what it would cost me to buy it there if I leave it at home; MUST means it has to come with me.\n\nID | Item | Weight | Volume | Size (cm) | Replace | Notes\nI01 | Passport | 0.05 kg | 0.1 l | 13 × 9 × 1 | MUST | -\nI02 | Phone | 0.2 kg | 0.1 l | 15 × 7 × 1 | MUST | -\nI03 | Festival tent | 2.4 kg | 14 l | 58 × 18 × 18 | £60.50 | -\nI04 | Sleeping bag | 1.4 kg | 12 l | 40 × 25 × 25 | £45.00 | -\nI05 | Wellies | 1.8 kg | 12 l | 40 × 30 × 12 | £24.50 | can be worn\nI06 | Waterproof jacket | 0.6 kg | 5 l | 30 × 25 × 8 | £57.00 | can be worn\nI07 | Summer clothes (rolled) | 2.2 kg | 11 l | 35 × 25 × 12 | £110.00 | -\nI08 | Trainers | 0.9 kg | 7 l | 32 × 22 × 13 | £58.50 | can be worn\nI09 | Washbag (toothbrush, razor, dry items) | 0.6 kg | 2.5 l | 24 × 14 × 10 | £20.50 | -\nI10 | Toothpaste 75 ml | 0.1 kg | 0.1 l | 16 × 4 × 3 | £3.00 | liquid, 75 ml container\nI11 | Sun cream 200 ml | 0.25 kg | 0.25 l | 16 × 6 × 4 | £11.50 | liquid, 200 ml container\nI12 | Sun cream 50 ml | 0.07 kg | 0.07 l | 10 × 4 × 3 | £5.50 | liquid, 50 ml container\nI13 | Travel shampoo 100 ml | 0.12 kg | 0.12 l | 12 × 5 × 3 | £3.50 | liquid, 100 ml container\nI14 | Bluetooth speaker | 0.6 kg | 1.2 l | 20 × 8 × 8 | £36.50 | -\nI15 | Power bank (spare lithium battery) | 0.35 kg | 0.3 l | 15 × 7 × 3 | £30.50 | spare lithium battery\nI16 | Pocket multitool with a knife | 0.2 kg | 0.1 l | 11 × 4 × 3 | £45.00 | sharp\nI17 | Beach towel | 0.9 kg | 6 l | 40 × 30 × 8 | £15.50 | -\nI18 | Camera and lens (nice to have) | 1.3 kg | 3 l | 20 × 15 × 12 | £250.00 | -\nI19 | Travel pillow | 0.3 kg | 4 l | 30 × 28 × 10 | £16.00 | can be worn\nI20 | Paperback book | 0.35 kg | 0.6 l | 20 × 13 × 3 | £10.00 | -\nI21 | Bottle of gin (gift, 700 ml) | 1.2 kg | 1.1 l | 30 × 9 × 9 | £35.00 | liquid, 700 ml container\n\nAIRLINE RULES (fees are for the whole return trip; the same things come home with me)\n- Personal item under the seat: free. Up to 40 × 30 × 20 cm, 20 litres; no weight limit.\n- Cabin bag: £29.00. Up to 55 × 40 × 20 cm, 40 litres, 10 kg.\n- Hold bags (at most 2): first £79.00, second £89.00. Each up to 75 × 50 × 30 cm, 95 litres and 32 kg. Each includes 15 kg; every kg or part of a kg over that costs £14.00.\n- An item fits a bag only if its size fits inside the bag’s size (in any orientation: compare longest with longest, and so on). The volumes of the items in a bag add up and must not exceed its litres; their weights add up too.\n- Liquids, gels and pastes in the cabin (personal item or cabin bag): each container at most 100 ml, and all of them together must fit in one 1-litre bag (at most 1,000 ml in total). Any size is fine in a hold bag.\n- Spare lithium batteries (power banks) must travel in the cabin, never in a hold bag. Sharp items (scissors with blades over 6 cm, knives, multitools) must go in a hold bag, never in the cabin.\n- Things marked \"can be worn\" can be worn onto the plane instead (they then count towards no bag). Nothing else can be worn.\n- You only pay for a bag if you put something in it. The total cost = bag fees + overweight fees + the \"Replace\" price of everything left at home.\n\nCorrection from the festival site: they now rent out tents AND sleeping bags, £25 each for the whole festival, so replacing either there would only cost £25, not the prices on my list. And the airline has just put the first hold bag up to £99.00 (the second to £109.00).\n\nPack for the lowest total cost while keeping every rule. Answer with where each item goes, using the item IDs, in this JSON format (each hold bag is its own list; anything not listed is left at home):\n```json\n{\"personal\": [\"<ID>\"], \"cabin\": [\"<ID>\"], \"hold\": [[\"<ID>\"]], \"wear\": [\"<ID>\"], \"leave\": [\"<ID>\"], \"total\": 0.00}\n```\nGive exactly one answer as a single JSON block. Do not offer alternatives: a reply that contains two different answers, or an answer that says \"or\", is marked wrong. You may explain your working before the JSON.",
       "expected": {
         "world": {
           "items": [
@@ -2833,7 +2833,7 @@
                 25,
                 25
               ],
-              "replace": 4500
+              "replace": 2500
             },
             {
               "id": "I05",
@@ -3088,7 +3088,7 @@
               ],
               "litres": 95,
               "maxKg": 32,
-              "fee": 7900,
+              "fee": 9900,
               "freeKg": 15,
               "overPerKg": 1400,
               "hold": true
@@ -3103,7 +3103,7 @@
               ],
               "litres": 95,
               "maxKg": 32,
-              "fee": 8900,
+              "fee": 10900,
               "freeKg": 15,
               "overPerKg": 1400,
               "hold": true
@@ -3112,7 +3112,7 @@
           "liquidMaxMl": 100,
           "liquidBagMl": 1000
         },
-        "optimum": 7900,
+        "optimum": 9900,
         "reference": {
           "personal": [
             "I01",
@@ -3144,10 +3144,10 @@
           ],
           "wear": [],
           "leave": [],
-          "total": 79
+          "total": 99
         }
       },
-      "notes": "[hard] Cheapest legal plan £79.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I06\",\"I07\",\"I10\",\"I12\",\"I13\",\"I15\",\"I18\"],\"cabin\":[],\"hold\":[[\"I03\",\"I04\",\"I05\",\"I08\",\"I09\",\"I11\",\"I14\",\"I16\",\"I17\",\"I19\",\"I20\",\"I21\"]],\"wear\":[],\"leave\":[],\"total\":79}."
+      "notes": "[hard] Cheapest legal plan £99.00 (exhaustive branch-and-bound over every place for every item). One optimal plan: {\"personal\":[\"I01\",\"I02\",\"I06\",\"I07\",\"I10\",\"I12\",\"I13\",\"I15\",\"I18\"],\"cabin\":[],\"hold\":[[\"I03\",\"I04\",\"I05\",\"I08\",\"I09\",\"I11\",\"I14\",\"I16\",\"I17\",\"I19\",\"I20\",\"I21\"]],\"wear\":[],\"leave\":[],\"total\":99}."
     }
   ]
 }

@@ -760,7 +760,7 @@ changes a score, and that the scripted wrong answers score as described.
 **Expected spread** (from scripted answers, `node verification/realworld-life/spread.mts`): do-nothing 0 on every
 test; careful (the reference) 100; careless answers (one rule ignored, a late message missed, no optimising, a
 typical arithmetic slip; only slips that change the answer for that case are counted) score about 22 on Weekend
-Away, 5 on Splitting the Bills, 55 on Cheapest Deal, 40 on Cook for Twelve, 46 on Pay It Off Faster and 29 on Pack
+Away, 5 on Splitting the Bills, 55 on Cheapest Deal, 40 on Cook for Twelve, 46 on Pay It Off Faster and 28 on Pack
 for the Flight.
 
 Stored answers to these tests are re-marked from their reply text like other objective tests (§5.6, `src/engine/remark.ts`).
