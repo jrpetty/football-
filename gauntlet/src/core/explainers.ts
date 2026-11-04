@@ -412,7 +412,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
   'work.sql-questions': {
     hook: 'Twelve questions from the boss: can it write the database query that answers each one?',
     whatItTests: 'Turning a manager’s plain-English question into one correct database query, following the company’s business rules.',
-    whyHard: 'Test accounts, deleted rows, guest orders, euros and refunds all have to be handled, and a careless join quietly double-counts.',
+    whyHard: 'Test accounts, deleted rows, guest orders, euros and refunds all count, and the hardest questions are whole specifications (a finance memo with amendments, a commission scheme) where one slip changes the answer.',
     howScored: [
       { icon: 'play', text: 'Its query is run on the real database' },
       { icon: 'hidden', text: 'And on 3 hidden copies with different data' },
@@ -424,7 +424,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
   'work.sql-hard': {
     hook: 'Time zones, price history, duplicate events: can it answer an analyst’s hardest questions?',
     whatItTests: 'Writing advanced database queries (cohorts, rankings with ties, streaks, sessions, running balances) on a messy data warehouse.',
-    whyHard: 'Every question hides a trap a real analyst falls into: UK clock changes, old prices, duplicated events, reversed payments.',
+    whyHard: 'Every question stacks the traps real analysts fall into: UK clock changes, old prices and categories, duplicated events, fast phone clocks, reversed reversals.',
     howScored: [
       { icon: 'play', text: 'Its query is run on the real database' },
       { icon: 'hidden', text: 'And on 3 hidden copies with different data' },

@@ -10,7 +10,7 @@ export const META = {
   id: 'work.sql-hard',
   name: 'Ask the Database: Hard',
   description:
-    'Nine genuinely hard analyst questions on a messy coffee-company warehouse, each answered with one SQLite query: UTC timestamps that must be read in UK local time across the clock change, prices from a slowly changing dimension, duplicated app events, overlapping promotions from a many-to-many table, cohort retention, top-N per group with ties, gaps-and-islands for subscription pauses, sessionisation with a 30-minute rule and a wallet running balance with reversals. The query runs read-only on the live database and on three hidden copies with different data and must match the reference query on each, so a hard-coded answer fails.',
+    'Nine analyst questions on a messy coffee-company warehouse, each answered with one SQLite query: UTC timestamps read in UK local time across the clock change, price and category history (slowly changing dimensions), duplicated app events, a daily snapshot that lost a day, promotions with channel and basket rules, and a wallet ledger whose reversals can themselves be reversed. Easy: orders per UK day, deduplicated event counts, revenue at historical prices and categories. Medium: top-N per group with ties across a category move, one- and two-month cohort retention, pause streaks through the lost day. Hard: lowest and end-of-day wallet balances through reversal chains, the best single promotion per line under four conditions, and sessions with checkouts after deduplication and fast-phone-clock correction. The query runs read-only on the live database and on three hidden copies with different data and must match the reference query on each, so a hard-coded answer fails.',
   difficulty: 'extreme',
   tags: ['sql', 'sqlite', 'data-analysis', 'window-functions', 'time-zones', 'real-world', 'work', 'frontier'],
   hook: 'Time zones, price history, duplicate events, reversals: nine analyst questions where one slip shows.',
@@ -26,7 +26,13 @@ CREATE TABLE dim_product (
   product_id INTEGER PRIMARY KEY,
   sku        TEXT NOT NULL,
   name       TEXT NOT NULL,
-  category   TEXT NOT NULL        -- 'Beans', 'Brewing kit' or 'Gifts'
+  category   TEXT NOT NULL        -- the CURRENT category: 'Beans', 'Brewing kit' or 'Gifts'
+);
+CREATE TABLE dim_product_category_history (  -- slowly changing dimension: products sometimes move category
+  product_id     INTEGER NOT NULL REFERENCES dim_product(product_id),
+  category       TEXT NOT NULL,
+  valid_from_utc TEXT NOT NULL,   -- inclusive
+  valid_to_utc   TEXT             -- exclusive; NULL = current
 );
 CREATE TABLE dim_price_history (  -- slowly changing dimension: one row per price period
   product_id     INTEGER NOT NULL REFERENCES dim_product(product_id),
@@ -49,11 +55,13 @@ CREATE TABLE fact_order_lines (
   PRIMARY KEY (order_id, line_no)
 );
 CREATE TABLE promotions (
-  promo_id  INTEGER PRIMARY KEY,
-  code      TEXT NOT NULL,
-  pct_off   INTEGER NOT NULL,     -- e.g. 15 = 15% off
-  starts_on TEXT NOT NULL,        -- UK local date, inclusive
-  ends_on   TEXT NOT NULL         -- UK local date, inclusive
+  promo_id       INTEGER PRIMARY KEY,
+  code           TEXT NOT NULL,
+  pct_off        INTEGER NOT NULL,  -- e.g. 15 = 15% off
+  channel        TEXT,              -- 'web' or 'app' = only orders from that channel; NULL = both
+  min_basket_gbp REAL,              -- only orders whose line revenue (rule 4) totals at least this; NULL = no minimum
+  starts_on      TEXT NOT NULL,     -- UK local date, inclusive
+  ends_on        TEXT NOT NULL      -- UK local date, inclusive
 );
 CREATE TABLE promotion_products ( -- which products each promotion covers (many-to-many)
   promo_id   INTEGER NOT NULL REFERENCES promotions(promo_id),
@@ -86,9 +94,10 @@ export const RULES = `Warehouse rules (every report follows them):
 1. Every column ending in _utc is a UTC timestamp stored as text 'YYYY-MM-DD HH:MM:SS'. Reports use UK local time: in this data UK local time equals UTC, except from 2026-03-29 01:00:00 UTC (inclusive) to 2026-10-25 01:00:00 UTC (exclusive), when it is UTC + 1 hour (British Summer Time).
 2. Days, months and quarters are UK local ones (an order placed at 23:30 UTC on 31 March 2026 was placed on 1 April, UK time). Columns without a time (starts_on, ends_on, snapshot_date) are already UK local dates.
 3. Only orders with status 'paid' count as orders or revenue.
-4. The price of an order line is the dim_price_history row of its product whose period contains the order moment: valid_from_utc <= ordered_at_utc < valid_to_utc (valid_to_utc NULL = no end). Line revenue = quantity × that price, in GBP, before any promotion.
+4. The category of a product on an order is the dim_product_category_history row whose period contains the order moment (valid_from_utc <= ordered_at_utc < valid_to_utc, NULL = no end); dim_product.category is only today's category. The price of an order line is the dim_price_history row of its product whose period contains the order moment: valid_from_utc <= ordered_at_utc < valid_to_utc (valid_to_utc NULL = no end). Line revenue = quantity × that price, in GBP, before any promotion.
 5. events_raw contains duplicate deliveries: rows with the same customer_id, event_name and event_ts_utc are one event (their event_id and ingested_at_utc differ).
-6. In wallet_ledger a 'reversal' cancels the entry named in its reverses_entry_id. For balances, ignore both the reversed entry and the reversal itself, as if neither had happened. Entries are applied in order of posted_at_utc, then entry_id.`;
+6. In wallet_ledger a 'reversal' cancels the entry named in its reverses_entry_id - unless that reversal is itself cancelled by a later reversal, in which case the entry it pointed at counts again (the payment provider undid the chargeback). Chains can be several reversals deep. Reversal rows never change a balance themselves: a balance is the sum of the amounts of the non-reversal entries that are not cancelled. Entries are applied in order of posted_at_utc, then entry_id.
+7. subscription_status_daily lost a whole day: there are no rows at all for 2026-04-14. Treat a customer who has rows on both 2026-04-13 and 2026-04-15 as having had their 2026-04-13 status on 2026-04-14.`;
 
 export const COMPANY = `You are an analyst at Copperline Coffee, a UK coffee roaster that sells beans, brewing kit and gifts through its website and app. You query its analytics warehouse, which is SQLite. Below are the tables, the warehouse rules and a few sample rows. Today is Wednesday 1 July 2026.`;
 
@@ -161,6 +170,17 @@ export function generateWarehouse(seed: number): { tables: Tables } {
   });
   for (const r of priceRows) prices.push([r.p, r.price, r.from, r.to]);
   const changeMoments = [...new Set(priceRows.filter((r) => r.to).map((r) => r.to!))];
+  // Category moves in Q2: two or three products change category at a random moment.
+  const kr = rng.fork('categories');
+  const moves = new Map<number, { to: string; at: string }>();
+  const candidates: Array<[number, string]> = [[11, 'Beans'], [10, 'Gifts'], [12, 'Brewing kit'], [4, 'Gifts'], [13, 'Brewing kit']];
+  for (const [p, to] of kr.shuffle(candidates).slice(0, kr.int(2, 3))) moves.set(p, { to, at: ts(kr, '2026-04-12', '2026-06-12', [0, 24]) });
+  const catHist: Cell[][] = [];
+  PRODUCTS.forEach(([, , cat], i) => {
+    const m = moves.get(i + 1);
+    if (m) catHist.push([i + 1, cat, '2025-01-01 00:00:00', m.at], [i + 1, m.to, m.at, null]);
+    else catHist.push([i + 1, cat, '2025-01-01 00:00:00', null]);
+  });
 
   // ── orders ──
   const or = rng.fork('orders');
@@ -200,6 +220,12 @@ export function generateWarehouse(seed: number): { tables: Tables } {
       if (r.chance(0.6)) addOrder(pick(r), fromMin(toMin(`${day} 00:00:00`) + r.int(0, 59), r.int(0, 59)), r, 'paid');
     }
     for (const day of ['2026-04-30', '2026-05-31', '2026-06-30', '2026-01-31', '2026-02-28']) addOrder(pick(r), fromMin(toMin(`${day} 23:00:00`) + r.int(5, 55), r.int(0, 59)), r, 'paid');
+    // Orders in the hours either side of each category move.
+    for (const [p, m] of moves) {
+      addOrder(pick(r), plusSec(m.at, -r.int(60, 7200)), r, 'paid', [[p, r.int(2, 4)]]);
+      addOrder(pick(r), plusSec(m.at, r.int(0, 7200)), r, 'paid', [[p, r.int(2, 4)]]);
+      if (r.chance(0.5)) addOrder(pick(r), m.at, r, 'paid', [[p, r.int(1, 3)]]);
+    }
     // Orders placed at the exact moment a price changed (the new price applies).
     for (const m of changeMoments) {
       const prod = priceRows.find((x) => x.to === m)!.p;
@@ -213,17 +239,17 @@ export function generateWarehouse(seed: number): { tables: Tables } {
   const kit = [7, 8, 9, 10];
   const gifts = [11, 12, 13];
   const sh = (d: string, k: number) => addDays(d, mr.int(-k, k));
-  const promos: Array<[number, string, number, string, string, number[]]> = [
-    [1, 'NEWYEAR15', 15, '2026-01-02', '2026-01-18', beans],
-    [2, 'SPRING10', 10, sh('2026-04-01', 0), sh('2026-04-28', 2), beans],
-    [3, 'ESPRESSO15', mr.pick([15, 20]), sh('2026-04-10', 3), sh('2026-05-10', 3), [3]],
-    [4, 'KIT20', 20, '2026-05-01', sh('2026-05-31', 0), kit],
-    [5, 'MAYDAY25', 25, '2026-05-01', '2026-05-03', [...beans, ...kit, ...gifts]],
-    [6, 'SUMMER10', 10, '2026-06-01', '2026-06-30', [...beans, ...gifts]],
-    [7, 'BEANCLUB10', 10, sh('2026-06-12', 2), sh('2026-06-22', 2), beans],
-    [8, 'FATHERS20', 20, '2026-06-15', '2026-06-21', [...kit, 11]],
+  const promos: Array<[number, string, number, string, string, number[], string | null, number | null]> = [
+    [1, 'NEWYEAR15', 15, '2026-01-02', '2026-01-18', beans, null, null],
+    [2, 'SPRING10', 10, sh('2026-04-01', 0), sh('2026-04-28', 2), beans, null, null],
+    [3, 'APPESPRESSO20', mr.pick([15, 20]), sh('2026-04-10', 3), sh('2026-05-10', 3), [3], 'app', null],
+    [4, 'KIT20', 20, '2026-05-01', sh('2026-05-31', 0), kit, null, mr.pick([30, 40, 50])],
+    [5, 'MAYDAY25', 25, '2026-05-01', '2026-05-03', [...beans, ...kit, ...gifts], null, mr.pick([25, 30, 35])],
+    [6, 'SUMMER10', 10, '2026-06-01', '2026-06-30', [...beans, ...gifts], null, null],
+    [7, 'APPBEANS10', 10, sh('2026-06-12', 2), sh('2026-06-22', 2), beans, 'app', null],
+    [8, 'FATHERS20', 20, '2026-06-15', '2026-06-21', [...kit, 11], 'web', mr.pick([40, 60])],
   ];
-  const promotions: Cell[][] = promos.map(([id, code, pct, s, e]) => [id, code, pct, s, e]);
+  const promotions: Cell[][] = promos.map(([id, code, pct, s, e, , ch, min]) => [id, code, pct, ch, min, s, e]);
   const promoProducts: Cell[][] = promos.flatMap(([id, , , , , ps]) => ps.map((p) => [id, p]));
   // Extra planted orders on promotion boundary days (late UTC evening = next UK day).
   {
@@ -260,9 +286,11 @@ export function generateWarehouse(seed: number): { tables: Tables } {
   const er = rng.fork('events');
   const events: Cell[][] = [];
   let eid = 5_000_000 + er.int(0, 50000);
-  const push = (cust: number, name: string, t: string) => {
-    events.push([eid++, cust, name, t, plusSec(t, er.int(2, 900))]);
-    if (er.chance(0.08)) events.push([eid++ + er.int(0, 3), cust, name, t, plusSec(t, er.int(1000, 90000))]);
+  const push = (cust: number, name: string, t: string, skewSec = er.chance(0.05) ? er.int(300, 5400) : 0, dup = false) => {
+    // A phone whose clock runs fast stamps the event later than it really happened (and later than it was stored).
+    const stamped = plusSec(t, skewSec);
+    events.push([eid++, cust, name, stamped, plusSec(t, er.int(2, skewSec ? 120 : 900))]);
+    if (dup || er.chance(0.08)) events.push([eid++ + er.int(0, 3), cust, name, stamped, plusSec(t, er.int(dup ? 7200 : 1000, 90000))]);
   };
   const appUsers = er.shuffle(customers.map((c) => Number(c[0]))).slice(0, 22 + er.int(0, 18));
   for (const cust of appUsers) {
@@ -286,6 +314,20 @@ export function generateWarehouse(seed: number): { tables: Tables } {
       push(cust, 'app_open', t0);
       push(cust, 'view_product', plusSec(t0, 1800));
       push(cust, 'add_to_basket', plusSec(t0, 3601));
+    }
+    // Fast phone clocks in the week: a stamp that looks like a new session (or a later day) but is not.
+    for (let k = 0; k < 4; k++) {
+      const cust = r.pick(appUsers);
+      const t0 = ts(r, '2026-04-06', '2026-04-12', [8, 20]);
+      push(cust, 'app_open', t0, 0);
+      push(cust, 'view_product', plusSec(t0, 600), 0);
+      push(cust, k % 2 ? 'checkout' : 'add_to_basket', plusSec(t0, 1200), r.int(2400, 4800), true);
+      push(cust, 'view_product', plusSec(t0, 1500), 0);
+    }
+    {
+      const cust = r.pick(appUsers);
+      push(cust, 'app_open', '2026-04-12 22:40:00', 0);
+      push(cust, 'checkout', '2026-04-12 22:52:00', 1800);
     }
     for (const edge of ['2026-04-05 22:40:00', '2026-04-12 22:50:00', '2026-03-31 23:20:00', '2026-04-30 23:25:00']) {
       const cust = r.pick(appUsers);
@@ -317,7 +359,7 @@ export function generateWarehouse(seed: number): { tables: Tables } {
       const runActive = sr.int(3, 30);
       for (let k = 0; k < runActive; k++) statuses.push('active');
       if (sr.chance(0.75)) {
-        const len = idx === 0 ? 7 : idx === 1 ? 6 : sr.pick([2, 3, 5, 7, 8, 10, 14, 21]);
+        const len = idx === 0 ? 7 : idx === 1 ? 6 : sr.pick([2, 3, 5, 6, 7, 8, 10, 14, 21]);
         for (let k = 0; k < len; k++) statuses.push('paused');
         if (sr.chance(0.3)) {
           statuses.push('active'); // one active day between two pauses
@@ -325,13 +367,24 @@ export function generateWarehouse(seed: number): { tables: Tables } {
         }
       }
     }
-    const cancelAt = sr.chance(0.25) ? sr.int(40, total - 1) : total;
+    // Planted pauses around the lost day (14 April): one that only reaches 7 days through it, one that starts on
+    // the 15th after an active 13th, one that ends on the 13th.
+    const at = (d: string) => daysBetween(day, d);
+    const setRun = (from: string, to: string, st: string) => {
+      for (let k = at(from); k <= at(to); k++) if (k >= 0 && k < statuses.length) statuses[k] = st;
+    };
+    if (idx === 2) { setRun('2026-04-08', '2026-04-08', 'active'); setRun('2026-04-09', '2026-04-17', 'active'); setRun('2026-04-11', '2026-04-17', 'paused'); setRun('2026-04-18', '2026-04-19', 'active'); }
+    if (idx === 3) { setRun('2026-04-10', '2026-04-13', 'active'); setRun('2026-04-15', '2026-04-21', 'paused'); setRun('2026-04-22', '2026-04-23', 'active'); }
+    if (idx === 4) { setRun('2026-04-06', '2026-04-13', 'paused'); setRun('2026-04-05', '2026-04-05', 'active'); setRun('2026-04-15', '2026-04-16', 'active'); }
+    const cancelAt = idx <= 4 ? total : sr.chance(0.25) ? sr.int(40, total - 1) : total;
     for (let k = 0; k < Math.min(total, cancelAt + 1); k++) {
       snaps.push([cust, day, k === cancelAt ? 'cancelled' : statuses[k]!]);
       day = addDays(day, 1);
     }
   });
   snaps.sort((a, b) => Number(a[0]) - Number(b[0]) || (String(a[1]) < String(b[1]) ? -1 : 1));
+  // The pipeline lost 14 April for everyone.
+  for (let i = snaps.length - 1; i >= 0; i--) if (snaps[i]![1] === '2026-04-14') snaps.splice(i, 1);
 
   // ── wallet ──
   const wr = rng.fork('wallet');
@@ -347,9 +400,9 @@ export function generateWarehouse(seed: number): { tables: Tables } {
       return row;
     };
     add(wr.pick([1000, 2000, 2500, 5000]), 'topup', t);
-    const n = wr.int(5, 14);
+    const n = wr.int(8, 18);
     for (let k = 0; k < n; k++) {
-      t = plusSec(t, wr.int(1, 12) * 86400 + wr.int(0, 40000));
+      t = plusSec(t, wr.int(1, 9) * 86400 + wr.int(0, 30000));
       const kind = wr.pick(['purchase', 'purchase', 'purchase', 'topup', 'refund', 'auto']);
       if (kind === 'purchase') add(-wr.pick([350, 420, 875, 950, 1125, 1800, 2700]), 'purchase', t);
       else if (kind === 'topup') add(wr.pick([1000, 2000, 2500]), 'topup', t);
@@ -359,10 +412,25 @@ export function generateWarehouse(seed: number): { tables: Tables } {
         add(-wr.pick([1800, 2700, 3200]), 'purchase', t);
         add(2000, 'topup', t);
       }
-      if (wr.chance(0.18) && mine.length > 1) {
-        const target = wr.pick(mine.filter((m) => m[4] !== 'reversal' && !mine.some((x) => x[5] === m[0])));
-        if (target) add(-Number(target[3]), 'reversal', plusSec(t, wr.int(3600, 5 * 86400)), Number(target[0]));
+      if (wr.chance(0.2) && mine.length > 1) {
+        const options = mine.filter((m) => m[4] !== 'reversal' && String(m[2]) <= t && !mine.some((x) => x[5] === m[0]));
+        const target = options.length ? wr.pick(options) : null;
+        if (target) {
+          let rev = add(-Number(target[3]), 'reversal', plusSec(t, wr.int(3600, 5 * 86400)), Number(target[0]));
+          // The chargeback is sometimes undone (a reversal of the reversal), and rarely undone again.
+          for (let depth = 0; depth < 2 && wr.chance(depth === 0 ? 0.45 : 0.35); depth++) rev = add(-Number(rev[3]), 'reversal', plusSec(String(rev[2]), wr.int(3600, 3 * 86400)), Number(rev[0]));
+        }
       }
+      if (t > '2026-03-29 01:00:00' && wr.chance(0.25)) {
+        // A late-evening purchase: after 23:00 UTC it belongs to the next UK day.
+        add(-wr.pick([420, 875, 1125]), 'purchase', `${t.slice(0, 10)} 23:${String(wr.int(5, 55)).padStart(2, '0')}:${String(wr.int(0, 59)).padStart(2, '0')}`);
+      }
+    }
+    if (wr.chance(0.5)) {
+      // A big late-evening purchase in British Summer Time (the next UK day), topped up the next morning.
+      const d = addDays('2026-04-02', wr.int(0, 50));
+      add(-wr.pick([3800, 4500, 5200]), 'purchase', `${d} 23:${String(wr.int(10, 50)).padStart(2, '0')}:${String(wr.int(0, 59)).padStart(2, '0')}`);
+      add(5000, 'topup', `${addDays(d, 1)} 08:${String(wr.int(0, 50)).padStart(2, '0')}:00`);
     }
     mine.sort((a, b) => (String(a[2]) < String(b[2]) ? -1 : String(a[2]) > String(b[2]) ? 1 : Number(a[0]) - Number(b[0])));
     ledger.push(...mine);
@@ -372,11 +440,12 @@ export function generateWarehouse(seed: number): { tables: Tables } {
   return {
     tables: {
       dim_customer: { columns: ['customer_id', 'full_name', 'country', 'created_at_utc'], rows: customers },
-      dim_product: { columns: ['product_id', 'sku', 'name', 'category'], rows: PRODUCTS.map(([sku, n, c], i) => [i + 1, sku, n, c]) },
+      dim_product: { columns: ['product_id', 'sku', 'name', 'category'], rows: PRODUCTS.map(([sku, n, c], i) => [i + 1, sku, n, moves.get(i + 1)?.to ?? c]) },
+      dim_product_category_history: { columns: ['product_id', 'category', 'valid_from_utc', 'valid_to_utc'], rows: catHist },
       dim_price_history: { columns: ['product_id', 'price_gbp', 'valid_from_utc', 'valid_to_utc'], rows: prices },
       fact_orders: { columns: ['order_id', 'customer_id', 'ordered_at_utc', 'channel', 'status'], rows: orders },
       fact_order_lines: { columns: ['order_id', 'line_no', 'product_id', 'quantity'], rows: lines.sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[1]) - Number(b[1])) },
-      promotions: { columns: ['promo_id', 'code', 'pct_off', 'starts_on', 'ends_on'], rows: promotions },
+      promotions: { columns: ['promo_id', 'code', 'pct_off', 'channel', 'min_basket_gbp', 'starts_on', 'ends_on'], rows: promotions },
       promotion_products: { columns: ['promo_id', 'product_id'], rows: promoProducts },
       events_raw: { columns: ['event_id', 'customer_id', 'event_name', 'event_ts_utc', 'ingested_at_utc'], rows: events },
       subscription_status_daily: { columns: ['customer_id', 'snapshot_date', 'status'], rows: snaps },
@@ -395,11 +464,13 @@ interface Line {
   product: number;
   qty: number;
   price: number;
+  category: string;
 }
 
 function paidLines(t: Tables): Line[] {
   const prices = t.dim_price_history!.rows.map((r) => ({ p: Number(r[0]), price: Number(r[1]), from: String(r[2]), to: r[3] === null ? null : String(r[3]) }));
   const orders = new Map(t.fact_orders!.rows.filter((o) => o[4] === 'paid').map((o) => [Number(o[0]), o]));
+  const cats = t.dim_product_category_history!.rows.map((r) => ({ p: Number(r[0]), cat: String(r[1]), from: String(r[2]), to: r[3] === null ? null : String(r[3]) }));
   const out: Line[] = [];
   for (const [o, , p, q] of t.fact_order_lines!.rows) {
     const ord = orders.get(Number(o));
@@ -407,7 +478,9 @@ function paidLines(t: Tables): Line[] {
     const utc = String(ord[2]);
     const hits = prices.filter((x) => x.p === Number(p) && x.from <= utc && (x.to === null || utc < x.to));
     if (hits.length !== 1) throw new Error(`price lookup for product ${p} at ${utc}: ${hits.length} rows`);
-    out.push({ order: Number(o), cust: Number(ord[1]), local: ukLocal(utc), utc, product: Number(p), qty: Number(q), price: hits[0]!.price });
+    const cat = cats.filter((x) => x.p === Number(p) && x.from <= utc && (x.to === null || utc < x.to));
+    if (cat.length !== 1) throw new Error(`category lookup for product ${p} at ${utc}: ${cat.length} rows`);
+    out.push({ order: Number(o), cust: Number(ord[1]), local: ukLocal(utc), utc, product: Number(p), qty: Number(q), price: hits[0]!.price, category: cat[0]!.cat });
   }
   return out;
 }
@@ -418,7 +491,6 @@ const nextMonth = (m: string) => {
   return mo === 12 ? `${y! + 1}-01` : `${y}-${String(mo! + 1).padStart(2, '0')}`;
 };
 const productName = (t: Tables) => new Map(t.dim_product!.rows.map((r) => [Number(r[0]), String(r[2])]));
-const category = (t: Tables) => new Map(t.dim_product!.rows.map((r) => [Number(r[0]), String(r[3])]));
 function dedupedEvents(t: Tables): Array<{ cust: number; name: string; utc: string }> {
   const seen = new Set<string>();
   const out: Array<{ cust: number; name: string; utc: string }> = [];
@@ -436,12 +508,15 @@ function dedupedEvents(t: Tables): Array<{ cust: number; name: string; utc: stri
 const PAID_LINES = `paid_lines AS (
   SELECT o.order_id, o.customer_id, o.ordered_at_utc,
          ${LOCAL('o.ordered_at_utc')} AS ordered_at_local,
-         l.line_no, l.product_id, l.quantity, h.price_gbp
+         l.line_no, l.product_id, l.quantity, h.price_gbp, ch.category AS category
   FROM fact_orders o
   JOIN fact_order_lines l ON l.order_id = o.order_id
   JOIN dim_price_history h ON h.product_id = l.product_id
    AND h.valid_from_utc <= o.ordered_at_utc
    AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc)
+  JOIN dim_product_category_history ch ON ch.product_id = l.product_id
+   AND ch.valid_from_utc <= o.ordered_at_utc
+   AND (ch.valid_to_utc IS NULL OR o.ordered_at_utc < ch.valid_to_utc)
   WHERE o.status = 'paid'
 )`;
 
@@ -512,125 +587,118 @@ GROUP BY event_name`,
     difficulty: 'easy',
     text: `From Femi (finance): "What was revenue by category in March 2026, at the prices we were actually charging at the time?"
 
-Revenue = the line revenue (rule 4) of paid orders placed in March 2026, UK local time. Return one row per category with two columns: the category and its revenue in GBP rounded to 2 decimal places (compared to within ±0.01).`,
+Revenue = the line revenue (rule 4) of paid orders placed in March 2026, UK local time, by the category the product had at the moment of the order (rule 4). Return one row per category with two columns: the category and its revenue in GBP rounded to 2 decimal places (compared to within ±0.01).`,
     ordered: false,
     reference: `WITH ${PAID_LINES}
-SELECT p.category, SUM(pl.quantity * pl.price_gbp) AS revenue_gbp
+SELECT pl.category, SUM(pl.quantity * pl.price_gbp) AS revenue_gbp
 FROM paid_lines pl
-JOIN dim_product p ON p.product_id = pl.product_id
 WHERE pl.ordered_at_local >= '2026-03-01' AND pl.ordered_at_local < '2026-04-01'
-GROUP BY p.category`,
+GROUP BY pl.category`,
     solve: (t) => {
-      const cat = category(t);
       const by = new Map<string, number>();
-      for (const l of paidLines(t)) if (l.local >= '2026-03-01' && l.local < '2026-04-01') by.set(cat.get(l.product)!, (by.get(cat.get(l.product)!) ?? 0) + l.qty * l.price);
+      for (const l of paidLines(t)) if (l.local >= '2026-03-01' && l.local < '2026-04-01') by.set(l.category, (by.get(l.category) ?? 0) + l.qty * l.price);
       return [...by.entries()].map(([c, v]) => [c, r2(v)]);
     },
-    careless: [
-      { why: 'uses today’s price for every order', sql: `SELECT p.category, ROUND(SUM(l.quantity * h.price_gbp), 2) FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_to_utc IS NULL WHERE o.status = 'paid' AND ${LOCAL('o.ordered_at_utc')} >= '2026-03-01' AND ${LOCAL('o.ordered_at_utc')} < '2026-04-01' GROUP BY p.category` },
-      { why: 'BETWEEN includes the end moment, so an order at a price change matches two prices', sql: `SELECT p.category, ROUND(SUM(l.quantity * h.price_gbp), 2) FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id JOIN dim_price_history h ON h.product_id = l.product_id AND o.ordered_at_utc BETWEEN h.valid_from_utc AND COALESCE(h.valid_to_utc, '9999-12-31') WHERE o.status = 'paid' AND ${LOCAL('o.ordered_at_utc')} >= '2026-03-01' AND ${LOCAL('o.ordered_at_utc')} < '2026-04-01' GROUP BY p.category` },
-      { why: 'March in UTC', sql: `SELECT p.category, ROUND(SUM(l.quantity * h.price_gbp), 2) FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_from_utc <= o.ordered_at_utc AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc) WHERE o.status = 'paid' AND o.ordered_at_utc >= '2026-03-01' AND o.ordered_at_utc < '2026-04-01' GROUP BY p.category` },
-    ],
-    notes: 'Range join to the SCD2 price row with a half-open interval. Planted: orders at the exact moment a price changes, and late on 31 March UTC (April in the UK).',
+    careless: [],
+    notes: 'Range joins to the SCD2 price and category rows with half-open intervals. Planted: orders at the exact moment a price changes, late on 31 March UTC (April in the UK); products that later move category (today’s dim_product.category is not March’s).',
   },
   {
     id: 'h04',
     difficulty: 'medium',
     text: `From Ewan (buying): "Top two products in each category by units sold in Q2 2026 - and if there's a tie, show me all of them."
 
-Units = the total quantity on paid orders placed from 1 April to 30 June 2026 (UK local time). Within each category, rank products by units with the highest first; tied products share a rank and the next rank is skipped (1, 2, 2, 4 or 1, 1, 3). Keep every product with rank 1 or 2. Return one row per kept product with four columns: the category, the product name, its units and its rank.`,
+Units = the total quantity on paid orders placed from 1 April to 30 June 2026 (UK local time). Each unit counts in the category the product had at the moment of its order (rule 4): a product that moved category during the quarter counts in both, with the units sold before and after the move. Within each category, rank products by units with the highest first; tied products share a rank and the next rank is skipped (1, 2, 2, 4 or 1, 1, 3). Keep every product with rank 1 or 2. Return one row per kept category and product with four columns: the category, the product name, its units in that category and its rank.`,
     ordered: false,
     reference: `WITH ${PAID_LINES},
 units AS (
-  SELECT p.category, p.name, SUM(pl.quantity) AS units
+  SELECT pl.category, p.name, SUM(pl.quantity) AS units
   FROM paid_lines pl JOIN dim_product p ON p.product_id = pl.product_id
   WHERE pl.ordered_at_local >= '2026-04-01' AND pl.ordered_at_local < '2026-07-01'
-  GROUP BY p.product_id, p.category, p.name
+  GROUP BY pl.category, p.product_id, p.name
 ),
 ranked AS (
   SELECT category, name, units, RANK() OVER (PARTITION BY category ORDER BY units DESC) AS rnk FROM units
 )
 SELECT category, name, units, rnk FROM ranked WHERE rnk <= 2`,
     solve: (t) => {
-      const cat = category(t);
       const nm = productName(t);
-      const u = new Map<number, number>();
-      for (const l of paidLines(t)) if (l.local >= '2026-04-01' && l.local < '2026-07-01') u.set(l.product, (u.get(l.product) ?? 0) + l.qty);
+      const u = new Map<string, number>();
+      for (const l of paidLines(t)) if (l.local >= '2026-04-01' && l.local < '2026-07-01') u.set(`${l.category}|${l.product}`, (u.get(`${l.category}|${l.product}`) ?? 0) + l.qty);
       const out: Cell[][] = [];
-      for (const [p, n] of u) {
-        const rank = 1 + [...u.entries()].filter(([q, m]) => cat.get(q) === cat.get(p) && m > n).length;
-        if (rank <= 2) out.push([cat.get(p)!, nm.get(p)!, n, rank]);
+      for (const [k, n] of u) {
+        const [cat, p] = k.split('|');
+        const rank = 1 + [...u.entries()].filter(([q, m]) => q.split('|')[0] === cat && m > n).length;
+        if (rank <= 2) out.push([cat!, nm.get(Number(p))!, n, rank]);
       }
       return out;
     },
-    careless: [
-      { why: 'ROW_NUMBER keeps exactly two per category and drops ties', sql: `WITH u AS (SELECT p.category, p.name, SUM(l.quantity) AS units FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id WHERE o.status = 'paid' AND ${LOCAL('o.ordered_at_utc')} >= '2026-04-01' AND ${LOCAL('o.ordered_at_utc')} < '2026-07-01' GROUP BY p.product_id) SELECT category, name, units, rn FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC) AS rn FROM u) WHERE rn <= 2` },
-      { why: 'DENSE_RANK lets a third product in after a tie for first', sql: `WITH u AS (SELECT p.category, p.name, SUM(l.quantity) AS units FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id WHERE o.status = 'paid' AND ${LOCAL('o.ordered_at_utc')} >= '2026-04-01' AND ${LOCAL('o.ordered_at_utc')} < '2026-07-01' GROUP BY p.product_id) SELECT category, name, units, rk FROM (SELECT *, DENSE_RANK() OVER (PARTITION BY category ORDER BY units DESC) AS rk FROM u) WHERE rk <= 2` },
-      { why: 'Q2 in UTC and every order status', sql: `WITH u AS (SELECT p.category, p.name, SUM(l.quantity) AS units FROM fact_orders o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_product p ON p.product_id = l.product_id WHERE o.ordered_at_utc >= '2026-04-01' AND o.ordered_at_utc < '2026-07-01' GROUP BY p.product_id) SELECT category, name, units, rk FROM (SELECT *, RANK() OVER (PARTITION BY category ORDER BY units DESC) AS rk FROM u) WHERE rk <= 2` },
-    ],
-    notes: 'RANK() per category, keep rank <= 2. Planted: in about half the categories of each copy the third product is topped up to tie with the second.',
+    careless: [],
+    notes: 'Category from the SCD2 history at the order moment, RANK() per category, keep rank <= 2. Planted: two or three products move category mid-quarter (with orders either side of the move), and in about half the categories the third product is topped up to tie with the second (or the second with the first).',
   },
   {
     id: 'h05',
     difficulty: 'medium',
-    text: `From Anjali (growth): "Cohort retention for our first-time buyers, January to April 2026."
+    text: `From Anjali (growth): "Cohort retention for our first-time buyers, January to April 2026 - one and two months on."
 
-A customer's cohort is the UK local month of their first paid order ever (the data starts in December 2025). For the cohorts 2026-01, 2026-02, 2026-03 and 2026-04: the cohort month as 'YYYY-MM', the number of customers in it, how many of them placed at least one paid order in the following calendar month (UK local), and that number as a percentage of the cohort rounded to 1 decimal place. Return four rows in cohort order with four columns. Values are compared to within ±0.06.`,
+A customer's cohort is the UK local month of their first paid order ever (the data starts in December 2025). For the cohorts 2026-01, 2026-02, 2026-03 and 2026-04 give: the cohort month as 'YYYY-MM'; the number of customers in it; M1 = how many of them placed at least one paid order in the calendar month after the cohort month; M2 = how many placed at least one paid order in the second calendar month after it (whether or not they ordered in the first); and M1 and M2 as percentages of the cohort. All months are UK local. Return four rows in cohort order with six columns: cohort month, customers, M1, M2, M1 %, M2 % (percentages compared to within ±0.06).`,
     ordered: true,
     tolerance: 0.06,
     reference: `WITH paid AS (
-  SELECT customer_id, strftime('%Y-%m', ${LOCAL('ordered_at_utc')}) AS month
+  SELECT DISTINCT customer_id, strftime('%Y-%m', ${LOCAL('ordered_at_utc')}) AS month
   FROM fact_orders WHERE status = 'paid'
 ),
 cohort AS (
   SELECT customer_id, MIN(month) AS cohort_month FROM paid GROUP BY customer_id
 ),
-retained AS (
-  SELECT DISTINCT c.customer_id, c.cohort_month
-  FROM cohort c JOIN paid p ON p.customer_id = c.customer_id
-   AND p.month = strftime('%Y-%m', date(c.cohort_month || '-01', '+1 month'))
+flags AS (
+  SELECT c.customer_id, c.cohort_month,
+         EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id
+                   AND p.month = strftime('%Y-%m', date(c.cohort_month || '-01', '+1 month'))) AS m1,
+         EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id
+                   AND p.month = strftime('%Y-%m', date(c.cohort_month || '-01', '+2 months'))) AS m2
+  FROM cohort c
 )
-SELECT c.cohort_month,
-       COUNT(*) AS customers,
-       COUNT(r.customer_id) AS retained,
-       100.0 * COUNT(r.customer_id) / COUNT(*) AS retained_pct
-FROM cohort c
-LEFT JOIN retained r ON r.customer_id = c.customer_id
-WHERE c.cohort_month BETWEEN '2026-01' AND '2026-04'
-GROUP BY c.cohort_month
-ORDER BY c.cohort_month`,
+SELECT cohort_month, COUNT(*) AS customers, SUM(m1) AS m1, SUM(m2) AS m2,
+       100.0 * SUM(m1) / COUNT(*) AS m1_pct, 100.0 * SUM(m2) / COUNT(*) AS m2_pct
+FROM flags
+WHERE cohort_month BETWEEN '2026-01' AND '2026-04'
+GROUP BY cohort_month
+ORDER BY cohort_month`,
     solve: (t) => {
       const months = new Map<number, Set<string>>();
       for (const o of t.fact_orders!.rows) if (o[4] === 'paid') {
         const m = ukLocal(String(o[2])).slice(0, 7);
         months.set(Number(o[1]), (months.get(Number(o[1])) ?? new Set()).add(m));
       }
-      const out: Cell[][] = [];
-      for (const cm of ['2026-01', '2026-02', '2026-03', '2026-04']) {
-        const members = [...months.entries()].filter(([, s]) => [...s].sort()[0] === cm);
-        const kept = members.filter(([, s]) => s.has(nextMonth(cm))).length;
-        out.push([cm, members.length, kept, r1((100 * kept) / members.length)]);
-      }
-      return out;
+      return ['2026-01', '2026-02', '2026-03', '2026-04'].map((cm) => {
+        const members = [...months.values()].filter((s) => [...s].sort()[0] === cm);
+        const m1 = members.filter((s) => s.has(nextMonth(cm))).length;
+        const m2 = members.filter((s) => s.has(nextMonth(nextMonth(cm)))).length;
+        return [cm, members.length, m1, m2, r1((100 * m1) / members.length), r1((100 * m2) / members.length)];
+      });
     },
-    careless: [
-      { why: 'cohort by account creation date instead of first order', sql: `WITH paid AS (SELECT customer_id, strftime('%Y-%m', ${LOCAL('ordered_at_utc')}) AS month FROM fact_orders WHERE status = 'paid'), cohort AS (SELECT customer_id, strftime('%Y-%m', ${LOCAL('created_at_utc')}) AS cm FROM dim_customer WHERE customer_id IN (SELECT customer_id FROM paid)) SELECT cm, COUNT(*), SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month = strftime('%Y-%m', date(cm || '-01', '+1 month')))), ROUND(100.0 * SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month = strftime('%Y-%m', date(cm || '-01', '+1 month')))) / COUNT(*), 1) FROM cohort c WHERE cm BETWEEN '2026-01' AND '2026-04' GROUP BY cm ORDER BY cm` },
-      { why: 'counts an order in any later month as retained', sql: `WITH paid AS (SELECT customer_id, strftime('%Y-%m', ${LOCAL('ordered_at_utc')}) AS month FROM fact_orders WHERE status = 'paid'), cohort AS (SELECT customer_id, MIN(month) AS cm FROM paid GROUP BY customer_id) SELECT cm, COUNT(*), SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month > cm)), ROUND(100.0 * SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month > cm)) / COUNT(*), 1) FROM cohort c WHERE cm BETWEEN '2026-01' AND '2026-04' GROUP BY cm ORDER BY cm` },
-      { why: 'months in UTC and every order status', sql: `WITH paid AS (SELECT customer_id, substr(ordered_at_utc, 1, 7) AS month FROM fact_orders), cohort AS (SELECT customer_id, MIN(month) AS cm FROM paid GROUP BY customer_id) SELECT cm, COUNT(*), SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month = strftime('%Y-%m', date(cm || '-01', '+1 month')))), ROUND(100.0 * SUM(EXISTS (SELECT 1 FROM paid p WHERE p.customer_id = c.customer_id AND p.month = strftime('%Y-%m', date(cm || '-01', '+1 month')))) / COUNT(*), 1) FROM cohort c WHERE cm BETWEEN '2026-01' AND '2026-04' GROUP BY cm ORDER BY cm` },
-    ],
-    notes: 'First paid order month per customer (UK local), then an exact next-month match. Planted: first orders at 23:xx UTC on 31 March (an April cohort in the UK) and on 30 April (May in the UK).',
+    careless: [],
+    notes: 'First paid order month per customer (UK local), then exact next-month and month-after-next matches. Planted: first orders at 23:xx UTC on 31 March (an April cohort in the UK) and on 30 April (May in the UK).',
   },
   {
     id: 'h06',
     difficulty: 'medium',
     text: `From Rowan (subscriptions): "List every subscription pause that lasted a week or more."
 
-A pause is a run of consecutive calendar days on which a customer's status in subscription_status_daily is 'paused' (any other status, or a missing day, ends the run). Keep the pauses of at least 7 days. Return one row per such pause with four columns: customer_id, the first paused day, the last paused day (both 'YYYY-MM-DD') and the number of days in the pause.`,
+A pause is a run of consecutive calendar days on which a customer's status is 'paused' (any other status, or a day with no row, ends the run). Apply rule 7 for the lost day, 2026-04-14, before looking for runs. Keep the pauses of at least 7 days. Return one row per such pause with four columns: customer_id, the first paused day, the last paused day (both 'YYYY-MM-DD') and the number of days in the pause.`,
     ordered: false,
-    reference: `WITH paused AS (
+    reference: `WITH filled AS (
+  SELECT customer_id, snapshot_date, status FROM subscription_status_daily
+  UNION ALL
+  SELECT d.customer_id, '2026-04-14', d.status
+  FROM subscription_status_daily d
+  WHERE d.snapshot_date = '2026-04-13'
+    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-15')
+),
+paused AS (
   SELECT customer_id, snapshot_date,
          julianday(snapshot_date) - ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY snapshot_date) AS grp
-  FROM subscription_status_daily
+  FROM filled
   WHERE status = 'paused'
 )
 SELECT customer_id, MIN(snapshot_date) AS first_day, MAX(snapshot_date) AS last_day, COUNT(*) AS days
@@ -638,9 +706,15 @@ FROM paused
 GROUP BY customer_id, grp
 HAVING COUNT(*) >= 7`,
     solve: (t) => {
-      const out: Cell[][] = [];
-      const rows = t.subscription_status_daily!.rows.filter((r) => r[2] === 'paused').map((r) => [Number(r[0]), String(r[1])] as [number, string]);
+      const status = new Map<string, string>();
+      for (const [c, d, st] of t.subscription_status_daily!.rows) status.set(`${c}|${d}`, String(st));
+      for (const c of new Set(t.subscription_status_daily!.rows.map((r) => Number(r[0])))) {
+        const before = status.get(`${c}|2026-04-13`);
+        if (before !== undefined && status.has(`${c}|2026-04-15`)) status.set(`${c}|2026-04-14`, before);
+      }
+      const rows = [...status.entries()].filter(([, st]) => st === 'paused').map(([k]) => k.split('|')).map(([c, d]) => [Number(c), d!] as [number, string]);
       rows.sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : 1));
+      const out: Cell[][] = [];
       let run: [number, string, string, number] | null = null;
       const flush = () => {
         if (run && run[3] >= 7) out.push([run[0], run[1], run[2], run[3]]);
@@ -657,87 +731,125 @@ HAVING COUNT(*) >= 7`,
       flush();
       return out;
     },
-    careless: [
-      { why: 'first and last paused day per customer, merging separate pauses', sql: `SELECT customer_id, MIN(snapshot_date), MAX(snapshot_date), COUNT(*) FROM subscription_status_daily WHERE status = 'paused' GROUP BY customer_id HAVING COUNT(*) >= 7` },
-      { why: 'more than 7 days instead of at least 7', sql: `WITH p AS (SELECT customer_id, snapshot_date, julianday(snapshot_date) - ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY snapshot_date) AS g FROM subscription_status_daily WHERE status = 'paused') SELECT customer_id, MIN(snapshot_date), MAX(snapshot_date), COUNT(*) FROM p GROUP BY customer_id, g HAVING COUNT(*) > 7` },
-      { why: 'numbers rows over every status, so the groups never line up', sql: `WITH p AS (SELECT customer_id, snapshot_date, status, julianday(snapshot_date) - ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY snapshot_date) AS g FROM subscription_status_daily) SELECT customer_id, MIN(snapshot_date), MAX(snapshot_date), COUNT(*) FROM p WHERE status = 'paused' GROUP BY customer_id, g HAVING COUNT(*) >= 7` },
-    ],
-    notes: 'Gaps and islands: date minus row number is constant within a run. Planted: pauses of exactly 7 and 6 days, and two pauses separated by a single active day.',
+    careless: [],
+    notes: 'Fill the lost day from the day before, then gaps and islands (date minus row number). Planted: a pause that only reaches 7 days through the lost day, one that starts on the 15th after an active 13th, one that ends on the 13th; pauses of exactly 7 and 6 days; two pauses one active day apart.',
   },
   {
     id: 'h07',
     difficulty: 'hard',
-    text: `From Kofi (finance): "For each wallet, what was the lowest balance it ever reached, and when?"
+    text: `From Kofi (finance): "For each wallet, what was the lowest balance it ever reached, when, and what was its lowest end-of-day balance?"
 
-Apply each customer's wallet entries in order (rule 6: by posted_at_utc, then entry_id), ignoring reversed entries and the reversals themselves. The balance after an entry is the sum of all applied entries up to and including it (balances start at 0 but only balances after an entry count). For every customer with at least one applied entry, find the lowest balance after any entry; if it was reached more than once, use the first time. Return one row per customer with three columns: customer_id, the lowest balance in pounds (amount_pence / 100, rounded to 2 decimal places, ±0.01) and the posted_at_utc of the entry after which it was first reached (as stored).`,
+Work out which entries count under rule 6 (follow every reversal chain to the end). Apply each customer's counting entries in order (posted_at_utc, then entry_id). The balance after an entry is the sum of all counting entries up to and including it. For every customer with at least one counting entry give:
+- the lowest balance after any counting entry, and the posted_at_utc (as stored) of the entry after which it was first reached;
+- the lowest end-of-day balance: for each UK local date on which the customer had at least one counting entry, the balance after the last counting entry of that UK date; the lowest of those.
+Return one row per customer with four columns: customer_id, the lowest balance in pounds (amount_pence / 100, ±0.01), the posted_at_utc, and the lowest end-of-day balance in pounds (±0.01).`,
     ordered: false,
-    reference: `WITH applied AS (
-  SELECT w.*
-  FROM wallet_ledger w
+    reference: `WITH RECURSIVE chain(entry_id, counts) AS (
+  SELECT w.entry_id, 1 FROM wallet_ledger w
+  WHERE w.entry_type = 'reversal'
+    AND NOT EXISTS (SELECT 1 FROM wallet_ledger x WHERE x.reverses_entry_id = w.entry_id)
+  UNION ALL
+  SELECT w.reverses_entry_id, 1 - c.counts
+  FROM chain c JOIN wallet_ledger w ON w.entry_id = c.entry_id
+  WHERE w.reverses_entry_id IS NOT NULL
+),
+applied AS (
+  SELECT w.* FROM wallet_ledger w
   WHERE w.entry_type <> 'reversal'
-    AND NOT EXISTS (SELECT 1 FROM wallet_ledger r WHERE r.entry_type = 'reversal' AND r.reverses_entry_id = w.entry_id)
+    AND COALESCE((SELECT c.counts FROM chain c WHERE c.entry_id = w.entry_id), 1) = 1
 ),
 balances AS (
   SELECT customer_id, entry_id, posted_at_utc,
+         date(${LOCAL('posted_at_utc')}) AS uk_day,
          SUM(amount_pence) OVER (PARTITION BY customer_id ORDER BY posted_at_utc, entry_id
-                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance
+                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance,
+         ROW_NUMBER() OVER (PARTITION BY customer_id, date(${LOCAL('posted_at_utc')}) ORDER BY posted_at_utc DESC, entry_id DESC) AS last_of_day
   FROM applied
 ),
 lowest AS (
   SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY balance, posted_at_utc, entry_id) AS rn FROM balances
 )
-SELECT customer_id, balance / 100.0 AS lowest_gbp, posted_at_utc
-FROM lowest WHERE rn = 1`,
+SELECT l.customer_id, l.balance / 100.0 AS lowest_gbp, l.posted_at_utc,
+       (SELECT MIN(b.balance) FROM balances b WHERE b.customer_id = l.customer_id AND b.last_of_day = 1) / 100.0 AS lowest_end_of_day_gbp
+FROM lowest l WHERE l.rn = 1`,
     solve: (t) => {
       const rows = t.wallet_ledger!.rows.map((r) => ({ id: Number(r[0]), cust: Number(r[1]), at: String(r[2]), amt: Number(r[3]), type: String(r[4]), rev: r[5] === null ? null : Number(r[5]) }));
-      const reversed = new Set(rows.filter((r) => r.type === 'reversal').map((r) => r.rev));
-      const applied = rows.filter((r) => r.type !== 'reversal' && !reversed.has(r.id)).sort((a, b) => a.cust - b.cust || (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id - b.id));
-      const best = new Map<number, [number, string]>();
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const reversedBy = new Map<number, number>();
+      for (const r of rows) if (r.type === 'reversal' && r.rev !== null) reversedBy.set(r.rev, r.id);
+      const memo = new Map<number, boolean>();
+      const counts = (id: number): boolean => {
+        if (memo.has(id)) return memo.get(id)!;
+        const by = reversedBy.get(id);
+        const v = by === undefined ? true : !counts(by);
+        memo.set(id, v);
+        return v;
+      };
+      const applied = rows.filter((r) => r.type !== 'reversal' && counts(r.id)).sort((a, b) => a.cust - b.cust || (a.at < b.at ? -1 : a.at > b.at ? 1 : a.id - b.id));
+      void byId;
+      const out = new Map<number, { low: number; at: string; eod: Map<string, number> }>();
       const bal = new Map<number, number>();
       for (const r of applied) {
         const b = (bal.get(r.cust) ?? 0) + r.amt;
         bal.set(r.cust, b);
-        if (!best.has(r.cust) || b < best.get(r.cust)![0]) best.set(r.cust, [b, r.at]);
+        const o = out.get(r.cust) ?? { low: Infinity, at: '', eod: new Map<string, number>() };
+        if (b < o.low) {
+          o.low = b;
+          o.at = r.at;
+        }
+        o.eod.set(ukLocal(r.at).slice(0, 10), b);
+        out.set(r.cust, o);
       }
-      return [...best.entries()].map(([c, [b, at]]) => [c, r2(b / 100), at]);
+      return [...out.entries()].map(([c, o]) => [c, r2(o.low / 100), o.at, r2(Math.min(...o.eod.values()) / 100)]);
     },
-    careless: [
-      { why: 'keeps the reversals and the entries they cancel', sql: `WITH b AS (SELECT customer_id, entry_id, posted_at_utc, SUM(amount_pence) OVER (PARTITION BY customer_id ORDER BY posted_at_utc, entry_id ROWS UNBOUNDED PRECEDING) AS bal FROM wallet_ledger), l AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY bal, posted_at_utc, entry_id) AS rn FROM b) SELECT customer_id, ROUND(bal / 100.0, 2), posted_at_utc FROM l WHERE rn = 1` },
-      { why: 'orders the running sum by time only, so entries in the same second are added together', sql: `WITH a AS (SELECT * FROM wallet_ledger w WHERE entry_type <> 'reversal' AND entry_id NOT IN (SELECT reverses_entry_id FROM wallet_ledger WHERE entry_type = 'reversal')), b AS (SELECT customer_id, entry_id, posted_at_utc, SUM(amount_pence) OVER (PARTITION BY customer_id ORDER BY posted_at_utc) AS bal FROM a), l AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY bal, posted_at_utc, entry_id) AS rn FROM b) SELECT customer_id, ROUND(bal / 100.0, 2), posted_at_utc FROM l WHERE rn = 1` },
-      { why: 'drops the reversal rows but keeps the entries they cancel', sql: `WITH a AS (SELECT * FROM wallet_ledger WHERE entry_type <> 'reversal'), b AS (SELECT customer_id, entry_id, posted_at_utc, SUM(amount_pence) OVER (PARTITION BY customer_id ORDER BY posted_at_utc, entry_id ROWS UNBOUNDED PRECEDING) AS bal FROM a), l AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY bal, posted_at_utc, entry_id) AS rn FROM b) SELECT customer_id, ROUND(bal / 100.0, 2), posted_at_utc FROM l WHERE rn = 1` },
-    ],
-    notes: 'Anti-join out reversed pairs, a ROWS frame running sum, first minimum. Planted: auto top-ups posted in the same second as the purchase that triggered them (purchase first by entry_id), reversed top-ups and reversed purchases.',
+    careless: [],
+    notes: 'A recursive walk down each reversal chain decides which entries count (a reversed reversal reinstates its target), a ROWS-frame running sum gives the balances, the first minimum, and the last balance of each UK local day. Planted: reversals of reversals (some three deep), auto top-ups posted in the same second as the purchase that triggered them, purchases after 23:00 UTC in British Summer Time.',
   },
   {
     id: 'h08',
     difficulty: 'hard',
     text: `From Femi (finance): "How much discount did each promotion actually give away in Q2 2026?"
 
-An order line qualifies for a promotion when its product is in promotion_products for that promotion and the order's UK local date is between the promotion's starts_on and ends_on (inclusive). Only paid orders placed from 1 April to 30 June 2026 (UK local) count. A line gets at most one promotion: the qualifying one with the highest pct_off, and if several tie on pct_off, the one with the lowest promo_id. The discount on a line = line revenue (rule 4) × pct_off / 100. Return one row per promotion that applied to at least one line, with three columns: the promotion code, the number of lines it applied to, and the total discount in GBP rounded to 2 decimal places (±0.01).`,
+Only paid orders placed from 1 April to 30 June 2026 (UK local) count. An order line qualifies for a promotion when all of these hold:
+(a) its product is in promotion_products for that promotion;
+(b) the order's UK local date is between the promotion's starts_on and ends_on (inclusive);
+(c) the promotion's channel is NULL or equals the order's channel;
+(d) the promotion's min_basket_gbp is NULL, or the order's basket - the total line revenue (rule 4) of ALL the order's lines, before any promotion - is at least min_basket_gbp.
+A line gets at most one promotion: the qualifying one with the highest pct_off; if several tie on pct_off, the one with the lowest promo_id. The discount on a line = its line revenue (rule 4) × pct_off / 100. Return one row per promotion that applied to at least one line, with three columns: the promotion code, the number of lines it applied to, and the total discount in GBP (±0.01).`,
     ordered: false,
     reference: `WITH ${PAID_LINES},
 q2 AS (
-  SELECT *, date(ordered_at_local) AS uk_day FROM paid_lines
-  WHERE ordered_at_local >= '2026-04-01' AND ordered_at_local < '2026-07-01'
+  SELECT pl.*, date(pl.ordered_at_local) AS uk_day, o.channel,
+         SUM(pl.quantity * pl.price_gbp) OVER (PARTITION BY pl.order_id) AS basket_gbp
+  FROM paid_lines pl JOIN fact_orders o ON o.order_id = pl.order_id
+  WHERE pl.ordered_at_local >= '2026-04-01' AND pl.ordered_at_local < '2026-07-01'
 ),
 candidates AS (
   SELECT q2.order_id, q2.line_no, q2.quantity, q2.price_gbp, p.promo_id, p.code, p.pct_off,
          ROW_NUMBER() OVER (PARTITION BY q2.order_id, q2.line_no ORDER BY p.pct_off DESC, p.promo_id) AS pick
   FROM q2
   JOIN promotion_products pp ON pp.product_id = q2.product_id
-  JOIN promotions p ON p.promo_id = pp.promo_id AND q2.uk_day BETWEEN p.starts_on AND p.ends_on
+  JOIN promotions p ON p.promo_id = pp.promo_id
+   AND q2.uk_day BETWEEN p.starts_on AND p.ends_on
+   AND (p.channel IS NULL OR p.channel = q2.channel)
+   AND (p.min_basket_gbp IS NULL OR q2.basket_gbp >= p.min_basket_gbp)
 )
 SELECT code, COUNT(*) AS lines, SUM(quantity * price_gbp * pct_off / 100.0) AS discount_gbp
 FROM candidates WHERE pick = 1
 GROUP BY promo_id, code`,
     solve: (t) => {
-      const promos = t.promotions!.rows.map((r) => ({ id: Number(r[0]), code: String(r[1]), pct: Number(r[2]), s: String(r[3]), e: String(r[4]) }));
+      const promos = t.promotions!.rows.map((r) => ({ id: Number(r[0]), code: String(r[1]), pct: Number(r[2]), ch: r[3] === null ? null : String(r[3]), min: r[4] === null ? null : Number(r[4]), s: String(r[5]), e: String(r[6]) }));
       const covers = new Set(t.promotion_products!.rows.map((r) => `${r[0]}|${r[1]}`));
+      const channel = new Map(t.fact_orders!.rows.map((o) => [Number(o[0]), String(o[3])]));
+      const lines = paidLines(t).filter((l) => l.local >= '2026-04-01' && l.local < '2026-07-01');
+      const basket = new Map<number, number>();
+      for (const l of lines) basket.set(l.order, (basket.get(l.order) ?? 0) + l.qty * l.price);
       const by = new Map<string, [number, number]>();
-      for (const l of paidLines(t)) {
-        if (l.local < '2026-04-01' || l.local >= '2026-07-01') continue;
+      for (const l of lines) {
         const day = l.local.slice(0, 10);
-        const ok = promos.filter((p) => covers.has(`${p.id}|${l.product}`) && day >= p.s && day <= p.e).sort((a, b) => b.pct - a.pct || a.id - b.id);
+        const ok = promos
+          .filter((p) => covers.has(`${p.id}|${l.product}`) && day >= p.s && day <= p.e && (p.ch === null || p.ch === channel.get(l.order)) && (p.min === null || basket.get(l.order)! >= p.min))
+          .sort((a, b) => b.pct - a.pct || a.id - b.id);
         if (!ok.length) continue;
         const w = ok[0]!;
         const a = by.get(w.code) ?? [0, 0];
@@ -747,76 +859,137 @@ GROUP BY promo_id, code`,
       }
       return [...by.entries()].map(([c, [n, d]]) => [c, n, r2(d)]);
     },
-    careless: [
-      { why: 'gives every qualifying promotion to the line, not just the best one', sql: `WITH o AS (SELECT o.order_id, o.ordered_at_utc, date(${LOCAL('o.ordered_at_utc')}) AS d FROM fact_orders o WHERE o.status = 'paid'), x AS (SELECT p.promo_id, p.code, l.quantity * h.price_gbp * p.pct_off / 100.0 AS disc FROM o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_from_utc <= o.ordered_at_utc AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc) JOIN promotion_products pp ON pp.product_id = l.product_id JOIN promotions p ON p.promo_id = pp.promo_id AND o.d BETWEEN p.starts_on AND p.ends_on WHERE o.d BETWEEN '2026-04-01' AND '2026-06-30') SELECT code, COUNT(*), ROUND(SUM(disc), 2) FROM x GROUP BY promo_id, code` },
-      { why: 'uses UTC dates for the promotion windows and the quarter', sql: `WITH o AS (SELECT o.order_id, o.ordered_at_utc, date(o.ordered_at_utc) AS d FROM fact_orders o WHERE o.status = 'paid'), c AS (SELECT p.promo_id, p.code, l.quantity * h.price_gbp * p.pct_off / 100.0 AS disc, ROW_NUMBER() OVER (PARTITION BY l.order_id, l.line_no ORDER BY p.pct_off DESC, p.promo_id) AS k FROM o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_from_utc <= o.ordered_at_utc AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc) JOIN promotion_products pp ON pp.product_id = l.product_id JOIN promotions p ON p.promo_id = pp.promo_id AND o.d BETWEEN p.starts_on AND p.ends_on WHERE o.d BETWEEN '2026-04-01' AND '2026-06-30') SELECT code, COUNT(*), ROUND(SUM(disc), 2) FROM c WHERE k = 1 GROUP BY promo_id, code` },
-      { why: 'breaks pct_off ties by the highest promo_id', sql: `WITH o AS (SELECT o.order_id, o.ordered_at_utc, date(${LOCAL('o.ordered_at_utc')}) AS d FROM fact_orders o WHERE o.status = 'paid'), c AS (SELECT p.promo_id, p.code, l.quantity * h.price_gbp * p.pct_off / 100.0 AS disc, ROW_NUMBER() OVER (PARTITION BY l.order_id, l.line_no ORDER BY p.pct_off DESC, p.promo_id DESC) AS k FROM o JOIN fact_order_lines l ON l.order_id = o.order_id JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_from_utc <= o.ordered_at_utc AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc) JOIN promotion_products pp ON pp.product_id = l.product_id JOIN promotions p ON p.promo_id = pp.promo_id AND o.d BETWEEN p.starts_on AND p.ends_on WHERE o.d BETWEEN '2026-04-01' AND '2026-06-30') SELECT code, COUNT(*), ROUND(SUM(disc), 2) FROM c WHERE k = 1 GROUP BY promo_id, code` },
-    ],
-    notes: 'Many-to-many join, one winner per line by ROW_NUMBER, price from the SCD2 row. Planted: overlapping promotions (MAYDAY25 over KIT20, ESPRESSO15 over SPRING10, SUMMER10 tied with BEANCLUB10), orders late in the UTC evening on promotion edges.',
+    careless: [],
+    notes: 'Many-to-many join with four conditions (product, UK date window, channel, basket total from a window over all the order’s lines at historical prices), one winner per line by ROW_NUMBER. Planted: overlapping promotions (MAYDAY25 over KIT20, APPESPRESSO20 over SPRING10 on the app only, SUMMER10 tied with APPBEANS10), baskets either side of the minimums, orders late in the UTC evening on promotion edges.',
   },
   {
     id: 'h09',
     difficulty: 'hard',
-    text: `From Joon (product): "How many app sessions did each customer have in the week of Monday 6 April 2026, and how long was their longest?"
+    text: `From Joon (product): "How many app sessions did each customer have in the week of Monday 6 April 2026, how many ended up with a checkout, and how long was their longest?"
 
-Use the events that happened from Monday 6 April 2026 00:00 to Sunday 12 April 2026 23:59:59 UK local time, each duplicate delivery counted once (rule 5); events outside the week are ignored. A customer's events, in time order, form sessions: an event starts a new session when it comes more than 30 minutes after that customer's previous event in the week (exactly 30 minutes later is still the same session). A session's length is the time from its first to its last event, in minutes (a single-event session lasts 0). Return one row per customer with events in the week, with three columns: customer_id, the number of sessions, and the length of their longest session in minutes rounded to 1 decimal place (±0.06).`,
+Prepare the events in this order:
+1. Duplicates (rule 5): rows with the same customer_id, event_name and event_ts_utc are one event; its ingested_at_utc is the EARLIEST of theirs.
+2. Event time: some phones' clocks run fast. An event's time is its event_ts_utc, except when that is later than its ingested_at_utc (from step 1) - then its time is that ingested_at_utc.
+3. The week: keep the events whose time (step 2) falls from Monday 6 April 2026 00:00 to Sunday 12 April 2026 23:59:59, UK local time.
+Sessions: a customer's events of the week, in order of time, form sessions; an event starts a new session when its time is more than 30 minutes after that customer's previous event (exactly 30 minutes later is still the same session). A session's length is the time from its first to its last event, in minutes (a single-event session lasts 0). A session "has a checkout" when at least one of its events is a 'checkout'. Return one row per customer with events in the week, with four columns: customer_id, the number of sessions, the number of sessions with a checkout, and the length of the longest session in minutes rounded to 1 decimal place (±0.06).`,
     ordered: false,
     tolerance: 0.06,
     reference: `WITH e AS (
-  SELECT DISTINCT customer_id, event_name, event_ts_utc FROM events_raw
+  SELECT customer_id, event_name, event_ts_utc, MIN(ingested_at_utc) AS ingested_at_utc
+  FROM events_raw GROUP BY customer_id, event_name, event_ts_utc
+),
+timed AS (
+  SELECT customer_id, event_name,
+         CASE WHEN event_ts_utc > ingested_at_utc THEN ingested_at_utc ELSE event_ts_utc END AS at_utc
+  FROM e
 ),
 wk AS (
-  SELECT customer_id, event_ts_utc, CAST(strftime('%s', event_ts_utc) AS INTEGER) AS t
-  FROM e
-  WHERE ${LOCAL('event_ts_utc')} >= '2026-04-06' AND ${LOCAL('event_ts_utc')} < '2026-04-13'
+  SELECT customer_id, event_name, CAST(strftime('%s', at_utc) AS INTEGER) AS t
+  FROM timed
+  WHERE ${LOCAL('at_utc')} >= '2026-04-06' AND ${LOCAL('at_utc')} < '2026-04-13'
 ),
 marked AS (
-  SELECT customer_id, t,
+  SELECT customer_id, event_name, t,
          CASE WHEN t - LAG(t) OVER (PARTITION BY customer_id ORDER BY t) <= 1800 THEN 0 ELSE 1 END AS new_session
   FROM wk
 ),
 numbered AS (
-  SELECT customer_id, t,
+  SELECT customer_id, event_name, t,
          SUM(new_session) OVER (PARTITION BY customer_id ORDER BY t ROWS UNBOUNDED PRECEDING) AS session_no
   FROM marked
 ),
 sessions AS (
-  SELECT customer_id, session_no, (MAX(t) - MIN(t)) / 60.0 AS minutes FROM numbered GROUP BY customer_id, session_no
+  SELECT customer_id, session_no, (MAX(t) - MIN(t)) / 60.0 AS minutes, MAX(event_name = 'checkout') AS has_checkout
+  FROM numbered GROUP BY customer_id, session_no
 )
-SELECT customer_id, COUNT(*) AS sessions, MAX(minutes) AS longest_minutes
+SELECT customer_id, COUNT(*) AS sessions, SUM(has_checkout) AS sessions_with_checkout, MAX(minutes) AS longest_minutes
 FROM sessions GROUP BY customer_id`,
     solve: (t) => {
-      const by = new Map<number, number[]>();
-      for (const e of dedupedEvents(t)) {
-        const l = ukLocal(e.utc);
-        if (l >= '2026-04-06' && l < '2026-04-13') by.set(e.cust, [...(by.get(e.cust) ?? []), secs(e.utc)]);
+      const ev = new Map<string, { cust: number; name: string; ts: string; ing: string }>();
+      for (const [, c, n, u, ing] of t.events_raw!.rows) {
+        const k = `${c}|${n}|${u}`;
+        const cur = ev.get(k);
+        if (!cur || String(ing) < cur.ing) ev.set(k, { cust: Number(c), name: String(n), ts: String(u), ing: String(ing) });
+      }
+      const by = new Map<number, Array<{ t: number; name: string }>>();
+      for (const e of ev.values()) {
+        const at = e.ts > e.ing ? e.ing : e.ts;
+        const l = ukLocal(at);
+        if (l >= '2026-04-06' && l < '2026-04-13') by.set(e.cust, [...(by.get(e.cust) ?? []), { t: secs(at), name: e.name }]);
       }
       const out: Cell[][] = [];
       for (const [c, list] of by) {
-        list.sort((a, b) => a - b);
-        let sessions = 1;
-        let start = list[0]!;
-        let longest = 0;
-        for (let i = 1; i < list.length; i++) {
-          if (list[i]! - list[i - 1]! > 1800) {
-            longest = Math.max(longest, list[i - 1]! - start);
-            sessions++;
-            start = list[i]!;
-          }
+        list.sort((a, b) => a.t - b.t);
+        const sessions: Array<{ start: number; end: number; checkout: boolean }> = [];
+        for (const x of list) {
+          const cur = sessions[sessions.length - 1];
+          if (cur && x.t - cur.end <= 1800) {
+            cur.end = x.t;
+            cur.checkout ||= x.name === 'checkout';
+          } else sessions.push({ start: x.t, end: x.t, checkout: x.name === 'checkout' });
         }
-        longest = Math.max(longest, list[list.length - 1]! - start);
-        out.push([c, sessions, r1(longest / 60)]);
+        out.push([c, sessions.length, sessions.filter((s) => s.checkout).length, r1(Math.max(...sessions.map((s) => s.end - s.start)) / 60)]);
       }
       return out;
     },
-    careless: [
-      { why: 'a gap of exactly 30 minutes starts a new session', sql: `WITH e AS (SELECT DISTINCT customer_id, event_name, event_ts_utc FROM events_raw), w AS (SELECT customer_id, CAST(strftime('%s', event_ts_utc) AS INTEGER) AS t FROM e WHERE ${LOCAL('event_ts_utc')} >= '2026-04-06' AND ${LOCAL('event_ts_utc')} < '2026-04-13'), m AS (SELECT customer_id, t, CASE WHEN t - LAG(t) OVER (PARTITION BY customer_id ORDER BY t) < 1800 THEN 0 ELSE 1 END AS ns FROM w), n AS (SELECT customer_id, t, SUM(ns) OVER (PARTITION BY customer_id ORDER BY t ROWS UNBOUNDED PRECEDING) AS s FROM m), x AS (SELECT customer_id, s, (MAX(t) - MIN(t)) / 60.0 AS mins FROM n GROUP BY customer_id, s) SELECT customer_id, COUNT(*), ROUND(MAX(mins), 1) FROM x GROUP BY customer_id` },
-      { why: 'the week in UTC', sql: `WITH e AS (SELECT DISTINCT customer_id, event_name, event_ts_utc FROM events_raw), w AS (SELECT customer_id, CAST(strftime('%s', event_ts_utc) AS INTEGER) AS t FROM e WHERE event_ts_utc >= '2026-04-06' AND event_ts_utc < '2026-04-13'), m AS (SELECT customer_id, t, CASE WHEN t - LAG(t) OVER (PARTITION BY customer_id ORDER BY t) <= 1800 THEN 0 ELSE 1 END AS ns FROM w), n AS (SELECT customer_id, t, SUM(ns) OVER (PARTITION BY customer_id ORDER BY t ROWS UNBOUNDED PRECEDING) AS s FROM m), x AS (SELECT customer_id, s, (MAX(t) - MIN(t)) / 60.0 AS mins FROM n GROUP BY customer_id, s) SELECT customer_id, COUNT(*), ROUND(MAX(mins), 1) FROM x GROUP BY customer_id` },
-      { why: 'one session per customer per day instead of the 30-minute rule', sql: `WITH e AS (SELECT DISTINCT customer_id, event_name, event_ts_utc FROM events_raw), w AS (SELECT customer_id, ${LOCAL('event_ts_utc')} AS lt, CAST(strftime('%s', event_ts_utc) AS INTEGER) AS t FROM e WHERE ${LOCAL('event_ts_utc')} >= '2026-04-06' AND ${LOCAL('event_ts_utc')} < '2026-04-13'), x AS (SELECT customer_id, date(lt) AS d, (MAX(t) - MIN(t)) / 60.0 AS mins FROM w GROUP BY customer_id, date(lt)) SELECT customer_id, COUNT(*), ROUND(MAX(mins), 1) FROM x GROUP BY customer_id` },
-    ],
-    notes: 'Deduplicate, filter the UK-local week, LAG gap > 1800 s flags a new session, running SUM numbers them. Planted: gaps of exactly 30:00 (same session) and 30:01 (new session), and events either side of the week edges in UTC vs UK time.',
+    careless: [],
+    notes: 'Deduplicate keeping the earliest ingestion, correct fast phone clocks, filter the UK-local week on the corrected time, LAG gap > 1800 s flags a new session, running SUM numbers them, then per-session checkout flags. Planted: fast-clock checkouts that would otherwise look like a new session, a fast clock that pushes an event past the end of the week, gaps of exactly 30:00 and 30:01, events either side of the week edges in UTC vs UK time.',
   },
 ];
+
+// ─────────────────────────────── Careless queries (each one real slip, applied to the reference) ───────────────────────────────
+
+const SLIPS: Record<string, Array<[why: string, from: string, to: string, all?: boolean]>> = {
+  h03: [
+    ['uses today’s category from dim_product', 'ch.category AS category', '(SELECT dp.category FROM dim_product dp WHERE dp.product_id = l.product_id) AS category'],
+    ['uses today’s price for every order', 'AND h.valid_from_utc <= o.ordered_at_utc\n   AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc)', 'AND h.valid_to_utc IS NULL'],
+    ['an inclusive end, so an order at a price change matches two prices', 'o.ordered_at_utc < h.valid_to_utc', 'o.ordered_at_utc <= h.valid_to_utc'],
+    ['March in UTC', "WHERE pl.ordered_at_local >= '2026-03-01' AND pl.ordered_at_local < '2026-04-01'", "WHERE pl.ordered_at_utc >= '2026-03-01' AND pl.ordered_at_utc < '2026-04-01'"],
+  ],
+  h04: [
+    ['uses today’s category from dim_product', 'ch.category AS category', '(SELECT dp.category FROM dim_product dp WHERE dp.product_id = l.product_id) AS category'],
+    ['ROW_NUMBER keeps exactly two per category and drops ties', 'RANK() OVER', 'ROW_NUMBER() OVER'],
+    ['DENSE_RANK lets a third product in after a tie for first', 'RANK() OVER', 'DENSE_RANK() OVER'],
+    ['Q2 in UTC', "WHERE pl.ordered_at_local >= '2026-04-01' AND pl.ordered_at_local < '2026-07-01'", "WHERE pl.ordered_at_utc >= '2026-04-01' AND pl.ordered_at_utc < '2026-07-01'"],
+  ],
+  h05: [
+    ['months in UTC', "strftime('%Y-%m', datetime(ordered_at_utc, CASE WHEN ordered_at_utc >= '2026-03-29 01:00:00' AND ordered_at_utc < '2026-10-25 01:00:00' THEN '+1 hour' ELSE '+0 hours' END))", 'substr(ordered_at_utc, 1, 7)'],
+    ['every order status counts', "FROM fact_orders WHERE status = 'paid'", 'FROM fact_orders'],
+    ['M2 counts an order in either of the next two months', "AND p.month = strftime('%Y-%m', date(c.cohort_month || '-01', '+2 months'))) AS m2", "AND p.month > c.cohort_month AND p.month <= strftime('%Y-%m', date(c.cohort_month || '-01', '+2 months'))) AS m2"],
+  ],
+  h06: [
+    ['ignores the lost day, so pauses through 14 April are cut in two', "  UNION ALL\n  SELECT d.customer_id, '2026-04-14', d.status\n  FROM subscription_status_daily d\n  WHERE d.snapshot_date = '2026-04-13'\n    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-15')\n", ''],
+    ['fills the lost day from 15 April instead of 13 April', "WHERE d.snapshot_date = '2026-04-13'\n    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-15')", "WHERE d.snapshot_date = '2026-04-15'\n    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-13')"],
+    ['more than 7 days instead of at least 7', 'HAVING COUNT(*) >= 7', 'HAVING COUNT(*) > 7'],
+    ['first and last paused day per customer, merging separate pauses', 'GROUP BY customer_id, grp', 'GROUP BY customer_id'],
+  ],
+  h07: [
+    ['drops every reversed entry, even when the reversal was itself undone', 'COALESCE((SELECT c.counts FROM chain c WHERE c.entry_id = w.entry_id), 1) = 1', "NOT EXISTS (SELECT 1 FROM wallet_ledger r WHERE r.entry_type = 'reversal' AND r.reverses_entry_id = w.entry_id)"],
+    ['end of day by the UTC date', "date(datetime(posted_at_utc, CASE WHEN posted_at_utc >= '2026-03-29 01:00:00' AND posted_at_utc < '2026-10-25 01:00:00' THEN '+1 hour' ELSE '+0 hours' END))", 'date(posted_at_utc)', true],
+    ['orders the running sum by time only, so entries in the same second are added together', 'ORDER BY posted_at_utc, entry_id\n                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW', 'ORDER BY posted_at_utc'],
+    ['adds the reversal rows’ own amounts', "WHERE w.entry_type <> 'reversal'\n    AND COALESCE", 'WHERE COALESCE'],
+  ],
+  h08: [
+    ['ignores the channel restriction', '   AND (p.channel IS NULL OR p.channel = q2.channel)\n', ''],
+    ['checks the minimum against the line instead of the whole basket', 'SUM(pl.quantity * pl.price_gbp) OVER (PARTITION BY pl.order_id)', 'pl.quantity * pl.price_gbp'],
+    ['gives every qualifying promotion to the line, not just the best one', 'FROM candidates WHERE pick = 1', 'FROM candidates'],
+    ['uses UTC dates for the promotion windows', 'date(pl.ordered_at_local) AS uk_day', 'date(pl.ordered_at_utc) AS uk_day'],
+  ],
+  h09: [
+    ['no correction for fast phone clocks', 'CASE WHEN event_ts_utc > ingested_at_utc THEN ingested_at_utc ELSE event_ts_utc END', 'event_ts_utc'],
+    ['corrects with the latest delivery instead of the earliest', 'MIN(ingested_at_utc)', 'MAX(ingested_at_utc)'],
+    ['a gap of exactly 30 minutes starts a new session', '<= 1800', '< 1800'],
+    ['the week in UTC', "WHERE datetime(at_utc, CASE WHEN at_utc >= '2026-03-29 01:00:00' AND at_utc < '2026-10-25 01:00:00' THEN '+1 hour' ELSE '+0 hours' END) >= '2026-04-06' AND datetime(at_utc, CASE WHEN at_utc >= '2026-03-29 01:00:00' AND at_utc < '2026-10-25 01:00:00' THEN '+1 hour' ELSE '+0 hours' END) < '2026-04-13'", "WHERE at_utc >= '2026-04-06' AND at_utc < '2026-04-13'"],
+  ],
+};
+
+for (const q of QUESTIONS) {
+  for (const [why, from, to, all] of SLIPS[q.id] ?? []) {
+    if (!q.reference.includes(from)) throw new Error(`${q.id}: slip "${why}" does not apply`);
+    q.careless.push({ why, sql: all ? q.reference.split(from).join(to) : q.reference.replace(from, to) });
+  }
+}
+
 
 export function sampleIds(t: Tables): Record<string, Array<string | number>> {
   const orders = t.fact_orders!.rows;
@@ -837,6 +1010,7 @@ export function sampleIds(t: Tables): Record<string, Array<string | number>> {
     dim_customer: [1, 2],
     dim_product: [1, 3, 8],
     dim_price_history: t.dim_price_history!.rows.filter((r) => r[0] === changed).map(k2),
+    dim_product_category_history: t.dim_product_category_history!.rows.filter((r) => r[3] !== null).slice(0, 1).flatMap((m) => t.dim_product_category_history!.rows.filter((r) => r[0] === m[0])).map(k2),
     fact_orders: o,
     fact_order_lines: lines,
     promotions: [2, 3, 5],
