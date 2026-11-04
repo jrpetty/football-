@@ -47,6 +47,8 @@ function defaultScorer(type: ScorerType): ScorerSpec {
       return { type, unorderedArrays: false };
     case 'code-js':
       return { type, timeoutMs: 2000 };
+    case 'sql':
+      return { type, dialect: 'sqlite', schema: '', databases: [] };
     case 'judge':
       return { type, rubric: '', passThreshold: 0.5 };
     case 'judge-classify':

@@ -1,24 +1,34 @@
 import { useMemo } from 'react';
 import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
-import { Link, setQuery, useRoute } from '../router.tsx';
+import { Link, navigate, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useViewerCaption } from '../context.tsx';
 import { Empty, ErrorState, HashTag, LoadingPage, PageHead, Seg } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { fmtDate, fmtInt } from '../format.ts';
 import type { Leaderboard, RunListItem, SuiteView } from '../types.ts';
+import { AREAS, areaInfo, areaOfSuite, type AreaId } from '../../../src/core/areas.ts';
 
-export default function LeaderboardPage() {
+/**
+ * `area` (Business results, #/business/results) pins the page to that area's suite. Otherwise the area follows
+ * the suite in the link, and the benchmark (the Gauntlet Index) is the default: its suite list never offers
+ * the Business or Everyday Life suites, so those results can't be mixed into the Index.
+ */
+export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}) {
   const { query } = useRoute();
   const { meta } = useMeta();
-  const runId = query.get('run');
+  const runId = pinned ? null : query.get('run');
   const scope: 'suite' | 'run' = runId ? 'run' : 'suite';
 
   const suites = useAsync<SuiteView[]>(() => api.suites().catch(() => []), []);
   const runs = useAsync<RunListItem[]>(() => api.runs().catch(() => []), []);
+  const askedSuite = pinned ? areaInfo(pinned).suiteId : query.get('suite');
+  const area: AreaId = pinned ?? (askedSuite ? areaOfSuite(suites.data?.find((x) => x.id === askedSuite) ?? { id: askedSuite }) : 'benchmark');
+  const areaSuites = (suites.data ?? []).filter((x) => areaOfSuite(x) === area);
+  const missingAreaSuite = area !== 'benchmark' && !!suites.data && !suites.data.some((x) => x.id === askedSuite);
   // Default to the flagship "core" suite when it exists, otherwise the first suite the server has.
-  const suiteId = query.get('suite') ?? (suites.data ? (suites.data.some((s) => s.id === 'core') ? 'core' : suites.data[0]?.id ?? 'core') : null);
+  const suiteId = missingAreaSuite ? null : askedSuite ?? (suites.data ? (suites.data.some((x) => x.id === 'core') ? 'core' : areaSuites[0]?.id ?? 'core') : null);
   const lbState = useAsync<Leaderboard | null>(
     () => (runId ? api.run(runId).then((d) => d.leaderboard) : suiteId ? api.leaderboard(suiteId) : new Promise<null>(() => undefined)),
     [runId, suiteId],
@@ -29,7 +39,7 @@ export default function LeaderboardPage() {
   const runOptions = useMemo(() => (runs.data ?? []).filter((r) => r.completedJobs > 0), [runs.data]);
   const noKeys = meta && meta.providers.length > 0 && meta.providers.every((p) => !p.hasKey && p.apiKeyEnv);
 
-  const title = scope === 'run' ? run?.name ?? 'Run leaderboard' : suite?.name ?? (suiteId === 'core' ? 'Core Gauntlet' : suiteId ?? 'Leaderboard');
+  const title = missingAreaSuite || (pinned && !suite) ? `${areaInfo(area).name} results` : scope === 'run' ? run?.name ?? 'Run leaderboard' : suite?.name ?? (suiteId === 'core' ? 'Core Gauntlet' : suiteId ?? 'Leaderboard');
   const sub =
     scope === 'run'
       ? `Single-run standings${run ? ` · ${fmtDate(run.createdAt)}` : ''}.`
@@ -56,6 +66,20 @@ export default function LeaderboardPage() {
         sub={sub}
         actions={
           <div className="lb-controls no-broadcast">
+            {scope === 'suite' && (
+              <Seg
+                label="Area"
+                value={area}
+                onChange={(v) => {
+                  if (v === 'business') navigate('/business/results');
+                  else if (v === 'life') navigate('/leaderboard', { suite: areaInfo('life').suiteId });
+                  else navigate('/leaderboard');
+                }}
+                options={AREAS.map((a) => ({ value: a.id, label: a.name, title: a.blurb }))}
+              />
+            )}
+            {!pinned && (
+              <>
             <Seg
               label="Leaderboard scope"
               value={scope}
@@ -70,8 +94,8 @@ export default function LeaderboardPage() {
             />
             {scope === 'suite' ? (
               <select className="select" style={{ width: 200 }} aria-label="Suite" value={suiteId ?? ''} onChange={(e) => setQuery({ suite: e.target.value, run: null })}>
-                {(suites.data ?? []).length === 0 && <option value={suiteId ?? ''}>{suiteId ?? '…'}</option>}
-                {(suites.data ?? []).map((s) => (
+                {areaSuites.length === 0 && <option value={suiteId ?? ''}>{suiteId ?? '…'}</option>}
+                {areaSuites.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.testCount} tests)
                   </option>
@@ -85,6 +109,8 @@ export default function LeaderboardPage() {
                   </option>
                 ))}
               </select>
+            )}
+              </>
             )}
             <button className="btn icon" aria-label="Refresh leaderboard" title="Refresh" onClick={lbState.reload}>
               <Icon.Refresh />
@@ -104,7 +130,27 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      {lbState.loading && !lb ? (
+      {missingAreaSuite ? (
+        <div className="card">
+          <Empty
+            icon={<Icon.Trophy />}
+            title={`The ${areaInfo(area).name} results are not set up yet`}
+            actions={
+              area === 'business' ? (
+                <Link to="/business/ladder" className="btn primary">
+                  See the Business Ladder
+                </Link>
+              ) : (
+                <Link to="/life" className="btn primary">
+                  See the Everyday Life tests
+                </Link>
+              )
+            }
+          >
+            {areaInfo(area).name} has its own suite ({areaInfo(area).suiteId}), kept separate from the Gauntlet Index. Its leaderboard appears here once that suite is installed.
+          </Empty>
+        </div>
+      ) : lbState.loading && !lb ? (
         <LoadingPage />
       ) : lbState.error && !lb ? (
         <ErrorState error={lbState.error} onRetry={lbState.reload} title="Couldn’t load the leaderboard" />

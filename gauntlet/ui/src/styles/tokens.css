@@ -82,6 +82,18 @@
   --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
   --shadow-2: 0 24px 60px -20px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border);
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* Areas outside the benchmark (ui/src/business/): Business (gold) and Everyday Life (rose) */
+  --area-business: #f2b84b;
+  --area-business-strong: #f9d68f;
+  --area-business-soft: rgba(242, 184, 75, 0.12);
+  --area-business-line: rgba(242, 184, 75, 0.42);
+  --area-business-ink: #1d1404;
+  --area-business-grad: linear-gradient(100deg, #f9d68f 0%, #f2b84b 45%, #f08a4b 100%);
+  --area-life: #f47fb6;
+  --area-life-soft: rgba(244, 127, 182, 0.12);
+  --area-life-line: rgba(244, 127, 182, 0.42);
+  --area-life-ink: #23060f;
 }
 
 :root[data-theme='light'] {
@@ -147,6 +159,17 @@
 
   --shadow-1: 0 1px 2px rgba(15, 30, 55, 0.06), 0 8px 24px -14px rgba(15, 30, 55, 0.18);
   --shadow-2: 0 24px 60px -24px rgba(15, 30, 55, 0.35), 0 0 0 1px var(--border);
+
+  --area-business: #a25a07;
+  --area-business-strong: #7c4205;
+  --area-business-soft: rgba(180, 100, 9, 0.1);
+  --area-business-line: rgba(180, 100, 9, 0.4);
+  --area-business-ink: #ffffff;
+  --area-business-grad: linear-gradient(100deg, #b86b0a 0%, #a25a07 45%, #c2410c 100%);
+  --area-life: #be185d;
+  --area-life-soft: rgba(190, 24, 93, 0.09);
+  --area-life-line: rgba(190, 24, 93, 0.38);
+  --area-life-ink: #ffffff;
 }
 
 :root {

@@ -10,6 +10,7 @@ import { SIMPLE_NAV, groupAllTools, pageKeyFor, sectionFor } from './nav.ts';
 import { SECTION_ICONS, SimpleIcon } from './icons.tsx';
 import { isSimpleMode, setSimpleMode, useSimplePrefs } from './prefs.ts';
 import './simple.css';
+import '../business/area-nav.css';
 
 /** The shape of App.tsx's NAV entries. */
 export interface MenuItem {
@@ -49,6 +50,11 @@ const HINTS: Record<string, string> = {
   '/publish': 'Turn results into a website for viewers',
   '/methodology': 'How scoring works and why it is fair',
   '/guide': 'Plain-English explanations for viewers',
+  '/business': 'The Business area: what it measures, the six business scenarios',
+  '/business/ladder': 'How far up the five levels each model climbs, per business area',
+  '/business/tests': 'Every business test, by scenario and level',
+  '/business/results': 'The Business leaderboard (separate from the Gauntlet Index)',
+  '/life': 'Everyday Life tests and results',
 };
 
 export function SidebarNav({ items, path, manualCount }: { items: MenuItem[]; path: string; manualCount: number }) {
@@ -65,7 +71,7 @@ export function SidebarNav({ items, path, manualCount }: { items: MenuItem[]; pa
             const active = current?.id === s.id;
             const count = s.id === 'copy' ? manualCount : 0;
             return (
-              <Link key={s.id} to={s.to} title={s.blurb} aria-current={active ? 'page' : undefined} aria-label={count ? `${s.label}, ${count} waiting` : undefined}>
+              <Link key={s.id} to={s.to} title={s.blurb} data-area={s.area} aria-current={active ? 'page' : undefined} aria-label={count ? `${s.label}, ${count} waiting` : undefined}>
                 <I />
                 {s.label}
                 {count > 0 && <span className="nav-count">{countLabel(count)}</span>}
@@ -76,7 +82,7 @@ export function SidebarNav({ items, path, manualCount }: { items: MenuItem[]; pa
       ) : (
         <nav className="nav nav-all" aria-label="All tools">
           {groupAllTools(items).map((g) => (
-            <div key={g.id} className="nav-group" role="group" aria-label={g.label}>
+            <div key={g.id} className="nav-group" role="group" aria-label={g.label} data-area={g.id === 'business' || g.id === 'life' ? g.id : undefined}>
               <div className="nav-section eyebrow" title={g.blurb}>
                 {g.label}
               </div>

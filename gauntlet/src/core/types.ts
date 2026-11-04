@@ -395,7 +395,23 @@ export type ScorerSpec =
   /** case.expected: Constraint[]. Partial credit = fraction of constraints satisfied. */
   | { type: 'constraints'; allOrNothing?: boolean }
   /** case.expected: object. Partial credit = fraction of expected leaf fields matched. */
-  | { type: 'json'; unorderedArrays?: boolean; numberTolerance?: number; allOrNothing?: boolean; aliases?: Record<string, string> }
+  | {
+      type: 'json';
+      unorderedArrays?: boolean;
+      numberTolerance?: number;
+      allOrNothing?: boolean;
+      aliases?: Record<string, string>;
+      /** Format-tolerant keys, numbers ("£1,234.50"), strings and nulls (see src/scoring/json-compare.ts). */
+      loose?: boolean;
+      /** Id-keyed objects (dotted path → fields per item): extra items cost as much as missing ones. */
+      sets?: Record<string, number>;
+      /** Format can't cost marks: keys match ignoring case/spaces/underscores, "£1,234.50" counts as 1234.5, "yes"/"no" as booleans, "n/a"/"none" as null. */
+      lenient?: boolean;
+      /** Points per field by dotted path (longest prefix wins, default 1). */
+      weights?: Record<string, number>;
+      /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */
+      aboveConstant?: string[];
+    }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }
   /** LLM-judge (or judge panel) grading against a rubric; case.expected is an optional reference answer. */
@@ -426,7 +442,45 @@ export type ScorerSpec =
    * world (case.expected = { world, optimum?, reference }): plans are checked for feasibility and against the
    * solver's proven optimum; exact multi-part answers check by check (src/scoring/verifier.ts).
    */
-  | { type: 'verifier'; verifier: string };
+  | { type: 'verifier'; verifier: string }
+  /** One SQLite query, run read-only on the test's database and hidden copies and compared with a reference query (src/scoring/sql.ts). */
+  | SqlScorerSpec;
+
+/** A table of the `sql` scorer's databases: column names and rows (test data, never an answer). */
+export interface SqlTable {
+  columns: string[];
+  rows: Array<Array<string | number | null>>;
+}
+
+export interface SqlDatabase {
+  /** "live" for the database the prompt samples; the others are hidden copies. */
+  id: string;
+  tables: Record<string, SqlTable>;
+}
+
+export interface SqlScorerSpec {
+  type: 'sql';
+  dialect: 'sqlite';
+  /** CREATE TABLE statements (trusted, from the test file). */
+  schema: string;
+  databases: SqlDatabase[];
+  /** Default number tolerance (absolute), 0.01 if absent. */
+  tolerance?: number;
+  /** Hard limit per database (build + reference + contestant query), default 8000 ms. */
+  timeoutMs?: number;
+  /** Most rows a contestant query may return, default 5000. */
+  maxRows?: number;
+}
+
+export interface SqlExpected {
+  /** The reference query (never shown to the model). */
+  reference: string;
+  /** True when the question asks for a row order. */
+  ordered?: boolean;
+  /** Number tolerance for this question (absolute). */
+  tolerance?: number;
+}
+
 
 /** Genre playtest + checklist judging for game artifacts (The Game Jam). */
 export interface PlaytestSpec {

@@ -34,7 +34,7 @@ import {
 } from '../core/registry.ts';
 import type { CaseResult, RunEvent, RunRequest, TestDefinition } from '../core/types.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
-import { combinedLeaderboard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
+import { businessLadder, combinedLeaderboard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
 import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRuns, resumeRun, startRun, subscribe } from '../engine/runner.ts';
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
@@ -543,6 +543,11 @@ route('GET', '/api/costs', async ({ query }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 route('GET', '/api/leaderboard', ({ query }) => combinedLeaderboard(query.get('suite') || 'core'));
+
+// The Business Ladder: per model, per business scenario, how far up the five levels it climbs (docs/METHODOLOGY.md).
+route('GET', '/api/business-ladder', ({ query }) =>
+  businessLadder(query.get('suite') || undefined, (query.get('models') ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
+);
 
 // "Why these scores?": every answer behind one leaderboard cell (read-only).
 route('GET', '/api/score-answers', ({ query }) => {

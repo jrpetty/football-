@@ -31,6 +31,7 @@ import { MomentSlide, momentCaption, momentKindFor, type MomentKind } from '../c
 import { selectTrickHighlights, type TrickHighlight } from '../../../src/presenter/trick-highlights.ts';
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
 import { LadderSlide } from '../components/present/LadderSlide.tsx';
+import { BusinessLadderSlide, runHasBusinessLadder } from '../business/BusinessLadderSlide.tsx';
 import { isHorizonTest } from '../../../src/presenter/visuals/horizon.ts';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
@@ -137,6 +138,7 @@ type Slide =
   | { kind: 'standings'; test: DeckTest; step: number }
   | { kind: 'podium' }
   | { kind: 'ladder'; test: DeckTest }
+  | { kind: 'business-ladder' }
   | { kind: 'jam-genre'; test: DeckTest; caseId: string }
   | { kind: 'jam-winner'; test: DeckTest }
 
@@ -211,6 +213,8 @@ export function friendlyScoring(def: TestDefinition | undefined, program: Progra
     }
     case 'human':
       return { text: 'Rated blind by people who never see which model made which answer.', tech: 'human blind review' };
+    case 'sql':
+      return { text: 'Each model writes a database query. It is run on the real database and on hidden copies with different data, and must return the same rows as the reference.', tech: 'SQL result match (read-only SQLite)' };
     default:
       return { text: 'Scored automatically by the Gauntlet harness.', tech: 'custom scorer' };
   }
@@ -400,6 +404,8 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   const comps = standings(deck).filter((r) => typeof r.index === 'number');
   if (comps.length && show.podium) slides.push({ kind: 'podium' });
   if (comps.length) slides.push({ kind: 'final' });
+  // The Business Ladder: how far up the five levels the run's top models climbed (business/BusinessLadderSlide.tsx).
+  if (runHasBusinessLadder(deck.d.results ?? [])) slides.push({ kind: 'business-ladder' });
   if (comps.some((r) => (r.totals?.costUsd ?? 0) > 0)) slides.push({ kind: 'scatter' });
   if (comps.length && (deck.lb?.medals ?? []).some((e) => e.gold || e.silver || e.bronze)) slides.push({ kind: 'medals' });
   slides.push({ kind: 'outro' });
@@ -508,6 +514,11 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'moment':
       return momentCaption(slide.moment);
+    case 'business-ladder':
+      return {
+        text: 'How far up the Business Ladder: five levels of real company work, from reading one document to running a department. Each model stands on the highest level where it scored at least 70 on every test, and on every level below.',
+        fine: 'From this run’s results only · dashed levels are still being built · bars show each score’s 95% range against the 70 line',
+      };
     case 'ladder':
       return {
         text: 'How far up the ladder: ten levels, each harder than the last. Each model stands on the highest rung it reached without missing one below; the dots show every level’s result.',
@@ -593,6 +604,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return 'The Gallery · Masterpiece of the Show';
     case 'ladder':
       return `Test ${slide.test.n} of ${deck.tests.length} · How far up the ladder`;
+    case 'business-ladder':
+      return 'Business · How far up the ladder?';
   }
 }
 
@@ -1287,6 +1300,8 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <TrickSlide h={slide.h} cat={slide.test.cat} reveal={reveal} index={slide.i} total={slide.of} vertical={vertical} />;
     case 'trick-empty':
       return <TrickEmptySlide />;
+    case 'business-ladder':
+      return <BusinessLadderSlide results={deck.d.results ?? []} contenders={deck.contenders} names={Object.fromEntries(deck.tests.map((t) => [t.snap.id, t.snap.name]))} />;
     case 'ladder':
       return <LadderSlide testId={slide.test.snap.id} testName={slide.test.snap.name} cat={slide.test.cat} detail={slide.test.detail} results={deck.d.results ?? []} contenders={deck.contenders} />;
     case 'truth':

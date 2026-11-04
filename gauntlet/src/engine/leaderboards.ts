@@ -4,6 +4,11 @@ import type { CaseResult, Contestant, Leaderboard } from '../core/types.ts';
 import { buildLeaderboard, type AggregateTest } from './aggregate.ts';
 import { toScoreAnswer, type ScoreAnswer } from '../core/score-explain.ts';
 import { listRunIds, readManifest, readResults } from './store.ts';
+import { isScored } from './aggregate.ts';
+import { buildBusinessLadderView, ladderTestInfo, type BusinessLadderView, type ModelClusters } from '../core/business-ladder.ts';
+import { loadBusinessLadder } from '../core/business-ladder-file.ts';
+import { BUSINESS_SUITE_ID } from '../core/areas.ts';
+import { explainerFor } from '../core/explainers.ts';
 
 function markManual(board: Leaderboard, contestants: Contestant[]): Leaderboard {
   const providers = loadProviders();
@@ -122,4 +127,36 @@ export function scoreAnswers(scope: string, contestantId: string, testId: string
   else if (scope.startsWith('suite:')) pool = combinedPool(scope.slice(6)).results;
   else throw new Error(`Unknown scope: ${scope}`);
   return pool.filter((r) => r.contestantId === contestantId && r.testId === testId && !r.reassignedTo).map((r) => toScoreAnswer(r));
+}
+
+/**
+ * The Business Ladder (GET /api/business-ladder): every model's ladder per scenario, computed from the same
+ * pooled, hash-checked results as the combined leaderboard of `suiteId` (default: the Business suite when it
+ * exists, else every test). `compare` lists 2–4 model ids for paired comparisons on shared cases.
+ */
+export function businessLadder(suiteId?: string, compare: string[] = []): BusinessLadderView {
+  const pool = suiteId || (getSuite(BUSINESS_SUITE_ID) ? BUSINESS_SUITE_ID : 'all');
+  const definition = loadBusinessLadder();
+  const all = loadTests();
+  const byId = new Map(all.map((t) => [t.definition.id, t.definition]));
+  const tests = ladderTestInfo(
+    definition,
+    (id) => {
+      const d = byId.get(id);
+      return d ? { name: d.name, difficulty: d.difficulty, cases: d.kind === 'prompt' ? d.cases.length : d.seeds.length } : undefined;
+    },
+    explainerFor,
+  );
+  const { board, results } = combinedPool(pool);
+  const onLadder = new Set(Object.keys(tests));
+  const clusters = new Map<string, ModelClusters>();
+  for (const r of results) {
+    if (r.reassignedTo || !onLadder.has(r.testId) || !isScored(r)) continue;
+    const m = clusters.get(r.contestantId) ?? {};
+    const t = (m[r.testId] ??= {});
+    t[r.caseId] = [...(t[r.caseId] ?? []), r.score!];
+    clusters.set(r.contestantId, m);
+  }
+  const models = board.filter((c) => clusters.has(c.id)).map((c) => ({ id: c.id, label: c.label, color: c.color, vendor: c.vendor, clusters: clusters.get(c.id)! }));
+  return buildBusinessLadderView({ definition, suiteId: pool, tests, models, compare });
 }

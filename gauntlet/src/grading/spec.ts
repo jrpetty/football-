@@ -154,7 +154,7 @@ const GENERIC_ANCHORS: RubricAnchor[] = [
   { value: 0, text: 'No credit' },
 ];
 
-const OBJECTIVE = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'verifier']);
+const OBJECTIVE = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'sql', 'verifier']);
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'c';
@@ -460,6 +460,8 @@ function checklistFor(sc: ScorerSpec, c?: PromptTestCase): ChecklistItem[] {
       const v = Object.prototype.hasOwnProperty.call(VERIFIERS, sc.verifier) ? VERIFIERS[sc.verifier] : undefined;
       return (v?.marking ?? ['The checker replays the answer against the hidden facts of the case']).map((m, i) => ({ id: `rule-${i}`, label: m, source: 'formula' as const }));
     }
+    case 'sql':
+      return (sc.databases ?? []).map((d, i) => ({ id: `db-${i}`, label: d.id === 'live' ? 'Result matches the reference query on the live database' : `Result matches the reference query on hidden copy ${d.id}`, source: 'answer-key' as const }));
     case 'artifact':
       return (sc.checks ?? [{ check: 'parses' }]).map((ch, i) => ({ id: `check-${i}`, label: artifactCheckLabel(ch, sc.format), source: ['runs_without_errors', 'has_canvas_or_svg', 'responds_to_input', 'no_external_requests'].includes(ch.check) || sc.format === 'svg' ? ('browser' as const) : ('auto-check' as const) }));
     default:
@@ -492,6 +494,8 @@ function answerRule(sc: ScorerSpec): string {
       return 'Ground truth for the grader: pick the label that fits.';
     case 'artifact':
       return 'Automated checks plus the rubric.';
+    case 'sql':
+      return 'The query is run read-only on the live database and the hidden copies; each scores the share of result rows that match the reference query (order only when asked); score = the mean.';
     case 'ladder':
       return sc.answer === 'plan'
         ? 'The plan is replayed: the proven minimum scores 1, a longer plan that solves it at most 0.25, an illegal move 0.'
@@ -527,7 +531,7 @@ function applicableLabels(instructions: string, labels: JudgeLabel[], expected: 
 function outputKind(sc: ScorerSpec): string {
   if (sc.type === 'artifact') return sc.format;
   if (sc.type === 'json' || sc.type === 'verifier') return 'json';
-  if (sc.type === 'code-js') return 'code';
+  if (sc.type === 'code-js' || sc.type === 'sql') return 'code';
   return 'text';
 }
 
@@ -592,6 +596,8 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
       gradedOn:
         sc.type === 'code-js'
           ? 'The code is run against hidden unit tests. The machine decides; a person can flag a dispute but not change the score.'
+          : sc.type === 'sql'
+            ? 'The query is run on the database and on hidden copies, and its results are compared with the reference query. The machine decides; a person can flag a dispute but not change the score.'
           : sc.type === 'constraints'
             ? 'Every rule is checked by machine. A person can flag a dispute but not change the score.'
             : sc.type === 'verifier'

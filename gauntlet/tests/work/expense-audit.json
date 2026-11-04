@@ -1,0 +1,486 @@
+{
+  "kind": "prompt",
+  "id": "work.expense-audit",
+  "version": "1.0.0",
+  "name": "Expense Policy Check",
+  "category": "work",
+  "description": "Audit 10 to 26 expense claim lines from several employees against a written policy: receipts from £25.00, alcohol, daily meal limits by city shared across several meals, hotel limits per night, client entertainment per head unless the approval is in the director register, first-class rail, mileage at 45p then 25p after 10,000 miles in the tax year (crossing the 6 April reset), a 60-day submission limit, duplicates, euro and dollar conversion and VAT reclaim rules. The answer is the non-compliant lines with the rule broken and the amount to pay, totals per employee, the grand total and the reclaimable VAT, to the penny.",
+  "difficulty": "hard",
+  "tags": [
+    "work",
+    "finance",
+    "expenses",
+    "policy",
+    "arithmetic",
+    "real-world"
+  ],
+  "hook": "Twenty-six claim lines, one policy, every penny checked. Who gets paid what?",
+  "maxOutputTokens": 32000,
+  "estimate": {
+    "inputTokens": 1912,
+    "outputTokens": 9000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-09-24",
+  "scorer": {
+    "type": "json",
+    "loose": true,
+    "sets": {
+      "non_compliant": 2
+    }
+  },
+  "cases": [
+    {
+      "id": "x01",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.87, $1 = £0.74.\n\nDirector approvals register (written approvals for client entertainment):\n  - (no approvals this period)\n\nClaim C-3598 — Callum Hughes (Marketing), submitted Mon 22 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 800.\n  L01 | Wed 17 Jun 2026 | Riverside Lodge London City, London | Hotel, 1 night | £217.80 | VAT £36.30 | receipt attached\n  L02 | Fri 5 Jun 2026 | Kirkgate Market Diner, Leeds | Lunch | £37.19 | VAT £6.20 | receipt attached\n  L03 | Thu 11 Jun 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n  L04 | Fri 12 Jun 2026 | Black cab | Taxi to client site | £31.50 | no receipt\n  L05 | Tue 9 Jun 2026 | Royal Mail | Special Delivery postage | £14.20 | no receipt\n  L06 | Fri 5 Jun 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Glasgow Central return, standard class | £120.10 | receipt attached\n\nClaim C-3629 — Elif Patel (Operations), submitted Mon 29 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 800.\n  L07 | Thu 25 Jun 2026 | Kirkgate Market Diner, Leeds | Breakfast | £34.80 | includes alcohol £9.50 | VAT £5.80 | receipt attached\n  L08 | Fri 26 Jun 2026 | Harbourside Inn Bristol, Bristol | Hotel, 1 night | £80.80 | VAT £13.47 | receipt attached\n  L09 | Thu 25 Jun 2026 | High Street Pharmacy | First-aid kit restock | £20.91 | VAT £3.49 | receipt attached\n  L10 | Thu 16 Apr 2026 | Own car | Mileage, 318 miles (client visits) | £143.10 | no receipt needed\n  L11 | Tue 23 Jun 2026 | City Car Parks | Parking, client visit | £21.55 | VAT £3.59 | receipt attached\n  L12 | Fri 12 Jun 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Glasgow Central return, standard class | £120.10 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 180.0
+          },
+          "L02": {
+            "rule": "MEAL_CAP",
+            "pay": 30.0
+          },
+          "L04": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L07": {
+            "rule": "ALCOHOL",
+            "pay": 25.3
+          },
+          "L10": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Callum Hughes": 403.2,
+          "Elif Patel": 268.66
+        },
+        "total_pay": 671.86,
+        "vat_reclaimable": 20.55
+      },
+      "notes": "[easy] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 5 non-compliant lines of 12."
+    },
+    {
+      "id": "x02",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.87, $1 = £0.78.\n\nDirector approvals register (written approvals for client entertainment):\n  - (no approvals this period)\n\nClaim C-3283 — Leila Kowalski (Operations), submitted Mon 22 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 5,100.\n  L01 | Wed 17 Jun 2026 | Northern Quarter Rooms, Manchester | Hotel, 2 nights | £309.50 | VAT £51.58 | receipt attached\n  L02 | Wed 10 Jun 2026 | Ashton Lane Bistro, Glasgow | Lunch | £20.35 | VAT £3.39 | receipt attached\n  L03 | Fri 12 Jun 2026 | National Rail (LNER/Avanti/GWR) | Rail London King's Cross – Leeds return, standard class | £86.70 | receipt attached\n  L04 | Fri 19 Jun 2026 | Black cab | Taxi to client site | £31.50 | no receipt\n  L05 | Fri 12 Jun 2026 | Royal Mail | Special Delivery postage | £14.20 | no receipt\n  L06 | Fri 12 Jun 2026 | High Street Pharmacy | First-aid kit restock | £18.72 | VAT £3.12 | receipt attached\n\nClaim C-3113 — Nkechi O'Brien (Finance), submitted Fri 26 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 2,400.\n  L07 | Fri 19 Jun 2026 | Kirkgate Market Diner, Leeds | Breakfast | £34.80 | includes alcohol £9.50 | VAT £5.80 | receipt attached\n  L08 | Thu 18 Jun 2026 | Wharfside Hotel Leeds, Leeds | Hotel, 1 night | £106.80 | VAT £17.80 | receipt attached\n  L09 | Fri 19 Jun 2026 | City Car Parks | Parking, client visit | £21.90 | VAT £3.65 | receipt attached\n  L10 | Mon 13 Apr 2026 | Own car | Mileage, 46 miles (client visits) | £20.70 | no receipt needed\n  L11 | Fri 12 Jun 2026 | Stationery World | Printer paper and folders | £22.36 | VAT £3.73 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 240.0
+          },
+          "L04": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L07": {
+            "rule": "ALCOHOL",
+            "pay": 25.3
+          },
+          "L10": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Leila Kowalski": 379.97,
+          "Nkechi O'Brien": 176.36
+        },
+        "total_pay": 556.33,
+        "vat_reclaimable": 31.69
+      },
+      "notes": "[easy] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 4 non-compliant lines of 11."
+    },
+    {
+      "id": "x03",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.87, $1 = £0.76.\n\nDirector approvals register (written approvals for client entertainment):\n  - (no approvals this period)\n\nClaim C-3412 — Tariq Tanaka (Finance), submitted Mon 29 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 2,400.\n  L01 | Wed 17 Jun 2026 | Rivergate Rooms Covent Garden, London | Hotel, 1 night | £220.00 | VAT £36.67 | receipt attached\n  L02 | Fri 12 Jun 2026 | Kirkgate Market Diner, Leeds | Breakfast | £13.19 | VAT £2.20 | receipt attached\n  L03 | Wed 17 Jun 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, standard class | £92.40 | receipt attached\n  L04 | Thu 11 Jun 2026 | Black cab | Taxi to client site | £31.50 | no receipt\n  L05 | Mon 22 Jun 2026 | High Street Pharmacy | First-aid kit restock | £14.20 | no receipt\n\nClaim C-3807 — Rhys Navarro (Sales), submitted Mon 29 Jun 2026. Business miles already paid in tax year 2026/27 before this claim: 800.\n  L06 | Fri 19 Jun 2026 | Kirkgate Market Diner, Leeds | Dinner | £34.80 | includes alcohol £9.50 | VAT £5.80 | receipt attached\n  L07 | Fri 26 Jun 2026 | The Fenwick Hotel Bloomsbury, London | Hotel, 3 nights | £503.50 | VAT £83.92 | receipt attached\n  L08 | Fri 12 Jun 2026 | Stationery World | Printer paper and folders | £20.03 | VAT £3.34 | receipt attached\n  L09 | Thu 16 Apr 2026 | Own car | Mileage, 84 miles (client visits) | £37.80 | no receipt needed\n  L10 | Thu 18 Jun 2026 | Royal Mail | Special Delivery postage | £10.92 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 180.0
+          },
+          "L04": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 25.3
+          },
+          "L09": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Tariq Tanaka": 299.79,
+          "Rhys Navarro": 559.75
+        },
+        "total_pay": 859.54,
+        "vat_reclaimable": 89.46
+      },
+      "notes": "[easy] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 4 non-compliant lines of 10."
+    },
+    {
+      "id": "x04",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.84, $1 = £0.78.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-118: approved by Oluwaseun Navarro for Hamza Novak\n\nClaim C-3338 — Sofia Lindqvist (Operations), submitted Mon 28 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 1,200.\n  L01 | Fri 18 Sep 2026 | Harbourside Inn Bristol, Bristol | Hotel, 3 nights | £473.50 | VAT £78.92 | receipt attached\n  L02 | Tue 22 Sep 2026 | Copper Kettle Café Borough, London | Lunch | £16.40 | VAT £2.73 | receipt attached\n  L03 | Tue 22 Sep 2026 | Daily Bread Café, London | Dinner | £31.20 | includes alcohol £6.80 | VAT £5.20 | receipt attached\n  L04 | Mon 21 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, first class | £164.00 | standard fare for this journey £92.40 | receipt attached\n  L05 | Fri 11 Sep 2026 | Harbour Café, Bristol | Dinner | £6.56 | VAT £1.09 | receipt attached\n\nClaim C-3101 — Hamza Novak (Finance), submitted Fri 25 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 1,200.\n  L06 | Fri 18 Sep 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 3 nights | €581.95 | receipt attached\n  L07 | Fri 4 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n  L08 | Fri 18 Sep 2026 | Citylink Cars | Taxi to client site | £25.00 | no receipt\n  L09 | Fri 11 Sep 2026 | Guildhall Grill | Client dinner, 4 people (incl. 2 staff) | £380.41 | includes alcohol £83.69 | VAT £63.40 | receipt attached | approved by director, ref DA-118\n  L10 | Fri 18 Sep 2026 | City Car Parks | Parking, client visit | £19.18 | VAT £3.20 | receipt attached\n  L11 | Fri 4 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n\nClaim C-3740 — Hiroshi Demir (Sales), submitted Mon 28 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 4,300.\n  L12 | Thu 10 Sep 2026 | Own car | Mileage, 84 miles (client visits) | £37.80 | no receipt needed\n  L13 | Wed 23 Sep 2026 | Northern Canteen, Manchester | Breakfast | £12.90 | VAT £2.15 | receipt attached\n  L14 | Tue 22 Sep 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 1 night | €254.26 | receipt attached\n  L15 | Fri 18 Sep 2026 | Brasserie Aubert, Covent Garden | Client dinner, 4 people (incl. 2 staff) | £248.20 | includes alcohol £44.68 | VAT £41.37 | receipt attached\n  L16 | Wed 23 Sep 2026 | Royal Mail | Special Delivery postage | £24.99 | no receipt\n  L17 | Thu 17 Sep 2026 | Royal Mail | Special Delivery postage | £15.17 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 360.0
+          },
+          "L03": {
+            "rule": "ALCOHOL",
+            "pay": 23.6
+          },
+          "L04": {
+            "rule": "RAIL_CLASS",
+            "pay": 92.4
+          },
+          "L07": {
+            "rule": "ALCOHOL",
+            "pay": 40.32
+          },
+          "L08": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L11": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L14": {
+            "rule": "HOTEL_CAP",
+            "pay": 190.0
+          },
+          "L15": {
+            "rule": "ALCOHOL",
+            "pay": 203.52
+          }
+        },
+        "pay_by_employee": {
+          "Sofia Lindqvist": 498.96,
+          "Hamza Novak": 928.75,
+          "Hiroshi Demir": 484.38
+        },
+        "total_pay": 1912.09,
+        "vat_reclaimable": 9.17
+      },
+      "notes": "[medium] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 8 non-compliant lines of 17."
+    },
+    {
+      "id": "x05",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.85, $1 = £0.79.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-105: approved by Yasmin Park for Sofia Pritchard\n\nClaim C-3509 — Agnieszka Eze (Finance), submitted Fri 25 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 9,890.\n  L01 | Fri 18 Sep 2026 | Northern Quarter Rooms, Manchester | Hotel, 1 night | £138.00 | VAT £23.00 | receipt attached\n  L02 | Fri 11 Sep 2026 | Daily Bread Café, London | Lunch | £16.40 | VAT £2.73 | receipt attached\n  L03 | Fri 11 Sep 2026 | Copper Kettle Café Borough, London | Dinner | £31.20 | includes alcohol £6.80 | VAT £5.20 | receipt attached\n  L04 | Wed 16 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail London King's Cross – Leeds return, first class | £151.20 | standard fare for this journey £86.70 | receipt attached\n\nClaim C-3755 — Sofia Pritchard (Sales), submitted Wed 23 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 9,720.\n  L05 | Fri 4 Sep 2026 | Hudson Yard Suites, New York | Hotel, 1 night | $272.92 | receipt attached\n  L06 | Fri 11 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n  L07 | Wed 9 Sep 2026 | Metro Cabs | Taxi to client site | £25.00 | no receipt\n  L08 | Tue 15 Sep 2026 | Guildhall Grill | Client dinner, 3 people (incl. 2 staff) | £195.46 | includes alcohol £43.00 | VAT £32.58 | receipt attached | approved by director, ref DA-105\n  L09 | Fri 4 Sep 2026 | Royal Mail | Special Delivery postage | £8.72 | receipt attached\n  L10 | Fri 11 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n  L11 | Fri 18 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n\nClaim C-3470 — Yusuf Doyle (Customer Success), submitted Tue 22 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 9,890.\n  L12 | Tue 8 Sep 2026 | Own car | Mileage, 46 miles (client visits) | £20.70 | no receipt needed\n  L13 | Fri 11 Sep 2026 | Ancoats Kitchen, Manchester | Breakfast | £12.90 | VAT £2.15 | receipt attached\n  L14 | Tue 15 Sep 2026 | Liffey Quay Hotel, Dublin | Hotel, 2 nights | €484.70 | receipt attached\n  L15 | Wed 2 Sep 2026 | Guildhall Grill | Client dinner, 3 people (incl. 2 staff) | £201.99 | includes alcohol £44.44 | VAT £33.67 | receipt attached\n  L16 | Thu 17 Sep 2026 | Stationery World | Printer paper and folders | £24.99 | no receipt\n  L17 | Thu 10 Sep 2026 | Black cab | Taxi to client site | £36.82 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 120.0
+          },
+          "L03": {
+            "rule": "ALCOHOL",
+            "pay": 23.6
+          },
+          "L04": {
+            "rule": "RAIL_CLASS",
+            "pay": 86.7
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 40.8
+          },
+          "L07": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L10": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L14": {
+            "rule": "HOTEL_CAP",
+            "pay": 340.0
+          },
+          "L15": {
+            "rule": "ALCOHOL",
+            "pay": 157.55
+          }
+        },
+        "pay_by_employee": {
+          "Agnieszka Eze": 246.7,
+          "Sofia Pritchard": 519.49,
+          "Yusuf Doyle": 592.96
+        },
+        "total_pay": 1359.15,
+        "vat_reclaimable": 4.88
+      },
+      "notes": "[medium] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 8 non-compliant lines of 17."
+    },
+    {
+      "id": "x06",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.84, $1 = £0.76.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-416: approved by Fatima Balogun for Bogdan Doyle\n\nClaim C-3465 — Joaquin Nowak (Sales), submitted Mon 28 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 9,480.\n  L01 | Wed 23 Sep 2026 | The Fenwick Hotel Bloomsbury, London | Hotel, 1 night | £185.80 | VAT £30.97 | receipt attached\n  L02 | Fri 18 Sep 2026 | The Crown & Anchor, London | Lunch | £16.40 | VAT £2.73 | receipt attached\n  L03 | Fri 18 Sep 2026 | Copper Kettle Café Borough, London | Dinner | £31.20 | includes alcohol £6.80 | VAT £5.20 | receipt attached\n  L04 | Fri 11 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, first class | £164.00 | standard fare for this journey £92.40 | receipt attached\n\nClaim C-3259 — Bogdan Doyle (Customer Success), submitted Thu 24 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 9,890.\n  L05 | Fri 4 Sep 2026 | Harbourside Inn Bristol, Bristol | Hotel, 1 night | £110.80 | VAT £18.47 | receipt attached\n  L06 | Mon 21 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n  L07 | Fri 4 Sep 2026 | Metro Cabs | Taxi to client site | £25.00 | no receipt\n  L08 | Fri 4 Sep 2026 | Brasserie Aubert, Covent Garden | Client dinner, 6 people (incl. 2 staff) | £384.97 | includes alcohol £84.69 | VAT £64.16 | receipt attached | approved by director, ref DA-416\n  L09 | Mon 14 Sep 2026 | High Street Pharmacy | First-aid kit restock | £21.91 | VAT £3.65 | receipt attached\n  L10 | Mon 21 Sep 2026 | Brasserie du Canal, Paris | Dinner | €62.00 | includes alcohol €14.00 | receipt attached\n  L11 | Fri 11 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail London Paddington – Bristol Temple Meads return, standard class | £64.50 | receipt attached\n\nClaim C-3447 — Maryam Bianchi (Engineering), submitted Mon 21 Sep 2026. Business miles already paid in tax year 2026/27 before this claim: 1,200.\n  L12 | Wed 2 Sep 2026 | Own car | Mileage, 46 miles (client visits) | £20.70 | no receipt needed\n  L13 | Fri 4 Sep 2026 | Ancoats Kitchen, Manchester | Breakfast | £12.90 | VAT £2.15 | receipt attached\n  L14 | Thu 17 Sep 2026 | Wharfside Hotel Leeds, Leeds | Hotel, 1 night | £136.50 | VAT £22.75 | receipt attached\n  L15 | Thu 17 Sep 2026 | The Fenwick Dining Room | Client dinner, 5 people (incl. 2 staff) | £465.03 | includes alcohol £83.71 | VAT £77.51 | receipt attached\n  L16 | Fri 4 Sep 2026 | High Street Pharmacy | First-aid kit restock | £24.99 | no receipt\n  L17 | Fri 11 Sep 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Glasgow Central return, standard class | £120.10 | receipt attached\n  L18 | Thu 17 Sep 2026 | Kirkgate Market Diner, Leeds | Lunch | £19.59 | VAT £3.27 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 180.0
+          },
+          "L03": {
+            "rule": "ALCOHOL",
+            "pay": 23.6
+          },
+          "L04": {
+            "rule": "RAIL_CLASS",
+            "pay": 92.4
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 40.32
+          },
+          "L07": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L10": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L14": {
+            "rule": "HOTEL_CAP",
+            "pay": 120.0
+          },
+          "L15": {
+            "rule": "ALCOHOL",
+            "pay": 300.0
+          }
+        },
+        "pay_by_employee": {
+          "Joaquin Nowak": 312.4,
+          "Bogdan Doyle": 622.5,
+          "Maryam Bianchi": 618.28
+        },
+        "total_pay": 1553.18,
+        "vat_reclaimable": 30.27
+      },
+      "notes": "[medium] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 8 non-compliant lines of 18."
+    },
+    {
+      "id": "x07",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.84, $1 = £0.74.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-413: approved by Ravi Pritchard for Anjali Kowalski\n\nClaim C-3731 — Rosa Kim (Finance), submitted Mon 20 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 1,200.\n  L01 | Tue 31 Mar 2026 | Merchant City Lodge, Glasgow | Hotel, 1 night | £144.00 | VAT £24.00 | receipt attached\n  L02 | Wed 8 Apr 2026 | Midtown Deli, New York | Breakfast | $21.50 | receipt attached\n  L03 | Wed 8 Apr 2026 | Midtown Deli, New York | Lunch | $27.00 | receipt attached\n  L04 | Wed 8 Apr 2026 | Midtown Deli, New York | Dinner | $44.00 | includes alcohol $12.00 | receipt attached\n  L05 | Fri 3 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Paddington – Bristol Temple Meads return, first class | £118.00 | standard fare for this journey £64.50 | receipt attached\n  L06 | Fri 3 Apr 2026 | Guildhall Grill | Client dinner, 5 people (incl. 2 staff) | £470.38 | includes alcohol £103.48 | VAT £78.40 | receipt attached | approved by director, ref DA-119\n  L07 | Thu 2 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Glasgow Central return, standard class | £120.10 | receipt attached\n  L08 | Fri 10 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n\nClaim C-3115 — Vikram Chen (Sales), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,720.\n  L09 | Tue 31 Mar 2026 | Own car | Mileage, 212 miles (client visits) | £95.40 | no receipt needed\n  L10 | Thu 2 Apr 2026 | Own car | Mileage, 126 miles (client visits) | £56.70 | no receipt needed\n  L11 | Wed 8 Apr 2026 | Own car | Mileage, 318 miles (client visits) | £143.10 | no receipt needed\n  L12 | Tue 7 Apr 2026 | Temple Bar Grill, Dublin | Dinner | €58.00 | includes alcohol €9.00 | receipt attached\n  L13 | Fri 17 Apr 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 2 nights | €380.46 | receipt attached\n  L14 | Mon 20 Apr 2026 | Black cab | Taxi to client site | £9.56 | receipt attached\n  L15 | Fri 17 Apr 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 2 nights | €380.46 | receipt attached\n\nClaim C-3249 — Anjali Kowalski (Customer Success), submitted Tue 21 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,480.\n  L16 | Thu 9 Apr 2026 | The Fenwick Dining Room | Client dinner, 6 people (incl. 1 staff) | £372.25 | includes alcohol £100.51 | VAT £62.04 | receipt attached | approved by director, ref DA-413\n  L17 | Fri 3 Apr 2026 | Ashton Lane Bistro, Glasgow | Lunch | £18.60 | VAT £3.10 | receipt attached\n  L18 | Fri 3 Apr 2026 | Ashton Lane Bistro, Glasgow | Dinner | £19.40 | VAT £3.23 | receipt attached\n  L19 | Fri 3 Apr 2026 | City Car Parks | Parking, client visit | £25.00 | no receipt\n  L20 | Thu 16 Apr 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 3 nights | €778.56 | receipt attached\n\nClaim C-3127 — Callum Eze (Engineering), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,890.\n  L21 | Fri 27 Mar 2026 | Own car | Mileage, 157 miles (client visits) | £70.65 | no receipt needed\n  L22 | Tue 7 Apr 2026 | Copper Kettle Café Borough, London | Lunch | £24.10 | no receipt\n  L23 | Thu 23 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n  L24 | Wed 22 Apr 2026 | Guildhall Grill | Client dinner, 5 people (incl. 2 staff) | £175.74 | includes alcohol £38.66 | VAT £29.29 | receipt attached\n  L25 | Wed 25 Feb 2026 | City Car Parks | Parking, client visit | £11.35 | VAT £1.89 | receipt attached\n  L26 | Fri 24 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, standard class | £92.40 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 120.0
+          },
+          "L04": {
+            "rule": "ALCOHOL",
+            "pay": 23.68
+          },
+          "L05": {
+            "rule": "RAIL_CLASS",
+            "pay": 64.5
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 300.0
+          },
+          "L10": {
+            "rule": "MILEAGE_RATE",
+            "pay": 45.1
+          },
+          "L12": {
+            "rule": "ALCOHOL",
+            "pay": 41.16
+          },
+          "L15": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L18": {
+            "rule": "MEAL_CAP",
+            "pay": 11.4
+          },
+          "L19": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L20": {
+            "rule": "HOTEL_CAP",
+            "pay": 570.0
+          },
+          "L21": {
+            "rule": "MILEAGE_RATE",
+            "pay": 61.25
+          },
+          "L24": {
+            "rule": "ALCOHOL",
+            "pay": 137.08
+          },
+          "L25": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Rosa Kim": 723.07,
+          "Vikram Chen": 653.91,
+          "Anjali Kowalski": 972.25,
+          "Callum Eze": 373.73
+        },
+        "total_pay": 2722.96,
+        "vat_reclaimable": 3.1
+      },
+      "notes": "[hard] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 13 non-compliant lines of 26."
+    },
+    {
+      "id": "x08",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.85, $1 = £0.74.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-241: approved by Ines Patel for Saoirse Hughes\n\nClaim C-3922 — Hyun-woo Nwosu (Sales), submitted Mon 20 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 4,300.\n  L01 | Tue 7 Apr 2026 | Hudson Yard Suites, New York | Hotel, 2 nights | $708.10 | receipt attached\n  L02 | Fri 10 Apr 2026 | Midtown Deli, New York | Breakfast | $21.50 | receipt attached\n  L03 | Fri 10 Apr 2026 | Midtown Deli, New York | Lunch | $27.00 | receipt attached\n  L04 | Fri 10 Apr 2026 | Midtown Deli, New York | Dinner | $44.00 | includes alcohol $12.00 | receipt attached\n  L05 | Thu 9 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, first class | £164.00 | standard fare for this journey £92.40 | receipt attached\n  L06 | Thu 9 Apr 2026 | Guildhall Grill | Client dinner, 3 people (incl. 2 staff) | £285.17 | includes alcohol £51.33 | VAT £47.53 | receipt attached | approved by director, ref DA-392\n  L07 | Mon 6 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, standard class | £92.40 | receipt attached\n\nClaim C-3394 — Hiroshi Okafor (Customer Success), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,720.\n  L08 | Tue 31 Mar 2026 | Own car | Mileage, 212 miles (client visits) | £95.40 | no receipt needed\n  L09 | Thu 2 Apr 2026 | Own car | Mileage, 126 miles (client visits) | £56.70 | no receipt needed\n  L10 | Wed 8 Apr 2026 | Own car | Mileage, 318 miles (client visits) | £143.10 | no receipt needed\n  L11 | Wed 8 Apr 2026 | Temple Bar Grill, Dublin | Dinner | €58.00 | includes alcohol €9.00 | receipt attached\n  L12 | Fri 10 Apr 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 1 night | €198.62 | receipt attached\n  L13 | Tue 14 Apr 2026 | Citylink Cars | Taxi to client site | £36.86 | receipt attached\n  L14 | Fri 10 Apr 2026 | Hôtel des Arts Montmartre, Paris | Hotel, 1 night | €198.62 | receipt attached\n  L15 | Wed 8 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n  L16 | Wed 8 Apr 2026 | High Street Pharmacy | First-aid kit restock | £10.80 | VAT £1.80 | receipt attached\n\nClaim C-3594 — Saoirse Hughes (Engineering), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,890.\n  L17 | Fri 17 Apr 2026 | Brasserie Aubert, Covent Garden | Client dinner, 5 people (incl. 1 staff) | £450.14 | includes alcohol £81.03 | VAT £75.02 | receipt attached | approved by director, ref DA-241\n  L18 | Fri 17 Apr 2026 | Ashton Lane Bistro, Glasgow | Lunch | £18.60 | VAT £3.10 | receipt attached\n  L19 | Fri 17 Apr 2026 | Ashton Lane Bistro, Glasgow | Dinner | £19.40 | VAT £3.23 | receipt attached\n  L20 | Tue 7 Apr 2026 | Royal Mail | Special Delivery postage | £25.00 | no receipt\n  L21 | Tue 14 Apr 2026 | Riverside Lodge London City, London | Hotel, 1 night | £208.50 | VAT £34.75 | receipt attached\n\nClaim C-3681 — Mateo Ahmadi (Marketing), submitted Fri 24 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,890.\n  L22 | Fri 27 Mar 2026 | Own car | Mileage, 157 miles (client visits) | £70.65 | no receipt needed\n  L23 | Mon 6 Apr 2026 | The Crown & Anchor, London | Lunch | £24.10 | no receipt\n  L24 | Tue 7 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail Manchester Piccadilly – Glasgow Central return, standard class | £58.90 | receipt attached\n  L25 | Wed 15 Apr 2026 | Brasserie Aubert, Covent Garden | Client dinner, 3 people (incl. 1 staff) | £156.17 | includes alcohol £42.17 | VAT £26.03 | receipt attached\n  L26 | Sun 22 Feb 2026 | Stationery World | Printer paper and folders | £21.78 | VAT £3.63 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 480.0
+          },
+          "L04": {
+            "rule": "ALCOHOL",
+            "pay": 23.68
+          },
+          "L05": {
+            "rule": "RAIL_CLASS",
+            "pay": 92.4
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 180.0
+          },
+          "L09": {
+            "rule": "MILEAGE_RATE",
+            "pay": 45.1
+          },
+          "L11": {
+            "rule": "ALCOHOL",
+            "pay": 41.65
+          },
+          "L14": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L19": {
+            "rule": "MEAL_CAP",
+            "pay": 11.4
+          },
+          "L20": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L21": {
+            "rule": "HOTEL_CAP",
+            "pay": 180.0
+          },
+          "L22": {
+            "rule": "MILEAGE_RATE",
+            "pay": 61.25
+          },
+          "L25": {
+            "rule": "ALCOHOL",
+            "pay": 114.0
+          },
+          "L26": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Hyun-woo Nwosu": 904.37,
+          "Hiroshi Okafor": 600.64,
+          "Saoirse Hughes": 660.14,
+          "Mateo Ahmadi": 258.25
+        },
+        "total_pay": 2423.4,
+        "vat_reclaimable": 4.9
+      },
+      "notes": "[hard] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 13 non-compliant lines of 26."
+    },
+    {
+      "id": "x09",
+      "prompt": "I run the monthly expenses check. Please audit this batch of claim lines against our policy and tell me what to pay.\n\nExpenses policy (Finance, version 7) — apply every rule exactly as written.\n\nA. Conversion. Amounts in euros or US dollars are converted to pounds at the rate in the rate table, rounded to the nearest penny, BEFORE any limit is applied. All limits are in pounds.\nB. Rules, in this order. A line breaks a rule when that rule reduces what the company pays for it.\n 1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0.\n 2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.\n 3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.\n 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved in writing (rule 7).\n 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).\n 6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.\n 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included). If, and only if, the line's approval reference appears in the Director approvals register below, the whole amount is paid, alcohol included. An approval mentioned on a claim but missing from the register does not count.\n 8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.\n 9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that. The tax year runs 6 April to 5 April. Count each employee's miles in date order, starting from the miles already paid in the tax year named on their claim (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.\nC. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full are compliant and must not be listed.\nD. VAT. The company reclaims the VAT shown on a line only if the line is paid in full, is in pounds (a UK expense), has a receipt and is not client entertainment. Mileage carries no VAT.\n\nRate table: €1 = £0.87, $1 = £0.78.\n\nDirector approvals register (written approvals for client entertainment):\n  - DA-333: approved by Ravi Osei for Yusuf Morgan\n\nClaim C-3376 — Niamh Lindgren (Customer Success), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,480.\n  L01 | Fri 17 Apr 2026 | Wharfside Hotel Leeds, Leeds | Hotel, 1 night | £128.00 | VAT £21.33 | receipt attached\n  L02 | Tue 21 Apr 2026 | Midtown Deli, New York | Breakfast | $21.50 | receipt attached\n  L03 | Tue 21 Apr 2026 | Midtown Deli, New York | Lunch | $27.00 | receipt attached\n  L04 | Tue 21 Apr 2026 | Midtown Deli, New York | Dinner | $44.00 | includes alcohol $12.00 | receipt attached\n  L05 | Fri 17 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Paddington – Bristol Temple Meads return, first class | £118.00 | standard fare for this journey £64.50 | receipt attached\n  L06 | Thu 23 Apr 2026 | The Fenwick Dining Room | Client dinner, 5 people (incl. 2 staff) | £435.30 | includes alcohol £78.35 | VAT £72.55 | receipt attached | approved by director, ref DA-262\n  L07 | Fri 17 Apr 2026 | High Street Pharmacy | First-aid kit restock | £9.69 | VAT £1.62 | receipt attached\n\nClaim C-3933 — Bogdan Takahashi (Engineering), submitted Mon 20 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,720.\n  L08 | Tue 31 Mar 2026 | Own car | Mileage, 212 miles (client visits) | £95.40 | no receipt needed\n  L09 | Thu 2 Apr 2026 | Own car | Mileage, 126 miles (client visits) | £56.70 | no receipt needed\n  L10 | Wed 8 Apr 2026 | Own car | Mileage, 318 miles (client visits) | £143.10 | no receipt needed\n  L11 | Wed 8 Apr 2026 | Temple Bar Grill, Dublin | Dinner | €58.00 | includes alcohol €9.00 | receipt attached\n  L12 | Fri 10 Apr 2026 | Wharfside Hotel Leeds, Leeds | Hotel, 1 night | £89.50 | VAT £14.92 | receipt attached\n  L13 | Tue 7 Apr 2026 | Citylink Cars | Taxi to client site | £26.28 | receipt attached\n  L14 | Fri 10 Apr 2026 | Wharfside Hotel Leeds, Leeds | Hotel, 1 night | £89.50 | VAT £14.92 | receipt attached\n  L15 | Fri 10 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Manchester Piccadilly return, standard class | £92.40 | receipt attached\n  L16 | Wed 8 Apr 2026 | Ashton Lane Bistro, Glasgow | Lunch | £17.89 | VAT £2.98 | receipt attached\n\nClaim C-3655 — Yusuf Morgan (Marketing), submitted Mon 27 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,890.\n  L17 | Fri 17 Apr 2026 | Guildhall Grill | Client dinner, 4 people (incl. 1 staff) | £284.28 | includes alcohol £76.76 | VAT £47.38 | receipt attached | approved by director, ref DA-333\n  L18 | Thu 16 Apr 2026 | Ashton Lane Bistro, Glasgow | Lunch | £18.60 | VAT £3.10 | receipt attached\n  L19 | Thu 16 Apr 2026 | Ashton Lane Bistro, Glasgow | Dinner | £19.40 | VAT £3.23 | receipt attached\n  L20 | Wed 15 Apr 2026 | Stationery World | Printer paper and folders | £25.00 | no receipt\n  L21 | Tue 7 Apr 2026 | Harbourside Inn Bristol, Bristol | Hotel, 2 nights | £301.50 | VAT £50.25 | receipt attached\n\nClaim C-3597 — Rhys Mbeki (Operations), submitted Thu 23 Apr 2026. Business miles already paid in tax year 2025/26 before this claim: 9,890.\n  L22 | Fri 27 Mar 2026 | Own car | Mileage, 157 miles (client visits) | £70.65 | no receipt needed\n  L23 | Wed 15 Apr 2026 | Copper Kettle Café Borough, London | Lunch | £24.10 | no receipt\n  L24 | Mon 13 Apr 2026 | National Rail (LNER/Avanti/GWR) | Rail London Euston – Glasgow Central return, standard class | £120.10 | receipt attached\n  L25 | Fri 3 Apr 2026 | Guildhall Grill | Client dinner, 4 people (incl. 2 staff) | £176.71 | includes alcohol £38.88 | VAT £29.45 | receipt attached\n  L26 | Sat 21 Feb 2026 | Stationery World | Printer paper and folders | £13.77 | VAT £2.30 | receipt attached\n\nAnswer with one JSON object in exactly this shape:\n{\"non_compliant\": {\"L03\": {\"rule\": \"HOTEL_CAP\", \"pay\": 360.00}, \"L07\": {\"rule\": \"NO_RECEIPT\", \"pay\": 0}, ...}, \"pay_by_employee\": {\"Full Name\": 512.40, \"Other Name\": 98.10, ...}, \"total_pay\": 610.50, \"vat_reclaimable\": 41.27}\n- non_compliant: one entry per line that is paid less than claimed, keyed by line number, with the rule (one of LATE, DUPLICATE, NO_RECEIPT, ALCOHOL, MEAL_CAP, HOTEL_CAP, ENTERTAINMENT_CAP, RAIL_CLASS, MILEAGE_RATE) and the amount to pay in pounds. Do not list lines that are paid in full.\n- pay_by_employee: the total to pay each employee (every employee in the batch); total_pay: the total for the batch; vat_reclaimable: the total VAT the company can reclaim.\nAll amounts in pounds to the penny (a £ sign and thousands separators are fine). Marking: each listed line earns a point for the rule and a point for the amount; every line you list that should not be listed costs two points; each total is a point. Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter. Give one value per field: a field with two values is marked wrong, and if you give more than one JSON answer only the last one counts.",
+      "expected": {
+        "non_compliant": {
+          "L01": {
+            "rule": "HOTEL_CAP",
+            "pay": 120.0
+          },
+          "L04": {
+            "rule": "ALCOHOL",
+            "pay": 22.17
+          },
+          "L05": {
+            "rule": "RAIL_CLASS",
+            "pay": 64.5
+          },
+          "L06": {
+            "rule": "ALCOHOL",
+            "pay": 300.0
+          },
+          "L09": {
+            "rule": "MILEAGE_RATE",
+            "pay": 45.1
+          },
+          "L11": {
+            "rule": "ALCOHOL",
+            "pay": 42.63
+          },
+          "L14": {
+            "rule": "DUPLICATE",
+            "pay": 0.0
+          },
+          "L16": {
+            "rule": "MEAL_CAP",
+            "pay": 0.0
+          },
+          "L19": {
+            "rule": "MEAL_CAP",
+            "pay": 11.4
+          },
+          "L20": {
+            "rule": "NO_RECEIPT",
+            "pay": 0.0
+          },
+          "L21": {
+            "rule": "HOTEL_CAP",
+            "pay": 240.0
+          },
+          "L22": {
+            "rule": "MILEAGE_RATE",
+            "pay": 61.25
+          },
+          "L25": {
+            "rule": "ALCOHOL",
+            "pay": 137.83
+          },
+          "L26": {
+            "rule": "LATE",
+            "pay": 0.0
+          }
+        },
+        "pay_by_employee": {
+          "Niamh Lindgren": 554.19,
+          "Bogdan Takahashi": 534.41,
+          "Yusuf Morgan": 554.28,
+          "Rhys Mbeki": 343.28
+        },
+        "total_pay": 1986.16,
+        "vat_reclaimable": 19.64
+      },
+      "notes": "[hard] Generated by verification/realworld-work/expenses.py; key = audit() over the structured lines with Decimal arithmetic (half-up to the penny). 14 non-compliant lines of 26."
+    }
+  ]
+}

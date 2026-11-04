@@ -105,6 +105,10 @@ export function answerForViewer(test: PromptTest, c: PromptTestCase): { answer: 
     }
     case 'regex':
       return null;
+    case 'sql': {
+      const x = e as { reference?: string } | undefined;
+      return x?.reference ? { answer: short(x.reference, 600), note: 'A reference query: any query that returns the same rows scores, on the live database and on hidden copies.' } : null;
+    }
     case 'contains': {
       const x = e as { all?: string[] } | undefined;
       return x?.all?.length ? { answer: x.all.join(', '), note: 'Every one of these must be mentioned.' } : null;
