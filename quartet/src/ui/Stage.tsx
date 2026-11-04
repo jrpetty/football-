@@ -4,7 +4,9 @@
 
 import type { Run } from '../engine/engine.ts'
 import type { Person } from '../engine/types.ts'
+import { useRef } from 'react'
 import { Figure, Face, mix } from './Figure.tsx'
+import { Backdrop } from './Backdrop.tsx'
 
 const W = 1000, H = 620
 
@@ -28,6 +30,12 @@ function hourOf(clock: string): number | null {
 
 export function Stage({ run, selected, onSelect, now }: { run: Run; selected: number | null; onSelect: (id: number) => void; now: number }) {
   const sc = run.sc
+  const moved = useRef(new Map<number, { place: string; at: number; from: number }>())
+  for (const p of run.people) {
+    const m = moved.current.get(p.id)
+    if (!m) moved.current.set(p.id, { place: p.place, at: 0, from: 0 })
+    else if (m.place !== p.place) { m.from = m.place === '' ? 0 : 1; m.place = p.place; m.at = now }
+  }
   const h = hourOf(run.clock)
   const night = sc.theme.night && h !== null ? (h < 6 || h >= 20 ? 0.55 : h < 7.5 ? 0.3 : h >= 18.5 ? 0.25 : 0) : 0
   const lastSpeaker = [...run.lines].reverse().find((l) => l.kind === 'say')?.who
@@ -44,42 +52,43 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
   }
   return (
     <div className="stage" style={{ aspectRatio: `${W} / ${H}` }}>
+      <Backdrop sc={sc} night={night} />
       <svg viewBox={`0 0 ${W} ${H}`} className="stage-svg" preserveAspectRatio="xMidYMid slice">
         <defs>
-          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={sc.theme.sky[0]} />
-            <stop offset="1" stopColor={sc.theme.sky[1]} />
-          </linearGradient>
-          <filter id="soft"><feDropShadow dx="0" dy="6" stdDeviation="8" floodOpacity="0.25" /></filter>
+          <filter id="soft"><feDropShadow dx="0" dy="8" stdDeviation="10" floodOpacity="0.3" /></filter>
+          <filter id="propshadow"><feDropShadow dx="2" dy="5" stdDeviation="3" floodOpacity="0.35" /></filter>
         </defs>
-        <rect width={W} height={H} fill="url(#sky)" />
-        <rect y={H * 0.48} width={W} height={H * 0.52} fill={mix(sc.theme.ground, '#000000', 0.12)} />
         {sc.places.map((pl) => {
           const glow = run.people.some((p) => p.place === pl.id && p.id === selected)
+          const tc = tint(pl.id)
           return (
-            <g key={pl.id} filter="url(#soft)">
-              <rect x={pl.x} y={pl.y} width={pl.w} height={pl.h} rx="22" fill={mix(mix(sc.theme.ground, tint(pl.id), 0.18), "#ffffff", 0.06)} stroke={glow ? sc.theme.accent : 'rgba(255,255,255,0.35)'} strokeWidth={glow ? 3 : 1.5} />
-              <rect x={pl.x + 8} y={pl.y + pl.h * 0.62} width={pl.w - 16} height={pl.h * 0.38 - 8} rx="16" fill="rgba(0,0,0,0.08)" />
-              <rect x={pl.x} y={pl.y} width={pl.w} height={30} rx="14" fill={mix(sc.theme.ground, '#000000', 0.18)} opacity="0.7" />
-              <text x={pl.x + 16} y={pl.y + 21} fontSize="15" fontWeight="700" fill="#fff" style={{ fontFamily: 'Inter, sans-serif' }}>{pl.name}</text>
+            <g key={pl.id}>
+              <rect x={pl.x} y={pl.y} width={pl.w} height={pl.h} rx="26" fill={mix(tc, '#ffffff', 0.55)} fillOpacity="0.16" stroke={glow ? sc.theme.accent : 'rgba(255,255,255,0.45)'} strokeWidth={glow ? 3.5 : 1.6} strokeDasharray={glow ? undefined : '10 8'} filter="url(#soft)" />
+              <ellipse cx={pl.x + pl.w / 2} cy={pl.y + pl.h * 0.84} rx={pl.w * 0.42} ry={pl.h * 0.1} fill="rgba(0,0,0,0.12)" />
+              <g transform={`translate(${pl.x + 14} ${pl.y + 12})`}>
+                <rect width={pl.name.length * 8.6 + 22} height="26" rx="13" fill="rgba(12,14,24,0.72)" />
+                <circle cx="13" cy="13" r="4.5" fill={tc} />
+                <text x="23" y="18" fontSize="13.5" fontWeight="700" fill="#fff" style={{ fontFamily: 'Inter, sans-serif' }}>{pl.name}</text>
+              </g>
               {pl.props.map((e, k) => {
-                // props stand along the back wall, spread evenly with a little jitter
                 const n = pl.props.length
-                const x = pl.x + (pl.w * (k + 0.5)) / n - 16 + (hash(pl.id + k) - 0.5) * 20
-                const y = pl.y + 70 + hash(pl.id + 'y' + k) * Math.max(10, pl.h * 0.22)
-                return <text key={k} x={x} y={y} fontSize={26 + hash(e + k) * 14} opacity="0.95">{e}</text>
+                const x = pl.x + (pl.w * (k + 0.5)) / n - 20 + (hash(pl.id + k) - 0.5) * 24
+                const y = pl.y + 84 + hash(pl.id + 'y' + k) * Math.max(10, pl.h * 0.2)
+                return <text key={k} x={x} y={y} fontSize={34 + hash(e + k) * 16} filter="url(#propshadow)">{e}</text>
               })}
             </g>
           )
         })}
-        {night > 0 && <rect width={W} height={H} fill="#0a1030" opacity={night} style={{ transition: 'opacity 2s' }} pointerEvents="none" />}
       </svg>
       {run.people.map((p, i) => {
         const s = slots.get(p.id) ?? { x: W / 2, y: H / 2, k: 0 }
         const speaking = p.lastSay !== '' && now < p.bubbleUntil
         const gone = p.health <= 0
+        const mv = moved.current.get(p.id)
+        const walking = !!mv && mv.at > 0 && now - mv.at < 1700
+        const working = !!p.lastAction && !['rested', 'talked', 'moved'].includes(p.lastAction) && now < p.emoteUntil + 2500
         return (
-          <div key={p.id} className={`actor ${selected === p.id ? 'sel' : ''} ${p.thinking ? 'thinking' : ''}`}
+          <div key={p.id} className={`actor ${selected === p.id ? 'sel' : ''} ${walking ? 'walking' : ''}`}
             style={{ left: `${(s.x / W) * 100}%`, top: `${(s.y / H) * 100}%`, ['--c' as string]: COLORS[i % 4] }}
             onClick={() => onSelect(p.id)}>
             {speaking && (
@@ -89,7 +98,7 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
             )}
             {!speaking && p.thinking && <div className="thinking-dots"><span /><span /><span /></div>}
             {now < p.emoteUntil && <div className="emote">{p.emote}</div>}
-            <div className="actor-body"><Figure p={p} speaking={speaking} working={!!p.lastAction && p.lastAction !== 'rested' && p.lastAction !== 'talked'} gone={gone} /></div>
+            <div className="actor-body"><Figure p={p} scenario={sc.id} talking={speaking} walking={walking} working={working} gone={gone} /></div>
             <div className="actor-name">{p.name}</div>
           </div>
         )
@@ -101,10 +110,10 @@ export function Stage({ run, selected, onSelect, now }: { run: Run; selected: nu
 /** A round head-and-shoulders portrait. */
 export function Portrait({ p, size = 44, color }: { p: Person; size?: number; color: string }) {
   return (
-    <svg viewBox="18 0 64 64" width={size} height={size} style={{ flex: 'none', borderRadius: '50%', background: `radial-gradient(circle at 50% 35%, ${mix(color, '#ffffff', 0.3)}, ${mix(color, '#0b1020', 0.5)})`, filter: p.health <= 0 ? 'grayscale(1)' : undefined }}>
-      <path d="M24 64 Q26 48 50 47 Q74 48 76 64 Z" fill={p.look.top} />
-      <rect x="45" y="42" width="10" height="8" rx="3" fill="#00000022" />
-      <Face p={p} />
+    <svg viewBox="22 4 76 76" width={size} height={size} style={{ flex: 'none', borderRadius: '50%', background: `radial-gradient(circle at 50% 35%, ${mix(color, '#ffffff', 0.3)}, ${mix(color, '#0b1020', 0.5)})`, filter: p.health <= 0 ? 'grayscale(1)' : undefined }}>
+      <path d="M20 84 Q24 66 60 64 Q96 66 100 84 Z" fill={p.look.top} stroke="#1e1a26" strokeWidth="1.5" />
+      <path d="M53 58 L67 58 L66 68 L54 68 Z" fill="#00000030" />
+      <g transform="translate(0 4)"><Face p={p} uid={`pt${p.id}s${size}`} /></g>
     </svg>
   )
 }

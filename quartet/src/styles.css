@@ -95,15 +95,15 @@ a { color: inherit; }
 .cost { color: var(--muted); font-size: 12px; min-width: 70px; }
 .play-main { flex: 1; display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
 .stage-wrap { position: relative; display: flex; flex-direction: column; padding: 12px; gap: 10px; min-height: 0; overflow: auto; }
-.stage { position: relative; width: 100%; max-height: calc(100vh - 230px); border-radius: 18px; overflow: visible; }
+.stage { position: relative; width: 100%; max-height: calc(100vh - 230px); border-radius: 18px; overflow: visible; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
 .stage-svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 18px; }
-.actor { position: absolute; width: 8.5%; transform: translate(-50%, -88%); transition: left 1.6s cubic-bezier(.5,.1,.3,1), top 1.6s cubic-bezier(.5,.1,.3,1); cursor: pointer; z-index: 2; }
-.actor-body { aspect-ratio: 100 / 160; transition: transform 0.2s; }
+.actor { position: absolute; width: 7.6%; transform: translate(-50%, -94%); transition: left 1.6s cubic-bezier(.5,.1,.3,1), top 1.6s cubic-bezier(.5,.1,.3,1); cursor: pointer; z-index: 2; }
+.actor-body { aspect-ratio: 120 / 240; transition: transform 0.2s; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.25)); }
 .actor:hover .actor-body { transform: scale(1.06); }
-.actor.sel .actor-body { filter: drop-shadow(0 0 8px var(--c)); }
+.actor.sel .actor-body { filter: drop-shadow(0 0 10px var(--c)) drop-shadow(0 6px 6px rgba(0,0,0,0.25)); }
 .actor.thinking .actor-body { animation: think 1.2s ease-in-out infinite; }
 @keyframes think { 50% { transform: translateY(-3px); } }
-.actor-name { text-align: center; font-weight: 800; font-size: 12px; margin-top: 2px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); border-bottom: 3px solid var(--c); border-radius: 2px; }
+.actor-name { text-align: center; font-weight: 800; font-size: 12px; margin: 2px auto 0; color: #fff; background: rgba(10,12,22,0.7); border-radius: 999px; padding: 1px 8px; width: max-content; border-bottom: 2px solid var(--c); }
 .bubble { position: absolute; bottom: 104%; left: 50%; transform: translateX(-50%); width: max-content; max-width: 230px; background: #fff; color: #1b2030; border-radius: 14px; padding: 8px 11px; font-size: 12.5px; line-height: 1.35; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35); border-top: 3px solid var(--c); animation: pop 0.3s ease; z-index: 3; }
 .bubble.latest { z-index: 4; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--c); }
 .bubble::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -7px; border: 7px solid transparent; border-top-color: #fff; }
@@ -182,6 +182,7 @@ a { color: inherit; }
 .prow-head { display: flex; justify-content: space-between; cursor: pointer; }
 
 @media (max-width: 1000px) {
+  .actor { width: 10%; }
   .play { height: auto; min-height: 100vh; overflow: visible; }
   .play-main { grid-template-columns: 1fr; }
   .side { border-left: 0; border-top: 1px solid var(--border); max-height: 70vh; }
@@ -191,3 +192,105 @@ a { color: inherit; }
   .actor { width: 11%; }
   .bubble { max-width: 160px; font-size: 11px; }
 }
+
+/* ---------------------------------------------------------------- figure animation rig */
+.fig g { transform-box: view-box; }
+.fig .body { transform-origin: 60px 234px; animation: breathe 3.4s ease-in-out infinite var(--d, 0s); }
+.fig .head { animation: look 7s ease-in-out infinite var(--d, 0s); }
+.fig .arm.l { animation: armIdleL 3.4s ease-in-out infinite var(--d, 0s); }
+.fig .arm.r { animation: armIdleR 3.4s ease-in-out infinite var(--d, 0s); }
+@keyframes breathe { 50% { transform: translateY(-1.2px) scaleY(1.008); } }
+@keyframes look { 0%, 40%, 100% { transform: rotate(0); } 50%, 62% { transform: rotate(-5deg); } 72%, 84% { transform: rotate(4deg); } }
+@keyframes armIdleL { 50% { transform: rotate(3deg); } }
+@keyframes armIdleR { 50% { transform: rotate(-3deg); } }
+
+/* walking: knee lifts, bob, sway, counter-swinging arms */
+.fig.walking .body { animation: walkBob 0.32s ease-in-out infinite alternate; }
+.fig.walking .leg.l { animation: stepL 0.64s ease-in-out infinite; }
+.fig.walking .leg.r { animation: stepL 0.64s ease-in-out infinite -0.32s; }
+.fig.walking .leg .shin { animation: knee 0.64s ease-in-out infinite; }
+.fig.walking .leg.r .shin { animation-delay: -0.32s; }
+.fig.walking .arm.l { animation: swingL 0.64s ease-in-out infinite; }
+.fig.walking .arm.r { animation: swingR 0.64s ease-in-out infinite; }
+.fig.walking .head { animation: none; }
+@keyframes walkBob { from { transform: translateY(0) rotate(-1.5deg); } to { transform: translateY(-4px) rotate(1.5deg); } }
+@keyframes stepL { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(-9px) rotate(-3deg); } 50% { transform: translateY(0); } }
+@keyframes knee { 0%, 100% { transform: scaleY(1); } 25% { transform: scaleY(0.82); } }
+@keyframes swingL { 0%, 100% { transform: rotate(9deg); } 50% { transform: rotate(-7deg); } }
+@keyframes swingR { 0%, 100% { transform: rotate(7deg); } 50% { transform: rotate(-9deg); } }
+
+/* talking: the hands do half the work */
+.fig.talking .arm.r { animation: gesture 1.7s ease-in-out infinite var(--d, 0s); }
+.fig.talking .arm.r .fore { animation: gestureFore 1.7s ease-in-out infinite var(--d, 0s); }
+.fig.talking .arm.l { animation: gestureL 2.3s ease-in-out infinite var(--d, 0s); }
+.fig.talking .arm.l .fore { animation: gestureLFore 2.3s ease-in-out infinite var(--d, 0s); }
+.fig.talking .head { animation: nod 1.1s ease-in-out infinite; }
+@keyframes gesture { 0%, 100% { transform: rotate(-8deg); } 30% { transform: rotate(-26deg); } 60% { transform: rotate(-14deg); } }
+@keyframes gestureFore { 0%, 100% { transform: rotate(-22deg); } 30% { transform: rotate(-62deg); } 60% { transform: rotate(-36deg); } }
+@keyframes gestureL { 0%, 100% { transform: rotate(4deg); } 45% { transform: rotate(16deg); } }
+@keyframes gestureLFore { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(35deg); } }
+@keyframes nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(3deg) translateY(1px); } 70% { transform: rotate(-2deg); } }
+
+/* working: hammering, scrubbing, typing — a strong repeated stroke */
+.fig.working .arm.r { animation: workArm 0.75s cubic-bezier(.6,0,.4,1) infinite var(--d, 0s); }
+.fig.working .arm.r .fore { animation: workFore 0.75s cubic-bezier(.6,0,.4,1) infinite var(--d, 0s); }
+.fig.working .arm.l { transform: rotate(12deg); animation: none; }
+.fig.working .arm.l .fore { transform: rotate(48deg); }
+.fig.working .body { animation: workBody 0.75s ease-in-out infinite var(--d, 0s); }
+@keyframes workArm { 0%, 100% { transform: rotate(-58deg); } 55% { transform: rotate(-12deg); } }
+@keyframes workFore { 0%, 100% { transform: rotate(-100deg); } 55% { transform: rotate(-25deg); } }
+@keyframes workBody { 55% { transform: translateY(2px) rotate(1deg); } }
+
+/* thinking (an AI mind is mid-thought): hand to chin, head tilted */
+.fig.pondering .arm.r { transform: rotate(26deg); animation: none; }
+.fig.pondering .arm.r .fore { transform: rotate(146deg); }
+.fig.pondering .arm.l { transform: rotate(-16deg); animation: none; }
+.fig.pondering .arm.l .fore { transform: rotate(-80deg); }
+.fig.pondering .head { animation: ponder 2.4s ease-in-out infinite; }
+@keyframes ponder { 50% { transform: rotate(7deg); } }
+
+/* feelings */
+.fig.happy .body { animation: bounce 0.9s ease-in-out infinite var(--d, 0s); }
+.fig.happy .arm.l { transform: rotate(14deg); }
+.fig.happy .arm.r { transform: rotate(-14deg); }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
+.fig.sad .head, .fig.tired .head { transform: rotate(9deg) translateY(4px); animation: none; }
+.fig.sad .body, .fig.tired .body { transform: translateY(4px); animation: breathe 5s ease-in-out infinite; }
+.fig.sad .arm.l { transform: rotate(-4deg); animation: none; }
+.fig.sad .arm.r { transform: rotate(4deg); animation: none; }
+.fig.tired .arm.l { transform: rotate(-2deg); animation: none; }
+.fig.tired .arm.r { transform: rotate(2deg); animation: none; }
+.fig.angry .arm.l { transform: rotate(30deg); animation: none; }
+.fig.angry .arm.l .fore { transform: rotate(-82deg); }
+.fig.angry .arm.r { transform: rotate(-30deg); animation: none; }
+.fig.angry .arm.r .fore { transform: rotate(82deg); }
+.fig.angry .body { animation: seethe 0.18s linear infinite; }
+@keyframes seethe { 50% { transform: translateX(0.6px); } }
+.fig.scared .arm.l { transform: rotate(18deg); animation: none; }
+.fig.scared .arm.l .fore { transform: rotate(-145deg); }
+.fig.scared .arm.r { transform: rotate(-18deg); animation: none; }
+.fig.scared .arm.r .fore { transform: rotate(145deg); }
+.fig.scared .body { animation: tremble 0.12s linear infinite; }
+@keyframes tremble { 25% { transform: translateX(-0.7px); } 75% { transform: translateX(0.7px); } }
+.fig.gone .body { transform: rotate(-84deg) translate(-40px, 30px); animation: none; opacity: 0.55; }
+.fig.gone .head, .fig.gone .arm { animation: none; }
+
+/* ---------------------------------------------------------------- stage backdrop */
+.backdrop-svg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 18px; }
+.cloud { animation: drift linear infinite; }
+@keyframes drift { from { transform: translateX(-260px); } to { transform: translateX(1260px); } }
+.wave { animation: wave 6s ease-in-out infinite; }
+@keyframes wave { 50% { transform: translateX(-30px) translateY(3px); } }
+.twinkle { animation: twinkle 3s ease-in-out infinite; }
+@keyframes twinkle { 50% { opacity: 0.2; } }
+.aurora { animation: aurora 9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes aurora { 50% { transform: skewX(12deg) scaleY(1.15); opacity: 0.55; } }
+.flicker { animation: flicker 4s steps(2) infinite; }
+@keyframes flicker { 50% { opacity: 0.35; } }
+.fall { animation: fall linear infinite; }
+@keyframes fall { from { transform: translateY(-40px); } to { transform: translateY(660px); } }
+.roaddash { animation: road 1.2s linear infinite; }
+@keyframes road { to { transform: translateX(-80px); } }
+.sway { animation: sway 5s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom center; }
+@keyframes sway { 50% { transform: rotate(3deg); } }
+.actor.walking { z-index: 3; }

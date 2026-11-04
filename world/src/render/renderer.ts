@@ -11,7 +11,8 @@ import { daylight, hourOf } from '../sim/time.ts'
 import { hash2, clamp, smoothstep, Noise2D } from '../sim/rng.ts'
 import type { World } from '../sim/world.ts'
 import type { Agent, Building } from '../sim/types.ts'
-import { featureSprite, buildingSprite, SPR, shade } from './sprites.ts'
+import { featureSprite, buildingSprite, SPR } from './sprites.ts'
+import { drawPerson, drawCreature } from './people.ts'
 
 export const TP = 16 // screen px per tile at zoom 1
 const CHUNK = 32
@@ -31,14 +32,12 @@ interface Chunk {
 const warpNoise = new Noise2D(9001)
 const edgeNoise = new Noise2D(4242)
 
-const SKIN = ['#f1c9a5', '#e0ac7e', '#c68a5a', '#9c6b43', '#7a4f30', '#5a3a24']
-const HAIR = ['#2b1d14', '#4a2f1d', '#7a4a24', '#b07a3a', '#d8b46a', '#1a1a1a', '#8a3a24']
 
 export class Renderer {
   canvas: HTMLCanvasElement
   ctx: CanvasRenderingContext2D
   world: World
-  cam = { x: 0, y: 0, zoom: 1.4 }
+  cam = { x: 0, y: 0, zoom: 2.3 }
   target: { x: number; y: number; zoom: number } | null = null
   dpr = 1
   vw = 0
@@ -126,7 +125,7 @@ export class Renderer {
     this.clampCam()
   }
   flyTo(x: number, y: number, zoom?: number) {
-    this.target = { x, y, zoom: zoom ?? Math.max(this.cam.zoom, 1.6) }
+    this.target = { x, y, zoom: zoom ?? Math.max(this.cam.zoom, 2.4) }
   }
   private clampCam() {
     this.cam.x = clamp(this.cam.x, 0, this.world.W)
@@ -186,10 +185,12 @@ export class Renderer {
     return [r, g, bl, snow]
   }
 
-  private renderChunk(cx: number, cy: number): HTMLCanvasElement {
+  private renderChunk(cx: number, cy: number, live = false): HTMLCanvasElement {
+    // close up, terrain is painted at double density so it stays crisp
+    const tp = live ? TP * 2 : TP
     const w = this.world
     const season = w.season
-    const PX = CHUNK * TP
+    const PX = CHUNK * tp
     const c = document.createElement('canvas')
     c.width = PX
     c.height = PX
@@ -241,8 +242,8 @@ export class Renderer {
         const dxw = warpX[g00] * b00 + warpX[g10] * b10 + warpX[g01] * b01 + warpX[g11] * b11
         const dyw = warpY[g00] * b00 + warpY[g10] * b10 + warpY[g01] * b01 + warpY[g11] * b11
         const en = edgeN[g00] * b00 + edgeN[g10] * b10 + edgeN[g01] * b01 + edgeN[g11] * b11
-        const vx = clamp((px + 0.5) / TP + 0.5 + dxw, 0, M - 1.001)
-        const vy = clamp((py + 0.5) / TP + 0.5 + dyw, 0, M - 1.001)
+        const vx = clamp((px + 0.5) / tp + 0.5 + dxw, 0, M - 1.001)
+        const vy = clamp((py + 0.5) / tp + 0.5 + dyw, 0, M - 1.001)
         const tx0 = Math.floor(vx), ty0 = Math.floor(vy)
         const fx = vx - tx0, fy = vy - ty0
         const a = ty0 * M + tx0
@@ -292,7 +293,7 @@ export class Renderer {
       if (!w.inBounds(gx, gy)) continue
       const rv = w.road[gx + gy * w.W]
       if (!rv) continue
-      const px = (tx + 0.5) * TP, py = (ty + 0.5) * TP
+      const px = (tx + 0.5) * tp, py = (ty + 0.5) * tp
       ctx.strokeStyle = rv === 2 ? '#5b5650' : '#a8906a'
       ctx.lineWidth = rv === 2 ? 7 : 6
       ctx.lineCap = 'round'
@@ -300,7 +301,7 @@ export class Renderer {
       for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
         const nx = gx + dx, ny = gy + dy
         if (w.inBounds(nx, ny) && w.road[nx + ny * w.W]) {
-          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + dx * TP, py + dy * TP); ctx.stroke()
+          ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + dx * tp, py + dy * tp); ctx.stroke()
           any = true
         }
       }
@@ -311,7 +312,45 @@ export class Renderer {
       if (!any) { ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fillStyle = ctx.strokeStyle; ctx.fill() }
     }
 
-    // features (sorted by row so lower sprites overlap upper ones)
+    // painted ground detail: grass tufts, pebbles, sand ripples, snow glints
+    for (let ty = 0; ty < CHUNK; ty++) for (let tx = 0; tx < CHUNK; tx++) {
+      const gx = cx * CHUNK + tx, gy = cy * CHUNK + ty
+      if (!w.inBounds(gx, gy)) continue
+      const i = gx + gy * w.W
+      const b = w.biome[i]
+      if (BIOMES[b].water || w.road[i] || (w.occ[i] && w.buildingById.get(w.occ[i] - 1)?.type !== 'mine')) continue
+      const snowy = (season === 3 && w.temp[i] < 0.42) || b === B.SNOW || b === B.PEAK
+      const n = live ? 7 : 4
+      for (let k = 0; k < n; k++) {
+        const hx = hash2(gx * 7 + k, gy * 13, 21), hy = hash2(gx * 11, gy * 5 + k, 22)
+        const px = (tx + hx) * tp, py = (ty + hy) * tp
+        if (snowy) {
+          if (k < 2) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(px, py, tp * 0.06, tp * 0.06) }
+          continue
+        }
+        if (b === B.DESERT || b === B.BEACH) {
+          if (k < 2) { ctx.strokeStyle = 'rgba(160,120,70,0.25)'; ctx.lineWidth = tp * 0.04; ctx.beginPath(); ctx.moveTo(px, py); ctx.quadraticCurveTo(px + tp * 0.2, py - tp * 0.06, px + tp * 0.4, py); ctx.stroke() }
+          continue
+        }
+        if (b === B.MOUNTAIN || b === B.HILLS || b === B.TUNDRA) {
+          if (k < 3) { ctx.fillStyle = k % 2 ? 'rgba(70,64,58,0.35)' : 'rgba(230,226,215,0.3)'; ctx.beginPath(); ctx.ellipse(px, py, tp * 0.07, tp * 0.045, 0, 0, Math.PI * 2); ctx.fill() }
+          if (b !== B.HILLS) continue
+        }
+        // a little tuft of grass, darker at the root, catching light at the tips
+        const autumn = season === 2
+        const base = b === B.SAVANNA ? [150, 140, 60] : b === B.TAIGA ? [40, 80, 60] : autumn ? [140, 130, 60] : [60, 120, 50]
+        const len = tp * (0.12 + hx * 0.1)
+        ctx.lineWidth = Math.max(1, tp * 0.035)
+        for (let bl = -1; bl <= 1; bl++) {
+          ctx.strokeStyle = `rgba(${base[0] + bl * 12},${base[1] + 20 + bl * 10},${base[2]},${bl === 0 ? 0.55 : 0.4})`
+          ctx.beginPath(); ctx.moveTo(px + bl * tp * 0.03, py); ctx.quadraticCurveTo(px + bl * tp * 0.06, py - len * 0.6, px + bl * tp * 0.09 + hy * tp * 0.04, py - len); ctx.stroke()
+        }
+      }
+    }
+
+    // features (sorted by row so lower sprites overlap upper ones). Close up,
+    // they are drawn live instead — crisp, swaying, and sorted with people.
+    if (live) return c
     ctx.imageSmoothingEnabled = true
     for (let ty = -1; ty <= CHUNK + 1; ty++) for (let tx = -1; tx <= CHUNK; tx++) {
       const gx = cx * CHUNK + tx, gy = cy * CHUNK + ty
@@ -328,24 +367,29 @@ export class Renderer {
       const s = featureSprite(f, v, season, empty)
       if (!s) continue
       const jx = (hash2(gx, gy, 5) - 0.5) * 5, jy = (hash2(gx, gy, 6) - 0.5) * 3
-      const k = TP / SPR
-      ctx.drawImage(s.img, tx * TP + s.ox * k + jx, ty * TP + s.oy * k + jy, s.img.width * k, s.img.height * k)
+      const k = tp / SPR
+      ctx.drawImage(s.img, tx * tp + s.ox * k + jx, ty * tp + s.oy * k + jy, (s.img.width / s.res) * k, (s.img.height / s.res) * k)
     }
     return c
   }
 
-  private getChunk(cx: number, cy: number, budget: { n: number }): HTMLCanvasElement | null {
-    const key = (cy << 8) | cx
+  private stale = new Set<number>()
+  private getChunk(cx: number, cy: number, budget: { n: number }, live = false): HTMLCanvasElement | null {
+    const base = (cy << 8) | cx
+    if (this.world.dirtyChunks.has(base)) {
+      this.world.dirtyChunks.delete(base)
+      this.stale.add(base * 2)
+      this.stale.add(base * 2 + 1)
+    }
+    const key = base * 2 + (live ? 1 : 0)
     const ch = this.chunks.get(key)
-    const dirty = this.world.dirtyChunks.has(key)
-    if (ch && !dirty) return ch.canvas
+    if (ch && !this.stale.has(key)) { ch.stamp = this.frame; return ch.canvas }
     if (budget.n <= 0) return ch ? ch.canvas : null
     budget.n--
-    const c = this.renderChunk(cx, cy)
-    this.world.dirtyChunks.delete(key)
+    const c = this.renderChunk(cx, cy, live)
+    this.stale.delete(key)
     this.chunks.set(key, { canvas: c, stamp: this.frame })
-    if (this.chunks.size > 90) {
-      // evict the oldest
+    if (this.chunks.size > (live ? 40 : 80)) {
       let oldK = -1, oldS = Infinity
       for (const [k, v] of this.chunks) if (v.stamp < oldS && k !== key) { oldS = v.stamp; oldK = k }
       if (oldK >= 0) this.chunks.delete(oldK)
@@ -480,7 +524,8 @@ export class Renderer {
 
     // terrain chunks
     ctx.imageSmoothingEnabled = this.cam.zoom < 2.2
-    const budget = { n: 2 }
+    const live = S >= 26
+    const budget = { n: live ? 1 : 2 }
     const cx0 = Math.max(0, Math.floor(left / CHUNK)), cx1 = Math.min(Math.ceil(w.W / CHUNK) - 1, Math.floor(right / CHUNK))
     const cy0 = Math.max(0, Math.floor(top / CHUNK)), cy1 = Math.min(Math.ceil(w.H / CHUNK) - 1, Math.floor(bottom / CHUNK))
     // nearest chunks first so the centre paints before the edges
@@ -489,7 +534,7 @@ export class Renderer {
     const ccx = this.cam.x / CHUNK - 0.5, ccy = this.cam.y / CHUNK - 0.5
     order.sort((p, q) => Math.hypot(p[0] - ccx, p[1] - ccy) - Math.hypot(q[0] - ccx, q[1] - ccy))
     for (const [cx, cy] of order) {
-      const c = this.getChunk(cx, cy, budget)
+      const c = this.getChunk(cx, cy, budget, live) ?? (live ? this.chunks.get(((cy << 8) | cx) * 2)?.canvas ?? null : null)
       const sz = CHUNK * S
       if (c) ctx.drawImage(c, Math.floor(ox + cx * sz), Math.floor(oy + cy * sz), Math.ceil(sz) + 1, Math.ceil(sz) + 1)
       else {
@@ -501,7 +546,26 @@ export class Renderer {
     if (budget.n > 0) {
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         const cx = Math.floor(this.cam.x / CHUNK) + dx * 2, cy = Math.floor(this.cam.y / CHUNK) + dy * 2
-        if (cx >= 0 && cy >= 0 && cx * CHUNK < w.W && cy * CHUNK < w.H && budget.n > 0) this.getChunk(cx, cy, budget)
+        if (cx >= 0 && cy >= 0 && cx * CHUNK < w.W && cy * CHUNK < w.H && budget.n > 0) this.getChunk(cx, cy, budget, live)
+      }
+    }
+
+    // fade the edges of the world into open ocean rather than a hard line
+    {
+      const fade = 5 * S
+      const edges: [number, number, number, number, number, number, number, number][] = [
+        [ox, oy, w.W * S, fade, ox, oy, ox, oy + fade],
+        [ox, oy + w.H * S - fade, w.W * S, fade, ox, oy + w.H * S, ox, oy + w.H * S - fade],
+        [ox, oy, fade, w.H * S, ox, oy, ox + fade, oy],
+        [ox + w.W * S - fade, oy, fade, w.H * S, ox + w.W * S, oy, ox + w.W * S - fade, oy],
+      ]
+      for (const [x, y, ww, hh, x0, y0, x1, y1] of edges) {
+        if (x > this.vw || y > this.vh || x + ww < 0 || y + hh < 0) continue
+        const g = ctx.createLinearGradient(x0, y0, x1, y1)
+        g.addColorStop(0, '#10325f')
+        g.addColorStop(1, 'rgba(16,50,95,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(x, y, ww, hh)
       }
     }
 
@@ -534,7 +598,9 @@ export class Renderer {
       }
       if (this.terr) {
         ctx.imageSmoothingEnabled = true
+        ctx.globalAlpha = clamp(1.35 - this.cam.zoom * 0.28, 0.22, 1)
         ctx.drawImage(this.terr, ox, oy, w.W * S, w.H * S)
+        ctx.globalAlpha = 1
       }
     } else if (this.overlay !== 'none') {
       const sel = this.selectedTribeId()
@@ -575,6 +641,38 @@ export class Renderer {
       if (b.x + 2 < left - pad || b.x > right + pad || b.y + 2 < top - pad || b.y > bottom + pad) continue
       list.push({ y: b.y + BUILDINGS[b.type].size - (b.type === 'farm' || b.type === 'pasture' || b.type === 'road' ? 2 : 0), draw: () => this.drawBuilding(b, ox, oy, S, now) })
     }
+    if (live) {
+      const tsec = now / 1000
+      const wind = w.weather === 'storm' ? 3 : w.weather === 'rain' || w.weather === 'snow' ? 1.6 : 1
+      const x0 = Math.max(0, Math.floor(left) - 1), x1 = Math.min(w.W - 1, Math.ceil(right) + 1)
+      const y0 = Math.max(0, Math.floor(top) - 1), y1 = Math.min(w.H - 1, Math.ceil(bottom) + 2)
+      const season = w.season
+      for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+        const i = ty * w.W + tx
+        const f = w.feature[i]
+        if (!f) continue
+        if (w.occ[i]) { const bb = w.buildingById.get(w.occ[i] - 1); if (bb && bb.type !== 'mine') continue }
+        const v = Math.floor(hash2(tx, ty, 11) * 4)
+        const empty = (f === F.BUSH || f === F.FIBER) && w.amount[i] === 0
+        const spr = featureSprite(f, v, season, empty, 3)
+        if (!spr) continue
+        const tree = f >= F.TREE && f <= F.JUNGLE
+        const jx = (hash2(tx, ty, 5) - 0.5) * 5 / TP, jy = (hash2(tx, ty, 6) - 0.5) * 3 / TP
+        list.push({ y: ty + 0.82, draw: () => {
+          const k = S / SPR
+          const dw = (spr.img.width / spr.res) * k, dh = (spr.img.height / spr.res) * k
+          const px = ox + (tx + jx) * S + spr.ox * k, py = oy + (ty + jy) * S + spr.oy * k
+          const sway = tree || f === F.FIBER ? Math.sin(tsec * (1.1 + hash2(tx, ty, 3) * 0.6) + tx * 0.3 + ty * 0.2) * 0.03 * wind : 0
+          if (sway) {
+            ctx.save()
+            ctx.translate(px + dw / 2, py + dh * 0.92)
+            ctx.rotate(sway)
+            ctx.drawImage(spr.img, -dw / 2, -dh * 0.92, dw, dh)
+            ctx.restore()
+          } else ctx.drawImage(spr.img, px, py, dw, dh)
+        } })
+      }
+    }
     for (const an of w.animals) {
       if (!an.alive || an.x < left - 1 || an.x > right + 1 || an.y < top - 1 || an.y > bottom + 1) continue
       list.push({ y: an.y, draw: () => this.drawAnimal(an, ox, oy, S, now) })
@@ -589,14 +687,22 @@ export class Renderer {
     // selected agent: path + ring
     this.drawSelection(ox, oy, S, now)
 
-    // particles (smoke etc.)
+    // particles (smoke, chips, sparks, leaves) and ambient life
     this.updateParticles(dt, ox, oy, S)
+    this.drawAmbient(dt, ox, oy, S, now, left, right, top, bottom)
 
     // --- lighting
     this.drawLighting(ox, oy, S, now, left, right, top, bottom)
 
     // --- weather
     this.drawWeather(dt)
+
+    // --- a gentle cinematic grade: vignette
+    const vg = ctx.createRadialGradient(this.vw / 2, this.vh / 2, Math.min(this.vw, this.vh) * 0.35, this.vw / 2, this.vh / 2, Math.max(this.vw, this.vh) * 0.75)
+    vg.addColorStop(0, 'rgba(0,0,0,0)')
+    vg.addColorStop(1, 'rgba(5,8,20,0.42)')
+    ctx.fillStyle = vg
+    ctx.fillRect(0, 0, this.vw, this.vh)
 
     // --- labels & speech on top of everything
     this.drawLabels(ox, oy, S, now, left, right, top, bottom)
@@ -648,12 +754,12 @@ export class Renderer {
     const k = S / SPR
     if (!b.done) {
       ctx.globalAlpha = 0.35 + 0.5 * (b.progress / def.hours)
-      ctx.drawImage(spr.img, x + spr.ox * k, y + spr.oy * k, spr.img.width * k, spr.img.height * k)
+      ctx.drawImage(spr.img, x + spr.ox * k, y + spr.oy * k, (spr.img.width / spr.res) * k, (spr.img.height / spr.res) * k)
       ctx.globalAlpha = 1
       this.drawScaffold(b, x, y, T, S)
       return
     }
-    ctx.drawImage(spr.img, x + spr.ox * k, y + spr.oy * k, spr.img.width * k, spr.img.height * k)
+    ctx.drawImage(spr.img, x + spr.ox * k, y + spr.oy * k, (spr.img.width / spr.res) * k, (spr.img.height / spr.res) * k)
     // live details
     const tsec = now / 1000
     if (b.type === 'campfire') {
@@ -678,6 +784,8 @@ export class Renderer {
       }
       ctx.fillStyle = '#6b4a2b'
       ctx.beginPath(); ctx.arc(cxm, cym, S * 0.06, 0, Math.PI * 2); ctx.fill()
+    } else if ((b.type === 'hut' || b.type === 'house') && (w.season >= 2 || hourOf(w.time) > 17 || hourOf(w.time) < 8) && Math.random() < 0.05) {
+      this.particles.push({ x: b.x + 0.65, y: b.y - 0.5, vx: 0.1 + Math.random() * 0.08, vy: -0.3, life: 3, kind: 0 })
     } else if ((b.type === 'factory' || b.type === 'smithy' || b.type === 'power_plant') && Math.random() < 0.12) {
       const sx = b.type === 'factory' ? b.x + def.size - 0.35 : b.type === 'power_plant' ? b.x + 0.6 : b.x + 0.85
       const sy = b.type === 'factory' ? b.y - 1.1 : b.type === 'power_plant' ? b.y - 0.65 : b.y - 0.35
@@ -706,166 +814,32 @@ export class Renderer {
   }
 
   private drawAnimal(an: World['animals'][0], ox: number, oy: number, S: number, now: number) {
-    const ctx = this.ctx
-    const x = ox + an.x * S, y = oy + an.y * S
-    const s = S * (an.kind === 'rabbit' ? 0.22 : an.kind === 'boar' ? 0.36 : 0.4)
-    const bob = Math.sin(now / 160 + an.id) * s * 0.06
-    ctx.fillStyle = 'rgba(0,0,0,0.2)'
-    ctx.beginPath(); ctx.ellipse(x, y + s * 0.15, s * 0.8, s * 0.25, 0, 0, Math.PI * 2); ctx.fill()
-    const col = an.kind === 'deer' ? '#a86b3c' : an.kind === 'boar' ? '#4f3a2c' : '#c9b8a0'
-    ctx.fillStyle = col
-    ctx.beginPath(); ctx.ellipse(x, y - s * 0.4 + bob, s * 0.7, s * 0.38, 0, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.ellipse(x + an.dir * s * 0.62, y - s * 0.72 + bob, s * 0.26, s * 0.22, 0, 0, Math.PI * 2); ctx.fill()
-    if (S > 14) {
-      ctx.fillStyle = shade(col, -0.3)
-      ctx.fillRect(x - s * 0.45, y - s * 0.1, s * 0.12, s * 0.3)
-      ctx.fillRect(x + s * 0.35, y - s * 0.1, s * 0.12, s * 0.3)
-      if (an.kind === 'deer') {
-        ctx.strokeStyle = '#6b4a2b'
-        ctx.lineWidth = Math.max(1, s * 0.07)
-        ctx.beginPath(); ctx.moveTo(x + an.dir * s * 0.65, y - s * 0.9); ctx.lineTo(x + an.dir * s * 0.5, y - s * 1.3); ctx.moveTo(x + an.dir * s * 0.75, y - s * 0.9); ctx.lineTo(x + an.dir * s * 0.95, y - s * 1.25); ctx.stroke()
-      }
-    }
+    const moving = Math.hypot(an.tx + 0.5 - an.x, an.ty + 0.5 - an.y) > 0.25
+    drawCreature(this.ctx, an, ox + an.x * S, oy + an.y * S, S, now / 1000, moving)
   }
 
   private drawAgent(a: Agent, ox: number, oy: number, S: number, now: number) {
     const w = this.world
     const ctx = this.ctx
-    const age = w.age(a)
-    const child = age < 14
-    const elder = age > 58
-    const L = a.look
-    const size = S * (child ? 0.42 + (age / 14) * 0.25 : 0.7) * L.height
-    const wide = L.build
-    const x = ox + a.x * S, y = oy + a.y * S + S * 0.15
     const t = w.tribeById(a.tribeId)
-    const color = t?.color ?? '#ddd'
-    const era = t ? eraOf(w.techs(t.id)) : 0
-    const leader = t?.leaderId === a.id
-    const sleeping = a.task?.action === 'sleep' && a.task.phase === 'work'
-    const working = a.task?.phase === 'work' && !sleeping
-    const walk = a.moving ? Math.sin(now / 90 + a.id) : 0
-    const skin = SKIN[L.skin % SKIN.length]
-    const hair = elder ? '#d9d9d9' : HAIR[L.hair % HAIR.length]
-    // what they wear tells you when (and who) they are
-    const garment = era === 0 ? (a.clothing > 20 ? '#8a6a44' : '#a68a6a') : era <= 4 ? shade(color, -0.15) : era <= 6 ? shade(L.accent, -0.25) : shade(color, -0.3)
-    const trim = era === 0 ? L.accent : era <= 4 ? L.accent : color
-
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'
-    ctx.beginPath(); ctx.ellipse(x, y, size * 0.32 * wide, size * 0.12, 0, 0, Math.PI * 2); ctx.fill()
-    if (sleeping) {
-      ctx.fillStyle = garment
-      ctx.beginPath(); ctx.ellipse(x, y - size * 0.12, size * 0.42, size * 0.15 * wide, 0, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = skin
-      ctx.beginPath(); ctx.arc(x - size * 0.42, y - size * 0.15, size * 0.13, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = hair
-      ctx.beginPath(); ctx.arc(x - size * 0.47, y - size * 0.17, size * 0.11, Math.PI * 0.5, Math.PI * 1.5); ctx.fill()
-      if (S > 12) {
-        ctx.fillStyle = 'rgba(255,255,255,0.8)'
-        ctx.font = `${Math.round(size * 0.35)}px Inter, sans-serif`
-        ctx.fillText('z', x + size * 0.2, y - size * 0.45 - Math.sin(now / 500 + a.id) * size * 0.1)
-      }
-      return
-    }
-    const lw = Math.max(1, size * 0.11)
-    // legs (trousers once cloth is common)
-    ctx.strokeStyle = era >= 5 ? '#2e3440' : '#3a2c22'
-    ctx.lineWidth = lw
-    ctx.beginPath()
-    ctx.moveTo(x - size * 0.08, y - size * 0.32); ctx.lineTo(x - size * 0.1 - walk * size * 0.12, y - size * 0.02)
-    ctx.moveTo(x + size * 0.08, y - size * 0.32); ctx.lineTo(x + size * 0.1 + walk * size * 0.12, y - size * 0.02)
-    ctx.stroke()
-    // body
-    const bob = a.moving ? Math.abs(walk) * size * 0.04 : working ? Math.sin(now / 140 + a.id) * size * 0.03 : 0
-    const hw = 0.2 * wide, sw = 0.15 * wide
-    ctx.fillStyle = garment
-    ctx.beginPath()
-    ctx.moveTo(x - size * hw, y - size * 0.3 - bob)
-    ctx.lineTo(x - size * sw, y - size * 0.72 - bob)
-    ctx.lineTo(x + size * sw, y - size * 0.72 - bob)
-    ctx.lineTo(x + size * hw, y - size * 0.3 - bob)
-    ctx.closePath()
-    ctx.fill()
-    if (S > 10) {
-      ctx.fillStyle = trim
-      ctx.fillRect(x - size * hw * 0.95, y - size * 0.42 - bob, size * hw * 1.9, Math.max(1, size * 0.05))
-    }
-    // arms (working arm swings)
-    ctx.strokeStyle = skin
-    ctx.lineWidth = lw * 0.9
-    const swing = working ? Math.sin(now / 120 + a.id) * 0.6 : walk * 0.4
-    ctx.beginPath()
-    ctx.moveTo(x - size * sw, y - size * 0.66 - bob); ctx.lineTo(x - size * (sw + 0.1), y - size * 0.4 - bob - swing * size * 0.05)
-    ctx.moveTo(x + size * sw, y - size * 0.66 - bob); ctx.lineTo(x + size * (sw + 0.03) + a.dir * swing * size * 0.12, y - size * 0.42 - bob - Math.abs(swing) * size * 0.12)
-    ctx.stroke()
-    if (working && a.toolTier > 0 && S > 12) {
-      ctx.strokeStyle = ['#888', '#9a9a9a', '#d0894b', '#9aa3ad', '#c6ccd2', '#ffd166'][a.toolTier]
-      ctx.lineWidth = lw * 0.8
-      const hx = x + size * (sw + 0.03) + a.dir * swing * size * 0.12, hy2 = y - size * 0.42 - bob - Math.abs(swing) * size * 0.12
-      ctx.beginPath(); ctx.moveTo(hx, hy2); ctx.lineTo(hx + a.dir * size * 0.18, hy2 - size * 0.18); ctx.stroke()
-    }
-    if (elder && S > 12 && !working) {
-      ctx.strokeStyle = '#6b4a2b'
-      ctx.lineWidth = lw * 0.6
-      ctx.beginPath(); ctx.moveTo(x - size * 0.3, y - size * 0.45); ctx.lineTo(x - size * 0.34, y); ctx.stroke()
-    }
-    // head
-    const hy = y - size * 0.86 - bob
-    const hr = size * 0.15
-    if (L.style === 1 || L.style === 3) {
-      // long hair falls behind the shoulders
-      ctx.fillStyle = hair
-      ctx.fillRect(x - hr * 1.05, hy - hr * 0.2, hr * 2.1, hr * (L.style === 1 ? 1.9 : 1.2))
-    }
-    ctx.fillStyle = skin
-    ctx.beginPath(); ctx.arc(x, hy, hr, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = hair
-    if (L.style === 4) {
-      ctx.globalAlpha = 0.35
-      ctx.beginPath(); ctx.arc(x, hy - hr * 0.25, hr * 0.95, Math.PI * 1.1, Math.PI * 1.9); ctx.fill()
-      ctx.globalAlpha = 1
-    } else {
-      ctx.beginPath(); ctx.arc(x, hy - hr * 0.27, hr * 1.03, Math.PI * 1.02, Math.PI * 1.98); ctx.fill()
-      if (L.style === 2) { ctx.beginPath(); ctx.arc(x, hy - hr * 1.15, hr * 0.45, 0, Math.PI * 2); ctx.fill() }
-      if (L.style === 5) for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(x + k * hr * 0.42, hy - hr * 0.85, hr * 0.32, 0, Math.PI * 2); ctx.fill() }
-      if (L.style === 3 && S > 12) {
-        ctx.strokeStyle = hair
-        ctx.lineWidth = Math.max(1, hr * 0.35)
-        ctx.beginPath(); ctx.moveTo(x - hr, hy); ctx.lineTo(x - hr * 1.1, hy + hr * 1.6); ctx.moveTo(x + hr, hy); ctx.lineTo(x + hr * 1.1, hy + hr * 1.6); ctx.stroke()
-      }
-    }
-    if (L.beard && !child) {
-      ctx.fillStyle = hair
-      ctx.beginPath(); ctx.arc(x, hy + hr * 0.35, hr * 0.7, 0, Math.PI); ctx.fill()
-    }
-    if (S > 16) {
-      // eyes look where they walk
-      ctx.fillStyle = '#1b1b1b'
-      const ex = a.dir * hr * 0.25
-      ctx.fillRect(x - hr * 0.38 + ex, hy - hr * 0.05, Math.max(1, hr * 0.18), Math.max(1, hr * 0.2))
-      ctx.fillRect(x + hr * 0.2 + ex, hy - hr * 0.05, Math.max(1, hr * 0.18), Math.max(1, hr * 0.2))
-      if (L.marks === 1) { ctx.fillStyle = color; ctx.fillRect(x - hr * 0.7, hy + hr * 0.25, hr * 1.4, Math.max(1, hr * 0.15)) }
-      if (L.marks === 3) { ctx.strokeStyle = 'rgba(120,40,40,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + hr * 0.3, hy - hr * 0.5); ctx.lineTo(x + hr * 0.6, hy + hr * 0.3); ctx.stroke() }
-    }
-    if (leader) {
-      ctx.fillStyle = '#ffd34a'
-      ctx.beginPath()
-      const cy = hy - hr * 1.0
-      ctx.moveTo(x - hr * 0.8, cy + hr * 0.25); ctx.lineTo(x - hr * 0.8, cy - hr * 0.3); ctx.lineTo(x - hr * 0.4, cy); ctx.lineTo(x, cy - hr * 0.45); ctx.lineTo(x + hr * 0.4, cy); ctx.lineTo(x + hr * 0.8, cy - hr * 0.3); ctx.lineTo(x + hr * 0.8, cy + hr * 0.25)
-      ctx.closePath(); ctx.fill()
-    }
-    // carrying load
-    if (S > 10 && Object.keys(a.inv).length && a.moving) {
-      ctx.fillStyle = '#8a6a44'
-      ctx.fillRect(x - size * 0.28 * a.dir - size * 0.08, y - size * 0.68 - bob, size * 0.16, size * 0.2)
+    const x = ox + a.x * S, y = oy + a.y * S + S * 0.3
+    const r = drawPerson(ctx, {
+      x, y, h: S * 1.45, t: now / 1000, a, era: t ? eraOf(w.techs(t.id)) : 0, tribeColor: t?.color ?? '#ccc',
+      leader: t?.leaderId === a.id, age: w.age(a), toolTier: a.toolTier,
+    })
+    if (r.impact && Math.random() < 0.7) {
+      const item = a.task?.target ?? ''
+      const kind = item === 'wood' ? 3 : a.task?.action === 'build' || a.task?.action === 'craft' ? 6 : 4
+      for (let k = 0; k < 4; k++) this.particles.push({ x: (r.impact.x - ox) / S, y: (r.impact.y - oy) / S, vx: (Math.random() - 0.5) * 1.6, vy: -0.8 - Math.random() * 1.2, life: 0.6 + Math.random() * 0.3, kind })
     }
     // a thinking mind
     if (a.aiPending) {
       const p = 0.5 + 0.5 * Math.sin(now / 200 + a.id)
-      ctx.fillStyle = `rgba(186,160,255,${0.55 + p * 0.45})`
-      ctx.beginPath(); ctx.arc(x, hy - size * 0.38, size * (0.07 + p * 0.03), 0, Math.PI * 2); ctx.fill()
+      const hy = r.headY - S * 0.18
       ctx.fillStyle = `rgba(186,160,255,${0.25 * p})`
-      ctx.beginPath(); ctx.arc(x, hy - size * 0.38, size * 0.2, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x, hy, S * 0.22, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = `rgba(206,190,255,${0.6 + p * 0.4})`
+      ctx.beginPath(); ctx.arc(x, hy, S * (0.07 + p * 0.03), 0, Math.PI * 2); ctx.fill()
     }
     // feelings show
     let icon = a.emote && now < a.emote.until ? a.emote.icon : ''
@@ -875,10 +849,17 @@ export class Renderer {
     if (icon && S > 9 && !a.aiPending) {
       const fresh = a.emote && now < a.emote.until ? Math.min(1, (a.emote.until - now) / 500) : 0.85
       const pop = a.emote && now < a.emote.until ? 1 + Math.max(0, Math.min(1, 1 - (now - a.emote.start) / 300)) * 0.4 : 1
+      const fs = Math.round(Math.min(34, Math.max(12, S * 0.5)) * pop)
+      const by = r.headY - S * 0.2 - Math.sin(now / 300 + a.id) * S * 0.03
       ctx.globalAlpha = fresh
-      ctx.font = `${Math.round(Math.min(40, Math.max(10, size * 0.42)) * pop)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'
+      ctx.beginPath(); ctx.arc(x + S * 0.38, by - fs * 0.35, fs * 0.68, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.moveTo(x + S * 0.16, by + fs * 0.05); ctx.lineTo(x + S * 0.26, by - fs * 0.1); ctx.lineTo(x + S * 0.34, by + fs * 0.12); ctx.fill()
+      ctx.font = `${fs}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
       ctx.textAlign = 'center'
-      ctx.fillText(icon, x + size * 0.32, hy - size * 0.3 - Math.sin(now / 300 + a.id) * size * 0.04)
+      ctx.textBaseline = 'middle'
+      ctx.fillText(icon, x + S * 0.38, by - fs * 0.32)
+      ctx.textBaseline = 'alphabetic'
       ctx.globalAlpha = 1
     }
   }
@@ -938,18 +919,89 @@ export class Renderer {
       if (p.life <= 0) continue
       p.x += p.vx * dt
       p.y += p.vy * dt
+      if (p.kind >= 3 && p.kind <= 6) p.vy += 4.5 * dt // gravity for chips, sparks, dust
+      if (p.kind === 7) { p.vx += Math.sin(p.life * 3 + p.y) * dt * 0.6 } // falling leaf flutter
       keep.push(p)
       const x = ox + p.x * S, y = oy + p.y * S
-      if (p.kind === 1) {
-        ctx.fillStyle = `rgba(255,${150 + Math.round(p.life * 60)},60,${Math.min(1, p.life)})`
-        ctx.fillRect(x, y, Math.max(1, S * 0.06), Math.max(1, S * 0.06))
-      } else {
-        const r = S * (0.15 + (3 - p.life) * 0.18)
-        ctx.fillStyle = p.kind === 2 ? `rgba(240,240,245,${p.life * 0.12})` : `rgba(80,80,85,${p.life * 0.14})`
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+      const sz = Math.max(1.5, S * 0.06)
+      switch (p.kind) {
+        case 1:
+          ctx.fillStyle = `rgba(255,${150 + Math.round(p.life * 60)},60,${Math.min(1, p.life)})`
+          ctx.fillRect(x, y, sz, sz)
+          break
+        case 3: ctx.fillStyle = `rgba(196,150,90,${Math.min(1, p.life * 2)})`; ctx.fillRect(x, y, sz * 1.4, sz * 0.8); break
+        case 4: ctx.fillStyle = `rgba(255,${200 + Math.round(p.life * 50)},120,${Math.min(1, p.life * 2)})`; ctx.fillRect(x, y, sz, sz); break
+        case 6: ctx.fillStyle = `rgba(200,190,170,${Math.min(0.7, p.life)})`; ctx.beginPath(); ctx.arc(x, y, sz * 1.2, 0, Math.PI * 2); ctx.fill(); break
+        case 7: ctx.save(); ctx.translate(x, y); ctx.rotate(p.life * 4); ctx.fillStyle = `rgba(${200 + (p.vx > 0 ? 30 : 0)},${110 + Math.round(p.life * 20)},40,${Math.min(1, p.life)})`; ctx.beginPath(); ctx.ellipse(0, 0, sz * 1.4, sz * 0.7, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); break
+        default: {
+          const r = S * (0.15 + (3 - p.life) * 0.18)
+          ctx.fillStyle = p.kind === 2 ? `rgba(240,240,245,${p.life * 0.12})` : `rgba(80,80,85,${p.life * 0.14})`
+          ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill()
+        }
       }
     }
-    this.particles = keep.length > 400 ? keep.slice(-400) : keep
+    this.particles = keep.length > 600 ? keep.slice(-600) : keep
+  }
+
+  // ---------------------------------------------------------------- ambient life
+
+  private birds: { x: number; y: number; vx: number; vy: number; n: number; ph: number }[] = []
+  private bugs: { x: number; y: number; ph: number; kind: number }[] = []
+
+  private drawAmbient(dt: number, ox: number, oy: number, S: number, now: number, left: number, right: number, top: number, bottom: number) {
+    const w = this.world
+    const ctx = this.ctx
+    const t = now / 1000
+    const day = daylight(w.time)
+    const s = w.season
+    // flocks of birds crossing the sky, with shadows on the ground
+    if (this.birds.length < 3 && Math.random() < dt * 0.15 && day > 0.4 && s !== 3) {
+      const fromLeft = Math.random() < 0.5
+      this.birds.push({ x: fromLeft ? left - 4 : right + 4, y: top + Math.random() * (bottom - top), vx: (fromLeft ? 1 : -1) * (3 + Math.random() * 2), vy: (Math.random() - 0.5) * 1.2, n: 3 + Math.floor(Math.random() * 6), ph: Math.random() * 10 })
+    }
+    this.birds = this.birds.filter((b) => b.x > left - 8 && b.x < right + 8)
+    for (const b of this.birds) {
+      b.x += b.vx * dt
+      b.y += b.vy * dt
+      for (let k = 0; k < b.n; k++) {
+        const row = Math.ceil(k / 2), side = k % 2 ? 1 : -1
+        const bx = b.x - Math.sign(b.vx) * row * 0.7, by = b.y + side * row * 0.5
+        const flap = Math.sin(t * 9 + b.ph + k) * 0.5
+        // shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.12)'
+        ctx.beginPath(); ctx.ellipse(ox + (bx + 1.5) * S, oy + (by + 3) * S, S * 0.12, S * 0.05, 0, 0, Math.PI * 2); ctx.fill()
+        ctx.strokeStyle = 'rgba(30,30,40,0.85)'
+        ctx.lineWidth = Math.max(1.2, S * 0.05)
+        const X = ox + bx * S, Y = oy + by * S
+        ctx.beginPath(); ctx.moveTo(X - S * 0.22, Y - flap * S * 0.18); ctx.quadraticCurveTo(X - S * 0.08, Y - S * 0.06, X, Y); ctx.quadraticCurveTo(X + S * 0.08, Y - S * 0.06, X + S * 0.22, Y - flap * S * 0.18); ctx.stroke()
+      }
+    }
+    if (S < 22) return
+    // butterflies by day in spring and summer; fireflies on summer nights
+    const want = s <= 1 ? 14 : 0
+    while (this.bugs.length < want) this.bugs.push({ x: left + Math.random() * (right - left), y: top + Math.random() * (bottom - top), ph: Math.random() * 100, kind: Math.floor(Math.random() * 4) })
+    if (this.bugs.length > want) this.bugs.length = want
+    for (const b of this.bugs) {
+      b.x += Math.sin(t * 0.7 + b.ph) * dt * 0.8
+      b.y += Math.cos(t * 0.9 + b.ph * 1.3) * dt * 0.6
+      if (b.x < left - 2 || b.x > right + 2 || b.y < top - 2 || b.y > bottom + 2) { b.x = left + Math.random() * (right - left); b.y = top + Math.random() * (bottom - top) }
+      const X = ox + b.x * S, Y = oy + b.y * S
+      if (day < 0.35) {
+        if (s !== 1) continue
+        const glow = 0.5 + 0.5 * Math.sin(t * 3 + b.ph)
+        ctx.fillStyle = `rgba(220,255,120,${0.2 * glow})`
+        ctx.beginPath(); ctx.arc(X, Y, S * 0.25, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = `rgba(240,255,160,${0.6 + glow * 0.4})`
+        ctx.beginPath(); ctx.arc(X, Y, S * 0.05, 0, Math.PI * 2); ctx.fill()
+      } else {
+        const flap = Math.abs(Math.sin(t * 14 + b.ph))
+        ctx.fillStyle = ['#ffd54f', '#f48fb1', '#ffffff', '#81d4fa'][b.kind]
+        ctx.beginPath(); ctx.ellipse(X - S * 0.06 * flap, Y, S * 0.08 * flap + 0.5, S * 0.06, -0.3, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.ellipse(X + S * 0.06 * flap, Y, S * 0.08 * flap + 0.5, S * 0.06, 0.3, 0, Math.PI * 2); ctx.fill()
+      }
+    }
+    // autumn leaves drift down from trees in view
+    if (s === 2 && Math.random() < dt * 6) this.particles.push({ x: left + Math.random() * (right - left), y: top + Math.random() * (bottom - top) * 0.7, vx: 0.4 + Math.random() * 0.3, vy: 0.5 + Math.random() * 0.4, life: 3 + Math.random() * 2, kind: 7 })
   }
 
   private drawLighting(ox: number, oy: number, S: number, now: number, left: number, right: number, top: number, bottom: number) {

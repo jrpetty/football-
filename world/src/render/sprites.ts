@@ -41,25 +41,27 @@ function blob(c: Ctx, x: number, y: number, r: number, col: string) {
 
 export interface FeatureSprite {
   img: HTMLCanvasElement
-  ox: number // anchor offset (sprite px) from tile top-left
+  ox: number // anchor offset (sprite px at 1×) from tile top-left
   oy: number
+  res: number // pixel density multiplier of img
 }
 
 const featureCache = new Map<string, FeatureSprite>()
 
 /** variant 0..3; season 0..3; empty = depleted bush */
-export function featureSprite(f: number, variant: number, season: number, empty = false): FeatureSprite | null {
-  const key = `${f}|${variant}|${season}|${empty ? 1 : 0}`
+export function featureSprite(f: number, variant: number, season: number, empty = false, res = 1): FeatureSprite | null {
+  const key = `${f}|${variant}|${season}|${empty ? 1 : 0}|${res}`
   const hit = featureCache.get(key)
   if (hit) return hit
-  const s = makeFeature(f, variant, season, empty)
+  const s = makeFeature(f, variant, season, empty, res)
   if (s) featureCache.set(key, s)
   return s
 }
 
-function makeFeature(f: number, v: number, season: number, empty: boolean): FeatureSprite | null {
+function makeFeature(f: number, v: number, season: number, empty: boolean, res: number): FeatureSprite | null {
   const W = SPR * 1.6, H = SPR * 2
-  const [cv, c] = canvas(W, H)
+  const [cv, c] = canvas(W * res, H * res)
+  c.scale(res, res)
   const cx = W / 2, base = H - SPR * 0.3
   const autumn = season === 2, winter = season === 3
   const leafHues = autumn ? ['#c9692e', '#d99a35', '#b5462e', '#9b7a2a'][v] : ['#3f8a3a', '#4a9440', '#367c38', '#5a9e45'][v]
@@ -259,7 +261,8 @@ function makeFeature(f: number, v: number, season: number, empty: boolean): Feat
     default:
       return null
   }
-  return { img: cv, ox: (SPR - W) / 2, oy: SPR - H + SPR * 0.15 }
+  if (res > 1) outlineAndLight(c, cv, res)
+  return { img: cv, ox: (SPR - W) / 2, oy: SPR - H + SPR * 0.15, res }
 }
 
 // ------------------------------------------------------------------ buildings
@@ -268,6 +271,7 @@ export interface BuildingSprite {
   img: HTMLCanvasElement
   ox: number
   oy: number
+  res: number
 }
 
 const bCache = new Map<string, BuildingSprite>()
@@ -335,7 +339,9 @@ function flag(c: Ctx, x: number, y: number, color: string) {
 function makeBuilding(type: BuildingType, color: string, size: number, era: number): BuildingSprite {
   const T = SPR * size
   const W = T + SPR, H = T + SPR * (type === 'skyscraper' ? 4 : type === 'launch_pad' ? 3.2 : type === 'watchtower' || type === 'power_plant' || type === 'factory' ? 2 : 1.4)
-  const [cv, c] = canvas(W, H)
+  const res = 3
+  const [cv, c] = canvas(W * res, H * res)
+  c.scale(res, res)
   const x0 = SPR / 2, y1 = H - SPR * 0.2 // footprint left & bottom
   const cx = x0 + T / 2
   const modern = era > 5
@@ -661,7 +667,40 @@ function makeBuilding(type: BuildingType, color: string, size: number, era: numb
       break
     }
   }
-  return { img: cv, ox: -SPR / 2, oy: -(H - T - SPR * 0.2) }
+  outlineAndLight(c, cv, res)
+  return { img: cv, ox: -SPR / 2, oy: -(H - T - SPR * 0.2), res }
+}
+
+/**
+ * Give a painted sprite an ink outline and soft top-left light, the way an
+ * illustrator would: sample the alpha edge, stroke it dark, then wash a
+ * light gradient over the shapes only.
+ */
+function outlineAndLight(c: Ctx, cv: HTMLCanvasElement, res: number) {
+  const w = cv.width, h = cv.height
+  const [oc, o] = canvas(w, h)
+  // silhouette, offset in 8 directions → outline ring
+  const sil = document.createElement('canvas')
+  sil.width = w; sil.height = h
+  const sc = sil.getContext('2d')!
+  sc.drawImage(cv, 0, 0)
+  sc.globalCompositeOperation = 'source-in'
+  sc.fillStyle = 'rgba(30,20,14,0.85)'
+  sc.fillRect(0, 0, w, h)
+  const r = Math.max(1, Math.round(res * 0.7))
+  for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r], [r, -r], [-r, r]]) o.drawImage(sil, dx, dy)
+  o.drawImage(cv, 0, 0)
+  // light from the top-left, only where there is paint
+  o.globalCompositeOperation = 'source-atop'
+  const g = o.createLinearGradient(0, 0, w, h)
+  g.addColorStop(0, 'rgba(255,245,220,0.22)')
+  g.addColorStop(0.5, 'rgba(255,255,255,0)')
+  g.addColorStop(1, 'rgba(0,0,30,0.18)')
+  o.fillStyle = g
+  o.fillRect(0, 0, w, h)
+  c.setTransform(1, 0, 0, 1, 0, 0)
+  c.clearRect(0, 0, w, h)
+  c.drawImage(oc, 0, 0)
 }
 
 export { shade }
