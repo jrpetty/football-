@@ -405,6 +405,10 @@ export type ScorerSpec =
       loose?: boolean;
       /** Id-keyed objects (dotted path → fields per item): extra items cost as much as missing ones. */
       sets?: Record<string, number>;
+      /** Points per field by dotted path (longest prefix wins, default 1). */
+      weights?: Record<string, number>;
+      /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */
+      aboveConstant?: string[];
     }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }

@@ -263,6 +263,8 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
   }
   if (s.type === 'json' && s.sets !== undefined && (typeof s.sets !== 'object' || !Object.values(s.sets).every((n) => Number.isInteger(n) && n >= 1)))
     errors.push(`${where}: json sets must map paths to a whole number of fields per item (at least 1)`);
+  if (s.type === 'json' && s.weights !== undefined && (typeof s.weights !== 'object' || !Object.values(s.weights).every((n) => typeof n === 'number' && n >= 0 && Number.isFinite(n))))
+    errors.push(`${where}: json weights must map paths to points (0 or more)`);
   if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
   if (s.type === 'sql') {
     if (s.dialect !== 'sqlite') errors.push(`${where}: sql scorer dialect must be "sqlite"`);

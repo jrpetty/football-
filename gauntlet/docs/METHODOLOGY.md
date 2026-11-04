@@ -135,7 +135,7 @@ These differences are small but real, which is why published comparisons should 
 | `regex` | 1 if the pattern matches the answer (or the full text). Full-text patterns can demand a one-line reply, as in the Lightning Traps. |
 | `contains` | Fraction of required / forbidden phrases satisfied. |
 | `constraints` | Fraction of machine-verifiable constraints satisfied (or all-or-nothing). Definitions: a *word* is a whitespace-separated token containing a letter or digit; a *sentence* ends in `.`, `!` or `?` followed by whitespace or the end; *paragraphs* are separated by blank lines; *bullets* start with `-`, `*`, `•`, `1.` or `1)`. |
-| `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). With `loose`, presentation is forgiven: key case and spacing, numbers written as `"£1,234.50"`, `"T"` or `"London"` in date-times, `"none"` for null, a one-item list for its item. With `sets`, an object keyed by item ids (e.g. the non-compliant lines) is a set: every extra item costs as many fields as a real item is worth, so listing everything scores no better than listing nothing. |
+| `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). With `loose`, presentation is forgiven: key case and spacing, numbers written as `"£1,234.50"`, `"T"` or `"London"` in date-times, `"none"` for null, a one-item list for its item. With `sets`, an object keyed by item ids (e.g. the non-compliant lines) is a set: every extra item costs as many fields as a real item is worth, so listing everything scores no better than listing nothing. `weights` gives fields more points by path (longest prefix wins), and `aboveConstant` scores a group of fields only above the best answer that gives them all one value. |
 | `code-js` | Fraction of hidden unit tests passed. Code runs in a separate Node.js process under the permission model (no file writes, no child processes, no workers), 256 MB heap, with string code generation disabled and a per-test timeout (default 2 s). |
 | `judge` | Mean of the judge panel's 0–10 grades ÷ 10. |
 | `judge-classify` | Mean of the scores of the labels chosen by each judge (e.g. `CAUGHT_TRAP` = 1, `HALLUCINATED` = 0). |
@@ -438,15 +438,24 @@ human opinion is involved: every mark is a machine check against a key computed 
 
 **Scoring.** All five use the `json` scorer with `loose` (presentation never costs a point: key case and spacing,
 `£` signs and thousands separators, `"Clause 9.2"` for `"9.2"`, a `T` or "London" in a time, a one-item list, prose
-around the JSON). Credit is fine-grained and every point is stated in the prompt:
+around the JSON). Credit is fine-grained and the marking is stated in the prompt.
 
-| Test | Points in a case | Extra items |
+**Points sit where the skill is.** In Monday Inbox, Reconcile the Account and What Changed in the Contract? a field
+where a trap sits is worth more than a routine field (`weights`, per case): 3 points instead of 1 in the inbox and the
+reconciliation, 2 in the contract. A trap field is one the generator's careless reading gets wrong, i.e. the fields
+touched by a scam, a duplicate, a correction, reassignment or cancellation, a moved meeting or a tricky date (plus the
+newsletter that tries to instruct the AI); a split, a duplicate, a reversal, a keying or FX difference, a timing item
+or the balance; a change hidden by renumbering, a moved clause, a "not" or a definition. An invented item costs its
+fields at the trap rate. In the inbox, category points count only above what giving every email the same category
+would earn (`aboveConstant`), so an answer that reads nothing scores 0.
+
+| Test | Fields in a case | Extra items |
 |---|---|---|
-| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 36–63 | An action on an email that has none costs 3 (`sets: {actions: 3}`) |
+| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 37–64 fields; trap fields ×3 | An action on an email that has none costs 3 fields ×3 (`sets: {actions: 3}`) |
 | Find a Slot | 1 per meeting: 4 | — |
 | Expense Policy Check | 2 per non-compliant line (rule, amount) + 1 per employee total + total + VAT: 12–34 | A compliant line listed costs 2 (`sets: {non_compliant: 2}`) |
-| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69 | An invented difference costs 2 (`sets: {differences: 2}`) |
-| What Changed in the Contract? | 3 per change (type, old, new): 12–45 | A listed non-change costs 3 (`sets: {changes: 3}`) |
+| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69; trap fields ×3 | An invented difference costs 2 fields ×3 (`sets: {differences: 2}`) |
+| What Changed in the Contract? | 3 per change (type, old, new): 12–45; trap fields ×2 | A listed non-change costs 3 fields ×2 (`sets: {changes: 3}`) |
 
 **Measured spread** (`node verification/realworld-work/spread.mts`, scripted answers through the real scorer; the
 "careless" answer is each generator's careless solver: first-stated deadlines, the nearest Wednesday for "next
@@ -456,14 +465,15 @@ old clause numbers, negations and definition changes missed):
 
 | Test | Careful (key) | Careless (easy / medium / hard) | Do-nothing `{}` | Copy the prompt | Random filler |
 |---|---:|---:|---:|---:|---:|
-| Monday Inbox | 100% | 78% (86 / 76 / 73) | 0% | 0% | 0% |
-| Find a Slot | 100% | 36% (67 / 17 / 25) | 0% | 0% | 0% |
+| Monday Inbox | 100% | 53% (65 / 49 / 44) | 0% | 0% | 0% |
+| Find a Slot | 100% | 28% (67 / 17 / 0) | 0% | 0% | 0% |
 | Expense Policy Check | 100% | 51% (60 / 57 / 36) | 0% | 0% | 0% |
-| Reconcile the Account | 100% | 73% (84 / 70 / 65) | 0% | 0% | 0% |
-| What Changed in the Contract? | 100% | 61% (80 / 62 / 42) | 0% | 0% | 0% |
+| Reconcile the Account | 100% | 49% (63 / 44 / 38) | 0% | 0% | 0% |
+| What Changed in the Contract? | 100% | 46% (67 / 45 / 26) | 0% | 0% | 0% |
 
-A constant answer that reads nothing (every email "internal", no actions) scores 4–13% on Monday Inbox and 0% on the
-other four.
+A constant answer that reads nothing (every email given one category, no actions) scores 0% on Monday Inbox. In
+Find a Slot's hard cases every meeting is chosen so that the careless reading gets it wrong (clock changes and
+earlier bookings interact).
 
 **Anti-cheat.** Answers never appear in the prompts; distractors are built in (a lookalike sender with a real
 supplier's name, a genuine "we never change bank details" notice next to the scam, a newsletter telling the AI how to
