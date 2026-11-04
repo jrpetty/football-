@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
-import { MODELS, modelInfo, type Effort } from '../ai/client.ts'
+import { type Effort } from '../ai/client.ts'
+import { ProvidersSection, ProfileSelect } from './Providers.tsx'
 import { PRESETS } from '../sim/worldgen.ts'
 import { DEFAULT_CONFIG, type WorldConfig } from '../sim/world.ts'
 import { ERAS } from '../sim/tech.ts'
@@ -38,16 +39,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal onClose={onClose} wide>
       <h2>✦ Minds & settings</h2>
-      <p className="lead">Every person can be driven by their own Claude mind. They decide what to do from what they see, feel, remember and are told — nothing is scripted.</p>
+      <p className="lead">Every person can be driven by their own AI mind — Claude, the Chinese model APIs (DeepSeek, Qwen, Kimi, GLM), or models you download and run yourself (Ollama, LM Studio). They decide what to do from what they see, feel, remember and are told — nothing is scripted.</p>
 
       <div className="field">
-        <label>Anthropic API key</label>
+        <label>Anthropic API key (Claude)</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="input" type={show ? 'text' : 'password'} placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} />
           <button className="btn" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
           <button className="btn primary" onClick={() => mind.update({ apiKey: key.trim(), enabled: true })}>Save key</button>
         </div>
-        <div className="hint">Stored only in this browser and sent only to api.anthropic.com. Get one at console.anthropic.com. Without a key, people live on instinct alone.</div>
+        <div className="hint">For Claude minds. Stored only in this browser and sent only to Anthropic. Get one at console.anthropic.com. You can skip this and use another provider or a local model below — and with no minds at all, people live on instinct.</div>
       </div>
 
       <div className="field">
@@ -55,18 +56,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         {st.pausedReason && <div className="note warn" style={{ marginTop: 8 }}>{st.pausedReason}</div>}
       </div>
 
-      <div className="field">
-        <label>Default model for minds</label>
-        <div className="choices">
-          {MODELS.map((m) => (
-            <button key={m.id} className={`choice ${s.model === m.id ? 'on' : ''}`} onClick={() => mind.update({ model: m.id })}>
-              <div className="t"><span>{m.label}</span><span className="meta">${m.input}/${m.output}</span></div>
-              <div className="d">{m.blurb}</div>
-            </button>
-          ))}
-        </div>
-        <div className="hint">Prices are $ per million input/output tokens. The world rules are cached, so most input is billed at the cache rate.</div>
-      </div>
+      <ProvidersSection />
 
       <div className="field">
         <label>Mixed minds — give each tribe its own model</label>
@@ -74,10 +64,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         {w.tribes.filter((t) => t.alive).map((t) => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span style={{ width: 160, color: t.color, fontWeight: 650 }}>{t.emblem} {t.name}</span>
-            <select className="input" style={{ padding: '6px 10px' }} value={t.model} onChange={(e) => { t.model = e.target.value; game.emit() }}>
-              <option value="">Default ({modelInfo(s.model).label})</option>
-              {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
+            <ProfileSelect className="input" style={{ padding: '6px 10px' }} value={t.model} onChange={(v) => { t.model = v; game.emit() }} emptyLabel={`Default (${mind.label(s.model)})`} />
           </div>
         ))}
       </div>
@@ -138,8 +125,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="note">
-        Estimated cost at {game.speed}× speed: <b>~${hourly.toFixed(2)} per real hour</b> with {modelInfo(s.model).label}. Spent so far: <b>${st.cost.toFixed(3)}</b> over {st.calls} calls.
-        {Object.entries(st.byModel).length > 1 && <> ({Object.entries(st.byModel).map(([m, v]) => `${modelInfo(m).label}: ${v.calls} / $${v.cost.toFixed(3)}`).join(' · ')})</>}
+        Estimated cost at {game.speed}× speed: <b>~${hourly.toFixed(2)} per real hour</b> with {mind.label(s.model)}. Spent so far: <b>${st.cost.toFixed(3)}</b> over {st.calls} calls.
+        {Object.entries(st.byModel).length > 1 && <> ({Object.entries(st.byModel).map(([m, v]) => `${mind.label(m)}: ${v.calls} / $${v.cost.toFixed(3)}`).join(' · ')})</>}
         <br />Faster game speeds don't cost more: thoughts are rate-limited, and instinct fills the gaps.
       </div>
       <div className="btn-row"><button className="btn primary" onClick={onClose}>Done</button></div>
@@ -149,7 +136,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
 
 // ------------------------------------------------------------------ New world
 
-export function NewWorldModal({ onClose }: { onClose: () => void }) {
+export function NewWorldModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
   const [cfg, setCfg] = useState<WorldConfig>({ ...DEFAULT_CONFIG, seed: Math.floor(Math.random() * 1e9), name: randomName() })
   const set = (p: Partial<WorldConfig>) => setCfg({ ...cfg, ...p })
   return (
@@ -162,12 +149,15 @@ export function NewWorldModal({ onClose }: { onClose: () => void }) {
           <input className="input" value={cfg.name} onChange={(e) => set({ name: e.target.value })} />
         </div>
         <div className="field">
-          <label>Seed</label>
+          <label>Map seed</label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input className="input" type="number" value={cfg.seed} onChange={(e) => set({ seed: +e.target.value || 1 })} />
             <button className="btn" onClick={() => set({ seed: Math.floor(Math.random() * 1e9) })}>🎲</button>
           </div>
         </div>
+      </div>
+      <div className="field">
+        <Toggle checked={!cfg.fixedHistory} onChange={(v) => set({ fixedHistory: !v })} label={<span><b>Unique history</b> — the same seed always makes the same land, but different people and a different story every time. Turn off to replay a seed exactly.</span>} />
       </div>
       <div className="field">
         <label>Land</label>
@@ -205,7 +195,7 @@ export function NewWorldModal({ onClose }: { onClose: () => void }) {
       </div>
       <div className="btn-row">
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={() => { game.newWorld(cfg); onClose() }}>Create world</button>
+        <button className="btn primary" onClick={() => { game.newWorld(cfg); onClose(); onCreated?.() }}>Create world</button>
       </div>
     </Modal>
   )
@@ -219,7 +209,7 @@ function randomName() {
 
 // ------------------------------------------------------------------ Saves
 
-export function SavesModal({ onClose }: { onClose: () => void }) {
+export function SavesModal({ onClose, onLoaded }: { onClose: () => void; onLoaded?: () => void }) {
   const [saves, setSaves] = useState<SaveMeta[]>([])
   const [msg, setMsg] = useState('')
   const file = useRef<HTMLInputElement>(null)
@@ -248,6 +238,7 @@ export function SavesModal({ onClose }: { onClose: () => void }) {
             const data = JSON.parse(await f.text()) as SaveFile
             game.setWorld(deserialize(data))
             onClose()
+            onLoaded?.()
           } catch {
             setMsg('That file could not be read as a Genesis world.')
           }
@@ -260,7 +251,7 @@ export function SavesModal({ onClose }: { onClose: () => void }) {
             <div className="name">{s.slot === 'autosave' ? `⟳ Autosave — ${s.name}` : s.slot}</div>
             <div className="sub">Year {s.year} · {s.pop} people · {ERAS[s.era]?.name} · {new Date(s.savedAt).toLocaleString()}</div>
           </div>
-          <button className="icon-btn" onClick={async () => { const ok = await game.load(s.slot); if (ok) onClose(); else setMsg('Could not load that save.') }}>Load</button>
+          <button className="icon-btn" onClick={async () => { const ok = await game.load(s.slot); if (ok) { onClose(); onLoaded?.() } else setMsg('Could not load that save.') }}>Load</button>
           <button className="icon-btn" onClick={async () => { await deleteSlot(s.slot); void refresh() }}>🗑</button>
         </div>
       ))}
@@ -274,37 +265,3 @@ export async function hasAutosave(): Promise<boolean> {
   return s.some((x) => x.slot === 'autosave')
 }
 export { loadSlot }
-
-// ------------------------------------------------------------------ Welcome
-
-export function Welcome({ onClose, onSettings, onNew }: { onClose: () => void; onSettings: () => void; onNew: () => void }) {
-  const [auto, setAuto] = useState<SaveMeta | null>(null)
-  useEffect(() => { void listSaves().then((s) => setAuto(s.find((x) => x.slot === 'autosave') ?? null)) }, [])
-  return (
-    <div className="backdrop">
-      <div className="modal glass welcome">
-        <h1>Genesis</h1>
-        <div className="tagline">
-          A living world where every inhabitant is an independent AI mind. From bare hands and berry bushes to farms, cities, science and rockets — they decide everything themselves.
-        </div>
-        <div className="features">
-          <div className="feature"><div className="i">✦</div><b>Minds of their own</b><span>Each person is driven by their own Claude mind with memories, personality, relationships and goals.</span></div>
-          <div className="feature"><div className="i">🌍</div><b>An Earth-like world</b><span>Realistic climate, seasons, rivers, forests, ores and fresh water. Real resources and real needs.</span></div>
-          <div className="feature"><div className="i">🏛️</div><b>Ten eras of progress</b><span>53 technologies from fire to rocketry; 32 kinds of building; crafting chains from flint to electronics.</span></div>
-          <div className="feature"><div className="i">💞</div><b>Lives & lineages</b><span>They court, raise children who inherit (and mutate) traits, grow old, grieve and remember.</span></div>
-          <div className="feature"><div className="i">🚩</div><b>Culture & politics</b><span>Leaders pass laws, tribes split and merge, beliefs emerge, ideas spread between peoples.</span></div>
-          <div className="feature"><div className="i">📖</div><b>Living history</b><span>A chronicle of every birth, death and discovery — and a Claude historian who writes it up.</span></div>
-        </div>
-        <div className="btn-row" style={{ justifyContent: 'flex-start' }}>
-          <button className="btn primary" onClick={() => { onClose(); onSettings() }}>✦ Add API key & awaken minds</button>
-          <button className="btn" onClick={onClose}>Watch on instinct first</button>
-          <button className="btn" onClick={() => { onClose(); onNew() }}>🌍 Design a world</button>
-          {auto && <button className="btn" onClick={async () => { await game.load('autosave'); onClose() }}>⟳ Continue “{auto.name}” (year {auto.year})</button>}
-        </div>
-        <div className="meta" style={{ marginTop: 14 }}>
-          Drag to pan · scroll or pinch to zoom · click anyone to read their mind · <b>Space</b> pause · <b>1–5</b> speed
-        </div>
-      </div>
-    </div>
-  )
-}

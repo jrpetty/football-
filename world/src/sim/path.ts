@@ -5,7 +5,7 @@ export interface PathGrid {
   W: number
   H: number
   /** movement cost of entering a tile; Infinity = blocked. */
-  cost(i: number, canSail: boolean): number
+  cost(i: number, sail: number): number
 }
 
 let cap = 0
@@ -76,7 +76,7 @@ const DC = [1, 1, 1, 1, 1.414, 1.414, 1.414, 1.414]
 export function findPath(
   grid: PathGrid,
   sx: number, sy: number, tx: number, ty: number,
-  adjacent: boolean, canSail: boolean, maxNodes = 24000,
+  adjacent: boolean, canSail: number, maxNodes = 24000,
 ): Int32Array | null {
   const { W, H } = grid
   const N = W * H

@@ -7,10 +7,11 @@ import type { Overlay } from './render/renderer.ts'
 import { useGameVersion, useMindVersion } from './ui/common.tsx'
 import { PeoplePanel, TribesPanel, MindsPanel, ChroniclePanel, TechPanel, StatsPanel } from './ui/panels.tsx'
 import { Inspector } from './ui/Inspector.tsx'
-import { SettingsModal, NewWorldModal, SavesModal, Welcome } from './ui/modals.tsx'
+import { SettingsModal, NewWorldModal, SavesModal } from './ui/modals.tsx'
+import { MainMenu, AboutModal } from './ui/MainMenu.tsx'
 
 type Tab = 'minds' | 'people' | 'tribes' | 'chronicle' | 'tech' | 'stats'
-type ModalKind = 'settings' | 'new' | 'saves' | 'welcome' | null
+type ModalKind = 'settings' | 'new' | 'saves' | 'about' | null
 
 const WEATHER_ICON: Record<string, string> = { clear: '☀️', cloudy: '☁️', rain: '🌧️', storm: '⛈️', snow: '🌨️', fog: '🌫️' }
 
@@ -18,8 +19,9 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [tab, setTab] = useState<Tab>('minds')
   const [sidebar, setSidebar] = useState(() => window.innerWidth > 860)
-  const [modal, setModal] = useState<ModalKind>(() => {
-    try { return localStorage.getItem('genesis.welcomed') ? null : 'welcome' } catch { return 'welcome' }
+  const [modal, setModal] = useState<ModalKind>(null)
+  const [menu, setMenu] = useState(() => {
+    try { return !new URLSearchParams(location.search).has('play') } catch { return true }
   })
 
   useEffect(() => {
@@ -55,15 +57,13 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const closeWelcome = () => {
-    try { localStorage.setItem('genesis.welcomed', '1') } catch { /* ignore */ }
-    setModal(null)
-  }
 
   return (
     <div className="app">
       <canvas ref={canvasRef} className="map" />
-      <TopBar onModal={setModal} />
+      {menu && <MainMenu onGo={(g) => { if (g === 'play') setMenu(false); else setModal(g) }} />}
+      {!menu && <>
+      <TopBar onModal={setModal} onMenu={() => setMenu(true)} />
       <button className="icon-btn sidebar-toggle glass" style={{ display: sidebar ? 'none' : undefined }} onClick={() => setSidebar(true)}>☰ Panels</button>
       <div className={`sidebar glass ${sidebar ? '' : 'closed'}`}>
         <Tabs tab={tab} setTab={setTab} onClose={() => setSidebar(false)} />
@@ -82,10 +82,11 @@ export default function App() {
       <div className="hud-hint glass hide-md">
         <kbd>Space</kbd> pause · <kbd>1</kbd>–<kbd>5</kbd> speed · <kbd>F</kbd> follow · <kbd>WASD</kbd> pan · click a person to read their mind
       </div>
-      {modal === 'welcome' && <Welcome onClose={closeWelcome} onSettings={() => setModal('settings')} onNew={() => setModal('new')} />}
+      </>}
+      {modal === 'about' && <AboutModal onClose={() => setModal(null)} />}
       {modal === 'settings' && <SettingsModal onClose={() => setModal(null)} />}
-      {modal === 'new' && <NewWorldModal onClose={() => setModal(null)} />}
-      {modal === 'saves' && <SavesModal onClose={() => setModal(null)} />}
+      {modal === 'new' && <NewWorldModal onClose={() => setModal(null)} onCreated={() => setMenu(false)} />}
+      {modal === 'saves' && <SavesModal onClose={() => setModal(null)} onLoaded={() => setMenu(false)} />}
     </div>
   )
 }
@@ -115,7 +116,7 @@ function Tabs({ tab, setTab, onClose }: { tab: Tab; setTab: (t: Tab) => void; on
   )
 }
 
-function TopBar({ onModal }: { onModal: (m: ModalKind) => void }) {
+function TopBar({ onModal, onMenu }: { onModal: (m: ModalKind) => void; onMenu: () => void }) {
   useGameVersion()
   useMindVersion()
   const w = game.world
@@ -127,7 +128,7 @@ function TopBar({ onModal }: { onModal: (m: ModalKind) => void }) {
   const event = w.events.find((e) => e.end > w.time)
   return (
     <div className="topbar glass">
-      <div className="brand">
+      <div className="brand" onClick={onMenu} style={{ cursor: 'pointer' }} title="Main menu">
         <div className="logo" />
         <div style={{ minWidth: 0 }}>
           <h1>Genesis</h1>
@@ -149,7 +150,7 @@ function TopBar({ onModal }: { onModal: (m: ModalKind) => void }) {
         title="AI minds — click for settings"
       >
         <span className="dot" />
-        {mind.settings.apiKey ? (live ? <>{minds} minds · {st.inFlight} thinking · ${st.cost.toFixed(2)}</> : st.pausedReason ? 'Minds paused' : 'Minds asleep') : 'Add API key'}
+        {mind.configured ? (live ? <>{minds} minds · {st.inFlight} thinking · ${st.cost.toFixed(2)}</> : st.pausedReason ? 'Minds paused' : 'Minds asleep') : 'Connect minds'}
       </button>
       <div className="speed">
         <button className={game.paused ? 'on' : ''} onClick={() => game.togglePause()} title="Pause (Space)">{game.paused ? '▶' : '❚❚'}</button>
@@ -158,6 +159,7 @@ function TopBar({ onModal }: { onModal: (m: ModalKind) => void }) {
         ))}
       </div>
       <button className="icon-btn hide-sm" onClick={() => onModal('saves')} title="Save / load">💾</button>
+      <button className="icon-btn" onClick={onMenu} title="Main menu">☰</button>
       <button className="icon-btn" onClick={() => onModal('new')} title="New world">🌍<span className="hide-md">New</span></button>
     </div>
   )

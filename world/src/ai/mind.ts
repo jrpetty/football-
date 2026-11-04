@@ -7,10 +7,8 @@ import type { World } from '../sim/world.ts'
 import type { Agent, PlanStep } from '../sim/types.ts'
 import { ACTION_KINDS } from '../sim/types.ts'
 import { HOUR, DAY, yearOf, YEAR } from '../sim/time.ts'
-import {
-  callClaude, costOf, parseJson, loadSettings, saveSettings, modelInfo, AiError,
-  type AiSettings, type Usage, type Effort,
-} from './client.ts'
+import { parseJson, loadSettings, saveSettings, AiError, type AiSettings, type Usage, type Effort } from './client.ts'
+import { builtinProfiles, complete, profileCost, type MindProfile } from './providers.ts'
 import {
   SYSTEM_PROMPT, DECISION_SCHEMA, buildContext, REFLECT_SYSTEM, REFLECT_SCHEMA, buildReflection,
   INTERVIEW_SYSTEM, CHRONICLE_SYSTEM, CHRONICLE_SCHEMA, type Decision, type Reflection,
@@ -85,8 +83,29 @@ export class MindManager {
     this.emit()
   }
 
+  /** All minds on offer: the built-in Claude models plus profiles the user added. */
+  get profiles(): MindProfile[] {
+    return [...builtinProfiles(), ...(this.settings.profiles ?? [])]
+  }
+  profile(id: string): MindProfile {
+    const all = this.profiles
+    return all.find((p) => p.id === id) ?? all.find((p) => p.id === this.settings.model) ?? all[0]
+  }
+  label(id: string): string {
+    return this.profile(id).label
+  }
+  /** Can this profile actually be called (has the key it needs)? */
+  usable(id: string): boolean {
+    const p = this.profile(id)
+    if (p.kind === 'anthropic') return (p.apiKey || this.settings.apiKey).trim().length > 20
+    return true
+  }
+  get configured(): boolean {
+    return this.settings.apiKey.trim().length > 20 || (this.settings.profiles ?? []).length > 0
+  }
+
   get ready(): boolean {
-    return this.settings.enabled && this.settings.apiKey.trim().length > 20 && this.stats.cost < this.settings.budgetUsd
+    return this.settings.enabled && this.usable(this.settings.model) && this.stats.cost < this.settings.budgetUsd
   }
 
   isMind(a: Agent): boolean {
@@ -132,7 +151,7 @@ export class MindManager {
     const w = this.world
     if (!w) return
     if (!this.ready) {
-      if (this.settings.enabled && this.settings.apiKey && this.stats.cost >= this.settings.budgetUsd) this.stats.pausedReason = 'Budget reached — raise it in Settings to continue.'
+      if (this.settings.enabled && this.configured && this.stats.cost >= this.settings.budgetUsd) this.stats.pausedReason = 'Budget reached — raise it in Settings to continue.'
       return
     }
     const now = Date.now()
@@ -154,6 +173,7 @@ export class MindManager {
     for (const id of this.minds) {
       const a = w.agentById.get(id)
       if (!a || !a.alive || a.aiPending || !w.isAdult(a)) continue
+      if (!this.usable(this.modelFor(a))) continue
       const since = w.time - a.aiLastT
       const heardNew = a.heard.some((h) => h.t > a.aiLastT)
       const idle = a.plan.length === 0 && (!a.task || !a.task.fromPlan)
@@ -178,7 +198,7 @@ export class MindManager {
     this.stats.usage.output += u.output
     this.stats.usage.cacheRead += u.cacheRead
     this.stats.usage.cacheWrite += u.cacheWrite
-    const c = costOf(model, u)
+    const c = profileCost(this.profile(model), u)
     this.stats.cost += c
     const m = (this.stats.byModel[model] ??= { calls: 0, cost: 0 })
     m.calls++
@@ -193,7 +213,7 @@ export class MindManager {
     this.recent.push(Date.now())
     this.emit()
     try {
-      const r = await callClaude({ key: this.settings.apiKey.trim(), model, effort, system, user, schema, maxTokens, signal: ctrl.signal })
+      const r = await complete(this.profile(model), { anthropicKey: this.settings.apiKey, effort, system, user, schema, maxTokens, signal: ctrl.signal })
       this.account(model, r.usage)
       this.stats.ok++
       return r.text
@@ -204,7 +224,7 @@ export class MindManager {
       const err = e instanceof AiError ? e : new AiError('other', String(e))
       this.stats.lastError = err.message
       this.stats.lastErrorT = Date.now()
-      if (err.kind === 'auth') { this.settings.enabled = false; this.stats.pausedReason = err.message }
+      if (err.kind === 'auth' && model === this.settings.model) { this.settings.enabled = false; this.stats.pausedReason = err.message }
       if (err.kind === 'rate') this.backoffUntil = Date.now() + 20_000
       if (err.kind === 'overloaded' || err.kind === 'network') this.backoffUntil = Date.now() + 8_000
       throw err
@@ -306,7 +326,7 @@ export class MindManager {
   async interview(a: Agent, question: string): Promise<string> {
     const w = this.world
     if (!w) throw new Error('No world')
-    if (!this.settings.apiKey) throw new AiError('auth', 'Add your Anthropic API key in Settings to listen to minds.')
+    if (!this.usable(this.modelFor(a))) throw new AiError('auth', 'Add an API key or a local model in Minds & settings to listen to minds.')
     const ctx = buildContext(w, a).replace(/What do you think, say and do next\?$/, '')
     return this.run(this.modelFor(a), INTERVIEW_SYSTEM, `${ctx}\n\nThe observer asks: "${question.slice(0, 600)}"`, undefined, 'low', 3000)
   }
@@ -335,7 +355,7 @@ export class MindManager {
     const t = w.tribeById(a.tribeId)
     this.feed.push({
       id: this.feedId++, realT: Date.now(), t: w.time, agentId: a.id, name: a.name, tribe: tribe ?? t?.name ?? '', color: color ?? t?.color ?? '#aaa',
-      kind, thought, say, sayTo, plan, model: modelInfo(model).label,
+      kind, thought, say, sayTo, plan, model: this.label(model),
     })
     if (this.feed.length > 300) this.feed.splice(0, 100)
     this.emit()
@@ -343,9 +363,8 @@ export class MindManager {
 
   /** Rough $/hour estimate at current settings, for the settings panel. */
   estimateHourly(speed: number): number {
-    const m = modelInfo(this.settings.model)
     // ~5.5k cached system + ~2.2k context in, ~700 out incl. thinking at low effort
-    const perCall = (5500 * m.cacheRead + 2200 * m.input + 700 * m.output) / 1e6
+    const perCall = profileCost(this.profile(this.settings.model), { input: 2200, output: 700, cacheRead: 5500, cacheWrite: 0 })
     const realSecPerGameHour = 2.5 / Math.max(0.25, speed)
     const decisionsPerMindPerRealHour = 3600 / (realSecPerGameHour * Math.max(1.5, this.settings.thinkEveryHours * 0.6))
     const wanted = decisionsPerMindPerRealHour * this.settings.maxMinds

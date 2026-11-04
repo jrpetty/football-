@@ -5,14 +5,14 @@
 
 import { B, BIOMES, F, FEATURES, TREE_FEATURES, ITEMS, FOOD_ITEMS, invAdd, invCount, invTotal, type Inventory, type Item } from './data.ts'
 import { BUILDINGS, type BuildingType } from './buildings.ts'
-import { TECH_BY_ID, availableTechs, eraOf, ERAS } from './tech.ts'
+import { TECH_BY_ID, TECHS, availableTechs, eraOf, ERAS, inspires, geographyAffinity, type Landscape, type TechDef } from './tech.ts'
 import { generateTerrain, PRESETS, featureAmount, type Preset } from './worldgen.ts'
 import { Rng, hash2, clamp } from './rng.ts'
 import { findPath, type PathGrid } from './path.ts'
 import { personName, tribeName, TRIBE_COLORS, TRIBE_EMBLEMS } from './names.ts'
 import { DAY, HOUR, YEAR, SEASONS, seasonOf, isNight, hourOf, ageYears, dayOf } from './time.ts'
 import type {
-  Agent, Tribe, Building, Animal, ChronicleEntry, Chapter, WorldEvent, Sample, Traits, SkillName, Memory, PlanStep, Task,
+  Look, Agent, Tribe, Building, Animal, ChronicleEntry, Chapter, WorldEvent, Sample, Traits, SkillName, Memory, PlanStep, Task,
 } from './types.ts'
 import { SKILL_NAMES } from './types.ts'
 import { updateTask, startTask, cancelTask } from './actions.ts'
@@ -26,6 +26,8 @@ export interface WorldConfig {
   tribes: number
   perTribe: number
   popCap: number
+  /** replay exactly the same history for this seed (otherwise every run diverges) */
+  fixedHistory?: boolean
 }
 
 export const DEFAULT_CONFIG: WorldConfig = {
@@ -108,6 +110,14 @@ export class World implements PathGrid {
     this.occ = new Int32Array(this.W * this.H)
     this.computeComponents()
 
+    // The map is reproducible from its seed; the *history* is not. Mixing in
+    // fresh entropy means the same land gives rise to different people,
+    // different discoveries and a different story every time.
+    if (!this.cfg.fixedHistory) {
+      let e = Math.floor(Math.random() * 0xffffffff)
+      try { const b = new Uint32Array(1); crypto.getRandomValues(b); e ^= b[0] } catch { /* no crypto */ }
+      this.rng.state = (this.rng.state ^ e) >>> 0
+    }
     const sites = this.pickStartSites(this.cfg.tribes)
     sites.forEach((s, k) => this.spawnTribe(s.x, s.y, k))
     this.spawnAnimals(Math.round((this.W * this.H) / 600))
@@ -191,7 +201,7 @@ export class World implements PathGrid {
     const t: Tribe = {
       id, name, color: TRIBE_COLORS[this.tribes.length % TRIBE_COLORS.length], emblem: TRIBE_EMBLEMS[this.tribes.length % TRIBE_EMBLEMS.length],
       founderId, leaderId: founderId, foundedT: this.time, values: '', beliefs: '', laws: [], techs: [...techs],
-      research: null, storage: { berries: 10 }, center: { x, y }, relations: {}, model: '', alive: true, history: [], works: [], launched: false,
+      research: null, insight: {}, lost: [], storage: { berries: 10 }, center: { x, y }, relations: {}, model: '', alive: true, history: [], works: [], launched: false,
     }
     this.tribes.push(t)
     this.techSets.set(id, new Set(techs))
@@ -219,14 +229,38 @@ export class World implements PathGrid {
       health: 100, hunger: this.rng.range(10, 35), thirst: this.rng.range(10, 30), energy: this.rng.range(70, 95), warmth: 90, social: 70, mood: 65,
       sick: 0, injured: 0, traits, skills, toolTier: 0, toolWear: 0, clothing: 30, inv: {},
       memories: [], reflections: [], goal: '', selfImage: '', beliefs: '', thought: '', feeling: 'curious', relations: {}, heard: [], journal: [],
-      plan: [], task: null, speech: null, aiPending: false, aiLastT: -1e9, aiDecisions: 0, aiErrors: 0, lastReflectT: this.time, urgentThink: true, model: '',
+      plan: [], task: null, speech: null, emote: null, look: undefined as unknown as Look, aiPending: false, aiLastT: -1e9, aiDecisions: 0, aiErrors: 0, lastReflectT: this.time, urgentThink: true, model: '',
       stats: { gathered: 0, built: 0, research: 0, crafted: 0, talks: 0, kids: 0 },
     }
     if (pa.length) a.name = personName(this.rng, culture + (tribe ? tribe.id : 0), sex)
+    a.look = this.makeLook(sex, traits, pa)
     this.agents.push(a)
     this.agentById.set(id, a)
     this.version++
     return a
+  }
+
+  private makeLook(sex: 'female' | 'male', t: Traits, parents: Agent[]): Look {
+    const r = this.rng
+    const inherit = <T,>(f: (l: Look) => T, fresh: () => T): T => (parents.length && r.chance(0.8) ? f(r.pick(parents).look) : fresh())
+    const accents = ['#e8c547', '#6fd3c7', '#e57373', '#9575cd', '#81c784', '#ffb74d', '#f06292', '#4fc3f7', '#dce775', '#a1887f']
+    return {
+      skin: inherit((l) => l.skin, () => r.int(0, 5)),
+      hair: inherit((l) => l.hair, () => r.int(0, 6)),
+      style: sex === 'female' ? r.pick([1, 1, 2, 3, 5, 0]) : r.pick([0, 0, 4, 5, 1, 2]),
+      beard: sex === 'male' && r.chance(0.45),
+      height: clamp(r.gauss(1, 0.05) + (sex === 'male' ? 0.03 : -0.02), 0.88, 1.12),
+      build: clamp(0.85 + t.strength * 0.35 + r.gauss(0, 0.04), 0.82, 1.22),
+      // the bold and the open wear brighter colours
+      accent: t.extraversion + t.openness > 1.1 ? r.pick(accents.slice(0, 6)) : r.pick(['#8d6e63', '#78909c', '#a1887f', '#90a4ae', '#bcaaa4']),
+      marks: r.chance(0.12) ? 3 : r.chance(0.2) ? 2 : t.extraversion > 0.7 && r.chance(0.4) ? 1 : 0,
+    }
+  }
+
+  /** Show a little icon over someone's head for a moment. */
+  emote(a: Agent, icon: string, ms = 4000) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    a.emote = { icon, until: now + ms, start: now }
   }
 
   spawnAnimals(n: number) {
@@ -346,10 +380,10 @@ export class World implements PathGrid {
   }
 
   walkableTile(i: number): boolean {
-    return this.cost(i, false) !== Infinity
+    return this.cost(i, 0) !== Infinity
   }
   /** PathGrid: cost of entering tile i. */
-  cost(i: number, canSail: boolean): number {
+  cost(i: number, sail: number): number {
     const o = this.occ[i]
     if (o) {
       const b = this.buildingById.get(o - 1)
@@ -358,19 +392,22 @@ export class World implements PathGrid {
     if (this.road[i]) return this.road[i] === 2 ? 0.22 : 0.4
     const bd = BIOMES[this.biome[i]]
     if (bd.move === Infinity) {
-      if (canSail && (this.biome[i] === B.SHALLOWS || this.biome[i] === B.OCEAN || this.biome[i] === B.LAKE)) return 1.4
-      if (canSail && this.biome[i] === B.DEEP_OCEAN) return 2.2
+      const b = this.biome[i]
+      if (sail >= 1 && (b === B.SHALLOWS || b === B.LAKE)) return 1.6
+      if (sail >= 2 && b === B.OCEAN) return 1.4
+      if (sail >= 3 && b === B.DEEP_OCEAN) return 2
       return Infinity
     }
     return bd.move
   }
-  canSail(tribeId: number): boolean {
-    return this.hasTech(tribeId, 'sailing')
+  /** 0 on foot · 1 canoes (lakes, shallows) · 2 sail (open sea) · 3 navigation (deep ocean) */
+  canSail(tribeId: number): number {
+    return this.hasTech(tribeId, 'navigation') ? 3 : this.hasTech(tribeId, 'sailing') ? 2 : this.hasTech(tribeId, 'boats') ? 1 : 0
   }
   path(a: Agent, tx: number, ty: number, adjacent: boolean): Int32Array | null {
     const sx = Math.floor(a.x), sy = Math.floor(a.y)
     const sail = this.canSail(a.tribeId)
-    if (!sail && this.comp) {
+    if (sail === 0 && this.comp) {
       const c = this.comp[sy * this.W + sx]
       let ok = c >= 0 && this.comp[ty * this.W + tx] === c
       if (!ok && adjacent && c >= 0) {
@@ -607,6 +644,8 @@ export class World implements PathGrid {
     if (a.hunger > 92) dmg += 2.2
     if (a.thirst > 92) dmg += 3.5
     if (a.warmth < 12) dmg += 2.5
+    if (a.warmth < 40) this.practice(a, 'cold', dtH)
+    if (a.sick > 0) this.practice(a, 'sick', dtH * 0.5)
     if (a.energy < 3) dmg += 0.6
     if (a.sick > 0) {
       dmg += a.sick * 0.35 * (this.hasTech(a.tribeId, 'antibiotics') ? 0.3 : 1)
@@ -799,8 +838,10 @@ export class World implements PathGrid {
       if (b.type === 'farm' && b.planted && b.crop < 1) {
         const i = this.idx(b.x, b.y)
         const rate = s === 0 || s === 1 ? 1 : s === 2 ? 0.5 : 0
-        const wet = this.weather === 'rain' ? 1.3 : this.hasEvent('drought') ? 0.4 : 1
-        b.crop = Math.min(1, b.crop + (rate * wet * (0.4 + this.fertility[i])) / 70)
+        const irrigated = this.hasTech(b.tribeId, 'irrigation')
+        const wet = this.weather === 'rain' ? 1.3 : this.hasEvent('drought') ? (irrigated ? 0.85 : 0.4) : 1
+        const know = (irrigated ? 1.3 : 1) * (this.hasTech(b.tribeId, 'calendar') ? 1.15 : 1)
+        b.crop = Math.min(1, b.crop + (rate * wet * know * (0.4 + this.fertility[i])) / 70)
         if (s === 3 && b.crop < 1 && this.rng.chance(0.01)) { b.planted = false; b.crop = 0 }
       }
       if (b.type === 'pasture' && b.crop < 12 && s !== 3) b.crop = Math.min(12, b.crop + 0.04)
@@ -835,6 +876,7 @@ export class World implements PathGrid {
     this.events = this.events.filter((e) => e.end > this.time)
     for (const t of this.tribes) if (t.alive) this.assignHomes(t)
     this.lifeEvents()
+    this.knowledgeDay()
     this.diseaseCheck()
     this.foodSpoilage()
     if (day % 1 === 0) this.sample()
@@ -956,6 +998,7 @@ export class World implements PathGrid {
       p.relations[child.id] = { affinity: 80, familiarity: 100, lastTalk: this.time }
       child.relations[p.id] = { affinity: 80, familiarity: 100, lastTalk: this.time }
       this.remember(p, `Our child ${child.name} was born.`, 9)
+      this.emote(p, '👶', 7000)
     }
     this.log('birth', `${child.name} was born to ${mother.name} and ${father.name}. (generation ${gen})`, '👶', child.id, mother.tribeId)
   }
@@ -978,6 +1021,8 @@ export class World implements PathGrid {
       const r = o.relations[a.id]
       if (r && r.affinity > 30) {
         this.remember(o, `${a.name} died of ${cause}. I grieve for them.`, Math.min(10, 5 + Math.round(r.affinity / 25)))
+        this.emote(o, '😢', 8000)
+        this.practice(o, 'grief', 2)
         o.mood = Math.max(0, o.mood - r.affinity / 5)
         o.urgentThink = true
       }
@@ -1008,14 +1053,15 @@ export class World implements PathGrid {
       if (a.sick > 0) {
         // contagion
         for (const o of this.living) {
-          if (o !== a && o.sick === 0 && Math.abs(o.x - a.x) < 3 && Math.abs(o.y - a.y) < 3 && this.rng.chance(0.15)) {
+          if (o !== a && o.sick === 0 && Math.abs(o.x - a.x) < 3 && Math.abs(o.y - a.y) < 3 && this.rng.chance(this.hasTech(o.tribeId, 'vaccination') ? 0.04 : 0.15)) {
             o.sick = this.rng.range(0.8, 2.5)
             this.remember(o, `I caught an illness from ${a.name}.`, 5)
           }
         }
         continue
       }
-      const p = (plague ? 0.08 : 0.006) * (this.season === 3 ? 1.6 : 1) * (a.health < 50 ? 2 : 1)
+      const know = (this.hasTech(a.tribeId, 'cooking') ? 0.8 : 1) * (this.hasTech(a.tribeId, 'sanitation') ? 0.5 : 1) * (this.hasTech(a.tribeId, 'vaccination') ? 0.4 : 1)
+      const p = (plague ? 0.08 : 0.006) * (this.season === 3 ? 1.6 : 1) * (a.health < 50 ? 2 : 1) * know
       if (this.rng.chance(p)) {
         a.sick = this.rng.range(0.8, plague ? 4 : 2.5)
         this.remember(a, 'I have fallen ill. I feel feverish and weak.', 6)
@@ -1122,8 +1168,12 @@ export class World implements PathGrid {
     if (set.has(techId)) return
     set.add(techId)
     t.techs.push(techId)
+    delete t.insight[techId]
+    t.lost = t.lost.filter((x) => x !== techId)
+    this.availCache.delete(t.id)
     const def = TECH_BY_ID[techId]
     if (t.research?.tech === techId) t.research = null
+    if (by) this.emote(by, how === 'research' ? '💡' : '🤝', 6000)
     const icon = how === 'research' ? '💡' : '🤝'
     const who = by ? (how === 'research' ? ` thanks to ${by.name}` : ` from ${by.name}`) : ''
     this.log('tech', `The ${t.name} ${how === 'research' ? 'discovered' : 'learned'} ${def?.name ?? techId}${who}.`, icon, by?.id, t.id)
@@ -1135,11 +1185,128 @@ export class World implements PathGrid {
     this.checkMilestones()
   }
 
+  /** Choose what to study: cheap ideas, ones already half-understood, and ones the land suggests. Never the same order twice. */
   pickResearch(t: Tribe): string | null {
-    const av = availableTechs(this.techs(t.id))
+    const av = this.available(t)
     if (!av.length) return null
-    av.sort((a, b) => a.cost - b.cost)
-    return av[0].id
+    const l = this.landscape(t)
+    const weights = av.map((d) => {
+      const progress = this.techProgress(t, d.id) / d.cost
+      return (geographyAffinity(d.id, l) * (1 + progress * 3)) / Math.sqrt(d.cost) * (0.6 + this.rng.next() * 0.8)
+    })
+    let best = 0
+    for (let k = 1; k < av.length; k++) if (weights[k] > weights[best]) best = k
+    return av[best].id
+  }
+
+  private availCache = new Map<number, TechDef[]>()
+  available(t: Tribe): TechDef[] {
+    let v = this.availCache.get(t.id)
+    if (!v) { v = availableTechs(this.techs(t.id)); this.availCache.set(t.id, v) }
+    return v
+  }
+
+  techProgress(t: Tribe, id: string): number {
+    return (t.insight[id] ?? 0) + (t.research?.tech === id ? t.research.progress : 0)
+  }
+
+  /** Switch the tribe's deliberate research focus without losing what was learnt so far. */
+  focusResearch(t: Tribe, id: string) {
+    if (t.research?.tech === id) return
+    if (t.research) t.insight[t.research.tech] = (t.insight[t.research.tech] ?? 0) + t.research.progress
+    const carried = t.insight[id] ?? 0
+    delete t.insight[id]
+    t.research = { tech: id, progress: carried }
+  }
+
+  private landCache = new Map<number, { t: number; l: Landscape }>()
+  landscape(t: Tribe): Landscape {
+    const c = this.landCache.get(t.id)
+    if (c && this.time - c.t < DAY) return c.l
+    const ex = this.explored.get(t.id)
+    const l: Landscape = { coast: 0, river: 0, forest: 0, fertile: 0, cold: 0, game: 0, copper: 0, tin: 0, iron: 0, coal: 0, gold: 0, oil: 0, sand: 0, clay: 0 }
+    let n = 0, cold = 0
+    for (let i = 0; i < this.W * this.H; i++) {
+      if (ex && !ex[i]) continue
+      n++
+      const b = this.biome[i]
+      if (b === B.SHALLOWS) l.coast++
+      else if (b === B.RIVER || b === B.LAKE) l.river++
+      else if (b === B.FOREST || b === B.RAINFOREST || b === B.TAIGA) l.forest++
+      if (this.fertility[i] > 0.5) l.fertile++
+      if (b === B.BEACH || b === B.DESERT) l.sand++
+      if (this.temp[i] < 0.35) cold++
+      const f = this.feature[i]
+      if (f === F.COPPER) l.copper++
+      else if (f === F.TIN) l.tin++
+      else if (f === F.IRON) l.iron++
+      else if (f === F.COAL) l.coal++
+      else if (f === F.GOLD) l.gold++
+      else if (f === F.OIL) l.oil++
+      else if (f === F.CLAY) l.clay++
+    }
+    l.cold = n ? cold / n : 0
+    l.game = this.animals.some((an) => an.alive && (!ex || ex[this.idx(Math.floor(an.x), Math.floor(an.y))])) ? 1 : 0
+    this.landCache.set(t.id, { t: this.time, l })
+    return l
+  }
+
+  /** Learning by doing: an hour of relevant work nudges a people toward an idea. */
+  practice(a: Agent, key: string, hours: number) {
+    const t = this.tribeById(a.tribeId)
+    if (!t || hours <= 0) return
+    const av = this.available(t)
+    if (!av.length) return
+    const l = this.landscape(t)
+    const knack = 0.07 * (0.5 + a.traits.intelligence) * (0.7 + a.traits.openness * 0.6)
+    for (const d of av) {
+      if (!inspires(d.id, key)) continue
+      // practical insight fades for advanced ideas: you can't stumble on electricity
+      const tierDamp = d.era === 0 ? 1 : d.era === 1 ? 0.6 : d.era <= 3 ? 0.25 : 0.08
+      t.insight[d.id] = (t.insight[d.id] ?? 0) + hours * knack * tierDamp * geographyAffinity(d.id, l)
+      if (this.techProgress(t, d.id) >= d.cost) {
+        this.learnTech(t, d.id, a, 'research')
+        this.remember(a, `While I was at work, it came to me: ${d.name}. ${d.desc}`, 8)
+        return
+      }
+    }
+  }
+
+  /** Daily: flashes of insight, and knowledge slipping away from small peoples without writing. */
+  private knowledgeDay() {
+    for (const t of this.tribes) {
+      if (!t.alive) continue
+      const mem = this.members(t.id).filter((m) => this.isAdult(m))
+      if (!mem.length) continue
+      // eureka: a half-understood idea suddenly clicks
+      for (const d of this.available(t)) {
+        const frac = this.techProgress(t, d.id) / d.cost
+        if (frac < 0.35) continue
+        const genius = mem.reduce((m, a) => Math.max(m, a.traits.intelligence + a.traits.openness * 0.5), 0)
+        if (this.rng.chance(0.025 * frac * genius)) {
+          const who = mem.reduce((b, a) => (a.traits.intelligence + this.rng.next() * 0.5 > b.traits.intelligence ? a : b), mem[0])
+          t.insight[d.id] = (t.insight[d.id] ?? 0) + d.cost * 0.4
+          this.log('tech', `${who.name} had a flash of insight about ${d.name.toLowerCase()}.`, '✨', who.id, t.id)
+          this.emote(who, '✨', 6000)
+          this.remember(who, `In a flash I understood something new about ${d.name}.`, 7)
+          if (this.techProgress(t, d.id) >= d.cost) this.learnTech(t, d.id, who, 'research')
+          break
+        }
+      }
+      // oral tradition is fragile: a tiny people can forget (the "Tasmanian effect")
+      if (!this.techs(t.id).has('writing') && mem.length <= 3 && this.rng.chance(0.03)) {
+        const known = this.techs(t.id)
+        const leaves = t.techs.filter((id) => id !== 'foraging' && !TECHS.some((o) => known.has(o.id) && o.req.includes(id)))
+        if (leaves.length) {
+          const lost = this.rng.pick(leaves)
+          known.delete(lost)
+          t.techs = t.techs.filter((x) => x !== lost)
+          t.lost.push(lost)
+          this.availCache.delete(t.id)
+          this.log('tech', `With so few left to remember it, the ${t.name} lost the knowledge of ${TECH_BY_ID[lost]?.name.toLowerCase()}.`, '🌫️', undefined, t.id)
+        }
+      }
+    }
   }
 
   // ---------------------------------------------------------------- placing buildings

@@ -31,13 +31,16 @@ const RAW_TECHS: TechDef[] = [
   { id: 'fire', name: 'Fire', era: 0, cost: 10, req: [], desc: 'Campfires for warmth, light, cooking and gathering.' },
   { id: 'stone_tools', name: 'Stone Tools', era: 0, cost: 12, req: [], desc: 'Knapped flint tools: faster gathering.' },
   { id: 'shelter', name: 'Shelter', era: 0, cost: 12, req: [], desc: 'Build huts to sleep warm and dry.' },
+  { id: 'cordage', name: 'Cordage', era: 0, cost: 12, req: [], desc: 'Twisting plant fibre into string and rope. Fibre is gathered faster.' },
+  { id: 'cooking', name: 'Cooking', era: 0, cost: 14, req: ['fire'], desc: 'Cooked food is more nourishing and carries less disease.' },
   { id: 'hunting', name: 'Hunting', era: 0, cost: 16, req: ['stone_tools'], desc: 'Spears and tracking: meat and hides from wild game.' },
-  { id: 'fishing', name: 'Fishing', era: 0, cost: 16, req: ['stone_tools'], desc: 'Nets and hooks: fish from rivers, lakes and coasts.' },
+  { id: 'fishing', name: 'Fishing', era: 0, cost: 16, req: ['stone_tools', 'cordage'], desc: 'Nets and hooks: fish from rivers, lakes and coasts.' },
+  { id: 'boats', name: 'Dugout Canoes', era: 0, cost: 30, req: ['stone_tools', 'fishing'], desc: 'Hollowed logs cross rivers, lakes and calm coastal water.' },
   { id: 'clothing', name: 'Clothing', era: 0, cost: 16, req: ['hunting'], desc: 'Sew hides into warm clothes.' },
   { id: 'herbalism', name: 'Herbalism', era: 0, cost: 20, req: ['foraging'], desc: 'Brew medicine from plants to heal the sick.' },
   { id: 'carpentry', name: 'Carpentry', era: 0, cost: 26, req: ['stone_tools'], desc: 'Workshops and sawn planks.' },
   { id: 'pottery', name: 'Pottery', era: 0, cost: 28, req: ['fire'], desc: 'Kilns, pots, granaries and baked bread.' },
-  { id: 'weaving', name: 'Weaving', era: 0, cost: 24, req: ['clothing'], desc: 'Spin fibre into cloth and better clothes.' },
+  { id: 'weaving', name: 'Weaving', era: 0, cost: 24, req: ['clothing', 'cordage'], desc: 'Spin fibre into cloth and better clothes.' },
   { id: 'agriculture', name: 'Agriculture', era: 0, cost: 34, req: ['stone_tools', 'foraging'], desc: 'Plant and harvest grain fields — the Neolithic revolution.' },
   { id: 'mysticism', name: 'Mysticism', era: 0, cost: 30, req: ['fire'], desc: 'Shared beliefs, rituals and temples.' },
   { id: 'animal_husbandry', name: 'Animal Husbandry', era: 0, cost: 40, req: ['agriculture', 'hunting'], desc: 'Pastures of domesticated animals.' },
@@ -47,7 +50,11 @@ const RAW_TECHS: TechDef[] = [
   { id: 'bronze_working', name: 'Bronze Working', era: 1, cost: 70, req: ['mining', 'pottery'], desc: 'Alloy copper and tin. Smithies and bronze tools.' },
   { id: 'the_wheel', name: 'The Wheel', era: 1, cost: 60, req: ['carpentry'], desc: 'Carts and roads: much faster travel.' },
   { id: 'writing', name: 'Writing', era: 1, cost: 75, req: ['pottery'], desc: 'Record knowledge. Libraries and paper.' },
-  { id: 'sailing', name: 'Sailing', era: 1, cost: 70, req: ['fishing', 'carpentry'], desc: 'Boats cross water. Docks for deep-water fishing.' },
+  { id: 'sailing', name: 'Sailing', era: 1, cost: 70, req: ['boats', 'carpentry'], desc: 'Sailboats cross open sea. Docks for deep-water fishing.' },
+  { id: 'irrigation', name: 'Irrigation', era: 1, cost: 65, req: ['agriculture', 'masonry'], desc: 'Canals water the fields: crops grow faster and resist drought.' },
+  { id: 'plough', name: 'The Plough', era: 1, cost: 70, req: ['agriculture', 'animal_husbandry', 'carpentry'], desc: 'Oxen turn the soil: much bigger harvests.' },
+  { id: 'calendar', name: 'Calendar', era: 1, cost: 60, req: ['agriculture', 'mysticism'], desc: 'Tracking the seasons: better-timed planting.' },
+  { id: 'horseback_riding', name: 'Horseback Riding', era: 1, cost: 65, req: ['animal_husbandry'], desc: 'Riders travel much faster.' },
   // Iron Age
   { id: 'iron_working', name: 'Iron Working', era: 2, cost: 120, req: ['bronze_working'], desc: 'Smelt iron for hard tools.' },
   { id: 'mathematics', name: 'Mathematics', era: 2, cost: 120, req: ['writing'], desc: 'Numbers, geometry and measurement.' },
@@ -63,7 +70,8 @@ const RAW_TECHS: TechDef[] = [
   { id: 'education', name: 'Education', era: 4, cost: 360, req: ['philosophy'], desc: 'Universities: a big boost to research.' },
   { id: 'steel', name: 'Steel', era: 4, cost: 390, req: ['iron_working', 'engineering'], desc: 'Carbon steel for strong tools and structures.' },
   { id: 'banking', name: 'Banking', era: 4, cost: 370, req: ['currency', 'education'], desc: 'Credit and finance: markets thrive.' },
-  { id: 'navigation', name: 'Navigation', era: 4, cost: 340, req: ['sailing', 'astronomy'], desc: 'Ocean voyages to distant lands.' },
+  { id: 'navigation', name: 'Navigation', era: 4, cost: 340, req: ['sailing', 'astronomy'], desc: 'Deep-ocean voyages to distant lands.' },
+  { id: 'sanitation', name: 'Sanitation', era: 4, cost: 330, req: ['engineering', 'medicine'], desc: 'Sewers and clean water halve disease.' },
   // Renaissance
   { id: 'printing_press', name: 'Printing Press', era: 5, cost: 560, req: ['education', 'engineering'], desc: 'Mass knowledge: +20% research.' },
   { id: 'physics', name: 'Physics', era: 5, cost: 620, req: ['education', 'astronomy'], desc: 'Laws of motion and mechanics.' },
@@ -75,6 +83,7 @@ const RAW_TECHS: TechDef[] = [
   { id: 'railways', name: 'Railways', era: 6, cost: 1100, req: ['steam_power'], desc: 'Roads become rail: very fast travel.' },
   { id: 'refining', name: 'Oil Refining', era: 6, cost: 1200, req: ['chemistry', 'industrialization'], desc: 'Drill oil and refine fuel.' },
   { id: 'electricity', name: 'Electricity', era: 6, cost: 1400, req: ['physics', 'industrialization'], desc: 'Power plants, electric light, power tools.' },
+  { id: 'vaccination', name: 'Vaccination', era: 6, cost: 1150, req: ['medicine', 'chemistry'], desc: 'Immunity before infection: plagues lose their terror.' },
   // Modern
   { id: 'combustion', name: 'Combustion Engine', era: 7, cost: 1600, req: ['refining'], desc: 'Engines burning fuel.' },
   { id: 'electronics', name: 'Electronics', era: 7, cost: 1800, req: ['electricity'], desc: 'Circuits, radio and electronics.' },
@@ -92,8 +101,11 @@ const RAW_TECHS: TechDef[] = [
 ]
 
 /** Research costs are scaled so a civilisation's rise takes hours, not minutes. */
-export const RESEARCH_SCALE = 3.2
-export const TECHS: TechDef[] = RAW_TECHS.map((t) => ({ ...t, cost: Math.round(t.cost * RESEARCH_SCALE) }))
+// Each era is harder to reach than the last — the stone age passes quickly in
+// game time, but industry and computing take generations.
+export const RESEARCH_SCALE = 3.5
+export const ERA_SCALE = 2.2
+export const TECHS: TechDef[] = RAW_TECHS.map((t) => ({ ...t, cost: Math.round(t.cost * (RESEARCH_SCALE + t.era * ERA_SCALE * 0.7 + t.era * t.era * 0.35)) }))
 
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]))
 
@@ -124,4 +136,71 @@ export function techWorkBonus(known: Set<string>): number {
   let m = 1
   if (known.has('robotics')) m += 0.4
   return m
+}
+
+// ------------------------------------------------------------------ learning by doing
+//
+// Most early knowledge wasn't "researched" — it was noticed. People who work
+// clay by a fire discover pottery; people who watch seeds sprout discover
+// farming. Every hour of relevant practice adds insight to the techs listed
+// here (activity keys are prefixes: "gather" matches "gather:clay").
+
+export const INSPIRE: Record<string, string[]> = {
+  fire: ['gather:wood', 'gather:stone', 'cold'], stone_tools: ['gather:stone', 'hunt'], shelter: ['gather:wood', 'gather:fiber', 'cold', 'sleep'],
+  cordage: ['gather:fiber', 'build'], cooking: ['eat', 'build:campfire', 'hunt'], hunting: ['hunt', 'gather:stone'],
+  fishing: ['fish', 'gather:fiber', 'drink'], boats: ['gather:wood', 'fish', 'explore'], clothing: ['hunt', 'cold'],
+  herbalism: ['gather:berries', 'gather:fiber', 'sick', 'heal'], carpentry: ['gather:wood', 'build'], pottery: ['gather:clay', 'build:campfire', 'eat'],
+  weaving: ['gather:fiber', 'craft'], agriculture: ['gather:berries', 'gather:fiber', 'farm'], mysticism: ['celebrate', 'grief', 'talk', 'sleep'],
+  animal_husbandry: ['hunt', 'farm'], mining: ['gather:stone', 'gather:clay'], masonry: ['gather:stone', 'build'],
+  bronze_working: ['gather:copper', 'gather:tin', 'craft', 'build:kiln'], the_wheel: ['craft:pottery', 'build', 'trade'],
+  writing: ['trade', 'talk', 'craft:pottery', 'decree'], sailing: ['fish', 'explore', 'gather:wood'], irrigation: ['farm', 'drink'],
+  plough: ['farm'], calendar: ['farm', 'celebrate', 'sleep'], horseback_riding: ['farm:pasture', 'hunt', 'explore'],
+  iron_working: ['gather:iron_ore', 'craft:bronze', 'build:smithy'], mathematics: ['trade', 'build'],
+  code_of_laws: ['decree', 'talk', 'trade'], currency: ['trade', 'gather:gold'], philosophy: ['write', 'talk', 'celebrate'],
+  engineering: ['build'], medicine: ['heal', 'sick'], glassmaking: ['gather:sand', 'craft:pottery', 'craft'],
+  astronomy: ['explore', 'sleep'], education: ['teach', 'write'], steel: ['craft:iron', 'craft'], banking: ['trade'],
+  navigation: ['explore', 'fish'], sanitation: ['sick', 'build', 'drink'], printing_press: ['write', 'craft:paper'],
+  physics: ['build'], chemistry: ['craft'], gunpowder: ['craft', 'gather:coal'], steam_power: ['craft', 'gather:coal'],
+  industrialization: ['craft', 'build'], railways: ['build:road'], refining: ['gather:oil'],
+  electricity: ['craft'], vaccination: ['heal', 'sick'], combustion: ['craft:fuel'],
+  electronics: ['craft'], research_labs: ['craft'], urban_planning: ['build'], antibiotics: ['heal', 'sick'],
+  flight: ['explore'], computing: ['craft:electronics'], skyscrapers: ['build'],
+  internet: ['talk'], robotics: ['craft'], rocketry: ['craft:fuel'],
+}
+
+export function inspires(tech: string, key: string): boolean {
+  const list = INSPIRE[tech]
+  if (!list) return false
+  for (const e of list) if (key === e || key.startsWith(e + ':')) return true
+  return false
+}
+
+/** What a tribe's lands offer — geography shapes which ideas come easily. */
+export interface Landscape {
+  coast: number; river: number; forest: number; fertile: number; cold: number; game: number
+  copper: number; tin: number; iron: number; coal: number; gold: number; oil: number; sand: number; clay: number
+}
+
+/** Research multiplier from geography (Guns, Germs and Steel in miniature). */
+export function geographyAffinity(tech: string, l: Landscape): number {
+  const has = (v: number, k = 1) => (v > 0 ? 1 + 0.35 * k : 1 - 0.3 * k)
+  switch (tech) {
+    case 'fishing': return has(l.coast + l.river)
+    case 'boats': return has(l.coast + l.river)
+    case 'sailing': case 'navigation': return has(l.coast, 1.4)
+    case 'agriculture': case 'irrigation': case 'calendar': return has(l.fertile > 20 ? 1 : 0) * (l.river > 0 ? 1.15 : 0.95)
+    case 'plough': return has(l.fertile > 20 ? 1 : 0)
+    case 'animal_husbandry': case 'horseback_riding': return has(l.game)
+    case 'clothing': case 'shelter': return l.cold > 0.3 ? 1.5 : 0.9
+    case 'pottery': return has(l.clay)
+    case 'mining': return has(l.copper + l.tin + l.iron + l.coal + l.gold)
+    case 'bronze_working': return has(l.copper) * has(l.tin, 0.6)
+    case 'iron_working': case 'steel': return has(l.iron)
+    case 'currency': return has(l.gold, 0.6)
+    case 'glassmaking': return has(l.sand)
+    case 'steam_power': case 'gunpowder': return has(l.coal)
+    case 'refining': case 'combustion': return has(l.oil, 1.4)
+    case 'carpentry': return has(l.forest > 30 ? 1 : 0, 0.6)
+    default: return 1
+  }
 }

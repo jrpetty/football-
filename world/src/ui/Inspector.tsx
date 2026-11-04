@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
-import { MODELS, modelInfo } from '../ai/client.ts'
+import { ProfileSelect } from './Providers.tsx'
 import { personality } from '../ai/prompts.ts'
 import { BIOMES, FEATURES, ITEMS, TREE_FEATURES, type Item } from '../sim/data.ts'
 import { BUILDINGS, TOOL_NAMES } from '../sim/buildings.ts'
@@ -72,7 +72,7 @@ function AgentView({ id }: { id: number }) {
           </div>
           <div style={{ marginTop: 4, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {!a.alive && <span className="tag bad">Died of {a.deathCause}</span>}
-            {a.alive && (isMind ? <span className="tag accent">✦ {modelInfo(mind.modelFor(a)).label}{a.aiPending ? ' · thinking…' : ''}</span> : <span className="tag">Instinct{mind.settings.apiKey ? ' (no mind slot)' : ''}</span>)}
+            {a.alive && (isMind ? <span className="tag accent">✦ {mind.label(mind.modelFor(a))}{a.aiPending ? ' · thinking…' : ''}</span> : <span className="tag">Instinct{mind.configured ? ' (no mind slot)' : ''}</span>)}
             {a.alive && <span className="tag">{a.feeling}</span>}
             {a.sick > 0 && <span className="tag warn">sick</span>}
           </div>
@@ -83,15 +83,7 @@ function AgentView({ id }: { id: number }) {
           <button className={`icon-btn ${game.renderer?.follow ? 'primary' : ''}`} onClick={() => { if (game.renderer) { game.renderer.follow = !game.renderer.follow; game.emit() } }}>
             🎥 {game.renderer?.follow ? 'Following' : 'Follow'}
           </button>
-          <select
-            className="icon-btn"
-            value={a.model}
-            title="Which Claude model drives this person"
-            onChange={(e) => { a.model = e.target.value; game.emit() }}
-          >
-            <option value="">Mind: tribe default</option>
-            {MODELS.map((m) => <option key={m.id} value={m.id}>Mind: {m.label}</option>)}
-          </select>
+          <ProfileSelect className="icon-btn" value={a.model} onChange={(v) => { a.model = v; game.emit() }} emptyLabel="Mind: tribe default" />
         </div>
       )}
 
@@ -116,7 +108,7 @@ function AgentView({ id }: { id: number }) {
         <Section title="Ask them anything">
           <div className="meta" style={{ marginBottom: 4 }}>You listen from outside their world — they won't remember you asked.</div>
           <div className="ask">
-            <input value={q} placeholder={mind.settings.apiKey ? 'What do you dream about?' : 'Add an API key in Settings first'} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ask()} disabled={asking} />
+            <input value={q} placeholder={mind.usable(mind.modelFor(a)) ? 'What do you dream about?' : 'Add a mind (API key or local model) first'} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ask()} disabled={asking} />
             <button className="icon-btn primary" onClick={ask} disabled={asking || !q.trim()}>{asking ? '…' : 'Ask'}</button>
           </div>
           {answer && (

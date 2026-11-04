@@ -61,7 +61,7 @@ export function serialize(w: World): SaveFile {
     },
     explored,
     regrow: w.regrow,
-    agents: w.agents.map((a) => ({ ...a, task: null, aiPending: false, speech: null })),
+    agents: w.agents.map((a) => ({ ...a, task: null, aiPending: false, speech: null, emote: null })),
     tribes: w.tribes,
     buildings: w.buildings,
     animals: w.animals.filter((a) => a.alive),
@@ -92,8 +92,8 @@ export function deserialize(s: SaveFile): World {
   w.rng.state = s.rng
   w.nextId = s.nextId
   w.regrow = s.regrow ?? []
-  w.agents = s.agents.map((a) => ({ ...a, journal: a.journal ?? [], task: null, aiPending: false }))
-  w.tribes = s.tribes
+  w.agents = s.agents.map((a) => ({ ...a, journal: a.journal ?? [], emote: null, look: a.look ?? { skin: a.id % 6, hair: a.id % 7, style: a.id % 6, beard: false, height: 1, build: 1, accent: '#a1887f', marks: 0 }, task: null, aiPending: false }))
+  w.tribes = s.tribes.map((t) => ({ ...t, insight: t.insight ?? {}, lost: t.lost ?? [] }))
   w.buildings = s.buildings
   w.animals = s.animals
   w.chronicle = s.chronicle

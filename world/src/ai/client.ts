@@ -3,6 +3,7 @@
 // shared deployment, put a small proxy in front instead of exposing a key.
 
 import Anthropic from '@anthropic-ai/sdk'
+import type { MindProfile } from './providers.ts'
 
 export interface ModelInfo {
   id: string
@@ -30,9 +31,10 @@ export function modelInfo(id: string): ModelInfo {
 export type Effort = 'low' | 'medium' | 'high'
 
 export interface AiSettings {
-  apiKey: string
+  apiKey: string // Anthropic key
   enabled: boolean
-  model: string
+  model: string // default mind profile id (a Claude model id, or a custom profile id)
+  profiles: MindProfile[] // user-added minds: DeepSeek, Qwen, Kimi, GLM, Ollama, LM Studio…
   effort: Effort
   maxConcurrent: number
   maxPerMinute: number
@@ -47,6 +49,7 @@ export const DEFAULT_SETTINGS: AiSettings = {
   apiKey: '',
   enabled: true,
   model: DEFAULT_MODEL,
+  profiles: [],
   effort: 'low',
   maxConcurrent: 4,
   maxPerMinute: 12,

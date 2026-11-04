@@ -46,6 +46,9 @@ export class Renderer {
   selection: Selection = { kind: null, id: 0 }
   hover: { x: number; y: number } | null = null
   follow = false
+  /** title-screen mode: the camera drifts slowly over the living world */
+  cinematic = false
+  private drift = Math.random() * 1000
   overlay: Overlay = 'territory'
   showNames = true
   private chunks = new Map<number, Chunk>()
@@ -441,7 +444,16 @@ export class Renderer {
     this.frame++
 
     // camera easing / follow
-    if (this.follow && this.selection.kind === 'agent') {
+    if (this.cinematic) {
+      this.drift += dt * 0.05
+      const w0 = this.world
+      const tribe = w0.tribes.find((t) => t.alive)
+      const cx = tribe ? tribe.center.x : w0.W / 2, cy = tribe ? tribe.center.y : w0.H / 2
+      const tx = cx + Math.cos(this.drift) * 14, ty = cy + Math.sin(this.drift * 1.3) * 8
+      this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 0.5)
+      this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 0.5)
+      this.cam.zoom += (1.7 - this.cam.zoom) * Math.min(1, dt * 0.5)
+    } else if (this.follow && this.selection.kind === 'agent') {
       const a = w.agentById.get(this.selection.id)
       if (a && a.alive) { this.cam.x += (a.x - this.cam.x) * Math.min(1, dt * 4); this.cam.y += (a.y - this.cam.y) * Math.min(1, dt * 4) }
     } else if (this.target) {
@@ -722,23 +734,32 @@ export class Renderer {
     const age = w.age(a)
     const child = age < 14
     const elder = age > 58
-    const size = S * (child ? 0.42 + (age / 14) * 0.25 : 0.7)
+    const L = a.look
+    const size = S * (child ? 0.42 + (age / 14) * 0.25 : 0.7) * L.height
+    const wide = L.build
     const x = ox + a.x * S, y = oy + a.y * S + S * 0.15
     const t = w.tribeById(a.tribeId)
     const color = t?.color ?? '#ddd'
+    const era = t ? eraOf(w.techs(t.id)) : 0
+    const leader = t?.leaderId === a.id
     const sleeping = a.task?.action === 'sleep' && a.task.phase === 'work'
     const working = a.task?.phase === 'work' && !sleeping
     const walk = a.moving ? Math.sin(now / 90 + a.id) : 0
-    const skin = SKIN[a.id % SKIN.length]
-    const hair = elder ? '#d9d9d9' : HAIR[(a.id * 7) % HAIR.length]
+    const skin = SKIN[L.skin % SKIN.length]
+    const hair = elder ? '#d9d9d9' : HAIR[L.hair % HAIR.length]
+    // what they wear tells you when (and who) they are
+    const garment = era === 0 ? (a.clothing > 20 ? '#8a6a44' : '#a68a6a') : era <= 4 ? shade(color, -0.15) : era <= 6 ? shade(L.accent, -0.25) : shade(color, -0.3)
+    const trim = era === 0 ? L.accent : era <= 4 ? L.accent : color
 
     ctx.fillStyle = 'rgba(0,0,0,0.25)'
-    ctx.beginPath(); ctx.ellipse(x, y, size * 0.32, size * 0.12, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.ellipse(x, y, size * 0.32 * wide, size * 0.12, 0, 0, Math.PI * 2); ctx.fill()
     if (sleeping) {
-      ctx.fillStyle = color
-      ctx.beginPath(); ctx.ellipse(x, y - size * 0.12, size * 0.42, size * 0.15, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = garment
+      ctx.beginPath(); ctx.ellipse(x, y - size * 0.12, size * 0.42, size * 0.15 * wide, 0, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = skin
       ctx.beginPath(); ctx.arc(x - size * 0.42, y - size * 0.15, size * 0.13, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = hair
+      ctx.beginPath(); ctx.arc(x - size * 0.47, y - size * 0.17, size * 0.11, Math.PI * 0.5, Math.PI * 1.5); ctx.fill()
       if (S > 12) {
         ctx.fillStyle = 'rgba(255,255,255,0.8)'
         ctx.font = `${Math.round(size * 0.35)}px Inter, sans-serif`
@@ -747,8 +768,8 @@ export class Renderer {
       return
     }
     const lw = Math.max(1, size * 0.11)
-    // legs
-    ctx.strokeStyle = '#3a2c22'
+    // legs (trousers once cloth is common)
+    ctx.strokeStyle = era >= 5 ? '#2e3440' : '#3a2c22'
     ctx.lineWidth = lw
     ctx.beginPath()
     ctx.moveTo(x - size * 0.08, y - size * 0.32); ctx.lineTo(x - size * 0.1 - walk * size * 0.12, y - size * 0.02)
@@ -756,44 +777,87 @@ export class Renderer {
     ctx.stroke()
     // body
     const bob = a.moving ? Math.abs(walk) * size * 0.04 : working ? Math.sin(now / 140 + a.id) * size * 0.03 : 0
-    ctx.fillStyle = a.clothing > 20 ? shade(color, -0.1) : '#a68a6a'
+    const hw = 0.2 * wide, sw = 0.15 * wide
+    ctx.fillStyle = garment
     ctx.beginPath()
-    ctx.moveTo(x - size * 0.2, y - size * 0.3 - bob)
-    ctx.lineTo(x - size * 0.15, y - size * 0.72 - bob)
-    ctx.lineTo(x + size * 0.15, y - size * 0.72 - bob)
-    ctx.lineTo(x + size * 0.2, y - size * 0.3 - bob)
+    ctx.moveTo(x - size * hw, y - size * 0.3 - bob)
+    ctx.lineTo(x - size * sw, y - size * 0.72 - bob)
+    ctx.lineTo(x + size * sw, y - size * 0.72 - bob)
+    ctx.lineTo(x + size * hw, y - size * 0.3 - bob)
     ctx.closePath()
     ctx.fill()
+    if (S > 10) {
+      ctx.fillStyle = trim
+      ctx.fillRect(x - size * hw * 0.95, y - size * 0.42 - bob, size * hw * 1.9, Math.max(1, size * 0.05))
+    }
     // arms (working arm swings)
     ctx.strokeStyle = skin
     ctx.lineWidth = lw * 0.9
     const swing = working ? Math.sin(now / 120 + a.id) * 0.6 : walk * 0.4
     ctx.beginPath()
-    ctx.moveTo(x - size * 0.16, y - size * 0.66 - bob); ctx.lineTo(x - size * 0.26, y - size * 0.4 - bob - swing * size * 0.05)
-    ctx.moveTo(x + size * 0.16, y - size * 0.66 - bob); ctx.lineTo(x + size * 0.18 + a.dir * swing * size * 0.12, y - size * 0.42 - bob - Math.abs(swing) * size * 0.12)
+    ctx.moveTo(x - size * sw, y - size * 0.66 - bob); ctx.lineTo(x - size * (sw + 0.1), y - size * 0.4 - bob - swing * size * 0.05)
+    ctx.moveTo(x + size * sw, y - size * 0.66 - bob); ctx.lineTo(x + size * (sw + 0.03) + a.dir * swing * size * 0.12, y - size * 0.42 - bob - Math.abs(swing) * size * 0.12)
     ctx.stroke()
-    // tool when working
     if (working && a.toolTier > 0 && S > 12) {
       ctx.strokeStyle = ['#888', '#9a9a9a', '#d0894b', '#9aa3ad', '#c6ccd2', '#ffd166'][a.toolTier]
       ctx.lineWidth = lw * 0.8
-      const hx = x + size * 0.18 + a.dir * swing * size * 0.12, hy = y - size * 0.42 - bob - Math.abs(swing) * size * 0.12
-      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + a.dir * size * 0.18, hy - size * 0.18); ctx.stroke()
+      const hx = x + size * (sw + 0.03) + a.dir * swing * size * 0.12, hy2 = y - size * 0.42 - bob - Math.abs(swing) * size * 0.12
+      ctx.beginPath(); ctx.moveTo(hx, hy2); ctx.lineTo(hx + a.dir * size * 0.18, hy2 - size * 0.18); ctx.stroke()
+    }
+    if (elder && S > 12 && !working) {
+      ctx.strokeStyle = '#6b4a2b'
+      ctx.lineWidth = lw * 0.6
+      ctx.beginPath(); ctx.moveTo(x - size * 0.3, y - size * 0.45); ctx.lineTo(x - size * 0.34, y); ctx.stroke()
     }
     // head
     const hy = y - size * 0.86 - bob
+    const hr = size * 0.15
+    if (L.style === 1 || L.style === 3) {
+      // long hair falls behind the shoulders
+      ctx.fillStyle = hair
+      ctx.fillRect(x - hr * 1.05, hy - hr * 0.2, hr * 2.1, hr * (L.style === 1 ? 1.9 : 1.2))
+    }
     ctx.fillStyle = skin
-    ctx.beginPath(); ctx.arc(x, hy, size * 0.15, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(x, hy, hr, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = hair
-    ctx.beginPath(); ctx.arc(x, hy - size * 0.04, size * 0.155, Math.PI * 1.05, Math.PI * 1.95); ctx.fill()
-    if (a.sex === 'female' && !elder) ctx.fillRect(x - size * 0.16, hy - size * 0.05, size * 0.06, size * 0.2)
+    if (L.style === 4) {
+      ctx.globalAlpha = 0.35
+      ctx.beginPath(); ctx.arc(x, hy - hr * 0.25, hr * 0.95, Math.PI * 1.1, Math.PI * 1.9); ctx.fill()
+      ctx.globalAlpha = 1
+    } else {
+      ctx.beginPath(); ctx.arc(x, hy - hr * 0.27, hr * 1.03, Math.PI * 1.02, Math.PI * 1.98); ctx.fill()
+      if (L.style === 2) { ctx.beginPath(); ctx.arc(x, hy - hr * 1.15, hr * 0.45, 0, Math.PI * 2); ctx.fill() }
+      if (L.style === 5) for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(x + k * hr * 0.42, hy - hr * 0.85, hr * 0.32, 0, Math.PI * 2); ctx.fill() }
+      if (L.style === 3 && S > 12) {
+        ctx.strokeStyle = hair
+        ctx.lineWidth = Math.max(1, hr * 0.35)
+        ctx.beginPath(); ctx.moveTo(x - hr, hy); ctx.lineTo(x - hr * 1.1, hy + hr * 1.6); ctx.moveTo(x + hr, hy); ctx.lineTo(x + hr * 1.1, hy + hr * 1.6); ctx.stroke()
+      }
+    }
+    if (L.beard && !child) {
+      ctx.fillStyle = hair
+      ctx.beginPath(); ctx.arc(x, hy + hr * 0.35, hr * 0.7, 0, Math.PI); ctx.fill()
+    }
+    if (S > 16) {
+      // eyes look where they walk
+      ctx.fillStyle = '#1b1b1b'
+      const ex = a.dir * hr * 0.25
+      ctx.fillRect(x - hr * 0.38 + ex, hy - hr * 0.05, Math.max(1, hr * 0.18), Math.max(1, hr * 0.2))
+      ctx.fillRect(x + hr * 0.2 + ex, hy - hr * 0.05, Math.max(1, hr * 0.18), Math.max(1, hr * 0.2))
+      if (L.marks === 1) { ctx.fillStyle = color; ctx.fillRect(x - hr * 0.7, hy + hr * 0.25, hr * 1.4, Math.max(1, hr * 0.15)) }
+      if (L.marks === 3) { ctx.strokeStyle = 'rgba(120,40,40,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + hr * 0.3, hy - hr * 0.5); ctx.lineTo(x + hr * 0.6, hy + hr * 0.3); ctx.stroke() }
+    }
+    if (leader) {
+      ctx.fillStyle = '#ffd34a'
+      ctx.beginPath()
+      const cy = hy - hr * 1.0
+      ctx.moveTo(x - hr * 0.8, cy + hr * 0.25); ctx.lineTo(x - hr * 0.8, cy - hr * 0.3); ctx.lineTo(x - hr * 0.4, cy); ctx.lineTo(x, cy - hr * 0.45); ctx.lineTo(x + hr * 0.4, cy); ctx.lineTo(x + hr * 0.8, cy - hr * 0.3); ctx.lineTo(x + hr * 0.8, cy + hr * 0.25)
+      ctx.closePath(); ctx.fill()
+    }
     // carrying load
     if (S > 10 && Object.keys(a.inv).length && a.moving) {
       ctx.fillStyle = '#8a6a44'
       ctx.fillRect(x - size * 0.28 * a.dir - size * 0.08, y - size * 0.68 - bob, size * 0.16, size * 0.2)
-    }
-    if (a.sick > 0 && S > 12) {
-      ctx.fillStyle = 'rgba(120,200,90,0.9)'
-      ctx.beginPath(); ctx.arc(x + size * 0.18, hy - size * 0.2, size * 0.06, 0, Math.PI * 2); ctx.fill()
     }
     // a thinking mind
     if (a.aiPending) {
@@ -802,6 +866,20 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(x, hy - size * 0.38, size * (0.07 + p * 0.03), 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = `rgba(186,160,255,${0.25 * p})`
       ctx.beginPath(); ctx.arc(x, hy - size * 0.38, size * 0.2, 0, Math.PI * 2); ctx.fill()
+    }
+    // feelings show
+    let icon = a.emote && now < a.emote.until ? a.emote.icon : ''
+    if (!icon && a.sick > 0.5) icon = '🤒'
+    if (!icon && a.hunger > 85) icon = '🍖'
+    if (!icon && a.warmth < 25) icon = '🥶'
+    if (icon && S > 9 && !a.aiPending) {
+      const fresh = a.emote && now < a.emote.until ? Math.min(1, (a.emote.until - now) / 500) : 0.85
+      const pop = a.emote && now < a.emote.until ? 1 + Math.max(0, Math.min(1, 1 - (now - a.emote.start) / 300)) * 0.4 : 1
+      ctx.globalAlpha = fresh
+      ctx.font = `${Math.round(Math.min(40, Math.max(10, size * 0.42)) * pop)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`
+      ctx.textAlign = 'center'
+      ctx.fillText(icon, x + size * 0.32, hy - size * 0.3 - Math.sin(now / 300 + a.id) * size * 0.04)
+      ctx.globalAlpha = 1
     }
   }
 

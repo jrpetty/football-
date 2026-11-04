@@ -106,12 +106,12 @@ export function TribesPanel() {
             <div className="kv" style={{ marginTop: 8 }}>
               <span className="k">Knowledge</span><span>{known.size} technologies</span>
               <span className="k">Researching</span>
-              <span>{rs ? <>{rs.name} <span className="meta">({Math.floor(t.research!.progress)}/{rs.cost})</span></> : '—'}</span>
+              <span>{rs ? <>{rs.name} <span className="meta">({Math.round((w.techProgress(t, rs.id) / rs.cost) * 100)}%)</span></> : '—'}</span>
               <span className="k">Buildings</span><span>{blds} + {farms} fields</span>
               <span className="k">Stores</span><span>{Math.floor(invTotal(t.storage))} / {w.storageCap(t.id)}</span>
-              <span className="k">Mind</span><span>{t.model ? `✦ ${t.model.replace('claude-', '')}` : 'default model'}</span>
+              <span className="k">Mind</span><span>{t.model ? `✦ ${mind.label(t.model)}` : 'default mind'}</span>
             </div>
-            {rs && <div style={{ marginTop: 6 }}><Bar value={t.research!.progress} max={rs.cost} color={t.color} /></div>}
+            {rs && <div style={{ marginTop: 6 }}><Bar value={w.techProgress(t, rs.id)} max={rs.cost} color={t.color} /></div>}
             {stores.length > 0 && (
               <div className="inv" style={{ marginTop: 8 }}>
                 {stores.map(([k, n]) => <span key={k}>{ITEMS[k as Item].icon} {Math.floor(n ?? 0)}</span>)}
@@ -156,16 +156,16 @@ export function MindsPanel({ onSettings }: { onSettings: () => void }) {
   const st = mind.stats
   return (
     <>
-      {!mind.settings.apiKey && (
+      {!mind.configured && (
         <div className="card" style={{ borderColor: 'rgba(155,140,255,0.4)' }}>
           <h3>✦ Give them minds</h3>
           <div className="meta" style={{ marginBottom: 10 }}>
-            Right now everyone runs on instinct. Add an Anthropic API key and each person gets their own Claude mind — they'll think, talk, scheme, love and invent in their own way.
+            Right now everyone runs on instinct. Add a Claude key, a DeepSeek / Qwen / Kimi / GLM key, or point it at a model running on your own computer — and each person gets their own mind.
           </div>
-          <button className="btn primary" onClick={onSettings}>Add API key</button>
+          <button className="btn primary" onClick={onSettings}>Connect a mind</button>
         </div>
       )}
-      {mind.settings.apiKey && (
+      {mind.configured && (
         <div className="card">
           <div className="kv">
             <span className="k">Status</span>
@@ -204,7 +204,7 @@ export function MindsPanel({ onSettings }: { onSettings: () => void }) {
           <div className="meta" style={{ marginTop: 4, fontSize: 10.5 }}>{f.model}</div>
         </div>
       ))}
-      {items.length === 0 && mind.settings.apiKey && <div className="empty"><div className="big">✦</div>Thoughts will appear here as people think.</div>}
+      {items.length === 0 && mind.configured && <div className="empty"><div className="big">✦</div>Thoughts will appear here as people think.</div>}
       {(!mind.ready || items.length < 6) && <Overheard />}
     </>
   )
@@ -270,7 +270,7 @@ export function ChroniclePanel() {
             </div>
             <button
               className="btn"
-              disabled={writing || !mind.settings.apiKey}
+              disabled={writing || !mind.ready}
               onClick={async () => {
                 setWriting(true)
                 await mind.writeChronicle(w, year)
@@ -329,8 +329,10 @@ export function TechPanel() {
         <div className="kv">
           <span className="k">Era</span><span style={{ color: era.color, fontWeight: 700 }}>{era.name}</span>
           <span className="k">Known</span><span>{known.size} of {TECHS.length}</span>
-          <span className="k">Researching</span><span>{t.research ? `${TECH_BY_ID[t.research.tech]?.name} (${Math.floor(t.research.progress)}/${TECH_BY_ID[t.research.tech]?.cost})` : 'nothing'}</span>
+          <span className="k">Focus</span><span>{t.research ? `${TECH_BY_ID[t.research.tech]?.name} (${Math.round((w.techProgress(t, t.research.tech) / (TECH_BY_ID[t.research.tech]?.cost ?? 1)) * 100)}%)` : 'nothing'}</span>
+          <span className="k">Memory</span><span>{known.has('writing') ? '📜 written down — safe' : '🗣️ oral tradition — fragile if the tribe dwindles'}</span>
         </div>
+        <div className="meta" style={{ marginTop: 8 }}>Ideas grow from practice as well as study: the % shows how close each idea is. Geography speeds some ideas and slows others.</div>
         <div style={{ marginTop: 8 }}><Bar value={known.size} max={TECHS.length} color={era.color} /></div>
       </div>
       {ERAS.map((e, i) => {
@@ -341,11 +343,13 @@ export function TechPanel() {
             <div className="techs">
               {techs.map((x) => {
                 const cur = t.research?.tech === x.id
+                const pct = Math.min(99, Math.round((w.techProgress(t, x.id) / x.cost) * 100))
+                const lost = t.lost.includes(x.id) && !known.has(x.id)
                 const cls = known.has(x.id) ? 'known' : cur ? 'current' : avail.has(x.id) ? 'avail' : ''
                 return (
                   <span key={x.id} className={`tech ${cls}`} style={known.has(x.id) ? { background: e.color } : undefined} title={`${x.name} — ${x.desc}\nCost ${x.cost}${x.req.length ? `\nRequires: ${x.req.map((r) => TECH_BY_ID[r]?.name).join(', ')}` : ''}`}>
-                    {x.name}
-                    {cur && ` ${Math.round((t.research!.progress / x.cost) * 100)}%`}
+                    {lost && '🌫️ '}{x.name}
+                    {!known.has(x.id) && pct > 0 && ` ${pct}%`}
                   </span>
                 )
               })}

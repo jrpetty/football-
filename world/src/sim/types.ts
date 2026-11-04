@@ -60,6 +60,18 @@ export interface Traits {
 export type SkillName = 'gathering' | 'farming' | 'building' | 'crafting' | 'research' | 'social' | 'hunting'
 export const SKILL_NAMES: SkillName[] = ['gathering', 'farming', 'building', 'crafting', 'research', 'social', 'hunting']
 
+/** Visual identity, fixed at birth (partly inherited). */
+export interface Look {
+  skin: number // index into skin palette
+  hair: number // colour index
+  style: number // 0 short, 1 long, 2 bun, 3 braids, 4 shaved, 5 curly
+  beard: boolean
+  height: number // 0.9 .. 1.1
+  build: number // 0.85 .. 1.2
+  accent: string // personal colour for clothing trim
+  marks: number // 0 none, 1 face paint, 2 freckles, 3 scar
+}
+
 export interface Speech {
   text: string
   to: number | null
@@ -124,6 +136,8 @@ export interface Agent {
   plan: PlanStep[]
   task: Task | null
   speech: Speech | null
+  emote: { icon: string; until: number; start: number } | null
+  look: Look
 
   // mind / AI scheduling
   aiPending: boolean
@@ -150,6 +164,10 @@ export interface Tribe {
   laws: string[]
   techs: string[]
   research: { tech: string; progress: number } | null
+  /** insight accumulated toward each undiscovered tech, from practice and set-aside research */
+  insight: Record<string, number>
+  /** techs this people once knew and lost */
+  lost: string[]
   storage: Inventory
   center: { x: number; y: number }
   relations: Record<number, number> // -100 hostile .. 100 allied

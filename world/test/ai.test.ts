@@ -25,7 +25,7 @@ test('context describes the person, their tribe and surroundings', () => {
   const c = buildContext(w, a)
   assert.match(c, new RegExp(`# You are ${a.name}`))
   assert.match(c, /# Your tribe: the /)
-  assert.match(c, /Could research next:/)
+  assert.match(c, /Ideas within reach:/)
   assert.ok(c.length < 12000, `context stays compact (${c.length} chars)`)
 })
 

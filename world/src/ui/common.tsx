@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
+import { Portrait } from './Portrait.tsx'
 import { DAY, HOUR, formatDate } from '../sim/time.ts'
 import type { Agent } from '../sim/types.ts'
 
@@ -58,14 +59,7 @@ export function Section({ title, children, right }: { title: string; children: R
 }
 
 export function Avatar({ a, size = 'md' }: { a: Agent; size?: 'md' | 'lg' }) {
-  const t = game.world.tribeById(a.tribeId)
-  const isMind = mind.isMind(a)
-  return (
-    <div className={`avatar ${size === 'lg' ? 'lg' : ''}`} style={{ background: t?.color ?? '#999', opacity: a.alive ? 1 : 0.45 }}>
-      {a.name.charAt(0)}
-      {isMind && <span className={`mind-dot ${a.aiPending ? 'thinking' : ''}`} title={a.aiPending ? 'Thinking…' : 'Claude mind'} />}
-    </div>
-  )
+  return <Portrait a={a} size={size === 'lg' ? 68 : 36} />
 }
 
 export function ago(t: number): string {

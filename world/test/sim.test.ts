@@ -7,11 +7,31 @@ import { DAY, YEAR } from '../src/sim/time.ts'
 import { B } from '../src/sim/data.ts'
 import { PRESETS } from '../src/sim/worldgen.ts'
 
-test('world generation is deterministic for a seed', () => {
-  const a = new World({ ...DEFAULT_CONFIG, seed: 42, size: 96 })
-  const b = new World({ ...DEFAULT_CONFIG, seed: 42, size: 96 })
+test('a map seed reproduces the land; fixedHistory reproduces the people', () => {
+  const a = new World({ ...DEFAULT_CONFIG, seed: 42, size: 96, fixedHistory: true })
+  const b = new World({ ...DEFAULT_CONFIG, seed: 42, size: 96, fixedHistory: true })
   assert.deepEqual(Array.from(a.biome.slice(0, 2000)), Array.from(b.biome.slice(0, 2000)))
   assert.equal(a.agents[0].name, b.agents[0].name)
+})
+
+test('by default the same land gives rise to a different history every run', () => {
+  const runs = [1, 2, 3].map(() => new World({ ...DEFAULT_CONFIG, seed: 42, size: 96 }))
+  assert.deepEqual(Array.from(runs[0].biome.slice(0, 3000)), Array.from(runs[1].biome.slice(0, 3000)), 'same terrain')
+  const casts = new Set(runs.map((w) => w.agents.map((x) => x.name).join(',')))
+  assert.ok(casts.size > 1, 'different people')
+  for (const w of runs) for (let d = 0; d < 24; d++) w.tick(DAY)
+  const paths = new Set(runs.map((w) => w.tribes.map((t) => t.techs.join('>')).join('|')))
+  assert.equal(paths.size, 3, 'different discoveries in a different order')
+})
+
+test('people discover things by doing them', () => {
+  const w = new World({ ...DEFAULT_CONFIG, seed: 3, size: 96 })
+  const a = w.living[0]
+  const t = w.tribeById(a.tribeId)!
+  assert.ok(!w.hasTech(t.id, 'cordage'))
+  for (let k = 0; k < 3000 && !w.hasTech(t.id, 'cordage'); k++) w.practice(a, 'gather:fiber', 1)
+  assert.ok(w.hasTech(t.id, 'cordage'), 'twisting fibre long enough teaches cordage')
+  assert.ok(w.chronicle.some((e) => /cordage/i.test(e.text)))
 })
 
 test('every preset makes land, water and rivers', () => {

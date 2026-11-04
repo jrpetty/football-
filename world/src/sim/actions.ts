@@ -5,7 +5,7 @@
 
 import { B, BIOMES, F, FEATURES, ITEMS, FOOD_ITEMS, TREE_FEATURES, invAdd, invCount, invTotal, ALL_ITEMS, type Item, type Inventory } from './data.ts'
 import { BUILDINGS, BUILDING_TYPES, RECIPES, TOOL_MULT, TOOL_NAMES, type BuildingType, type Recipe } from './buildings.ts'
-import { TECHS, TECH_BY_ID, availableTechs, techResearchBonus, techWorkBonus } from './tech.ts'
+import { TECHS, TECH_BY_ID, availableTechs, techResearchBonus, techWorkBonus, geographyAffinity } from './tech.ts'
 import { clamp } from './rng.ts'
 import { HOUR, hourOf, isNight } from './time.ts'
 import type { Agent, PlanStep, Task, SkillName, ActionKind } from './types.ts'
@@ -92,6 +92,7 @@ function speedOf(w: World, a: Agent): number {
   if (a.health < 40) s *= 0.7
   if (isNight(w.time)) s *= 0.85
   if (w.weather === 'storm' || w.weather === 'snow') s *= 0.85
+  if (age >= 14 && w.hasTech(a.tribeId, 'horseback_riding')) s *= 1.15
   return s
 }
 
@@ -394,7 +395,9 @@ const HANDLERS: Record<ActionKind, Handler> = {
         if (w.hasTech(a.tribeId, 'gunpowder')) rate *= 1.4
       }
       if (item === 'berries' && w.hasEvent('drought')) rate *= 0.5
+      if (item === 'fiber' && w.hasTech(a.tribeId, 'cordage')) rate *= 1.3
       t.progress += rate * dtH
+      w.practice(a, `gather:${item}`, dtH)
       skillUp(a, 'gathering', dtH)
       wearTools(w, a, dtH)
       while (t.progress >= 1) {
@@ -457,6 +460,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
     work(w, a, t, dtH) {
       t.progress += dtH
       skillUp(a, 'hunting', dtH)
+      w.practice(a, 'hunt', dtH)
       if (t.progress < t.need) return 'continue'
       const an = w.animals.find((x) => x.id === t.ref)
       if (!an || !an.alive) return 'fail'
@@ -504,6 +508,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (w.nearestBuilding(a, ['dock'], true, 8)) rate *= 2
       t.progress += rate * dtH
       skillUp(a, 'hunting', dtH * 0.5)
+      w.practice(a, 'fish', dtH)
       while (t.progress >= 1) {
         t.progress -= 1
         invAdd(a.inv, 'fish', 1)
@@ -548,6 +553,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (!b || !b.done) return 'fail'
       t.progress += dtH * workMult(w, a, 'farming', 0.5)
       skillUp(a, 'farming', dtH)
+      w.practice(a, b.type === 'pasture' ? 'farm:pasture' : 'farm', dtH)
       const i = w.idx(b.x, b.y)
       if (b.type === 'pasture') {
         if (t.progress < 1.5) return 'continue'
@@ -559,6 +565,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
         if (t.progress < 1.5) return 'continue'
         let y = 6 + w.fertility[i] * 9
         if (w.tribeBuildings(a.tribeId, 'mill').length) y *= 1.5
+        if (w.hasTech(a.tribeId, 'plough')) y *= 1.35
         if (w.hasEvent('drought')) y *= 0.5
         if (w.hasEvent('bounty')) y *= 1.3
         const n = Math.round(y)
@@ -614,7 +621,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
         if (tr && (t.ref === 1 || nearHub(w, a)) && eatFrom(a, tr.storage)) { ate++; continue }
         break
       }
-      if (w.warmSourceNear(a.x, a.y)) a.hunger = Math.max(0, a.hunger - 4) // cooked food is more nourishing
+      if (w.warmSourceNear(a.x, a.y) && w.hasTech(a.tribeId, 'cooking')) a.hunger = Math.max(0, a.hunger - 8) // cooked food is more nourishing
+      w.practice(a, 'eat', 0.3)
       if (!ate) { w.remember(a, 'I was hungry but had nothing to eat.', 4); return 'fail' }
       return 'done'
     },
@@ -638,10 +646,11 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (tx < 0) { fail(w, a, "I can't find fresh water anywhere I know. I must explore to find a river or lake."); return false }
       return travel(w, a, t, tx, ty, true)
     },
-    work(_w, a, t, dtH) {
+    work(w, a, t, dtH) {
       t.progress += dtH
       if (t.progress < t.need) return 'continue'
       a.thirst = 0
+      w.practice(a, 'drink', 0.2)
       return 'done'
     },
   },
@@ -660,7 +669,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       t.progress += dtH
       const h = hourOf(w.time)
       const day = h > 6 && h < 20
-      if (a.energy >= 99 || (day && a.energy > 75) || t.progress > t.need) return 'done'
+      if (a.energy >= 99 || (day && a.energy > 75) || t.progress > t.need) { w.practice(a, 'sleep', 0.5); return 'done' }
       if (a.thirst > 85 || a.hunger > 88) return 'done'
       return 'continue'
     },
@@ -732,6 +741,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       const def = BUILDINGS[b.type]
       b.progress += dtH * workMult(w, a, 'building', 0.6)
       skillUp(a, 'building', dtH)
+      w.practice(a, `build:${b.type}`, dtH)
       wearTools(w, a, dtH * 0.5)
       if (b.progress >= def.hours) {
         w.completeBuilding(b, a)
@@ -776,6 +786,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       }
       t.progress += dtH * workMult(w, a, 'crafting', 0.4)
       skillUp(a, 'crafting', dtH)
+      w.practice(a, `craft:${r.id}`, dtH)
       if (t.progress < t.need) return 'continue'
       t.progress = 0
       a.stats.crafted++
@@ -801,15 +812,15 @@ const HANDLERS: Record<ActionKind, Handler> = {
       const av = availableTechs(w.techs(tr.id))
       if (!av.length) { fail(w, a, 'There is nothing left for us to discover right now.'); return false }
       if (want && av.some((x) => x.id === want)) {
-        if (!tr.research || tr.research.tech !== want) tr.research = { tech: want, progress: tr.research?.tech === want ? tr.research.progress : 0 }
+        w.focusResearch(tr, want)
       } else if (want && !w.techs(tr.id).has(want) && TECH_BY_ID[want]) {
         const def = TECH_BY_ID[want]
         const missing = def.req.filter((r) => !w.techs(tr.id).has(r)).map((r) => TECH_BY_ID[r]?.name ?? r)
         w.remember(a, `${def.name} must wait — first we need ${missing.join(' and ')}.`, 3)
       }
-      if (!tr.research) tr.research = { tech: w.pickResearch(tr) ?? av[0].id, progress: 0 }
+      if (!tr.research) w.focusResearch(tr, w.pickResearch(tr) ?? av[0].id)
       t.need = clamp(t.amount || 3, 1, 6)
-      t.label = `Researching ${TECH_BY_ID[tr.research.tech]?.name ?? ''}`
+      t.label = `Researching ${TECH_BY_ID[(tr.research as { tech: string } | null)?.tech ?? '']?.name ?? ''}`
       const place = w.nearestBuilding(a, ['data_center', 'lab', 'university', 'library'], true, 50) ?? w.nearestBuilding(a, ['campfire', 'temple'], true, 25)
       if (place) { t.ref = place.id; return travel(w, a, t, place.x, place.y, true) || true }
       return true
@@ -820,21 +831,24 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (!tr.research) {
         const next = w.pickResearch(tr)
         if (!next) return 'done'
-        tr.research = { tech: next, progress: 0 }
+        w.focusResearch(tr, next)
       }
       let mult = 1
       const place = t.ref ? w.buildingById.get(t.ref) : undefined
       if (place && Math.hypot(place.x - a.x, place.y - a.y) < 3) mult = BUILDINGS[place.type].research ?? 1
       if (w.tribeBuildings(a.tribeId, 'power_plant').length) mult *= 1.2
-      const pts = dtH * (0.55 + a.traits.intelligence * 0.9) * (0.8 + a.skills.research / 100) * mult * techResearchBonus(w.techs(tr.id))
-      tr.research.progress += pts
+      const rs = tr.research as { tech: string; progress: number } | null
+      if (!rs) return 'done'
+      const def = TECH_BY_ID[rs.tech]
+      const geo = def ? Math.sqrt(geographyAffinity(def.id, w.landscape(tr))) : 1
+      // without writing there is no systematic study: ideas must be held in memory
+      const literate = w.techs(tr.id).has('writing') ? 1 : 0.5
+      const pts = dtH * (0.55 + a.traits.intelligence * 0.9) * (0.8 + a.skills.research / 100) * mult * geo * literate * techResearchBonus(w.techs(tr.id))
+      rs.progress += pts
       a.stats.research += pts
       skillUp(a, 'research', dtH)
       t.progress += dtH
-      const def = TECH_BY_ID[tr.research.tech]
-      if (def && tr.research.progress >= def.cost) {
-        w.learnTech(tr, def.id, a, 'research')
-      }
+      if (def && w.techProgress(tr, def.id) >= def.cost) w.learnTech(tr, def.id, a, 'research')
       return t.progress >= t.need ? 'done' : 'continue'
     },
   },
@@ -913,6 +927,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (t.phase === 'travel') return 'continue'
       const text = t.text || smallTalk(w, a, tg)
       w.say(a, text, tg)
+      w.practice(a, 'talk', 0.3)
       w.remember(a, `I told ${tg.name}: "${text.slice(0, 120)}"`, 2)
       w.remember(tg, `${a.name} told me: "${text.slice(0, 160)}"`, 4)
       return 'done'
@@ -943,6 +958,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       w.bump(tg, a, 6 + n, 4)
       w.bump(a, tg, 2, 2)
       w.remember(tg, `${a.name} gave me ${n} ${it}. That was kind.`, 5)
+      w.emote(tg, '😊')
       w.remember(a, `I gave ${n} ${it} to ${tg.name}.`, 3)
       if (tg.tribeId !== a.tribeId) w.shiftTribeRelation(a.tribeId, tg.tribeId, 4)
       return 'done'
@@ -966,6 +982,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
       let best: SkillName = 'gathering'
       for (const s of Object.keys(a.skills) as SkillName[]) if (a.skills[s] - tg.skills[s] > a.skills[best] - tg.skills[best]) best = s
       tg.skills[best] = clamp(tg.skills[best] + 5 + a.skills.social / 25, 0, 100)
+      w.practice(a, 'teach', 1)
+      w.emote(a, '📚')
       skillUp(a, 'social', 1)
       w.bump(tg, a, 5, 5)
       w.bump(a, tg, 3, 5)
@@ -1007,6 +1025,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
         w.bump(tg, a, 15, 10)
         w.bump(a, tg, 15, 10)
         w.log('social', `${a.name} and ${tg.name} became partners. 💞`, '💞', a.id, a.tribeId)
+        w.emote(a, '💞', 7000)
+        w.emote(tg, '💞', 7000)
         w.remember(a, `${tg.name} and I are now partners.`, 9)
         w.remember(tg, `${a.name} and I are now partners.`, 9)
         if (tg.tribeId !== a.tribeId) {
@@ -1022,6 +1042,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
         else if (!tg.homeId && a.homeId) tg.homeId = a.homeId
       } else {
         w.bump(tg, a, r.affinity > 0 ? 3 : -3, 4)
+        w.emote(a, '💔')
         w.remember(a, free ? `${tg.name} wasn't ready to be my partner. Maybe if we grow closer.` : `${tg.name} is already spoken for — or I am.`, 4)
         w.remember(tg, `${a.name} tried to court me.`, 4)
       }
@@ -1049,6 +1070,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
     },
     work(w, a) {
       w.revealAround(a.tribeId, a.x, a.y, 12)
+      w.practice(a, 'explore', 2)
+      w.emote(a, '🧭')
       const desc = describeArea(w, a, a.x, a.y, 10)
       const tr = w.tribeById(a.tribeId)
       const hub = tr ? tr.center : { x: a.x, y: a.y }
@@ -1134,6 +1157,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
         tr.beliefs = text
         w.log('tribe', `The ${tr.name} embrace a belief: “${text}”`, '🌟', a.id, tr.id)
       } else {
+        w.practice(a, 'decree', 1)
         tr.laws.push(text)
         if (tr.laws.length > 6) tr.laws.shift()
         w.log('tribe', `${a.name} decreed a law for the ${tr.name}: “${text}”`, '📜', a.id, tr.id)
@@ -1164,6 +1188,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
       tr.works.push({ t: w.time, author: a.name, title, text: (t.text || '').slice(0, 1200) })
       if (tr.works.length > 40) tr.works.shift()
       w.log('ai', `${a.name} wrote “${title}”.`, '📜', a.id, tr.id)
+      w.practice(a, 'write', 2)
+      w.emote(a, '📜')
       w.remember(a, `I wrote a work called "${title}".`, 6)
       skillUp(a, 'research', 1)
       return 'done'
@@ -1201,6 +1227,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
         invAdd(a.inv, wantI, wantN)
         w.bump(tg, a, 4, 4)
         w.bump(a, tg, 4, 4)
+        w.practice(a, 'trade', 0.6)
+        w.emote(a, '⚖️')
         w.log('social', `${a.name} traded ${giveN} ${giveI} to ${tg.name} for ${wantN} ${wantI}.`, '⚖️', a.id, a.tribeId)
         w.remember(a, `I traded ${giveN} ${giveI} with ${tg.name} for ${wantN} ${wantI}.`, 4)
         w.remember(tg, `I traded with ${a.name}: got ${giveN} ${giveI}, gave ${wantN} ${wantI}.`, 4)
@@ -1235,7 +1263,9 @@ const HANDLERS: Record<ActionKind, Handler> = {
           feast = true
         }
       }
+      w.practice(a, 'celebrate', 2)
       for (const o of near) {
+        w.emote(o, feast ? '🍖' : '🎉', 5000)
         o.mood = clamp(o.mood + (feast ? 12 : 7), 0, 100)
         o.social = clamp(o.social + 25, 0, 100)
         if (feast) o.hunger = Math.max(0, o.hunger - 25)
@@ -1269,6 +1299,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
       else if (tr) invAdd(tr.storage, 'medicine', -1)
       tg.sick = 0
       tg.injured = 0
+      w.practice(a, 'heal', 0.5)
+      w.emote(a, '🌿')
       tg.health = clamp(tg.health + 25, 0, 100)
       if (tg !== a) {
         w.bump(tg, a, 12, 5)
@@ -1302,6 +1334,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (tg.tribeId !== a.tribeId) w.shiftTribeRelation(a.tribeId, tg.tribeId, -30)
       w.log('event', `${a.name} attacked ${tg.name}${t.text ? ` (“${t.text.slice(0, 60)}”)` : ''}. ${winner.name} prevailed.`, '⚔️', a.id, a.tribeId)
       w.remember(tg, `${a.name} attacked me!`, 9)
+      w.emote(a, '⚔️', 5000)
+      w.emote(tg, '😠', 6000)
       w.remember(a, `I fought ${tg.name}. ${winner === a ? 'I won.' : 'I lost.'}`, 8)
       tg.urgentThink = true
       for (const o of w.living) if (o !== a && o !== tg && Math.hypot(o.x - a.x, o.y - a.y) < 8) { w.bump(o, a, -15, 2); w.remember(o, `I saw ${a.name} attack ${tg.name}.`, 6) }

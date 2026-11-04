@@ -33,7 +33,7 @@ Humanity in this world began with nothing: a few small bands, bare hands, and th
 - Your body: hunger and thirst rise over time (0 = fine, 100 = dying). Drink fresh water from rivers, lakes, marshes or a well — sea water is undrinkable. Energy falls while awake; sleep restores it, best at home. In cold places, winter and at night you lose warmth unless near a campfire, in your home, or wearing clothes. If hunger, thirst or cold become extreme your health falls and you can die. When needs become critical your body acts on its own (drinks, eats, sleeps) and then returns to your plan.
 - Work: gathering, building, crafting and research take hours. Tools multiply your work speed (stone → bronze → iron → steel → power tools). Skills improve with practice.
 - Carrying: you can carry ${CARRY_CAP} items. Your tribe shares communal stores at its hub; "store" deposits your goods there, "take" fetches them. Building and crafting draw on your pack first, then the tribe's stores.
-- Knowledge belongs to your tribe. Research adds to the tribe's current project; libraries, universities, labs and data centres multiply it. Ideas also spread between tribes through teaching, partnerships and people joining.
+- Knowledge belongs to your tribe, and it is earned the way humans really earned it. Much early knowledge comes from practice: working clay near a fire teaches pottery, tending wild plants teaches farming, hunting teaches tracking and hides — every hour of relevant work brings an idea closer, and sometimes a half-understood idea suddenly clicks. Deliberate research (thinking, experimenting, teaching) drives the harder ideas; libraries, universities, labs and data centres multiply it. Geography matters: coasts suggest boats, ore in the hills suggests metalwork, fertile river land suggests farming. Ideas spread between tribes through teaching, partnerships and people joining. Before Writing, knowledge lives only in memory — a people that dwindles to a handful can forget what it knew.
 - Exploration: you can only harvest resources in lands your tribe has explored. Ore (copper, tin, iron, coal, gold) lies in hills and mountains; clay along rivers; oil in deserts and marshes.
 - Farming: farm fields are planted in spring/summer, tended, and harvested when ripe; nothing grows in winter. Pastures breed animals for meat and hides.
 - Society: partners (from courting someone who likes you back) can have children if they have food and a home. The leader of a tribe can issue decrees (laws, values, beliefs, even a new name). Anyone can found a new tribe or ask to join another. Violence is possible but damages trust and can kill.
@@ -287,9 +287,10 @@ export function buildContext(w: World, a: Agent): string {
     lines.push(`Members: ${adults.slice(0, 14).map((m) => `${m.name}${m.id === a.id ? ' (you)' : ''}: ${m.task?.label?.toLowerCase() || 'idle'}`).join('; ')}.`)
     lines.push(`Known technology: ${[...known].map((k) => TECH_BY_ID[k]?.name ?? k).join(', ')}.`)
     const rs = tribe.research
-    if (rs) lines.push(`Current research: ${TECH_BY_ID[rs.tech]?.name} (${Math.floor(rs.progress)}/${TECH_BY_ID[rs.tech]?.cost} points).`)
+    if (rs) lines.push(`Current research focus: ${TECH_BY_ID[rs.tech]?.name} (${Math.round((w.techProgress(tribe, rs.tech) / (TECH_BY_ID[rs.tech]?.cost ?? 1)) * 100)}% understood).`)
     const av = availableTechs(known)
-    if (av.length) lines.push(`Could research next: ${av.slice(0, 10).map((t) => `${t.name} (${t.cost} pts — ${t.desc})`).join('; ')}.`)
+    if (av.length) lines.push(`Ideas within reach: ${av.slice(0, 12).map((t) => `${t.name} (${Math.round((w.techProgress(tribe, t.id) / t.cost) * 100)}% understood, ${t.cost} pts — ${t.desc})`).join('; ')}.`)
+    if (tribe.lost.length) lines.push(`Knowledge your people once had but lost: ${tribe.lost.map((x) => TECH_BY_ID[x]?.name ?? x).join(', ')}.`)
     lines.push(`Communal stores (${Math.floor(w.storageUsed(tribe))}/${w.storageCap(tribe.id)}): ${invToString(tribe.storage)}.`)
     const tb = w.tribeBuildings(tribe.id, undefined, false)
     const counts = new Map<string, number>()

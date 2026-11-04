@@ -5,7 +5,7 @@
 
 import { FOOD_ITEMS, invCount, invTotal, type Item } from './data.ts'
 import { BUILDINGS, RECIPES, type BuildingType } from './buildings.ts'
-import { availableTechs } from './tech.ts'
+import { availableTechs, eraOf } from './tech.ts'
 import { isNight, hourOf } from './time.ts'
 import type { Agent, PlanStep } from './types.ts'
 import type { World } from './world.ts'
@@ -77,7 +77,9 @@ export function instinctStep(w: World, a: Agent): PlanStep {
   if (a.clothing < 25 && w.season >= 2 && known.has('clothing') && stock('hide') >= 2) return step('craft', 'clothes')
 
   // research is how a people advance; the curious and clever do more of it
-  const researchWeight = 0.12 + a.traits.intelligence * 0.25 + a.traits.openness * 0.15
+  // foragers rarely sit and study; settled, literate societies do so far more
+  const era = eraOf(known)
+  const researchWeight = Math.min(0.45, (0.04 + a.traits.intelligence * 0.1 + a.traits.openness * 0.06) * (1 + era * 0.35) * (known.has('writing') ? 1.3 : 1))
   if (availableTechs(known).length && r < researchWeight) return step('research')
 
   // build the next useful thing the tribe lacks
