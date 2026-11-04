@@ -126,6 +126,19 @@
 .d-spacer {
   flex: 1;
 }
+/* Demo mode (?mock=1): the deck says so on every slide, so demo numbers are never shown as real. */
+.d-demo {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .d-section {
   font-size: 17px;
   font-weight: 700;

@@ -30,13 +30,16 @@ import type {
 import type { RunStreamHandlers } from '../api.ts';
 import { ApiError } from '../api.ts';
 import { mockArtifactUrls } from './registry.ts';
-import { BUSINESS_MOCK_TESTS, handleBusinessLadder } from './businessLadderMock.ts';
+import { handleBusinessLadder } from './businessLadderMock.ts';
+import { AREA_RUN_ID } from './areaDemo.ts';
+import { BUSINESS_SUITE_ID, LIFE_SUITE_ID } from '../../../src/core/areas.ts';
 import {
   CONTESTANTS,
   DISCOVERABLE,
   META,
   PROGRAMS,
   RUN_SPECS,
+  AREA_RUN_SPEC,
   SUITES,
   TESTS,
   artifactContent,
@@ -66,12 +69,14 @@ const contestants: ContestantView[] = CONTESTANTS.map((c) => ({ ...c }));
 const syncManualContestants = () => {
   for (const c of mockManualContestants()) if (!contestants.some((x) => x.id === c.id)) contestants.push(c);
 };
-const tests: TestDefinition[] = [...TESTS, ...BUSINESS_MOCK_TESTS];
+const tests: TestDefinition[] = [...TESTS];
+/** The benchmark's tests: a "*" suite never includes the Business or Everyday Life tests (they have their own suites). */
+const benchmarkTests = () => tests.filter((t) => t.category !== 'work' && t.category !== 'life');
 const customIds = new Set(['reasoning.calendar-puzzle']);
 const sourceOf = (id: string) => (customIds.has(id) ? 'custom' : PRIVATE_IDS.has(id) ? 'private' : 'builtin');
 const runs = new Map<string, MockRun>();
 const specs = new Map<string, RunSpec>();
-for (const s of RUN_SPECS) specs.set(s.id, s);
+for (const s of [...RUN_SPECS, AREA_RUN_SPEC]) specs.set(s.id, s);
 
 function getRun(id: string): MockRun {
   let run = runs.get(id);
@@ -120,7 +125,7 @@ function runDetail(id: string): RunDetail {
 function suiteTests(suiteId: string): string[] {
   const suite = SUITES.find((s) => s.id === suiteId);
   if (!suite) throw new ApiError(`Unknown suite: ${suiteId}`, 404);
-  return suite.tests.some((t) => t.id === '*') ? tests.map((t) => t.id) : suite.tests.map((t) => t.id);
+  return suite.tests.some((t) => t.id === '*') ? benchmarkTests().map((t) => t.id) : suite.tests.map((t) => t.id);
 }
 
 function validate(def: TestDefinition): string[] {
@@ -738,7 +743,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   const route = `${method} ${a ?? ''}`;
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
-  if (a === 'business-ladder') return handleBusinessLadder(q);
+  if (a === 'business-ladder') return handleBusinessLadder(q, getRun(AREA_RUN_ID).results);
   if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
   syncManualContestants();
   if (a === 'manual-models' || a === 'best-per-test') return (await import('./manualModelsMock.ts')).handleManualModels(method, parts, q, body);
@@ -821,7 +826,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
       return { ok: true };
     }
     case 'GET suites':
-      return SUITES.map((s) => ({ ...s, testCount: s.tests.some((t) => t.id === '*') ? tests.length : s.tests.length }));
+      return SUITES.map((s) => ({ ...s, testCount: s.tests.some((t) => t.id === '*') ? benchmarkTests().length : s.tests.length }));
     case 'POST estimate':
       return estimateRun(body as RunRequest);
     case 'GET costs': {
@@ -925,13 +930,14 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     }
     case 'GET score-answers': {
       const scope = q.get('scope') ?? '';
-      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : 'run-2026-09-21-core');
+      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : scope === `suite:${BUSINESS_SUITE_ID}` || scope === `suite:${LIFE_SUITE_ID}` ? AREA_RUN_ID : 'run-2026-09-21-core');
       return run.results.filter((r) => r.contestantId === q.get('contestant') && r.testId === q.get('test')).map((r) => toScoreAnswer(detailFor(r)));
     }
     case 'GET leaderboard': {
       const suiteId = q.get('suite') ?? 'core';
       const ids = new Set(suiteTests(suiteId));
-      const core = getRun('run-2026-09-21-core');
+      // Business and Everyday Life have their own results (the demo area run); the benchmark suites use the core run.
+      const core = getRun(suiteId === BUSINESS_SUITE_ID || suiteId === LIFE_SUITE_ID ? AREA_RUN_ID : 'run-2026-09-21-core');
       const manifest = { ...core.manifest, tests: core.manifest.tests.filter((t) => ids.has(t.id)), fingerprint: SUITES.find((s) => s.id === suiteId)?.fingerprint ?? core.manifest.fingerprint };
       return buildLeaderboard(manifest, core.results.filter((r) => ids.has(r.testId)), { kind: 'combined', suiteId }, suiteId === 'core' ? 17 : 0);
     }

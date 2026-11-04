@@ -27,7 +27,7 @@
   /* Ink */
   --text-1: #eef3fa;
   --text-2: #a8b4c6;
-  --text-3: #7f8b9d;
+  --text-3: #8a96a8; /* AA (4.5:1) on every surface up to --surface-4 */
   --text-inverse: #05080d;
 
   /* Brand */
@@ -40,6 +40,7 @@
   --brand-grad: linear-gradient(100deg, #22d3ee 0%, #7dd3fc 38%, #a78bfa 100%);
   --live: #ff3b4e;
   --live-soft: rgba(255, 59, 78, 0.16);
+  --live-fill: #dc2537; /* behind white text (AA) */
 
   /* Status (fixed scale; always paired with icon + label) */
   --good: #0ca30c;
@@ -114,11 +115,12 @@
 
   --text-1: #0b1220;
   --text-2: #465266;
-  --text-3: #5f6b7e;
+  --text-3: #586478;
   --text-inverse: #ffffff;
 
-  --accent: #0891b2;
-  --accent-strong: #0e7490;
+  /* Deep enough to be readable as link text on every light surface (AA), and behind white text. */
+  --accent: #0c6d87;
+  --accent-strong: #0a5a70;
   --accent-ink: #ffffff;
   --accent-soft: rgba(8, 145, 178, 0.1);
   --accent-line: rgba(8, 145, 178, 0.45);
@@ -126,6 +128,7 @@
   --brand-grad: linear-gradient(100deg, #0891b2 0%, #0284c7 40%, #7c3aed 100%);
   --live: #e11d48;
   --live-soft: rgba(225, 29, 72, 0.1);
+  --live-fill: #e11d48;
 
   --good-text: #006300;
   --good-soft: rgba(12, 163, 12, 0.12);
@@ -145,7 +148,7 @@
   --chart-surface: var(--surface-1);
   --grid: #e6e9ee;
   --axis: #c3c9d3;
-  --chart-label: #5f6b7e;
+  --chart-label: #586478;
 
   --seq-0: #e6f0fc;
   --seq-1: #cde2fb;
@@ -160,8 +163,8 @@
   --shadow-1: 0 1px 2px rgba(15, 30, 55, 0.06), 0 8px 24px -14px rgba(15, 30, 55, 0.18);
   --shadow-2: 0 24px 60px -24px rgba(15, 30, 55, 0.35), 0 0 0 1px var(--border);
 
-  --area-business: #a25a07;
-  --area-business-strong: #7c4205;
+  --area-business: #96530a;
+  --area-business-strong: #763f05;
   --area-business-soft: rgba(180, 100, 9, 0.1);
   --area-business-line: rgba(180, 100, 9, 0.4);
   --area-business-ink: #ffffff;
@@ -179,6 +182,37 @@
     monospace;
   --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 
+  /* Type scale (base 14px = 1rem). One scale for the whole app: display / h1 / h2 / h3 / body / small / micro. */
+  --fs-display: 2.86rem; /* 40px: hero titles */
+  --fs-h1: 2rem; /* 28px: page titles */
+  --fs-h2: 1.43rem; /* 20px: section titles */
+  --fs-h3: 1.143rem; /* 16px: card titles */
+  --fs-body: 1rem; /* 14px */
+  --fs-small: 0.857rem; /* 12px: secondary text, table headers */
+  --fs-micro: 0.75rem; /* 10.5px: eyebrows, chip labels */
+  --lh-tight: 1.15;
+  --lh-snug: 1.3;
+  --lh-body: 1.55;
+  --measure: 70ch; /* comfortable reading width */
+
+  /* Spacing: an 8-point grid (4 for hairline nudges). */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Reference lines on every score track: a pass mark is solid, the random-guess floor is dashed. */
+  --ref-line: color-mix(in srgb, var(--text-1) 62%, transparent);
+  --ref-line-w: 2px;
+
+  /* The benchmark's own accent (Business and Everyday Life have theirs above). */
+  --area-benchmark: var(--accent);
+  --area-benchmark-soft: var(--accent-soft);
+
   --r-xs: 4px;
   --r-sm: 6px;
   --r-md: 10px;
@@ -187,9 +221,11 @@
 
   --sidebar-w: 232px;
   --topbar-h: 58px;
-  --page-pad: 28px;
+  --page-pad: 32px;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Motion: short and quiet (nothing distracting on camera); all of it off under prefers-reduced-motion. */
   --t-fast: 120ms;
-  --t-med: 220ms;
+  --t-med: 180ms;
+  --t-slow: 200ms;
 }

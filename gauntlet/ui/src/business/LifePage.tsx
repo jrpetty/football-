@@ -6,7 +6,8 @@ import { api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { Link, href, pathOf } from '../router.tsx';
 import { useViewerCaption } from '../context.tsx';
-import { Empty, ErrorState, LoadingPage, PageHead } from '../components/ui.tsx';
+import { DemoBanner, Empty, ErrorState, LoadingPage, PageHead } from '../components/ui.tsx';
+import { MOCK } from '../api.ts';
 import { AreaIcon } from '../simple/icons.tsx';
 import { LIFE_SUITE_ID, areaInfo, areaOfTest } from '../../../src/core/areas.ts';
 import type { TestSummary } from '../types.ts';
@@ -42,6 +43,7 @@ export default function LifePage() {
           </div>
         }
       />
+      <DemoBanner show={MOCK && tests.length > 0}>The Everyday Life results in demo mode are made up to show the layout. Run the Everyday Life tests to see your own.</DemoBanner>
       {tests.length === 0 ? (
         <Empty icon={<AreaIcon.Life />} title="Everyday Life tests are on their way">
           Trip planning on a budget, splitting bills fairly, picking the cheapest tariff and more. They will appear here as soon as they are in the test library.

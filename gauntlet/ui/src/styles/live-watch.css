@@ -718,7 +718,7 @@ html[data-broadcast='on'] .page.watch.cm-feed .watch-main {
   align-items: center;
   gap: 8px;
   padding: 0 1.1rem;
-  background: var(--live);
+  background: var(--live-fill);
   color: #fff;
   font-weight: 900;
   letter-spacing: 0.12em;

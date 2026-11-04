@@ -1,0 +1,414 @@
+/*
+ * The design system layer (loaded last). One place for the rules every page shares, so the app reads as one
+ * product: the type scale and rhythm, page headers, the three area accents, cards, tables, empty states,
+ * motion, phone tap targets and Broadcast legibility. Tokens live in tokens.css; this file only uses them.
+ * Look only: nothing here changes what a page does.
+ */
+
+/* ───────── Type scale & rhythm ───────── */
+body {
+  line-height: var(--lh-body);
+}
+h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+}
+h4 {
+  font-size: var(--fs-body);
+  line-height: var(--lh-snug);
+}
+.eyebrow {
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+p {
+  text-wrap: pretty;
+}
+small,
+.small {
+  font-size: var(--fs-small);
+}
+
+/* Page rhythm: 24px between blocks, 32px gutters (8-point grid). */
+.main {
+  padding-top: var(--s-5);
+  padding-bottom: var(--s-8);
+}
+.page {
+  gap: var(--s-5);
+}
+.page-chrome {
+  margin-bottom: var(--s-5);
+  gap: var(--s-4);
+}
+/* A page still loading inside another page fills it (no narrow column in the middle). */
+.page .page {
+  width: 100%;
+  max-width: none;
+  animation: none;
+}
+
+/* ───────── Page header: title, one-line subtitle, one primary action ───────── */
+.page-head {
+  align-items: flex-end;
+  gap: var(--s-4) var(--s-5);
+  padding-bottom: var(--s-1);
+}
+.page-head .titles {
+  gap: var(--s-2);
+  flex: 1 1 520px;
+}
+.page-head .titles > .eyebrow {
+  color: var(--area-accent, var(--accent));
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.page-head .sub {
+  font-size: 1.07rem;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: var(--measure);
+}
+.page-head .actions {
+  gap: var(--s-2);
+}
+/* Secondary actions in a header stay quiet next to the one filled button. */
+.page-head .actions .btn:not(.primary):not(.biz-cta):not(.life-cta):not(.danger):not(.live) {
+  background: transparent;
+}
+.page-head .actions .btn:not(.primary):not(.biz-cta):not(.life-cta):not(.danger):not(.live):hover {
+  background: var(--surface-3);
+}
+
+/* ───────── Area accents: Benchmark (cyan), Business (gold), Everyday Life (rose) ───────── */
+.app {
+  --area-accent: var(--area-benchmark);
+  --area-accent-soft: var(--area-benchmark-soft);
+}
+.app:has(.page[data-area='business']),
+.page[data-area='business'] {
+  --area-accent: var(--area-business);
+  --area-accent-soft: var(--area-business-soft);
+}
+.app:has(.page[data-area='life']),
+.page[data-area='life'] {
+  --area-accent: var(--area-life);
+  --area-accent-soft: var(--area-life-soft);
+}
+.section-tabs a[aria-current='page']::after,
+.tabs button[aria-selected='true']::after {
+  background: var(--area-accent, var(--accent));
+}
+.page-guide {
+  border-left-color: var(--area-accent, var(--accent));
+}
+.page-guide .pg-icon {
+  background: var(--area-accent-soft, var(--accent-soft));
+  color: var(--area-accent, var(--accent));
+}
+.page-guide .pg-text strong {
+  color: var(--area-accent, var(--accent));
+}
+/* "See in depth" / "Tests →" links on area cards use the area's colour, and sit at the bottom of the card. */
+.page[data-area='business'] .tc-go,
+.page[data-area='life'] .tc-go,
+.page[data-area='business'] .biz-card footer a {
+  color: var(--area-accent);
+}
+.page .biz-tcard:not(.soon):not(.none) {
+  display: flex;
+  flex-direction: column;
+}
+.page .biz-tcard .tc-go {
+  margin-top: auto;
+}
+
+/* The active sidebar item: a quiet tint and a solid bar in the area's colour (no glow). */
+.nav a[aria-current='page']::before {
+  box-shadow: none;
+}
+
+/* ───────── Cards & panels ───────── */
+.card {
+  border-radius: var(--r-lg);
+}
+.card.pad {
+  padding: var(--s-5);
+}
+.card-head {
+  padding: var(--s-5) var(--s-5) 0;
+  gap: var(--s-3);
+}
+.card-head h2,
+.card-head h3 {
+  font-size: var(--fs-h3);
+  font-weight: 650;
+  line-height: var(--lh-snug);
+}
+.card-head .desc {
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--text-3);
+  max-width: var(--measure);
+}
+.card-body {
+  padding: var(--s-4) var(--s-5) var(--s-5);
+}
+.card-foot {
+  padding: var(--s-3) var(--s-5);
+  font-size: var(--fs-small);
+}
+/* Cards that are links or buttons lift slightly on hover and show the focus ring on keyboard focus. */
+a.card,
+button.card,
+.card.clickable {
+  transition:
+    border-color var(--t-fast),
+    background var(--t-fast),
+    transform var(--t-fast);
+}
+a.card:hover,
+button.card:hover,
+.card.clickable:hover {
+  border-color: var(--border-strong);
+  text-decoration: none;
+}
+a.card:focus-visible,
+button.card:focus-visible {
+  border-radius: var(--r-lg);
+}
+
+/* ───────── Buttons ───────── */
+.btn {
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
+}
+.btn.primary {
+  font-weight: 650;
+}
+.btn.live {
+  background: var(--live-fill);
+}
+
+/* ───────── Tables: aligned numbers, sticky headers, hairlines (no zebra) ───────── */
+table {
+  font-variant-numeric: tabular-nums;
+}
+.table thead th {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  background: var(--surface-2);
+}
+.table-wrap {
+  overscroll-behavior-x: contain;
+}
+
+/* ───────── Charts: one visual language for reference lines ───────── */
+:is(.page, .deck, .bare-root) .biz-score .passline {
+  width: var(--ref-line-w);
+  background: var(--ref-line);
+}
+:is(.page, .deck, .bare-root) .rg-line {
+  border-left-width: var(--ref-line-w);
+  border-left-color: var(--ref-line);
+}
+
+/* ───────── Badges & chips ───────── */
+.badge {
+  line-height: 1;
+}
+
+/* ───────── Empty, loading and error states ───────── */
+.empty {
+  gap: var(--s-2);
+  padding: var(--s-7) var(--s-5);
+}
+.empty .art {
+  margin-bottom: var(--s-2);
+}
+.empty h3 {
+  font-size: var(--fs-h3);
+}
+.empty p {
+  line-height: 1.5;
+}
+.empty .actions {
+  margin-top: var(--s-3);
+}
+
+/* "Demo data — not real results": on area pages, and in the Broadcast slate so it is on camera too. */
+.demo-banner {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  background: var(--warn-soft);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.page .biz-demo {
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  background: var(--warn-soft);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-small);
+}
+.page .biz-demo b {
+  color: var(--warn-text);
+  font-size: var(--fs-micro);
+}
+.demo-banner b {
+  color: var(--warn-text);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.broadcast-slate .slate-demo {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ───────── Home: calmer "at a glance" (a thin live edge instead of a red frame) ───────── */
+.glance.live {
+  border-color: var(--border);
+  box-shadow:
+    inset 3px 0 0 var(--live),
+    var(--shadow-1);
+}
+
+/* ───────── Narrow screens: headers stack, actions get the full width ───────── */
+@media (max-width: 640px) {
+  .page-head .titles {
+    flex-basis: 100%;
+  }
+  .page-head .actions {
+    width: 100%;
+  }
+  .page-head .sub {
+    font-size: 1rem;
+  }
+  h1 {
+    font-size: 1.64rem;
+  }
+}
+
+/* ───────── Phone and touch: tap targets of at least 44px ───────── */
+@media (max-width: 960px), (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+  .btn.sm,
+  .btn.xs {
+    min-height: 40px;
+  }
+  .btn.icon {
+    min-width: 44px;
+  }
+  .tabs button,
+  .section-tabs a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .seg button {
+    min-height: 38px;
+  }
+  .seg {
+    padding: 3px;
+  }
+  .nav a {
+    min-height: 44px;
+  }
+  .input,
+  .select {
+    min-height: 44px;
+  }
+}
+
+/* ───────── Motion: short, quiet, and off when the viewer asks ───────── */
+.tabs button,
+.section-tabs a,
+.seg button {
+  transition:
+    color var(--t-fast),
+    background var(--t-fast);
+}
+.tabs button[aria-selected='true']::after,
+.section-tabs a[aria-current='page']::after {
+  animation: tab-in var(--t-med) var(--ease-out);
+}
+@keyframes tab-in {
+  from {
+    transform: scaleX(0.4);
+    opacity: 0;
+  }
+}
+details > summary {
+  transition: color var(--t-fast);
+}
+
+/* Broadcast: the backdrop stays still enough for camera (no sweeping scan line), counters don't pulse. */
+html[data-broadcast='on'] .broadcast-backdrop .scan {
+  display: none;
+}
+/* Slide-in reveals (Head to Head) never push the page sideways. */
+html[data-broadcast='on'] .main,
+.vx-page {
+  overflow-x: clip;
+}
+.nav-count {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  .page-guide,
+  .drawer,
+  .modal {
+    animation: none !important;
+  }
+}
+
+/* "About this test" in a phone-width drawer: the label sits above the question instead of squeezing it. */
+@media (max-width: 640px) {
+  .at-sum {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .at-k {
+    flex: 1 1 auto;
+  }
+  .at-hook {
+    flex-basis: 100%;
+    order: 3;
+    line-height: 1.35;
+  }
+}

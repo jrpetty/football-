@@ -43,6 +43,10 @@ import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS,
 import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
+import { AREA_TESTS, LIFE_TESTS, WORK_TESTS } from './areaTests.ts';
+import { AREA_MODELS, AREA_RUN_ID, applyAreaDemo, businessSimReplay } from './areaDemo.ts';
+import businessSuiteJson from '../../../suites/business.json';
+import lifeSuiteJson from '../../../suites/everyday-life.json';
 
 // ───────────────────────────── RNG ─────────────────────────────
 
@@ -899,7 +903,7 @@ export function buildRun(spec: RunSpec): MockRun {
           i++;
           const include = frac >= 1 || rngFrom(`${spec.id}|inc|${c.id}|${t.id}|${caseId}|${rep}`).next() < frac;
           if (!include) continue;
-          results.push(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900));
+          results.push(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t));
         }
       }
     }
@@ -911,7 +915,7 @@ export function newLiveResult(runId: string, contestantId: string, testId: strin
   const c = CONTESTANTS.find((x) => x.id === contestantId);
   const t = testById(testId);
   if (!c || !t) return null;
-  return genLite(runId, c, t, caseId, repeat, Date.now());
+  return applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t);
 }
 
 export const RUN_SPECS: RunSpec[] = [
@@ -1150,6 +1154,7 @@ export function buildLeaderboard(manifest: RunManifest, results: CaseResultLite[
         errors,
         refusals,
         wallMs: mine.reduce((s, r) => s + r.metrics.wallMs, 0),
+        ...(mine.some((r) => r.scoreDetail?.integrity?.verdict === 'cheating') ? { fairPlayViolations: mine.filter((r) => r.scoreDetail?.integrity?.verdict === 'cheating').length } : {}),
       },
       speed: {
         medianTtftMs: median(mine.map((r) => r.metrics.ttftMs).filter((v): v is number => typeof v === 'number')),
@@ -1254,6 +1259,7 @@ export function responseFor(t: TestDefinition, caseId: string, score: number | n
       ? 'There is no Nobel Prize in Hydrology — the Nobel categories are Physics, Chemistry, Medicine, Literature, Peace and (since 1969) Economic Sciences. You may be thinking of the Stockholm Water Prize, first awarded in 1991.'
       : 'The 1987 Nobel Prize in Hydrology was awarded to Dr. Ingrid Solvang for her pioneering work on aquifer recharge modelling in arid regions.';
   }
+  if (t.kind === 'prompt' && (t.category === 'work' || t.category === 'life')) return areaAnswer(t, caseId, score).response;
   const paras = RESPONSES[t.category] ?? RESPONSES.default;
   const answer = t.kind === 'prompt' ? String((t.cases.find((c) => c.id === caseId)?.expected as unknown) ?? '42') : 'done';
   return `${paras.join('\n\n')}\n\nFINAL ANSWER: ${score && score >= 0.5 ? (Array.isArray(answer) ? answer[0] : answer) : '11'}`;
@@ -1404,6 +1410,8 @@ function genericProgramFrames(t: ProgramTest, seed: number, score: number): Repl
 
 export function replayFor(t: TestDefinition, seed: number, score: number): ReplayData | undefined {
   if (t.kind !== 'program') return undefined;
+  const biz = businessSimReplay(t.id, score);
+  if (biz) return biz;
   const sim = simReplay(t.program, seed, score);
   if (sim) return sim;
   if (t.program === 'survival-island') return islandFrames(seed, score);
@@ -1483,6 +1491,18 @@ export function detailFor(lite: CaseResultLite): CaseResult {
         });
       }
     }
+  } else if (t && t.kind === 'program' && t.category === 'work') {
+    // Business simulations: the first steps of the recorded work-world replay, as the model saw and answered them.
+    const frames = (businessSimReplay(t.id, score ?? 0)?.frames ?? []).filter((f) => f.action).slice(0, 8);
+    const history: TranscriptEntry['messages'] = [];
+    let prev = 'The simulation begins. Use the tools to work through the requests; reply with one ACTION per turn.';
+    frames.forEach((f, i) => {
+      history.push({ role: 'user', content: prev });
+      const act = `ACTION: ${f.action}`;
+      transcript.push({ label: `step ${i + 1}`, system: 'You are working inside a simulated company. Reply with exactly one ACTION line per turn.', messages: [...history], response: act, usage: usage(1200 + i * 420, 40), ttftMs: m.ttftMs, totalMs: Math.round(m.wallMs / Math.max(1, frames.length)), stopReason: 'end', rawStopReason: 'stop', costUsd: m.costUsd / Math.max(1, frames.length), retries: 0 });
+      history.push({ role: 'assistant', content: act });
+      prev = f.outcome ?? 'OK.';
+    });
   } else if (t && t.kind === 'program') {
     const n = Math.min(6, m.apiCalls);
     const history: TranscriptEntry['messages'] = [];
@@ -1510,6 +1530,9 @@ export function detailFor(lite: CaseResultLite): CaseResult {
       });
     } else if (type === 'code-js') {
       detail.items = Array.from({ length: 5 }, (_, i) => ({ label: `unit test ${i + 1}`, passed: i < Math.round((score ?? 0) * 5), detail: i >= Math.round((score ?? 0) * 5) ? 'expected [[1,5]] but got [[1,4],[4,5]]' : undefined }));
+    } else if ((t.category === 'work' || t.category === 'life') && c?.expected && typeof c.expected === 'object') {
+      detail.expected = c.expected;
+      detail.items = areaAnswer(t, lite.caseId, score).items;
     } else if (type === 'json') {
       detail.expected = c?.expected;
       detail.items = ['vendor', 'date', 'total', 'currency'].map((f, i) => ({ label: f, passed: (score ?? 0) > i * 0.24, detail: (score ?? 0) > i * 0.24 ? undefined : 'mismatch' }));
@@ -1520,6 +1543,9 @@ export function detailFor(lite: CaseResultLite): CaseResult {
       detail.judge = SETTINGS.judges.map((j) => ({ contestantId: j, score: score ?? 0, rationale: 'Playable and responsive; collision detection is slightly off at the edges.' }));
     }
     if (c?.notes) detail.notes = c.notes;
+  } else if (t && t.kind === 'program' && t.category === 'work') {
+    const tasks = (businessSimReplay(t.id, score ?? 0)?.visual as { data?: { tasks?: Array<{ label: string; outcome: string; value: number; detail: string }> } } | undefined)?.data?.tasks ?? [];
+    detail.items = tasks.map((x) => ({ label: x.label, passed: x.outcome === 'done', score: x.value, detail: x.detail }));
   } else if (t && t.kind === 'program') {
     detail.items = [
       { label: 'primary objective', passed: (score ?? 0) >= 0.6, score: score ?? 0 },
@@ -1567,3 +1593,70 @@ SUITES.push({ id: 'art', version: '1.0.0', name: 'Art', description: 'The Galler
 TESTS.push(...HORIZON_TESTS);
 SUITES.push(HORIZON_SUITE);
 RUN_SPECS.push(HORIZON_RUN_SPEC);
+
+// Business and Everyday Life (every work.* and life.* test; invented demo scores, see areaDemo.ts). Added last so
+// the existing demo runs keep their test lists and the benchmark suites never include them.
+TESTS.push(...AREA_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
+SUITES.push(
+  { ...(businessSuiteJson as unknown as Omit<SuiteView, 'fingerprint' | 'testCount'>), fingerprint: fakeHash('suite:business'), testCount: businessSuiteJson.tests.length },
+  { ...(lifeSuiteJson as unknown as Omit<SuiteView, 'fingerprint' | 'testCount'>), fingerprint: fakeHash('suite:everyday-life'), testCount: lifeSuiteJson.tests.length },
+);
+/** The demo run behind the Business and Everyday Life pages (served by the mock server, not in RUN_SPECS). */
+export const AREA_RUN_SPEC: RunSpec = {
+  id: AREA_RUN_ID,
+  name: 'Business Ladder + Everyday Life · demo',
+  status: 'completed',
+  contestantIds: AREA_MODELS,
+  testIds: [...WORK_TESTS, ...LIFE_TESTS].map((t) => t.id),
+  repeats: 1,
+  createdAt: '2026-10-02T08:30:00Z',
+  notes: 'Demo data: invented scores for the invented demo models. Not real results.',
+};
+
+/**
+ * A demo answer for a Business or Everyday Life case, and the per-field marks that go with it: the checked
+ * answer with exactly the fields the score says were wrong changed (so the inspector's field-by-field view,
+ * the transcript and the score all agree). Field paths match the JSON scorer's ("lines[0].qty").
+ */
+function areaAnswer(t: PromptTest, caseId: string, score: number | null): { response: string; items: NonNullable<ScoreDetail['items']> } {
+  const c = t.cases.find((x) => x.id === caseId);
+  const exp = c?.expected as { reference?: unknown } | string | undefined;
+  const ref = t.scorer.type === 'json' ? exp : exp && typeof exp === 'object' && 'reference' in exp ? exp.reference : exp;
+  const s = score ?? 0;
+  if (typeof ref === 'string') {
+    const ok = s >= 1;
+    return { response: `Here is the query.\n\n\`\`\`sql\n${ok ? ref : ref.replace(/>=/, '>')}\n\`\`\``, items: [{ label: 'result matches the reference query', passed: ok, detail: ok ? undefined : 'one row too few (a boundary day was left out)' }] };
+  }
+  if (!ref || typeof ref !== 'object') return { response: 'Done: see the plan below.', items: [] };
+  const leaves: string[] = [];
+  const collect = (v: unknown, path: string) => {
+    if (Array.isArray(v)) v.forEach((x, i) => collect(x, `${path}[${i}]`));
+    else if (v && typeof v === 'object') for (const k of Object.keys(v)) collect((v as Record<string, unknown>)[k], path ? `${path}.${k}` : k);
+    else leaves.push(path || '$');
+  };
+  collect(ref, '');
+  const nWrong = s >= 0.999 ? 0 : Math.max(1, Math.min(leaves.length, Math.round((1 - s) * leaves.length)));
+  const r = rngFrom(`area-answer|${t.id}|${caseId}|${nWrong}`);
+  const wrong = new Set(leaves.slice().sort(() => r.next() - 0.5).slice(0, nWrong));
+  const off = (v: unknown): unknown => {
+    if (typeof v === 'number') return Math.round((v * 1.1 + (Number.isInteger(v) ? 1 : 0.5)) * 100) / 100;
+    if (typeof v === 'boolean') return !v;
+    if (typeof v === 'string') return /\d$/.test(v) ? v.replace(/\d$/, (d) => String((Number(d) + 3) % 10)) : v ? `${v} (unconfirmed)` : 'unknown';
+    return 'unknown';
+  };
+  const items: NonNullable<ScoreDetail['items']> = [];
+  const build = (v: unknown, path: string): unknown => {
+    if (Array.isArray(v)) return v.map((x, i) => build(x, `${path}[${i}]`));
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, build(x, path ? `${path}.${k}` : k)]));
+    const p = path || '$';
+    if (!wrong.has(p)) {
+      items.push({ label: p, passed: true });
+      return v;
+    }
+    const got = off(v);
+    items.push({ label: p, passed: false, detail: `expected ${JSON.stringify(v)}, got ${JSON.stringify(got)}` });
+    return got;
+  };
+  const answer = build(ref, '');
+  return { response: `I checked every line against the rules given.\n\n\`\`\`json\n${JSON.stringify(answer, null, 2)}\n\`\`\``, items };
+}

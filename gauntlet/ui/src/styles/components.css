@@ -185,7 +185,7 @@
   background: color-mix(in srgb, var(--bad) 28%, transparent);
 }
 .btn.live {
-  background: var(--live);
+  background: var(--live-fill);
   border-color: transparent;
   color: #fff;
 }
@@ -936,7 +936,7 @@ th.num .sort-btn {
   box-shadow: var(--shadow-2);
   display: flex;
   flex-direction: column;
-  animation: slide-in 260ms var(--ease-out);
+  animation: slide-in var(--t-slow) var(--ease-out);
 }
 .drawer-head {
   display: flex;
@@ -978,7 +978,7 @@ th.num .sort-btn {
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-2);
-  animation: pop-in 220ms var(--ease-out);
+  animation: pop-in var(--t-med) var(--ease-out);
 }
 .modal-head {
   padding: 20px 22px 6px;
@@ -1030,7 +1030,7 @@ th.num .sort-btn {
   background: var(--surface-2);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-2);
-  animation: pop-in 220ms var(--ease-out);
+  animation: pop-in var(--t-med) var(--ease-out);
   font-size: 0.9rem;
 }
 .toast .ico {

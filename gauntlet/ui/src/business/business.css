@@ -1131,6 +1131,112 @@
 .biz-ladder.slide .biz-rung {
   grid-template-columns: 28px minmax(0, 1fr);
 }
+/* All six business areas fit one 1920×1080 frame: tighter rungs, one-line verdicts, no long notes. */
+.s-bizladder .biz-slide-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  overflow: hidden;
+}
+.biz-ladder.slide .biz-heights {
+  grid-template-columns: minmax(0, 1fr);
+}
+.biz-ladder.slide .biz-height {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.biz-ladder.slide .biz-height .who {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+}
+.biz-ladder.slide .biz-height .w b {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* In a narrow column the model is told by its colour (named in the heights box above), not a cut-off name. */
+.biz-ladder.slide .biz-score.compact {
+  grid-template-columns: auto minmax(40px, 1fr) auto;
+}
+.biz-ladder.slide .biz-score .lbl,
+.biz-ladder.slide .biz-flag,
+.biz-ladder.slide .rung-soon {
+  display: none;
+}
+.biz-ladder.slide .biz-score .num {
+  color: color-mix(in srgb, var(--mc) 55%, var(--text-1));
+}
+.biz-ladder.slide .biz-rung .rung-title b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.biz-ladder.slide {
+  padding: 10px 14px 12px;
+  gap: 6px;
+  align-content: start;
+}
+.biz-ladder.slide .biz-ladder-head .biz-glyph {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.biz-ladder.slide .biz-ladder-head h3 {
+  font-size: 1.05rem;
+}
+.biz-ladder.slide .biz-heights {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+}
+.biz-ladder.slide .biz-height {
+  padding: 6px 10px;
+  gap: 4px 10px;
+}
+.biz-ladder.slide .biz-height .big {
+  font-size: 1.55rem;
+}
+.biz-ladder.slide .biz-height .w em {
+  display: none;
+}
+.biz-ladder.slide .biz-height .w b {
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+.biz-ladder.slide .biz-rungs {
+  gap: 2px;
+}
+.biz-ladder.slide .biz-rung {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  gap: 8px;
+}
+.biz-ladder.slide .biz-rung .rung-title {
+  min-height: 24px;
+  gap: 6px;
+}
+.biz-ladder.slide .biz-rung .rung-title b {
+  font-size: 0.92rem;
+}
+.biz-ladder.slide .biz-rung .rung-soon {
+  margin: 0;
+  font-size: 0.78rem;
+}
+.biz-ladder.slide .rung-compare {
+  gap: 1px;
+}
+.biz-ladder.slide .biz-score {
+  gap: 8px;
+}
+.biz-ladder.slide .biz-score .num {
+  font-size: 0.95rem;
+}
+.biz-ladder.slide .biz-score .rng {
+  display: none;
+}
+/* The slide is about heights; the paired verdicts stay on the Business Ladder page. */
+.biz-ladder.slide .biz-verdict {
+  display: none;
+}
 
 /* ───────── Broadcast mode: bigger type, no controls ───────── */
 html[data-broadcast='on'] .biz-page .biz-picker .hint,
