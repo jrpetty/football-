@@ -70,6 +70,11 @@ function respond(prompt: string, rng: ReturnType<typeof createRng>): string {
   // Performance-summary requests (Grading Station): repeat the template summary it was given.
   const template = /^Template summary: (.+)$/m.exec(prompt);
   if (template && /Write the performance summary/.test(prompt)) return template[1]!.trim();
+  // A database question (the sql scorer): the know-nothing query, every row of the first table.
+  if (/```sql/.test(prompt) && /CREATE TABLE/i.test(prompt)) {
+    const table = /CREATE TABLE\s+(\w+)/i.exec(prompt)?.[1] ?? 'orders';
+    return `\`\`\`sql\nSELECT * FROM ${table};\n\`\`\``;
+  }
   const options = [...prompt.matchAll(/`([^`\n]{1,120})`/g)].map((m) => m[1]!.trim()).filter(Boolean);
   if (options.length > 0) {
     // Options formatted as "TAG: value" are decision lines — choose one per tag.

@@ -49,6 +49,8 @@ export function scoringText(def: TestDefinition): string {
       return 'Rated blind by people who never see which model made which answer.';
     case 'ladder':
       return 'Ten levels, each checked exactly by machine. The score is the share of the ladder climbed.';
+    case 'sql':
+      return 'Each answer is a database query, run on the real database and on hidden copies with different data. Points for every result row that matches.';
     default:
       return 'Scored automatically by the Gauntlet harness.';
   }

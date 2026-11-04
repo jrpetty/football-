@@ -420,7 +420,45 @@ export type ScorerSpec =
   /** Scored by humans in the Blind Review screen. */
   | { type: 'human'; rubric: string }
   /** Horizon ladder rung (src/scoring/ladder.ts): exact big integer, a replayed sliding-tile plan, or a whole grid. */
-  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' };
+  | { type: 'ladder'; answer: 'integer' | 'plan' | 'grid' }
+  /** One SQLite query, run read-only on the test's database and hidden copies and compared with a reference query (src/scoring/sql.ts). */
+  | SqlScorerSpec;
+
+/** A table of the `sql` scorer's databases: column names and rows (test data, never an answer). */
+export interface SqlTable {
+  columns: string[];
+  rows: Array<Array<string | number | null>>;
+}
+
+export interface SqlDatabase {
+  /** "live" for the database the prompt samples; the others are hidden copies. */
+  id: string;
+  tables: Record<string, SqlTable>;
+}
+
+export interface SqlScorerSpec {
+  type: 'sql';
+  dialect: 'sqlite';
+  /** CREATE TABLE statements (trusted, from the test file). */
+  schema: string;
+  databases: SqlDatabase[];
+  /** Default number tolerance (absolute), 0.01 if absent. */
+  tolerance?: number;
+  /** Hard limit per database (build + reference + contestant query), default 8000 ms. */
+  timeoutMs?: number;
+  /** Most rows a contestant query may return, default 5000. */
+  maxRows?: number;
+}
+
+export interface SqlExpected {
+  /** The reference query (never shown to the model). */
+  reference: string;
+  /** True when the question asks for a row order. */
+  ordered?: boolean;
+  /** Number tolerance for this question (absolute). */
+  tolerance?: number;
+}
+
 
 /** Genre playtest + checklist judging for game artifacts (The Game Jam). */
 export interface PlaytestSpec {
