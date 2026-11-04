@@ -222,6 +222,103 @@ table {
   overscroll-behavior-x: contain;
 }
 
+/* ───────── Leaderboard notes: one quiet line under the summary (fair play stays a visible alert) ───────── */
+.lb-notes {
+  display: grid;
+  gap: var(--s-2);
+}
+.lb-notes-more {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: transparent;
+}
+.lb-notes-more > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  min-height: 40px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  border-radius: inherit;
+}
+.lb-notes-more > summary::-webkit-details-marker {
+  display: none;
+}
+.lb-notes-more > summary:hover {
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+.lb-notes-more > summary svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.lbn-k {
+  font-weight: 650;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.lbn-list {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lbn-more {
+  color: var(--accent);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.lb-notes-more[open] .lbn-more {
+  visibility: hidden;
+}
+.lbn-body {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-1) var(--s-4) var(--s-4);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.lbn-item {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  max-width: 120ch;
+}
+.lbn-icon {
+  color: var(--text-3);
+  flex: none;
+  padding-top: 2px;
+}
+.lbn-icon svg {
+  width: 15px;
+  height: 15px;
+}
+.lbn-item strong {
+  color: var(--text-1);
+}
+@media (max-width: 640px) {
+  .lb-notes-more > summary {
+    flex-wrap: wrap;
+    min-height: 44px;
+  }
+  .lbn-list {
+    white-space: normal;
+    flex-basis: 100%;
+    order: 3;
+  }
+}
+
+.lb-folded {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  font-style: italic;
+}
+
 /* ───────── Charts: one visual language for reference lines ───────── */
 :is(.page, .deck, .bare-root) .biz-score .passline {
   width: var(--ref-line-w);

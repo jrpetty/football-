@@ -169,6 +169,51 @@
   background: color-mix(in srgb, var(--ww-cal-0) 80%, transparent);
   border: 1px solid var(--surface-1);
 }
+/* Legible at 1920×1080 and in Broadcast: a taller week, a readable size, one clean line for short events
+   (ellipsis), two lines for longer ones, and the full event on hover / keyboard focus. */
+.ww-hours,
+.ww-day-b {
+  height: 34rem;
+}
+.ww-ev {
+  min-height: 1.3em;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  cursor: default;
+  transition:
+    box-shadow var(--t-fast),
+    background var(--t-fast);
+}
+.ww-ev b {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.ww-ev:not(.short) .ww-ev-t {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ww-ev.short {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ww-ev:hover,
+.ww-ev:focus-visible {
+  z-index: 4;
+  height: auto !important;
+  min-height: 2.6em;
+  white-space: normal;
+  overflow: visible;
+  box-shadow: 0 0 0 2px var(--surface-1), 0 8px 20px -6px rgba(0, 0, 0, 0.55);
+  border-radius: 4px;
+}
+.ww-ev:hover .ww-ev-t,
+.ww-ev:focus-visible .ww-ev-t {
+  display: inline;
+  -webkit-line-clamp: unset;
+}
 .ww-ev.cal-1 {
   left: 30%;
   background: color-mix(in srgb, var(--ww-cal-1) 85%, transparent);

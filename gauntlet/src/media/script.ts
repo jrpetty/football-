@@ -5,7 +5,7 @@
  * stored data — `unverifiedNumbers()` checks a (possibly edited or AI-polished)
  * script against the numbers the run can back up.
  */
-import { buildCtx, count, idx, label, money, numberTokens, ordinal, perM, pts, rankedOnTest, standings, type Ctx } from './common.ts';
+import { buildCtx, count, idx, label, money, numberTokens, ordinal, perM, pts, rankedOnTest, scoreWords, standings, type Ctx } from './common.ts';
 import { presenterSlides, runningOrder, slideOf } from './slides.ts';
 import type { Highlight, ScriptSection, SlideRef, StudioInput, VideoScript } from './types.ts';
 
@@ -140,7 +140,7 @@ export function buildScript(input: StudioInput, highlights: Highlight[], slides:
   // ── Final reveal ──
   const final = slideOf(slides, 'podium') ?? slideOf(slides, 'final');
   if (final && st.length) {
-    const lines = [`[Slide ${final}] The final standings. The Gauntlet Index is the overall score out of 100, averaged across every category.`];
+    const lines = [`[Slide ${final}] The final standings. The ${scoreWords(ctx).name} is the overall score out of 100, averaged across every category.`];
     for (let place = st.length; place >= 2; place--) {
       const s = st[place - 1]!;
       lines.push(`In ${ordinal(place)} place: ${label(ctx, s.id)}, with ${idx(s.index)}.`);

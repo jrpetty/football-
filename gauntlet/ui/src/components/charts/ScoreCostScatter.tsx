@@ -12,6 +12,7 @@ import { FloatingTip } from '../ui.tsx';
 import { clamp, linearScale, logScale, logTicks, measureText, niceTicks, overlap } from './scale.ts';
 import type { Box } from './scale.ts';
 import { isBaseline } from '../leaderboard/util.ts';
+import { useScoreName } from '../leaderboard/scoreName.tsx';
 
 export type CostMode = 'total' | 'perCase';
 
@@ -43,6 +44,7 @@ export function ScoreCostScatter({
   fontScale,
   height: fixedHeight,
   baselineText,
+  scoreName: scoreNameProp,
 }: {
   rows: LeaderboardRow[];
   mode: CostMode;
@@ -53,7 +55,11 @@ export function ScoreCostScatter({
   height?: number;
   /** Optional wording for the random-baseline line, e.g. "random guessing: 12%" (the Presenter). */
   baselineText?: (index: number) => string;
+  /** The headline score's name ("Gauntlet Index", "Business Score" …); defaults to the leaderboard's. */
+  scoreName?: string;
 }) {
+  const ctxScoreName = useScoreName();
+  const scoreName = scoreNameProp ?? ctxScoreName;
   const [ref, size] = useElementSize<HTMLDivElement>();
   const fs = useRootFontSize();
   const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -241,7 +247,7 @@ export function ScoreCostScatter({
           onPointerLeave={() => setHover(null)}
           style={{ ['--s' as string]: s }}
         >
-          <title id={`${uid}-t`}>Gauntlet Index versus cost</title>
+          <title id={`${uid}-t`}>{scoreName} versus cost</title>
           <desc id={`${uid}-d`}>
             {pts.map((p) => `${p.label}: index ${fmtIndex(p.index)}, cost ${fmtCost(p.cost)}`).join('; ')}
           </desc>
@@ -275,7 +281,7 @@ export function ScoreCostScatter({
             ))}
           </g>
           <text className="axis-title" x={margin.left - 8 * s} y={margin.top - 16 * s} style={{ fontSize: tickSize }}>
-            GAUNTLET INDEX
+            {scoreName.toUpperCase()}
           </text>
           <text className="axis-title" x={margin.left + plotW / 2} y={height - 8 * s} textAnchor="middle" style={{ fontSize: tickSize }}>
             {width < 560 ? 'SPEND (USD, LOG) →' : `${costLabel.toUpperCase()} (USD, LOG SCALE) →`}
@@ -325,7 +331,7 @@ export function ScoreCostScatter({
                 style={{ animationDelay: `${120 + i * 70}ms` }}
                 tabIndex={0}
                 role="img"
-                aria-label={`${p.label}: Gauntlet Index ${fmtIndex(p.index)}, cost ${fmtCost(p.cost)}${p.frontier ? ', on the Pareto frontier' : ''}`}
+                aria-label={`${p.label}: ${scoreName} ${fmtIndex(p.index)}, cost ${fmtCost(p.cost)}${p.frontier ? ', on the Pareto frontier' : ''}`}
                 onFocus={(e) => {
                   const b = (e.currentTarget as SVGGElement).getBoundingClientRect();
                   setHover({ id: p.id, x: b.left + b.width / 2, y: b.top + b.height / 2 });
@@ -392,7 +398,7 @@ export function ScoreCostScatter({
             {hovered.label}
           </div>
           <div className="tip-row">
-            <span>Gauntlet Index</span>
+            <span>{scoreName}</span>
             <b>{fmtIndex(hovered.index)}</b>
           </div>
           {hovered.ci && (

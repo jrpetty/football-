@@ -6,6 +6,7 @@ import type { CategoryInfo, LeaderboardRow } from '../core/types.ts';
 import { CANARY } from '../core/version.ts';
 import { buildHistory } from './history.ts';
 import { esc, historySvg, scatterSvg } from './site-charts.ts';
+import { scoreNameFor } from '../core/areas.ts';
 import { SITE_JS, siteCss } from './site-assets.ts';
 import type { PublicData, PublicModel, PublicSuite, PublicTest } from './types.ts';
 import type { Contestant } from '../core/types.ts';
@@ -144,7 +145,7 @@ function leaderboardTable(ctx: Ctx, suite: PublicSuite): string {
 </tr>`;
     })
     .join('');
-  return `<div class="card"><h2>Gauntlet Index</h2><p class="desc">Weighted mean of the category scores, 0–100. The bar shows the 95% confidence interval: models whose bars overlap are statistically tied. Click a column to sort.</p>
+  return `<div class="card"><h2>${esc(scoreNameFor(suite.leaderboard.tests))}</h2><p class="desc">Weighted mean of the category scores, 0–100. The bar shows the 95% confidence interval: models whose bars overlap are statistically tied. Click a column to sort.</p>
 <div class="scroll"><table data-sortable><thead><tr><th data-sort>#</th><th data-sort>Model</th><th data-sort>Index</th><th class="num" data-sort>95% CI</th><th class="num" data-sort title="Gold · silver · bronze test wins">Medals</th><th class="num" data-sort>Cost / case</th><th class="num" data-sort title="USD per Index point">$ / point</th><th class="num" data-sort>Median case</th><th class="num" data-sort title="Share of suite tests with results">Coverage</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
 }
 
@@ -191,7 +192,7 @@ function medalTable(ctx: Ctx, suite: PublicSuite): string {
 
 function suitePanel(ctx: Ctx, suite: PublicSuite): string {
   const lb = suite.leaderboard;
-  const scatter = scatterSvg(lb.rows, { isBaseline: (r) => isBaselineRow(r, ctx.models), manual: (r) => !!r.manual });
+  const scatter = scatterSvg(lb.rows, { isBaseline: (r) => isBaselineRow(r, ctx.models), manual: (r) => !!r.manual, scoreName: scoreNameFor(lb.tests) });
   return `<h2 class="nojs-title">${esc(suite.name)}</h2>
 <p class="muted small">${esc(suite.description)}</p>
 <div class="meta-line"><span class="pill">${lb.tests.length} tests</span><span class="pill">${lb.rows.length} models</span><span class="pill mono" title="Identical fingerprint = identical test conditions">fingerprint ${esc(suite.fingerprint)}</span><span class="pill">suite v${esc(suite.version)}</span></div>
@@ -256,7 +257,7 @@ function modelPage(ctx: Ctx, m: PublicModel): string {
         })
         .join('');
       return `<section class="card"><h2>${esc(s.name)}</h2>
-<div class="kv"><div><div class="k">Rank</div><div class="v">${r.rank ? `#${r.rank}` : '—'} <span class="muted small">of ${s.leaderboard.rows.length}</span></div></div><div><div class="k">Gauntlet Index</div><div class="v">${fmtIdx(r.index)}</div><div class="muted small">${r.indexCi95 ? `95% CI ${fmtIdx(r.indexCi95[0])}–${fmtIdx(r.indexCi95[1])}` : ''}</div></div><div><div class="k">Medals</div><div class="v">${r.medals.gold}·${r.medals.silver}·${r.medals.bronze}</div></div><div><div class="k">Cost / case</div><div class="v">${m.manual ? 'n/a' : fmtCost(r.totals.cases ? r.totals.costUsd / r.totals.cases : null)}</div></div><div><div class="k">Median case</div><div class="v">${m.manual ? 'n/a' : fmtMs(r.speed.medianCaseMs)}</div></div><div><div class="k">Output speed</div><div class="v">${m.manual || r.speed.outputTokensPerSec === null ? '—' : `${Math.round(r.speed.outputTokensPerSec)} tok/s`}</div></div></div>
+<div class="kv"><div><div class="k">Rank</div><div class="v">${r.rank ? `#${r.rank}` : '—'} <span class="muted small">of ${s.leaderboard.rows.length}</span></div></div><div><div class="k">${esc(scoreNameFor(s.leaderboard.tests))}</div><div class="v">${fmtIdx(r.index)}</div><div class="muted small">${r.indexCi95 ? `95% CI ${fmtIdx(r.indexCi95[0])}–${fmtIdx(r.indexCi95[1])}` : ''}</div></div><div><div class="k">Medals</div><div class="v">${r.medals.gold}·${r.medals.silver}·${r.medals.bronze}</div></div><div><div class="k">Cost / case</div><div class="v">${m.manual ? 'n/a' : fmtCost(r.totals.cases ? r.totals.costUsd / r.totals.cases : null)}</div></div><div><div class="k">Median case</div><div class="v">${m.manual ? 'n/a' : fmtMs(r.speed.medianCaseMs)}</div></div><div><div class="k">Output speed</div><div class="v">${m.manual || r.speed.outputTokensPerSec === null ? '—' : `${Math.round(r.speed.outputTokensPerSec)} tok/s`}</div></div></div>
 <div class="grid2" style="margin-top:16px"><div><h3>Categories</h3><div class="scroll"><table>${catRows}</table></div></div><div><h3>Tests</h3><div class="scroll"><table data-sortable><thead><tr><th data-sort>Test</th><th data-sort>Category</th><th class="num" data-sort>Score</th><th class="num">95% CI</th><th class="num" data-sort title="Scored samples">n</th><th class="num" data-sort>Cost</th></tr></thead><tbody>${testRows}</tbody></table></div></div></div></section>`;
     })
     .join('');

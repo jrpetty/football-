@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { summaryFor, useRunSummaries } from '../grading/useSummaries.ts';
 import type { CSSProperties, ReactNode } from 'react';
 import { MOCK, api } from '../api.ts';
+import { scoreNameFor, withArticle } from '../../../src/core/areas.ts';
 import { useAsync, useCountUp, useElementSize, useHotkeys, useInterval } from '../hooks.ts';
 import { navigate, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useMeta, usePrefs } from '../context.tsx';
@@ -96,6 +97,8 @@ interface Contender {
 interface Deck {
   d: RunDetail;
   lb: Leaderboard;
+  /** The headline score's name: "Gauntlet Index" for benchmark runs, "Business Score" / "Everyday Life Score" for those areas. */
+  scoreName: string;
   tests: DeckTest[];
   contenders: Contender[];
   rowsById: Map<string, LeaderboardRow>;
@@ -306,6 +309,7 @@ function buildDeck(d: RunDetail, details: Map<string, TestDetail>, metaCats: Cat
   return {
     d,
     lb,
+    scoreName: scoreNameFor(lb?.tests?.length ? lb.tests : m.tests),
     tests: ordered,
     contenders,
     rowsById,
@@ -442,7 +446,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       };
     case 'how':
       return {
-        text: 'The rules: every test is scored out of 100, the Gauntlet Index averages the categories into one number, and brackets show how certain each score is.',
+        text: `The rules: every test is scored out of 100, the ${deck.scoreName} averages the categories into one number, and brackets show how certain each score is.`,
         fine: `Thin lines = likely range (95%) · temperature ${m.settings?.temperature ?? 0}${deck.hasManual ? ' · hand-pasted chatbots used their own apps' : ''}${viaOpenRouter(deck).length ? ` · via OpenRouter: ${viaOpenRouter(deck).join(', ')}` : ''}`,
       };
     case 'intro':
@@ -474,7 +478,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'final':
       return {
-        text: 'The final ranking: the Gauntlet Index combines every category into one score out of 100. Squares show each category; brackets show uncertainty.',
+        text: `The final ranking: the ${deck.scoreName} combines every category into one score out of 100. Squares show each category; brackets show uncertainty.`,
         fine: `Thin lines = likely range · cost per point = spend ÷ Index${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     case 'scatter':
@@ -535,13 +539,13 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const base = typeof st.baseline === 'number';
       return {
         text: `The overall race after ${st.step} of ${st.of} ${noun(st.of, 'test')}: longer bar = higher score so far. Arrows show who moved up or down after “${slide.test.snap.name}”.${base ? ' The dashed line is what random guessing scores.' : ''}`,
-        fine: `Running Gauntlet Index: the leaderboard formula applied to the tests played so far${base ? ` · ${randomGuessText(st.baseline!)}` : ''}${deck.hasManual ? ' · * pasted by hand' : ''}`,
+        fine: `Running ${deck.scoreName}: the leaderboard formula applied to the tests played so far${base ? ` · ${randomGuessText(st.baseline!)}` : ''}${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     }
     case 'podium':
       return {
         text: 'The final ranking, revealed from last place to first. Each model’s overall score out of 100, with the test it did best and worst on.',
-        fine: `Gauntlet Index = every category averaged into one score · best/worst = highest and lowest test score${deck.hasManual ? ' · * pasted by hand' : ''}`,
+        fine: `${deck.scoreName} = every category averaged into one score · best/worst = highest and lowest test score${deck.hasManual ? ' · * pasted by hand' : ''}`,
       };
     case 'gallery': {
       const code = slide.test.snap.id.includes('painted-in-code');
@@ -747,9 +751,9 @@ function HowSlide({ deck }: { deck: Deck }) {
               {deck.cats.length > shown.length && <span className="more">+{deck.cats.length - shown.length}</span>}
             </div>
             <span className="iv-arrow">↓</span>
-            <span className="iv-index">Gauntlet Index</span>
+            <span className="iv-index">{deck.scoreName}</span>
           </div>
-          <h2>One number: the Gauntlet Index</h2>
+          <h2>One number: the {deck.scoreName}</h2>
           <p>We average the tests in each category, then average the categories — so every skill counts {equal ? 'equally' : 'by its published weight'}, no matter how many tests it has.</p>
         </section>
         <section className="how-card" style={{ ['--i' as string]: 2 }}>
@@ -1130,12 +1134,12 @@ function FinalSlide({ deck, reveal }: { deck: Deck; reveal: number }) {
   const cats = deck.cats;
   return (
     <div className="s-final">
-      <SlideHead eyebrow="The verdict" title="Final standings" sub="Gauntlet Index — the overall score out of 100" />
+      <SlideHead eyebrow="The verdict" title="Final standings" sub={`${deck.scoreName} — the overall score out of 100`} />
       <div className="fs-table" style={{ ['--cats' as string]: cats.length, ['--rows' as string]: n + (base ? 1 : 0) }}>
         <div className="fs-row fs-headrow">
           <span className="fs-rank">#</span>
           <span>Model</span>
-          <span>Gauntlet Index</span>
+          <span>{deck.scoreName}</span>
           <span className="fs-cats fs-cats-h">
             {cats.map((c, i) => (
               <span key={c.id} className={cx('fs-cat-h', i % 2 === 1 && 'lo')} title={c.name}>
@@ -1172,7 +1176,7 @@ function ScatterSlide({ deck }: { deck: Deck }) {
     <div className="s-scatter">
       <SlideHead eyebrow="Value for money" title="Score vs cost" sub="Is the most expensive model worth it?" />
       <div className="sc-wrap" ref={ref}>
-        {size.height > 0 && <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={h} baselineText={randomGuessText} />}
+        {size.height > 0 && <ScoreCostScatter rows={deck.lb?.rows ?? []} mode="total" fontScale={1.72} height={h} baselineText={randomGuessText} scoreName={deck.scoreName} />}
       </div>
     </div>
   );
@@ -1273,7 +1277,7 @@ function OutroSlide({ deck }: { deck: Deck }) {
         <div className="o-winner" style={{ ['--c' as string]: top.color }}>
           <PMedal kind="gold" size="lg" />
           <span>
-            <b>{top.label}</b> wins this episode with a Gauntlet Index of <b className="tnum">{fmtIndex(top.index)}</b>
+            <b>{top.label}</b> wins this episode with {withArticle(deck.scoreName)} of <b className="tnum">{fmtIndex(top.index)}</b>
           </span>
         </div>
       )}
@@ -1350,6 +1354,7 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
           tests={deck.tests.map((t) => ({ id: t.snap.id, name: t.snap.name }))}
           baseline={typeof base?.index === 'number' ? base.index : null}
           reveal={reveal}
+          scoreName={deck.scoreName}
         />
       );
     }

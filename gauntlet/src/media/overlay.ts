@@ -6,6 +6,7 @@
 import { isBaselineId } from './common.ts';
 import type { OverlayData, StudioResult, StudioTestInfo } from './types.ts';
 import type { Leaderboard, RunManifest } from '../core/types.ts';
+import { scoreNameFor } from '../core/areas.ts';
 
 type LiteResult = Pick<StudioResult, 'key' | 'contestantId' | 'testId' | 'caseId' | 'status' | 'score' | 'summary' | 'finishedAt'>;
 
@@ -70,6 +71,7 @@ export function overlayData(manifest: RunManifest, results: LiteResult[], leader
     runName: manifest.name || manifest.id,
     status: active ? 'running' : manifest.status,
     scoreKind: final ? 'index' : 'average',
+    scoreName: scoreNameFor(manifest.tests),
     standings,
     ticker,
     now,

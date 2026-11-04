@@ -10,6 +10,7 @@ import { computeCost } from '../core/cost.ts';
 import { getSuite, resolveTests, selectedCaseIds } from '../core/registry.ts';
 import type { Contestant } from '../core/types.ts';
 import { combinedLeaderboard } from '../engine/leaderboards.ts';
+import { scoreNameFor, withArticle } from '../core/areas.ts';
 import { callWithRetry } from '../engine/recorder.ts';
 import { estimateRun } from '../engine/runner.ts';
 import { Semaphore } from '../engine/semaphore.ts';
@@ -205,7 +206,7 @@ export function newModelHeadline(id: string, suiteId: string, board = combinedLe
   const n = rows.length;
   let headline: string;
   if (rank === null || idx === null) headline = `${label} has no scored results on ${suiteName} yet.`;
-  else if (rank === 1) headline = `${label} takes #1 on ${suiteName} with a Gauntlet Index of ${idx.toFixed(1)}${rows[1] ? `, ahead of ${rows[1].label} (${rows[1].index!.toFixed(1)})` : ''}.`;
+  else if (rank === 1) headline = `${label} takes #1 on ${suiteName} with ${withArticle(scoreNameFor(board.tests))} of ${idx.toFixed(1)}${rows[1] ? `, ahead of ${rows[1].label} (${rows[1].index!.toFixed(1)})` : ''}.`;
   else headline = `${label} scores ${idx.toFixed(1)} and ranks #${rank} of ${n} on ${suiteName}${above ? `, ${tiedWithAbove ? 'statistically tied with' : 'behind'} ${above.label} (${above.index!.toFixed(1)})` : ''}.`;
   const best = sortedCats[0] ?? null;
   const worst = sortedCats.length > 1 ? sortedCats[sortedCats.length - 1]! : null;

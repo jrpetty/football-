@@ -11,6 +11,7 @@
  * score-based moments.
  */
 import {
+  scoreWords,
   buildCtx,
   caseLink,
   clamp,
@@ -178,14 +179,14 @@ function closeRaces(env: Env): Highlight[] {
         id: `close-race:overall:${a.id}:${b.id}`,
         type: 'close-race',
         title: `Photo finish: ${label(ctx, a.id)} edges ${label(ctx, b.id)} overall`,
-        why: `${label(ctx, a.id)} finished on ${idx(a.index)} and ${label(ctx, b.id)} on ${idx(b.index)}: a gap of ${idx(gap)} Index points${overlap ? ', inside the confidence intervals, so it is statistically a tie' : ''}.`,
+        why: `${label(ctx, a.id)} finished on ${idx(a.index)} and ${label(ctx, b.id)} on ${idx(b.index)}: a gap of ${idx(gap)} ${scoreWords(ctx).short} points${overlap ? ', inside the confidence intervals, so it is statistically a tie' : ''}.`,
         drama: clamp(75 + (3 - gap) * 7, 0, 100),
         contestantIds: [a.id, b.id],
         link: presenterLink(ctx.runId, slide),
         cue: slide ? `[Slide ${slide}]` : '[Final standings]',
         clipSec: CLIP.reveal,
-        evidence: [ev(`${label(ctx, a.id)} Index`, a.index, idx(a.index)), ev(`${label(ctx, b.id)} Index`, b.index, idx(b.index)), ev('Gap', gap, idx(gap))],
-        rule: 'Close race (overall): the top two Gauntlet Index scores are within 3 points.',
+        evidence: [ev(`${label(ctx, a.id)} ${scoreWords(ctx).short}`, a.index, idx(a.index)), ev(`${label(ctx, b.id)} ${scoreWords(ctx).short}`, b.index, idx(b.index)), ev('Gap', gap, idx(gap))],
+        rule: `Close race (overall): the top two ${scoreWords(ctx).name} scores are within 3 points.`,
       });
     }
   }
@@ -547,11 +548,12 @@ function bestValue(env: Env): Highlight[] {
   const top = st[0]!;
   const ppd = (v: number) => (v >= 100 ? String(Math.round(v)) : v.toFixed(1));
   const slide = slideOf(slides, 'scatter');
-  const evidence = [ev(`${label(ctx, best.id)} Index`, best.index, idx(best.index)), ev(`${label(ctx, best.id)} total spend`, best.costUsd, money(best.costUsd)), ev('Index points per dollar', value(best), ppd(value(best)))];
+  const sw = scoreWords(ctx);
+  const evidence = [ev(`${label(ctx, best.id)} ${sw.short}`, best.index, idx(best.index)), ev(`${label(ctx, best.id)} total spend`, best.costUsd, money(best.costUsd)), ev(`${sw.short} points per dollar`, value(best), ppd(value(best)))];
   let why: string;
   let drama = 55;
   if (best.id === top.id) {
-    why = `The winner is also the best value: ${idx(best.index)} on the Index for ${money(best.costUsd)} in total.`;
+    why = `The winner is also the best value: ${idx(best.index)} on the ${sw.short} for ${money(best.costUsd)} in total.`;
   } else {
     const ratio = value(best) / value(top);
     evidence.push(ev(`${label(ctx, top.id)} points per dollar`, value(top), ppd(value(top))), ev('Value ratio', ratio, times(ratio)));
@@ -570,7 +572,7 @@ function bestValue(env: Env): Highlight[] {
       cue: slide ? `[Slide ${slide}]` : '[Score vs cost]',
       clipSec: CLIP.stat,
       evidence,
-      rule: 'Best value: highest Gauntlet Index points per dollar of contestant spend (API models with a cost only).',
+      rule: `Best value: highest ${sw.name} points per dollar of contestant spend (API models with a cost only).`,
     },
   ];
 }

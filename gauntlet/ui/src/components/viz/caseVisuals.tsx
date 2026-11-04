@@ -83,7 +83,7 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
     family: 'extraction',
     caption: 'Every field the model had to pull out of the document, answer key against the model. Wrong values are struck through; amber lines in the document are the corrections and changes that set the traps.',
     build: extractionVisual,
-    render: (v, mode, input) => <JsonTruthDiff v={v} mode={mode} score={input.score} />,
+    render: (v, mode, input) => <JsonTruthDiff v={v} mode={mode} score={input.score} violation={input.detail.integrity?.verdict === 'cheating' ? input.detail.integrity : undefined} />,
   }),
   honesty: entry({
     family: 'honesty',

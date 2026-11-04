@@ -23,6 +23,7 @@ import { href, Link } from '../../router.tsx';
 import { isBaseline } from './util.ts';
 import { RandomGuessLine } from '../viz/RandomGuessLine.tsx';
 import './score-why.css';
+import { useScoreName } from './scoreName.tsx';
 
 export interface ScoreFocus {
   contestantId: string;
@@ -278,6 +279,7 @@ export function BaselineExplainer({ score, defaultOpen = false }: { score?: numb
 }
 
 export function ScoreWhyPanel({ lb, focus }: { lb: Leaderboard; focus: ScoreFocus | null }) {
+  const scoreName = useScoreName();
   const ordered = useMemo(() => [...lb.rows].sort((a, b) => Number(isBaseline(a)) - Number(isBaseline(b)) || (a.rank || 99) - (b.rank || 99)), [lb.rows]);
   const [id, setId] = useState<string>(() => ordered.find((r) => !isBaseline(r))?.contestantId ?? ordered[0]?.contestantId ?? '');
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -348,7 +350,7 @@ export function ScoreWhyPanel({ lb, focus }: { lb: Leaderboard; focus: ScoreFocu
         <li>
           <b>4</b>
           <span>
-            <strong>Gauntlet Index</strong> = average of the categories
+            <strong>{scoreName}</strong> = average of the categories
           </span>
         </li>
       </ol>
@@ -376,7 +378,7 @@ export function ScoreWhyPanel({ lb, focus }: { lb: Leaderboard; focus: ScoreFocu
         <>
           <div className={cx('why-index', ex.isBaseline && 'is-baseline')} style={{ ['--c' as string]: row.color } as CSSProperties}>
             <div className="why-index-num">
-              <span className="k">Gauntlet Index</span>
+              <span className="k">{scoreName}</span>
               <span className="v tnum">{ex.index === null ? '—' : one(ex.index)}</span>
               <span className="s">out of 100</span>
             </div>
