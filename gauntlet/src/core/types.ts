@@ -409,6 +409,10 @@ export type ScorerSpec =
       partitions?: string[];
       /** [answerPath, keyPath]: listing under answerPath an id the key lists under keyPath scores the case 0. */
       forbidOverlap?: Array<[string, string]>;
+      /** Points per field by dotted path (longest prefix wins, default 1). */
+      weights?: Record<string, number>;
+      /** Leaf patterns ("messages.*.category") that earn only the points above a constant guess. */
+      aboveConstant?: string[];
     }
   /** case.expected: { functionName, tests: [{ args, expected }] }. Generated code is executed in a sandbox. */
   | { type: 'code-js'; timeoutMs?: number }

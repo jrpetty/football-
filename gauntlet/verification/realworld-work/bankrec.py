@@ -14,6 +14,9 @@ payment are left as unexplained items, the split payment and the reversed charge
 not spotted, and every unmatched cash-book entry is called a timing difference.
 """
 import random
+
+# Points per field for fields where a trap sits (routine fields are worth 1). Stated in the prompt.
+TRAP_WEIGHT = 3
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from wk import uk, uky, people
@@ -440,7 +443,8 @@ def prompt(rec):
             "- ledger: every cash-book entry, with the bank line it matches (a list of two for a split) or its reason from rule 4.\n"
             "- differences: one entry per matched bank line whose amount differs from the cash book (rule 2); leave it empty ({}) if there are none.\n"
             "- adjusted_balance: in pounds, to the penny.\n"
-            "Marking: a point for each bank line, each cash-book entry, each difference's reason and amount, and the adjusted balance; every difference you list that is not one costs two points. "
+            f"Marking: each bank line, each cash-book entry, each difference's reason and amount and the adjusted balance is a field. Routine fields (a straightforward match) are worth 1 point; "
+            f"fields that need extra care (a split, a duplicate, a reversal, a keying or FX difference, a timing item, the balance) are worth {TRAP_WEIGHT}. Every difference you list that is not one costs two fields at {TRAP_WEIGHT} points each. "
             "Reply with the JSON object only (a ```json code block is fine); key order, spacing and letter case do not matter, and amounts may have a £ sign. "
             "Give one value per field: a field with two answers is marked wrong, and if you give more than one JSON answer only the last one counts.")
 

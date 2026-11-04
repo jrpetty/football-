@@ -842,11 +842,12 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whatItTests: 'Sorting a real-looking inbox by a written rubric and pulling out every action with its owner, due date and priority.',
     whyHard: 'Scams use lookalike addresses, deadlines are corrected or cancelled in later emails, duplicates and an email that tries to instruct the AI must be ignored, and dates like "next Wednesday" cross bank holidays.',
     howScored: [
-      { icon: 'document', text: 'Answer is data (JSON): a category for every email' },
-      { icon: 'check', text: 'Each action: owner, due date and priority, a point each' },
-      { icon: 'cross', text: 'An invented action costs as much as a missed one' },
+      { icon: 'document', text: 'A category for every email; each action: owner, date, priority' },
+      { icon: 'star', text: 'Trap fields (scam, duplicate, correction…) are worth 3 points' },
+      { icon: 'zero', text: 'Category points count only above giving all emails one label' },
+      { icon: 'cross', text: 'An invented action costs as much as a missed trap' },
     ],
-    goodScore: '100 means every category and every action exactly right; each of the nine inboxes counts equally and each point is a share of its inbox.',
+    goodScore: '100 means every category and every action exactly right. Giving every email the same label scores 0, and a careless reader who falls for the traps lands near 50.',
     icon: 'document',
   },
   'work.meeting-scheduler': {
@@ -879,7 +880,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'One payment was keyed with two digits swapped, a dollar payment cost more than booked, payments are split or made twice, and a look-alike payment with the same amount is a different invoice.',
     howScored: [
       { icon: 'swap', text: 'Every statement line and cash-book entry: match or reason' },
-      { icon: 'check', text: 'A point per line, per difference field and the balance' },
+      { icon: 'star', text: 'Routine matches 1 point; splits, duplicates, differences 3' },
       { icon: 'cross', text: 'An invented difference costs as much as a missed one' },
     ],
     goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
@@ -891,7 +892,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'Real changes like a lower liability cap or one inserted "not" hide among renumbered clauses, moved paragraphs and reformatted numbers that change nothing.',
     howScored: [
       { icon: 'diff', text: 'List each real change: clause, type, old and new value' },
-      { icon: 'check', text: 'Up to three points per change, checked by machine' },
+      { icon: 'star', text: 'Renumbered, negated or redefined changes: 2 points a field' },
       { icon: 'cross', text: 'Listing a non-change costs as much as missing a change' },
     ],
     goodScore: '100 means every substantive change found with the right values and nothing extra listed; the nine contract pairs count equally.',
