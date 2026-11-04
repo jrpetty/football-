@@ -284,10 +284,15 @@ default repeat count. Bump the suite `version` when you change it.
 | False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
-**Real-World Work (`work` category)**
+**Real-World Work (`work` category)**: everyday office jobs, every answer checked by machine against a solver ([METHODOLOGY.md](docs/METHODOLOGY.md#7e-real-world-work-category-work)).
 
 | Test | Id | What it does |
 |---|---|---|
+| Monday Inbox | `work.inbox-triage` | Thirty emails, one scam, two duplicates and a deadline that moves twice. Can it clear your Monday? |
+| Find a Slot | `work.meeting-scheduler` | Five people, four time zones, the week the clocks change. When is the earliest slot that works? |
+| Expense Policy Check | `work.expense-audit` | Twenty-six claim lines, one policy, every penny checked. Who gets paid what? |
+| Reconcile the Account | `work.bank-reconciliation` | Sixty lines of bank statement and cash book. Can it find the swapped digits and the double payment? |
+| What Changed in the Contract? | `work.contract-redline` | Two drafts, fifteen hidden changes and a lot of noise. Would you sign it? |
 | Ask the Database | `work.sql-questions` | Twelve questions from the boss, one SQLite query each. The query runs on hidden copies of the database too, so hard-coding fails. |
 | Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
 

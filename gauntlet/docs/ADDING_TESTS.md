@@ -119,6 +119,7 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "contains", "all": [...], "any": [...], "none": [...] }` | or put the lists in `expected` | Partial credit |
 | `{ "type": "constraints", "allOrNothing": false }` | array of constraints (below) | Partial credit |
 | `{ "type": "json", "unorderedArrays": false, "numberTolerance": 1e-6 }` | the exact expected object | Field-level partial credit |
+| `{ "type": "json", "loose": true, "sets": { "non_compliant": 2 } }` | the exact expected object | `loose` forgives presentation (key case/spacing, `"£1,234.50"`, `"Clause 9.2"`, `T`/"London" in date-times, `"none"` for null, one-item lists); each `sets` path is an id-keyed object where an extra item costs that many fields, as a missing one does (see `tests/work/`) |
 | `{ "type": "code-js", "timeoutMs": 2000 }` | `{ "functionName": "f", "tests": [{ "args": [1, 2], "expected": 3 }] }` | Tell the model to reply with one ```` ```javascript ```` block |
 | `{ "type": "judge", "rubric": "...", "passThreshold": 0.7 }` | optional reference answer | Judge panel, 0–10 |
 | `{ "type": "judge-classify", "instructions": "...", "labels": [{ "id": "CORRECT", "description": "...", "score": 1 }] }` | reference for the judge | Label ids in UPPER_SNAKE_CASE |
