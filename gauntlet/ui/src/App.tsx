@@ -14,7 +14,10 @@ import { BudgetIcon } from './budget/BudgetParts.tsx';
 import { SidebarNav } from './simple/SidebarNav.tsx';
 import { PageChrome } from './simple/PageChrome.tsx';
 import { HelpButton } from './help/HelpPanel.tsx';
-import { SimpleIcon } from './simple/icons.tsx';
+import { AreaIcon, SimpleIcon } from './simple/icons.tsx';
+import { ExplainIcon } from './components/viz/ExplainIcon.tsx';
+
+const LadderNavIcon = (p: { className?: string }) => <ExplainIcon name="ladder" {...p} />;
 import { pageKeyFor } from './simple/nav.ts';
 import { isSimpleMode, useSimplePrefs } from './simple/prefs.ts';
 import { useProgressTracking } from './simple/progress.ts';
@@ -65,6 +68,11 @@ const GalleryVotePage = lazy(() => import('./gallery/GalleryVotePage.tsx'));
 const GradingStationPage = lazy(() => import('./grading/GradingStationPage.tsx'));
 // Best on each test (ui/src/manual-models/)
 const BestPerTestPage = lazy(() => import('./manual-models/BestPerTestPage.tsx'));
+// Business and Everyday Life, the two areas outside the benchmark (ui/src/business/)
+const BusinessHomePage = lazy(() => import('./business/BusinessHomePage.tsx'));
+const BusinessLadderPage = lazy(() => import('./business/BusinessLadderPage.tsx'));
+const BusinessTestsPage = lazy(() => import('./business/BusinessTestsPage.tsx'));
+const LifePage = lazy(() => import('./business/LifePage.tsx'));
 
 interface NavItem {
   to: string;
@@ -84,6 +92,11 @@ const NAV: NavItem[] = [
   { to: '/arena', label: 'Arena', icon: ArenaIcon, match: (p) => p.startsWith('/arena') },
   { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
   { to: '/best', label: 'Best on each test', icon: Icon.Layers, match: (p) => p.startsWith('/best') },
+  { to: '/business', label: 'Business home', icon: AreaIcon.Business, match: (p) => p === '/business' },
+  { to: '/business/ladder', label: 'Business Ladder', icon: LadderNavIcon, match: (p) => p.startsWith('/business/ladder') },
+  { to: '/business/tests', label: 'Business tests', icon: Icon.Flask, match: (p) => p.startsWith('/business/tests') },
+  { to: '/business/results', label: 'Business results', icon: Icon.Trophy, match: (p) => p.startsWith('/business/results') },
+  { to: '/life', label: 'Everyday Life', icon: AreaIcon.Life, match: (p) => p.startsWith('/life') },
   { to: '/present', label: 'Presenter', icon: Icon.Present, match: (p) => p.startsWith('/present') },
   { to: '/studio', label: 'Studio', icon: Icon.Clapper, match: (p) => p.startsWith('/studio') },
   { to: '/gallery', label: 'The Gallery', icon: Icon.Image, match: (p) => p.startsWith('/gallery') },
@@ -187,6 +200,13 @@ function resolve(parts: string[], query?: URLSearchParams): Resolved {
   }
   if (a === 'versus') return { el: <VersusPage />, crumb: 'Head to Head' };
   if (a === 'best') return { el: <BestPerTestPage />, crumb: 'Best on each test' };
+  if (a === 'business') {
+    if (!b) return { el: <BusinessHomePage />, crumb: 'Business' };
+    if (b === 'ladder') return { el: <BusinessLadderPage />, crumb: 'Business Ladder' };
+    if (b === 'tests') return { el: <BusinessTestsPage />, crumb: 'Business tests' };
+    if (b === 'results') return { el: <LeaderboardPage key="business" area="business" />, crumb: 'Business results' };
+  }
+  if (a === 'life') return { el: <LifePage />, crumb: 'Everyday Life' };
   if (a === 'present' && b === 'versus') return { el: <VersusDeckPage />, crumb: 'Presenter', bare: true };
   if (a === 'present') {
     if (!b) return { el: <PresentPickerPage />, crumb: 'Presenter' };

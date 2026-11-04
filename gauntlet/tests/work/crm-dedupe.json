@@ -29,9 +29,9 @@
     "partitions": [
       "clusters"
     ],
-    "sets": [
-      "masters"
-    ]
+    "sets": {
+      "masters": 1
+    }
   },
   "cases": [
     {

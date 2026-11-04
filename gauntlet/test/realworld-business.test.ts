@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadTests, renderCase } from '../src/core/registry.ts';
 import { scoreResponse } from '../src/scoring/index.ts';
-import { canonicalize, compareJsonSets, moneyNumber } from '../src/scoring/json-sets.ts';
+import { compareJson, forbiddenOverlap, looseNumber, normSetId } from '../src/scoring/json-compare.ts';
 import { createRng } from '../src/core/rng.ts';
 import type { PromptTest } from '../src/core/types.ts';
 
@@ -86,9 +86,9 @@ test('format never costs marks: key case, £ signs, thousands separators, code p
   const crm = exp('work.crm-dedupe', 'd05');
   crm.clusters = (crm.clusters as string[][]).map((g) => g.map((x) => x.toLowerCase().replace('-', ' ')));
   assert.equal((await score('work.crm-dedupe', 'd05', asJson(crm))).score, 1);
-  assert.equal(moneyNumber('-£1,234.50'), -1234.5);
-  assert.equal(moneyNumber('(12.00)'), -12);
-  assert.equal(moneyNumber('12 or 13'), null);
+  assert.equal(looseNumber('-£1,234.50'), -1234.5);
+  assert.equal(looseNumber('(12.00)'), -12);
+  assert.equal(looseNumber('12 or 13'), null);
 });
 
 test('do-nothing, copied-prompt and random-filler answers score at most 5% on every test', async () => {
@@ -242,11 +242,21 @@ test('CRM: groups are scored pair by pair; merging everything or nothing scores 
   assert.equal((await score(id, 'd10', asJson(split))).score, Math.round(expected * 10000) / 10000);
 });
 
-test('json-sets helpers: canonicalize only forgives presentation', () => {
-  assert.deepEqual(canonicalize({ a_b: 1, c: 'hold-price' }, { 'A B': '1.00', c: 'HOLD PRICE' }), { a_b: 1, c: 'hold-price' });
-  assert.deepEqual(canonicalize({ c: 'hold-price' }, { c: 'hold-qty' }), { c: 'hold-qty' });
-  const r = compareJsonSets({ s: ['A', 'B'] }, { s: ['a', 'b', 'c'] }, { sets: ['s'] });
-  assert.equal(r.matched / r.total, 0.8);
-  const p = compareJsonSets({ g: [['A', 'B', 'C']] }, { g: [['A', 'B'], ['C']] }, { partitions: ['g'] });
+test('json scorer options: lenient forgives presentation only; sets, partitions and forbidOverlap', () => {
+  // lenient: key spelling, money as text, code punctuation, yes/no, n/a, date-time separators; never content.
+  assert.equal(compareJson({ a_b: 1, c: 'hold-price', d: true, e: null, f: '2026-11-05 14:00' }, { 'A B': '£1.00', C: 'HOLD PRICE', d: 'yes', e: 'n/a', f: '2026-11-05T14:00:00' }, { lenient: true }).score, 1);
+  assert.equal(compareJson({ c: 'hold-price' }, { c: 'hold-qty' }, { lenient: true }).score, 0);
+  assert.equal(compareJson({ n: 12 }, { n: '12 or 13' }, { lenient: true }).score, 0);
+  // sets of ids: each id is worth its points, and an extra id costs the same.
+  const r = compareJson({ s: ['A', 'B'] }, { s: ['a', 'b', 'c'] }, { sets: { s: 1 } });
+  assert.equal(r.matched / r.total, 2 / 3);
+  const missing = compareJson({ s: ['A', 'B', 'C'] }, { s: ['a', 'b'] }, { sets: { s: 1 } });
+  assert.equal(missing.matched / missing.total, 2 / 3);
+  assert.equal(normSetId('m 10001'), normSetId('M-10001'));
+  // partitions: pairwise F1.
+  const p = compareJson({ g: [['A', 'B', 'C']] }, { g: [['A', 'B'], ['C']] }, { partitions: ['g'] });
   assert.equal(Math.round((p.matched / p.total) * 1000) / 1000, 0.5);
+  // forbidOverlap: listing an id the key keeps under the other list.
+  assert.deepEqual(forbiddenOverlap({ shortlist: ['C01'], flagged: ['C07'] }, { shortlist: ['c07'] }, [['shortlist', 'flagged']]), { answerKey: 'shortlist', item: 'c07' });
+  assert.equal(forbiddenOverlap({ shortlist: ['C01'], flagged: ['C07'] }, { shortlist: ['C01'] }, [['shortlist', 'flagged']]), null);
 });

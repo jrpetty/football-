@@ -1,14 +1,14 @@
 import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, NormalizeMode, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
 import { extractCodeBlock, extractCodeBlocks, extractFinalAnswer, extractTagged, normalize, parseAnswerNumber, parseJsonLoose, stripReasoning } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
-import { compareJson } from './json-compare.ts';
-import { canonicalize, compareJsonSets, forbiddenOverlap } from './json-sets.ts';
+import { compareJson, forbiddenOverlap } from './json-compare.ts';
 import { promptExampleArgs, runCodeTests, trivialSolutionReason, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
 import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { checkReply, fairPlaySummary } from './integrity.ts';
+import { scoreSql } from './sql.ts';
 
 export interface JudgeCall {
   judgeId: string;
@@ -376,11 +376,8 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
     case 'json': {
       const parsed = parseJsonLoose(response, expected);
       if (parsed === undefined) return { score: 0, passed: false, summary: 'No valid JSON found', detail: { formatOk: false, expected } };
-      const extended = scorer.lenient || scorer.sets?.length || scorer.partitions?.length;
-      const r = extended
-        ? compareJsonSets(expected, parsed, scorer)
-        : compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases });
-      const banned = scorer.forbidOverlap?.length ? forbiddenOverlap(expected, scorer.lenient ? canonicalize(expected, parsed) : parsed, scorer.forbidOverlap) : null;
+      const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases, lenient: scorer.lenient, sets: scorer.sets, partitions: scorer.partitions });
+      const banned = scorer.forbidOverlap?.length ? forbiddenOverlap(expected, parsed, scorer.forbidOverlap) : null;
       if (banned) {
         return {
           score: 0,
@@ -423,6 +420,8 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
     case 'ladder':
       return scoreLadder(scorer.answer, expected, response);
+    case 'sql':
+      return scoreSql(scorer, expected as never, response, input.signal);
   }
 }
 

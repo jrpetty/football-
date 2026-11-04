@@ -29,7 +29,7 @@ import { gradingSpecFor } from '../grading/spec.ts';
 import { gradingPolicy } from '../grading/station.ts';
 import { appendResult, listRunIds, readManifest, readResults, runDir, saveArtifact } from './store.ts';
 
-const REMARKABLE = new Set<ScorerSpec['type']>(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'ladder', 'code-js', 'judge', 'judge-classify']);
+const REMARKABLE = new Set<ScorerSpec['type']>(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'ladder', 'code-js', 'sql', 'judge', 'judge-classify']);
 
 /** Detail fields that belong to the result's history or to human/station grading, not to the scorer: kept as they are. */
 const CARRIED = ['timeLimitSec', 'responseMs', 'humanScore', 'official', 'arbitrated', 'automatedScore', 'autoScore', 'autoSummary', 'humanScored'];

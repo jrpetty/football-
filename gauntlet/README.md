@@ -284,7 +284,33 @@ default repeat count. Bump the suite `version` when you change it.
 | False Premise | `trick.false-premise` | The Eiffel Tower was built for the 1900 World's Fair. Who built it? |
 | Lightning Traps | `trick.lightning-traps` | 30 seconds. One line. Don't fall for it. |
 
-**Real-World Work: business pack** (category `work`; see [METHODOLOGY §7e](docs/METHODOLOGY.md#7e-real-world-work-the-business-pack))
+**Real-World Work (`work` category)**: everyday office jobs, every answer checked by machine against a solver ([METHODOLOGY.md](docs/METHODOLOGY.md#7e-real-world-work-category-work)).
+
+| Test | Id | What it does |
+|---|---|---|
+| Monday Inbox | `work.inbox-triage` | Thirty emails, one scam, two duplicates and a deadline that moves twice. Can it clear your Monday? |
+| Find a Slot | `work.meeting-scheduler` | Five people, four time zones, the week the clocks change. When is the earliest slot that works? |
+| Expense Policy Check | `work.expense-audit` | Twenty-six claim lines, one policy, every penny checked. Who gets paid what? |
+| Reconcile the Account | `work.bank-reconciliation` | Sixty lines of bank statement and cash book. Can it find the swapped digits and the double payment? |
+| What Changed in the Contract? | `work.contract-redline` | Two drafts, fifteen hidden changes and a lot of noise. Would you sign it? |
+| Ask the Database | `work.sql-questions` | Twelve questions from the boss, one SQLite query each. The query runs on hidden copies of the database too, so hard-coding fails. |
+| Ask the Database: Hard | `work.sql-hard` | Time zones, price history, duplicate events, reversals: nine analyst questions on a messy warehouse. |
+| The Personal Assistant | `work.assistant` | Eight jobs, one inbox, and an email telling the AI to send the invoices somewhere else. |
+| The Personal Assistant (Hard) | `work.assistant-hard` | Ten real jobs, late corrections and a fake bank-details email: can it run the week? |
+
+**Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
+running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7e-the-business-ladder)). Never part of the Gauntlet Index.
+
+| Test | Id | What it does |
+|---|---|---|
+| Read an Invoice | `work.invoice-read` | One invoice, twelve boxes to fill. Can it read the paperwork without slipping? |
+| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, six tags. Does it follow the rubric or its gut? |
+| Read a CV | `work.cv-read` | One CV, seven boxes. Count the experience properly and never guess what isn't written. |
+| What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
+| Read the Spreadsheet | `work.sheet-lookup` | A hundred rows, three questions, one exact answer each. No formulas allowed. |
+| Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
+
+**Business pack, Business Ladder levels 2-3** (category `work`; see [METHODOLOGY §7i](docs/METHODOLOGY.md#7i-business-ladder-levels-2-3-the-business-pack))
 
 | Test | Id | What it does |
 |---|---|---|

@@ -27,10 +27,10 @@
     "type": "json",
     "numberTolerance": 1e-8,
     "lenient": true,
-    "sets": [
-      "shortlist",
-      "screener_instructions"
-    ],
+    "sets": {
+      "shortlist": 1,
+      "screener_instructions": 1
+    },
     "forbidOverlap": [
       [
         "shortlist",

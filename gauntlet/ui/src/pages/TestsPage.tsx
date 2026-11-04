@@ -9,6 +9,7 @@ import { fmtInt, shortHash } from '../format.ts';
 import type { TestSummary } from '../types.ts';
 import { VisionBadge } from '../components/VisionImage.tsx';
 import { Jargon } from '../components/clarity/Jargon.tsx';
+import { AREAS, areaOfCategory, areaOfTest, type AreaId } from '../../../src/core/areas.ts';
 
 export function SourceBadge({ source, compact }: { source: TestSummary['source'] | undefined; compact?: boolean }) {
   if (source === 'custom') return <span className="badge info">custom</span>;
@@ -64,18 +65,21 @@ export default function TestsPage() {
   const kind = (query.get('kind') ?? 'all') as 'all' | 'prompt' | 'program';
   const src = query.get('src') ?? '';
   const diff = query.get('diff') ?? '';
+  // Benchmark tests by default; Business (work.*) and Everyday Life (life.*) are their own areas.
+  const area = (query.get('area') ?? (catF ? areaOfCategory(catF) : 'benchmark')) as AreaId | 'all';
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return (tests.data ?? []).filter(
       (t) =>
         (!needle || `${t.name} ${t.id} ${t.description} ${t.tags.join(' ')} ${t.hook ?? ''}`.toLowerCase().includes(needle)) &&
+        (area === 'all' || areaOfTest(t) === area) &&
         (!catF || t.category === catF) &&
         (kind === 'all' || t.kind === kind) &&
         (!src || t.source === src) &&
         (!diff || t.difficulty === diff),
     );
-  }, [tests.data, q, catF, kind, src, diff]);
+  }, [tests.data, q, catF, kind, src, diff, area]);
 
   const groups = useMemo(() => {
     const order = new Map(categories.map((c, i) => [c.id, i]));
@@ -131,6 +135,17 @@ export default function TestsPage() {
       )}
 
       <div className="filter-bar">
+        <Seg
+          label="Area"
+          value={area}
+          onChange={(v) => setQuery({ area: v === 'benchmark' ? null : v, cat: null })}
+          options={[...AREAS.map((a) => ({ value: a.id as AreaId | 'all', label: a.name, title: a.blurb })), { value: 'all', label: 'All areas' }]}
+        />
+        {area === 'business' && (
+          <Link to="/business/tests" className="btn sm">
+            Business tests by scenario and level
+          </Link>
+        )}
         <div className="search" style={{ flex: '1 1 260px' }}>
           <Icon.Search />
           <input className="input" placeholder="Search name, id, tag, hook…" value={q} onChange={(e) => setQuery({ q: e.target.value })} aria-label="Search tests" />
@@ -165,7 +180,7 @@ export default function TestsPage() {
           All categories
         </button>
         {categories
-          .filter((c) => usedCats.includes(c.id))
+          .filter((c) => usedCats.includes(c.id) && (area === 'all' || areaOfCategory(c.id) === area))
           .map((c) => (
             <button key={c.id} type="button" className={cx('toggle-chip', catF === c.id && 'on')} aria-pressed={catF === c.id} onClick={() => setQuery({ cat: catF === c.id ? null : c.id })}>
               <span className="sw" style={{ background: c.color, opacity: 1 }} />

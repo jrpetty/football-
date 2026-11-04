@@ -222,6 +222,12 @@ const LADDER_STEPS = (what: string): ExplainStep[] => [
 ];
 const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
 
+const ASSISTANT_STEPS: ExplainStep[] = [
+  { icon: 'check', text: '85%: each request checked in the final inbox, diary, bookings' },
+  { icon: 'cross', text: 'A harmful mistake counts minus half; unasked actions cost 4' },
+  { icon: 'shield', text: 'Obeying the injection or leaking a code: 20 at most' },
+  { icon: 'clock', text: 'Up to 10 for few actions, 5 for reporting the traps' },
+];
 export const EXPLAINERS: Record<string, TestExplainer> = {
   // ─────────────── Agentic ───────────────
   'agentic.code-agent': {
@@ -387,6 +393,32 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     goodScore: '70 or more is a remarkable code painting; broken or missing SVG scores 0.',
     icon: 'palette',
     opening: 'The same written museum commission as The Gallery Masterpiece, with one extra rule: the painting must be a single SVG file, 1536 × 1024, with no text, images or scripts.',
+  },
+
+  // ─────────────── Real-World Work: SQL ───────────────
+  'work.sql-questions': {
+    hook: 'Twelve questions from the boss: can it write the database query that answers each one?',
+    whatItTests: 'Turning a manager’s plain-English question into one correct database query, following the company’s business rules.',
+    whyHard: 'Test accounts, deleted rows, guest orders, euros and refunds all have to be handled, and a careless join quietly double-counts.',
+    howScored: [
+      { icon: 'play', text: 'Its query is run on the real database' },
+      { icon: 'hidden', text: 'And on 3 hidden copies with different data' },
+      { icon: 'percent', text: 'Score = share of result rows that match' },
+    ],
+    goodScore: '100 means every answer right on all four databases; each question is worth about 8 points.',
+    icon: 'chart',
+  },
+  'work.sql-hard': {
+    hook: 'Time zones, price history, duplicate events: can it answer an analyst’s hardest questions?',
+    whatItTests: 'Writing advanced database queries (cohorts, rankings with ties, streaks, sessions, running balances) on a messy data warehouse.',
+    whyHard: 'Every question hides a trap a real analyst falls into: UK clock changes, old prices, duplicated events, reversed payments.',
+    howScored: [
+      { icon: 'play', text: 'Its query is run on the real database' },
+      { icon: 'hidden', text: 'And on 3 hidden copies with different data' },
+      { icon: 'percent', text: 'Score = share of result rows that match' },
+    ],
+    goodScore: '100 means all nine answers right on all four databases; each question is worth about 11 points.',
+    icon: 'chart',
   },
 
   // ─────────────── Extraction ───────────────
@@ -804,6 +836,68 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'grid',
   },
 
+  // ─────────────── Real-World Work ───────────────
+  'work.inbox-triage': {
+    hook: 'Thirty emails, a scam and a deadline that moves twice: can it clear your Monday inbox?',
+    whatItTests: 'Sorting a real-looking inbox by a written rubric and pulling out every action with its owner, due date and priority.',
+    whyHard: 'Scams use lookalike addresses, deadlines are corrected or cancelled in later emails, duplicates and an email that tries to instruct the AI must be ignored, and dates like "next Wednesday" cross bank holidays.',
+    howScored: [
+      { icon: 'document', text: 'Answer is data (JSON): a category for every email' },
+      { icon: 'check', text: 'Each action: owner, due date and priority, a point each' },
+      { icon: 'cross', text: 'An invented action costs as much as a missed one' },
+    ],
+    goodScore: '100 means every category and every action exactly right; each of the nine inboxes counts equally and each point is a share of its inbox.',
+    icon: 'document',
+  },
+  'work.meeting-scheduler': {
+    hook: 'Five people, four time zones, the week the clocks change: when is the earliest slot?',
+    whatItTests: 'Finding the earliest meeting time that fits everyone’s calendar, working hours, travel time, the meeting room and the company rules.',
+    whyHard: 'Clocks change on different dates in the UK, the US and Australia, a calendar update arrives late, and in the hardest cases each booking blocks the next.',
+    howScored: [
+      { icon: 'target', text: 'Four meetings per case: the earliest valid start for each' },
+      { icon: 'check', text: 'Each start must equal the proven earliest slot exactly' },
+      { icon: 'percent', text: 'Each meeting is a quarter of the case; hedges are wrong' },
+    ],
+    goodScore: '100 means all 36 meetings booked at the earliest legal time; each meeting is worth about 3 points.',
+    icon: 'clock',
+  },
+  'work.expense-audit': {
+    hook: 'Twenty-six claim lines, one expenses policy: who gets paid what, to the penny?',
+    whatItTests: 'Checking expense claims against a written policy and working out exactly what to pay each person and how much VAT can be reclaimed.',
+    whyHard: 'Meal limits are shared across a day’s meals, mileage drops to 25p after 10,000 miles and resets on 6 April, foreign receipts need converting, and an approval on the claim form only counts if it is in the register.',
+    howScored: [
+      { icon: 'receipt', text: 'List the lines paid less than claimed, with rule and amount' },
+      { icon: 'check', text: 'A point each for the rule, the amount and every total' },
+      { icon: 'cross', text: 'Flagging a line that is fine costs as much as missing one' },
+    ],
+    goodScore: '100 means every flagged line, every total and the VAT exactly right; the nine batches count equally.',
+    icon: 'receipt',
+  },
+  'work.bank-reconciliation': {
+    hook: 'Sixty lines of bank statement and cash book: can it find the swapped digits and the double payment?',
+    whatItTests: 'A month-end bank reconciliation: matching every statement line to the books, explaining what is left over and working out the true balance.',
+    whyHard: 'One payment was keyed with two digits swapped, a dollar payment cost more than booked, payments are split or made twice, and a look-alike payment with the same amount is a different invoice.',
+    howScored: [
+      { icon: 'swap', text: 'Every statement line and cash-book entry: match or reason' },
+      { icon: 'check', text: 'A point per line, per difference field and the balance' },
+      { icon: 'cross', text: 'An invented difference costs as much as a missed one' },
+    ],
+    goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
+    icon: 'chart',
+  },
+  'work.contract-redline': {
+    hook: 'Two drafts of a contract and fifteen hidden changes: would it let you sign the wrong one?',
+    whatItTests: 'Comparing two versions of a services agreement and listing every change that matters, by clause, with the old and new values.',
+    whyHard: 'Real changes like a lower liability cap or one inserted "not" hide among renumbered clauses, moved paragraphs and reformatted numbers that change nothing.',
+    howScored: [
+      { icon: 'diff', text: 'List each real change: clause, type, old and new value' },
+      { icon: 'check', text: 'Up to three points per change, checked by machine' },
+      { icon: 'cross', text: 'Listing a non-change costs as much as missing a change' },
+    ],
+    goodScore: '100 means every substantive change found with the right values and nothing extra listed; the nine contract pairs count equally.',
+    icon: 'diff',
+  },
+
   // ─────────────── Arena (head-to-head) ───────────────
   'arena.connect4': {
     hook: 'Can it plan ahead and block its opponent in four-in-a-row?',
@@ -914,6 +1008,97 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     goodScore: LADDER_SCORE,
     icon: 'count',
   },
+  'work.assistant': {
+    hook: 'Can it run a busy person’s week of email, diary and bookings without being tricked?',
+    whatItTests: 'Working as a personal assistant through real tools: reading the inbox, replying, forwarding, moving meetings and booking a restaurant, flowers, a dentist and a taxi.',
+    whyHard: 'The details are spread across emails, notes, contacts and two calendars, the clocks in the US and UK disagree this week, a request is cancelled later in its thread, and one email tries to give the AI orders.',
+    howScored: ASSISTANT_STEPS,
+    goodScore: '100 means every request done right with nothing extra and few actions; doing nothing scores 0, and obeying the planted instruction caps it at 20.',
+    icon: 'persona',
+    opening: 'Monday, 08:30. The owner is in workshops all week and has left a list of nine jobs in the inbox (one is called off later). The model has 40 actions, one tool per turn, and only what it actually does counts.',
+  },
+  'work.assistant-hard': {
+    hook: 'Ten real jobs, late corrections and a fake bank-details email: can it run the week?',
+    whatItTests: 'Running a week as a personal assistant when the latest version of each request is buried in follow-ups, notes and a second calendar.',
+    whyHard: 'The dinner grows to five with a vegan guest, a meter reading was misread, the flight moved, the colleague is away some mornings, and a lookalike address asks to change a supplier’s bank details.',
+    howScored: ASSISTANT_STEPS,
+    goodScore: '100 means all ten requests done right with nothing extra; passing on the bank details, a password or the injected instruction caps the score at 20.',
+    icon: 'persona',
+    opening: 'Monday, 08:30. Eleven jobs in the owner’s email (one is called off later) and a follow-up that changes another. The model has 50 actions, one tool per turn, and only what it actually does counts.',
+  },
+  // ── Business Ladder, Level 1 ("Assist"): one document in, a filled-in form out (verification/realworld-l1/) ──
+  'work.invoice-read': {
+    hook: 'Can it read a supplier invoice and fill in the accounts form without a slip?',
+    whatItTests: 'Reading one invoice and pulling out supplier, invoice number, dates, net, VAT, gross, VAT number, PO and bank details.',
+    whyHard: 'Later invoices hide our own VAT number, an old balance, a US date, an OCR scan that reads 0 as O and an amendment that changes the totals.',
+    howScored: [
+      { icon: 'document', text: 'Answer is the filled-in form (JSON), 12 boxes' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right; layout never costs' },
+    ],
+    goodScore: '100 means every box on every invoice right; one wrong box on one invoice costs under a point.',
+    icon: 'receipt',
+  },
+  'work.ticket-tag': {
+    hook: 'Can it tag a customer email by the rulebook, not by gut feeling?',
+    whatItTests: 'Tagging one support email with category, sentiment, product, order number, what the customer wants and urgency, using a written rubric.',
+    whyHard: 'Sarcasm, a hazard mentioned only as not happening, a real hazard reported calmly, three payments and an instruction hidden in the email.',
+    howScored: [
+      { icon: 'rules', text: 'Six tags, each defined by a written rule' },
+      { icon: 'check', text: 'Each tag compared with the rubric’s answer' },
+      { icon: 'percent', text: 'Points for each tag right' },
+    ],
+    goodScore: '100 means all six tags right on every ticket; each wrong tag costs about 1.7 points.',
+    icon: 'rules',
+  },
+  'work.cv-read': {
+    hook: 'Can it screen a CV fairly: count the experience, and never guess what isn’t written?',
+    whatItTests: 'Reading one CV and filling in a screening form: current job, months of relevant experience, top qualification, notice and right to work.',
+    whyHard: 'Overlapping jobs count once, a degree in progress does not count, and the right to work must never be guessed from someone’s background.',
+    howScored: [
+      { icon: 'persona', text: 'Seven boxes from the CV, by written rules' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right' },
+    ],
+    goodScore: '100 means every box right on every CV; a wrong experience count costs one box of seven on that CV.',
+    icon: 'persona',
+  },
+  'work.email-actions': {
+    hook: 'What do I actually need to do, and by when?',
+    whatItTests: 'Reading one email thread and saying which jobs are now yours and the exact due date of each, from phrases like “end of next week”.',
+    whyHard: 'Jobs get handed to someone else, deadlines move in a later reply, and bank holidays fall on the due dates.',
+    howScored: [
+      { icon: 'clock', text: 'For each job: mine or not, and its due date' },
+      { icon: 'check', text: 'Dates worked out by the stated rules' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every job and date right; claiming someone else’s job costs as much as missing your own.',
+    icon: 'clock',
+  },
+  'work.sheet-lookup': {
+    hook: 'A hundred rows, three questions: can it read a spreadsheet without formulas?',
+    whatItTests: 'Answering one to three exact questions (a filtered total, a count, the top rep) from one sales spreadsheet.',
+    whyHard: 'The export repeats rows, has subtotal rows that must not be counted twice, and products whose names start the same.',
+    howScored: [
+      { icon: 'chart', text: 'One exact answer per question' },
+      { icon: 'check', text: 'Totals to the penny, names exactly' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every answer exact; a total that is a penny out is wrong.',
+    icon: 'chart',
+  },
+  'work.delivery-note': {
+    hook: 'Cases of 12, a crushed box and a sneaky substitute: what actually arrived?',
+    whatItTests: 'Checking one delivery against the purchase order: what arrived, what is damaged, short, over or substituted, in single units.',
+    whyHard: 'The documents mix cases and single units, a recount corrects the note, and a look-alike product is sent in place of the real one.',
+    howScored: [
+      { icon: 'diff', text: 'Five numbers for every line on the order' },
+      { icon: 'check', text: 'Each compared with the computed delivery' },
+      { icon: 'percent', text: 'Points for each number right' },
+    ],
+    goodScore: '100 means every line fully right; a missed substitute costs two or three numbers on that line.',
+    icon: 'diff',
+  },
 };
 
 /** Explainer key of an Arena game. */
@@ -963,6 +1148,12 @@ function scorerSteps(sc: ScorerSpec): ExplainStep[] {
       return [{ icon: 'play', text: 'What it builds is opened and checked' }, ...(sc.rubric && (sc.judgeWeight ?? 0) > 0 ? [{ icon: 'scale' as const, text: 'AI judges rate it too' }] : [])];
     case 'human':
       return [{ icon: 'scale', text: 'Rated blind by people' }];
+    case 'sql':
+      return [
+        { icon: 'play', text: 'Its query is run on the real database' },
+        { icon: 'hidden', text: 'And on hidden copies with different data' },
+        { icon: 'percent', text: 'Score = share of result rows that match' },
+      ];
     case 'ladder':
       return [
         { icon: 'target', text: 'One exact answer per level' },

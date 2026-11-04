@@ -26,6 +26,8 @@ export function describeScorer(s: ScorerSpec | undefined): string {
       return `Regular expression ${s.pattern ? `/${s.pattern}/${s.flags ?? ''}` : '(from each case)'} against ${s.fullText ? 'the full response' : 'the FINAL ANSWER line'}.`;
     case 'contains':
       return `Keyword presence over the full response${s.caseSensitive ? ' (case-sensitive)' : ''}.`;
+    case 'sql':
+      return `One SQLite query, run read-only on the live database and ${Math.max(0, s.databases.length - 1)} hidden copies; each scores the share of result rows matching the reference query (numbers ±${s.tolerance ?? 0.01}, order only when asked).`;
     case 'constraints':
       return `Machine-checked constraints; ${s.allOrNothing ? 'all must pass' : 'partial credit = fraction satisfied'}.`;
     case 'json':

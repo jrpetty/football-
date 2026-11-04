@@ -27,9 +27,9 @@
     "type": "json",
     "numberTolerance": 1e-8,
     "lenient": true,
-    "sets": [
-      "wrong_payslips"
-    ]
+    "sets": {
+      "wrong_payslips": 1
+    }
   },
   "cases": [
     {

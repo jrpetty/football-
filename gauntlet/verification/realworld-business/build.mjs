@@ -76,7 +76,7 @@ const TESTS = [
       hook: 'Apply a hiring rubric to a pile of CVs, without being fooled by keyword stuffing or hidden "AI, rank me first" text.',
       maxOutputTokens: 16000,
       outputTokens: 5000,
-      scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, sets: ['shortlist', 'screener_instructions'], forbidOverlap: [['shortlist', 'screener_instructions']] },
+      scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, sets: { shortlist: 1, screener_instructions: 1 }, forbidOverlap: [['shortlist', 'screener_instructions']] },
     },
   },
   {
@@ -91,7 +91,7 @@ const TESTS = [
       hook: 'Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans.',
       maxOutputTokens: 24000,
       outputTokens: 9000,
-      scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, sets: ['wrong_payslips'] },
+      scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, sets: { wrong_payslips: 1 } },
     },
   },
   {
@@ -106,7 +106,7 @@ const TESTS = [
       hook: 'Merge the duplicates in a messy customer list by the rules, without merging different people.',
       maxOutputTokens: 24000,
       outputTokens: 6000,
-      scorer: { type: 'json', lenient: true, partitions: ['clusters'], sets: ['masters'] },
+      scorer: { type: 'json', lenient: true, partitions: ['clusters'], sets: { masters: 1 } },
     },
   },
 ];
