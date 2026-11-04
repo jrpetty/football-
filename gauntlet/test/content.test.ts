@@ -58,6 +58,7 @@ test('answer keys score 100% when stated correctly', async () => {
       if (scorer.type === 'exact') response = `FINAL ANSWER: ${Array.isArray(c.expected) ? c.expected[0] : c.expected}`;
       else if (scorer.type === 'number' || scorer.type === 'choice') response = `Working...\nFINAL ANSWER: ${c.expected}`;
       else if (scorer.type === 'json') response = '```json\n' + JSON.stringify(c.expected, null, 2) + '\n```';
+      else if (scorer.type === 'verifier') response = '```json\n' + JSON.stringify((c.expected as { reference?: unknown }).reference, null, 2) + '\n```';
       if (response === null) continue;
       const out = await scoreResponse({
         scorer,

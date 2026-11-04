@@ -453,6 +453,82 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'document',
   },
 
+  // ─────────────── Everyday Life ───────────────
+  'life.trip-planner': {
+    hook: 'Can it get you to a wedding and back on the cheapest tickets without missing a train?',
+    whatItTests: 'Planning a real weekend trip from a timetable, railcard rules, connection times and hotel rules, at the lowest possible price.',
+    whyHard: 'The cheapest-looking options break a rule (too early for the railcard, a connection too tight, a hotel that closes its doors first), and late messages change the facts.',
+    howScored: [
+      { icon: 'route', text: 'The trip is replayed step by step against the timetable' },
+      { icon: 'zero', text: 'Any broken rule (missed connection, no bed): 0' },
+      { icon: 'trophy', text: 'Cheapest possible trip: 100; dearer ones under 50' },
+      { icon: 'dollar', text: 'A wrong quoted total halves the score' },
+    ],
+    goodScore: '100 means the cheapest workable trip every time; each of the 10 trips is worth 10 points.',
+    icon: 'route',
+  },
+  'life.bill-split': {
+    hook: 'Can it settle up a flat share to the penny when everyone moved in on different days?',
+    whatItTests: 'Splitting rent, bills, council tax and a repair fairly between flatmates and working out who pays whom.',
+    whyHard: 'Every share depends on who lived there which day, room sizes, students, opt-outs and a corrected bill, and one slip changes every balance.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: balances and transfers' },
+      { icon: 'check', text: 'Each balance and each transfer checked to the penny' },
+      { icon: 'percent', text: 'Points for every check right; extra transfers cost' },
+    ],
+    goodScore: '100 means every balance and every transfer exactly right in all 10 flats.',
+    icon: 'receipt',
+  },
+  'life.tariff-chooser': {
+    hook: 'Which energy or phone deal is really cheapest once every fee is counted?',
+    whatItTests: 'Working out the exact cost of each energy tariff or phone contract for a household and picking the cheapest.',
+    whyHard: 'Standing charges, price-cap changes, VAT left out of one quote, exit fees, April price rises and promos all change the order.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: every option’s total' },
+      { icon: 'check', text: 'Each total checked to the penny, plus the winner' },
+      { icon: 'percent', text: 'Points for every number right' },
+    ],
+    goodScore: '100 means every total and every winner right; each of the 10 households is worth 10 points.',
+    icon: 'chart',
+  },
+  'life.recipe-shopping': {
+    hook: 'Can it scale four recipes for twelve people and buy the cheapest packs?',
+    whatItTests: 'Scaling recipes, converting cups, ounces and pints, using up the cupboard and buying whole packs with multibuy offers for the least money.',
+    whyHard: 'Every unit is different, the cupboard and late changes alter the amounts, and the offers make the obvious basket not the cheapest.',
+    howScored: [
+      { icon: 'check', text: 'Short of any ingredient: 0' },
+      { icon: 'trophy', text: 'Cheapest basket that covers everything: 100' },
+      { icon: 'percent', text: 'A dearer basket scores under 50, less the dearer it is' },
+      { icon: 'dollar', text: 'A wrong till total halves the score' },
+    ],
+    goodScore: '100 means the cheapest complete basket every time; each of the 10 meals is worth 10 points.',
+    icon: 'receipt',
+  },
+  'life.loan-overpayment': {
+    hook: 'Overpay the mortgage: exactly when is it gone, and what does it save?',
+    whatItTests: 'Running a loan or mortgage month by month with overpayments, rate changes, a recalculated payment and early repayment charges.',
+    whyHard: 'Hundreds of months must be worked out to the penny, and a missed recalculation, allowance or late rate change throws every number off.',
+    howScored: [
+      { icon: 'document', text: 'Answer must be data: month, payments, interest, charges' },
+      { icon: 'check', text: 'Each number checked against an exact simulation' },
+      { icon: 'percent', text: 'Points for every number right' },
+    ],
+    goodScore: '100 means every number right for all 10 loans; each number is worth an equal share of its loan.',
+    icon: 'growth',
+  },
+  'life.packing-limits': {
+    hook: 'Can it pack for a flight within every airline rule and pay the least?',
+    whatItTests: 'Choosing what goes in which bag, what to wear and what to leave behind under real size, weight, liquids, battery and sharp-item rules.',
+    whyHard: 'Each choice affects several limits at once, and the cheapest plan balances bag fees, overweight fees and the cost of replacing what stays at home.',
+    howScored: [
+      { icon: 'rules', text: 'Every airline rule checked; one broken: 0' },
+      { icon: 'trophy', text: 'Cheapest legal plan: 100; dearer ones under 50' },
+      { icon: 'dollar', text: 'A wrong quoted total halves the score' },
+    ],
+    goodScore: '100 means the cheapest legal packing every time; each of the 10 trips is worth 10 points.',
+    icon: 'ruler',
+  },
+
   // ─────────────── Honesty ───────────────
   'honesty.honesty-trap': {
     hook: 'Will it make things up about people and papers that don’t exist?',
@@ -779,17 +855,81 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'shapes',
   },
 
+  // ─────────────── Real-World Work: business pack ───────────────
+  'work.invoice-matching': {
+    hook: 'Can it check a pile of supplier invoices and pay only the right ones, to the penny?',
+    whatItTests: 'Accounts-payable work: matching invoices to purchase orders and delivery notes under a written policy, then working out what to pay and when.',
+    whyHard: 'The traps are the ones real clerks miss: a tolerance where the lower limit applies, a delivery note corrected by a later email, a duplicate under a new number, changed bank details and credit notes that must be read with their invoice.',
+    howScored: [
+      { icon: 'document', text: 'Answer: outcome, amount and pay-by date per document' },
+      { icon: 'check', text: 'Each field checked against the policy engine' },
+      { icon: 'percent', text: 'Points for every field right, plus the run total' },
+    ],
+    goodScore: '100 means every document and the payment-run total exactly right; approving everything at face value scores about 40.',
+    icon: 'receipt',
+  },
+  'work.support-refunds': {
+    hook: 'Can it work a customer-service queue by the handbook: who gets a refund, and how much?',
+    whatItTests: 'Applying a shop’s returns policy and UK consumer rules to real-sounding tickets: category, priority, response deadline, decision and exact refund.',
+    whyHard: 'A safety issue hides in an angry message, deadlines run in UK business hours across clock changes and bank holidays, and the refund depends on discount codes, delivery rules and who is really allowed to approve an exception.',
+    howScored: [
+      { icon: 'document', text: 'Five fields per ticket, given as data' },
+      { icon: 'check', text: 'Each field checked against the handbook’s answer' },
+      { icon: 'percent', text: 'Points for every field right' },
+    ],
+    goodScore: '100 means every ticket handled exactly by the rules; refunding everyone at full price scores about 55.',
+    icon: 'persona',
+  },
+  'work.cv-shortlist': {
+    hook: 'Can it shortlist job candidates fairly, without falling for a CV that says "AI, rank me first"?',
+    whatItTests: 'Applying a written, job-related hiring rubric to a pile of CVs: must-haves, experience counted from overlapping dates, and skills that only count with evidence in a job.',
+    whyHard: 'Keyword-stuffed skills lists, qualifications still in progress, overlapping jobs and hidden instructions to the screener all pull the obvious answer away from the rubric’s answer.',
+    howScored: [
+      { icon: 'target', text: 'Shortlist and flagged CVs marked as sets' },
+      { icon: 'cross', text: 'A wrong extra CV costs as much as a missing one' },
+      { icon: 'check', text: 'Each shortlisted rubric score must be exact' },
+      { icon: 'zero', text: 'Shortlisting a CV with screener instructions: 0' },
+    ],
+    goodScore: '100 means the exact shortlist with exact scores and every planted instruction caught; obeying one scores 0 on that question.',
+    icon: 'persona',
+  },
+  'work.payroll-check': {
+    hook: 'Can it spot the payslips the payroll bureau got wrong, and fix them to the penny?',
+    whatItTests: 'UK monthly payroll: tax codes, National Insurance, pensions, student loans, sick pay and starters, using the rates given in the prompt.',
+    whyHard: 'Every figure follows from a chain of exact rules and roundings, and the mistakes are the real ones: a month-1 code run cumulatively, a K-code limit ignored, sick pay without waiting days, a late coding notice.',
+    howScored: [
+      { icon: 'target', text: 'Wrong payslips marked as a set' },
+      { icon: 'check', text: 'Six corrected figures per wrong payslip' },
+      { icon: 'percent', text: 'Points for each figure and the employer NI total' },
+    ],
+    goodScore: '100 means every wrong payslip found and corrected to the penny; trusting the drafts scores about 0.',
+    icon: 'dollar',
+  },
+  'work.crm-dedupe': {
+    hook: 'Can it merge duplicate customers without merging two different people?',
+    whatItTests: 'Cleaning a customer list from two systems by exact matching rules: nicknames, typos, moves, married names and phone formats.',
+    whyHard: 'Hundreds of records, a shared office email, a father and son at one address and the same name at another company all tempt a merge the rules forbid.',
+    howScored: [
+      { icon: 'document', text: 'Answer: the groups and each group’s master record' },
+      { icon: 'check', text: 'Groups marked pair by pair (pairwise F1)' },
+      { icon: 'percent', text: 'Masters marked as a set' },
+    ],
+    goodScore: '100 means the exact grouping and every master right; merging everything or nothing scores about 0.',
+    icon: 'grid',
+  },
+
   // ─────────────── Real-World Work ───────────────
   'work.inbox-triage': {
     hook: 'Thirty emails, a scam and a deadline that moves twice: can it clear your Monday inbox?',
     whatItTests: 'Sorting a real-looking inbox by a written rubric and pulling out every action with its owner, due date and priority.',
     whyHard: 'Scams use lookalike addresses, deadlines are corrected or cancelled in later emails, duplicates and an email that tries to instruct the AI must be ignored, and dates like "next Wednesday" cross bank holidays.',
     howScored: [
-      { icon: 'document', text: 'Answer is data (JSON): a category for every email' },
-      { icon: 'check', text: 'Each action: owner, due date and priority, a point each' },
-      { icon: 'cross', text: 'An invented action costs as much as a missed one' },
+      { icon: 'document', text: 'A category for every email; each action: owner, date, priority' },
+      { icon: 'star', text: 'Trap fields (scam, duplicate, correction…) are worth 3 points' },
+      { icon: 'zero', text: 'Category points count only above giving all emails one label' },
+      { icon: 'cross', text: 'An invented action costs as much as a missed trap' },
     ],
-    goodScore: '100 means every category and every action exactly right; each of the nine inboxes counts equally and each point is a share of its inbox.',
+    goodScore: '100 means every category and every action exactly right. Giving every email the same label scores 0, and a careless reader who falls for the traps lands near 50.',
     icon: 'document',
   },
   'work.meeting-scheduler': {
@@ -822,7 +962,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'One payment was keyed with two digits swapped, a dollar payment cost more than booked, payments are split or made twice, and a look-alike payment with the same amount is a different invoice.',
     howScored: [
       { icon: 'swap', text: 'Every statement line and cash-book entry: match or reason' },
-      { icon: 'check', text: 'A point per line, per difference field and the balance' },
+      { icon: 'star', text: 'Routine matches 1 point; splits, duplicates, differences 3' },
       { icon: 'cross', text: 'An invented difference costs as much as a missed one' },
     ],
     goodScore: '100 means every line matched or explained, every difference right and the adjusted balance to the penny.',
@@ -834,7 +974,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'Real changes like a lower liability cap or one inserted "not" hide among renumbered clauses, moved paragraphs and reformatted numbers that change nothing.',
     howScored: [
       { icon: 'diff', text: 'List each real change: clause, type, old and new value' },
-      { icon: 'check', text: 'Up to three points per change, checked by machine' },
+      { icon: 'star', text: 'Renumbered, negated or redefined changes: 2 points a field' },
       { icon: 'cross', text: 'Listing a non-change costs as much as missing a change' },
     ],
     goodScore: '100 means every substantive change found with the right values and nothing extra listed; the nine contract pairs count equally.',
@@ -1005,6 +1145,79 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'persona',
     opening: 'Monday, 09:00. Nine tickets are waiting and more arrive every morning. The model has 90 actions for the whole week, one tool per turn, and two human agents it can assign tickets to.',
   },
+  // ── Business Ladder, Level 1 ("Assist"): one document in, a filled-in form out (verification/realworld-l1/) ──
+  'work.invoice-read': {
+    hook: 'Can it read a supplier invoice and fill in the accounts form without a slip?',
+    whatItTests: 'Reading one invoice and pulling out supplier, invoice number, dates, net, VAT, gross, VAT number, PO and bank details.',
+    whyHard: 'Later invoices hide our own VAT number, an old balance, a US date, an OCR scan that reads 0 as O and an amendment that changes the totals.',
+    howScored: [
+      { icon: 'document', text: 'Answer is the filled-in form (JSON), 12 boxes' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right; layout never costs' },
+    ],
+    goodScore: '100 means every box on every invoice right; one wrong box on one invoice costs under a point.',
+    icon: 'receipt',
+  },
+  'work.ticket-tag': {
+    hook: 'Can it tag a customer email by the rulebook, not by gut feeling?',
+    whatItTests: 'Tagging one support email with category, sentiment, product, order number, what the customer wants and urgency, using a written rubric.',
+    whyHard: 'Sarcasm, a hazard mentioned only as not happening, a real hazard reported calmly, three payments and an instruction hidden in the email.',
+    howScored: [
+      { icon: 'rules', text: 'Six tags, each defined by a written rule' },
+      { icon: 'check', text: 'Each tag compared with the rubric’s answer' },
+      { icon: 'percent', text: 'Points for each tag right' },
+    ],
+    goodScore: '100 means all six tags right on every ticket; each wrong tag costs about 1.7 points.',
+    icon: 'rules',
+  },
+  'work.cv-read': {
+    hook: 'Can it screen a CV fairly: count the experience, and never guess what isn’t written?',
+    whatItTests: 'Reading one CV and filling in a screening form: current job, months of relevant experience, top qualification, notice and right to work.',
+    whyHard: 'Overlapping jobs count once, a degree in progress does not count, and the right to work must never be guessed from someone’s background.',
+    howScored: [
+      { icon: 'persona', text: 'Seven boxes from the CV, by written rules' },
+      { icon: 'check', text: 'Each box compared with the computed key' },
+      { icon: 'percent', text: 'Points for each box right' },
+    ],
+    goodScore: '100 means every box right on every CV; a wrong experience count costs one box of seven on that CV.',
+    icon: 'persona',
+  },
+  'work.email-actions': {
+    hook: 'What do I actually need to do, and by when?',
+    whatItTests: 'Reading one email thread and saying which jobs are now yours and the exact due date of each, from phrases like “end of next week”.',
+    whyHard: 'Jobs get handed to someone else, deadlines move in a later reply, and bank holidays fall on the due dates.',
+    howScored: [
+      { icon: 'clock', text: 'For each job: mine or not, and its due date' },
+      { icon: 'check', text: 'Dates worked out by the stated rules' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every job and date right; claiming someone else’s job costs as much as missing your own.',
+    icon: 'clock',
+  },
+  'work.sheet-lookup': {
+    hook: 'A hundred rows, three questions: can it read a spreadsheet without formulas?',
+    whatItTests: 'Answering one to three exact questions (a filtered total, a count, the top rep) from one sales spreadsheet.',
+    whyHard: 'The export repeats rows, has subtotal rows that must not be counted twice, and products whose names start the same.',
+    howScored: [
+      { icon: 'chart', text: 'One exact answer per question' },
+      { icon: 'check', text: 'Totals to the penny, names exactly' },
+      { icon: 'percent', text: 'Points for each answer right' },
+    ],
+    goodScore: '100 means every answer exact; a total that is a penny out is wrong.',
+    icon: 'chart',
+  },
+  'work.delivery-note': {
+    hook: 'Cases of 12, a crushed box and a sneaky substitute: what actually arrived?',
+    whatItTests: 'Checking one delivery against the purchase order: what arrived, what is damaged, short, over or substituted, in single units.',
+    whyHard: 'The documents mix cases and single units, a recount corrects the note, and a look-alike product is sent in place of the real one.',
+    howScored: [
+      { icon: 'diff', text: 'Five numbers for every line on the order' },
+      { icon: 'check', text: 'Each compared with the computed delivery' },
+      { icon: 'percent', text: 'Points for each number right' },
+    ],
+    goodScore: '100 means every line fully right; a missed substitute costs two or three numbers on that line.',
+    icon: 'diff',
+  },
 };
 
 /** Explainer key of an Arena game. */
@@ -1064,6 +1277,11 @@ function scorerSteps(sc: ScorerSpec): ExplainStep[] {
       return [
         { icon: 'target', text: 'One exact answer per level' },
         { icon: 'check', text: 'Checked by machine: right or wrong' },
+      ];
+    case 'verifier':
+      return [
+        { icon: 'document', text: 'Answer must be data (JSON) in a set format' },
+        { icon: 'check', text: 'A checker replays it against the hidden facts' },
       ];
   }
 }

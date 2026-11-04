@@ -1,10 +1,11 @@
 import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, NormalizeMode, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
 import { extractCodeBlock, extractCodeBlocks, extractFinalAnswer, extractTagged, normalize, parseAnswerNumber, parseJsonLoose, stripReasoning } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
-import { compareJson } from './json-compare.ts';
+import { compareJson, forbiddenOverlap } from './json-compare.ts';
 import { promptExampleArgs, runCodeTests, trivialSolutionReason, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
+import { scoreVerifier } from './verifier.ts';
 import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { checkReply, fairPlaySummary } from './integrity.ts';
@@ -376,12 +377,21 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
     case 'json': {
       const parsed = parseJsonLoose(response, expected);
       if (parsed === undefined) return { score: 0, passed: false, summary: 'No valid JSON found', detail: { formatOk: false, expected } };
-      const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases, loose: scorer.loose, sets: scorer.sets });
+      const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases, lenient: scorer.lenient, sets: scorer.sets, partitions: scorer.partitions, weights: scorer.weights, aboveConstant: scorer.aboveConstant });
+      const banned = scorer.forbidOverlap?.length ? forbiddenOverlap(expected, parsed, scorer.forbidOverlap) : null;
+      if (banned) {
+        return {
+          score: 0,
+          passed: false,
+          summary: `Listed ${banned.item} under "${banned.answerKey}", which the task rules out, so 0`,
+          detail: { formatOk: true, items: r.items, expected, extracted: JSON.stringify(parsed).slice(0, 4000), notes: `Scored 0: "${banned.item}" may not appear under "${banned.answerKey}".` },
+        };
+      }
       const all = r.matched === r.total;
       return {
         score: scorer.allOrNothing ? (all ? 1 : 0) : round(r.score),
         passed: all,
-        summary: scorer.allOrNothing && !all ? `${r.matched}/${r.total} fields correct · all-or-nothing, so 0` : `${r.matched}/${r.total} fields correct`,
+        summary: scorer.allOrNothing && !all ? `${r.matched}/${r.total} fields correct · all-or-nothing, so 0` : scorer.weights || scorer.aboveConstant ? `${r.matched}/${r.total} points` : `${r.matched}/${r.total} fields correct`,
         detail: { formatOk: true, items: r.items, expected, extracted: JSON.stringify(parsed).slice(0, 4000) },
       };
     }
@@ -411,6 +421,8 @@ async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
       return { score: null, passed: null, summary: 'Awaiting human review', detail: { notes: scorer.rubric }, pendingHuman: true };
     case 'ladder':
       return scoreLadder(scorer.answer, expected, response);
+    case 'verifier':
+      return scoreVerifier(scorer.verifier, expected, response, input.taskText);
     case 'sql':
       return scoreSql(scorer, expected as never, response, input.signal);
   }

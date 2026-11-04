@@ -499,7 +499,7 @@ def build_case(cid, seed, tier, cfg):
             continue
         care = solve(w, careless=True)
         diff = sum(1 for k in sol if careless_str(care[k]) != lon_str(sol[k]))
-        need = {'easy': 0, 'medium': 2, 'hard': 3}[tier]
+        need = {'easy': 0, 'medium': 2, 'hard': 4}[tier]
         if len(set(sol.values())) < 3 or len(sol) != 4:
             continue
         if diff < need:

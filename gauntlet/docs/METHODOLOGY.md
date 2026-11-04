@@ -135,13 +135,14 @@ These differences are small but real, which is why published comparisons should 
 | `regex` | 1 if the pattern matches the answer (or the full text). Full-text patterns can demand a one-line reply, as in the Lightning Traps. |
 | `contains` | Fraction of required / forbidden phrases satisfied. |
 | `constraints` | Fraction of machine-verifiable constraints satisfied (or all-or-nothing). Definitions: a *word* is a whitespace-separated token containing a letter or digit; a *sentence* ends in `.`, `!` or `?` followed by whitespace or the end; *paragraphs* are separated by blank lines; *bullets* start with `-`, `*`, `•`, `1.` or `1)`. |
-| `json` | Fraction of expected leaf fields matched (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`). With `loose`, presentation is forgiven: key case and spacing, numbers written as `"£1,234.50"`, `"T"` or `"London"` in date-times, `"none"` for null, a one-item list for its item. With `sets`, an object keyed by item ids (e.g. the non-compliant lines) is a set: every extra item costs as many fields as a real item is worth, so listing everything scores no better than listing nothing. |
+| `json` | Fraction of expected points matched: one point per expected leaf field (strings trimmed and case-insensitive, numbers within tolerance, array lengths checked, missing keys equal `null`), with the opt-in options of §5.1a. |
 | `code-js` | Fraction of hidden unit tests passed. Code runs in a separate Node.js process under the permission model (no file writes, no child processes, no workers), 256 MB heap, with string code generation disabled and a per-test timeout (default 2 s). |
 | `judge` | Mean of the judge panel's 0–10 grades ÷ 10. |
 | `judge-classify` | Mean of the scores of the labels chosen by each judge (e.g. `CAUGHT_TRAP` = 1, `HALLUCINATED` = 0). |
 | `artifact` | `(1 − w) × automated checks + w × judge score`, where the checks run in headless Chromium (renders, no JavaScript errors, no network access, reacts to input) and `w` is the test's `judgeWeight`. |
 | `human` | Mean of human ratings (0–10 ÷ 10) from the Blind Review screen, where identities are hidden until rated. |
-| `sql` | One read-only SQLite query, run on the test's live database and on hidden copies with different data; each database scores the share of result rows that match the reference query's (order only when asked); the case scores the mean over the databases (§7e). |
+| `verifier` | A registered checker (`src/scoring/verifiers/<name>.ts`) replays the JSON answer against the case's hidden world. Plans: a broken rule → 0, the solver's proven optimum → 1, a workable but worse plan → 0.5 × (best ÷ its cost)² (always under 0.5); a wrong or missing quoted total halves it. Exact multi-part answers: the share of checks right. Two different answers in one reply, or an "alternative" key → 0 (§7i). |
+| `sql` | One read-only SQLite query, run on the test's live database and on hidden copies with different data; each database scores the share of result rows that match the reference query's (order only when asked); the case scores the mean over the databases (§7f). |
 | Programs | Each simulation documents its own formula (see the Methodology page in the app). |
 
 **Fair play.** Before any scorer runs, the reply goes through the fair-play check (§3). A violation scores 0 under every
@@ -153,6 +154,29 @@ is timed from the moment the request is sent (queueing and retry back-off exclud
 in time is aborted and the case scores 0 with the status *Out of time*. It counts as a wrong answer, not as an
 error. Latency differs by provider, so these tests are designed with limits that a normal answer fits easily,
 and response times are published next to the scores. Manual (copy & paste) contestants are not timed.
+
+### 5.1a The `json` scorer's options
+
+All opt-in, set on the test's scorer (`src/scoring/json-compare.ts`, `JsonCompareOptions`). With none set, a json
+test is marked exactly as before. Each option has one meaning everywhere:
+
+| Option | Shape | What it does |
+|---|---|---|
+| `unorderedArrays` | `true` | List items are matched to the key in any order. |
+| `numberTolerance` | number | Relative tolerance for numbers (default 1e-6; money tests use 1e-8, well under a penny). |
+| `aliases` | `{ "given": "accepted" }` | Stated alternative spellings for string answers. |
+| `lenient` | `true` | Presentation never costs marks, content always does. Object keys match ignoring case, spaces, `_` and `-`; a number may be text with a currency sign or code, thousands separators, a trailing `%` or accounting brackets (`"£1,234.50"`, `"GBP 1 234.50"`, `"-£35"`, `"(12.00)"`); strings match ignoring case, spacing, `_`/`-` and a trailing full stop (`"HOLD_PRICE"` = `"hold-price"`), and an identifier containing a digit also ignores spaces and hyphens (`"GB 123 4567 89"`); a date-time's `T`, `:00` seconds and a trailing "London"/"(UK time)" are ignored; `"yes"`/`"no"` count as booleans; `""`, `"none"`, `"null"`, `"n/a"`, `"-"` count as null; a one-item list equals its item. A hedge is never forgiven: `"12 or 13"` is not a number and `"approve or hold"` is not `"approve"`. |
+| `sets` | `{ "path": points }` | The collection at each dotted path is a SET of items by id. In the key it is either an object keyed by item id (each item's own fields are compared as usual, so `points` is its field count) or a list of ids (each id is worth `points`). The answer may give either shape; ids match loosely (`"Clause 8.2"` = `"8.2"`, `"m 10001"` = `"M-10001"`). A missing item loses its points and every extra item costs the same, so listing everything scores no better than listing nothing. An empty set in the key earns one point when the answer lists nothing. |
+| `partitions` | `["path"]` | The value at each path is a grouping (a list of id lists), marked pair by pair: every pair of ids the key puts in one group is a point, credited by pairwise F1 (2 × right pairs / (key pairs + answer pairs)). "Merge everything" and "merge nothing" both score close to zero. |
+| `forbidOverlap` | `[["answerPath", "keyPath"]]` | If the answer lists under `answerPath` an id that the key lists under `keyPath` (and not under `answerPath`), the whole case scores 0. Used where listing an item can only mean obeying an instruction planted in the documents (Shortlist the Candidates). |
+| `weights` | `{ "path": points }` | Points per field by dotted path (e.g. `messages.M07.category`, or `actions` for everything under it); the longest matching prefix wins, array indexes are ignored, default 1. A set's items and extra items, and a grouping's pairs, are worth their usual points times the weight of their path. Used to put the points where the skill is (the trap fields of the work pack). |
+| `aboveConstant` | `["messages.*.category"]` | The leaf fields matching each pattern (`*` = one path segment) earn only the points they get beyond the best answer that gives all of them the same value, so labelling everything alike earns nothing. |
+| `allOrNothing` | `true` | The case scores 1 only if every point is earned. |
+
+These replaced overlapping options (`loose`, an older `lenient`, and list-only `sets`); every test that used them
+was migrated through its generator and re-checked (`node verification/json-options-proof.mts` scores every json case against a
+fixed battery of answers: the key, do-nothing, a copy of the prompt, random filler and every scripted answer the
+generators keep; all 127 cases outside the business pack scored identically before and after).
 
 ### 5.2 Aggregation
 
@@ -436,17 +460,26 @@ human opinion is involved: every mark is a machine check against a key computed 
 | Reconcile the Account (`work.bank-reconciliation`) | Every bank line and cash-book entry matched or given a reason from a fixed list, every explained difference (keying error, FX) with its amount, and the adjusted balance. | The key is the generator's own transaction list. `check_unique()` re-derives every one-to-one match from the printed amounts, dates and references alone and asserts there is exactly one; `balance()` proves the adjusted cash book equals the adjusted bank balance. |
 | What Changed in the Contract? (`work.contract-redline`) | Every substantive change between two drafts of a services agreement, by clause number in the new draft, with its type and old and new values. | The diff of the two STRUCTURED versions (clause lists and parameters), so formatting noise (renumbering, moved clauses, renumbered cross-references, "thirty (30) days" written "30 days", recased headings, American spellings) cannot enter the key. |
 
-**Scoring.** All five use the `json` scorer with `loose` (presentation never costs a point: key case and spacing,
+**Scoring.** All five use the `json` scorer with `lenient` (§5.1a; presentation never costs a point: key case and spacing,
 `£` signs and thousands separators, `"Clause 9.2"` for `"9.2"`, a `T` or "London" in a time, a one-item list, prose
-around the JSON). Credit is fine-grained and every point is stated in the prompt:
+around the JSON). Credit is fine-grained and the marking is stated in the prompt.
 
-| Test | Points in a case | Extra items |
+**Points sit where the skill is.** In Monday Inbox, Reconcile the Account and What Changed in the Contract? a field
+where a trap sits is worth more than a routine field (`weights`, per case): 3 points instead of 1 in the inbox and the
+reconciliation, 2 in the contract. A trap field is one the generator's careless reading gets wrong, i.e. the fields
+touched by a scam, a duplicate, a correction, reassignment or cancellation, a moved meeting or a tricky date (plus the
+newsletter that tries to instruct the AI); a split, a duplicate, a reversal, a keying or FX difference, a timing item
+or the balance; a change hidden by renumbering, a moved clause, a "not" or a definition. An invented item costs its
+fields at the trap rate. In the inbox, category points count only above what giving every email the same category
+would earn (`aboveConstant`), so an answer that reads nothing scores 0.
+
+| Test | Fields in a case | Extra items |
 |---|---|---|
-| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 36–63 | An action on an email that has none costs 3 (`sets: {actions: 3}`) |
+| Monday Inbox | 1 per email (category) + 3 per action (owner, due, priority): 37–64 fields; trap fields ×3 | An action on an email that has none costs 3 fields ×3 (`sets: {actions: 3}`) |
 | Find a Slot | 1 per meeting: 4 | — |
 | Expense Policy Check | 2 per non-compliant line (rule, amount) + 1 per employee total + total + VAT: 12–34 | A compliant line listed costs 2 (`sets: {non_compliant: 2}`) |
-| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69 | An invented difference costs 2 (`sets: {differences: 2}`) |
-| What Changed in the Contract? | 3 per change (type, old, new): 12–45 | A listed non-change costs 3 (`sets: {changes: 3}`) |
+| Reconcile the Account | 1 per bank line + 1 per cash-book entry (a split's list counts its length and each id) + 2 per difference + the balance: 31–69; trap fields ×3 | An invented difference costs 2 fields ×3 (`sets: {differences: 2}`) |
+| What Changed in the Contract? | 3 per change (type, old, new): 12–45; trap fields ×2 | A listed non-change costs 3 fields ×2 (`sets: {changes: 3}`) |
 
 **Measured spread** (`node verification/realworld-work/spread.mts`, scripted answers through the real scorer; the
 "careless" answer is each generator's careless solver: first-stated deadlines, the nearest Wednesday for "next
@@ -456,14 +489,15 @@ old clause numbers, negations and definition changes missed):
 
 | Test | Careful (key) | Careless (easy / medium / hard) | Do-nothing `{}` | Copy the prompt | Random filler |
 |---|---:|---:|---:|---:|---:|
-| Monday Inbox | 100% | 78% (86 / 76 / 73) | 0% | 0% | 0% |
-| Find a Slot | 100% | 36% (67 / 17 / 25) | 0% | 0% | 0% |
+| Monday Inbox | 100% | 53% (65 / 49 / 44) | 0% | 0% | 0% |
+| Find a Slot | 100% | 28% (67 / 17 / 0) | 0% | 0% | 0% |
 | Expense Policy Check | 100% | 51% (60 / 57 / 36) | 0% | 0% | 0% |
-| Reconcile the Account | 100% | 73% (84 / 70 / 65) | 0% | 0% | 0% |
-| What Changed in the Contract? | 100% | 61% (80 / 62 / 42) | 0% | 0% | 0% |
+| Reconcile the Account | 100% | 49% (63 / 44 / 38) | 0% | 0% | 0% |
+| What Changed in the Contract? | 100% | 46% (67 / 45 / 26) | 0% | 0% | 0% |
 
-A constant answer that reads nothing (every email "internal", no actions) scores 4–13% on Monday Inbox and 0% on the
-other four.
+A constant answer that reads nothing (every email given one category, no actions) scores 0% on Monday Inbox. In
+Find a Slot's hard cases every meeting is chosen so that the careless reading gets it wrong (clock changes and
+earlier bookings interact).
 
 **Anti-cheat.** Answers never appear in the prompts; distractors are built in (a lookalike sender with a real
 supplier's name, a genuine "we never change bank details" notice next to the scam, a newsletter telling the AI how to
@@ -617,7 +651,202 @@ reference plus obeying the injection):
 | work.assistant-hard | 2202 | 10 (3/3/4) | 26 | 100 | 65.8 | 16.4 | 17.3 | 0 | 0 |
 | work.assistant-hard | 2303 | 10 (3/3/4) | 26 | 100 | 63.9 | 14.5 | 17.3 | 0 | 0 |
 
-## 7h. Work-world simulations: finance and customer service (Business Ladder levels 4 and 5)
+## 7h. The Business Ladder
+
+Gauntlet has three separate areas: the **Benchmark** (everything above: the Gauntlet Index, the tiers, the Arena),
+**Business** (every `work.*` test) and **Everyday Life** (every `life.*` test). `src/core/areas.ts` maps a test or
+category to its area. Business and Everyday Life have their own suites (`business`, `everyday-life`) and their own
+leaderboards, so they **never feed the Gauntlet Index**.
+
+Business is organised the way companies actually adopt AI: from the easiest job to the most ambitious, the same
+five levels in six business areas (scenarios). The ladder lives in `config/business-ladder.json`.
+
+| Level | Name | What the AI does | Who checks it in real life |
+|---|---|---|---|
+| 1 | Assist | Reads ONE document or message and pulls out or tags what matters | A person checks every output |
+| 2 | Automate a step | Processes a BATCH against written rules and produces structured output a system can load | A person spot-checks |
+| 3 | Run a workflow | Joins several documents and rules end to end: match, reconcile, decide, draft | A person approves the result |
+| 4 | Agent | Uses real tools (inbox, accounts system, calendar, database, bank) over many steps, with traps such as scams, injected instructions and fake bank-detail changes | A person reviews the log |
+| 5 | Autonomous department | Runs a whole function for a simulated week or month: volume, interruptions, priorities, KPIs, escalations | A person sets goals and audits |
+
+The six scenarios are Finance & Accounts, Customer Service, Hiring & People, Office & Admin, Data & Reporting and
+Operations. Each lists its tests and their level; a test not built yet is marked `"planned": true` and shown as
+"coming soon". `test/business-ladder.test.ts` checks the file: levels exactly 1–5, unique ids, every built test
+exists in the library and every planned one does not (when a planned test lands, the test fails and says to flip
+it to `"planned": false`).
+
+**Rules** (`src/core/business-ladder.ts`, pure and unit-tested):
+
+* A **test score** is the leaderboard's: the mean over cases of the mean over that case's repeats, from the same
+  pooled, hash-checked results as the combined leaderboard. Its 95% range is a cluster bootstrap over cases.
+* A **level score** is the mean of its built tests' scores; its 95% range resamples cases within every test.
+* A model **reaches** level L in a scenario when every level from 1 to L that has built tests has all of them run
+  and scored **at least 70**. A level with no built test yet is skipped in the climb and never counted as
+  reached; a built test that was not run blocks the climb ("partly run"), so missing data is never a pass.
+* **Within the noise.** A passed test whose range dips below 70 is *borderline*; a failed test whose range reaches
+  70 is *just short*. The ladder shows both, so a lucky or unlucky sample is never sold as a clear result.
+* **Comparing models** (2–4 side by side) uses a **paired bootstrap** on the questions both models answered
+  (`src/core/paired.ts`, reusable by Head to Head): the gap is the mean over tests of the mean per-case difference,
+  and its 95% range resamples shared cases within each test, keeping each case's two scores together. A model is
+  "ahead" only when the whole range is on its side of zero (and at least 3 questions are shared); otherwise the
+  two are "statistically tied". A tie is never presented as a win.
+
+**How objective is it?** Every Business test is marked by code against answers computed by a solver: no AI judges,
+no opinions. Every model gets identical prompts, the same output limit and no answer-time limit (speed is shown,
+never scored). Documents are generated from fixed seeds, so nothing can be memorised; hedged answers, guessed
+lists and copied prompts score nothing.
+
+The API is `GET /api/business-ladder` (docs/API.md). The app shows it under **Business**: Business home, the
+Business Ladder (one model, or 2–4 side by side), Business tests (by scenario and level) and Business results; the
+Presenter adds a "How far up the ladder?" slide to any run that includes Business tests.
+
+### Level 1 ("Assist") tests
+
+Six one-document tests, category `work`, generated by `verification/realworld-l1/build.mjs` (plain JavaScript,
+fixed seeds; `node verification/realworld-l1/build.mjs --check` and `test/realworld-l1.test.ts` confirm the
+committed JSON is reproduced byte for byte). Ten cases each, ordered from approachable to careful; prompts are
+about 600–1,000 tokens (Read the Spreadsheet up to ~3,600 for its one 140-row sheet).
+
+| Test | What a case asks | Points per case | The traps in the later cases |
+|---|---|---:|---|
+| Read an Invoice (`work.invoice-read`) | Fill in the accounts form: supplier, invoice number, dates, net/VAT/gross, VAT number, PO, bank details changed?, sort code, account | 12 | Our own VAT number printed too, a delivery-note number that looks like the invoice number, an earlier balance added to "total now due", a US-format date (flagged), an OCR scan that reads 0 as O, an amendment that changes a line so the totals must be recalculated (VAT 20%, zero-rated lines), a "bank details have NOT changed" warning |
+| Tag the Ticket (`work.ticket-tag`) | Category (with a stated tie-break order), sentiment, product, order number, what the customer wants, P1–P4 urgency, by a written rubric | 6 | Sarcasm, a hazard mentioned only as not happening, a real hazard reported calmly (P1 but neutral), three payments where only the extra two count towards the £100 line, a quoted resolved email, two order numbers, an instruction to the "tagging system" in the ticket |
+| Read a CV (`work.cv-read`) | Current paid job and employer, months of relevant experience (titles with Payroll/Pensions, start and end months inclusive, overlaps once), highest completed qualification, notice period, right to work as written | 7 | Overlapping part-time roles, a voluntary role running to "Present", an employer called "Payroll Partners", payroll duties under another title, a degree in progress, a promotion and a changed notice period noted at the end, candidates whose right to work is not stated and must not be inferred from their background |
+| What Do I Need to Do? (`work.email-actions`) | For each tracker job the email mentions: is it mine, and its due date | 2 per job (6–12) | Relative deadlines ("by the end of next week", "within 6 working days", "by the 1st") resolved by stated rules against the right message's send date, UK bank holidays given (Easter, May Day, Christmas), a job taken off me, a deadline moved by a later reply, jobs for "everyone", a forwarded message "for info only", an instruction to the AI hidden in the email |
+| Read the Spreadsheet (`work.sheet-lookup`) | 1–3 exact questions on a 40–140 row sales CSV: a filtered total, units sold, a count, the top rep | 1–3 | Rows repeated by the export (count once), SUBTOTAL rows that include every status and the repeats (never the answer), cancelled and refunded orders, product names that start the same, DD/MM dates |
+| Check the Delivery (`work.delivery-note`) | For each PO line: received, damaged, short, over, substitute; plus anything delivered that was not ordered | 5 per line + the list (17–42) | Cases vs single units both ways, a whole crushed case, a recount that corrects the note, part of a line substituted with a look-alike SKU, an item out of stock "to follow", a product nobody ordered |
+
+**Scoring.** The `json` scorer with `lenient: true` (field by field, partial credit: the case score is the share of
+fields right). Lenient means presentation never costs marks, only content: keys match ignoring case, spaces and
+underscores; "£1,234.50" counts as 1234.5; identifiers match ignoring spaces and hyphens ("GB 123 4567 89");
+"yes"/"no" count as booleans and "n/a"/"none" as null; a few stated spellings are aliased (e.g. "Bachelor’s
+degree"). A field holding two values, a range or "X or Y" is simply wrong, and every prompt says so. Lists
+(`not_ordered`) are checked for exact membership and length. Money is exact to the penny.
+
+**Measured spread** (scripted answers, `test/realworld-l1.test.ts`): the reference answer scores 100 on every case
+through the full scoring path (fair-play checks included); random filler, an empty `{}` and the prompt copied back
+score 0; a *careless* reader that falls for every trap (printed totals, OCR text as printed, overlaps counted
+twice, every job claimed, repeated rows counted twice, the delivery note trusted over the recount) scores 77%
+(invoice), 88% (ticket), 79% (CV), 77% (email), 68% (spreadsheet) and 87% (delivery) on average, and much less on
+the last cases (33–71%). These are Level 1 tests: a careful model should score near 100, and each trap costs
+exactly the fields it touches.
+
+## 7i. Everyday Life tests: checked plans and exact money
+
+The `life` category holds six tests of personal admin people really ask an AI for. Every case is generated from a
+fixed seed by `verification/realworld-life/` (TypeScript, run with `node`), which also computes the answer key;
+`node verification/realworld-life/build.mts --check` proves the committed files are reproduced byte for byte, and
+`test/life.test.ts` runs that check on every `npm test`. Each test has 10 cases, roughly a third easy, a third medium
+and a third hard (marked in the notes); each case is worth 10 points of its test. No judges and no human opinion
+are involved anywhere in the pack.
+
+| Test | What the model hands in | How the key is computed | How a case is marked |
+|---|---|---|---|
+| Weekend Away (`life.trip-planner`) | an itinerary (service and transfer IDs in order), hotel nights and the total | exhaustive branch-and-bound over every itinerary and hotel choice; every candidate is checked by an independent rule evaluator | plan checker `trip` |
+| Splitting the Bills (`life.bill-split`) | each flatmate's balance and the settle-up transfers | exact fractions day by day, rounded only at the end; the settle-up method is checked to use the fewest possible transfers | `settle`: one check per balance and per transfer; every extra transfer is one more failed check |
+| Cheapest Deal (`life.tariff-chooser`) | every option's total and the cheapest | exact month-by-month bills in hundredths of a penny, VAT, fees, rises; ties are refused | `fields`: one check per total plus the winner |
+| Cook for Twelve (`life.recipe-shopping`) | a basket of packs and the till total | exact fractions for scaling and conversion; every combination of pack counts tried | plan checker `shopping` |
+| Pay It Off Faster (`life.loan-overpayment`) | the last-payment month, number of payments, interest, interest saved, ERC | month-by-month simulation in whole pence | `fields`: one check per number |
+| Pack for the Flight (`life.packing-limits`) | where every item goes (bag, worn, left) and the total | exhaustive branch-and-bound over every place for every item | plan checker `packing` |
+
+**The verifier scorer** (`{ "type": "verifier", "verifier": "<name>" }`, `src/scoring/verifier.ts`). The case's
+`expected` holds the structured world (the timetable, the shop, the bags, the true balances…), the solver's
+proven optimum (plans) and one reference answer; the world is never sent to the model, and "Reveal answer" shows
+only the reference. Marking, in order:
+
+1. The fair-play check (§3) runs first, as for every scorer.
+2. The answer is every JSON object in the reply that has one of the checker's answer keys, in or out of a code fence,
+   with key case and punctuation ignored, trailing commas and `//` comments tolerated and one wrapper such as
+   `{"answer": {…}}` unwrapped. A copy of the prompt's own format example is ignored, and repeats of the same answer
+   count once. No answer → 0. **Two different answers → 0**, and so does a key that offers an alternative
+   (`alternative`, `plan_b`, `backup`, `option2`…). Values are read leniently: `"£1,234.50"` = 1234.5, `"Aug 2039"`
+   = `"2039-08"`, an item, hotel or tariff named by its ID or its full name. A value that says "or" is not read.
+3. **Plan checkers** replay the plan rule by rule (every check is listed in the result inspector). Any broken rule →
+   0, because the plan would not work in real life (a missed connection, an ingredient short, a power bank in the
+   hold). A workable plan as cheap as the proven optimum → 1; any other workable plan → `0.5 × (optimum ÷ its
+   cost)²`: 1% dearer scores 49, 10% dearer 41, twice the price 12.5, so near-misses visibly beat poor plans while
+   only an optimal plan scores 100. The plan's total is worked out by the checker; the model must quote it too, and a
+   missing or wrong quoted total halves the score. Any equally cheap plan scores 100, not just the reference.
+4. **Answer checkers** compare each part with the exact key and score the share right.
+
+**Cannot be cheated.** Answer keys are computed, never typed. Every prompt says that two answers score 0. Lists
+cannot be padded: an extra transfer costs a check, an extra pack costs money, an unlisted item is left at home.
+Prompts carry distractors that change the answer if followed: a corrected bill, a hotel that closes, a ceremony
+moved earlier, the railcard's morning limit and expiry, a brother's bad advice, offers that only look cheaper.
+The checker's source code (its file, the verifier files it imports and the generic scorer) is part of the hash of
+every test that uses it, like a program's source (`verifierSourceHash` in `src/core/registry.ts`), so editing a
+checker invalidates old results. `test/life.test.ts` proves the trip checker and the independent solver agree on
+every itinerary they both enumerate, that every reference scores 100 through the full pipeline, that the do-nothing
+answers (empty, `{}`, the copied template, the prompt itself) and random filler score 0, that presentation never
+changes a score, and that the scripted wrong answers score as described.
+
+**Expected spread** (from scripted answers, `node verification/realworld-life/spread.mts`): do-nothing 0 on every
+test; careful (the reference) 100; careless answers (one rule ignored, a late message missed, no optimising, a
+typical arithmetic slip; only slips that change the answer for that case are counted) score about 22 on Weekend
+Away, 5 on Splitting the Bills, 55 on Cheapest Deal, 40 on Cook for Twelve, 46 on Pay It Off Faster and 28 on Pack
+for the Flight.
+
+Stored answers to these tests are re-marked from their reply text like other objective tests (§5.6, `src/engine/remark.ts`).
+
+## 7j. Business Ladder levels 2-3: the business pack
+
+Five tests in the `work` category built from the paperwork of invented UK small businesses (a Bristol café chain,
+a Huddersfield plumbing firm, a Norwich baby-and-gift shop, a Leicester dental practice, a Sheffield homeware
+shop, a leisure centre). Every scenario is generated from a fixed seed by `verification/realworld-business/`
+(`node build.mjs` writes the files, `--check` proves they are byte-identical) and every answer key is computed
+by a rules engine from the scenario's data, never typed by hand. No AI judges and no human opinion: every mark
+is a machine check.
+
+| Test | Cases (points per case) | What is checked |
+|---|---|---|
+| Invoices to Pay (`work.invoice-matching`) | 10 (16-70) | For every inbox document: outcome (approve, one of six holds, or one of two rejects), amount to pay and pay-by date; plus the run total. |
+| Customer Support Queue (`work.support-refunds`) | 10 (30-100) | For every ticket: category, priority, SLA due time (UK time), decision and refund. |
+| Shortlist the Candidates (`work.cv-shortlist`) | 10 (7-15) | The shortlist (a set of the stated size), each shortlisted rubric score, and the set of CVs that contain screener instructions. |
+| Check the Payslips (`work.payroll-check`) | 10 (8-43) | The set of wrong draft payslips, six corrected figures for each, and the employer NI total. |
+| Clean the Customer List (`work.crm-dedupe`) | 10 (38-200) | The grouping of records into customers (pair by pair) and the set of surviving master records. |
+
+**How a case is marked.** All five use the `json` scorer with field-by-field partial credit (the case score is the
+share of points earned) and `lenient` (§5.1a), so key case, `£` signs, thousands separators, `HOLD_PRICE` for
+`hold-price`, a `T` in a date-time and a fenced or unfenced JSON block never cost marks. The shortlist, the
+screener-instruction list, the wrong-payslip list and the master records are `sets` worth one point per id (an
+extra id costs as much as a missing one); the customer grouping is a `partitions` path (pairwise F1); and
+`forbidOverlap` scores a CV shortlist 0 if it includes a CV that contains instructions aimed at the screener. The
+rubric disqualifies such CVs, so the only way to shortlist one is to obey it.
+
+**Why each key is the only right answer.** Each generator plants every document, ticket, CV, payslip or record
+with an intended outcome ("this invoice is a duplicate", "this ticket arrives on day 15", "this candidate's two
+jobs overlap"), and a separate rules engine re-derives the answer from the data alone; the build refuses any
+case where the two disagree, where a shortlist has a tie at the cut-off, or where a master record is tied. Every
+edge sits clearly on one side of its rule (tolerances have a margin, day-14 and day-15 tickets are both
+planted, a six-months-to-the-day fault is planted), and every rate, threshold, bank holiday and clock change the
+answer depends on is stated in the prompt as "this exercise's figures", so nothing depends on memory.
+
+**Anti-cheat and fairness.** Invented people and companies; real places and public rules only. The answer never
+appears in the prompt: drafts, ledgers and GRNs carry plausible wrong values, and late emails change earlier
+facts. The CV rubric is strictly job-related and says so: names, age, gender, nationality, family status and
+career gaps earn and lose nothing, sponsorship is judged only from what the CV says, and the names come from many
+backgrounds. Planted traps are realistic, not wordplay: keyword-stuffed skills lists, a qualification still in
+progress, a shared office mailbox, a father and son at one address, a bank-detail change by email, a customer who
+says "I'm the manager, just refund it". Hedged values score 0 for that field and every prompt says so. No
+answer-time limit beyond the default, and the same prompt and output limit for every model.
+
+**Expected spread** (scripted answers scored by the real scorer, `node verification/realworld-business/spread.mts`;
+`test/realworld-business.test.ts` pins these ranges):
+
+| Test | Do nothing | Careless | Careful but one or two rules wrong | Reference |
+|---|---:|---:|---:|---:|
+| Invoices to Pay | 0% | 43% (approve everything at face value) | 82-94% | 100% |
+| Customer Support Queue | 0% | 55% (refund everyone, P3, times read as UK time) | 89-97% | 100% |
+| Shortlist the Candidates | 0% | 5% (count every keyword, obey the planted note) | 73-90% | 100% |
+| Check the Payslips | 0% | 1% (trust the drafts) | 71-89% (flagging every payslip: 80%) | 100% |
+| Clean the Customer List | 0% | 49% (merge on identical email or phone text) | 92-95% (right groups, wrong masters: 42%) | 100% |
+
+Merging every customer record into one group scores 1% and merging nothing 0%. Random filler, the Random
+Baseline's `{}` and a copy of the prompt score at most 5% on every test. Each test has 3 easy, 3 medium and 4
+hard cases (the case notes say which); the hard cases are the long ones (up to about 8k tokens for invoices, 6k
+for support, 9k for CVs, 4k for payroll and 12k for the customer list).
+
+## 7k. Work-world simulations: finance and customer service (Business Ladder levels 4 and 5)
 
 Four simulations on the same work-world engine as The Personal Assistant (§7g: one `ACTION:` per turn, every action
 counts against the budget, the last few exchanges kept verbatim, a 400-character `MEMO:` line, tolerant parsing of

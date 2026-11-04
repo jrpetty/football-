@@ -119,7 +119,9 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "contains", "all": [...], "any": [...], "none": [...] }` | or put the lists in `expected` | Partial credit |
 | `{ "type": "constraints", "allOrNothing": false }` | array of constraints (below) | Partial credit |
 | `{ "type": "json", "unorderedArrays": false, "numberTolerance": 1e-6 }` | the exact expected object | Field-level partial credit |
-| `{ "type": "json", "loose": true, "sets": { "non_compliant": 2 } }` | the exact expected object | `loose` forgives presentation (key case/spacing, `"£1,234.50"`, `"Clause 9.2"`, `T`/"London" in date-times, `"none"` for null, one-item lists); each `sets` path is an id-keyed object where an extra item costs that many fields, as a missing one does (see `tests/work/`) |
+| `{ "type": "json", "lenient": true, "sets": { "non_compliant": 2 } }` | the exact expected object | `lenient` forgives presentation only (key spelling, `"£1,234.50"`, `"HOLD_PRICE"`, `T` in date-times, yes/no, `"n/a"`, one-item lists); each `sets` path is an id-keyed object or a list of ids where every extra item costs as many points as a real one (see `tests/work/`) |
+| `{ "type": "json", "lenient": true, "weights": { "messages.M07.category": 3 }, "aboveConstant": ["messages.*.category"] }` | the exact expected object | `weights`: points per field by path (longest prefix wins); `aboveConstant`: a group of fields earns only the points above giving them all one value |
+| `{ "type": "json", "lenient": true, "partitions": ["clusters"], "sets": { "masters": 1 }, "forbidOverlap": [["shortlist", "flagged"]] }` | the exact expected object | `partitions`: a list of id groups marked pair by pair (pairwise F1); `forbidOverlap`: listing a forbidden id scores 0. Every option is described once in [METHODOLOGY §5.1a](METHODOLOGY.md#51a-the-json-scorers-options) |
 | `{ "type": "code-js", "timeoutMs": 2000 }` | `{ "functionName": "f", "tests": [{ "args": [1, 2], "expected": 3 }] }` | Tell the model to reply with one ```` ```javascript ```` block |
 | `{ "type": "judge", "rubric": "...", "passThreshold": 0.7 }` | optional reference answer | Judge panel, 0–10 |
 | `{ "type": "judge-classify", "instructions": "...", "labels": [{ "id": "CORRECT", "description": "...", "score": 1 }] }` | reference for the judge | Label ids in UPPER_SNAKE_CASE |
@@ -127,6 +129,7 @@ Three optional fields, used by the `trick` tests but available to any prompt tes
 | `{ "type": "human", "rubric": "..." }` | – | Scored in Blind Review |
 | `{ "type": "sql", "dialect": "sqlite", "schema": "CREATE TABLE …", "databases": [{ "id": "live", "tables": {…} }, …] }` | `{ "reference": "SELECT …", "ordered": false, "tolerance": 0.01 }` | One read-only SQLite query, run on every database (the first is "live", the rest hidden copies); score = mean share of matching result rows. Generate the data with a script (see `verification/realworld-sql/`) |
 | `{ "type": "ladder", "answer": "integer" \| "plan" \| "grid" }` | a digit string · `{ rows, cols, start, optimal, plan }` · rows of `#`/`.` | Horizon ladders (case ids `L01`…): exact big integers; sliding plans replayed (minimum = 1, longer ≤ 0.25); whole grids. See METHODOLOGY §7c |
+| `{ "type": "verifier", "verifier": "trip" }` | `{ "world": {…}, "optimum": 1234, "reference": {…} }` | A checker in `src/scoring/verifiers/<name>.ts` replays the JSON answer against the hidden world: plans (`trip`, `shopping`, `packing`) must keep every rule, optimum = 1, worse ≤ 0.5; exact answers (`settle`, `fields`) score per check. Register new checkers in `verifiers/index.ts`; their source is hashed with the test. See METHODOLOGY §7i |
 
 ### Constraint reference (`constraints` scorer)
 

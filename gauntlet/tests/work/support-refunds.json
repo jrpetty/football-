@@ -1,0 +1,977 @@
+{
+  "kind": "prompt",
+  "id": "work.support-refunds",
+  "version": "1.0.0",
+  "name": "Customer Support Queue",
+  "category": "work",
+  "description": "An online homeware shop's overnight ticket queue: change-of-mind returns inside and outside the 14-day cooling-off period, personalised items, faulty goods before and after 30 days and six months, a safety issue buried in an angry message, wrong items, lost and 'delivered' parcels, late express orders, double charges that are only pending authorisations, a fraud pattern, a customer who says 'just refund it, I'm the manager', and a ticket half in Welsh. Each ticket needs its category, priority, SLA deadline in UK business hours (UTC timestamps, BST/GMT, bank holidays), decision and exact refund including discount-code shares.",
+  "difficulty": "hard",
+  "tags": [
+    "real-world",
+    "work",
+    "customer-service",
+    "refunds",
+    "consumer-law",
+    "sla",
+    "json"
+  ],
+  "hook": "Work an overnight support queue by the handbook: priority, deadline, decision and refund for every ticket.",
+  "maxOutputTokens": 16000,
+  "estimate": {
+    "inputTokens": 4180,
+    "outputTokens": 5000
+  },
+  "author": "Gauntlet Core",
+  "createdAt": "2026-11-04",
+  "scorer": {
+    "type": "json",
+    "numberTolerance": 1e-8,
+    "lenient": true
+  },
+  "cases": [
+    {
+      "id": "s01",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Wed 15 Jul 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): EL-BLN6 Peak hand blender: 30 in stock\n\nORDER LOOKUP\n  FB-208406  tomasz.lis45@yahoo.co.uk  placed 27 Jun 2026  paid by Mastercard ending 7718\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 30 Jun 2026 - signed for\n  Account claims history: none\n\n  FB-208578  patrick.doyle21@hotmail.co.uk  placed 23 Jun 2026  paid by Amex ending 3005\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n      PS-MUG1  Personalised name mug                x1  £16.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 27 Jun 2026 - signed for\n  Account claims history: none\n\n  FB-208865  zainab.ali75@btinternet.com  placed 25 Jun 2026  paid by Visa ending 4421\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Standard £4.95\n  Status: In transit - last scan Mon 29 Jun 2026 at Wakefield sort centre\n  Account claims history: none\n\n  FB-209136  marcus.grant58@icloud.com  placed 30 Jun 2026  paid by Visa ending 4421\n      PS-DMT3  Personalised coir doormat            x1  £29.99\n  Delivery: Standard £4.95\n  Status: Delivered Thu 2 Jul 2026 - signed for\n  Account claims history: none\n\n  FB-209236  joel.mensah14@outlook.com  placed 9 Jul 2026  paid by Mastercard ending 0937\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Express next working day £9.95, promised Fri 10 Jul 2026\n  Status: Delivered Sat 11 Jul 2026 - signed for\n  Account claims history: none\n\n  FB-209587  ewan.ross75@hotmail.co.uk  placed 10 Jul 2026  paid by Visa ending 4421\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Express next working day £9.95\n  Status: Delivered Sat 11 Jul 2026 - signed for\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48566 | received 2026-07-10 13:46 UTC | via web form | previous contacts about this order: 0\nFrom: Marcus Grant <marcus.grant58@icloud.com>   Order: FB-209136\nHello, the Personalised coir doormat arrived and the engraving is exactly what I asked for, but I've decided I don't need it after all. How do I send it back for a refund? Cheers, Marcus\n\n--- Ticket #48593 | received 2026-07-11 04:48 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Tomasz Lis <tomasz.lis45@yahoo.co.uk>   Order: FB-208406\nHi,\nI ordered the Hand-blown glass vase from you (arrived Tue 30 Jun 2026) and it just doesn't go with the room.\nCan I return just the Hand-blown glass vase? Keeping the rest.\nIt's unused and still in the box.\nThanks, Tomasz\n\n--- Ticket #48614 | received 2026-07-12 11:34 UTC | via email | previous contacts about this order: 0\nFrom: Ewan Ross <ewan.ross75@hotmail.co.uk>   Order: FB-209587\nHi, I ordered the Peak hand blender but you've sent me a Stoneware mugs, set of 4 instead?! Can you sort out the right one please. Ewan\n\n--- Ticket #48628 | received 2026-07-13 08:13 UTC | via email | previous contacts about this order: 1\nFrom: Patrick Doyle <patrick.doyle21@hotmail.co.uk>   Order: FB-208578\nMorning,\nMy Wool throw, charcoal (delivered 27 Jun 2026) the colour has run badly after one gentle wash.\nI just want my money back.\nPatrick\n\n--- Ticket #48631 | received 2026-07-14 11:44 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Joel Mensah <joel.mensah14@outlook.com>   Order: FB-209236\nI paid for next-day express delivery and the Ceramic planter, large turned up 1 day(s) late. Not impressed. Joel\n\n--- Ticket #48651 | received 2026-07-14 12:55 UTC | via web form | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali75@btinternet.com>   Order: FB-208865\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nI would like a replacement, not a refund.\nZainab\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48566": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-07-14 14:46",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48593": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-07-14 17:00",
+            "decision": "refund",
+            "refund": 36
+          },
+          "#48614": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2026-07-14 17:00",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#48628": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-07-15 09:13",
+            "decision": "refund",
+            "refund": 45
+          },
+          "#48631": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-07-16 12:44",
+            "decision": "partial",
+            "refund": 5
+          },
+          "#48651": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-07-16 13:55",
+            "decision": "replace",
+            "refund": 0
+          }
+        }
+      },
+      "notes": "[easy] 6 tickets {\"P3/decline\":1,\"P3/refund\":2,\"P3/replace\":2,\"P3/partial\":1}"
+    },
+    {
+      "id": "s02",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Wed 9 Sep 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): none queried\n\nORDER LOOKUP\n  FB-208611  yusuf.kaya32@outlook.com  placed 25 Aug 2026  paid by PayPal\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Express next working day £9.95, promised Wed 26 Aug 2026\n  Status: Delivered Wed 26 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-208671  nkechi.obi3@yahoo.co.uk  placed 30 Aug 2026  paid by Visa ending 4421\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Standard £4.95\n  Status: Delivered Tue 1 Sep 2026 - signed for\n  Account claims history: none\n\n  FB-209026  sadia.rahman51@gmail.com  placed 5 Aug 2026  paid by Mastercard ending 0937\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 8 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-209066  agnieszka.wrobel81@yahoo.co.uk  placed 2 Sep 2026  paid by PayPal\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95, promised Thu 3 Sep 2026\n  Status: Delivered Thu 3 Sep 2026 - signed for\n  Payment log: 2 Sep 2026 £94.93 captured; 3 Sep 2026 £94.93 captured\n  Account claims history: none\n\n  FB-209364  zainab.ali98@outlook.com  placed 30 Aug 2026  paid by Mastercard ending 7718\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 1 Sep 2026 - left in safe place (porch)\n  Account claims history: none\n\n  FB-209699  arjun.patel72@hotmail.co.uk  placed 2 Apr 2026  paid by PayPal\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Express next working day £9.95, promised Tue 7 Apr 2026\n  Status: Delivered Tue 7 Apr 2026 - signed for\n  Account claims history: none\n\n  FB-209914  megan.hughes2@outlook.com  placed 18 Aug 2026  paid by Mastercard ending 0937\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Fri 21 Aug 2026 at Normanton hub\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48595 | received 2026-09-04 09:48 UTC | via web form | previous contacts about this order: 0\nFrom: Yusuf Kaya <yusuf.kaya32@outlook.com>   Order: FB-208611\nHi,\nI got the Wool throw, charcoal from you (arrived Wed 26 Aug 2026) and my partner has bought the same thing.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Yusuf\n\n--- Ticket #48624 | received 2026-09-04 13:11 UTC | via email | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali98@outlook.com>   Order: FB-209364\nHello,\nMy order still hasn't arrived. Your tracking says it was delivered and left in a safe place but there is nothing here and I've asked the neighbours.\nZainab\n\n--- Ticket #48658 | received 2026-09-04 15:05 UTC | via web form | previous contacts about this order: 0\nFrom: Nkechi Obi <nkechi.obi3@yahoo.co.uk>   Order: FB-208671\nMorning,\nMy Velvet cushion, ochre (delivered 1 Sep 2026) the colour has run badly after one gentle wash.\nCan I get a new one sent out?\nNkechi\n\n--- Ticket #48690 | received 2026-09-05 02:38 UTC | via email | previous contacts about this order: 0\nFrom: Megan Hughes <megan.hughes2@outlook.com>   Order: (not given)\nwhere is my stuff?? ordered ages ago and nothing.  megan\n\n--- Ticket #48733 | received 2026-09-06 19:37 UTC | via web form | previous contacts about this order: 0\nFrom: Agnieszka Wrobel <agnieszka.wrobel81@yahoo.co.uk>   Order: FB-209066\nHi, I've been charged twice for order FB-209066, £94.93 has gone out of my account two times according to my banking app. Please refund the extra one. Agnieszka\n\n--- Ticket #48759 | received 2026-09-08 12:57 UTC | via email | previous contacts about this order: 0\nFrom: Arjun Patel <arjun.patel72@hotmail.co.uk>   Order: FB-209699\nHi there,\nMy Peak hand blender (delivered 7 Apr 2026) has stopped working completely - no power at all.\nI would like a refund please.\nArjun\n\n--- Ticket #48779 | received 2026-09-08 20:33 UTC | via web form | previous contacts about this order: 1\nFrom: Sadia Rahman <sadia.rahman51@gmail.com>   Order: FB-209026\nHi,\nI ordered the Peak 4.2L air fryer and the Ashby 1.7L glass kettle from you (arrived Sat 8 Aug 2026) and my partner has bought the same thing.\nI'd like to send all of it back - that's everything I ordered.\nI know it's been a little while, I've been away.\nIt's unused and still in the box.\nThanks, Sadia\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48595": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-09-08 10:48",
+            "decision": "refund",
+            "refund": 49.95
+          },
+          "#48624": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-09-07 14:11",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48658": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-09-08 16:05",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#48690": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-09-08 17:00",
+            "decision": "refund",
+            "refund": 88.99
+          },
+          "#48733": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-09-08 17:00",
+            "decision": "refund",
+            "refund": 94.93
+          },
+          "#48759": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-09-10 13:57",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#48779": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-09-09 17:00",
+            "decision": "decline",
+            "refund": 0
+          }
+        }
+      },
+      "notes": "[easy] 7 tickets {\"P3/refund\":3,\"P2/escalate\":1,\"P3/replace\":1,\"P3/repair\":1,\"P2/decline\":1}"
+    },
+    {
+      "id": "s03",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Thu 15 Oct 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): HM-TWL5 Egyptian cotton towel bale: out of stock (no date)\n\nORDER LOOKUP\n  FB-208543  ellie.ward9@hotmail.co.uk  placed 2 Oct 2026  paid by Visa ending 4421\n      EL-TOA2  Ashby 2-slice toaster                x1  £23.99 (SALE, was £34.99)\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 4 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-208767  priya.shah45@btinternet.com  placed 2 Oct 2026  paid by Mastercard ending 0937\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 4 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-208900  chloe.barnes19@outlook.com  placed 5 Oct 2026  paid by Amex ending 3005\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n  Delivery: Standard £4.95, promised by Tue 6 Oct 2026\n  Status: Delivered Fri 9 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209016  graham.turnbull90@hotmail.co.uk  placed 8 Oct 2026  paid by Visa debit ending 6610\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 10 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209232  zainab.ali25@outlook.com  placed 4 Oct 2026  paid by PayPal\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard £4.95\n  Status: Delivered Wed 7 Oct 2026 - signed for\n  Payment log: 4 Oct 2026 £40.95 captured; 4 Oct 2026 £40.95 authorisation (pending, not captured)\n  Account claims history: none\n\n  FB-209546  tariq.hussain91@outlook.com  placed 26 Jul 2026  paid by Amex ending 3005\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 28 Jul 2026 - signed for\n  Account claims history: none\n\n  FB-209698  li.wei93@yahoo.co.uk  placed 6 Oct 2026  paid by Visa ending 4421\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 8 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210008  sian.pritchard75@hotmail.co.uk  placed 3 Oct 2026  paid by Visa debit ending 6610\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Mon 5 Oct 2026 - signed for\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48645 | received 2026-10-10 09:54 UTC | via email | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali25@outlook.com>   Order: FB-209232\nHi, I've been charged twice for order FB-209232, £40.95 has gone out of my account two times according to my banking app. Please refund the extra one. Zainab\n\n--- Ticket #48653 | received 2026-10-10 14:41 UTC | via web form | previous contacts about this order: 1\nFrom: Tariq Hussain <tariq.hussain91@outlook.com>   Order: FB-209546\nHi there,\nMy Hand-blown glass vase (delivered 28 Jul 2026) has started coming apart at the seam.\nI would like a refund please.\nTariq\n\n--- Ticket #48673 | received 2026-10-12 10:28 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Chloe Barnes <chloe.barnes19@outlook.com>   Order: FB-208900\nI paid for delivery and the Ashby 2-slice toaster turned up 3 day(s) late. Not impressed. Chloe\n\n--- Ticket #48699 | received 2026-10-13 09:39 UTC | via email | previous contacts about this order: 0\nFrom: Priya Shah <priya.shah45@btinternet.com>   Order: FB-208767\nParcel came today and the Jute rug 160x230 was smashed/damaged inside the box, the box itself was crushed on one corner. Photos attached. I would like a refund please. - Priya\n\n--- Ticket #48708 | received 2026-10-14 10:54 UTC | via email | previous contacts about this order: 0\nFrom: Li Wei <li.wei93@yahoo.co.uk>   Order: FB-209698\nHi,\nI got the Linen bedding set, double from you (arrived Thu 8 Oct 2026) and my partner has bought the same thing.\nCan I return just the Linen bedding set, double? Keeping the rest.\nIt's unused and still in the box.\nThanks, Li\n\n--- Ticket #48731 | received 2026-10-14 13:09 UTC | via web form | previous contacts about this order: 0\nFrom: Sian Pritchard <sian.pritchard75@hotmail.co.uk>   Order: FB-210008\nBore da,\nMae'r Hepworth brass table lamp wedi torri - it stopped working on the second day, dim byd, nothing at all. Cyrhaeddodd y parsel ar 5 Oct 2026.\nHoffwn i gael ad-daliad os gwelwch yn dda (I'd like a refund please).\nDiolch yn fawr,\nSian Pritchard\n\n--- Ticket #48762 | received 2026-10-14 17:54 UTC | via email | previous contacts about this order: 0\nFrom: Ellie Ward <ellie.ward9@hotmail.co.uk>   Order: FB-208543\nHi,\nI got the Ashby 2-slice toaster and the Arched mirror 60x90 from you (arrived Sun 4 Oct 2026) and my partner has bought the same thing. I know it was in the sale but it was £34.99 originally so I'd expect that back really.\nI'd like to send all of it back - that's everything I ordered.\nIt's unused and still in the box.\nThanks, Ellie\n\n--- Ticket #48793 | received 2026-10-15 04:25 UTC | via email | previous contacts about this order: 0\nFrom: Graham Turnbull <graham.turnbull90@hotmail.co.uk>   Order: FB-209016\nHi, I ordered the Egyptian cotton towel bale but you've sent me a Ceramic planter, large instead?! Can you sort out the right one please. Graham\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48645": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-10-13 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48653": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-10-13 17:00",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#48673": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-10-14 11:28",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48699": {
+            "category": "faulty",
+            "priority": "P2",
+            "sla_due": "2026-10-14 10:39",
+            "decision": "refund",
+            "refund": 119
+          },
+          "#48708": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-16 11:54",
+            "decision": "refund",
+            "refund": 88
+          },
+          "#48731": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-10-16 14:09",
+            "decision": "refund",
+            "refund": 64
+          },
+          "#48762": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-10-15 17:00",
+            "decision": "refund",
+            "refund": 118.99
+          },
+          "#48793": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2026-10-16 17:00",
+            "decision": "refund",
+            "refund": 54
+          }
+        }
+      },
+      "notes": "[easy] 8 tickets {\"P3/decline\":2,\"P3/replace\":1,\"P2/refund\":2,\"P3/refund\":3}"
+    },
+    {
+      "id": "s04",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Tue 1 Sep 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): none queried\n\nORDER LOOKUP\n  FB-208821  megan.hughes38@yahoo.co.uk  placed 23 Aug 2026  paid by PayPal\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 26 Aug 2026 - signed for\n  Discount code: WELCOME10 (10% off items)\n  Account claims history: none\n\n  FB-209018  ellie.ward10@icloud.com  placed 8 Aug 2026  paid by Amex ending 3005\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 12 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-209178  declan.ohara83@yahoo.co.uk  placed 21 Aug 2026  paid by PayPal\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard £4.95\n  Status: In transit - last scan Tue 25 Aug 2026 at Sheffield hub\n  Account claims history: none\n\n  FB-209249  tariq.hussain34@yahoo.co.uk  placed 25 Jul 2026  paid by PayPal\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 29 Jul 2026 - signed for\n  Account claims history: none\n\n  FB-209639  marcus.grant63@btinternet.com  placed 10 Jun 2026  paid by Visa ending 4421\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 14 Jun 2026 - signed for\n  Account claims history: none\n\n  FB-209871  sadia.rahman11@icloud.com  placed 21 Aug 2026  paid by PayPal\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Standard £4.95, promised by Mon 24 Aug 2026\n  Status: Delivered Wed 26 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-210246  gemma.whitlock47@btinternet.com  placed 21 Aug 2026  paid by Mastercard ending 7718\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Express next working day £9.95, promised Mon 24 Aug 2026\n  Status: Delivered Mon 24 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-210526  patrick.doyle46@outlook.com  placed 15 Aug 2026  paid by Mastercard ending 0937\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard £4.95\n  Status: Delivered Wed 19 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-210547  tomasz.lis9@gmail.com  placed 14 Aug 2026  paid by Amex ending 3005\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Express next working day £9.95, promised Mon 17 Aug 2026\n  Status: Delivered Mon 17 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-210604  amara.singh98@outlook.com  placed 3 Aug 2026  paid by Visa ending 4421\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Standard £4.95\n  Status: Delivered Fri 7 Aug 2026 - signed for\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48717 | received 2026-08-27 08:57 UTC | via web form | previous contacts about this order: 0\nFrom: Gemma Whitlock <gemma.whitlock47@btinternet.com>   Order: FB-210246\nHi,\nWe bought the Jute rug 160x230 and the Peak hand blender from you (arrived Mon 24 Aug 2026) and my partner has bought the same thing.\nI'd like to send all of it back - that's everything I ordered.\nIt's unused and still in the box.\nThanks, Gemma\n\n--- Ticket #48743 | received 2026-08-27 10:50 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Declan O'Hara <declan.ohara83@yahoo.co.uk>   Order: FB-209178\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nDeclan\n\n--- Ticket #48784 | received 2026-08-27 11:29 UTC | via email | previous contacts about this order: 0\nFrom: Marcus Grant <marcus.grant63@btinternet.com>   Order: FB-209639\nThis is the second time. My Linen bedding set, double broke not long after I got it and you sent me a replacement under ticket #43518. It's now done exactly the same thing again. I don't want another replacement, I want my money back.\nMarcus Grant\n\n--- Ticket #48791 | received 2026-08-27 12:52 UTC | via web form | previous contacts about this order: 1\nFrom: Tomasz Lis <tomasz.lis9@gmail.com>   Order: FB-210547\nI want to return the Hand-blown glass vase - changed my mind, it's unused. If this isn't sorted this week I'll be reporting you to Trading Standards. Please refund me. Tomasz\n\n--- Ticket #48804 | received 2026-08-27 15:14 UTC | via email | previous contacts about this order: 0\nFrom: Ellie Ward <ellie.ward10@icloud.com>   Order: FB-209018\nURGENT - the Hepworth brass table lamp sparked and tripped all the electrics in the house.\nI've unplugged it and it's in the garage. Please refund me.\nEllie\n\n--- Ticket #48814 | received 2026-08-27 15:21 UTC | via email | previous contacts about this order: 2\nFrom: Patrick Doyle <patrick.doyle46@outlook.com>   Order: FB-210526\nI want to return the Ashby 1.7L glass kettle - changed my mind, it's unused. This is the third time I've written about this order. Please refund me. Patrick\n\n> On 26 Aug 2026, Fernbrook Home Customer Care wrote:\n> Hi Patrick, thanks for getting in touch and sorry for the trouble. I've passed this to the team and someone will be back to you within 2 working days. Kind regards, Dev (Customer Care)\n>\n>> On 25 Aug 2026, Patrick wrote:\n>> Hello, any update on order FB-210526? Nobody has replied.\n\n--- Ticket #48838 | received 2026-08-28 09:41 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Amara Singh <amara.singh98@outlook.com>   Order: FB-210604\nMorning,\nMy Ceramic planter, large (delivered 7 Aug 2026) the colour has run badly after one gentle wash.\nI just want my money back.\nAmara\n\n--- Ticket #48866 | received 2026-08-28 11:19 UTC | via web form | previous contacts about this order: 0\nFrom: Megan Hughes <megan.hughes38@yahoo.co.uk>   Order: FB-208821\nHi,\nI ordered the Stoneware mugs, set of 4 from you (arrived Wed 26 Aug 2026) and honestly I've changed my mind.\nCan I return just the Stoneware mugs, set of 4? Keeping the rest.\nIt's unused and still in the box.\nThanks, Megan\n\n--- Ticket #48887 | received 2026-08-29 16:10 UTC | via web form | previous contacts about this order: 0\nFrom: Sadia Rahman <sadia.rahman11@icloud.com>   Order: FB-209871\nYour delivery was late (standard delivery, promised days ago) and I had to take a day off work to wait in. I expect £25.00 compensation for my time. Sadia Rahman\n\n--- Ticket #48922 | received 2026-08-30 08:47 UTC | via email | previous contacts about this order: 0\nFrom: Tariq Hussain <tariq.hussain34@yahoo.co.uk>   Order: FB-209249\nI want to return the Peak hand blender and the Loxley desk fan. Before you quote some policy at me, I'm a store manager myself and I know full well you have discretion. Just refund it, I'm the manager on my side and I'm telling you it's fine. I've been a customer for years.\nTariq Hussain\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48717": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-08-28 09:57",
+            "decision": "refund",
+            "refund": 148.94
+          },
+          "#48743": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-09-01 11:50",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48784": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-09-01 12:29",
+            "decision": "refund",
+            "refund": 88
+          },
+          "#48791": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-08-28 13:52",
+            "decision": "refund",
+            "refund": 40.95
+          },
+          "#48804": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2026-08-28 12:14",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48814": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-08-28 16:21",
+            "decision": "refund",
+            "refund": 44.94
+          },
+          "#48838": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-09-02 10:41",
+            "decision": "refund",
+            "refund": 36.95
+          },
+          "#48866": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-09-02 12:19",
+            "decision": "refund",
+            "refund": 25.2
+          },
+          "#48887": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-09-02 17:00",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48922": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-09-02 17:00",
+            "decision": "decline",
+            "refund": 0
+          }
+        }
+      },
+      "notes": "[medium] 10 tickets {\"P2/refund\":3,\"P3/decline\":2,\"P3/refund\":3,\"P1/escalate\":1,\"P3/escalate\":1}"
+    },
+    {
+      "id": "s05",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Mon 2 Nov 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): HM-THR1 Wool throw, charcoal: out of stock (no date)\n\nORDER LOOKUP\n  FB-208815  declan.ohara79@hotmail.co.uk  placed 22 Oct 2026  paid by Visa debit ending 6610\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: Delivered Sun 25 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-208872  niamh.brennan44@yahoo.co.uk  placed 21 Oct 2026  paid by Visa ending 4421\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 23 Oct 2026 - signed for\n  Discount code: WELCOME10 (10% off items)\n  Account claims history: none\n\n  FB-209001  marcus.grant40@outlook.com  placed 13 Dec 2025  paid by Mastercard ending 0937\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 16 Dec 2025 - signed for\n  Account claims history: none\n\n  FB-209056  sian.pritchard17@btinternet.com  placed 17 Oct 2026  paid by Amex ending 3005\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 20 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209275  joel.mensah45@yahoo.co.uk  placed 24 Oct 2026  paid by Visa debit ending 6610\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 28 Oct 2026 - signed for\n  Payment log: 24 Oct 2026 £79.99 captured; 24 Oct 2026 £79.99 captured\n  Account claims history: none\n\n  FB-209486  arjun.patel59@gmail.com  placed 17 Oct 2026  paid by Visa ending 4421\n      PS-CHB2  Engraved oak chopping board          x1  £42.00\n  Delivery: Standard £4.95\n  Status: Delivered Mon 19 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209542  priya.shah76@gmail.com  placed 11 Oct 2026  paid by Mastercard ending 7718\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Thu 15 Oct 2026 at Normanton hub\n  Account claims history: none\n\n  FB-209599  daniel.novak7@yahoo.co.uk  placed 23 Aug 2026  paid by PayPal\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 27 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-209962  callum.fraser58@hotmail.co.uk  placed 27 Oct 2026  paid by Mastercard ending 0937\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Express next working day £9.95, promised Wed 28 Oct 2026\n  Status: Delivered Wed 28 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210064  ben.okoro39@hotmail.co.uk  placed 27 Oct 2026  paid by Mastercard ending 7718\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Express next working day £9.95, promised Wed 28 Oct 2026\n  Status: Delivered Sat 31 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210092  agnieszka.wrobel86@gmail.com  placed 25 Sep 2026  paid by Amex ending 3005\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Express next working day £9.95\n  Status: Delivered Sun 27 Sep 2026 - signed for\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48745 | received 2026-10-28 13:48 UTC | via web form | previous contacts about this order: 0\nFrom: Priya Shah <priya.shah76@gmail.com>   Order: FB-209542\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nPriya\n\n--- Ticket #48767 | received 2026-10-28 17:24 UTC | via web form | previous contacts about this order: 0\nFrom: Arjun Patel <arjun.patel59@gmail.com>   Order: FB-209486\nHello, the Engraved oak chopping board arrived and the engraving is exactly what I asked for, but I've decided I don't need it after all. How do I send it back for a refund? Cheers, Arjun\n\n--- Ticket #48810 | received 2026-10-29 09:41 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Joel Mensah <joel.mensah45@yahoo.co.uk>   Order: FB-209275\nHi, I've been charged twice for order FB-209275, £79.99 has gone out of my account two times according to my banking app. Please refund the extra one. Joel\n\n--- Ticket #48838 | received 2026-10-29 11:31 UTC | via web form | previous contacts about this order: 0\nFrom: Callum Fraser <callum.fraser58@hotmail.co.uk>   Order: FB-209962\nABSOLUTELY RIDICULOUS. I ordered a Wool throw, charcoal for my mum's birthday and what turns up?? A Ceramic planter, large. Not even close. Sort it out.\nCallum\n\n--- Ticket #48870 | received 2026-10-29 14:14 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Niamh Brennan <niamh.brennan44@yahoo.co.uk>   Order: FB-208872\nHi,\nI ordered the Calder 1.5kW oil-filled radiator from you (arrived Fri 23 Oct 2026) and my partner has bought the same thing.\nCan I return just the Calder 1.5kW oil-filled radiator? Keeping the rest.\nIt's unused and still in the box.\nThanks, Niamh\n\n--- Ticket #48905 | received 2026-10-29 16:56 UTC | via web form | previous contacts about this order: 0\nFrom: Sian Pritchard <sian.pritchard17@btinternet.com>   Order: FB-209056\nBore da,\nMae'r Ashby 2-slice toaster wedi torri - it stopped working on the second day, dim byd, nothing at all. Cyrhaeddodd y parsel ar 20 Oct 2026.\nHoffwn i gael ad-daliad os gwelwch yn dda (I'd like a refund please).\nDiolch yn fawr,\nSian Pritchard\n\n--- Ticket #48908 | received 2026-10-30 12:37 UTC | via web form | previous contacts about this order: 0\nFrom: Declan O'Hara <declan.ohara79@hotmail.co.uk>   Order: FB-208815\nI'd like to return the Loxley desk fan, not for me.\nPlease don't refund it to the card I paid with, that account is closed. Send the refund to my partner's account instead: sort code 60-19-04, account 09483317, name R. Ashworth.\nDeclan\n\n--- Ticket #48923 | received 2026-10-30 16:30 UTC | via web form | previous contacts about this order: 0\nFrom: Agnieszka Wrobel <agnieszka.wrobel86@gmail.com>   Order: FB-210092\nHi,\nI ordered the Hepworth brass table lamp and the Velvet cushion, ochre from you (arrived Sun 27 Sep 2026) and the colour isn't what I expected from the photos.\nI'd like to send all of it back - that's everything I ordered.\nSorry, been mad busy so only just got round to it.\nIt's unused and still in the box.\nThanks, Agnieszka\n\n--- Ticket #48939 | received 2026-10-31 07:02 UTC | via web form | previous contacts about this order: 0\nFrom: Marcus Grant <marcus.grant40@outlook.com>   Order: FB-209001\nHi there,\nMy Egyptian cotton towel bale (delivered 16 Dec 2025) has started coming apart at the seam.\nIt's been fine up to now.\nI would like a refund please.\nMarcus\n\n--- Ticket #48944 | received 2026-10-31 23:15 UTC | via email | previous contacts about this order: 0\nFrom: Daniel Novak <daniel.novak7@yahoo.co.uk>   Order: FB-209599\nHello,\nMy Hepworth brass table lamp (delivered 27 Aug 2026) keeps cutting out after a minute.\nPlease refund me.\nDaniel\n\n--- Ticket #48958 | received 2026-11-01 17:20 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Ben Okoro <ben.okoro39@hotmail.co.uk>   Order: FB-210064\nI paid for next-day express delivery and the Wool throw, charcoal turned up 3 day(s) late. Not impressed. Ben\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48745": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-10-29 13:48",
+            "decision": "refund",
+            "refund": 116
+          },
+          "#48767": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-30 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48810": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-11-02 09:41",
+            "decision": "refund",
+            "refund": 79.99
+          },
+          "#48838": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2026-11-02 11:31",
+            "decision": "refund",
+            "refund": 45
+          },
+          "#48870": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-11-02 14:14",
+            "decision": "refund",
+            "refund": 80.99
+          },
+          "#48905": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-11-02 16:56",
+            "decision": "refund",
+            "refund": 34.99
+          },
+          "#48908": {
+            "category": "change-of-mind",
+            "priority": "P1",
+            "sla_due": "2026-10-30 16:37",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48923": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-11-03 16:30",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48939": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-11-03 17:00",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48944": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-11-03 17:00",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#48958": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-11-03 17:00",
+            "decision": "partial",
+            "refund": 5
+          }
+        }
+      },
+      "notes": "[medium] 11 tickets {\"P2/refund\":1,\"P3/decline\":2,\"P3/refund\":4,\"P1/escalate\":1,\"P3/escalate\":1,\"P3/repair\":1,\"P3/partial\":1}"
+    },
+    {
+      "id": "s06",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Fri 20 Nov 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): EL-KET1 Ashby 1.7L glass kettle: 26 in stock\n\nORDER LOOKUP\n  FB-208859  callum.fraser87@icloud.com  placed 14 Nov 2026  paid by Visa debit ending 6610\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Mon 16 Nov 2026 - signed for\n  Account claims history: missing-parcel claim 18 Oct 2026; missing-parcel claim 29 Aug 2026\n\n  FB-209224  sadia.rahman61@btinternet.com  placed 8 Nov 2026  paid by Visa debit ending 6610\n      HM-LIN8  Linen bedding set, double            x1  £61.99 (SALE, was £88.00)\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 12 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-209281  leanne.booth30@gmail.com  placed 24 Oct 2026  paid by PayPal\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n  Delivery: Standard £4.95\n  Status: Delivered Wed 28 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209398  patrick.doyle62@gmail.com  placed 8 Nov 2026  paid by PayPal\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 11 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-209612  zainab.ali64@yahoo.co.uk  placed 11 Nov 2026  paid by PayPal\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n  Delivery: Express next working day £9.95, promised Thu 12 Nov 2026\n  Status: Delivered Thu 12 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-209778  daniel.novak46@yahoo.co.uk  placed 11 Nov 2026  paid by Mastercard ending 7718\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 14 Nov 2026 - signed for\n  Payment log: 11 Nov 2026 £64.00 captured; 11 Nov 2026 £64.00 authorisation (pending, not captured)\n  Account claims history: none\n\n  FB-210078  chloe.barnes11@yahoo.co.uk  placed 9 Nov 2026  paid by Visa ending 4421\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Express next working day £9.95, promised Tue 10 Nov 2026\n  Status: Delivered Tue 10 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-210411  li.wei52@outlook.com  placed 11 Oct 2026  paid by Visa ending 4421\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 14 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210760  ewan.ross27@gmail.com  placed 13 Nov 2026  paid by Mastercard ending 7718\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Express next working day £9.95\n  Status: Delivered Sat 14 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-210871  marcus.grant83@hotmail.co.uk  placed 13 Nov 2026  paid by PayPal\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n  Delivery: Express next working day £9.95\n  Status: Delivered Sun 15 Nov 2026 - left in safe place (porch)\n  Account claims history: missing-parcel claim 5 May 2026\n\n  FB-210918  amara.singh55@gmail.com  placed 10 Nov 2026  paid by PayPal\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard £4.95, promised by Wed 11 Nov 2026\n  Status: Delivered Sat 14 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-210942  tomasz.lis92@yahoo.co.uk  placed 8 Nov 2026  paid by Mastercard ending 7718\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 10 Nov 2026 - signed for\n  Discount code: TREAT15 (£15.00 off the order)\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48771 | received 2026-11-15 20:15 UTC | via web form | previous contacts about this order: 0\nFrom: Amara Singh <amara.singh55@gmail.com>   Order: FB-210918\nYour delivery was late (standard delivery, promised days ago) and I had to take a day off work to wait in. I expect £25.00 compensation for my time. Amara Singh\n\n--- Ticket #48788 | received 2026-11-16 13:38 UTC | via web form | previous contacts about this order: 0\nFrom: Marcus Grant <marcus.grant83@hotmail.co.uk>   Order: FB-210871\nHi,\nMy order still hasn't arrived. Your tracking says it was delivered and left in a safe place but there is nothing here and I've asked the neighbours.\nCan I get a new one sent out?\nMarcus\n\n--- Ticket #48790 | received 2026-11-17 07:06 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Tomasz Lis <tomasz.lis92@yahoo.co.uk>   Order: FB-210942\nHi,\nI ordered the Loxley desk fan from you (arrived Tue 10 Nov 2026) and honestly I've changed my mind.\nCan I return just the Loxley desk fan? Keeping the rest.\nIt's unused and still in the box.\nThanks, Tomasz\n\n--- Ticket #48798 | received 2026-11-17 11:48 UTC | via web form | previous contacts about this order: 3\nFrom: Patrick Doyle <patrick.doyle62@gmail.com>   Order: FB-209398\nI want to return the Hepworth brass table lamp - changed my mind, it's unused. This is the fourth time I've written about this order. I just want my money back. Patrick\n\n> On 16 Nov 2026, Fernbrook Home Customer Care wrote:\n> Hi Patrick, thanks for getting in touch and sorry for the trouble. I've passed this to the team and someone will be back to you within 2 working days. Kind regards, Dev (Customer Care)\n>\n>> On 15 Nov 2026, Patrick wrote:\n>> Hello, any update on order FB-209398? Nobody has replied.\n\n--- Ticket #48824 | received 2026-11-17 16:33 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Callum Fraser <callum.fraser87@icloud.com>   Order: FB-208859\nHi, my parcel says delivered but it never came. This keeps happening with your couriers. Please refund me. Callum\n\n--- Ticket #48844 | received 2026-11-18 12:32 UTC | via email | previous contacts about this order: 0\nFrom: Sadia Rahman <sadia.rahman61@btinternet.com>   Order: FB-209224\nHi,\nWe bought the Linen bedding set, double from you (arrived Thu 12 Nov 2026) and honestly I've changed my mind. I know it was in the sale but it was £88.00 originally so I'd expect that back really.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Sadia\n\n--- Ticket #48850 | received 2026-11-19 01:21 UTC | via web form | previous contacts about this order: 0\nFrom: Daniel Novak <daniel.novak46@yahoo.co.uk>   Order: FB-209778\nHi, I've been charged twice for order FB-209778, £64.00 has gone out of my account two times according to my banking app. Please refund the extra one. Daniel\n\n--- Ticket #48866 | received 2026-11-19 10:28 UTC | via web form | previous contacts about this order: 1\nFrom: Leanne Booth <leanne.booth30@gmail.com>   Order: FB-209281\nURGENT - the Ashby 2-slice toaster sparked and tripped all the electrics in the house.\nI've unplugged it and it's in the garage. I would like a refund please.\nLeanne\n\n--- Ticket #48878 | received 2026-11-19 12:17 UTC | via email | previous contacts about this order: 0\nFrom: Li Wei <li.wei52@outlook.com>   Order: FB-210411\nI want to return the Egyptian cotton towel bale and the Calder 1.5kW oil-filled radiator. Before you quote some policy at me, I'm a store manager myself and I know full well you have discretion. Just refund it, I'm the manager on my side and I'm telling you it's fine. I've been a customer for years.\nLi Wei\n\n--- Ticket #48914 | received 2026-11-19 13:12 UTC | via web form | previous contacts about this order: 0\nFrom: Ewan Ross <ewan.ross27@gmail.com>   Order: FB-210760\nHi, I ordered the Ashby 1.7L glass kettle but you've sent me a Velvet cushion, ochre instead?! Can you sort out the right one please. Ewan\n\n--- Ticket #48957 | received 2026-11-19 13:19 UTC | via web form | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali64@yahoo.co.uk>   Order: FB-209612\nHi,\nWe bought the Jute rug 160x230 from you (arrived Thu 12 Nov 2026) and it just doesn't go with the room.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Zainab\n\n--- Ticket #48975 | received 2026-11-19 14:04 UTC | via web form | previous contacts about this order: 0\nFrom: Chloe Barnes <chloe.barnes11@yahoo.co.uk>   Order: FB-210078\nParcel came today and the Jute rug 160x230 was smashed/damaged inside the box, the box itself was crushed on one corner. Photos attached. I just want my money back. - Chloe\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48771": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-11-17 17:00",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48788": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-11-17 13:38",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48790": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-11-18 17:00",
+            "decision": "refund",
+            "refund": 40.58
+          },
+          "#48798": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-11-18 11:48",
+            "decision": "refund",
+            "refund": 64
+          },
+          "#48824": {
+            "category": "missing-parcel",
+            "priority": "P1",
+            "sla_due": "2026-11-18 12:33",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48844": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-11-20 12:32",
+            "decision": "refund",
+            "refund": 61.99
+          },
+          "#48850": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-11-20 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48866": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2026-11-19 14:28",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48878": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-11-20 12:17",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#48914": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2026-11-23 13:12",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#48957": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-11-20 13:19",
+            "decision": "refund",
+            "refund": 123.95
+          },
+          "#48975": {
+            "category": "faulty",
+            "priority": "P2",
+            "sla_due": "2026-11-20 14:04",
+            "decision": "refund",
+            "refund": 119
+          }
+        }
+      },
+      "notes": "[medium] 12 tickets {\"P3/escalate\":1,\"P2/escalate\":1,\"P3/refund\":2,\"P2/refund\":3,\"P1/escalate\":2,\"P3/decline\":1,\"P2/decline\":1,\"P3/replace\":1}"
+    },
+    {
+      "id": "s07",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Mon 26 Oct 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): none queried\n\nORDER LOOKUP\n  FB-209071  agnieszka.wrobel3@icloud.com  placed 19 Oct 2026  paid by Amex ending 3005\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 21 Oct 2026 - signed for\n  Discount code: NEWHOME10 (10% off items)\n  Account claims history: none\n\n  FB-209321  niamh.brennan47@hotmail.co.uk  placed 9 Oct 2026  paid by PayPal\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Express next working day £9.95\n  Status: Delivered Sun 11 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209676  owen.price50@btinternet.com  placed 10 Oct 2026  paid by Mastercard ending 7718\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Tue 13 Oct 2026 at Wakefield sort centre\n  Account claims history: none\n\n  FB-209827  isabel.costa79@icloud.com  placed 8 Oct 2026  paid by Visa ending 4421\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Express next working day £9.95\n  Status: In transit - last scan Fri 9 Oct 2026 at Sheffield hub\n  Account claims history: none\n\n  FB-209912  declan.ohara28@yahoo.co.uk  placed 25 May 2026  paid by Visa debit ending 6610\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 28 May 2026 - signed for\n  Account claims history: none\n\n  FB-210023  patrick.doyle92@icloud.com  placed 7 Oct 2026  paid by Visa debit ending 6610\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: Delivered Fri 9 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210275  olumide.adeyemi56@hotmail.co.uk  placed 9 Oct 2026  paid by Amex ending 3005\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Express next working day £9.95\n  Status: Delivered Sun 11 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-210487  callum.fraser5@btinternet.com  placed 10 Oct 2026  paid by Mastercard ending 7718\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: In transit - last scan Tue 13 Oct 2026 at Normanton hub\n  Account claims history: none\n\n  FB-210560  gethin.rees19@gmail.com  placed 23 Sep 2026  paid by Mastercard ending 7718\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 27 Sep 2026 - signed for\n  Account claims history: none\n\n  FB-210755  tomasz.lis62@btinternet.com  placed 15 Oct 2026  paid by PayPal\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Express next working day £9.95, promised Fri 16 Oct 2026\n  Status: Delivered Mon 19 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-211091  daniel.novak90@yahoo.co.uk  placed 20 Oct 2026  paid by Mastercard ending 7718\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 22 Oct 2026 - signed for\n  Payment log: 20 Oct 2026 £95.00 captured; 21 Oct 2026 £95.00 captured\n  Account claims history: none\n\n  FB-211247  yusuf.kaya50@yahoo.co.uk  placed 21 Apr 2026  paid by PayPal\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 23 Apr 2026 - signed for\n  Account claims history: none\n\n  FB-211413  ben.okoro10@btinternet.com  placed 11 Oct 2026  paid by Visa debit ending 6610\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Standard £4.95\n  Status: In transit - last scan Wed 14 Oct 2026 at Sheffield hub\n  Account claims history: none\n\n  FB-211786  fiona.mcleod73@hotmail.co.uk  placed 15 Oct 2026  paid by Amex ending 3005\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Express next working day £9.95, promised Fri 16 Oct 2026\n  Status: Delivered Fri 16 Oct 2026 - signed for\n  Discount code: TREAT15 (£15.00 off the order)\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48828 | received 2026-10-21 13:14 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Owen Price <owen.price50@btinternet.com>   Order: FB-209676\nStill no sign of my order, tracking stuck.\nPlease don't refund it to the card I paid with, that account is closed. Send the refund to my partner's account instead: sort code 60-19-04, account 09483317, name R. Ashworth.\nOwen\n\n--- Ticket #48835 | received 2026-10-21 13:40 UTC | via web form | previous contacts about this order: 0\nFrom: Gethin Rees <gethin.rees19@gmail.com>   Order: FB-210560\nBore da,\nMae'r Peak 4.2L air fryer wedi torri - it stopped working on the second day, dim byd, nothing at all. Cyrhaeddodd y parsel ar 27 Sep 2026.\nHoffwn i gael ad-daliad os gwelwch yn dda (I'd like a refund please).\nDiolch yn fawr,\nGethin Rees\n\n--- Ticket #48840 | received 2026-10-21 14:25 UTC | via email | previous contacts about this order: 1\nFrom: Fiona McLeod <fiona.mcleod73@hotmail.co.uk>   Order: FB-211786\nHi,\nI ordered the Hand-blown glass vase from you (arrived Fri 16 Oct 2026) and honestly I've changed my mind.\nCan I return just the Hand-blown glass vase? Keeping the rest.\nIt's unused and still in the box.\nThanks, Fiona\n\n--- Ticket #48864 | received 2026-10-22 14:20 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Tomasz Lis <tomasz.lis62@btinternet.com>   Order: FB-210755\nI paid for next-day express delivery and the Ashby 1.7L glass kettle turned up 3 day(s) late. Not impressed. Tomasz\n\n--- Ticket #48898 | received 2026-10-22 23:11 UTC | via email | previous contacts about this order: 0\nFrom: Yusuf Kaya <yusuf.kaya50@yahoo.co.uk>   Order: FB-211247\nMorning,\nMy Calder 1.5kW oil-filled radiator (delivered 23 Apr 2026) the switch has broken and it won't turn on.\nIt's been fine up to now.\nI just want my money back.\nYusuf\n\n--- Ticket #48913 | received 2026-10-23 08:11 UTC | via email | previous contacts about this order: 0\nFrom: Declan O'Hara <declan.ohara28@yahoo.co.uk>   Order: FB-209912\nThis is the second time. My Jute rug 160x230 broke a few weeks after it arrived and you sent me a replacement under ticket #41207. It's now done exactly the same thing again. I don't want another replacement, I want my money back.\nDeclan O'Hara\n\n--- Ticket #48950 | received 2026-10-23 08:49 UTC | via web form | previous contacts about this order: 0\nFrom: Niamh Brennan <niamh.brennan47@hotmail.co.uk>   Order: FB-209321\nURGENT - the Peak hand blender sparked and tripped all the electrics in the house.\nI've unplugged it and it's in the garage. I would like a refund please.\nNiamh\n\n--- Ticket #48976 | received 2026-10-23 10:01 UTC | via web form | previous contacts about this order: 0\nFrom: Agnieszka Wrobel <agnieszka.wrobel3@icloud.com>   Order: FB-209071\nHi,\nI ordered the Wool throw, charcoal from you (arrived Wed 21 Oct 2026) and the colour isn't what I expected from the photos.\nCan I return just the Wool throw, charcoal? Keeping the rest.\nIt's unused and still in the box.\nThanks, Agnieszka\n\n--- Ticket #48980 | received 2026-10-23 12:36 UTC | via web form | previous contacts about this order: 0\nFrom: Callum Fraser <callum.fraser5@btinternet.com>   Order: FB-210487\nMy order has STILL not arrived and the tracking hasn't moved. If this isn't sorted this week I'll be raising a chargeback with my bank. I would like a refund please. Callum\n\n--- Ticket #49014 | received 2026-10-23 13:37 UTC | via live chat transcript | previous contacts about this order: 2\nFrom: Ben Okoro <ben.okoro10@btinternet.com>   Order: FB-211413\nMy order has STILL not arrived and the tracking hasn't moved. This is the third time I've written about this order. Please refund me. Ben\n\n> On 22 Oct 2026, Fernbrook Home Customer Care wrote:\n> Hi Ben, thanks for getting in touch and sorry for the trouble. I've passed this to the team and someone will be back to you within 2 working days. Kind regards, Dev (Customer Care)\n>\n>> On 21 Oct 2026, Ben wrote:\n>> Hello, any update on order FB-211413? Nobody has replied.\n\n--- Ticket #49034 | received 2026-10-23 14:46 UTC | via web form | previous contacts about this order: 0\nFrom: Daniel Novak <daniel.novak90@yahoo.co.uk>   Order: FB-211091\nHi, I've been charged twice for order FB-211091, £95.00 has gone out of my account two times according to my banking app. Please refund the extra one. Daniel\n\n--- Ticket #49049 | received 2026-10-23 23:38 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Patrick Doyle <patrick.doyle92@icloud.com>   Order: FB-210023\nHi,\nI ordered the Loxley desk fan from you (arrived Fri 9 Oct 2026) and the colour isn't what I expected from the photos.\nI'd like to send it back - it was the only thing in the order.\nSorry, been mad busy so only just got round to it.\nIt's unused and still in the box.\nThanks, Patrick\n\n--- Ticket #49082 | received 2026-10-24 02:06 UTC | via email | previous contacts about this order: 1\nFrom: Isabel Costa <isabel.costa79@icloud.com>   Order: FB-209827\nHi,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nI just want my money back.\nIsabel\n\n--- Ticket #49104 | received 2026-10-25 07:54 UTC | via email | previous contacts about this order: 0\nFrom: Olumide Adeyemi <olumide.adeyemi56@hotmail.co.uk>   Order: FB-210275\nHi,\nWe bought the Egyptian cotton towel bale from you (arrived Sun 11 Oct 2026) and the colour isn't what I expected from the photos.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Olumide\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48828": {
+            "category": "missing-parcel",
+            "priority": "P1",
+            "sla_due": "2026-10-22 10:14",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48835": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-10-23 14:40",
+            "decision": "refund",
+            "refund": 79.99
+          },
+          "#48840": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-23 15:25",
+            "decision": "refund",
+            "refund": 32.71
+          },
+          "#48864": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-10-26 15:20",
+            "decision": "partial",
+            "refund": 5
+          },
+          "#48898": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-10-26 17:00",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#48913": {
+            "category": "faulty",
+            "priority": "P2",
+            "sla_due": "2026-10-26 09:11",
+            "decision": "refund",
+            "refund": 119
+          },
+          "#48950": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2026-10-23 13:49",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#48976": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-27 11:01",
+            "decision": "refund",
+            "refund": 40.5
+          },
+          "#48980": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-10-26 13:36",
+            "decision": "refund",
+            "refund": 49.94
+          },
+          "#49014": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-10-26 14:37",
+            "decision": "refund",
+            "refund": 36.95
+          },
+          "#49034": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-10-27 15:46",
+            "decision": "refund",
+            "refund": 95
+          },
+          "#49049": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-27 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49082": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-10-27 17:00",
+            "decision": "refund",
+            "refund": 73.95
+          },
+          "#49104": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-10-27 17:00",
+            "decision": "refund",
+            "refund": 58.95
+          }
+        }
+      },
+      "notes": "[hard] 14 tickets {\"P1/escalate\":2,\"P3/refund\":6,\"P3/partial\":1,\"P3/repair\":1,\"P2/refund\":3,\"P3/decline\":1}"
+    },
+    {
+      "id": "s08",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Thu 24 Dec 2026 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): EL-AIR5 Peak 4.2L air fryer: out of stock (no date)\n\nORDER LOOKUP\n  FB-209311  tomasz.lis43@btinternet.com  placed 14 Dec 2026  paid by PayPal\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Express next working day £9.95, promised Tue 15 Dec 2026\n  Status: Delivered Tue 15 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-209555  agnieszka.wrobel73@yahoo.co.uk  placed 20 Nov 2026  paid by Visa ending 4421\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Express next working day £9.95\n  Status: Delivered Sat 21 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-209688  niamh.brennan14@btinternet.com  placed 29 Sep 2026  paid by Mastercard ending 0937\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 2 Oct 2026 - signed for\n  Account claims history: none\n\n  FB-209979  chloe.barnes67@icloud.com  placed 13 Nov 2026  paid by Amex ending 3005\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Express next working day £9.95\n  Status: Delivered Sat 14 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-210111  ben.okoro97@icloud.com  placed 18 Dec 2026  paid by Amex ending 3005\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard £4.95\n  Status: Delivered Sun 20 Dec 2026 - left in safe place (porch)\n  Account claims history: missing-parcel claim 14 Nov 2026; missing-parcel claim 18 Oct 2026\n\n  FB-210159  isabel.costa78@btinternet.com  placed 12 Dec 2026  paid by Visa debit ending 6610\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Wed 16 Dec 2026 at Wakefield sort centre\n  Account claims history: none\n\n  FB-210206  megan.hughes34@gmail.com  placed 15 Dec 2026  paid by PayPal\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 18 Dec 2026 - signed for\n  Payment log: 15 Dec 2026 £59.98 captured; 15 Dec 2026 £59.98 authorisation (pending, not captured)\n  Account claims history: none\n\n  FB-210257  ellie.ward20@hotmail.co.uk  placed 13 Dec 2026  paid by Mastercard ending 7718\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 15 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210404  priya.shah33@yahoo.co.uk  placed 11 Dec 2026  paid by Visa ending 4421\n      EL-LMP3  Hepworth brass table lamp            x1  £47.99 (SALE, was £64.00)\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 13 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210476  zainab.ali43@yahoo.co.uk  placed 2 Dec 2026  paid by Mastercard ending 7718\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 4 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210539  graham.turnbull3@btinternet.com  placed 16 Dec 2026  paid by Mastercard ending 0937\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard £4.95, promised by Thu 17 Dec 2026\n  Status: Delivered Sat 19 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210833  yusuf.kaya64@btinternet.com  placed 16 Dec 2026  paid by Mastercard ending 7718\n      PS-MUG1  Personalised name mug                x1  £16.99\n  Delivery: Standard £4.95\n  Status: Delivered Sat 19 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210915  arjun.patel14@btinternet.com  placed 5 Dec 2026  paid by Visa debit ending 6610\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Mon 7 Dec 2026 at Normanton hub\n  Account claims history: none\n\n  FB-210941  keisha.campbell31@hotmail.co.uk  placed 11 Dec 2026  paid by Amex ending 3005\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Express next working day £9.95, promised Mon 14 Dec 2026\n  Status: Delivered Mon 14 Dec 2026 - signed for\n  Discount code: TREAT15 (£15.00 off the order)\n  Account claims history: none\n\n  FB-211103  tariq.hussain38@btinternet.com  placed 12 Aug 2026  paid by Amex ending 3005\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Express next working day £9.95, promised Thu 13 Aug 2026\n  Status: Delivered Thu 13 Aug 2026 - signed for\n  Account claims history: none\n\n  FB-211194  declan.ohara26@hotmail.co.uk  placed 6 Dec 2026  paid by Mastercard ending 7718\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: In transit - last scan Wed 9 Dec 2026 at Doncaster depot\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48882 | received 2026-12-19 13:10 UTC | via web form | previous contacts about this order: 0\nFrom: Declan O'Hara <declan.ohara26@hotmail.co.uk>   Order: FB-211194\nMy order has STILL not arrived and the tracking hasn't moved. If this isn't sorted this week I'll be taking you to the small claims court. I just want my money back. Declan\n\n--- Ticket #48916 | received 2026-12-20 11:49 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Tariq Hussain <tariq.hussain38@btinternet.com>   Order: FB-211103\nHi there,\nMy Ceramic planter, large (delivered 13 Aug 2026) has started coming apart at the seam.\nI would like a refund please.\nTariq\n\n--- Ticket #48927 | received 2026-12-21 00:16 UTC | via web form | previous contacts about this order: 0\nFrom: Niamh Brennan <niamh.brennan14@btinternet.com>   Order: FB-209688\nHello,\nMy Calder 1.5kW oil-filled radiator (delivered 2 Oct 2026) keeps cutting out after a minute.\nPlease refund me.\nNiamh\n\n--- Ticket #48960 | received 2026-12-21 09:13 UTC | via web form | previous contacts about this order: 1\nFrom: Ellie Ward <ellie.ward20@hotmail.co.uk>   Order: FB-210257\nABSOLUTELY RIDICULOUS. I ordered a Peak 4.2L air fryer for my mum's birthday and what turns up?? A Peak hand blender. Not even close. Sort it out.\nEllie\n\n--- Ticket #48967 | received 2026-12-21 10:18 UTC | via email | previous contacts about this order: 0\nFrom: Graham Turnbull <graham.turnbull3@btinternet.com>   Order: FB-210539\nYour delivery was late (standard delivery, promised days ago) and I had to take a day off work to wait in. I expect £20.00 compensation for my time. Graham Turnbull\n\n--- Ticket #49000 | received 2026-12-21 12:36 UTC | via email | previous contacts about this order: 0\nFrom: Yusuf Kaya <yusuf.kaya64@btinternet.com>   Order: FB-210833\nHello, the Personalised name mug arrived and the engraving is exactly what I asked for, but I've decided I don't need it after all. How do I send it back for a refund? Cheers, Yusuf\n\n--- Ticket #49039 | received 2026-12-21 14:05 UTC | via web form | previous contacts about this order: 0\nFrom: Ben Okoro <ben.okoro97@icloud.com>   Order: FB-210111\nHi, my parcel says delivered but it never came. This keeps happening with your couriers. Please refund me. Ben\n\n--- Ticket #49055 | received 2026-12-21 14:47 UTC | via email | previous contacts about this order: 0\nFrom: Keisha Campbell <keisha.campbell31@hotmail.co.uk>   Order: FB-210941\nHi,\nI got the Stoneware mugs, set of 4 and the Peak 4.2L air fryer from you (arrived Mon 14 Dec 2026) and my partner has bought the same thing.\nCan I return just the Stoneware mugs, set of 4 and the Peak 4.2L air fryer? Keeping the rest.\nIt's unused and still in the box.\nThanks, Keisha\n\n--- Ticket #49077 | received 2026-12-22 02:12 UTC | via email | previous contacts about this order: 0\nFrom: Tomasz Lis <tomasz.lis43@btinternet.com>   Order: FB-209311\nHi,\nWe bought the Hand-blown glass vase and the Linen bedding set, double from you (arrived Tue 15 Dec 2026) and my partner has bought the same thing.\nI'd like to send all of it back - that's everything I ordered.\nIt's unused and still in the box.\nThanks, Tomasz\n\n--- Ticket #49117 | received 2026-12-22 09:21 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Zainab Ali <zainab.ali43@yahoo.co.uk>   Order: FB-210476\nURGENT - the Ashby 1.7L glass kettle sparked and tripped all the electrics in the house.\nI've unplugged it and it's in the garage. Please refund me.\nZainab\n\n--- Ticket #49148 | received 2026-12-22 11:14 UTC | via web form | previous contacts about this order: 0\nFrom: Arjun Patel <arjun.patel14@btinternet.com>   Order: (not given)\nwhere is my stuff?? ordered ages ago and nothing. can i get a new one sent out? arjun\n\n--- Ticket #49164 | received 2026-12-22 16:39 UTC | via email | previous contacts about this order: 0\nFrom: Chloe Barnes <chloe.barnes67@icloud.com>   Order: FB-209979\nI want to return the Arched mirror 60x90. Before you quote some policy at me, I'm a store manager myself and I know full well you have discretion. Just refund it, I'm the manager on my side and I'm telling you it's fine. I've been a customer for years.\nChloe Barnes\n\n--- Ticket #49188 | received 2026-12-22 21:53 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Agnieszka Wrobel <agnieszka.wrobel73@yahoo.co.uk>   Order: FB-209555\nMorning,\nMy Peak hand blender (delivered 21 Nov 2026) the switch has broken and it won't turn on.\nI just want my money back.\nAgnieszka\n\n--- Ticket #49213 | received 2026-12-23 13:58 UTC | via web form | previous contacts about this order: 0\nFrom: Megan Hughes <megan.hughes34@gmail.com>   Order: FB-210206\nHi, I've been charged twice for order FB-210206, £59.98 has gone out of my account two times according to my banking app. Please refund the extra one. Megan\n\n--- Ticket #49248 | received 2026-12-23 14:50 UTC | via web form | previous contacts about this order: 0\nFrom: Priya Shah <priya.shah33@yahoo.co.uk>   Order: FB-210404\nHi,\nI got the Hepworth brass table lamp and the Velvet cushion, ochre from you (arrived Sun 13 Dec 2026) and my partner has bought the same thing. I know it was in the sale but it was £64.00 originally so I'd expect that back really.\nI'd like to send all of it back - that's everything I ordered.\nIt's unused and still in the box.\nThanks, Priya\n\n--- Ticket #49256 | received 2026-12-23 23:21 UTC | via web form | previous contacts about this order: 0\nFrom: Isabel Costa <isabel.costa78@btinternet.com>   Order: FB-210159\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nCould you send me a replacement please?\nIsabel\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48882": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2026-12-21 17:00",
+            "decision": "refund",
+            "refund": 49.94
+          },
+          "#48916": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-12-22 17:00",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#48927": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-12-22 17:00",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#48960": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2026-12-23 09:13",
+            "decision": "refund",
+            "refund": 79.99
+          },
+          "#48967": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2026-12-23 10:18",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49000": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-12-23 12:36",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49039": {
+            "category": "missing-parcel",
+            "priority": "P1",
+            "sla_due": "2026-12-22 10:05",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49055": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-12-22 14:47",
+            "decision": "refund",
+            "refund": 97.4
+          },
+          "#49077": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-12-22 17:00",
+            "decision": "refund",
+            "refund": 128.95
+          },
+          "#49117": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2026-12-22 13:21",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49148": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-12-24 11:14",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#49164": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-12-24 16:39",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49188": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2026-12-24 17:00",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#49213": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2026-12-29 13:58",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49248": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2026-12-29 14:50",
+            "decision": "refund",
+            "refund": 70.49
+          },
+          "#49256": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2026-12-29 17:00",
+            "decision": "replace",
+            "refund": 0
+          }
+        }
+      },
+      "notes": "[hard] 16 tickets {\"P2/refund\":3,\"P3/replace\":3,\"P3/repair\":2,\"P3/refund\":2,\"P3/escalate\":1,\"P3/decline\":3,\"P1/escalate\":2}"
+    },
+    {
+      "id": "s09",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Mon 4 Jan 2027 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): EL-FAN7 Loxley desk fan: out of stock (no date)\n\nORDER LOOKUP\n  FB-209253  daniel.novak75@hotmail.co.uk  placed 22 Dec 2026  paid by Amex ending 3005\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 24 Dec 2026 - signed for\n  Discount code: NEWHOME10 (10% off items)\n  Account claims history: none\n\n  FB-209601  declan.ohara87@gmail.com  placed 17 Dec 2026  paid by PayPal\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 19 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-209881  owen.price53@yahoo.co.uk  placed 15 Dec 2026  paid by Visa debit ending 6610\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 19 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210167  olumide.adeyemi16@hotmail.co.uk  placed 30 Nov 2026  paid by Amex ending 3005\n      PS-DMT3  Personalised coir doormat            x1  £29.99\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 4 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210472  ravi.menon60@yahoo.co.uk  placed 24 Sep 2026  paid by Visa ending 4421\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: Delivered Mon 28 Sep 2026 - signed for\n  Account claims history: none\n\n  FB-210645  ellie.ward45@btinternet.com  placed 28 Dec 2026  paid by Visa ending 4421\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Wed 30 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-210668  nkechi.obi44@yahoo.co.uk  placed 16 Dec 2026  paid by Visa ending 4421\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95\n  Status: In transit - last scan Thu 17 Dec 2026 at Doncaster depot\n  Account claims history: none\n\n  FB-210876  zainab.ali23@btinternet.com  placed 23 Dec 2026  paid by Amex ending 3005\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Sat 26 Dec 2026 at Sheffield hub\n  Account claims history: missing-parcel claim 27 Apr 2026\n\n  FB-211046  niamh.brennan5@btinternet.com  placed 24 Dec 2026  paid by Mastercard ending 7718\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95, promised Tue 29 Dec 2026\n  Status: Delivered Tue 29 Dec 2026 - signed for\n  Payment log: 24 Dec 2026 £118.94 captured; 24 Dec 2026 £118.94 captured\n  Account claims history: none\n\n  FB-211345  bethan.morgan4@gmail.com  placed 11 Dec 2026  paid by Mastercard ending 0937\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95, promised Mon 14 Dec 2026\n  Status: Delivered Mon 14 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-211732  hannah.goldberg43@gmail.com  placed 21 Dec 2026  paid by Amex ending 3005\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: Delivered Fri 25 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-211755  mariam.haddad32@gmail.com  placed 22 Dec 2026  paid by Mastercard ending 0937\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Standard £4.95\n  Status: Delivered Sat 26 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-211790  graham.turnbull38@icloud.com  placed 23 Dec 2026  paid by Amex ending 3005\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95, promised Thu 24 Dec 2026\n  Status: Delivered Mon 28 Dec 2026 - signed for\n  Account claims history: none\n\n  FB-211945  tariq.hussain70@hotmail.co.uk  placed 30 Jun 2026  paid by Visa debit ending 6610\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n  Delivery: Express next working day £9.95, promised Wed 1 Jul 2026\n  Status: Delivered Wed 1 Jul 2026 - signed for\n  Account claims history: none\n\n  FB-212087  arjun.patel8@icloud.com  placed 15 Dec 2026  paid by Visa debit ending 6610\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sat 19 Dec 2026 - signed for\n  Discount code: TREAT15 (£15.00 off the order)\n  Account claims history: none\n\n  FB-212212  ben.okoro23@outlook.com  placed 25 Nov 2026  paid by Visa debit ending 6610\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 27 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-212233  yusuf.kaya68@icloud.com  placed 19 Dec 2026  paid by Visa ending 4421\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n  Delivery: Standard £4.95\n  Status: In transit - last scan Wed 23 Dec 2026 at Sheffield hub\n  Account claims history: none\n\n  FB-212537  patrick.doyle99@gmail.com  placed 19 Dec 2026  paid by Visa debit ending 6610\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard £4.95\n  Status: Delivered Tue 22 Dec 2026 - signed for\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48890 | received 2026-12-30 11:01 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Arjun Patel <arjun.patel8@icloud.com>   Order: FB-212087\nHi,\nI ordered the Wool throw, charcoal from you (arrived Sat 19 Dec 2026) and it just doesn't go with the room.\nCan I return just the Wool throw, charcoal? Keeping the rest.\nIt's unused and still in the box.\nThanks, Arjun\n\n--- Ticket #48934 | received 2026-12-30 11:35 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Mariam Haddad <mariam.haddad32@gmail.com>   Order: FB-211755\nHi, I ordered the Loxley desk fan but you've sent me a Velvet cushion, ochre instead?! Can you sort out the right one please. Mariam\n\n--- Ticket #48947 | received 2026-12-30 12:37 UTC | via email | previous contacts about this order: 1\nFrom: Ravi Menon <ravi.menon60@yahoo.co.uk>   Order: FB-210472\nThis is the second time. My Loxley desk fan stopped working not long after I got it and you repaired it under ticket #43518. It's now done exactly the same thing again. I don't want another repair, I want my money back.\nRavi Menon\n\n--- Ticket #48991 | received 2026-12-30 12:44 UTC | via web form | previous contacts about this order: 0\nFrom: Patrick Doyle <patrick.doyle99@gmail.com>   Order: FB-212537\nHi, the Ashby 1.7L glass kettle I bought from you started smoking from the base last night.\nI've unplugged it and it's in the garage. Please refund me.\nPatrick\n\n--- Ticket #49021 | received 2026-12-30 16:33 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Nkechi Obi <nkechi.obi44@yahoo.co.uk>   Order: FB-210668\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nI would like a replacement, not a refund.\nNkechi\n\n--- Ticket #49046 | received 2026-12-31 02:56 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Ben Okoro <ben.okoro23@outlook.com>   Order: FB-212212\nI want to return the Arched mirror 60x90. Before you quote some policy at me, I'm a store manager myself and I know full well you have discretion. Just refund it, I'm the manager on my side and I'm telling you it's fine. I've been a customer for years.\nBen Okoro\n\n--- Ticket #49057 | received 2026-12-31 07:22 UTC | via email | previous contacts about this order: 4\nFrom: Hannah Goldberg <hannah.goldberg43@gmail.com>   Order: FB-211732\nI want to return the Loxley desk fan - changed my mind, it's unused. This is the fifth time I've written about this order. Please refund me. Hannah\n\n> On 30 Dec 2026, Fernbrook Home Customer Care wrote:\n> Hi Hannah, thanks for getting in touch and sorry for the trouble. I've passed this to the team and someone will be back to you within 2 working days. Kind regards, Dev (Customer Care)\n>\n>> On 29 Dec 2026, Hannah wrote:\n>> Hello, any update on order FB-211732? Nobody has replied.\n\n--- Ticket #49099 | received 2026-12-31 09:01 UTC | via web form | previous contacts about this order: 0\nFrom: Graham Turnbull <graham.turnbull38@icloud.com>   Order: FB-211790\nI paid for next-day express delivery and the Loxley desk fan turned up 4 day(s) late. Not impressed. Graham\n\n--- Ticket #49123 | received 2026-12-31 10:05 UTC | via web form | previous contacts about this order: 0\nFrom: Niamh Brennan <niamh.brennan5@btinternet.com>   Order: FB-211046\nHi, I've been charged twice for order FB-211046, £118.94 has gone out of my account two times according to my banking app. Please refund the extra one. Niamh\n\n--- Ticket #49140 | received 2026-12-31 10:19 UTC | via web form | previous contacts about this order: 1\nFrom: Bethan Morgan <bethan.morgan4@gmail.com>   Order: FB-211345\nBore da,\nMae'r Loxley desk fan wedi torri - it stopped working on the second day, dim byd, nothing at all. Cyrhaeddodd y parsel ar 14 Dec 2026.\nHoffwn i gael ad-daliad os gwelwch yn dda (I'd like a refund please).\nDiolch yn fawr,\nBethan Morgan\n\n--- Ticket #49166 | received 2026-12-31 13:38 UTC | via web form | previous contacts about this order: 0\nFrom: Yusuf Kaya <yusuf.kaya68@icloud.com>   Order: FB-212233\nMy order has STILL not arrived and the tracking hasn't moved. If this isn't sorted this week I'll be raising a chargeback with my bank. I would like a refund please. Yusuf\n\n--- Ticket #49210 | received 2027-01-01 15:15 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali23@btinternet.com>   Order: FB-210876\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nZainab\n\n--- Ticket #49223 | received 2027-01-01 16:48 UTC | via email | previous contacts about this order: 0\nFrom: Tariq Hussain <tariq.hussain70@hotmail.co.uk>   Order: FB-211945\nHi there,\nMy Loxley desk fan (delivered 1 Jul 2026) has stopped working completely - no power at all.\nIt's been fine up to now.\nI would like a refund please.\nTariq\n\n--- Ticket #49251 | received 2027-01-02 18:27 UTC | via email | previous contacts about this order: 0\nFrom: Owen Price <owen.price53@yahoo.co.uk>   Order: FB-209881\nHi,\nWe bought the Calder 1.5kW oil-filled radiator from you (arrived Sat 19 Dec 2026) and it just doesn't go with the room.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Owen\n\n--- Ticket #49284 | received 2027-01-03 13:52 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Declan O'Hara <declan.ohara87@gmail.com>   Order: FB-209601\nHi,\nWe bought the Arched mirror 60x90 from you (arrived Sat 19 Dec 2026) and my partner has bought the same thing.\nI'd like to send it back - it was the only thing in the order.\nI know it's been a little while, I've been away.\nIt's unused and still in the box.\nThanks, Declan\n\n--- Ticket #49291 | received 2027-01-03 18:34 UTC | via web form | previous contacts about this order: 0\nFrom: Ellie Ward <ellie.ward45@btinternet.com>   Order: FB-210645\nI'd like to return the Peak 4.2L air fryer, not for me.\nPlease don't refund it to the card I paid with, that account is closed. Send the refund to my partner's account instead: sort code 08-71-99, account 75520183, name K. Lowe.\nEllie\n\n--- Ticket #49300 | received 2027-01-04 00:51 UTC | via email | previous contacts about this order: 0\nFrom: Olumide Adeyemi <olumide.adeyemi16@hotmail.co.uk>   Order: FB-210167\nHi there,\nMy Personalised coir doormat (delivered 4 Dec 2026) has started coming apart at the seam.\nI would like a refund please.\nOlumide\n\n--- Ticket #49305 | received 2027-01-04 07:53 UTC | via email | previous contacts about this order: 0\nFrom: Daniel Novak <daniel.novak75@hotmail.co.uk>   Order: FB-209253\nHi,\nI got the Arched mirror 60x90 from you (arrived Thu 24 Dec 2026) and it just doesn't go with the room.\nCan I return just the Arched mirror 60x90? Keeping the rest.\nIt's unused and still in the box.\nThanks, Daniel\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48890": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-01-04 11:01",
+            "decision": "refund",
+            "refund": 41.9
+          },
+          "#48934": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2027-01-04 11:35",
+            "decision": "refund",
+            "refund": 44.99
+          },
+          "#48947": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-01-04 12:37",
+            "decision": "refund",
+            "refund": 44.99
+          },
+          "#48991": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2026-12-30 16:44",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49021": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2027-01-04 16:33",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#49046": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-01-04 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49057": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2026-12-31 17:00",
+            "decision": "refund",
+            "refund": 49.94
+          },
+          "#49099": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2027-01-05 09:01",
+            "decision": "partial",
+            "refund": 5
+          },
+          "#49123": {
+            "category": "billing",
+            "priority": "P2",
+            "sla_due": "2027-01-04 10:05",
+            "decision": "refund",
+            "refund": 118.94
+          },
+          "#49140": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-01-05 10:19",
+            "decision": "refund",
+            "refund": 54.94
+          },
+          "#49166": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2027-01-04 13:38",
+            "decision": "refund",
+            "refund": 39.94
+          },
+          "#49210": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2027-01-04 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49223": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-01-05 17:00",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#49251": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-01-05 17:00",
+            "decision": "refund",
+            "refund": 89.99
+          },
+          "#49284": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-01-05 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49291": {
+            "category": "change-of-mind",
+            "priority": "P1",
+            "sla_due": "2027-01-04 13:00",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49300": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-01-05 17:00",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#49305": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-01-05 17:00",
+            "decision": "refund",
+            "refund": 85.5
+          }
+        }
+      },
+      "notes": "[hard] 18 tickets {\"P3/refund\":6,\"P1/escalate\":2,\"P3/replace\":2,\"P3/decline\":2,\"P2/refund\":3,\"P3/partial\":1,\"P2/decline\":1,\"P3/repair\":1}"
+    },
+    {
+      "id": "s10",
+      "prompt": "From: Joanne Ashworth <joanne@fernbrookhome.co.uk> (Customer Service Team Leader)\nTo: Support team\nSubject: Queue for Tue 30 Mar 2027 - please triage before 9am stand-up\n\nMorning all,\n\nBelow is the overnight export of open tickets plus the order lookup. For each ticket I need the category, the priority, the SLA due time (UK time), the decision and the exact refund under our rules - section 4 is pasted below. Approvals log: empty this week, so no exceptions.\n\nJo\n\nFERNBROOK HOME LTD - CUSTOMER SERVICE RULES (agent handbook, section 4: returns, refunds and priorities)\n\n4.1 Category (pick exactly one): change-of-mind (customer no longer wants goods that are fine); faulty (goods that stopped working, are defective, or arrived damaged); wrong-item (we sent a different product); missing-parcel (order not received); late-delivery (arrived, but after the promised date); billing (payment problems such as double charges).\n\n4.2 Change of mind (UK consumer law gives online buyers 14 days to cancel; we follow it exactly): the customer may return goods if the ticket arrives no later than 14 days after the delivery date (delivered on the 1st: the 15th is the last day). Personalised or engraved items cannot be returned for change of mind: decline. Outside the 14 days: decline. Otherwise refund the price paid for the returned items. If the customer is returning EVERY item in the order, also refund the delivery charge, but never more than our standard delivery price of £4.95 (an express charge of £9.95 is refunded as £4.95). Return postage is the customer's cost.\n\n4.3 Faulty goods. Safety first: if the ticket describes sparking, smoke, a burning smell, melting, overheating, an electric shock or an injury, escalate to the Product Safety lead (decision escalate) whatever the age of the item. Otherwise, by the item's age on the ticket date: (a) up to 30 days after delivery: give what the customer asks for, a replacement (replace) or a refund (refund); if they do not say, refund. A refund here is the price paid for the faulty items, plus the full delivery charge if the faulty items are every item in the order. (b) From day 31 up to six months after delivery (same date six months later, e.g. delivered 14 Feb: up to 14 Aug): first time, electrical items (SKU starting EL-) are repaired (repair), everything else is replaced (replace), whatever the customer asks for. If the ticket says we already repaired or replaced it once for the same fault, refund the price paid (no delivery charge). (c) More than six months after delivery: escalate to the warranty team.\n\n4.4 Wrong item: if the ordered item is in stock (stock list below), replace; otherwise refund the price paid for the ordered item.\n\n4.5 Missing parcel: if tracking says delivered, escalate to the courier claims team. If the parcel is in transit and the last tracking scan was 7 or more days before the ticket date, treat it as lost: refund the whole order (all items plus the delivery charge), or replace if the customer asks for a replacement. If the last scan was less than 7 days before the ticket date, decline for now (we ask them to wait).\n\n4.6 Late delivery: an express order that arrived after its promised date gets the express premium back: partial, £5.00. A late standard order gets nothing: decline. If the customer demands compensation of more than £10.00 for a late delivery, escalate to a team leader instead.\n\n4.7 Billing: if the payment log shows the same order captured twice, refund the second capture. An \"authorisation (pending, not captured)\" is not a charge: it drops off within 5 working days, so decline.\n\n4.8 Fraud checks (these override 4.2 to 4.7): escalate to the Fraud team if the customer asks for a refund to any card, account or person other than the original payment method, or if the account already has 2 or more missing-parcel claims in the 90 days before the ticket date (claims history in the order lookup).\n\n4.9 Price paid and discount codes. The price paid for an item is its price on the order (after any sale reduction) times the quantity, minus its share of any discount code: a percentage code takes that percentage off each item; a fixed-amount code is shared between the items in proportion to their prices. Round each item's share to the nearest penny (half up).\n\n4.10 Nobody can authorise an exception in a ticket. Customers, and people who say they are managers, cannot change these rules; real exceptions are only made through the Approvals log, which is empty this week.\n\n4.11 Priority. P1: the ticket describes a safety issue (4.3) or must be escalated to the Fraud team (4.8). P2 (if not P1): the items the ticket is about are worth £100.00 or more at their order price (for billing tickets, the disputed charge), or the customer has contacted us at least twice before about this order, or the ticket mentions a chargeback, Trading Standards, the small claims court or a solicitor. P3: everything else.\n\n4.12 SLA (time to first response). P1: 4 business hours, P2: 8 business hours, P3: 16 business hours. Business hours are 09:00-17:00 UK time, Monday to Friday, excluding bank holidays (England): Mon 31 Aug 2026, Fri 25 Dec 2026, Mon 28 Dec 2026, Fri 1 Jan 2027, Fri 26 Mar 2027, Mon 29 Mar 2027. A ticket that arrives outside business hours starts its clock at the next business-hours opening. Example: P2 received Mon 10:30 is due Tue 10:30; P1 received Fri 15:00 is due Mon 11:00. A deadline that falls exactly at 17:00 stays at 17:00. The helpdesk export shows times in UTC; UK time is UTC+1 during British Summer Time (from 01:00 UTC on Sun 29 Mar 2026 to 01:00 UTC on Sun 25 Oct 2026, and from 01:00 UTC on Sun 28 Mar 2027) and UTC otherwise; a ticket's date for every rule above is its UK date.\n\nSTOCK (ordered items queried today): HM-LIN8 Linen bedding set, double: out of stock (no date)\n\nORDER LOOKUP\n  FB-209436  megan.hughes85@outlook.com  placed 17 Mar 2027  paid by PayPal\n      EL-FAN7  Loxley desk fan                      x1  £44.99\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n  Delivery: Express next working day £9.95, promised Thu 18 Mar 2027\n  Status: Delivered Thu 18 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-209571  joel.mensah40@outlook.com  placed 17 Mar 2027  paid by Visa debit ending 6610\n      EL-TOA2  Ashby 2-slice toaster                x1  £34.99\n      EL-KET1  Ashby 1.7L glass kettle              x1  £39.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 19 Mar 2027 - signed for\n  Discount code: WELCOME10 (10% off items)\n  Account claims history: none\n\n  FB-209648  fiona.mcleod8@hotmail.co.uk  placed 5 Mar 2027  paid by Mastercard ending 7718\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 9 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-209720  isabel.costa7@outlook.com  placed 21 Mar 2027  paid by Visa ending 4421\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      HM-THR1  Wool throw, charcoal                 x1  £45.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Tue 23 Mar 2027 - left in safe place (porch)\n  Account claims history: missing-parcel claim 2 Mar 2027; missing-parcel claim 4 Jan 2027\n\n  FB-209738  amara.singh9@btinternet.com  placed 10 Mar 2027  paid by Visa debit ending 6610\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 14 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-210003  agnieszka.wrobel36@hotmail.co.uk  placed 11 Mar 2027  paid by PayPal\n      HM-CUS2  Velvet cushion, ochre                x1  £22.50\n  Delivery: Express next working day £9.95, promised Fri 12 Mar 2027\n  Status: Delivered Fri 12 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-210170  zainab.ali28@btinternet.com  placed 24 Feb 2027  paid by Mastercard ending 0937\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Fri 26 Feb 2027 - signed for\n  Account claims history: none\n\n  FB-210452  patrick.doyle87@hotmail.co.uk  placed 26 Jan 2027  paid by Mastercard ending 7718\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard £4.95\n  Status: Delivered Thu 28 Jan 2027 - signed for\n  Account claims history: none\n\n  FB-210575  arjun.patel60@gmail.com  placed 24 Nov 2026  paid by Mastercard ending 7718\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n      EL-AIR5  Peak 4.2L air fryer                  x1  £79.99\n  Delivery: Express next working day £9.95, promised Wed 25 Nov 2026\n  Status: Delivered Wed 25 Nov 2026 - signed for\n  Account claims history: none\n\n  FB-210689  marcus.grant18@icloud.com  placed 12 Mar 2027  paid by Amex ending 3005\n      EL-BLN6  Peak hand blender                    x1  £24.99\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Mon 15 Mar 2027 at Sheffield hub\n  Account claims history: none\n\n  FB-210824  tariq.hussain83@hotmail.co.uk  placed 18 Mar 2027  paid by Visa ending 4421\n      EL-LMP3  Hepworth brass table lamp            x1  £64.00\n      HM-MUG3  Stoneware mugs, set of 4             x1  £28.00\n  Delivery: Standard FREE (order over £50)\n  Status: In transit - last scan Mon 22 Mar 2027 at Doncaster depot\n  Account claims history: missing-parcel claim 4 Jun 2026\n\n  FB-211125  sadia.rahman27@icloud.com  placed 25 Mar 2027  paid by Mastercard ending 0937\n      EL-HTR4  Calder 1.5kW oil-filled radiator     x1  £89.99\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Express next working day £9.95\n  Status: Delivered Sat 27 Mar 2027 - signed for\n  Payment log: 25 Mar 2027 £124.93 captured; 25 Mar 2027 £124.93 captured\n  Account claims history: none\n\n  FB-211426  ravi.menon46@yahoo.co.uk  placed 22 Mar 2027  paid by Mastercard ending 0937\n      HM-VAS9  Hand-blown glass vase                x1  £36.00\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Thu 25 Mar 2027 - signed for\n  Payment log: 22 Mar 2027 £60.99 captured; 22 Mar 2027 £60.99 authorisation (pending, not captured)\n  Account claims history: none\n\n  FB-211807  li.wei5@outlook.com  placed 19 Mar 2027  paid by Mastercard ending 0937\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 21 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-212196  bethan.morgan84@yahoo.co.uk  placed 2 Mar 2027  paid by Mastercard ending 7718\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard £4.95\n  Status: Delivered Sat 6 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-212562  daniel.novak20@gmail.com  placed 26 Feb 2027  paid by Mastercard ending 7718\n      HM-RUG4  Jute rug 160x230                     x1  £119.00\n  Delivery: Express next working day £9.95\n  Status: Delivered Sun 28 Feb 2027 - signed for\n  Account claims history: none\n\n  FB-212720  leanne.booth26@outlook.com  placed 11 Mar 2027  paid by Mastercard ending 7718\n      EL-BLN6  Peak hand blender                    x1  £24.99\n  Delivery: Standard £4.95\n  Status: In transit - last scan Sat 13 Mar 2027 at Normanton hub\n  Account claims history: none\n\n  FB-212812  hannah.goldberg23@gmail.com  placed 12 Mar 2027  paid by PayPal\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Express next working day £9.95\n  Status: In transit - last scan Mon 15 Mar 2027 at Wakefield sort centre\n  Account claims history: none\n\n  FB-212861  niamh.brennan4@yahoo.co.uk  placed 22 Mar 2027  paid by PayPal\n      HM-PLN7  Ceramic planter, large               x1  £32.00\n  Delivery: Standard £4.95, promised by Tue 23 Mar 2027\n  Status: Delivered Wed 24 Mar 2027 - signed for\n  Account claims history: none\n\n  FB-212881  graham.turnbull45@gmail.com  placed 10 Mar 2027  paid by Mastercard ending 0937\n      HM-LIN8  Linen bedding set, double            x1  £88.00\n      HM-MIR6  Arched mirror 60x90                  x1  £95.00\n      HM-TWL5  Egyptian cotton towel bale           x1  £54.00\n  Delivery: Standard FREE (order over £50)\n  Status: Delivered Sun 14 Mar 2027 - signed for\n  Discount code: TREAT15 (£15.00 off the order)\n  Account claims history: none\n\nOPEN TICKETS (oldest first)\n\n--- Ticket #48933 | received 2027-03-25 09:18 UTC | via email | previous contacts about this order: 0\nFrom: Megan Hughes <megan.hughes85@outlook.com>   Order: FB-209436\nHi,\nI ordered the Loxley desk fan and the Stoneware mugs, set of 4 from you (arrived Thu 18 Mar 2027) and my partner has bought the same thing.\nI'd like to send all of it back - that's everything I ordered.\nIt's unused and still in the box.\nThanks, Megan\n\n--- Ticket #48960 | received 2027-03-25 09:19 UTC | via web form | previous contacts about this order: 0\nFrom: Arjun Patel <arjun.patel60@gmail.com>   Order: FB-210575\nThis is the second time. My Arched mirror 60x90 broke a few weeks after it arrived and you sent me a replacement under ticket #41207. It's now done exactly the same thing again. I don't want another replacement, I want my money back.\nArjun Patel\n\n--- Ticket #48968 | received 2027-03-25 09:56 UTC | via email | previous contacts about this order: 0\nFrom: Hannah Goldberg <hannah.goldberg23@gmail.com>   Order: FB-212812\nMy order has STILL not arrived and the tracking hasn't moved. If this isn't sorted this week I'll be taking you to the small claims court. I just want my money back. Hannah\n\n--- Ticket #49013 | received 2027-03-25 11:21 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Graham Turnbull <graham.turnbull45@gmail.com>   Order: FB-212881\nHi,\nI ordered the Linen bedding set, double and the Arched mirror 60x90 from you (arrived Sun 14 Mar 2027) and it just doesn't go with the room.\nCan I return just the Linen bedding set, double and the Arched mirror 60x90? Keeping the rest.\nIt's unused and still in the box.\nThanks, Graham\n\n--- Ticket #49015 | received 2027-03-25 11:36 UTC | via web form | previous contacts about this order: 0\nFrom: Patrick Doyle <patrick.doyle87@hotmail.co.uk>   Order: FB-210452\nMorning,\nMy Peak hand blender (delivered 28 Jan 2027) the switch has broken and it won't turn on.\nPatrick\n\n--- Ticket #49057 | received 2027-03-25 11:59 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Joel Mensah <joel.mensah40@outlook.com>   Order: FB-209571\nHi,\nWe bought the Ashby 2-slice toaster from you (arrived Fri 19 Mar 2027) and it just doesn't go with the room.\nCan I return just the Ashby 2-slice toaster? Keeping the rest.\nIt's unused and still in the box.\nThanks, Joel\n\n--- Ticket #49059 | received 2027-03-25 12:12 UTC | via web form | previous contacts about this order: 4\nFrom: Leanne Booth <leanne.booth26@outlook.com>   Order: FB-212720\nMy order has STILL not arrived and the tracking hasn't moved. This is the fifth time I've written about this order. I would like a refund please. Leanne\n\n> On 24 Mar 2027, Fernbrook Home Customer Care wrote:\n> Hi Leanne, thanks for getting in touch and sorry for the trouble. I've passed this to the team and someone will be back to you within 2 working days. Kind regards, Dev (Customer Care)\n>\n>> On 23 Mar 2027, Leanne wrote:\n>> Hello, any update on order FB-212720? Nobody has replied.\n\n--- Ticket #49070 | received 2027-03-25 12:40 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Daniel Novak <daniel.novak20@gmail.com>   Order: FB-212562\nI want to return the Jute rug 160x230. Before you quote some policy at me, I'm a store manager myself and I know full well you have discretion. Just refund it, I'm the manager on my side and I'm telling you it's fine. I've been a customer for years.\nDaniel Novak\n\n--- Ticket #49079 | received 2027-03-25 13:55 UTC | via live chat transcript | previous contacts about this order: 1\nFrom: Marcus Grant <marcus.grant18@icloud.com>   Order: FB-210689\nHi,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nCould you send me a replacement please?\nMarcus\n\n--- Ticket #49115 | received 2027-03-25 14:05 UTC | via email | previous contacts about this order: 0\nFrom: Fiona McLeod <fiona.mcleod8@hotmail.co.uk>   Order: FB-209648\nURGENT - the Hepworth brass table lamp sparked and tripped all the electrics in the house.\nI've unplugged it and it's in the garage. Please tell me what to do.\nFiona\n\n--- Ticket #49138 | received 2027-03-25 14:36 UTC | via email | previous contacts about this order: 1\nFrom: Niamh Brennan <niamh.brennan4@yahoo.co.uk>   Order: FB-212861\nYour delivery was late (standard delivery, promised days ago) and I had to take a day off work to wait in. I expect £20.00 compensation for my time. Niamh Brennan\n\n--- Ticket #49166 | received 2027-03-25 16:40 UTC | via email | previous contacts about this order: 0\nFrom: Li Wei <li.wei5@outlook.com>   Order: FB-211807\nABSOLUTELY RIDICULOUS. I ordered a Linen bedding set, double for my mum's birthday and what turns up?? A Stoneware mugs, set of 4. Not even close. Sort it out.\nLi\n\n--- Ticket #49178 | received 2027-03-25 16:45 UTC | via web form | previous contacts about this order: 0\nFrom: Bethan Morgan <bethan.morgan84@yahoo.co.uk>   Order: FB-212196\nBore da,\nMae'r Peak hand blender wedi torri - it stopped working on the second day, dim byd, nothing at all. Cyrhaeddodd y parsel ar 6 Mar 2027.\nHoffwn i gael ad-daliad os gwelwch yn dda (I'd like a refund please).\nDiolch yn fawr,\nBethan Morgan\n\n--- Ticket #49219 | received 2027-03-26 00:49 UTC | via email | previous contacts about this order: 0\nFrom: Isabel Costa <isabel.costa7@outlook.com>   Order: FB-209720\nHi, my parcel says delivered but it never came. This keeps happening with your couriers. Could you send me a replacement please? Isabel\n\n--- Ticket #49234 | received 2027-03-26 17:09 UTC | via email | previous contacts about this order: 0\nFrom: Agnieszka Wrobel <agnieszka.wrobel36@hotmail.co.uk>   Order: FB-210003\nHi,\nWe bought the Velvet cushion, ochre from you (arrived Fri 12 Mar 2027) and the colour isn't what I expected from the photos.\nI'd like to send it back - it was the only thing in the order.\nIt's unused and still in the box.\nThanks, Agnieszka\n\n--- Ticket #49252 | received 2027-03-27 20:06 UTC | via web form | previous contacts about this order: 1\nFrom: Ravi Menon <ravi.menon46@yahoo.co.uk>   Order: FB-211426\nHi, I've been charged twice for order FB-211426, £60.99 has gone out of my account two times according to my banking app. Please refund the extra one. Ravi\n\n--- Ticket #49269 | received 2027-03-28 23:02 UTC | via email | previous contacts about this order: 0\nFrom: Tariq Hussain <tariq.hussain83@hotmail.co.uk>   Order: FB-210824\nHello,\nMy order still hasn't arrived. The tracking hasn't moved for ages.\nI would like a refund please.\nTariq\n\n--- Ticket #49292 | received 2027-03-28 23:35 UTC | via web form | previous contacts about this order: 0\nFrom: Amara Singh <amara.singh9@btinternet.com>   Order: FB-209738\nHi,\nI got the Linen bedding set, double from you (arrived Sun 14 Mar 2027) and the colour isn't what I expected from the photos.\nI'd like to send it back - it was the only thing in the order.\nSorry, been mad busy so only just got round to it.\nIt's unused and still in the box.\nThanks, Amara\n\n--- Ticket #49327 | received 2027-03-28 23:58 UTC | via live chat transcript | previous contacts about this order: 0\nFrom: Zainab Ali <zainab.ali28@btinternet.com>   Order: FB-210170\nHello,\nMy Egyptian cotton towel bale (delivered 26 Feb 2027) has a crack right down one side that appeared after a week.\nPlease refund me.\nZainab\n\n--- Ticket #49335 | received 2027-03-30 06:30 UTC | via web form | previous contacts about this order: 0\nFrom: Sadia Rahman <sadia.rahman27@icloud.com>   Order: FB-211125\nHi, I've been charged twice for order FB-211125, £124.93 has gone out of my account two times according to my banking app. Please refund the extra one. Sadia\n\nYOUR ANSWER\nReply with one JSON object with one entry per ticket, keyed by ticket number:\n{\n  \"tickets\": {\n    \"#12345\": { \"category\": \"faulty\", \"priority\": \"P2\", \"sla_due\": \"YYYY-MM-DD HH:MM\", \"decision\": \"refund\", \"refund\": 0.00 }\n  }\n}\ncategory: change-of-mind, faulty, wrong-item, missing-parcel, late-delivery, billing. priority: P1, P2 or P3. sla_due: UK local time. decision: refund, partial, replace, repair, decline, escalate. refund: the money we pay back in pounds (0 unless the decision is refund or partial). Give exactly one value for every field: alternatives, ranges or \"either/or\" answers are marked wrong. Each field of each ticket is marked separately.",
+      "expected": {
+        "tickets": {
+          "#48933": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-03-31 09:18",
+            "decision": "refund",
+            "refund": 77.94
+          },
+          "#48960": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-03-31 09:19",
+            "decision": "refund",
+            "refund": 95
+          },
+          "#48968": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2027-03-30 09:56",
+            "decision": "refund",
+            "refund": 41.95
+          },
+          "#49013": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2027-03-30 11:21",
+            "decision": "refund",
+            "refund": 171.42
+          },
+          "#49015": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-03-31 11:36",
+            "decision": "repair",
+            "refund": 0
+          },
+          "#49057": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-03-31 11:59",
+            "decision": "refund",
+            "refund": 31.49
+          },
+          "#49059": {
+            "category": "missing-parcel",
+            "priority": "P2",
+            "sla_due": "2027-03-30 12:12",
+            "decision": "refund",
+            "refund": 29.94
+          },
+          "#49070": {
+            "category": "change-of-mind",
+            "priority": "P2",
+            "sla_due": "2027-03-30 12:40",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49079": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2027-03-31 13:55",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#49115": {
+            "category": "faulty",
+            "priority": "P1",
+            "sla_due": "2027-03-30 10:05",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49138": {
+            "category": "late-delivery",
+            "priority": "P3",
+            "sla_due": "2027-03-31 14:36",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49166": {
+            "category": "wrong-item",
+            "priority": "P3",
+            "sla_due": "2027-03-31 16:40",
+            "decision": "refund",
+            "refund": 88
+          },
+          "#49178": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-03-31 16:45",
+            "decision": "refund",
+            "refund": 29.94
+          },
+          "#49219": {
+            "category": "missing-parcel",
+            "priority": "P1",
+            "sla_due": "2027-03-30 13:00",
+            "decision": "escalate",
+            "refund": 0
+          },
+          "#49234": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-03-31 17:00",
+            "decision": "refund",
+            "refund": 27.45
+          },
+          "#49252": {
+            "category": "billing",
+            "priority": "P3",
+            "sla_due": "2027-03-31 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49269": {
+            "category": "missing-parcel",
+            "priority": "P3",
+            "sla_due": "2027-03-31 17:00",
+            "decision": "refund",
+            "refund": 92
+          },
+          "#49292": {
+            "category": "change-of-mind",
+            "priority": "P3",
+            "sla_due": "2027-03-31 17:00",
+            "decision": "decline",
+            "refund": 0
+          },
+          "#49327": {
+            "category": "faulty",
+            "priority": "P3",
+            "sla_due": "2027-03-31 17:00",
+            "decision": "replace",
+            "refund": 0
+          },
+          "#49335": {
+            "category": "billing",
+            "priority": "P2",
+            "sla_due": "2027-03-30 17:00",
+            "decision": "refund",
+            "refund": 124.93
+          }
+        }
+      },
+      "notes": "[hard] 20 tickets {\"P3/refund\":7,\"P2/refund\":4,\"P3/repair\":1,\"P2/decline\":1,\"P3/replace\":2,\"P1/escalate\":2,\"P3/escalate\":1,\"P3/decline\":2}"
+    }
+  ]
+}

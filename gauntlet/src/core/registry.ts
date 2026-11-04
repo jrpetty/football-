@@ -9,6 +9,7 @@ import { writeJsonAtomic, loadCategories } from './config.ts';
 import { JUDGE_PROMPT_FINGERPRINT } from '../scoring/judge-prompts.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { validateGameJamCase } from '../scoring/game-jam-shared.ts';
+import { scoreVerifier, verifierFor } from '../scoring/verifier.ts';
 import { sqlScorerSourceHash, unsafeReason } from '../scoring/sql.ts';
 import { caseImageRefs, resolveTestImage, testBaseDir, testHasImages, testImageDigests, testsRelativePath, validateCaseImages } from './vision.ts';
 import type { PromptTest, PromptTestCase, ScorerSpec, Suite, TestDefinition } from './types.ts';
@@ -98,6 +99,40 @@ export function programSourceHash(programId: string): string {
   return hash;
 }
 
+/** Verifier checkers live here (src/scoring/verifiers/<name>.ts); the generic scorer is src/scoring/verifier.ts. */
+const VERIFIERS_DIR = join(ROOT, 'src', 'scoring', 'verifiers');
+const VERIFIER_DRIVER = join(ROOT, 'src', 'scoring', 'verifier.ts');
+
+/**
+ * Hash of a verifier's source: its file, every module it imports from the verifiers folder (transitively) and the
+ * generic scorer that turns its checks into a score. Part of the hash of every test that uses the verifier, so
+ * editing a checker invalidates old results exactly like editing a prompt.
+ */
+export function verifierSourceHash(name: string): string {
+  if (!/^[a-z0-9-]+$/.test(name)) return 'missing';
+  const entry = join(VERIFIERS_DIR, `${name}.ts`);
+  if (!existsSync(entry)) return 'missing';
+  const files = new Set<string>([VERIFIER_DRIVER]);
+  const visit = (file: string) => {
+    if (files.has(file) || !existsSync(file)) return;
+    files.add(file);
+    for (const m of readFileSync(file, 'utf8').matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {
+      const target = resolve(dirname(file), m[1]!);
+      if (target.startsWith(VERIFIERS_DIR)) visit(target);
+    }
+  };
+  visit(entry);
+  const sorted = [...files].filter((f) => existsSync(f)).sort();
+  return sha256(sorted.map((f) => relative(ROOT, f).replace(/\\/g, '/') + '\n' + readFileSync(f, 'utf8').replace(/\r\n/g, '\n')).join('\n---\n')).slice(0, 12);
+}
+
+/** Names of the verifiers a prompt test uses (test scorer and case overrides), sorted. */
+export function verifierNamesOf(def: PromptTest): string[] {
+  const names = new Set<string>();
+  for (const s of [def.scorer, ...(def.cases ?? []).map((c) => c.scorer)]) if (s?.type === 'verifier') names.add(s.verifier);
+  return [...names].sort();
+}
+
 /** The fair-play notice's hash: part of every test hash and run fingerprint, so results recorded under another notice (or none) stop counting. */
 export const FAIR_PLAY_FINGERPRINT = contentHash({ version: FAIR_PLAY_VERSION, text: FAIR_PLAY_NOTICE });
 
@@ -120,10 +155,13 @@ export function computeTestHash(def: TestDefinition, baseDir?: string): string {
     if (PICTURE_ONLY_PROGRAMS.has(def.program)) return contentHash({ def, program: programSourceHash(def.program) });
     return contentHash({ def, program: programSourceHash(def.program), fairPlay: FAIR_PLAY_FINGERPRINT });
   }
-  if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()), fairPlay: FAIR_PLAY_FINGERPRINT });
+  // Tests marked by a verifier also hash the checker's source code (like a program's).
+  const verifiers = verifierNamesOf(def);
+  const checkers = verifiers.length ? { verifiers: Object.fromEntries(verifiers.map((n) => [n, verifierSourceHash(n)])) } : {};
+  if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()), fairPlay: FAIR_PLAY_FINGERPRINT, ...checkers });
   // The sql scorer's code decides what counts as the same result: a change to it changes these tests' hashes.
-  if (def.scorer?.type === 'sql' || def.cases?.some((c) => c.scorer?.type === 'sql')) return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT, scorer: sqlScorerSourceHash() });
-  return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT });
+  if (def.scorer?.type === 'sql' || def.cases?.some((c) => c.scorer?.type === 'sql')) return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT, scorer: sqlScorerSourceHash(), ...checkers });
+  return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT, ...checkers });
 }
 
 export function loadTests(): LoadedTest[] {
@@ -238,7 +276,7 @@ export function summarize(t: LoadedTest): TestSummary {
 
 const TEST_ID_RE = /^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9.-]*$/;
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
-const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human', 'ladder', 'sql']);
+const SCORER_TYPES = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'judge', 'judge-classify', 'artifact', 'human', 'ladder', 'sql', 'verifier']);
 const CONSTRAINT_CHECKS = new Set([
   'word_count', 'sentence_count', 'paragraph_count', 'line_count', 'bullet_count', 'include', 'exclude', 'no_letter',
   'starts_with', 'ends_with', 'all_lowercase', 'all_uppercase', 'no_commas', 'json', 'json_keys', 'regex',
@@ -263,7 +301,10 @@ function validateScorer(s: ScorerSpec | undefined, where: string, errors: string
   }
   if (s.type === 'json' && s.sets !== undefined && (typeof s.sets !== 'object' || !Object.values(s.sets).every((n) => Number.isInteger(n) && n >= 1)))
     errors.push(`${where}: json sets must map paths to a whole number of fields per item (at least 1)`);
+  if (s.type === 'json' && s.weights !== undefined && (typeof s.weights !== 'object' || !Object.values(s.weights).every((n) => typeof n === 'number' && n >= 0 && Number.isFinite(n))))
+    errors.push(`${where}: json weights must map paths to points (0 or more)`);
   if (s.type === 'ladder' && !['integer', 'plan', 'grid'].includes(s.answer)) errors.push(`${where}: ladder scorer answer must be integer, plan or grid`);
+  if (s.type === 'verifier' && !verifierFor(String(s.verifier))) errors.push(`${where}: unknown verifier "${s.verifier}" (see src/scoring/verifiers/index.ts)`);
   if (s.type === 'sql') {
     if (s.dialect !== 'sqlite') errors.push(`${where}: sql scorer dialect must be "sqlite"`);
     if (typeof s.schema !== 'string' || !/CREATE\s+TABLE/i.test(s.schema)) errors.push(`${where}: sql scorer needs a schema with CREATE TABLE statements`);
@@ -329,6 +370,19 @@ function validateExpected(s: ScorerSpec, expected: unknown, where: string, error
         const k = expected as { rows?: number; cols?: number; start?: unknown; optimal?: number } | undefined;
         if (!k || !Number.isInteger(k.rows) || !Number.isInteger(k.cols) || !Array.isArray(k.start) || k.start.length !== k.rows! * k.cols! || !Number.isInteger(k.optimal))
           errors.push(`${where}: ladder plan key needs rows, cols, start[rows*cols] and optimal`);
+      }
+      break;
+    }
+    case 'verifier': {
+      const v = verifierFor(String(s.verifier));
+      const e = expected as { world?: unknown; optimum?: unknown; reference?: unknown } | undefined;
+      if (!e || !e.world || typeof e.world !== 'object') errors.push(`${where}: verifier needs expected.world`);
+      else if (!e.reference || typeof e.reference !== 'object') errors.push(`${where}: verifier needs expected.reference (one correct answer)`);
+      else if (v?.kind === 'plan' && !(typeof e.optimum === 'number' && Number.isFinite(e.optimum))) errors.push(`${where}: plan verifier needs a numeric expected.optimum`);
+      else if (v) {
+        // The reference answer must pass its own checker with full marks (key and checker agree).
+        const r = scoreVerifier(v.name, expected, '```json\n' + JSON.stringify(e.reference) + '\n```');
+        if (r.score !== 1) errors.push(`${where}: the reference answer scores ${r.score} under verifier "${v.name}" (${r.summary})`);
       }
       break;
     }

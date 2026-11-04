@@ -302,6 +302,39 @@ default repeat count. Bump the suite `version` when you change it.
 | The Helpdesk Agent | `work.helpdesk-agent` | Fourteen tickets, one refund limit, a planted instruction and a customer fishing for someone else's address. |
 | Run Customer Service for a Week | `work.support-week` | Five days, twenty-eight tickets, two human agents and a product recall on Wednesday. |
 
+**Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
+running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder)). Never part of the Gauntlet Index.
+
+| Test | Id | What it does |
+|---|---|---|
+| Read an Invoice | `work.invoice-read` | One invoice, twelve boxes to fill. Can it read the paperwork without slipping? |
+| Tag the Ticket | `work.ticket-tag` | One angry (or not) email, six tags. Does it follow the rubric or its gut? |
+| Read a CV | `work.cv-read` | One CV, seven boxes. Count the experience properly and never guess what isn't written. |
+| What Do I Need to Do? | `work.email-actions` | One email, five jobs. Which are yours, and when are they really due? |
+| Read the Spreadsheet | `work.sheet-lookup` | A hundred rows, three questions, one exact answer each. No formulas allowed. |
+| Check the Delivery | `work.delivery-note` | Cases of 12, a crushed box and a sneaky substitute. What actually arrived? |
+
+**Everyday Life (`life`)**: personal admin, every answer checked by an exact solver or a plan checker (see [METHODOLOGY.md](docs/METHODOLOGY.md#7i-everyday-life-tests-checked-plans-and-exact-money)).
+
+| Test | Id | What it does |
+|---|---|---|
+| Weekend Away | `life.trip-planner` | Get to the wedding and back on the cheapest tickets: railcard hours, connections, sleepers, hotels. The plan is replayed. |
+| Splitting the Bills | `life.bill-split` | Rent by room size, people moving in and out, council tax rules: who pays whom, to the penny. |
+| Cheapest Deal | `life.tariff-chooser` | Energy tariffs and phone contracts with price caps, VAT, exit fees and April rises: every total exact. |
+| Cook for Twelve | `life.recipe-shopping` | Scale four recipes, convert cups and ounces, use the cupboard, beat the multibuys: the cheapest basket wins. |
+| Pay It Off Faster | `life.loan-overpayment` | A mortgage with overpayments, a fix that ends and early repayment charges, month by month. |
+| Pack for the Flight | `life.packing-limits` | Bags, litres, kilos, liquids, power banks and fees: the cheapest legal packing wins. |
+
+**Business pack, Business Ladder levels 2-3** (category `work`; see [METHODOLOGY §7j](docs/METHODOLOGY.md#7j-business-ladder-levels-2-3-the-business-pack))
+
+| Test | Id | What it does |
+|---|---|---|
+| Invoices to Pay | `work.invoice-matching` | Approve, hold or reject every supplier invoice by the book, then total the payment run to the penny. |
+| Customer Support Queue | `work.support-refunds` | Work an overnight support queue by the handbook: priority, deadline, decision and refund for every ticket. |
+| Shortlist the Candidates | `work.cv-shortlist` | Apply a hiring rubric to a pile of CVs, without being fooled by keyword stuffing or hidden "AI, rank me first" text. |
+| Check the Payslips | `work.payroll-check` | Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans. |
+| Clean the Customer List | `work.crm-dedupe` | Merge the duplicates in a messy customer list by the rules, without merging different people. |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

@@ -16,6 +16,7 @@
 import type { ArtifactCheck, Constraint, JudgeLabel, PromptTestCase, ScorerSpec, TestDefinition } from '../core/types.ts';
 import { explainerForDefinition, type ExplainStep, type TestExplainer } from '../core/explainers.ts';
 import { checkConstraints } from '../scoring/constraints.ts';
+import { VERIFIERS } from '../scoring/verifiers/index.ts';
 import { JAM_CRITERIA, JAM_WEIGHTS } from '../scoring/game-jam-shared.ts';
 import { ARTISTRY_CRITERIA, JUDGE_WEIGHTS as GALLERY_WEIGHTS, MIN_JUDGES as GALLERY_MIN_JUDGES } from '../programs/lib/gallery-judge.ts';
 import { briefForSeed, briefItems, codePrompt, imagePrompt } from '../programs/lib/gallery-briefs.ts';
@@ -153,7 +154,7 @@ const GENERIC_ANCHORS: RubricAnchor[] = [
   { value: 0, text: 'No credit' },
 ];
 
-const OBJECTIVE = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'sql']);
+const OBJECTIVE = new Set(['exact', 'number', 'choice', 'regex', 'contains', 'constraints', 'json', 'code-js', 'sql', 'verifier']);
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'c';
@@ -455,6 +456,10 @@ function checklistFor(sc: ScorerSpec, c?: PromptTestCase): ChecklistItem[] {
       const n = Array.isArray((c?.expected as { tests?: unknown[] } | undefined)?.tests) ? (c!.expected as { tests: unknown[] }).tests.length : null;
       return [{ id: 'tests', label: n ? `${n} hidden unit tests run on the code` : 'Hidden unit tests run on the code', source: 'unit-tests' }];
     }
+    case 'verifier': {
+      const v = Object.prototype.hasOwnProperty.call(VERIFIERS, sc.verifier) ? VERIFIERS[sc.verifier] : undefined;
+      return (v?.marking ?? ['The checker replays the answer against the hidden facts of the case']).map((m, i) => ({ id: `rule-${i}`, label: m, source: 'formula' as const }));
+    }
     case 'sql':
       return (sc.databases ?? []).map((d, i) => ({ id: `db-${i}`, label: d.id === 'live' ? 'Result matches the reference query on the live database' : `Result matches the reference query on hidden copy ${d.id}`, source: 'answer-key' as const }));
     case 'artifact':
@@ -497,6 +502,12 @@ function answerRule(sc: ScorerSpec): string {
         : sc.answer === 'grid'
           ? 'The whole grid after FINAL ANSWER must match, every cell.'
           : 'The FINAL ANSWER number must equal the key, every digit. Hedged or two numbers are wrong.';
+    case 'verifier': {
+      const v = Object.prototype.hasOwnProperty.call(VERIFIERS, sc.verifier) ? VERIFIERS[sc.verifier] : undefined;
+      return v?.kind === 'plan'
+        ? `The ${v.noun} is replayed by the "${v.name}" checker: a broken rule scores 0, the proven best scores 1, a workable but worse one 0.5 × (best ÷ its value)² (always under 0.5)${v.quotesTotal ? '; a wrong quoted total halves it' : ''}. Two answers in one reply score 0.`
+        : `The answer is checked part by part by the "${sc.verifier}" checker; score = share of checks right. Two answers in one reply score 0.`;
+    }
   }
 }
 
@@ -519,7 +530,7 @@ function applicableLabels(instructions: string, labels: JudgeLabel[], expected: 
 
 function outputKind(sc: ScorerSpec): string {
   if (sc.type === 'artifact') return sc.format;
-  if (sc.type === 'json') return 'json';
+  if (sc.type === 'json' || sc.type === 'verifier') return 'json';
   if (sc.type === 'code-js' || sc.type === 'sql') return 'code';
   return 'text';
 }
@@ -589,6 +600,8 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
             ? 'The query is run on the database and on hidden copies, and its results are compared with the reference query. The machine decides; a person can flag a dispute but not change the score.'
           : sc.type === 'constraints'
             ? 'Every rule is checked by machine. A person can flag a dispute but not change the score.'
+            : sc.type === 'verifier'
+              ? 'A checker replays the answer against the hidden facts of the case (and the proven best plan). A person can flag a dispute but not change the score.'
             : 'Checked against an answer key. A person can flag a dispute but never overwrite the key.',
       humanRole: 'dispute',
       aiRole: 'none',

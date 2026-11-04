@@ -63,11 +63,11 @@ export async function spread(): Promise<Row[]> {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const rows = await spread();
   const pct = (x: number) => `${Math.round(x * 100)}%`;
-  console.log('test | case | points | careful | careless | do-nothing | copy-prompt | random');
+  console.log('test | case | fields | careful | careless | do-nothing | copy-prompt | random');
   for (const r of rows) console.log(`${r.test} | ${r.caseId} | ${r.points} | ${pct(r.careful)} | ${pct(r.careless)} | ${pct(r.nothing)} | ${pct(r.copy)} | ${pct(r.random)}`);
   for (const id of WORK_IDS) {
     const rs = rows.filter((r) => r.test === id);
     const m = (f: (r: Row) => number) => pct(rs.reduce((a, r) => a + f(r), 0) / rs.length);
-    console.log(`MEAN ${id}: points/case ${Math.min(...rs.map((r) => r.points))}-${Math.max(...rs.map((r) => r.points))}, careful ${m((r) => r.careful)}, careless ${m((r) => r.careless)}, do-nothing ${m((r) => r.nothing)}, copy ${m((r) => r.copy)}, random ${m((r) => r.random)}`);
+    console.log(`MEAN ${id}: fields/case ${Math.min(...rs.map((r) => r.points))}-${Math.max(...rs.map((r) => r.points))}, careful ${m((r) => r.careful)}, careless ${m((r) => r.careless)}, do-nothing ${m((r) => r.nothing)}, copy ${m((r) => r.copy)}, random ${m((r) => r.random)}`);
   }
 }
