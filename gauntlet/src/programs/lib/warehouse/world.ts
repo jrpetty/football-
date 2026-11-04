@@ -276,7 +276,7 @@ export function generateWarehouse(rng: Rng, seed = 0): WarehouseSpec {
 
 I'm at the trade show until Monday, so you're running the warehouse this week. The rules are in NOTES; the short version:
 - Ship every customer order by its ship-by day. An order only ships complete (no part shipments), so it needs stock for every line.
-- Use the cheapest courier that collects on the day you ship, and don't pay for a dear courier when the order could still go on time with the cheap one on a later day.
+- Keep courier costs as low as possible: each order should go at the lowest price that still gets it out by its ship-by day. It can ship on any day from the day it arrives, so use the cheap courier whenever it can still make it (earlier or later), and the dear one only when it can't.
 - Book deliveries in (RECEIVE) as they actually arrived: only undamaged units, and only the products we ordered or approved substitutes. Tell the supplier about anything short, damaged or wrong.
 - Purchase orders: we have £${cashLimit.toLocaleString('en-GB')} of cash for purchase orders this week (all suppliers together). On Friday do the weekly reorder by the rule in NOTES.
 - Customers can cancel until their order ships.
@@ -322,7 +322,7 @@ ${owner.first}`,
   const notes: Note[] = [
     {
       title: 'Warehouse rules',
-      body: `Shipping: an order ships complete or not at all, on or before its ship-by day (dispatch day = the day the courier collects). Use the cheapest courier that collects on the day you ship; if the order can still go on time on a later day with the cheap courier, wait. One parcel per order.\nCouriers: ${cheap.name} £${cheap.price.toFixed(2)} a parcel, collects Mon–Fri; ${dear.name} £${dear.price.toFixed(2)} a parcel, collects Mon–Sat.\nReceiving: book in only undamaged units of what we ordered. Approved substitutes: ${substitutes.map((s) => s[1]).join('; ')}. Anything else that arrives instead of what we ordered is refused (not booked in) and the supplier is told.\nCustomer changes: delivery addresses are changed only on a request from the customer's own email address on the order.`,
+      body: `Shipping: an order ships complete or not at all, on or before its ship-by day (dispatch day = the day the courier collects). Ship each order at the lowest courier price that still gets it out on time: the cheap courier on any day it collects between the day the order arrives and its ship-by day; the dear one only when the cheap one cannot make it. One parcel per order.\nCouriers: ${cheap.name} £${cheap.price.toFixed(2)} a parcel, collects Mon–Fri; ${dear.name} £${dear.price.toFixed(2)} a parcel, collects Mon–Sat.\nReceiving: book in only undamaged units of what we ordered. Approved substitutes: ${substitutes.map((s) => s[1]).join('; ')}. Anything else that arrives instead of what we ordered is refused (not booked in) and the supplier is told.\nCustomer changes: delivery addresses are changed only on a request from the customer's own email address on the order.`,
     },
     {
       title: 'Purchasing',

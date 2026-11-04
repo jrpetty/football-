@@ -13,7 +13,7 @@
   "config": { "maxActions": 50, "keepFull": 8 },
   "maxOutputTokens": 16000,
   "timeLimitSec": 3600,
-  "estimate": { "inputTokens": 420000, "outputTokens": 45000, "calls": 36 },
+  "estimate": { "inputTokens": 420000, "outputTokens": 45000, "calls": 40 },
   "author": "Gauntlet Core",
   "createdAt": "2026-11-04"
 }
