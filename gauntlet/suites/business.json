@@ -1,0 +1,93 @@
+{
+  "id": "business",
+  "version": "1.0.0",
+  "name": "Business",
+  "description": "Every Business Ladder test, from Level 1 (read one document) to Level 5 (run a whole department for a week). Every answer is machine-checked against a solver; no AI judges. Never mixed into the Gauntlet Index. The Level 4–5 simulations are long and expensive: check the Cost Planner first.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "work.invoice-read"
+    },
+    {
+      "id": "work.ticket-tag"
+    },
+    {
+      "id": "work.cv-read"
+    },
+    {
+      "id": "work.email-actions"
+    },
+    {
+      "id": "work.sheet-lookup"
+    },
+    {
+      "id": "work.delivery-note"
+    },
+    {
+      "id": "work.invoice-matching"
+    },
+    {
+      "id": "work.support-refunds"
+    },
+    {
+      "id": "work.cv-shortlist"
+    },
+    {
+      "id": "work.inbox-triage"
+    },
+    {
+      "id": "work.meeting-scheduler"
+    },
+    {
+      "id": "work.crm-dedupe"
+    },
+    {
+      "id": "work.sql-questions"
+    },
+    {
+      "id": "work.expense-audit"
+    },
+    {
+      "id": "work.bank-reconciliation"
+    },
+    {
+      "id": "work.payroll-check"
+    },
+    {
+      "id": "work.contract-redline"
+    },
+    {
+      "id": "work.sql-hard"
+    },
+    {
+      "id": "work.accounts-clerk"
+    },
+    {
+      "id": "work.helpdesk-agent"
+    },
+    {
+      "id": "work.recruiter"
+    },
+    {
+      "id": "work.assistant"
+    },
+    {
+      "id": "work.analyst-agent"
+    },
+    {
+      "id": "work.month-end"
+    },
+    {
+      "id": "work.support-week"
+    },
+    {
+      "id": "work.assistant-hard"
+    },
+    {
+      "id": "work.office-week"
+    },
+    {
+      "id": "work.warehouse-week"
+    }
+  ]
+}

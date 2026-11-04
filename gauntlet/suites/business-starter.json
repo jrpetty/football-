@@ -1,0 +1,63 @@
+{
+  "id": "business-starter",
+  "version": "1.0.0",
+  "name": "Business: Levels 1–3",
+  "description": "The Business Ladder without the long agent simulations: one-document Assist tasks, batch automation and full workflows. Much cheaper than the full Business suite. Never mixed into the Gauntlet Index.",
+  "repeats": 1,
+  "tests": [
+    {
+      "id": "work.invoice-read"
+    },
+    {
+      "id": "work.ticket-tag"
+    },
+    {
+      "id": "work.cv-read"
+    },
+    {
+      "id": "work.email-actions"
+    },
+    {
+      "id": "work.sheet-lookup"
+    },
+    {
+      "id": "work.delivery-note"
+    },
+    {
+      "id": "work.invoice-matching"
+    },
+    {
+      "id": "work.support-refunds"
+    },
+    {
+      "id": "work.cv-shortlist"
+    },
+    {
+      "id": "work.inbox-triage"
+    },
+    {
+      "id": "work.meeting-scheduler"
+    },
+    {
+      "id": "work.crm-dedupe"
+    },
+    {
+      "id": "work.sql-questions"
+    },
+    {
+      "id": "work.expense-audit"
+    },
+    {
+      "id": "work.bank-reconciliation"
+    },
+    {
+      "id": "work.payroll-check"
+    },
+    {
+      "id": "work.contract-redline"
+    },
+    {
+      "id": "work.sql-hard"
+    }
+  ]
+}
