@@ -24,7 +24,7 @@
   "createdAt": "2026-09-24",
   "scorer": {
     "type": "json",
-    "loose": true,
+    "lenient": true,
     "sets": {
       "changes": 3
     }
@@ -59,7 +59,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -110,7 +110,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -161,7 +161,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -242,7 +242,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -331,7 +331,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -414,7 +414,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -527,7 +527,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -658,7 +658,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },
@@ -794,7 +794,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "sets": {
           "changes": 3
         },

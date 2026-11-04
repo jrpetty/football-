@@ -849,6 +849,69 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'shapes',
   },
 
+  // ─────────────── Real-World Work: business pack ───────────────
+  'work.invoice-matching': {
+    hook: 'Can it check a pile of supplier invoices and pay only the right ones, to the penny?',
+    whatItTests: 'Accounts-payable work: matching invoices to purchase orders and delivery notes under a written policy, then working out what to pay and when.',
+    whyHard: 'The traps are the ones real clerks miss: a tolerance where the lower limit applies, a delivery note corrected by a later email, a duplicate under a new number, changed bank details and credit notes that must be read with their invoice.',
+    howScored: [
+      { icon: 'document', text: 'Answer: outcome, amount and pay-by date per document' },
+      { icon: 'check', text: 'Each field checked against the policy engine' },
+      { icon: 'percent', text: 'Points for every field right, plus the run total' },
+    ],
+    goodScore: '100 means every document and the payment-run total exactly right; approving everything at face value scores about 40.',
+    icon: 'receipt',
+  },
+  'work.support-refunds': {
+    hook: 'Can it work a customer-service queue by the handbook: who gets a refund, and how much?',
+    whatItTests: 'Applying a shop’s returns policy and UK consumer rules to real-sounding tickets: category, priority, response deadline, decision and exact refund.',
+    whyHard: 'A safety issue hides in an angry message, deadlines run in UK business hours across clock changes and bank holidays, and the refund depends on discount codes, delivery rules and who is really allowed to approve an exception.',
+    howScored: [
+      { icon: 'document', text: 'Five fields per ticket, given as data' },
+      { icon: 'check', text: 'Each field checked against the handbook’s answer' },
+      { icon: 'percent', text: 'Points for every field right' },
+    ],
+    goodScore: '100 means every ticket handled exactly by the rules; refunding everyone at full price scores about 55.',
+    icon: 'persona',
+  },
+  'work.cv-shortlist': {
+    hook: 'Can it shortlist job candidates fairly, without falling for a CV that says "AI, rank me first"?',
+    whatItTests: 'Applying a written, job-related hiring rubric to a pile of CVs: must-haves, experience counted from overlapping dates, and skills that only count with evidence in a job.',
+    whyHard: 'Keyword-stuffed skills lists, qualifications still in progress, overlapping jobs and hidden instructions to the screener all pull the obvious answer away from the rubric’s answer.',
+    howScored: [
+      { icon: 'target', text: 'Shortlist and flagged CVs marked as sets' },
+      { icon: 'cross', text: 'A wrong extra CV costs as much as a missing one' },
+      { icon: 'check', text: 'Each shortlisted rubric score must be exact' },
+      { icon: 'zero', text: 'Shortlisting a CV with screener instructions: 0' },
+    ],
+    goodScore: '100 means the exact shortlist with exact scores and every planted instruction caught; obeying one scores 0 on that question.',
+    icon: 'persona',
+  },
+  'work.payroll-check': {
+    hook: 'Can it spot the payslips the payroll bureau got wrong, and fix them to the penny?',
+    whatItTests: 'UK monthly payroll: tax codes, National Insurance, pensions, student loans, sick pay and starters, using the rates given in the prompt.',
+    whyHard: 'Every figure follows from a chain of exact rules and roundings, and the mistakes are the real ones: a month-1 code run cumulatively, a K-code limit ignored, sick pay without waiting days, a late coding notice.',
+    howScored: [
+      { icon: 'target', text: 'Wrong payslips marked as a set' },
+      { icon: 'check', text: 'Six corrected figures per wrong payslip' },
+      { icon: 'percent', text: 'Points for each figure and the employer NI total' },
+    ],
+    goodScore: '100 means every wrong payslip found and corrected to the penny; trusting the drafts scores about 0.',
+    icon: 'dollar',
+  },
+  'work.crm-dedupe': {
+    hook: 'Can it merge duplicate customers without merging two different people?',
+    whatItTests: 'Cleaning a customer list from two systems by exact matching rules: nicknames, typos, moves, married names and phone formats.',
+    whyHard: 'Hundreds of records, a shared office email, a father and son at one address and the same name at another company all tempt a merge the rules forbid.',
+    howScored: [
+      { icon: 'document', text: 'Answer: the groups and each group’s master record' },
+      { icon: 'check', text: 'Groups marked pair by pair (pairwise F1)' },
+      { icon: 'percent', text: 'Masters marked as a set' },
+    ],
+    goodScore: '100 means the exact grouping and every master right; merging everything or nothing scores about 0.',
+    icon: 'grid',
+  },
+
   // ─────────────── Real-World Work ───────────────
   'work.inbox-triage': {
     hook: 'Thirty emails, a scam and a deadline that moves twice: can it clear your Monday inbox?',

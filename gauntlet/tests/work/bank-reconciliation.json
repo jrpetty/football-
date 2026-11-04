@@ -24,7 +24,7 @@
   "createdAt": "2026-09-24",
   "scorer": {
     "type": "json",
-    "loose": true,
+    "lenient": true,
     "unorderedArrays": true,
     "sets": {
       "differences": 2
@@ -77,7 +77,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -139,7 +139,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -201,7 +201,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -280,7 +280,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -366,7 +366,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -452,7 +452,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -563,7 +563,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -682,7 +682,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2
@@ -801,7 +801,7 @@
       },
       "scorer": {
         "type": "json",
-        "loose": true,
+        "lenient": true,
         "unorderedArrays": true,
         "sets": {
           "differences": 2

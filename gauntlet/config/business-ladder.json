@@ -19,7 +19,7 @@
       "summary": "Invoices, expenses, bank reconciliations and the month-end close.",
       "tests": [
         { "id": "work.invoice-read", "level": 1 },
-        { "id": "work.invoice-matching", "level": 2, "planned": true },
+        { "id": "work.invoice-matching", "level": 2 },
         { "id": "work.expense-audit", "level": 3 },
         { "id": "work.bank-reconciliation", "level": 3 },
         { "id": "work.accounts-clerk", "level": 4, "planned": true },
@@ -34,7 +34,7 @@
       "summary": "Tagging tickets, refunds by policy, replies and running the helpdesk.",
       "tests": [
         { "id": "work.ticket-tag", "level": 1 },
-        { "id": "work.support-refunds", "level": 2, "planned": true },
+        { "id": "work.support-refunds", "level": 2 },
         { "id": "work.support-replies", "level": 3, "planned": true },
         { "id": "work.helpdesk-agent", "level": 4, "planned": true },
         { "id": "work.support-week", "level": 5, "planned": true }
@@ -48,8 +48,8 @@
       "summary": "Reading CVs, shortlisting fairly, checking payslips and recruiting.",
       "tests": [
         { "id": "work.cv-read", "level": 1 },
-        { "id": "work.cv-shortlist", "level": 2, "planned": true },
-        { "id": "work.payroll-check", "level": 3, "planned": true },
+        { "id": "work.cv-shortlist", "level": 2 },
+        { "id": "work.payroll-check", "level": 3 },
         { "id": "work.recruiter", "level": 4, "planned": true }
       ]
     },
@@ -77,7 +77,7 @@
       "summary": "Spreadsheets, clean customer lists, database questions and board numbers.",
       "tests": [
         { "id": "work.sheet-lookup", "level": 1 },
-        { "id": "work.crm-dedupe", "level": 2, "planned": true },
+        { "id": "work.crm-dedupe", "level": 2 },
         { "id": "work.sql-questions", "level": 2 },
         { "id": "work.sql-hard", "level": 3 },
         { "id": "work.board-report", "level": 3, "planned": true },

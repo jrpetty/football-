@@ -24,7 +24,7 @@ async function score(t: PromptTest, c: PromptTestCase, reply: string): Promise<n
 function points(t: PromptTest, c: PromptTestCase): number {
   const sc = caseScorer(t, c);
   if (sc.type !== 'json') throw new Error('json scorer expected');
-  return compareJson(c.expected, c.expected, { loose: sc.loose, sets: sc.sets, unorderedArrays: sc.unorderedArrays, weights: sc.weights, aboveConstant: sc.aboveConstant }).total;
+  return compareJson(c.expected, c.expected, { lenient: sc.lenient, sets: sc.sets, unorderedArrays: sc.unorderedArrays, weights: sc.weights, aboveConstant: sc.aboveConstant }).total;
 }
 /** Points one field is worth in this case (the scorer's weights; 1 when unweighted). */
 function w(t: PromptTest, c: PromptTestCase, path: string): number {
@@ -47,7 +47,7 @@ test('the pack has five tests of nine cases: three easy, three medium, three har
     const tiers = t.cases.map((c) => /^\[(easy|medium|hard)\]/.exec(c.notes ?? '')?.[1]);
     assert.deepEqual(tiers, ['easy', 'easy', 'easy', 'medium', 'medium', 'medium', 'hard', 'hard', 'hard'], t.id);
     assert.equal(t.scorer.type, 'json');
-    assert.ok(t.scorer.type === 'json' && t.scorer.loose, `${t.id} uses format-tolerant JSON`);
+    assert.ok(t.scorer.type === 'json' && t.scorer.lenient, `${t.id} uses format-tolerant JSON`);
     assert.ok(!('answerWithinSec' in t), 'no answer-time limit');
   }
 });

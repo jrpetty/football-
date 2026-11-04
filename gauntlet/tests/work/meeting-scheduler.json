@@ -24,7 +24,7 @@
   "createdAt": "2026-09-24",
   "scorer": {
     "type": "json",
-    "loose": true
+    "lenient": true
   },
   "cases": [
     {

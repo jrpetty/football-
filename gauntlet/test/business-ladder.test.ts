@@ -45,13 +45,14 @@ test('the ladder config: levels 1–5, six scenarios, unique ids, built tests ex
 test('the validator catches a planned test that now exists, a missing built test, bad levels and duplicates', () => {
   const bad: LadderDefinition = JSON.parse(JSON.stringify(def));
   bad.scenarios[0]!.tests[0]!.planned = true; // exists, so must be flipped
-  bad.scenarios[0]!.tests[1]!.planned = false; // does not exist
+  const notBuilt = bad.scenarios[0]!.tests.slice(1).find((t) => t.planned)!;
+  notBuilt.planned = false; // does not exist
   bad.scenarios[1]!.tests.push({ id: 'work.cv-read', level: 1 });
   bad.scenarios[2]!.tests.push({ id: 'work.x', level: 6, planned: true });
   bad.levels = bad.levels.slice(0, 4);
   const errs = validateBusinessLadder(bad, library).join('\n');
   assert.match(errs, /work\.invoice-read now exists .* set "planned": false/);
-  assert.match(errs, /work\.invoice-matching is not in the test library: mark it "planned": true/);
+  assert.match(errs, new RegExp(`${notBuilt.id.replace('.', '\\.')} is not in the test library: mark it "planned": true`));
   assert.match(errs, /work\.cv-read is listed twice/);
   assert.match(errs, /level must be 1–5/);
   assert.match(errs, /levels must be exactly 1–5/);
