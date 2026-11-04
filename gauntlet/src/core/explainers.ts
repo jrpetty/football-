@@ -884,7 +884,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'check', text: 'Each field checked against the handbook’s answer' },
       { icon: 'percent', text: 'Points for every field right' },
     ],
-    goodScore: '100 means every ticket handled exactly by the rules; refunding everyone at full price scores about 55.',
+    goodScore: '100 means every ticket handled exactly by the rules; refunding everyone at full price scores about 50.',
     icon: 'persona',
   },
   'work.cv-shortlist': {
@@ -917,11 +917,11 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whatItTests: 'Cleaning a customer list from two systems by exact matching rules: nicknames, typos, moves, married names and phone formats.',
     whyHard: 'Hundreds of records, a shared office email, a father and son at one address and the same name at another company all tempt a merge the rules forbid.',
     howScored: [
-      { icon: 'document', text: 'Answer: the groups and each group’s master record' },
+      { icon: 'document', text: 'Answer: the groups and each group’s golden record' },
       { icon: 'check', text: 'Groups marked pair by pair (pairwise F1)' },
-      { icon: 'percent', text: 'Masters marked as a set' },
+      { icon: 'percent', text: 'Golden records keyed by master, marked as a set' },
     ],
-    goodScore: '100 means the exact grouping and every master right; merging everything or nothing scores about 0.',
+    goodScore: '100 means the exact grouping, every master and every golden email and phone right; merging everything or nothing scores about 0.',
     icon: 'grid',
   },
 

@@ -36,6 +36,8 @@ export const BUSINESSES = {
         products: [P('BAN18', 'Bananas (box 18kg)', 1650, 'Z', 1, 4), P('AVO22', 'Avocados (tray of 22)', 1980, 'Z', 1, 4), P('LEM80', 'Lemons (box of 80)', 1420, 'Z', 1, 3), P('SPN1', 'Baby spinach 1kg', 675, 'Z', 2, 8)] },
       { id: 'KTE', name: 'Kettle & Tap Equipment Ltd', addr: 'Unit 12, Aztec West, Bristol BS32 4TD', vatNo: 'GB 205 6618 73', prefix: 'KT', sort: '30-12-80', acct: '55018266', terms: { kind: 'net', days: 45 }, layout: 'formal',
         products: [P('GB64', 'Grinder burr set 64mm', 8900, 'S', 1, 3), P('GHK', 'Group head seal & screen kit', 2450, 'S', 2, 6), P('WFC', 'Water filter cartridge', 6750, 'S', 1, 4)] },
+      { id: 'MBS', name: 'Mendip Bakery Supplies Ltd', addr: 'Unit 3, Station Road Industrial Estate, Wells BA5 1EA', vatNo: 'GB 640 2215 37', prefix: 'MBS', sort: '30-96-34', acct: '58201146', terms: { kind: 'settle', bp: 250, within: 14, days: 30 }, layout: 'formal',
+        products: [P('FLR16', 'Strong white flour 16kg', 1450, 'Z', 2, 8), P('BKP', 'Baking parchment roll 50m', 895, 'S', 2, 6), P('CHOC', 'Dark chocolate callets 2.5kg', 2875, 'Z', 1, 4)] },
     ],
   },
   plumbing: {
@@ -60,6 +62,8 @@ export const BUSINESSES = {
         products: [P('BTS3', 'Safety boots S3', 4995, 'S', 2, 6), P('TRSW', 'Work trousers (kneepad pockets)', 2650, 'S', 2, 8), P('HIVV', 'Hi-vis vest, branded', 425, 'S', 6, 20)] },
       { id: 'DFL', name: 'Dales Fuel Ltd', addr: 'Station Yard, Penistone S36 6HE', vatNo: 'GB 291 4457 03', prefix: 'DF', sort: '16-00-38', acct: '20774519', terms: { kind: 'net', days: 14 }, layout: 'formal',
         products: [P('KER28', 'Kerosene 28-sec, domestic delivery (litre)', 68, 'R', 500, 1200), P('ADDK', 'Kerosene additive 1L, domestic', 1450, 'R', 1, 4), P('TNKG', 'Oil tank level gauge (workshop stock)', 3450, 'S', 1, 3)] },
+      { id: 'BTH', name: 'Brighouse Tool Hire Ltd', addr: '2 Mill Royd Street, Brighouse HD6 1EY', vatNo: 'GB 512 0098 44', prefix: 'BTH', sort: '40-19-77', acct: '62045513', terms: { kind: 'settle', bp: 300, within: 14, days: 30 }, layout: 'email',
+        products: [P('PCUT', 'Pipe cutter set 15-28mm', 3450, 'S', 1, 4), P('PJAW', 'Press-fit jaw set 15/22/28', 18900, 'S', 1, 2), P('SDSB', 'SDS drill bit set (8 piece)', 2995, 'S', 1, 5)] },
     ],
   },
   baby: {
@@ -78,12 +82,14 @@ export const BUSINESSES = {
         products: [P('BK-MH', "'The Moon and the Hare' board book", 425, 'Z', 12, 48), P('BK-TE', "'Tiny Explorers' sticker atlas", 560, 'Z', 10, 40), P('BK-BT', 'Bedtime Stories Treasury (hardback)', 1150, 'Z', 6, 24), P('BK-GW', 'Gift wrap & card set', 350, 'S', 6, 24)] },
       { id: 'TTC', name: 'Tumbletots Clothing Co', addr: '4 Mill Lane, Leicester LE2 7HU', vatNo: 'GB 158 0039 72', prefix: 'TT', sort: '23-05-80', acct: '61428830', terms: { kind: 'disc', bp: 200, within: 10, days: 30 }, layout: 'email',
         products: [P('SLP03', 'Organic sleepsuit 0-3m', 840, 'Z', 12, 48), P('RMP612', 'Knitted romper 6-12m', 1275, 'Z', 6, 30), P('HATT', 'Bobble hat (toddler)', 395, 'Z', 12, 40)] },
-      { id: 'SRC', name: 'SafeRide Child Seats Ltd', addr: 'Unit 1, Ely Road, Waterbeach CB25 9PG', vatNo: 'GB 944 6120 07', prefix: 'SR', sort: '30-90-89', acct: '16620873', terms: { kind: 'eom', days: 30 }, layout: 'formal',
+      { id: 'SRC', name: 'SafeRide Child Seats Ltd', addr: 'Unit 1, Ely Road, Waterbeach CB25 9PG', vatNo: 'GB 944 6120 07', prefix: 'SR', sort: '30-90-89', acct: '16620873', terms: { kind: 'net', days: 30 }, layout: 'formal',
         products: [P('CS0', 'Infant car seat, group 0+', 6450, 'R', 2, 8), P('CSHB', 'High-back booster seat', 3875, 'R', 2, 10), P('MIRR', 'Back-seat baby mirror', 1195, 'S', 4, 12)] },
       { id: 'WWC', name: 'Wick & Wax Candle Co', addr: 'The Old Forge, Aylsham NR11 6EH', vatNo: 'GB 389 7105 61', prefix: 'WW', sort: '60-02-13', acct: '27750914', terms: { kind: 'eom', days: 30 }, layout: 'scan',
         products: [P('CND-FC', "Soy candle 200g 'Fig & Cassis'", 525, 'S', 12, 48), P('DIF100', 'Reed diffuser 100ml', 640, 'S', 12, 36)] },
       { id: 'BBM', name: 'Broadland Box & Mailer Ltd', addr: '7 Gapton Hall Road, Great Yarmouth NR31 0NL', vatNo: 'GB 471 2288 19', prefix: 'BBM', sort: '20-61-55', acct: '90044321', terms: { kind: 'net', days: 21 }, layout: 'email',
         products: [P('MLR-S', 'Kraft mailer box small (pack 100)', 3290, 'S', 2, 10), P('TSP-IV', 'Tissue paper ivory (ream 480)', 2150, 'S', 1, 5), P('TAPE6', 'Branded paper tape (6 rolls)', 2475, 'S', 1, 5)] },
+      { id: 'NKW', name: 'Norfolk Knitwear Co', addr: '14 Market Place, North Walsham NR28 9BP', vatNo: 'GB 377 6104 92', prefix: 'NKW', sort: '20-30-81', acct: '47716032', terms: { kind: 'settle', bp: 250, within: 14, days: 30 }, layout: 'formal',
+        products: [P('CARD612', 'Knitted cardigan 6-12m', 1650, 'Z', 6, 24), P('BLNK', 'Cellular baby blanket', 1395, 'Z', 6, 24), P('GBOX', 'Gift box with ribbon', 275, 'S', 12, 48)] },
     ],
   },
   dental: {
@@ -100,14 +106,16 @@ export const BUSINESSES = {
     suppliers: [
       { id: 'SDS', name: 'Soar Dental Supplies Ltd', addr: '2 Soar Valley Way, Enderby, Leicester LE19 1WA', vatNo: 'GB 610 4473 28', prefix: 'SDS', sort: '30-80-47', acct: '50927716', terms: { kind: 'disc', bp: 200, within: 10, days: 30 }, layout: 'formal',
         products: [P('NGL-M', 'Nitrile gloves size M (box 200)', 785, 'S', 10, 40), P('MSK2R', 'Type IIR face masks (box 50)', 430, 'S', 10, 40), P('CMP-A2', 'Composite syringe A2 4g', 2865, 'S', 4, 16), P('BIB500', 'Patient bibs (case 500)', 1990, 'S', 2, 8)] },
-      { id: 'CVI', name: 'ClearView Imaging Ltd', addr: 'Suite 3, Pegasus House, Nottingham NG7 2RU', vatNo: 'GB 255 9081 34', prefix: 'CVI-', sort: '40-11-62', acct: '81236607', terms: { kind: 'net', days: 45 }, layout: 'email',
-        products: [P('PSP2', 'Phosphor imaging plates size 2 (pack 4)', 13400, 'S', 1, 3), P('SSL500', 'Sensor sleeves (box 500)', 3850, 'S', 1, 4)] },
+      { id: 'CVI', name: 'ClearView Imaging Ltd', addr: 'Suite 3, Pegasus House, Nottingham NG7 2RU', vatNo: 'GB 255 9081 34', prefix: 'CVI-', sort: '40-11-62', acct: '81236607', terms: { kind: 'net', days: 30 }, layout: 'email',
+        products: [P('PSP2', 'Phosphor imaging plates size 2 (pack 4)', 13400, 'S', 1, 3), P('SSL500', 'Sensor sleeves (box 500)', 3850, 'S', 1, 4), P('XRM100', 'X-ray film mounts (pack 100)', 1250, 'S', 4, 12)] },
       { id: 'MMW', name: 'Midshires Medical Waste Ltd', addr: 'Unit 20, Coalville Business Park, Coalville LE67 3NR', vatNo: 'GB 731 6650 92', prefix: 'MMW', sort: '20-45-77', acct: '33061894', terms: { kind: 'net', days: 14 }, layout: 'scan',
         products: [P('SHB5', 'Sharps bin 5L', 465, 'S', 6, 24), P('AMGP', 'Amalgam waste pot', 2150, 'S', 1, 4), P('GYPB', 'Gypsum waste bin 30L', 1875, 'S', 1, 4)] },
       { id: 'CPS', name: 'Charnwood Print & Signs', addr: '88 Belvoir Road, Loughborough LE11 1PT', vatNo: 'GB 402 3378 15', prefix: 'CPS', sort: '30-15-99', acct: '62710058', terms: { kind: 'eom', days: 30 }, layout: 'formal',
         products: [P('APC1K', 'Appointment cards (1000)', 4600, 'S', 1, 3), P('LTH500', 'Letterheads (500)', 3800, 'S', 1, 3), P('CHLD', "Children's oral-health leaflets (500)", 2950, 'S', 1, 3)] },
       { id: 'NPC', name: 'North Point Child Products Ltd', addr: 'Unit 8, Grove Park, Enderby LE19 1SA', vatNo: 'GB 588 0412 66', prefix: 'NPC', sort: '09-01-29', acct: '76543210', terms: { kind: 'net', days: 21 }, layout: 'email',
         products: [P('CHB', "Children's picture books for waiting room", 650, 'Z', 6, 20), P('CHCS', 'Infant car seat (staff benefit scheme)', 5995, 'R', 1, 3)] },
+      { id: 'MDS', name: 'Midland Dental Sundries Ltd', addr: 'Unit 6, Meridian Business Park, Leicester LE19 1WZ', vatNo: 'GB 298 4471 05', prefix: 'MDS', sort: '30-54-66', acct: '19983307', terms: { kind: 'settle', bp: 300, within: 14, days: 30 }, layout: 'formal',
+        products: [P('ITRAY', 'Impression trays (box 50)', 2400, 'S', 1, 6), P('ALG500', 'Alginate 500g', 1150, 'S', 4, 16), P('BITE', 'Bite registration cartridges (pack 4)', 3200, 'S', 1, 5)] },
     ],
   },
 };
@@ -123,13 +131,18 @@ export const SPECS = [
   { id: 'c01', tier: 'easy', biz: 'cafe', seed: 101, run: D(2026, 11, 5), intents: ['ok', 'ok-disc', 'hold-price-clear', 'ok', 'ok-partial'] },
   { id: 'c02', tier: 'easy', biz: 'baby', seed: 202, run: D(2026, 11, 12), intents: ['ok', 'ok-tolvar', 'hold-qty', 'reject-entity', 'ok-disc', 'ok'] },
   { id: 'c03', tier: 'easy', biz: 'plumbing', seed: 303, run: D(2026, 11, 19), intents: ['ok', 'reject-dup-ledger', 'hold-vat', 'ok-disc-expired', 'ok-partial', 'ok', 'hold-no-po'] },
-  { id: 'c04', tier: 'medium', biz: 'dental', seed: 404, run: D(2026, 11, 26), intents: ['ok', 'ok-tolvar', 'hold-price-5', 'credit-ledger', 'ok-disc', 'hold-qty', 'ok-vat-rounding', 'reject-entity', 'ok-mixed-vat'] },
-  { id: 'c05', tier: 'medium', biz: 'cafe', seed: 505, run: D(2026, 12, 3), intents: ['ok-ocr', 'hold-bank', 'ok', 'hold-price-2pc', 'ok-disc', 'pair:dup-batch', 'hold-vat', 'ok-partial', 'ok-eom'] },
-  { id: 'c06', tier: 'medium', biz: 'baby', seed: 606, run: D(2026, 12, 10), intents: ['ok', 'pair:credit-combined-qty', 'hold-price-under', 'ok-delivered-sister', 'hold-no-po-wrong-supplier', 'ok-ocr', 'ok-tolvar', 'ok-disc-expired', 'hold-vat-rate', 'ok-mixed-vat'] },
-  { id: 'c07', tier: 'hard', biz: 'plumbing', seed: 707, run: D(2026, 12, 17), intents: ['ok', 'hold-qty-correction', 'ok-correction', 'pair:credit-linked-hold', 'ok-bank-format', 'hold-price-5', 'reject-dup-ledger', 'ok-disc', 'ok-tolvar', 'hold-bank', 'ok-eom', 'credit-ledger', 'ok-partial'] },
-  { id: 'c08', tier: 'hard', biz: 'dental', seed: 808, run: D(2027, 1, 7), intents: ['ok-mixed-vat', 'pair:credit-combined-price', 'hold-price-2pc', 'reject-entity', 'ok-delivered-sister', 'hold-qty-correction', 'ok-disc', 'ok-disc-expired', 'pair:dup-batch', 'hold-vat', 'ok-vat-rounding', 'ok-ocr', 'hold-no-po', 'ok-partial-earlier'] },
-  { id: 'c09', tier: 'hard', biz: 'cafe', seed: 909, run: D(2027, 1, 14), intents: ['ok', 'ok-disc', 'pair:credit-combined-qty', 'hold-bank', 'ok-bank-format', 'hold-price-5', 'hold-price-under', 'reject-dup-ledger', 'ok-correction', 'hold-qty-correction', 'ok-ocr', 'hold-vat-rate', 'ok-tolvar', 'ok-eom', 'credit-ledger', 'reject-entity', 'ok-partial-earlier', 'ok-disc-expired'] },
-  { id: 'c10', tier: 'hard', biz: 'baby', seed: 1010, run: D(2027, 1, 21), intents: ['ok', 'ok-mixed-vat', 'pair:credit-combined-price', 'pair:credit-linked-hold', 'pair:dup-batch', 'hold-qty', 'hold-price-2pc', 'hold-price-5', 'ok-ocr', 'hold-no-po-wrong-supplier', 'ok-delivered-sister', 'ok-correction', 'hold-qty-correction', 'hold-bank', 'ok-disc', 'ok-disc-expired', 'ok-vat-rounding', 'reject-dup-ledger', 'credit-ledger', 'ok-tolvar'] },
+  { id: 'c04', tier: 'medium', biz: 'dental', seed: 404, run: D(2026, 11, 26), intents: ['ok', 'ok-tolvar', 'hold-price-5', 'credit-ledger', 'ok-disc', 'hold-qty', 'reject-entity', 'hold-price-total', 'ok-settle', 'grn-revert', 'pair:consume-hold'] },
+  { id: 'c05', tier: 'medium', biz: 'cafe', seed: 505, run: D(2026, 12, 3), intents: ['ok-ocr', 'hold-bank', 'ok', 'hold-price-2pc', 'ok-disc', 'pair:dup-batch', 'hold-vat', 'ok-eom', 'pair:consume-freed', 'po-amend-supplier', 'ok-settle', 'ok-tolvar-multi'] },
+  { id: 'c06', tier: 'medium', biz: 'baby', seed: 606, run: D(2026, 12, 10), intents: ['ok', 'pair:credit-combined-qty', 'hold-price-under', 'ok-delivered-sister', 'hold-no-po-wrong-supplier', 'ok-tolvar', 'ok-disc-expired', 'hold-vat-rate', 'po-amend-ok', 'grn-double', 'hold-price-total', 'credit-exceeds'] },
+  { id: 'c07', tier: 'hard', biz: 'plumbing', seed: 707, run: D(2026, 12, 17), intents: ['hold-qty-correction', 'ok-correction', 'pair:credit-linked-hold', 'ok-bank-format', 'hold-price-5', 'reject-dup-ledger', 'ok-disc', 'hold-bank', 'pair:consume-hold', 'pair:consume-freed', 'hold-price-total', 'ok-tolvar-multi', 'po-amend-ok', 'po-amend-supplier', 'grn-revert', 'grn-double', 'ok-settle', 'credit-exceeds'] },
+  { id: 'c08', tier: 'hard', biz: 'dental', seed: 808, run: D(2027, 1, 7), intents: ['pair:credit-combined-price', 'hold-price-2pc', 'reject-entity', 'ok-delivered-sister', 'hold-qty-correction', 'ok-disc', 'pair:dup-batch', 'hold-vat', 'ok-ocr', 'ok-partial-earlier', 'pair:consume-hold', 'pair:consume-freed', 'hold-price-total', 'po-amend-supplier', 'po-amend-ok', 'grn-double', 'grn-revert', 'ok-settle', 'credit-exceeds'] },
+  { id: 'c09', tier: 'hard', biz: 'cafe', seed: 909, run: D(2027, 1, 14), intents: ['ok-disc', 'pair:credit-combined-qty', 'hold-bank', 'hold-price-under', 'reject-dup-ledger', 'ok-correction', 'hold-qty-correction', 'ok-ocr', 'hold-vat-rate', 'credit-ledger', 'reject-entity', 'pair:consume-freed', 'pair:consume-hold', 'hold-price-total', 'ok-tolvar-multi', 'po-amend-ok', 'po-amend-supplier', 'grn-double', 'grn-revert', 'ok-settle', 'credit-exceeds'] },
+  { id: 'c10', tier: 'hard', biz: 'baby', seed: 1010, run: D(2027, 1, 21), intents: [
+    'ok', 'ok-mixed-vat', 'pair:credit-combined-price', 'pair:credit-linked-hold', 'pair:dup-batch', 'hold-qty', 'hold-price-2pc', 'hold-price-5', 'ok-ocr', 'hold-no-po-wrong-supplier',
+    'ok-delivered-sister', 'ok-correction', 'hold-qty-correction', 'hold-bank', 'ok-disc', 'ok-disc-expired', 'ok-vat-rounding', 'reject-dup-ledger', 'credit-ledger', 'ok-tolvar',
+    'pair:consume-hold', 'pair:consume-freed', 'pair:consume-hold', 'hold-price-total', 'hold-price-total', 'ok-tolvar-multi', 'ok-tolvar-multi', 'po-amend-ok', 'po-amend-supplier', 'po-amend-ok',
+    'grn-revert', 'grn-double', 'grn-double', 'ok-settle', 'ok-settle', 'credit-exceeds', 'pair:credit-combined-qty', 'hold-vat-rate', 'reject-entity', 'ok-partial-earlier',
+    'ok-eom', 'hold-price-under', 'pair:consume-freed', 'ok-bank-format', 'ok-partial'] },
 ];
 
 // ───────────────────────────── Generator ─────────────────────────────
@@ -156,8 +169,10 @@ export function generate(spec) {
     invCounters[sup.id] = (invCounters[sup.id] ?? 100000 + r.int(1000, 89999)) + r.int(3, 40);
     return `${sup.prefix}${invCounters[sup.id]}`;
   };
+  const reserved = new Set();
+  let currentIntent = '';
   const pickSupplier = (pred = () => true) => {
-    const ok = biz.suppliers.filter((s) => pred(s));
+    const ok = biz.suppliers.filter((s) => pred(s) && !reserved.has(s.id));
     assert(ok.length, `${spec.id}: no supplier left`);
     return r.pick(ok);
   };
@@ -188,6 +203,7 @@ export function generate(spec) {
   }
   function invoiceDateFor(intent) {
     if (intent === 'ok-disc') return addDays(run, -r.int(2, 8));
+    if (intent === 'ok-settle') return addDays(run, -r.int(3, 12));
     if (intent === 'ok-disc-expired') return addDays(run, -r.int(13, 19));
     return addDays(run, -r.int(6, 34));
   }
@@ -214,6 +230,7 @@ export function generate(spec) {
       reason: opts.reason ?? null,
       phoneOrder: !!opts.phoneOrder,
       reissue: !!opts.reissue,
+      tag: currentIntent,
       received: null,
     };
     world.docs.push(d);
@@ -239,6 +256,7 @@ export function generate(spec) {
   function plant(intent) {
     switch (intent) {
       case 'ok':
+      case 'ok-settle':
       case 'ok-disc':
       case 'ok-disc-expired':
       case 'ok-eom':
@@ -249,12 +267,13 @@ export function generate(spec) {
       case 'ok-vat-rounding': {
         let pred = () => true;
         if (intent === 'ok-disc' || intent === 'ok-disc-expired') pred = (s) => s.terms.kind === 'disc';
+        if (intent === 'ok-settle') pred = (s) => s.terms.kind === 'settle';
         if (intent === 'ok-eom') pred = (s) => s.terms.kind === 'eom';
         if (intent === 'ok-ocr') pred = (s) => s.layout === 'scan';
         if (intent === 'ok-mixed-vat') pred = (s) => new Set(s.products.map((p) => p.vat)).size > 1;
         if (intent === 'ok-bank-format') pred = (s) => s.layout !== 'scan';
         const sup = pickSupplier(pred);
-        const po = makePO(sup, intent === 'ok-mixed-vat' ? Math.min(sup.products.length, 3) : r.int(1, Math.min(3, sup.products.length)));
+        const po = makePO(sup, intent === 'ok-mixed-vat' ? Math.min(sup.products.length, 3) : r.int(1, Math.min(3, sup.products.length)), intent === 'ok-settle' ? { vat: ['S'] } : {});
         if (intent === 'ok-mixed-vat') assert(new Set(po.lines.map((l) => l.vat)).size > 1 || sup.products.length < 3, 'mixed vat');
         makeGRN(po, po.lines.map((l) => [l.code, l.qty]));
         const lines = invLines(po);
@@ -346,7 +365,8 @@ export function generate(spec) {
           const sign = intent === 'hold-price-under' ? -1 : 1;
           return [makeDoc(sup, po, invLines(po, (l) => l.qty, (l) => (l.code === p.code ? l.price + sign * dlt : l.price)))];
         }
-        throw new Error(`${spec.id}: could not plant ${intent}`);
+        assert(false, `${spec.id}: could not plant ${intent}`);
+        return [];
       }
       case 'hold-vat':
       case 'hold-vat-rate': {
@@ -463,17 +483,143 @@ export function generate(spec) {
         world.intent[cn.docId] = 'hold-linked';
         return [];
       }
+      case 'pair:consume-hold':
+      case 'pair:consume-freed': {
+        // Two invoices on one PO line. The first one uses up most of what was received, unless it is itself held.
+        const sup = pickSupplier((s) => s.terms.kind === 'net' && s.products.some((p) => p.hi >= 8));
+        const prod = r.pick(sup.products.filter((p) => p.hi >= 8));
+        poNo += r.int(1, 9);
+        const st = site();
+        const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(40, 50)), raisedBy: st.lead, site: st, lines: [{ code: prod.code, desc: prod.desc, qty: Math.max(prod.hi, 12) + r.int(0, 8), price: prod.price, vat: prod.vat, invoicedToDate: 0 }] };
+        world.pos.push(po);
+        const l = po.lines[0];
+        const received = l.qty - r.int(1, 3);
+        makeGRN(po, [[l.code, received]], { note: 'Part delivery - balance to follow' });
+        const a = Math.max(3, Math.floor((received * r.int(45, 65)) / 100));
+        let bq = received - a + r.int(1, 2);
+        if (bq === a) bq = bq + 1 <= received ? bq + 1 : bq - 1;
+        assert(bq !== a && bq <= received && a + bq > received, 'consume quantities');
+        const freed = intent === 'pair:consume-freed';
+        let priceA = l.price;
+        if (freed) priceA = l.price + (deltaIn(a, Math.max(tolerance(a * l.price) * 2, 700), a * l.price * 0.2) ?? Math.ceil((tolerance(a * l.price) + 800) / a));
+        const dA = addDays(run, -r.int(16, 30));
+        const A = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: a, price: priceA, vat: l.vat }], { date: dA });
+        const B = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: bq, price: l.price, vat: l.vat }], { date: addDays(dA, r.int(3, 8)) });
+        B.after = A;
+        world.intent[A.docId] = freed ? 'hold-price' : 'approve';
+        world.intent[B.docId] = freed ? 'approve' : 'hold-qty';
+        return [];
+      }
+      case 'hold-price-total':
+      case 'ok-tolvar-multi': {
+        // Every line is inside its own tolerance; only the £10 cap on the whole document decides.
+        for (let tries = 0; tries < 400; tries++) {
+          const sup = pickSupplier((s) => s.products.length >= 3);
+          const prods = r.sample(sup.products, Math.min(sup.products.length, intent === 'hold-price-total' ? 4 : 3));
+          const ls = prods.map((p) => ({ p, qty: r.int(Math.ceil((p.lo + p.hi) / 2), p.hi) }));
+          const deltas = [];
+          for (const x of ls) {
+            const tol = tolerance(x.qty * x.p.price);
+            const cand = [];
+            for (let dl = 1; dl * x.qty < tol - 15; dl++) if (intent === 'hold-price-total' ? dl * x.qty > tol * 0.55 : dl * x.qty > 15) cand.push(dl);
+            if (!cand.length) break;
+            deltas.push(intent === 'hold-price-total' ? r.pick(cand) : cand[0]);
+          }
+          if (deltas.length !== ls.length || deltas.some((dl, i) => dl >= ls[i].p.price)) continue;
+          const sum = ls.reduce((t, x, i) => t + deltas[i] * x.qty, 0);
+          if (intent === 'hold-price-total' ? sum <= 1040 : sum >= 960) continue;
+          poNo += r.int(1, 9);
+          const st = site();
+          const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(36, 50)), raisedBy: st.lead, site: st, lines: ls.map((x) => ({ code: x.p.code, desc: x.p.desc, qty: x.qty, price: x.p.price, vat: x.p.vat, invoicedToDate: 0 })) };
+          world.pos.push(po);
+          makeGRN(po, po.lines.map((x) => [x.code, x.qty]));
+          const signs = intent === 'hold-price-total' ? [1, -1, 1, -1] : [1, 1, -1, 1];
+          return [makeDoc(sup, po, po.lines.map((x, i) => ({ code: x.code, desc: x.desc, qty: x.qty, price: x.price + signs[i] * deltas[i], vat: x.vat })))];
+        }
+        assert(false, `${spec.id}: could not plant ${intent}`);
+        return [];
+      }
+      case 'po-amend-ok':
+      case 'po-amend-supplier': {
+        // The invoice price is above tolerance against the PO; an email amends the price, but only the buyer's counts.
+        for (let tries = 0; tries < 200; tries++) {
+          const sup = pickSupplier((s) => s.layout !== 'scan');
+          const prod = r.pick(sup.products);
+          const qty = r.int(prod.lo, prod.hi);
+          const dl = deltaIn(qty, Math.max(tolerance(qty * prod.price) * 2, 600), qty * prod.price * 0.12);
+          if (!dl) continue;
+          poNo += r.int(1, 9);
+          const st = site();
+          const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(36, 50)), raisedBy: st.lead, site: st, lines: [{ code: prod.code, desc: prod.desc, qty, price: prod.price, vat: prod.vat, invoicedToDate: 0 }] };
+          world.pos.push(po);
+          makeGRN(po, [[prod.code, qty]]);
+          const doc = makeDoc(sup, po, [{ code: prod.code, desc: prod.desc, qty, price: prod.price + dl, vat: prod.vat }]);
+          const buyer = intent === 'po-amend-ok';
+          world.emails.push({ kind: 'po-amend', po: po.no, code: prod.code, desc: prod.desc, price: prod.price + dl, was: prod.price, from: buyer ? po.raisedBy : `${sup.name} sales`, supplier: buyer ? null : sup.id, site: po.site });
+          return [doc];
+        }
+        assert(false, `${spec.id}: could not plant ${intent}`);
+        return [];
+      }
+      case 'grn-revert':
+      case 'grn-double': {
+        const sup = pickSupplier((s) => s.products.some((p) => p.hi >= 10));
+        const po = makePO(sup, 1);
+        const l = po.lines[0];
+        if (l.qty < 10) l.qty = 10 + r.int(0, 10);
+        const g = makeGRN(po, [[l.code, l.qty]]);
+        const first = l.qty - r.int(3, Math.max(3, Math.floor(l.qty / 3)));
+        world.emails.push({ kind: 'grn-correction', grn: g.no, code: l.code, desc: l.desc, from: po.site.lead, site: po.site, was: l.qty, now: first, up: false });
+        let billed = l.qty;
+        if (intent === 'grn-revert') world.emails.push({ kind: 'grn-revert', grn: g.no, code: l.code, desc: l.desc, from: po.site.lead, site: po.site, original: l.qty });
+        else {
+          const second = first + r.int(1, l.qty - first - 1 > 1 ? l.qty - first - 1 : 1);
+          world.emails.push({ kind: 'grn-correction', grn: g.no, code: l.code, desc: l.desc, from: po.site.lead, site: po.site, was: first, now: second, up: true, again: true });
+          billed = second;
+        }
+        return [makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: billed, price: l.price, vat: l.vat }])];
+      }
+      case 'credit-exceeds': {
+        // A big credit note and one small invoice from the same supplier: their net payment this run is negative.
+        const fits = (s) => s.terms.kind === 'net' && s.terms.days <= 21 && s.products.some((p) => p.price * p.hi >= 9000);
+        // Keep the scanning supplier free when the case needs an OCR invoice; otherwise use it first.
+        const wantScan = !spec.intents.includes('ok-ocr') && biz.suppliers.some((s) => fits(s) && s.layout === 'scan');
+        const sup = wantScan ? pickSupplier((s) => fits(s) && s.layout === 'scan') : pickSupplier((s) => fits(s) && s.layout !== 'scan');
+        reserved.add(sup.id);
+        const big = r.pick(sup.products.filter((p) => p.price * p.hi >= 9000));
+        const po1 = makePO(sup, 1);
+        po1.lines = [{ code: big.code, desc: big.desc, qty: big.hi, price: big.price, vat: big.vat, invoicedToDate: big.hi }];
+        makeGRN(po1, [[big.code, big.hi]]);
+        const origNo = nextInvNo(sup);
+        const l0 = po1.lines[0];
+        const g0 = l0.qty * l0.price + divHalfUp(l0.qty * l0.price * VAT_BP[l0.vat], 10000);
+        world.ledger.push({ supplier: sup.id, number: origNo, po: po1.no, gross: g0, paid: addDays(run, -r.int(4, 15)) });
+        let back = Math.max(2, Math.floor(l0.qty * 0.6));
+        const cn = makeDoc(sup, po1, [{ code: l0.code, desc: l0.desc, qty: back, price: l0.price, vat: l0.vat, cnKind: 'return' }], { kind: 'credit', number: `CN-${origNo}`, creditFor: origNo, date: addDays(run, -r.int(2, 6)), reason: 'faulty batch returned for credit' });
+        const small = r.pick(sup.products.filter((p) => p.code !== big.code)) ?? big;
+        const po2 = makePO(sup, 1);
+        po2.lines = [{ code: small.code, desc: small.desc, qty: small.lo, price: small.price, vat: small.vat, invoicedToDate: 0 }];
+        makeGRN(po2, [[small.code, small.lo]]);
+        const inv = makeDoc(sup, po2, [{ code: small.code, desc: small.desc, qty: small.lo, price: small.price, vat: small.vat }], { date: addDays(run, -r.int(sup.terms.days + 1, sup.terms.days + 6)) });
+        assert(cn.gross > inv.gross, 'credit must exceed the invoice');
+        world.intent[cn.docId] = 'approve';
+        world.intent[inv.docId] = 'approve';
+        world.netNegative = sup.id;
+        return [];
+      }
       default:
         throw new Error(`unknown intent ${intent}`);
     }
   }
 
   const INTENT_OUTCOME = (i) =>
-    i.startsWith('ok') ? 'approve' : i.startsWith('hold-price') ? 'hold-price' : i.startsWith('hold-qty') ? 'hold-qty' : i.startsWith('hold-vat') ? 'hold-vat' : i.startsWith('hold-no-po') ? 'hold-no-po' : i === 'hold-bank' ? 'hold-bank-details' : i === 'reject-entity' ? 'reject-wrong-entity' : i.startsWith('reject-dup') || i === 'pair:dup-batch' ? 'reject-duplicate' : i === 'credit-ledger' ? 'approve' : null;
+    i.startsWith('ok') ? 'approve' : i.startsWith('hold-price') ? 'hold-price' : i.startsWith('hold-qty') ? 'hold-qty' : i.startsWith('hold-vat') ? 'hold-vat' : i.startsWith('hold-no-po') ? 'hold-no-po' : i === 'hold-bank' ? 'hold-bank-details' : i === 'reject-entity' ? 'reject-wrong-entity' : i.startsWith('reject-dup') || i === 'pair:dup-batch' ? 'reject-duplicate' : i === 'credit-ledger' || i === 'po-amend-ok' || i.startsWith('grn-') ? 'approve' : i === 'po-amend-supplier' ? 'hold-price' : null;
 
   // Plant in an order that lets "wrong supplier PO" intents find other POs; then shuffle the inbox.
-  const order = spec.intents.slice().sort((a, b) => (a.includes('wrong-supplier') ? 1 : 0) - (b.includes('wrong-supplier') ? 1 : 0));
+  const rank = (x) => (x === 'credit-exceeds' ? -1 : x.includes('wrong-supplier') ? 1 : 0);
+  const order = spec.intents.slice().sort((a, b) => rank(a) - rank(b));
   for (const intent of order) {
+    currentIntent = intent;
     const docs = plant(intent);
     for (const d of docs) world.intent[d.docId] = INTENT_OUTCOME(intent);
     if (intent === 'ok-ocr') docs[0].layout = 'scan';
@@ -489,8 +635,8 @@ export function generate(spec) {
   let docs = world.docs.slice().sort((a, b) => rk(a) - rk(b));
   for (let i = 0; i < docs.length; i++) {
     const d = docs[i];
-    if (!d.reissue) continue;
-    const j = docs.findIndex((o) => o !== d && o.kind === 'invoice' && o.supplier === d.supplier && o.poRef === d.poRef && o.gross === d.gross);
+    if (!d.reissue && !d.after) continue;
+    const j = d.after ? docs.indexOf(d.after) : docs.findIndex((o) => o !== d && o.kind === 'invoice' && o.supplier === d.supplier && o.poRef === d.poRef && o.gross === d.gross);
     if (j > i) {
       d.received = { ...docs[j].received, mm: Math.min(59, docs[j].received.mm + 1 + r.int(0, 3)), hh: docs[j].received.hh + (docs[j].received.mm >= 56 ? 1 : 0) };
       docs = world.docs.slice().sort((a, b) => rk(a) - rk(b));
@@ -539,13 +685,34 @@ const refNorm = (s) => (s == null ? '' : String(s).toUpperCase().replace(/O/g, '
 export function solve(world, flags = {}) {
   const { biz, run, nextRun } = world;
   const sup = Object.fromEntries(biz.suppliers.map((s) => [s.id, s]));
+  // GRN figures after the site managers' emails (in the order sent: the latest word counts, "ignore my last
+  // email" restores the GRN), and PO lines after amendments by the person who raised the PO.
+  const grnLine = {};
+  for (const g of world.grns) for (const l of g.lines) grnLine[`${g.no}:${l.code}`] = l.qty;
+  const poPrice = {};
+  const poQty = {};
+  for (const po of world.pos) for (const l of po.lines) {
+    poPrice[`${po.no}:${l.code}`] = l.price;
+    poQty[`${po.no}:${l.code}`] = l.qty;
+  }
+  if (!flags.ignoreEmails) {
+    for (const e of world.emails) {
+      if (e.kind === 'grn-correction') grnLine[`${e.grn}:${e.code}`] = e.now;
+      if (e.kind === 'grn-revert') grnLine[`${e.grn}:${e.code}`] = e.original;
+      if (e.kind === 'po-amend') {
+        const po = world.pos.find((x) => x.no === e.po);
+        if (flags.anyAmendment || e.from === po.raisedBy) {
+          if (e.price !== undefined) poPrice[`${e.po}:${e.code}`] = e.price;
+          if (e.qty !== undefined) poQty[`${e.po}:${e.code}`] = e.qty;
+        }
+      }
+    }
+  }
   const grnQty = {};
-  const corrections = flags.ignoreEmails ? [] : world.emails.filter((e) => e.kind === 'grn-correction');
   for (const g of world.grns)
     for (const l of g.lines) {
-      const c = corrections.find((e) => e.grn === g.no && e.code === l.code);
       const k = `${g.po}:${l.code}`;
-      grnQty[k] = (grnQty[k] ?? 0) + (c ? c.now : l.qty);
+      grnQty[k] = (grnQty[k] ?? 0) + grnLine[`${g.no}:${l.code}`];
     }
   const findPO = (ref, supplierId) => world.pos.find((p) => (flags.noOcr ? p.no === ref : refNorm(p.no) === refNorm(ref)) && p.supplier === supplierId);
   const vatOk = (doc, po) => {
@@ -556,6 +723,7 @@ export function solve(world, flags = {}) {
   const bankOk = (doc) => flags.noBank || (digits(doc.bank.sort) === digits(sup[doc.supplier].sort) && digits(doc.bank.acct) === digits(sup[doc.supplier].acct));
   const credits = {};
   for (const d of world.docs) if (d.kind === 'credit') (credits[d.creditFor] ??= []).push(d);
+  const consumed = {};
 
   const out = {};
   const invoiceOutcome = (doc, idx) => {
@@ -569,6 +737,7 @@ export function solve(world, flags = {}) {
     const po = doc.poRef ? findPO(doc.poRef, doc.supplier) : null;
     if (!po) return 'hold-no-po';
     const cns = flags.noCredits ? [] : credits[doc.number] ?? [];
+    const eff = [];
     for (const l of doc.lines) {
       const pl = po.lines.find((x) => x.code === l.code);
       assert(pl, `${doc.docId}: line ${l.code} not on ${po.no}`);
@@ -580,14 +749,25 @@ export function solve(world, flags = {}) {
             value -= lineNet(c);
             if (c.cnKind === 'return') qty -= c.qty;
           }
-      const available = (grnQty[`${po.no}:${l.code}`] ?? 0) - pl.invoicedToDate;
-      if (!flags.noQty && qty > available) return 'hold-qty';
-      const poValue = pl.price * qty;
-      const diff = Math.abs(value - poValue);
+      eff.push({ key: `${po.no}:${l.code}`, qty, value, pl });
+    }
+    if (flags.consumeHeld) for (const x of eff) consumed[x.key] = (consumed[x.key] ?? 0) + x.qty;
+    for (const x of eff) {
+      const used = flags.noConsume ? 0 : (consumed[x.key] ?? 0) - (flags.consumeHeld ? x.qty : 0);
+      const available = (grnQty[x.key] ?? 0) - x.pl.invoicedToDate - used;
+      if (!flags.noQty && x.qty > available) return 'hold-qty';
+    }
+    let totalDiff = 0;
+    for (const x of eff) {
+      const poValue = poPrice[x.key] * x.qty;
+      const diff = Math.abs(x.value - poValue);
+      totalDiff += diff;
       const tolOk = flags.tolFiveOnly ? diff <= 500 : diff * 50 <= poValue && diff <= 500;
       if (!flags.noPrice && !tolOk) return 'hold-price';
     }
+    if (!flags.noPrice && !flags.noTotalCap && totalDiff > 1000) return 'hold-price';
     if (!vatOk(doc, po)) return 'hold-vat';
+    if (!flags.consumeHeld) for (const x of eff) consumed[x.key] = (consumed[x.key] ?? 0) + x.qty;
     return 'approve';
   };
   world.docs.forEach((doc, idx) => {
@@ -608,9 +788,9 @@ export function solve(world, flags = {}) {
     }
     out[doc.docId] = { outcome: o };
   });
-  // Amounts, pay-by dates and the run total.
-  let total = 0;
+  // Amounts and pay-by dates.
   const docs = {};
+  const inRun = [];
   for (const doc of world.docs) {
     const o = out[doc.docId].outcome;
     let amount = 0;
@@ -623,19 +803,25 @@ export function solve(world, flags = {}) {
         const t = sup[doc.supplier].terms;
         if (t.kind === 'net') payBy = addDays(doc.date, t.days);
         if (t.kind === 'eom') payBy = addDays(lastOfMonth(doc.date), t.days);
-        if (t.kind === 'disc') {
+        if (t.kind === 'disc' || t.kind === 'settle') {
           const deadline = addDays(doc.date, t.within);
           if (!flags.noDiscount && deadline >= run) {
             payBy = deadline;
-            amount = doc.gross - divHalfUp(doc.gross * t.bp, 10000);
+            const base = t.kind === 'settle' && !flags.settleOnGross ? doc.net : doc.gross;
+            amount = doc.gross - divHalfUp(base * t.bp, 10000);
           } else payBy = addDays(doc.date, t.days);
         }
         if (!amount) amount = doc.gross;
       }
-      if (payBy < nextRun) total += amount;
+      if (payBy < nextRun) inRun.push({ doc, amount });
     }
     docs[doc.docId] = { outcome: o, amount_to_pay: amount / 100, pay_by: payBy ? iso(payBy) : null };
   }
+  // A supplier whose documents in this run come to zero or less is not paid in this run at all.
+  const bySupplier = {};
+  for (const x of inRun) bySupplier[x.doc.supplier] = (bySupplier[x.doc.supplier] ?? 0) + x.amount;
+  let total = 0;
+  for (const x of inRun) if (flags.noSupplierNet || bySupplier[x.doc.supplier] > 0) total += x.amount;
   return { documents: docs, total_payable_this_run: Math.round(total) / 100 };
 }
 
@@ -655,6 +841,7 @@ export function careless(world) {
 function termsText(t) {
   if (t.kind === 'net') return `Net ${t.days}`;
   if (t.kind === 'eom') return `${t.days} days EOM`;
+  if (t.kind === 'settle') return `${t.bp / 100}% on goods in ${t.within} days, net ${t.days}`;
   return `${t.bp / 100}/${t.within} net ${t.days}`;
 }
 
@@ -728,17 +915,48 @@ function r0(key, xs) {
 
 function renderEmail(world, e, i) {
   const s = e.supplier ? world.biz.suppliers.find((x) => x.id === e.supplier) : null;
-  const when = `${ukShort(addDays(world.run, -2 + (i % 2)))} ${String(9 + i * 2).padStart(2, '0')}:${String(10 + i * 7).padStart(2, '0')}`;
+  const mins = 8 * 60 + i * 53;
+  const when = `${ukShort(addDays(world.run, -3 + Math.floor(mins / (10 * 60))))} ${String(Math.floor((mins % (10 * 60)) / 60) + 8).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   if (e.kind === 'grn-correction') {
     const first = e.from.split(' ')[0].toLowerCase();
     return [
       `From: ${e.from} <${first}@${world.biz.domain}> (site manager, ${e.site.name})`,
       `Sent: ${when}`,
       `Subject: RE: ${e.grn} - miscount`,
-      e.up
+      e.again
+        ? `Me again on ${e.grn} - found more ${e.desc} behind the cold-room door, so it's ${e.now}, not the ${e.was} I said. Please correct the GRN to ${e.now}. Last word on this one, promise.`
+        : e.up
         ? `Hi both - sorry, on ${e.grn} I put ${e.was} x ${e.desc} but the rest turned up on a second cage the same afternoon. We received ${e.now} in total. Please correct the GRN to ${e.now}.`
         : `Hi both - recount on ${e.grn}: we only had ${e.now} x ${e.desc}, not ${e.was}. The driver took the rest back (short-dated). Please correct the GRN to ${e.now}.`,
       `Cheers, ${e.from.split(' ')[0]}`,
+    ].join('\n');
+  }
+  if (e.kind === 'grn-revert') {
+    const first = e.from.split(' ')[0].toLowerCase();
+    return [
+      `From: ${e.from} <${first}@${world.biz.domain}> (site manager, ${e.site.name})`,
+      `Sent: ${when}`,
+      `Subject: RE: RE: ${e.grn} - miscount`,
+      `Ignore my last email about ${e.grn}, I was looking at the wrong delivery. The GRN was right first time (${e.original} x ${e.desc}). Sorry!`,
+    ].join('\n');
+  }
+  if (e.kind === 'po-amend') {
+    const po = world.pos.find((x) => x.no === e.po);
+    if (!e.supplier) {
+      const first = e.from.split(' ')[0].toLowerCase();
+      return [
+        `From: ${e.from} <${first}@${world.biz.domain}> (${po.site.name}, raised ${e.po})`,
+        `Sent: ${when}`,
+        `Subject: ${e.po} amended (rev B)`,
+        `FYI I've agreed a new price with the supplier on ${e.po}: ${e.desc} now ${gbp(e.price)} each (was ${gbp(e.was)}). Please treat the PO as amended.`,
+      ].join('\n');
+    }
+    const s2 = world.biz.suppliers.find((x) => x.id === e.supplier);
+    return [
+      `From: ${s2.name} Sales <sales@${s2.name.toLowerCase().replace(/ (ltd|co)$/, '').replace(/[^a-z]+/g, '')}.co.uk>`,
+      `Sent: ${when}`,
+      `Subject: Price update - your ${e.po}`,
+      `Hello, as discussed with ${po.raisedBy.split(' ')[0]} on the phone, ${e.desc} is now ${gbp(e.price)} each (was ${gbp(e.was)}) because of our supplier increases. Our invoice reflects this. Please update your PO. Kind regards, Sales Team`,
     ].join('\n');
   }
   if (e.kind === 'bank-change') {
@@ -758,12 +976,12 @@ Check 1, entity. The invoice must be addressed ("Invoice to" / "Bill to") to ${b
 Check 2, duplicate. An invoice is a duplicate if it has the same supplier, the same PO number and the same invoice total as an invoice on the paid ledger, or as an invoice earlier in this inbox (lower DOC number), even when the invoice number or date differs: reject-duplicate. Credit notes are never duplicates.
 Check 3, bank details. The sort code and account number printed on the document must match the supplier master file (spacing and dashes do not matter). If they differ: hold-bank-details. Bank details change only after a call-back to the phone number on the master file; an email asking us to change them changes nothing.
 Check 4, purchase order. The document must quote a PO number that is on the PO list for the same supplier; otherwise hold-no-po. Scanned documents are OCR text: the scanner sometimes reads the digit 0 as the letter O (or the reverse) in references, so treat O and 0 as the same character.
-Check 5, quantity. For each line, the invoiced quantity must not be more than the quantity received for that PO line (all GRNs, as corrected) minus the quantity already invoiced to date (shown on the PO list); otherwise hold-qty. A correction to a GRN emailed by the site manager who signed it replaces the GRN figure.
-Check 6, price. For each line, compare the invoiced line value with PO unit price x invoiced quantity. The difference, in either direction, may be at most 2% of that PO value or £5.00, whichever is LOWER; otherwise hold-price.
+Check 5, quantity. For each line, the invoiced quantity must not be more than the quantity received for that PO line (all GRNs, as corrected) minus the quantity already invoiced to date (shown on the PO list) minus the quantity on EARLIER documents in this inbox for the same PO line that you approve (held or rejected ones use up nothing); otherwise hold-qty. A correction to a GRN emailed by the site manager who signed it replaces the GRN figure; if they email more than once about the same GRN line, their latest email counts, and "ignore my last email" puts the GRN figure back.
+Check 6, price. Use the PO unit price as amended: an email from the person who raised the PO that changes its price amends the PO; a price change claimed by anyone else (including the supplier) changes nothing. For each line, compare the invoiced line value with PO unit price x invoiced quantity. The difference, in either direction, may be at most 2% of that PO value or £5.00, whichever is LOWER; and the differences of all the document's lines added together (each counted as a positive amount) may be at most £10.00. Otherwise hold-price.
 Check 7, VAT. The VAT charged must equal the correct VAT to within £0.02. Correct VAT: for each rate, apply the rate of the PO line's VAT code (S 20%, R 5%, Z 0%) to the document's net total at that rate, round to the nearest penny (half a penny rounds up), then add the rates up. Otherwise hold-vat.
 Credit notes. A credit note against an invoice on the paid ledger: checks 1, 3 and 7 apply; if it passes, approve it. A credit note against an invoice in this inbox: assess the two together. Before checks 5 and 6, reduce the invoice's lines by the credit note's lines (returned quantity and value, or a price adjustment's value); every other check applies to each document on its own. If the invoice is then approved, approve the credit note too; otherwise hold the credit note: hold-linked. An approved credit note has amount_to_pay equal to minus its total and pay_by equal to the run date.
-Payment terms (supplier master file). "Net N": due N days after the invoice date. "N days EOM": due N days after the last day of the invoice's month. "D/10 net 30": a D% early-payment discount if paid within 10 days of the invoice date, otherwise due 30 days after the invoice date. Take the discount whenever its deadline (invoice date + 10 days) is on or after the run date: pay_by is then that deadline and amount_to_pay is the invoice total minus D% of the total (the discount rounded to the nearest penny, half up). Otherwise pay_by is the due date (even if it has already passed) and amount_to_pay is the invoice total.
-This run. Approved documents whose pay_by date is BEFORE the next run date are paid in this run (overdue ones included); the rest wait for a later run. total_payable_this_run is the sum of amount_to_pay over the documents paid in this run, credit notes included.
+Payment terms (supplier master file). "Net N": due N days after the invoice date. "N days EOM": due N days after the last day of the invoice's month. "D/10 net 30": a D% early-payment discount if paid within 10 days of the invoice date, otherwise due 30 days after the invoice date. Take the discount whenever its deadline (invoice date + 10 days) is on or after the run date: pay_by is then that deadline and amount_to_pay is the invoice total minus D% of the total (the discount rounded to the nearest penny, half up). "P% on goods in 14 days, net 30" (a settlement discount): the same, but the deadline is invoice date + 14 days and the discount is P% of the NET goods total (before VAT), rounded to the nearest penny (half up), taken off the invoice total. Otherwise pay_by is the due date (even if it has already passed) and amount_to_pay is the invoice total.
+This run. Approved documents whose pay_by date is BEFORE the next run date are paid in this run (overdue ones included); the rest wait for a later run. Exception: if a supplier's documents that would be paid in this run add up to zero or less (credit notes bigger than the invoices), none of that supplier's documents are paid in this run; they keep their outcome, amount_to_pay and pay_by and wait for a later run. total_payable_this_run is the sum of amount_to_pay over the documents paid in this run, credit notes included.
 Held or rejected documents: amount_to_pay 0 and pay_by null.`;
 
 export function render(world) {
@@ -830,6 +1048,15 @@ export function selfCheck(world, sol) {
     for (const d of world.docs.filter((x) => refNorm(x.poRef) === refNorm(po.no))) if (!(d.date > po.date)) bad.push(`${d.docId} dated before ${po.no}`);
   }
   for (const d of world.docs) if (!(d.date < world.run) || !(d.received.date < world.run)) bad.push(`${d.docId} not before the run`);
+  // Every planted rule must change the answer when it is ignored.
+  const tags = new Set(world.docs.map((d) => d.tag));
+  const differs = (f) => JSON.stringify(solve(world, f)) !== JSON.stringify(sol);
+  if (tags.has('credit-exceeds') && !differs({ noSupplierNet: true })) bad.push('supplier-net exception has no effect');
+  if (tags.has('pair:consume-hold') && !differs({ noConsume: true })) bad.push('consumption has no effect');
+  if (tags.has('pair:consume-freed') && !differs({ consumeHeld: true })) bad.push('held invoices consuming has no effect');
+  if (tags.has('hold-price-total') && !differs({ noTotalCap: true })) bad.push('total cap has no effect');
+  if (tags.has('po-amend-supplier') && !differs({ anyAmendment: true })) bad.push('amendment rule has no effect');
+  if (tags.has('ok-settle') && !differs({ settleOnGross: true })) bad.push('settlement base has no effect');
   return bad;
 }
 
@@ -839,10 +1066,25 @@ export function summary(world, sol) {
   return `${world.docs.length} docs, total ${sol.total_payable_this_run} ${JSON.stringify(counts)}`;
 }
 
+/** Hard skills weigh more: a planted problem's outcome is worth 4 points, its amount 3 and its pay-by date 2; the run total 8. */
+export function caseScorer(world, base) {
+  const plain = new Set(['ok', 'ok-partial', 'ok-eom', 'ok-mixed-vat']);
+  const weights = { total_payable_this_run: 8 };
+  for (const d of world.docs)
+    if (!plain.has(d.tag)) {
+      weights[`documents.${d.docId}.outcome`] = 4;
+      weights[`documents.${d.docId}.amount_to_pay`] = 3;
+      weights[`documents.${d.docId}.pay_by`] = 2;
+    }
+  return { ...base, weights };
+}
+
 /** Scripted answers for the spread report and the scorer tests (never shown to a model). */
 export function scripted(world) {
   return {
     careless: careless(world),
+    flawed_new_rules: solve(world, { noConsume: true, noTotalCap: true, anyAmendment: true, settleOnGross: true, noSupplierNet: true }),
+    careful_human_slips: solve(world, { noSupplierNet: true, settleOnGross: true }),
     flawed_tolerance_ocr_emails: solve(world, { tolFiveOnly: true, noOcr: true, ignoreEmails: true }),
     flawed_discounts_credits: solve(world, { noDiscount: true, noCredits: true }),
     flawed_misses_duplicates_and_bank: solve(world, { noDup: true, noBank: true }),

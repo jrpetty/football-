@@ -16,8 +16,10 @@ export const RATES = {
   pensionAge: 66,
 };
 
-const FIRST = ['Marek', 'Aisha', 'Daniel', 'Siobhan', 'Kwame', 'Lucy', 'Tomasz', 'Hiba', 'Ryan', 'Ngozi', 'Ewa', 'Callum', 'Parveen', 'Jordan', 'Mei', 'Owain', 'Sana', 'Liam', 'Grace', 'Bilal', 'Kerry', 'Femi', 'Joanna', 'Arash'];
-const LAST = ['Nowak', 'Begum', 'Ferreira', 'Kelly', 'Mensah', 'Hartley', 'Lis', 'Saleh', 'Thornton', 'Okafor', 'Wisniewska', 'Fraser', 'Kaur', 'Pryce', 'Lin', 'Evans', 'Iqbal', 'Doyle', 'Asante', 'Rashid', 'Holroyd', 'Adebayo', 'Szymanska', 'Karimi'];
+const FIRST = ['Marek', 'Aisha', 'Daniel', 'Siobhan', 'Kwame', 'Lucy', 'Tomasz', 'Hiba', 'Ryan', 'Ngozi', 'Ewa', 'Callum', 'Parveen', 'Jordan', 'Mei', 'Owain', 'Sana', 'Liam', 'Grace', 'Bilal', 'Kerry', 'Femi', 'Joanna', 'Arash',
+  'Chloe', 'Dev', 'Ines', 'Kieran', 'Layla', 'Mateusz', 'Nia', 'Omar', 'Pippa', 'Rashid', 'Sophie', 'Theo', 'Uche', 'Vikram', 'Wendy', 'Yasmin', 'Zoltan', 'Bethan', 'Craig', 'Delia'];
+const LAST = ['Nowak', 'Begum', 'Ferreira', 'Kelly', 'Mensah', 'Hartley', 'Lis', 'Saleh', 'Thornton', 'Okafor', 'Wisniewska', 'Fraser', 'Kaur', 'Pryce', 'Lin', 'Evans', 'Iqbal', 'Doyle', 'Asante', 'Rashid', 'Holroyd', 'Adebayo', 'Szymanska', 'Karimi',
+  'Barlow', 'Chowdhury', 'Dimitrov', 'Ellis', 'Farrell', 'Gomez', 'Haworth', 'Ibe', 'Jansen', 'Kowalski', 'Lowe', 'Moran', 'Nash', 'Oduya', 'Pilling', 'Quigley', 'Rourke', 'Sato', 'Tan', 'Varga'];
 
 export const EMPLOYERS = [
   { name: 'Pennine Plumbing & Heating Ltd', town: 'Huddersfield', boss: 'Gareth Lloyd', bureau: 'Colne Valley Payroll Bureau' },
@@ -30,13 +32,13 @@ export const SPECS = [
   { id: 'p01', tier: 'easy', seed: 51, emp: 0, pay: [2026, 11, 27], month: 8, staff: ['plain', 'plain-sl2', 'overtime', 'plain'], mistakes: { 2: 'overtime-1x' } },
   { id: 'p02', tier: 'easy', seed: 52, emp: 1, pay: [2026, 11, 27], month: 8, staff: ['plain', 'br-second-job', 'over-pension-age', 'hourly', 'plain-sl1'], mistakes: { 2: 'ni-cat-a-for-c', 4: 'sl-wrong-plan' } },
   { id: 'p03', tier: 'easy', seed: 53, emp: 2, pay: [2026, 12, 18], month: 9, staff: ['plain', 'apprentice', 'opted-out', 'overtime', 'plain-sl4'], mistakes: { 2: 'pension-opted-out', 3: 'pension-full-pay' } },
-  { id: 'p04', tier: 'medium', seed: 54, emp: 0, pay: [2026, 12, 23], month: 9, staff: ['plain', 'sacrifice', 'k-code', 'plain-sl2-pgl', 'starter-m1', 'apprentice', 'overtime'], mistakes: { 1: 'sacrifice-ni-before', 4: 'm1-as-cumulative', 5: 'employer-ni-apprentice' } },
-  { id: 'p05', tier: 'medium', seed: 55, emp: 1, pay: [2027, 1, 29], month: 10, staff: ['plain', 'ssp', 'mid-month-starter', 'br-second-job', 'plain-sl1', 'sacrifice', 'hourly', 'over-pension-age'], mistakes: { 1: 'ssp-no-waiting', 2: 'starter-calendar-days', 4: 'sl-rounded-penny' } },
-  { id: 'p06', tier: 'medium', seed: 56, emp: 2, pay: [2027, 1, 29], month: 10, staff: ['plain', 'k-code', 'opted-out', 'overtime', 'apprentice-turned-25', 'plain-sl2-pgl', 'code-change', 'sacrifice'], mistakes: { 3: 'overtime-1x', 4: 'apprentice-still-h', 6: 'old-code' } },
-  { id: 'p07', tier: 'hard', seed: 57, emp: 0, pay: [2027, 2, 26], month: 11, staff: ['plain', 'k-code-cap', 'ssp', 'mid-month-starter', 'starter-p45', 'sacrifice', 'plain-sl4', 'over-pension-age', 'overtime-late-fix', 'opted-out'], mistakes: { 1: 'k-no-cap', 2: 'ssp-no-waiting', 4: 'p45-ignored', 8: 'overtime-uncorrected' } },
-  { id: 'p08', tier: 'hard', seed: 58, emp: 1, pay: [2027, 2, 26], month: 11, staff: ['plain', 'code-change', 'apprentice', 'br-second-job', 'starter-m1', 'plain-sl2-pgl', 'sacrifice', 'ssp', 'hourly', 'over-pension-age', 'higher-rate'], mistakes: { 1: 'old-code', 2: 'employer-ni-apprentice', 5: 'pgl-missing', 7: 'ssp-full-pay', 10: 'higher-rate-flat' } },
-  { id: 'p09', tier: 'hard', seed: 59, emp: 2, pay: [2027, 3, 26], month: 12, staff: ['plain', 'k-code-cap', 'mid-month-starter', 'starter-p45', 'apprentice-turned-25', 'overtime-late-fix', 'sacrifice', 'plain-sl1', 'opted-out', 'higher-rate', 'ssp', 'over-pension-age'], mistakes: { 1: 'k-no-cap', 2: 'starter-calendar-days', 4: 'apprentice-still-h', 5: 'overtime-uncorrected', 6: 'sacrifice-ni-before', 9: 'net-typo' } },
-  { id: 'p10', tier: 'hard', seed: 60, emp: 0, pay: [2027, 3, 26], month: 12, staff: ['plain', 'code-change', 'k-code', 'starter-m1', 'starter-p45', 'apprentice', 'plain-sl2-pgl', 'sacrifice', 'ssp', 'higher-rate', 'overtime-late-fix', 'hourly'], mistakes: { 1: 'old-code', 3: 'm1-as-cumulative', 5: 'employer-ni-apprentice', 6: 'pgl-missing', 8: 'ssp-no-waiting', 10: 'overtime-uncorrected', 11: 'pension-full-pay' } },
+  { id: 'p04', tier: 'medium', seed: 54, emp: 0, pay: [2026, 12, 23], month: 9, staff: ['plain', 'sacrifice', 'k-code', 'plain-sl2-pgl', 'starter-m1', 'apprentice', 'overtime', 'director', 'half-penny'], mistakes: { 1: 'sacrifice-ni-before', 4: 'm1-as-cumulative', 5: 'employer-ni-apprentice', 7: 'director-ni-monthly', 8: 'employer-ni-half-up' } },
+  { id: 'p05', tier: 'medium', seed: 55, emp: 1, pay: [2027, 1, 29], month: 10, staff: ['plain', 'ssp', 'mid-month-starter', 'br-second-job', 'plain-sl1', 'sacrifice', 'hourly', 'over-pension-age', 'pension-sacrifice', 'sunday-ot'], mistakes: { 1: 'ssp-no-waiting', 2: 'starter-calendar-days', 4: 'sl-rounded-penny', 8: 'pension-sacrifice-net-pay' } },
+  { id: 'p06', tier: 'medium', seed: 56, emp: 2, pay: [2027, 1, 29], month: 10, staff: ['plain', 'k-code', 'opted-out', 'overtime', 'apprentice-turned-25', 'plain-sl2-pgl', 'code-change', 'sacrifice', 'sunday-ot', 'director'], mistakes: { 3: 'hourly-rounded-early', 4: 'apprentice-still-h', 6: 'old-code', 8: 'sunday-ot-1.5' } },
+  { id: 'p07', tier: 'hard', seed: 57, emp: 0, pay: [2027, 2, 26], month: 11, staff: ['plain', 'k-code-cap', 'ssp', 'mid-month-starter', 'starter-p45', 'sacrifice', 'plain-sl4', 'over-pension-age', 'overtime-late-fix', 'opted-out', 'director', 'pension-sacrifice', 'sunday-ot', 'half-penny', 'higher-rate', 'apprentice'], mistakes: { 1: 'k-no-cap', 2: 'ssp-no-waiting', 4: 'p45-ignored', 8: 'overtime-uncorrected', 10: 'director-ni-monthly', 12: 'hourly-rounded-early', 13: 'employer-ni-half-up' } },
+  { id: 'p08', tier: 'hard', seed: 58, emp: 1, pay: [2027, 2, 26], month: 11, staff: ['plain', 'code-change', 'apprentice', 'br-second-job', 'starter-m1', 'plain-sl2-pgl', 'sacrifice', 'ssp', 'hourly', 'over-pension-age', 'higher-rate', 'director', 'pension-sacrifice', 'sunday-ot', 'k-code', 'half-penny'], mistakes: { 1: 'old-code', 2: 'employer-ni-apprentice', 5: 'pgl-missing', 7: 'ssp-full-pay', 10: 'higher-rate-flat', 12: 'pension-sacrifice-net-pay', 13: 'sunday-ot-1.5' } },
+  { id: 'p09', tier: 'hard', seed: 59, emp: 2, pay: [2027, 3, 26], month: 12, staff: ['plain', 'k-code-cap', 'mid-month-starter', 'starter-p45', 'apprentice-turned-25', 'overtime-late-fix', 'sacrifice', 'plain-sl1', 'opted-out', 'higher-rate', 'ssp', 'over-pension-age', 'director', 'pension-sacrifice', 'sunday-ot', 'half-penny'], mistakes: { 1: 'k-no-cap', 2: 'starter-calendar-days', 4: 'apprentice-still-h', 5: 'overtime-uncorrected', 6: 'sacrifice-ni-before', 9: 'net-typo', 12: 'director-ni-monthly', 15: 'employer-ni-half-up' } },
+  { id: 'p10', tier: 'hard', seed: 60, emp: 0, pay: [2027, 3, 26], month: 12, staff: ['plain', 'code-change', 'k-code', 'starter-m1', 'starter-p45', 'apprentice', 'plain-sl2-pgl', 'sacrifice', 'ssp', 'higher-rate', 'overtime-late-fix', 'hourly', 'director', 'director', 'pension-sacrifice', 'pension-sacrifice', 'sunday-ot', 'sunday-ot', 'half-penny', 'half-penny', 'k-code-cap', 'mid-month-starter', 'apprentice-turned-25', 'over-pension-age', 'plain-sl1', 'opted-out', 'overtime', 'plain-sl4', 'plain', 'plain', 'overtime', 'plain-sl2', 'br-second-job', 'code-change', 'ssp', 'higher-rate', 'sacrifice', 'plain', 'apprentice', 'plain-sl1'], mistakes: { 1: 'old-code', 3: 'm1-as-cumulative', 5: 'employer-ni-apprentice', 6: 'pgl-missing', 8: 'ssp-no-waiting', 10: 'overtime-uncorrected', 12: 'director-ni-monthly', 14: 'pension-sacrifice-net-pay', 16: 'sunday-ot-1.5', 17: 'hourly-rounded-early', 18: 'employer-ni-half-up', 20: 'k-no-cap', 21: 'starter-calendar-days', 22: 'apprentice-still-h', 23: 'ni-cat-a-for-c', 24: 'sl-wrong-plan', 25: 'pension-opted-out', 26: 'overtime-1x', 27: 'sl-rounded-penny', 35: 'higher-rate-flat', 36: 'sacrifice-ni-before' } },
 ];
 
 // ───────────────────────────── Payroll engine ─────────────────────────────
@@ -94,10 +96,21 @@ export function calc(world, e, f = {}) {
   parts.push(['Basic pay', basic]);
   let gross = basic;
   const otHours = f.overtimeUncorrected ? e.otDraft ?? e.ot : e.ot;
+  const otPay = (hours, mult2) => {
+    // mult2 = the multiplier x 2 (1.5x = 3, 2x = 4)
+    if (f.hourlyRoundedEarly) return divHalfUp(divHalfUp(e.salary * 2, 52 * Math.round(e.weekly * 2)) * Math.round(hours * 2) * mult2, 4);
+    return divHalfUp(e.salary * Math.round(hours * 2) * mult2, 52 * Math.round(e.weekly * 2) * 2);
+  };
   if (otHours) {
-    const mult = f.overtime1x ? 2 : 3; // ×1.5 = ×3/2
-    const ot = divHalfUp(e.salary * Math.round(otHours * 2) * mult, 52 * Math.round(e.weekly * 2) * 2);
+    const mult = f.overtime1x ? 2 : 3;
+    const ot = otPay(otHours, mult);
     parts.push([`Overtime ${otHours} hrs @ ${f.overtime1x ? '1.0' : '1.5'}`, ot]);
+    gross += ot;
+  }
+  if (e.otSun) {
+    const mult = f.sundayAs15 ? 3 : 4;
+    const ot = otPay(e.otSun, mult);
+    parts.push([`Overtime (Sunday/bank holiday) ${e.otSun} hrs @ ${f.sundayAs15 ? '1.5' : '2.0'}`, ot]);
     gross += ot;
   }
   if (e.sick) {
@@ -125,7 +138,15 @@ export function calc(world, e, f = {}) {
   // Pension (net pay arrangement): qualifying earnings on gross after sacrifice.
   let pension = 0;
   let erPen = 0;
-  if (e.pension === 'enrolled' || f.pensionOptedOut) {
+  if (e.pensionSacrifice && !f.sacrificeAsNetPay) {
+    // Pension by salary sacrifice: pay is reduced by 5% of qualifying earnings worked out before the sacrifice.
+    const qe = Math.max(0, Math.min(gross, RATES.qeHigh) - RATES.qeLow);
+    const sac = divHalfUp(qe * 500, 10000);
+    parts.push(['Pension salary sacrifice (5%)', -sac]);
+    gross -= sac;
+    niable -= sac;
+    erPen = divHalfUp(qe * 800, 10000);
+  } else if (e.pension === 'enrolled' || e.pensionSacrifice || f.pensionOptedOut) {
     const base = f.pensionFullPay ? gross : Math.max(0, Math.min(gross, RATES.qeHigh) - RATES.qeLow);
     pension = divHalfUp(base * RATES.eePen, 10000);
     erPen = divHalfUp(base * RATES.erPen, 10000);
@@ -159,10 +180,16 @@ export function calc(world, e, f = {}) {
   if (f.apprenticeStillH) cat = 'H';
   const between = Math.max(0, Math.min(niable, RATES.ust) - RATES.pt);
   const above = Math.max(0, niable - RATES.ust);
-  const ni = cat === 'C' ? 0 : divHalfDown(between * RATES.ni8 + above * RATES.ni2, 10000);
+  let ni = cat === 'C' ? 0 : divHalfDown(between * RATES.ni8 + above * RATES.ni2, 10000);
   const erCat = f.employerNiApprentice ? 'A' : cat;
   const erBase = erCat === 'H' ? Math.max(0, niable - RATES.ust) : Math.max(0, niable - RATES.st);
-  const erNi = divHalfDown(erBase * RATES.er, 10000);
+  let erNi = (f.employerHalfUp ? divHalfUp : divHalfDown)(erBase * RATES.er, 10000);
+  if (e.director && !f.directorMonthly) {
+    // Directors: annual earnings period, cumulative to date.
+    const td = e.prevNiable + niable;
+    ni = divHalfDown(Math.max(0, Math.min(td, 5027000) - 1257000) * RATES.ni8 + Math.max(0, td - 5027000) * RATES.ni2, 10000) - e.prevNi;
+    erNi = divHalfDown(Math.max(0, td - 500000) * RATES.er, 10000) - e.prevErNi;
+  }
   // Student loans on NIable pay
   let sl = 0;
   for (const plan of e.loans) {
@@ -199,6 +226,11 @@ const MISTAKE_FLAGS = {
   'pgl-missing': { pglMissing: true },
   'higher-rate-flat': { higherRateFlat: true },
   'net-typo': { netTypo: true },
+  'director-ni-monthly': { directorMonthly: true },
+  'pension-sacrifice-net-pay': { sacrificeAsNetPay: true },
+  'sunday-ot-1.5': { sundayAs15: true },
+  'hourly-rounded-early': { hourlyRoundedEarly: true },
+  'employer-ni-half-up': { employerHalfUp: true },
 };
 
 // ───────────────────────────── Generator ─────────────────────────────
@@ -284,6 +316,24 @@ export function generate(spec) {
       case 'ssp': e.sick = r.int(4, 8); e.awe = r.int(450, 800) * 100; e.waitingLeft = 3; break;
       case 'code-change': e.oldCode = '1257L'; e.code = r.pick(['1185L', '1100L', '1310L', '1383L']); world.notices.push({ kind: 'code', id: e.id, code: e.code }); break;
       case 'higher-rate': e.salary = r.int(560, 760) * 10000; e.loans = r.chance(0.5) ? [] : [2]; break;
+      case 'director':
+        e.director = true;
+        e.role = 'Director';
+        e.salary = r.int(18, 34) * 100000;
+        if (r.chance(0.5)) e.bonus = r.int(10, 40) * 10000;
+        break;
+      case 'pension-sacrifice': e.pensionSacrifice = true; e.salary = r.int(260, 420) * 10000; break;
+      case 'sunday-ot': e.ot = r.pick([4, 6, 7.5, 9]); e.otSun = r.pick([3, 4.5, 6, 7.5, 8]); break;
+      case 'half-penny':
+        // Pay chosen so that employer NI comes to an exact half penny (it rounds DOWN).
+        for (let k = 0; k < 400; k++) {
+          const sal = e.salary + k * 12;
+          if (((divHalfUp(sal, 12) - RATES.st) * 15) % 100 === 50) {
+            e.salary = sal;
+            break;
+          }
+        }
+        break;
       default: break;
     }
     // Year-to-date (previous periods of this tax year) from the payroll records.
@@ -309,6 +359,19 @@ export function generate(spec) {
         e.prevTax = taxToDate(Math.max(0, Math.floor(t / 100) * 100), priorMonths);
         if (pc.kind === 'K') e.prevTax = Math.min(e.prevTax, Math.floor(prevTaxable / 2));
       }
+    }
+    if (e.director) {
+      // Earlier months at the same salary (the bonus is this month's).
+      e.prevNiable = monthlyGuess * priorMonths;
+      e.prevPay = monthlyGuess * priorMonths - (e.pension === 'enrolled' ? Math.round(priorMonths * Math.max(0, Math.min(monthlyGuess, RATES.qeHigh) - RATES.qeLow) * 0.05) : 0);
+      e.prevTax = taxToDate(Math.max(0, Math.floor((e.prevPay - divHalfUp(1257000 * priorMonths, 12)) / 100) * 100), priorMonths);
+      e.prevNi = divHalfDown(Math.max(0, Math.min(e.prevNiable, 5027000) - 1257000) * RATES.ni8 + Math.max(0, e.prevNiable - 5027000) * RATES.ni2, 10000);
+      e.prevErNi = divHalfDown(Math.max(0, e.prevNiable - 500000) * RATES.er, 10000);
+    }
+    if (e.pensionSacrifice) {
+      const sac = divHalfUp(Math.max(0, Math.min(monthlyGuess, RATES.qeHigh) - RATES.qeLow) * 500, 10000);
+      e.prevPay = (monthlyGuess - sac) * priorMonths;
+      e.prevTax = taxToDate(Math.max(0, Math.floor((e.prevPay - divHalfUp(1257000 * priorMonths, 12)) / 100) * 100), priorMonths);
     }
     world.staff.push(e);
   });
@@ -359,9 +422,22 @@ export function flawed(world, flags) {
   return { wrong_payslips: wrong, corrected, employer_ni_total: er / 100 };
 }
 
+/** Hard skills weigh more: each wrong payslip found is worth 2, its tax and NI 2 each, the employer NI total 4. */
+export function caseScorer(world, base) {
+  const sol = solve(world);
+  const weights = { wrong_payslips: 2, employer_ni_total: 4 };
+  for (const id of sol.wrong_payslips) {
+    weights[`corrected.${id}.tax`] = 2;
+    weights[`corrected.${id}.ni`] = 2;
+  }
+  return { ...base, weights };
+}
+
 export function scripted(world, sol) {
   return {
     careless: careless(world),
+    flawed_new_rules: flawed(world, { directorMonthly: true, sacrificeAsNetPay: true, sundayAs15: true, employerHalfUp: true }),
+    careful_human_slips: flawed(world, { employerHalfUp: true, hourlyRoundedEarly: true }),
     flawed_no_m1_no_cap: flawed(world, { m1AsCumulative: true, kNoCap: true }),
     flawed_sacrifice_and_overtime: flawed(world, { sacrificeNiBefore: true, overtimeUncorrected: true }),
     flawed_ssp_and_age: flawed(world, { sspNoWaiting: true, apprenticeStillH: true, oldCode: true }),
@@ -375,8 +451,8 @@ export function selfCheck(world, sol) {
     const p = e.correct;
     if (p.net !== p.gross - p.tax - p.ni - p.pension - p.sl) bad.push(`${e.id} net`);
     if (p.net <= 0) bad.push(`${e.id} net not positive`);
-    if (e.mistake && !['employer-ni-apprentice', 'apprentice-still-h'].includes(e.mistake) && !differs(e.correct, e.draft)) bad.push(`${e.id}: mistake ${e.mistake} changes nothing`);
-    const erOnly = e.mistake === 'employer-ni-apprentice' || e.mistake === 'apprentice-still-h';
+    if (e.mistake && !['employer-ni-apprentice', 'apprentice-still-h', 'employer-ni-half-up'].includes(e.mistake) && !differs(e.correct, e.draft)) bad.push(`${e.id}: mistake ${e.mistake} changes nothing`);
+    const erOnly = ['employer-ni-apprentice', 'apprentice-still-h', 'employer-ni-half-up'].includes(e.mistake);
     if (erOnly && e.correct.erNi === e.draft.erNi) bad.push(`${e.id}: ${e.mistake} changes nothing`);
     if (e.kind === 'k-code-cap' && calc(world, e, { kNoCap: true }).tax === p.tax) bad.push(`${e.id}: K cap does not bind`);
     if (e.kind === 'apprentice-turned-25' && p.cat !== 'A') bad.push(`${e.id}: should be A`);
@@ -413,10 +489,10 @@ Hi, ${emp.bureau} have sent the draft payslips for ${mon} ${yr} (tax month ${mon
   out.push(`THIS EXERCISE'S RATES AND RULES (use these exactly; they may differ from HMRC's current figures)
 Pay. Monthly salary = annual salary / 12, rounded to the penny (half up). Hourly rate for overtime = annual salary / 52 / contracted weekly hours (not rounded); overtime pay = hours x hourly rate x 1.5, rounded to the penny. Hourly-paid staff: hours x rate, rounded to the penny. A starter who joins during the month gets monthly salary x (working days from the start date to the month end) / (working days in the month); working days are Monday to Friday, bank holidays included; rounded to the penny. Unpaid sick day deduction = annual salary x days / 260, rounded to the penny.
 SSP (company sick pay is SSP only). SSP is paid at £23.75 a day (£118.75 a week, 5 qualifying days) for qualifying days of sickness after the first 3 qualifying days of a period of sickness (waiting days), and only if average weekly earnings are at least £125.00. The sick days themselves are deducted as unpaid days.
-Salary sacrifice (Cycle to Work) is taken off gross pay before tax, NI, pension and student loan. Gross pay on the payslip = pay after salary sacrifice.
+Hours worked on a Sunday or a bank holiday are overtime at 2x the hourly rate (same hourly rate, not rounded). Salary sacrifice (Cycle to Work) is taken off gross pay before tax, NI, pension and student loan. Gross pay on the payslip = pay after salary sacrifice. Pension by salary sacrifice (staff marked so): instead of paying 5% themselves, their pay is reduced by 5% of their qualifying earnings worked out on pay BEFORE that sacrifice (rounded to the penny, half up); the reduction is taken off gross pay before tax, NI and student loan, no employee pension is deducted, and the employer pays 8% of those qualifying earnings.
 Pension (auto-enrolment, net pay arrangement). Qualifying earnings for the month = gross pay between £520.00 and £4,189.00. Employee 5% and employer 3% of qualifying earnings, each rounded to the penny (half up). Opted-out staff pay nothing. Employee pension is deducted before tax (not before NI or student loan).
 Income tax. Taxable pay = gross pay - employee pension. L codes: annual allowance = code number x £10 (1257L = £12,570). K codes: the code number x £10 is ADDED to taxable pay instead. Cumulative basis (normal): allowance to date = annual allowance x tax month / 12 (rounded to the penny); taxable pay to date = previous taxable pay this tax year + this month's taxable pay - allowance to date (K: + the K amount to date), rounded DOWN to the whole pound (never below zero). Bands to date: 20% on the first £37,700 x tax month / 12, 40% up to £125,140 x tax month / 12, 45% above (each band limit rounded UP to the whole pound). Tax to date is rounded DOWN to the penny; this month's tax = tax to date - tax already paid this tax year (it can be negative: a refund). Week 1/month 1 (M1) basis: the same with tax month = 1 and no previous pay or tax. BR: 20% of this month's taxable pay; D0: 40%; rounded down to the penny. K codes: this month's tax may not exceed 50% of this month's taxable pay (the regulatory limit), rounded down to the penny. A coding notice from HMRC applies from the payroll it arrives before, on the cumulative basis. New starters: with a P45, use its pay and tax to date as previous figures and its code (cumulative); without a P45, starter checklist statement A: 1257L cumulative, statement B: 1257L M1, statement C: BR.
-National Insurance (monthly, on gross pay). Category A: employee 8% of pay between £1,048.00 and £4,189.00 plus 2% above £4,189.00; employer 15% above £417.00. Category C (employee aged 66 or over on pay day): no employee NI; employer as A. Category H (apprentice under 25 on pay day): employee as A; employer 0% up to £4,189.00 and 15% above. Use the employee's age on pay day. Round each employee and employer NI figure to the nearest penny, half a penny rounding DOWN.
+National Insurance (monthly, on gross pay). Category A: employee 8% of pay between £1,048.00 and £4,189.00 plus 2% above £4,189.00; employer 15% above £417.00. Category C (employee aged 66 or over on pay day): no employee NI; employer as A. Category H (apprentice under 25 on pay day): employee as A; employer 0% up to £4,189.00 and 15% above. Use the employee's age on pay day. Company directors use the annual earnings period instead (category A): NI to date = 8% of NIable pay to date between £12,570 and £50,270 plus 2% above £50,270; employer NI to date = 15% above £5,000; this month's NI = NI to date (NIable pay to date before this month plus this month's) minus the NI already paid this tax year, for each of the two. Round each employee and employer NI figure (each NI to date for directors) to the nearest penny, half a penny rounding DOWN.
 Student loans (on gross pay, monthly thresholds): Plan 1 £2,172; Plan 2 £2,372; Plan 4 £2,728 at 9%; Postgraduate Loan £1,750 at 6% (deducted as well as any plan). Each deduction is rounded DOWN to the whole pound.
 Net pay = gross pay - tax - employee NI - employee pension - student loan.`);
   const rows = world.staff.map((e) => {
@@ -427,6 +503,8 @@ Net pay = gross pay - tax - employee NI - employee pension - student loan.`);
     bits.push(`pension: ${e.pension}`);
     bits.push(`student loan: ${e.loans.length ? e.loans.map((l) => (l === 'PGL' ? 'Postgraduate Loan' : `Plan ${l}`)).join(' + ') : 'none'}`);
     if (e.apprentice) bits.push('apprentice (on an approved apprenticeship)');
+    if (e.director) bits.push(`company director (NI on the annual earnings period): NIable pay to date before this month ${gbp(e.prevNiable)}, employee NI paid ${gbp(e.prevNi)}, employer NI paid ${gbp(e.prevErNi)}`);
+    if (e.pensionSacrifice) bits.push('pension by salary sacrifice (5% of qualifying earnings)');
     if (e.sacrifice) bits.push(`${e.sacrificeName} ${gbp(e.sacrifice)}/month`);
     if (e.start || e.starter === 'B' || e.p45) bits.push(e.p45 ? `joined ${dMonY(firstDay)}` : `joined ${dMonY(e.start ?? firstDay)}`);
     const ytd = e.start || e.starter === 'B' || e.p45 ? 'no previous pay with us this tax year' : `previous taxable pay this tax year ${gbp(e.prevPay)}, tax paid ${gbp(e.prevTax)}`;
@@ -435,6 +513,8 @@ Net pay = gross pay - tax - employee NI - employee pension - student loan.`);
   out.push('EMPLOYEE RECORDS\n' + rows.join('\n'));
   const changes = [];
   for (const e of world.staff) {
+    if (e.otSun) changes.push(`  ${e.id}: ${e.otSun} hours on Sunday 2x overtime (timesheet signed off).`);
+    if (e.bonus) changes.push(`  ${e.id}: annual bonus ${gbp(e.bonus)} paid with this month's salary (board minute).`);
     if (e.ot && e.kind !== 'overtime-late-fix') changes.push(`  ${e.id}: ${e.ot} hours overtime (timesheet signed off).`);
     if (e.kind === 'overtime-late-fix') changes.push(`  ${e.id}: ${e.otDraft} hours overtime (timesheet signed off).`);
     if (e.hourly) changes.push(`  ${e.id}: ${e.hours} hours worked this month.`);
