@@ -50,7 +50,7 @@
         { "id": "work.cv-read", "level": 1 },
         { "id": "work.cv-shortlist", "level": 2 },
         { "id": "work.payroll-check", "level": 3 },
-        { "id": "work.recruiter", "level": 4, "planned": true }
+        { "id": "work.recruiter", "level": 4 }
       ]
     },
     {
@@ -66,7 +66,7 @@
         { "id": "work.contract-redline", "level": 3 },
         { "id": "work.assistant", "level": 4 },
         { "id": "work.assistant-hard", "level": 5 },
-        { "id": "work.office-week", "level": 5, "planned": true }
+        { "id": "work.office-week", "level": 5 }
       ]
     },
     {
@@ -81,7 +81,7 @@
         { "id": "work.sql-questions", "level": 2 },
         { "id": "work.sql-hard", "level": 3 },
         { "id": "work.board-report", "level": 3, "planned": true },
-        { "id": "work.analyst-agent", "level": 4, "planned": true }
+        { "id": "work.analyst-agent", "level": 4 }
       ]
     },
     {
@@ -95,7 +95,7 @@
         { "id": "work.stock-reorder", "level": 2, "planned": true },
         { "id": "work.shift-rota", "level": 3, "planned": true },
         { "id": "work.delivery-routes", "level": 4, "planned": true },
-        { "id": "work.warehouse-week", "level": 5, "planned": true }
+        { "id": "work.warehouse-week", "level": 5 }
       ]
     }
   ]

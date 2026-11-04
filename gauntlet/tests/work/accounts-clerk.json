@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "work.accounts-clerk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "accounts-clerk",
   "name": "The Accounts Clerk",
   "category": "work",

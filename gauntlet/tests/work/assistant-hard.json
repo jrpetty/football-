@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "work.assistant-hard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "assistant",
   "name": "The Personal Assistant (Hard)",
   "category": "work",

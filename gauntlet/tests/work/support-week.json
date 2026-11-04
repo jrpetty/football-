@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "work.support-week",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "support-week",
   "name": "Run Customer Service for a Week",
   "category": "work",

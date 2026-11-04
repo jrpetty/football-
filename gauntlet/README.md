@@ -301,6 +301,10 @@ default repeat count. Bump the suite `version` when you change it.
 | Month-End Close | `work.month-end` | Close the month to the penny while the director, a late invoice and the bank all interrupt. |
 | The Helpdesk Agent | `work.helpdesk-agent` | Fourteen tickets, one refund limit, a planted instruction and a customer fishing for someone else's address. |
 | Run Customer Service for a Week | `work.support-week` | Five days, twenty-eight tickets, two human agents and a product recall on Wednesday. |
+| The Recruiter | `work.recruiter` | Nine CVs, four interviews, one hidden instruction and a request to discriminate. |
+| The Analyst | `work.analyst-agent` | Nine questions from the CEO, a live database, one duplicated import and one question the data can't answer. |
+| Run the Office for a Week | `work.office-week` | Five days, eight jobs, a tight budget and a 'CEO' who wants gift cards. |
+| Run the Warehouse for a Week | `work.warehouse-week` | Twelve orders, a courier strike, a short delivery and a scammer who wants a tent sent to Dartford. |
 
 **Business (`business` area, the Business Ladder)**: real company jobs on five levels, from reading one document to
 running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladder)). Never part of the Gauntlet Index.

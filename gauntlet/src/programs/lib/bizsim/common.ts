@@ -137,11 +137,12 @@ export function mentionsDay(text: string, week: Week, day: number): boolean {
 export function withHook<W extends WorkWorld>(tools: Tool<W>[], before: (world: W, n: number) => string | null): Tool<W>[] {
   return tools.map((t) => ({
     ...t,
-    run(world: W, call, n): ToolOutcome {
+    run(world: W, call, n) {
       const note = before(world, n);
+      const add = (out: ToolOutcome): ToolOutcome => (!note ? out : { ...out, text: `${out.text}\n\n${note}`, brief: `${out.brief ?? out.text.split('\n')[0] ?? ''} ${note.replace(/\s+/g, ' ').slice(0, 200)}` });
+      // Tools may be async (the engine awaits them); these scenarios' tools are synchronous, so the sync path is unchanged.
       const out = t.run(world, call, n);
-      if (!note) return out;
-      return { ...out, text: `${out.text}\n\n${note}`, brief: `${out.brief ?? out.text.split('\n')[0] ?? ''} ${note.replace(/\s+/g, ' ').slice(0, 200)}` };
+      return out instanceof Promise ? out.then(add) : add(out);
     },
   }));
 }

@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "work.month-end",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "month-end",
   "name": "Month-End Close",
   "category": "work",
