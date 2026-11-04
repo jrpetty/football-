@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { summaryFor, useRunSummaries } from '../grading/useSummaries.ts';
 import type { CSSProperties, ReactNode } from 'react';
-import { api } from '../api.ts';
+import { MOCK, api } from '../api.ts';
 import { useAsync, useCountUp, useElementSize, useHotkeys, useInterval } from '../hooks.ts';
 import { navigate, pathOf, setQuery, useRoute } from '../router.tsx';
 import { useMeta, usePrefs } from '../context.tsx';
@@ -1642,6 +1642,7 @@ export default function PresentPage({ runId }: { runId: string }) {
           </span>
           <span className="d-run">{deck.d.manifest.name || runId}</span>
           <span className="d-spacer" />
+          {MOCK && <span className="d-demo">Demo data — not real results</span>}
           <span className="d-section">{sectionFor(slide, deck)}</span>
           <span className="d-prog" aria-label={`Slide ${idx + 1} of ${total}`}>
             <span className="tnum">

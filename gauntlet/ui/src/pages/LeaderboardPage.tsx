@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { api } from '../api.ts';
+import { MOCK, api } from '../api.ts';
 import { useAsync } from '../hooks.ts';
 import { Link, navigate, setQuery, useRoute } from '../router.tsx';
 import { useMeta, useViewerCaption } from '../context.tsx';
-import { Empty, ErrorState, HashTag, LoadingPage, PageHead, Seg } from '../components/ui.tsx';
+import { DemoBanner, Empty, ErrorState, HashTag, LoadingPage, PageHead, Seg } from '../components/ui.tsx';
 import { Icon } from '../components/icons.tsx';
 import { LeaderboardView } from '../components/leaderboard/LeaderboardView.tsx';
 import { fmtDate, fmtInt } from '../format.ts';
@@ -55,7 +55,7 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
   );
 
   return (
-    <div className="page leaderboard-page">
+    <div className="page leaderboard-page" data-area={area}>
       <PageHead
         eyebrow={
           <span className="row" style={{ gap: 10 }}>
@@ -118,6 +118,9 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
           </div>
         }
       />
+      <DemoBanner show={MOCK && area !== 'benchmark' && !!lb?.rows.length}>
+        These {areaInfo(area).name} scores are made up to show the layout (demo mode). Run the {areaInfo(area).name} tests to see your own.
+      </DemoBanner>
 
       {lb && (
         <div className="only-broadcast flex broadcast-meta">

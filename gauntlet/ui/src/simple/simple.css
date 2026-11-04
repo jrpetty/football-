@@ -151,7 +151,7 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
   background: var(--surface-1);
-  animation: fade-in 260ms ease-out;
+  animation: fade-in var(--t-med) ease-out;
 }
 .page-guide .pg-icon {
   width: 38px;

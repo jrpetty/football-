@@ -307,10 +307,9 @@ hr {
   place-items: center;
   font-size: 0.72rem;
   font-weight: 800;
-  background: var(--live);
+  background: var(--live-fill);
   color: #fff;
   box-shadow: 0 0 0 3px var(--live-soft);
-  animation: pulse 2s ease-in-out infinite;
 }
 .nav .nav-section {
   padding: 14px 10px 4px;
@@ -401,7 +400,7 @@ hr {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 22px;
-  animation: page-in 260ms var(--ease-out);
+  animation: page-in var(--t-slow) var(--ease-out);
 }
 @keyframes page-in {
   from {

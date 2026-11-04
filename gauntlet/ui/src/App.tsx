@@ -378,6 +378,7 @@ function Shell() {
         <div className="brand-word">GAUNTLET</div>
         <div className="slate-tag">AI Benchmark Lab</div>
         <div className="slate-right">
+          {MOCK && <span className="slate-demo">Demo data — not real results</span>}
           <span className="eyebrow" style={{ color: 'var(--text-2)' }}>
             {crumb}
           </span>

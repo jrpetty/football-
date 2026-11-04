@@ -399,6 +399,17 @@ export function ErrorState({ error, onRetry, title = 'Something went wrong' }: {
   );
 }
 
+/** "Demo data — not real results" strip for pages that show demo (?mock=1) numbers. Renders nothing otherwise. */
+export function DemoBanner({ show, children }: { show: boolean; children?: ReactNode }) {
+  if (!show) return null;
+  return (
+    <div className="demo-banner" role="note">
+      <b>Demo data — not real results</b>
+      <span>{children ?? 'These scores are made up to show the layout (demo mode). Run the tests to see your own.'}</span>
+    </div>
+  );
+}
+
 export function Callout({ tone = 'info', icon, children }: { tone?: 'info' | 'warn' | 'bad' | 'plain'; icon?: ReactNode; children: ReactNode }) {
   const ico = icon ?? (tone === 'warn' || tone === 'bad' ? <Icon.Alert /> : <Icon.Info />);
   return (

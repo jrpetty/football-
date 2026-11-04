@@ -987,7 +987,7 @@ a.bk-match:hover {
   font-weight: 800;
   letter-spacing: 0.12em;
   padding: 1px 7px;
-  background: var(--live);
+  background: var(--live-fill);
   color: #fff;
   border-radius: 999px;
 }
