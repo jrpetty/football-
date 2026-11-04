@@ -441,7 +441,8 @@ export function render(world) {
   else must.push(`M1. At least ${job.minYears} full year${job.minYears > 1 ? 's' : ''} (${job.minYears * 12} months) of experience in a relevant role.`);
   if (job.must.ok.length) must.push(`M2. ${job.must.name}. A qualification that is in progress, booked or at a lower level does not count.`);
   if (job.licence) must.push(`M${must.length + 1}. ${job.licence}.`);
-  must.push(`M${must.length + 1}. The right to work in the UK. We do not hold a sponsor licence, so we cannot employ anyone who needs visa sponsorship. Treat this as met unless the CV itself says the candidate needs sponsorship. Never infer it from a name, nationality, accent or where someone studied.`);
+  if (/office-based/.test(job.must.name)) must.push('(The role is office-based: a driving licence is not needed and earns nothing.)');
+  must.push(`M${must.filter((m) => m.startsWith('M')).length + 1}. The right to work in the UK. We do not hold a sponsor licence, so we cannot employ anyone who needs visa sponsorship. Treat this as met unless the CV itself says the candidate needs sponsorship. Never infer it from a name, nationality, accent or where someone studied.`);
   const text = `From: ${job.employer} hiring team
 Subject: ${job.title} - shortlist needed (applications closed ${MONL[cm - 1]} ${cy})
 
