@@ -29,9 +29,9 @@ def write_test(meta, cases, fname=None):
         'maxOutputTokens': meta.get('maxOutputTokens', 16000),
         'estimate': meta['estimate'],
         'author': 'Gauntlet Core',
-        'createdAt': '2026-09-24',
+        'createdAt': meta.get('createdAt', '2026-09-24'),
     }
-    for k in ('timeLimitSec', 'system', 'preamble'):
+    for k in ('timeLimitSec', 'maxRetries', 'system', 'preamble'):
         if k in meta:
             obj[k] = meta[k]
     obj['scorer'] = meta['scorer']

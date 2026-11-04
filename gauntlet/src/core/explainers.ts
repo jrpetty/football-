@@ -221,6 +221,7 @@ const LADDER_STEPS = (what: string): ExplainStep[] => [
   { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
 ];
 const LADDER_SCORE = 'Every level is worth 10 points, so 30 means three levels solved. The ladder was built so today’s best models stall low and future ones can climb.';
+const LOGIC_LADDER_SCORE = 'Every level is worth 10 points, so 50 means five levels solved. Small models should clear the first rungs, today’s best should stall around levels 5 to 7, and the top rungs are left for future models.';
 
 const ASSISTANT_STEPS: ExplainStep[] = [
   { icon: 'check', text: '85%: each request checked in the final inbox, diary, bookings' },
@@ -719,6 +720,30 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whyHard: 'The textbook rule is often wrong here, and a plan that is even one step or one unit above the minimum is marked wrong.',
     howScored: NUMBER_STEPS('One number: the proven minimum'),
     goodScore: '100 means all ten minimums found; each is worth 10 points.',
+    icon: 'route',
+  },
+  'reasoning.grid-ladder': {
+    hook: 'Logic grids that grow from 4 people to 12: how big a grid can it solve?',
+    whatItTests: 'Deduction at growing scale: the same kind of logic grid, from 4 people and 3 attributes with 10 clues up to 12 people and 8 attributes with well over a hundred clues.',
+    whyHard: 'Every clue is needed and the clues get more tangled level by level (either/or, if-then, exactly two of three, ages), so the top grids need hundreds of linked steps without one slip.',
+    howScored: LADDER_STEPS('Two complete orderings, every value right'),
+    goodScore: LOGIC_LADDER_SCORE,
+    icon: 'grid',
+  },
+  'reasoning.truth-ladder': {
+    hook: 'Knights tell the truth, knaves lie: can it unmask 24 islanders?',
+    whatItTests: 'Case analysis at growing scale: naming every islander’s type, from 4 islanders with plain statements up to 24 with spies, alternators and liars quoting liars.',
+    whyHard: 'The top level has over a trillion possible line-ups and statements nested three deep (“Ada would say that Bruno would say that…”), and only one line-up fits.',
+    howScored: LADDER_STEPS('Every islander’s type, all of them right'),
+    goodScore: LOGIC_LADDER_SCORE,
+    icon: 'knight',
+  },
+  'reasoning.plans-ladder': {
+    hook: 'From 6 moves to 70: how deep can it plan before one move too many?',
+    whatItTests: 'Proving a plan is the shortest: the fewest moves to stack a scattered four-peg Tower of Hanoi, from 4 disks up to 13.',
+    whyHard: 'The positions grow from 256 to 67 million, and the answer only counts if no shorter plan exists, so it must rule out every quicker route.',
+    howScored: LADDER_STEPS('One number: the proven minimum'),
+    goodScore: LOGIC_LADDER_SCORE,
     icon: 'route',
   },
 
