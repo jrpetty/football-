@@ -954,7 +954,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
   'work.expense-audit': {
     hook: 'A hundred and eighty claim lines, one policy full of exceptions: who gets paid what?',
     whatItTests: 'Checking expense claims against a written policy and working out exactly what to pay each person and how much VAT can be reclaimed.',
-    whyHard: 'Meal limits are shared across a day and rise on hotel nights, mileage drops to 25p after 10,000 miles across two claims and the 6 April reset, and approvals only count for the right person, claim and limit.',
+    whyHard: 'Meal limits are shared across a day in each city and rise on hotel nights, mileage drops to 25p after 10,000 miles across two claims and the 6 April reset, and approvals only count for the right person, claim and limit.',
     howScored: [
       { icon: 'receipt', text: 'List the lines paid less than claimed, with rule and amount' },
       { icon: 'star', text: 'Routine fields 1 point; fields behind an exception 3' },

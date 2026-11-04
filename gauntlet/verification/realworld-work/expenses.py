@@ -38,10 +38,10 @@ B. Rules, in this order. A line breaks a rule when that rule reduces what the co
  1. LATE — a line whose expense date is more than 60 days before its claim's submission date pays £0, unless the register holds a late-submission approval (type LATE) for that claim number.
  2. DUPLICATE — the same expense claimed again (same employee, date, merchant and amount, in the same or another claim): the later line (higher line number) pays £0.
  3. NO_RECEIPT — any line of £25.00 or more (after conversion) without a receipt pays £0. Mileage needs no receipt.
- 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved under rule 7, where alcohol is paid up to £15 per head and only the excess is deducted.
- 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a daily limit per employee per day, by city: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. The limit is £20 higher on a day when the same employee has a hotel stay in that city in this batch covering the night of that day (a hotel line dated D for N nights covers the nights of D to D+N-1, not the morning of departure). When one employee has several meals on the same day, take them in line order: each is paid up to what is left of that day's limit (after any alcohol deduction).
+ 4. ALCOHOL — alcohol is never paid (deduct the alcohol amount shown on the line, converted if needed), except on client entertainment approved under rule 7, where alcohol is paid up to £15 per head (heads counted as in rule 7) and only the excess is deducted.
+ 5. MEAL_CAP — meals (breakfast, lunch, dinner) are paid up to a limit for each employee, each city and each day: London £40, other UK cities £30, Paris £48, Dublin £44, New York £60. Meals in different cities on the same day are capped separately, each against its own city's limit. A city's limit is £20 higher on a day when the same employee has a hotel stay in that city in this batch covering the night of that day (a hotel line dated D for N nights covers the nights of D to D+N-1, not the morning of departure). When one employee has several meals in the same city on the same day, take them in line order: each is paid up to what is left of that limit (after any alcohol deduction).
  6. HOTEL_CAP — hotels are paid up to a limit per night: London £180, other UK cities £120, Paris £190, Dublin £170, New York £240.
- 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included), after any alcohol deduction. It is approved only if the line's approval reference is in the register as type ENT for the same employee; an approval mentioned on a claim but missing from the register, or registered for someone else, does not count. Approved entertainment is paid in full (alcohol as in rule 4) up to the approval's limit, if the register gives one.
+ 7. ENTERTAINMENT_CAP — client entertainment is paid up to £60 per head (count everyone at the table, staff included), after any alcohol deduction. It is approved only if the line's approval reference is in the register as type ENT for the same employee; an approval mentioned on a claim but missing from the register, or registered for someone else, does not count. Approved entertainment is paid in full (alcohol as in rule 4); if the register gives a limit, the amount left after any alcohol deduction is capped at that limit.
  8. RAIL_CLASS — rail travel is paid at standard class: a first-class ticket is paid at the standard fare shown on the line.
  9. MILEAGE_RATE — business mileage in a private car is paid at 45p a mile for the first 10,000 business miles in the tax year and 25p a mile after that, plus 5p a mile for each colleague carried as a passenger (the passenger supplement does not count towards the 10,000). The tax year runs 6 April to 5 April. Count each employee's miles in date order across all their claims in this batch, starting from the miles paid before this batch in the tax year named on their claims (in any other tax year, start from 0); a journey that crosses 10,000 is split. Mileage is paid at the correct rate whatever amount was claimed.
 C. Report a line as non-compliant when it is paid less than its claimed amount (in pounds). Give the FIRST rule in the list above that reduced it, and the amount to pay. Lines paid in full (or more) are compliant and must not be listed; a mileage line claimed below the correct amount is paid the correct amount and is compliant.
@@ -146,11 +146,11 @@ def audit(claims, lines, rates, register, F=frozenset()):
             if 'percap' in F:
                 left = cap
             else:
-                left = cap - day_used.get((c['emp'], ln.date), D('0'))
+                left = cap - day_used.get((c['emp'], ln.date, ln.city), D('0'))
             paid = min(amt, max(left, D('0')))
             if paid < amt:
                 reasons.append('MEAL_CAP')
-            day_used[(c['emp'], ln.date)] = day_used.get((c['emp'], ln.date), D('0')) + paid
+            day_used[(c['emp'], ln.date, ln.city)] = day_used.get((c['emp'], ln.date, ln.city), D('0')) + paid
             amt = paid
         if ln.kind == 'hotel':
             cap = HOTEL_CAP[ln.city] * ln.nights
