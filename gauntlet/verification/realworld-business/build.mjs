@@ -45,7 +45,7 @@ const TESTS = [
       tags: ['real-world', 'work', 'finance', 'accounts-payable', 'three-way-match', 'vat', 'json'],
       hook: 'Approve, hold or reject every supplier invoice by the book, then total the payment run to the penny.',
       maxOutputTokens: 16000,
-      outputTokens: 4500,
+      outputTokens: 6000,
       scorer: { type: 'json', numberTolerance: 1e-8, lenient: true },
     },
   },
@@ -90,7 +90,7 @@ const TESTS = [
       tags: ['real-world', 'work', 'payroll', 'paye', 'national-insurance', 'pensions', 'json'],
       hook: 'Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans.',
       maxOutputTokens: 24000,
-      outputTokens: 9000,
+      outputTokens: 10000,
       scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, sets: { wrong_payslips: 1 } },
     },
   },
@@ -100,13 +100,13 @@ const TESTS = [
       id: 'work.crm-dedupe',
       name: 'Clean the Customer List',
       description:
-        'A merged customer export from two systems (bookings and accounts) for a UK trades business: nicknames, Mc/Mac, typos, swapped first and last names, moves to a new address, a shared office email used by different people, the same name at a different company, a married-name change confirmed by phone and date of birth, a father and son at one address, and +44/07 phone formats. Exact matching rules are stated; the answer is the grouping of records into customers plus the surviving master record of each group. Groups are marked pair by pair (pairwise F1), so merging everything or nothing scores close to zero.',
+        'A merged customer export from two systems (membership and class bookings) for a leisure centre: nicknames, Mc/Mac, typos, swapped first and last names, moves to a new address, a shared office email used by different people, the same name at a different company, a married-name change confirmed by phone and date of birth, a father and son at one address, and +44/07 phone formats. Exact matching rules are stated (including staff notes and “gone away” records); the answer is the grouping of records into customers plus each group’s surviving master record and golden email and phone. Groups are marked pair by pair (pairwise F1), so merging everything or nothing scores close to zero.',
       difficulty: 'hard',
       tags: ['real-world', 'work', 'data-cleaning', 'deduplication', 'crm', 'entity-resolution', 'json'],
       hook: 'Merge the duplicates in a messy customer list by the rules, without merging different people.',
       maxOutputTokens: 24000,
-      outputTokens: 6000,
-      scorer: { type: 'json', lenient: true, partitions: ['clusters'], sets: { masters: 1 } },
+      outputTokens: 9000,
+      scorer: { type: 'json', lenient: true, partitions: ['clusters'], sets: { golden: 2 } },
     },
   },
 ];
@@ -122,7 +122,9 @@ export function buildAll() {
       const prompt = mod.render(world);
       assert(JSON.parse(JSON.stringify(sol)) !== null, 'json');
       const notes = `[${spec.tier}] ${mod.notes ? mod.notes(world, sol) : mod.summary(world, sol)}${salt ? ` (generator salt ${salt})` : ''}`;
-      cases.push({ id: spec.id, prompt, expected: sol, notes });
+      const c = { id: spec.id, prompt, expected: sol, notes };
+      if (mod.caseScorer) c.scorer = mod.caseScorer(world, meta.scorer);
+      cases.push(c);
       scripted[meta.id][spec.id] = mod.scripted ? mod.scripted(world, sol) : { careless: mod.careless(world) };
     }
     const est = Math.round(cases.reduce((s, c) => s + tok(c.prompt), 0) / cases.length);

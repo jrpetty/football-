@@ -34,13 +34,13 @@ export const SPECS = [
   { id: 'd01', tier: 'easy', seed: 71, n: 60, dupShare: 0.35, tricky: 0.15 },
   { id: 'd02', tier: 'easy', seed: 72, n: 80, dupShare: 0.35, tricky: 0.2 },
   { id: 'd03', tier: 'easy', seed: 73, n: 100, dupShare: 0.4, tricky: 0.25 },
-  { id: 'd04', tier: 'medium', seed: 74, n: 130, dupShare: 0.4, tricky: 0.35 },
-  { id: 'd05', tier: 'medium', seed: 75, n: 160, dupShare: 0.4, tricky: 0.45 },
-  { id: 'd06', tier: 'medium', seed: 76, n: 200, dupShare: 0.4, tricky: 0.5 },
-  { id: 'd07', tier: 'hard', seed: 77, n: 240, dupShare: 0.42, tricky: 0.6 },
-  { id: 'd08', tier: 'hard', seed: 78, n: 280, dupShare: 0.42, tricky: 0.65 },
-  { id: 'd09', tier: 'hard', seed: 79, n: 290, dupShare: 0.45, tricky: 0.7 },
-  { id: 'd10', tier: 'hard', seed: 80, n: 320, dupShare: 0.45, tricky: 0.75 },
+  { id: 'd04', tier: 'medium', seed: 74, n: 130, dupShare: 0.42, tricky: 0.45 },
+  { id: 'd05', tier: 'medium', seed: 75, n: 160, dupShare: 0.42, tricky: 0.55 },
+  { id: 'd06', tier: 'medium', seed: 76, n: 180, dupShare: 0.45, tricky: 0.6 },
+  { id: 'd07', tier: 'hard', seed: 77, n: 200, dupShare: 0.48, tricky: 0.75 },
+  { id: 'd08', tier: 'hard', seed: 78, n: 210, dupShare: 0.5, tricky: 0.8 },
+  { id: 'd09', tier: 'hard', seed: 79, n: 220, dupShare: 0.5, tricky: 0.85 },
+  { id: 'd10', tier: 'hard', seed: 80, n: 520, dupShare: 0.5, tricky: 0.85 },
 ];
 
 // ───────────────────────────── Normalisation and rules (shared wording with the prompt) ─────────────────────────────
@@ -97,6 +97,7 @@ function firstOf(a, b) {
 
 export function pairRule(a, b) {
   if (!F.noBlock && a.dob && b.dob && a.dob !== b.dob) return null; // block
+  if (!F.noNotes && ((a.note && a.note.includes(b.id)) || (b.note && b.note.includes(a.id)))) return null; // checked: not the same person
   const e = emailNorm(a.email);
   if (e && e === emailNorm(b.email) && (F.sharedOk || !isShared(a.email)) && (F.sharedOk || firstOf(a, b))) return 'R1';
   const p = phoneNorm(a.phone);
@@ -121,8 +122,19 @@ export function clustersOf(records) {
   return [...groups.values()];
 }
 
+const byRecency = (a, b) => b.activity.localeCompare(a.activity) || (a.id[0] === 'M' ? 0 : 1) - (b.id[0] === 'M' ? 0 : 1) || a.id.localeCompare(b.id);
+
 export function masterOf(group) {
-  return group.slice().sort((a, b) => b.activity.localeCompare(a.activity) || (a.id[0] === 'M' ? 0 : 1) - (b.id[0] === 'M' ? 0 : 1) || a.id.localeCompare(b.id))[0];
+  const live = group.filter((x) => F.noGoneAway || x.status !== 'gone away');
+  return (live.length ? live : group).slice().sort(byRecency)[0];
+}
+
+/** The surviving email and phone of a group: the most recent non-blank value (email: not a shared mailbox). */
+export function goldenOf(group) {
+  const order = F.goldenFromMaster ? [masterOf(group)] : group.slice().sort(byRecency);
+  const em = order.find((x) => x.email && (F.sharedOk || !isShared(x.email)));
+  const ph = order.find((x) => x.phone);
+  return { email: em ? emailNorm(em.email) : null, phone: ph ? phoneNorm(ph.phone) : null };
 }
 
 // ───────────────────────────── Generator ─────────────────────────────
@@ -180,6 +192,8 @@ export function generate(spec) {
       address: f.address ?? p.address,
       employer: f.employer !== undefined ? f.employer : p.employer ?? '',
       activity: f.activity ?? activity(),
+      status: f.status ?? '',
+      note: '',
       pid: p.pid,
     };
     p.records.push(x);
@@ -220,11 +234,18 @@ export function generate(spec) {
       return rec(p, 'M', { last: nl, email: emailFor(p.first, nl), dob: p.dob, phone: fmtPhone(p.phone, r.int(0, 3)), ...address() });
     },
   };
+  // A record that links only to the person's LATEST record (a chain: A-B by one rule, B-C by another).
+  variants.chain = (p) => {
+    const last = p.records[p.records.length - 1];
+    if (!last.phone || p.records.length < 2) return variants.moved(p);
+    return rec(p, 'B', { first: nickOf(last.first) ?? last.first, last: last.last, phone: fmtPhone(phoneNorm(last.phone), r.int(0, 3)), email: '', dob: '', address: '', postcode: '' });
+  };
   const easyOps = ['copy', 'nickname', 'phone44', 'emailCase', 'mac'];
-  const hardOps = ['typo', 'swapped', 'moved', 'married', 'nickname', 'mac'];
+  const hardOps = ['typo', 'swapped', 'moved', 'married', 'nickname', 'mac', 'chain'];
 
   // Planted distractors first.
   const distractors = [];
+  const notes = [];
   const nDistract = Math.max(1, Math.min(4, Math.round(spec.n / 80)));
   for (let k = 0; k < nDistract; k++) {
     // Shared office mailbox: two different people at one firm.
@@ -241,6 +262,15 @@ export function generate(spec) {
     rec(c, 'M');
     rec(d, 'B', { dob: '' });
     distractors.push('same-name');
+    if (spec.tricky >= 0.4) {
+      // Two different people with the same name and date of birth: R3 would merge them, but staff checked.
+      const e1 = newPerson();
+      const e2 = newPerson({ first: e1.first, last: e1.last, dob: e1.dob });
+      const r1 = rec(e1, 'M', { dob: e1.dob });
+      const r2 = rec(e2, 'B', { dob: e2.dob });
+      notes.push([r2, r1]);
+      distractors.push('same-name-same-dob');
+    }
     if (spec.tricky >= 0.3) {
       // Father and son at one address with one landline; both have their DOB in MemberHub.
       const home = address();
@@ -261,25 +291,29 @@ export function generate(spec) {
     if (r.chance(spec.dupShare)) {
       const extra = r.chance(0.2) ? 2 : 1;
       for (let k = 0; k < extra && records.length < spec.n; k++) {
-        const op = r.chance(spec.tricky) ? r.pick(hardOps) : r.pick(easyOps);
+        const op = r.chance(spec.tricky) ? r.pick(k > 0 ? hardOps : hardOps.filter((o) => o !== 'chain')) : r.pick(easyOps);
         variants[op](p);
       }
-    }
+      // Mail returned "gone away" on a group's most recent record: it can no longer be the master.
+      if (p.records.length > 1 && r.chance(spec.tricky * 0.35)) p.records.slice().sort((a, b) => b.activity.localeCompare(a.activity))[0].status = 'gone away';
+    } else if (r.chance(0.03)) p.records[0].status = 'gone away';
   }
   // Ids: MemberHub M-1xxxx, BookIt B-2xxxx, then shuffle the export order.
   const shuffled = r.shuffle(records);
-  let m = 10000 + spec.seed * 3;
-  let b = 20000 + spec.seed * 5;
+  let m = 10000 + (spec.seed % 997) * 3;
+  let b = 20000 + (spec.seed % 997) * 5;
   for (const x of shuffled) x.id = x.sys === 'M' ? `M-${(m += r.int(1, 9))}` : `B-${(b += r.int(1, 9))}`;
   shuffled.sort((x, y) => x.id.localeCompare(y.id));
+  for (const [x, other] of notes) x.note = `checked by phone ${r.pick(['3 Sep', '17 Jun', '22 Oct', '9 Feb'])}: not the same person as ${other.id}`;
+  for (const x of shuffled) if (!x.note && r.chance(0.04)) x.note = r.pick(['prefers email', 'VIP - corporate scheme', 'asked for paper invoices', 'photo ID seen']);
   return { spec, records: shuffled, people, distractors };
 }
 
 export function solve(world) {
   const groups = clustersOf(world.records).filter((g) => g.length > 1);
   const clusters = groups.map((g) => g.map((x) => x.id).sort()).sort((a, b) => a[0].localeCompare(b[0]));
-  const masters = groups.map((g) => masterOf(g).id).sort();
-  return { clusters, masters };
+  const golden = Object.fromEntries(groups.map((g) => [masterOf(g).id, goldenOf(g)]).sort((a, b) => a[0].localeCompare(b[0])));
+  return { clusters, golden };
 }
 
 /** Careless cleaner: merges on exact email or exact phone text only, keeps the first id. */
@@ -292,7 +326,8 @@ export function careless(world) {
   const g = new Map();
   for (const x of world.records) (g.get(find(x.id)) ?? g.set(find(x.id), []).get(find(x.id))).push(x.id);
   const clusters = [...g.values()].filter((c) => c.length > 1).map((c) => c.sort());
-  return { clusters, masters: clusters.map((c) => c[0]) };
+  const recOf = (id) => world.records.find((x) => x.id === id);
+  return { clusters, golden: Object.fromEntries(clusters.map((c) => [c[0], { email: recOf(c[0]).email || null, phone: recOf(c[0]).phone || null }])) };
 }
 
 export function flawedSolve(world, flags) {
@@ -308,11 +343,13 @@ export function scripted(world, sol) {
   const all = world.records.map((x) => x.id);
   return {
     careless: careless(world),
-    merge_everything: { clusters: [all], masters: [all[0]] },
-    merge_nothing: { clusters: [], masters: [] },
+    merge_everything: { clusters: [all], golden: { [all[0]]: { email: null, phone: null } } },
+    merge_nothing: { clusters: [], golden: {} },
     flawed_no_block_shared_mailbox: flawedSolve(world, { noBlock: true, sharedOk: true }),
     flawed_strict_names: flawedSolve(world, { noNick: true, noMac: true, noTypo: true }),
-    right_groups_wrong_masters: { clusters: sol.clusters, masters: sol.clusters.map((c) => c.find((id) => !sol.masters.includes(id)) ?? c[0]) },
+    flawed_new_rules: flawedSolve(world, { noNotes: true, noGoneAway: true, goldenFromMaster: true }),
+    careful_human_slips: flawedSolve(world, { goldenFromMaster: true }),
+    right_groups_wrong_masters: { clusters: sol.clusters, golden: Object.fromEntries(sol.clusters.map((c) => [c.find((id) => !(id in sol.golden)) ?? c[0], { email: null, phone: null }])) },
   };
 }
 
@@ -326,11 +363,18 @@ export function selfCheck(world, sol) {
   }
   // Master uniqueness: no tie on activity date between two records of one system in a cluster.
   for (const c of sol.clusters) {
-    const recs = c.map((id) => world.records.find((x) => x.id === id));
+    const recs = c.map((id) => world.records.find((x) => x.id === id)).filter((x) => x.status !== 'gone away');
+    if (!recs.length) bad.push(`every record gone away in ${c.join(',')}`);
     const top = recs.map((x) => x.activity).sort().pop();
     if (recs.filter((x) => x.activity === top).length > 1) bad.push(`activity tie in ${c.join(',')}`);
   }
   for (const d of ['shared-mailbox', 'same-name']) if (!world.distractors.includes(d)) bad.push(`missing ${d}`);
+  if (world.spec.tier !== 'easy') {
+    const same = (f) => JSON.stringify(flawedSolve(world, f)) === JSON.stringify(sol);
+    if (same({ noGoneAway: true })) bad.push('gone-away rule changes nothing');
+    if (same({ goldenFromMaster: true })) bad.push('survivorship rule changes nothing');
+    if (world.distractors.includes('same-name-same-dob') && same({ noNotes: true })) bad.push('notes change nothing');
+  }
   return bad;
 }
 
@@ -343,7 +387,7 @@ export function summary(world, sol) {
 // ───────────────────────────── Rendering ─────────────────────────────
 export function render(world) {
   const nick = NICK.map((g) => g.join(' = ')).join('; ');
-  const rows = world.records.map((x) => [x.id, x.first, x.last, x.dob, x.email, x.phone, x.postcode, x.address, x.employer, x.activity].map((v) => (/[,"]/.test(v ?? '') ? `"${v}"` : v ?? '')).join(','));
+  const rows = world.records.map((x) => [x.id, x.first, x.last, x.dob, x.email, x.phone, x.postcode, x.address, x.employer, x.activity, x.status, x.note].map((v) => (/[,"]/.test(v ?? '') ? `"${v}"` : v ?? '')).join(','));
   return `From: Hollie Barker (Membership Manager, Kirklees Fitness & Swim)
 Subject: Customer list clean-up before the new CRM goes live
 
@@ -362,18 +406,20 @@ Two records are the same customer if ANY of these holds:
   R5. Matching first names and surnames, the same postcode and the same address line.
 Block: two records that both have a date of birth, with different dates, are never the same customer, whatever else matches.
 Records linked through a chain of matching pairs are all one customer (if A matches B and B matches C, then A, B and C are one customer). A blank field never matches anything.
-Surviving master record: in each group, the record with the most recent last_activity date; if two share that date, the MemberHub record; then the lower id.
+Notes: a record whose notes say it is "not the same person as" another record never matches that record directly, whatever the rules say (staff checked).
+Surviving master record: in each group, the record with the most recent last_activity date, but never a record with status "gone away" (post returned) unless every record in the group is gone away; if two share that date, the MemberHub record; then the lower id.
+Golden record (what the new CRM keeps for each group, filled from ALL records of the group): email = the most recent non-blank email in the group that is not a shared mailbox, in lower case; phone = the most recent non-blank phone in the group, as digits only starting 0 (e.g. 07700900123). "Most recent" means latest last_activity, with the same tie-breaks as for the master. A gone-away record still counts for these. If there is none, null.
 
-EXPORT (CSV: id,first_name,last_name,dob,email,phone,postcode,address,employer,last_activity)
+EXPORT (CSV: id,first_name,last_name,dob,email,phone,postcode,address,employer,last_activity,status,notes)
 ${rows.join('\n')}
 
 YOUR ANSWER
 Reply with one JSON object:
 {
   "clusters": [["M-10001", "B-20002"], ["..."]],
-  "masters": ["M-10001", "..."]
+  "golden": { "M-10001": { "email": "name@example.com", "phone": "07700900123" } }
 }
-clusters: every group of two or more records that are the same customer (leave out records with no duplicate). masters: the surviving record of each group. ${ONE_ANSWER} Groups are marked pair by pair (every pair of records correctly put together counts, every wrong pair costs), and masters are marked as a set.`;
+clusters: every group of two or more records that are the same customer (leave out records with no duplicate). golden: one entry per group, keyed by the group's surviving master record id. ${ONE_ANSWER} Groups are marked pair by pair (every pair of records correctly put together counts, every wrong pair costs); golden entries are marked as a set keyed by master id (an entry under a wrong id costs as much as a missing one), and each email and phone is checked.`;
 }
 
 void assert;

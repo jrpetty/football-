@@ -40,6 +40,23 @@ const asJson = (v: unknown) => '```json\n' + JSON.stringify(v, null, 2) + '\n```
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const exp = (id: string, caseId: string) => clone(tests.get(id)!.cases.find((c) => c.id === caseId)!.expected) as Record<string, any>;
 const lastCase = (id: string) => tests.get(id)!.cases[tests.get(id)!.cases.length - 1]!.id;
+/** Total points of a case and the points one field is worth (its weight, or the longest weighted prefix). */
+function pointsOf(id: string, caseId: string): { total: number; w: (path: string) => number } {
+  const def = tests.get(id)!;
+  const c = def.cases.find((x) => x.id === caseId)!;
+  const sc = (c.scorer ?? def.scorer) as { sets?: Record<string, number>; partitions?: string[]; weights?: Record<string, number>; aboveConstant?: string[] };
+  const total = compareJson(c.expected, c.expected, { lenient: true, sets: sc.sets, partitions: sc.partitions, weights: sc.weights }).total;
+  const w = (path: string) => {
+    for (let p = path; ; ) {
+      if (sc.weights?.[p] !== undefined) return sc.weights[p]!;
+      const i = p.lastIndexOf('.');
+      if (i < 0) return 1;
+      p = p.slice(0, i);
+    }
+  };
+  return { total, w };
+}
+const r4 = (x: number) => Math.round(x * 10000) / 10000;
 
 test('all five tests exist in the work category with 10 cases split easy / medium / hard', () => {
   for (const id of IDS) {
@@ -50,7 +67,9 @@ test('all five tests exist in the work category with 10 cases split easy / mediu
     const tiers = def.cases.map((c) => /^\[(easy|medium|hard)\]/.exec(c.notes ?? '')?.[1]);
     assert.deepEqual([tiers.filter((t) => t === 'easy').length, tiers.filter((t) => t === 'medium').length, tiers.filter((t) => t === 'hard').length], [3, 3, 4], id);
     assert.equal(def.answerWithinSec, undefined, `${id}: no answer-time limit`);
-    for (const c of def.cases) assert.ok(c.prompt!.length / 3.6 < 12500, `${id}/${c.id}: prompt under ~12k tokens`);
+    const toks = def.cases.map((c) => c.prompt!.length / 3.6);
+    assert.ok(Math.max(...toks) < 20500, `${id}: the longest prompt stays under ~20k tokens`);
+    assert.ok(toks.filter((t) => t > 10500).length <= 1, `${id}: at most one case over ~10k tokens`);
   }
 });
 
@@ -139,7 +158,7 @@ test('the spread: careless answers score well below careful ones, and every scri
     'work.support-refunds': [['careless', 0.35, 0.65], ['flawed_utc_times', 0.7, 0.97], ['flawed_misses_safety_and_fraud', 0.8, 0.99]],
     'work.cv-shortlist': [['careless', 0, 0.25], ['flawed_counts_skills_list', 0.5, 0.9], ['obeys_injection', 0, 0]],
     'work.payroll-check': [['careless', 0, 0.06], ['flawed_ssp_and_age', 0.5, 0.9], ['flawed_sacrifice_and_overtime', 0.6, 0.95]],
-    'work.crm-dedupe': [['careless', 0.4, 0.7], ['merge_everything', 0, 0.05], ['merge_nothing', 0, 0], ['flawed_strict_names', 0.8, 0.99]],
+    'work.crm-dedupe': [['careless', 0.2, 0.6], ['merge_everything', 0, 0.05], ['merge_nothing', 0, 0], ['flawed_strict_names', 0.8, 0.99]],
   };
   for (const [id, rows] of Object.entries(bounds))
     for (const [kind, lo, hi] of rows) {
@@ -154,13 +173,15 @@ test('invoices: a missed hold, a penny off the run total and a hedged outcome ea
   const key = exp(id, cid);
   const docs = key.documents as Record<string, { outcome: string; amount_to_pay: number; pay_by: string | null }>;
   const held = Object.keys(docs).find((k) => docs[k]!.outcome.startsWith('hold'))!;
-  const n = Object.keys(docs).length * 3 + 1;
+  const { total: n, w } = pointsOf(id, cid);
   const missed = clone(key);
   missed.documents[held] = { outcome: 'approve', amount_to_pay: 100, pay_by: '2027-01-30' };
-  assert.equal((await score(id, cid, asJson(missed))).score, Math.round(((n - 3) / n) * 10000) / 10000);
+  const lost = w(`documents.${held}.outcome`) + w(`documents.${held}.amount_to_pay`) + w(`documents.${held}.pay_by`);
+  assert.ok(lost >= 9, 'a planted problem carries extra weight');
+  assert.equal((await score(id, cid, asJson(missed))).score, r4((n - lost) / n));
   const penny = clone(key);
   penny.total_payable_this_run = Math.round((key.total_payable_this_run + 0.01) * 100) / 100;
-  assert.equal((await score(id, cid, asJson(penny))).score, Math.round(((n - 1) / n) * 10000) / 10000);
+  assert.equal((await score(id, cid, asJson(penny))).score, r4((n - w('total_payable_this_run')) / n));
   const hedge = clone(key);
   hedge.documents[held].outcome = `${docs[held]!.outcome} or approve`;
   assert.ok((await score(id, cid, asJson(hedge))).score < 1);
@@ -214,8 +235,8 @@ test('payroll: copying the drafts scores ~0, a figure a penny out loses one fiel
   const penny = clone(key);
   const e = key.wrong_payslips[0]!;
   penny.corrected[e]!.net = Math.round((key.corrected[e]!.net! + 0.01) * 100) / 100;
-  const total = key.wrong_payslips.length * 7 + 1;
-  assert.equal((await score(id, cid, asJson(penny))).score, Math.round(((total - 1) / total) * 10000) / 10000);
+  const { total } = pointsOf(id, cid);
+  assert.equal((await score(id, cid, asJson(penny))).score, r4((total - 1) / total));
   const flagAll = scripted[id]![cid]!.flag_everything;
   assert.ok((await score(id, cid, asJson(flagAll))).score < 1);
 });
@@ -231,15 +252,16 @@ test('CRM: groups are scored pair by pair; merging everything or nothing scores 
     assert.equal((await score(id, c.id, asJson(scripted[id]![c.id]!.merge_nothing))).score, 0, c.id);
   }
   assert.ok(everything <= 0.05, `merge everything averages ${everything}`);
-  // Splitting one group of three into two loses exactly two of its three pairs.
-  const key = exp(id, 'd10') as { clusters: string[][]; masters: string[] };
+  // Splitting one group of three into two loses exactly two of its three pairs (pairwise F1 over all pairs).
+  const key = exp(id, 'd10') as { clusters: string[][]; golden: Record<string, unknown> };
   const three = key.clusters.findIndex((g) => g.length === 3);
   const split = clone(key);
   const g = split.clusters[three]!;
   split.clusters.splice(three, 1, [g[0]!, g[1]!]);
-  const pairs = key.clusters.reduce((s, x) => s + (x.length * (x.length - 1)) / 2, 0);
-  const expected = (pairs * ((2 * (pairs - 2)) / (pairs + pairs - 2)) + key.masters.length) / (pairs + key.masters.length);
-  assert.equal((await score(id, 'd10', asJson(split))).score, Math.round(expected * 10000) / 10000);
+  const pairs = key.clusters.reduce((s2, x) => s2 + (x.length * (x.length - 1)) / 2, 0);
+  const goldenPoints = Object.keys(key.golden).length * 2;
+  const expected = (pairs * ((2 * (pairs - 2)) / (pairs + pairs - 2)) + goldenPoints) / (pairs + goldenPoints);
+  assert.equal((await score(id, 'd10', asJson(split))).score, r4(expected));
 });
 
 test('json scorer options: lenient forgives presentation only; sets, partitions and forbidOverlap', () => {
