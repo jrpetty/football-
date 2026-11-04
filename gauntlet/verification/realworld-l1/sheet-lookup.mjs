@@ -19,11 +19,14 @@ const PLAN = [
   { rows: 55, qs: ['unitsRepProduct', 'sumRegionMonth'], cancelled: true },
   { rows: 60, qs: ['sumRegionMonth', 'topRep'], cancelled: true, dup: 1 },
   { rows: 65, qs: ['unitsRepProduct', 'sumRegion', 'countOrders'], subtotals: true, cancelled: true },
-  { rows: 70, qs: ['sumRegionMonth', 'unitsRepProduct', 'topRep'], subtotals: true, dup: 1, cancelled: true },
-  { rows: 75, qs: ['topRep', 'sumRegion', 'unitsRepProduct'], subtotals: true, dup: 2, cancelled: true, refunds: true },
-  { rows: 80, qs: ['countOrders', 'topRep', 'sumRegionMonth'], subtotals: true, dup: 2, cancelled: true, refunds: true },
-  { rows: 140, qs: ['sumRegion', 'topRep', 'unitsRepProduct'], subtotals: true, dup: 3, cancelled: true, refunds: true },
+  // Hard third: bigger sheets, 4–5 questions, late CORRECTION rows that replace an earlier order, net-of-refund and
+  // average questions, and the best month.
+  { rows: 110, qs: ['topRep', 'sumRegion', 'unitsRepProduct', 'avgRep'], subtotals: true, dup: 2, cancelled: true, refunds: true, corr: 1 },
+  { rows: 150, qs: ['countOrders', 'topRep', 'sumRegionMonth', 'netRegion'], subtotals: true, dup: 2, cancelled: true, refunds: true, corr: 2 },
+  { rows: 190, qs: ['sumRegion', 'topMonth', 'unitsRepProduct', 'avgRep', 'netRegion'], subtotals: true, dup: 3, cancelled: true, refunds: true, corr: 2 },
+  { rows: 240, qs: ['sumRegionMonth', 'topRep', 'unitsRepProduct', 'avgRep', 'topMonth'], subtotals: true, dup: 3, cancelled: true, refunds: true, corr: 3 },
 ];
+const half = (pence, n) => Math.floor((2 * pence + n) / (2 * n)); // mean in pence, rounded half up
 
 function build(plan, i) {
   const rng = rngFor(`sheet-lookup/c${i + 1}`);
@@ -93,6 +96,33 @@ function build(plan, i) {
         }
         break;
       }
+      if (kind === 'avgRep') {
+        const rep = rng.pick(reps);
+        const f = (r) => completed(r) && r.rep === rep;
+        if (rows.filter(f).length < 5) continue;
+        qs.push({ kind, filter: f, text: `What is the average Total (£) per Completed order for ${rep}? Round to the nearest penny (half a penny rounds up).`, answer: (rs) => { const h = rs.filter(f); return Number(plain(half(h.reduce((s, r) => s + r.total, 0), h.length))); } });
+        break;
+      }
+      if (kind === 'netRegion') {
+        const region = rng.pick(REGIONS);
+        const f = (r) => r.region === region && (completed(r) || r.status === 'Refunded');
+        if (rows.filter((r) => r.region === region && r.status === 'Refunded').length < 1) continue;
+        qs.push({ kind, filter: f, region, text: `What are the net sales (£) of the ${region} region: the Total of its Completed orders minus the Total of its Refunded orders?`, answer: (rs) => Number(plain(rs.filter(f).reduce((s, r) => s + (completed(r) ? r.total : -r.total), 0))) });
+        break;
+      }
+      if (kind === 'topMonth') {
+        const region = rng.pick(REGIONS);
+        const f = (r) => completed(r) && r.region === region;
+        const byMonth = (rs) => {
+          const m = new Map();
+          for (const r of rs.filter(f)) m.set(r.date.getUTCMonth(), (m.get(r.date.getUTCMonth()) ?? 0) + r.total);
+          return [...m.entries()].sort((a, b) => b[1] - a[1]);
+        };
+        const ranked = byMonth(rows);
+        if (ranked.length < 2 || ranked[0][1] - ranked[1][1] < 3000) continue;
+        qs.push({ kind, filter: f, region, text: `In which month of 2026 was the total value of Completed orders in the ${region} region highest? (the month's name)`, answer: (rs) => MONTHS[byMonth(rs)[0][0]] });
+        break;
+      }
       if (kind === 'topRep') {
         const tot = (rs) => {
           const m = new Map();
@@ -110,6 +140,16 @@ function build(plan, i) {
         qs.push({ kind, filter: () => true, text: 'Which rep has the highest total value of Completed orders across the whole sheet? (full name as written)', answer: (rs) => tot(rs)[0][0] });
         break;
       }
+    }
+  }
+
+  // Late corrections: a Completed row that matters to a question gets a new quantity in a CORRECTION row at the end.
+  const corrections = [];
+  if (plan.corr) {
+    const relevant = rows.filter((r) => completed(r) && qs.some((q) => !['topRep', 'countOrders', 'topMonth'].includes(q.kind) && q.filter(r)));
+    for (const r of rng.sample(relevant, plan.corr)) {
+      const qty = Math.max(1, r.qty + rng.pick([-3, -2, -1, 1, 2, 3]));
+      corrections.push({ ...r, qty: qty === r.qty ? qty + 1 : qty, total: (qty === r.qty ? qty + 1 : qty) * r.unit, status: 'Correction' });
     }
   }
 
@@ -146,6 +186,7 @@ function build(plan, i) {
       regionSum = 0;
     }
   });
+  if (corrections.length) for (const c of corrections) out.push(fmt(c));
   const csv = out.join('\n');
 
   // Answers from the clean data; naive answers re-read the rendered CSV literally (duplicates and subtotals included).
@@ -156,21 +197,35 @@ function build(plan, i) {
     return { id: c[0], date: D(y, m, d), region: c[2], rep: c[3], product: c[4], qty: Number(c[5]), unit: Math.round(Number(c[6]) * 100), total: Math.round(Number(c[7]) * 100), status: c[8] };
   });
   // Re-derive the clean rows from the CSV by the stated rules, and check they equal the source data.
-  const seen = new Set();
-  const clean = parsed.filter((r) => !r.id.startsWith('SUBTOTAL') && !seen.has(r.id) && seen.add(r.id));
+  const byId = new Map();
+  for (const r of parsed) {
+    if (r.id.startsWith('SUBTOTAL')) continue;
+    if (r.status === 'Correction') {
+      assert(byId.has(r.id), 'a correction replaces an earlier order');
+      byId.set(r.id, { ...r, status: 'Completed' });
+    } else if (!byId.has(r.id)) byId.set(r.id, r);
+  }
+  const clean = [...byId.values()];
   assert(clean.length === rows.length, 'CSV round-trips to the source rows');
   const expected = {};
   const naive = {};
   qs.forEach((q, k) => {
     expected[`q${k + 1}`] = q.answer(clean);
-    // Naive reader: counts a repeated row twice.
-    naive[`q${k + 1}`] = q.answer(parsed.filter((r) => r.date !== null));
+    // Naive reader: counts a repeated row twice and ignores the late corrections.
+    naive[`q${k + 1}`] = q.answer(parsed.filter((r) => r.date !== null && r.status !== 'Correction'));
     if (q.kind === 'sumRegion' && plan.subtotals) {
       assert(Number(plain(subtotals[q.region])) !== expected[`q${k + 1}`], 'the printed subtotal is not the answer');
       naive[`q${k + 1}_subtotal`] = Number(plain(subtotals[q.region]));
     }
   });
   if (plan.dup) assert(qs.some((q, k) => expected[`q${k + 1}`] !== naive[`q${k + 1}`]), 'a repeated row changes at least one answer');
+  // A strong but error-prone reader: everything right except that it misses the late corrections.
+  const slip = {};
+  qs.forEach((q, k) => {
+    const seen2 = new Set();
+    slip[`q${k + 1}`] = q.answer(parsed.filter((r) => r.date !== null && r.status !== 'Correction' && !seen2.has(r.id) && seen2.add(r.id)));
+  });
+  if (plan.corr) assert(Object.keys(expected).some((k) => expected[k] !== slip[k]), 'a correction changes at least one answer');
 
   const prompt = [
     'Here is an export of our furniture sales orders (CSV). Please answer the questions below from it.',
@@ -184,29 +239,31 @@ function build(plan, i) {
     '- The export sometimes repeats a row. Rows with the same Order ID are the same order: count each order once.',
     ...(plan.subtotals ? ['- Rows starting "SUBTOTAL" are subtotals of the rows above them, not orders: do not count them.'] : []),
     '- Only rows with Status "Completed" are completed orders.',
+    ...(plan.corr ? ['- A row with Status "Correction" replaces the earlier row with the same Order ID: use the correction\'s values instead, and count that order as Completed.'] : []),
     '',
     'Questions:',
     ...qs.map((q, k) => `q${k + 1}: ${q.text}`),
     '',
-    `Reply with ONE JSON object (a \`\`\`json block is fine): {${qs.map((q, k) => `"q${k + 1}": ${q.kind === 'topRep' ? 'string' : 'number'}`).join(', ')}}. Money in pounds to 2 decimal places, as plain numbers. ${HEDGE_RULE} Each answer is checked separately.`,
+    `Reply with ONE JSON object (a \`\`\`json block is fine): {${qs.map((q, k) => `"q${k + 1}": ${q.kind === 'topRep' || q.kind === 'topMonth' ? 'string' : 'number'}`).join(', ')}}. Money in pounds to 2 decimal places, as plain numbers. ${HEDGE_RULE} Each answer is checked separately.`,
   ].join('\n');
   const notes = `${plan.rows} rows${plan.dup ? `, ${dupIdx.size} duplicated` : ''}${plan.subtotals ? ', subtotal rows' : ''}; naive literal answers ${JSON.stringify(naive)}`;
   // A careless reader counts repeated rows twice and reads a printed subtotal as the regional total.
   const careless = {};
   for (const k of Object.keys(expected)) careless[k] = naive[`${k}_subtotal`] ?? naive[k];
-  return { case: { id: `c${String(i + 1).padStart(2, '0')}`, prompt, expected, notes }, careless, naive };
+  void careless;
+  return { case: { id: `c${String(i + 1).padStart(2, '0')}`, prompt, expected, notes: notes + (corrections.length ? `; corrections: ${corrections.map((c) => c.id).join(', ')}; answers without corrections ${JSON.stringify(slip)}` : '') }, careless, slip, naive };
 }
 
 export const META = {
   id: 'work.sheet-lookup',
   name: 'Read the Spreadsheet',
   description:
-    'Business Ladder, Data & Reporting, Level 1 (Assist). One sales-orders spreadsheet (CSV, 40 to 140 rows) and one to three questions with exact answers: a filtered total, the units one rep sold of one product, a count, and the top rep. Later sheets add the traps real exports have: rows repeated by the export (to be counted once, as the notes say), regional SUBTOTAL rows that must not be double counted, cancelled and refunded orders, product names that start the same ("Oak Desk" and "Oak Desk XL"), and day/month dates.',
+    'Business Ladder, Data & Reporting, Level 1 (Assist). One sales-orders spreadsheet (CSV, 40 to 240 rows) and one to five questions with exact answers: a filtered total, the units one rep sold of one product, a count, the top rep, an average, net sales after refunds and the best month. Later sheets add the traps real exports have: rows repeated by the export (to be counted once, as the notes say), regional SUBTOTAL rows that must not be double counted, cancelled and refunded orders, product names that start the same ("Oak Desk" and "Oak Desk XL"), day/month dates, and in the hard third late CORRECTION rows that replace an earlier order.',
   difficulty: 'medium',
   tags: ['business-ladder', 'data-reporting', 'level-1', 'spreadsheet', 'csv', 'arithmetic', 'json'],
-  hook: 'A hundred rows, three questions, one exact answer each. No formulas allowed.',
-  outputTokens: 2500,
-  scorer: { type: 'json', numberTolerance: 1e-8, lenient: true },
+  hook: 'Two hundred rows, five questions, one exact answer each. No formulas allowed.',
+  outputTokens: 4000,
+  scorer: { type: 'json', numberTolerance: 1e-8, lenient: true, aliases: Object.fromEntries(MONTHS.flatMap((m) => [[m.slice(0, 3), m], [`${m} 2026`, m]])) },
 };
 
 export function generate() {

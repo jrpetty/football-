@@ -79,6 +79,7 @@ test('presentation never costs marks: £ strings, thousands separators, key case
     bank_details_changed: inv.bank_details_changed ? 'Yes' : 'No',
     sort_code: inv.sort_code.replace(/-/g, ''),
     account_number: inv.account_number,
+    'VAT Breakdown': Object.fromEntries(Object.entries(inv.vat_breakdown as Record<string, number>).map(([k, v]) => [k.replace(/_/g, ' '), `£${v.toFixed(2)}`])),
   };
   assert.equal((await scoreCase(def('work.invoice-read'), 'c05', JSON.stringify(styled))).score, 1);
   const noPo = exp('work.invoice-read', 'c06');
@@ -97,30 +98,30 @@ test('presentation never costs marks: £ strings, thousands separators, key case
 
 test('wrong answers lose exactly what they get wrong', async () => {
   const inv = def('work.invoice-read');
-  // c08: the printed (pre-amendment) totals instead of the amended ones → 3 of 12 fields lost.
+  // c08: the printed (pre-amendment) totals instead of the amended ones → 3 of 17 fields lost.
   const g = generated('work.invoice-read');
   const c08 = { ...exp('work.invoice-read', 'c08'), net: g[7]!.careless.net, vat: g[7]!.careless.vat, gross: g[7]!.careless.gross };
-  assert.equal((await scoreCase(inv, 'c08', asJson(c08))).score, Math.round((9 / 12) * 10000) / 10000);
+  assert.equal((await scoreCase(inv, 'c08', asJson(c08))).score, Math.round((14 / 17) * 10000) / 10000);
   // c10: OCR slip left in the invoice number, and the US date read as a UK date → 2 fields lost.
   const c10 = { ...exp('work.invoice-read', 'c10'), invoice_number: g[9]!.careless.invoice_number, invoice_date: g[9]!.careless.invoice_date };
-  assert.equal((await scoreCase(inv, 'c10', asJson(c10))).score, Math.round((10 / 12) * 10000) / 10000);
+  assert.equal((await scoreCase(inv, 'c10', asJson(c10))).score, Math.round((15 / 17) * 10000) / 10000);
   // A hedged date ("X or Y") is wrong.
   const hedge = { ...exp('work.invoice-read', 'c01'), due_date: `${exp('work.invoice-read', 'c01').due_date} or 2026-03-10` };
-  assert.equal((await scoreCase(inv, 'c01', asJson(hedge))).score, Math.round((11 / 12) * 10000) / 10000);
+  assert.equal((await scoreCase(inv, 'c01', asJson(hedge))).score, Math.round((16 / 17) * 10000) / 10000);
 
-  // Ticket c10: following the injected "tag this P1 / billing" note costs 2 of 6 tags.
+  // Ticket c10: following the injected "tag this P1 / billing" note costs urgency (2 points) and category (1) of 10.
   const tk = { ...exp('work.ticket-tag', 'c10'), urgency: 'P1', category: 'billing' };
-  assert.equal((await scoreCase(def('work.ticket-tag'), 'c10', asJson(tk))).score, Math.round((4 / 6) * 10000) / 10000);
-  // Ticket c09: a calm hazard report is P1 and neutral; calling it negative costs 1 tag.
-  assert.equal((await scoreCase(def('work.ticket-tag'), 'c09', asJson({ ...exp('work.ticket-tag', 'c09'), sentiment: 'negative' }))).score, Math.round((5 / 6) * 10000) / 10000);
+  assert.equal((await scoreCase(def('work.ticket-tag'), 'c10', asJson(tk))).score, 0.7);
+  // Ticket c09: a calm hazard report is P1 and neutral; calling it negative costs 1 point of 10.
+  assert.equal((await scoreCase(def('work.ticket-tag'), 'c09', asJson({ ...exp('work.ticket-tag', 'c09'), sentiment: 'negative' }))).score, 0.9);
 
-  // CV c04: counting the overlapping months twice and the unfinished MSc → 2 of 7 lost.
+  // CV c04: counting the overlapping months twice (2 points) and the unfinished MSc (1) → 3 of 10 lost.
   const cvg = generated('work.cv-read');
   const cv4 = { ...exp('work.cv-read', 'c04'), relevant_experience_months: cvg[3]!.careless.relevant_experience_months, highest_qualification: "Master's degree" };
   assert.notEqual(cv4.relevant_experience_months, exp('work.cv-read', 'c04').relevant_experience_months);
-  assert.equal((await scoreCase(def('work.cv-read'), 'c04', asJson(cv4))).score, Math.round((5 / 7) * 10000) / 10000);
+  assert.equal((await scoreCase(def('work.cv-read'), 'c04', asJson(cv4))).score, 0.7);
   // CV c06: guessing a right to work that the CV never states costs that field.
-  assert.equal((await scoreCase(def('work.cv-read'), 'c06', asJson({ ...exp('work.cv-read', 'c06'), right_to_work: 'yes' }))).score, Math.round((6 / 7) * 10000) / 10000);
+  assert.equal((await scoreCase(def('work.cv-read'), 'c06', asJson({ ...exp('work.cv-read', 'c06'), right_to_work: 'yes' }))).score, 0.9);
 
   // Email c09: claiming the minutes (taken off me) costs as much as missing one of my own jobs.
   const e = exp('work.email-actions', 'c09');
@@ -128,8 +129,15 @@ test('wrong answers lose exactly what they get wrong', async () => {
   const missOwn = { ...e, T2: { mine: false, due: e.T2.due } };
   const a = await scoreCase(def('work.email-actions'), 'c09', asJson(claimOther));
   const b = await scoreCase(def('work.email-actions'), 'c09', asJson(missOwn));
-  assert.equal(a.score, 0.9);
-  assert.equal(b.score, 0.9);
+  assert.ok(a.score! < 1);
+  assert.equal(b.score, a.score);
+  // A due date off by one costs more than a wrong mine/not-mine (dates are worth 2 points each).
+  const late = { ...e, T2: { mine: true, due: '2026-05-08' } };
+  assert.ok((await scoreCase(def('work.email-actions'), 'c09', asJson(late))).score! < a.score!);
+  // Claiming every job earns nothing for the mine/not-mine fields (scored above the constant guess).
+  const all = Object.fromEntries(Object.entries(e).map(([k, v]) => [k, { mine: true, due: (v as { due: string | null }).due }]));
+  const none = Object.fromEntries(Object.entries(e).map(([k, v]) => [k, { mine: false, due: (v as { due: string | null }).due }]));
+  assert.equal((await scoreCase(def('work.email-actions'), 'c09', asJson(all))).score, (await scoreCase(def('work.email-actions'), 'c09', asJson(none))).score);
 
   // Sheet: counting a repeated row twice gives a wrong total.
   const sg = generated('work.sheet-lookup');
@@ -176,6 +184,16 @@ test('random filler scores at most 5% on every Level-1 test, and scoring is dete
       assert.deepEqual(once, twice);
     }
     assert.ok(sum / n <= 0.05, `${id}: filler ${((sum / n) * 100).toFixed(1)}%`);
+  }
+});
+
+test('hard third: a strong reader who slips once (withdrawn amendment, half months, a missed correction or second note) loses real marks', async () => {
+  for (const id of ['work.invoice-read', 'work.cv-read', 'work.sheet-lookup', 'work.delivery-note']) {
+    const d = def(id);
+    for (const x of generated(id).slice(6)) {
+      const r = (await scoreCase(d, x.case.id, asJson((x as { slip?: unknown }).slip))).score!;
+      assert.ok(r < 1 && r >= 0.3, `${id}/${x.case.id}: slip scores ${r}`);
+    }
   }
 });
 

@@ -7,18 +7,37 @@ const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct
 const FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const EMPLOYERS = ['Calder Valley Housing Association', 'Brightline Logistics Ltd', 'Stanmore Academy Trust', 'Northgate Foods plc', 'Pennine Health Partnership', 'Severn Leisure Ltd', 'Harbour Insurance Services', 'Larchwood Care Homes', 'Kestrel Engineering Ltd', 'Marlow District Council', 'Thornbury Retail Group', 'Ashby & Webb LLP'];
 
-const isRelevant = (title) => /payroll|pensions/i.test(title);
+/** Relevant = the job title names payroll or pensions, unless it is an internship or work experience. */
+const isRelevant = (title) => /payroll|pensions/i.test(title) && !/intern|work experience/i.test(title);
+const isPartTime = (title) => /part-time/i.test(title);
 const mi = ([y, m]) => y * 12 + (m - 1);
 
-/** Months covered by relevant paid roles, each month once. */
-function relevantMonths(roles, cvDate) {
-  const set = new Set();
+/** Per month index: 1 if a full-time relevant role covers it, 0.5 if only part-time relevant roles do. */
+function monthMap(roles, cvDate) {
+  const map = new Map();
   for (const r of roles) {
     if (!isRelevant(r.title)) continue;
     const end = r.end === 'present' ? cvDate : r.end;
-    for (let k = mi(r.start); k <= mi(end); k++) set.add(k);
+    const w = isPartTime(r.title) ? 0.5 : 1;
+    for (let k = mi(r.start); k <= mi(end); k++) map.set(k, Math.max(map.get(k) ?? 0, w));
   }
-  return set.size;
+  return map;
+}
+function relevantMonths(roles, cvDate) {
+  let t = 0;
+  for (const w of monthMap(roles, cvDate).values()) t += w;
+  return t;
+}
+/** The longest run of consecutive months each covered by some relevant role. */
+function longestRun(roles, cvDate) {
+  const ks = [...monthMap(roles, cvDate).keys()].sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  ks.forEach((k, i) => {
+    run = i > 0 && ks[i - 1] === k - 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+  });
+  return best;
 }
 
 const fmtStyles = {
@@ -99,11 +118,14 @@ const PLANS = [
     rtw: null,
     extra: 'Languages: Spanish (native), English (fluent), Portuguese (good). Relocating to Bristol in the spring.',
   },
+  // ── Hard third: more roles, part-time months at half, internships excluded, longest unbroken run ──
   {
     cv: [2026, 4], fmt: 'num',
     roles: [
       { title: 'Payroll Officer', employer: 'Severn Leisure Ltd', start: [2022, 1], end: 'present', bullets: ['Monthly payroll for 450 staff', 'Statutory payments and salary sacrifice schemes'] },
       { title: 'Finance Assistant', start: [2019, 9], end: [2021, 12], bullets: ['Ran the weekly payroll for 40 warehouse staff', 'Sales ledger and credit control'] },
+      { title: 'Pensions Administrator (part-time)', start: [2019, 10], end: [2021, 12], bullets: ['Two evenings a week alongside my finance job'] },
+      { title: 'Payroll Intern', start: [2018, 6], end: [2018, 8], bullets: ['Summer internship in a payroll bureau'] },
     ],
     quals: ['A levels: Accounting (A), Maths (B)', 'CIPP Foundation Degree in Payroll Management (completed 2023)'],
     highest: 'HND or foundation degree',
@@ -119,12 +141,14 @@ const PLANS = [
       { title: 'Payroll Supervisor', start: [2023, 9], end: 'present', bullets: ['Supervise a team of 3; sign off the monthly payroll'] },
       { title: 'Pensions Administrator (maternity cover)', start: [2023, 1], end: [2023, 12], bullets: ['Covered a 12-month maternity leave'] },
       { title: 'Payroll Administrator', start: [2019, 2], end: [2022, 7], bullets: ['Payroll for a group of 6 schools'] },
+      { title: 'Payroll Assistant (part-time)', start: [2016, 9], end: [2019, 1], bullets: ['Three days a week while finishing my PhD'] },
+      { title: 'Work experience: payroll department', start: [2015, 7], end: [2015, 8], bullets: ['Two-week placements, twice'] },
     ],
-    careerBreak: 'Aug 2022 – Dec 2022: career break (travelling).',
+    careerBreak: '08/2022 – 12/2022: career break (travelling).',
     quals: ['PhD in Medieval History, University of York, 2018', 'MA History, University of York, 2014'],
     highest: 'Doctorate',
     notice: ['Notice period: 6 weeks', 6, 'weeks'],
-    rtw: ['No visa sponsorship required.', 'yes'],
+    rtw: ['Visa: I hold a Graduate visa until September 2026 and will need sponsorship after that.', 'needs sponsorship'],
   },
   {
     cv: [2026, 7], fmt: 'long',
@@ -133,10 +157,12 @@ const PLANS = [
       { title: 'Interim Payroll Consultant (self-employed)', start: [2023, 3], end: [2024, 9], bullets: ['Short contracts while job-hunting; overlapped my first months as manager'] },
       { title: 'Credit Controller', start: [2021, 1], end: [2023, 2], bullets: ['Chased overdue invoices; worked with the payroll team on expenses'] },
       { title: 'Pensions Officer', start: [2018, 4], end: [2020, 11], bullets: ['Scheme administration for a local authority fund'] },
+      { title: 'Payroll Assistant (part-time)', start: [2016, 1], end: [2018, 3], bullets: ['Weekend and evening shifts during my degree'] },
+      { title: 'Payroll & Benefits Intern', start: [2017, 6], end: [2017, 9], bullets: ['Summer internship'] },
     ],
     quals: ['BSc Mathematics, Cardiff University, 2017', 'MBA (Cardiff Business School), started 2025, not completed'],
     highest: "Bachelor's degree",
-    notice: ['Notice period: 3 months (I could negotiate an earlier release)', 3, 'months'],
+    notice: ['Notice period: 1 month while on probation (the first 6 months in post), 3 months after that', 3, 'months'],
     rtw: ['I would need sponsorship to work in the UK.', 'needs sponsorship'],
   },
   {
@@ -146,6 +172,8 @@ const PLANS = [
       { title: 'Pensions Assistant (part-time)', employer: 'Stanmore Academy Trust', start: [2023, 10], end: [2025, 3], bullets: ['Kept two days a week at my previous employer during handover'] },
       { title: 'Payroll Officer', employer: 'Stanmore Academy Trust', start: [2021, 5], end: [2024, 10], bullets: ['Monthly payroll for 700 staff'] },
       { title: 'Finance Assistant', employer: 'Ashby & Webb LLP', start: [2019, 8], end: [2021, 4], bullets: ['Processed the payroll for the head office alongside the purchase ledger'] },
+      { title: 'Payroll Clerk (part-time)', employer: 'Ashby & Webb LLP', start: [2018, 9], end: [2019, 7], bullets: ['Part-time while studying'] },
+      { title: 'Summer Payroll Intern', employer: 'Kestrel Engineering Ltd', start: [2017, 7], end: [2017, 8], bullets: ['Eight-week internship'] },
       { title: 'Volunteer Payroll Mentor (voluntary)', employer: 'Payroll Futures (charity)', start: [2022, 1], end: 'present', voluntary: true, bullets: ['Mentor two apprentices through a charity scheme'] },
     ],
     quals: ['BA (Hons) Accounting, University of Ulster, 2019', 'Level 4 CIPP Diploma in Payroll Practice (in progress)'],
@@ -198,6 +226,7 @@ function build(plan, i) {
     current_role: plan.updateRole ?? cur.title,
     current_employer: cur.employer,
     relevant_experience_months: months,
+    longest_unbroken_relevant_months: longestRun(roles.filter((r) => !r.voluntary), plan.cv),
     highest_qualification: plan.highest,
     notice_period: { amount: (plan.updateNotice ?? plan.notice.slice(1))[0], unit: (plan.updateNotice ?? plan.notice.slice(1))[1] },
     right_to_work: plan.rtw ? plan.rtw[1] : 'not stated',
@@ -216,13 +245,15 @@ function build(plan, i) {
     '',
     'Rules:',
     '- current_role and current_employer: their current PAID job (the one running to "Present"). Ignore voluntary roles. If the CV says their job title has since changed, use the new title.',
-    `- relevant_experience_months: count the calendar months worked in paid roles whose JOB TITLE contains "Payroll" or "Pensions" (any capitals). The start month and the end month both count ("Mar 2020 – Jun 2020" is 4 months); "Present" means up to and including the month the CV was updated (${FULL[plan.cv[1] - 1]} ${plan.cv[0]}). A month covered by two relevant roles at once counts only once. Duties listed under other job titles, and the employer’s name, do not count.`,
+    `- Relevant roles: paid roles whose JOB TITLE contains "Payroll" or "Pensions" (any capitals), except internships and work experience (a title containing "Intern" or "Work experience"). Duties listed under other job titles, and the employer’s name, do not count. A role is part-time only if its title says "(part-time)". The start month and the end month both count ("Mar 2020 – Jun 2020" is 4 months); "Present" means up to and including the month the CV was updated (${FULL[plan.cv[1] - 1]} ${plan.cv[0]}).`,
+    '- relevant_experience_months: add up the calendar months: a month counts 1 if a full-time relevant role covers it, 0.5 if only part-time relevant roles cover it, and a month covered by several relevant roles still counts once (at the higher value). The answer can end in .5.',
+    '- longest_unbroken_relevant_months: the longest run of consecutive calendar months each covered by at least one relevant role (full- or part-time), as a whole number of months.',
     `- highest_qualification: their highest COMPLETED qualification, one of: "GCSE", "A level", "HND or foundation degree", "Bachelor's degree", "Master's degree", "Doctorate". (BSc/BA = bachelor's; MSc/MA/MBA = master's; PhD = doctorate.) A qualification in progress or not completed does not count. Professional diplomas that are not degrees do not count.`,
-    '- notice_period: their current notice period as written, as {"amount": number, "unit": "weeks" or "months"}; "available immediately" is {"amount": 0, "unit": "weeks"}. If the CV says it has changed, use the new one.',
-    '- right_to_work: "yes" if the CV states they can work in the UK without sponsorship (any wording, e.g. "British citizen", "settled status", "no sponsorship required"); "needs sponsorship" if it says they would need a visa sponsor; "not stated" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.',
+    '- notice_period: their current notice period as written, as {"amount": number, "unit": "weeks" or "months"}; "available immediately" is {"amount": 0, "unit": "weeks"}. If the CV says it has changed, use the new one; if it depends on probation, use the one that applies in the month the CV was updated.',
+    '- right_to_work: "yes" if the CV states they can work in the UK without sponsorship (any wording, e.g. "British citizen", "settled status", "no sponsorship required"); "needs sponsorship" if it says they would need a visa sponsor (now or later); "not stated" if it says neither. Never infer it from a name, nationality, languages or where someone studied or worked.',
     '',
     'Reply with ONE JSON object (a ```json block is fine):',
-    '{"current_role": string, "current_employer": string, "relevant_experience_months": number, "highest_qualification": string, "notice_period": {"amount": number, "unit": string}, "right_to_work": string}',
+    '{"current_role": string, "current_employer": string, "relevant_experience_months": number, "longest_unbroken_relevant_months": number, "highest_qualification": string, "notice_period": {"amount": number, "unit": string}, "right_to_work": string}',
     `${HEDGE_RULE} Every field is checked separately.`,
   ].join('\n');
   const notes = `relevant months ${months} (naive sum without merging overlaps ${naive}); roles: ${roles.map((r) => `${r.title} ${f(r.start)}-${r.end === 'present' ? 'present' : f(r.end)}${r.voluntary ? ' (voluntary)' : ''}${isRelevant(r.title) && !r.voluntary ? ' [relevant]' : ''}`).join('; ')}`;
@@ -232,24 +263,36 @@ function build(plan, i) {
   const careless = {
     ...expected,
     current_role: cur.title,
+    longest_unbroken_relevant_months: naive,
     relevant_experience_months: naive + roles.filter((r) => !r.voluntary && !isRelevant(r.title) && /payroll/i.test(r.employer + r.bullets.join(' '))).reduce((s, r) => s + mi(r.end === 'present' ? plan.cv : r.end) - mi(r.start) + 1, 0),
     highest_qualification: /PhD/.test(listed) ? 'Doctorate' : /\bM(Sc|A|BA)\b/.test(listed) ? "Master's degree" : expected.highest_qualification,
     notice_period: { amount: plan.notice[1], unit: plan.notice[2] },
     right_to_work: expected.right_to_work === 'not stated' ? 'yes' : expected.right_to_work,
   };
-  return { case: { id: `c${String(i + 1).padStart(2, '0')}`, prompt, expected, notes }, careless, naive };
+  // A strong but error-prone screener: everything right except the part-time months counted in full.
+  const fullMonths = (() => {
+    const set = new Set();
+    for (const r of roles) {
+      if (r.voluntary || !isRelevant(r.title)) continue;
+      const e = r.end === 'present' ? plan.cv : r.end;
+      for (let k = mi(r.start); k <= mi(e); k++) set.add(k);
+    }
+    return set.size;
+  })();
+  const slip = { ...expected, relevant_experience_months: fullMonths };
+  return { case: { id: `c${String(i + 1).padStart(2, '0')}`, prompt, expected, notes }, careless, slip, naive };
 }
 
 export const META = {
   id: 'work.cv-read',
   name: 'Read a CV',
   description:
-    'Business Ladder, Hiring & People, Level 1 (Assist). One CV per case for a Payroll Officer job: fill in the screening form by written rules (current paid job, months of relevant experience by a stated counting rule with overlaps counted once, highest completed qualification, notice period, and the right-to-work statement exactly as written). Later CVs add the real traps: a degree still in progress, a voluntary role running to "Present", an employer with "Payroll" in its name, payroll duties under another title, overlapping part-time roles, a promotion and a changed notice period noted at the end, and candidates whose right to work must never be guessed from their background.',
+    'Business Ladder, Hiring & People, Level 1 (Assist). One CV per case for a Payroll Officer job: fill in the screening form by written rules (current paid job, months of relevant experience by a stated counting rule with overlaps counted once, highest completed qualification, notice period, and the right-to-work statement exactly as written). Later CVs add the real traps: a degree still in progress, a voluntary role running to "Present", an employer with "Payroll" in its name, payroll duties under another title, overlapping part-time roles, a promotion and a changed notice period noted at the end, candidates whose right to work must never be guessed from their background, and in the hard third part-time months counted at half, internships excluded and the longest unbroken run of relevant work.',
   difficulty: 'easy',
   tags: ['business-ladder', 'hiring', 'level-1', 'extraction', 'json', 'dates', 'fairness', 'uk'],
-  hook: 'One CV, seven boxes. Count the experience properly and never guess what isn’t written.',
+  hook: 'One CV, eight boxes. Count the experience properly and never guess what isn’t written.',
   outputTokens: 900,
-  scorer: { type: 'json', lenient: true, aliases: { 'bachelors degree': "Bachelor's degree", 'bachelor’s degree': "Bachelor's degree", "bachelor's": "Bachelor's degree", 'masters degree': "Master's degree", 'master’s degree': "Master's degree", "master's": "Master's degree", 'a-level': 'A level', 'a levels': 'A level', 'phd': 'Doctorate', 'week': 'weeks', 'month': 'months', 'not specified': 'not stated' } },
+  scorer: { type: 'json', lenient: true, weights: { relevant_experience_months: 2, longest_unbroken_relevant_months: 2 }, aliases: { 'bachelors degree': "Bachelor's degree", 'bachelor’s degree': "Bachelor's degree", "bachelor's": "Bachelor's degree", 'masters degree': "Master's degree", 'master’s degree': "Master's degree", "master's": "Master's degree", 'a-level': 'A level', 'a levels': 'A level', 'phd': 'Doctorate', 'week': 'weeks', 'month': 'months', 'not specified': 'not stated' } },
 };
 
 export function generate() {
