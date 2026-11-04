@@ -33,7 +33,8 @@ export interface Tool<W extends WorkWorld = WorkWorld> {
   readOnly?: boolean;
   /** Tools whose text goes on the lines after the ACTION line (a reply cut off at the output limit is not applied). */
   takesBody?: boolean;
-  run(world: W, call: ParsedAction, n: number): ToolOutcome;
+  /** May be async (a tool backed by a sandboxed worker, e.g. a database query box). */
+  run(world: W, call: ParsedAction, n: number): ToolOutcome | Promise<ToolOutcome>;
 }
 
 const fail = (text: string): ToolOutcome => ({ ok: false, text, outcome: text, tone: 'bad' });

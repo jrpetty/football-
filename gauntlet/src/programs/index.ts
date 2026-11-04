@@ -10,12 +10,16 @@ import { program as codeAgent } from './code-agent.ts';
 import { program as galleryMasterpiece } from './gallery-masterpiece.ts';
 import { program as galleryCode } from './gallery-code.ts';
 import { program as assistant } from './assistant.ts';
+import { program as recruiter } from './recruiter.ts';
+import { program as analystAgent } from './analyst-agent.ts';
+import { program as officeWeek } from './office-week.ts';
+import { program as warehouseWeek } from './warehouse-week.ts';
 
 /**
  * Registry of every program (simulation / multi-step pipeline).
  * To add one: write src/programs/<id>.ts exporting `program`, import it here,
  * and add a JSON test with "kind": "program", "program": "<id>".
  */
-const all: ProgramDefinition[] = [survivalIsland, escapeRoom, startupSim, liarsTable, needleHaystack, chainOfWhispers, drawItBlind, codeAgent, galleryMasterpiece, galleryCode, assistant];
+const all: ProgramDefinition[] = [survivalIsland, escapeRoom, startupSim, liarsTable, needleHaystack, chainOfWhispers, drawItBlind, codeAgent, galleryMasterpiece, galleryCode, assistant, recruiter, analystAgent, officeWeek, warehouseWeek];
 
 export const PROGRAMS: Record<string, ProgramDefinition> = Object.fromEntries(all.map((p) => [p.id, p]));
