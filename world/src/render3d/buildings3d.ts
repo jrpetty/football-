@@ -126,7 +126,9 @@ export interface ModelInfo {
   smoke: [number, number, number, number][] // x, y, z, kind (0 smoke, 1 sparks, 2 steam)
   /** a light source in model space: x, y, z, radius, warmth */
   light: [number, number, number, number, number] | null
-  anim: 'fire' | 'mill' | 'herd' | 'crops' | 'rocket' | 'beacon' | null
+  anim: 'fire' | 'mill' | 'herd' | 'crops' | 'rocket' | 'beacon' | 'pump' | 'wind' | 'wheel' | 'flare' | null
+  /** where a moving part sits (pumpjack pivot, rotor hub, winding wheel) */
+  pivot?: [number, number, number]
   height: number
 }
 
@@ -139,6 +141,7 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
   let light: ModelInfo['light'] = null
   let anim: ModelInfo['anim'] = null
   let height = 1
+  let pivot: [number, number, number] | undefined
   // a plinth that buries the base into sloping ground
   const plinth = (w = s * 0.92, col = era <= 1 ? '#6e5a40' : P.stone) => k.box(w, 0.5, w, c, -0.46, c, col)
 
@@ -349,18 +352,183 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
       break
     }
     case 'mine': {
-      k.box(0.9, 0.25, 0.7, c, -0.05, c - 0.1, '#7d7468')
-      k.sph(0.45, c, 0.1, c - 0.15, '#7d7468', 0.7, true, 10)
-      k.box(0.3, 0.3, 0.06, c, 0, c + 0.24, '#141210')
-      k.box(0.05, 0.36, 0.05, c - 0.18, 0, c + 0.27, P.wood)
-      k.box(0.05, 0.36, 0.05, c + 0.18, 0, c + 0.27, P.wood)
-      k.box(0.44, 0.06, 0.06, c, 0.34, c + 0.27, P.wood)
-      // a rail and an ore cart
-      k.box(0.06, 0.01, 0.4, c - 0.05, 0, c + 0.45, '#5a5048'); k.box(0.06, 0.01, 0.4, c + 0.05, 0, c + 0.45, '#5a5048')
-      k.box(0.16, 0.1, 0.14, c, 0.03, c + 0.48, '#4a4440')
-      k.sph(0.06, c, 0.13, c + 0.48, '#8a7a6a', 0.6)
+      if (era <= 3) {
+        // a pit and a timbered adit into the hillside
+        k.box(0.9, 0.25, 0.7, c, -0.05, c - 0.1, '#7d7468')
+        k.sph(0.45, c, 0.1, c - 0.15, '#7d7468', 0.7, true, 10)
+        k.box(0.3, 0.3, 0.06, c, 0, c + 0.24, '#141210')
+        k.box(0.05, 0.36, 0.05, c - 0.18, 0, c + 0.27, P.wood)
+        k.box(0.05, 0.36, 0.05, c + 0.18, 0, c + 0.27, P.wood)
+        k.box(0.44, 0.06, 0.06, c, 0.34, c + 0.27, P.wood)
+        k.box(0.06, 0.01, 0.4, c - 0.05, 0, c + 0.45, '#5a5048'); k.box(0.06, 0.01, 0.4, c + 0.05, 0, c + 0.45, '#5a5048')
+        k.box(0.16, 0.1, 0.14, c, 0.03, c + 0.48, '#4a4440')
+        k.sph(0.06, c, 0.13, c + 0.48, '#8a7a6a', 0.6)
+        height = 0.6
+      } else {
+        // a shaft with a headframe and winding wheel; a spoil heap beside it
+        const steel = era >= 6
+        const fr = steel ? '#5a6068' : P.wood
+        k.box(0.36, 0.04, 0.36, c, 0, c, '#3a3530')
+        k.box(0.2, 0.02, 0.2, c, 0.04, c, '#0c0a08')
+        for (const [x, z] of [[-0.15, -0.15], [0.15, -0.15], [-0.15, 0.15], [0.15, 0.15]]) k.box(0.035, 0.95, 0.035, c + x * 0.6, 0, c + z, fr, 0, 0, x * 0.25)
+        k.box(0.3, 0.04, 0.3, c, 0.92, c, fr)
+        k.box(0.04, 0.9, 0.04, c, 0, c - 0.32, fr, 0, -0.35)
+        k.box(0.36, 0.34, 0.3, c - 0.05, 0, c - 0.6 + 0.6, steel ? '#8a4a3a' : P.wall, 0, 0, 0)
+        k.cone(0.32, 0.36, c + 0.3, 0, c - 0.3, '#5e5850', 9)
+        if (steel) { k.cyl(0.04, 0.05, 0.8, c - 0.32, 0.34, c + 0.1, '#8a4a3a', 8); smoke.push([c - 0.32, 1.16, c + 0.1, 0]) }
+        k.box(0.06, 0.01, 0.4, c - 0.05, 0, c + 0.42, '#5a5048'); k.box(0.06, 0.01, 0.4, c + 0.05, 0, c + 0.42, '#5a5048')
+        k.box(0.16, 0.1, 0.14, c, 0.03, c + 0.46, '#4a4440')
+        anim = 'wheel'
+        pivot = [c, 1.02, c]
+        height = 1.2
+      }
       light = [c, 0.25, c + 0.35, 1.8, 1]
-      height = 0.6
+      break
+    }
+    case 'oil_well': {
+      k.box(0.6, 0.04, 0.4, c, 0, c, '#6a6560')
+      k.box(0.12, 0.16, 0.18, c - 0.2, 0.04, c, '#3a3a40')
+      // the samson post that carries the walking beam
+      k.box(0.04, 0.42, 0.04, c - 0.02, 0.04, c - 0.06, '#c0392b', 0, 0.2)
+      k.box(0.04, 0.42, 0.04, c - 0.02, 0.04, c + 0.06, '#c0392b', 0, -0.2)
+      k.cyl(0.02, 0.02, 0.1, c + 0.24, 0.04, c, '#4a4a50', 6)
+      k.box(0.14, 0.1, 0.14, c + 0.24, 0.0, c, '#2a2a2e')
+      anim = 'pump'
+      pivot = [c - 0.02, 0.46, c]
+      height = 0.7
+      break
+    }
+    case 'offshore_rig': {
+      for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) k.cyl(0.07, 0.09, 2.2, c + x, -2, c + z, '#d0a030', 8)
+      k.box(1.7, 0.12, 1.7, c, 0.2, c, '#6a6e74')
+      k.box(1.5, 0.3, 0.6, c - 0.05, 0.32, c - 0.45, '#e8e8e4')
+      k.winRow(1.5, 0.6, c - 0.05, c - 0.45, 0.42, 6, 0.1, 0.07, [0, 2])
+      // the derrick
+      for (const [x, z] of [[-0.14, -0.14], [0.14, -0.14], [-0.14, 0.14], [0.14, 0.14]]) k.box(0.03, 1.1, 0.03, c + 0.35 + x * 0.6, 0.32, c + 0.3 + z * 0.6, '#c0392b', 0, z * -0.12, x * 0.12)
+      k.box(0.12, 0.04, 0.12, c + 0.35, 1.4, c + 0.3, '#c0392b')
+      // helideck and flare boom
+      k.cyl(0.32, 0.32, 0.04, c - 0.5, 0.62, c + 0.5, '#2e7d32', 16)
+      k.box(0.7, 0.03, 0.03, c + 0.9, 0.6, c - 0.4, '#8a8f96', 0, 0, -0.5)
+      smoke.push([c + 1.2, 0.85, c - 0.4, 1])
+      anim = 'flare'
+      pivot = [c + 1.2, 0.8, c - 0.4]
+      light = [c, 0.6, c, 4, 0.5]
+      height = 1.6
+      break
+    }
+    case 'evaporation_ponds': {
+      const cols = ['#9fe0e8', '#bfeaf0', '#e8f6f8', '#f6fbfc']
+      for (let i = 0; i < 4; i++) {
+        k.box(0.86, 0.03, 0.86, c + (i % 2 ? 0.45 : -0.45), 0, c + (i < 2 ? -0.45 : 0.45), '#d8d0c0')
+        k.box(0.76, 0.035, 0.76, c + (i % 2 ? 0.45 : -0.45), 0.005, c + (i < 2 ? -0.45 : 0.45), cols[i])
+      }
+      k.box(0.2, 0.16, 0.14, c, 0, c, '#9aa3ad')
+      height = 0.2
+      break
+    }
+    case 'refinery': {
+      plinth(1.9, '#8a8680')
+      for (const [x, z, h] of [[-0.55, -0.4, 1.3], [-0.25, -0.5, 1.6], [0.1, -0.45, 1.1]]) { k.cyl(0.09, 0.11, h, c + x, 0, c + z, '#b8bcc2', 10); for (let y = 0.3; y < h; y += 0.35) k.cyl(0.13, 0.13, 0.03, c + x, y, c + z, '#8a8f96', 10) }
+      for (const [x, z] of [[0.45, 0.35], [0.45, -0.25], [-0.4, 0.45]]) { k.cyl(0.26, 0.26, 0.3, c + x, 0, c + z, '#e8e6e0', 16); k.sph(0.26, c + x, 0.3, c + z, '#d8d6d0', 0.2, true, 16) }
+      k.box(1.2, 0.04, 0.04, c - 0.1, 0.5, c, '#7a7f86'); k.box(0.04, 0.04, 1.0, c + 0.2, 0.4, c, '#7a7f86')
+      k.cyl(0.03, 0.04, 1.8, c + 0.75, 0, c - 0.7, '#8a8f96', 6)
+      smoke.push([c + 0.75, 1.9, c - 0.7, 1], [c - 0.25, 1.65, c - 0.5, 2])
+      anim = 'flare'
+      pivot = [c + 0.75, 1.82, c - 0.7]
+      light = [c, 0.6, c + 0.9, 4, 0.7]
+      height = 2
+      break
+    }
+    case 'fish_farm': {
+      k.box(0.12, 0.04, 1.6, c, 0.06, c + 0.6, P.wood)
+      for (const [x, z] of [[-0.28, 1.05], [0.28, 1.35], [-0.28, 1.6]]) {
+        const ring = new THREE.TorusGeometry(0.22, 0.03, 6, 20)
+        ring.rotateX(Math.PI / 2)
+        ring.translate(c + x, 0.04, c + z)
+        k['add'](ring, '#e8e8e4')
+        k.cyl(0.21, 0.21, 0.01, c + x, 0.02, c + z, '#2a5a6a', 18)
+      }
+      k.box(0.3, 0.2, 0.24, c, 0, c - 0.25, '#4a7aa8')
+      height = 0.3
+      break
+    }
+    case 'wind_farm': {
+      for (const [x, z] of [[0.45, 0.45], [1.5, 0.6], [0.9, 1.5]]) {
+        k.cyl(0.035, 0.06, 2.1, x, 0, z, '#f4f4f2', 10)
+        k.box(0.12, 0.1, 0.22, x, 2.06, z - 0.02, '#f4f4f2')
+      }
+      anim = 'wind'
+      pivot = [0.45, 2.11, 0.45 + 0.1]
+      height = 2.6
+      break
+    }
+    case 'solar_farm': {
+      for (let r = 0; r < 5; r++) for (let q = 0; q < 2; q++) {
+        const z = 0.25 + r * 0.36, x = 0.5 + q * 0.95
+        k.box(0.04, 0.12, 0.04, x - 0.3, 0, z, '#9aa0a8'); k.box(0.04, 0.12, 0.04, x + 0.3, 0, z, '#9aa0a8')
+        k.box(0.82, 0.02, 0.26, x, 0.12, z, '#1d3a6a', 0, -0.45)
+      }
+      height = 0.3
+      break
+    }
+    case 'nuclear_plant': {
+      plinth(1.95, '#a8a49c')
+      for (const x of [0.45, 1.4]) {
+        const pts: THREE.Vector2[] = []
+        for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(new THREE.Vector2(0.4 - Math.sin(t * Math.PI) * 0.13 - t * 0.04, t * 1.6)) }
+        const lathe = new THREE.LatheGeometry(pts, 20)
+        lathe.translate(x, 0, 0.5)
+        k['add'](lathe, '#d8d4cc')
+        smoke.push([x, 1.62, 0.5, 2])
+      }
+      k.cyl(0.32, 0.32, 0.5, 0.6, 0, 1.45, '#e8e6e0', 20)
+      k.sph(0.32, 0.6, 0.5, 1.45, '#d8d6d0', 1, true, 20)
+      k.box(0.7, 0.45, 0.5, 1.35, 0, 1.45, '#9aa3ad')
+      k.winRow(0.7, 0.5, 1.35, 1.45, 0.2, 4, 0.1, 0.08, [0, 1])
+      light = [c, 0.4, c + 0.9, 4, 0.2]
+      height = 1.7
+      break
+    }
+    case 'airport': {
+      k.box(1.95, 0.02, 0.42, c, 0, c - 0.55, '#3a3a3e')
+      for (let i = 0; i < 8; i++) k.box(0.12, 0.022, 0.03, 0.15 + i * 0.24, 0, c - 0.55, '#f4f4f2')
+      k.box(1.2, 0.3, 0.45, c - 0.3, 0, c + 0.5, '#d8dde2')
+      k.winRow(1.2, 0.45, c - 0.3, c + 0.5, 0.08, 8, 0.11, 0.14, [0, 2])
+      k.cyl(0.05, 0.06, 0.7, c + 0.7, 0, c + 0.5, '#e8e8e4', 8)
+      k.cyl(0.13, 0.1, 0.14, c + 0.7, 0.7, c + 0.5, '#5f8fb3', 10)
+      // a parked plane
+      k.cyl(0.05, 0.05, 0.6, c + 0.2, 0.08, c - 0.1, '#f4f4f2', 10).rotateZ(Math.PI / 2)
+      k.box(0.12, 0.012, 0.6, c + 0.2, 0.08, c - 0.1, '#f4f4f2')
+      k.box(0.04, 0.12, 0.12, c + 0.48, 0.1, c - 0.1, '#c0392b')
+      anim = 'beacon'
+      light = [c, 0.4, c, 4, 0.3]
+      height = 0.9
+      break
+    }
+    case 'radio_tower': {
+      for (const [x, z] of [[-0.08, -0.08], [0.08, -0.08], [-0.08, 0.08], [0.08, 0.08]]) k.box(0.02, 1.9, 0.02, c + x * 0.6, 0, c + z * 0.6, '#c0392b', 0, z * -0.03, x * 0.03)
+      for (let y = 0.2; y < 1.9; y += 0.25) k.box(0.13, 0.02, 0.13, c, y, c, y % 0.5 < 0.25 ? '#f4f4f2' : '#c0392b')
+      k.box(0.2, 0.14, 0.16, c + 0.25, 0, c + 0.2, '#9aa3ad')
+      anim = 'beacon'
+      height = 2
+      break
+    }
+    case 'harbour': {
+      k.box(1.95, 0.14, 0.8, c, 0, c - 0.5, '#9a968f')
+      for (let i = 0; i < 3; i++) k.box(0.55, 0.06, 0.9, 0.3 + i * 0.7, 0.08, c + 0.45, '#8a8680')
+      // a crane
+      k.box(0.06, 1.1, 0.06, c - 0.5, 0.14, c - 0.3, '#e0a030'); k.box(0.9, 0.05, 0.05, c - 0.2, 1.2, c - 0.3, '#e0a030', 0, 0, -0.1)
+      // warehouses
+      k.box(0.6, 0.35, 0.4, c + 0.5, 0.14, c - 0.6, '#8a4a3a'); k.gable(0.62, 0.42, 0.12, c + 0.5, 0.49, c - 0.6, P.roof)
+      // a moored trawler
+      const hull = new THREE.SphereGeometry(0.3, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
+      hull.scale(0.6, 0.55, 1.8)
+      hull.translate(c + 0.1, 0.12, c + 1.25)
+      k['add'](hull, '#2e5a8a')
+      k.box(0.24, 0.2, 0.3, c + 0.1, 0.14, c + 1.1, '#f4f4f2')
+      k.cyl(0.015, 0.015, 0.5, c + 0.1, 0.14, c + 1.4, '#3a3a3e', 5)
+      light = [c, 0.5, c + 0.6, 4, 0.5]
+      height = 1.3
       break
     }
     case 'library': {
@@ -623,7 +791,7 @@ function build(type: BuildingType, era: number, tribe: string, v: number): Model
   const body = mergeGeometries(k.parts, false)!
   body.computeVertexNormals()
   const glow = k.glow.length ? mergeGeometries(k.glow, false)! : null
-  return { body, glow, smoke, light, anim, height }
+  return { body, glow, smoke, light, anim, height, pivot }
 }
 
 const modelCache = new Map<string, ModelInfo>()
@@ -698,6 +866,7 @@ export class Building3D {
   private crops: THREE.Mesh | null = null
   private beacon: THREE.Mesh | null = null
   rocket: THREE.Mesh | null = null
+  private mover: THREE.Group | null = null
   b: Building
   constructor(b: Building) {
     this.b = b
@@ -721,6 +890,7 @@ export class Building3D {
       this.crops = null
       this.beacon = null
       this.rocket = null
+      this.mover = null
       this.body = new THREE.Mesh(this.info.body, bodyMat)
       this.body.castShadow = true
       this.body.receiveShadow = true
@@ -780,6 +950,49 @@ export class Building3D {
           this.beacon.position.set(c, this.info.height - 0.02, c)
           this.extras.add(this.beacon)
         }
+        if (this.info.pivot && (this.info.anim === 'pump' || this.info.anim === 'wind' || this.info.anim === 'wheel' || this.info.anim === 'flare')) {
+          const g = new THREE.Group()
+          g.position.set(...this.info.pivot)
+          if (this.info.anim === 'pump') {
+            const beam = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.05, 0.06), mat('#2a2a30'))
+            beam.position.x = 0.04
+            const head = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 12, 1, false, -Math.PI / 2, Math.PI), mat('#2a2a30'))
+            head.rotation.x = Math.PI / 2
+            head.position.set(0.34, -0.02, 0)
+            const counter = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), mat('#c0392b'))
+            counter.position.set(-0.24, -0.08, 0)
+            g.add(beam, head, counter)
+          } else if (this.info.anim === 'wind') {
+            // one rotor per turbine, all turning together
+            for (const [x, z] of [[0.45, 0.45], [1.5, 0.6], [0.9, 1.5]]) {
+              const hub = new THREE.Group()
+              hub.position.set(x - 0.45, 0, z - 0.45 + 0.02)
+              for (let q = 0; q < 3; q++) {
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.62, 0.012), mat('#ffffff'))
+                blade.position.y = 0.31
+                const arm = new THREE.Group()
+                arm.rotation.z = (q * Math.PI * 2) / 3
+                arm.add(blade)
+                hub.add(arm)
+              }
+              g.add(hub)
+            }
+          } else if (this.info.anim === 'wheel') {
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.015, 6, 18), mat(this.key.includes('|6|') || this.key.includes('|8|') ? '#5a6068' : '#6b4a2b'))
+            wheel.rotation.y = Math.PI / 2
+            g.add(wheel)
+          } else {
+            for (const sc of [1, 0.6]) {
+              const f = new THREE.Mesh(flameGeo, sc === 1 ? flameMat : flameCore)
+              f.scale.setScalar(sc * 0.8)
+              g.add(f)
+              this.flames.push(f)
+            }
+          }
+          g.traverse((o) => { if ((o as THREE.Mesh).isMesh && this.info?.anim !== 'flare') o.castShadow = true })
+          this.extras.add(g)
+          this.mover = g
+        }
         if (this.info.anim === 'rocket') {
           this.rocket = new THREE.Mesh(rocketGeo, rocketMat)
           this.rocket.position.set(c, 0.1, c)
@@ -792,9 +1005,9 @@ export class Building3D {
       }
       // docks face the water
       this.root.rotation.y = 0
-      if (b.type === 'dock') {
+      if (b.type === 'dock' || b.type === 'fish_farm' || b.type === 'harbour') {
         this.root.rotation.y = dockDir
-      } else if (s === 1 && b.type !== 'farm' && b.type !== 'pasture' && b.type !== 'mill' && b.type !== 'mine') {
+      } else if (s === 1 && b.type !== 'farm' && b.type !== 'pasture' && b.type !== 'mill' && b.type !== 'mine' && b.type !== 'oil_well') {
         this.root.rotation.y = [0, Math.PI / 2, -Math.PI / 2, 0][Math.floor(hash2(b.x, b.y, 17) * 4)]
       }
       // rotate about the footprint centre
@@ -827,6 +1040,11 @@ export class Building3D {
       f.rotation.y = t * (i ? -2 : 1.5)
     }
     if (this.sails) this.sails.rotation.z = -t * 1.3
+    if (this.mover && this.info) {
+      if (this.info.anim === 'pump') this.mover.rotation.z = Math.sin(t * 1.6 + b.id) * 0.32
+      else if (this.info.anim === 'wind') for (const hub of this.mover.children) hub.rotation.z = -t * 2.2 - b.id
+      else if (this.info.anim === 'wheel') for (const c of this.mover.children) c.rotation.x = t * 2.4
+    }
     if (this.sheep.length) {
       const n = Math.min(6, Math.ceil(b.crop / 2))
       this.sheep.forEach((g, q) => {

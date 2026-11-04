@@ -31,6 +31,7 @@ export interface SaveFile {
   nextId: number
   maps: Record<string, string>
   explored: Record<string, string>
+  known?: Record<string, string>
   regrow: World['regrow']
   agents: Agent[]
   tribes: Tribe[]
@@ -58,8 +59,10 @@ export function serialize(w: World): SaveFile {
     maps: {
       biome: b64(w.biome), elev: b64(w.elev), temp: b64(w.temp), moist: b64(w.moist), feature: b64(w.feature),
       amount: b64(w.amount), fertility: b64(w.fertility), road: b64(w.road), occ: b64(w.occ),
+      deposit: b64(w.deposit), depAmt: b64(w.depAmt), depDepth: b64(w.depDepth), fish: b64(w.fish),
     },
     explored,
+    known: Object.fromEntries([...w.known].map(([id, arr]) => [id, b64(arr)])),
     regrow: w.regrow,
     agents: w.agents.map((a) => ({ ...a, task: null, aiPending: false, speech: null, emote: null })),
     tribes: w.tribes,
@@ -88,6 +91,14 @@ export function deserialize(s: SaveFile): World {
   w.road = unb64(s.maps.road)
   w.occ = new Int32Array(unb64(s.maps.occ).buffer)
   for (const id in s.explored) w.explored.set(+id, unb64(s.explored[id]))
+  if (s.maps.deposit) {
+    w.deposit = unb64(s.maps.deposit)
+    w.depAmt = new Uint16Array(unb64(s.maps.depAmt).buffer)
+    w.depDepth = unb64(s.maps.depDepth)
+  } else w.ensureGeology()
+  w.initFish()
+  if (s.maps.fish) w.fish = f32('fish')
+  for (const id in s.known ?? {}) w.known.set(+id, unb64(s.known![id]))
   w.time = s.time
   w.rng.state = s.rng
   w.nextId = s.nextId

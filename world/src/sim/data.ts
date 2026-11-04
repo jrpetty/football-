@@ -56,6 +56,7 @@ export type Item =
   | 'wood' | 'stone' | 'fiber' | 'hide' | 'clay' | 'sand' | 'copper' | 'tin' | 'iron_ore' | 'coal' | 'gold' | 'oil'
   | 'planks' | 'bricks' | 'pottery' | 'cloth' | 'clothes' | 'bronze' | 'iron' | 'steel' | 'glass' | 'paper'
   | 'concrete' | 'machinery' | 'electronics' | 'fuel' | 'medicine'
+  | 'bauxite' | 'uranium' | 'lithium' | 'aluminium' | 'plastic' | 'batteries'
 
 export interface FeatureDef {
   id: F
@@ -129,13 +130,64 @@ export const ITEMS: Record<Item, ItemDef> = {
   electronics: { name: 'Electronics', icon: '💡' },
   fuel: { name: 'Fuel', icon: '⛽' },
   medicine: { name: 'Medicine', icon: '💊' },
+  bauxite: { name: 'Bauxite', icon: '🟤' },
+  uranium: { name: 'Uranium ore', icon: '☢️' },
+  lithium: { name: 'Lithium brine', icon: '🧂' },
+  aluminium: { name: 'Aluminium', icon: '🥫' },
+  plastic: { name: 'Plastic', icon: '🧴' },
+  batteries: { name: 'Batteries', icon: '🔋' },
 }
 
 export const ALL_ITEMS = Object.keys(ITEMS) as Item[]
 export const FOOD_ITEMS = ALL_ITEMS.filter((i) => ITEMS[i].food) as Item[]
 
 /** Gatherable raw resources an agent can name in a plan. */
-export const GATHERABLE: Item[] = ['wood', 'stone', 'berries', 'fiber', 'clay', 'sand', 'copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil']
+export const GATHERABLE: Item[] = ['wood', 'stone', 'berries', 'fiber', 'clay', 'sand', 'copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'bauxite', 'uranium', 'lithium']
+
+// ------------------------------------------------------------------ geology
+//
+// Minerals lie where the rocks that hold them formed, mostly out of sight.
+// Copper, gold, tin and uranium come from the roots of mountain belts; the
+// great iron ores from ancient shield rock; coal from buried swamp forests
+// and oil from deep sedimentary basins (on land and under the sea); bauxite
+// from deeply weathered tropical soils; lithium from desert salt flats.
+// Only a few bodies break the surface. The rest must be found by
+// prospecting and reached by digging — deeper as technology allows.
+
+export const D = { NONE: 0, COPPER: 1, TIN: 2, IRON: 3, COAL: 4, GOLD: 5, OIL: 6, BAUXITE: 7, URANIUM: 8, LITHIUM: 9 } as const
+export type D = number
+
+export interface DepositDef {
+  id: D
+  name: string
+  item: Item
+  /** the surface showing that hints at it */
+  outcrop: F | null
+  color: string
+  /** a bright, distinct colour for the geology map */
+  map: string
+  /** units per tile of the ore body */
+  grade: [number, number]
+  /** extracted by: 'mine' (shafts and pits), 'well' (drilling), 'brine' (evaporation ponds) */
+  via: 'mine' | 'well' | 'brine'
+}
+
+export const DEPOSITS: DepositDef[] = [
+  { id: D.NONE, name: '', item: 'stone', outcrop: null, map: '#000000', color: '#000', grade: [0, 0], via: 'mine' },
+  { id: D.COPPER, name: 'Copper porphyry', item: 'copper', outcrop: F.COPPER, map: '#ff8c42', color: '#d9774a', grade: [120, 320], via: 'mine' },
+  { id: D.TIN, name: 'Tin lode', item: 'tin', outcrop: F.TIN, map: '#9ad1ff', color: '#c9d1d9', grade: [60, 160], via: 'mine' },
+  { id: D.IRON, name: 'Iron formation', item: 'iron_ore', outcrop: F.IRON, map: '#e63946', color: '#a2462e', grade: [200, 600], via: 'mine' },
+  { id: D.COAL, name: 'Coal seam', item: 'coal', outcrop: F.COAL, map: '#a78bfa', color: '#2a2a30', grade: [200, 500], via: 'mine' },
+  { id: D.GOLD, name: 'Gold vein', item: 'gold', outcrop: F.GOLD, map: '#ffd60a', color: '#ffd34a', grade: [20, 70], via: 'mine' },
+  { id: D.OIL, name: 'Oil reservoir', item: 'oil', outcrop: F.OIL, map: '#ff2fa0', color: '#141018', grade: [300, 900], via: 'well' },
+  { id: D.BAUXITE, name: 'Bauxite laterite', item: 'bauxite', outcrop: null, map: '#c2733a', color: '#b5651d', grade: [150, 400], via: 'mine' },
+  { id: D.URANIUM, name: 'Uranium deposit', item: 'uranium', outcrop: null, map: '#7cff4f', color: '#9be564', grade: [20, 60], via: 'mine' },
+  { id: D.LITHIUM, name: 'Lithium brine', item: 'lithium', outcrop: null, map: '#3ef0e0', color: '#e8f4ff', grade: [80, 200], via: 'brine' },
+]
+
+/** Depths: 0 = at the surface, 1 = shallow (pits, adits), 2 = deep (shafts), 3 = very deep (pumped shafts, deep wells). */
+export const DEPTH_NAMES = ['at the surface', 'shallow', 'deep', 'very deep']
+export const DEPTH_METRES = ['0–5 m', '5–40 m', '40–300 m', '300 m +']
 
 export type Inventory = Partial<Record<Item, number>>
 

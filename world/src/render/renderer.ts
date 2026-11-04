@@ -4,7 +4,7 @@
 // Buildings, wildlife and people are drawn live on top, then a lightmap for
 // night, glowing windows and fires, and weather.
 
-import { B, BIOMES, F, FEATURES } from '../sim/data.ts'
+import { B, BIOMES, F, FEATURES, DEPOSITS } from '../sim/data.ts'
 import { BUILDINGS } from '../sim/buildings.ts'
 import { eraOf } from '../sim/tech.ts'
 import { daylight, hourOf } from '../sim/time.ts'
@@ -17,7 +17,7 @@ import { drawPerson, drawCreature } from './people.ts'
 export const TP = 16 // screen px per tile at zoom 1
 const CHUNK = 32
 
-export type Overlay = 'none' | 'territory' | 'fertility' | 'temperature' | 'explored'
+export type Overlay = 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish'
 
 export interface Selection {
   kind: 'agent' | 'building' | 'tile' | 'tribe' | null
@@ -460,6 +460,8 @@ export class Renderer {
         r = clamp(t * 2, 0, 1) * 255; b = clamp(1 - t * 1.6, 0, 1) * 255; g = 60; a = 120
       } else if (kind === 'explored' && ex) {
         if (!ex[i]) { r = 8; g = 10; b = 20; a = 200 }
+      } else if (kind === 'geology' || kind === 'fish') {
+        ;[r, g, b, a] = layerColor(w, kind, i, sel)
       }
       img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = b; img.data[i * 4 + 3] = a
     }
@@ -1262,3 +1264,24 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export { FEATURES }
+
+/**
+ * Shared colouring for the geology and fish-stock layers (2D and 3D).
+ * Geology: every ore body, by mineral, strongest where the selected people
+ * know of it and where it lies shallow. Fish: from rich (teal) to fished out (red).
+ */
+export function layerColor(w: World, kind: 'geology' | 'fish', i: number, sel: number): [number, number, number, number] {
+  if (kind === 'fish') {
+    const cap = w.fishCap[i]
+    if (!cap) return [0, 0, 0, 0]
+    const f = w.fish[i] / cap
+    return [Math.round(255 * (1 - f)), Math.round(90 + 140 * f), Math.round(80 + 120 * f), 150]
+  }
+  const d = w.deposit[i]
+  // everything that isn't ore is veiled, so the bodies stand out like a geological map
+  if (!d) return [8, 10, 22, 165]
+  const n = parseInt(DEPOSITS[d].map.slice(1), 16)
+  const known = sel ? w.knowsDeposit(sel, i) : false
+  const depthFade = 1 - w.depDepth[i] * 0.12
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255, Math.round((known ? 245 : 175) * depthFade)]
+}

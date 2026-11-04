@@ -5,12 +5,12 @@ export type ActionKind =
   | 'gather' | 'hunt' | 'fish' | 'farm' | 'eat' | 'drink' | 'sleep' | 'rest'
   | 'build' | 'craft' | 'research' | 'store' | 'take' | 'talk' | 'give' | 'teach'
   | 'court' | 'explore' | 'go_home' | 'found_tribe' | 'join_tribe' | 'decree'
-  | 'write' | 'trade' | 'celebrate' | 'heal' | 'attack' | 'wander' | 'follow'
+  | 'write' | 'trade' | 'celebrate' | 'heal' | 'attack' | 'wander' | 'follow' | 'prospect'
 
 export const ACTION_KINDS: ActionKind[] = [
   'gather', 'hunt', 'fish', 'farm', 'eat', 'drink', 'sleep', 'rest', 'build', 'craft', 'research', 'store', 'take',
   'talk', 'give', 'teach', 'court', 'explore', 'go_home', 'found_tribe', 'join_tribe', 'decree', 'write', 'trade',
-  'celebrate', 'heal', 'attack', 'wander', 'follow',
+  'celebrate', 'heal', 'attack', 'wander', 'follow', 'prospect',
 ]
 
 export interface PlanStep {

@@ -2,7 +2,7 @@
 // world works (cached across every call); the user turn is this person's
 // senses, body, memories and society right now, rendered as plain prose.
 
-import { BIOMES, FEATURES, ITEMS, TREE_FEATURES, invToString, invTotal, F, type Item } from '../sim/data.ts'
+import { BIOMES, FEATURES, ITEMS, TREE_FEATURES, DEPOSITS, DEPTH_NAMES, DEPTH_METRES, invToString, invTotal, F, type Item } from '../sim/data.ts'
 import { BUILDINGS, BUILDING_TYPES, RECIPES, TOOL_NAMES } from '../sim/buildings.ts'
 import { TECHS, TECH_BY_ID, ERAS, availableTechs, eraOf } from '../sim/tech.ts'
 import { ACTION_KINDS, type Agent } from '../sim/types.ts'
@@ -11,6 +11,44 @@ import type { World } from '../sim/world.ts'
 import { CARRY_CAP } from '../sim/world.ts'
 
 const costStr = (c: Partial<Record<Item, number>>) => Object.entries(c).map(([k, v]) => `${v} ${k}`).join(' + ')
+
+/** What a people knows lies underground, grouped into bodies, nearest first. */
+function depositSummary(w: World, tribeId: number, a: Agent): string {
+  const kd = w.knownDeposits(tribeId)
+  const seen = new Uint8Array(kd.length)
+  const bodies: { name: string; reserves: number; depth: number; x: number; y: number; site: string; worked: boolean }[] = []
+  for (let i = 0; i < kd.length; i++) {
+    if (!kd[i] || seen[i] || !w.deposit[i]) continue
+    const d = w.deposit[i]
+    const stack = [i]
+    seen[i] = 1
+    let reserves = 0, depth = 3, sx = 0, sy = 0, n = 0, worked = false
+    while (stack.length) {
+      const j = stack.pop()!
+      reserves += w.depAmt[j]
+      depth = Math.min(depth, w.depDepth[j])
+      const x = j % w.W, y = Math.floor(j / w.W)
+      sx += x; sy += y; n++
+      const o = w.occ[j]
+      if (o) { const b = w.buildingById.get(o - 1); if (b && b.tribeId === tribeId && ['mine', 'oil_well', 'offshore_rig', 'evaporation_ponds'].includes(b.type)) worked = true }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!w.inBounds(x + dx, y + dy)) continue
+        const k = w.idx(x + dx, y + dy)
+        if (!seen[k] && kd[k] && w.deposit[k] === d) { seen[k] = 1; stack.push(k) }
+      }
+    }
+    const cx = Math.round(sx / n), cy = Math.round(sy / n)
+    bodies.push({ name: DEPOSITS[d].name, reserves, depth, x: cx, y: cy, site: w.extractable(tribeId, w.idx(cx, cy)) ?? '', worked })
+  }
+  if (!bodies.length) return 'Known deposits underground: none yet — prospecting would find them.'
+  bodies.sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y))
+  const dir = (x: number, y: number) => {
+    const dx = x - a.x, dy = y - a.y
+    const d = Math.round(Math.hypot(dx, dy))
+    return `${d} paces ${`${dy < -d * 0.4 ? 'north' : dy > d * 0.4 ? 'south' : ''}${dx > d * 0.4 ? 'east' : dx < -d * 0.4 ? 'west' : ''}` || 'here'}`
+  }
+  return `Known deposits underground: ${bodies.slice(0, 8).map((b) => `${b.name} (~${Math.round(b.reserves / 10) * 10}, ${DEPTH_NAMES[b.depth]} ${DEPTH_METRES[b.depth]}, ${dir(b.x, b.y)}; ${b.worked ? 'being worked' : b.site ? `ready for a ${b.site.replace('_', ' ')}` : 'too deep or hard for us yet'})`).join('; ')}.`
+}
 
 function catalog(): string {
   const b = BUILDING_TYPES.map((t) => {
@@ -34,14 +72,17 @@ Humanity in this world began with nothing: a few small bands, bare hands, and th
 - Work: gathering, building, crafting and research take hours. Tools multiply your work speed (stone → bronze → iron → steel → power tools). Skills improve with practice.
 - Carrying: you can carry ${CARRY_CAP} items. Your tribe shares communal stores at its hub; "store" deposits your goods there, "take" fetches them. Building and crafting draw on your pack first, then the tribe's stores.
 - Knowledge belongs to your tribe, and it is earned the way humans really earned it. Much early knowledge comes from practice: working clay near a fire teaches pottery, tending wild plants teaches farming, hunting teaches tracking and hides — every hour of relevant work brings an idea closer, and sometimes a half-understood idea suddenly clicks. Deliberate research (thinking, experimenting, teaching) drives the harder ideas; libraries, universities, labs and data centres multiply it. Geography matters: coasts suggest boats, ore in the hills suggests metalwork, fertile river land suggests farming. Ideas spread between tribes through teaching, partnerships and people joining. Before Writing, knowledge lives only in memory — a people that dwindles to a handful can forget what it knew.
-- Exploration: you can only harvest resources in lands your tribe has explored. Ore (copper, tin, iron, coal, gold) lies in hills and mountains; clay along rivers; oil in deserts and marshes.
+- Exploration: you can only harvest resources in lands your tribe has explored.
+- Geology: most minerals lie hidden underground, where the rocks that hold them formed — copper, gold, tin and uranium in the roots of mountain ranges; great iron ores in old worn-down hills; coal under low basins of ancient swamp forest; oil deep under deserts, marshes, plains and the sea floor; bauxite under hot, wet forests; lithium brine under desert salt flats. Only a few bodies show at the surface as outcrops (which can be dug by hand once you know Mining). To find the rest, "prospect" — follow stained rock and odd gravels; with Geology you read the strata; with Seismic Surveying you can see kilometres down and under the sea. To work a known body, build a mine over it (pits and short tunnels reach shallow ore; Shaft Mining reaches deep ore; Deep Mining with steam pumps reaches very deep ore), an oil well (Oil Drilling), an offshore platform (Offshore Drilling) or evaporation ponds; then "gather" the mineral and you will go and work it. Bodies run out. Mines are dangerous.
+- The sea: fish live where the water is rich — coastal shallows and the edge of the continental shelf most of all, open ocean less, lakes and rivers least. Without boats you fish from the bank; canoes reach lakes and shallows, sailing boats the open sea, ocean ships the deep water, and steam and diesel trawlers catch far more — but stocks only regrow so fast, and an overfished sea can collapse. Fish farms (Aquaculture) raise fish without emptying the sea.
 - Farming: farm fields are planted in spring/summer, tended, and harvested when ripe; nothing grows in winter. Pastures breed animals for meat and hides.
 - Society: partners (from courting someone who likes you back) can have children if they have food and a home. The leader of a tribe can issue decrees (laws, values, beliefs, even a new name). Anyone can found a new tribe or ask to join another. Violence is possible but damages trust and can kill.
 - The world has weather, droughts, harsh winters, plagues and other events.
 
 # Actions you can plan (action — what goes in target / amount / text)
-- gather — target: a resource (wood, stone, berries, fiber, clay, sand, copper, tin, iron_ore, coal, gold, oil); amount: how many
-- hunt — wild game for meat and hides · fish — near water; amount: how many
+- gather — target: a resource (wood, stone, berries, fiber, clay, sand, copper, tin, iron_ore, coal, gold, oil, bauxite, uranium, lithium); amount: how many. Minerals come from surface outcrops or from your tribe's mines, wells and rigs.
+- prospect — search for hidden ore bodies; target: a direction or ""; amount: hours (1-6)
+- hunt — wild game for meat and hides · fish — from the bank, or out on the water if your people have boats; amount: how many
 - farm — plant, tend or harvest your tribe's fields/pastures; amount: how many fields
 - eat · drink · sleep · rest (amount: hours)
 - build — target: a building id (see catalogue). If your tribe already has an unfinished site, you help finish it. Use target "road" to pave roads.
@@ -292,6 +333,7 @@ export function buildContext(w: World, a: Agent): string {
     if (av.length) lines.push(`Ideas within reach: ${av.slice(0, 12).map((t) => `${t.name} (${Math.round((w.techProgress(tribe, t.id) / t.cost) * 100)}% understood, ${t.cost} pts — ${t.desc})`).join('; ')}.`)
     if (tribe.lost.length) lines.push(`Knowledge your people once had but lost: ${tribe.lost.map((x) => TECH_BY_ID[x]?.name ?? x).join(', ')}.`)
     lines.push(`Communal stores (${Math.floor(w.storageUsed(tribe))}/${w.storageCap(tribe.id)}): ${invToString(tribe.storage)}.`)
+    lines.push(depositSummary(w, tribe.id, a))
     const tb = w.tribeBuildings(tribe.id, undefined, false)
     const counts = new Map<string, number>()
     for (const b of tb) {

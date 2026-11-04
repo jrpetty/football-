@@ -61,3 +61,51 @@ test('an instinct-only civilisation survives and develops over several years', (
   assert.ok(techs >= 5, 'they research')
   void YEAR
 })
+
+test('minerals lie underground where geology puts them, and must be found and dug', () => {
+  const w = new World({ ...DEFAULT_CONFIG, seed: 7 })
+  let total = 0, deep = 0, coalLow = 0, coal = 0, oilSea = 0
+  for (let i = 0; i < w.W * w.H; i++) {
+    const d = w.deposit[i]
+    if (!d) continue
+    total++
+    if (w.depDepth[i] >= 1) deep++
+    if (d === 4) { coal++; if (w.elev[i] < 0.45) coalLow++ }
+    if (d === 6 && [B.SHALLOWS, B.OCEAN].includes(w.biome[i] as 1 | 2)) oilSea++
+  }
+  assert.ok(total > 300, `deposits exist (${total})`)
+  assert.equal(deep, total, 'ore bodies continue below the surface')
+  assert.ok(coal === 0 || coalLow / coal > 0.9, 'coal lies in low basins')
+  assert.ok(oilSea > 0, 'some oil is offshore')
+  // nobody knows about any of it at first
+  const t = w.tribes[0]
+  assert.equal(w.knownList(t.id).length, 0)
+  // a prospector standing on a body, with the know-how, finds it
+  const a = w.members(t.id)[0]
+  t.techs.push('mining', 'prospecting', 'geology'); w.techSets.set(t.id, new Set(t.techs))
+  let body = -1
+  for (let i = 0; i < w.W * w.H && body < 0; i++) if (w.deposit[i] && w.depDepth[i] <= 2 && !w.biome[i].toString().match(/^[012]$/)) body = i
+  a.x = (body % w.W) + 0.5; a.y = Math.floor(body / w.W) + 0.5
+  let found: string[] = []
+  for (let k = 0; k < 40 && !found.length; k++) found = w.prospect(a, 1)
+  assert.ok(found.length > 0, 'prospecting finds the body')
+  assert.ok(w.knowsDeposit(t.id, body), 'and remembers where it is')
+  // a mine over it brings the ore up and the reserves go down
+  t.techs.push('shaft_mining'); w.techSets.set(t.id, new Set(t.techs))
+  const before = w.reservesNear(t.id, body % w.W, Math.floor(body / w.W), w.deposit[body] === 6 ? 'oil' : (['', 'copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'bauxite', 'uranium', 'lithium'] as const)[w.deposit[body]] as never)
+  assert.ok(before > 0)
+})
+
+test('fish stocks fall when fished and recover slowly', () => {
+  const w = new World({ ...DEFAULT_CONFIG, seed: 11, size: 96 })
+  let sea = -1
+  for (let i = 0; i < w.W * w.H; i++) if (w.biome[i] === B.SHALLOWS) { sea = i; break }
+  const x = sea % w.W, y = Math.floor(sea / w.W)
+  const full = w.fishNear(x, y, 2)
+  w.takeFish(x, y, full * 0.8, 2)
+  const low = w.fishNear(x, y, 2)
+  assert.ok(low < full * 0.3, 'overfished')
+  w.tick(DAY)
+  const later = w.fishNear(x, y, 2)
+  assert.ok(later > low && later < full * 0.6, 'recovering, but not at once')
+})

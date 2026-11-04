@@ -5,6 +5,7 @@ import { ERAS } from './sim/tech.ts'
 import { formatClock, SEASONS, SEASON_ICONS, dayInSeason, yearOf, seasonOf, partOfDay } from './sim/time.ts'
 import type { Overlay } from './render/renderer.ts'
 import { preferredView, setPreferredView, type ViewMode } from './render/view.ts'
+import { DEPOSITS } from './sim/data.ts'
 import { useGameVersion, useMindVersion } from './ui/common.tsx'
 import { PeoplePanel, TribesPanel, MindsPanel, ChroniclePanel, TechPanel, StatsPanel } from './ui/panels.tsx'
 import { Inspector } from './ui/Inspector.tsx'
@@ -196,6 +197,8 @@ function Minimap({ wide }: { wide: boolean }) {
   return (
     <div className={`minimap glass ${wide ? 'wide' : ''}`}>
       <canvas ref={ref} onMouseDown={jump} onMouseMove={(e) => e.buttons === 1 && jump(e)} />
+      {overlay === 'geology' && <div className="legend">{DEPOSITS.filter((d) => d.id).map((d) => <span key={d.id}><i style={{ background: d.map }} />{d.name.split(' ')[0]}</span>)}<small>bright = found by the selected people</small></div>}
+      {overlay === 'fish' && <div className="legend"><span><i style={{ background: '#00e6c8' }} />plentiful</span><span><i style={{ background: '#ff5a50' }} />fished out</span></div>}
       <div className="controls">
         <select value={overlay} onChange={(e) => { const v = e.target.value as Overlay; setOverlay(v); if (game.renderer) game.renderer.overlay = v }}>
           <option value="territory">Territory</option>
@@ -203,6 +206,8 @@ function Minimap({ wide }: { wide: boolean }) {
           <option value="fertility">Fertility</option>
           <option value="temperature">Temperature</option>
           <option value="explored">Explored (selected tribe)</option>
+          <option value="geology">Geology: what lies underground</option>
+          <option value="fish">Fish stocks</option>
         </select>
         <button className="icon-btn" onClick={() => game.renderer?.zoomAt(game.renderer.vw / 2, game.renderer.vh / 2, 1.25)}>＋</button>
         <button className="icon-btn" onClick={() => game.renderer?.zoomAt(game.renderer.vw / 2, game.renderer.vh / 2, 0.8)}>－</button>

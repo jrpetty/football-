@@ -3,10 +3,10 @@
 // the AI layer (src/ai) only ever changes an agent's *plan*, and the
 // simulation carries that plan out under the same physical rules as everyone.
 
-import { B, BIOMES, F, FEATURES, TREE_FEATURES, ITEMS, FOOD_ITEMS, invAdd, invCount, invTotal, type Inventory, type Item } from './data.ts'
+import { B, BIOMES, D, DEPOSITS, DEPTH_NAMES, F, FEATURES, TREE_FEATURES, ITEMS, FOOD_ITEMS, invAdd, invCount, invTotal, type Inventory, type Item } from './data.ts'
 import { BUILDINGS, type BuildingType } from './buildings.ts'
-import { TECH_BY_ID, TECHS, availableTechs, eraOf, ERAS, inspires, geographyAffinity, type Landscape, type TechDef } from './tech.ts'
-import { generateTerrain, PRESETS, featureAmount, type Preset } from './worldgen.ts'
+import { TECH_BY_ID, TECHS, availableTechs, eraOf, ERAS, inspires, geographyAffinity, techFx, RESEARCH_PRIORITY, type Landscape, type TechDef } from './tech.ts'
+import { generateTerrain, generateGeology, PRESETS, featureAmount, type Preset } from './worldgen.ts'
 import { Rng, hash2, clamp } from './rng.ts'
 import { findPath, type PathGrid } from './path.ts'
 import { personName, tribeName, TRIBE_COLORS, TRIBE_EMBLEMS } from './names.ts'
@@ -59,6 +59,18 @@ export class World implements PathGrid {
   failCache = new Map<string, number>()
   explored = new Map<number, Uint8Array>()
   regrow: { i: number; t: number; f: number }[] = []
+  /** what lies underground: mineral (D), reserves and depth (0 surface … 3 very deep) */
+  deposit!: Uint8Array
+  depAmt!: Uint16Array
+  depDepth!: Uint8Array
+  /** which deposits each tribe has found by prospecting */
+  known = new Map<number, Uint8Array>()
+  /** the same, as a list of tiles (derived) */
+  private knownTiles = new Map<number, number[]>()
+  private powerCache = new Map<number, { v: number; on: boolean }>()
+  /** fish in each water tile, and what that water can support */
+  fish!: Float32Array
+  fishCap!: Float32Array
 
   time = 6 * HOUR // start at dawn, day 0
   rng: Rng
@@ -106,6 +118,10 @@ export class World implements PathGrid {
     this.feature = m.feature
     this.amount = m.amount
     this.fertility = m.fertility
+    this.deposit = m.deposit
+    this.depAmt = m.depAmt
+    this.depDepth = m.depDepth
+    this.initFish()
     this.road = new Uint8Array(this.W * this.H)
     this.occ = new Int32Array(this.W * this.H)
     this.computeComponents()
@@ -590,6 +606,199 @@ export class World implements PathGrid {
     return this.inBounds(xi, yi) && this.warmGrid[yi * this.W + xi] === 1
   }
 
+  // ---------------------------------------------------------------- the sea and the ground
+
+  /** Fish stocks follow the water: rich coastal shallows, upwelling at the shelf edge, thin open ocean. */
+  initFish() {
+    const N = this.W * this.H
+    this.fish = new Float32Array(N)
+    this.fishCap = new Float32Array(N)
+    for (let i = 0; i < N; i++) {
+      const b = this.biome[i]
+      let cap = b === B.SHALLOWS ? 90 : b === B.OCEAN ? 70 : b === B.DEEP_OCEAN ? 30 : b === B.LAKE ? 50 : b === B.RIVER ? 24 : b === B.MARSH ? 6 : 0
+      if (b === B.OCEAN || b === B.DEEP_OCEAN) {
+        // the shelf edge, where cold water wells up, teems with life
+        const x = i % this.W, y = (i / this.W) | 0
+        let shelf = false
+        for (let dy = -3; dy <= 3 && !shelf; dy++) for (let dx = -3; dx <= 3 && !shelf; dx++) if (this.inBounds(x + dx, y + dy) && this.biome[this.idx(x + dx, y + dy)] === B.SHALLOWS) shelf = true
+        if (shelf) cap *= 1.6
+        cap *= 0.75 + hash2(x >> 3, y >> 3, this.cfg.seed + 5) * 0.6
+      }
+      this.fishCap[i] = cap
+      this.fish[i] = cap
+    }
+  }
+  /** Stocks recover logistically, and drift in from neighbouring water. */
+  private growFish() {
+    const N = this.W * this.H
+    for (let i = 0; i < N; i++) {
+      const cap = this.fishCap[i]
+      if (!cap) continue
+      const f = this.fish[i]
+      // fish breed fast at low density: a village can fish a lake for ever, a trawler fleet can strip it
+      this.fish[i] = Math.min(cap, f + 0.3 * f * (1 - f / cap) + cap * 0.012)
+    }
+  }
+  /** How many fish swim within r tiles of (x, y). */
+  fishNear(x: number, y: number, r: number): number {
+    let s = 0
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const xx = Math.floor(x) + dx, yy = Math.floor(y) + dy
+      if (this.inBounds(xx, yy)) s += this.fish[this.idx(xx, yy)]
+    }
+    return s
+  }
+  /** Take n fish from around a spot; returns how many were really there. */
+  takeFish(x: number, y: number, n: number, r = 2): number {
+    let got = 0
+    for (let dy = -r; dy <= r && got < n; dy++) for (let dx = -r; dx <= r && got < n; dx++) {
+      const xx = Math.floor(x) + dx, yy = Math.floor(y) + dy
+      if (!this.inBounds(xx, yy)) continue
+      const i = this.idx(xx, yy)
+      const take = Math.min(this.fish[i], n - got)
+      this.fish[i] -= take
+      got += take
+    }
+    return got
+  }
+
+  /** Old saves predate geology: rebuild it from the seed (without touching the surface). */
+  ensureGeology() {
+    if (this.deposit) return
+    const g = generateGeology(this.W, this.H, this.cfg.seed, this.biome, this.elev, this.temp, this.moist, new Uint8Array(this.feature), new Uint16Array(this.amount))
+    this.deposit = g.deposit
+    this.depAmt = g.depAmt
+    this.depDepth = g.depDepth
+  }
+
+  /** Does this people's town have electricity? */
+  hasPower(tribeId: number): boolean {
+    const c = this.powerCache.get(tribeId)
+    if (c && c.v === this.buildVersion) return c.on
+    const on = this.buildings.some((b) => b.done && b.tribeId === tribeId && BUILDINGS[b.type].power)
+    this.powerCache.set(tribeId, { v: this.buildVersion, on })
+    return on
+  }
+  /** Tiles of every deposit this tribe has found. */
+  knownList(tribeId: number): number[] {
+    let l = this.knownTiles.get(tribeId)
+    if (!l) {
+      l = []
+      const k = this.knownDeposits(tribeId)
+      for (let i = 0; i < k.length; i++) if (k[i]) l.push(i)
+      this.knownTiles.set(tribeId, l)
+    }
+    return l
+  }
+
+  knownDeposits(tribeId: number): Uint8Array {
+    let k = this.known.get(tribeId)
+    if (!k) { k = new Uint8Array(this.W * this.H); this.known.set(tribeId, k) }
+    return k
+  }
+  knowsDeposit(tribeId: number, i: number): boolean {
+    return !!this.deposit[i] && this.knownDeposits(tribeId)[i] === 1
+  }
+  /** How deep a people can dig: pits → shafts → steam-pumped deep mines. */
+  maxDepth(tribeId: number): number {
+    return this.hasTech(tribeId, 'deep_mining') ? 3 : this.hasTech(tribeId, 'shaft_mining') ? 2 : this.hasTech(tribeId, 'mining') ? 1 : 0
+  }
+  /** Can this tribe extract the deposit under tile i (and with which installation)? */
+  extractable(tribeId: number, i: number): 'mine' | 'oil_well' | 'offshore_rig' | 'evaporation_ponds' | null {
+    const d = this.deposit[i]
+    if (!d || !this.depAmt[i] || !this.knowsDeposit(tribeId, i)) return null
+    const def = DEPOSITS[d]
+    const water = BIOMES[this.biome[i]].water
+    if (def.via === 'well') return water ? (this.hasTech(tribeId, 'offshore_drilling') ? 'offshore_rig' : null) : this.hasTech(tribeId, 'oil_drilling') ? 'oil_well' : null
+    if (def.via === 'brine') return this.hasTech(tribeId, 'chemistry') ? 'evaporation_ponds' : null
+    return this.depDepth[i] <= this.maxDepth(tribeId) ? 'mine' : null
+  }
+  /** Mark a whole ore body (connected tiles of the same mineral) as found. */
+  revealBody(tribeId: number, i: number): { tiles: number; reserves: number; depth: number } {
+    const k = this.knownDeposits(tribeId)
+    const d = this.deposit[i]
+    if (!d) return { tiles: 0, reserves: 0, depth: 0 }
+    const stack = [i]
+    let tiles = 0, reserves = 0, depth = 3
+    const list = this.knownList(tribeId)
+    k[i] = 1
+    list.push(i)
+    while (stack.length) {
+      const j = stack.pop()!
+      tiles++
+      reserves += this.depAmt[j]
+      depth = Math.min(depth, this.depDepth[j])
+      const x = j % this.W, y = (j / this.W) | 0
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!this.inBounds(x + dx, y + dy)) continue
+        const n = this.idx(x + dx, y + dy)
+        if (this.deposit[n] === d && !k[n]) { k[n] = 1; list.push(n); stack.push(n) }
+      }
+    }
+    this.territoryDirty = true
+    return { tiles, reserves, depth }
+  }
+  /**
+   * An hour of prospecting around (x, y). Surface showings lead straight to
+   * their body; beyond that, how far and how deep a survey sees depends on
+   * what the people know — a prospector's eye, a geologist's map, a seismic
+   * survey.
+   */
+  prospect(a: Agent, hours: number): string[] {
+    const k = this.hasTech(a.tribeId, 'seismic_survey') ? 3 : this.hasTech(a.tribeId, 'geology') ? 2 : this.hasTech(a.tribeId, 'prospecting') ? 1 : 0
+    const R = [3, 4, 7, 11][k], maxD = [1, 1, 2, 3][k]
+    const found: string[] = []
+    const x0 = Math.floor(a.x), y0 = Math.floor(a.y)
+    const kd = this.knownDeposits(a.tribeId)
+    const skill = 0.6 + a.skills.gathering / 150 + a.traits.intelligence * 0.3
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const x = x0 + dx, y = y0 + dy
+      if (!this.inBounds(x, y) || Math.hypot(dx, dy) > R) continue
+      const i = this.idx(x, y)
+      const d = this.deposit[i]
+      if (!d || kd[i]) continue
+      const water = BIOMES[this.biome[i]].water
+      if (water && k < 3) continue // only seismic surveys see under the sea
+      // a visible showing nearby makes the body easy to trace
+      const f = this.feature[i]
+      const showing = f && DEPOSITS[d].outcrop === f
+      const depth = this.depDepth[i]
+      if (!showing && depth > maxD) continue
+      const p = showing ? 0.7 : (0.05 + 0.05 * k) * (1.4 - depth * 0.3) * skill
+      if (this.rng.chance(Math.min(0.95, p * hours))) {
+        const r = this.revealBody(a.tribeId, i)
+        const def = DEPOSITS[d]
+        const size = r.reserves > 3000 ? 'a vast' : r.reserves > 1200 ? 'a rich' : r.reserves > 400 ? 'a good' : 'a small'
+        found.push(`${size} ${def.name.toLowerCase()} (${DEPTH_NAMES[Math.min(3, r.depth)]}, ~${Math.round(r.reserves / 10) * 10} ${ITEMS[def.item].name.toLowerCase()})`)
+      }
+    }
+    return found
+  }
+  /** Draw one unit from the reserves around an extraction site. */
+  extractNear(tribeId: number, x: number, y: number, item: Item): boolean {
+    let best = -1, bv = 0
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      if (!this.inBounds(x + dx, y + dy)) continue
+      const i = this.idx(x + dx, y + dy)
+      if (!this.deposit[i] || DEPOSITS[this.deposit[i]].item !== item || !this.extractable(tribeId, i)) continue
+      if (this.depAmt[i] > bv) { bv = this.depAmt[i]; best = i }
+    }
+    if (best < 0) return false
+    this.depAmt[best]--
+    if (!this.depAmt[best]) this.deposit[best] = D.NONE
+    return true
+  }
+  /** Reserves of an item reachable from an extraction site. */
+  reservesNear(tribeId: number, x: number, y: number, item: Item): number {
+    let n = 0
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      if (!this.inBounds(x + dx, y + dy)) continue
+      const i = this.idx(x + dx, y + dy)
+      if (this.deposit[i] && DEPOSITS[this.deposit[i]].item === item && this.extractable(tribeId, i)) n += this.depAmt[i]
+    }
+    return n
+  }
+
   // ---------------------------------------------------------------- main loop
 
   tick(dtMin: number) {
@@ -872,6 +1081,13 @@ export class World implements PathGrid {
   }
 
   private daily() {
+    this.growFish()
+    // fish farms put a steady harvest into the stores
+    for (const b of this.buildings) {
+      if (!b.done || b.type !== 'fish_farm') continue
+      const t = this.tribeById(b.tribeId)
+      if (t && this.storageUsed(t) < this.storageCap(t.id)) invAdd(t.storage, 'fish', 10)
+    }
     const day = dayOf(this.time)
     this.events = this.events.filter((e) => e.end > this.time)
     for (const t of this.tribes) if (t.alive) this.assignHomes(t)
@@ -1060,7 +1276,7 @@ export class World implements PathGrid {
         }
         continue
       }
-      const know = (this.hasTech(a.tribeId, 'cooking') ? 0.8 : 1) * (this.hasTech(a.tribeId, 'sanitation') ? 0.5 : 1) * (this.hasTech(a.tribeId, 'vaccination') ? 0.4 : 1)
+      const know = 1 / techFx(this.techs(a.tribeId), 'health')
       const p = (plague ? 0.08 : 0.006) * (this.season === 3 ? 1.6 : 1) * (a.health < 50 ? 2 : 1) * know
       if (this.rng.chance(p)) {
         a.sick = this.rng.range(0.8, plague ? 4 : 2.5)
@@ -1192,7 +1408,7 @@ export class World implements PathGrid {
     const l = this.landscape(t)
     const weights = av.map((d) => {
       const progress = this.techProgress(t, d.id) / d.cost
-      return (geographyAffinity(d.id, l) * (1 + progress * 3)) / Math.sqrt(d.cost) * (0.6 + this.rng.next() * 0.8)
+      return (geographyAffinity(d.id, l) * (1 + progress * 3) * (RESEARCH_PRIORITY[d.id] ?? 1)) / Math.sqrt(d.cost) * (0.6 + this.rng.next() * 0.8)
     })
     let best = 0
     for (let k = 1; k < av.length; k++) if (weights[k] > weights[best]) best = k
@@ -1224,7 +1440,8 @@ export class World implements PathGrid {
     const c = this.landCache.get(t.id)
     if (c && this.time - c.t < DAY) return c.l
     const ex = this.explored.get(t.id)
-    const l: Landscape = { coast: 0, river: 0, forest: 0, fertile: 0, cold: 0, game: 0, copper: 0, tin: 0, iron: 0, coal: 0, gold: 0, oil: 0, sand: 0, clay: 0 }
+    const l: Landscape = { coast: 0, river: 0, forest: 0, fertile: 0, cold: 0, game: 0, copper: 0, tin: 0, iron: 0, coal: 0, gold: 0, oil: 0, sand: 0, clay: 0, bauxite: 0, uranium: 0, lithium: 0, hills: 0 }
+    const kd = this.knownDeposits(t.id)
     let n = 0, cold = 0
     for (let i = 0; i < this.W * this.H; i++) {
       if (ex && !ex[i]) continue
@@ -1235,6 +1452,7 @@ export class World implements PathGrid {
       else if (b === B.FOREST || b === B.RAINFOREST || b === B.TAIGA) l.forest++
       if (this.fertility[i] > 0.5) l.fertile++
       if (b === B.BEACH || b === B.DESERT) l.sand++
+      if (b === B.HILLS || b === B.MOUNTAIN) l.hills++
       if (this.temp[i] < 0.35) cold++
       const f = this.feature[i]
       if (f === F.COPPER) l.copper++
@@ -1244,6 +1462,18 @@ export class World implements PathGrid {
       else if (f === F.GOLD) l.gold++
       else if (f === F.OIL) l.oil++
       else if (f === F.CLAY) l.clay++
+      if (kd[i]) {
+        const d = this.deposit[i]
+        if (d === D.COPPER) l.copper++
+        else if (d === D.TIN) l.tin++
+        else if (d === D.IRON) l.iron++
+        else if (d === D.COAL) l.coal++
+        else if (d === D.GOLD) l.gold++
+        else if (d === D.OIL) l.oil++
+        else if (d === D.BAUXITE) l.bauxite++
+        else if (d === D.URANIUM) l.uranium++
+        else if (d === D.LITHIUM) l.lithium++
+      }
     }
     l.cold = n ? cold / n : 0
     l.game = this.animals.some((an) => an.alive && (!ex || ex[this.idx(Math.floor(an.x), Math.floor(an.y))])) ? 1 : 0
@@ -1311,8 +1541,18 @@ export class World implements PathGrid {
 
   // ---------------------------------------------------------------- placing buildings
 
-  canPlace(type: BuildingType, x: number, y: number): boolean {
+  canPlace(type: BuildingType, x: number, y: number, tribeId?: number): boolean {
     const def = BUILDINGS[type]
+    if (!this.inBounds(x, y)) return false
+    // extraction sites go where the deposit is (and where this people can reach it)
+    if (def.placement === 'deposit' || def.placement === 'offshore') {
+      const i0 = this.idx(x, y)
+      const want = type === 'mine' ? 'mine' : type
+      const ok = tribeId !== undefined && this.extractable(tribeId, i0) === want
+      // early mines can also be sunk beside surface outcrops in the hills
+      const outcrops = type === 'mine' && (this.biome[i0] === B.HILLS || this.biome[i0] === B.MOUNTAIN) && this.nearestTile(x, y, 3, (j) => this.feature[j] >= F.COPPER && this.feature[j] <= F.GOLD) >= 0
+      if (!ok && !outcrops) return false
+    }
     for (let dy = 0; dy < def.size; dy++) for (let dx = 0; dx < def.size; dx++) {
       const xx = x + dx, yy = y + dy
       if (!this.inBounds(xx, yy)) return false
@@ -1320,6 +1560,10 @@ export class World implements PathGrid {
       if (this.occ[i]) return false
       const b = this.biome[i]
       const bd = BIOMES[b]
+      if (def.placement === 'offshore') {
+        if (b !== B.SHALLOWS && b !== B.OCEAN) return false
+        continue
+      }
       if (bd.water || b === B.PEAK) return false
       if (type === 'road') continue
       if (this.road[i]) return false
@@ -1378,6 +1622,7 @@ export class World implements PathGrid {
     let maxR = 26
     let minR = type === 'campfire' && !ownB.length ? 0 : 1
     if (def.placement === 'hills' || def.placement === 'coast') { maxR = 40; minR = 0 }
+    if (def.placement === 'deposit' || def.placement === 'offshore') { maxR = 70; minR = 0 }
     if (type === 'farm' || type === 'pasture') minR = 3
     let best: { x: number; y: number } | null = null
     let bestScore = -1e9
@@ -1386,7 +1631,7 @@ export class World implements PathGrid {
         const ang = (k / (8 * Math.max(1, r))) * Math.PI * 2
         const x = Math.round(cx + Math.cos(ang) * r)
         const y = Math.round(cy + Math.sin(ang) * r)
-        if (!this.canPlace(type, x, y)) continue
+        if (!this.canPlace(type, x, y, a.tribeId)) continue
         const i = this.idx(x, y)
         if (!this.isExplored(a.tribeId, i)) continue
         let score = -r
@@ -1394,6 +1639,11 @@ export class World implements PathGrid {
           score += this.fertility[i] * 12
           // farms like to cluster with other farms
           for (const fb of ownB) if (fb.type === 'farm' && Math.abs(fb.x - x) + Math.abs(fb.y - y) <= 1) score += 4
+        }
+        if (def.placement === 'deposit' || def.placement === 'offshore') {
+          // richer, shallower bodies first — and not right next to an existing working
+          score += Math.min(40, this.depAmt[i] / 25) - this.depDepth[i] * 2
+          if (ownB.some((ob) => ob.type === type && Math.abs(ob.x - x) + Math.abs(ob.y - y) < 5)) score -= 30
         }
         if (type === 'mine') {
           let ore = 0
@@ -1408,7 +1658,7 @@ export class World implements PathGrid {
         if (TREE_FEATURES.has(this.feature[i])) score -= 2
         if (score > bestScore) { bestScore = score; best = { x, y } }
       }
-      if (best && r > minR + 3 && type !== 'farm' && type !== 'mine') break
+      if (best && r > minR + 3 && type !== 'farm' && type !== 'mine' && def.placement !== 'deposit' && def.placement !== 'offshore') break
       if (best && r > minR + 8) break
     }
     return best

@@ -9,6 +9,7 @@ import { B, BIOMES } from '../sim/data.ts'
 import { BUILDINGS } from '../sim/buildings.ts'
 import { hash2, clamp, smoothstep } from '../sim/rng.ts'
 import type { World } from '../sim/world.ts'
+import { layerColor } from '../render/renderer.ts'
 
 export const RES = 2 // terrain vertices per tile edge
 
@@ -305,8 +306,12 @@ export class Terrain {
     this.waterMat.onBeforeCompile = (sh) => {
       sh.uniforms.uRipple2 = { value: ripple2 }
       sh.uniforms.uTime = U.uTime
-      sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n')
-      sh.fragmentShader = 'uniform sampler2D uRipple2;\nuniform float uTime;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `
+      sh.uniforms.uOver = U.uOver
+      sh.uniforms.uMode = U.uMode
+      sh.uniforms.uSize = U.uSize
+      sh.vertexShader = 'varying vec2 vWXZ;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvWXZ = position.xz;')
+      sh.fragmentShader = 'uniform sampler2D uRipple2;\nuniform float uTime;\nuniform sampler2D uOver;\nuniform float uMode;\nuniform vec2 uSize;\nvarying vec2 vWXZ;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+        if (uMode > 1.5) { vec4 ov = texture2D(uOver, vWXZ / uSize); diffuseColor.rgb = mix(diffuseColor.rgb, ov.rgb, ov.a * 0.8); diffuseColor.a = max(diffuseColor.a, ov.a); }`).replace('#include <normal_fragment_maps>', `
         vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
         vec3 mapN2 = texture2D( uRipple2, vNormalMapUv * 0.55 + vec2(-uTime * 0.011, uTime * 0.007) ).xyz * 2.0 - 1.0;
         mapN = normalize(vec3(mapN.xy + mapN2.xy, mapN.z * mapN2.z));
@@ -508,7 +513,7 @@ export class Terrain {
   }
 
   /** Territory borders or a data layer, sampled by the ground shader. */
-  setOverlay(kind: 'none' | 'territory' | 'fertility' | 'temperature' | 'explored', selTribe: number) {
+  setOverlay(kind: 'none' | 'territory' | 'fertility' | 'temperature' | 'explored' | 'geology' | 'fish', selTribe: number) {
     const w = this.w
     const d = this.overTex.image.data as Uint8Array
     d.fill(0)
@@ -552,10 +557,12 @@ export class Terrain {
           r = clamp(t * 2, 0, 1) * 255; b = clamp(1 - t * 1.6, 0, 1) * 255; g = 60; a = 130
         } else if (kind === 'explored' && ex) {
           if (!ex[i]) { r = 8; g = 10; b = 20; a = 215 }
+        } else if (kind === 'geology' || kind === 'fish') {
+          ;[r, g, b, a] = layerColor(w, kind, i, selTribe)
         }
         d[i * 4] = r; d[i * 4 + 1] = g; d[i * 4 + 2] = b; d[i * 4 + 3] = a
       }
-      this.overTex.magFilter = kind === 'explored' ? THREE.NearestFilter : THREE.LinearFilter
+      this.overTex.magFilter = kind === 'explored' || kind === 'geology' ? THREE.NearestFilter : THREE.LinearFilter
       this.uniforms.uMode.value = 2
     }
     this.overTex.needsUpdate = true

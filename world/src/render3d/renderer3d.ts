@@ -76,7 +76,7 @@ export class Renderer3D {
   private people = new Map<number, Person3D>()
   private animals = new Map<number, Animal3D>()
   private buildings = new Map<number, Building3D>()
-  private boats = new Map<number, THREE.Mesh>()
+  private boats = new Map<number, THREE.Group>()
   private particles = new Particles()
   private weather = new Weather()
   private clouds!: Clouds
@@ -454,7 +454,7 @@ export class Renderer3D {
       const near = Math.hypot(b.x + size / 2 - cx, b.y + size / 2 - cz) < view
       m.root.visible = near || d > 50
       if (!m.root.visible) continue
-      m.sync(this.eraOfTribe(b.tribeId), tr?.color ?? '#cccccc', this.buildingGround(b.x, b.y, size, b.type), this.dockDir(b.x, b.y))
+      m.sync(this.eraOfTribe(b.tribeId), tr?.color ?? '#cccccc', this.buildingGround(b.x, b.y, size, b.type), this.dockDir(b.x, b.y, size))
       m.update(t, night, b.crop)
       const info = m.info
       if (!info || !b.done || !near) continue
@@ -517,7 +517,9 @@ export class Renderer3D {
       p.update(a, a.x, y, a.y, t, this.eraOfTribe(a.tribeId), tr?.color ?? '#cccccc', tr?.leaderId === a.id, w.age(a), camDist < 24)
       if (sea) {
         let bm = boat
-        if (!bm) { bm = makeBoat(); this.boats.set(a.id, bm); this.worldGroup.add(bm) }
+        const tier = boatTier(w.techs(a.tribeId))
+        if (bm && bm.userData.tier !== tier) { this.worldGroup.remove(bm); bm = undefined }
+        if (!bm) { bm = makeBoat(tier); this.boats.set(a.id, bm); this.worldGroup.add(bm) }
         bm.visible = true
         bm.position.set(a.x, lv + Math.sin(t * 1.6 + a.id) * 0.03, a.y)
         bm.rotation.y = p.heading
@@ -591,20 +593,20 @@ export class Renderer3D {
     const hs = this.terrain.heights
     let sum = 0, mx = -1e9
     for (const [dx, dy] of [[0.2, 0.2], [s - 0.2, 0.2], [0.2, s - 0.2], [s - 0.2, s - 0.2], [s / 2, s / 2]]) {
-      const g = type === 'dock' ? hs.surface(x + dx, y + dy) : hs.at(x + dx, y + dy)
+      const g = type === 'dock' || type === 'offshore_rig' || type === 'fish_farm' ? hs.surface(x + dx, y + dy) : hs.at(x + dx, y + dy)
       sum += g
       mx = Math.max(mx, g)
     }
+    if (type === 'offshore_rig') return Math.max(0, mx)
     return type === 'farm' || type === 'pasture' ? sum / 5 : Math.max(sum / 5, mx - 0.15)
   }
-  private dockDir(x: number, y: number): number {
+  private dockDir(x: number, y: number, s = 1): number {
     const w = this.world
     const water = (xx: number, yy: number) => w.inBounds(xx, yy) && (w.biome[w.idx(xx, yy)] <= B.RIVER)
-    if (water(x, y + 1)) return 0
-    if (water(x + 1, y)) return Math.PI / 2
-    if (water(x, y - 1)) return Math.PI
-    if (water(x - 1, y)) return -Math.PI / 2
-    return 0
+    const side = (dx: number, dy: number) => { let n = 0; for (let k = 0; k < s; k++) n += water(dx === 0 ? x + k : dx > 0 ? x + s : x - 1, dy === 0 ? y + k : dy > 0 ? y + s : y - 1) ? 1 : 0; return n }
+    const opts: [number, number][] = [[side(0, 1), 0], [side(1, 0), Math.PI / 2], [side(0, -1), Math.PI], [side(-1, 0), -Math.PI / 2]]
+    opts.sort((a, b) => b[0] - a[0])
+    return opts[0][0] ? opts[0][1] : 0
   }
 
   private updateOverlay(now: number) {
@@ -921,17 +923,57 @@ export class Renderer3D {
   }
 }
 
-let boatGeo: THREE.BufferGeometry | null = null
-const boatMat = new THREE.MeshStandardMaterial({ color: '#6b4a2b', roughness: 0.8 })
-function makeBoat(): THREE.Mesh {
-  if (!boatGeo) {
-    boatGeo = new THREE.SphereGeometry(0.3, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
-    boatGeo.scale(0.75, 0.5, 1.6)
-    boatGeo.translate(0, 0.12, 0)
+/** Boats by what a people knows: dugout canoe → sailing smack → ocean ship → steam trawler → diesel trawler. */
+export function boatTier(known: Set<string>): number {
+  return known.has('diesel_trawlers') ? 4 : known.has('steamships') ? 3 : known.has('shipbuilding') ? 2 : known.has('sailing') ? 1 : 0
+}
+const boatTemplates = new Map<number, THREE.Group>()
+const bm = (c: string, r = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: r })
+function hullGeo(w: number, h: number, l: number): THREE.BufferGeometry {
+  const g = new THREE.SphereGeometry(0.3, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
+  g.scale(w, h, l)
+  g.translate(0, 0.12, 0)
+  return g
+}
+function boatTemplate(tier: number): THREE.Group {
+  let g = boatTemplates.get(tier)
+  if (g) return g
+  g = new THREE.Group()
+  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g!.add(o); return o }
+  if (tier === 0) {
+    add(hullGeo(0.55, 0.45, 1.5), bm('#6b4a2b'))
+    add(new THREE.BoxGeometry(0.02, 0.02, 0.6), bm('#8a6a44'), 0.12, 0.2, 0.1).rotation.x = 0.6
+  } else if (tier === 1) {
+    add(hullGeo(0.8, 0.6, 1.8), bm('#7a5530'))
+    add(new THREE.CylinderGeometry(0.012, 0.015, 0.9, 6), bm('#5a3d26'), 0, 0.55, 0.05)
+    const sail = add(new THREE.PlaneGeometry(0.42, 0.6), new THREE.MeshStandardMaterial({ color: '#c23b22', roughness: 0.9, side: THREE.DoubleSide }), 0.01, 0.6, -0.08)
+    sail.rotation.y = Math.PI / 2 + 0.25
+  } else if (tier === 2) {
+    add(hullGeo(1.0, 0.8, 2.4), bm('#5a3d26'))
+    add(new THREE.BoxGeometry(0.4, 0.14, 0.3), bm('#6b4a2b'), 0, 0.2, -0.5)
+    for (const [z, h] of [[0.2, 1.3], [-0.25, 1.1]]) {
+      add(new THREE.CylinderGeometry(0.015, 0.02, h, 6), bm('#3e2818'), 0, 0.2 + h / 2, z)
+      const sail = add(new THREE.PlaneGeometry(0.55, h * 0.55), new THREE.MeshStandardMaterial({ color: '#efe7d6', roughness: 0.95, side: THREE.DoubleSide }), 0, 0.35 + h * 0.4, z)
+      sail.rotation.y = Math.PI / 2
+    }
+  } else {
+    const steel = tier === 4
+    add(hullGeo(1.0, 0.85, 2.4), bm(steel ? '#b23a2e' : '#2e3a4a', 0.6))
+    add(new THREE.BoxGeometry(0.42, 0.3, 0.5), bm('#f4f4f2', 0.5), 0, 0.32, -0.25)
+    add(new THREE.BoxGeometry(0.36, 0.06, 0.44), bm('#3a3a40'), 0, 0.5, -0.25)
+    add(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 8), bm(steel ? '#f4f4f2' : '#1a1a1e'), 0, 0.55, -0.55)
+    // the gantry that hauls the trawl net over the stern
+    add(new THREE.BoxGeometry(0.4, 0.04, 0.04), bm('#e0a030'), 0, 0.62, 0.62)
+    add(new THREE.BoxGeometry(0.03, 0.45, 0.03), bm('#e0a030'), -0.18, 0.4, 0.62)
+    add(new THREE.BoxGeometry(0.03, 0.45, 0.03), bm('#e0a030'), 0.18, 0.4, 0.62)
   }
-  const m = new THREE.Mesh(boatGeo, boatMat)
-  m.castShadow = true
-  return m
+  boatTemplates.set(tier, g)
+  return g
+}
+function makeBoat(tier: number): THREE.Group {
+  const g = boatTemplate(tier).clone()
+  g.userData.tier = tier
+  return g
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

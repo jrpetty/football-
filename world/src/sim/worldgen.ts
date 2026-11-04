@@ -3,7 +3,7 @@
 // moisture from distance to the sea plus noise; rivers traced downhill from
 // wet highlands to the sea; biomes classified Whittaker-style from all three.
 
-import { B, F, BIOMES } from './data.ts'
+import { B, F, D, BIOMES, DEPOSITS } from './data.ts'
 import { Noise2D, Rng, clamp, smoothstep, hash2 } from './rng.ts'
 
 export interface Preset {
@@ -37,6 +37,10 @@ export interface WorldMaps {
   feature: Uint8Array
   amount: Uint16Array
   fertility: Float32Array
+  /** the mineral body under each tile (D), how much is there, and how deep */
+  deposit: Uint8Array
+  depAmt: Uint16Array
+  depDepth: Uint8Array
 }
 
 export function generateTerrain(W: number, H: number, seed: number, preset: Preset): WorldMaps {
@@ -226,7 +230,6 @@ export function generateTerrain(W: number, H: number, seed: number, preset: Pres
   // Features
   const feature = new Uint8Array(N)
   const amount = new Uint16Array(N)
-  const ore = new Noise2D(seed + 91)
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const i = y * W + x
@@ -283,19 +286,6 @@ export function generateTerrain(W: number, H: number, seed: number, preset: Pres
           if (r < 0.22) f = F.ROCK
           break
       }
-      // Ore bodies cluster in hills and mountains
-      if (b === B.HILLS || b === B.MOUNTAIN) {
-        const o = ore.noise(x / 6, y / 6)
-        const o2 = ore.noise(x / 7 + 40, y / 7 + 40)
-        if (o > 0.62) f = F.IRON
-        else if (o < -0.66) f = F.COPPER
-        else if (o2 > 0.68) f = F.COAL
-        else if (o2 < -0.72) f = F.TIN
-        else if (r > 0.992) f = F.GOLD
-      }
-      if (b === B.DESERT || b === B.MARSH || b === B.TUNDRA) {
-        if (ore.noise(x / 8 + 90, y / 8 + 90) > 0.74) f = F.OIL
-      }
       // Clay along river banks and lake shores
       if (f === F.NONE && nearWater && b !== B.RIVER && b !== B.LAKE && r > 0.9) f = F.CLAY
       // Occasional surface stones and copper near the start so the stone age is playable
@@ -305,7 +295,130 @@ export function generateTerrain(W: number, H: number, seed: number, preset: Pres
     }
   }
 
-  return { W, H, biome, elev, temp, moist, feature, amount, fertility }
+  const geo = generateGeology(W, H, seed, biome, elev, temp, moist, feature, amount)
+  return { W, H, biome, elev, temp, moist, feature, amount, fertility, ...geo }
+}
+
+// ------------------------------------------------------------------ geology
+
+const isSeaB = (b: number) => b === B.DEEP_OCEAN || b === B.OCEAN || b === B.SHALLOWS
+
+/**
+ * Ore bodies placed by the rules of real geology. Each body is a blob of
+ * tiles with a mineral, a grade and a depth. Bodies that reach the surface
+ * leave outcrops (features anyone can see); many deeper ones leave a small
+ * "showing" a sharp-eyed prospector might notice; the rest are invisible
+ * until surveyed.
+ */
+export function generateGeology(W: number, H: number, seed: number, biome: Uint8Array, elev: Float32Array, temp: Float32Array, moist: Float32Array, feature: Uint8Array, amount: Uint16Array) {
+  const N = W * H
+  const rng = new Rng(seed + 777)
+  const deposit = new Uint8Array(N)
+  const depAmt = new Uint16Array(N)
+  const depDepth = new Uint8Array(N)
+  const warp = new Noise2D(seed + 313)
+  const area = N / 25600
+  // how mountainous the neighbourhood is (the roots of orogenic belts)
+  const orogen = new Float32Array(N)
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let s = 0, n = 0
+    for (let dy = -3; dy <= 3; dy += 3) for (let dx = -3; dx <= 3; dx += 3) {
+      const xx = x + dx, yy = y + dy
+      if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue
+      const b = biome[yy * W + xx]
+      s += b === B.MOUNTAIN || b === B.PEAK ? 1 : b === B.HILLS ? 0.6 : 0
+      n++
+    }
+    orogen[y * W + x] = s / n
+  }
+  const land = (b: number) => !BIOMES[b].water
+  type Rule = { d: number; count: number; where: (i: number) => number; r: [number, number]; depth: () => number; surfaceChance: number }
+  const rules: Rule[] = [
+    // copper: porphyry systems in the roots of mountain belts
+    { d: D.COPPER, count: 7, where: (i) => (land(biome[i]) && orogen[i] > 0.3 ? orogen[i] : 0), r: [2, 4], depth: () => (rng.next() < 0.3 ? 0 : rng.next() < 0.7 ? 1 : 2), surfaceChance: 0.6 },
+    // tin: greisen and lodes in granite highlands, rarer and away from the tropics
+    { d: D.TIN, count: 4, where: (i) => (land(biome[i]) && orogen[i] > 0.2 && temp[i] < 0.6 ? orogen[i] * 0.8 : 0), r: [1, 3], depth: () => (rng.next() < 0.3 ? 0 : 1 + (rng.next() < 0.4 ? 1 : 0)), surfaceChance: 0.6 },
+    // gold: small, rich quartz veins high in the mountains
+    { d: D.GOLD, count: 6, where: (i) => (land(biome[i]) && orogen[i] > 0.45 ? orogen[i] : 0), r: [1, 2], depth: () => 1 + Math.floor(rng.next() * 3), surfaceChance: 0.45 },
+    // iron: great banded iron formations in old, worn-down shield hills
+    { d: D.IRON, count: 5, where: (i) => (land(biome[i]) && elev[i] > 0.18 && elev[i] < 0.65 && orogen[i] < 0.7 ? 0.4 + orogen[i] * 0.5 : 0), r: [3, 6], depth: () => (rng.next() < 0.35 ? 0 : rng.next() < 0.6 ? 1 : 2), surfaceChance: 0.7 },
+    // coal: buried swamp forests in low sedimentary basins
+    { d: D.COAL, count: 6, where: (i) => (land(biome[i]) && elev[i] < 0.42 && orogen[i] < 0.35 && (biome[i] === B.FOREST || biome[i] === B.MARSH || biome[i] === B.GRASSLAND || biome[i] === B.TAIGA) ? 1 - elev[i] : 0), r: [4, 8], depth: () => 1 + Math.floor(rng.next() * 3), surfaceChance: 0.5 },
+    // oil: deep sedimentary basins — deserts, marshes, plains — and the continental shelf
+    { d: D.OIL, count: 5, where: (i) => (land(biome[i]) && elev[i] < 0.35 && orogen[i] < 0.25 && (biome[i] === B.DESERT || biome[i] === B.MARSH || biome[i] === B.GRASSLAND || biome[i] === B.SAVANNA || biome[i] === B.TUNDRA) ? 1 : 0), r: [3, 6], depth: () => 2 + (rng.next() < 0.5 ? 1 : 0), surfaceChance: 0.4 },
+    { d: D.OIL, count: 4, where: (i) => (biome[i] === B.SHALLOWS || biome[i] === B.OCEAN ? 1 : 0), r: [3, 6], depth: () => 3, surfaceChance: 0 },
+    // bauxite: deeply weathered laterite under hot, wet forests
+    { d: D.BAUXITE, count: 4, where: (i) => (land(biome[i]) && temp[i] > 0.62 && moist[i] > 0.5 ? temp[i] + moist[i] : 0), r: [2, 4], depth: () => (rng.next() < 0.5 ? 0 : 1), surfaceChance: 0 },
+    // uranium: rare, in granite and old sandstone basins
+    { d: D.URANIUM, count: 2, where: (i) => (land(biome[i]) && orogen[i] > 0.25 ? 1 : 0), r: [1, 2], depth: () => 2, surfaceChance: 0 },
+    // lithium: brine under desert salt flats
+    { d: D.LITHIUM, count: 2, where: (i) => (biome[i] === B.DESERT && elev[i] < 0.3 ? 1 : 0), r: [2, 3], depth: () => 1, surfaceChance: 0 },
+  ]
+  for (const rule of rules) {
+    const cand: number[] = []
+    const wts: number[] = []
+    for (let i = 0; i < N; i += 3) { const v = rule.where(i); if (v > 0) { cand.push(i); wts.push(v) } }
+    if (!cand.length) continue
+    const total = wts.reduce((a, b) => a + b, 0)
+    const want = Math.max(1, Math.round(rule.count * area * (0.7 + rng.next() * 0.6)))
+    for (let k = 0; k < want; k++) {
+      let pick = rng.next() * total, c = cand[0]
+      for (let j = 0; j < cand.length; j++) { pick -= wts[j]; if (pick <= 0) { c = cand[j]; break } }
+      const cx = c % W, cy = (c / W) | 0
+      const r = rule.r[0] + rng.next() * (rule.r[1] - rule.r[0])
+      const depth = rule.depth()
+      const def = DEPOSITS[rule.d]
+      const tiles: number[] = []
+      const R = Math.ceil(r + 2)
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+        const x = cx + dx, y = cy + dy
+        if (x < 0 || y < 0 || x >= W || y >= H) continue
+        const i = y * W + x
+        if (deposit[i]) continue
+        const offshore = rule.d === D.OIL && rule.surfaceChance === 0
+        if (offshore ? !isSeaB(biome[i]) || biome[i] === B.DEEP_OCEAN : !land(biome[i])) continue
+        const d = Math.hypot(dx, dy) / r + warp.noise(x / 4 + rule.d * 10, y / 4) * 0.45
+        if (d > 1) continue
+        deposit[i] = rule.d
+        const g = def.grade[0] + (def.grade[1] - def.grade[0]) * rng.next()
+        depAmt[i] = Math.round(g * (1.1 - d * 0.6))
+        // the heart of a basin lies deeper than its rim
+        depDepth[i] = Math.min(3, Math.max(0, depth + (d < 0.4 && (rule.d === D.COAL || rule.d === D.OIL) ? 0 : d > 0.75 && depth > 0 && rng.next() < 0.5 ? -1 : 0)))
+        tiles.push(i)
+      }
+      // what shows at the surface
+      const showsAt = tiles.filter((i) => depDepth[i] === 0)
+      for (const i of showsAt) {
+        depDepth[i] = 1 // the outcrop is worked by hand; the body continues below
+        if (def.outcrop !== null && (feature[i] === F.NONE || feature[i] === F.ROCK || feature[i] === F.FLOWERS) && rng.next() < 0.75) {
+          feature[i] = def.outcrop
+          amount[i] = Math.round(18 + rng.next() * 26)
+        }
+      }
+      if (!showsAt.length && def.outcrop !== null && tiles.length && rng.next() < rule.surfaceChance) {
+        // a small "showing": a stained outcrop, an oil seep, a coal smear in a stream bank
+        const i = tiles[Math.floor(rng.next() * tiles.length)]
+        if (feature[i] === F.NONE || feature[i] === F.ROCK || feature[i] === F.FLOWERS) {
+          feature[i] = def.outcrop
+          amount[i] = Math.round(6 + rng.next() * 10)
+        }
+      }
+    }
+  }
+  // placer gold: gold-bearing gravels along rivers that drain the mountains
+  for (let i = 0; i < N; i++) {
+    if (biome[i] !== B.RIVER) continue
+    const x = i % W, y = (i / W) | 0
+    if (orogen[i] < 0.15 || hash2(x, y, seed + 9) > 0.05) continue
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const j = (y + dy) * W + (x + dx)
+      if (x + dx < 0 || y + dy < 0 || x + dx >= W || y + dy >= H) continue
+      if (land(biome[j]) && feature[j] === F.NONE) { feature[j] = F.GOLD; amount[j] = Math.round(4 + hash2(x, y, 3) * 8); break }
+    }
+  }
+  // bog iron: lumps of ore in marsh peat
+  for (let i = 0; i < N; i++) if (biome[i] === B.MARSH && feature[i] === F.NONE && hash2(i % W, (i / W) | 0, seed + 4) < 0.03) { feature[i] = F.IRON; amount[i] = Math.round(5 + hash2(i, 1, 2) * 8) }
+  return { deposit, depAmt, depDepth }
 }
 
 export const DIRS4: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]]

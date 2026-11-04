@@ -3,9 +3,9 @@
 // with A*, then works over time. Failures are remembered by the agent so the
 // mind can learn from them ("I couldn't find clay nearby — need to explore").
 
-import { B, BIOMES, F, FEATURES, ITEMS, FOOD_ITEMS, TREE_FEATURES, invAdd, invCount, invTotal, ALL_ITEMS, type Item, type Inventory } from './data.ts'
+import { B, BIOMES, F, FEATURES, ITEMS, FOOD_ITEMS, TREE_FEATURES, DEPOSITS, invAdd, invCount, invTotal, ALL_ITEMS, type Item, type Inventory } from './data.ts'
 import { BUILDINGS, BUILDING_TYPES, RECIPES, TOOL_MULT, TOOL_NAMES, type BuildingType, type Recipe } from './buildings.ts'
-import { TECHS, TECH_BY_ID, availableTechs, techResearchBonus, techWorkBonus, geographyAffinity } from './tech.ts'
+import { TECHS, TECH_BY_ID, availableTechs, techResearchBonus, techWorkBonus, geographyAffinity, techFx } from './tech.ts'
 import { clamp } from './rng.ts'
 import { HOUR, hourOf, isNight } from './time.ts'
 import type { Agent, PlanStep, Task, SkillName, ActionKind } from './types.ts'
@@ -92,7 +92,7 @@ function speedOf(w: World, a: Agent): number {
   if (a.health < 40) s *= 0.7
   if (isNight(w.time)) s *= 0.85
   if (w.weather === 'storm' || w.weather === 'snow') s *= 0.85
-  if (age >= 14 && w.hasTech(a.tribeId, 'horseback_riding')) s *= 1.15
+  if (age >= 14) s *= techFx(w.techs(a.tribeId), 'travel')
   return s
 }
 
@@ -156,7 +156,7 @@ function workMult(w: World, a: Agent, skill: SkillName, toolWeight = 1): number 
   const tool = 1 + (TOOL_MULT[a.toolTier] - 1) * toolWeight
   const sk = 0.65 + (a.skills[skill] / 100) * 0.8
   let m = tool * sk * techWorkBonus(w.techs(a.tribeId))
-  if (w.tribeBuildings(a.tribeId, 'power_plant').length) m *= 1.4
+  if (w.hasPower(a.tribeId)) m *= 1.4
   if (a.energy < 20) m *= 0.7
   if (a.sick > 0) m *= 0.6
   return m
@@ -175,7 +175,7 @@ function wearTools(w: World, a: Agent, dtH: number) {
 const norm = (s: string) => s.toLowerCase().trim().replace(/[\s-]+/g, '_').replace(/[^a-z_0-9]/g, '')
 
 const ACTION_ALIASES: Record<string, ActionKind> = {
-  collect: 'gather', chop: 'gather', mine: 'gather', harvest: 'farm', plant: 'farm', forage: 'gather', cut: 'gather',
+  collect: 'gather', chop: 'gather', mine: 'gather', survey: 'prospect', prospecting: 'prospect', dig: 'gather', drill: 'gather', harvest: 'farm', plant: 'farm', forage: 'gather', cut: 'gather',
   construct: 'build', make: 'craft', smelt: 'craft', forge: 'craft', study: 'research', invent: 'research',
   deposit: 'store', withdraw: 'take', say: 'talk', speak: 'talk', chat: 'talk', gift: 'give', propose: 'court',
   romance: 'court', woo: 'court', travel: 'explore', scout: 'explore', home: 'go_home', return_home: 'go_home',
@@ -285,6 +285,66 @@ function itemSourceTile(w: World, a: Agent, item: Item, radius: number, nearX = 
   })
 }
 
+/** Tasks that draw from an underground deposit through a mine, well, rig or ponds. */
+const DEP_TASK = new WeakSet<Task>()
+const EXTRACTORS = new Set<BuildingType>(['mine', 'oil_well', 'offshore_rig', 'evaporation_ponds'])
+
+/** The nearest of the tribe's extraction sites with reachable reserves of an item. */
+function depositSource(w: World, a: Agent, item: Item): number {
+  let best = -1, bd = 1e9
+  for (const b of w.buildings) {
+    if (!b.done || b.tribeId !== a.tribeId || !EXTRACTORS.has(b.type)) continue
+    if (w.reservesNear(a.tribeId, b.x, b.y, item) <= 0) continue
+    const d = Math.hypot(b.x - a.x, b.y - a.y)
+    if (d < bd) { bd = d; best = w.idx(b.x, b.y) }
+  }
+  return best
+}
+
+/**
+ * How an instinct-driven person should get a mineral: work an existing mine
+ * or well, dig a surface outcrop, build an extraction site over a known body,
+ * or go prospecting for one.
+ */
+export function oreStep(w: World, a: Agent, item: Item): { action: 'gather' | 'build' | 'prospect'; target: string } | null {
+  if (depositSource(w, a, item) >= 0) return { action: 'gather', target: item }
+  if (itemSourceTile(w, a, item, 48) >= 0) return { action: 'gather', target: item }
+  // one working per ore body is plenty; and a people only runs so many at once
+  const own = w.buildings.filter((b) => b.tribeId === a.tribeId && EXTRACTORS.has(b.type))
+  const era = Math.max(0, ...[...w.techs(a.tribeId)].map((id) => TECH_BY_ID[id]?.era ?? 0))
+  for (const i of w.knownList(a.tribeId)) {
+    if (DEPOSITS[w.deposit[i]]?.item !== item || !w.depAmt[i]) continue
+    const site = w.extractable(a.tribeId, i)
+    if (!site) continue
+    const same = own.filter((b) => b.type === site)
+    // finish what's started; otherwise one working per body, and only so many of each kind
+    if (same.some((b) => !b.done)) return { action: 'build', target: site }
+    if (same.length >= (site === 'mine' ? 3 + era : 3)) continue
+    const x = i % w.W, y = Math.floor(i / w.W)
+    if (own.some((b) => Math.abs(b.x - x) + Math.abs(b.y - y) < 8)) continue
+    return { action: 'build', target: site }
+  }
+  if (w.hasTech(a.tribeId, 'mining')) return { action: 'prospect', target: item }
+  return null
+}
+
+/** Why an ore can't be had yet, in a person's words. */
+function oreAdvice(w: World, a: Agent, item: Item): string | null {
+  const dep = DEPOSITS.find((d) => d.item === item && d.id)
+  if (!dep) return null
+  let known = 0, reachable = 0, kind = ''
+  for (const i of w.knownList(a.tribeId)) {
+    if (DEPOSITS[w.deposit[i]]?.item !== item || !w.depAmt[i]) continue
+    known++
+    const e = w.extractable(a.tribeId, i)
+    if (e) { reachable++; kind = e }
+  }
+  const site = kind.replace('_', ' ')
+  if (reachable) return `We know where ${item.replace('_', ' ')} lies underground — we need to build a ${site} over it.`
+  if (known) return dep.via === 'well' ? 'We know where oil lies, but we cannot drill for it yet.' : `We know of ${item.replace('_', ' ')} deep underground, but cannot dig that deep yet.`
+  return w.hasTech(a.tribeId, 'prospecting') ? `I couldn't find ${item.replace('_', ' ')} at the surface. Someone should go prospecting.` : null
+}
+
 function personTarget(w: World, a: Agent, t: Task): Agent | undefined {
   return w.findAgentByName(t.target, a)
 }
@@ -363,12 +423,24 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (room <= 0) { fail(w, a, 'My pack is full; I should store things first.'); return false }
       t.amount = clamp(t.amount || 10, 1, room)
       const failKey = `${a.tribeId}|gather|${item}|${Math.floor(a.x / 16)},${Math.floor(a.y / 16)}`
+      // a mine, well or rig the tribe already runs beats scratching at outcrops
+      const dep = depositSource(w, a, item)
+      if (dep >= 0) {
+        DEP_TASK.add(t)
+        t.ref = dep
+        t.need = 0
+        const b = w.buildingById.get(w.occ[dep] - 1)
+        t.label = `${b?.type === 'oil_well' || b?.type === 'offshore_rig' ? 'Pumping' : b?.type === 'evaporation_ponds' ? 'Harvesting' : 'Mining'} ${item.replace('_', ' ')}`
+        return travel(w, a, t, dep % w.W, Math.floor(dep / w.W), true)
+      }
       const src = w.failed(failKey) ? -1 : itemSourceTile(w, a, item, 48)
       if (src < 0) {
         w.markFailed(failKey, 8)
         const f = FEATURES.find((d) => d.item === item)
+        const advice = oreAdvice(w, a, item)
         if (f?.tech && !w.hasTech(a.tribeId, f.tech)) fail(w, a, `We can't harvest ${item} yet — it needs ${TECH_BY_ID[f.tech]?.name ?? f.tech}.`)
-        else fail(w, a, `I couldn't find any ${item} in the lands we know. We need to explore further.`)
+        else if (advice) fail(w, a, advice)
+        else fail(w, a, `I couldn't find any ${item.replace('_', ' ')} in the lands we know. We need to explore further.`)
         return false
       }
       t.ref = src
@@ -379,6 +451,39 @@ const HANDLERS: Record<ActionKind, Handler> = {
     work(w, a, t, dtH) {
       const item = t.target as Item
       const i = t.ref
+      if (DEP_TASK.has(t)) {
+        const b = w.buildingById.get(w.occ[i] - 1)
+        if (!b) return t.need > 0 ? 'done' : 'fail'
+        const base = b.type === 'offshore_rig' ? 7 : b.type === 'oil_well' ? 4 : b.type === 'evaporation_ponds' ? 2.5 : 2.2
+        const known = w.techs(a.tribeId)
+        const rate = base * workMult(w, a, 'gathering', b.type === 'mine' ? 1 : 0.3) * techFx(known, 'mine')
+        t.progress += rate * dtH
+        w.practice(a, `gather:${item}`, dtH)
+        skillUp(a, 'gathering', dtH)
+        if (b.type === 'mine') wearTools(w, a, dtH)
+        // mines are dangerous places
+        if (b.type === 'mine' && Math.random() < dtH * 0.0025 / techFx(known, 'health')) {
+          a.injured = Math.max(a.injured, 1.2)
+          w.remember(a, 'A roof fall in the mine caught me. I am hurt.', 6)
+          w.log('event', `A rock fall in the ${item.replace('_', ' ')} mine injures ${a.name}.`, '⚠️', a.id, a.tribeId)
+          return 'done'
+        }
+        while (t.progress >= 1) {
+          t.progress -= 1
+          if (!w.extractNear(a.tribeId, b.x, b.y, item)) {
+            w.remember(a, `The ${item.replace('_', ' ')} at our ${BUILDINGS[b.type].name.toLowerCase()} has run out.`, 4)
+            return t.need > 0 ? 'done' : 'fail'
+          }
+          invAdd(a.inv, item, 1)
+          a.stats.gathered++
+          t.need++
+          if (t.need >= t.amount || invTotal(a.inv) >= CARRY_CAP) {
+            w.remember(a, `I brought up ${t.need} ${item.replace('_', ' ')} from our ${BUILDINGS[b.type].name.toLowerCase()}.`, 1)
+            return 'done'
+          }
+        }
+        return 'continue'
+      }
       const isSand = item === 'sand'
       if (!isSand && (w.amount[i] === 0 || FEATURES[w.feature[i]].item !== item)) {
         const next = itemSourceTile(w, a, item, 10)
@@ -392,7 +497,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (!isSand && w.feature[i] >= F.ROCK && w.feature[i] <= F.GOLD) {
         const x = i % w.W, y = Math.floor(i / w.W)
         if (w.buildings.some((b) => b.done && b.type === 'mine' && b.tribeId === a.tribeId && Math.abs(b.x - x) <= 4 && Math.abs(b.y - y) <= 4)) rate *= 2
-        if (w.hasTech(a.tribeId, 'gunpowder')) rate *= 1.4
+        rate *= techFx(w.techs(a.tribeId), 'mine')
       }
       if (item === 'berries' && w.hasEvent('drought')) rate *= 0.5
       if (item === 'fiber' && w.hasTech(a.tribeId, 'cordage')) rate *= 1.3
@@ -464,7 +569,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (t.progress < t.need) return 'continue'
       const an = w.animals.find((x) => x.id === t.ref)
       if (!an || !an.alive) return 'fail'
-      const p = (w.hasTech(a.tribeId, 'hunting') ? 0.7 : 0.35) + a.traits.strength * 0.15 + a.skills.hunting / 400 + (a.toolTier ? 0.1 : 0)
+      const p = Math.min(0.95, ((w.hasTech(a.tribeId, 'hunting') ? 0.7 : 0.35) + a.traits.strength * 0.15 + a.skills.hunting / 400 + (a.toolTier ? 0.1 : 0)) * techFx(w.techs(a.tribeId), 'hunt'))
       if (Math.random() < p) {
         an.alive = false
         const meat = an.kind === 'rabbit' ? 3 : an.kind === 'boar' ? 10 : 8
@@ -484,10 +589,34 @@ const HANDLERS: Record<ActionKind, Handler> = {
 
   fish: {
     init(w, a, t) {
-      const fishy = (i: number) => {
-        const b = w.biome[i]
-        return b === B.RIVER || b === B.LAKE || b === B.SHALLOWS || b === B.OCEAN
+      t.amount = clamp(t.amount || 6, 1, CARRY_CAP - invTotal(a.inv))
+      if (t.amount <= 0) return false
+      t.need = 0
+      const sail = w.canSail(a.tribeId)
+      // with boats, go out to where the fish are; without, fish from the bank
+      // canoes are worth the paddle only when the home shore is fished out; sailing boats and trawlers always go out
+      const shoreRich = w.fishNear(a.x, a.y, 4) > 81 * 25 * 0.5
+      if (sail >= 1 && w.hasTech(a.tribeId, 'fishing') && (sail >= 2 || !shoreRich)) {
+        const range = [0, 10, 30, 55][sail] + (w.hasTech(a.tribeId, 'steamships') ? 20 : 0)
+        const ok = (b: number) => b === B.LAKE || b === B.SHALLOWS || (sail >= 2 && b === B.OCEAN) || (sail >= 3 && b === B.DEEP_OCEAN)
+        let best = -1, bs = -1e9
+        const x0 = Math.floor(a.x), y0 = Math.floor(a.y)
+        for (let k = 0; k < 140; k++) {
+          const ang = Math.random() * Math.PI * 2, r = 2 + Math.random() * range
+          const x = Math.round(x0 + Math.cos(ang) * r), y = Math.round(y0 + Math.sin(ang) * r)
+          if (!w.inBounds(x, y)) continue
+          const i = w.idx(x, y)
+          if (!ok(w.biome[i]) || !w.isExplored(a.tribeId, i) || w.occ[i]) continue
+          const sc = w.fishNear(x, y, 1) - r * 1.2
+          if (sc > bs) { bs = sc; best = i }
+        }
+        if (best >= 0 && w.fishNear(best % w.W, Math.floor(best / w.W), 1) > 20) {
+          t.ref = 1
+          t.label = sail >= 3 && w.hasTech(a.tribeId, 'steamships') ? 'Trawling' : sail >= 2 ? 'Fishing at sea' : 'Fishing from a canoe'
+          if (travel(w, a, t, best % w.W, Math.floor(best / w.W), false)) return true
+        }
       }
+      const fishy = (i: number) => w.fishCap[i] >= 20 && w.fish[i] > 3
       const spot = w.nearestTile(a.x, a.y, 45, (i) => {
         if (!w.walkableTile(i) || w.biome[i] === B.RIVER || !w.isExplored(a.tribeId, i)) return false
         const x = i % w.W, y = Math.floor(i / w.W)
@@ -496,28 +625,115 @@ const HANDLERS: Record<ActionKind, Handler> = {
         }
         return false
       })
-      if (spot < 0) { fail(w, a, 'There is no water to fish near here.'); return false }
-      t.amount = clamp(t.amount || 6, 1, CARRY_CAP - invTotal(a.inv))
-      if (t.amount <= 0) return false
+      if (spot < 0) { fail(w, a, 'There is no water with fish in it near here.'); return false }
+      t.ref = 0
       t.label = 'Fishing'
-      t.need = 0
       return travel(w, a, t, spot % w.W, Math.floor(spot / w.W), false)
     },
     work(w, a, t, dtH) {
-      let rate = (w.hasTech(a.tribeId, 'fishing') ? 1.7 : 0.5) * workMult(w, a, 'hunting', 0.4)
-      if (w.nearestBuilding(a, ['dock'], true, 8)) rate *= 2
+      const known = w.techs(a.tribeId)
+      let rate = (known.has('fishing') ? 1.7 : 0.5) * workMult(w, a, 'hunting', 0.4) * techFx(known, 'fish')
+      const sail = w.canSail(a.tribeId)
+      if (t.ref === 1) rate *= [1, 1.2, 1.6, 2.1][sail]
+      else if (w.nearestBuilding(a, ['harbour'], true, 8)) rate *= 2
+      else if (w.nearestBuilding(a, ['dock'], true, 8)) rate *= 1.5
+      // the catch depends on how many fish are really there
+      let cap = 0, have = 0
+      const x0 = Math.floor(a.x), y0 = Math.floor(a.y)
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        if (!w.inBounds(x0 + dx, y0 + dy)) continue
+        const i = w.idx(x0 + dx, y0 + dy)
+        cap += w.fishCap[i]
+        have += w.fish[i]
+      }
+      const density = cap > 0 ? have / cap : 0
+      rate *= 0.3 + density * 0.8
       t.progress += rate * dtH
       skillUp(a, 'hunting', dtH * 0.5)
       w.practice(a, 'fish', dtH)
+      // trawl nets take much more than they keep
+      const waste = known.has('diesel_trawlers') && t.ref === 1 ? 1.8 : known.has('steamships') && t.ref === 1 ? 1.4 : 1
       while (t.progress >= 1) {
         t.progress -= 1
+        const got = w.takeFish(a.x, a.y, waste, 2)
+        if (got < 0.5) {
+          w.remember(a, 'The fish are gone from these waters. We have taken too many.', 5)
+          return t.need > 0 ? 'done' : 'fail'
+        }
         invAdd(a.inv, 'fish', 1)
         a.stats.gathered++
         t.need++
-        if (t.need >= t.amount) { w.remember(a, `I caught ${t.need} fish.`, 1); return 'done' }
+        if (t.need >= t.amount) {
+          w.remember(a, `${t.ref === 1 ? 'Out on the water ' : ''}I caught ${t.need} fish${density < 0.35 ? ' — far fewer than there used to be' : ''}.`, 1)
+          return 'done'
+        }
       }
       if (w.time - t.started > 6 * HOUR) return 'done'
       return 'continue'
+    },
+  },
+
+  prospect: {
+    init(w, a, t) {
+      if (!w.hasTech(a.tribeId, 'mining') && !w.hasTech(a.tribeId, 'prospecting')) { fail(w, a, 'We do not know what ore looks like yet — we need Mining first.'); return false }
+      t.amount = clamp(t.amount || 3, 1, 6)
+      t.need = 0
+      const d = DIRS[norm(t.target)] ?? null
+      const want = d ? null : normalizeItem(t.target, true)
+      const deep = w.hasTech(a.tribeId, 'geology')
+      // where each mineral forms
+      const likes = (b: number, i: number): number => {
+        switch (want) {
+          case 'oil': return (b === B.DESERT || b === B.MARSH || b === B.GRASSLAND || b === B.SAVANNA || b === B.TUNDRA) && w.elev[i] < 0.35 ? 8 : 0
+          case 'coal': return (b === B.FOREST || b === B.MARSH || b === B.GRASSLAND || b === B.TAIGA) && w.elev[i] < 0.42 ? 8 : 0
+          case 'bauxite': return w.temp[i] > 0.62 && w.moist[i] > 0.5 ? 8 : 0
+          case 'lithium': return b === B.DESERT ? 8 : 0
+          case 'iron_ore': return b === B.HILLS ? 8 : 0
+          case 'copper': case 'gold': case 'tin': case 'uranium': return b === B.MOUNTAIN || b === B.HILLS ? 8 : 0
+          default: return 0
+        }
+      }
+      // prospectors head for hills and mountains — and, once they know geology, the sedimentary lowlands too
+      let best = -1, bs = -1e9
+      for (let k = 0; k < 90; k++) {
+        const ang = d ? Math.atan2(d[1], d[0]) + (Math.random() - 0.5) * 1.1 : Math.random() * Math.PI * 2
+        const dist = 5 + Math.random() * (want ? 48 : 32)
+        const x = clamp(Math.round(a.x + Math.cos(ang) * dist), 1, w.W - 2), y = clamp(Math.round(a.y + Math.sin(ang) * dist), 1, w.H - 2)
+        const i = w.idx(x, y)
+        if (!w.walkableTile(i) || !w.isExplored(a.tribeId, i)) continue
+        const key = `${a.tribeId}|prospect|${x >> 3},${y >> 3}`
+        if (w.failed(key)) continue
+        const b = w.biome[i]
+        let sc = -dist * 0.15 + Math.random() * 3
+        if (want) sc += likes(b, i)
+        else {
+          if (b === B.HILLS || b === B.MOUNTAIN) sc += 6
+          if (deep && (b === B.DESERT || b === B.MARSH || b === B.GRASSLAND || b === B.TUNDRA)) sc += 3
+        }
+        if (w.feature[i] >= F.COPPER && w.feature[i] <= F.OIL) sc += 8
+        if (sc > bs) { bs = sc; best = i }
+      }
+      if (best < 0) { fail(w, a, 'Every likely place nearby has already been searched.'); return false }
+      t.ref = best
+      t.label = `${w.hasTech(a.tribeId, 'seismic_survey') ? 'Running a seismic survey' : deep ? 'Mapping the geology' : 'Prospecting'}${want ? ` for ${want.replace('_', ' ')}` : ''}`
+      return travel(w, a, t, best % w.W, Math.floor(best / w.W), false)
+    },
+    work(w, a, t, dtH) {
+      t.progress += dtH
+      w.practice(a, 'prospect', dtH)
+      skillUp(a, 'gathering', dtH * 0.5)
+      w.revealAround(a.tribeId, a.x, a.y, 6)
+      const found = w.prospect(a, dtH)
+      for (const f of found) {
+        w.remember(a, `Prospecting, I found ${f}.`, 7)
+        w.emote(a, '⛏️')
+        w.log('event', `${a.name} finds ${f}.`, '⛏️', a.id, a.tribeId)
+        t.need++
+      }
+      if (t.progress < t.amount) return 'continue'
+      w.markFailed(`${a.tribeId}|prospect|${Math.floor(a.x) >> 3},${Math.floor(a.y) >> 3}`, 24 * 6)
+      if (!t.need) w.remember(a, 'I searched the ground for signs of ore and found nothing worth digging.', 2)
+      return 'done'
     },
   },
 
@@ -565,7 +781,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
         if (t.progress < 1.5) return 'continue'
         let y = 6 + w.fertility[i] * 9
         if (w.tribeBuildings(a.tribeId, 'mill').length) y *= 1.5
-        if (w.hasTech(a.tribeId, 'plough')) y *= 1.35
+        y *= techFx(w.techs(a.tribeId), 'farm')
         if (w.hasEvent('drought')) y *= 0.5
         if (w.hasEvent('bounty')) y *= 1.3
         const n = Math.round(y)
@@ -739,7 +955,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       if (!b) return 'fail'
       if (b.done) return 'done'
       const def = BUILDINGS[b.type]
-      b.progress += dtH * workMult(w, a, 'building', 0.6)
+      b.progress += dtH * workMult(w, a, 'building', 0.6) * techFx(w.techs(a.tribeId), 'build')
       skillUp(a, 'building', dtH)
       w.practice(a, `build:${b.type}`, dtH)
       wearTools(w, a, dtH * 0.5)
@@ -784,7 +1000,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
         if (!w.payCost(a, r.inputs)) return 'fail'
         t.ref = -1
       }
-      t.progress += dtH * workMult(w, a, 'crafting', 0.4)
+      t.progress += dtH * workMult(w, a, 'crafting', 0.4) * techFx(w.techs(a.tribeId), 'craft')
       skillUp(a, 'crafting', dtH)
       w.practice(a, `craft:${r.id}`, dtH)
       if (t.progress < t.need) return 'continue'
@@ -836,7 +1052,7 @@ const HANDLERS: Record<ActionKind, Handler> = {
       let mult = 1
       const place = t.ref ? w.buildingById.get(t.ref) : undefined
       if (place && Math.hypot(place.x - a.x, place.y - a.y) < 3) mult = BUILDINGS[place.type].research ?? 1
-      if (w.tribeBuildings(a.tribeId, 'power_plant').length) mult *= 1.2
+      if (w.hasPower(a.tribeId)) mult *= 1.2
       const rs = tr.research as { tech: string; progress: number } | null
       if (!rs) return 'done'
       const def = TECH_BY_ID[rs.tech]

@@ -58,13 +58,63 @@ tundra, snow, marsh, hills, mountains and peaks. There are five presets:
 Highlands* and *Rift Valley*.
 
 **Real resources and needs.** People need food, water, sleep and warmth. Sea
-water is undrinkable, and winter nights kill the unsheltered. Resources sit
-where they would in reality: trees and berry bushes, reeds, clay on river banks,
-sand on beaches and deserts, ore (copper, tin, iron, coal, gold) in hills and
-mountains, and oil in deserts and marshes. Trees and bushes regrow; ore runs out.
-A tribe can only harvest land it has explored.
+water is undrinkable, and winter nights kill the unsheltered. Trees, berry
+bushes, reeds, clay on river banks and sand on beaches and deserts sit where
+they would in reality. Trees and bushes regrow. A tribe can only harvest land
+it has explored.
 
-**Ten eras and 62 technologies, learnt the way humans learnt them.** Early
+**Geology: minerals are underground, where real geology puts them.** Every
+world is seeded with ore bodies, each with a mineral, reserves and a depth:
+
+- copper, tin, gold and uranium in the roots of mountain ranges
+- great iron formations in old, worn-down hills
+- coal under low basins of buried swamp forest
+- oil deep under deserts, marshes and plains, and under the continental shelf
+- bauxite under hot, wet forests, and lithium brine under desert salt flats
+
+Only a few bodies break the surface as outcrops (plus gold gravels along
+mountain rivers and bog iron in marshes). Most must be **found by
+prospecting**:
+
+- a prospector's eye spots shallow bodies near surface showings
+- Geology reads the strata over wide areas
+- seismic surveys see kilometres down and under the sea
+
+Then they have to be **dug**:
+
+- a pit or adit for shallow ore
+- Shaft Mining for deep ore
+- steam-pumped Deep Mining for the deepest seams
+- oil wells and offshore platforms for oil, and evaporation ponds for lithium
+
+Bodies run out, mines are dangerous, and the minds are told what their people
+have found and how deep it lies. A **Geology** overlay shows what lies beneath:
+every body, with the ones a tribe has found shown strongest.
+
+**The sea.** Fish live where the water is rich: the coastal shallows and the
+upwelling edge of the shelf most, open ocean less, lakes and rivers least.
+Stocks regrow at about the rate real fisheries do. Fishing moves on with
+technology:
+
+- from the bank
+- dugout canoes on lakes and shallows
+- sailing boats on the open sea
+- ocean ships in deep water
+- steam trawlers, then diesel trawlers with sonar
+
+Each step catches far more, and the trawl nets destroy more than they keep.
+Overfished water empties, and a **Fish stocks** overlay shows it happening.
+Fish farms (Aquaculture) take the pressure off. In the 3D view the boats change
+with the era.
+
+**Ten eras and 126 technologies, learnt the way humans learnt them.** The tree
+runs from fire to reusable rockets: copper smelting, the alphabet, crop
+rotation, the compass, the blast furnace, shaft mining, optics, geology, coke
+smelting, steamships, germ theory, dynamite, oil drilling, Haber–Bosch
+fertiliser, plastics, aluminium smelting, nuclear power, the transistor, wind
+and solar, lithium batteries, genetic engineering, mRNA vaccines, artificial
+intelligence, satellites and GPS. Each one changes how fast people farm, fish,
+mine, build, craft, travel, heal or research. Early
 knowledge comes from practice. Every hour of relevant work brings an idea
 closer:
 
@@ -82,9 +132,16 @@ fragile:** a people that dwindles to a handful before inventing writing can
 forget what it knew. Each era is harder to reach than the last. The Stone Age
 lasts about a decade of game time, and the space age takes generations.
 
-Production chains are real: ore → metal → tools; sand → glass; steel + iron →
-machinery; copper + glass + gold → electronics. Boats progress from canoes on
-lakes, to sail on the open sea, to deep-ocean navigation.
+Production chains are real:
+
+- ore → metal → tools; iron ore + coal → coke-smelted iron
+- sand → glass; steel + iron → machinery
+- copper + glass + gold → electronics; crude oil → fuel and plastics at a refinery
+- bauxite → aluminium (electrolysis); lithium + copper + plastic → batteries
+- uranium → nuclear power
+
+Industry needs power: coal plants, then wind turbines, solar farms and nuclear
+stations. Later come airports, radio masts and harbours.
 
 **Lives and lineages.** Personalities use the Big Five plus intelligence and
 strength. Everyone looks like an individual:

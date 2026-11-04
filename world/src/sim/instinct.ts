@@ -3,8 +3,9 @@
 // over budget, or at hyper speed. It's sensible but unimaginative: the AI
 // minds are what give the world personality, culture and ambition.
 
-import { FOOD_ITEMS, invCount, invTotal, type Item } from './data.ts'
+import { DEPOSITS, FOOD_ITEMS, invCount, invTotal, type Item } from './data.ts'
 import { BUILDINGS, RECIPES, type BuildingType } from './buildings.ts'
+import { oreStep } from './actions.ts'
 import { availableTechs, eraOf } from './tech.ts'
 import { isNight, hourOf } from './time.ts'
 import type { Agent, PlanStep } from './types.ts'
@@ -84,10 +85,38 @@ export function instinctStep(w: World, a: Agent): PlanStep {
 
   // build the next useful thing the tribe lacks
   const wishlist: BuildingType[] = [
-    'stockpile', 'farm', 'workshop', 'kiln', 'granary', 'well', 'farm', 'pasture', 'smithy', 'library', 'mine', 'temple',
-    'market', 'town_hall', 'mill', 'dock', 'farm', 'house', 'university', 'hospital', 'watchtower', 'factory', 'power_plant',
-    'lab', 'apartment', 'data_center', 'skyscraper', 'launch_pad',
+    'stockpile', 'farm', 'workshop', 'kiln', 'granary', 'well', 'farm', 'pasture', 'smithy', 'library', 'temple',
+    'market', 'town_hall', 'mill', 'dock', 'farm', 'house', 'university', 'hospital', 'watchtower', 'factory',
+    known.has('nuclear_power') ? 'nuclear_plant' : known.has('solar_power') ? 'solar_farm' : known.has('wind_power') ? 'wind_farm' : 'power_plant',
+    'refinery', 'harbour', 'radio_tower', 'lab', 'apartment', 'airport', 'fish_farm', 'data_center', 'skyscraper', 'launch_pad',
   ]
+  // prospectors go looking when a people knows mining but has found little underground
+  const fed = food > members * 12
+  if (fed && known.has('mining') && Math.random() < (known.has('geology') ? 0.03 : 0.015) + a.traits.openness * 0.02) {
+    // what this people's knowledge makes them need, but haven't found
+    const need: Item[] = ['copper', 'tin', 'iron_ore', 'coal']
+    if (known.has('oil_drilling')) need.push('oil')
+    if (known.has('aluminium_smelting')) need.push('bauxite')
+    if (known.has('nuclear_power')) need.push('uranium')
+    if (known.has('lithium_batteries')) need.push('lithium')
+    const have = new Set<string>()
+    for (const i of w.knownList(t.id)) have.add(DEPOSITS[w.deposit[i]]?.item ?? '')
+    const missing = need.filter((x) => !have.has(x))
+    if (missing.length) return step('prospect', missing[Math.floor(Math.random() * missing.length)], 3)
+    if (w.knownList(t.id).length < 30 + era * 15) return step('prospect', '', 3)
+  }
+  // a known body nobody is working yet: sink a mine, drill a well
+  if (fed && known.has('mining') && Math.random() < 0.07) {
+    for (const item of ['copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'bauxite', 'uranium', 'lithium'] as Item[]) {
+      if (stock(item) > 25) continue
+      const o = oreStep(w, a, item)
+      if (o?.action === 'build') {
+        const bt = o.target as BuildingType
+        if (afford(bt)) return step('build', bt)
+        return gatherFor(w, a, w.missing(a, BUILDINGS[bt].cost))
+      }
+    }
+  }
   const wants: BuildingType[] = []
   for (const b of wishlist) {
     if (!can(b) || wants.includes(b)) continue
@@ -103,13 +132,15 @@ export function instinctStep(w: World, a: Agent): PlanStep {
     return gatherFor(w, a, w.missing(a, BUILDINGS[goal].cost))
   }
 
+  // a fishing fleet goes out whenever it can
+  if (known.has('fishing') && w.tribeBuildings(t.id).some((b) => b.type === 'dock' || b.type === 'harbour') && Math.random() < 0.12) return step('fish', '', 14)
   // farm fields need hands
   if (has('farm', false) && w.season <= 2 && food < members * 40 && Math.random() < 0.35) return step('farm', '', 3)
 
   // craft upgrades
   if (a.toolTier < 2 && known.has('bronze_working') && stock('bronze') >= 2) return step('craft', 'bronze_tools')
   if (a.toolTier < 3 && known.has('iron_working') && stock('iron') >= 2) return step('craft', 'iron_tools')
-  const refine: [string, Item, number][] = [['planks', 'wood', 12], ['bricks', 'clay', 8], ['paper', 'fiber', 6], ['bronze', 'copper', 4], ['iron', 'iron_ore', 4], ['glass', 'sand', 4], ['concrete', 'stone', 10], ['steel', 'iron', 4], ['machinery', 'steel', 4], ['fuel', 'oil', 4], ['electronics', 'copper', 4], ['pottery', 'clay', 6]]
+  const refine: [string, Item, number][] = [['planks', 'wood', 12], ['bricks', 'clay', 8], ['paper', 'fiber', 6], ['bronze', 'copper', 4], ['iron', 'iron_ore', 4], ['glass', 'sand', 4], ['concrete', 'stone', 10], ['steel', 'iron', 4], ['machinery', 'steel', 4], ['fuel', 'oil', 4], ['plastic', 'oil', 4], ['aluminium', 'bauxite', 8], ['batteries', 'lithium', 2], ['electronics', 'copper', 4], ['pottery', 'clay', 6]]
   for (const [rec, inp, min] of refine) {
     const re = RECIPES.find((x) => x.id === rec)!
     if (!re.tech || !known.has(re.tech)) continue
@@ -132,10 +163,15 @@ export function instinctStep(w: World, a: Agent): PlanStep {
   const basics: Item[] = ['wood', 'stone', 'fiber', 'clay']
   if (known.has('mining')) basics.push('copper', 'tin', 'iron_ore', 'coal')
   if (known.has('glassmaking') || known.has('engineering')) basics.push('sand')
-  if (known.has('refining')) basics.push('oil')
+  if (known.has('oil_drilling')) basics.push('oil')
+  if (known.has('aluminium_smelting')) basics.push('bauxite')
+  if (known.has('nuclear_power')) basics.push('uranium')
+  if (known.has('lithium_batteries')) basics.push('lithium')
   basics.sort((x, y) => stock(x) - stock(y))
   if (Math.random() < 0.4 && food < members * 25) return foodStep(w, a)
-  return step('gather', basics[0], 10)
+  const pick = basics[0]
+  if (ORES.includes(pick)) return resolve(w, a, pick, 10, 0) ?? step('gather', 'stone', 10)
+  return step('gather', pick, 10)
 }
 
 function foodStep(w: World, a: Agent): PlanStep {
@@ -145,7 +181,8 @@ function foodStep(w: World, a: Agent): PlanStep {
   const ripe = farms.some((f) => f.planted && f.crop >= 1) || (w.season <= 1 && farms.some((f) => !f.planted))
   if (ripe) return step('farm', '', 3)
   const r = Math.random()
-  if (known.has('fishing') && r < 0.4) return step('fish', '', 8)
+  const fleet = t ? w.tribeBuildings(t.id).filter((b) => b.type === 'dock' || b.type === 'harbour').length : 0
+  if (known.has('fishing') && r < (fleet ? 0.6 : 0.4)) return step('fish', '', 8 + fleet * 4)
   if (known.has('hunting') && r < 0.65 && w.animals.length) return step('hunt')
   return step('gather', 'berries', 10)
 }
@@ -164,12 +201,26 @@ function gatherFor(w: World, a: Agent, missing: string[]): PlanStep {
   return step('gather', 'wood', 10)
 }
 
-const RAW: Item[] = ['wood', 'stone', 'fiber', 'clay', 'sand', 'copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'berries']
+const RAW: Item[] = ['wood', 'stone', 'fiber', 'clay', 'sand', 'berries']
+const ORES: Item[] = ['copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'bauxite', 'uranium', 'lithium']
 
 function resolve(w: World, a: Agent, item: Item, n: number, depth: number): PlanStep | null {
   const known = w.techs(a.tribeId)
   const room = Math.max(4, CARRY_CAP - invTotal(a.inv))
   if (RAW.includes(item)) return step('gather', item, Math.min(room, Math.max(4, n)))
+  if (ORES.includes(item)) {
+    const o = oreStep(w, a, item)
+    if (!o) return null
+    if (o.action === 'gather') return step('gather', item, Math.min(room, Math.max(4, n)))
+    if (o.action === 'prospect') return step('prospect', o.target, 3)
+    const bt = o.target as BuildingType
+    if (w.buildings.some((b) => b.tribeId === a.tribeId && b.type === bt && !b.done)) return step('build', bt)
+    const miss = w.missing(a, BUILDINGS[bt].cost)
+    if (!miss.length) return step('build', bt)
+    if (depth > 3) return null
+    const [mn, mi] = miss[0].split(' ')
+    return resolve(w, a, mi as Item, +mn, depth + 1)
+  }
   if (item === 'hide' || item === 'meat') return step('hunt')
   if (item === 'fish') return step('fish', '', 6)
   if (item === 'grain') return step('farm', '', 3)

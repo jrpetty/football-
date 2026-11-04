@@ -338,7 +338,7 @@ function flag(c: Ctx, x: number, y: number, color: string) {
 
 function makeBuilding(type: BuildingType, color: string, size: number, era: number): BuildingSprite {
   const T = SPR * size
-  const W = T + SPR, H = T + SPR * (type === 'skyscraper' ? 4 : type === 'launch_pad' ? 3.2 : type === 'watchtower' || type === 'power_plant' || type === 'factory' ? 2 : 1.4)
+  const W = T + SPR, H = T + SPR * (type === 'skyscraper' ? 4 : type === 'launch_pad' ? 3.2 : type === 'wind_farm' || type === 'radio_tower' ? 3 : type === 'watchtower' || type === 'power_plant' || type === 'factory' || type === 'refinery' || type === 'nuclear_plant' || type === 'offshore_rig' ? 2 : 1.4)
   const res = 3
   const [cv, c] = canvas(W * res, H * res)
   c.scale(res, res)
@@ -648,6 +648,84 @@ function makeBuilding(type: BuildingType, color: string, size: number, era: numb
       c.beginPath(); c.moveTo(cx - 5, y1 - 6); c.lineTo(cx - 2, y1 - 40); c.lineTo(cx + 2, y1 - 40); c.lineTo(cx + 5, y1 - 6); c.closePath(); c.fill()
       c.fillStyle = '#e8c547'
       c.beginPath(); c.moveTo(cx - 2, y1 - 40); c.lineTo(cx, y1 - 45); c.lineTo(cx + 2, y1 - 40); c.closePath(); c.fill()
+      break
+    }
+    case 'oil_well': {
+      c.fillStyle = '#6a6560'; c.fillRect(x0 + 2, y1 - 5, T - 4, 3)
+      c.strokeStyle = '#c0392b'; c.lineWidth = 2
+      c.beginPath(); c.moveTo(cx - 6, y1 - 4); c.lineTo(cx, y1 - 20); c.lineTo(cx + 6, y1 - 4); c.stroke()
+      c.strokeStyle = '#2a2a30'; c.lineWidth = 3
+      c.beginPath(); c.moveTo(cx - 12, y1 - 17); c.lineTo(cx + 12, y1 - 23); c.stroke()
+      blob(c, cx + 12, y1 - 21, 3.5, '#2a2a30'); blob(c, cx - 12, y1 - 14, 3, '#c0392b')
+      break
+    }
+    case 'offshore_rig': {
+      c.fillStyle = '#d0a030'
+      for (const x of [x0 + 6, x0 + T - 10]) c.fillRect(x, y1 - 26, 4, 24)
+      c.fillStyle = '#6a6e74'; c.fillRect(x0 + 2, y1 - 30, T - 4, 6)
+      c.fillStyle = '#e8e8e4'; c.fillRect(x0 + 6, y1 - 40, T * 0.45, 10)
+      c.strokeStyle = '#c0392b'; c.lineWidth = 2
+      c.beginPath(); c.moveTo(cx + 4, y1 - 30); c.lineTo(cx + 10, y1 - 62); c.lineTo(cx + 16, y1 - 30); c.stroke()
+      blob(c, x0 + T, y1 - 40, 3, '#ff9a3a')
+      break
+    }
+    case 'evaporation_ponds': {
+      const cols = ['#9fe0e8', '#bfeaf0', '#e8f6f8', '#f6fbfc']
+      for (let k = 0; k < 4; k++) { c.fillStyle = '#d8d0c0'; c.fillRect(x0 + (k % 2) * T / 2 + 1, y1 - T + Math.floor(k / 2) * T / 2 + 1, T / 2 - 2, T / 2 - 2); c.fillStyle = cols[k]; c.fillRect(x0 + (k % 2) * T / 2 + 3, y1 - T + Math.floor(k / 2) * T / 2 + 3, T / 2 - 6, T / 2 - 6) }
+      break
+    }
+    case 'refinery': case 'nuclear_plant': {
+      c.fillStyle = '#9a968f'; c.fillRect(x0 + 2, y1 - 8, T - 4, 6)
+      if (type === 'refinery') {
+        c.fillStyle = '#b8bcc2'
+        for (const [x, h] of [[x0 + 8, 34], [x0 + 18, 44], [x0 + 28, 28]]) c.fillRect(x, y1 - 8 - h, 6, h)
+        c.fillStyle = '#e8e6e0'; blob(c, x0 + T - 12, y1 - 14, 9, '#e8e6e0'); blob(c, x0 + T - 26, y1 - 12, 7, '#e8e6e0')
+        blob(c, x0 + 21, y1 - 56, 3, '#ff9a3a')
+      } else {
+        for (const x of [x0 + 14, x0 + 36]) { c.fillStyle = '#d8d4cc'; c.beginPath(); c.moveTo(x - 10, y1 - 6); c.quadraticCurveTo(x - 5, y1 - 26, x - 8, y1 - 44); c.lineTo(x + 8, y1 - 44); c.quadraticCurveTo(x + 5, y1 - 26, x + 10, y1 - 6); c.closePath(); c.fill() }
+        blob(c, x0 + T - 12, y1 - 14, 9, '#e8e6e0')
+      }
+      break
+    }
+    case 'fish_farm': {
+      c.strokeStyle = '#e8e8e4'; c.lineWidth = 2
+      for (const [x, y] of [[cx - 6, y1 - 8], [cx + 6, y1 - 12]]) { c.beginPath(); c.ellipse(x, y, 7, 3.5, 0, 0, Math.PI * 2); c.stroke() }
+      break
+    }
+    case 'wind_farm': {
+      for (const [x, h] of [[x0 + 10, 60], [x0 + T - 12, 66]]) {
+        c.strokeStyle = '#f4f4f2'; c.lineWidth = 2.5
+        c.beginPath(); c.moveTo(x, y1 - 4); c.lineTo(x, y1 - h); c.stroke()
+        c.lineWidth = 2
+        for (let k = 0; k < 3; k++) { const a = (k / 3) * Math.PI * 2 - 0.4; c.beginPath(); c.moveTo(x, y1 - h); c.lineTo(x + Math.cos(a) * 14, y1 - h + Math.sin(a) * 14); c.stroke() }
+      }
+      break
+    }
+    case 'solar_farm': {
+      c.fillStyle = '#1d3a6a'
+      for (let r = 0; r < 4; r++) c.fillRect(x0 + 3, y1 - T + 3 + r * (T / 4), T - 6, T / 4 - 4)
+      break
+    }
+    case 'airport': {
+      c.fillStyle = '#3a3a3e'; c.fillRect(x0 + 1, y1 - T * 0.75, T - 2, T * 0.22)
+      c.fillStyle = '#f4f4f2'; for (let k = 0; k < 6; k++) c.fillRect(x0 + 4 + k * (T / 6), y1 - T * 0.65, 5, 1.2)
+      c.fillStyle = '#d8dde2'; c.fillRect(x0 + 4, y1 - 16, T * 0.6, 12)
+      c.fillStyle = '#5f8fb3'; c.fillRect(x0 + T - 14, y1 - 26, 6, 22)
+      break
+    }
+    case 'radio_tower': {
+      c.strokeStyle = '#c0392b'; c.lineWidth = 2
+      c.beginPath(); c.moveTo(cx - 5, y1 - 3); c.lineTo(cx, y1 - 70); c.lineTo(cx + 5, y1 - 3); c.stroke()
+      for (let y = y1 - 60; y < y1 - 5; y += 10) { c.beginPath(); c.moveTo(cx - 4, y + 8); c.lineTo(cx + 4, y); c.stroke() }
+      blob(c, cx, y1 - 71, 2, '#ff3b3b')
+      break
+    }
+    case 'harbour': {
+      c.fillStyle = '#9a968f'; c.fillRect(x0 + 1, y1 - T * 0.6, T - 2, T * 0.6 - 2)
+      c.strokeStyle = '#e0a030'; c.lineWidth = 2.5
+      c.beginPath(); c.moveTo(x0 + 10, y1 - 6); c.lineTo(x0 + 10, y1 - 44); c.lineTo(x0 + 34, y1 - 40); c.stroke()
+      c.fillStyle = '#2e5a8a'; c.beginPath(); c.ellipse(cx + 6, y1 - 6, 14, 5, 0, 0, Math.PI * 2); c.fill()
+      c.fillStyle = '#f4f4f2'; c.fillRect(cx + 2, y1 - 16, 8, 8)
       break
     }
     case 'launch_pad': {

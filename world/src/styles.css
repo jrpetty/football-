@@ -297,3 +297,8 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .menu-person small { color: var(--muted); font-size: 10.5px; line-height: 1.2; }
 .menu-line { font-size: 12px; color: #cfd6e6; padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 @media (max-width: 860px) { .menu { padding: 20px; align-items: flex-start; } .menu h1 { font-size: 44px; } }
+
+.minimap .legend { display: flex; flex-wrap: wrap; gap: 4px 8px; padding: 6px 2px 2px; font-size: 10.5px; color: var(--muted, #aab); }
+.minimap .legend span { display: inline-flex; align-items: center; gap: 4px; }
+.minimap .legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.minimap .legend small { width: 100%; opacity: 0.8; }
