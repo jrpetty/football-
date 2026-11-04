@@ -988,6 +988,60 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     icon: 'diff',
   },
 
+  // ─────────────── Business ladders: data & support ───────────────
+  'work.crm-ladder': {
+    hook: 'From 24 customer records to 1,000: how far up can it merge duplicates without merging two people?',
+    whatItTests: 'Cleaning a customer list by exact written matching rules at ten growing sizes, from capitals and phone formats to long chains of matches.',
+    whyHard: 'Every level adds records and rule families (nicknames, typos, shared mailboxes, married names, staff notes, gone-away masters), and the top levels join records only through chains of up to six matches.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten levels of the same clean-up, each bigger and deeper' },
+      { icon: 'check', text: 'Groups pair by pair (F1); golden records as a set' },
+      { icon: 'percent', text: 'A level is passed at 90% of its points' },
+      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+    ],
+    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    icon: 'grid',
+  },
+  'work.contract-ladder': {
+    hook: 'From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change?',
+    whatItTests: 'Comparing two drafts of a services agreement at ten growing lengths and listing every change that matters, by clause, with its old and new values.',
+    whyHard: 'Each level adds length and kinds of edit, and the top levels hide about a hundred changes, re-pointed cross-references and a “shall” turned “may” among hundreds of renumbered clauses and re-sorted schedules.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten pairs of drafts, each longer with more edits' },
+      { icon: 'diff', text: 'Each change: clause, type, old and new; traps 2 points' },
+      { icon: 'cross', text: 'Listing a non-change costs as much as missing one' },
+      { icon: 'flag', text: 'A level is passed at 90%; headline = rungs climbed' },
+    ],
+    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    icon: 'diff',
+  },
+  'work.sql-ladder': {
+    hook: 'From one table and one rule to ten tables and a five-point memo: how deep a query can it get right?',
+    whatItTests: 'Writing one database query per level, from a simple count to a customer review that applies every warehouse rule and a finance memo at once.',
+    whyHard: 'Each level adds tables, rules and memo amendments: UK time across the clock change, price and category history, best promotions, reversal chains, a lost day of data, duplicate events and ranks with ties.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten questions, each one query deeper' },
+      { icon: 'hidden', text: 'Run on the real database and 3 hidden copies' },
+      { icon: 'percent', text: 'Share of result rows that match; pass at 90%' },
+      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+    ],
+    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    icon: 'chart',
+  },
+  'work.support-ladder': {
+    hook: 'From four easy returns to 120 tangled tickets: how far up the queue can it climb by the handbook?',
+    whatItTests: 'Working a shop’s overnight support queue at ten growing sizes: category, priority, response deadline, decision and exact refund for every ticket.',
+    whyHard: 'Every level adds tickets and handbook rules; the top levels are mostly interacting traps (split parcels, minimum-spend codes, corrections, reopened tickets, fraud) across clock changes and bank holidays.',
+    howScored: [
+      { icon: 'ladder', text: 'Ten queues under the same handbook, each longer' },
+      { icon: 'check', text: 'Five fields per ticket; trap decisions worth more' },
+      { icon: 'percent', text: 'A level is passed at 90% of its points' },
+      { icon: 'flag', text: 'Headline: how high it climbs without missing a rung' },
+    ],
+    goodScore: 'Each level is worth 10 points in proportion to its score; the ladder height is the highest level passed at 90% with every level below it passed too.',
+    icon: 'persona',
+  },
+
   // ─────────────── Arena (head-to-head) ───────────────
   'arena.connect4': {
     hook: 'Can it plan ahead and block its opponent in four-in-a-row?',

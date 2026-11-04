@@ -1,0 +1,166 @@
+{
+ "work.crm-ladder": [
+  {
+   "level": "L01",
+   "tokens": 1949,
+   "records": 24,
+   "groups": 8,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 0
+  },
+  {
+   "level": "L02",
+   "tokens": 2580,
+   "records": 40,
+   "groups": 10,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 1
+  },
+  {
+   "level": "L03",
+   "tokens": 3659,
+   "records": 70,
+   "groups": 21,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 2
+  },
+  {
+   "level": "L04",
+   "tokens": 5332,
+   "records": 120,
+   "groups": 32,
+   "chainDepth": 1,
+   "chainOnlyPairs": 0,
+   "distractors": 8
+  },
+  {
+   "level": "L05",
+   "tokens": 8839,
+   "records": 220,
+   "groups": 61,
+   "chainDepth": 2,
+   "chainOnlyPairs": 5,
+   "distractors": 12
+  },
+  {
+   "level": "L06",
+   "tokens": 12078,
+   "records": 320,
+   "groups": 69,
+   "chainDepth": 3,
+   "chainOnlyPairs": 35,
+   "distractors": 32
+  },
+  {
+   "level": "L07",
+   "tokens": 16561,
+   "records": 450,
+   "groups": 84,
+   "chainDepth": 4,
+   "chainOnlyPairs": 86,
+   "distractors": 48
+  },
+  {
+   "level": "L08",
+   "tokens": 21213,
+   "records": 600,
+   "groups": 91,
+   "chainDepth": 5,
+   "chainOnlyPairs": 270,
+   "distractors": 64
+  },
+  {
+   "level": "L09",
+   "tokens": 27591,
+   "records": 780,
+   "groups": 123,
+   "chainDepth": 6,
+   "chainOnlyPairs": 454,
+   "distractors": 80
+  },
+  {
+   "level": "L10",
+   "tokens": 34870,
+   "records": 1000,
+   "groups": 148,
+   "chainDepth": 6,
+   "chainOnlyPairs": 849,
+   "distractors": 104
+  }
+ ],
+ "work.support-ladder": [
+  {
+   "level": "L01",
+   "tokens": 2962,
+   "tickets": 4,
+   "trapTickets": 0,
+   "families": 2
+  },
+  {
+   "level": "L02",
+   "tokens": 3342,
+   "tickets": 6,
+   "trapTickets": 0,
+   "families": 4
+  },
+  {
+   "level": "L03",
+   "tokens": 4014,
+   "tickets": 10,
+   "trapTickets": 0,
+   "families": 6
+  },
+  {
+   "level": "L04",
+   "tokens": 5037,
+   "tickets": 15,
+   "trapTickets": 9,
+   "families": 8
+  },
+  {
+   "level": "L05",
+   "tokens": 8007,
+   "tickets": 29,
+   "trapTickets": 22,
+   "families": 15
+  },
+  {
+   "level": "L06",
+   "tokens": 10042,
+   "tickets": 40,
+   "trapTickets": 32,
+   "families": 16
+  },
+  {
+   "level": "L07",
+   "tokens": 12589,
+   "tickets": 54,
+   "trapTickets": 43,
+   "families": 16
+  },
+  {
+   "level": "L08",
+   "tokens": 16044,
+   "tickets": 70,
+   "trapTickets": 59,
+   "families": 16
+  },
+  {
+   "level": "L09",
+   "tokens": 19825,
+   "tickets": 90,
+   "trapTickets": 77,
+   "families": 16
+  },
+  {
+   "level": "L10",
+   "tokens": 26037,
+   "tickets": 120,
+   "trapTickets": 105,
+   "families": 16
+  }
+ ]
+}

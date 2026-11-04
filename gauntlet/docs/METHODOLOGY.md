@@ -1344,6 +1344,73 @@ the night premium left out of the total (50); the break rule, capacities or wind
 (about 88), the courier named or another customer mentioned (about 94); and, for the board, each memo definition
 misread on its own (18–94).
 
+## 7q. Business ladders: data and support
+
+Four Business tests (category `work`) turned into ten-rung difficulty ladders, Horizon-style (§7d): the same task and
+the same written rules on every level, ten frozen cases `L01`…`L10`, each level strictly bigger or deeper than the one
+below. The original tests stay unchanged, so old results stay comparable. Every level's key comes from the same
+generators, rules engines and scorers as the original test, so a level is marked exactly as that test marks a case;
+a level is **passed at 90% of its points** (partial credit, so the pass mark is per test in `config/ladders.json`),
+the test score is the mean over the levels, and the headline is the ladder height (§7d: the highest level L with
+every level 1..L passed reliably).
+
+| Test | Built from | The growth parameter, level 1 → 10 | Input tokens per level |
+|---|---|---|---|
+| Clean the Customer List: Ladder (`work.crm-ladder`) | `crm.mjs` (business pack) | records 24 / 40 / 70 / 120 / 220 / 320 / 450 / 600 / 780 / 1,000; rule families stacked (formats → nicknames, Mac/Mc, typos and swapped names → shared mailboxes and the same name elsewhere → moves, married names, DOB block, father and son, staff notes, gone-away masters, golden records from all records → chains); longest matching chain 1 / 1 / 1 / 1 / 2 / 3 / 4 / 5 / 6 / 6 hops; record pairs joined only through a chain 0 (L01–L04) / 5 / 35 / 86 / 270 / 454 / 849; planted look-alikes 0 / 1 / 2 / 8 / 12 / 32 / 48 / 64 / 80 / 104 | 2.0k / 2.6k / 3.7k / 5.4k / 8.9k / 12.1k / 16.6k / 21.3k / 27.7k / 34.9k |
+| What Changed in the Contract?: Ladder (`work.contract-ladder`) | `contract.py` (work pack) | words across both drafts 973 / 1,900 / 2,331 / 3,463 / 4,683 / 6,751 / 8,814 / 11,213 / 14,064 / 17,526; substantive changes 3 / 7 / 12 / 18 / 33 / 45 / 58 / 78 / 93 / 114; kinds of change 2 / 6 / 8 / 12 / 14 / 15 (all) from L06; clauses renumbered 0 / 1 / 6 / 19 / 49 / 91 / 195 / 265 / 347 / 443; re-pointed cross-references 0 / 0 / 0 / 1 / 2 / 3 / 4 / 5 / 6 / 7. L05 is the longest case of the original (k09); L06–L10 add governance and asset clauses that cross-refer to others, a fourth schedule (asset register, up to 260 rows), a second new section, more moved clauses and re-sorted site and asset lists | 2.5k / 4.0k / 4.7k / 6.6k / 8.8k / 12.4k / 16.0k / 20.2k / 25.2k / 31.4k |
+| Ask the Database: Ladder (`work.sql-ladder`) | `warehouse.mts` (Ask the Database: Hard) | query depth, not table size: tables read 1 / 1 / 4 / 5 / 6 / 6 / 6 / 8 / 9 / 10 and rules, conditions and memo items applied 1 / 2 / 3 / 4 / 8 / 10 / 12 / 15 / 19 / 22. L01 counts paid orders per channel; L02 deduplicated events in a UK week; L03–L05 are sql-hard's h01, h04 and h08 (UK days over the clock change, top two per category with ties across a category move, the best promotion per line); L06–L10 are one per-customer Q2 review that grows: memo item 1 (a promotion withdrawn early), then the 23:00 UK quarter cut-off and no promotions on gift lines by the category history, then UK and Ireland only and wallet spend through reversal chains, then subscriber orders through the lost snapshot day and an ordered segment list with a memo exception, then deduplicated, clock-corrected checkouts and ranks with ties | 3.2k (L01–L03) / 3.3k / 3.3k / 3.5k / 3.6k / 3.8k / 4.0k / 4.2k (schema, rules and sample rows are about 3.0k of it) |
+| Customer Support Queue: Ladder (`work.support-ladder`) | `support.mjs` (business pack) | tickets 4 / 6 / 10 / 15 / 29 / 40 / 54 / 70 / 90 / 120; handbook rule families in play 2 / 4 / 6 / 8 / 15 / 16 (all) from L06; trap tickets 0 / 0 / 0 / 9 / 22 / 32 / 43 / 59 / 77 / 105. L01 is change of mind and faulty goods in GMT; L02 adds missing parcels and wrong items; L03 late delivery, billing, personalised, sale and express rules and BST; L04 the faulty-age bands, P2 triggers, a bank holiday, Welsh and vague tickets; L05 is the original's s09 mix; L06–L10 are queues of interacting traps around Christmas, the August bank holiday, the October clock change and Easter with the March clock change | 3.0k / 3.3k / 4.0k / 5.0k / 8.0k / 10.0k / 12.6k / 16.0k / 19.8k / 26.0k |
+
+**Same rules, growing depth.** The rules text is the original test's, word for word, on every level (the matching
+rules, handbook section 4, the contract instructions, the warehouse schema and rules); only the data grows and the
+rule families it exercises stack up. The customer list adds one line to each prompt stating that level's points
+(below); the SQL questions from L06 on carry the definitions and the memo items in force at that level.
+
+**Keys and checks.** `verification/ladders-data-support/` builds all four from fixed seeds (`node build.mjs`,
+`python3 contract_ladder.py`, `node sql-ladder.mts`; each takes `--check`, and `test/ladders-data-support.test.ts`
+runs all three). Customer list and support queue: the business pack's rules engine computes the key and the level is
+accepted only when it equals what the generator planted (`buildWorld`, as in §7j), with ladder-only knobs (operation
+mix, chain hops, distractor counts, unique email addresses so two different people never share one by chance, a
+larger name pool for long queues) that leave the original tests byte-identical. Contract: the key is the diff of the
+two structured versions, and `check_unique()` re-derives it independently from the rendered text (every clause whose
+normalised words differ, references mapped to the clause they point at). SQL: `buildPack()` of §7f runs on every
+level with all its guarantees: reference query = independent JavaScript solver on all four databases, no dependence on
+scan order, a different answer on every database, hidden copies sharing at most a fifth of their rows with the live
+answer (mean at most a tenth, so a hard-coded answer scores at most about 0.3), and every careless query wrong on at
+least one database. The ladder's databases come from new seeds plus planted rows that make every new rule bite for
+several customers (orders and wallet entries either side of the 23:00 cut-offs, big baskets on the withdrawn
+promotion's last day, orders of products before they move in or out of Gifts, chargebacks that were undone, subscriber
+orders on the lost day and at 23:xx UTC before a status change, big spenders with a cancelled order, fast-clock
+checkouts across the cut-offs, pairs of new customers with identical baskets for rank ties).
+
+**Marking** is the original test's. Customer list: `json` with `partitions: clusters` (pairwise F1) and the golden
+records as a set; because big groups hold many pairs, each golden email and phone is worth W = key pairs ÷ (2 ×
+groups) points (1 on L01–L05, then 2 / 2 / 4 / 5 / 6, stated in the prompt), which keeps grouping and golden records about
+equal on every level. Contract: three fields per change, trap fields 2 points, a listed non-change costs three fields
+at 2. Support: five fields per ticket, a trap ticket's decision and refund 5 points each. SQL: the `sql` scorer
+(share of matching rows, averaged over the four databases).
+
+**Measured spread** (`node verification/ladders-data-support/spread.mts`; scripted answers through the real scorers,
+score per level L01 → L10, %; pinned by the regression test):
+
+| Test | Reference | Careful with one slip | Careless | Do-nothing |
+|---|---|---|---|---|
+| Clean the Customer List: Ladder | 100 on every level | golden records from the master only: 88 / 100 / 94 / 92 / 91 / 89 / 92 / 91 / 90 / 89 | exact email or phone text only: 26 / 52 / 39 / 30 / 36 / 24 / 29 / 22 / 22 / 17 | 0 (merge everything 0–3, merge nothing 0) |
+| What Changed in the Contract?: Ladder | 100 | a re-pointed reference read as renumbering: 100 / 100 / 100 / 91 / 91 / 92 / 92 / 93 / 93 / 93 | old numbers, subtle changes missed, moved and re-sorted rows reported: 60 / 60 / 56 / 45 / 43 / 16 / 12 / 11 / 9 / 8 | 0 |
+| Ask the Database: Ladder | 100 | the mildest single slip: 0 / 56 / 40 / 96 / 53 / 93 / 93 / 90 / 96 / 93; the worst: 0 / 0 / 5 / 63 / 20 / 21 / 69 / 67 / 67 / 11 | — | `SELECT *` 0 |
+| Customer Support Queue: Ladder | 100 | reopened-ticket SLA and minimum-spend codes missed: 100 / 100 / 100 / 100 / 98 / 97 / 98 / 99 / 97 / 97 | refund everyone, P3, UTC as UK time: 83 / 59 / 49 / 44 / 55 / 48 / 42 / 48 / 40 / 43 | 0 |
+
+Other scripted answers per level: customer list without nicknames, Mac/Mc and typos 100 / 90 / 87 / 98 / 87 / 80 / 81
+/ 85 / 76 / 75 (fails every rung from L05), without the DOB block and the shared-mailbox rule 86–100; support queue
+with UTC times 84–100, with the money rules missed 91–97, without safety and fraud 85–100, obeying "I'm the manager"
+96–100. Random filler, `{}`, an empty reply and a copy of the prompt score at most 5% on every ladder; the scripted
+answers bound the scale, they are not models, and the levels' calibration against real models is still to be run.
+
+**Cost.** Input grows with the level and stays under 40k tokens at L10 (largest: the customer list, about 35k);
+L01 is 2.0k–3.2k tokens. The test estimates are the level means (customer list 13.5k in / 9k out, contract 13.2k /
+9k, SQL 3.5k / 6k, support 10.8k / 7k); every model gets the same 32,000-token output limit, and there is no
+answer-time limit.
+
 ## 8. The random baseline
 
 `random-baseline` makes no API calls. It picks a random offered action in simulations, a random letter or

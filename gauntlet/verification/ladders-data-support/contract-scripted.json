@@ -1,0 +1,4344 @@
+{
+ "work.contract-ladder": {
+  "L01": {
+   "careless": {
+    "changes": {
+     "4.1": {
+      "new": 8450,
+      "old": 12600,
+      "type": "amount"
+     },
+     "4.4": {
+      "new": 7.5,
+      "old": 5,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "9.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "4.1": {
+      "new": 8450,
+      "old": 12600,
+      "type": "amount"
+     },
+     "4.4": {
+      "new": 7.5,
+      "old": 5,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "L02": {
+   "careless": {
+    "changes": {
+     "10.1": {
+      "new": 90,
+      "old": 60,
+      "type": "days"
+     },
+     "10.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "10.3": {
+      "new": 3,
+      "old": 2,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "4.3": {
+      "new": 15,
+      "old": 25,
+      "type": "percent"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 3,
+      "type": "percent"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "10.1": {
+      "new": 90,
+      "old": 60,
+      "type": "days"
+     },
+     "10.3": {
+      "new": 3,
+      "old": 2,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "4.3": {
+      "new": 15,
+      "old": 25,
+      "type": "percent"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 3,
+      "type": "percent"
+     }
+    }
+   }
+  },
+  "L03": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 21,
+      "old": 21,
+      "type": "days"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "4.1": {
+      "new": 99.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "4.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "4.3": {
+      "new": 15,
+      "old": 20,
+      "type": "percent"
+     },
+     "6.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "6.2": {
+      "new": 5000000,
+      "old": 1000000,
+      "type": "amount"
+     },
+     "7.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "8.2": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "S1.2": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S2.4": {
+      "new": 90,
+      "old": 97.5,
+      "type": "percent"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.1": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "4.1": {
+      "new": 99.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "4.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "4.3": {
+      "new": 15,
+      "old": 20,
+      "type": "percent"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "6.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "6.2": {
+      "new": 5000000,
+      "old": 1000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "S1.2": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S2.4": {
+      "new": 90,
+      "old": 97.5,
+      "type": "percent"
+     }
+    }
+   }
+  },
+  "L04": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     },
+     "10.3": {
+      "new": 2,
+      "old": 6,
+      "type": "months"
+     },
+     "11.1": {
+      "new": 6,
+      "old": 12,
+      "type": "months"
+     },
+     "12.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": 24,
+      "old": 12,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "4.1": {
+      "new": 99.5,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "6.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "7.2": {
+      "new": 2,
+      "old": 3,
+      "type": "years"
+     },
+     "7.4": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.9": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S2.1": {
+      "new": 85,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.5": {
+      "new": 345,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.8": {
+      "new": 345,
+      "old": 420,
+      "type": "amount"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.3": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.3": {
+      "new": 2,
+      "old": 6,
+      "type": "months"
+     },
+     "11.1": {
+      "new": 6,
+      "old": 12,
+      "type": "months"
+     },
+     "12.3": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": 24,
+      "old": 12,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "3.5": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "4.1": {
+      "new": 99.5,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "6.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "7.2": {
+      "new": 2,
+      "old": 3,
+      "type": "years"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.9": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S2.1": {
+      "new": 85,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.5": {
+      "new": 345,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.8": {
+      "new": 345,
+      "old": 420,
+      "type": "amount"
+     }
+    }
+   }
+  },
+  "L05": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 14,
+      "old": 21,
+      "type": "days"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "11.2": {
+      "new": 14,
+      "old": 14,
+      "type": "days"
+     },
+     "12.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 8,
+      "type": "hours"
+     },
+     "4.2": {
+      "new": 5,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "4.3": {
+      "new": 20,
+      "old": 15,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 14975,
+      "old": 9250,
+      "type": "amount"
+     },
+     "5.2": {
+      "new": 60,
+      "old": 45,
+      "type": "days"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 8,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 90,
+      "old": 60,
+      "type": "days"
+     },
+     "6.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "8.2": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "S1.11": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.13": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.25": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.35": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.6": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S2.3": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.5": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.6": {
+      "new": 95,
+      "old": 98,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 85,
+      "old": 95,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 295,
+      "old": 295,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 180,
+      "old": 180,
+      "type": "amount"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.1": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "11.2": {
+      "new": 14,
+      "old": 21,
+      "type": "days"
+     },
+     "11.3": {
+      "new": 6,
+      "old": 2,
+      "type": "months"
+     },
+     "13.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 8,
+      "type": "hours"
+     },
+     "3.5": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "4.2": {
+      "new": 5,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "4.3": {
+      "new": 20,
+      "old": 15,
+      "type": "percent"
+     },
+     "5.1": {
+      "new": 14975,
+      "old": 9250,
+      "type": "amount"
+     },
+     "5.2": {
+      "new": 60,
+      "old": 45,
+      "type": "days"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "5.4": {
+      "new": 4,
+      "old": 8,
+      "type": "percent"
+     },
+     "5.5": {
+      "new": 90,
+      "old": 60,
+      "type": "days"
+     },
+     "6.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "6.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "7.1": {
+      "new": "Customer",
+      "old": "Supplier",
+      "type": "party"
+     },
+     "9.2": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "9.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "S1.11": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.13": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.25": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.35": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.6": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S2.3": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.5": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.6": {
+      "new": 95,
+      "old": 98,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 85,
+      "old": 95,
+      "type": "percent"
+     }
+    }
+   }
+  },
+  "L06": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "12.1": {
+      "new": 180,
+      "old": 90,
+      "type": "days"
+     },
+     "12.2": {
+      "new": 30,
+      "old": 14,
+      "type": "days"
+     },
+     "12.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "13.1": {
+      "new": 12,
+      "old": 18,
+      "type": "months"
+     },
+     "13.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "14.10": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 8,
+      "old": 4,
+      "type": "hours"
+     },
+     "5.1": {
+      "new": 99,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "7.1": {
+      "new": 12600,
+      "old": 9250,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 60,
+      "old": 45,
+      "type": "days"
+     },
+     "8.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 5000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "9.2": {
+      "new": 3,
+      "old": 5,
+      "type": "years"
+     },
+     "S1.12": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.14": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.25": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.30": {
+      "new": 4,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.37": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.44": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.6": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S2.8": {
+      "new": 98,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.16": {
+      "new": 345,
+      "old": 210,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 210,
+      "old": 210,
+      "type": "amount"
+     },
+     "S3.4": {
+      "new": 245,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.6": {
+      "new": 295,
+      "old": 345,
+      "type": "amount"
+     },
+     "S3.9": {
+      "new": 320,
+      "old": 245,
+      "type": "amount"
+     },
+     "S4.11": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.12": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.14": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.15": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.20": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.3": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.2": {
+      "new": 3,
+      "old": 5,
+      "type": "years"
+     },
+     "11.2": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "11.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "13.1": {
+      "new": 180,
+      "old": 90,
+      "type": "days"
+     },
+     "13.2": {
+      "new": 30,
+      "old": 14,
+      "type": "days"
+     },
+     "13.3": {
+      "new": 2,
+      "old": 3,
+      "type": "months"
+     },
+     "14.1": {
+      "new": 12,
+      "old": 18,
+      "type": "months"
+     },
+     "14.10": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "15.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.5": {
+      "new": 8,
+      "old": 4,
+      "type": "hours"
+     },
+     "3.6": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "4.2": {
+      "new": "Supplier",
+      "old": "Customer",
+      "type": "party"
+     },
+     "5.1": {
+      "new": 99,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "7.1": {
+      "new": 12600,
+      "old": 9250,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 60,
+      "old": 45,
+      "type": "days"
+     },
+     "7.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "8.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "8.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.1": {
+      "new": 2000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "9.2": {
+      "new": 5000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "9.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "S1.11": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.14": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.25": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.29": {
+      "new": 4,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.36": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.44": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.5": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S2.8": {
+      "new": 98,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 320,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.10": {
+      "new": 345,
+      "old": 210,
+      "type": "amount"
+     },
+     "S3.15": {
+      "new": 295,
+      "old": 345,
+      "type": "amount"
+     },
+     "S3.3": {
+      "new": 210,
+      "old": 420,
+      "type": "amount"
+     },
+     "S4.11": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.12": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.14": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.15": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.20": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     }
+    }
+   }
+  },
+  "L07": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 48,
+      "old": 24,
+      "type": "hours"
+     },
+     "11.2": {
+      "new": 150000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "12.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "12.2": {
+      "new": 21,
+      "old": 14,
+      "type": "days"
+     },
+     "12.3": {
+      "new": 6,
+      "old": 2,
+      "type": "months"
+     },
+     "13.1": {
+      "new": 12,
+      "old": 18,
+      "type": "months"
+     },
+     "13.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "14.2": {
+      "new": 21,
+      "old": 21,
+      "type": "days"
+     },
+     "14.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.8": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "2.1": {
+      "new": 12,
+      "old": 36,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "5.1": {
+      "new": 98.5,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "5.2": {
+      "new": 10,
+      "old": 5,
+      "type": "percent"
+     },
+     "7.1": {
+      "new": 8450,
+      "old": 12600,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 45,
+      "old": 60,
+      "type": "days"
+     },
+     "7.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "7.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 2,
+      "old": 5,
+      "type": "years"
+     },
+     "S1.1": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.13": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.17": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.32": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.36": {
+      "new": 8,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.40": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.43": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.44": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.48": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.58": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.60": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.61": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.7": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S2.4": {
+      "new": 98,
+      "old": 85,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 98,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 180,
+      "old": 180,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 295,
+      "old": 295,
+      "type": "amount"
+     },
+     "S3.4": {
+      "new": 245,
+      "old": 345,
+      "type": "amount"
+     },
+     "S4.1": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.15": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.2": {
+      "new": 4,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.24": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.30": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.31": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.34": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.43": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.63": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.70": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.2": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.1": {
+      "new": "Customer",
+      "old": "Supplier",
+      "type": "party"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "11.2": {
+      "new": 2,
+      "old": 5,
+      "type": "years"
+     },
+     "12.3": {
+      "new": 48,
+      "old": 24,
+      "type": "hours"
+     },
+     "12.4": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "13.1": {
+      "new": 150000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "14.1": {
+      "new": 180,
+      "old": 90,
+      "type": "days"
+     },
+     "14.2": {
+      "new": 21,
+      "old": 14,
+      "type": "days"
+     },
+     "14.3": {
+      "new": 6,
+      "old": 2,
+      "type": "months"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.8": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "15.1": {
+      "new": 12,
+      "old": 18,
+      "type": "months"
+     },
+     "16.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.1": {
+      "new": 12,
+      "old": 36,
+      "type": "months"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.2": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "4.5": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "6.1": {
+      "new": 98.5,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "6.2": {
+      "new": 10,
+      "old": 5,
+      "type": "percent"
+     },
+     "8.1": {
+      "new": 8450,
+      "old": 12600,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 45,
+      "old": 60,
+      "type": "days"
+     },
+     "8.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "8.5": {
+      "new": 5,
+      "old": 3,
+      "type": "percent"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.1": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.12": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.17": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.30": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.34": {
+      "new": 8,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.38": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.41": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.42": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.48": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.57": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.6": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.60": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.61": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S2.4": {
+      "new": 98,
+      "old": 85,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 98,
+      "old": 99,
+      "type": "percent"
+     },
+     "S3.16": {
+      "new": 245,
+      "old": 345,
+      "type": "amount"
+     },
+     "S4.11": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.12": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.16": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.30": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.31": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.34": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.43": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.52": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     }
+    }
+   }
+  },
+  "L08": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "11.2": {
+      "new": 1000000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "12.1": {
+      "new": 180,
+      "old": 60,
+      "type": "days"
+     },
+     "12.3": {
+      "new": 2,
+      "old": 3,
+      "type": "months"
+     },
+     "12.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "13.1": {
+      "new": 18,
+      "old": 6,
+      "type": "months"
+     },
+     "13.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "14.4": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "16.8": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "16.9": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.1": {
+      "new": 36,
+      "old": 24,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 2,
+      "type": "hours"
+     },
+     "4.4": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "5.1": {
+      "new": 99.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "5.2": {
+      "new": 2.5,
+      "old": 5,
+      "type": "percent"
+     },
+     "6.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.4": {
+      "new": 3,
+      "old": 8,
+      "type": "percent"
+     },
+     "7.5": {
+      "new": 60,
+      "old": 90,
+      "type": "days"
+     },
+     "8.1": {
+      "new": 10000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 2,
+      "old": 5,
+      "type": "years"
+     },
+     "S1.13": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.17": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.19": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.23": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.25": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.36": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.38": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.42": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.56": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.64": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.78": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.79": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.80": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.9": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S2.1": {
+      "new": 85,
+      "old": 95,
+      "type": "percent"
+     },
+     "S2.11": {
+      "new": 95,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 99,
+      "old": 90,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 245,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.13": {
+      "new": 320,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.14": {
+      "new": 210,
+      "old": 320,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 320,
+      "old": 320,
+      "type": "amount"
+     },
+     "S3.4": {
+      "new": 180,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.7": {
+      "new": 260,
+      "old": 320,
+      "type": "amount"
+     },
+     "S4.1": {
+      "new": 6,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.107": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.15": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.16": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.2": {
+      "new": 4,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.24": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.25": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.39": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.40": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.49": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.6": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.75": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.80": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.86": {
+      "new": 4,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.91": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.94": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.96": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.99": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.1": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.1": {
+      "new": 10000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "10.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "11.2": {
+      "new": 2,
+      "old": 5,
+      "type": "years"
+     },
+     "12.2": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "12.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "12.4": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "13.1": {
+      "new": 1000000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "14.1": {
+      "new": 180,
+      "old": 60,
+      "type": "days"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.3": {
+      "new": 2,
+      "old": 3,
+      "type": "months"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "15.1": {
+      "new": 18,
+      "old": 6,
+      "type": "months"
+     },
+     "16.3": {
+      "new": "Northern Ireland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.1": {
+      "new": 36,
+      "old": 24,
+      "type": "months"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.2": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "4.4": {
+      "new": 4,
+      "old": 2,
+      "type": "hours"
+     },
+     "4.5": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.2": {
+      "new": "Supplier",
+      "old": "Customer",
+      "type": "party"
+     },
+     "5.4": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "5.5": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "6.1": {
+      "new": 99.5,
+      "old": 99,
+      "type": "percent"
+     },
+     "6.2": {
+      "new": 2.5,
+      "old": 5,
+      "type": "percent"
+     },
+     "7.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.7": {
+      "new": "Customer",
+      "old": "Supplier",
+      "type": "party"
+     },
+     "8.4": {
+      "new": 3,
+      "old": 8,
+      "type": "percent"
+     },
+     "8.5": {
+      "new": 60,
+      "old": 90,
+      "type": "days"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.13": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.14": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.16": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.2": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.22": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.23": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.3": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.34": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.36": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.40": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.54": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.62": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.7": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.76": {
+      "new": 4,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.79": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.80": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S2.1": {
+      "new": 85,
+      "old": 95,
+      "type": "percent"
+     },
+     "S2.11": {
+      "new": 95,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S2.9": {
+      "new": 99,
+      "old": 90,
+      "type": "percent"
+     },
+     "S3.12": {
+      "new": 320,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.13": {
+      "new": 210,
+      "old": 320,
+      "type": "amount"
+     },
+     "S3.14": {
+      "new": 260,
+      "old": 320,
+      "type": "amount"
+     },
+     "S3.8": {
+      "new": 180,
+      "old": 245,
+      "type": "amount"
+     },
+     "S4.107": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.15": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.19": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.3": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.35": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.46": {
+      "new": 4,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.49": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.5": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.53": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.60": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.65": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.70": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.90": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.93": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.94": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.96": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.99": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     }
+    }
+   }
+  },
+  "L09": {
+   "careless": {
+    "changes": {
+     "11.2": {
+      "new": 500000,
+      "old": 1000000,
+      "type": "amount"
+     },
+     "12.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "12.3": {
+      "new": 2,
+      "old": 3,
+      "type": "months"
+     },
+     "13.1": {
+      "new": 12,
+      "old": 6,
+      "type": "months"
+     },
+     "13.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.2": {
+      "new": 30,
+      "old": 30,
+      "type": "days"
+     },
+     "14.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "14.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "16.8": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.1": {
+      "new": 24,
+      "old": 12,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 4,
+      "old": 2,
+      "type": "hours"
+     },
+     "4.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.4": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "5.1": {
+      "new": 99,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "5.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "5.3": {
+      "new": 25,
+      "old": 15,
+      "type": "percent"
+     },
+     "6.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.1": {
+      "new": 14975,
+      "old": 12600,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 30,
+      "old": 60,
+      "type": "days"
+     },
+     "7.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "7.5": {
+      "new": 60,
+      "old": 30,
+      "type": "days"
+     },
+     "8.1": {
+      "new": 5000000,
+      "old": 10000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 2,
+      "old": 3,
+      "type": "years"
+     },
+     "S1.1": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.10": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.100": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.15": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.16": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.17": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.2": {
+      "new": 1,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.25": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.30": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.33": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.35": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.40": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.42": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.49": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.56": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.57": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.65": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.7": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.70": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.72": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.75": {
+      "new": 8,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.79": {
+      "new": 8,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.80": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.91": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.98": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S2.7": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 295,
+      "old": 295,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 180,
+      "old": 180,
+      "type": "amount"
+     },
+     "S3.6": {
+      "new": 260,
+      "old": 245,
+      "type": "amount"
+     },
+     "S4.1": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.106": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.107": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.110": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.117": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.13": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.131": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.133": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.135": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.137": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.151": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.158": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.163": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.166": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.167": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.172": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.179": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.2": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.44": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.56": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.61": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.64": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.66": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.69": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.71": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.79": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.87": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.99": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.1": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.1": {
+      "new": 5000000,
+      "old": 10000000,
+      "type": "amount"
+     },
+     "10.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "11.2": {
+      "new": 2,
+      "old": 3,
+      "type": "years"
+     },
+     "12.4": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "13.1": {
+      "new": 500000,
+      "old": 1000000,
+      "type": "amount"
+     },
+     "14.1": {
+      "new": 60,
+      "old": 180,
+      "type": "days"
+     },
+     "14.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.3": {
+      "new": 2,
+      "old": 3,
+      "type": "months"
+     },
+     "14.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "15.1": {
+      "new": 12,
+      "old": 6,
+      "type": "months"
+     },
+     "16.3": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.1": {
+      "new": 24,
+      "old": 12,
+      "type": "months"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "4.5": {
+      "new": 4,
+      "old": 2,
+      "type": "hours"
+     },
+     "4.6": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.2": {
+      "new": "Supplier",
+      "old": "Customer",
+      "type": "party"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.4": {
+      "new": 72,
+      "old": 24,
+      "type": "hours"
+     },
+     "6.1": {
+      "new": 99,
+      "old": 99.5,
+      "type": "percent"
+     },
+     "6.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "6.3": {
+      "new": 25,
+      "old": 15,
+      "type": "percent"
+     },
+     "7.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.7": {
+      "new": "Customer",
+      "old": "Supplier",
+      "type": "party"
+     },
+     "8.1": {
+      "new": 14975,
+      "old": 12600,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 30,
+      "old": 60,
+      "type": "days"
+     },
+     "8.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "8.5": {
+      "new": 60,
+      "old": 30,
+      "type": "days"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.10": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.14": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.15": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.17": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.18": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.30": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.33": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.35": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.38": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.39": {
+      "new": 8,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.5": {
+      "new": 8,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.52": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.6": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.62": {
+      "new": 6,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.65": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.7": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.70": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.74": {
+      "new": 8,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.86": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.88": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.91": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.96": {
+      "new": 8,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.97": {
+      "new": 1,
+      "old": 8,
+      "type": "number"
+     },
+     "S2.7": {
+      "new": 98,
+      "old": 97.5,
+      "type": "percent"
+     },
+     "S3.11": {
+      "new": 260,
+      "old": 245,
+      "type": "amount"
+     },
+     "S4.107": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.111": {
+      "new": 4,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.112": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.118": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.119": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.122": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.13": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.138": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.14": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.15": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.162": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.17": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.170": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.171": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.172": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.175": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.47": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.61": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.63": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.66": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.71": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.79": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.84": {
+      "new": 4,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.89": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.94": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.98": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.99": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     }
+    }
+   }
+  },
+  "L10": {
+   "careless": {
+    "changes": {
+     "10.2": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "11.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "11.2": {
+      "new": 1000000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "12.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "12.2": {
+      "new": 21,
+      "old": 14,
+      "type": "days"
+     },
+     "12.3": {
+      "new": 2,
+      "old": 6,
+      "type": "months"
+     },
+     "13.1": {
+      "new": 6,
+      "old": 12,
+      "type": "months"
+     },
+     "13.3": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "14.10": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.2": {
+      "new": 21,
+      "old": 21,
+      "type": "days"
+     },
+     "14.4": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "14.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.8": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "16.7": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.1": {
+      "new": 12,
+      "old": 24,
+      "type": "months"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.4": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "4.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.4": {
+      "new": 48,
+      "old": 24,
+      "type": "hours"
+     },
+     "5.1": {
+      "new": 99.5,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "5.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "5.3": {
+      "new": 15,
+      "old": 25,
+      "type": "percent"
+     },
+     "6.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.1": {
+      "new": 14975,
+      "old": 12600,
+      "type": "amount"
+     },
+     "7.2": {
+      "new": 45,
+      "old": 30,
+      "type": "days"
+     },
+     "7.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "7.5": {
+      "new": 3,
+      "old": 7.5,
+      "type": "percent"
+     },
+     "8.1": {
+      "new": 10000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": 5,
+      "old": 2,
+      "type": "years"
+     },
+     "S1.1": {
+      "new": 6,
+      "old": 6,
+      "type": "number"
+     },
+     "S1.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.116": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.117": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.118": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.16": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.17": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.2": {
+      "new": 8,
+      "old": 8,
+      "type": "number"
+     },
+     "S1.22": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.23": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.25": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.28": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.36": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.50": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.54": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.55": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.61": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.7": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.71": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.76": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.8": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S2.3": {
+      "new": 98,
+      "old": 90,
+      "type": "percent"
+     },
+     "S3.1": {
+      "new": 245,
+      "old": 245,
+      "type": "amount"
+     },
+     "S3.14": {
+      "new": 295,
+      "old": 380,
+      "type": "amount"
+     },
+     "S3.2": {
+      "new": 260,
+      "old": 260,
+      "type": "amount"
+     },
+     "S4.1": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.100": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.109": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.113": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.12": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.120": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.124": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.129": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.132": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.137": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.14": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.142": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.144": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.146": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.163": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.170": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.172": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.176": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.177": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.184": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.191": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.195": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.2": {
+      "new": 2,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.20": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.204": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.214": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.217": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.220": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.224": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.227": {
+      "new": 4,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.229": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.231": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.237": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.242": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.245": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.248": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.27": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.38": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.42": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.49": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.50": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.54": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.71": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.72": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.96": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     }
+    }
+   },
+   "slip": {
+    "changes": {
+     "1.2": {
+      "new": null,
+      "old": null,
+      "type": "definition"
+     },
+     "10.1": {
+      "new": 10000000,
+      "old": 5000000,
+      "type": "amount"
+     },
+     "10.2": {
+      "new": 1000000,
+      "old": 2000000,
+      "type": "amount"
+     },
+     "10.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "11.3": {
+      "new": 5,
+      "old": 2,
+      "type": "years"
+     },
+     "12.3": {
+      "new": 24,
+      "old": 48,
+      "type": "hours"
+     },
+     "12.4": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "13.1": {
+      "new": 1000000,
+      "old": 500000,
+      "type": "amount"
+     },
+     "14.1": {
+      "new": 180,
+      "old": 60,
+      "type": "days"
+     },
+     "14.10": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.2": {
+      "new": 21,
+      "old": 14,
+      "type": "days"
+     },
+     "14.3": {
+      "new": 2,
+      "old": 6,
+      "type": "months"
+     },
+     "14.5": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.6": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "14.8": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "15.1": {
+      "new": 6,
+      "old": 12,
+      "type": "months"
+     },
+     "16.3": {
+      "new": "Scotland",
+      "old": "England and Wales",
+      "type": "governing_law"
+     },
+     "2.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "2.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "3.1": {
+      "new": 12,
+      "old": 24,
+      "type": "months"
+     },
+     "3.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "4.3": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "4.5": {
+      "new": 2,
+      "old": 4,
+      "type": "hours"
+     },
+     "4.6": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.2": {
+      "new": "Supplier",
+      "old": "Customer",
+      "type": "party"
+     },
+     "5.3": {
+      "new": null,
+      "old": null,
+      "type": "obligation"
+     },
+     "5.4": {
+      "new": 48,
+      "old": 24,
+      "type": "hours"
+     },
+     "5.5": {
+      "new": null,
+      "old": null,
+      "type": "negation"
+     },
+     "6.1": {
+      "new": 99.5,
+      "old": 98.5,
+      "type": "percent"
+     },
+     "6.2": {
+      "new": 10,
+      "old": 2.5,
+      "type": "percent"
+     },
+     "6.3": {
+      "new": 15,
+      "old": 25,
+      "type": "percent"
+     },
+     "7.3": {
+      "new": 20,
+      "old": 10,
+      "type": "days"
+     },
+     "7.7": {
+      "new": "Customer",
+      "old": "Supplier",
+      "type": "party"
+     },
+     "8.1": {
+      "new": 14975,
+      "old": 12600,
+      "type": "amount"
+     },
+     "8.2": {
+      "new": 45,
+      "old": 30,
+      "type": "days"
+     },
+     "8.4": {
+      "new": 8,
+      "old": 4,
+      "type": "percent"
+     },
+     "8.5": {
+      "new": 3,
+      "old": 7.5,
+      "type": "percent"
+     },
+     "9.1": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "9.2": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.102": {
+      "new": 1,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.11": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.110": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S1.116": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.117": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.118": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.12": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.17": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.19": {
+      "new": 12,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.25": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.44": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.51": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.55": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.61": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.7": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S1.71": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S1.77": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S1.79": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.87": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S1.94": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S1.99": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S2.3": {
+      "new": 98,
+      "old": 90,
+      "type": "percent"
+     },
+     "S3.10": {
+      "new": 295,
+      "old": 380,
+      "type": "amount"
+     },
+     "S4.112": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.116": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.118": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.12": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.121": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.124": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.127": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.13": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.136": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.141": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.145": {
+      "new": 12,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.15": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.157": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.159": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.162": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.166": {
+      "new": 6,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.184": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.194": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.195": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.20": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.214": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.217": {
+      "new": 4,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.235": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.238": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.24": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.248": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.255": {
+      "new": 1,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.256": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.258": {
+      "new": 2,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.259": {
+      "new": 6,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.260": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.27": {
+      "new": null,
+      "old": null,
+      "type": "deleted"
+     },
+     "S4.3": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.32": {
+      "new": 4,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.4": {
+      "new": 6,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.43": {
+      "new": 2,
+      "old": 4,
+      "type": "number"
+     },
+     "S4.47": {
+      "new": 2,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.49": {
+      "new": null,
+      "old": null,
+      "type": "added"
+     },
+     "S4.75": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.81": {
+      "new": 12,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.84": {
+      "new": 1,
+      "old": 12,
+      "type": "number"
+     },
+     "S4.89": {
+      "new": 12,
+      "old": 6,
+      "type": "number"
+     },
+     "S4.90": {
+      "new": 2,
+      "old": 1,
+      "type": "number"
+     },
+     "S4.94": {
+      "new": 1,
+      "old": 2,
+      "type": "number"
+     },
+     "S4.97": {
+      "new": 6,
+      "old": 1,
+      "type": "number"
+     }
+    }
+   }
+  }
+ }
+}
