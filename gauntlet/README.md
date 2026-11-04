@@ -370,10 +370,10 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 
 | Test | Id | What it does |
 |---|---|---|
-| Clean the Customer List: Ladder | `work.crm-ladder` | From 24 customer records to 1,000: how far up the clean-up ladder can it merge without merging two different people? |
-| What Changed in the Contract?: Ladder | `work.contract-ladder` | From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change or inventing one? |
-| Ask the Database: Ladder | `work.sql-ladder` | From one table and one rule to ten tables and a five-point memo: how deep a query can it get right? |
-| Customer Support Queue: Ladder | `work.support-ladder` | From four easy returns to 120 tangled tickets: how far up the support queue can it climb by the handbook? |
+| Clean the Customer List: Ladder | `work.crm-ladder` | From 24 records to 950, merged one decision at a time: can an early merge send a later one wrong? |
+| What Changed in the Contract?: Ladder | `work.contract-ladder` | Two drafts, a response and a final note: what was actually agreed, clause by clause? |
+| Ask the Database: Ladder | `work.sql-ladder` | From one count to a budget run where every pick changes the next: how deep a query can it write? |
+| Customer Support Queue: Ladder | `work.support-ladder` | Four easy returns up to 120 tickets that hang on each customer’s history: how far can it climb? |
 
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests

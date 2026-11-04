@@ -94,36 +94,33 @@ test('input size: level 1 is small, level 10 stays under ~40k tokens', () => {
 });
 
 test('growth: every level is strictly bigger or deeper than the one below', () => {
-  // Customer list: more records every level; from level 5 more pairs that only a chain joins, more planted look-alikes, chains no shorter.
+  // Customer list: more records every level; from level 3 more merges refused by the ordered merge procedure.
   const crm = growth['work.crm-ladder']!;
   increasing(def('work.crm-ladder').cases.map((c) => Number(/: (\d+) records\./.exec(c.prompt!)![1])), 'crm records');
-  increasing(crm.map((g) => Number(g.chainOnlyPairs)).slice(4), 'crm chain-only pairs');
-  increasing(crm.map((g) => Number(g.distractors)), 'crm distractors', false);
-  increasing(crm.map((g) => Number(g.chainDepth)), 'crm chain depth', false);
-  assert.ok(Number(crm[9]!.chainDepth) >= 6 && Number(crm[4]!.chainDepth) >= 2);
-  // Support queue: more tickets every level, rule families never fewer, more trap tickets.
+  increasing(crm.map((g) => Number(g.refusedMerges)).slice(2), 'crm refused merges');
+  assert.ok(/MERGING PROCEDURE/.test(def('work.crm-ladder').cases[2]!.prompt!) && !/MERGING PROCEDURE/.test(def('work.crm-ladder').cases[1]!.prompt!));
+  // Support queue: more tickets every level; from level 3 more accounts and never fewer tickets changed by account history.
   const sup = growth['work.support-ladder']!;
   increasing(def('work.support-ladder').cases.map((c) => Object.keys((c.expected as { tickets: object }).tickets).length), 'support tickets');
-  increasing(sup.map((g) => Number(g.families)), 'support rule families', false);
-  increasing(sup.map((g) => Number(g.trapTickets)).slice(3), 'support trap tickets');
-  assert.equal(sup[0]!.families, 2);
-  // Contract: longer drafts, more changes, more renumbering, more re-pointed references.
+  increasing(sup.map((g) => Number(g.accounts)).slice(2), 'support accounts', false);
+  increasing(sup.map((g) => Number(g.changedByAccounts)).slice(2), 'support tickets changed by account limits', false);
+  assert.ok(Number(sup[9]!.changedByAccounts) > 3 * Number(sup[3]!.changedByAccounts));
+  // Contract: longer drafts, more version-2 changes, more response and note items, more clauses renumbered by settlement.
   const k = def('work.contract-ladder').cases;
   increasing(k.map((c) => c.prompt!.length), 'contract length');
-  increasing(k.map((c) => Object.keys((c.expected as { changes: object }).changes).length), 'contract changes');
-  const types = (c: (typeof k)[number]) => Object.values((c.expected as { changes: Record<string, { type: string }> }).changes).map((x) => x.type);
-  increasing(k.map((c) => new Set(types(c)).size), 'contract change kinds', false);
-  increasing(k.map((c) => types(c).filter((t) => t === 'cross_reference').length).slice(3), 'contract re-pointed references');
-  // SQL: more tables (never fewer), more rules and memo items every level, longer questions from level 5.
+  const count = (c: (typeof k)[number], re: RegExp) => (c.prompt!.match(re) ?? []).length;
+  increasing(k.map((c) => count(c, /^R\d+\. /gm)), 'contract response items');
+  increasing(k.map((c) => count(c, /^N\d+\. (?!Nothing)/gm)), 'contract note items', false);
+  assert.ok(count(k[9]!, /^N\d+\. /gm) >= 20);
+  // SQL: more semantics composed every level; the reference reads the tables the depth table says.
   const s = def('work.sql-ladder').cases;
-  increasing(DEPTH.map((d) => d.rules), 'sql rules');
-  increasing(DEPTH.map((d) => d.tables), 'sql tables', false);
+  increasing(DEPTH.map((d) => d.rules), 'sql semantics');
   const tables = ['dim_product', 'dim_customer', 'dim_product_category_history', 'dim_price_history', 'fact_orders', 'fact_order_lines', 'promotions', 'promotion_products', 'events_raw', 'subscription_status_daily', 'wallet_ledger'];
   s.forEach((c, i) => {
     const used = tables.filter((t) => new RegExp(`\\b${t}\\b`).test((c.expected as SqlExpected).reference)).length;
     assert.equal(used, DEPTH[i]!.tables, `${c.id}: the reference reads ${used} tables`);
   });
-  increasing(s.map((c) => c.prompt!.length).slice(4), 'sql question length');
+  assert.match((s[7]!.expected as SqlExpected).reference, /WITH RECURSIVE/);
 });
 
 test('every reference answer scores 100, fenced or not, with words around it', async () => {
@@ -219,27 +216,35 @@ test('do-nothing, copied-prompt and random-filler answers score at most 5% on ev
   }
 });
 
-test('the spread per level: careless answers fail every rung, careful answers with one slip stay close to the pass mark', async () => {
-  const at = async (id: string, kind: string) => Promise.all(LEVELS.map(async (lv) => score(id, lv, asJson(scripted[id]![lv]![kind]))));
+test('the spread per level: careless answers fail, and from level 3 ignoring the chained rules fails the rung', async () => {
+  const at = async (id: string, kind: string) => Promise.all(LEVELS.map(async (lv) => (scripted[id]![lv]![kind] === undefined ? NaN : score(id, lv, asJson(scripted[id]![lv]![kind])))));
   const crmCareless = await at('work.crm-ladder', 'careless');
-  const crmSlip = await at('work.crm-ladder', 'careful_human_slips');
   const supCareless = await at('work.support-ladder', 'careless');
-  const supSlip = await at('work.support-ladder', 'careful_human_slips');
-  const kCareless = await at('work.contract-ladder', 'careless');
-  const kSlip = await at('work.contract-ladder', 'slip');
+  const kCareless = await at('work.contract-ladder', 'old_careless');
   for (const [i, lv] of LEVELS.entries()) {
     assert.ok(crmCareless[i]! < 0.6, `crm ${lv} careless ${crmCareless[i]}`);
     assert.ok(supCareless[i]! < 0.9, `support ${lv} careless ${supCareless[i]}`);
     assert.ok(kCareless[i]! < 0.65, `contract ${lv} careless ${kCareless[i]}`);
-    assert.ok(crmSlip[i]! >= 0.85 && crmSlip[i]! <= 1, `crm ${lv} slip ${crmSlip[i]}`);
-    assert.ok(supSlip[i]! >= 0.9, `support ${lv} slip ${supSlip[i]}`);
-    assert.ok(kSlip[i]! >= 0.9, `contract ${lv} slip ${kSlip[i]}`);
   }
-  // The careless readers get worse as the levels grow.
-  assert.ok(kCareless[9]! < kCareless[0]! && crmCareless[9]! < crmCareless[1]! && supCareless[9]! < supCareless[0]!);
-  // From level 5 on, the strict-name reader (no nicknames, Mac/Mc or typos) fails every rung of the customer list.
-  const strict = await at('work.crm-ladder', 'flawed_strict_names');
-  for (let i = 4; i < 10; i++) assert.ok(strict[i]! < 0.9, `crm L${i + 1} strict names ${strict[i]}`);
+  // Customer list: plain union-find (the business pack's procedure) and the old survivorship fail from where they appear.
+  const uf = await at('work.crm-ladder', 'business_pack_union_find');
+  const surv = await at('work.crm-ladder', 'slip_old_survivorship');
+  for (let i = 2; i < 10; i++) assert.ok(uf[i]! < 0.93, `crm L${i + 1} union-find ${uf[i]}`);
+  for (let i = 3; i < 10; i++) assert.ok(surv[i]! < 0.8, `crm L${i + 1} old survivorship ${surv[i]}`);
+  // Support: deciding every ticket on its own facts (no account limits) fails every rung from level 3.
+  const solo = await at('work.support-ladder', 'careful_ignores_account_rules');
+  for (let i = 2; i < 10; i++) assert.ok(solo[i]! < 0.9, `support L${i + 1} without account limits ${solo[i]}`);
+  // Contract: reading version 2 as agreed fails from level 2; keeping version 2's numbers or letting a general statement beat a specific item fails from level 5.
+  const asIs = await at('work.contract-ladder', 'careless');
+  const v2n = await at('work.contract-ladder', 'slip_v2_numbering');
+  const gen = await at('work.contract-ladder', 'slip_general_beats_specific');
+  for (let i = 1; i < 10; i++) assert.ok(asIs[i]! < 0.9, `contract L${i + 1} version 2 as agreed ${asIs[i]}`);
+  for (let i = 4; i < 10; i++) assert.ok(v2n[i]! < 0.5 && gen[i]! < 0.8, `contract L${i + 1} numbering ${v2n[i]} / general ${gen[i]}`);
+  // Single slips in the chained rules still earn most of their points (no single root error zeroes a rung).
+  for (const [id, kind] of [['work.support-ladder', 'slip_no_escalation_memory'], ['work.crm-ladder', 'slip_ignores_vip_master'], ['work.contract-ladder', 'slip_counter_without_note']] as const) {
+    const xs = (await at(id, kind)).filter((x) => !Number.isNaN(x));
+    assert.ok(xs.every((x) => x > 0.7 && x <= 1) && xs.filter((x) => x < 1).length >= xs.length - 2, `${id} ${kind}: ${xs.join(', ')}`);
+  }
 });
 
 test('scoring is deterministic', async () => {

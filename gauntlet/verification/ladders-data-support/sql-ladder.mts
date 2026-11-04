@@ -1,19 +1,24 @@
 // "Ask the Database: Ladder" (work.sql-ladder): ten frozen questions on Copperline Coffee's warehouse (the schema,
 // rules and generator of work.sql-hard, verification/realworld-sql/warehouse.mts), each one query deeper than the
-// one before. Growth is query depth, not table size: tables joined, warehouse rules and memo amendments applied,
-// query stages.
+// one before. Growth is query depth, not table size: the number of subtle semantics one query has to compose
+// correctly, and from level 6 state that carries from row to row (a calendar, as-of chain resolution, sessions, a
+// budget run where every pick changes the later ones).
 //
-//   L01  1 table, 1 rule        paid orders and customers per channel
-//   L02  1 table, 2 rules       deduplicated app events in a UK-local week
-//   L03  4 tables, 3 rules      orders and revenue per UK day over the clock change, historical prices (= sql-hard h01)
-//   L04  5 tables, 4 rules      top two per category with ties across a category move (= h04)
-//   L05  6 tables, 8 rules      the best single promotion per line under four conditions (= h08, the current hard case)
-//   L06  6 tables, 10 rules     a per-customer Q2 review: gross, best-promotion discount, net; memo item 1
-//   L07  6 tables, 12 rules     + the 23:00 quarter cut-off and "no promotion on gift lines" by the category history
-//   L08  8 tables, 15 rules     + UK and Ireland only, wallet spend through reversal chains in UK local time
-//   L09  9 tables, 19 rules     + subscriber orders through the lost snapshot day, an ordered segment rule list with
-//                               an exception (memo item 5)
-//   L10  10 tables, 22 rules    + deduplicated, clock-corrected app checkouts and a rank within each segment
+//   L01  paid orders and customers per channel (1 rule)
+//   L02  deduplicated app events in a UK-local week (2)
+//   L03  top two per category with ties across a category move (= sql-hard h04) (4)
+//   L04  lowest and end-of-UK-day wallet balances through reversal chains (= h07) (5)
+//   L05  app sessions after deduplication with the earliest ingestion and fast-clock correction (= h09) (6)
+//   L06  balances as known each April evening vs restated with every later reversal: a calendar with carried
+//        balances and rule 6 evaluated as of each date (7)
+//   L07  sessions of L05 joined to the paid app orders that fall in [first event, last event + 30 min], at
+//        historical prices, by the UK date the session started (8)
+//   L08  promotion budgets used up line by line in time order: each line takes the best promotion that still fits
+//        and falls back otherwise (a recursive CTE carrying seven budgets) (10)
+//   L09  + one use per customer per promotion (later orders blocked, the same order not), gift lines by the category
+//        at the order moment, a memo override (13)
+//   L10  + partial last use of a budget unless under £0.50 (then skipped but kept for smaller lines), the 23:00 UK
+//        quarter cut-off (16)
 //
 // The scorer is the `sql` scorer with hidden variant databases, exactly as for the other SQL tests: buildPack()
 // (verification/realworld-sql/build.mts) runs every check on every level: the reference query equals an independent
@@ -147,6 +152,74 @@ export function generateLadderWarehouse(seed: number): { tables: Tables } {
     events.push([evid++, c, 'checkout', `${fast}${s}:30`, `${real}${s}:40`]);
   }
   events.sort((a, b) => Number(a[0]) - Number(b[0]));
+  // 9. April chargebacks for the restated balances (L06): a purchase that takes a wallet below zero for the evening,
+  //    reversed the next day, and in some wallets the reversal undone (and once undone again) a few days later; plus a
+  //    late-evening purchase in BST (23:xx UTC is the next UK date).
+  {
+    const r9 = createRng(seed).fork('ladder-plants-wallet');
+    const two = (n: number) => String(n).padStart(2, '0');
+    const holders9 = [...new Set(ledger.filter((x) => String(x[2]) < '2026-03-30').map((x) => Number(x[1])))];
+    r9.shuffle(holders9).slice(0, 7).forEach((c, k) => {
+      const d = `2026-04-${two(r9.int(3, 20))}`;
+      const bal = ledger.filter((x) => Number(x[1]) === c && String(x[2]) < d && x[4] !== 'reversal').reduce((a, x) => a + Number(x[3]), 0);
+      const amt = -(Math.max(0, bal) + r9.pick([300, 800, 1500]));
+      const p = eid++;
+      ledger.push([p, c, `${d} 17:${two(r9.int(0, 59))}:00`, amt, 'purchase', null]);
+      const rv1 = eid++;
+      ledger.push([rv1, c, `${addDays(d, k % 3 === 2 ? 0 : 1)} 2${r9.int(0, 1)}:${two(r9.int(0, 59))}:00`, -amt, 'reversal', p]);
+      if (k % 2 === 0) {
+        const rv2 = eid++;
+        ledger.push([rv2, c, `${addDays(d, r9.int(2, 4))} 09:${two(r9.int(0, 59))}:00`, amt, 'reversal', rv1]);
+        if (k === 0) ledger.push([eid++, c, `${addDays(d, 6)} 10:${two(r9.int(0, 59))}:00`, -amt, 'reversal', rv2]);
+      }
+      ledger.push([eid++, c, `${addDays(d, r9.int(1, 6))} 23:${two(r9.int(5, 55))}:00`, -r9.pick([420, 875, 1125]), 'purchase', null]);
+    });
+    const fresh = r9.shuffle(local.filter((c) => !ledger.some((x) => Number(x[1]) === c))).slice(0, 2);
+    for (const c of fresh) {
+      ledger.push([eid++, c, `2026-04-${two(r9.int(6, 10))} 10:${two(r9.int(0, 59))}:00`, 1000, 'topup', null]);
+      ledger.push([eid++, c, `2026-04-${two(r9.int(12, 16))} 15:${two(r9.int(0, 59))}:00`, -r9.pick([1500, 1800, 2700]), 'purchase', null]);
+    }
+    ledger.sort((a, b) => Number(a[0]) - Number(b[0]));
+  }
+  // 10. Paid orders around the app sessions of 6-12 April (L07): a few minutes after the last event, exactly 30:00
+  //     and 30:01 after it, web orders inside a session window, and app orders just after a fast-clock event (only
+  //     the corrected time puts them inside the session).
+  {
+    const r10 = createRng(seed).fork('ladder-plants-sessions');
+    const iso = (s: number) => new Date(s * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const week = sessionsOf(tables).filter((s) => wh.ukLocal(s.first) >= '2026-04-06' && wh.ukLocal(s.first) < '2026-04-13');
+    r10.shuffle(week).slice(0, 16).forEach((s, k) => {
+      const off = k % 8 === 0 ? 1800 : k % 8 === 1 ? 1801 : r10.int(30, 1700);
+      add(s.cust, iso(s.t1 + off), 'paid', [[r10.int(1, 13), r10.int(1, 2)]], k % 8 === 2 ? 'web' : 'app');
+    });
+    const fast = events.filter((e) => String(e[3]) > String(e[4]) && wh.ukLocal(String(e[4])) >= '2026-04-06' && wh.ukLocal(String(e[4])) < '2026-04-12');
+    for (const e of r10.shuffle(fast).slice(0, 4)) add(Number(e[1]), iso(secs(String(e[4])) + 1700 + r10.int(0, 90)), 'paid', [[r10.int(1, 6), 1]], 'app');
+    orders.sort((a, b) => Number(a[0]) - Number(b[0]));
+    lines.sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[1]) - Number(b[1]));
+  }
+  // 11. Ties in Q2 units (L03, sql-hard h04): in two categories the third product is topped up to tie with the
+  //     second, in one the second to tie with the first (the extra order is placed a minute after one of that
+  //     product's own orders in that category, so it is counted in the same category).
+  {
+    const r11 = createRng(seed).fork('ladder-plants-ties');
+    const iso = (s: number) => new Date(s * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const q2 = paidLines(tables).filter((l) => l.local >= '2026-04-01' && l.local < '2026-07-01');
+    const units = new Map<string, { n: number; at: string }>();
+    for (const l of q2) {
+      const k = `${l.category}|${l.product}`;
+      const cur = units.get(k);
+      units.set(k, { n: (cur?.n ?? 0) + l.qty, at: cur && cur.at < l.utc ? cur.at : l.utc });
+    }
+    const cats = r11.shuffle(['Beans', 'Brewing kit', 'Gifts']);
+    cats.forEach((cat, i) => {
+      const ranked = [...units.entries()].filter(([k]) => k.startsWith(`${cat}|`)).sort((a, b) => b[1].n - a[1].n || (a[0] < b[0] ? -1 : 1));
+      const [hi, lo] = i === 0 ? [ranked[0], ranked[1]] : [ranked[1], ranked[2]];
+      if (!hi || !lo || hi[1].n === lo[1].n) return;
+      add(r11.pick(q2Buyers), iso(secs(lo[1].at) + 60), 'paid', [[Number(lo[0].split('|')[1]), hi[1].n - lo[1].n]]);
+    });
+    orders.sort((a, b) => Number(a[0]) - Number(b[0]));
+    lines.sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[1]) - Number(b[1]));
+  }
   return { tables };
 }
 
@@ -157,23 +230,289 @@ const BST_TO = '2026-10-25 01:00:00';
 const LOCAL = (col: string) => `datetime(${col}, CASE WHEN ${col} >= '${BST_FROM}' AND ${col} < '${BST_TO}' THEN '+1 hour' ELSE '+0 hours' END)`;
 const W_FROM = '2026-03-31 23:00:00';
 const W_TO = '2026-06-30 23:00:00';
+const secs = (ts: string) => Date.parse(`${ts.replace(' ', 'T')}Z`) / 1000;
+const r2 = (x: number) => Math.round(x * 100) / 100;
 
-/** The per-customer Q2 review (levels 6-10). `slip` switches exactly one detail off, the way a careful analyst slips. */
-export function reviewSql(lv: number, slip = ''): string {
-  const cut = lv >= 7;
-  const gifts = lv >= 7;
-  const country = lv >= 8;
-  const wallet = lv >= 8;
-  const subs = lv >= 9;
-  const checkouts = lv >= 10;
-  const inQ2 = (col: string) =>
-    slip === 'no-cutoff' || !cut ? `${col} >= '2026-04-01' AND ${col} < '2026-07-01'` : `${col} >= '${W_FROM}' AND ${col} < '${W_TO}'`;
-  const orderTime = slip === 'cutoff-utc' ? 'pl.ordered_at_utc' : 'pl.ordered_at_local';
-  const ctes: string[] = [];
-  ctes.push(`paid_lines AS (
+// ─────────────────────────────── L06: balances as known that evening vs restated ───────────────────────────────
+
+export function restatedSql(slip = ''): string {
+  const day = slip === 'utc-days' ? 'date(posted_at_utc)' : `date(${LOCAL('posted_at_utc')})`;
+  const known = slip === 'known-uses-today' ? 'k.all_n' : 'k.known_n';
+  const counts = (n: string) => (slip === 'drop-reversed' ? `${n} = 0` : `${n} % 2 = 0`);
+  const grid =
+    slip === 'entry-days-only'
+      ? `grid AS (
+  SELECT DISTINCT h.customer_id, l.uk_day AS d FROM holders h JOIN ledger l ON l.customer_id = h.customer_id
+  WHERE l.uk_day BETWEEN '2026-04-01' AND '2026-04-30'
+)`
+      : `grid AS (
+  SELECT h.customer_id, days.d FROM holders h CROSS JOIN days
+)`;
+  return `WITH RECURSIVE days(d) AS (
+  SELECT '2026-04-01'
+  UNION ALL
+  SELECT date(d, '+1 day') FROM days WHERE d < '2026-04-30'
+),
+ledger AS MATERIALIZED (
+  SELECT entry_id, customer_id, amount_pence, entry_type, reverses_entry_id, ${day} AS uk_day
+  FROM wallet_ledger
+),
+chain(entry_id, base_id) AS (
+  SELECT l.entry_id, l.reverses_entry_id FROM ledger l
+  WHERE l.entry_type = 'reversal'
+    AND (SELECT b.entry_type FROM ledger b WHERE b.entry_id = l.reverses_entry_id) <> 'reversal'
+  UNION ALL
+  SELECT l.entry_id, c.base_id FROM ledger l JOIN chain c ON l.reverses_entry_id = c.entry_id
+),
+members AS MATERIALIZED (
+  SELECT c.base_id, r.uk_day FROM chain c JOIN ledger r ON r.entry_id = c.entry_id
+),
+holders AS (
+  SELECT DISTINCT customer_id FROM ledger WHERE uk_day < '2026-04-01'${slip === 'april-starters' ? " OR uk_day <= '2026-04-30'" : ''}
+),
+${grid},
+counts AS MATERIALIZED (
+  SELECT e.entry_id, e.customer_id, e.amount_pence, g.d,
+         SUM(CASE WHEN m.uk_day <= g.d THEN 1 ELSE 0 END) AS known_n, COUNT(m.base_id) AS all_n
+  FROM grid g
+  JOIN ledger e ON e.customer_id = g.customer_id AND e.entry_type <> 'reversal' AND e.uk_day <= g.d
+  LEFT JOIN members m ON m.base_id = e.entry_id
+  GROUP BY e.entry_id, e.customer_id, e.amount_pence, g.d
+),
+balances AS (
+  SELECT g.customer_id, g.d,
+         COALESCE(SUM(CASE WHEN ${counts(known)} THEN k.amount_pence END), 0) AS known_p,
+         COALESCE(SUM(CASE WHEN ${counts('k.all_n')} THEN k.amount_pence END), 0) AS restated_p
+  FROM grid g
+  LEFT JOIN counts k ON k.customer_id = g.customer_id AND k.d = g.d
+  GROUP BY g.customer_id, g.d
+)
+SELECT customer_id, SUM(known_p < 0) AS days_negative_known, SUM(restated_p < 0) AS days_negative_restated,
+       SUM(known_p <> restated_p) AS days_differ
+FROM balances GROUP BY customer_id`;
+}
+
+export function restatedSolve(t: Tables): Cell[][] {
+  const rows = t.wallet_ledger!.rows.map((r) => ({ id: Number(r[0]), cust: Number(r[1]), day: wh.ukLocal(String(r[2])).slice(0, 10), amt: Number(r[3]), type: String(r[4]), rev: r[5] === null ? null : Number(r[5]) }));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const reversedBy = new Map<number, (typeof rows)[number]>();
+  for (const r of rows) if (r.type === 'reversal' && r.rev !== null) reversedBy.set(r.rev, r);
+  /** Does entry e count, when only the reversals for which `known` holds have happened? (rule 6, walked down the chain) */
+  const counts = (e: (typeof rows)[number], known: (r: (typeof rows)[number]) => boolean): boolean => {
+    const by = reversedBy.get(e.id);
+    return !by || !known(by) || !counts(by, known);
+  };
+  void byId;
+  const holders = [...new Set(rows.filter((r) => r.day < '2026-04-01').map((r) => r.cust))];
+  const out: Cell[][] = [];
+  for (const c of holders) {
+    const mine = rows.filter((r) => r.cust === c && r.type !== 'reversal');
+    let neg1 = 0;
+    let neg2 = 0;
+    let diff = 0;
+    for (let d = '2026-04-01'; d <= '2026-04-30'; d = addDays1(d)) {
+      const upto = mine.filter((r) => r.day <= d);
+      const known = upto.filter((e) => counts(e, (r) => r.day <= d)).reduce((a, e) => a + e.amt, 0);
+      const restated = upto.filter((e) => counts(e, () => true)).reduce((a, e) => a + e.amt, 0);
+      if (known < 0) neg1++;
+      if (restated < 0) neg2++;
+      if (known !== restated) diff++;
+    }
+    out.push([c, neg1, neg2, diff]);
+  }
+  return out;
+}
+
+// ─────────────────────────────── L07: app sessions and the paid app orders they led to ───────────────────────────────
+
+export function sessionsSql(slip = ''): string {
+  const at = slip === 'no-clock-fix' ? 'event_ts_utc' : 'CASE WHEN event_ts_utc > ing THEN ing ELSE event_ts_utc END';
+  const priceJoin =
+    slip === 'todays-price'
+      ? 'JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_to_utc IS NULL'
+      : 'JOIN dim_price_history h ON h.product_id = l.product_id AND h.valid_from_utc <= o.ordered_at_utc AND (h.valid_to_utc IS NULL OR o.ordered_at_utc < h.valid_to_utc)';
+  const startDay = slip === 'utc-week' ? 'first_utc' : LOCAL('first_utc');
+  return `WITH e AS (
+  SELECT customer_id, event_name, event_ts_utc, ${slip === 'latest-ingest' ? 'MAX' : 'MIN'}(ingested_at_utc) AS ing
+  FROM events_raw GROUP BY customer_id, event_name, event_ts_utc
+),
+timed AS (
+  SELECT customer_id, ${at} AS at_utc FROM e
+),
+marked AS (
+  SELECT customer_id, at_utc, CAST(strftime('%s', at_utc) AS INTEGER) AS t,
+         CASE WHEN CAST(strftime('%s', at_utc) AS INTEGER) - LAG(CAST(strftime('%s', at_utc) AS INTEGER)) OVER (PARTITION BY customer_id ORDER BY at_utc) <= 1800 THEN 0 ELSE 1 END AS new_session
+  FROM timed
+),
+numbered AS (
+  SELECT customer_id, at_utc, t, SUM(new_session) OVER (PARTITION BY customer_id ORDER BY t ROWS UNBOUNDED PRECEDING) AS session_no
+  FROM marked
+),
+sessions AS (
+  SELECT customer_id, session_no, MIN(t) AS t0, MAX(t) AS t1, MIN(at_utc) AS first_utc
+  FROM numbered GROUP BY customer_id, session_no
+),
+wk AS (
+  SELECT customer_id, session_no, t0, t1, date(${startDay}) AS uk_day
+  FROM sessions
+  WHERE ${startDay} >= '2026-04-06' AND ${startDay} < '2026-04-13'
+),
+app_orders AS (
+  SELECT o.order_id, o.customer_id, CAST(strftime('%s', o.ordered_at_utc) AS INTEGER) AS t, SUM(l.quantity * h.price_gbp) AS revenue
+  FROM fact_orders o
+  JOIN fact_order_lines l ON l.order_id = o.order_id
+  ${priceJoin}
+  WHERE o.status = 'paid'${slip === 'any-channel' ? '' : " AND o.channel = 'app'"}
+  GROUP BY o.order_id, o.customer_id, o.ordered_at_utc
+),
+per_session AS (
+  SELECT w.uk_day, w.customer_id, w.session_no, COUNT(a.order_id) AS orders, COALESCE(SUM(a.revenue), 0) AS revenue
+  FROM wk w
+  LEFT JOIN app_orders a ON a.customer_id = w.customer_id AND a.t >= w.t0 AND a.t ${slip === 'window-exclusive' ? '<' : '<='} w.t1 + 1800
+  GROUP BY w.uk_day, w.customer_id, w.session_no
+)
+SELECT uk_day, COUNT(*) AS sessions, SUM(orders > 0) AS converting_sessions, SUM(revenue) AS revenue_gbp
+FROM per_session GROUP BY uk_day`;
+}
+
+interface Session {
+  cust: number;
+  t0: number;
+  t1: number;
+  first: string;
+}
+/** Sessions over every corrected, deduplicated event (h09's preparation, all days). */
+export function sessionsOf(t: Tables): Session[] {
+  const ev = new Map<string, { cust: number; ts: string; ing: string }>();
+  for (const [, c, n, u, ing] of t.events_raw!.rows) {
+    const k = `${c}|${n}|${u}`;
+    const cur = ev.get(k);
+    if (!cur || String(ing) < cur.ing) ev.set(k, { cust: Number(c), ts: String(u), ing: String(ing) });
+  }
+  const by = new Map<number, string[]>();
+  for (const e of ev.values()) by.set(e.cust, [...(by.get(e.cust) ?? []), e.ts > e.ing ? e.ing : e.ts]);
+  const out: Session[] = [];
+  for (const [c, times] of by) {
+    times.sort();
+    let cur: Session | null = null;
+    for (const at of times) {
+      const s = secs(at);
+      if (cur && s - cur.t1 <= 1800) cur.t1 = s;
+      else {
+        cur = { cust: c, t0: s, t1: s, first: at };
+        out.push(cur);
+      }
+    }
+  }
+  return out;
+}
+
+export function sessionsSolve(t: Tables): Cell[][] {
+  const lines = paidLines(t);
+  const rev = new Map<number, number>();
+  for (const l of lines) if (l.channel === 'app') rev.set(l.order, (rev.get(l.order) ?? 0) + l.qty * l.price);
+  const orders = t.fact_orders!.rows.filter((o) => o[4] === 'paid' && o[3] === 'app').map((o) => ({ id: Number(o[0]), cust: Number(o[1]), t: secs(String(o[2])) }));
+  const by = new Map<string, [number, number, number]>();
+  for (const s of sessionsOf(t)) {
+    const local = wh.ukLocal(s.first);
+    if (local < '2026-04-06' || local >= '2026-04-13') continue;
+    const day = local.slice(0, 10);
+    const mine = orders.filter((o) => o.cust === s.cust && o.t >= s.t0 && o.t <= s.t1 + 1800);
+    const a = by.get(day) ?? [0, 0, 0];
+    a[0]++;
+    if (mine.length) a[1]++;
+    a[2] += mine.reduce((x, o) => x + (rev.get(o.id) ?? 0), 0);
+    by.set(day, a);
+  }
+  return [...by.entries()].map(([d, [n, c, v]]) => [d, n, c, r2(v)]);
+}
+
+// ─────────────────────────────── L08-L10: promotion budgets, used up in order ───────────────────────────────
+
+export const BUDGET_PROMOS = [2, 3, 4, 5, 6, 7, 8];
+
+/** The promotion lines of the budget run, in the order the budgets are used up. */
+function budgetCandidates(t: Tables, lv: number, slip = ''): Array<{ order: number; line: number; cust: number; utc: string; cands: Array<{ id: number; pct: number; disc: number }> }> {
+  const cut = lv >= 10 && slip !== 'no-cutoff';
+  const gifts = lv >= 9 && slip !== 'gifts-discounted';
+  const promos = t.promotions!.rows.map((r) => ({ id: Number(r[0]), pct: Number(r[2]), ch: r[3] === null ? null : String(r[3]), min: r[4] === null ? null : Number(r[4]), s: String(r[5]), e: lv >= 9 && slip !== 'no-memo-1' && r[1] === 'MAYDAY25' ? '2026-05-02' : String(r[6]) }));
+  const covers = new Set(t.promotion_products!.rows.map((r) => `${r[0]}|${r[1]}`));
+  const lines = paidLines(t).filter((l) => (cut ? l.local >= W_FROM && l.local < W_TO : l.local >= '2026-04-01' && l.local < '2026-07-01'));
+  const pence = (l: PLine) => Math.round(l.qty * l.price * 100);
+  const basket = new Map<number, number>();
+  for (const l of lines) basket.set(l.order, (basket.get(l.order) ?? 0) + pence(l));
+  const out = [];
+  for (const l of lines) {
+    if (gifts && l.category === 'Gifts') continue;
+    const day = l.local.slice(0, 10);
+    const cands = promos
+      .filter((p) => BUDGET_PROMOS.includes(p.id) && covers.has(`${p.id}|${l.product}`) && day >= p.s && day <= p.e && (p.ch === null || p.ch === l.channel) && (p.min === null || basket.get(l.order)! >= p.min * 100))
+      .sort((a, b) => b.pct - a.pct || a.id - b.id)
+      .map((p) => ({ id: p.id, pct: p.pct, disc: Math.floor((pence(l) * p.pct + 50) / 100) }));
+    if (cands.length) out.push({ order: l.order, line: l.line, cust: l.cust, utc: l.utc, cands });
+  }
+  out.sort((a, b) => (a.utc < b.utc ? -1 : a.utc > b.utc ? 1 : a.order - b.order || a.line - b.line));
+  if (slip === 'order-id-order') out.sort((a, b) => a.order - b.order || a.line - b.line);
+  return out;
+}
+
+/** The budget run (independent JavaScript): remaining budgets carried line by line. */
+export function budgetSolve(t: Tables, lv: number, budgets: Record<number, number>): Cell[][] {
+  const left = { ...budgets };
+  const used = new Map<string, number>(); // customer|promo -> the order that used it
+  const lines = new Map<number, number>();
+  const disc = new Map<number, number>();
+  for (const l of budgetCandidates(t, lv)) {
+    for (const c of l.cands) {
+      if (lv >= 9) {
+        const u = used.get(`${l.cust}|${c.id}`);
+        if (u !== undefined && u !== l.order) continue;
+      }
+      let take = 0;
+      if (left[c.id]! >= c.disc) take = c.disc;
+      else if (lv >= 10 && left[c.id]! >= 50) take = left[c.id]!;
+      else continue;
+      left[c.id]! -= take;
+      lines.set(c.id, (lines.get(c.id) ?? 0) + 1);
+      disc.set(c.id, (disc.get(c.id) ?? 0) + take);
+      if (!used.has(`${l.cust}|${c.id}`)) used.set(`${l.cust}|${c.id}`, l.order);
+      break;
+    }
+  }
+  const code = new Map(t.promotions!.rows.map((r) => [Number(r[0]), String(r[1])]));
+  return BUDGET_PROMOS.filter((p) => lines.has(p)).map((p) => [code.get(p)!, lines.get(p)!, disc.get(p)! / 100, left[p]! / 100]);
+}
+
+/** Unconstrained discount per promotion (pence), used to set budgets that bind on every database. */
+export function unconstrained(t: Tables): Record<number, number> {
+  const out: Record<number, number> = Object.fromEntries(BUDGET_PROMOS.map((p) => [p, 0]));
+  for (const l of budgetCandidates(t, 8)) out[l.cands[0]!.id]! += l.cands[0]!.disc;
+  return out;
+}
+
+export function budgetSql(lv: number, budgets: Record<number, number>, slip = ''): string {
+  const cut = lv >= 10 && slip !== 'no-cutoff';
+  const gifts = lv >= 9 && slip !== 'gifts-discounted';
+  const oneUse = lv >= 9 && slip !== 'one-use-ignored';
+  const partial = lv >= 10 && slip !== 'no-partial';
+  const window = cut ? `pl.ordered_at_local >= '${W_FROM}' AND pl.ordered_at_local < '${W_TO}'` : `pl.ordered_at_local >= '2026-04-01' AND pl.ordered_at_local < '2026-07-01'`;
+  const bud = (c: string) => `CASE ${c} ${BUDGET_PROMOS.map((p) => `WHEN ${p} THEN w.b${p}`).join(' ')} END`;
+  const fits = (c: string) =>
+    slip === 'no-budget' ? '1' : partial ? `${bud(c)} >= MIN(${c === 'c.promo_id' ? 'c.disc' : 'x.disc'}, ${slip === 'partial-any' ? 1 : 50})` : `${bud(c)} >= c.disc`;
+  const useOk = oneUse
+    ? slip === 'one-use-per-line'
+      ? ` AND instr(w.used, ',' || s.customer_id || '|' || c.promo_id || '|') = 0`
+      : ` AND (instr(w.used, ',' || s.customer_id || '|' || c.promo_id || '|') = 0 OR instr(w.used, ',' || s.customer_id || '|' || c.promo_id || '|' || s.order_id || ',') > 0)`
+    : '';
+  const pickWhere = slip === 'no-fallback' ? `c.order_id = s.order_id AND c.line_no = s.line_no AND c.rnk = 1 AND ${fits('c.promo_id')}${useOk}` : `c.order_id = s.order_id AND c.line_no = s.line_no AND ${fits('c.promo_id')}${useOk}`;
+  const pick = `(SELECT c.promo_id FROM cand c WHERE ${pickWhere} ORDER BY c.pct_off DESC, c.promo_id LIMIT 1)`;
+  const taken = `(SELECT ${partial ? `MIN(c.disc, ${bud('c.promo_id')})` : 'c.disc'} FROM cand c WHERE ${pickWhere} ORDER BY c.pct_off DESC, c.promo_id LIMIT 1)`;
+  const memo = lv >= 9 && slip !== 'no-memo-1' ? "CASE WHEN p.code = 'MAYDAY25' THEN '2026-05-02' ELSE p.ends_on END" : 'p.ends_on';
+  const category = slip === 'gift-today' ? '(SELECT dp.category FROM dim_product dp WHERE dp.product_id = l.product_id)' : 'ch.category';
+  return `WITH RECURSIVE paid_lines AS (
   SELECT o.order_id, o.customer_id, o.channel, o.ordered_at_utc,
          ${LOCAL('o.ordered_at_utc')} AS ordered_at_local,
-         l.line_no, l.product_id, l.quantity, h.price_gbp, ${slip === 'gift-today' ? '(SELECT dp.category FROM dim_product dp WHERE dp.product_id = l.product_id)' : 'ch.category'} AS category
+         l.line_no, l.product_id, CAST(ROUND(l.quantity * h.price_gbp * 100) AS INTEGER) AS line_p, ${category} AS category
   FROM fact_orders o
   JOIN fact_order_lines l ON l.order_id = o.order_id
   JOIN dim_price_history h ON h.product_id = l.product_id
@@ -183,120 +522,49 @@ export function reviewSql(lv: number, slip = ''): string {
    AND ch.valid_from_utc <= o.ordered_at_utc
    AND (ch.valid_to_utc IS NULL OR o.ordered_at_utc < ch.valid_to_utc)
   WHERE o.status = 'paid'
-)`);
-  ctes.push(`q2 AS (
+),
+q2 AS (
   SELECT pl.*, date(pl.ordered_at_local) AS uk_day,
-         ${slip === 'basket-line' ? 'pl.quantity * pl.price_gbp' : 'SUM(pl.quantity * pl.price_gbp) OVER (PARTITION BY pl.order_id)'} AS basket_gbp
-  FROM paid_lines pl${country && slip !== 'all-countries' ? '\n  JOIN dim_customer c ON c.customer_id = pl.customer_id' : ''}
-  WHERE ${inQ2(orderTime)}${country && slip !== 'all-countries' ? "\n    AND c.country IN ('GB', 'IE')" : ''}
-)`);
-  ctes.push(`promos AS (
-  SELECT promo_id, code, pct_off, channel, min_basket_gbp, starts_on,
-         ${slip === 'no-memo-1' ? 'ends_on' : "CASE WHEN code = 'MAYDAY25' THEN '2026-05-02' ELSE ends_on END"} AS ends_on
-  FROM promotions
-)`);
-  ctes.push(`best AS (
-  SELECT q2.order_id, q2.line_no, p.pct_off,
-         ROW_NUMBER() OVER (PARTITION BY q2.order_id, q2.line_no ORDER BY p.pct_off DESC, p.promo_id) AS pick
+         ${slip === 'basket-line' ? 'pl.line_p' : 'SUM(pl.line_p) OVER (PARTITION BY pl.order_id)'} AS basket_p
+  FROM paid_lines pl
+  WHERE ${window}
+),
+cand AS (
+  SELECT q2.order_id, q2.line_no, q2.customer_id, q2.ordered_at_utc, p.promo_id, p.pct_off,
+         (q2.line_p * p.pct_off + 50) / 100 AS disc,
+         RANK() OVER (PARTITION BY q2.order_id, q2.line_no ORDER BY p.pct_off DESC, p.promo_id) AS rnk
   FROM q2
   JOIN promotion_products pp ON pp.product_id = q2.product_id
-  JOIN promos p ON p.promo_id = pp.promo_id
-   AND ${slip === 'promo-utc-date' ? 'date(q2.ordered_at_utc)' : 'q2.uk_day'} BETWEEN p.starts_on AND p.ends_on
+  JOIN promotions p ON p.promo_id = pp.promo_id
+   AND p.promo_id IN (${BUDGET_PROMOS.join(', ')})
+   AND q2.uk_day BETWEEN p.starts_on AND ${memo}
    AND (p.channel IS NULL OR p.channel = q2.channel)
-   AND (p.min_basket_gbp IS NULL OR q2.basket_gbp >= p.min_basket_gbp)${gifts && slip !== 'gifts-discounted' ? "\n  WHERE q2.category <> 'Gifts'" : ''}
-)`);
-  ctes.push(`priced AS (
-  SELECT q2.customer_id, q2.order_id, q2.uk_day, q2.quantity * q2.price_gbp AS revenue,
-         COALESCE(q2.quantity * q2.price_gbp * b.pct_off / 100.0, 0) AS discount
-  FROM q2 LEFT JOIN best b ON b.order_id = q2.order_id AND b.line_no = q2.line_no${slip === 'stack-promos' ? '' : ' AND b.pick = 1'}
-)`);
-  ctes.push(`cust AS (
-  SELECT customer_id, ${slip === 'count-lines' ? 'COUNT(*)' : 'COUNT(DISTINCT order_id)'} AS orders,
-         SUM(revenue) AS gross_gbp, SUM(discount) AS discount_gbp, SUM(revenue) - SUM(discount) AS net_gbp
-  FROM priced GROUP BY customer_id
-)`);
-  if (wallet) {
-    ctes.push(`chain(entry_id, counts) AS (
-  SELECT w.entry_id, 1 FROM wallet_ledger w
-  WHERE w.entry_type = 'reversal'
-    AND NOT EXISTS (SELECT 1 FROM wallet_ledger x WHERE x.reverses_entry_id = w.entry_id)
+   AND (p.min_basket_gbp IS NULL OR q2.basket_p >= p.min_basket_gbp * 100)${gifts ? "\n  WHERE q2.category <> 'Gifts'" : ''}
+),
+seq AS (
+  SELECT order_id, line_no, customer_id,
+         ROW_NUMBER() OVER (ORDER BY ${slip === 'order-id-order' ? 'order_id, line_no' : 'ordered_at_utc, order_id, line_no'}) AS n
+  FROM (SELECT DISTINCT order_id, line_no, customer_id, ordered_at_utc FROM cand)
+),
+walk(n, ${BUDGET_PROMOS.map((p) => `b${p}`).join(', ')}, used, pick, taken) AS (
+  SELECT 0, ${BUDGET_PROMOS.map((p) => budgets[p]).join(', ')}, ',', NULL, 0
   UNION ALL
-  SELECT w.reverses_entry_id, 1 - c.counts
-  FROM chain c JOIN wallet_ledger w ON w.entry_id = c.entry_id
-  WHERE w.reverses_entry_id IS NOT NULL
-)`);
-    const counting =
-      slip === 'drop-reversed'
-        ? "NOT EXISTS (SELECT 1 FROM wallet_ledger r WHERE r.entry_type = 'reversal' AND r.reverses_entry_id = w.entry_id)"
-        : 'COALESCE((SELECT c.counts FROM chain c WHERE c.entry_id = w.entry_id), 1) = 1';
-    ctes.push(`wallet AS (
-  SELECT w.customer_id, -SUM(w.amount_pence) / 100.0 AS spend_gbp
-  FROM wallet_ledger w
-  WHERE w.entry_type IN (${slip === 'purchases-only' ? "'purchase'" : "'purchase', 'refund'"})
-    AND ${counting}
-    AND ${slip === 'wallet-utc' ? `w.posted_at_utc >= '${W_FROM}' AND w.posted_at_utc < '${W_TO}'` : inQ2(LOCAL('w.posted_at_utc'))}
-  GROUP BY w.customer_id
-)`);
-  }
-  if (subs) {
-    const fill =
-      slip === 'no-lost-day'
-        ? ''
-        : slip === 'fill-from-15th'
-          ? `
-  UNION ALL
-  SELECT d.customer_id, '2026-04-14', d.status
-  FROM subscription_status_daily d
-  WHERE d.snapshot_date = '2026-04-15'
-    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-13')`
-          : `
-  UNION ALL
-  SELECT d.customer_id, '2026-04-14', d.status
-  FROM subscription_status_daily d
-  WHERE d.snapshot_date = '2026-04-13'
-    AND EXISTS (SELECT 1 FROM subscription_status_daily e WHERE e.customer_id = d.customer_id AND e.snapshot_date = '2026-04-15')`;
-    ctes.push(`filled AS (
-  SELECT customer_id, snapshot_date, status FROM subscription_status_daily${fill}
-)`);
-    ctes.push(`sub_orders AS (
-  SELECT d.customer_id, COUNT(*) AS n
-  FROM (SELECT DISTINCT customer_id, order_id, ${slip === 'sub-utc-date' ? '(SELECT date(o.ordered_at_utc) FROM fact_orders o WHERE o.order_id = priced.order_id)' : 'uk_day'} AS uk_day FROM priced) d
-  JOIN filled f ON f.customer_id = d.customer_id AND f.snapshot_date = d.uk_day AND f.status = 'active'
-  GROUP BY d.customer_id
-)`);
-    ctes.push(`cancelled AS (
-  SELECT DISTINCT o.customer_id FROM fact_orders o
-  WHERE o.status = 'cancelled' AND ${inQ2(LOCAL('o.ordered_at_utc'))}
-)`);
-  }
-  if (checkouts) {
-    ctes.push(`ev AS (
-  SELECT customer_id, event_name, event_ts_utc, ${slip === 'latest-ingest' ? 'MAX' : 'MIN'}(ingested_at_utc) AS ingested_at_utc
-  FROM events_raw GROUP BY customer_id, event_name, event_ts_utc${slip === 'dup-checkouts' ? ', event_id' : ''}
-)`);
-    ctes.push(`checkouts AS (
-  SELECT customer_id, COUNT(*) AS n
-  FROM (SELECT customer_id, ${slip === 'no-clock-fix' ? 'event_ts_utc' : 'CASE WHEN event_ts_utc > ingested_at_utc THEN ingested_at_utc ELSE event_ts_utc END'} AS at_utc
-        FROM ev WHERE event_name = 'checkout') x
-  WHERE ${inQ2(LOCAL('x.at_utc'))}
-  GROUP BY customer_id
-)`);
-  }
-  const cols = ['c.customer_id', 'c.orders', 'c.gross_gbp', 'c.discount_gbp', 'c.net_gbp'];
-  if (wallet) cols.push('COALESCE(w.spend_gbp, 0) AS wallet_spend_gbp');
-  if (subs) cols.push('COALESCE(s.n, 0) AS subscriber_orders');
-  if (checkouts) cols.push('COALESCE(k.n, 0) AS checkouts');
-  if (subs)
-    cols.push(`CASE WHEN ROUND(c.net_gbp, 2) >= 150${slip === 'cancelled-vip' ? '' : ' AND c.customer_id NOT IN (SELECT customer_id FROM cancelled)'} THEN 'VIP'
-              WHEN COALESCE(s.n, 0) >= 1 THEN 'Subscriber'
-              WHEN COALESCE(w.spend_gbp, 0) >= 20 THEN 'Wallet'
-              ELSE 'Standard' END AS segment`);
-  const joins = [wallet ? 'LEFT JOIN wallet w ON w.customer_id = c.customer_id' : '', subs ? 'LEFT JOIN sub_orders s ON s.customer_id = c.customer_id' : '', checkouts ? 'LEFT JOIN checkouts k ON k.customer_id = c.customer_id' : ''].filter(Boolean);
-  const body = `SELECT ${cols.join(',\n       ')}\nFROM cust c${joins.length ? '\n' + joins.join('\n') : ''}`;
-  const final = checkouts
-    ? `,\nreport AS (\n${body}\n)\nSELECT *, ${slip === 'row-number' ? 'ROW_NUMBER()' : 'RANK()'} OVER (PARTITION BY segment ORDER BY ROUND(net_gbp, 2) DESC) AS segment_rank\nFROM report`
-    : `\n${body}`;
-  return `WITH${wallet ? ' RECURSIVE' : ''} ${ctes.join(',\n')}${final}`;
+  SELECT s.n,
+         ${BUDGET_PROMOS.map((p) => `w.b${p} - CASE WHEN ${pick} = ${p} THEN ${taken} ELSE 0 END`).join(',\n         ')},
+         w.used || CASE WHEN ${pick} IS NULL THEN '' ELSE s.customer_id || '|' || ${pick} || '|' || s.order_id || ',' END,
+         ${pick},
+         COALESCE(${taken}, 0)
+  FROM walk w JOIN seq s ON s.n = w.n + 1
+),
+budgets(promo_id, budget_p) AS (
+  VALUES ${BUDGET_PROMOS.map((p) => `(${p}, ${budgets[p]})`).join(', ')}
+)
+SELECT p.code, COUNT(w.pick) AS lines, COALESCE(SUM(w.taken), 0) / 100.0 AS discount_gbp,
+       (b.budget_p - COALESCE(SUM(w.taken), 0)) / 100.0 AS remaining_gbp
+FROM budgets b
+JOIN promotions p ON p.promo_id = b.promo_id
+JOIN walk w ON w.pick = b.promo_id
+GROUP BY b.promo_id, p.code, b.budget_p`;
 }
 
 // ─────────────────────────────── Independent JavaScript solver ───────────────────────────────
@@ -330,207 +598,117 @@ function paidLines(t: Tables): PLine[] {
   }
   return out;
 }
-const r2 = (x: number) => Math.round(x * 100) / 100;
-const inWindow = (local: string, cut: boolean) => (cut ? local >= W_FROM && local < W_TO : local >= '2026-04-01' && local < '2026-07-01');
 
 /** The review rows computed from the raw tables, without SQL. */
-export function reviewSolve(t: Tables, lv: number): Cell[][] {
-  const cut = lv >= 7;
-  const country = new Map(t.dim_customer!.rows.map((c) => [Number(c[0]), String(c[2])]));
-  let lines = paidLines(t).filter((l) => inWindow(l.local, cut));
-  if (lv >= 8) lines = lines.filter((l) => ['GB', 'IE'].includes(country.get(l.cust)!));
-  const promos = t.promotions!.rows.map((r) => ({ id: Number(r[0]), code: String(r[1]), pct: Number(r[2]), ch: r[3] === null ? null : String(r[3]), min: r[4] === null ? null : Number(r[4]), s: String(r[5]), e: r[1] === 'MAYDAY25' ? '2026-05-02' : String(r[6]) }));
-  const covers = new Set(t.promotion_products!.rows.map((r) => `${r[0]}|${r[1]}`));
-  const basket = new Map<number, number>();
-  for (const l of lines) basket.set(l.order, (basket.get(l.order) ?? 0) + l.qty * l.price);
-  const acc = new Map<number, { orders: Set<number>; days: Map<number, string>; gross: number; disc: number }>();
-  for (const l of lines) {
-    const day = l.local.slice(0, 10);
-    const ok = lv >= 7 && l.category === 'Gifts' ? [] : promos.filter((p) => covers.has(`${p.id}|${l.product}`) && day >= p.s && day <= p.e && (p.ch === null || p.ch === l.channel) && (p.min === null || basket.get(l.order)! >= p.min));
-    ok.sort((a, b) => b.pct - a.pct || a.id - b.id);
-    const rev = l.qty * l.price;
-    const a = acc.get(l.cust) ?? { orders: new Set<number>(), days: new Map<number, string>(), gross: 0, disc: 0 };
-    a.orders.add(l.order);
-    a.days.set(l.order, day);
-    a.gross += rev;
-    a.disc += ok.length ? (rev * ok[0]!.pct) / 100 : 0;
-    acc.set(l.cust, a);
-  }
-  // Wallet (rule 6 over the whole ledger, then the Q2 window in UK time).
-  const spend = new Map<number, number>();
-  if (lv >= 8) {
-    const rows = t.wallet_ledger!.rows.map((r) => ({ id: Number(r[0]), cust: Number(r[1]), at: String(r[2]), amt: Number(r[3]), type: String(r[4]), rev: r[5] === null ? null : Number(r[5]) }));
-    const reversedBy = new Map<number, number>();
-    for (const r of rows) if (r.type === 'reversal' && r.rev !== null) reversedBy.set(r.rev, r.id);
-    const counts = (id: number): boolean => {
-      const by = reversedBy.get(id);
-      return by === undefined ? true : !counts(by);
-    };
-    for (const r of rows) if ((r.type === 'purchase' || r.type === 'refund') && counts(r.id) && inWindow(wh.ukLocal(r.at), true)) spend.set(r.cust, (spend.get(r.cust) ?? 0) - r.amt);
-  }
-  // Subscriptions (rule 7) and cancelled orders.
-  const status = new Map<string, string>();
-  const cancelled = new Set<number>();
-  if (lv >= 9) {
-    for (const [c, d, st] of t.subscription_status_daily!.rows) status.set(`${c}|${d}`, String(st));
-    for (const c of new Set(t.subscription_status_daily!.rows.map((r) => Number(r[0])))) {
-      const before = status.get(`${c}|2026-04-13`);
-      if (before !== undefined && status.has(`${c}|2026-04-15`)) status.set(`${c}|2026-04-14`, before);
-    }
-    for (const o of t.fact_orders!.rows) if (o[4] === 'cancelled' && inWindow(wh.ukLocal(String(o[2])), true)) cancelled.add(Number(o[1]));
-  }
-  // Checkouts (rule 5 with the earliest ingestion, fast clocks corrected).
-  const chk = new Map<number, number>();
-  if (lv >= 10) {
-    const ev = new Map<string, { cust: number; name: string; ts: string; ing: string }>();
-    for (const [, c, n, u, ing] of t.events_raw!.rows) {
-      const k = `${c}|${n}|${u}`;
-      const cur = ev.get(k);
-      if (!cur || String(ing) < cur.ing) ev.set(k, { cust: Number(c), name: String(n), ts: String(u), ing: String(ing) });
-    }
-    for (const e of ev.values()) {
-      if (e.name !== 'checkout') continue;
-      const at = e.ts > e.ing ? e.ing : e.ts;
-      if (inWindow(wh.ukLocal(at), true)) chk.set(e.cust, (chk.get(e.cust) ?? 0) + 1);
-    }
-  }
-  const rows: Cell[][] = [];
-  for (const [c, a] of acc) {
-    const net = a.gross - a.disc;
-    const row: Cell[] = [c, a.orders.size, r2(a.gross), r2(a.disc), r2(net)];
-    const w = spend.get(c) ?? 0;
-    if (lv >= 8) row.push(r2(w / 100));
-    if (lv >= 9) {
-      const subOrders = [...a.days.values()].filter((d) => status.get(`${c}|${d}`) === 'active').length;
-      row.push(subOrders);
-      if (lv >= 10) row.push(chk.get(c) ?? 0);
-      row.push(r2(net) >= 150 && !cancelled.has(c) ? 'VIP' : subOrders >= 1 ? 'Subscriber' : w / 100 >= 20 ? 'Wallet' : 'Standard');
-    }
-    rows.push(row);
-  }
-  if (lv >= 10) {
-    const segAt = rows[0]!.length - 1;
-    for (const row of rows) row.push(1 + rows.filter((o) => o[segAt] === row[segAt] && Number(o[4]) > Number(row[4])).length);
-  }
-  return rows;
-}
-
 // ─────────────────────────────── The questions ───────────────────────────────
 
-const PROMO_RULES = `An order line qualifies for a promotion when all of these hold: (a) its product is in promotion_products for that promotion; (b) the order's UK local date is between the promotion's starts_on and ends_on (inclusive); (c) the promotion's channel is NULL or equals the order's channel; (d) the promotion's min_basket_gbp is NULL, or the order's basket - the total line revenue (rule 4) of ALL the order's lines, before any promotion - is at least min_basket_gbp. A line gets at most one promotion: the qualifying one with the highest pct_off; if several tie on pct_off, the one with the lowest promo_id. The line's discount = its line revenue (rule 4) × pct_off / 100.`;
+const PROMO_RULES = `(a) its product is in promotion_products for that promotion; (b) the order's UK local date is between the promotion's starts_on and ends_on (inclusive); (c) the promotion's channel is NULL or equals the order's channel; (d) the promotion's min_basket_gbp is NULL, or the order's basket - the total line revenue (rule 4) of ALL the order's lines, before any promotion - is at least min_basket_gbp`;
 
-const MEMO = [
-  'MAYDAY25 was withdrawn early: it ended on 2 May 2026, whatever ends_on says in the promotions table.',
-  "Finance closes each quarter at 23:00 UK local time on its last day: an order placed at or after 23:00 UK time on 31 March 2026 is a Q2 order, and one placed at or after 23:00 UK time on 30 June 2026 is not (it belongs to Q3). This cut-off only decides the quarter; the promotion dates in (b) still use the order's UK local date.",
-  "Gift lines get no promotion: a line whose product was in the category 'Gifts' at the moment of the order (rule 4) cannot get any promotion. It still counts in gross and in its order's basket.",
-  "The review covers customers in the UK and Ireland only: leave out every customer whose country is not 'GB' or 'IE' (their orders are not part of the review at all).",
-  "A customer with a cancelled order (status 'cancelled') placed in Q2 (the cut-offs of item 2, UK local time) is never 'VIP': apply the next segment rule that fits.",
-];
+const RESTATED_TEXT = `From Kofi (finance): "In April, how often did each wallet look overdrawn at the end of the day as we saw it that evening - and how often does it look overdrawn now that every chargeback and its undoing is on the books?"
 
-function reviewText(lv: number): string {
-  const memo = MEMO.slice(0, lv >= 9 ? 5 : lv >= 8 ? 4 : lv >= 7 ? 3 : 1);
-  const q2 = lv >= 7 ? 'paid orders placed in Q2 2026 (UK local time, with the cut-offs of memo item 2)' : 'paid orders placed from 1 April to 30 June 2026 (UK local dates)';
-  const defs = [
-    `- Q2 orders: ${q2}.`,
-    `- gross: the line revenue (rule 4) of all lines of the customer's Q2 orders, in GBP.`,
-    `- discount: the total discount on those lines. ${PROMO_RULES}`,
-    '- net: gross minus discount.',
+For every customer with at least one wallet entry posted before 1 April 2026 (UK local time), and for every UK local date from 1 to 30 April 2026 (all 30 dates, including dates with no entries), work out two balances:
+- As known that evening: take only the wallet entries posted up to the end of that UK date (posted_at_utc read in UK local time). Apply rule 6 to those entries alone: a reversal posted later had not happened yet, so the entry it cancels still counted that evening, and a reversal of a reversal posted later had not yet reinstated anything. The balance is the sum of the amount_pence of the counting non-reversal entries among them.
+- Restated: the same entries (posted up to the end of that UK date), but which of them count is decided by rule 6 applied to the WHOLE ledger as it stands today.
+Return one row per such customer with four columns: customer_id; the number of those April dates on which the balance as known that evening was below zero; the number on which the restated balance was below zero; and the number on which the two balances differ.`;
+
+const SESSIONS_TEXT = `From Joon (product): "In the week of Monday 6 April 2026, how many app sessions did we get each day, how many of them led to a paid app order, and what did those orders bring in?"
+
+Prepare the events in this order:
+1. Duplicates (rule 5): rows with the same customer_id, event_name and event_ts_utc are one event; its ingested_at_utc is the EARLIEST of theirs.
+2. Event time: some phones' clocks run fast. An event's time is its event_ts_utc, except when that is later than its ingested_at_utc (from step 1) - then its time is that ingested_at_utc.
+Sessions: each customer's events (all of them, whatever the date), in order of time, form sessions; an event starts a new session when its time is more than 30 minutes after that customer's previous event (exactly 30 minutes later is the same session). A session belongs to the UK local date of its first event; keep the sessions whose first event falls from Monday 6 April 2026 00:00 to Sunday 12 April 2026 23:59:59 UK local time.
+A paid order placed through the app (channel 'app') belongs to a session of the same customer when its ordered_at_utc is no earlier than the session's first event and no later than 30 minutes after the session's last event (both ends included). A session "led to an order" when at least one such order belongs to it; an order's revenue is its line revenue (rule 4).
+Return one row per UK date with four columns: the date as text 'YYYY-MM-DD', the number of sessions that started that day, the number of them that led to an order, and the revenue of the orders belonging to them in GBP (±0.01).`;
+
+function budgetText(lv: number, budgets: Record<number, number>, codes: Record<number, string>): string {
+  const gbp = (p: number) => `£${(p / 100).toFixed(2)}`;
+  const rules = [
+    `1. A line's qualifying promotions are the promotions in the budget sheet for which all of these hold: ${PROMO_RULES}.${lv >= 9 ? ' Memo items 1 and 2 below change this.' : ''}`,
+    "2. The line's discount at a promotion = its line revenue (rule 4) × pct_off / 100, rounded to the nearest penny (half a penny rounds up).",
+    lv >= 10
+      ? '3. Try the qualifying promotions from the highest pct_off down (ties: lowest promo_id first). The line takes the first one whose remaining budget is at least its discount at it, and that discount comes off the promotion\'s remaining budget. Exception: if a promotion\'s remaining budget is less than the line\'s discount but at least £0.50, the line takes that whole remaining budget as its discount and the promotion is used up. A promotion whose remaining budget is below £0.50 and below the line\'s discount is skipped for that line. If no promotion can be used, the line gets none.'
+      : "3. Try the qualifying promotions from the highest pct_off down (ties: lowest promo_id first). The line takes the first one whose remaining budget is at least its discount at it, and that discount comes off the promotion's remaining budget. A promotion whose remaining budget is too small is skipped for this line (it may still fit a smaller line later). If none fits, the line gets no promotion.",
   ];
-  const cols = ['customer_id', 'the number of Q2 orders', 'gross', 'discount', 'net'];
-  if (lv >= 8) {
-    defs.push(`- wallet spend: work out which wallet entries count under rule 6, using the whole ledger (follow every reversal chain to the end). Take the customer's counting entries of type 'purchase' or 'refund' posted in Q2 (posted_at_utc read in UK local time, with the cut-offs of memo item 2). Wallet spend = minus the sum of their amount_pence, divided by 100 (purchases are negative, so spending is positive and refunds reduce it); 0 if there are none.`);
-    cols.push('wallet spend');
-  }
-  if (lv >= 9) {
-    defs.push(`- subscriber orders: how many of the customer's Q2 orders were placed on a UK local date on which the customer's status in subscription_status_daily was 'active' (apply rule 7 for 2026-04-14 first); 0 if none.`);
-    cols.push('subscriber orders');
-  }
-  if (lv >= 10) {
-    defs.push(`- checkouts: the customer's app 'checkout' events in Q2. Prepare events_raw first: rows with the same customer_id, event_name and event_ts_utc are one event (rule 5), whose ingested_at_utc is the EARLIEST of theirs; an event's time is its event_ts_utc, except when that is later than its ingested_at_utc - then its time is that ingested_at_utc (some phones' clocks run fast). Count the checkout events whose time, in UK local time, falls in Q2 (the cut-offs of memo item 2); 0 if none.`);
-    cols.push('checkouts');
-  }
-  if (lv >= 9) {
-    defs.push(`- segment: the first of these rules that applies: (1) 'VIP' if net rounded to the penny is at least 150.00; (2) 'Subscriber' if subscriber orders is at least 1; (3) 'Wallet' if wallet spend is at least 20.00; (4) 'Standard'.`);
-    cols.push("segment (the text 'VIP', 'Subscriber', 'Wallet' or 'Standard')");
-  }
-  if (lv >= 10) {
-    defs.push(`- segment rank: the customer's rank within their segment by net rounded to the penny, highest first; tied customers share a rank and the next rank is skipped (1, 2, 2, 4).`);
-    cols.push('segment rank');
-  }
+  if (lv >= 9) rules.push("4. One use per customer: once one of a customer's orders has used a promotion, that customer's LATER orders cannot use that promotion (treat it as not qualifying); other lines of the same order can.");
+  const memo = lv >= 9
+    ? `\n\nMemo from Kofi (finance) - it overrides the tables and the rules above:
+1. MAYDAY25 was withdrawn early: it ended on 2 May 2026, whatever ends_on says in the promotions table.
+2. Gift lines get no promotion: a line whose product was in the category 'Gifts' at the moment of the order (rule 4) qualifies for no promotion. It still counts in its order's basket for (d).${lv >= 10 ? "\n3. Finance closes each quarter at 23:00 UK local time on its last day: an order placed at or after 23:00 UK time on 31 March 2026 is a Q2 order, and one placed at or after 23:00 UK time on 30 June 2026 is not. (This cut-off only decides the quarter; the promotion dates in (b) still use the order's UK local date.)" : ''}`
+    : '';
   const intro = [
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    `From Femi (finance): "I need a Q2 2026 revenue review per customer, with what each promotion really took off. Kofi's memo has a correction - apply it."`,
-    `From Femi (finance): "Q2 2026 revenue review per customer again, but this time with all of Kofi's memo applied."`,
-    `From Femi (finance): "The Q2 2026 customer review for the board: revenue after promotions and wallet spend, UK and Ireland only, by Kofi's memo."`,
-    `From Femi (finance): "The Q2 2026 customer review with segments for the CRM team, by Kofi's memo."`,
-    `From Femi (finance): "The full Q2 2026 customer review: revenue after promotions, wallet spend, subscriptions, app checkouts, segments and ranks, by Kofi's memo."`,
-  ][lv]!;
-  const money = ['gross', 'discount', 'net', 'wallet spend'].filter((c) => cols.includes(c));
+    `From Kofi (finance): "Each Q2 promotion had a budget this year. Once a promotion's remaining budget was too small for a line, that line got the next best promotion instead. How did the budgets go?"`,
+    `From Kofi (finance): "The Q2 promotion budgets again, now with the one-use-per-customer rule and my memo."`,
+    `From Kofi (finance): "The Q2 promotion budget run as finance will book it: one use per customer, partial last uses and my whole memo."`,
+  ][lv - 8]!;
   return `${intro}
 
-Definitions:
-${defs.join('\n')}
+Budget sheet - the most each promotion may give away in Q2 2026: ${BUDGET_PROMOS.map((p) => `${codes[p]} ${gbp(budgets[p]!)}`).join(', ')}. (NEWYEAR15 ended in January and is not part of the run.)
 
-Memo from Kofi (finance) - it overrides the tables and the definitions above:
-${memo.map((m, i) => `${i + 1}. ${m}`).join('\n')}
+Work through the order lines of paid orders placed in Q2 2026 (${lv >= 10 ? 'with the cut-offs of memo item 3' : 'from 1 April to 30 June 2026, UK local dates'}) one at a time, in order of the order's ordered_at_utc, then order_id, then line_no, carrying each promotion's remaining budget from line to line:
+${rules.join('\n')}${memo}
 
-Return one row per customer${lv >= 8 ? ' in the review' : ''} with at least one Q2 order, with ${cols.length} columns: ${cols.join(', ')}. ${money.length > 1 ? `${money.slice(0, -1).join(', ')} and ${money[money.length - 1]} are` : `${money[0]} is`} in GBP (each compared to within ±0.01).`;
+Return one row per promotion in the budget sheet that was applied to at least one line, with four columns: the promotion code, the number of lines it was applied to, the total discount it gave in GBP and its remaining budget at the end of the run in GBP (both ±0.01).`;
 }
 
 const SLIP_TEXT: Record<string, string> = {
-  'no-memo-1': 'ignores memo item 1, so MAYDAY25 still runs on 3 May',
-  'count-lines': 'counts order lines instead of orders',
-  'stack-promos': 'gives a line every qualifying promotion, not just the best one',
-  'basket-line': 'checks the minimum basket against the line instead of the whole order',
-  'promo-utc-date': 'uses the UTC date for the promotion windows',
-  'no-cutoff': 'ignores the 23:00 quarter cut-off (memo item 2)',
-  'cutoff-utc': 'applies the 23:00 cut-off to the UTC timestamp',
-  'gift-today': 'decides gift lines by today’s category in dim_product',
-  'gifts-discounted': 'ignores memo item 3, so gift lines get promotions',
-  'all-countries': 'keeps customers outside the UK and Ireland (memo item 4)',
-  'drop-reversed': 'drops every reversed wallet entry, even when the reversal was itself undone',
-  'purchases-only': 'leaves wallet refunds out of wallet spend',
-  'wallet-utc': 'takes the wallet window in UTC',
-  'no-lost-day': 'ignores the lost day, 2026-04-14',
-  'fill-from-15th': 'fills the lost day from 15 April instead of 13 April',
-  'sub-utc-date': 'matches the subscription status on the UTC date of the order',
-  'cancelled-vip': 'ignores memo item 5, so a customer with a cancelled order can still be VIP',
-  'dup-checkouts': 'counts duplicate checkout deliveries',
+  'known-uses-today': 'decides which entries counted that evening with reversals posted later',
+  'entry-days-only': 'only looks at the dates on which an entry was posted (no carrying balances forward)',
+  'utc-days': 'uses UTC dates for the end of each day',
+  'drop-reversed': 'drops every reversed entry, even when the reversal was itself undone',
+  'april-starters': 'also includes wallets opened in April',
   'no-clock-fix': 'no correction for fast phone clocks',
   'latest-ingest': 'corrects fast clocks with the latest delivery instead of the earliest',
-  'row-number': 'ROW_NUMBER instead of RANK, so tied customers get different ranks',
-};
-const SLIPS_BY_LEVEL: Record<number, string[]> = {
-  6: ['no-memo-1', 'count-lines', 'stack-promos', 'basket-line'],
-  7: ['no-cutoff', 'cutoff-utc', 'gift-today', 'gifts-discounted', 'no-memo-1'],
-  8: ['all-countries', 'drop-reversed', 'purchases-only', 'wallet-utc', 'no-cutoff', 'gift-today'],
-  9: ['no-lost-day', 'fill-from-15th', 'sub-utc-date', 'cancelled-vip', 'drop-reversed', 'all-countries', 'no-cutoff'],
-  10: ['dup-checkouts', 'no-clock-fix', 'row-number', 'no-lost-day', 'cancelled-vip', 'drop-reversed', 'gift-today', 'no-memo-1'],
+  'window-exclusive': 'an order exactly 30 minutes after the last event is left out',
+  'utc-week': 'the week and the session day in UTC',
+  'todays-price': 'prices the orders at today’s price',
+  'any-channel': 'counts web orders as well as app orders',
+  'no-budget': 'ignores the budgets (the best promotion every time)',
+  'no-fallback': 'a line whose best promotion has run out gets no promotion instead of the next best',
+  'order-id-order': 'uses the budgets up in order of order_id instead of the order time',
+  'basket-line': 'checks the minimum basket against the line instead of the whole order',
+  'one-use-ignored': 'ignores the one-use-per-customer rule',
+  'one-use-per-line': 'blocks the other lines of the same order once one line has used a promotion',
+  'gifts-discounted': 'ignores memo item 2, so gift lines get promotions',
+  'gift-today': 'decides gift lines by today’s category in dim_product',
+  'no-memo-1': 'ignores memo item 1, so MAYDAY25 still runs on 3 May',
+  'no-partial': 'never uses a remaining budget smaller than the discount',
+  'partial-any': 'uses any remaining budget, even below £0.50',
+  'no-cutoff': 'ignores the 23:00 quarter cut-off',
 };
 
-function reviewQuestion(lv: number): Question {
-  const notes: Record<number, string> = {
-    6: 'Per-customer rollup of the L05 promotion logic (many-to-many join, four conditions, one winner per line by ROW_NUMBER, basket from a window over the whole order) with a memo amendment that overrides a table value. Planted: a big kit basket on 3 May, the day MAYDAY25 no longer runs.',
-    7: 'Adds a quarter defined by 23:00 UK-time cut-offs in BST (orders at 22:xx UTC on 31 March and 30 June) while promotion windows keep the UK date, and a promotion exclusion decided by the category history at the order moment (products move in and out of Gifts during the quarter).',
-    8: 'Adds a country filter that removes whole customers and a wallet measure: a recursive walk down each reversal chain over the whole ledger (a reversed reversal reinstates its target), then purchases and refunds posted in the UK-time quarter. Planted: wallet purchases at 21:xx and 22:xx UTC on both cut-off days.',
-    9: 'Adds the daily subscription snapshot with the lost day filled from the day before, matched on each order’s UK date, and an ordered segment rule list whose first rule has a memo exception. Planted: subscriber orders on 14 April and at 23:xx UTC on 13 April, a paused-then-active subscriber ordering on 14 April, big spenders with a cancelled order.',
-    10: 'Adds app checkouts after deduplication with the earliest ingestion and fast-clock correction, filtered by the UK-time quarter, and RANK() within each segment on net rounded to the penny (ties share a rank). Ten tables, five memo items and every warehouse rule at once.',
-  };
-  return {
-    id: `L${String(lv).padStart(2, '0')}`,
-    difficulty: 'hard',
-    text: reviewText(lv),
-    ordered: false,
-    reference: reviewSql(lv),
-    solve: (t) => reviewSolve(t, lv),
-    careless: SLIPS_BY_LEVEL[lv]!.map((s) => ({ why: SLIP_TEXT[s]!, sql: reviewSql(lv, s) })),
-    notes: notes[lv]!,
-  };
+let budgetCache: { budgets: Record<number, number>; codes: Record<number, string> } | null = null;
+/** Budgets are fixed in the question text: about 55% of the smallest unconstrained Q2 spend of each promotion over the
+ *  four databases (rounded to £5, at least £5), so every budget runs out part-way through the quarter on every copy. */
+export function budgetSheet(): { budgets: Record<number, number>; codes: Record<number, string> } {
+  if (budgetCache) return budgetCache;
+  const dbs = LADDER_SEEDS.map((s) => generateLadderWarehouse(s).tables);
+  const totals = dbs.map(unconstrained);
+  const budgets = Object.fromEntries(BUDGET_PROMOS.map((p) => [p, Math.max(500, Math.round((0.55 * Math.min(...totals.map((x) => x[p]!))) / 500) * 500)]));
+  const codes = Object.fromEntries(dbs[0]!.promotions!.rows.map((r) => [Number(r[0]), String(r[1])]));
+  budgetCache = { budgets, codes };
+  return budgetCache;
+}
+
+function q(id: string, text: string, reference: string, solve: (t: Tables) => Cell[][], slips: Array<[string, string]>, notes: string, tolerance?: number): Question {
+  return { id, difficulty: 'hard', text, ordered: false, ...(tolerance !== undefined ? { tolerance } : {}), reference, solve, careless: slips.map(([s, sql]) => ({ why: SLIP_TEXT[s]!, sql })), notes };
+}
+
+function deepQuestions(): Question[] {
+  const { budgets, codes } = budgetSheet();
+  const budget = (lv: number, slips: string[], notes: string) =>
+    q(`L${String(lv).padStart(2, '0')}`, budgetText(lv, budgets, codes), budgetSql(lv, budgets), (t) => budgetSolve(t, lv, budgets), slips.map((s) => [s, budgetSql(lv, budgets, s)]), notes);
+  return [
+    q('L06', RESTATED_TEXT, restatedSql(), restatedSolve, ['known-uses-today', 'entry-days-only', 'utc-days', 'drop-reversed', 'april-starters'].map((s) => [s, restatedSql(s)]),
+      'Bitemporal balances: a calendar of every April date per wallet (balances carried over empty days), rule 6 applied twice per date - to the entries known that evening only, and with every reversal known today - by the parity of each chain’s known length. Planted: April chargebacks undone days later, purchases that dip a wallet below zero for the evening, late-evening entries in BST.'),
+    q('L07', SESSIONS_TEXT, sessionsSql(), sessionsSolve, ['no-clock-fix', 'latest-ingest', 'window-exclusive', 'utc-week', 'todays-price', 'any-channel'].map((s) => [s, sessionsSql(s)]),
+      'Sessions over all deduplicated, clock-corrected events (earliest ingestion), kept by the UK date of their first event, then an interval join of paid app orders into [first event, last event + 30 min] with revenue at historical prices. Planted: app orders a few minutes after checkouts, exactly 30:00 and 30:01 after a session’s last event, web orders inside session windows, orders right after fast-clock events.'),
+    budget(8, ['no-budget', 'no-fallback', 'order-id-order', 'basket-line'],
+      'Sequential state: every promotion’s remaining budget is carried line by line in time order (a recursive CTE), each line takes the best promotion that still fits and falls back otherwise, so one wrong pick changes every later pick. Budgets are fixed in the text at about 55% of the smallest unconstrained spend over the four databases, so they run out part-way on every copy.'),
+    budget(9, ['one-use-ignored', 'one-use-per-line', 'gifts-discounted', 'gift-today', 'no-memo-1', 'no-fallback'],
+      'Adds state of a second kind - which customer has used which promotion, and in which order (a later order is blocked, the same order is not) - plus gift lines excluded by the category at the order moment and the memo’s early end of MAYDAY25.'),
+    budget(10, ['no-partial', 'partial-any', 'no-cutoff', 'one-use-per-line', 'gift-today', 'no-fallback'],
+      'Adds an exception to an exception (a too-small remaining budget is used up in part, unless it is under £0.50, when it is skipped for that line but stays available to smaller lines) and the 23:00 UK quarter cut-off.'),
+  ];
 }
 
 const L01: Question = {
@@ -602,34 +780,30 @@ GROUP BY event_name`,
 
 const reuse = (id: string, as: string): Question => ({ ...wh.QUESTIONS.find((q) => q.id === id)!, id: as, careless: [...wh.QUESTIONS.find((q) => q.id === id)!.careless] });
 
-export const LADDER_QUESTIONS: Question[] = [L01, L02, reuse('h01', 'L03'), reuse('h04', 'L04'), reuse('h08', 'L05'), ...[6, 7, 8, 9, 10].map(reviewQuestion)];
+export const LADDER_QUESTIONS: Question[] = [L01, L02, reuse('h04', 'L03'), reuse('h07', 'L04'), reuse('h09', 'L05'), ...deepQuestions()];
 
-/** Depth per level: the tables the reference reads and the rules, conditions and memo items it must apply (L05: paid,
- *  UK date, historical price, the four promotion conditions, one best promotion; each later level adds the items its
- *  notes list: L06 the customer rollup and memo item 1; L07 the cut-off and gift lines; L08 countries, reversal chains
- *  and the wallet window; L09 the lost day, the subscription match, the segment list and its exception; L10
- *  deduplication, the clock correction and ranks with ties). */
+/** Depth per level: the tables the reference reads and the semantics it has to compose (see the header). */
 export const DEPTH = [
   { level: 'L01', tables: 1, rules: 1 },
   { level: 'L02', tables: 1, rules: 2 },
-  { level: 'L03', tables: 4, rules: 3 },
-  { level: 'L04', tables: 5, rules: 4 },
-  { level: 'L05', tables: 6, rules: 8 },
-  { level: 'L06', tables: 6, rules: 10 },
-  { level: 'L07', tables: 6, rules: 12 },
-  { level: 'L08', tables: 8, rules: 15 },
-  { level: 'L09', tables: 9, rules: 19 },
-  { level: 'L10', tables: 10, rules: 22 },
+  { level: 'L03', tables: 5, rules: 4 },
+  { level: 'L04', tables: 1, rules: 5 },
+  { level: 'L05', tables: 1, rules: 6 },
+  { level: 'L06', tables: 1, rules: 7 },
+  { level: 'L07', tables: 4, rules: 8 },
+  { level: 'L08', tables: 6, rules: 10 },
+  { level: 'L09', tables: 6, rules: 13 },
+  { level: 'L10', tables: 6, rules: 16 },
 ];
 
 export const META = {
   id: 'work.sql-ladder',
   name: 'Ask the Database: Ladder',
   description:
-    'Ten frozen analyst questions on a messy coffee-company warehouse, each answered with one SQLite query and each one query deeper than the last: from counting paid orders in one table, through UK local time across the clock change, price and category history and the best single promotion per line (the hardest questions of Ask the Database: Hard), up to a per-customer Q2 review that joins ten tables and applies a finance memo with five amendments (a promotion withdrawn early, 23:00 quarter cut-offs, no promotions on gift lines by the category at the order moment, UK and Ireland only, no VIP with a cancelled order), wallet spend through reversal chains, subscriber orders through a lost snapshot day, deduplicated and clock-corrected app checkouts, an ordered segment rule list and ranks with ties. Every query runs read-only on the live database and three hidden copies and must match the reference on each, so hard-coding fails; a level is passed at 90%.',
+    'Ten frozen analyst questions on a messy coffee-company warehouse, each answered with one SQLite query, each composing more subtle semantics than the last: a count, deduplicated events in UK time, then three hard questions of Ask the Database: Hard (top two with ties across a category move, balances through reversal chains, sessions after deduplication and fast-clock correction), then queries that carry state from row to row: April wallet balances as known each evening against the restated books (rule 6 evaluated as of every date, on a calendar that carries balances over empty days), app sessions joined to the paid orders that fall in their windows at historical prices, and a promotion budget run in which every line takes the best promotion that still fits its remaining budget, with one use per customer, gift lines decided by the category at the order moment, partial last uses unless under 50p, and the 23:00 quarter cut-off, so one wrong pick changes every later one. Every query runs read-only on the live database and three hidden copies and must match the reference on each, so hard-coding fails; a level is passed at 90%.',
   difficulty: 'extreme',
   tags: ['sql', 'sqlite', 'data-analysis', 'window-functions', 'time-zones', 'real-world', 'work', 'ladder'],
-  hook: 'From one table and one rule to ten tables and a five-point memo: how deep a query can it get right?',
+  hook: 'From one count to a budget run where every pick changes the next: how deep a query can it get right?',
 };
 
 export const PACK: Pack = {
@@ -649,7 +823,7 @@ export function buildLadder(opts: { collect?: string[] } = {}): { text: string; 
   const obj = JSON.parse(built.text) as { cases: Array<{ id: string; prompt: string; notes: string }>; estimate: { inputTokens: number; outputTokens: number }; maxOutputTokens: number; preamble: string };
   obj.cases.forEach((c, i) => {
     const d = DEPTH[i]!;
-    c.notes = c.notes.replace(/^\[(easy|medium|hard)\]/, `[level ${i + 1}] Depth: ${d.tables} table${d.tables > 1 ? 's' : ''}; ${d.rules} rule${d.rules > 1 ? 's, conditions and memo items' : ''} to apply.`);
+    c.notes = c.notes.replace(/^\[(easy|medium|hard)\]/, `[level ${i + 1}] Depth: ${d.rules} semantics to compose in one query, over ${d.tables} table${d.tables > 1 ? 's' : ''}.`);
   });
   obj.maxOutputTokens = 32000;
   obj.estimate = { inputTokens: tok(obj.preamble) + Math.round(obj.cases.reduce((s, c) => s + tok(c.prompt), 0) / obj.cases.length), outputTokens: 6000 };

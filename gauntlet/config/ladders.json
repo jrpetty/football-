@@ -148,8 +148,8 @@
       "category": "work",
       "basedOn": "work.crm-dedupe",
       "passMark": 0.9,
-      "grows": "Records and duplicate rules: a short list with obvious duplicates, up to a large list where every matching rule interacts.",
-      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "70 records · 5 rules", "120 records · 8 rules", "220 records · all rules", "320 records · 3-hop chains", "450 records · 4-hop chains", "600 records · 5-hop chains", "780 records · 6-hop chains", "1,000 records · 6-hop chains"]
+      "grows": "Records merged one pair at a time: 24 records to about 950, with link records, refused merges and survivorship precedence.",
+      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "79 records · 4 refused merges", "131 records · 11 refused merges", "234 records · 15 refused merges", "349 records · 37 refused merges", "492 records · 56 refused merges", "620 records · 73 refused merges", "774 records · 99 refused merges", "949 records · 106 refused merges"]
     },
     {
       "id": "work.contract-ladder",
@@ -158,8 +158,8 @@
       "category": "work",
       "basedOn": "work.contract-redline",
       "passMark": 0.9,
-      "grows": "Contract length and kinds of change: a short clause list with plain edits, up to a long contract with moved, split and reworded clauses.",
-      "rungs": ["970 words · 3 changes", "1,900 words · 7 changes", "2,300 words · 12 changes", "3,500 words · 18 changes", "4,700 words · 33 changes", "6,800 words · 45 changes", "8,800 words · 58 changes", "11,200 words · 78 changes", "14,100 words · 93 changes", "17,500 words · 114 changes"]
+      "grows": "Draft length and settlement: 3 accepted changes to 114 changes settled by about 100 replies, keyed by the agreed numbering.",
+      "rungs": ["3 changes · all accepted", "7 changes · 2 replies", "12 changes · 12 replies", "18 changes · 20 replies", "33 changes · 35 replies", "45 changes · 46 replies", "58 changes · 58 replies", "78 changes · 78 replies", "93 changes · 92 replies", "114 changes · 106 replies"]
     },
     {
       "id": "work.sql-ladder",
@@ -168,8 +168,8 @@
       "category": "work",
       "basedOn": "work.sql-questions",
       "passMark": 0.9,
-      "grows": "Tables and query depth: one table and a filter, up to many joined tables with grouping, windows and edge cases (checked on hidden variant databases).",
-      "rungs": ["1 table · 1 rule", "1 table · 2 rules", "4 tables · 3 rules", "5 tables · 4 rules", "6 tables · 8 rules", "6 tables · 10 rules", "6 tables · 12 rules", "8 tables · 15 rules", "9 tables · 19 rules", "10 tables · 22 rules"]
+      "grows": "Query depth: semantics one query must compose, from a filter to state carried row by row (as-of balances, a budget run).",
+      "rungs": ["1 rule · a count", "2 rules · dedup, UK week", "4 rules · ranks with ties", "5 rules · reversal chains", "6 rules · sessions", "7 rules · as-known balances", "8 rules · session orders", "10 rules · budget run", "13 rules · one use each", "16 rules · partial budgets"]
     },
     {
       "id": "work.support-ladder",
@@ -178,8 +178,8 @@
       "category": "work",
       "basedOn": "work.support-refunds",
       "passMark": 0.9,
-      "grows": "Tickets and policy rules: a few tickets under two refund rules, up to a full queue under the whole support policy.",
-      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 6 rules", "15 tickets · 8 rules", "29 tickets · full handbook", "40 tickets · 32 traps", "54 tickets · 43 traps", "70 tickets · 59 traps", "90 tickets · 77 traps", "120 tickets · 105 traps"]
+      "grows": "Tickets and history: 4 independent returns to 120 tickets from 36 accounts whose limits are used up in date order.",
+      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 3 accounts", "15 tickets · 6 accounts", "29 tickets · 9 accounts", "40 tickets · 14 accounts", "54 tickets · 16 accounts", "70 tickets · 22 accounts", "90 tickets · 25 accounts", "120 tickets · 36 accounts"]
     }
   ]
 }
