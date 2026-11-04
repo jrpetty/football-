@@ -1,21 +1,11 @@
 """work.contract-ladder — "What Changed in the Contract?: Ladder".
 
-Ten levels of the same task as work.contract-redline (verification/realworld-work/contract.py): list every
-substantive change between two drafts of a services agreement, by clause or schedule row in version 2, with type
-and old and new values. It reuses that generator's clause library, renderer, structured diff (the key), its careless
-and careful-with-a-slip readers and the prompt text word for word; only the size of the agreement and the number and
-kind of edits grow:
-
-  L01  a short agreement (about 20 clauses), three value changes
-  L02  the full main body, + a "not" flipped, an auto-renewal clause added (renumbers the Term section)
-  L03  + three schedules (sites, service levels, rate card), a definition change, a clause deleted, a clause moved
-  L04  the business pack's medium agreement: + boilerplate, governing law, "shall"/"may" and party changes, a site
-       added and one deleted mid-list
-  L05  the business pack's longest agreement (k09): + a new section that renumbers everything after it, a carve-out
-       moved, the rate card re-sorted
-  L06-L10  beyond it: governance and asset clauses that cross-refer to other clauses (re-pointed references), a
-       fourth schedule (asset register), a second new section, more moved clauses, re-sorted site and asset lists,
-       and up to ~110 changes in a ~37k-token pair of drafts.
+Ten levels of the same task as work.contract-redline (verification/realworld-work/contract.py), plus settlement: the
+prompt shows version 1, the supplier's version 2, the customer's response and the supplier's final note, and asks for
+every substantive change between version 1 and the AGREED version, keyed by the agreed numbering. The drafts come from
+build_level() below (that generator's clause library, renderer and diff, at ten sizes; L05 is the original's longest
+case, L06-L10 add governance and asset clauses with cross-references, a fourth schedule, a second new section, more
+moved clauses and re-sorted lists); the response and note come from contract_settle.py (assign / settle / predict).
 
 Run:  python3 contract_ladder.py            writes tests/work/contract-ladder.json and contract-scripted.json
       python3 contract_ladder.py --check    exits 1 unless both files are byte-identical to a fresh build
@@ -29,6 +19,7 @@ sys.path.insert(0, os.path.join(HERE, '..'))
 import common  # noqa: E402
 from wk import people  # noqa: E402
 import contract as K  # noqa: E402
+import contract_settle as CS  # noqa: E402
 
 TRAP_WEIGHT = K.TRAP_WEIGHT
 
@@ -73,25 +64,25 @@ SHORT_DROP = ('ins_evidence', 'term_end', 'personnel', 'def_services', 'entire',
 # Growth: (sites, service levels, rate card rows, assets) per schedule; value changes; subtle changes (who must do it,
 # shall/may, re-pointed references, a "not"); schedule rows changed; structural edits.
 LEVELS = [
-    dict(id='L01', repoint=0, seed=5101, short=True, sched=None, n_val=3, neg=False, law=False, defn=False, subtle=0, n_rows=0, renewal=False, victims=0, new_sections=0, moves=0,
+    dict(id='L01', resp=dict(accept_all=True), repoint=0, seed=5101, short=True, sched=None, n_val=3, neg=False, law=False, defn=False, subtle=0, n_rows=0, renewal=False, victims=0, new_sections=0, moves=0,
          ladder_lib=False, sites_added=0, sites_deleted=0, assets_added=0, assets_deleted=0, resort=(), heads_upper=True),
-    dict(id='L02', repoint=0, seed=5102, short=False, sched=None, n_val=5, neg=True, law=False, defn=False, subtle=0, n_rows=0, renewal=True, victims=0, new_sections=0, moves=0,
+    dict(id='L02', resp=dict(accept_all=True, min_reject=1), repoint=0, seed=5102, short=False, sched=None, n_val=5, neg=True, law=False, defn=False, subtle=0, n_rows=0, renewal=True, victims=0, new_sections=0, moves=0,
          ladder_lib=False, sites_added=0, sites_deleted=0, assets_added=0, assets_deleted=0, resort=(), heads_upper=True),
-    dict(id='L03', repoint=0, seed=5103, short=False, sched=(6, 4, 5, 0), n_val=6, neg=True, law=False, defn=True, subtle=0, n_rows=2, renewal=True, victims=1, new_sections=0, moves=1,
+    dict(id='L03', resp=dict(reject=0.2, counter=0.1, none=0.1, min_reject=1), repoint=0, seed=5103, short=False, sched=(6, 4, 5, 0), n_val=6, neg=True, law=False, defn=True, subtle=0, n_rows=2, renewal=True, victims=1, new_sections=0, moves=1,
          ladder_lib=False, sites_added=0, sites_deleted=0, assets_added=0, assets_deleted=0, resort=(), heads_upper=False),
-    dict(id='L04', repoint=1, seed=5104, short=False, extra=True, sched=(10, 6, 8, 0), n_val=6, neg=True, law=True, defn=True, subtle=2, n_rows=3, renewal=True, victims=1, new_sections=0, moves=1,
+    dict(id='L04', resp=dict(reject=0.2, counter=0.15, none=0.15, withdraw=0.06, correction=0.06, min_reject=2), repoint=1, seed=5104, short=False, extra=True, sched=(10, 6, 8, 0), n_val=6, neg=True, law=True, defn=True, subtle=2, n_rows=3, renewal=True, victims=1, new_sections=0, moves=1,
          ladder_lib=False, sites_added=1, sites_deleted=1, assets_added=0, assets_deleted=0, resort=(), heads_upper=False),
-    dict(id='L05', repoint=2, seed=5105, short=False, extra=True, sched=(34, 12, 16, 0), n_val=10, neg=True, law=True, defn=True, subtle=5, n_rows=8, renewal=True, victims=1, new_sections=1, moves=1,
+    dict(id='L05', resp=dict(reject=0.2, counter=0.12, none=0.12, withdraw=0.05, correction=0.05, blanket=[(0, 'accept')], exceptions=0.3, reject_sections=1), repoint=2, seed=5105, short=False, extra=True, sched=(34, 12, 16, 0), n_val=10, neg=True, law=True, defn=True, subtle=5, n_rows=8, renewal=True, victims=1, new_sections=1, moves=1,
          ladder_lib=False, sites_added=2, sites_deleted=1, assets_added=0, assets_deleted=0, resort=('rates',), heads_upper=False),
-    dict(id='L06', repoint=3, seed=5106, short=False, extra=True, sched=(44, 12, 16, 30), n_val=12, neg=True, law=True, defn=True, subtle=7, n_rows=12, renewal=True, victims=2, new_sections=1, moves=2,
+    dict(id='L06', resp=dict(reject=0.22, counter=0.13, none=0.12, withdraw=0.05, correction=0.05, blanket=[(0, 'accept'), (2, 'reject')], exceptions=0.3, reject_sections=1), repoint=3, seed=5106, short=False, extra=True, sched=(44, 12, 16, 30), n_val=12, neg=True, law=True, defn=True, subtle=7, n_rows=12, renewal=True, victims=2, new_sections=1, moves=2,
          ladder_lib=True, sites_added=2, sites_deleted=2, assets_added=1, assets_deleted=1, resort=('rates',), heads_upper=False),
-    dict(id='L07', repoint=4, seed=5107, short=False, extra=True, sched=(60, 12, 16, 70), n_val=14, neg=True, law=True, defn=True, subtle=9, n_rows=17, renewal=True, victims=2, new_sections=2, moves=2,
+    dict(id='L07', resp=dict(reject=0.24, counter=0.14, none=0.12, withdraw=0.06, correction=0.06, blanket=[(0, 'accept'), (2, 'reject')], exceptions=0.35, reject_sections=1), repoint=4, seed=5107, short=False, extra=True, sched=(60, 12, 16, 70), n_val=14, neg=True, law=True, defn=True, subtle=9, n_rows=17, renewal=True, victims=2, new_sections=2, moves=2,
          ladder_lib=True, sites_added=3, sites_deleted=2, assets_added=2, assets_deleted=1, resort=('rates', 'assets'), heads_upper=False),
-    dict(id='L08', repoint=5, seed=5108, short=False, extra=True, sched=(80, 12, 16, 120), n_val=16, neg=True, law=True, defn=True, subtle=11, n_rows=30, renewal=True, victims=3, new_sections=2, moves=3,
+    dict(id='L08', resp=dict(reject=0.26, counter=0.15, none=0.12, withdraw=0.06, correction=0.06, blanket=[(0, 'accept'), (3, 'reject')], exceptions=0.35, reject_sections=2), repoint=5, seed=5108, short=False, extra=True, sched=(80, 12, 16, 120), n_val=16, neg=True, law=True, defn=True, subtle=11, n_rows=30, renewal=True, victims=3, new_sections=2, moves=3,
          ladder_lib=True, sites_added=3, sites_deleted=3, assets_added=2, assets_deleted=2, resort=('rates', 'assets'), heads_upper=False),
-    dict(id='L09', repoint=6, seed=5109, short=False, extra=True, sched=(100, 12, 16, 180), n_val=18, neg=True, law=True, defn=True, subtle=12, n_rows=40, renewal=True, victims=3, new_sections=2, moves=4,
+    dict(id='L09', resp=dict(reject=0.28, counter=0.15, none=0.12, withdraw=0.07, correction=0.06, blanket=[(0, 'accept'), (3, 'reject'), (1, 'accept')], exceptions=0.4, reject_sections=2), repoint=6, seed=5109, short=False, extra=True, sched=(100, 12, 16, 180), n_val=18, neg=True, law=True, defn=True, subtle=12, n_rows=40, renewal=True, victims=3, new_sections=2, moves=4,
          ladder_lib=True, sites_added=4, sites_deleted=3, assets_added=3, assets_deleted=2, resort=('rates', 'assets', 'sites'), heads_upper=False),
-    dict(id='L10', repoint=7, seed=5110, short=False, extra=True, sched=(120, 12, 16, 260), n_val=20, neg=True, law=True, defn=True, subtle=14, n_rows=52, renewal=True, victims=4, new_sections=2, moves=5,
+    dict(id='L10', resp=dict(reject=0.3, counter=0.16, none=0.12, withdraw=0.07, correction=0.07, blanket=[(0, 'accept'), (3, 'reject'), (1, 'accept')], exceptions=0.4, reject_sections=2), repoint=7, seed=5110, short=False, extra=True, sched=(120, 12, 16, 260), n_val=20, neg=True, law=True, defn=True, subtle=14, n_rows=52, renewal=True, victims=4, new_sections=2, moves=5,
          ladder_lib=True, sites_added=5, sites_deleted=4, assets_added=4, assets_deleted=3, resort=('rates', 'assets', 'sites'), heads_upper=False),
 ]
 MOVABLE = ['liab_excl', 'notices', 'dp_return', 'conf_ex', 'waiver', 'hs']  # clauses that may move verbatim (references follow them)
@@ -397,7 +388,24 @@ def make_levels():
                 continue
         else:
             raise AssertionError(L['id'])
-        out.append(dict(L=L, b=b, salt=k, prompt=K.prompt(b), expected={'changes': b['key']}, careless=careless(b), slip=K.slip(b)))
+        for j in range(200):
+            st = CS.assign(b, L['resp'], L['seed'] * 7 + j)
+            sA = CS.settle(b, st)
+            pred = CS.predict(b, st, sA)
+            assert pred == sA['key'], (L['id'], [x for x in pred if pred.get(x) != sA['key'].get(x)] + [x for x in sA['key'] if x not in pred])
+            check_unique(dict(b, t2=sA['tA'], n2=sA['nA'], key=sA['key']))
+            slips = {f: CS.settle(b, st, frozenset([f]))['key'] for f in ('unanswered_ok', 'counter_always', 'blanket_wins')}
+            need = [f for f, on in (('unanswered_ok', L['resp'].get('none')), ('counter_always', L['resp'].get('counter')), ('blanket_wins', L['resp'].get('exceptions'))) if on]
+            if L['id'] != 'L01' and sA['key'] == b['key']:
+                continue
+            if all(slips[f] != sA['key'] for f in need):
+                break
+        else:
+            raise AssertionError(f"{L['id']}: no response layout makes every settlement rule bite")
+        v2nums = CS.predict(b, st, dict(sA, nA=b['n2']))
+        scripted = dict(careless={'changes': b['key']}, slip_v2_numbering={'changes': v2nums}, slip_unanswered_agreed={'changes': slips['unanswered_ok']},
+                        slip_counter_without_note={'changes': slips['counter_always']}, slip_general_beats_specific={'changes': slips['blanket_wins']}, old_careless=careless(b))
+        out.append(dict(L=L, b=b, st=st, sA=sA, salt=k, rsalt=j, prompt=CS.prompt(b, st), expected={'changes': sA['key']}, careless={'changes': b['key']}, scripted=scripted))
     return out
 
 
@@ -441,8 +449,11 @@ def growth(c):
         types[v['type']] = types.get(v['type'], 0) + 1
     words = len(b['t1'].split()) + len(b['t2'].split())
     renumbered = sum(1 for k in b['n2'] if k in b['n1'] and b['n1'][k] != b['n2'][k])
-    return dict(level=c['L']['id'], tokens=common.tok(c['prompt']), words=words, clauses=len(b['n2']), changes=len(b['key']), renumbered=renumbered,
-                repointed=types.get('cross_reference', 0), types=types)
+    st, sA = c['st'], c['sA']
+    shifted = sum(1 for k in sA['nA'] if k in b['n2'] and sA['nA'][k] != b['n2'][k])
+    return dict(level=c['L']['id'], tokens=common.tok(c['prompt']), words=words, clauses=len(b['n2']), v2_changes=len(b['key']), agreed_changes=len(sA['key']), renumbered=renumbered,
+                responses=len(st['resp']) + len(st['blanket']) + len(st['section_reject']), note_items=len(st['counter_ok']) + len(st['withdrawn']) + (1 if st['corrections'] else 0),
+                shifted_by_settlement=shifted, repointed=types.get('cross_reference', 0), types=types)
 
 
 def build(out_root=None):
@@ -454,19 +465,18 @@ def build(out_root=None):
         sc['weights'] = trap_weights(exp, json.loads(json.dumps(c['careless'])), TRAP_WEIGHT, ['changes'])
         g = growth(c)
         notes = (f"[level {i + 1}] Generated by verification/ladders-data-support/contract_ladder.py with the clause library, renderer and diff of verification/realworld-work/contract.py; "
-                 f"key = diff() of the two structured versions, re-checked by check_unique() from the rendered text. {g['words']} words across both drafts, {g['clauses']} clauses and rows in version 2, "
-                 f"{g['changes']} substantive changes ({', '.join(f'{k} {v}' for k, v in sorted(g['types'].items()))}), {g['renumbered']} clauses renumbered."
+                 f"version 2 settled by contract_settle.py; key = diff() of version 1 and the agreed version, re-derived independently by predict() from version 2's own diff and the statuses, and re-checked by check_unique() from the rendered agreed text. {g['words']} words across both drafts, {g['clauses']} clauses and rows in version 2, "
+                 f"{g['v2_changes']} changes in version 2, {g['responses']} response items and {g['note_items']} note items, {g['agreed_changes']} agreed changes, {g['shifted_by_settlement']} clauses numbered differently in the agreed version than in version 2."
                  f"{' (generator salt %d)' % c['salt'] if c['salt'] else ''} Fields where a trap sits are worth {TRAP_WEIGHT} points, routine fields 1.")
         cases.append(dict(id=c['L']['id'], prompt=c['prompt'], expected=exp, scorer=sc, notes=notes))
     meta = dict(
         id='work.contract-ladder', category='work', name='What Changed in the Contract?: Ladder', version='1.0.0',
-        description=('Ten levels of the same job: compare two drafts of a services agreement and list every substantive change by clause or schedule row in version 2, with its type and old and new values, '
-                     'while ignoring renumbering, moved clauses, re-sorted schedules and reformatted numbers. Level 1 is a short agreement with three changed values; every level adds length and kinds of edit '
-                     '(a "not" flipped, a clause added that renumbers a section, schedules, definitions, deleted and moved clauses, governing law, "shall" turned into "may", obligations moved to the other party, '
-                     're-pointed cross-references); level 5 is the longest case of What Changed in the Contract?, and levels 6 to 10 grow to about 115 changes in two drafts of some 17,500 words with a fourth '
-                     'schedule, a second new section, re-sorted site and asset lists and up to fourteen subtle changes. Listing a non-change costs as much as missing a change; a level is passed at 90% of its points.'),
+        description=('Ten levels of the same job: two drafts of a services agreement, the customer’s response to the supplier’s version 2 and the supplier’s final note, and the question: what changed from version 1 in the AGREED version? '
+                     'Level 1 accepts everything; from level 2 the response rejects changes, makes counter-proposals that count only if the supplier agrees them, leaves changes unanswered (not agreed, unless the supplier lists them as corrections, and then only if not rejected), '
+                     'and from level 5 makes general statements about a schedule that specific items override and rejects a whole new section, while the supplier withdraws changes. Every rejected addition or kept deletion renumbers the agreed version, and every change is keyed by its agreed clause number, so each answer depends on the settlement decisions before it. '
+                     'Levels 6 to 10 grow to 114 changes in two drafts of 17,500 words, about 80 response items and 27 note items, with hundreds of clauses numbered differently from version 2. Listing a non-change costs as much as missing a change; a level is passed at 90% of its points.'),
         difficulty='extreme', tags=['work', 'ladder', 'legal', 'contracts', 'diff', 'reading', 'real-world'],
-        hook='From a one-page redline to two 9,000-word drafts: how far up can it climb without missing a change or inventing one?',
+        hook='Two drafts, a response and a final note: what was actually agreed, clause by clause, as the contract grows?',
         maxOutputTokens=32000,
         scorer={'type': 'json', 'lenient': True, 'sets': {'changes': 3}},
     )
@@ -480,7 +490,7 @@ def build(out_root=None):
         common.ROOT = old_root
     with open(path, encoding='utf-8') as f:
         files['test'] = (path, f.read())
-    scripted = {'work.contract-ladder': {c['L']['id']: {'careless': c['careless'], 'slip': c['slip']} for c in cs}}
+    scripted = {'work.contract-ladder': {c['L']['id']: c['scripted'] for c in cs}}
     files['scripted'] = (os.path.join(HERE, 'contract-scripted.json'), json.dumps(json.loads(json.dumps(scripted)), indent=1, ensure_ascii=False, sort_keys=True) + '\n')
     return files, [growth(c) for c in cs]
 

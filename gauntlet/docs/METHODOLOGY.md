@@ -1516,194 +1516,67 @@ payroll); never regenerate a released version.
 
 ## 7s. Business ladders: data and support
 
-Four Business tests (category `work`) turned into ten-rung difficulty ladders under the contract of §7q: the same task and
-the same written rules on every level, ten frozen cases `L01`…`L10`, each level strictly bigger or deeper than the one
-below. The original tests stay unchanged, so old results stay comparable. Every level's key comes from the same
-generators, rules engines and scorers as the original test, so a level is marked exactly as that test marks a case;
-a level is **passed at 90% of its points** (`passMark` 0.9 in `config/ladders.json`), the test score is the mean
-over the levels, and the headline is the ladder height (§7q: the highest level L with every level 1..L passed
-reliably).
+Four Business tests (category `work`) rebuilt as ten-rung difficulty ladders under the contract of §7q (frozen cases
+`L01`…`L10`, `passMark` 0.9, height = highest level with every level below passed reliably). The originals stay
+unchanged. **Rework after blind calibration:** the first version grew only in volume and every item could be decided on
+its own, so a small model cleared level 5 and the top model level 10. The rebuilt ladders keep levels 1–2 small and
+plain and, from level 3, make answers depend on **state built up across items**: decisions taken one at a time in a
+stated order, where each depends on the outcome of the earlier ones, and rules with exceptions to exceptions that are
+stated once and needed many times. Carried figures (golden records, account totals, agreed clause numbers, remaining
+budgets) carry real weight, so a broken chain costs well over 10%; scoring stays partial (pairs, fields, rows), so a
+single slip is never all or nothing.
 
-| Test | Built from | The growth parameter, level 1 → 10 | Input tokens per level |
+| Test | What carries over from item to item | Growth per level (L01 → L10) | Input tokens per level |
 |---|---|---|---|
-| Clean the Customer List: Ladder (`work.crm-ladder`) | `crm.mjs` (business pack) | records 24 / 40 / 70 / 120 / 220 / 320 / 450 / 600 / 780 / 1,000; rule families stacked (formats → nicknames, Mac/Mc, typos and swapped names → shared mailboxes and the same name elsewhere → moves, married names, DOB block, father and son, staff notes, gone-away masters, golden records from all records → chains); longest matching chain 1 / 1 / 1 / 1 / 2 / 3 / 4 / 5 / 6 / 6 hops; record pairs joined only through a chain 0 (L01–L04) / 5 / 35 / 86 / 270 / 454 / 849; planted look-alikes 0 / 1 / 2 / 8 / 12 / 32 / 48 / 64 / 80 / 104 | 2.0k / 2.6k / 3.7k / 5.4k / 8.9k / 12.1k / 16.6k / 21.3k / 27.7k / 34.9k |
-| What Changed in the Contract?: Ladder (`work.contract-ladder`) | `contract.py` (work pack) | words across both drafts 973 / 1,900 / 2,331 / 3,463 / 4,683 / 6,751 / 8,814 / 11,213 / 14,064 / 17,526; substantive changes 3 / 7 / 12 / 18 / 33 / 45 / 58 / 78 / 93 / 114; kinds of change 2 / 6 / 8 / 12 / 14 / 15 (all) from L06; clauses renumbered 0 / 1 / 6 / 19 / 49 / 91 / 195 / 265 / 347 / 443; re-pointed cross-references 0 / 0 / 0 / 1 / 2 / 3 / 4 / 5 / 6 / 7. L05 is the longest case of the original (k09); L06–L10 add governance and asset clauses that cross-refer to others, a fourth schedule (asset register, up to 260 rows), a second new section, more moved clauses and re-sorted site and asset lists | 2.5k / 4.0k / 4.7k / 6.6k / 8.8k / 12.4k / 16.0k / 20.2k / 25.2k / 31.4k |
-| Ask the Database: Ladder (`work.sql-ladder`) | `warehouse.mts` (Ask the Database: Hard) | query depth, not table size: tables read 1 / 1 / 4 / 5 / 6 / 6 / 6 / 8 / 9 / 10 and rules, conditions and memo items applied 1 / 2 / 3 / 4 / 8 / 10 / 12 / 15 / 19 / 22. L01 counts paid orders per channel; L02 deduplicated events in a UK week; L03–L05 are sql-hard's h01, h04 and h08 (UK days over the clock change, top two per category with ties across a category move, the best promotion per line); L06–L10 are one per-customer Q2 review that grows: memo item 1 (a promotion withdrawn early), then the 23:00 UK quarter cut-off and no promotions on gift lines by the category history, then UK and Ireland only and wallet spend through reversal chains, then subscriber orders through the lost snapshot day and an ordered segment list with a memo exception, then deduplicated, clock-corrected checkouts and ranks with ties | 3.2k (L01–L03) / 3.3k / 3.3k / 3.5k / 3.6k / 3.8k / 4.0k / 4.2k (schema, rules and sample rows are about 3.0k of it) |
-| Customer Support Queue: Ladder (`work.support-ladder`) | `support.mjs` (business pack) | tickets 4 / 6 / 10 / 15 / 29 / 40 / 54 / 70 / 90 / 120; handbook rule families in play 2 / 4 / 6 / 8 / 15 / 16 (all) from L06; trap tickets 0 / 0 / 0 / 9 / 22 / 32 / 43 / 59 / 77 / 105. L01 is change of mind and faulty goods in GMT; L02 adds missing parcels and wrong items; L03 late delivery, billing, personalised, sale and express rules and BST; L04 the faulty-age bands, P2 triggers, a bank holiday, Welsh and vague tickets; L05 is the original's s09 mix; L06–L10 are queues of interacting traps around Christmas, the August bank holiday, the October clock change and Easter with the March clock change | 3.0k / 3.3k / 4.0k / 5.0k / 8.0k / 10.0k / 12.6k / 16.0k / 19.8k / 26.0k |
+| Clean the Customer List: Ladder (`work.crm-ladder`) | From L03 groups are built by a **merge procedure**: every matching pair (R1–R5) is processed in order (rule, then the lower id, then the higher id) and a merge is **refused** when the merged group would hold two different dates of birth or a record noted "not the same person as" another. Planted link records match two different people (one's email and a namesake's phone; chains of two to four links; bookings that join two existing customers), so where they end up depends on earlier decisions. From L04 survivorship has precedence rules (a mobile beats a landline; address and postcode from the most recent MemberHub record that is not gone away, else BookIt), from L05 a corporate-scheme VIP record is the master | records 24 / 40 / 79 / 131 / 234 / 349 / 492 / 620 / 774 / 949; refused merges 0 / 0 / 4 / 11 / 15 / 37 / 56 / 73 / 99 / 106 | 2.0k / 2.6k / 4.1k / 6.0k / 9.6k / 13.3k / 18.1k / 22.0k / 27.3k / 32.9k |
+| What Changed in the Contract?: Ladder (`work.contract-ladder`) | Version 2 is **settled** by the customer's response (accept, reject, "accepted, but with X", general statements about a schedule that specific items override, a whole new section rejected) and the supplier's final note (counter-proposals agreed or not, withdrawals, corrections that stand unless rejected). Changes are keyed by the **agreed** version's numbering, so every rejected addition or kept deletion renumbers what follows | version-2 changes 3 / 7 / 12 / 18 / 33 / 45 / 58 / 78 / 93 / 114; response items 1 / 2 / 11 / 15 / 28 / 37 / 46 / 60 / 70 / 79; note items 0 / 0 / 1 / 5 / 7 / 9 / 12 / 18 / 22 / 27; clauses numbered differently from version 2 0 / 1 / 1 / 7 / 33 / 85 / 155 / 196 / 228 / 280 | 3.0k / 4.5k / 5.3k / 7.3k / 9.7k / 13.4k / 17.1k / 21.6k / 26.8k / 33.3k |
+| Ask the Database: Ladder (`work.sql-ladder`) | Query depth as **composed semantics** (1 / 2 / 4 / 5 / 6 / 7 / 8 / 10 / 13 / 16): L01 a count, L02 deduplicated events in a UK week, L03–L05 sql-hard's h04 (ranks with ties across a category move), h07 (reversal chains, running minimum, UK end of day) and h09 (sessions after deduplication with the earliest ingestion and fast-clock correction); L06 wallet balances **as known each April evening** against the restated books (rule 6 evaluated as of every date, on a calendar carrying balances over empty days); L07 the sessions joined to the paid app orders in [first event, last event + 30 min] at historical prices; L08 a **promotion budget run**: lines in time order, each taking the best promotion whose remaining budget still covers it, falling back otherwise (a recursive CTE carrying seven budgets); L09 + one use per customer per promotion (later orders blocked, the same order not), gift lines by the category at the order moment, a memo override; L10 + partial last use of a budget unless under £0.50 (then skipped but kept for smaller lines) and the 23:00 UK quarter cut-off | tables read 1 / 1 / 5 / 1 / 1 / 1 / 4 / 6 / 6 / 6 | 3.2k / 3.2k / 3.3k / 3.3k / 3.4k / 3.4k / 3.5k / 3.6k / 3.8k / 3.9k |
+| Customer Support Queue: Ladder (`work.support-ladder`) | From L03 customers have several tickets and an account history, and handbook section 4.15 applies **account limits** to each customer's tickets in received order, counting the history and the final outcomes of earlier tickets: (a) at most 2 change-of-mind refunds in 90 days (else escalate); from L04 (b) a £10 yearly goodwill cap on late-delivery partials (pay what is left, or decline) and (d) escalation memory (an escalated customer's later tickets are at least P2, which moves their SLA); from L05 (c) repeat-fault escalation over 180 days; from L06 (e) Fernbrook Plus members (no allowance limit, £20 cap) and from L07 memberships that expire during the year. The answer also carries each account's refunded total and remaining goodwill | tickets 4 / 6 / 10 / 15 / 29 / 40 / 54 / 70 / 90 / 120; accounts 0 / 0 / 3 / 6 / 9 / 14 / 16 / 22 / 25 / 36; tickets changed by the account limits 0 / 0 / 1 / 3 / 9 / 14 / 14 / 28 / 36 / 52 | 3.0k / 3.3k / 4.5k / 5.9k / 9.2k / 11.8k / 14.4k / 18.4k / 22.3k / 29.5k |
 
-**Same rules, growing depth.** The rules text is the original test's, word for word, on every level (the matching
-rules, handbook section 4, the contract instructions, the warehouse schema and rules); only the data grows and the
-rule families it exercises stack up. The customer list adds one line to each prompt stating that level's points
-(below); the SQL questions from L06 on carry the definitions and the memo items in force at that level.
+**Keys, each new mechanic derived twice** (`verification/ladders-data-support/`; `node build.mjs`, `python3
+contract_ladder.py`, `node sql-ladder.mts`, each with `--check`, all run by `test/ladders-data-support.test.ts`):
 
-**Keys and checks.** `verification/ladders-data-support/` builds all four from fixed seeds (`node build.mjs`,
-`python3 contract_ladder.py`, `node sql-ladder.mts`; each takes `--check`, and `test/ladders-data-support.test.ts`
-runs all three). Customer list and support queue: the business pack's rules engine computes the key and the level is
-accepted only when it equals what the generator planted (`buildWorld`, as in §7j), with ladder-only knobs (operation
-mix, chain hops, distractor counts, unique email addresses so two different people never share one by chance, a
-larger name pool for long queues) that leave the original tests byte-identical. Contract: the key is the diff of the
-two structured versions, and `check_unique()` re-derives it independently from the rendered text (every clause whose
-normalised words differ, references mapped to the clause they point at). SQL: `buildPack()` of §7f runs on every
-level with all its guarantees: reference query = independent JavaScript solver on all four databases, no dependence on
-scan order, a different answer on every database, hidden copies sharing at most a fifth of their rows with the live
-answer (mean at most a tenth, so a hard-coded answer scores at most about 0.3), and every careless query wrong on at
-least one database. The ladder's databases come from new seeds plus planted rows that make every new rule bite for
-several customers (orders and wallet entries either side of the 23:00 cut-offs, big baskets on the withdrawn
-promotion's last day, orders of products before they move in or out of Gifts, chargebacks that were undone, subscriber
-orders on the lost day and at 23:xx UTC before a status change, big spenders with a cancelled order, fast-clock
-checkouts across the cut-offs, pairs of new customers with identical baskets for rank ties).
+* Customer list: the business pack builds the world and checks its planted people (§7j); `crm-ladder.mjs` plants the
+  link records, `mergeGroups()` (union-find with per-group date-of-birth and note sets) gives the key, `mergeCheck()`
+  replays the same ordered pairs with explicit groups and a from-scratch conflict test, `goldenCheck()` re-derives every
+  golden record with its own precedence sort; every planted link must cause a refused merge, and the procedure, the
+  survivorship rules and the VIP rule must each change the answer.
+* Contract: `contract.py`'s diff gives version 2's changes; `contract_settle.py` builds the agreed version and diffs it
+  against version 1 (`settle()`), `predict()` derives the same key independently from version 2's own diff and the
+  statuses alone (numbers mapped to the agreed numbering, counter values substituted), and `check_unique()` re-checks
+  it from the rendered agreed text. Each level is accepted only when the settlement rules it uses change the answer.
+* SQL: `buildPack()` of §7f on every level: reference query = independent JavaScript solver on all four databases, no
+  dependence on scan order, a different answer on every database, hidden copies sharing at most a fifth of their rows
+  with the live answer, every careless query wrong somewhere. Budgets are fixed in the question at about 55% of the
+  smallest unconstrained spend over the four databases, so every budget runs out part-way on every copy. Planted rows
+  make each rule bite (chargebacks undone days later, orders exactly 30:00 and 30:01 after a session, ties in units,
+  orders either side of the cut-offs, products that move in or out of Gifts inside a promotion window).
+* Support: the business pack's engine decides each ticket on its own facts (checked against the planted intent);
+  `support-accounts.mjs` groups tickets into customers with histories, `applyAccounts()` runs the limits with a running
+  state per customer, and `checkAccounts()` recounts every ticket from scratch over the history and the result's own
+  earlier tickets. Every active limit (and the membership expiry) must change at least one ticket.
 
-**Marking** is the original test's. Customer list: `json` with `partitions: clusters` (pairwise F1) and the golden
-records as a set; because big groups hold many pairs, each golden email and phone is worth W = key pairs ÷ (2 ×
-groups) points (1 on L01–L05, then 2 / 2 / 4 / 5 / 6, stated in the prompt), which keeps grouping and golden records about
-equal on every level. Contract: three fields per change, trap fields 2 points, a listed non-change costs three fields
-at 2. Support: five fields per ticket, a trap ticket's decision and refund 5 points each. SQL: the `sql` scorer
-(share of matching rows, averaged over the four databases).
+**Marking** is the original tests' (§7j, §7e, §7f) plus the carried figures: golden records keyed by master with four
+fields from L04, each field worth W = key pairs ÷ (fields × groups) points so grouping and golden records weigh about
+the same (stated in the prompt); support tickets changed by the account limits weigh 5 / 5 / 4 / 4 (decision, refund,
+priority, SLA) and every account total 8; contract fields where the agreed version differs from version 2 weigh 2.
 
-**Measured spread** (`node verification/ladders-data-support/spread.mts`; scripted answers through the real scorers,
-score per level L01 → L10, %; pinned by the regression test):
+**Measured spread** (`node verification/ladders-data-support/spread.mts`, scripted answers through the real scorers,
+%, L01 → L10; pinned by the regression test):
 
-| Test | Reference | Careful with one slip | Careless | Do-nothing |
-|---|---|---|---|---|
-| Clean the Customer List: Ladder | 100 on every level | golden records from the master only: 88 / 100 / 94 / 92 / 91 / 89 / 92 / 91 / 90 / 89 | exact email or phone text only: 26 / 52 / 39 / 30 / 36 / 24 / 29 / 22 / 22 / 17 | 0 (merge everything 0–3, merge nothing 0) |
-| What Changed in the Contract?: Ladder | 100 | a re-pointed reference read as renumbering: 100 / 100 / 100 / 91 / 91 / 92 / 92 / 93 / 93 / 93 | old numbers, subtle changes missed, moved and re-sorted rows reported: 60 / 60 / 56 / 45 / 43 / 16 / 12 / 11 / 9 / 8 | 0 |
-| Ask the Database: Ladder | 100 | the mildest single slip: 0 / 56 / 40 / 96 / 53 / 93 / 93 / 90 / 96 / 93; the worst: 0 / 0 / 5 / 63 / 20 / 21 / 69 / 67 / 67 / 11 | — | `SELECT *` 0 |
-| Customer Support Queue: Ladder | 100 | reopened-ticket SLA and minimum-spend codes missed: 100 / 100 / 100 / 100 / 98 / 97 / 98 / 99 / 97 / 97 | refund everyone, P3, UTC as UK time: 83 / 59 / 49 / 44 / 55 / 48 / 42 / 48 / 40 / 43 | 0 |
+| Test | Reference | Ignores the chained rule (fails the rung) | One slip in the chained rules | Careless | Do-nothing |
+|---|---|---|---|---|---|
+| Customer list | 100 | plain union-find from L03: 92 / 87 / 88 / 85 / 81 / 79 / 82 / 80; old survivorship from L04: 62 / 64 / 73 / 76 / 74 / 75 / 73 | VIP master missed from L05: 91 / 91 / 91 / 87 / 89 / 89 | 26 / 52 / 39 / 17 / 21 / 20 / 24 / 18 / 19 / 12 | 0 |
+| Contract | 100 | version 2 read as agreed: 100 / 75 / 50 / 35 / 10 / 12 / 6 / 6 / 4 / 5; version 2's numbering kept from L05: 24 / 27 / 9 / 13 / 8 / 14; a general statement beats a specific item from L05: 66 / 58 / 50 / 45 / 35 / 42 | counter taken without the supplier's agreement: 80 / 84 / 92 / 77 / 85 / 88 / 76 / 78 (L03–L10); unanswered taken as agreed: 80 / 73 / 85 / 82 / 73 / 88 / 84 / 83 | original careless reader: 60 / 50 / 30 / 22 / 21 / 18 / 16 / 14 / 10 / 9 | 0 |
+| SQL | 100 | — | the mildest single slip: 0 / 56 / 89 / 88 / 93 / 92 / 75 / 64 / 75 / 92; the worst: 0 / 0 / 53 / 19 / 54 / 4 / 21 / 0 / 29 / 33 | — | `SELECT *` 0 |
+| Support | 100 | each ticket on its own facts from L03: 87 / 68 / 66 / 62 / 70 / 60 / 59 / 60 | declined returns counted: 100 / 100 / 97 / 97 / 94 / 94 / 98 / 98; no escalation memory: 100 / 97 / 93 / 95 / 96 / 94 / 95 / 93; expired membership still counted (L06–L10): 100 / 99 / 94 / 93 / 98 | refund everyone, P3, UTC as UK time: 83 / 59 / 49 / 37 / 42 / 32 / 35 / 28 / 23 / 27 | 0 |
 
-Other scripted answers per level: customer list without nicknames, Mac/Mc and typos 100 / 90 / 87 / 98 / 87 / 80 / 81
-/ 85 / 76 / 75 (fails every rung from L05), without the DOB block and the shared-mailbox rule 86–100; support queue
-with UTC times 84–100, with the money rules missed 91–97, without safety and fraud 85–100, obeying "I'm the manager"
-96–100. Random filler, `{}`, an empty reply and a copy of the prompt score at most 5% on every ladder; the scripted
-answers bound the scale, they are not models, and the levels' calibration against real models is still to be run.
+Random filler, `{}`, an empty reply and a copy of the prompt score at most 5% on every ladder. These scripted answers
+bound the scale; they are not models: the calibration targets (a small model tops out around L02–L03, a mid model
+around L04–L05, today's top model around L06–L07, L08–L10 beyond it) are by design and need blind play again.
 
-**Cost.** Input grows with the level and stays under 40k tokens at L10 (largest: the customer list, about 35k);
-L01 is 2.0k–3.2k tokens. The test estimates are the level means (customer list 13.5k in / 9k out, contract 13.2k /
-9k, SQL 3.5k / 6k, support 10.8k / 7k); every model gets the same 32,000-token output limit, and there is no
-answer-time limit.
-
-## 7t. Difficulty ladders: Exact Maths and Engineering
-
-The maths and coding rungs of the Frontier Ladders (§7q: ten frozen levels, pass mark full marks, height rule).
-Both ask for each model's own maximum output (`"maxOutputTokens": "model-max"`, one retry at most, one hour per
-level).
-
-### Exact Maths: Ladder (`math.exact-ladder`)
-
-**The task, on every level.** A one-player game of snakes and ladders with traps: a fair spinner numbered 1 to d,
-a track 0..N, reaching N or beyond wins, landing on a trap loses, ladders climb, snakes slide back. The question is
-the exact probability of winning, as a fraction. The rules text is identical on every level; only the board grows.
-
-| Level | Track (N) | Spinner | Ladders | Snakes | Traps | Resting squares | Key (digits p/q) |
-|---|---:|---:|---:|---:|---:|---:|---|
-| L01 | 10 | 1–2 | 0 | 0 | 2 | 8 | 2/3 |
-| L02 | 12 | 1–3 | 1 | 0 | 2 | 9 | 4/4 |
-| L03 | 14 | 1–4 | 1 | 1 | 2 | 10 | 5/5 |
-| L04 | 18 | 1–4 | 2 | 1 | 3 | 12 | 6/7 |
-| L05 | 22 | 1–6 | 2 | 2 | 3 | 15 | 10/11 |
-| L06 | 28 | 1–6 | 3 | 2 | 4 | 19 | 13/14 |
-| L07 | 34 | 1–6 | 3 | 3 | 5 | 23 | 14/15 |
-| L08 | 42 | 1–6 | 4 | 4 | 5 | 29 | 18/18 |
-| L09 | 52 | 1–6 | 5 | 5 | 6 | 36 | 26/27 |
-| L10 | 64 | 1–6 | 6 | 6 | 8 | 44 | 29/30 |
-
-Without snakes (levels 1–2) the answer is a plain countdown from the finish. Every snake sends the counter back,
-so from level 3 the probabilities are fixed by simultaneous linear equations (one unknown per snake loop) that
-must be solved exactly; the fractions grow to 30-digit denominators. A patient expert can do every level by
-hand (backward recursion carrying the snake-tail values as unknowns, then elimination); it just takes longer.
-The growth (longer track, more special squares, no fewer loops, longer denominator) is asserted by a unit test.
-
-**Keys, computed twice.** `verification/exact-ladder/snakes.py` builds each board from a fixed seed (every snake
-and ladder must change the answer, the probability lies between 1/10 and 9/10, no run of d special squares) and
-solves the full system, one equation per resting square, by Gauss-Jordan elimination over Python `Fraction`s.
-`verify.mjs` parses every board back out of the prompt text the models see and re-solves it in JavaScript BigInt
-rationals by a different method (backward recursion with affine snake-tail unknowns, then a small elimination);
-it self-tests on hand-checked boards first. `build.py` writes the test file byte-identically.
-
-**Scoring** (`{ "type": "ladder", "answer": "fraction" }`): the FINAL ANSWER line must state one exact fraction.
-Any fraction of the same value scores (the prompt says lowest terms are not required, so nobody loses a level to a
-gcd of 30-digit numbers); spaces, thousands separators, LaTeX `\frac`, "P = …" and a trailing approximation
-("≈ 0.18") are forgiven; a decimal, a second value ("or"), a negative or a zero denominator scores 0. The
-comparison is exact (BigInt cross-multiplication), so one wrong digit anywhere is wrong.
-
-**Spread** (scripted answers through the real scorer, every level): the key 100%; the key in unreduced form or
-LaTeX 100%; one digit off, the decimal value, the answer that forgets the snakes, the answer that forgets the
-ladders, and a hedge all 0%; random filler and the Random Baseline 0%. Tokens: about 420 input tokens per level;
-output from a few thousand tokens (level 1) to the model's maximum (levels 8–10); estimate 45,000 per level.
-
-### Engineering: Ladder (`coding.engineering-ladder`)
-
-**The task, on every level.** Write `runStore(commands)`: a small in-memory key-value store (a mini Redis) that
-replays a list of commands and returns one reply per command, scored by hidden unit tests in the code sandbox
-(§5.1 `code-js`). Level L's prompt is the specification of levels 1..L, word for word, plus its examples, its size
-limits and its time limit; each level only adds commands and rules, and never changes what an earlier command
-does, so one reference solution serves every level.
-
-| Level | Adds | Commands in all | Largest test | Largest store | Time limit / test | Hidden tests |
-|---|---|---:|---:|---:|---:|---:|
-| L01 | SET, GET, DEL | 3 | 200 | 100 keys | 2 s | 15 |
-| L02 | SETNX, COUNT, SIZE, POPULATE (bulk load) | 7 | 1,000 | 2,000 | 2 s | 19 |
-| L03 | INCR with exact big integers and canonical-integer rules | 8 | 2,000 | 5,000 | 2 s | 18 |
-| L04 | BEGIN / ROLLBACK / COMMIT, nested | 11 | 3,000 | 10,000 | 2 s | 21 |
-| L05 | SCAN (ordered prefix scan) | 12 | 4,000 | 20,000 | 2 s | 16 |
-| L06 | TIME / EXPIRE / TTL / PERSIST (a clock and deadlines) | 16 | 5,000 | 40,000 | 3 s | 24 |
-| L07 | RENAME (value and deadline move) | 17 | 6,000 | 60,000 | 4 s | 21 |
-| L08 | SNAPSHOT / GETAT (read the past) | 19 | 8,000 | 100,000 | 8 s | 20 |
-| L09 | DELPREFIX (bulk delete) | 20 | 10,000 | 150,000 | 12 s | 19 |
-| L10 | COUNTRANGE (ordered range counts) | 21 | 12,000 | 200,000 | 15 s | 17 |
-
-Every level's hidden tests are hand-made rule tests for what it adds (and for its interplay with every earlier
-rule: an expired key restored by a rollback, a snapshot taken inside a rolled-back transaction, a rename that
-carries a deadline, …), random streams over a pool of near-collision keys (`a`, `a1`, `a:1`, `a_1`, `ab`, …) and
-values that look like integers but are not (`007`, `-0`, `+5`, `" 5"`), and from level 2 large tests built with
-POPULATE (cheap to store, expensive to process naively). The large tests are sized so that the obvious design for
-that level (copy the store at BEGIN or SNAPSHOT, scan every key for COUNT, SIZE, SCAN, DELPREFIX or COUNTRANGE,
-re-sort on each scan) runs out of time, while the reference needs a small fraction of the limit: the top levels
-need every rule right in every combination AND an efficient design. The growth (more commands, a superset
-specification, bigger limits, no tighter time limit) and well-formedness (every test uses only its level's commands,
-every argument of the stated form) are asserted by unit tests.
-
-**Expected replies, checked three ways.** `verification/engineering-ladder/ref.js` (offline key compression, a
-Fenwick tree over keys in string order, a deadline heap, first-touch undo maps merged small-to-large, per-key
-history for snapshots) computes every expected reply; `gen.mjs` writes the test file byte-identically. `verify.mjs`
-re-checks every hidden test and example with `alt.js`, a second JavaScript implementation with different data
-structures (string-keyed maps, a sorted array, undo logs), and with `oracle.py`, a literal Python model written
-from the prompt text (copies the store at every BEGIN and SNAPSHOT, lazy expiry, full scans), on every test small
-enough for it. `fuzz.mjs` runs the three on 30,000 random streams (3,000 per level): all agree.
-
-**Time limits, measured.** Per-level limits are set from the reference's slowest hidden test in the real sandbox
-(best of three runs; `spread.mjs`, recorded in `measurements.json` and each case's notes) with at least 8× headroom
-(in practice 30× or more), so a slow laptop has room to spare; a unit test enforces the 8×. The prompt states each
-level's limit. The other side is measured too (`margins.mjs`, the large tests with a 60-second limit): the
-copy-and-scan design needs 2.6–4× the limit on the deciding large tests of levels 5–7 and runs out of memory, or
-runs past 60 seconds, on those of levels 4 and 8–10, so it does not pass by luck on a fast machine. Every other
-large test is light enough for any design (well under a third of its limit).
-
-**Scoring.** Each level is one case: the share of its hidden tests passed, after the fair-play check (§3) and the
-stub gate (a stub, an echo or a table of the prompt's examples scores 0). The rung counts as passed only at
-full marks. Spread (scripted solutions through the real scorer and sandbox):
-
-| Level | Reference (slowest test / limit) | alt.js (careful, simpler structures) | slips.js (careful with slips) | naive.js (correct, copies and scans) | careless.js | Do nothing (stub / no replies) |
-|---|---|---:|---:|---:|---:|---|
-| L01 | 100% (1 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
-| L02 | 100% (3 ms / 2 s) | 100% | 100% | 100% | 100% | 0% / 0% |
-| L03 | 100% (14 ms / 2 s) | 100% | 67% | 100% | 33% | 0% / 0% |
-| L04 | 100% (18 ms / 2 s) | 100% | 71% | 95% | 48% | 0% / 0% |
-| L05 | 100% (61 ms / 2 s) | 100% | 75% | 88% | 31% | 0% / 0% |
-| L06 | 100% (55 ms / 3 s) | 100% | 38% | 96% | 29% | 0% / 0% |
-| L07 | 100% (68 ms / 4 s) | 100% | 57% | 90% | 29% | 0% / 0% |
-| L08 | 100% (114 ms / 8 s) | 100% | 60% | 90% | 40% | 0% / 0% |
-| L09 | 100% (276 ms / 12 s) | 100% | 53% | 89% | 37% | 0% / 0% |
-| L10 | 100% (467 ms / 15 s) | 100% | 29% | 88% | 12% | 0% / 0% |
-
-`alt.js` is careful but uses simpler structures (it re-copies undo logs on every COMMIT and splices a sorted
-array key by key): it passes every level, but its slowest tests take 7.6 s and 2.2 s at levels 9 and 10, so a
-design that is quadratic in the worst case is close to the edge there; `slips.js` is a fast, well-designed solution with one plausible slip per level from level 3
-(an integer check that accepts `007`, POPULATE not undone, a key still alive at its deadline, RENAME onto itself
-deletes, GETAT checks today's clock, DELPREFIX leaves no history, COUNTRANGE includes the upper bound); `naive.js`
-gets every rule right with the obvious design (copies, scans) and loses the large tests; `careless.js` reads the
-specification loosely (Number arithmetic, COMMIT closes every transaction, expiry seen only by GET, …). Tokens:
-the prompt grows from about 640 to 2,500 input tokens; a full solution is 3,000–8,000 output tokens plus
-reasoning; estimate 30,000 output tokens per level.
+**Cost.** L01 is 2.0k–3.2k input tokens, L10 at most 33k (the contract). Test estimates are the level means; every
+model gets the same 32,000-token output limit and no answer-time limit.
 
 ## 8. The random baseline
 
