@@ -1600,7 +1600,7 @@ TESTS.push(...HORIZON_TESTS);
 SUITES.push(HORIZON_SUITE);
 RUN_SPECS.push(HORIZON_RUN_SPEC);
 
-// Difficulty ladders: placeholder levels and invented heights for the two ladder suites (DEMO; see laddersMock.ts).
+// Difficulty ladders: stand-in levels and invented heights for the two ladder suites (DEMO; see laddersMock.ts).
 TESTS.push(...LADDER_DEMO_TESTS.filter((t) => !TESTS.some((x) => x.id === t.id)));
 SUITES.push(...LADDER_DEMO_SUITES);
 RUN_SPECS.push(...LADDER_DEMO_RUN_SPECS);

@@ -9,6 +9,7 @@ import { Link, pathOf } from '../../router.tsx';
 import { cx } from '../ui.tsx';
 import { RungMeter } from '../viz/DifficultyLadder.tsx';
 import { ladderSpecOf, passMarkText } from '../../ladders.ts';
+import { calibrationMonth, calibrationVerdict } from '../../../../src/core/ladders.ts';
 import { isBaseline } from './util.ts';
 import { fmtHeight } from './LeaderboardTable.tsx';
 
@@ -41,6 +42,12 @@ export function LadderHeightsPanel({ lb, planned = [], demo }: { lb: Leaderboard
     builtN,
   );
   const passMarks = [...new Set(cols.map((c) => ladderSpecOf(c.id)?.passMark ?? 1))];
+  // Business ladders the blind test found today's top models clear: say so beside the heights (docs/AUDIT.md).
+  const cleared = cols.filter((c) => {
+    const sp = ladderSpecOf(c.id);
+    return sp?.area === 'business' && sp.calibration && calibrationVerdict(sp.calibration) === 'top-clears';
+  });
+  const clearedNote = cleared.length && cleared.length === cols.length ? `Blind test, ${calibrationMonth(ladderSpecOf(cleared[0]!.id)!.calibration!.date)}: today’s top models clear these ladders. They show which models stay error-free as the work piles up, not which top model is cleverest.` : null;
   return (
     <section className="card lh-card" aria-label="Ladder heights">
       <div className="card-head">
@@ -50,6 +57,7 @@ export function LadderHeightsPanel({ lb, planned = [], demo }: { lb: Leaderboard
           <div className="desc">
             Each ladder has ten levels, each harder than the last. The height is the highest level passed reliably with every level below it. {passMarks.map(passMarkText).join(' · ')}.
           </div>
+          {clearedNote && <p className="lh-calnote">{clearedNote}</p>}
         </div>
       </div>
       <div className="card-body">

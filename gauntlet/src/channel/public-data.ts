@@ -20,7 +20,7 @@ import { buildHistory, simulatedIds } from './history.ts';
 import { loadSiteConfig } from './site-config.ts';
 import type { PublicData, PublicModel, PublicSuite, PublicTest, SiteConfig } from './types.ts';
 
-import { ladderSpec } from '../core/ladders.ts';
+import { CALIBRATION_TIERS, DESIGN_TARGET_TEXT, calibrationTierText, calibrationVerdictText, ladderSpec } from '../core/ladders.ts';
 import { loadLadders } from '../core/ladders-file.ts';
 
 const MAX_PROMPT_CHARS = 6000;
@@ -32,6 +32,19 @@ export function scoringText(def: TestDefinition): string {
   if (!ladder || ladder.planned || def.kind !== 'prompt' || def.scorer.type === 'ladder') return base;
   const mark = ladder.passMark >= 1 ? 'full marks' : `${Math.round(ladder.passMark * 100)}% of its marks`;
   return `${base} A difficulty ladder: ten levels, each harder than the last; a level is passed at ${mark}, and the headline is the highest level passed reliably with every level below it.`;
+}
+
+/** A built ladder's blind-test result in plain English (or its design target, when not blind-tested yet). */
+export function ladderCalibrationOf(testId: string): PublicTest['ladderCalibration'] {
+  const spec = ladderSpec(loadLadders(), testId);
+  if (!spec || spec.planned) return undefined;
+  const cal = spec.calibration;
+  if (!cal) return { designTarget: DESIGN_TARGET_TEXT };
+  return {
+    verdict: calibrationVerdictText(cal, spec.area),
+    tiers: CALIBRATION_TIERS.filter((t) => cal.tiers[t]).map((t) => calibrationTierText(cal, t)),
+    ...(cal.note ? { note: cal.note } : {}),
+  };
 }
 
 function scorerText(def: TestDefinition): string {
@@ -152,6 +165,8 @@ export function buildPublicData(opts: BuildPublicOptions = {}): { data: PublicDa
       heldOut: false,
       promptWithheld: withhold.has(tid),
     };
+    const ladderCalibration = ladderCalibrationOf(d.id);
+    if (ladderCalibration) entry.ladderCalibration = ladderCalibration;
     if (d.kind === 'prompt' && !withhold.has(tid)) {
       const ids = selectedCaseIds(t);
       const first = d.cases.find((c) => ids.includes(c.id)) ?? d.cases[0];

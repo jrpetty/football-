@@ -313,6 +313,87 @@ within policy, board report) were not blind-played; their spreads come from scri
   long interest schedule). Separating the strongest models is the job of the Level 4–5 agent simulations and the Horizon
   tier; real runs will show how well they do it.
 
+## Difficulty ladders: blind calibration (November 2026)
+
+The 13 Frontier and Business difficulty ladders ([METHODOLOGY §7q](METHODOLOGY.md#7q-difficulty-ladders)) were built
+to design targets: levels 1–2 for a small model, 3–4 for a mid-sized one, 5–7 for today's top model, 8–10 beyond any
+model today. This round checked those targets against what models actually do. For many ladders they were wrong, and
+the app now shows what was measured instead.
+
+**Method.** Fresh Claude agents of three strengths (a small, a mid-sized and a top-tier model) each read **only** the
+rendered prompt a model receives through the API, fair-play notice included. No tools beyond reading the prompt and
+writing the answer, no code execution, no web. One attempt per level, on a spread of levels (the Frontier ladders
+L02, L04, L06 and L08, plus L09 and L10 where a model passed L08; the Business ladders two levels per strength, chosen around each strength's design
+target: small L03 and L05, mid L05 and L07, top L07 and L09). Replies were marked by Gauntlet's real scorers and code
+sandbox against the machine-checked keys, with each test's pass mark (full marks; 90% for the Business ladders). Every
+solver's tool log was checked.
+
+The results are in `config/ladders.json` (`calibration` per test). The ladder view draws them down its left edge: a
+slot per model size on every rung, ✓ where it passed and ✕ where it failed. The five Horizon ladders have their own
+calibration above and keep showing their design targets, labelled as such.
+
+**Frontier ladders** (exact answers, full marks to pass; L = level, one attempt each):
+
+| Ladder | Small model | Mid-sized model | Top model | Verdict |
+|---|---|---|---|---|
+| Deduction Grid (`reasoning.grid-ladder`) | passed L2; failed L4, L6, L8 | passed L2, L4; failed L6, L8 | passed L2, L4, L6; failed L8 | separates small, mid and top |
+| Knights & Knaves (`reasoning.truth-ladder`) | passed L2; failed L4, L6, L8 | passed L2, L4; failed L6, L8 | passed L4, L6; failed L2, L8 | separates (the top model's L2 miss was a copying slip: its reasoning had the right answer) |
+| Shortest Plans (`reasoning.plans-ladder`) | failed L2, L4, L6, L8 | passed L4; failed L2, L6, L8 | passed L2, L4, L6, L8; failed L9, L10 | separates (the top model's L9 and L10 plans were each one move over the proven minimum: 59 for 58, 71 for 70) |
+| Exact Maths (`math.exact-ladder`) | passed L2, L4, L6; failed L8 | passed L2, L4, L6; failed L8 | passed L2, L4, L6, L8; failed L9, L10 | partly: small and mid came out level, top got further |
+| Engineering (`coding.engineering-ladder`) | passed L2, L4; failed L6 (16 of 17 hidden tests), L8 | passed L2, L4, L6, L8, L9, L10 | passed L2, L4, L6, L8, L9, L10 | top clears: separates small models only |
+
+**Business ladders** (partial credit, 90% of a level's marks to pass):
+
+| Ladder | Small model | Mid-sized model | Top model | Scores |
+|---|---|---|---|---|
+| Invoices to Pay (`work.invoices-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | 99–100% throughout |
+| Check the Payslips (`work.payroll-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | 99–100% throughout |
+| Expense Policy Check (`work.expenses-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | 99–100% throughout |
+| Reconcile the Account (`work.reconciliation-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | 99–100% throughout |
+| Clean the Customer List (`work.crm-ladder`) | passed L3; **failed L5** | passed L5, L7 | passed L7, L9 | small 100 / 58; mid 100 / 99; top 100 / 99 |
+| What Changed in the Contract? (`work.contract-ladder`) | passed L3; **failed L5** | passed L5, L7 | passed L7, L9 | small 100 / 88; mid 100 / 96; top 100 / 100 |
+| Ask the Database (`work.sql-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | 100% throughout |
+| Customer Support Queue (`work.support-ladder`) | passed L3, L5 | passed L5, L7 | passed L7, L9 | small 99 / 93; mid 100 / 100; top 100 / 99 |
+
+**What it found.**
+
+* **Deduction Grid, Knights & Knaves and Shortest Plans separate the three strengths as designed**, though lower
+  down than the targets: the top model stops around L6–L8, not at L10.
+* **Exact Maths tells the top model apart, not the small from the mid-sized one**: both stop at the same level.
+* **Engineering is cleared by today's mid-sized and top models.** Both wrote the specialist segment-tree-beats design
+  correctly, without running any code, up to L10. It separates small models only.
+* **Today's top models clear the eight Business ladders.** The mid-sized and top models scored 96–100% on every level
+  they were tested on, up to L9; the small model passed L5 on six of the eight. These ladders do not pick out the
+  cleverest top model. What they still show is which models stay error-free as the work piles up, and where smaller,
+  cheaper models start to slip (the small model failed L5 of the customer list and the contract).
+
+**History.**
+
+* **Business ladders: v1 → v2 → kept, reported honestly.** Version 1 grew only in volume, with every item decided on
+  its own: a small model passed L05 and the top model passed L08–L10. Version 2 (the current one, §7r and §7s) made each
+  answer depend on state built up across items (pools of documents drawing on each other, months on the cumulative
+  basis, merges processed in order, account limits used up in date order). The mid-sized and top models still scored
+  96–100% up to L07 and L09. The owner decided to keep the ladders and say so plainly in the app, on the public site
+  and in the suite description: today's top models clear them; they measure reliability at scale and separate smaller
+  models.
+* **Engineering: v1 replaced by v2.** Version 1 (a mini key-value store) was passed at L09 by all three strengths. It was
+  replaced by the array engine of §7t, whose spec grows one range operation per level up to segment tree beats with
+  historic values. Version 2 separates small models; mid-sized and top models clear it.
+* **Exact Maths and the logic ladders** were kept as built.
+
+**Limits of this calibration.**
+
+* **One attempt per level.** The height rule counts a level as passed only when at least two of three attempts pass
+  (§7q). These are single-attempt results, so they say where a model *can* get, not where it gets *reliably*.
+* **Claude-family solvers only**, one model per strength. It measures how well a ladder separates strengths, not how
+  vendors compare.
+* **A small sample.** Four to six levels per Frontier ladder, two per strength on the Business ladders; untested levels are
+  left blank on the strip, not guessed.
+* **The top model's single-attempt slips show why the height rule uses repeated attempts.** It missed Knights &
+  Knaves L2 through a copying slip while passing L4 and L6; one attempt can understate (or, by luck, overstate) a model.
+* **Tool logs.** One top-tier solver once used a shell command to copy its own answer file; it did not run code or read
+  anything else. Every other solver used only Read and Write, as its tool log confirms.
+
 ## What the audit changed
 
 The blind play found real problems, and each was fixed before release:

@@ -293,6 +293,15 @@ function testsPage(ctx: Ctx): string {
   return layout(ctx, { root: '', title: 'Tests', active: 'tests', description: `The tests behind the ${ctx.data.site.channelName} AI leaderboard.`, body });
 }
 
+/** A difficulty ladder: what the blind test measured per model size, or (not blind-tested yet) its design target. */
+function ladderCalibrationBlock(t: PublicTest): string {
+  const c = t.ladderCalibration;
+  if (!c) return '';
+  if ('designTarget' in c) return `<h3>Who it is built for</h3><p class="muted">${esc(c.designTarget)}</p>`;
+  const tiers = c.tiers.map((x) => `<li>${esc(x)}</li>`).join('');
+  return `<h3>Blind test</h3><p><b>${esc(c.verdict)}.</b></p><ul>${tiers}</ul><p class="muted small">${c.note ? `${esc(c.note)} ` : ''}One model of each size, one attempt per level: a check of the ladder, not a result.</p>`;
+}
+
 function testPage(ctx: Ctx, t: PublicTest): string {
   const root = '../';
   const cat = ctx.cats.get(t.category);
@@ -326,7 +335,7 @@ function testPage(ctx: Ctx, t: PublicTest): string {
     .join('');
   const body = `<a class="back" href="${root}tests.html">← All tests</a>
 <div class="hero"><h1>${esc(t.name)}</h1>${t.hook ? `<p class="lead">${esc(t.hook)}</p>` : ''}<div class="meta-line"><span class="pill"><i class="dot" style="background:${esc(cat?.color ?? '#888')}"></i>${esc(cat?.name ?? t.category)}</span><span class="pill">${esc(DIFF[t.difficulty] ?? t.difficulty)}</span><span class="pill">${t.cases} ${t.kind === 'program' ? 'seeds' : 'cases'}</span><span class="pill mono">v${esc(t.version)} · ${esc(t.hash)}</span></div></div>
-<section class="card"><h2>What it measures</h2><p>${esc(t.description)}</p><h3>How it is scored</h3><p>${esc(t.scoring)}</p>${promptBlock}</section>
+<section class="card"><h2>What it measures</h2><p>${esc(t.description)}</p><h3>How it is scored</h3><p>${esc(t.scoring)}</p>${ladderCalibrationBlock(t)}${promptBlock}</section>
 ${results}`;
   return layout(ctx, { root, title: t.name, active: 'tests', description: t.heldOut ? 'A held-out Gauntlet test.' : t.description.slice(0, 160), body });
 }

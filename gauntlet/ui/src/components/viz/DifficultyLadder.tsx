@@ -5,17 +5,107 @@
  * up to its HEIGHT (every level up to it passed reliably; src/core/ladders.ts), with a marker on the top one.
  * Every rung shows one chip per attempt (✓ passed · ✗ failed · ◐ some points, not enough). A pass higher up
  * that does not count is a dashed "once" ghost. The axis names each rung's growth parameter (from
- * config/ladders.json) and the calibration band it was built for. The header row puts the heights side by side
- * and the footer says the comparison in plain English.
+ * config/ladders.json). Down the left edge: what the blind test MEASURED (a slot per model size, small / mid / top,
+ * marked ✓ or ✕ on each rung it was tested on, from the test's "calibration"); a ladder not blind-tested yet shows
+ * the design-target bands instead, labelled "Built for". The header row puts the heights side by side and the
+ * footer says the comparison in plain English.
  *
  * Modes: "card" (pages and the inspector), "slide" (the Presenter: big type, fills the stage). Phone: the lanes
  * scroll sideways inside the ladder with the axis pinned; the page itself never scrolls sideways.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { cx } from '../ui.tsx';
-import { heightsNote, type LadderHeight, type RungResult } from '../../../../src/core/ladders.ts';
-import { levelBand, passMarkText } from '../../ladders.ts';
+import {
+  CALIBRATION_TIERS,
+  calibrationAt,
+  calibrationMonth,
+  calibrationTierText,
+  heightsNote,
+  type CalibrationTier,
+  type LadderCalibration,
+  type LadderHeight,
+  type RungResult,
+} from '../../../../src/core/ladders.ts';
+import { DESIGN_TARGET_TEXT, levelBand, passMarkText } from '../../ladders.ts';
 import './difficulty-ladder.css';
+
+const TIER: Record<CalibrationTier, { letter: string; name: string }> = {
+  small: { letter: 'S', name: 'Small model' },
+  mid: { letter: 'M', name: 'Mid model' },
+  top: { letter: 'T', name: 'Top model' },
+};
+const CAL_MARK: Record<'passed' | 'failed' | 'pending', { glyph: string; word: string }> = {
+  passed: { glyph: '✓', word: 'passed' },
+  failed: { glyph: '✕', word: 'failed' },
+  pending: { glyph: '', word: 'still being tested on' },
+};
+
+/** One rung of the measured strip: a slot per model size, marked where that size was blind-tested. */
+function CalibrationCell({ cal, level }: { cal: LadderCalibration; level: number }) {
+  const when = calibrationMonth(cal.date);
+  return (
+    <span className="dl-cal">
+      {CALIBRATION_TIERS.map((t) => {
+        const at = calibrationAt(cal, t, level);
+        return at ? (
+          <i key={t} className={cx('dl-cm', `k-${at}`)} title={`${TIER[t].name} (blind test, ${when}): ${CAL_MARK[at].word} L${level}`}>
+            {CAL_MARK[at].glyph}
+          </i>
+        ) : (
+          <i key={t} className="dl-cm k-none" />
+        );
+      })}
+    </span>
+  );
+}
+
+/** The key under the ladder: what the left strip shows (measured, or the design target). */
+function StripKey({ calibration, method }: { calibration?: LadderCalibration | null; method?: string }) {
+  if (!calibration)
+    return (
+      <p className="dl-calkey design">
+        <span className="dl-calkey-k">Left strip</span> {DESIGN_TARGET_TEXT}
+      </p>
+    );
+  const when = calibrationMonth(calibration.date);
+  return (
+    <div className="dl-calkey" title={method}>
+      <p>
+        <span className="dl-calkey-k">Left strip · blind test, {when}</span>
+        <span className="dl-calkey-tiers">
+          {CALIBRATION_TIERS.map((t) => (
+            <span key={t}>
+              <b>{TIER[t].letter}</b> {TIER[t].name.toLowerCase()}
+            </span>
+          ))}
+        </span>
+        <span className="dl-calkey-marks">
+          <span>
+            <i className="dl-cm k-passed">✓</i> passed
+          </span>
+          <span>
+            <i className="dl-cm k-failed">✕</i> failed
+          </span>
+          {CALIBRATION_TIERS.some((t) => calibration.tiers[t]?.pending?.length) && (
+            <span>
+              <i className="dl-cm k-pending" /> still being tested
+            </span>
+          )}
+          <span>
+            <i className="dl-cm k-none" /> not tested
+          </span>
+        </span>
+        <span className="dl-calkey-how">One model of each size, one attempt per level: a check of the ladder, not a result.</span>
+      </p>
+      {calibration.note && <p className="dl-calkey-note">{calibration.note}</p>}
+      <ul className="sr-only">
+        {CALIBRATION_TIERS.filter((t) => calibration.tiers[t]).map((t) => (
+          <li key={t}>{calibrationTierText(calibration, t)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export interface LadderClimber {
   id: string;
@@ -86,7 +176,16 @@ export function DifficultyLadder({
   comingSoon,
   note: noteGiven,
   eyebrow = 'Difficulty ladder',
+  calibration,
+  verdict,
+  calibrationMethod,
 }: {
+  /** What a blind test measured (config/ladders.json): replaces the design-target bands down the left edge. */
+  calibration?: LadderCalibration | null;
+  /** The one-line blind-test verdict, shown under the title. */
+  verdict?: string | null;
+  /** How the blind test was done (the key's tooltip). */
+  calibrationMethod?: string;
   climbers: LadderClimber[];
   levels?: number;
   /** The growth parameter of each rung (index 0 = level 1), e.g. "3×3 · 20 moves". */
@@ -113,7 +212,7 @@ export function DifficultyLadder({
   const chipCap = mode === 'slide' ? 3 : 5;
   const order = Array.from({ length: levels }, (_, i) => levels - i);
   const bands: Array<{ id: string; label: string; short: string; top: number; bottom: number }> = [];
-  for (const level of order) {
+  for (const level of calibration ? [] : order) {
     const b = levelBand(level);
     const last = bands[bands.length - 1];
     if (last && last.id === b.id) last.bottom = level;
@@ -123,26 +222,61 @@ export function DifficultyLadder({
   const label = `${title ?? 'Difficulty ladder'}: ${comingSoon ? 'coming soon' : real.map((c) => `${c.label} reached level ${c.climb.height} of ${levels}`).join('; ') || 'no results yet'}`;
 
   return (
-    <figure className={cx('dl', `dl-${mode}`, comingSoon && 'dl-soon')} style={style} aria-label={label}>
+    <figure className={cx('dl', `dl-${mode}`, comingSoon && 'dl-soon', calibration && 'dl-calibrated')} style={style} aria-label={label}>
       {(title || grows) && (
         <figcaption className="dl-head">
           <div className="dl-titles">
             <span className="dl-eyebrow">{eyebrow}</span>
             {title && <h3>{title}</h3>}
             {grows && <p>{grows}</p>}
+            {verdict && <p className="dl-verdict">{verdict}</p>}
           </div>
           <span className="dl-pass">{passMarkText(passMark)}</span>
         </figcaption>
       )}
       <div className="dl-scroll">
         <div className="dl-grid" role="table" aria-label={label}>
-          {/* The calibration bands down the left edge: what each stretch of the ladder was built for. */}
-          <span className="dl-bandcol dl-corner" style={{ gridRow: 1 }} aria-hidden="true" />
-          {bands.map((b) => (
-            <span key={b.id} className={cx('dl-bandcol', `b-${b.id}`)} style={{ gridRow: `${levels - b.top + 2} / ${levels - b.bottom + 3}` }} title={`${b.label}: levels ${b.bottom}–${b.top}`}>
-              <span>{b.short}</span>
-            </span>
-          ))}
+          {calibration ? (
+            <>
+              {/* What the blind test measured, down the left edge: a slot per model size on every rung it was tested on. */}
+              <span className="dl-bandcol dl-corner cal" style={{ gridRow: 1 }} aria-hidden="true">
+                <small>Blind test{mode === 'slide' ? `, ${calibrationMonth(calibration.date)}` : ''}</small>
+                {mode === 'slide' && (
+                  <span className="dl-cal-legend">
+                    {CALIBRATION_TIERS.map((t) => (
+                      <span key={t}>
+                        <b>{TIER[t].letter}</b> {TIER[t].name.replace(' model', '').toLowerCase()}
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <span className="dl-cal">
+                  {CALIBRATION_TIERS.map((t) => (
+                    <b key={t} title={calibrationTierText(calibration, t)}>
+                      {TIER[t].letter}
+                    </b>
+                  ))}
+                </span>
+              </span>
+              {order.map((level) => (
+                <span key={level} className="dl-bandcol cal" style={{ gridRow: levels - level + 2 }} aria-hidden="true">
+                  <CalibrationCell cal={calibration} level={level} />
+                </span>
+              ))}
+            </>
+          ) : (
+            <>
+              {/* Not blind-tested yet: the design target each stretch of the ladder was built for. */}
+              <span className="dl-bandcol dl-corner design" style={{ gridRow: 1 }} title="Built for (design target, not yet blind-tested)" aria-hidden="true">
+                <span>Built for</span>
+              </span>
+              {bands.map((b) => (
+                <span key={b.id} className={cx('dl-bandcol', `b-${b.id}`)} style={{ gridRow: `${levels - b.top + 2} / ${levels - b.bottom + 3}` }} title={`Built for (design target, not yet blind-tested): ${b.label}, levels ${b.bottom}–${b.top}`}>
+                  <span>{b.short}</span>
+                </span>
+              ))}
+            </>
+          )}
           <span className="dl-bandcol dl-corner" style={{ gridRow: levels + 2 }} aria-hidden="true" />
           <div className="dl-row dl-names" role="row">
             <div className="dl-axis dl-axis-h" role="columnheader">
@@ -177,9 +311,10 @@ export function DifficultyLadder({
             )}
           </div>
           {order.map((level) => {
-            const band = levelBand(level);
+            // The design-target tint (beyond today) only where the ladder has not been blind-tested.
+            const band = calibration ? null : levelBand(level);
             return (
-              <div key={level} className={cx('dl-row', 'dl-rung', highlight === level && 'hl', `b-${band.id}`)} role="row" style={{ ['--i' as string]: level } as CSSProperties}>
+              <div key={level} className={cx('dl-row', 'dl-rung', highlight === level && 'hl', band && `b-${band.id}`)} role="row" style={{ ['--i' as string]: level } as CSSProperties}>
                 <div className="dl-axis" role="rowheader">
                   <span className="dl-lv">
                     <b>L{level}</b>
@@ -238,6 +373,8 @@ export function DifficultyLadder({
           </div>
         </div>
       </div>
+      {/* On a slide the measured strip explains itself in its corner; the key would squeeze the rungs. */}
+      {!(mode === 'slide' && calibration) && <StripKey calibration={calibration} method={calibrationMethod} />}
       {!comingSoon && lanes.length > 0 && (
         <footer className="dl-foot">
           {note && <p className="dl-note">{note}</p>}

@@ -4,10 +4,36 @@
  */
 import type { SuiteView } from '../../types.ts';
 import { Link, pathOf } from '../../router.tsx';
-import { cx } from '../ui.tsx';
+import { Callout, cx } from '../ui.tsx';
 import { Icon } from '../icons.tsx';
-import { ladderSpecOf, passMarkText } from '../../ladders.ts';
+import { LADDERS, ladderSpecOf, ladderVerdictOf, passMarkText } from '../../ladders.ts';
+import { calibrationMonth, calibrationVerdict, levelsText } from '../../../../src/core/ladders.ts';
 import '../viz/difficulty-ladder.css';
+
+/**
+ * The honest note on the Business difficulty ladders (Business results → Difficulty ladders, and the Business tests
+ * page): what the blind test found, worked out from config/ladders.json so it stays true when the numbers change.
+ */
+export function BusinessLaddersNote() {
+  const tested = LADDERS.tests.filter((t) => t.area === 'business' && t.calibration);
+  if (!tested.length) return null;
+  const cleared = tested.filter((t) => calibrationVerdict(t.calibration!) === 'top-clears').length;
+  const slipped = tested.map((t) => t.calibration!.tiers.small?.failed ?? []).filter((f) => f.length > 0);
+  const smallSlips = slipped.length;
+  const slipAt = levelsText([...new Set(slipped.map((f) => Math.min(...f)))]).replace(/^L/, '').replace(/ L/g, ' ');
+  const when = calibrationMonth(tested[0]!.calibration!.date);
+  const all = cleared === tested.length;
+  return (
+    <Callout tone="info">
+      <strong>
+        Blind test, {when}: today’s top models clear {all ? 'these ladders' : `${cleared} of these ${tested.length} ladders`}.
+      </strong>{' '}
+      {all ? 'A mid-sized and a top model passed every level they were tested on, up to level 9, scoring 96–100%. ' : ''}
+      So these ladders do not pick out the cleverest top model. They show which models stay error-free as the work piles up
+      {smallSlips ? `, and where smaller, cheaper models start to slip (a small model already failed level ${slipAt} on ${smallSlips === 1 ? 'one' : smallSlips === 2 ? 'two' : smallSlips} of them)` : ''}. One model of each size, one attempt per level.
+    </Callout>
+  );
+}
 
 export function LadderSuiteSoon({ suite }: { suite: SuiteView }) {
   const entries = suite.tests.filter((t) => t.id !== '*');
@@ -39,13 +65,14 @@ export function LadderSuiteSoon({ suite }: { suite: SuiteView }) {
   );
 }
 
-/** The ladders by name: what grows, the pass mark, and whether each is ready or still coming. */
+/** The ladders by name: what grows, the pass mark, whether each is ready or still coming, and its blind-test verdict. */
 export function LadderList({ ids, planned }: { ids: string[]; planned?: ReadonlySet<string> }) {
   return (
     <ul className="lh-soon-list">
       {ids.map((id) => {
         const spec = ladderSpecOf(id);
         const soon = planned ? planned.has(id) : !!spec?.planned;
+        const verdict = ladderVerdictOf(id);
         return (
           <li key={id} className={cx(soon && 'soon')}>
             <span className="lh-mini" aria-hidden="true">
@@ -60,6 +87,7 @@ export function LadderList({ ids, planned }: { ids: string[]; planned?: Readonly
                 <span className={cx('lh-tag', !soon && 'ok')}>{soon ? 'Coming soon' : 'Ready'}</span>
                 <small>{passMarkText(spec?.passMark ?? 1)}</small>
               </span>
+              {verdict && <p className="lh-verdict">{verdict}</p>}
             </div>
           </li>
         );

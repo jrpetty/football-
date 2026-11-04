@@ -36,6 +36,38 @@ export interface LadderTestSpec {
   basedOn?: string;
   /** Not built yet: shown as "coming soon". Delete the flag when the test lands. */
   planned?: boolean;
+  /** What a blind test measured (replaces the design-target bands in the ladder view). See calibrationVerdict. */
+  calibration?: LadderCalibration;
+}
+
+// ───────────────────────────── calibration (what blind play measured) ─────────────────────────────
+
+/** The model sizes a ladder is blind-tested with. */
+export type CalibrationTier = 'small' | 'mid' | 'top';
+export const CALIBRATION_TIERS: readonly CalibrationTier[] = ['small', 'mid', 'top'];
+/**
+ * separates: each bigger model got further than the smaller one · top-clears: the top model passed every level it
+ * was tested on · partly: some sizes were not told apart.
+ */
+export type CalibrationVerdict = 'separates' | 'top-clears' | 'partly';
+export const CALIBRATION_VERDICTS: readonly CalibrationVerdict[] = ['separates', 'top-clears', 'partly'];
+
+/** One model size's blind result on one ladder: the levels it was tested on (one attempt each). */
+export interface CalibrationTierResult {
+  passed: number[];
+  failed: number[];
+  /** Levels still being tested. When the numbers arrive, move each level into passed or failed and delete this. */
+  pending?: number[];
+}
+
+export interface LadderCalibration {
+  /** When the blind test ran: "2026-11". */
+  date: string;
+  tiers: Partial<Record<CalibrationTier, CalibrationTierResult>>;
+  /** Overrides the verdict worked out from the tiers (calibrationVerdict). Leave out unless the data misleads. */
+  verdict?: CalibrationVerdict;
+  /** One plain sentence, e.g. what a surprising miss was. */
+  note?: string;
 }
 
 export interface LaddersConfig {
@@ -44,6 +76,8 @@ export interface LaddersConfig {
   about?: string;
   /** Rungs per ladder (10). */
   levels: number;
+  /** How the blind calibration was done (one line, shown beside the measured strip). */
+  calibrationMethod?: string;
   tests: LadderTestSpec[];
 }
 
@@ -295,6 +329,180 @@ export interface LadderBoard {
   demo?: boolean;
 }
 
+// ───────────────────────────── calibration: verdict and plain English ─────────────────────────────
+
+/** What the design-target strip means, on ladders not blind-tested yet (METHODOLOGY §7q). */
+export const DESIGN_TARGET_TEXT = 'Built for (design target, not yet blind-tested): small models L1–L2, mid-sized L3–L4, today’s top models L5–L7, beyond any model today L8–L10.';
+
+const TIER_WORD: Record<CalibrationTier, string> = { small: 'small', mid: 'mid', top: 'top' };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "2026-11" → "Nov 2026" (anything else is returned as given). */
+export function calibrationMonth(date: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(date ?? '');
+  const i = m ? Number(m[2]) - 1 : -1;
+  return m && i >= 0 && i < 12 ? `${MONTHS[i]} ${m[1]}` : date;
+}
+
+/** The tiers a calibration has, smallest first. */
+export function calibrationTiers(cal: LadderCalibration): CalibrationTier[] {
+  return CALIBRATION_TIERS.filter((t) => cal.tiers?.[t]);
+}
+
+/** Highest level a tier passed (0 = none). */
+const bestOf = (r: CalibrationTierResult | undefined) => Math.max(0, ...(r?.passed ?? []));
+
+/** What a tier showed on one level: passed, failed, still being tested, or not tested (null). */
+export function calibrationAt(cal: LadderCalibration, tier: CalibrationTier, level: number): 'passed' | 'failed' | 'pending' | null {
+  const r = cal.tiers?.[tier];
+  if (!r) return null;
+  if (r.passed.includes(level)) return 'passed';
+  if (r.failed.includes(level)) return 'failed';
+  if (r.pending?.includes(level)) return 'pending';
+  return null;
+}
+
+/**
+ * The verdict: the explicit one, else worked out from the tiers. "top-clears" when the top model passed every level
+ * it was tested on; "separates" when small < mid < top by the highest level passed (and the top model failed
+ * somewhere); otherwise "partly".
+ */
+export function calibrationVerdict(cal: LadderCalibration): CalibrationVerdict {
+  if (cal.verdict) return cal.verdict;
+  const { small, mid, top } = cal.tiers ?? {};
+  if (top && top.passed.length > 0 && top.failed.length === 0) return 'top-clears';
+  if (small && mid && top && bestOf(small) < bestOf(mid) && bestOf(mid) < bestOf(top)) return 'separates';
+  return 'partly';
+}
+
+/** "L2", "L2 and L4", "L2, L4 and L6"; runs of consecutive levels as "L9–L10". */
+export function levelsText(levels: readonly number[]): string {
+  const xs = [...new Set(levels)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  for (let i = 0; i < xs.length; i++) {
+    let j = i;
+    while (j + 1 < xs.length && xs[j + 1] === xs[j]! + 1) j++;
+    parts.push(j > i ? `L${xs[i]}–L${xs[j]}` : `L${xs[i]}`);
+    i = j;
+  }
+  return andJoin(parts);
+}
+
+function andJoin(xs: string[]): string {
+  return xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "Small model (blind test, Nov 2026): passed L2, failed L4, L6 and L8". */
+export function calibrationTierText(cal: LadderCalibration, tier: CalibrationTier): string {
+  const r = cal.tiers?.[tier];
+  const head = `${cap(TIER_WORD[tier])} model (blind test, ${calibrationMonth(cal.date)})`;
+  if (!r) return `${head}: not tested`;
+  const bits = [r.passed.length ? `passed ${levelsText(r.passed)}` : '', r.failed.length ? `failed ${levelsText(r.failed)}` : '', r.pending?.length ? `${levelsText(r.pending)} still being tested` : ''].filter(Boolean);
+  return `${head}: ${bits.join('; ') || 'no levels tested'}`;
+}
+
+/** "L9–L10 still being tested for the mid and top models" (null when nothing is pending). */
+export function calibrationPendingText(cal: LadderCalibration): string | null {
+  const by = new Map<string, CalibrationTier[]>();
+  for (const t of calibrationTiers(cal)) {
+    const p = cal.tiers[t]!.pending;
+    if (!p?.length) continue;
+    const k = levelsText(p);
+    by.set(k, [...(by.get(k) ?? []), t]);
+  }
+  if (!by.size) return null;
+  return [...by].map(([lv, ts]) => `${lv} still being tested for the ${andJoin(ts.map((t) => TIER_WORD[t]))} model${ts.length > 1 ? 's' : ''}`).join('; ');
+}
+
+/**
+ * The one-line verdict on a ladder card and page, e.g. "Blind test, Nov 2026: separates small, mid and top models"
+ * or "Blind test, Nov 2026: today’s top models clear every level tested (up to L9) — this ladder measures
+ * reliability at scale and separates small models". `area` "business": a ladder the top models clear is framed as
+ * a measure of reliability at scale (the owner's call, docs/AUDIT.md); a benchmark one says "so far".
+ */
+export function calibrationVerdictText(cal: LadderCalibration, area: LadderArea = 'benchmark'): string {
+  const head = `Blind test, ${calibrationMonth(cal.date)}`;
+  const tiers = calibrationTiers(cal);
+  const pending = calibrationPendingText(cal);
+  const tail = pending ? ` (${pending})` : '';
+  const verdict = calibrationVerdict(cal);
+  if (verdict === 'separates') return `${head}: separates ${andJoin(tiers.map((t) => TIER_WORD[t]))} models${tail}`;
+  if (verdict === 'top-clears') {
+    const top = cal.tiers.top;
+    const upTo = top?.passed.length ? ` (up to L${bestOf(top)})` : '';
+    const stopped = tiers.filter((t) => t !== 'top' && cal.tiers[t]!.failed.length > 0);
+    const separates = stopped.length ? `separates ${andJoin(stopped.map((t) => TIER_WORD[t]))} models` : '';
+    const clears = `today’s top models clear every level tested${pending ? ' so far' : ''}${upTo}`;
+    if (area === 'business') {
+      const rest = separates ? ` and ${separates}` : tiers.length > 1 ? '; smaller models passed every level they were tested on too' : '';
+      return `${head}: ${clears} — this ladder measures reliability at scale${rest}${tail}`;
+    }
+    // A benchmark ladder names every size that cleared it ("today’s mid and top models clear every level tested").
+    const cleared = tiers.filter((t) => cal.tiers[t]!.passed.length > 0 && cal.tiers[t]!.failed.length === 0);
+    const who = cleared.length > 1 ? `today’s ${andJoin(cleared.map((t) => TIER_WORD[t]))} models` : 'today’s top models';
+    return `${head}: ${clears.replace('today’s top models', who)}${separates ? `; it ${separates}${stopped.length === 1 ? ' only' : ''}` : ''}${tail}`;
+  }
+  // partly: name the sizes that were not told apart (a smaller one got as far as the next one up).
+  const ties: string[] = [];
+  for (let i = 0; i + 1 < tiers.length; i++) {
+    const a = tiers[i]!;
+    const b = tiers[i + 1]!;
+    if (bestOf(cal.tiers[a]) >= bestOf(cal.tiers[b])) ties.push(`${TIER_WORD[a]} and ${TIER_WORD[b]}`);
+  }
+  const last = tiers[tiers.length - 1];
+  const lastAhead = !!last && tiers.length > 1 && tiers.slice(0, -1).every((t) => bestOf(cal.tiers[t]) < bestOf(cal.tiers[last]));
+  if (!ties.length) return `${head}: partly separates ${andJoin(tiers.map((t) => TIER_WORD[t]))} models${tail}`;
+  return `${head}: partly separates — ${andJoin(ties)} models came out level${lastAhead ? `; ${TIER_WORD[last!]} models got further` : ''}${tail}`;
+}
+
+/** Problems with one test's calibration (empty = valid). `levels` = the ladder's rungs. */
+export function validateCalibration(at: string, cal: unknown, levels: number): string[] {
+  if (!cal || typeof cal !== 'object' || Array.isArray(cal)) return [`${at}: calibration must be an object`];
+  const errs: string[] = [];
+  const c = cal as Record<string, unknown>;
+  for (const k of Object.keys(c)) if (!['date', 'tiers', 'verdict', 'note'].includes(k)) errs.push(`${at}: calibration has an unknown field "${k}" (date, tiers, verdict, note)`);
+  if (typeof c.date !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(c.date)) errs.push(`${at}: calibration.date must be "YYYY-MM", e.g. "2026-11"`);
+  if (c.verdict !== undefined && !CALIBRATION_VERDICTS.includes(c.verdict as CalibrationVerdict)) errs.push(`${at}: calibration.verdict must be ${CALIBRATION_VERDICTS.map((v) => `"${v}"`).join(', ')} (or left out)`);
+  if (c.note !== undefined && (typeof c.note !== 'string' || !c.note.trim())) errs.push(`${at}: calibration.note must be a sentence (or left out)`);
+  const tiers = c.tiers;
+  if (!tiers || typeof tiers !== 'object' || Array.isArray(tiers)) return [...errs, `${at}: calibration.tiers must be an object with small, mid and/or top`];
+  if (!Object.keys(tiers).length) errs.push(`${at}: calibration.tiers needs at least one of small, mid, top`);
+  for (const [tier, r] of Object.entries(tiers as Record<string, unknown>)) {
+    const tt = `${at}: calibration.tiers.${tier}`;
+    if (!CALIBRATION_TIERS.includes(tier as CalibrationTier)) {
+      errs.push(`${tt}: the tiers are small, mid and top only`);
+      continue;
+    }
+    if (!r || typeof r !== 'object' || Array.isArray(r)) {
+      errs.push(`${tt} must be { "passed": [...], "failed": [...] }`);
+      continue;
+    }
+    const x = r as Record<string, unknown>;
+    for (const k of Object.keys(x)) if (!['passed', 'failed', 'pending'].includes(k)) errs.push(`${tt} has an unknown field "${k}" (passed, failed, pending)`);
+    const seen = new Map<number, string>();
+    for (const name of ['passed', 'failed', 'pending']) {
+      const list = x[name];
+      if (list === undefined && name === 'pending') continue;
+      if (!Array.isArray(list)) {
+        errs.push(`${tt}.${name} must be a list of level numbers (empty is fine)`);
+        continue;
+      }
+      for (const lv of list as unknown[]) {
+        if (typeof lv !== 'number' || !Number.isInteger(lv) || lv < 1 || lv > levels) {
+          errs.push(`${tt}.${name}: ${JSON.stringify(lv)} is not a level (1..${levels})`);
+          continue;
+        }
+        const before = seen.get(lv);
+        if (before === name) errs.push(`${tt}.${name}: L${lv} is listed twice`);
+        else if (before) errs.push(`${tt}: L${lv} is both ${before} and ${name}`);
+        else seen.set(lv, name);
+      }
+    }
+  }
+  return errs;
+}
+
 // ───────────────────────────── the config ─────────────────────────────
 
 /** Rules for every BUILT ladder test (planned tests have no results to measure). */
@@ -328,6 +536,7 @@ export function validateLadders(cfg: LaddersConfig, library: ReadonlyMap<string,
   const errs: string[] = [];
   if (!/^\d+\.\d+\.\d+$/.test(cfg.version ?? '')) errs.push('version must be semver (x.y.z)');
   if (!cfg.title?.trim()) errs.push('needs a title');
+  if (cfg.calibrationMethod !== undefined && !(typeof cfg.calibrationMethod === 'string' && cfg.calibrationMethod.trim())) errs.push('calibrationMethod must be one line of text (or left out)');
   if (!Number.isInteger(cfg.levels) || cfg.levels < 2) errs.push('levels must be a whole number ≥ 2 (10)');
   const seen = new Set<string>();
   for (const t of cfg.tests ?? []) {
@@ -342,6 +551,7 @@ export function validateLadders(cfg: LaddersConfig, library: ReadonlyMap<string,
     if ((t.area === 'business') !== !!business) errs.push(`${at}: work.* tests are area "business", every other ladder is "benchmark"`);
     if (!(typeof t.passMark === 'number' && t.passMark > 0 && t.passMark <= 1)) errs.push(`${at}: passMark must be in (0, 1] (1 = full marks)`);
     if (t.basedOn && !library.has(t.basedOn)) errs.push(`${at}: basedOn "${t.basedOn}" is not in the test library`);
+    if (t.calibration !== undefined) errs.push(...validateCalibration(at, t.calibration, t.rungs?.length || cfg.levels));
     const lib = library.get(t.id);
     if (t.planned) {
       if (lib) errs.push(`${at} now exists in the test library: delete "planned": true and add its ${cfg.levels} "rungs" labels in config/ladders.json (and flip it in its suite)`);

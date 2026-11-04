@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { TestDetail } from '../../types.ts';
 import { ladderClimbs, ladderLevel, type LadderResultLike } from '../../../../src/core/ladders.ts';
 import { rungCaption } from '../../../../src/presenter/visuals/horizon.ts';
-import { ladderRuleOf, ladderSpecOf } from '../../ladders.ts';
+import { LADDERS, ladderRuleOf, ladderSpecOf, ladderVerdictOf } from '../../ladders.ts';
 import { DifficultyLadder, type DifficultyLadderMode, type LadderClimber } from './DifficultyLadder.tsx';
 import { useTestDetail } from './CaseVisualPanel.tsx';
 
@@ -79,6 +79,9 @@ export function LadderPanel({
       title={showHead ? detail?.definition.name ?? spec?.name : undefined}
       grows={showHead ? spec?.grows : undefined}
       passMark={spec?.passMark ?? 1}
+      calibration={spec?.calibration}
+      verdict={showHead ? ladderVerdictOf(testId) : undefined}
+      calibrationMethod={LADDERS.calibrationMethod}
     />
   );
 }

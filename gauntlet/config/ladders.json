@@ -1,8 +1,9 @@
 {
   "version": "1.0.0",
   "title": "Difficulty ladders",
-  "about": "Every test built as a ten-rung difficulty ladder (case ids L01 to L10, frozen forever, each strictly harder than the one below along one documented size or depth). The headline is the ladder height: the highest level L such that every level 1..L was passed reliably. A rung is passed at passMark of its points (1 = full marks). src/core/ladders.ts validates this file and computes heights; docs/METHODOLOGY.md 'Difficulty ladders' is the contract. Planned tests are being built: when one lands, delete its \"planned\": true and add its ten rung labels.",
+  "about": "Every test built as a ten-rung difficulty ladder (case ids L01 to L10, frozen forever, each strictly harder than the one below along one documented size or depth). The headline is the ladder height: the highest level L such that every level 1..L was passed reliably. A rung is passed at passMark of its points (1 = full marks). src/core/ladders.ts validates this file and computes heights; docs/METHODOLOGY.md 'Difficulty ladders' is the contract. Planned tests are being built: when one lands, delete its \"planned\": true and add its ten rung labels. A test's \"calibration\" records what a blind test measured (the levels each model size passed and failed, one attempt each; \"pending\" = still being tested); the ladder view shows it in place of the design-target bands.",
   "levels": 10,
+  "calibrationMethod": "Blind test, November 2026: one Claude model of each size (small, mid, top) saw only the prompt a model receives (no tools, no code), one attempt per level tested, marked by Gauntlet's real scorers. Small samples: read as a check of the ladder, not as results.",
   "tests": [
     {
       "id": "horizon.mind-runner",
@@ -58,7 +59,15 @@
       "basedOn": "reasoning.deduction-grid-extreme",
       "passMark": 1,
       "grows": "Grid size × attributes × clue depth: more people, more attributes and longer chains of clues to combine.",
-      "rungs": ["4×3 grid · 10 clues", "5×3 grid · 16 clues", "6×4 grid · 23 clues", "7×4 grid · 26 clues", "8×5 grid · 29 clues", "9×5 grid · 46 clues", "9×6 grid · 52 clues", "10×6 grid · 71 clues", "11×7 grid · 104 clues", "12×8 grid · 172 clues"]
+      "rungs": ["4×3 grid · 10 clues", "5×3 grid · 16 clues", "6×4 grid · 23 clues", "7×4 grid · 26 clues", "8×5 grid · 29 clues", "9×5 grid · 46 clues", "9×6 grid · 52 clues", "10×6 grid · 71 clues", "11×7 grid · 104 clues", "12×8 grid · 172 clues"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [2], "failed": [4, 6, 8] },
+          "mid": { "passed": [2, 4], "failed": [6, 8] },
+          "top": { "passed": [2, 4, 6], "failed": [8] }
+        }
+      }
     },
     {
       "id": "reasoning.truth-ladder",
@@ -68,7 +77,16 @@
       "basedOn": "reasoning.truth-tellers-extreme",
       "passMark": 1,
       "grows": "Islanders and statement depth: more people, nested statements, then spies and alternators.",
-      "rungs": ["4 islanders · 4 statements", "5 islanders · 5 statements", "6 islanders · 8 statements", "9 islanders · 13 statements", "12 islanders · 20 statements", "14 islanders · 24 statements", "16 islanders · 28 statements", "19 islanders · 34 statements", "22 islanders · 40 statements", "24 islanders · 45 statements"]
+      "rungs": ["4 islanders · 4 statements", "5 islanders · 5 statements", "6 islanders · 8 statements", "9 islanders · 13 statements", "12 islanders · 20 statements", "14 islanders · 24 statements", "16 islanders · 28 statements", "19 islanders · 34 statements", "22 islanders · 40 statements", "24 islanders · 45 statements"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [2], "failed": [4, 6, 8] },
+          "mid": { "passed": [2, 4], "failed": [6, 8] },
+          "top": { "passed": [4, 6], "failed": [2, 8] }
+        },
+        "note": "The top model's level-2 miss was a copying slip: its reasoning had the right answer."
+      }
     },
     {
       "id": "reasoning.plans-ladder",
@@ -78,7 +96,16 @@
       "basedOn": "reasoning.planning-extreme",
       "passMark": 1,
       "grows": "State-space size and the proven-minimum plan length.",
-      "rungs": ["4 disks · 6 moves", "5 disks · 10 moves", "6 disks · 14 moves", "7 disks · 19 moves", "8 disks · 25 moves", "9 disks · 32 moves", "10 disks · 40 moves", "11 disks · 48 moves", "12 disks · 58 moves", "13 disks · 70 moves"]
+      "rungs": ["4 disks · 6 moves", "5 disks · 10 moves", "6 disks · 14 moves", "7 disks · 19 moves", "8 disks · 25 moves", "9 disks · 32 moves", "10 disks · 40 moves", "11 disks · 48 moves", "12 disks · 58 moves", "13 disks · 70 moves"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [], "failed": [2, 4, 6, 8] },
+          "mid": { "passed": [4], "failed": [2, 6, 8] },
+          "top": { "passed": [2, 4, 6, 8], "failed": [9, 10] }
+        },
+        "note": "The top model's level 9 and 10 plans were each one move over the proven minimum (59 moves for 58, 71 for 70). One attempt per level: the mid model missed level 2 but passed level 4."
+      }
     },
     {
       "id": "math.exact-ladder",
@@ -88,7 +115,15 @@
       "basedOn": "math.olympiad",
       "passMark": 1,
       "grows": "Board 10→64 squares, 0→6 snake loops, more ladders and traps; exact answer 3→30-digit denominator.",
-      "rungs": ["10 squares · 3-digit answer", "12 squares · 4-digit", "14 squares · 1 snake · 5-digit", "18 squares · 1 snake · 7-digit", "22 squares · 2 snakes · 11-digit", "28 squares · 2 snakes · 14-digit", "34 squares · 3 snakes · 15-digit", "42 squares · 4 snakes · 18-digit", "52 squares · 5 snakes · 27-digit", "64 squares · 6 snakes · 30-digit"]
+      "rungs": ["10 squares · 3-digit answer", "12 squares · 4-digit", "14 squares · 1 snake · 5-digit", "18 squares · 1 snake · 7-digit", "22 squares · 2 snakes · 11-digit", "28 squares · 2 snakes · 14-digit", "34 squares · 3 snakes · 15-digit", "42 squares · 4 snakes · 18-digit", "52 squares · 5 snakes · 27-digit", "64 squares · 6 snakes · 30-digit"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [2, 4, 6], "failed": [8] },
+          "mid": { "passed": [2, 4, 6], "failed": [8] },
+          "top": { "passed": [2, 4, 6, 8], "failed": [9, 10] }
+        }
+      }
     },
     {
       "id": "coding.engineering-ladder",
@@ -98,7 +133,16 @@
       "basedOn": "coding.frontier",
       "passMark": 1,
       "grows": "One more range operation per level (2→12: add, assign, chmin, chmax, division, historic max/min, history reset) on up to 10^6 numbers; from level 5 only segment tree beats is fast enough.",
-      "rungs": ["set + range sum · n 2,000", "+min/max · n 10^6", "+range add", "+range assign", "+range chmin", "+range chmax", "+floor division", "+historic max", "+historic min", "+history reset"]
+      "rungs": ["set + range sum · n 2,000", "+min/max · n 10^6", "+range add", "+range assign", "+range chmin", "+range chmax", "+floor division", "+historic max", "+historic min", "+history reset"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [2, 4], "failed": [6, 8] },
+          "mid": { "passed": [2, 4, 6, 8, 9, 10], "failed": [] },
+          "top": { "passed": [2, 4, 6, 8, 9, 10], "failed": [] }
+        },
+        "note": "Today's mid and top models cleared every level, writing the specialist segment-tree-beats design correctly without running any code; the small model failed level 6 (16 of 17 hidden tests) and level 8. So this ladder separates small models only. It replaces a first version (a key-value store) that all three model sizes passed at level 9."
+      }
     },
 
     {
@@ -109,7 +153,16 @@
       "basedOn": "work.invoice-matching",
       "passMark": 0.9,
       "grows": "Dependency depth: from a handful of invoices under two rules to ten pools of eight documents each drawing on what the ones before them left, under the full payment policy.",
-      "rungs": ["5 documents · 2 rules", "1 pool of 3 · 4 rules", "2 pools of 4 · 7 rules", "3 pools of 5 · 10 rules", "4 pools of 5 · full policy", "5 pools of 6", "6 pools of 6", "7 pools of 7", "8 pools of 8", "10 pools of 8"]
+      "rungs": ["5 documents · 2 rules", "1 pool of 3 · 4 rules", "2 pools of 4 · 7 rules", "3 pools of 5 · 10 rules", "4 pools of 5 · full policy", "5 pools of 6", "6 pools of 6", "7 pools of 7", "8 pools of 8", "10 pools of 8"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 99–100% (pass mark 90%)."
+      }
     },
     {
       "id": "work.payroll-ladder",
@@ -119,7 +172,16 @@
       "basedOn": "work.payroll-check",
       "passMark": 0.9,
       "grows": "Months that rest on each other: one month's payslips, up to six months of a payroll on the cumulative basis with code changes, P45s, directors and linked sickness.",
-      "rungs": ["1 month · 4 staff", "1 month · 6 staff", "2 months · 6 staff", "3 months · 8 staff", "3 months · full rules", "4 months · 12 staff", "5 months · 14 staff", "5 months · 16 staff", "6 months · 18 staff", "6 months · 22 staff"]
+      "rungs": ["1 month · 4 staff", "1 month · 6 staff", "2 months · 6 staff", "3 months · 8 staff", "3 months · full rules", "4 months · 12 staff", "5 months · 14 staff", "5 months · 16 staff", "6 months · 18 staff", "6 months · 22 staff"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 99–100% (pass mark 90%)."
+      }
     },
     {
       "id": "work.expenses-ladder",
@@ -129,7 +191,16 @@
       "basedOn": "work.expense-audit",
       "passMark": 0.9,
       "grows": "Months that rest on each other: one batch under two rules, up to six monthly batches for one team with mileage, duplicates, late lines and cash advances carried through.",
-      "rungs": ["1 month · 2 rules", "1 month · 4 rules", "2 months · 8 rules", "2 months · 11 rules", "3 months · full policy", "3 months · 5 people", "4 months · 5 people", "4 months · 6 people", "5 months · 6 people", "6 months · 7 people"]
+      "rungs": ["1 month · 2 rules", "1 month · 4 rules", "2 months · 8 rules", "2 months · 11 rules", "3 months · full policy", "3 months · 5 people", "4 months · 5 people", "4 months · 6 people", "5 months · 6 people", "6 months · 7 people"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 99–100% (pass mark 90%)."
+      }
     },
     {
       "id": "work.reconciliation-ladder",
@@ -139,7 +210,16 @@
       "basedOn": "work.bank-reconciliation",
       "passMark": 0.9,
       "grows": "Months that rest on each other: one month's statement, up to six unreconciled months where items clear late and every balance carries all earlier corrections.",
-      "rungs": ["1 month · 1 rule", "1 month · 3 rules", "2 months · 5 rules", "2 months · 8 rules", "3 months · all rules", "3 months · denser", "4 months", "4 months · denser", "5 months", "6 months"]
+      "rungs": ["1 month · 1 rule", "1 month · 3 rules", "2 months · 5 rules", "2 months · 8 rules", "3 months · all rules", "3 months · denser", "4 months", "4 months · denser", "5 months", "6 months"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 99–100% (pass mark 90%)."
+      }
     },
     {
       "id": "work.crm-ladder",
@@ -149,7 +229,16 @@
       "basedOn": "work.crm-dedupe",
       "passMark": 0.9,
       "grows": "Records merged one pair at a time: 24 records to about 950, with link records, refused merges and survivorship precedence.",
-      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "79 records · 4 refused merges", "131 records · 11 refused merges", "234 records · 15 refused merges", "349 records · 37 refused merges", "492 records · 56 refused merges", "620 records · 73 refused merges", "774 records · 99 refused merges", "949 records · 106 refused merges"]
+      "rungs": ["24 records · 2 rules", "40 records · 3 rules", "79 records · 4 refused merges", "131 records · 11 refused merges", "234 records · 15 refused merges", "349 records · 37 refused merges", "492 records · 56 refused merges", "620 records · 73 refused merges", "774 records · 99 refused merges", "949 records · 106 refused merges"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3], "failed": [5] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "The small model scored 58% at level 5 (pass mark 90%); the mid and top models scored 99–100%."
+      }
     },
     {
       "id": "work.contract-ladder",
@@ -159,7 +248,16 @@
       "basedOn": "work.contract-redline",
       "passMark": 0.9,
       "grows": "Draft length and settlement: 3 accepted changes to 114 changes settled by about 100 replies, keyed by the agreed numbering.",
-      "rungs": ["3 changes · all accepted", "7 changes · 2 replies", "12 changes · 12 replies", "18 changes · 20 replies", "33 changes · 35 replies", "45 changes · 46 replies", "58 changes · 58 replies", "78 changes · 78 replies", "93 changes · 92 replies", "114 changes · 106 replies"]
+      "rungs": ["3 changes · all accepted", "7 changes · 2 replies", "12 changes · 12 replies", "18 changes · 20 replies", "33 changes · 35 replies", "45 changes · 46 replies", "58 changes · 58 replies", "78 changes · 78 replies", "93 changes · 92 replies", "114 changes · 106 replies"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3], "failed": [5] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "The small model scored 88% at level 5, just under the 90% pass mark; the mid model 96–100%, the top model 100%."
+      }
     },
     {
       "id": "work.sql-ladder",
@@ -169,7 +267,16 @@
       "basedOn": "work.sql-questions",
       "passMark": 0.9,
       "grows": "Query depth: semantics one query must compose, from a filter to state carried row by row (as-of balances, a budget run).",
-      "rungs": ["1 rule · a count", "2 rules · dedup, UK week", "4 rules · ranks with ties", "5 rules · reversal chains", "6 rules · sessions", "7 rules · as-known balances", "8 rules · session orders", "10 rules · budget run", "13 rules · one use each", "16 rules · partial budgets"]
+      "rungs": ["1 rule · a count", "2 rules · dedup, UK week", "4 rules · ranks with ties", "5 rules · reversal chains", "6 rules · sessions", "7 rules · as-known balances", "8 rules · session orders", "10 rules · budget run", "13 rules · one use each", "16 rules · partial budgets"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 100%."
+      }
     },
     {
       "id": "work.support-ladder",
@@ -179,7 +286,16 @@
       "basedOn": "work.support-refunds",
       "passMark": 0.9,
       "grows": "Tickets and history: 4 independent returns to 120 tickets from 36 accounts whose limits are used up in date order.",
-      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 3 accounts", "15 tickets · 6 accounts", "29 tickets · 9 accounts", "40 tickets · 14 accounts", "54 tickets · 16 accounts", "70 tickets · 22 accounts", "90 tickets · 25 accounts", "120 tickets · 36 accounts"]
+      "rungs": ["4 tickets · 2 rules", "6 tickets · 4 rules", "10 tickets · 3 accounts", "15 tickets · 6 accounts", "29 tickets · 9 accounts", "40 tickets · 14 accounts", "54 tickets · 16 accounts", "70 tickets · 22 accounts", "90 tickets · 25 accounts", "120 tickets · 36 accounts"],
+      "calibration": {
+        "date": "2026-11",
+        "tiers": {
+          "small": { "passed": [3, 5], "failed": [] },
+          "mid": { "passed": [5, 7], "failed": [] },
+          "top": { "passed": [7, 9], "failed": [] }
+        },
+        "note": "Every score was 93–100% (pass mark 90%)."
+      }
     }
   ]
 }

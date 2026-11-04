@@ -2,7 +2,7 @@
   "id": "business-ladders",
   "version": "1.0.0",
   "name": "Business Ladders",
-  "description": "Eight Business tests rebuilt as ten-rung difficulty ladders (not the Business Ladder's adoption levels): invoices, payslips, expenses, reconciliation, the customer list, contract changes, database questions and the support queue. Each rung adds volume and stacks more policy rules; a rung is passed at 90% of its points. The headline is the ladder height alongside the Business Score. Every answer is machine-checked against a solver. Never mixed into the Gauntlet Index. Tests still being built appear as coming soon.",
+  "description": "Eight Business tests rebuilt as ten-rung difficulty ladders (not the Business Ladder's adoption levels): invoices, payslips, expenses, reconciliation, the customer list, contract changes, database questions and the support queue. On each rung more of the answer depends on earlier work; a rung is passed at 90% of its points. What the November 2026 blind test found: today's top models clear these ladders (96-100% on every level tested, up to level 9), so they do not pick out the cleverest top model. They show which models stay error-free as the work piles up, and where smaller, cheaper models start to slip. The headline is the ladder height alongside the Business Score. Every answer is machine-checked against a solver. Never mixed into the Gauntlet Index.",
   "repeats": 1,
   "tests": [
     { "id": "work.invoices-ladder" },
