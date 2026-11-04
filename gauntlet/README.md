@@ -344,6 +344,15 @@ running a department ([METHODOLOGY.md](docs/METHODOLOGY.md#7h-the-business-ladde
 | Check the Payslips | `work.payroll-check` | Find the payslips the bureau got wrong and fix them to the penny: tax codes, NI, pension, student loans. |
 | Clean the Customer List | `work.crm-dedupe` | Merge the duplicates in a messy customer list by the rules, without merging different people. |
 
+**Business ladders: finance** (category `work`; ten frozen levels each, more items and more rules per level, a level passed at 90% of its points; see [METHODOLOGY §7q](docs/METHODOLOGY.md#7q-business-ladders-finance-invoices-payslips-expenses-reconciliation))
+
+| Test | Id | What it does |
+|---|---|---|
+| Invoices to Pay: Ladder | `work.invoices-ladder` | Ten rungs of supplier invoices, from five documents to a hundred and thirty. How far up can it pay the right ones to the penny? |
+| Check the Payslips: Ladder | `work.payroll-ladder` | Ten rungs of payslips, from 4 staff to 120. How far up can it find every mistake and fix it to the penny? |
+| Expense Policy Check: Ladder | `work.expenses-ladder` | Ten rungs of expense claims, from 8 lines to over 900. How far up can it pay every person exactly by the policy? |
+| Reconcile the Account: Ladder | `work.reconciliation-ladder` | Ten rungs of bank reconciliation, from 28 lines to 1,400. How far up can it match every line and land the balance to the penny? |
+
 **Also in the library (not in a suite, pick it in New Run):** **Fix the Bug** (`agentic.code-agent`): a coding
 agent dropped into a small real JavaScript repo with a red test suite. It reads, searches, edits and runs the tests
 one action at a time (30 actions), and hidden tests decide the score. See [docs/PLAYBOOK.md](docs/PLAYBOOK.md#coding-agent-episode-fix-the-bug).

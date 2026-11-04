@@ -398,30 +398,40 @@ def gen(seed, tier):
     return claims, lines, rates, register, directors
 
 
-def gen_big(seed, tier):
+def gen_big(seed, tier, p=None):
     """Medium and hard batches: many employees, trips with hotels and the meals around them, mileage near the 10,000
     mark with passengers, entertainment with every approval state, receipts at the £25.00 edge, late lines with and
-    without a late-submission approval, and duplicates."""
+    without a late-submission approval, and duplicates.
+
+    `p` (the Expense Policy Check ladder, verification/finance-ladders/) sets the sizes and the rule families in play;
+    without it this is exactly the medium or hard batch of work.expense-audit."""
     rng = random.Random(seed)
-    n_emp = {'medium': 5, 'hard': 8}[tier]
+    P = dict(n_emp={'medium': 5, 'hard': 8}.get(tier), multi=3 if tier == 'hard' else 0, month={'medium': 9, 'hard': 4}.get(tier),
+             extra=['small', 'local_meals'] if tier == 'hard' else [], ents=5 + (2 if tier == 'hard' else 0),
+             n_late=2 if tier == 'medium' else 3, n_dup={'medium': 2, 'hard': 4}.get(tier), late_dups=0, edge_fx=0, fams=None)
+    P.update(p or {})
+
+    def fam(f):
+        return P['fams'] is None or f in P['fams']
+    n_emp = P['n_emp']
     names = people(rng, n_emp + 3)
     emps = names[:n_emp]
     directors = names[n_emp:n_emp + 3]
     rates = {'GBP': D('1'), 'EUR': D(str(rng.choice(['0.84', '0.85', '0.86', '0.87']))), 'USD': D(str(rng.choice(['0.74', '0.76', '0.78', '0.79'])))}
-    month = {'medium': 9, 'hard': 4}[tier]
+    month = P['month']
     base = date(2026, month, 1)
     claims = {}
     lines = []
     register = []
     used_ids = set()
     for i, e in enumerate(emps):
-        for k in range(2 if (tier == 'hard' and i < 3) else 1):
+        for k in range(2 if i < P['multi'] else 1):
             while True:
                 cid = f"C-{rng.randint(3100, 3999)}"
                 if cid not in used_ids:
                     used_ids.add(cid)
                     break
-            sub = base + timedelta(days=rng.randint(18, 26) - (9 if k == 0 and tier == 'hard' and i < 3 else 0))
+            sub = base + timedelta(days=rng.randint(18, 26) - (9 if k == 0 and i < P['multi'] else 0))
             while sub.weekday() >= 5:
                 sub += timedelta(days=1)
             miles_year = 2026 if month >= 5 else 2025
@@ -470,7 +480,7 @@ def gen_big(seed, tier):
                    receipt=receipt, alcohol=alc, vat=vat_of(amt) if cur == 'GBP' and receipt else None)
 
     def trip(c):
-        city = rng.choice(list(HOTEL_CAP))
+        city = rng.choice(list(HOTEL_CAP) if fam('conversion') else UK_CITIES)
         n = rng.choice([1, 2, 2, 3])
         d0 = edate(c, 8, 40)
         cap = HOTEL_CAP[city]
@@ -480,6 +490,8 @@ def gen_big(seed, tier):
             amount=amt, cur=CUR[city], receipt=True, nights=n, vat=vat_of(amt) if CUR[city] == 'GBP' else None)
         base_cap = MEAL_CAP[city]
         for i in range(n + 1):  # the departure day is not covered by a night
+            if not fam('meal') or (not fam('meal-uplift') and i < n):
+                continue  # (ladder) no meals yet, or only on the departure day before the hotel-night uplift is a rule
             d = d0 + timedelta(days=i)
             if d.weekday() >= 5 and rng.random() < 0.5:
                 continue
@@ -491,17 +503,19 @@ def gen_big(seed, tier):
             for kd, w in zip(kinds, parts):
                 a = r2(target * D(str(round(w / sum(parts), 3))))
                 alc = r2(a * D('0.2')) if kd == 'Dinner' and rng.random() < 0.35 else None
-                meal_line(c, d, city, kd, max(a, D('4.50')), alc)
+                meal_line(c, d, city, kd, max(a, D('4.50')), alc if fam('alcohol') else None)
         if city in UK_CITIES and city != 'London':
             a, b, std, fc = rng.choice([r for r in RAIL if city.split()[0] in r[1] or city.split()[0] in r[0]] or RAIL)
-            first = rng.random() < 0.4
+            first = rng.random() < 0.4 and fam('rail')
             add(claim=c['id'], date=d0, kind='rail', city='London', merchant='National Rail (LNER/Avanti/GWR)', desc=f"Rail {a} – {b} return, {'first' if first else 'standard'} class",
                 amount=fc if first else std, cur='GBP', receipt=True, first_class=first, standard=std)
 
     def local_meals(c):
         d = edate(c)
         for kd in sorted(rng.sample(['Breakfast', 'Lunch', 'Dinner'], rng.choice([1, 2])), key=['Breakfast', 'Lunch', 'Dinner'].index):
-            meal_line(c, d, 'London', kd, money(6, 32), money(3, 9) if kd == 'Dinner' and rng.random() < 0.5 else None, receipt=rng.random() < 0.85)
+            amt = money(6, 32)
+            alc = money(3, 9) if kd == 'Dinner' and rng.random() < 0.5 else None
+            meal_line(c, d, 'London', kd, amt, alc if fam('alcohol') else None, receipt=rng.random() < 0.85)
 
     def mileage_run(c):
         k = rng.choice([1, 2, 3])
@@ -541,26 +555,49 @@ def gen_big(seed, tier):
 
     states = ['approved', 'limit', 'other', 'claimed', 'none']
     rng.shuffle(states)
+    named = {'trip': trip, 'mileage_run': mileage_run, 'local_meals': local_meals, 'small': small}
     for i, c in enumerate(C):
-        blocks = [trip, mileage_run, local_meals, small, lambda c: small(c, True)]
-        if tier == 'hard':
-            blocks += [small, local_meals]
+        if p is None:
+            blocks = [trip, mileage_run, local_meals, small, lambda c: small(c, True)]
+            if tier == 'hard':
+                blocks += [small, local_meals]
+        else:
+            blocks = [trip] + ([mileage_run] if fam('mileage') else []) + ([local_meals] if fam('meal') else []) + [small, lambda c: small(c, True)]
+            blocks += [named[x] for x in P['extra'] if (x != 'local_meals' or fam('meal')) and (x != 'mileage_run' or fam('mileage'))]
         rng.shuffle(blocks)
         for b in blocks:
             b(c)
-        ent(c, states[i % len(states)]) if i < len(states) + (2 if tier == 'hard' else 0) else None
+        ent(c, states[i % len(states)]) if fam('entertainment') and i < P['ents'] else None
     # late lines: one claim with a LATE approval, one where the approval names a different claim
-    late_claims = rng.sample(C, 2 if tier == 'medium' else 3)
+    late_claims = rng.sample(C, P['n_late']) if P['n_late'] else []
     for j, c in enumerate(late_claims):
         ln = [l for l in lines if l.claim == c['id'] and l.kind in ('misc', 'taxi', 'meal')][0]
         ln.date = wday(c['submitted'] - timedelta(days=rng.choice([61, 63, 70, 85])))
-        if j == 0:
+        ln.late_planted = True
+        if j % 3 == 0:
             register.append(dict(ref=f"LS-{rng.randint(10, 99)}", type='LATE', director=rng.choice(directors), claim=c['id']))
-        elif j == 1:
+        elif j % 3 == 1:
             others = [x for x in C if x['id'] != c['id']]
             register.append(dict(ref=f"LS-{rng.randint(10, 99)}", type='LATE', director=rng.choice(directors), claim=rng.choice(others)['id']))
+    # (ladder) a late line claimed again: the copy is late too, unless an approval covers ITS claim
+    for _ in range(P['late_dups']):
+        src = rng.choice([l for l in lines if getattr(l, 'late_planted', False)])
+        cand = [x for x in C if x['emp'] == claims[src.claim]['emp']]
+        dup = Line(**dict(src.__dict__))
+        dup.claim = rng.choice(cand)['id']
+        dup.receipt = True
+        lines.append(dup)
+    # (ladder) foreign taxis without a receipt either side of £25.00 after conversion
+    for _ in range(P['edge_fx']):
+        c = rng.choice(C)
+        city = rng.choice(['Paris', 'Dublin', 'New York'])
+        cur = CUR[city]
+        target = D('25') + D(rng.choice([-35, -12, 9, 21, 48])) / 100
+        amt = r2(target / rates[cur])
+        merchant = {'Paris': 'G7 Taxi, Paris', 'Dublin': 'Liffey Cabs, Dublin', 'New York': 'Yellow Cab, New York'}[city]
+        add(claim=c['id'], date=edate(c), kind='taxi', city=city, merchant=merchant, desc='Taxi to client site', amount=amt, cur=cur, receipt=False)
     # duplicates (the same employee; in the hard tier sometimes in their other claim)
-    for _ in range({'medium': 2, 'hard': 4}[tier]):
+    for _ in range(P['n_dup']):
         src = rng.choice([l for l in lines if l.kind in ('meal', 'taxi', 'misc', 'hotel')])
         cand = [x for x in C if x['emp'] == claims[src.claim]['emp'] and x['submitted'] > src.date + timedelta(days=1 if src.kind != 'hotel' else src.nights)]
         dup = Line(**dict(src.__dict__))

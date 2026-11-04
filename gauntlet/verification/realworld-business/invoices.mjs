@@ -158,7 +158,8 @@ function correctVat(lines) {
 
 export function generate(spec) {
   const r = rng(spec.seed);
-  const biz = BUSINESSES[spec.biz];
+  // A ladder level may use a subset of the business's suppliers (no discount terms before that rule family is in play).
+  const biz = spec.bizData ?? BUSINESSES[spec.biz];
   const run = spec.run;
   const world = { spec, biz, run, nextRun: addDays(run, 7), pos: [], grns: [], ledger: [], docs: [], emails: [], intent: {} };
   let poNo = 4000 + r.int(10, 80) * 10 + (spec.seed % 7);
@@ -607,6 +608,83 @@ export function generate(spec) {
         world.netNegative = sup.id;
         return [];
       }
+      case 'chain:consume-3': {
+        // Four invoices on one PO line: A is approved, B is over the price tolerance (held, so it uses up nothing),
+        // C fits only because B is held, and D no longer fits after A and C.
+        const sup = pickSupplier((s) => s.terms.kind === 'net' && s.products.some((p) => p.hi >= 8));
+        const prod = r.pick(sup.products.filter((p) => p.hi >= 8));
+        poNo += r.int(1, 9);
+        const st = site();
+        const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(42, 50)), raisedBy: st.lead, site: st, lines: [{ code: prod.code, desc: prod.desc, qty: Math.max(prod.hi, 20) + r.int(2, 10), price: prod.price, vat: prod.vat, invoicedToDate: 0 }] };
+        world.pos.push(po);
+        const l = po.lines[0];
+        const received = l.qty - r.int(1, 3);
+        makeGRN(po, [[l.code, received]], { note: 'Part delivery - balance to follow' });
+        const a = Math.floor((received * r.int(36, 42)) / 100);
+        const c = Math.floor((received * r.int(24, 30)) / 100);
+        const rest = received - a - c;
+        const b = rest + r.int(1, 3);
+        let d = rest + r.int(1, 3);
+        if (d === b) d = b + 1;
+        assert(a + c <= received && a + b + c > received && a + c + d > received && d <= received && new Set([a, b, c, d]).size === 4, 'consume-3 quantities');
+        const dl = deltaIn(b, Math.max(tolerance(b * l.price) * 2, 700), b * l.price * 0.2) ?? Math.ceil((tolerance(b * l.price) + 800) / b);
+        const d0 = addDays(run, -r.int(24, 30));
+        const A = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: a, price: l.price, vat: l.vat }], { date: d0 });
+        const B = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: b, price: l.price + dl, vat: l.vat }], { date: addDays(d0, r.int(2, 4)) });
+        const C = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: c, price: l.price, vat: l.vat }], { date: addDays(B.date, r.int(2, 4)) });
+        const Dd = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: d, price: l.price, vat: l.vat }], { date: addDays(C.date, r.int(2, 4)) });
+        B.after = A;
+        C.after = B;
+        Dd.after = C;
+        world.intent[A.docId] = 'approve';
+        world.intent[B.docId] = 'hold-price';
+        world.intent[C.docId] = 'approve';
+        world.intent[Dd.docId] = 'hold-qty';
+        return [];
+      }
+      case 'chain:credit-consume': {
+        // Goods refused on delivery: invoice A bills them anyway and its credit note takes them back. A second invoice
+        // B on the same PO line fits only once A is reduced by its credit note.
+        const sup = pickSupplier((s) => s.terms.kind === 'net' && s.terms.days <= 30 && s.layout !== 'scan' && s.products.some((p) => p.hi >= 8));
+        const prod = r.pick(sup.products.filter((p) => p.hi >= 8));
+        poNo += r.int(1, 9);
+        const st = site();
+        const po = { no: `PO-${poNo}`, supplier: sup.id, date: addDays(run, -r.int(40, 48)), raisedBy: st.lead, site: st, lines: [{ code: prod.code, desc: prod.desc, qty: Math.max(prod.hi, 16) + r.int(2, 8), price: prod.price, vat: prod.vat, invoicedToDate: 0 }] };
+        world.pos.push(po);
+        const l = po.lines[0];
+        const back = r.int(2, Math.max(2, Math.floor(l.qty / 6)));
+        const received = l.qty - back;
+        makeGRN(po, [[l.code, received]], { note: `${back} x ${l.desc} refused on delivery (damaged), sent back with driver` });
+        const a = Math.floor((received * r.int(50, 62)) / 100) + back;
+        const bq = received - (a - back);
+        assert(a <= received && bq > received - a && bq >= 1, 'credit-consume quantities');
+        const d0 = addDays(run, -r.int(24, 28));
+        const A = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: a, price: l.price, vat: l.vat }], { date: d0 });
+        const cn = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: back, price: l.price, vat: l.vat, cnKind: 'return' }], { kind: 'credit', number: `CN-${A.number}`, creditFor: A.number, date: addDays(d0, r.int(1, 2)), reason: 'goods refused on delivery' });
+        const B = makeDoc(sup, po, [{ code: l.code, desc: l.desc, qty: bq, price: l.price, vat: l.vat }], { date: addDays(d0, r.int(3, 6)) });
+        B.after = A;
+        world.intent[A.docId] = 'approve';
+        world.intent[cn.docId] = 'approve';
+        world.intent[B.docId] = 'approve';
+        return [];
+      }
+      case 'chain:reissue': {
+        // An invoice with wrong VAT (held), the same invoice sent again (a duplicate of the held one), then the
+        // supplier's corrected re-issue with the right VAT (approved: the held and rejected copies used up nothing).
+        const sup = pickSupplier((s) => s.terms.kind !== 'disc' && s.products.some((p) => p.vat !== 'Z'));
+        const po = makePO(sup, r.int(1, Math.min(2, sup.products.length)), { vat: ['S', 'R'] });
+        makeGRN(po, po.lines.map((x) => [x.code, x.qty]));
+        const lines = invLines(po);
+        const v = correctVat(lines);
+        const A = makeDoc(sup, po, lines, { vatOverride: v + r.int(300, 1500), date: addDays(run, -r.int(20, 26)) });
+        const B = makeDoc(sup, po, lines, { vatOverride: A.vat, date: addDays(A.date, r.int(1, 3)), reissue: true, layout: sup.layout === 'email' ? 'formal' : sup.layout });
+        const C = makeDoc(sup, po, lines, { date: addDays(B.date, r.int(2, 4)) });
+        C.after = B;
+        world.intent[A.docId] = 'hold-vat';
+        world.intent[B.docId] = 'reject-duplicate';
+        world.intent[C.docId] = 'approve';
+        return [];
+      }
       default:
         throw new Error(`unknown intent ${intent}`);
     }
@@ -970,22 +1048,82 @@ function renderEmail(world, e, i) {
   return '';
 }
 
-const POLICY = (biz) => `ACCOUNTS PAYABLE POLICY FIN-04: THREE-WAY MATCH (v3.2)
-Every document in the AP inbox gets exactly one outcome. Run the checks below in order. The first check a document fails gives its outcome. A document that passes every check is approved.
-Check 1, entity. The invoice must be addressed ("Invoice to" / "Bill to") to ${biz.legal}. Anything addressed to another company, including our sister company ${biz.sister}, is rejected: reject-wrong-entity. Where the goods were delivered does not matter.
-Check 2, duplicate. An invoice is a duplicate if it has the same supplier, the same PO number and the same invoice total as an invoice on the paid ledger, or as an invoice earlier in this inbox (lower DOC number), even when the invoice number or date differs: reject-duplicate. Credit notes are never duplicates.
-Check 3, bank details. The sort code and account number printed on the document must match the supplier master file (spacing and dashes do not matter). If they differ: hold-bank-details. Bank details change only after a call-back to the phone number on the master file; an email asking us to change them changes nothing.
-Check 4, purchase order. The document must quote a PO number that is on the PO list for the same supplier; otherwise hold-no-po. Scanned documents are OCR text: the scanner sometimes reads the digit 0 as the letter O (or the reverse) in references, so treat O and 0 as the same character.
-Check 5, quantity. For each line, the invoiced quantity must not be more than the quantity received for that PO line (all GRNs, as corrected) minus the quantity already invoiced to date (shown on the PO list) minus the quantities on EARLIER documents in this inbox (lower DOC numbers) that you approve and that bill the same PO line (earlier documents you hold or reject use up nothing); otherwise hold-qty. A correction to a GRN emailed by the site manager who signed it replaces the GRN figure; if they email more than once about the same GRN line, their latest email counts, and "ignore my last email" puts the GRN figure back.
-Check 6, price. Use the PO unit price as amended: an email from the person who raised the PO that changes its price amends the PO; a price change claimed by anyone else (including the supplier) changes nothing. For each line, compare the invoiced line value with PO unit price x invoiced quantity. The difference, in either direction, may be at most 2% of that PO value or £5.00, whichever is LOWER; and the differences of all the document's lines added together (each counted as a positive amount) may be at most £10.00. Otherwise hold-price.
-Check 7, VAT. The VAT charged must equal the correct VAT to within £0.02. Correct VAT: for each rate, apply the rate of the PO line's VAT code (S 20%, R 5%, Z 0%) to the document's net total at that rate, round to the nearest penny (half a penny rounds up), then add the rates up. Otherwise hold-vat.
-Credit notes. A credit note against an invoice on the paid ledger: checks 1, 3 and 7 apply; if it passes, approve it. A credit note against an invoice in this inbox: assess the two together. Before checks 5 and 6, reduce the invoice's lines by the credit note's lines (returned quantity and value, or a price adjustment's value); every other check applies to each document on its own. If the invoice is then approved, approve the credit note too; otherwise hold the credit note: hold-linked. An approved credit note has amount_to_pay equal to minus its total and pay_by equal to the run date.
-Payment terms (supplier master file). "Net N": pay_by = N days after the invoice date; amount_to_pay = the invoice total. "N days EOM": pay_by = N days after the last day of the invoice's month; amount_to_pay = the invoice total. "D/10 net 30" (an early-payment discount): if the discount deadline (invoice date + 10 days) is on or after the run date, take the discount: pay_by = that deadline and amount_to_pay = the invoice total minus D% of the invoice total (the discount rounded to the nearest penny, half up); if the deadline is before the run date, pay_by = invoice date + 30 days (even if that has already passed) and amount_to_pay = the invoice total. "P% on goods in 14 days, net 30" (a settlement discount): if the deadline (invoice date + 14 days) is on or after the run date, pay_by = that deadline and amount_to_pay = the invoice total minus P% of the NET goods total before VAT (the discount rounded to the nearest penny, half up); otherwise pay_by = invoice date + 30 days and amount_to_pay = the invoice total.
-This run. Approved documents whose pay_by date is BEFORE the next run date are paid in this run (overdue ones included); the rest wait for a later run. Exception: if a supplier's documents that would be paid in this run add up to zero or less (credit notes bigger than the invoices), none of that supplier's documents are paid in this run; they keep their outcome, amount_to_pay and pay_by and wait for a later run. total_payable_this_run is the sum of amount_to_pay over the documents paid in this run, credit notes included.
-Held or rejected documents: amount_to_pay 0 and pay_by null.`;
+// ───────────────────────────── Rule families ─────────────────────────────
+// The policy is written as clauses, each belonging to one rule family. The full test (work.invoice-matching) prints
+// every family; the ladder (work.invoices-ladder) prints only the families its level uses, word for word the same.
+export const FAMILIES = ['price', 'qty', 'entity', 'vat', 'dup', 'bank', 'po', 'discount', 'credit', 'grn-emails', 'consume', 'total-cap', 'amend', 'supplier-net'];
+const ALL_FAMILIES = new Set(FAMILIES);
+/** The rule families an intent exercises (a planted document of this kind needs every one of them in the policy). */
+export const INTENT_FAMILIES = {
+  ok: [], 'ok-eom': [], 'ok-partial': ['qty'], 'ok-partial-earlier': ['qty'], 'hold-qty': ['qty'],
+  'hold-price-clear': ['price'], 'hold-price-5': ['price'], 'hold-price-2pc': ['price'], 'hold-price-under': ['price'], 'ok-tolvar': ['price'],
+  'reject-entity': ['entity'], 'ok-delivered-sister': ['entity'],
+  'hold-vat': ['vat'], 'hold-vat-rate': ['vat'], 'ok-vat-rounding': ['vat'], 'ok-mixed-vat': ['vat'],
+  'reject-dup-ledger': ['dup'], 'pair:dup-batch': ['dup'],
+  'hold-bank': ['bank'], 'ok-bank-format': ['bank'],
+  'hold-no-po': ['po'], 'hold-no-po-wrong-supplier': ['po'], 'ok-ocr': ['po'],
+  'ok-disc': ['discount'], 'ok-disc-expired': ['discount'], 'ok-settle': ['discount'],
+  'credit-ledger': ['credit'], 'pair:credit-combined-qty': ['credit', 'qty'], 'pair:credit-combined-price': ['credit', 'price'], 'pair:credit-linked-hold': ['credit', 'vat'],
+  'hold-qty-correction': ['grn-emails', 'qty'], 'ok-correction': ['grn-emails', 'qty'], 'grn-revert': ['grn-emails', 'qty'], 'grn-double': ['grn-emails', 'qty'],
+  'pair:consume-hold': ['consume', 'qty'], 'pair:consume-freed': ['consume', 'qty', 'price'],
+  'hold-price-total': ['total-cap', 'price'], 'ok-tolvar-multi': ['total-cap', 'price'],
+  'po-amend-ok': ['amend', 'price'], 'po-amend-supplier': ['amend', 'price'],
+  'credit-exceeds': ['supplier-net', 'credit'],
+  // Chains: several rules acting on one PO line (ladder levels 6-10).
+  'chain:consume-3': ['consume', 'qty', 'price'], 'chain:credit-consume': ['credit', 'consume', 'qty'], 'chain:reissue': ['dup', 'vat', 'qty'],
+};
+/** Rules-engine flags that switch each family off: with a family absent from a world, its flag must change nothing. */
+export const FAMILY_OFF = {
+  price: { noPrice: true }, qty: { noQty: true }, entity: { noEntity: true }, vat: { noVat: true }, dup: { noDup: true }, bank: { noBank: true }, po: { noOcr: true },
+  discount: { noDiscount: true }, credit: { noCredits: true }, 'grn-emails': { ignoreEmails: true }, consume: { noConsume: true }, 'total-cap': { noTotalCap: true },
+  amend: { anyAmendment: true }, 'supplier-net': { noSupplierNet: true },
+};
+const OUTCOME_FAMILY = { 'hold-bank-details': 'bank', 'hold-qty': 'qty', 'hold-price': 'price', 'hold-vat': 'vat', 'hold-linked': 'credit', 'reject-duplicate': 'dup', 'reject-wrong-entity': 'entity' };
+export const outcomesFor = (fams = ALL_FAMILIES) => OUTCOMES.filter((o) => !OUTCOME_FAMILY[o] || fams.has(OUTCOME_FAMILY[o]));
+
+export function POLICY(biz, fams = ALL_FAMILIES) {
+  const on = (f) => fams.has(f);
+  const checks = [];
+  const num = {};
+  const add = (key, text) => {
+    num[key] = checks.length + 1;
+    checks.push(text(num[key]));
+  };
+  if (on('entity')) add('entity', (n) => `Check ${n}, entity. The invoice must be addressed ("Invoice to" / "Bill to") to ${biz.legal}. Anything addressed to another company, including our sister company ${biz.sister}, is rejected: reject-wrong-entity. Where the goods were delivered does not matter.`);
+  if (on('dup')) add('dup', (n) => `Check ${n}, duplicate. An invoice is a duplicate if it has the same supplier, the same PO number and the same invoice total as an invoice on the paid ledger, or as an invoice earlier in this inbox (lower DOC number), even when the invoice number or date differs: reject-duplicate.${on('credit') ? ' Credit notes are never duplicates.' : ''}`);
+  if (on('bank')) add('bank', (n) => `Check ${n}, bank details. The sort code and account number printed on the document must match the supplier master file (spacing and dashes do not matter). If they differ: hold-bank-details. Bank details change only after a call-back to the phone number on the master file; an email asking us to change them changes nothing.`);
+  add('po', (n) => `Check ${n}, purchase order. The document must quote a PO number that is on the PO list for the same supplier; otherwise hold-no-po.${on('po') ? ' Scanned documents are OCR text: the scanner sometimes reads the digit 0 as the letter O (or the reverse) in references, so treat O and 0 as the same character.' : ''}`);
+  if (on('qty'))
+    add('qty', (n) =>
+      `Check ${n}, quantity. For each line, the invoiced quantity must not be more than the quantity received for that PO line (all GRNs${on('grn-emails') ? ', as corrected' : ''}) minus the quantity already invoiced to date (shown on the PO list)${on('consume') ? ' minus the quantities on EARLIER documents in this inbox (lower DOC numbers) that you approve and that bill the same PO line (earlier documents you hold or reject use up nothing)' : ''}; otherwise hold-qty.${on('grn-emails') ? ' A correction to a GRN emailed by the site manager who signed it replaces the GRN figure; if they email more than once about the same GRN line, their latest email counts, and "ignore my last email" puts the GRN figure back.' : ''}`);
+  if (on('price'))
+    add('price', (n) =>
+      `Check ${n}, price. ${on('amend') ? 'Use the PO unit price as amended: an email from the person who raised the PO that changes its price amends the PO; a price change claimed by anyone else (including the supplier) changes nothing. ' : ''}For each line, compare the invoiced line value with PO unit price x invoiced quantity. The difference, in either direction, may be at most 2% of that PO value or £5.00, whichever is LOWER${on('total-cap') ? "; and the differences of all the document's lines added together (each counted as a positive amount) may be at most £10.00" : ''}. Otherwise hold-price.`);
+  if (on('vat')) add('vat', (n) => `Check ${n}, VAT. The VAT charged must equal the correct VAT to within £0.02. Correct VAT: for each rate, apply the rate of the PO line's VAT code (S 20%, R 5%, Z 0%) to the document's net total at that rate, round to the nearest penny (half a penny rounds up), then add the rates up. Otherwise hold-vat.`);
+  const listN = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : String(xs[0]));
+  const out = [
+    'ACCOUNTS PAYABLE POLICY FIN-04: THREE-WAY MATCH (v3.2)',
+    'Every document in the AP inbox gets exactly one outcome. Run the checks below in order. The first check a document fails gives its outcome. A document that passes every check is approved.',
+    ...checks,
+  ];
+  if (on('credit')) {
+    const own = ['entity', 'bank', 'vat'].filter((k) => num[k]).map((k) => num[k]);
+    const before = ['qty', 'price'].filter((k) => num[k]).map((k) => num[k]);
+    out.push(
+      `Credit notes. A credit note against an invoice on the paid ledger: ${own.length > 1 ? 'checks' : 'check'} ${listN(own)} ${own.length > 1 ? 'apply' : 'applies'}; if it passes, approve it. A credit note against an invoice in this inbox: assess the two together. Before ${before.length > 1 ? 'checks' : 'check'} ${listN(before)}, reduce the invoice's lines by the credit note's lines (returned quantity and value, or a price adjustment's value); every other check applies to each document on its own. If the invoice is then approved, approve the credit note too; otherwise hold the credit note: hold-linked. An approved credit note has amount_to_pay equal to minus its total and pay_by equal to the run date.`,
+    );
+  }
+  out.push(
+    `Payment terms (supplier master file). "Net N": pay_by = N days after the invoice date; amount_to_pay = the invoice total. "N days EOM": pay_by = N days after the last day of the invoice's month; amount_to_pay = the invoice total.${on('discount') ? ' "D/10 net 30" (an early-payment discount): if the discount deadline (invoice date + 10 days) is on or after the run date, take the discount: pay_by = that deadline and amount_to_pay = the invoice total minus D% of the invoice total (the discount rounded to the nearest penny, half up); if the deadline is before the run date, pay_by = invoice date + 30 days (even if that has already passed) and amount_to_pay = the invoice total. "P% on goods in 14 days, net 30" (a settlement discount): if the deadline (invoice date + 14 days) is on or after the run date, pay_by = that deadline and amount_to_pay = the invoice total minus P% of the NET goods total before VAT (the discount rounded to the nearest penny, half up); otherwise pay_by = invoice date + 30 days and amount_to_pay = the invoice total.' : ''}`,
+    `This run. Approved documents whose pay_by date is BEFORE the next run date are paid in this run (overdue ones included); the rest wait for a later run.${on('supplier-net') ? " Exception: if a supplier's documents that would be paid in this run add up to zero or less (credit notes bigger than the invoices), none of that supplier's documents are paid in this run; they keep their outcome, amount_to_pay and pay_by and wait for a later run." : ''} total_payable_this_run is the sum of amount_to_pay over the documents paid in this run${on('credit') ? ', credit notes included' : ''}.`,
+    'Held or rejected documents: amount_to_pay 0 and pay_by null.',
+  );
+  return out.join('\n');
+}
 
 export function render(world) {
   const { biz, run, nextRun } = world;
+  const fams = world.spec.families ? new Set(world.spec.families) : ALL_FAMILIES;
   const supName = (id) => biz.suppliers.find((s) => s.id === id).name;
   const m = biz.manager;
   const out = [];
@@ -1000,7 +1138,7 @@ Can you check every document in the AP inbox against the POs and GRNs before ${u
 
 Thanks,
 ${m.name.split(' ')[0]}`);
-  out.push(POLICY(biz));
+  out.push(POLICY(biz, fams));
   out.push(
     'SUPPLIER MASTER FILE (bank details verified by call-back)\n' +
       biz.suppliers.map((s) => `  ${s.name.padEnd(34)} terms ${termsText(s.terms).padEnd(15)} bank ${s.sort} / ${s.acct}`).join('\n'),
@@ -1032,7 +1170,7 @@ Reply with one JSON object in this shape, with one entry for every DOC in the in
   },
   "total_payable_this_run": 0.00
 }
-outcome is one of: ${OUTCOMES.join(', ')}. Amounts are in pounds as numbers with two decimals (credit notes negative). ${ONE_ANSWER} Each field is marked separately against the policy's answer.`);
+outcome is one of: ${outcomesFor(fams).join(', ')}. Amounts are in pounds as numbers with two decimals${fams.has('credit') ? ' (credit notes negative)' : ''}. ${ONE_ANSWER} Each field is marked separately against the policy's answer.`);
   return out.join('\n\n');
 }
 
