@@ -1,0 +1,80 @@
+/*
+ * Rung thumbnails: tiny pictograms of one ladder level's size. Everything is drawn in currentColor (the text colour
+ * around the thumbnail) at a few opacities, plus the theme's accent, good and bad tokens, so the same SVG works in
+ * dark, light and broadcast.
+ */
+.rung-thumb {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  overflow: visible;
+  --rt-acc: var(--area-accent, var(--accent));
+  --rt-good: var(--good-text);
+  --rt-bad: var(--bad-text);
+  --rt-warn: var(--warn-text);
+  --rt-paper: var(--surface-2);
+}
+.rung-thumb .rt-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rung-thumb .rt-faint {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.32;
+}
+.rung-thumb .rt-ink {
+  fill: currentColor;
+}
+.rung-thumb .rt-mid {
+  fill: currentColor;
+  fill-opacity: 0.55;
+}
+.rung-thumb .rt-soft {
+  fill: currentColor;
+  fill-opacity: 0.16;
+}
+.rung-thumb .rt-paper {
+  fill: var(--rt-paper);
+  stroke: currentColor;
+  stroke-linejoin: round;
+}
+.rung-thumb .rt-acc {
+  fill: var(--rt-acc);
+}
+.rung-thumb .rt-acc-line {
+  fill: none;
+  stroke: var(--rt-acc);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rung-thumb .rt-good-line {
+  fill: none;
+  stroke: var(--rt-good);
+  stroke-linecap: round;
+}
+.rung-thumb .rt-bad {
+  fill: var(--rt-bad);
+}
+.rung-thumb .rt-bad-line {
+  fill: none;
+  stroke: var(--rt-bad);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rung-thumb .rt-warn {
+  fill: var(--rt-warn);
+}
+.rung-thumb .rt-badge rect {
+  fill: var(--surface-1);
+  stroke: var(--border-strong);
+}
+.rung-thumb .rt-badge text {
+  fill: var(--text-1);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}

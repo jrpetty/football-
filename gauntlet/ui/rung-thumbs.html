@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Rung thumbnails · Gauntlet (review page)</title>
+    <link rel="icon" href="data:," />
+    <!-- Dev-only review page for the ladder rung thumbnails: open /rung-thumbs.html on the Vite dev server
+         (npx vite --config ui/vite.config.ts). Not part of the production build (only index.html is). -->
+    <script>
+      try {
+        var t = localStorage.getItem('gauntlet.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/components/viz/rung-thumbs/showcase-main.tsx"></script>
+  </body>
+</html>
