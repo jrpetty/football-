@@ -1084,6 +1084,17 @@
   justify-self: start;
   font-weight: 650;
 }
+.biz-tcard .tc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.lc-example-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 @media (min-width: 1101px) {
   .biz-scn-level .lvl-tests .biz-tcard:not(.soon) {
     grid-column: span 2;

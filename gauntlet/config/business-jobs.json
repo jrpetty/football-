@@ -1,0 +1,268 @@
+{
+  "version": "1.0.0",
+  "title": "Which model for this job?",
+  "tagline": "Pick a job your business does. See which AI models can do it, how often they get it wrong, what it costs and how fast it is.",
+  "rule": {
+    "minAnswers": 10,
+    "requireEveryTest": true,
+    "ready": { "minMean": 0.95, "minCiLow": 0.9, "allowSevere": false },
+    "check": { "minMean": 0.85 },
+    "bootstrap": { "iterations": 1000, "seed": 77 }
+  },
+  "jobs": [
+    {
+      "id": "screen-applicants",
+      "short": "Applicants",
+      "name": "Screen job applicants",
+      "what": "Reads CVs, checks each one against the job's must-haves and draws up a fair shortlist.",
+      "icon": "persona",
+      "tests": ["work.cv-shortlist", "work.cv-read", "work.recruiter"]
+    },
+    {
+      "id": "supplier-invoices",
+      "short": "Invoices",
+      "name": "Check supplier invoices before paying",
+      "what": "Matches each invoice to its order and delivery, then says pay, hold or reject, and how much.",
+      "icon": "receipt",
+      "tests": ["work.invoice-matching", "work.invoice-read", "work.delivery-note", "work.invoices-ladder", "work.accounts-clerk"]
+    },
+    {
+      "id": "payroll",
+      "short": "Payroll",
+      "name": "Check payroll",
+      "what": "Checks every payslip's tax, National Insurance, pension and net pay, and corrects the wrong ones.",
+      "icon": "dollar",
+      "tests": ["work.payroll-check", "work.payroll-ladder"]
+    },
+    {
+      "id": "expenses",
+      "short": "Expenses",
+      "name": "Expense claims",
+      "what": "Checks staff expense claims against your policy: caps, receipts, alcohol, duplicates and mileage.",
+      "icon": "percent",
+      "tests": ["work.expense-audit", "work.expenses-ladder"]
+    },
+    {
+      "id": "month-end",
+      "short": "Month end",
+      "name": "Bank reconciliation and month end",
+      "what": "Ties the bank statement to your books line by line, finds the differences and closes the month.",
+      "icon": "scale",
+      "tests": ["work.bank-reconciliation", "work.reconciliation-ladder", "work.month-end"]
+    },
+    {
+      "id": "customer-support",
+      "short": "Support",
+      "name": "Customer support",
+      "what": "Tags tickets, decides refunds by your policy, writes the replies and works the helpdesk queue.",
+      "icon": "mic",
+      "tests": ["work.ticket-tag", "work.support-refunds", "work.support-replies", "work.support-ladder", "work.helpdesk-agent", "work.support-week"]
+    },
+    {
+      "id": "inbox-admin",
+      "short": "Inbox & admin",
+      "name": "Inbox and admin assistant",
+      "what": "Sorts the inbox, picks out your jobs and deadlines, and runs the diary and errands with tools.",
+      "icon": "ask",
+      "tests": ["work.email-actions", "work.inbox-triage", "work.assistant", "work.assistant-hard", "work.office-week"]
+    },
+    {
+      "id": "contracts",
+      "short": "Contracts",
+      "name": "Contracts",
+      "what": "Compares two versions of a contract and lists every change that matters, clause by clause.",
+      "icon": "gavel",
+      "tests": ["work.contract-redline", "work.contract-ladder"]
+    },
+    {
+      "id": "customer-data",
+      "short": "Customer data",
+      "name": "Customer data clean-up",
+      "what": "Finds the same customer entered twice in your lists, merges them and keeps the right details.",
+      "icon": "connect4",
+      "tests": ["work.crm-dedupe", "work.crm-ladder"]
+    },
+    {
+      "id": "database-questions",
+      "short": "Data questions",
+      "name": "Answer questions from your database",
+      "what": "Answers business questions by writing database queries or reading a spreadsheet, with exact numbers.",
+      "icon": "grid",
+      "tests": ["work.sql-questions", "work.sql-hard", "work.sql-ladder", "work.sheet-lookup"]
+    },
+    {
+      "id": "scheduling",
+      "short": "Rotas",
+      "name": "Scheduling and rotas",
+      "what": "Finds meeting slots that suit everyone and builds staff rotas that keep every rule.",
+      "icon": "clock",
+      "tests": ["work.meeting-scheduler", "work.shift-rota"]
+    },
+    {
+      "id": "stock-deliveries",
+      "short": "Stock",
+      "name": "Stock and deliveries",
+      "what": "Checks deliveries, decides what to reorder, plans van routes and runs the warehouse for a week.",
+      "icon": "route",
+      "tests": ["work.stock-reorder", "work.delivery-routes", "work.delivery-note", "work.warehouse-week"]
+    },
+    {
+      "id": "board-reporting",
+      "short": "Board pack",
+      "name": "Board reporting",
+      "what": "Works out the figures for the board pack from raw data, and investigates the numbers with tools.",
+      "icon": "chart",
+      "tests": ["work.board-report", "work.analyst-agent"]
+    }
+  ],
+  "mistakes": [
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "duplicate", "got": "approve", "say": "approved duplicate invoices" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "bank-details", "got": "approve", "say": "paid invoices with changed bank details" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "wrong-entity", "got": "approve", "say": "paid invoices addressed to another company" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "hold-price", "got": "approve", "say": "paid invoices above the agreed price" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "hold-qty", "got": "approve", "say": "paid for goods that never arrived" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "hold-vat", "got": "approve", "say": "paid invoices with the wrong VAT" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "no-po", "got": "approve", "say": "paid invoices with no purchase order" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "hold|reject", "got": "approve", "say": "paid invoices it should have held" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "expected": "^\"?approve", "say": "held back invoices that were fine to pay" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.outcome", "say": "held invoices for the wrong reason" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.amount_to_pay", "say": "worked out the wrong amount to pay" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "documents.*.pay_by", "say": "got payment dates wrong" },
+    { "tests": ["work.invoice-matching", "work.invoices-ladder"], "field": "total_payable_this_run", "say": "got the payment-run total wrong" },
+    { "tests": ["work.invoices-ladder"], "field": "remaining_received.*", "say": "lost track of goods still waiting for an invoice" },
+
+    { "tests": ["work.invoice-read"], "field": "bank_details_changed", "expected": "true", "say": "missed a change of bank details" },
+    { "tests": ["work.invoice-read"], "field": "bank_details_changed", "say": "flagged bank details that had not changed" },
+    { "tests": ["work.invoice-read"], "field": "sort_code|account_number", "say": "copied the bank details wrong" },
+    { "tests": ["work.invoice-read"], "field": "supplier_vat_number", "say": "copied the wrong VAT number" },
+    { "tests": ["work.invoice-read"], "field": "invoice_number|po_reference", "say": "read the wrong invoice or order number" },
+    { "tests": ["work.invoice-read"], "field": "invoice_date|due_date", "say": "got an invoice date wrong" },
+    { "tests": ["work.invoice-read"], "field": "net|vat|gross|vat_breakdown.*", "say": "got the invoice totals or VAT wrong" },
+    { "tests": ["work.invoice-read"], "field": "supplier", "say": "named the wrong supplier" },
+
+    { "tests": ["work.delivery-note"], "field": "lines.*.damaged", "say": "missed damaged goods" },
+    { "tests": ["work.delivery-note"], "field": "lines.*.short", "say": "missed goods that were short" },
+    { "tests": ["work.delivery-note"], "field": "lines.*.over", "say": "missed extra goods delivered" },
+    { "tests": ["work.delivery-note"], "field": "lines.*.substitute", "say": "missed a swapped product" },
+    { "tests": ["work.delivery-note"], "field": "lines.*.received", "say": "miscounted what arrived" },
+    { "tests": ["work.delivery-note"], "field": "not_ordered", "kind": "missing", "say": "missed goods nobody ordered" },
+    { "tests": ["work.delivery-note"], "field": "not_ordered", "say": "listed goods as not ordered when they were" },
+
+    { "tests": ["work.cv-read"], "field": "right_to_work", "expected": "not stated|sponsorship", "say": "assumed a right to work the CV does not give" },
+    { "tests": ["work.cv-read"], "field": "right_to_work", "say": "got the right to work wrong" },
+    { "tests": ["work.cv-read"], "field": "current_role|current_employer", "say": "named the wrong current job" },
+    { "tests": ["work.cv-read"], "field": "relevant_experience_months|longest_unbroken_relevant_months", "say": "miscounted the relevant experience" },
+    { "tests": ["work.cv-read"], "field": "highest_qualification", "say": "got the qualification wrong" },
+    { "tests": ["work.cv-read"], "field": "notice_period.*", "say": "got the notice period wrong" },
+
+    { "tests": ["work.cv-shortlist"], "field": "shortlist", "kind": "missing", "say": "rejected candidates who should be shortlisted" },
+    { "tests": ["work.cv-shortlist"], "field": "shortlist", "kind": "extra", "say": "shortlisted candidates who miss a must-have" },
+    { "tests": ["work.cv-shortlist"], "field": "screener_instructions", "kind": "missing", "say": "missed a CV that tried to instruct the AI" },
+    { "tests": ["work.cv-shortlist"], "field": "screener_instructions", "kind": "extra", "say": "accused a candidate of hiding instructions" },
+    { "tests": ["work.cv-shortlist"], "field": "scores.*", "say": "scored candidates wrongly" },
+    { "tests": ["work.cv-shortlist"], "field": "shortlist", "say": "shortlisted the wrong candidates" },
+
+    { "tests": ["work.payroll-check"], "field": "wrong_payslips", "kind": "missing", "say": "missed wrong payslips" },
+    { "tests": ["work.payroll-check"], "field": "wrong_payslips", "kind": "extra", "say": "flagged correct payslips as wrong" },
+    { "tests": ["work.payroll-ladder"], "field": "months.*.wrong_payslips", "say": "picked out the wrong payslips" },
+    { "tests": ["work.payroll-check", "work.payroll-ladder"], "field": "corrected.*.*|months.*.corrected.*.*", "say": "corrected payslips to the wrong figures" },
+    { "tests": ["work.payroll-check", "work.payroll-ladder"], "field": "employer_ni_total|months.*.employer_ni_total", "say": "got the employer's National Insurance wrong" },
+    { "tests": ["work.payroll-ladder"], "field": "year_to_date.*.*", "say": "got the year-to-date totals wrong" },
+
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.rule", "kind": "missing", "expected": "DUPLICATE", "say": "paid duplicate expense claims" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.rule", "kind": "missing", "expected": "NO_RECEIPT", "say": "paid claims with no receipt" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.rule", "kind": "missing", "expected": "ALCOHOL", "say": "paid for alcohol the policy excludes" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.*", "kind": "missing", "say": "paid claims that break the policy" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant", "kind": "extra", "say": "cut claims that were within policy" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.rule", "say": "gave the wrong policy reason" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "non_compliant.*.pay", "say": "paid back the wrong amount" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "pay_by_employee.*|total_pay|paid_out.*.*", "say": "got the totals to pay staff wrong" },
+    { "tests": ["work.expense-audit", "work.expenses-ladder"], "field": "vat_reclaimable", "say": "got the VAT to reclaim wrong" },
+    { "tests": ["work.expenses-ladder"], "field": "miles_to_date.*", "say": "lost count of mileage" },
+    { "tests": ["work.expenses-ladder"], "field": "advances_left.*", "say": "lost track of cash advances" },
+
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "bank.*", "expected": "direct_debit", "say": "missed a direct debit that isn't in the books" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "bank.*", "expected": "returned_cheque", "say": "missed a bounced cheque" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "bank.*", "expected": "duplicate", "say": "missed a duplicate payment" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "bank.*", "expected": "charge", "say": "missed a bank charge or reversal" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "bank.*|bank.*.*|ledger.*|ledger.*.*", "say": "matched bank lines to the wrong entries" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "differences", "kind": "missing", "say": "missed a keying error or currency difference" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "differences.*.*", "kind": "missing", "say": "missed a keying error or currency difference" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "differences", "kind": "extra", "say": "reported a difference that isn't there" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "differences.*.*", "say": "got the size of a difference wrong" },
+    { "tests": ["work.bank-reconciliation", "work.reconciliation-ladder"], "field": "adjusted_balance|adjusted_balance.*", "say": "got the reconciled balance wrong" },
+    { "tests": ["work.bank-reconciliation"], "field": "prior.*", "say": "lost track of last month's open items" },
+
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes.*.type", "kind": "missing", "expected": "negation", "say": "missed a \"not\" slipped into a clause" },
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes.*.type", "kind": "missing", "expected": "governing_law", "say": "missed a change of governing law" },
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes.*.*", "kind": "missing", "say": "missed changes in the contract" },
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes", "kind": "extra", "say": "reported changes that were never made" },
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes.*.type", "say": "described a change wrongly" },
+    { "tests": ["work.contract-redline", "work.contract-ladder"], "field": "changes.*.old|changes.*.new", "say": "got the old or new figure wrong" },
+
+    { "tests": ["work.crm-dedupe", "work.crm-ladder"], "field": "clusters", "kind": "partition-wrong", "say": "merged customers who are different people" },
+    { "tests": ["work.crm-dedupe", "work.crm-ladder"], "field": "clusters", "kind": "partition-missed", "say": "missed duplicate customer records" },
+    { "tests": ["work.crm-dedupe", "work.crm-ladder"], "field": "golden.*.*", "kind": "missing", "say": "missed which record to keep" },
+    { "tests": ["work.crm-dedupe", "work.crm-ladder"], "field": "golden", "kind": "extra", "say": "kept records that should have been merged away" },
+    { "tests": ["work.crm-dedupe", "work.crm-ladder"], "field": "golden.*.*", "say": "kept out-of-date contact details" },
+
+    { "tests": ["work.email-actions"], "field": "*.mine", "expected": "true", "say": "missed jobs that were theirs" },
+    { "tests": ["work.email-actions"], "field": "*.mine", "say": "took on jobs that were someone else's" },
+    { "tests": ["work.email-actions"], "field": "*.due", "say": "got deadlines wrong" },
+
+    { "tests": ["work.inbox-triage"], "field": "messages.*.category", "expected": "phishing", "say": "missed phishing emails" },
+    { "tests": ["work.inbox-triage"], "field": "messages.*.category", "got": "phishing", "say": "flagged real emails as phishing" },
+    { "tests": ["work.inbox-triage"], "field": "messages.*.category", "expected": "duplicate", "say": "missed duplicate emails" },
+    { "tests": ["work.inbox-triage"], "field": "messages.*.category", "say": "filed emails in the wrong pile" },
+    { "tests": ["work.inbox-triage"], "field": "actions.*.*", "kind": "missing", "say": "missed actions in the inbox" },
+    { "tests": ["work.inbox-triage"], "field": "actions", "kind": "extra", "say": "invented actions nobody asked for" },
+    { "tests": ["work.inbox-triage"], "field": "actions.*.owner", "say": "gave jobs to the wrong person" },
+    { "tests": ["work.inbox-triage"], "field": "actions.*.due", "say": "got deadlines wrong" },
+    { "tests": ["work.inbox-triage"], "field": "actions.*.priority", "say": "got priorities wrong" },
+
+    { "tests": ["work.meeting-scheduler"], "field": "*", "say": "booked slots that don't suit everyone" },
+    { "tests": ["work.sheet-lookup"], "field": "*", "say": "read the wrong figure off the spreadsheet" },
+    { "tests": ["work.board-report"], "field": "*_pct", "say": "got a percentage for the board wrong" },
+    { "tests": ["work.board-report"], "field": "*", "say": "got a board figure wrong" },
+
+    { "tests": ["work.ticket-tag"], "field": "urgency", "expected": "P1", "say": "missed an urgent safety issue" },
+    { "tests": ["work.ticket-tag"], "field": "urgency", "say": "set the wrong urgency" },
+    { "tests": ["work.ticket-tag"], "field": "category", "say": "put tickets in the wrong category" },
+    { "tests": ["work.ticket-tag"], "field": "sentiment", "say": "misread the customer's mood" },
+    { "tests": ["work.ticket-tag"], "field": "wants", "say": "misread what the customer wants" },
+    { "tests": ["work.ticket-tag"], "field": "product|order_number", "say": "got the product or order number wrong" },
+    { "tests": ["work.ticket-tag"], "field": "overcharge_owed", "say": "got the money owed to the customer wrong" },
+
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.decision", "expected": "decline", "got": "refund", "say": "refunded customers outside the policy" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.decision", "expected": "refund", "got": "decline", "say": "refused refunds customers were owed" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.decision", "expected": "escalate", "say": "didn't escalate cases that needed a manager" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.decision", "say": "made the wrong call on tickets" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.refund", "say": "refunded the wrong amount" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.priority", "say": "set the wrong priority" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.sla_due", "say": "got reply deadlines wrong" },
+    { "tests": ["work.support-refunds", "work.support-ladder"], "field": "tickets.*.category", "say": "put tickets in the wrong category" },
+
+    { "tests": ["work.support-replies"], "field": "decision", "say": "made the wrong call on the complaint" },
+    { "tests": ["work.support-replies"], "field": "refund amount*", "say": "offered the wrong refund" },
+    { "tests": ["work.support-replies"], "field": "next step", "say": "chose the wrong next step" },
+    { "tests": ["work.support-replies"], "field": "no banned promise words*", "say": "promised vouchers or compensation" },
+    { "tests": ["work.support-replies"], "field": "does not name or blame*", "say": "blamed the courier" },
+    { "tests": ["work.support-replies"], "field": "no other customer*", "say": "leaked another customer's details" },
+    { "tests": ["work.support-replies"], "field": "reply apologises*", "say": "forgot to apologise when the policy says to" },
+    { "tests": ["work.support-replies"], "field": "at most * words", "say": "wrote replies that were too long" },
+
+    { "tests": ["work.stock-reorder"], "field": "no item falls below*", "say": "let items run out before the next delivery" },
+    { "tests": ["work.stock-reorder"], "field": "within the cash limit*", "say": "spent more than the cash limit" },
+    { "tests": ["work.stock-reorder"], "field": "whole cases only|minimum order quantities*", "say": "ordered in amounts suppliers don't sell" },
+    { "tests": ["work.stock-reorder"], "field": "nothing more than the store can hold", "say": "ordered more than the store can hold" },
+    { "tests": ["work.shift-rota"], "field": "every shift has exactly*|every shift has the skills*", "say": "left shifts short of staff or skills" },
+    { "tests": ["work.shift-rota"], "field": "nobody works a shift they are not available for", "say": "rota'd people when they can't work" },
+    { "tests": ["work.shift-rota"], "field": "at least * rest*|nobody over * hours|under-18 rules*", "say": "broke working-time rules" },
+    { "tests": ["work.delivery-routes"], "field": "every drop delivered exactly once", "say": "missed or doubled deliveries" },
+    { "tests": ["work.delivery-routes"], "field": "every drop reached before*", "say": "arrived after customers closed" },
+    { "tests": ["work.delivery-routes"], "field": "no more than * of driving*", "say": "broke drivers' break rules" },
+    { "tests": ["work.delivery-routes"], "field": "no van overloaded", "say": "overloaded a van" },
+
+    { "tests": ["work.sql-questions", "work.sql-hard", "work.sql-ladder"], "field": "**", "say": "gave wrong answers from the database" }
+  ]
+}

@@ -37,7 +37,6 @@ import { BUSINESS_LADDERS_SUITE_ID, BUSINESS_SUITE_ID, FRONTIER_LADDERS_SUITE_ID
 import { HORIZON_RUN_SPEC } from './horizonMock.ts';
 import { LADDER_DEMO_BUSINESS_RUN, LADDER_DEMO_FRONTIER_RUN, LADDER_DEMO_RULES } from './laddersMock.ts';
 import { isLadderCloseUpTest, ladderCloseUpDetail, ladderCloseUpResult } from './ladderCloseUpMock.ts';
-import { customersDataResult, isCustomersDataTest } from './customersDataMock.ts';
 import { ladderClimbs } from '../../../src/core/ladders.ts';
 import { ladderSpecOf } from '../ladders.ts';
 import {
@@ -761,6 +760,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
   if (a === 'business-ladder') return handleBusinessLadder(q, getRun(AREA_RUN_ID).results);
+  if (a === 'business-jobs') return (await import('./businessJobsMock.ts')).handleBusinessJobs([...getRun(AREA_RUN_ID).results, ...getRun(LADDER_DEMO_BUSINESS_RUN).results], (r) => (isLadderCloseUpTest(r.testId) ? ladderCloseUpResult(r, detailFor(r)) : detailFor(r)));
   if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
   syncManualContestants();
   if (a === 'manual-models' || a === 'best-per-test') return (await import('./manualModelsMock.ts')).handleManualModels(method, parts, q, body);
@@ -941,7 +941,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         const run = getRun(b);
         const lite = run.results.find((r) => r.key === d);
         if (!lite) throw new ApiError(`Result not found: ${d}`, 404);
-        const full = isLadderCloseUpTest(lite.testId) ? await ladderCloseUpResult(lite, detailFor(lite)) : isCustomersDataTest(lite.testId) ? customersDataResult(lite, detailFor(lite)) : detailFor(lite);
+        const full = isLadderCloseUpTest(lite.testId) ? await ladderCloseUpResult(lite, detailFor(lite)) : detailFor(lite);
         for (const art of full.artifacts) {
           if (mockArtifactUrls.has(`${b}/${art.file}`)) continue; // recorded fixtures register their own URLs
           const content = artifactContent(art);

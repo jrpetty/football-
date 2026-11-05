@@ -15,7 +15,7 @@ import { ExplainerCard } from '../components/ExplainerCard.tsx';
 import { LadderTestCard } from '../components/viz/LadderTestCard.tsx';
 import { LevelCloseUpLauncher } from '../components/viz/LevelCloseUpLauncher.tsx';
 import { isLadderTest } from '../ladders.ts';
-import { CaseCloseUpLauncher } from '../business/docs/CaseCloseUp.tsx';
+import { CaseCloseUpHost, CaseExampleButton } from '../components/viz/CaseCloseUpLauncher.tsx';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
   if (!s) return '—';
@@ -157,7 +157,16 @@ export default function TestDetailPage({ testId }: { testId: string }) {
 
       {isLadderTest(testId) && <LadderTestCard testId={testId} detail={d} />}
       {isLadderTest(testId) && <LevelCloseUpLauncher testId={testId} />}
-      {!isLadderTest(testId) && <CaseCloseUpLauncher testId={testId} caseIds={d.rendered.map((r) => r.caseId)} />}
+      {!isLadderTest(testId) && def.kind === 'prompt' && def.category === 'work' && (
+        <section className="card lc-launch" aria-label="See one case up close">
+          <div className="lc-launch-t">
+            <b>See a case up close</b>
+            <span className="muted">The documents as the model got them, its decisions drawn on them, and what each mistake would have cost.</span>
+          </div>
+          <CaseExampleButton testId={testId} cases={def.cases.length} />
+          <CaseCloseUpHost />
+        </section>
+      )}
 
       {def.hook && (
         <blockquote className="hook-quote">

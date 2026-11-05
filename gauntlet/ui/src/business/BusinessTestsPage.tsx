@@ -17,10 +17,13 @@ import './business.css';
 import { BusinessLaddersNote, LadderList } from '../components/leaderboard/LadderSuiteSoon.tsx';
 import { LADDERS } from '../ladders.ts';
 import { BUSINESS_LADDERS_SUITE_ID } from '../../../src/core/areas.ts';
-import { CaseExampleButton } from './docs/CaseCloseUp.tsx';
+import { api } from '../api.ts';
+import { CaseCloseUpHost, CaseExampleButton } from '../components/viz/CaseCloseUpLauncher.tsx';
 
 export default function BusinessTestsPage() {
   const state = useAsync(() => businessApi.ladder(), []);
+  // Which Business tests are prompt tests (their cases open in the close-up as "See an example").
+  const kinds = useAsync(() => api.tests().then((ts) => new Map(ts.map((t) => [t.id, t]))), []);
   const view = state.data;
   const { query } = useRoute();
   const jump = query.get('scenario');
@@ -119,8 +122,8 @@ export default function BusinessTestsPage() {
                               </ul>
                             </div>
                           </div>
-                          <div className="tc-foot">
-                            <CaseExampleButton testId={t.id} />
+                          <div className="tc-actions">
+                            {kinds.data?.get(t.id)?.kind === 'prompt' && <CaseExampleButton testId={t.id} cases={kinds.data.get(t.id)!.caseCount} />}
                             <Link to={pathOf('tests', t.id)} className="tc-go">
                               See in depth <span aria-hidden="true">→</span>
                             </Link>
@@ -157,6 +160,7 @@ export default function BusinessTestsPage() {
         <BusinessLaddersNote />
         <LadderList ids={LADDERS.tests.filter((t) => t.area === 'business').map((t) => t.id)} />
       </section>
+      <CaseCloseUpHost />
     </div>
   );
 }

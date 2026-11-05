@@ -1,0 +1,155 @@
+/* Bank statement and cash book side by side, match lines between them. */
+.pm-rec {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) 4.5rem minmax(18rem, 1fr);
+  min-width: 42rem;
+  align-items: start;
+  font-size: 0.78rem;
+}
+.pm-rec-doc {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.45);
+}
+.pm-rec-doc.bank {
+  border-top: 3px solid #24476b;
+}
+.pm-rec-doc.book {
+  border-top: 3px solid #5f8a5a;
+}
+.pm-rec-h {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 2px solid var(--rule);
+}
+.pm-rec-h small {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  font-weight: 800;
+}
+.pm-rec-r {
+  display: grid;
+  grid-template-columns: 2.6rem 3.6rem minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: start;
+  padding: 0.22rem 0.6rem;
+  border-bottom: 1px dashed var(--rule);
+  min-height: 1.7rem;
+}
+.pm-rec-r .id {
+  font-weight: 800;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.pm-rec-r .d {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.pm-rec-r .t {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pm-rec-r .a {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
+}
+.pm-rec-r .a .out {
+  color: var(--ink);
+}
+.pm-rec-r .a .in {
+  color: var(--ink-good);
+}
+.pm-rec-r.bad {
+  background: rgba(220, 38, 38, 0.08);
+  box-shadow: inset 3px 0 0 var(--ink-bad);
+}
+.pm-rec-r.prior,
+.pm-rec-r.earlier {
+  background: var(--paper-2);
+}
+.pm-rec-f {
+  padding: 0.4rem 0.6rem;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pm-rr {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-wrap: wrap;
+  margin-left: 0.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.86em;
+  font-weight: 700;
+  border: 1px solid var(--rule);
+}
+.pm-rr.key {
+  border-color: #8a6a00;
+  color: var(--ink-key);
+  background: var(--hl-key);
+}
+.pm-rr.ok {
+  border-color: rgba(22, 163, 74, 0.5);
+  color: var(--ink-good);
+}
+.pm-rr.no {
+  border-color: rgba(185, 28, 28, 0.55);
+  color: var(--ink-bad);
+}
+.pm-rr em {
+  font-style: normal;
+  font-weight: 600;
+}
+.pm-rec-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.pm-rec-lines path {
+  fill: none;
+  stroke-width: 2;
+}
+.pm-rec-lines .e-key {
+  stroke: var(--accent);
+}
+.pm-rec-lines .e-good {
+  stroke: var(--good);
+}
+.pm-rec-lines .e-bad {
+  stroke: var(--bad);
+  stroke-width: 2.6;
+}
+.pm-rec-lines .e-missed {
+  stroke: var(--warn);
+  stroke-dasharray: 5 4;
+}
+.pm-rec-key i {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0;
+  border-top: 2.5px solid var(--accent);
+  vertical-align: middle;
+  margin-right: 0.3rem;
+}
+.pm-rec-key i.e-good {
+  border-color: var(--good);
+}
+.pm-rec-key i.e-bad {
+  border-color: var(--bad);
+}
+.pm-rec-key i.e-missed {
+  border-top-style: dashed;
+  border-color: var(--warn);
+}

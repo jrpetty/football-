@@ -1,0 +1,203 @@
+/* Expense claims: claim forms with receipt slips, and the wall of lines. */
+.pm-xgrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1100px) {
+  .pm-xgrid {
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  }
+}
+.pm-claim {
+  padding: 0;
+  font-size: 0.8rem;
+  overflow-x: auto;
+}
+.pm-claim-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 2px solid var(--rule);
+  background: var(--paper-2);
+}
+.pm-claim-head small {
+  display: block;
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  font-weight: 800;
+}
+.pm-claim-head b {
+  display: block;
+  font-size: 1.05em;
+}
+.pm-claim-head span {
+  color: var(--ink-2);
+}
+.pm-claim-note {
+  max-width: 22rem;
+  font-size: 0.88em;
+  text-align: right;
+}
+.pm-claim-t {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 36rem;
+}
+.pm-claim-t th {
+  text-align: left;
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+.pm-claim-t td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px dashed var(--rule);
+  vertical-align: top;
+}
+.pm-claim-t .r {
+  text-align: right;
+  white-space: nowrap;
+}
+.pm-claim-t td.id {
+  font-weight: 800;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.pm-claim-t td.amt {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.pm-claim-t .sub {
+  display: block;
+  color: var(--ink-3);
+  font-size: 0.9em;
+  font-weight: 400;
+}
+.pm-claim-t tr.bad td {
+  background: rgba(220, 38, 38, 0.08);
+}
+.pm-claim-t tr.bad td:first-child {
+  box-shadow: inset 4px 0 0 var(--ink-bad);
+}
+.pm-claim-fix {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  font-size: 0.82em;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.pm-rcpt {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 7.5rem;
+  max-width: 9.5rem;
+  padding: 0.3rem 0.45rem 0.45rem;
+  background: #fbfbf8;
+  color: #2b2b2b;
+  border: 1px solid #d8d6cf;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 5px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 5px repeat-x;
+}
+.pm-rcpt b {
+  text-transform: uppercase;
+  font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pm-rcpt .amt {
+  font-weight: 800;
+  border-top: 1px dashed #bbb;
+  margin-top: 0.15rem;
+}
+.pm-rcpt.missing {
+  background: transparent;
+  border: 1.5px dashed var(--ink-bad);
+  color: var(--ink-bad);
+  -webkit-mask: none;
+  mask: none;
+  box-shadow: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2rem;
+}
+.pm-rcpt.none {
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-3);
+  -webkit-mask: none;
+  mask: none;
+  box-shadow: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2rem;
+}
+
+.pm-xwall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.pm-xwall-c {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  cursor: pointer;
+  max-width: 14rem;
+}
+.pm-xwall-c .t {
+  font-size: 0.72rem;
+  color: var(--text-2);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.pm-xwall-c .sq {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.pm-xwall-c .sq i {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 2px;
+  background: var(--surface-4);
+}
+.pm-xwall-c .sq i.ok {
+  background: color-mix(in srgb, var(--good) 30%, var(--surface-4));
+}
+.pm-xwall-c .sq i.caught {
+  background: var(--good);
+}
+.pm-xwall-c .sq i.cut {
+  background: var(--warn);
+}
+.pm-xwall-c .sq i.wrong {
+  background: var(--bad);
+}
+.pm-xwall-c.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.pm-xwall-c.bad {
+  border-color: color-mix(in srgb, var(--bad) 55%, var(--border));
+}
+.pm-xwall-c:focus-visible {
+  box-shadow: var(--focus-ring);
+}

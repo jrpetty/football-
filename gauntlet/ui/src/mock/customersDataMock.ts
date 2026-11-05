@@ -285,7 +285,13 @@ function nearest(cands: Candidate[], target: number): Candidate | null {
   return cands.reduce((b, c) => (Math.abs(c.score - target) < Math.abs(b.score - target) - 1e-9 ? c : b));
 }
 
-/** The demo reply for one result (null: leave the generic one). */
+/** The area demo's invented score of each result before the real scorer re-marked it (run|key → target). */
+const TARGETS = new Map<string, number>();
+
+/**
+ * The demo reply for one result, built from its invented target score (null: leave the generic one). Cached by
+ * key and target, and the same input always builds the same reply, whatever was opened first.
+ */
 export function customersDataReply(lite: Pick<CaseResultLite, 'key' | 'testId' | 'caseId' | 'contestantId' | 'repeat' | 'score' | 'status'>): Candidate | null {
   const k = `${lite.key}|${lite.score}`;
   if (cache.has(k)) return cache.get(k)!;
@@ -296,18 +302,19 @@ export function customersDataReply(lite: Pick<CaseResultLite, 'key' | 'testId' |
     console.warn('demo reply could not be built', lite.testId, lite.caseId, err);
   }
   cache.set(k, out);
-  if (out) cache.set(`${lite.key}|${out.score}`, out);
   return out;
 }
 
 /**
  * The demo run's result with the real mark of its scripted reply: the reply is chosen to land as near the demo
- * score as the case allows, and the real scorer's mark then stands everywhere (run, inspector, close-up).
+ * score as the case allows, and the real scorer's mark then stands everywhere (run, inspector, close-up, jobs).
  */
 export function decorateCustomersData(lite: CaseResultLite): CaseResultLite {
   if (!isCustomersDataTest(lite.testId) || lite.status !== 'ok' || typeof lite.score !== 'number') return lite;
+  if (lite.scoreDetail?.integrity?.verdict === 'cheating') return lite;
   const cand = customersDataReply(lite);
   if (!cand) return lite;
+  TARGETS.set(`${lite.runId}|${lite.key}`, lite.score);
   return { ...lite, score: cand.score, passed: cand.passed, summary: cand.summary };
 }
 
@@ -357,8 +364,11 @@ function build(lite: Pick<CaseResultLite, 'testId' | 'caseId' | 'contestantId' |
 
 /** The full result of one demo answer, with the scripted reply and its real mark. */
 export function customersDataResult(lite: CaseResultLite, base: CaseResult): CaseResult {
-  const cand = customersDataReply(lite);
+  if (!isCustomersDataTest(lite.testId) || base.status !== 'ok') return base;
+  const target = TARGETS.get(`${lite.runId}|${lite.key}`);
+  if (target === undefined) return base;
+  const cand = customersDataReply({ ...lite, score: target });
   if (!cand || !base.transcript?.length) return base;
-  const transcript = base.transcript.map((e, i) => (i === base.transcript!.length - 1 ? { ...e, response: cand.reply } : e));
+  const transcript = base.transcript.map((e, i) => (i === base.transcript!.length - 1 && !e.judge ? { ...e, response: cand.reply } : e));
   return { ...base, score: cand.score, passed: cand.passed, summary: cand.summary, scoreDetail: { ...cand.detail, notes: DEMO_REPLY_NOTE }, transcript };
 }

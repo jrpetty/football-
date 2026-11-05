@@ -16,6 +16,7 @@ import { BUSINESS_SUITE_ID } from '../../../src/core/areas.ts';
 import { ladderTestIds } from '../../../src/core/business-ladder.ts';
 import { businessApi, type BusinessLadderView } from './businessApi.ts';
 import { DemoNote, LevelsStaircase, MiniLadder, ObjectivityPanel, ScenarioGlyph, scenarioStyle } from './LadderParts.tsx';
+import { JobsTeaser } from './jobs/JobsTeaser.tsx';
 import './business.css';
 
 /** The built Business tests (ids). */
@@ -66,6 +67,7 @@ export default function BusinessHomePage() {
 
   return (
     <div className="page biz-page biz-home" data-area="business">
+      <JobsTeaser />
       <header className="biz-hero">
         <div className="biz-hero-copy">
           <div className="biz-eyebrow">

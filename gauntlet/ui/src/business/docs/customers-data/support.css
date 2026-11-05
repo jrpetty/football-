@@ -1,10 +1,4 @@
 /* Helpdesk, tags and policy replies (Support.tsx). Tokens from docs.css / tokens.css. */
-.biz-tcard .tc-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem 1rem;
-  flex-wrap: wrap;
-}
 .cd-queue-head {
   display: flex;
   align-items: center;

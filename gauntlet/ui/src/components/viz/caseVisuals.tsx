@@ -31,7 +31,7 @@ import { CodeTestBoard } from './CodeTestBoard.tsx';
 import { HorizonRungCard } from './HorizonRungCard.tsx';
 import { BusinessAnswerVisual } from './BusinessAnswerVisual.tsx';
 import { engineTestNames } from './closeup/engineNames.ts';
-import { CUSTOMERS_DATA_VISUALS } from '../../business/docs/customers-data/registry.ts';
+import { docVisualFor } from '../../business/docs/docVisuals.ts';
 
 export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code' | 'horizon' | 'business';
 
@@ -125,9 +125,6 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
   }),
 };
 
-/** Business tests drawn as their own paperwork (by test id): these win over the generic family pictures. */
-const DOC_VISUALS: Record<string, Entry<unknown> & { family: CaseVisualFamily }> = { ...CUSTOMERS_DATA_VISUALS };
-
 const BY_ID: Record<string, CaseVisualFamily> = {
   'reasoning.deduction-grid': 'grid',
   'reasoning.deduction-grid-extreme': 'grid',
@@ -169,7 +166,8 @@ const BY_ID: Record<string, CaseVisualFamily> = {
 
 /** Which visual (if any) draws cases of this test. */
 export function visualFamilyFor(testId: string, scorerType?: string, category?: string): CaseVisualFamily | null {
-  if (DOC_VISUALS[testId]) return DOC_VISUALS[testId]!.family;
+  const doc = docVisualFor(testId);
+  if (doc) return doc.family;
   if (BY_ID[testId]) return BY_ID[testId]!;
   if (testId.startsWith('horizon.') || scorerType === 'ladder') return 'horizon';
   if (category === 'trick') return 'trick';
@@ -195,7 +193,7 @@ export function visualEntry(family: CaseVisualFamily): Entry<unknown> {
 
 /** Build and draw in one go; null when the data does not parse (caller falls back to the plain view). */
 export function renderCaseVisual(family: CaseVisualFamily, input: CaseVisualInput, mode: VizMode, ctx: VisualContext = {}): ReactNode | null {
-  const e = DOC_VISUALS[input.testId] ?? ENTRIES[family];
+  const e = (docVisualFor(input.testId) as Entry<unknown> | null) ?? ENTRIES[family];
   let model: unknown = null;
   try {
     model = e.build(input);

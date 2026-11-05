@@ -29,6 +29,7 @@ import { BusinessBeats } from './closeup/businessBeats.tsx';
 import { HorizonBeats, TextBeats } from './closeup/otherBeats.tsx';
 import type { KindProps } from './closeup/types.ts';
 import { docVisualFor } from '../../business/docs/docVisuals.ts';
+import { interestingCase, interestingModel, latestRunWith } from '../../business/docs/caseExamples.ts';
 import '../../styles/viz.css';
 import './closeup/closeup.css';
 
@@ -95,6 +96,7 @@ function useLevelRows(testId: string, caseId: string, runKey: string | null): { 
   useEffect(() => {
     let alive = true;
     setState({ rows: null, error: null });
+    if (!caseId) return;
     const done = (rows: LevelRow[]) => alive && setState({ rows, error: null });
     const fail = (e: unknown) => alive && setState({ rows: [], error: e instanceof Error ? e.message : String(e) });
     if (runKey) {
@@ -117,6 +119,23 @@ function useLevelRows(testId: string, caseId: string, runKey: string | null): { 
               }),
           );
         })
+        .catch(fail);
+    } else if (!ladderSpecOf(testId)) {
+      // Not a ladder: every model with an answer to this case, pooled like the ladder view.
+      api
+        .contestants()
+        .then((cs) =>
+          Promise.all(
+            cs.map((c) =>
+              api
+                .scoreAnswers('suite:all', c.id, testId)
+                .then((xs) => xs.filter((x) => x.caseId === caseId))
+                .catch(() => [])
+                .then((xs) => ({ id: c.id, label: c.label, color: c.color, attempts: null, scores: xs.filter((x) => typeof x.score === 'number').map((x) => x.score as number) })),
+            ),
+          ),
+        )
+        .then((rows) => done(rows.filter((r) => r.scores.length > 0)))
         .catch(fail);
     } else {
       const level = Number(caseId.slice(1));
@@ -289,23 +308,76 @@ function AttemptTabs({ list, idx, onPick, passMark }: { list: Attempt[]; idx: nu
 
 // ───────────────────────────── the close-up ─────────────────────────────
 
-export function LevelCloseUp(props: { testId: string; level: number; contestantId?: string; runId?: string | null; scope?: string; onClose: () => void; mode?: 'panel' | 'slide' }): JSX.Element {
+/**
+ * A case that is not a ladder level (a Business test's case, say): the same three beats, opened from the test's
+ * page or the Result Inspector; the arrows step through the test's cases and the verdict is the share of marks.
+ */
+function caseVerdict(score: number | null, status?: string): ReturnType<typeof levelVerdict> {
+  if (status === 'error' || status === 'cancelled' || status === 'skipped' || score === null) return levelVerdict(score, 1, status);
+  if (score >= 0.9995) return { tone: 'pass', mark: '✓', title: 'Full marks', scoreText: 'Every checked field right' };
+  if (score <= 0) return { tone: 'fail', mark: '✕', title: 'No marks', scoreText: null };
+  return { tone: score >= 0.5 ? 'partial' : 'fail', mark: '◐', title: `${Math.round(score * 100)}% of the marks`, scoreText: null };
+}
+
+export function LevelCloseUp(props: {
+  testId: string;
+  level: number;
+  caseId?: string;
+  contestantId?: string;
+  runId?: string | null;
+  scope?: string;
+  onClose: () => void;
+  mode?: 'panel' | 'slide';
+  /** "See an example" (not a ladder, no case given): the newest run's most telling case and model are shown first. */
+  example?: boolean;
+}): JSX.Element {
   const { testId, onClose, scope } = props;
   const mode = props.mode ?? 'panel';
   const spec = ladderSpecOf(testId);
   const rule = ladderRuleOf(testId);
-  const levels = rule.levels ?? 10;
+  const detail = useTestDetail(testId);
+  const caseIds = useMemo(() => (detail?.definition.kind === 'prompt' ? detail.definition.cases.map((c) => c.id) : []), [detail]);
+  // A ladder steps through its levels (L01…L10); any other test through its cases.
+  const levels = spec ? (rule.levels ?? 10) : Math.max(1, caseIds.length);
   const [level, setLevel] = useState(props.level);
   const [who, setWho] = useState<string | null>(props.contestantId ?? null);
   const [attemptIdx, setAttemptIdx] = useState(0);
   useEffect(() => setLevel(props.level), [props.level]);
+  useEffect(() => {
+    if (!spec && props.caseId && caseIds.length) setLevel(Math.max(1, caseIds.indexOf(props.caseId) + 1));
+  }, [spec, props.caseId, caseIds]);
   useEffect(() => setWho(props.contestantId ?? null), [props.contestantId]);
   useEffect(() => setAttemptIdx(0), [level, who]);
 
-  const caseId = levelCaseId(level);
-  const runKey = props.runId ?? (scope?.startsWith('run:') ? scope.slice(4) : null);
-  const detail = useTestDetail(testId);
+  // "See an example": the newest run with this test, its most telling case, then its most telling model.
+  const picking = !!props.example && !spec && !props.caseId && !props.runId;
+  const [example, setExample] = useState<{ runId: string | null; caseId: string | null } | null>(null);
+  useEffect(() => {
+    if (!picking || !caseIds.length) return;
+    let alive = true;
+    latestRunWith(testId)
+      .then((hit) => {
+        if (!alive) return;
+        const pick = hit ? interestingCase(hit.run.results.filter((r) => r.testId === testId), caseIds) : null;
+        if (pick) setLevel(caseIds.indexOf(pick) + 1);
+        setExample({ runId: hit?.runId ?? null, caseId: pick });
+      })
+      .catch(() => alive && setExample({ runId: null, caseId: null }));
+    return () => {
+      alive = false;
+    };
+  }, [picking, testId, caseIds]);
+  const waiting = picking && !example;
+
+  const caseId = waiting ? '' : spec ? levelCaseId(level) : (caseIds[level - 1] ?? props.caseId ?? '');
+  const runKey = props.runId ?? (scope?.startsWith('run:') ? scope.slice(4) : null) ?? example?.runId ?? null;
   const { rows, error: rowsError } = useLevelRows(testId, caseId, runKey);
+  const autoWho = useRef(picking && !props.contestantId);
+  useEffect(() => {
+    if (!autoWho.current || !rows?.length || waiting) return;
+    autoWho.current = false;
+    setWho(interestingModel(rows));
+  }, [rows, waiting]);
   const row = useMemo(() => rows?.find((r) => r.id === who) ?? null, [rows, who]);
   const attempts = useAttempts(testId, caseId, row, scope);
   const attempt = attempts?.[Math.min(attemptIdx, attempts.length - 1)] ?? null;
@@ -316,7 +388,9 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
   const scorerType = def?.kind === 'prompt' ? (def.cases.find((c) => c.id === caseId)?.scorer ?? def.scorer).type : detail?.summary.scorerType;
   const q = useMemo(() => questionInput(testId, caseId, rendered, { scorerType, category: def?.category }), [testId, caseId, rendered, scorerType, def?.category]);
   const a = useMemo(() => (res && detail !== undefined ? caseInputFor(res, detail, row?.label) : null), [res, detail, row?.label]);
-  const verdict = res ? levelVerdict(res.score, rule.passMark, res.status) : null;
+  // Outside a ladder a case has no pass mark: the model row and attempt tabs show the share of marks.
+  const passMark = spec ? rule.passMark : 0.9995;
+  const verdict = res ? (spec ? levelVerdict(res.score, rule.passMark, res.status) : caseVerdict(res.score, res.status)) : null;
   const prompt = (a?.turns.length ? a.turns : rendered?.turns ?? []).join('\n\n— next message —\n\n');
   const reply = a ? a.replies.join('\n\n— next reply —\n\n') : null;
 
@@ -330,10 +404,11 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
   const loadingAnswer = !!who && (!attempts || (attempts.length > 0 && !res && !resError));
 
   let body: ReactNode;
-  if (detail === undefined) body = <div className="lc-loading">Loading level {level}…</div>;
-  else if (!q) body = <div className="lc-loading">This level’s question could not be loaded.</div>;
+  const unit = spec ? 'level' : 'case';
+  if (detail === undefined || waiting) body = <div className="lc-loading">Loading {waiting ? 'an example' : `${unit} ${level}`}…</div>;
+  else if (!q) body = <div className="lc-loading">This {unit}’s question could not be loaded.</div>;
   else if (loadingAnswer) body = <div className="lc-loading">Loading {row?.label ?? 'the model'}’s answer…</div>;
-  else if (who && attempts && attempts.length === 0) body = <div className="lc-loading">{row?.label ?? 'This model'} has no recorded answer at level {level}.</div>;
+  else if (who && attempts && attempts.length === 0) body = <div className="lc-loading">{row?.label ?? 'This model'} has no recorded answer {spec ? `at level ${level}` : 'to this case'}.</div>;
   else if (resError) body = <div className="lc-loading">Couldn’t load this answer: {resError}</div>;
   else
     body = (
@@ -342,10 +417,10 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
         q={q}
         a={questionOnly ? null : a}
         verdict={questionOnly ? null : verdict}
-        passMark={rule.passMark}
+        passMark={passMark}
         prompt={prompt}
         reply={reply}
-        answerHead={attempts && who ? <AttemptTabs list={attempts} idx={Math.min(attemptIdx, attempts.length - 1)} onPick={setAttemptIdx} passMark={rule.passMark} /> : undefined}
+        answerHead={attempts && who ? <AttemptTabs list={attempts} idx={Math.min(attemptIdx, attempts.length - 1)} onPick={setAttemptIdx} passMark={passMark} /> : undefined}
         mode={mode}
         modelLabel={row?.label}
         rung={rung}
@@ -354,7 +429,7 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
 
   const modelRow =
     rows && rows.length > 0 ? (
-      <ModelRow rows={rows} selected={who} passMark={rule.passMark} onPick={setWho} title={questionOnly ? 'How each model did at this level — pick one to see its answer' : 'Switch model'} />
+      <ModelRow rows={rows} selected={who} passMark={passMark} onPick={setWho} title={questionOnly ? `How each model did ${spec ? 'at this level' : 'on this case'} — pick one to see its answer` : 'Switch model'} />
     ) : rowsError ? (
       <p className="lc-models lc-empty">Results could not be loaded: {rowsError}</p>
     ) : null;
@@ -367,7 +442,7 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
           <div className="lc-title">
             <span className="lc-eyebrow">{name}</span>
             <h2 id={titleId}>
-              Level {level} <small>of {levels}</small>
+              {spec ? 'Level' : 'Case'} {level} <small>of {levels}</small>
               {rung && <span className="lc-rung">{rung}</span>}
             </h2>
           </div>
@@ -377,18 +452,21 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
               <b>{row.label}</b>
             </span>
           )}
-          <nav className="lc-nav" aria-label="Levels">
-            <button type="button" className="btn sm" disabled={level <= 1} onClick={() => setLevel((l) => Math.max(1, l - 1))} aria-label={level > 1 ? `Previous level, level ${level - 1}` : 'No previous level'}>
-              <span aria-hidden="true">←</span> L{Math.max(1, level - 1)}
+          <nav className="lc-nav" aria-label={spec ? 'Levels' : 'Cases'}>
+            <button type="button" className="btn sm" disabled={level <= 1} onClick={() => setLevel((l) => Math.max(1, l - 1))} aria-label={level > 1 ? `Previous ${unit}, ${unit} ${level - 1}` : `No previous ${unit}`}>
+              <span aria-hidden="true">←</span> {spec ? 'L' : '#'}
+              {Math.max(1, level - 1)}
             </button>
             <span className="lc-nav-cur tnum" aria-hidden="true">
-              L{level}
+              {spec ? 'L' : '#'}
+              {level}
             </span>
-            <button type="button" className="btn sm" disabled={level >= levels} onClick={() => setLevel((l) => Math.min(levels, l + 1))} aria-label={level < levels ? `Next level, level ${level + 1}` : 'No next level'}>
-              L{Math.min(levels, level + 1)} <span aria-hidden="true">→</span>
+            <button type="button" className="btn sm" disabled={level >= levels} onClick={() => setLevel((l) => Math.min(levels, l + 1))} aria-label={level < levels ? `Next ${unit}, ${unit} ${level + 1}` : `No next ${unit}`}>
+              {spec ? 'L' : '#'}
+              {Math.min(levels, level + 1)} <span aria-hidden="true">→</span>
             </button>
           </nav>
-          <button type="button" className="btn ghost icon lc-close" onClick={onClose} aria-label="Close the level close-up" data-autofocus>
+          <button type="button" className="btn ghost icon lc-close" onClick={onClose} aria-label={`Close the ${unit} close-up`} data-autofocus>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
