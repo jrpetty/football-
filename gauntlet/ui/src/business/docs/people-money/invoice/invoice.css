@@ -1,0 +1,95 @@
+/* Read an Invoice: the invoice document. */
+.pm-inv {
+  font-size: 0.8rem;
+  max-width: 46rem;
+}
+.pm-inv-letterhead {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 2px solid #a5784a;
+  padding-bottom: 0.45em;
+  margin-bottom: 0.55em;
+  color: var(--ink-2);
+}
+.pm-inv-letterhead b {
+  font-size: 1.3em;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.pm-inv-line {
+  margin: 0.08em 0;
+}
+.pm-inv-line.k-title {
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  font-size: 1.1em;
+  margin: 0.2em 0 0.35em;
+}
+.pm-inv-line.k-meta {
+  color: var(--ink-2);
+}
+.pm-inv-line.k-total {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pm-inv-line.k-amend {
+  border-left: 3px solid var(--ink-warn);
+  padding-left: 0.5em;
+  background: rgba(217, 119, 6, 0.08);
+}
+.pm-inv-gap {
+  height: 0.45em;
+}
+.pm-inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.3em 0 0.4em;
+  font-variant-numeric: tabular-nums;
+}
+.pm-inv-table th {
+  text-align: left;
+  font-size: 0.85em;
+  color: var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-2);
+  padding: 0.15em 0.4em;
+  font-weight: 700;
+}
+.pm-inv-table td {
+  padding: 0.12em 0.4em;
+  border-bottom: 1px solid var(--rule);
+}
+.pm-inv-table td:not(:nth-child(2)),
+.pm-inv-table th:not(:nth-child(2)) {
+  white-space: nowrap;
+}
+.pm-inv-table tr.hl-good td {
+  background: var(--hl-good);
+}
+.pm-inv-table tr.hl-bad td {
+  background: var(--hl-bad);
+}
+.pm-inv-table tr.hl-key td {
+  background: var(--hl-key);
+}
+.pm-inv-table tr.hl-info td {
+  background: var(--hl-info);
+}
+.pm-trap {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  border: 1px solid var(--ink-warn);
+  color: var(--ink-warn);
+  font-size: 0.82em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .pm-inv-table {
+    font-size: 0.9em;
+  }
+  .pm-inv {
+    overflow-x: auto;
+  }
+}

@@ -11,6 +11,7 @@ import { useViewerCaption } from '../context.tsx';
 import { VisionResultPanel, resultImages } from './VisionResult.tsx';
 import { useRoute } from '../router.tsx';
 import { CaseVisualPanel } from './viz/CaseVisualPanel.tsx';
+import { OpenCloseUp } from '../business/docs/people-money/OpenCloseUp.tsx';
 import { ArtifactShowcase, showcaseArtifact } from './viz/ArtifactShowcase.tsx';
 import { Jargon } from './clarity/Jargon.tsx';
 import { plainAttempt, plainCaseName, plainKey, plainValue } from './clarity/plain.ts';
@@ -281,6 +282,7 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
       {tab === 'overview' && (
         <>
           <CaseVisualPanel res={res} modelLabel={target?.contestantLabel} names={names} />
+          <OpenCloseUp testId={res.testId} caseId={res.caseId} contestantId={res.contestantId} runId={runId} />
           {gallery && <GalleryResultPanel res={res} modelLabel={target?.contestantLabel} modelColor={target?.contestantColor} names={names} manual={res.transcript?.some((t) => t.rawStopReason === 'manual')} />}
           {images.length > 0 && <VisionResultPanel images={images} detail={res.scoreDetail ?? {}} passed={res.passed} />}
           {showcase && <ArtifactShowcase runId={runId} result={res} testId={res.testId} caseId={res.caseId} names={names} />}

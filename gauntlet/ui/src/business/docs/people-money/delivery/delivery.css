@@ -1,0 +1,142 @@
+/* Check the Delivery: PO · delivery note · goods-in, one row per ordered product. */
+.pm-dn {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
+  min-width: 46rem;
+  width: 100%;
+}
+.pm-dn th.h {
+  text-align: left;
+  vertical-align: bottom;
+  padding: 0.45rem 0.6rem;
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 2px solid var(--rule);
+}
+.pm-dn th.h small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.pm-dn th.h b {
+  display: block;
+  font-size: 0.92rem;
+}
+.pm-dn th.h span {
+  display: block;
+  font-weight: 400;
+  color: var(--ink-2);
+  font-size: 0.9em;
+}
+.pm-dn th.po {
+  border-top: 3px solid #4a6fa5;
+}
+.pm-dn th.dn {
+  border-top: 3px solid #a5784a;
+  border-left: 6px solid var(--surface-2);
+}
+.pm-dn th.gi {
+  border-top: 3px solid #5f8a5a;
+  border-left: 6px solid var(--surface-2);
+}
+.pm-dn th.ans {
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+.pm-dn th.ans:first-of-type {
+  border-left: 6px solid var(--surface-2);
+}
+.pm-dn td.c {
+  vertical-align: top;
+  padding: 0.35rem 0.6rem;
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 1px dashed var(--rule);
+}
+.pm-dn td.c span {
+  display: block;
+  color: var(--ink-2);
+}
+.pm-dn td.c b {
+  color: var(--ink);
+}
+.pm-dn td.dn,
+.pm-dn td.gi {
+  border-left: 6px solid var(--surface-2);
+}
+.pm-dn td.dn .sub {
+  color: var(--ink-warn);
+  font-weight: 600;
+}
+.pm-dn td.dn .flag {
+  font-weight: 600;
+}
+.pm-dn td.gi.has {
+  background: color-mix(in srgb, var(--paper) 88%, #5f8a5a);
+}
+.pm-dn td.gi span {
+  font-size: 0.95em;
+}
+.pm-dn .muted {
+  color: var(--ink-3) !important;
+}
+.pm-dn td.pm-dn-a {
+  text-align: center;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--text-1);
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  padding: 0.3rem 0.4rem;
+  white-space: nowrap;
+}
+.pm-dn td.pm-dn-a.zero {
+  color: var(--text-3);
+  font-weight: 500;
+}
+.pm-dn td.pm-dn-a.no {
+  background: var(--bad-soft);
+}
+.pm-dn td.pm-dn-a s {
+  color: var(--bad-text);
+}
+.pm-dn td.pm-dn-a b {
+  color: var(--good-text);
+}
+.pm-dn td.pm-dn-stamp {
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  vertical-align: middle;
+}
+.pm-dn td.pm-dn-stamp .pm-stamp.t-good {
+  --c: var(--good-text);
+}
+.pm-dn td.pm-dn-stamp .pm-stamp.t-bad {
+  --c: var(--bad-text);
+}
+.pm-dn td.pm-dn-stamp .pm-stamp.t-muted {
+  --c: var(--text-2);
+}
+.pm-dn tr.bad td.c.po {
+  box-shadow: inset 4px 0 0 var(--bad);
+}
+.pm-dn-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
