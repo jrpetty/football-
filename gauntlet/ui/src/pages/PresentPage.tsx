@@ -37,7 +37,7 @@ import { JobsSlide, jobsFromRun, jobsSlideTitle, runHasBusinessJobs } from '../b
 import { isLadderTest, ladderSpecOf } from '../ladders.ts';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
-import { PEOPLE_MONEY_VISUALS } from '../business/docs/people-money/registry.ts';
+import { docVisualFor } from '../business/docs/docVisuals.ts';
 import { runningStandings, revealSteps, revealState, type StandingsStep } from '../../../src/presenter/standings.ts';
 import { StandingsSlide } from '../components/present/StandingsSlide.tsx';
 import { PodiumSlide } from '../components/present/PodiumSlide.tsx';
@@ -517,7 +517,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const fam = visualFamilyFor(slide.test.snap.id, def?.kind === 'prompt' ? def.scorer.type : undefined, slide.test.snap.category);
       const who = deck.contenders.find((c) => c.id === slide.pick.featuredContestantId)?.label ?? 'one model';
       return {
-        text: `${PEOPLE_MONEY_VISUALS[slide.test.snap.id]?.caption ?? (fam ? visualEntry(fam).caption : 'One answer against the answer key.')} Shown: ${who}’s answer.`,
+        text: `${docVisualFor(slide.test.snap.id)?.caption ?? (fam ? visualEntry(fam).caption : 'One answer against the answer key.')} Shown: ${who}’s answer.`,
         fine: `Case ${slide.pick.caseId}: the one where the models’ scores differed most · right column = each model’s score on this case${R > 1 ? ` (mean of ${R} attempts)` : ''}`,
       };
     }

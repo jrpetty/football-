@@ -1,7 +1,8 @@
 /**
  * "See an example" for a test that is not a ladder (every Business prompt test, say): opens the close-up
- * (LevelCloseUp in case mode) on one real case: the question as the model got it, the correct answer behind
- * "Reveal", and every model's result on that case. Deep-linkable: ?example=<test id>&case=<case id>&c=<model>.
+ * (LevelCloseUp in case mode) on one real case — the newest run's case where the models differed most, with a
+ * model that got some of it wrong — or the question with the answer key behind "Reveal" when no run has it.
+ * Deep-linkable: ?example=<test id>&case=<case id>&c=<model>&run=<run id> (or &n=<case number>).
  */
 import { navigate, useRoute } from '../../router.tsx';
 import { LevelCloseUp } from './LevelCloseUp.tsx';
@@ -25,7 +26,8 @@ function useSetQuery() {
 export function CaseExampleButton({ testId, cases, label = 'See an example' }: { testId: string; cases: number; label?: string }) {
   const set = useSetQuery();
   return (
-    <button type="button" className="btn sm lc-example-btn" onClick={() => set({ example: testId, case: null, n: String(exampleCaseIndex(cases) + 1), c: null, run: null })}>
+    <button type="button" className="btn sm lc-example-btn" onClick={() => set({ example: testId, case: null, n: null, c: null, run: null })}
+      title={`One of the ${cases} cases, drawn: the documents, a model's answer and the result`}>
       <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
         <circle cx="11" cy="11" r="6.5" />
         <path d="M16 16l4.5 4.5" />
@@ -42,10 +44,12 @@ export function CaseCloseUpHost() {
   const testId = route.query.get('example');
   if (!testId) return null;
   const n = Number(route.query.get('n'));
+  const given = Number.isInteger(n) && n >= 1;
   return (
     <LevelCloseUp
       testId={testId}
-      level={Number.isInteger(n) && n >= 1 ? n : 1}
+      level={given ? n : 1}
+      example={!given && !route.query.get('case')}
       caseId={route.query.get('case') ?? undefined}
       contestantId={route.query.get('c') ?? undefined}
       runId={route.query.get('run')}

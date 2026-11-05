@@ -28,7 +28,8 @@ import { EngineBeats } from './closeup/engineBeats.tsx';
 import { BusinessBeats } from './closeup/businessBeats.tsx';
 import { HorizonBeats, TextBeats } from './closeup/otherBeats.tsx';
 import type { KindProps } from './closeup/types.ts';
-import { PEOPLE_MONEY_VISUALS } from '../../business/docs/people-money/registry.ts';
+import { docVisualFor } from '../../business/docs/docVisuals.ts';
+import { interestingCase, interestingModel, latestRunWith } from '../../business/docs/caseExamples.ts';
 import '../../styles/viz.css';
 import './closeup/closeup.css';
 
@@ -318,7 +319,18 @@ function caseVerdict(score: number | null, status?: string): ReturnType<typeof l
   return { tone: score >= 0.5 ? 'partial' : 'fail', mark: '◐', title: `${Math.round(score * 100)}% of the marks`, scoreText: null };
 }
 
-export function LevelCloseUp(props: { testId: string; level: number; caseId?: string; contestantId?: string; runId?: string | null; scope?: string; onClose: () => void; mode?: 'panel' | 'slide' }): JSX.Element {
+export function LevelCloseUp(props: {
+  testId: string;
+  level: number;
+  caseId?: string;
+  contestantId?: string;
+  runId?: string | null;
+  scope?: string;
+  onClose: () => void;
+  mode?: 'panel' | 'slide';
+  /** "See an example" (not a ladder, no case given): the newest run's most telling case and model are shown first. */
+  example?: boolean;
+}): JSX.Element {
   const { testId, onClose, scope } = props;
   const mode = props.mode ?? 'panel';
   const spec = ladderSpecOf(testId);
@@ -337,9 +349,35 @@ export function LevelCloseUp(props: { testId: string; level: number; caseId?: st
   useEffect(() => setWho(props.contestantId ?? null), [props.contestantId]);
   useEffect(() => setAttemptIdx(0), [level, who]);
 
-  const caseId = spec ? levelCaseId(level) : (caseIds[level - 1] ?? props.caseId ?? '');
-  const runKey = props.runId ?? (scope?.startsWith('run:') ? scope.slice(4) : null);
+  // "See an example": the newest run with this test, its most telling case, then its most telling model.
+  const picking = !!props.example && !spec && !props.caseId && !props.runId;
+  const [example, setExample] = useState<{ runId: string | null; caseId: string | null } | null>(null);
+  useEffect(() => {
+    if (!picking || !caseIds.length) return;
+    let alive = true;
+    latestRunWith(testId)
+      .then((hit) => {
+        if (!alive) return;
+        const pick = hit ? interestingCase(hit.run.results.filter((r) => r.testId === testId), caseIds) : null;
+        if (pick) setLevel(caseIds.indexOf(pick) + 1);
+        setExample({ runId: hit?.runId ?? null, caseId: pick });
+      })
+      .catch(() => alive && setExample({ runId: null, caseId: null }));
+    return () => {
+      alive = false;
+    };
+  }, [picking, testId, caseIds]);
+  const waiting = picking && !example;
+
+  const caseId = waiting ? '' : spec ? levelCaseId(level) : (caseIds[level - 1] ?? props.caseId ?? '');
+  const runKey = props.runId ?? (scope?.startsWith('run:') ? scope.slice(4) : null) ?? example?.runId ?? null;
   const { rows, error: rowsError } = useLevelRows(testId, caseId, runKey);
+  const autoWho = useRef(picking && !props.contestantId);
+  useEffect(() => {
+    if (!autoWho.current || !rows?.length || waiting) return;
+    autoWho.current = false;
+    setWho(interestingModel(rows));
+  }, [rows, waiting]);
   const row = useMemo(() => rows?.find((r) => r.id === who) ?? null, [rows, who]);
   const attempts = useAttempts(testId, caseId, row, scope);
   const attempt = attempts?.[Math.min(attemptIdx, attempts.length - 1)] ?? null;
@@ -359,7 +397,7 @@ export function LevelCloseUp(props: { testId: string; level: number; caseId?: st
   const { ref, onKeyDown } = useDialog(onClose);
   const titleId = useId();
   const kind = closeUpKind(testId);
-  const Beats = PEOPLE_MONEY_VISUALS[testId]?.Beats ?? BEATS[kind];
+  const Beats = docVisualFor(testId)?.Beats ?? BEATS[kind];
   const rung = spec?.rungs?.[level - 1];
   const name = spec?.name ?? def?.name ?? testId;
   const questionOnly = !who;
@@ -367,7 +405,7 @@ export function LevelCloseUp(props: { testId: string; level: number; caseId?: st
 
   let body: ReactNode;
   const unit = spec ? 'level' : 'case';
-  if (detail === undefined) body = <div className="lc-loading">Loading {unit} {level}…</div>;
+  if (detail === undefined || waiting) body = <div className="lc-loading">Loading {waiting ? 'an example' : `${unit} ${level}`}…</div>;
   else if (!q) body = <div className="lc-loading">This {unit}’s question could not be loaded.</div>;
   else if (loadingAnswer) body = <div className="lc-loading">Loading {row?.label ?? 'the model'}’s answer…</div>;
   else if (who && attempts && attempts.length === 0) body = <div className="lc-loading">{row?.label ?? 'This model'} has no recorded answer {spec ? `at level ${level}` : 'to this case'}.</div>;

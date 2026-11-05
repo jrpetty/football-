@@ -1,0 +1,160 @@
+/* Calendars (Meeting.tsx). */
+.cd-cal {
+  display: block;
+}
+.cd-cal-hr {
+  stroke: var(--border);
+  stroke-width: 0.6;
+}
+.cd-cal-t,
+.cd-cal-name {
+  fill: var(--text-3);
+  font-size: 8.5px;
+}
+.cd-cal-name {
+  fill: var(--text-2);
+  font-weight: 700;
+  font-size: 9px;
+}
+.cd-cal-lane {
+  fill: color-mix(in srgb, var(--text-1) 7%, var(--surface-1));
+  stroke: var(--border);
+  stroke-width: 0.5;
+}
+.cd-cal-offbg {
+  fill: var(--surface-3);
+}
+.cd-cal-hatch {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+}
+.cd-cal-b.focus {
+  stroke: currentColor;
+  stroke-dasharray: 2 2;
+  stroke-width: 0.6;
+}
+.cd-cal-b.travel {
+  opacity: 0.6;
+}
+.cd-cal-bt {
+  fill: var(--text-1);
+  font-size: 7.5px;
+  font-weight: 650;
+}
+.cd-cal-slot {
+  fill: none;
+  stroke-width: 2.2;
+}
+.cd-cal-slot.t-key,
+.cd-cal-slot.t-good {
+  stroke: var(--good);
+  fill: color-mix(in srgb, var(--good) 22%, transparent);
+}
+.cd-cal-slot.t-bad {
+  stroke: var(--bad);
+  stroke-dasharray: 5 3;
+  fill: color-mix(in srgb, var(--bad) 18%, transparent);
+}
+.cd-cal-slt {
+  font-size: 9px;
+  font-weight: 800;
+}
+.cd-cal-slt.t-key,
+.cd-cal-slt.t-good {
+  fill: var(--good-text);
+}
+.cd-cal-slt.t-bad {
+  fill: var(--bad-text);
+}
+.cd-week-grid {
+  display: grid;
+  gap: 0.3rem;
+}
+.cd-week-day {
+  min-width: 0;
+}
+.cd-week-dh {
+  font-size: 0.72em;
+  font-weight: 750;
+  color: var(--text-2);
+  margin-bottom: 0.15rem;
+  white-space: nowrap;
+}
+.cd-people {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  font-size: 0.78em;
+}
+.cd-people li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.cd-people i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+}
+.cd-mlist2 ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9em;
+}
+.cd-room {
+  color: var(--cd-warn);
+  font-weight: 700;
+}
+.cd-slotcard {
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0.5rem 0.65rem;
+  background: var(--cd-paper);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cd-slotcard.t-good {
+  border-left-color: var(--good);
+}
+.cd-slotcard.t-bad {
+  border-left-color: var(--bad);
+}
+.cd-slot-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9em;
+}
+.cd-slot-ans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+  align-items: baseline;
+}
+.cd-slot-model {
+  font-size: 1.1em;
+  font-weight: 800;
+}
+.cd-slot-model.no {
+  color: var(--cd-bad);
+  text-decoration: line-through;
+}
+.cd-slot-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.cd-slot-day {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

@@ -1,0 +1,150 @@
+/* Customer cards (Crm.tsx) and the shared spreadsheet-style grid. */
+.cd-group {
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--surface-1);
+}
+.cd-group.t-good {
+  border-left-color: var(--good);
+}
+.cd-group.t-bad {
+  border-left-color: var(--bad);
+}
+.cd-group.t-warn {
+  border-left-color: var(--warn);
+}
+.cd-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9em;
+}
+.cd-group.t-bad .cd-group-head b {
+  color: var(--cd-bad);
+}
+.cd-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem;
+}
+.cd-person {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+}
+.cd-rec {
+  background: var(--cd-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.86em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.cd-rec.master {
+  border-color: color-mix(in srgb, var(--good) 60%, transparent);
+}
+.cd-rec.gone {
+  opacity: 0.8;
+}
+.cd-rec-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.45rem;
+  align-items: center;
+}
+.cd-src {
+  font-size: 0.72em;
+  font-weight: 800;
+  padding: 0.02rem 0.35rem;
+  border-radius: 4px;
+  color: #fff;
+}
+.cd-src.m {
+  background: hsl(210 60% 42%);
+}
+.cd-src.b {
+  background: hsl(330 55% 45%);
+}
+.cd-rec-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+  overflow-wrap: anywhere;
+}
+.cd-rf.link {
+  background: hsl(var(--h) 85% 55% / 0.25);
+  outline: 1.5px solid hsl(var(--h) 80% 55% / 0.8);
+  border-radius: 3px;
+  padding: 0 0.2rem;
+  font-weight: 650;
+}
+.cd-rf.link::before {
+  content: '🔗 ';
+  font-size: 0.8em;
+}
+.cd-rec-note {
+  font-size: 0.85em;
+  font-style: italic;
+  color: var(--cd-warn);
+}
+.cd-golds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cd-golden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.8rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--r-md);
+  border: 2px solid color-mix(in srgb, var(--good) 55%, transparent);
+  background: var(--cd-good-bg);
+  font-size: 0.86em;
+}
+.cd-gf {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.cd-gf.no {
+  color: var(--cd-bad);
+  text-decoration: line-through;
+}
+.cd-grid {
+  border-collapse: collapse;
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+.cd-grid th,
+.cd-grid td {
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.4rem;
+  white-space: nowrap;
+  text-align: left;
+}
+.cd-grid th {
+  background: var(--surface-3);
+  font-weight: 750;
+  color: var(--text-2);
+}
+.cd-grid td.num,
+.cd-grid th.num {
+  text-align: right;
+}

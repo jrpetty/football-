@@ -43,6 +43,9 @@ import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS,
 import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { LADDER_DEMO_RULES, LADDER_DEMO_RUN_SPECS, LADDER_DEMO_SUITES, LADDER_DEMO_TESTS, decorateLadderDemo } from './laddersMock.ts';
 import { decorateLadderCloseUp } from './ladderCloseUpMock.ts';
+// The two document-picture demos re-mark each answer with the real scorer, so they run last: nothing after them
+// may change a score (the near-miss reshaping of decorateLadderCloseUp included).
+import { customersDataResult, decorateCustomersData } from './customersDataMock.ts';
 import { decoratePeopleMoney, peopleMoneyDetail } from './peopleMoneyMock.ts';
 import { attachLadderHeights } from '../../../src/core/ladders.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
@@ -907,7 +910,7 @@ export function buildRun(spec: RunSpec): MockRun {
           i++;
           const include = frac >= 1 || rngFrom(`${spec.id}|inc|${c.id}|${t.id}|${caseId}|${rep}`).next() < frac;
           if (!include) continue;
-          results.push(decorateLadderCloseUp(decorateLadderDemo(decoratePeopleMoney(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t), t), t)));
+          results.push(decorateCustomersData(decoratePeopleMoney(decorateLadderCloseUp(decorateLadderDemo(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t), t)), t)));
         }
       }
     }
@@ -919,7 +922,7 @@ export function newLiveResult(runId: string, contestantId: string, testId: strin
   const c = CONTESTANTS.find((x) => x.id === contestantId);
   const t = testById(testId);
   if (!c || !t) return null;
-  return decorateLadderCloseUp(decorateLadderDemo(decoratePeopleMoney(applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t), t), t));
+  return decorateCustomersData(decoratePeopleMoney(decorateLadderCloseUp(decorateLadderDemo(applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t), t)), t));
 }
 
 export const RUN_SPECS: RunSpec[] = [
@@ -1563,13 +1566,13 @@ export function detailFor(lite: CaseResultLite): CaseResult {
   }
 
   const artifacts = lite.artifacts;
-  return peopleMoneyDetail(gameJamDetail(visualPassDetail({
+  return customersDataResult(lite, peopleMoneyDetail(gameJamDetail(visualPassDetail({
     ...lite,
     scoreDetail: detail,
     transcript,
     replay: t && t.kind === 'program' ? replayFor(t, lite.seed ?? 1, score ?? 0.2) : undefined,
     artifacts,
-  }, lite), lite), t);
+  }, lite), lite), t));
 }
 
 // Vision tests (added after the core fixtures so the existing demo runs keep their test lists).

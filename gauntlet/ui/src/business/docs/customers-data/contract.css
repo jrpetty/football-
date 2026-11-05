@@ -1,0 +1,111 @@
+/* Contract redline (Contract.tsx). */
+.cd-contract {
+  font-family: Georgia, 'Times New Roman', serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.cd-contract .cd-why,
+.cd-contract .cd-more,
+.cd-contract .cd-paper-title {
+  font-family: var(--font-sans);
+}
+.cd-contract-title {
+  font-weight: 800;
+  text-align: center;
+  font-size: 1.02em;
+}
+.cd-contract-sub {
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 0.78em;
+  color: var(--text-3);
+  margin-bottom: 0.3rem;
+}
+.cd-clause {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  gap: 0.4rem;
+  font-size: 0.92em;
+}
+.cd-clause-no {
+  font-weight: 800;
+  font-family: var(--font-sans);
+}
+.cd-redline del {
+  color: var(--cd-bad);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+}
+.cd-redline ins {
+  color: var(--cd-good);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+}
+.cd-moved {
+  font-family: var(--font-sans);
+  font-size: 0.72em;
+  font-weight: 800;
+  color: var(--text-3);
+  margin-right: 0.35rem;
+}
+.cd-chg {
+  background: var(--cd-paper);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cd-chg.t-good {
+  border-left-color: var(--good);
+}
+.cd-chg.t-warn {
+  border-left-color: var(--warn);
+}
+.cd-chg.t-bad {
+  border-left-color: var(--bad);
+}
+.cd-chg-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cd-chg-text {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.9em;
+}
+.cd-chg-claims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.86em;
+}
+.cd-claim {
+  font-weight: 650;
+}
+.cd-claim.no {
+  color: var(--cd-bad);
+}
+.cd-claim.ok {
+  color: var(--cd-good);
+}
+.cd-claim.key {
+  color: var(--cd-good);
+}
+.cd-talk {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.8em;
+  color: var(--text-2);
+}
+.cd-keylist {
+  margin: 0;
+  padding-left: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.9em;
+}

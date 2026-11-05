@@ -1,15 +1,15 @@
 /**
  * "See it up close" in the Result Inspector: opens the close-up (question, the model's answer drawn on the
- * documents, the result) on this very result, for the people-and-money tests.
+ * documents, the result) on this very result, for every Business test drawn as its paperwork.
  */
 import { useState } from 'react';
 import { LevelCloseUp } from '../../../components/viz/LevelCloseUp.tsx';
 import { ladderLevel } from '../../../../../src/core/ladders.ts';
-import { PEOPLE_MONEY_VISUALS } from './registry.ts';
+import { docVisualFor } from '../docVisuals.ts';
 
 export function OpenCloseUp({ testId, caseId, contestantId, runId }: { testId: string; caseId: string; contestantId: string; runId?: string | null }) {
   const [open, setOpen] = useState(false);
-  if (!PEOPLE_MONEY_VISUALS[testId]) return null;
+  if (!docVisualFor(testId)) return null;
   const level = ladderLevel(caseId);
   return (
     <>
