@@ -28,6 +28,7 @@ import { EngineBeats } from './closeup/engineBeats.tsx';
 import { BusinessBeats } from './closeup/businessBeats.tsx';
 import { HorizonBeats, TextBeats } from './closeup/otherBeats.tsx';
 import type { KindProps } from './closeup/types.ts';
+import { docVisualFor } from '../../business/docs/docVisuals.ts';
 import '../../styles/viz.css';
 import './closeup/closeup.css';
 
@@ -322,7 +323,7 @@ export function LevelCloseUp(props: { testId: string; level: number; contestantI
   const { ref, onKeyDown } = useDialog(onClose);
   const titleId = useId();
   const kind = closeUpKind(testId);
-  const Beats = BEATS[kind];
+  const Beats = docVisualFor(testId)?.Beats ?? BEATS[kind];
   const rung = spec?.rungs?.[level - 1];
   const name = spec?.name ?? def?.name ?? testId;
   const questionOnly = !who;

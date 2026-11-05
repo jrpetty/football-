@@ -37,6 +37,7 @@ import { BUSINESS_LADDERS_SUITE_ID, BUSINESS_SUITE_ID, FRONTIER_LADDERS_SUITE_ID
 import { HORIZON_RUN_SPEC } from './horizonMock.ts';
 import { LADDER_DEMO_BUSINESS_RUN, LADDER_DEMO_FRONTIER_RUN, LADDER_DEMO_RULES } from './laddersMock.ts';
 import { isLadderCloseUpTest, ladderCloseUpDetail, ladderCloseUpResult } from './ladderCloseUpMock.ts';
+import { customersDataResult, isCustomersDataTest } from './customersDataMock.ts';
 import { ladderClimbs } from '../../../src/core/ladders.ts';
 import { ladderSpecOf } from '../ladders.ts';
 import {
@@ -940,7 +941,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         const run = getRun(b);
         const lite = run.results.find((r) => r.key === d);
         if (!lite) throw new ApiError(`Result not found: ${d}`, 404);
-        const full = isLadderCloseUpTest(lite.testId) ? await ladderCloseUpResult(lite, detailFor(lite)) : detailFor(lite);
+        const full = isLadderCloseUpTest(lite.testId) ? await ladderCloseUpResult(lite, detailFor(lite)) : isCustomersDataTest(lite.testId) ? customersDataResult(lite, detailFor(lite)) : detailFor(lite);
         for (const art of full.artifacts) {
           if (mockArtifactUrls.has(`${b}/${art.file}`)) continue; // recorded fixtures register their own URLs
           const content = artifactContent(art);

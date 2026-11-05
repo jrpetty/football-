@@ -1,0 +1,226 @@
+/* Helpdesk, tags and policy replies (Support.tsx). Tokens from docs.css / tokens.css. */
+.biz-tcard .tc-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  flex-wrap: wrap;
+}
+.cd-queue-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88em;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.cd-ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-left: 4px solid var(--border-strong);
+}
+.cd-ticket.t-good {
+  border-left-color: var(--good);
+}
+.cd-ticket.t-warn {
+  border-left-color: var(--warn);
+}
+.cd-ticket.t-bad {
+  border-left-color: var(--bad);
+}
+.cd-ticket-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.55rem;
+  font-size: 0.85em;
+}
+.cd-chan {
+  font-size: 0.85em;
+  font-weight: 700;
+  padding: 0.02rem 0.4rem;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+.cd-ticket-from {
+  font-size: 0.88em;
+}
+.cd-ticket-msg {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface-2));
+}
+.cd-order {
+  font-size: 0.84em;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0.4rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cd-order-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+  align-items: baseline;
+}
+.cd-order-lines {
+  border-collapse: collapse;
+  width: 100%;
+}
+.cd-order-lines td {
+  padding: 0.05rem 0.4rem 0.05rem 0;
+  vertical-align: top;
+}
+.cd-order-lines td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+.cd-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.cd-facts div {
+  display: flex;
+  gap: 0.4rem;
+}
+.cd-facts dt {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.cd-facts dd {
+  margin: 0;
+  min-width: 0;
+}
+.cd-facts div.warn dd {
+  color: var(--cd-warn);
+  font-weight: 700;
+}
+.cd-decide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.35rem 0;
+}
+.cd-decide-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+.cd-decide-cat {
+  font-size: 0.8em;
+  color: var(--text-2);
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.cd-diffs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+}
+.cd-diffs s {
+  color: var(--cd-bad);
+}
+.cd-diffs b {
+  color: var(--cd-good);
+}
+.cd-rule {
+  margin: 0;
+  font-size: 0.82em;
+  color: var(--text-2);
+  border-left: 3px solid var(--accent);
+  padding: 0.25rem 0.55rem;
+  background: var(--surface-1);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.cd-rule b {
+  color: var(--accent);
+  margin-right: 0.3rem;
+}
+.cd-split.two {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 900px) {
+  .cd-split.two {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+.cd-tags dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cd-tagrow {
+  display: grid;
+  grid-template-columns: 7.2rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.25rem 0.35rem;
+  border-radius: var(--r-sm);
+  border-left: 3px solid transparent;
+}
+.cd-tagrow.t-bad {
+  border-left-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 7%, transparent);
+}
+.cd-tagrow dt {
+  font-size: 0.8em;
+  color: var(--text-3);
+  font-weight: 700;
+}
+.cd-tagrow dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+}
+.cd-tagval {
+  font-weight: 700;
+}
+.cd-tagrow.t-bad .cd-tagval {
+  text-decoration: line-through;
+  color: var(--cd-bad);
+}
+.cd-plain {
+  margin: 0;
+  padding-left: 1rem;
+}
+.cd-other {
+  margin: 0.2rem 0 0;
+  font-size: 0.85em;
+  color: var(--cd-warn);
+}
+.cd-reply {
+  border-left: 4px solid var(--accent);
+}
+.cd-checks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cd-checks li {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 0.88em;
+}

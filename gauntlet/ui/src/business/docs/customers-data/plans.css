@@ -1,0 +1,141 @@
+/* Van map and rota grid (Plans.tsx). */
+.cd-maps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+}
+.cd-mapbox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.cd-map {
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+  display: block;
+}
+.cd-map-bg {
+  fill: color-mix(in srgb, #3b8f5a 14%, var(--surface-1));
+  stroke: var(--border);
+}
+.cd-route {
+  fill: none;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+.cd-drop {
+  fill: var(--surface-4);
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+}
+.cd-drop-t {
+  fill: #fff;
+  font-size: 8.5px;
+  font-weight: 800;
+}
+.cd-place {
+  fill: var(--text-2);
+  font-size: 8px;
+  font-weight: 650;
+}
+.cd-depot {
+  fill: var(--text-1);
+  stroke: var(--surface-1);
+  stroke-width: 1.5;
+}
+.cd-depot + .cd-drop-t {
+  fill: var(--surface-1);
+}
+.cd-late-ring {
+  fill: none;
+  stroke: var(--bad);
+  stroke-width: 2.5;
+  stroke-dasharray: 3 2;
+}
+.cd-vans td.wrap {
+  white-space: normal;
+}
+.cd-vans td.bad,
+.cd-rota td.bad,
+.cd-rota th.bad {
+  color: var(--cd-bad);
+  font-weight: 800;
+}
+.cd-vans tr.r-bad td:first-child {
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+.cd-vdot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+.cd-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.86em;
+}
+.cd-rules li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.cd-rota td,
+.cd-rota th {
+  text-align: center;
+  vertical-align: top;
+}
+.cd-rota-who {
+  text-align: left !important;
+  min-width: 7rem;
+}
+.cd-rota-c {
+  min-width: 2.6rem;
+}
+.cd-rota-c.bad {
+  background: color-mix(in srgb, var(--bad) 22%, transparent);
+  outline: 2px solid var(--bad);
+  outline-offset: -2px;
+}
+.cd-rota-c.diff {
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.cd-shift {
+  display: inline-block;
+  min-width: 1.3rem;
+  padding: 0.05rem 0.25rem;
+  margin: 0.05rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 30%, var(--surface-2));
+  font-weight: 800;
+  font-size: 0.9em;
+}
+.cd-cellwhy {
+  display: block;
+  font-size: 0.72em;
+  color: var(--cd-bad);
+  white-space: normal;
+  max-width: 6.5rem;
+  line-height: 1.15;
+}
+.cd-shiftkey {
+  margin-top: 0.4rem;
+}
+.cd-shiftkey > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.cd-offday {
+  font-size: 0.72em;
+  color: var(--text-3);
+  font-style: italic;
+}

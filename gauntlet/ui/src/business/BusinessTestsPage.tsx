@@ -17,6 +17,7 @@ import './business.css';
 import { BusinessLaddersNote, LadderList } from '../components/leaderboard/LadderSuiteSoon.tsx';
 import { LADDERS } from '../ladders.ts';
 import { BUSINESS_LADDERS_SUITE_ID } from '../../../src/core/areas.ts';
+import { CaseExampleButton } from './docs/CaseCloseUp.tsx';
 
 export default function BusinessTestsPage() {
   const state = useAsync(() => businessApi.ladder(), []);
@@ -118,9 +119,12 @@ export default function BusinessTestsPage() {
                               </ul>
                             </div>
                           </div>
-                          <Link to={pathOf('tests', t.id)} className="tc-go">
-                            See in depth <span aria-hidden="true">→</span>
-                          </Link>
+                          <div className="tc-foot">
+                            <CaseExampleButton testId={t.id} />
+                            <Link to={pathOf('tests', t.id)} className="tc-go">
+                              See in depth <span aria-hidden="true">→</span>
+                            </Link>
+                          </div>
                         </article>
                       );
                     })}

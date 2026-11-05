@@ -1,0 +1,145 @@
+/* Ask the Database (Sql.tsx). */
+.cd-chat {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.cd-bubble {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  border: 1px solid var(--accent-line);
+  border-radius: 4px 14px 14px 14px;
+  padding: 0.55rem 0.75rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cd-bubble-from {
+  font-size: 0.78em;
+  font-weight: 750;
+  color: var(--text-2);
+}
+.cd-bubble-q {
+  font-size: 1.08em;
+  font-weight: 700;
+}
+.cd-bubble-detail {
+  font-size: 0.85em;
+  color: var(--text-2);
+}
+.cd-schema svg {
+  display: block;
+}
+.cd-tbox {
+  fill: var(--surface-1);
+  stroke: var(--border-strong);
+}
+.cd-thead {
+  fill: color-mix(in srgb, var(--accent) 28%, var(--surface-2));
+}
+.cd-tname {
+  fill: var(--text-1);
+  font-size: 12px;
+  font-weight: 800;
+}
+.cd-tcol {
+  fill: var(--text-3);
+  font-size: 10.5px;
+}
+.cd-tcol.used {
+  fill: var(--text-1);
+  font-weight: 700;
+}
+.cd-tcol.fk {
+  fill: var(--accent);
+}
+.cd-join {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+.cd-sql {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 22rem;
+  overflow: auto;
+}
+.cd-sql .s-kw {
+  color: var(--accent);
+  font-weight: 700;
+}
+.cd-sql .s-str {
+  color: var(--good-text);
+}
+.cd-sql .s-num {
+  color: var(--warn-text);
+}
+.cd-sql .s-com {
+  color: var(--text-3);
+  font-style: italic;
+}
+.cd-sql .s-pun {
+  color: var(--text-2);
+}
+.cd-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem;
+}
+.cd-res {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cd-res tr.r-ok td {
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+}
+.cd-res tr.r-bad td {
+  background: color-mix(in srgb, var(--bad) 16%, transparent);
+  color: var(--cd-bad);
+  font-weight: 700;
+}
+.cd-res tr.r-miss td {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  font-weight: 700;
+}
+.cd-dbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.4rem;
+}
+.cd-db {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  font-size: 0.86em;
+}
+.cd-db > div {
+  flex: 1;
+  min-width: 0;
+}
+.cd-db.t-bad {
+  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
+}
+.cd-db.t-good {
+  border-color: color-mix(in srgb, var(--good) 50%, transparent);
+}
+.cd-db-icon {
+  width: 1rem;
+  height: 1.2rem;
+  border-radius: 50% / 18%;
+  background: var(--surface-4);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2), inset 0 3px 0 rgba(255, 255, 255, 0.15);
+  flex: none;
+}

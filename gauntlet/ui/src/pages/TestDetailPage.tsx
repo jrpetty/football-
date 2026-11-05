@@ -15,6 +15,7 @@ import { ExplainerCard } from '../components/ExplainerCard.tsx';
 import { LadderTestCard } from '../components/viz/LadderTestCard.tsx';
 import { LevelCloseUpLauncher } from '../components/viz/LevelCloseUpLauncher.tsx';
 import { isLadderTest } from '../ladders.ts';
+import { CaseCloseUpLauncher } from '../business/docs/CaseCloseUp.tsx';
 
 export function describeScorer(s: ScorerSpec | undefined): string {
   if (!s) return '—';
@@ -156,6 +157,7 @@ export default function TestDetailPage({ testId }: { testId: string }) {
 
       {isLadderTest(testId) && <LadderTestCard testId={testId} detail={d} />}
       {isLadderTest(testId) && <LevelCloseUpLauncher testId={testId} />}
+      {!isLadderTest(testId) && <CaseCloseUpLauncher testId={testId} caseIds={d.rendered.map((r) => r.caseId)} />}
 
       {def.hook && (
         <blockquote className="hook-quote">
