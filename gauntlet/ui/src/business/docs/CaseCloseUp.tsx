@@ -180,9 +180,9 @@ export function CaseCloseUp(props: { testId: string; caseId?: string | null; con
   const caseIds = useMemo(() => detail?.rendered.map((r) => r.caseId) ?? [], [detail]);
   const results = useMemo(() => run?.results.filter((r) => r.testId === testId) ?? [], [run, testId]);
   useEffect(() => {
-    if (caseId || !caseIds.length || runId === undefined) return;
+    if (caseId || !caseIds.length || runId === undefined || (runId && !run)) return;
     setCaseId(interestingCase(results, caseIds) ?? caseIds[0]!);
-  }, [caseId, caseIds, results, runId]);
+  }, [caseId, caseIds, results, runId, run]);
 
   const rows: Row[] = useMemo(() => {
     if (!run || !caseId) return [];

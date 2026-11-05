@@ -181,7 +181,8 @@ export const SHEET_LOOKUP = docVisual<SheetDoc, SheetMark[]>({
   },
   sentence: (doc, ans) => {
     const wrong = ans.filter((m) => !m.ok);
-    if (!wrong.length) return `Answered all ${doc.questions.length} questions exactly, dodging the repeated, subtotal and corrected rows.`;
+    const traps = [doc.rows.some((r) => r.trap === 'repeat') && 'repeated', doc.rows.some((r) => r.trap === 'subtotal') && 'subtotal', doc.rows.some((r) => r.trap === 'correction') && 'corrected'].filter(Boolean);
+    if (!wrong.length) return `${doc.questions.length === 1 ? 'Answered the question' : `Answered all ${doc.questions.length} questions`} exactly${traps.length ? `, dodging the ${traps.join(', ')} rows` : ''}.`;
     const t = wrong.find((m) => m.trap);
     return `Got ${ans.length - wrong.length} of ${ans.length} answers right${t ? `; on ${t.id} it ${t.trap}` : ''}. A report built on this would carry the wrong figure.`;
   },
