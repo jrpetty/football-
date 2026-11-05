@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "node --test test/*.test.ts",
     "build:single": "tsc -b && vite build && node scripts/build-single.mjs",
-    "proxy": "node scripts/proxy.mjs"
+    "proxy": "node scripts/proxy.mjs",
+    "live": "node --experimental-strip-types --no-warnings scripts/live-diplomacy.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
