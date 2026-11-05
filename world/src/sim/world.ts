@@ -11,10 +11,11 @@ import { Rng, hash2, clamp } from './rng.ts'
 import { findPath, type PathGrid } from './path.ts'
 import { personName, tribeName, TRIBE_COLORS, TRIBE_EMBLEMS } from './names.ts'
 import { DAY, HOUR, YEAR, SEASONS, seasonOf, isNight, hourOf, ageYears, dayOf } from './time.ts'
-import type {
+import type { Lesson,
   Look, Agent, Tribe, Building, Animal, ChronicleEntry, Chapter, WorldEvent, Sample, Traits, SkillName, Memory, PlanStep, Task,
 } from './types.ts'
 import { SKILL_NAMES } from './types.ts'
+import { yearlyReview } from './learning.ts'
 import { updateTask, startTask, cancelTask } from './actions.ts'
 import { instinctStep } from './instinct.ts'
 import { newDiplomacy, diplomacyDaily, diplomacyHourly, type Diplomacy } from './diplomacy.ts'
@@ -29,6 +30,8 @@ export interface WorldConfig {
   popCap: number
   /** replay exactly the same history for this seed (otherwise every run diverges) */
   fixedHistory?: boolean
+  /** players' AIs are playing: once history begins, nobody may steer anyone */
+  handsOff?: boolean
 }
 
 export const DEFAULT_CONFIG: WorldConfig = {
@@ -102,6 +105,8 @@ export class World implements PathGrid {
   aiActive: (a: Agent) => boolean = () => false
   /** Is this leader steered by an external model (Claude & co.) that makes its own diplomatic calls? */
   aiLeads: (a: Agent) => boolean = () => false
+  /** told whenever a people learns a lesson (a player's AI keeps it for future worlds) */
+  onLesson: ((t: Tribe, l: Lesson) => void) | null = null
   /** A mind that thinks in the same instant (the built-in Genesis Mind): fills an idle person's plan, or returns false. */
   think: ((a: Agent) => boolean) | null = null
 
@@ -1129,7 +1134,11 @@ export class World implements PathGrid {
 
   private newSeason() {
     const s = SEASONS[this.season]
-    if (this.season === 0) this.log('event', `Year ${Math.floor(this.time / YEAR) + 1} begins. Spring returns.`, '🌱')
+    if (this.season === 0) {
+      this.log('event', `Year ${Math.floor(this.time / YEAR) + 1} begins. Spring returns.`, '🌱')
+      // every people's AI looks back on the year and learns from it
+      for (const { tribe, lesson } of yearlyReview(this)) this.onLesson?.(tribe, lesson)
+    }
     else if (this.season === 3) this.log('event', `Winter descends. Fields lie fallow and the nights grow cold.`, '❄️')
     else if (this.season === 2) this.log('event', `${s} arrives — harvest time.`, '🍂')
     // re-render terrain for seasonal colours

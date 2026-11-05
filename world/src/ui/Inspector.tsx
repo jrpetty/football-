@@ -83,7 +83,7 @@ function AgentView({ id }: { id: number }) {
           <button className={`icon-btn ${game.renderer?.follow ? 'primary' : ''}`} onClick={() => { if (game.renderer) { game.renderer.follow = !game.renderer.follow; game.emit() } }}>
             🎥 {game.renderer?.follow ? 'Following' : 'Follow'}
           </button>
-          <ProfileSelect className="icon-btn" value={a.model} onChange={(v) => { a.model = v; game.emit() }} emptyLabel="Mind: tribe default" />
+          {!w.cfg.handsOff && <ProfileSelect className="icon-btn" value={a.model} onChange={(v) => { a.model = v; game.emit() }} emptyLabel="Mind: tribe default" />}
         </div>
       )}
 
@@ -187,7 +187,7 @@ function AgentView({ id }: { id: number }) {
       {a.journal.length > 0 && (
         <Section title="Inner journal">
           {a.journal.slice(-6).reverse().map((j, i) => (
-            <div key={i} className="mem"><span className="ago">{shortDate(j.t)}</span><i>{j.text}</i>{j.say && <div>💬 {j.say}</div>}</div>
+            <div key={i} className="mem"><span className="ago">{shortDate(j.t)}</span><i>{j.text}</i>{j.say && <div>💬 {j.say}</div>}{j.reasoning && <details className="reasoning" open={i === 0}><summary>🧠 Reasoning</summary>{j.reasoning}</details>}</div>
           ))}
         </Section>
       )}

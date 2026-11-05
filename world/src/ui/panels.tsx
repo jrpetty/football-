@@ -2,6 +2,7 @@ import { met, status as dipStatus, strength as dipStrength, militaryTier, type S
 import { useMemo, useState } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
+import { LearnedBars } from './Players.tsx'
 import { ERAS, TECHS, TECH_BY_ID, availableTechs, eraOf } from '../sim/tech.ts'
 import { BUILDINGS } from '../sim/buildings.ts'
 import { ITEMS, invTotal, type Item } from '../sim/data.ts'
@@ -132,6 +133,10 @@ export function TribesPanel() {
               {t.alive ? `${mem.length} people · led by ${leader?.alive ? leader.name : '—'} · founded ${formatDate(t.foundedT)}` : 'Extinct'}
               {t.launched && ' · 🚀 reached space'}
             </div>
+            {t.ai?.player && (
+              <div className="player-badge">🧑 <b>{t.ai.playerName}</b>'s AI · {mind.label(t.model)} · <span title="Set before history began; nobody may steer it now">🔒 hands off</span></div>
+            )}
+            {t.ai?.brief && <div className="meta" style={{ marginBottom: 6 }}>Creed: <i>“{t.ai.brief}”</i></div>}
             {t.values && <div className="quote">“{t.values}”</div>}
             {t.beliefs && <div className="kv"><span className="k">Beliefs</span><span>{t.beliefs}</span></div>}
             {t.laws.length > 0 && (
@@ -148,7 +153,7 @@ export function TribesPanel() {
               <span>{rs ? <>{rs.name} <span className="meta">({Math.round((w.techProgress(t, rs.id) / rs.cost) * 100)}%)</span></> : '—'}</span>
               <span className="k">Buildings</span><span>{blds} + {farms} fields</span>
               <span className="k">Stores</span><span>{Math.floor(invTotal(t.storage))} / {w.storageCap(t.id)}</span>
-              <span className="k">Mind</span><span>{t.model ? `✦ ${mind.label(t.model)}` : 'default mind'}</span>
+              <span className="k">Mind</span><span>{t.model ? `${t.model === 'genesis-mind' ? '🌱' : '✦'} ${mind.label(t.model)}` : 'default mind'}</span>
             </div>
             {rs && <div style={{ marginTop: 6 }}><Bar value={w.techProgress(t, rs.id)} max={rs.cost} color={t.color} /></div>}
             {stores.length > 0 && (
@@ -157,6 +162,13 @@ export function TribesPanel() {
               </div>
             )}
             {t.alive && <Relations tribe={t.id} />}
+            {t.ai && t.ai.lessons.length > 0 && (
+              <details style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+                <summary className="meta" style={{ cursor: 'pointer' }}>🧠 {t.ai.lessons.length} lessons learned this world</summary>
+                <LearnedBars learned={t.ai.learned} />
+                {t.ai.lessons.slice().reverse().map((l, i) => <div key={i} className="mem"><span className="ago">Year {l.year}</span>{l.text}</div>)}
+              </details>
+            )}
             {t.works.length > 0 && (
               <details style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
                 <summary className="meta" style={{ cursor: 'pointer' }}>📜 {t.works.length} written works</summary>
@@ -232,6 +244,7 @@ export function MindsPanel({ onSettings }: { onSettings: () => void }) {
               <div className="thought">“{f.thought}”</div>
               {f.say && <div className="say">💬 {f.sayTo && !/^(everyone|)$/i.test(f.sayTo) ? <b>to {f.sayTo}: </b> : null}{f.say}</div>}
               {f.plan && <div className="plan">→ {f.plan}</div>}
+              {f.reasoning && <details className="reasoning" onClick={(e) => e.stopPropagation()}><summary>🧠 Reasoning</summary>{f.reasoning}</details>}
             </>
           )}
           <div className="meta" style={{ marginTop: 4, fontSize: 10.5 }}>{f.model}</div>

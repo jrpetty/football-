@@ -2,6 +2,7 @@
 // drives them from one requestAnimationFrame loop. React panels subscribe to a
 // throttled "version" so the UI refreshes a few times a second, not every frame.
 
+import { seatPlayers, keepLesson, recordProgress } from './ai/players.ts'
 import { World, DEFAULT_CONFIG, type WorldConfig } from './sim/world.ts'
 import { REAL_SEC_PER_HOUR, HOUR } from './sim/time.ts'
 import { Renderer } from './render/renderer.ts'
@@ -60,6 +61,8 @@ class Game {
 
   private hook() {
     mind.attach(this.world)
+    // what a player's AI learns, it keeps for future worlds
+    this.world.onLesson = (t, l) => { keepLesson(t, l); recordProgress(this.world) }
     this.unlisten?.()
     const onLog = (e: ChronicleEntry) => {
       if (e.kind === 'speech') return
@@ -160,8 +163,11 @@ class Game {
     this.emit()
   }
 
-  newWorld(cfg: WorldConfig) {
-    this.setWorld(new World(cfg))
+  /** Start a world; the chosen players' AIs each take one people and play it alone. */
+  newWorld(cfg: WorldConfig, players: string[] = []) {
+    const w = new World({ ...cfg, handsOff: false })
+    seatPlayers(w, players)
+    this.setWorld(w)
   }
 
   setWorld(w: World) {

@@ -10,6 +10,7 @@ import { formatDate, formatClock, partOfDay, SEASONS } from '../sim/time.ts'
 import type { World } from '../sim/world.ts'
 import { CARRY_CAP } from '../sim/world.ts'
 import { describeRelations } from '../sim/diplomacy.ts'
+import { lessonLines } from '../sim/learning.ts'
 
 const costStr = (c: Partial<Record<Item, number>>) => Object.entries(c).map(([k, v]) => `${v} ${k}`).join(' + ')
 
@@ -109,6 +110,7 @@ ${catalog()}
 
 # How to answer
 Reply with a JSON object:
+- reasoning: weigh your real options before choosing, in 1-3 sentences: what you need most, what your people's creed asks of you, what lessons your people have learned, and what went wrong last time you tried something. Then decide.
 - thought: your private inner monologue right now, first person, 1-3 vivid sentences grounded in your situation.
 - feeling: one to three words for your mood.
 - goal: your long-term aim in life, one sentence. Keep it stable unless something has genuinely changed your mind.
@@ -119,6 +121,7 @@ Reply with a JSON object:
 export const DECISION_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
+    reasoning: { type: 'string' },
     thought: { type: 'string' },
     feeling: { type: 'string' },
     goal: { type: 'string' },
@@ -139,11 +142,12 @@ export const DECISION_SCHEMA: Record<string, unknown> = {
       },
     },
   },
-  required: ['thought', 'feeling', 'goal', 'say', 'say_to', 'plan'],
+  required: ['reasoning', 'thought', 'feeling', 'goal', 'say', 'say_to', 'plan'],
   additionalProperties: false,
 }
 
 export interface Decision {
+  reasoning?: string
   thought: string
   feeling: string
   goal: string
@@ -337,6 +341,12 @@ export function buildContext(w: World, a: Agent): string {
     if (tribe.lost.length) lines.push(`Knowledge your people once had but lost: ${tribe.lost.map((x) => TECH_BY_ID[x]?.name ?? x).join(', ')}.`)
     lines.push(`Communal stores (${Math.floor(w.storageUsed(tribe))}/${w.storageCap(tribe.id)}): ${invToString(tribe.storage)}.`)
     lines.push(depositSummary(w, tribe.id, a))
+    // the creed the people were given before history began, and what experience has taught them
+    if (tribe.ai?.brief) lines.push(`The founding creed of your people (it shapes what you value; it is not an order): “${tribe.ai.brief.slice(0, 600)}”`)
+    const lessons = lessonLines(tribe, 6)
+    if (lessons.length) lines.push(`Lessons your people learned the hard way:\n${lessons.map((l) => `- ${l}`).join('\n')}`)
+    const failed = a.memories.filter((m) => m.t > a.aiLastT - 12 * 60 && /couldn't|can't|cannot|refused|failed|not enough|must wait|declined/i.test(m.text)).slice(-3)
+    if (failed.length) lines.push(`What went wrong for you recently: ${failed.map((m) => m.text).join(' · ')}`)
     const rel = describeRelations(w, tribe.id)
     lines.push(rel.length ? `Other peoples you know:\n${rel.map((r) => `- ${r}`).join('\n')}` : 'Other peoples: none met yet.')
     if (tribe.leaderId === a.id && rel.length) lines.push('You lead your people: war, peace, alliances, trade and tribute are your decisions (use "diplomacy").')

@@ -8,7 +8,8 @@
 // drive every person at once, or share the world with Claude, DeepSeek & co.
 
 import type { World } from '../sim/world.ts'
-import type { Agent, PlanStep, Tribe, Memory, Heard, Building } from '../sim/types.ts'
+import type { Agent, PlanStep, Tribe, Memory, Heard, Building, Prefs, Learned } from '../sim/types.ts'
+import { NEUTRAL_PREFS, FRESH_LEARNED } from '../sim/learning.ts'
 import { FOOD_ITEMS, invCount, invTotal, type Item } from '../sim/data.ts'
 import { BUILDINGS, RECIPES, type BuildingType } from '../sim/buildings.ts'
 import { TECH_BY_ID, RESEARCH_PRIORITY, eraOf, ERAS } from '../sim/tech.ts'
@@ -62,6 +63,9 @@ interface Sit {
   homeless: boolean
   site?: Building
   storeFull: boolean
+  P: Prefs // the people's standing wishes (the player's brief)
+  L: Learned // what the people have learned the hard way
+  notes: string[] // reasoning jotted down while weighing options
 }
 
 function situation(w: World, a: Agent): Sit {
@@ -85,6 +89,9 @@ function situation(w: World, a: Agent): Sit {
     homeless: !a.homeId && housing < members,
     site: t ? w.buildings.find((x) => x.tribeId === t.id && !x.done && x.type !== 'road') : undefined,
     storeFull: !!t && w.storageUsed(t) > w.storageCap(t.id) * 0.82,
+    P: t?.ai?.prefs ?? NEUTRAL_PREFS,
+    L: t?.ai?.learned ?? FRESH_LEARNED,
+    notes: [],
   }
 }
 
@@ -206,8 +213,12 @@ function statecraft(s: Sit): Project | null {
   if (!t || !s.leader) return null
   if (w.time - (lastStatecraft.get(t.id) ?? -1e9) < 1.2 * DAY) return null
   const T = a.traits
-  const aggression = (1 - T.agreeableness) * 0.6 + T.extraversion * 0.15 + T.neuroticism * 0.1 + (foodPerHead(w, t) < 2 ? 0.3 : 0)
+  const { P, L } = s
+  const aggression = (1 - T.agreeableness) * 0.6 + T.extraversion * 0.15 + T.neuroticism * 0.1 + (foodPerHead(w, t) < 2 ? 0.3 : 0) + P.war * 0.3
   const mine = strength(w, t.id)
+  // the brief and hard experience temper the appetite for war
+  const warBias = Math.max(0.05, 1 + P.war * 0.9) / L.warCaution
+  const minRatio = 0.6 + 0.3 * L.warCaution
   const out = (kind: string, o: Tribe, words: string, why: string, tell: string, score: number): Project => {
     lastStatecraft.set(t.id, w.time)
     return { id: 'statecraft', score, steps: [S('diplomacy', o.name, 0, `${kind}: ${words}`)], why, tell }
@@ -219,7 +230,8 @@ function statecraft(s: Sit): Project | null {
     const my = war.a === t.id ? war.score : -war.score
     const days = (w.time - war.since) / DAY
     const tired = (war.dead[t.id] ?? 0) * 8 + days * 0.8 + (foodPerHead(w, t) < 2 ? 20 : 0)
-    if ((my < -30 || tired > 34 + (1 - T.agreeableness) * 30 || (my > 50 && days > 10)) && (days > 3 || war.battles >= 2)) {
+    if ((my < -30 || tired > (34 + (1 - T.agreeableness) * 30) * (1 + P.war * 0.35) || (my > 50 && days > 10) || (P.war < -0.4 && days > 2)) && (days > 3 || war.battles >= 2 || P.war < -0.4)) {
+      s.notes.push(`The war with the ${o.name} is ${my < -30 ? 'going badly' : my > 30 ? 'won' : 'bleeding us'}${P.war < -0.4 ? ', and our people never wanted it' : ''} — time to end it.`)
       const words = my > 30 ? `You have learned what we can do. Lay down your arms and we will leave you in peace.` : pick(['Enough of our people lie in the ground. Let us bury our dead and live as neighbours.', 'This war feeds no one. I ask for peace.', 'Our mothers weep on both sides of the river. Let it end.'])
       return out('peace', o, words, `the war with the ${o.name} has cost too much`, `I am sending envoys to the ${o.name} to ask for peace.`, 9)
     }
@@ -242,27 +254,35 @@ function statecraft(s: Sit): Project | null {
     const anger = popularAnger(w, t.id, o.id)
     // opportunity: a far stronger people next to a weak one it dislikes is tempted, whoever leads it
     const opportunity = ratio > 1.7 && r < -8 ? 0.42 + Math.min(0.2, (ratio - 1.7) * 0.15) : 0
-    const temper = Math.max(0, Math.min(1.5, (Math.max(aggression, anger, opportunity) - 0.33) * 2.5))
+    const temper = Math.max(0, Math.min(1.5, (Math.max(aggression, anger, opportunity) - 0.33) * 2.5), P.war * 0.8)
     if (!allied && !truce && temper > 0 && fighters(w, t.id).length >= 3) {
       const motives: [number, string, string, string][] = []
       if (hungryRaid) motives.push([0.18, 'hunger leaves us no choice', `our children are hungry while the ${o.name} sit on full granaries`, `Ready the spears. We take what the ${o.name} will not share.`])
+      if (P.war > 0.3 && close && ratio > 1.15 && r < 35) motives.push([0.03 * P.war * Math.min(2, ratio - 0.6), goal ? 'to bring their lands under our rule' : 'because the strong take what the weak cannot hold', `our creed is conquest, and the ${o.name} are weaker than we are`, `We are strong and the ${o.name} are not. Our creed says take what we can hold.`])
       if (anger > 0.45 && ratio > 0.85) motives.push([0.025 * anger, 'our people demand justice for what was done to them', `my people will not forgive the ${o.name}, and I cannot hold them back`, `Our people have suffered enough at the hands of the ${o.name}. We answer.`])
       if (r < -18) motives.push([(0.022 + (-r - 18) / 400) * Math.min(1.3, ratio), 'for every insult we have swallowed', `I am done swallowing the insults of the ${o.name}`, `The ${o.name} have mocked us long enough. We march.`])
       if (ore && r < 8 && ratio > 1.2) motives.push([0.035, `to take their ${ore}`, `we need the ${ore} the ${o.name} keep from us`, `The ${o.name} will not share their ${ore}. We will take them.`])
       if (close && ratio > 1.3 && r < 5) motives.push([0.02 * (ratio - 0.8), goal ? 'to bring their lands under our rule' : 'for the good land along our border', `the ${o.name} hold land that should be ours, and they are weaker than we are`, `The ${o.name} are weak and their land is good. We go to war.`])
       if (close && full > 0.85 && r < 15 && ratio > 0.85) motives.push([0.028, 'for land — there is no longer room for us both', `there is no more room, and the ${o.name} stand in our way`, `There is not land enough for us and the ${o.name}. Ready yourselves.`])
       const eager = appetite(w, t.id)
-      for (const [p, words, why, tell] of motives) if (chance(p * temper * eager)) return out('war', o, words, why, tell, 9)
+      const fit = ratio >= minRatio || hungryRaid
+      for (const [p, words, why, tell] of motives) {
+        if (fit && chance(p * temper * eager * warBias)) {
+          s.notes.push(`War on the ${o.name}: ${why}; we are ${ratio.toFixed(1)}× their strength${L.warCaution > 1.05 ? `, and even with our lesson in caution it is worth it` : ''}.`)
+          return out('war', o, words, why, tell, 9)
+        }
+      }
+      if (motives.length) s.notes.push(`Considered war on the ${o.name} (${motives[0][2]}) but held back — ${!fit ? `we are only ${ratio.toFixed(1)}× their strength${L.warCaution > 1.05 ? ' and we have learned not to gamble' : ''}` : P.war < -0.2 ? 'our people want peace' : eager < 0.6 ? 'we are tired of war' : 'not yet'}.`)
     }
     if (ratio > 2.4 && r < 0 && aggression > 0.5 && s.known.has('writing') && !pactBetween(w, t.id, o.id, 'tribute'))
-      options.push(out('tribute', o, `You are weak and we are strong. Send us a share of your harvest and you will have nothing to fear.`, `the ${o.name} should pay for our protection`, `I have sent word to the ${o.name}: they will pay us tribute.`, 3 * rnd()))
+      options.push(out('tribute', o, `You are weak and we are strong. Send us a share of your harvest and you will have nothing to fear.`, `the ${o.name} should pay for our protection`, `I have sent word to the ${o.name}: they will pay us tribute.`, 3 * rnd() * Math.max(0.1, 1 + P.war * 0.7)))
     if (!allied && (r > 24 || (common && r > 0)))
-      options.push(out('alliance', o, common ? 'Our enemies are the same. Let us stand together.' : 'You have been good neighbours. Let our peoples stand as one.', `the ${o.name} have proved themselves friends`, `I will offer the ${o.name} an alliance.`, (common ? 5 : 3.5) * (0.5 + T.agreeableness * 0.6)))
+      options.push(out('alliance', o, common ? 'Our enemies are the same. Let us stand together.' : 'You have been good neighbours. Let our peoples stand as one.', `the ${o.name} have proved themselves friends`, `I will offer the ${o.name} an alliance.`, (common ? 5 : 3.5) * (0.5 + T.agreeableness * 0.6) * Math.max(0.2, 1 + P.trade * 0.5 - P.war * 0.2) * L.trade))
     const canTrade = ['the_wheel', 'sailing', 'currency'].some((x) => s.known.has(x))
     if (canTrade && r > (T.extraversion > 0.6 ? -5 : 4) && !pactBetween(w, t.id, o.id, 'trade') && w.dip.pacts.filter((p) => p.kind === 'trade' && (p.a === t.id || p.b === t.id)).length < 1 + Math.round(T.extraversion * 2))
-      options.push(out('trade', o, `Let caravans move between us: our ${pick(['grain', 'tools', 'cloth', 'pots', 'timber'])} for what you have plenty of.`, `trade with the ${o.name} would make us both richer`, `We should trade with the ${o.name}. I'll send envoys.`, (2.5 + T.extraversion * 2) * (0.6 + rnd() * 0.4)))
+      options.push(out('trade', o, `Let caravans move between us: our ${pick(['grain', 'tools', 'cloth', 'pots', 'timber'])} for what you have plenty of.`, `trade with the ${o.name} would make us both richer`, `We should trade with the ${o.name}. I'll send envoys.`, (2.5 + T.extraversion * 2) * (0.6 + rnd() * 0.4) * Math.max(0.2, 1 + P.trade * 0.6 - Math.max(0, P.war) * 0.5) * L.trade))
     if (r < -12 && r > -50 && T.agreeableness > 0.52)
-      options.push(out('gift', o, 'Take these as a sign that we want no quarrel with you.', `bad blood with the ${o.name} helps no one`, `Let us send gifts to the ${o.name} and mend this.`, 2 * T.agreeableness * (0.6 + rnd() * 0.6)))
+      options.push(out('gift', o, 'Take these as a sign that we want no quarrel with you.', `bad blood with the ${o.name} helps no one`, `Let us send gifts to the ${o.name} and mend this.`, 2 * T.agreeableness * (0.6 + rnd() * 0.6) * Math.max(0.2, 1 + P.trade * 0.4 - P.war * 0.4)))
   }
   options.sort((x, y) => y.score - x.score)
   if (!options.length) return null
@@ -409,6 +429,84 @@ function social(s: Sit): Project | null {
     if (f) return { id: 'company', score: 1.2 + (1 - a.social / 100) * 2 * (0.5 + a.traits.extraversion), steps: [S('talk', f.name, 0, chat(s, f))], why: `I miss talking to ${f.name}` }
   }
   return null
+}
+
+const lastChoice = new Map<number, { key: string; t: number; what: string }>()
+const avoid = new Map<number, Map<string, { until: number; why: string }>>()
+const FAILED = /couldn't|can't|cannot|refused|too far|no such|nothing left|failed|must wait|not enough|lack|had nothing|made no sense|declined/i
+
+const projectKey = (p: Project) => `${p.id}:${p.steps.find((x) => x.action === 'build' || x.action === 'research' || x.action === 'diplomacy' || x.action === 'craft')?.target ?? ''}`
+const projectName = (p: Project) => {
+  const st = p.steps.find((x) => x.action === 'research' || x.action === 'diplomacy')
+  const b = p.steps.filter((x) => x.action === 'build').pop()?.target
+  if (p.id === 'research' && st) return `research ${TECH_BY_ID[st.target]?.name.toLowerCase() ?? st.target}`
+  if ((p.id === 'build' || p.id === 'home' || p.id === 'site') && b) return `build a ${BUILDINGS[b as BuildingType]?.name.toLowerCase() ?? itemName(b)}`
+  if (p.id === 'statecraft' && st) return `${st.text.split(':')[0]} with the ${st.target}`
+  return ({ food: 'find food', fish: 'fish', farm: 'work the fields', mine: 'dig for ore', explore: 'explore', feast: 'hold a feast', write: 'write', decree: 'decree', tools: 'make tools', clothes: 'make clothes', court: 'court', befriend: 'make a friend', give: 'share food', teach: 'teach', company: 'keep company', store: 'store my load', split: 'break away' } as Record<string, string>)[p.id] ?? p.id
+}
+
+/** Weigh every option through the people's brief and the lessons it has learned; note why. */
+function weigh(s: Sit, P0: Project[]) {
+  const { P, L, a, w } = s
+  const notes = new Set<string>()
+  const mult = (p: Project, m: number, why: string) => {
+    if (Math.abs(m - 1) < 0.04) return
+    p.score *= Math.max(0.15, m)
+    notes.add(why)
+  }
+  const lesson = (k: keyof Learned) => (s.t?.ai?.lessons ?? []).slice().reverse().find((l) => l.key === k)
+  const L_ = (k: keyof Learned, p: Project, label: string) => {
+    if (Math.abs(L[k] - 1) < 0.04) return
+    const l = lesson(k)
+    mult(p, L[k], `lesson${l ? ` of year ${l.year}` : ''}: ${label} ×${L[k].toFixed(1)}`)
+  }
+  const favours = new Set<string>(), shuns = new Set<string>()
+  const creed = (v: number, k: number, p: Project, label: string) => {
+    if (Math.abs(v) <= 0.05) return
+    p.score *= Math.max(0.15, 1 + v * k)
+    ;(v > 0 ? favours : shuns).add(label)
+  }
+  for (const p of P0) {
+    const b = p.steps.filter((x) => x.action === 'build').pop()?.target as BuildingType | undefined
+    switch (p.id) {
+      case 'food': case 'fish': case 'farm': L_('food', p, 'food'); creed(P.growth, 0.15, p, 'growth'); break
+      case 'home': L_('housing', p, 'housing'); if (w.season >= 2) L_('warmth', p, 'winter readiness'); break
+      case 'clothes': L_('warmth', p, 'winter readiness'); break
+      case 'research': creed(P.science, 0.6, p, 'knowledge'); L_('research', p, 'study'); break
+      case 'explore': creed(P.expand, 0.8, p, 'exploring'); break
+      case 'write': creed(P.faith, 0.5, p, 'culture'); creed(P.science, 0.3, p, 'learning'); break
+      case 'feast': creed(P.faith, 0.5, p, 'ritual'); break
+      case 'court': case 'befriend': creed(P.growth, 0.4, p, 'family'); break
+      case 'mine': creed(P.science, 0.25, p, 'industry'); creed(P.expand, 0.25, p, 'expansion'); break
+    }
+    if (b && (p.id === 'build' || p.id === 'site')) {
+      if (['walls', 'barracks', 'watchtower'].includes(b)) { L_('defence', p, 'defence'); creed(Math.max(0, P.war), 0.5, p, 'strength') }
+      else if (['farm', 'granary', 'stockpile', 'mill', 'well', 'pasture'].includes(b)) L_('food', p, 'food')
+      else if (['house', 'hut', 'apartment', 'lean_to'].includes(b)) L_('housing', p, 'housing')
+      else if (['library', 'university', 'lab', 'data_center'].includes(b)) { creed(P.science, 0.6, p, 'knowledge'); L_('research', p, 'study') }
+      else if (['temple', 'monument'].includes(b)) creed(P.faith, 0.7, p, 'faith')
+      else if (['market', 'dock', 'harbour'].includes(b)) { creed(P.trade, 0.5, p, 'trade'); L_('trade', p, 'trade') }
+      else if (b === 'campfire') L_('warmth', p, 'warmth')
+    }
+  }
+  if (favours.size) notes.add(`our creed favours ${listing([...favours])}`)
+  if (shuns.size) notes.add(`our creed shuns ${listing([...shuns])}`)
+  // my own mistakes: whatever failed last time waits a while
+  const last = lastChoice.get(a.id)
+  if (last) {
+    const failed = a.memories.filter((m) => m.t >= last.t && FAILED.test(m.text)).pop()
+    if (failed) {
+      const mine = avoid.get(a.id) ?? new Map()
+      avoid.set(a.id, mine)
+      const prev = mine.get(last.key)
+      mine.set(last.key, { until: w.time + (prev ? 2 : 1) * 24 * 60, why: failed.text })
+      notes.add(`my last attempt to ${last.what} failed (“${failed.text.slice(0, 70)}”), so it waits${prev ? ' longer this time' : ''}`)
+      if (prev && chance(0.5)) w.remember(a, `I keep failing to ${last.what}. I must prepare better first.`, 5)
+    }
+  }
+  const av = avoid.get(a.id)
+  if (av) for (const p of P0) { const x = av.get(projectKey(p)); if (x && x.until > w.time) p.score *= 0.25 }
+  s.notes.unshift(...notes)
 }
 
 function chooseProjects(s: Sit): Project[] {
@@ -683,17 +781,18 @@ export function nativeDecide(w: World, a: Agent): Decision {
   if ((night && a.energy < 70) || a.energy < 22) {
     const plan = [...body, S('sleep')]
     const thought = `${observation(s)} ${pick(['Time to rest; tomorrow is another long day.', 'My eyes are closing on their own.', 'Sleep now — the work will wait.'])}`
-    return { thought, feeling: a.energy < 22 ? 'exhausted' : 'drowsy', goal, say: s.partner && Math.hypot(s.partner.x - a.x, s.partner.y - a.y) < 6 && chance(0.3) ? `Goodnight, ${s.partner.name}.` : '', say_to: s.partner?.name ?? '', plan }
+    return { thought, feeling: a.energy < 22 ? 'exhausted' : 'drowsy', goal, say: s.partner && Math.hypot(s.partner.x - a.x, s.partner.y - a.y) < 6 && chance(0.3) ? `Goodnight, ${s.partner.name}.` : '', say_to: s.partner?.name ?? '', plan, reasoning: `Energy ${Math.round(a.energy)} at ${String(Math.floor(hourOf(w.time))).padStart(2, '0')}:00${body.length ? ` and ${body.map((x) => x.action).join(' and ')} first` : ''}. Nothing I could do tonight is worth more than rest — tomorrow's work depends on it.` }
   }
   if (s.campaign) {
     // under orders: eat and drink if need be, then back to the column
     const c = w.dip.campaigns.find((x) => x.units.includes(a.id))!
     const back = c.phase === 'return' ? [] : [S('war', w.tribeById(c.enemy)?.name ?? '', 0, c.kind)]
     const doing = c.kind === 'defend' ? 'I stand with the others to defend our home.' : c.phase === 'return' ? 'We are going home.' : 'I march with the others.'
-    return { thought: `${observation(s)} ${doing} ${pick(['I will not shame my people.', 'I only want to come home.', 'Let it be quick.'])}`, feeling: a.traits.neuroticism > 0.5 ? 'afraid' : 'grim', goal, say: '', say_to: '', plan: [...body, ...back] }
+    return { thought: `${observation(s)} ${doing} ${pick(['I will not shame my people.', 'I only want to come home.', 'Let it be quick.'])}`, feeling: a.traits.neuroticism > 0.5 ? 'afraid' : 'grim', goal, say: '', say_to: '', plan: [...body, ...back], reasoning: `I am under orders in the war against the ${w.tribeById(c.enemy)?.name}: ${c.phase}. Orders come before my own plans${body.length ? ', but I must eat and drink to fight' : ''}.` }
   }
 
   const P = chooseProjects(s)
+  weigh(s, P)
   P.sort((x, y) => y.score - x.score)
   // a little randomness between close options, so no two lives run the same
   let chosen = P[0]
@@ -710,6 +809,13 @@ export function nativeDecide(w: World, a: Agent): Decision {
     if (second) plan.push(...second.steps.slice(0, 2))
   }
   const steps = plan.slice(0, 6)
+  lastChoice.set(a.id, { key: projectKey(chosen), t: w.time, what: projectName(chosen) })
+  const top = P.slice(0, 4).map((p) => `${projectName(p)} ${p.score.toFixed(1)}`)
+  const reasoning = [
+    top.length ? `Weighed: ${top.join(' · ')}.` : '',
+    ...s.notes.slice(0, 4).map((n) => cap(n.replace(/\.$/, '')) + '.'),
+    `Chose to ${projectName(chosen)}: ${chosen.why}${chosen !== P[0] ? ' (a close second, for variety)' : ''}.`,
+  ].filter(Boolean).join(' ')
 
   // what to say aloud
   let say = '', sayTo = ''
@@ -727,7 +833,7 @@ export function nativeDecide(w: World, a: Agent): Decision {
   const c = coda(s)
   const heardBit = rep && rep.heard.length < 90 ? `${s.heard?.from ?? 'Someone'} said, “${rep.heard.replace(/[“”"]/g, '')}” ` : ''
   const thought = `${heardBit}${observation(s)} ${intent}${c ? ' ' + c : ''}`.replace(/\s+/g, ' ').trim()
-  return { thought: thought.slice(0, 400), feeling: feelingWord(s), goal, say, say_to: sayTo, plan: steps }
+  return { thought: thought.slice(0, 400), feeling: feelingWord(s), goal, say, say_to: sayTo, plan: steps, reasoning: reasoning.slice(0, 700) }
 }
 
 // ------------------------------------------------------------------ reflection

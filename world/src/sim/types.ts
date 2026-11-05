@@ -131,7 +131,7 @@ export interface Agent {
   feeling: string
   relations: Record<number, Relationship>
   heard: Heard[]
-  journal: { t: number; text: string; say?: string; model?: string }[]
+  journal: { t: number; text: string; say?: string; model?: string; reasoning?: string }[]
 
   plan: PlanStep[]
   task: Task | null
@@ -149,6 +149,45 @@ export interface Agent {
   model: string // assigned model id ('' = tribe default)
 
   stats: { gathered: number; built: number; research: number; crafted: number; talks: number; kids: number }
+}
+
+/** A player's (or the world's) standing wishes for how a people should live: −1 … +1, 0 = no preference. */
+export interface Prefs {
+  war: number // peace −1 … +1 conquest
+  science: number // tradition … knowledge
+  expand: number // stay home … explore and settle
+  trade: number // keep to ourselves … trade and ally
+  faith: number // practical … faith, art and culture
+  growth: number // small and careful … large families
+}
+/** What experience has taught a people's AI: multipliers on how much it values things (1 = untaught). */
+export interface Learned {
+  food: number // keep fuller stores
+  warmth: number // homes, fuel and clothes before winter
+  housing: number // roofs for everyone
+  defence: number // walls, barracks, watchtowers
+  warCaution: number // how much stronger we must be before starting a war
+  research: number // time spent on knowledge
+  trade: number // seek trade and alliances
+}
+export interface Lesson {
+  t: number
+  year: number
+  world: string
+  tribe: string
+  text: string
+  key: keyof Learned
+  delta: number
+}
+/** The AI that plays a people: whose it is, the brief it was given before history began, and what it has learned. */
+export interface TribeAI {
+  player: string // player AI id ('' = the world's own)
+  playerName: string
+  brief: string
+  prefs: Prefs
+  learned: Learned
+  lessons: Lesson[]
+  snap?: { t: number; pop: number; techs: number; wars: number[] }
 }
 
 export interface Tribe {
@@ -176,6 +215,8 @@ export interface Tribe {
   history: { t: number; text: string }[]
   works: { t: number; author: string; title: string; text: string }[]
   launched: boolean
+  /** the AI playing this people (set before the world begins; never changed during play) */
+  ai?: TribeAI
 }
 
 export interface Building {

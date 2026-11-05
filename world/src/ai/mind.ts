@@ -29,6 +29,7 @@ export interface FeedItem {
   sayTo: string
   plan: string
   model: string
+  reasoning?: string
 }
 
 export interface MindStats {
@@ -117,13 +118,17 @@ export class MindManager {
     if (!this.settings.enabled) return false
     return this.settings.nativeCrowd || this.isNative(this.settings.model) || (this.usable(this.settings.model) && this.stats.cost < this.settings.budgetUsd)
   }
+  /** In a players' game nobody may switch the minds off: the AIs play on. */
+  private get awake(): boolean {
+    return this.settings.enabled || !!this.world?.cfg.handsOff
+  }
   private get paidOk(): boolean {
-    return this.settings.enabled && this.stats.cost < this.settings.budgetUsd
+    return this.awake && this.stats.cost < this.settings.budgetUsd
   }
 
   /** Which mind is steering this person right now ('' = instinct alone). */
   mindOf(a: Agent): string {
-    if (!this.settings.enabled) return ''
+    if (!this.awake) return ''
     const m = this.modelFor(a)
     if (this.isNative(m)) return NATIVE_ID
     if (this.minds.has(a.id) && this.usable(m) && this.paidOk) return m
@@ -171,7 +176,7 @@ export class MindManager {
   /** Called every frame. Launches new requests when there's capacity. */
   tick() {
     const w = this.world
-    if (!w || !this.settings.enabled) return
+    if (!w || !this.awake) return
     if (w.time - this.mindsT > 2 * HOUR || this.minds.size === 0) this.refreshMinds(w)
     // chronicle once a year: a model historian if one is set up, otherwise our own
     if (this.settings.chronicler && yearOf(w.time) > this.lastChronicleYear) {
@@ -342,7 +347,7 @@ export class MindManager {
     a.thought = (d.thought || '').slice(0, 400)
     a.feeling = (d.feeling || a.feeling).slice(0, 40)
     if (d.goal && d.goal.length > 3) a.goal = d.goal.slice(0, 200)
-    a.journal.push({ t: w.time, text: a.thought, say: d.say || undefined, model })
+    a.journal.push({ t: w.time, text: a.thought, say: d.say || undefined, model, reasoning: d.reasoning ? String(d.reasoning).slice(0, 700) : undefined })
     if (a.journal.length > 30) a.journal.shift()
 
     const steps: PlanStep[] = (Array.isArray(d.plan) ? d.plan : [])
@@ -376,7 +381,7 @@ export class MindManager {
     const tribe = w.tribeById(a.tribeId)
     // the Genesis Mind thinks often and for everyone: only the telling moments reach the feed
     if (model === NATIVE_ID && !say && !steps.some((s) => s.action === 'diplomacy' || s.action === 'decree' || s.action === 'write' || s.action === 'found_tribe' || s.action === 'court') && Math.random() > 0.08) return
-    this.pushFeed(w, a, 'thought', a.thought, say, d.say_to || '', steps.map((s) => `${s.action}${s.target ? ' ' + s.target : ''}`).join(' → '), model, tribe?.name, tribe?.color)
+    this.pushFeed(w, a, 'thought', a.thought, say, d.say_to || '', steps.map((s) => `${s.action}${s.target ? ' ' + s.target : ''}`).join(' → '), model, tribe?.name, tribe?.color, d.reasoning)
   }
 
   private applyReflection(w: World, a: Agent, r: Reflection, model: string) {
@@ -440,11 +445,11 @@ export class MindManager {
     }
   }
 
-  private pushFeed(w: World, a: Agent, kind: FeedItem['kind'], thought: string, say: string, sayTo: string, plan: string, model: string, tribe?: string, color?: string) {
+  private pushFeed(w: World, a: Agent, kind: FeedItem['kind'], thought: string, say: string, sayTo: string, plan: string, model: string, tribe?: string, color?: string, reasoning?: string) {
     const t = w.tribeById(a.tribeId)
     this.feed.push({
       id: this.feedId++, realT: Date.now(), t: w.time, agentId: a.id, name: a.name, tribe: tribe ?? t?.name ?? '', color: color ?? t?.color ?? '#aaa',
-      kind, thought, say, sayTo, plan, model: this.label(model),
+      kind, thought, say, sayTo, plan, model: this.label(model), reasoning: reasoning ? String(reasoning).slice(0, 700) : undefined,
     })
     if (this.feed.length > 300) this.feed.splice(0, 100)
     this.emit()

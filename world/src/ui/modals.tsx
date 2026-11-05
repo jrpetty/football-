@@ -3,6 +3,7 @@ import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
 import { DEFAULT_MODEL, type Effort } from '../ai/client.ts'
 import { ProvidersSection, ProfileSelect } from './Providers.tsx'
+import { PlayersSection } from './Players.tsx'
 import { PRESETS } from '../sim/worldgen.ts'
 import { DEFAULT_CONFIG, type WorldConfig } from '../sim/world.ts'
 import { ERAS } from '../sim/tech.ts'
@@ -60,13 +61,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
 
       <ProvidersSection />
 
+      <PlayersSection />
+
       <div className="field">
         <label>Mixed minds — give each tribe its own model</label>
+        {w.cfg.handsOff && <div className="note" style={{ marginBottom: 8 }}>🔒 <b>Hands off.</b> Players' AIs are playing this world: every mind was chosen before history began, and nobody may change them now.</div>}
         <div className="hint" style={{ marginTop: 0, marginBottom: 8 }}>Pit models against each other and see which civilisation flourishes. (You can also set a model per person in their inspector.)</div>
         {w.tribes.filter((t) => t.alive).map((t) => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <span style={{ width: 160, color: t.color, fontWeight: 650 }}>{t.emblem} {t.name}</span>
-            <ProfileSelect className="input" style={{ padding: '6px 10px' }} value={t.model} onChange={(v) => { t.model = v; game.emit() }} emptyLabel={`Default (${mind.label(s.model)})`} />
+            {w.cfg.handsOff ? <span className="meta">{t.ai?.player ? `🧑 ${t.ai.playerName}'s AI · ` : ''}{mind.label(t.model || s.model)} 🔒</span> : <ProfileSelect className="input" style={{ padding: '6px 10px' }} value={t.model} onChange={(v) => { t.model = v; game.emit() }} emptyLabel={`Default (${mind.label(s.model)})`} />}
           </div>
         ))}
       </div>
@@ -140,7 +144,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
 
 export function NewWorldModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
   const [cfg, setCfg] = useState<WorldConfig>({ ...DEFAULT_CONFIG, seed: Math.floor(Math.random() * 1e9), name: randomName() })
-  const set = (p: Partial<WorldConfig>) => setCfg({ ...cfg, ...p })
+  const [picked, setPicked] = useState<string[]>([])
+  const set = (p: Partial<WorldConfig>) => { setCfg({ ...cfg, ...p }); if (p.tribes !== undefined && picked.length > p.tribes) setPicked(picked.slice(0, p.tribes)) }
   return (
     <Modal onClose={onClose} wide>
       <h2>🌍 Create a new world</h2>
@@ -195,9 +200,10 @@ export function NewWorldModal({ onClose, onCreated }: { onClose: () => void; onC
           <div className="hint">Births slow as the world nears this — keeps performance and AI cost in check.</div>
         </div>
       </div>
+      <PlayersSection picked={picked} setPicked={setPicked} max={cfg.tribes} />
       <div className="btn-row">
         <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={() => { game.newWorld(cfg); onClose(); onCreated?.() }}>Create world</button>
+        <button className="btn primary" onClick={() => { game.newWorld(cfg, picked); onClose(); onCreated?.() }}>{picked.length ? `Create world — ${picked.length} player AI${picked.length > 1 ? 's' : ''}, hands off` : 'Create world'}</button>
       </div>
     </Modal>
   )

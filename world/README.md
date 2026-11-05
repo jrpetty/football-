@@ -292,6 +292,64 @@ full model pipeline (prompt, request, reply, plan and the diplomacy action),
 with only the network replaced, and checks that it can swear an alliance and
 declare war.
 
+### Reasoning and learning from mistakes
+
+- **It shows its reasoning.** Every decision lists the options weighed and their
+  scores, what the people's creed favours or shuns, which lessons came into
+  play, what failed last time, and why the winner won. For example: *"Weighed:
+  research mathematics 6.8 · keep company 3.7 · build a town hall 3.2. Our creed
+  favours knowledge. Chose to research mathematics…"* Leaders also record the
+  wars they considered and why they held back. Model minds give their reasoning
+  too, as a required part of every reply. Open 🧠 Reasoning in the feed or the
+  inspector.
+- **It avoids its own recent failures.** Whatever a person just failed at
+  (missing stone, a refused trade, a far-off target) waits a while, and longer
+  if it fails again.
+- **Its people learn every year.** Each spring a people's AI looks back on the
+  year:
+  - Starvation, cold or homelessness raise the value it puts on stores, winter
+    readiness or homes.
+  - Losing a war it started teaches caution: next time it wants to be far
+    stronger.
+  - Being raided without walls teaches defence.
+  - Falling behind its neighbours teaches study, and trade that brought new
+    ideas teaches friendship.
+
+  Lessons show in the Tribes panel and the chronicle, and model minds read them
+  in their prompts.
+
+### Players and their own AIs
+
+Each player has their own AI, with a name, a mind (the Genesis Mind or any model)
+and a brief. In **New world → Players**, before history begins, you set it up:
+
+- **Write a brief.** For example: *"Be peaceful and curious. Trade with
+  everyone, never start a war, and push for science until we reach the stars."*
+- **Or start from a preset:** Peaceful scholar, Conqueror or Guardian.
+- **Tune the sliders:** Peace ↔ Conquest, Tradition ↔ Knowledge, Stay home ↔
+  Explore, Keep to ourselves ↔ Trade, Practical ↔ Faith & culture, and Small ↔
+  Big families.
+
+A model mind reads the brief word for word as its people's founding creed. The
+Genesis Mind reads it for what you want more or less of, adds that to the
+sliders, and shows you how it read it.
+
+**Hands off.** Once the world starts, each player's AI plays one people
+entirely on its own. Minds can't be changed for any person or tribe, the AIs
+can't be switched off, and nobody gives orders. You watch, follow and ask
+questions; asking changes nothing, because they won't remember it.
+
+**It carries what it learned into the next world.** Every lesson a player's AI
+learns is kept, a little damped, and it starts its next world with that
+experience. In testing:
+
+- A conqueror that lost a war it had started learned caution (×1.3) and built
+  walls, and in the next world it held back.
+- A peaceful scholar learned that trade brings ideas.
+
+Each AI's record (worlds played, lessons and what it values now) is shown in
+its editor, with a button to make it forget.
+
 Claude requests go through the official `@anthropic-ai/sdk` from the browser. Other providers use the standard `/chat/completions` endpoint in JSON mode, and any reasoning a local model writes out inline is stripped from its replies. Claude requests use
 adaptive thinking at a chosen effort, structured outputs (a strict JSON schema),
 a cached system prompt, and server-side refusal fallbacks where the model
