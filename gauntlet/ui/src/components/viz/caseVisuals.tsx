@@ -31,6 +31,7 @@ import { CodeTestBoard } from './CodeTestBoard.tsx';
 import { HorizonRungCard } from './HorizonRungCard.tsx';
 import { BusinessAnswerVisual } from './BusinessAnswerVisual.tsx';
 import { engineTestNames } from './closeup/engineNames.ts';
+import { PEOPLE_MONEY_VISUALS } from '../../business/docs/people-money/registry.ts';
 
 export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code' | 'horizon' | 'business';
 
@@ -165,6 +166,7 @@ const BY_ID: Record<string, CaseVisualFamily> = {
 
 /** Which visual (if any) draws cases of this test. */
 export function visualFamilyFor(testId: string, scorerType?: string, category?: string): CaseVisualFamily | null {
+  if (PEOPLE_MONEY_VISUALS[testId]) return PEOPLE_MONEY_VISUALS[testId]!.family;
   if (BY_ID[testId]) return BY_ID[testId]!;
   if (testId.startsWith('horizon.') || scorerType === 'ladder') return 'horizon';
   if (category === 'trick') return 'trick';
@@ -190,7 +192,7 @@ export function visualEntry(family: CaseVisualFamily): Entry<unknown> {
 
 /** Build and draw in one go; null when the data does not parse (caller falls back to the plain view). */
 export function renderCaseVisual(family: CaseVisualFamily, input: CaseVisualInput, mode: VizMode, ctx: VisualContext = {}): ReactNode | null {
-  const e = ENTRIES[family];
+  const e = (PEOPLE_MONEY_VISUALS[input.testId] as Entry<unknown> | undefined) ?? ENTRIES[family];
   let model: unknown = null;
   try {
     model = e.build(input);

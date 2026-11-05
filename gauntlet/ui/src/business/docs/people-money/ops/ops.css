@@ -1,0 +1,225 @@
+/* Board KPIs and the stock list. */
+.pm-memo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+.pm-memo b {
+  font-size: 1.05em;
+}
+.pm-memo ol {
+  margin: 0.3rem 0 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--ink-2);
+}
+.pm-sheet {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+  border-radius: 3px;
+  font-size: 0.74rem;
+  padding: 0.35rem 0.45rem 0.4rem;
+  min-width: 0;
+}
+.pm-sheet-t {
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+  text-transform: capitalize;
+}
+.pm-sheet table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.pm-sheet th,
+.pm-sheet td {
+  border: 1px solid #c9c4b6;
+  padding: 0.08rem 0.35rem;
+  white-space: nowrap;
+  text-align: left;
+}
+.pm-sheet thead th,
+.pm-sheet tbody th,
+.pm-sheet tr.names th {
+  background: #dcd8cc;
+  color: #555;
+  font-weight: 600;
+  text-align: center;
+  font-size: 0.9em;
+}
+.pm-sheet tr.names td {
+  font-weight: 700;
+  background: #ebe8df;
+}
+.pm-sheet tr.flag td {
+  background: rgba(217, 119, 6, 0.14);
+}
+.pm-sheet .pm-more {
+  color: var(--ink-3);
+  font-size: 0.9em;
+  margin-top: 0.2rem;
+}
+.pm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.55rem;
+}
+.pm-kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+}
+.pm-kpi .l {
+  font-size: 0.74rem;
+  color: var(--text-2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pm-kpi b {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.pm-kpi b.bad {
+  color: var(--bad-text);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.pm-kpi .c {
+  color: var(--good-text);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.pm-kpi .m {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.55rem;
+}
+.pm-kpi.ok {
+  border-color: color-mix(in srgb, var(--good) 45%, var(--border));
+}
+.pm-kpi.no {
+  border-color: color-mix(in srgb, var(--bad) 55%, var(--border));
+  background: var(--bad-soft);
+}
+
+.pm-suppliers {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--text-2);
+}
+.pm-stock {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  min-width: 46rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--paper-edge);
+}
+.pm-stock th {
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  padding: 0.4rem 0.5rem;
+  border-bottom: 2px solid var(--rule);
+  background: var(--paper-2);
+}
+.pm-stock td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px dashed var(--rule);
+  vertical-align: middle;
+}
+.pm-stock .r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pm-stock .sub {
+  display: block;
+  color: var(--ink-3);
+  font-size: 0.86em;
+  font-weight: 400;
+}
+.pm-stock .sub.no {
+  color: var(--ink-bad);
+  font-weight: 700;
+}
+.pm-stock .sub2 {
+  color: var(--ink-2);
+}
+.pm-stock td.big {
+  font-weight: 800;
+  font-size: 1.05em;
+}
+.pm-stock td.big.no {
+  color: var(--ink-bad);
+  background: rgba(220, 38, 38, 0.1);
+}
+.pm-stock td.big.warn {
+  color: var(--ink-warn);
+  background: rgba(217, 119, 6, 0.1);
+}
+.pm-stock td.big.ok {
+  color: var(--ink-good);
+}
+.pm-stock tr.bad td:first-child {
+  box-shadow: inset 4px 0 0 var(--ink-bad);
+}
+.pm-spark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 1.4rem;
+}
+.pm-spark i {
+  width: 0.45rem;
+  background: #6b7f99;
+  border-radius: 1px;
+}
+.pm-spark i.promo {
+  background: #d97706;
+}
+.pm-spark i.bh {
+  opacity: 0.45;
+}
+.pm-lowbar {
+  position: relative;
+  display: block;
+  width: 9rem;
+  height: 0.6rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.pm-lowbar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+.pm-lowbar i.safe {
+  background: rgba(100, 100, 100, 0.25);
+  border-right: 2px solid var(--ink-2);
+  z-index: 1;
+}
+.pm-lowbar i.lvl {
+  background: var(--ink-good);
+  opacity: 0.75;
+  height: 50%;
+  top: 25%;
+  z-index: 2;
+}
+.pm-lowbar i.lvl.below {
+  background: var(--ink-bad);
+}

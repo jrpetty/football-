@@ -1,0 +1,255 @@
+/* Payslips and the months × staff calendar. */
+.pm-pslist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+.pm-ps-btn {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.pm-ps-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.pm-ps {
+  font-size: 0.8rem;
+  padding: 0;
+  overflow: visible;
+}
+.pm-ps.has-err {
+  border-color: rgba(185, 28, 28, 0.55);
+}
+.pm-ps-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem 0.5rem;
+  background: #24476b;
+  color: #fff;
+  border-radius: 3px 3px 0 0;
+}
+.pm-ps-head small {
+  display: block;
+  font-size: 0.72em;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.pm-ps-head b {
+  display: block;
+  font-size: 1.08em;
+}
+.pm-ps-head span {
+  font-size: 0.86em;
+  opacity: 0.9;
+}
+.pm-ps-codes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.86em;
+  white-space: nowrap;
+}
+.pm-ps-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 0.9rem;
+  padding: 0.5rem 0.85rem 0.3rem;
+}
+.pm-ps-col h6 {
+  margin: 0 0 0.2rem;
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--rule);
+}
+.pm-ps-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.12rem 0;
+  color: var(--ink-2);
+}
+.pm-ps-row.total {
+  border-top: 1px solid var(--ink-2);
+  margin-top: 0.2rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.pm-fig {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  text-align: right;
+}
+.pm-fig .draft {
+  color: var(--ink);
+  padding: 0 0.15rem;
+}
+.pm-fig.circled .draft {
+  border: 2px solid var(--ink-bad);
+  border-radius: 50%;
+  padding: 0.05rem 0.45rem;
+  color: var(--ink-bad);
+  text-decoration: line-through;
+  transform: rotate(-3deg);
+}
+.pm-fig .fix {
+  color: var(--ink-good);
+  font-weight: 800;
+  font-size: 0.95em;
+}
+.pm-fig .given {
+  font-size: 0.86em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pm-fig .given.ok {
+  color: var(--ink-good);
+}
+.pm-fig .given.no {
+  color: var(--ink-bad);
+}
+.pm-ps-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 0.2rem 0.85rem 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 1.05em;
+}
+.pm-ps-ytd {
+  padding: 0 0.85rem 0.6rem;
+  color: var(--ink-3);
+  font-size: 0.82em;
+}
+.pm-ps-stamp {
+  padding: 0 0.85rem 0.65rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.pm-ps-stamp .pm-stamp {
+  transform: rotate(-3deg);
+}
+.pm-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  border-left: 3px solid var(--accent-line);
+  padding: 0.3rem 0.6rem;
+  background: var(--surface-3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.pm-cal {
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 0.8rem;
+}
+.pm-cal th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  padding-right: 0.5rem;
+}
+.pm-cal thead th {
+  text-align: center;
+  font-size: 0.75rem;
+  padding: 0 0.1rem;
+}
+.pm-cal thead th small {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.85em;
+}
+.pm-cal td {
+  padding: 0;
+  text-align: center;
+}
+.pm-cal td.none {
+  background: transparent;
+}
+.pm-cal-c {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 1.6rem;
+  border-radius: 4px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  font-weight: 900;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text-1);
+  font-style: normal;
+}
+.pm-cal-c.ok {
+  background: color-mix(in srgb, var(--good) 22%, var(--surface-3));
+  border-color: color-mix(in srgb, var(--good) 40%, var(--border));
+}
+.pm-cal-c.caught {
+  background: var(--good);
+  color: #fff;
+  border-color: var(--good);
+}
+.pm-cal-c.err {
+  background: color-mix(in srgb, var(--warn) 55%, var(--surface-3));
+  border-color: var(--warn);
+}
+.pm-cal-c.wrong {
+  background: var(--bad);
+  color: #fff;
+  border-color: var(--bad);
+}
+.pm-cal-c.on {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.pm-cal-c:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.pm-cal tr.ni td {
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+.pm-cal-key {
+  margin-top: 0.4rem;
+}
+.pm-cal-key .pm-cal-c {
+  width: 1.4rem;
+  height: 1.1rem;
+  font-size: 0.65rem;
+  cursor: default;
+}
+@media (max-width: 720px) {
+  .pm-pslist {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pm-calview {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .pm-calview {
+    grid-template-columns: minmax(0, max-content) minmax(0, 36rem);
+  }
+}
