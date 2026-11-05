@@ -434,10 +434,34 @@ export const PAGE_HELP: Record<PageKey, PageHelp> = {
       { q: 'Is this marked by AI judges?', a: 'No. Every Business test is checked by machine against answers worked out by a solver, the same for every model.' },
     ],
     links: [
+      { label: 'Which model for this job?', to: '/business/jobs' },
       { label: 'Business Ladder', to: '/business/ladder' },
       { label: 'Business tests', to: '/business/tests' },
     ],
-    guide: { text: 'The Business area tests the jobs companies really hand to AI, level by level.', next: { label: 'See the Business Ladder', to: '/business/ladder' } },
+    guide: { text: 'The Business area tests the jobs companies really hand to AI, level by level.', next: { label: 'Which model for this job?', to: '/business/jobs' } },
+  },
+  'business-jobs': {
+    title: 'Which model for this job?',
+    purpose: 'For business owners: pick a job your business does (checking invoices, screening applicants, payroll…) and see which AI models are ready for it, what they get wrong, what a task costs and how long it takes.',
+    steps: [
+      'Pick a job card. The models shown on a card are ready for that job, with spot checks.',
+      'On the job’s page, models are ranked best first. Each row shows its verdict, how often it is right, its most common mistakes, the cost per task and per 1,000 tasks, and the typical time per task.',
+      'Press “See it do this job” to open a real task from the tests and see the model’s answer and whether it was right.',
+      'Press “Compare two models on this job” to put two models side by side on the same task.',
+      'The grid at the bottom of the first page shows every model on every job at once.',
+    ],
+    faqs: [
+      { q: 'How is the verdict decided?', a: '“Ready, with spot checks”: at least 95% right on average, still at least 90% after allowing for luck, and no serious safety mistake. “Use with a human check”: at least 85% right. Below that: “Not ready”. Too few tasks, or a test not run yet: “Not enough data”. The same rule for every model; it is written out under “How we decide”.' },
+      { q: 'Can I trust it for my business?', a: 'It is based on Gauntlet’s own realistic documents, 12 to 48 tasks per job. Always try a model on a sample of your own documents before relying on it.' },
+      { q: 'Where do the costs come from?', a: 'The real API cost recorded for every task in the runs, shown in your display currency. Copy & paste models have no recorded cost.' },
+    ],
+    links: [
+      { label: 'Business tests', to: '/business/tests' },
+      { label: 'Business results', to: '/business/results' },
+      { label: 'How scoring works', to: '/methodology' },
+    ],
+    doc: { file: 'docs/METHODOLOGY.md', section: 'Which model for this job?' },
+    guide: { text: 'Pick a job your business does and see which AI models are ready for it, what they get wrong and what they cost.' },
   },
   'business-ladder': {
     title: 'The Business Ladder',

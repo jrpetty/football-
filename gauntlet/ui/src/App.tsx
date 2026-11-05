@@ -72,6 +72,7 @@ const BestPerTestPage = lazy(() => import('./manual-models/BestPerTestPage.tsx')
 const BusinessHomePage = lazy(() => import('./business/BusinessHomePage.tsx'));
 const BusinessLadderPage = lazy(() => import('./business/BusinessLadderPage.tsx'));
 const BusinessTestsPage = lazy(() => import('./business/BusinessTestsPage.tsx'));
+const BusinessJobsPage = lazy(() => import('./business/jobs/JobsPage.tsx'));
 const LifePage = lazy(() => import('./business/LifePage.tsx'));
 
 interface NavItem {
@@ -93,6 +94,7 @@ const NAV: NavItem[] = [
   { to: '/versus', label: 'Head to Head', icon: VersusIcon, match: (p) => p.startsWith('/versus') },
   { to: '/best', label: 'Best on each test', icon: Icon.Layers, match: (p) => p.startsWith('/best') },
   { to: '/business', label: 'Business home', icon: AreaIcon.Business, match: (p) => p === '/business' },
+  { to: '/business/jobs', label: 'Which model for this job?', icon: Icon.Target, match: (p) => p.startsWith('/business/jobs') },
   { to: '/business/ladder', label: 'Business Ladder', icon: LadderNavIcon, match: (p) => p.startsWith('/business/ladder') },
   { to: '/business/tests', label: 'Business tests', icon: Icon.Flask, match: (p) => p.startsWith('/business/tests') },
   { to: '/business/results', label: 'Business results', icon: Icon.Trophy, match: (p) => p.startsWith('/business/results') },
@@ -204,6 +206,7 @@ function resolve(parts: string[], query?: URLSearchParams): Resolved {
     if (!b) return { el: <BusinessHomePage />, crumb: 'Business' };
     if (b === 'ladder') return { el: <BusinessLadderPage />, crumb: 'Business Ladder' };
     if (b === 'tests') return { el: <BusinessTestsPage />, crumb: 'Business tests' };
+    if (b === 'jobs') return { el: <BusinessJobsPage />, crumb: 'Which model for this job?' };
     if (b === 'results') return { el: <LeaderboardPage key="business" area="business" />, crumb: 'Business results' };
   }
   if (a === 'life') return { el: <LifePage />, crumb: 'Everyday Life' };

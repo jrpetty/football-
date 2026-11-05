@@ -34,7 +34,7 @@ import {
 } from '../core/registry.ts';
 import type { CaseResult, RunEvent, RunRequest, TestDefinition } from '../core/types.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
-import { businessLadder, combinedLeaderboard, ladderBoard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
+import { businessJobs, businessLadder, combinedLeaderboard, ladderBoard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
 import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRuns, resumeRun, startRun, subscribe } from '../engine/runner.ts';
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
@@ -549,6 +549,8 @@ route('GET', '/api/ladders/:testId', ({ params }) => ladderBoard(params.testId!)
 route('GET', '/api/business-ladder', ({ query }) =>
   businessLadder(query.get('suite') || undefined, (query.get('models') ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
 );
+// "Which model for this job?": per business job, every model's verdict, cost, speed and common mistakes (config/business-jobs.json).
+route('GET', '/api/business-jobs', () => businessJobs());
 
 // "Why these scores?": every answer behind one leaderboard cell (read-only).
 route('GET', '/api/score-answers', ({ query }) => {

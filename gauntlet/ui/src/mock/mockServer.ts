@@ -760,6 +760,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
   if (a === 'arena') return (await import('./arenaMock.ts')).handleArena(method, parts.slice(1), body);
   if (a === 'versus') return (await import('./versusMock.ts')).handleVersus(method, parts.slice(1), q, body);
   if (a === 'business-ladder') return handleBusinessLadder(q, getRun(AREA_RUN_ID).results);
+  if (a === 'business-jobs') return (await import('./businessJobsMock.ts')).handleBusinessJobs([...getRun(AREA_RUN_ID).results, ...getRun(LADDER_DEMO_BUSINESS_RUN).results], (r) => (isLadderCloseUpTest(r.testId) ? ladderCloseUpResult(r, detailFor(r)) : detailFor(r)));
   if (a === 'grading') return (await import('./gradingMock.ts')).handleGrading(method, parts.slice(1), q, body);
   syncManualContestants();
   if (a === 'manual-models' || a === 'best-per-test') return (await import('./manualModelsMock.ts')).handleManualModels(method, parts, q, body);

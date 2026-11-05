@@ -1,6 +1,7 @@
-/** Client for the Business area (GET /api/business-ladder; docs/API.md). */
+/** Client for the Business area (GET /api/business-ladder and /api/business-jobs; docs/API.md). */
 import { request } from '../api.ts';
 import type { BusinessLadderView } from '../../../src/core/business-ladder.ts';
+import type { BusinessJobsView } from '../../../src/core/business-jobs.ts';
 
 export type * from '../../../src/core/business-ladder.ts';
 export type { PairedResult, PairedVerdict } from '../../../src/core/paired.ts';
@@ -14,4 +15,6 @@ export const businessApi = {
     const qs = q.toString();
     return request<BusinessLadderView>('GET', `/api/business-ladder${qs ? `?${qs}` : ''}`);
   },
+  /** "Which model for this job?": every model's verdict, cost, speed and common mistakes per business job. */
+  jobs: () => request<BusinessJobsView>('GET', '/api/business-jobs'),
 };

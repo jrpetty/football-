@@ -7,6 +7,8 @@ import { listRunIds, readManifest, readResults } from './store.ts';
 import { isScored } from './aggregate.ts';
 import { buildBusinessLadderView, ladderTestInfo, type BusinessLadderView, type ModelClusters } from '../core/business-ladder.ts';
 import { loadBusinessLadder } from '../core/business-ladder-file.ts';
+import { buildBusinessJobsView, type BusinessJobsView, type JobTestInfo } from '../core/business-jobs.ts';
+import { loadBusinessJobs } from '../core/business-jobs-file.ts';
 import { BUSINESS_SUITE_ID } from '../core/areas.ts';
 import { explainerFor } from '../core/explainers.ts';
 import { attachLadderHeights, ladderClimbs, ladderSpec, type LadderBoard } from '../core/ladders.ts';
@@ -180,4 +182,23 @@ export function businessLadder(suiteId?: string, compare: string[] = []): Busine
   }
   const models = board.filter((c) => clusters.has(c.id)).map((c) => ({ id: c.id, label: c.label, color: c.color, vendor: c.vendor, clusters: clusters.get(c.id)! }));
   return buildBusinessLadderView({ definition, suiteId: pool, tests, models, compare });
+}
+
+/**
+ * "Which model for this job?" (GET /api/business-jobs): every model's verdict, score, cost, speed and common
+ * mistakes per business job (config/business-jobs.json), from the same pooled, hash-checked results as the
+ * combined leaderboard. Pooled over every test, so the Business Ladders' ten-rung tests count too.
+ */
+export function businessJobs(): BusinessJobsView {
+  const config = loadBusinessJobs();
+  const byId = new Map(loadTests().map((t) => [t.definition.id, t.definition]));
+  const tests: Record<string, JobTestInfo> = {};
+  for (const id of new Set(config.jobs.flatMap((j) => j.tests))) {
+    const d = byId.get(id);
+    tests[id] = d ? { name: d.name, exists: true, kind: d.kind === 'program' ? 'program' : 'prompt', cases: d.kind === 'prompt' ? d.cases.length : d.seeds.length } : { name: id, exists: false };
+  }
+  const { board, results } = combinedPool('all');
+  const baseline = (id: string) => /(^|[-_.])(random|baseline)([-_.]|$)/i.test(id);
+  const models = board.filter((c) => !baseline(c.id)).map((c) => ({ id: c.id, label: c.label, color: c.color, vendor: c.vendor }));
+  return buildBusinessJobsView({ config, tests, models, results });
 }

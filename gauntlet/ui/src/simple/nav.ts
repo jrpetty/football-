@@ -51,6 +51,7 @@ export type PageKey =
   | 'present'
   | 'business'
   | 'business-ladder'
+  | 'business-jobs'
   | 'business-tests'
   | 'business-results'
   | 'life'
@@ -116,6 +117,7 @@ export function pageKeyFor(path: string): PageKey {
     case 'business':
       if (!b) return 'business';
       if (b === 'ladder') return 'business-ladder';
+      if (b === 'jobs') return 'business-jobs';
       if (b === 'tests') return 'business-tests';
       if (b === 'results') return 'business-results';
       return 'unknown';
@@ -207,9 +209,10 @@ export const SECTIONS: NavSection[] = [
     area: 'business',
     to: '/business',
     blurb: 'The jobs companies hand to AI, from reading one invoice to running a department: the Business Ladder.',
-    keys: ['business', 'business-ladder', 'business-tests', 'business-results'],
+    keys: ['business', 'business-jobs', 'business-ladder', 'business-tests', 'business-results'],
     tabs: [
       { label: 'Business home', to: '/business', keys: ['business'], hint: 'What the Business area measures' },
+      { label: 'Which model for this job?', to: '/business/jobs', keys: ['business-jobs'], hint: 'Pick a job your business does and see which models are ready for it' },
       { label: 'Business Ladder', to: '/business/ladder', keys: ['business-ladder'], hint: 'How far up the five levels each model climbs' },
       { label: 'Business tests', to: '/business/tests', keys: ['business-tests'], hint: 'Every business test, by scenario and level' },
       { label: 'Business results', to: '/business/results', keys: ['business-results'], hint: 'The Business leaderboard (never part of the Gauntlet Index)' },
@@ -368,6 +371,7 @@ export const ROUTE_EXAMPLES: Record<Exclude<PageKey, 'unknown'>, string> = {
   present: '/present',
   business: '/business',
   'business-ladder': '/business/ladder',
+  'business-jobs': '/business/jobs',
   'business-tests': '/business/tests',
   'business-results': '/business/results',
   life: '/life',
