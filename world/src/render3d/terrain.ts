@@ -12,6 +12,9 @@ import type { World } from '../sim/world.ts'
 import { layerColor } from '../render/renderer.ts'
 
 export const RES = 2 // terrain vertices per tile edge
+/** structures that sit on the water or follow the land as it is */
+const NO_PAD = new Set(['dock', 'harbour', 'offshore_rig', 'fish_farm', 'road', 'farm', 'pasture', 'walls', 'mine', 'oil_well', 'evaporation_ponds'])
+const smooth = (t: number) => t * t * (3 - 2 * t)
 
 export function landH(e: number): number {
   return 0.12 + Math.pow(Math.max(0, e), 1.45) * 7.5
@@ -25,9 +28,16 @@ export class Heights {
   H: number
   ground: Float32Array // per tile, at the tile centre
   level: Float32Array // water surface per tile (NaN for dry land)
+  /** building pads: per terrain vertex, how far the ground was cut or filled, and how flat it now is (0..1) */
+  padD: Float32Array
+  padW: Float32Array
+  private GW: number
   constructor(w: World) {
     this.W = w.W
     this.H = w.H
+    this.GW = w.W * RES + 1
+    this.padD = new Float32Array(this.GW * (w.H * RES + 1))
+    this.padW = new Float32Array(this.GW * (w.H * RES + 1))
     this.ground = new Float32Array(w.W * w.H)
     this.level = new Float32Array(w.W * w.H).fill(NaN)
     for (let i = 0; i < w.W * w.H; i++) {
@@ -64,8 +74,19 @@ export class Heights {
     const tx = clamp(Math.floor(x), 0, this.W - 1), ty = clamp(Math.floor(y), 0, this.H - 1)
     return this.ground[ty * this.W + tx]
   }
-  /** Bilinear ground height at world (x, z) — the same surface the mesh draws. */
+  /** Ground height at world (x, z) — the same surface the mesh draws, building pads included. */
   at(x: number, z: number): number {
+    const g = this.natural(x, z)
+    const fx = clamp(x * RES, 0, this.W * RES), fz = clamp(z * RES, 0, this.H * RES)
+    const i0 = Math.min(Math.floor(fx), this.W * RES - 1), j0 = Math.min(Math.floor(fz), this.H * RES - 1)
+    const k = j0 * this.GW + i0
+    const P = this.padD
+    if (P[k] === 0 && P[k + 1] === 0 && P[k + this.GW] === 0 && P[k + this.GW + 1] === 0) return g
+    const tx = fx - i0, tz = fz - j0
+    return g + (P[k] * (1 - tx) + P[k + 1] * tx) * (1 - tz) + (P[k + this.GW] * (1 - tx) + P[k + this.GW + 1] * tx) * tz
+  }
+  /** The land as it was before anyone dug or filled it. */
+  natural(x: number, z: number): number {
     const fx = x - 0.5, fz = z - 0.5
     const x0 = Math.floor(fx), z0 = Math.floor(fz)
     const tx = fx - x0, tz = fz - z0
@@ -242,7 +263,7 @@ export class Terrain {
       const k = j * GW + i
       const g = hs.at(x, z)
       // a touch of roughness on land so slopes catch the light unevenly
-      const rough = g > 0.2 ? (hash2(i, j, 13) - 0.5) * 0.06 * Math.min(1, g) : 0
+      const rough = g > 0.2 ? (hash2(i, j, 13) - 0.5) * 0.06 * Math.min(1, g) * (1 - hs.padW[k]) : 0
       pos[k * 3] = x
       pos[k * 3 + 1] = g + rough
       pos[k * 3 + 2] = z
@@ -588,6 +609,65 @@ export class Terrain {
       this.uniforms.uMode.value = 2
     }
     this.overTex.needsUpdate = true
+  }
+
+  /**
+   * Cut and fill: level a terrace under every building, blending into the slope
+   * around it, so nothing stands on a tall bare plinth. Returns true if the land changed.
+   */
+  levelPads(w: World): Set<number> {
+    const hs = this.heights
+    const GW = w.W * RES + 1, GH = w.H * RES + 1
+    const target = new Float32Array(GW * GH).fill(NaN)
+    const weight = new Float32Array(GW * GH)
+    const M = 0.75 // blend margin, tiles
+    for (const b of w.buildings) {
+      const def = BUILDINGS[b.type]
+      if (def.walkable || NO_PAD.has(b.type)) continue
+      const S = def.size
+      // the pad sits at the mean of the land under it, never below the water
+      let sum = 0, n = 0, wet = false
+      for (let j = b.y * RES; j <= (b.y + S) * RES; j++) for (let i = b.x * RES; i <= (b.x + S) * RES; i++) {
+        sum += hs.natural(i / RES, j / RES); n++
+      }
+      for (let dy = 0; dy < S; dy++) for (let dx = 0; dx < S; dx++) if (w.inBounds(b.x + dx, b.y + dy) && !Number.isNaN(hs.level[w.idx(b.x + dx, b.y + dy)])) wet = true
+      if (wet) continue
+      const pad = sum / n
+      const i0 = Math.max(0, Math.floor((b.x - M) * RES)), i1 = Math.min(GW - 1, Math.ceil((b.x + S + M) * RES))
+      const j0 = Math.max(0, Math.floor((b.y - M) * RES)), j1 = Math.min(GH - 1, Math.ceil((b.y + S + M) * RES))
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const x = i / RES, z = j / RES
+        const dx = Math.max(b.x - x, 0, x - (b.x + S)), dz = Math.max(b.y - z, 0, z - (b.y + S))
+        const d = Math.hypot(dx, dz)
+        if (d >= M) continue
+        const wt = d === 0 ? 1 : 1 - smooth(d / M)
+        const k = j * GW + i
+        if (wt > weight[k]) { weight[k] = wt; target[k] = pad }
+      }
+    }
+    const touched = new Set<number>()
+    const pos = this.geom.getAttribute('position') as THREE.BufferAttribute
+    for (let k = 0; k < GW * GH; k++) {
+      const wt = weight[k]
+      const i = k % GW, j = (k / GW) | 0
+      const nat = hs.natural(i / RES, j / RES)
+      const d = wt > 0 ? (target[k] - nat) * wt : 0
+      if (Math.abs(d - hs.padD[k]) < 1e-4 && Math.abs(wt - hs.padW[k]) < 1e-4) continue
+      hs.padD[k] = d
+      hs.padW[k] = wt
+      const g = nat + d
+      const rough = g > 0.2 ? (hash2(i, j, 13) - 0.5) * 0.06 * Math.min(1, g) * (1 - wt) : 0
+      pos.setY(k, g + rough)
+      // the 32-tile chunk this vertex belongs to, so the trees there are replanted on the new ground
+      const tx = Math.min(w.W - 1, Math.floor(i / RES)), ty = Math.min(w.H - 1, Math.floor(j / RES))
+      touched.add(((ty >> 5) << 8) | (tx >> 5))
+    }
+    if (touched.size) {
+      pos.needsUpdate = true
+      this.geom.computeVertexNormals()
+      this.geom.computeBoundingSphere()
+    }
+    return touched
   }
 
   update(t: number, season: number) {

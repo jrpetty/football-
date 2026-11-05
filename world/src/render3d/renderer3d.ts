@@ -88,6 +88,9 @@ export class Renderer3D {
   private boats = new Map<number, THREE.Group>()
   /** how far each body is drawn from where the simulation puts it, so none overlap */
   private offsets = new Map<number, { x: number; y: number }>()
+  private padVersion = -1
+  private camLift = 0
+  private padT = -1e9
   private particles = new Particles()
   private weather = new Weather()
   private clouds!: Clouds
@@ -264,9 +267,21 @@ export class Renderer3D {
     const cx = gx + Math.sin(this.yaw) * Math.cos(p) * d
     const cz = gz + Math.cos(this.yaw) * Math.cos(p) * d
     let cy = this.groundY + Math.sin(p) * d
-    // never dip into a hillside
-    const floor = this.terrain.heights.surface(cx, cz) + 1.2
-    if (cy < floor) cy = floor
+    // never dip into a hillside, and never let a ridge stand between the eye and
+    // what it is looking at: rise until the line of sight clears the land
+    const hs = this.terrain.heights
+    let need = hs.surface(cx, cz) + 1.2
+    for (let k = 1; k <= 12; k++) {
+      const f = k / 12
+      if (f < 0.15) continue
+      // the line of sight must pass a little above the land (the margin grows toward the eye)
+      const h = hs.surface(gx + (cx - gx) * f, gz + (cz - gz) * f) + 0.35 * f
+      need = Math.max(need, this.groundY + (h - this.groundY) / f)
+    }
+    // ease the lift so the camera glides over hills instead of jumping
+    const lift = Math.max(0, need - cy)
+    this.camLift += (lift - this.camLift) * (lift > this.camLift ? 0.35 : 0.08)
+    cy += Math.max(this.camLift, lift * 0.85)
     this.camera.position.set(cx, cy, cz)
     this.camera.lookAt(gx, this.groundY, gz)
     this.camera.near = Math.max(0.1, d * 0.02)
@@ -562,7 +577,16 @@ export class Renderer3D {
     const night = clamp((0.62 - day) / 0.5, 0, 1)
     this.updateSky(h, day, night, d, w.weather, t)
     this.terrain.update(t, w.season)
+    // new buildings level their ground (at most twice a second)
+    if (w.buildVersion !== this.padVersion && performance.now() - this.padT > 500) {
+      this.padVersion = w.buildVersion
+      this.padT = performance.now()
+      for (const key of this.terrain.levelPads(w)) this.flora.markDirty32(key)
+    }
     wind.uTime.value = t
+    wind.uCam.value.copy(this.camera.position)
+    wind.uLook.value.set(this.cam.x, this.groundY + 0.2, this.cam.y)
+    wind.uCut.value = this.dist < 26 ? clamp(this.dist * 0.14, 0.55, 2.4) : 0
     wind.uWind.value = w.weather === 'storm' ? 3 : w.weather === 'rain' || w.weather === 'snow' ? 1.7 : 1
 
     // --- buildings

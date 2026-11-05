@@ -188,6 +188,10 @@ spreads out instead of stacking into one body. Sleepers go indoors, smiths
 work inside their forges, and miners vanish underground. Trees beside a
 building grow smaller and lean away, so no crown pokes through a roof. Water
 meets the shore along the ground's own curve instead of cutting across it.
+Builders cut and fill: every building stands on a levelled terrace blended into
+the slope around it, never on a tall bare plinth. The camera rises over any ridge
+between it and what it is looking at, and leaves in the way dissolve into a
+clean see-through window.
 
 **Lives and lineages.** Personalities use the Big Five plus intelligence and
 strength. Everyone looks like an individual:
@@ -264,9 +268,13 @@ thinks with it.
 - **Leading.** Leaders set values, beliefs and laws that suit their temperament
   and their land, so peoples grow apart in culture. They practise statecraft:
   trade, alliances, gifts, tribute, and suing for peace when a war goes badly.
-  For hard leaders, war is a real temptation, driven by hunger beside full
-  granaries, old insults, ore they cannot find at home, or a world with no room
-  left.
+  War is a real temptation, driven by hunger beside full granaries, old insults,
+  ore they cannot find at home, a weak neighbour with good land, or a world with
+  no room left. Hard leaders give in to it most readily. Even a gentle leader is
+  pushed by popular anger, which grows from border incidents (stolen herds, a
+  hunter found dead, a dammed stream). Reach grows with horses, ships and rails.
+  A peace holds for two years, and a people that has fought recently has little
+  appetite for more.
 - **Talking.** It replies to what people say to it, makes small talk in its own
   voice (warm, blunt, anxious, dreamy or steady), announces what it is about to
   do, and brings suggestions to the leader, who may make them law.
@@ -275,8 +283,14 @@ thinks with it.
   historian is set up, it writes each year's chapter of the chronicle.
 
 In head-to-head runs from the same start, worlds run by the Genesis Mind grow
-several times larger and advance far faster than instinct alone. The peoples
-trade and ally, and they sometimes go to war.
+several times larger and advance far faster than instinct alone. Over forty
+years a typical world sees a handful of wars between its own peoples, with trade
+pacts, alliances and tribute in between.
+
+Model-led peoples conduct the same diplomacy. A test drives a leader through the
+full model pipeline (prompt, request, reply, plan and the diplomacy action),
+with only the network replaced, and checks that it can swear an alliance and
+declare war.
 
 Claude requests go through the official `@anthropic-ai/sdk` from the browser. Other providers use the standard `/chat/completions` endpoint in JSON mode, and any reasoning a local model writes out inline is stripped from its replies. Claude requests use
 adaptive thinking at a chosen effort, structured outputs (a strict JSON schema),

@@ -17,6 +17,7 @@ import { BUILDINGS } from './buildings.ts'
 import { ITEMS, invAdd, invCount, type Item } from './data.ts'
 import { DAY, HOUR, YEAR } from './time.ts'
 import type { Agent, Tribe } from './types.ts'
+import { eraOf } from './tech.ts'
 import type { World } from './world.ts'
 
 export type PactKind = 'alliance' | 'trade' | 'tribute'
@@ -144,6 +145,7 @@ export function diplomacyDaily(w: World) {
   for (const a of live) for (const b of live) {
     if (a.id >= b.id || !met(w, a.id, b.id)) continue
     drift(w, a, b)
+    incident(w, a, b)
   }
   pactsDaily(w, live)
   for (const t of live) leaderDecides(w, t)
@@ -188,6 +190,43 @@ export function food(w: World, t: Tribe): number {
   let f = 0
   for (const k in t.storage) if (ITEMS[k as Item]?.food) f += t.storage[k as Item] ?? 0
   return f / Math.max(1, w.members(t.id).length)
+}
+
+/**
+ * Border incidents: neighbours who live close, and closer as the land fills,
+ * rub against each other — stolen herds, a hunter killed, a disputed spring.
+ * Each leaves a grudge; allies and trading partners usually settle them.
+ */
+function incident(w: World, a: Tribe, b: Tribe) {
+  if (warBetween(w, a.id, b.id)) return
+  const dist = Math.hypot(a.center.x - b.center.x, a.center.y - b.center.y)
+  // horses, ships and rails carry quarrels further
+  const reach = 40 + Math.max(eraOf(w.techs(a.id)), eraOf(w.techs(b.id))) * 12
+  if (dist > reach) return
+  const full = w.living.length / Math.max(1, w.cfg.popCap)
+  const p = 0.004 + (reach - dist) / reach * 0.008 + Math.max(0, full - 0.7) * 0.02
+  if (!w.rng.chance(p)) return
+  const friends = pactBetween(w, a.id, b.id, 'alliance') ? 0.75 : pactBetween(w, a.id, b.id, 'trade') ? 0.4 : 0
+  const [x, y] = w.rng.chance(0.5) ? [a, b] : [b, a] // x wrongs y
+  if (w.rng.chance(friends)) {
+    w.log('tribe', `A quarrel between ${x.name} and ${y.name} herders is settled by their elders before blood is spilled.`, '🤝', undefined, y.id)
+    w.shiftTribeRelation(a.id, b.id, -1)
+    return
+  }
+  const what = w.rng.pick([
+    `${x.name} herders drive off cattle belonging to the ${y.name}`,
+    `a ${y.name} hunter is found dead in the hills, and the ${x.name} are blamed`,
+    `the ${x.name} dam a stream the ${y.name} drink from`,
+    `${x.name} woodcutters fell a grove the ${y.name} hold sacred`,
+    `a ${x.name} raiding party steals grain from a ${y.name} farm`,
+    `${x.name} and ${y.name} fishermen come to blows over a fishing ground`,
+    `the ${x.name} build on land the ${y.name} call their own`,
+  ])
+  const k = key(a.id, b.id)
+  w.dip.grievance[k] = (w.dip.grievance[k] ?? 0) + 10
+  w.shiftTribeRelation(a.id, b.id, -5)
+  w.log('tribe', `Border trouble: ${what}.`, '😠', undefined, y.id)
+  for (const m of w.members(y.id)) if (w.rng.chance(0.4)) w.remember(m, `Border trouble: ${what}.`, 5)
 }
 
 /** Daily drift of opinion between two peoples. */
@@ -430,7 +469,7 @@ export function makePeace(w: World, war: War, why: string) {
     terms = `The ${loser.name} must pay the ${winner.name} tribute for ${hard ? 'four' : 'two'} years.`
   }
   w.shiftTribeRelation(war.a, war.b, 15)
-  w.dip.grievance[key(war.a, war.b)] = (w.dip.grievance[key(war.a, war.b)] ?? 0) + 30 + (war.dead[war.a] ?? 0) * 5 + (war.dead[war.b] ?? 0) * 5
+  w.dip.grievance[key(war.a, war.b)] = (w.dip.grievance[key(war.a, war.b)] ?? 0) + 15 + ((war.dead[war.a] ?? 0) + (war.dead[war.b] ?? 0)) * 2
   w.log('tribe', `PEACE between the ${A.name} and the ${Bt.name} after ${Math.max(1, Math.round((w.time - war.since) / DAY))} days of war. ${why} ${terms}`, '🕊️', undefined, war.a)
   for (const m of [...w.members(war.a), ...w.members(war.b)]) w.remember(m, `The war between the ${A.name} and the ${Bt.name} is over. ${terms}`, 8)
 }
@@ -657,11 +696,12 @@ function leaderDecides(w: World, t: Tribe) {
   if (!leader?.alive) return
   // an AI-minded leader mostly decides for themself through the "diplomacy" action
   if (w.aiLeads(leader) && w.rng.chance(0.8)) return
-  const aggression = (1 - leader.traits.agreeableness) * 0.6 + leader.traits.extraversion * 0.15 + (food(w, t) < 2 ? 0.3 : 0)
+  const temperament = (1 - leader.traits.agreeableness) * 0.6 + leader.traits.extraversion * 0.15 + (food(w, t) < 2 ? 0.3 : 0)
   const mine = strength(w, t.id)
   for (const o of w.tribes) {
     if (!o.alive || o.id === t.id || !met(w, t.id, o.id)) continue
     const r = w.tribeRelation(t.id, o.id)
+    const aggression = inTruce(w, t.id, o.id) ? 0 : Math.max(temperament, popularAnger(w, t.id, o.id))
     const s = mine / Math.max(1, strength(w, o.id))
     const war = warBetween(w, t.id, o.id)
     const common = enemies(w, t.id).some((e) => enemies(w, o.id).includes(e))
@@ -671,18 +711,19 @@ function leaderDecides(w: World, t: Tribe) {
     const allied = !!pactBetween(w, t.id, o.id, 'alliance')
     const goal: War['goal'] = s > 2.2 && w.members(o.id).length < w.members(t.id).length * 0.6 ? 'conquest' : 'raid'
     // grudges: deep enough dislike, an edge in strength, a hard leader
-    if (!allied && ((r < -30 && s > 1.2 && aggression > 0.45) || (r < -45 && s > 0.85 && aggression > 0.35) || hungryRaid) && w.rng.chance(hungryRaid ? 0.04 : 0.03)) {
+    const eager = appetite(w, t.id)
+    if (!allied && ((r < -30 && s > 1.2 && aggression > 0.45) || (r < -45 && s > 0.85 && aggression > 0.35) || hungryRaid) && w.rng.chance((hungryRaid ? 0.04 : 0.03) * eager)) {
       declareWar(w, t.id, o.id, hungryRaid ? 'driven by hunger to take what their neighbours have' : 'after years of bad blood', goal)
       return
     }
     // resources: they hold ore we need and cannot find
     const want = wantedOre(w, t.id, o.id)
-    if (!allied && want && r < 10 && s > 1.3 && aggression > 0.35 && w.rng.chance(0.012)) {
+    if (!allied && want && r < 10 && s > 1.3 && aggression > 0.35 && w.rng.chance(0.012 * eager)) {
       declareWar(w, t.id, o.id, `to seize their ${want}`, goal)
       return
     }
     // expansion: a strong, ambitious state and a weak neighbour it does not love
-    if (!allied && s > 1.8 && r < 5 && aggression > 0.5 && w.techs(t.id).has('code_of_laws') && w.rng.chance(0.01)) {
+    if (!allied && s > 1.8 && r < 5 && aggression > 0.5 && w.techs(t.id).has('code_of_laws') && w.rng.chance(0.01 * eager)) {
       declareWar(w, t.id, o.id, 'to bring their lands under its rule', 'conquest')
       return
     }
@@ -694,6 +735,32 @@ function leaderDecides(w: World, t: Tribe) {
     if (canTrade && r > -8 && !pactBetween(w, t.id, o.id, 'trade') && w.rng.chance(w.techs(t.id).has('currency') ? 0.06 : 0.025)) { propose(w, t.id, o.id, 'trade', leader); return }
     if (r < -20 && r > -50 && leader.traits.agreeableness > 0.6 && w.rng.chance(0.03)) { propose(w, t.id, o.id, 'gift', leader); return }
   }
+}
+
+/** War-weariness: a people that has fought recently has little appetite for more (1 = fresh, → 0 = exhausted). */
+export function appetite(w: World, t: number): number {
+  const recent = w.dip.wars.filter((x) => (x.a === t || x.b === t) && w.time - x.since < 8 * YEAR).length
+  return 1 / (1 + recent * recent * 0.8)
+}
+
+/** A peace is kept for a while: no new war between the same peoples for two years. */
+export function inTruce(w: World, a: number, b: number): boolean {
+  return w.dip.wars.some((x) => x.ended && ((x.a === a && x.b === b) || (x.a === b && x.b === a)) && w.time - x.ended < 2 * YEAR)
+}
+
+/** How hard a people pushes its leader toward war with another, whatever the leader's own temper. */
+export function popularAnger(w: World, me: number, them: number): number {
+  const r = w.tribeRelation(me, them)
+  const g = w.dip.grievance[key(me, them)] ?? 0
+  // land hunger: in a full world, a close neighbour's fields look like the answer
+  const A = w.tribeById(me), Bt = w.tribeById(them)
+  let land = 0
+  if (A && Bt && r < 15) {
+    const reach = 40 + eraOf(w.techs(me)) * 12
+    const full = w.living.length / Math.max(1, w.cfg.popCap)
+    if (Math.hypot(A.center.x - Bt.center.x, A.center.y - Bt.center.y) < reach) land = Math.max(0, full - 0.82) * 3
+  }
+  return Math.min(0.75, Math.max(0, (-r - 35) / 55) + Math.max(0, (g - 25) / 90) + land)
 }
 
 /** An ore this people needs but only knows of near the other people. */

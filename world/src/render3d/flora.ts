@@ -249,7 +249,11 @@ function kinds(): Map<number, PartDef[]> {
 
 // ---------------------------------------------------------------- materials
 
-export const wind = { uTime: { value: 0 }, uWind: { value: 1 } }
+export const wind = {
+  uTime: { value: 0 }, uWind: { value: 1 },
+  // the see-through window: leaves between the eye and what it looks at dissolve
+  uCam: { value: new THREE.Vector3() }, uLook: { value: new THREE.Vector3() }, uCut: { value: 0 },
+}
 
 function swayMaterial(sway: number, instTint: boolean): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.88, metalness: 0 })
@@ -258,7 +262,26 @@ function swayMaterial(sway: number, instTint: boolean): THREE.MeshStandardMateri
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = wind.uTime
       sh.uniforms.uWind = wind.uWind
-      sh.vertexShader = 'uniform float uTime;\nuniform float uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      sh.uniforms.uCam = wind.uCam
+      sh.uniforms.uLook = wind.uLook
+      sh.uniforms.uCut = wind.uCut
+      sh.fragmentShader = 'uniform vec3 uCam;\nuniform vec3 uLook;\nuniform float uCut;\nvarying vec3 vXr;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        if (uCut > 0.0) {
+          vec3 seg = uLook - uCam;
+          float L = length(seg);
+          vec3 dir = seg / L;
+          float t = dot(vXr - uCam, dir);
+          if (t > 0.0 && t < L - 0.25) {
+            float d = length(vXr - (uCam + dir * t));
+            float r = uCut * mix(0.45, 1.0, t / L);
+            // a clean round window with a fine ordered-dither rim, not a speckle
+            float k = 1.0 - smoothstep(r * 0.8, r, d);
+            vec2 q = mod(floor(gl_FragCoord.xy), 4.0);
+            float bayer = (mod(q.x + q.y * 2.0, 4.0) * 4.0 + mod(q.x * 2.0 + q.y, 4.0)) / 16.0;
+            if (k > 0.97 || bayer < k) discard;
+          }
+        }`)
+      sh.vertexShader = 'uniform float uTime;\nuniform float uWind;\nvarying vec3 vXr;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         #ifdef USE_INSTANCING
           vec3 ip = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
         #else
@@ -267,7 +290,12 @@ function swayMaterial(sway: number, instTint: boolean): THREE.MeshStandardMateri
         float sw = ${sway.toFixed(2)} * uWind * max(0.0, transformed.y) * max(0.0, transformed.y);
         float ph = uTime * (1.3 + fract(ip.x * 0.37) * 0.6) + ip.x * 0.31 + ip.z * 0.23;
         transformed.x += (sin(ph) * 0.05 + sin(ph * 2.7) * 0.015) * sw;
-        transformed.z += (cos(ph * 0.8) * 0.035) * sw;`)
+        transformed.z += (cos(ph * 0.8) * 0.035) * sw;`).replace('#include <project_vertex>', `#include <project_vertex>
+        #ifdef USE_INSTANCING
+          vXr = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+        #else
+          vXr = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        #endif`)
     }
     m.customProgramCacheKey = () => 'sway' + sway.toFixed(2)
   }

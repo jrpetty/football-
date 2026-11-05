@@ -13,7 +13,7 @@ import { FOOD_ITEMS, invCount, invTotal, type Item } from '../sim/data.ts'
 import { BUILDINGS, RECIPES, type BuildingType } from '../sim/buildings.ts'
 import { TECH_BY_ID, RESEARCH_PRIORITY, eraOf, ERAS } from '../sim/tech.ts'
 import { foodStep, gatherFor, resolve, instinctStep } from '../sim/instinct.ts'
-import { enemies, met, warBetween, pactBetween, strength, fighters, food as foodPerHead, wantedOre, militaryTier, type War } from '../sim/diplomacy.ts'
+import { enemies, met, warBetween, pactBetween, strength, fighters, food as foodPerHead, wantedOre, militaryTier, popularAnger, inTruce, appetite, type War } from '../sim/diplomacy.ts'
 import { isNight, hourOf, DAY, YEAR, SEASONS } from '../sim/time.ts'
 import { CARRY_CAP } from '../sim/world.ts'
 import type { Decision, Reflection } from './prompts.ts'
@@ -227,7 +227,7 @@ function statecraft(s: Sit): Project | null {
   const options: Project[] = []
   for (const o of w.tribes) {
     if (!o.alive || o.id === t.id || !met(w, t.id, o.id) || warBetween(w, t.id, o.id)) continue
-    const truce = w.dip.wars.some((x) => x.ended && ((x.a === t.id && x.b === o.id) || (x.a === o.id && x.b === t.id)) && w.time - x.ended < 1.5 * YEAR)
+    const truce = inTruce(w, t.id, o.id)
     const r = w.tribeRelation(t.id, o.id)
     const ratio = mine / Math.max(1, strength(w, o.id))
     const allied = !!pactBetween(w, t.id, o.id, 'alliance')
@@ -235,18 +235,24 @@ function statecraft(s: Sit): Project | null {
     const goal = ratio > 2.2 && w.members(o.id).length < s.members * 0.6
     const hungryRaid = foodPerHead(w, t) < 1.5 && foodPerHead(w, o) > 10 && r < 0 && ratio > 1 && fighters(w, t.id).length >= 4 && s.known.has('hunting')
     const ore = wantedOre(w, t.id, o.id)
-    const close = Math.hypot(t.center.x - o.center.x, t.center.y - o.center.y) < 36
+    const close = Math.hypot(t.center.x - o.center.x, t.center.y - o.center.y) < 36 + s.era * 12 // reach grows with horses, ships and rails
     const full = w.living.length / Math.max(1, w.cfg.popCap)
     // war is weighed as a temptation, not a score: hard leaders give in to it more often
-    const temper = Math.max(0, Math.min(1.5, (aggression - 0.33) * 2.5))
+    // the people's anger can drive even a gentle leader to war
+    const anger = popularAnger(w, t.id, o.id)
+    // opportunity: a far stronger people next to a weak one it dislikes is tempted, whoever leads it
+    const opportunity = ratio > 1.7 && r < -8 ? 0.42 + Math.min(0.2, (ratio - 1.7) * 0.15) : 0
+    const temper = Math.max(0, Math.min(1.5, (Math.max(aggression, anger, opportunity) - 0.33) * 2.5))
     if (!allied && !truce && temper > 0 && fighters(w, t.id).length >= 3) {
       const motives: [number, string, string, string][] = []
       if (hungryRaid) motives.push([0.18, 'hunger leaves us no choice', `our children are hungry while the ${o.name} sit on full granaries`, `Ready the spears. We take what the ${o.name} will not share.`])
-      if (r < -15) motives.push([(0.04 + (-r - 15) / 300) * Math.min(1.3, ratio), 'for every insult we have swallowed', `I am done swallowing the insults of the ${o.name}`, `The ${o.name} have mocked us long enough. We march.`])
+      if (anger > 0.45 && ratio > 0.85) motives.push([0.025 * anger, 'our people demand justice for what was done to them', `my people will not forgive the ${o.name}, and I cannot hold them back`, `Our people have suffered enough at the hands of the ${o.name}. We answer.`])
+      if (r < -18) motives.push([(0.022 + (-r - 18) / 400) * Math.min(1.3, ratio), 'for every insult we have swallowed', `I am done swallowing the insults of the ${o.name}`, `The ${o.name} have mocked us long enough. We march.`])
       if (ore && r < 8 && ratio > 1.2) motives.push([0.035, `to take their ${ore}`, `we need the ${ore} the ${o.name} keep from us`, `The ${o.name} will not share their ${ore}. We will take them.`])
-      if (close && ratio > 1.3 && r < 12) motives.push([0.02 * (ratio - 0.8), goal ? 'to bring their lands under our rule' : 'for the good land along our border', `the ${o.name} hold land that should be ours, and they are weaker than we are`, `The ${o.name} are weak and their land is good. We go to war.`])
-      if (close && full > 0.85 && r < 6 && ratio > 0.85) motives.push([0.028, 'for land — there is no longer room for us both', `there is no more room, and the ${o.name} stand in our way`, `There is not land enough for us and the ${o.name}. Ready yourselves.`])
-      for (const [p, words, why, tell] of motives) if (chance(p * temper)) return out('war', o, words, why, tell, 9)
+      if (close && ratio > 1.3 && r < 5) motives.push([0.02 * (ratio - 0.8), goal ? 'to bring their lands under our rule' : 'for the good land along our border', `the ${o.name} hold land that should be ours, and they are weaker than we are`, `The ${o.name} are weak and their land is good. We go to war.`])
+      if (close && full > 0.85 && r < 15 && ratio > 0.85) motives.push([0.028, 'for land — there is no longer room for us both', `there is no more room, and the ${o.name} stand in our way`, `There is not land enough for us and the ${o.name}. Ready yourselves.`])
+      const eager = appetite(w, t.id)
+      for (const [p, words, why, tell] of motives) if (chance(p * temper * eager)) return out('war', o, words, why, tell, 9)
     }
     if (ratio > 2.4 && r < 0 && aggression > 0.5 && s.known.has('writing') && !pactBetween(w, t.id, o.id, 'tribute'))
       options.push(out('tribute', o, `You are weak and we are strong. Send us a share of your harvest and you will have nothing to fear.`, `the ${o.name} should pay for our protection`, `I have sent word to the ${o.name}: they will pay us tribute.`, 3 * rnd()))
