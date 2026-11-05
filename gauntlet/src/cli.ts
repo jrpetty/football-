@@ -491,6 +491,15 @@ async function main(): Promise<void> {
         errors++;
         console.log(c.red(`✗ config/ladders.json: ${p}`));
       }
+      // "Which model for this job?": every job test exists and is a Business test, and every Business test is in a job.
+      {
+        const { validateBusinessJobs } = await import('./core/business-jobs.ts');
+        const { loadBusinessJobs } = await import('./core/business-jobs-file.ts');
+        const jobErrs = validateBusinessJobs(loadBusinessJobs(), new Map(all.map((t) => [t.definition.id, { category: t.definition.category }])));
+        errors += jobErrs.length;
+        for (const p of jobErrs) console.log(c.red(`✗ config/business-jobs.json: ${p}`));
+        if (!jobErrs.length) console.log(c.green('✓ ') + 'business jobs (config/business-jobs.json)');
+      }
       for (const m of loadContestants()) {
         const errs = validateContestant(m);
         if (errs.length) {

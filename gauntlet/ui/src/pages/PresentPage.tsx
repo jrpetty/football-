@@ -33,6 +33,7 @@ import { selectTrickHighlights, type TrickHighlight } from '../../../src/present
 import { TruthSlide } from '../components/present/TruthSlide.tsx';
 import { LadderSlide } from '../components/present/LadderSlide.tsx';
 import { BusinessLadderSlide, runHasBusinessLadder } from '../business/BusinessLadderSlide.tsx';
+import { JobsSlide, jobsFromRun, jobsSlideTitle, runHasBusinessJobs } from '../business/jobs/JobsSlide.tsx';
 import { isLadderTest, ladderSpecOf } from '../ladders.ts';
 import { pickInterestingCase, type InterestPick } from '../../../src/presenter/visuals/interest.ts';
 import { visualEntry, visualFamilyFor } from '../components/viz/caseVisuals.tsx';
@@ -142,6 +143,7 @@ type Slide =
   | { kind: 'podium' }
   | { kind: 'ladder'; test: DeckTest }
   | { kind: 'business-ladder' }
+  | { kind: 'business-jobs' }
   | { kind: 'jam-genre'; test: DeckTest; caseId: string }
   | { kind: 'jam-winner'; test: DeckTest }
 
@@ -410,6 +412,8 @@ function buildSlides(deck: Deck, vertical = false, show: ShowOpts = { race: true
   if (comps.length) slides.push({ kind: 'final' });
   // The Business Ladder: how far up the five levels the run's top models climbed (business/BusinessLadderSlide.tsx).
   if (runHasBusinessLadder(deck.d.results ?? [])) slides.push({ kind: 'business-ladder' });
+  // Which model for a business job: the job this run covers best, ranked by the published rule (business/jobs/JobsSlide.tsx).
+  if (runHasBusinessJobs(deck.d.results ?? []) && jobsFromRun(deck.d.results ?? [], deck.contenders, deck.tests.map((t) => t.snap))) slides.push({ kind: 'business-jobs' });
   if (comps.some((r) => (r.totals?.costUsd ?? 0) > 0)) slides.push({ kind: 'scatter' });
   if (comps.length && (deck.lb?.medals ?? []).some((e) => e.gold || e.silver || e.bronze)) slides.push({ kind: 'medals' });
   slides.push({ kind: 'outro' });
@@ -518,6 +522,11 @@ function captionFor(slide: Slide, deck: Deck): Caption {
     }
     case 'moment':
       return momentCaption(slide.moment);
+    case 'business-jobs':
+      return {
+        text: 'Which model for this business job? Each model gets one verdict by a fixed rule: ready with spot checks (at least 95% right, at least 90% allowing for luck, no serious safety mistake), use with a human check (at least 85%), or not ready.',
+        fine: 'From this run’s results only · bar = share of the job done right, whisker = its 95% range · cost is the recorded API cost',
+      };
     case 'business-ladder':
       return {
         text: 'How far up the Business Ladder: five levels of real company work, from reading one document to running a department. Each model stands on the highest level where it scored at least 70 on every test, and on every level below.',
@@ -613,6 +622,8 @@ function sectionFor(slide: Slide, deck: Deck): string {
       return `Test ${slide.test.n} of ${deck.tests.length} · How high can it climb?`;
     case 'business-ladder':
       return 'Business · How far up the ladder?';
+    case 'business-jobs':
+      return `Business · ${jobsSlideTitle(jobsFromRun(deck.d.results ?? [], deck.contenders, deck.tests.map((t) => t.snap))?.job)}`;
   }
 }
 
@@ -1307,6 +1318,8 @@ function SlideView({ slide, deck, reveal, vertical }: { slide: Slide; deck: Deck
       return <TrickSlide h={slide.h} cat={slide.test.cat} reveal={reveal} index={slide.i} total={slide.of} vertical={vertical} />;
     case 'trick-empty':
       return <TrickEmptySlide />;
+    case 'business-jobs':
+      return <JobsSlide results={deck.d.results ?? []} contenders={deck.contenders} snaps={deck.tests.map((t) => t.snap)} />;
     case 'business-ladder':
       return <BusinessLadderSlide results={deck.d.results ?? []} contenders={deck.contenders} names={Object.fromEntries(deck.tests.map((t) => [t.snap.id, t.snap.name]))} />;
     case 'ladder':

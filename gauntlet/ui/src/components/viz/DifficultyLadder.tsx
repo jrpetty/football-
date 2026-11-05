@@ -9,7 +9,7 @@
  *
  * Modes: "card" (pages and the inspector), "slide" (the Presenter: big type, fills the stage, the climb only).
  */
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useId, useState, type CSSProperties } from 'react';
 import { Seg, cx } from '../ui.tsx';
 import {
   calibrationClimbText,
