@@ -43,12 +43,13 @@ export interface AiSettings {
   maxMinds: number
   reflections: boolean
   chronicler: boolean
+  nativeCrowd: boolean // everyone without a paid/local AI mind thinks with the built-in Genesis Mind
 }
 
 export const DEFAULT_SETTINGS: AiSettings = {
   apiKey: '',
   enabled: true,
-  model: DEFAULT_MODEL,
+  model: 'genesis-mind',
   profiles: [],
   effort: 'low',
   maxConcurrent: 4,
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: AiSettings = {
   maxMinds: 16,
   reflections: true,
   chronicler: true,
+  nativeCrowd: true,
 }
 
 const LS = 'genesis.ai.settings'

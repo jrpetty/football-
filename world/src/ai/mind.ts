@@ -8,7 +8,8 @@ import type { Agent, PlanStep } from '../sim/types.ts'
 import { ACTION_KINDS } from '../sim/types.ts'
 import { HOUR, DAY, yearOf, YEAR } from '../sim/time.ts'
 import { parseJson, loadSettings, saveSettings, AiError, type AiSettings, type Usage, type Effort } from './client.ts'
-import { builtinProfiles, complete, profileCost, type MindProfile } from './providers.ts'
+import { builtinProfiles, complete, profileCost, NATIVE_ID, type MindProfile } from './providers.ts'
+import { nativeDecide, nativeReflect, nativeInterview, nativeChronicle } from './native.ts'
 import {
   SYSTEM_PROMPT, DECISION_SCHEMA, buildContext, REFLECT_SYSTEM, REFLECT_SCHEMA, buildReflection,
   INTERVIEW_SYSTEM, CHRONICLE_SYSTEM, CHRONICLE_SCHEMA, type Decision, type Reflection,
@@ -31,6 +32,7 @@ export interface FeedItem {
 }
 
 export interface MindStats {
+  native: number // decisions made by the built-in Genesis Mind
   calls: number
   ok: number
   errors: number
@@ -49,7 +51,7 @@ export class MindManager {
   settings: AiSettings
   world: World | null = null
   feed: FeedItem[] = []
-  stats: MindStats = { calls: 0, ok: 0, errors: 0, inFlight: 0, usage: emptyUsage(), cost: 0, byModel: {}, lastError: '', lastErrorT: 0, pausedReason: '' }
+  stats: MindStats = { native: 0, calls: 0, ok: 0, errors: 0, inFlight: 0, usage: emptyUsage(), cost: 0, byModel: {}, lastError: '', lastErrorT: 0, pausedReason: '' }
   private recent: number[] = [] // real timestamps of calls in last minute
   private backoffUntil = 0
   private minds = new Set<number>()
@@ -73,6 +75,8 @@ export class MindManager {
     for (const a of w.agents) a.aiPending = false
     this.stats.inFlight = 0
     w.aiActive = (a) => this.isMind(a)
+    w.think = (a) => this.thinkNow(w, a)
+    w.aiLeads = (a) => { const m = this.mindOf(a); return m !== '' && m !== NATIVE_ID }
   }
 
   update(s: Partial<AiSettings>) {
@@ -97,6 +101,7 @@ export class MindManager {
   /** Can this profile actually be called (has the key it needs)? */
   usable(id: string): boolean {
     const p = this.profile(id)
+    if (p.kind === 'native') return true
     if (p.kind === 'anthropic') return (p.apiKey || this.settings.apiKey).trim().length > 20
     return true
   }
@@ -104,12 +109,29 @@ export class MindManager {
     return this.settings.apiKey.trim().length > 20 || (this.settings.profiles ?? []).length > 0
   }
 
+  isNative(id: string): boolean {
+    return this.profile(id).kind === 'native'
+  }
+  /** Is any mind awake — a paid/local model within budget, or the built-in Genesis Mind? */
   get ready(): boolean {
-    return this.settings.enabled && this.usable(this.settings.model) && this.stats.cost < this.settings.budgetUsd
+    if (!this.settings.enabled) return false
+    return this.settings.nativeCrowd || this.isNative(this.settings.model) || (this.usable(this.settings.model) && this.stats.cost < this.settings.budgetUsd)
+  }
+  private get paidOk(): boolean {
+    return this.settings.enabled && this.stats.cost < this.settings.budgetUsd
+  }
+
+  /** Which mind is steering this person right now ('' = instinct alone). */
+  mindOf(a: Agent): string {
+    if (!this.settings.enabled) return ''
+    const m = this.modelFor(a)
+    if (this.isNative(m)) return NATIVE_ID
+    if (this.minds.has(a.id) && this.usable(m) && this.paidOk) return m
+    return this.settings.nativeCrowd ? NATIVE_ID : ''
   }
 
   isMind(a: Agent): boolean {
-    return this.ready && this.minds.has(a.id)
+    return this.mindOf(a) !== ''
   }
 
   modelFor(a: Agent): string {
@@ -124,7 +146,7 @@ export class MindManager {
 
   /** Choose which adults get a Claude mind (leaders and elders first, then by curiosity). */
   private refreshMinds(w: World) {
-    const adults = w.living.filter((a) => w.isAdult(a))
+    const adults = w.living.filter((a) => w.isAdult(a) && !this.isNative(this.modelFor(a)))
     const leaders = new Set(w.tribes.map((t) => t.leaderId))
     adults.sort((a, b) => {
       const pa = (leaders.has(a.id) ? 1000 : 0) + (this.minds.has(a.id) ? 500 : 0) + a.aiDecisions
@@ -149,31 +171,33 @@ export class MindManager {
   /** Called every frame. Launches new requests when there's capacity. */
   tick() {
     const w = this.world
-    if (!w) return
-    if (!this.ready) {
-      if (this.settings.enabled && this.configured && this.stats.cost >= this.settings.budgetUsd) this.stats.pausedReason = 'Budget reached — raise it in Settings to continue.'
+    if (!w || !this.settings.enabled) return
+    if (w.time - this.mindsT > 2 * HOUR || this.minds.size === 0) this.refreshMinds(w)
+    // chronicle once a year: a model historian if one is set up, otherwise our own
+    if (this.settings.chronicler && yearOf(w.time) > this.lastChronicleYear) {
+      this.lastChronicleYear = yearOf(w.time)
+      const historian = this.settings.model
+      if (!this.isNative(historian) && this.usable(historian) && this.paidOk) void this.writeChronicle(w, this.lastChronicleYear - 1)
+      else this.nativeChronicle(w, this.lastChronicleYear - 1)
+    }
+    this.nativeTick(w)
+    if (!this.paidOk) {
+      if (this.configured && this.stats.cost >= this.settings.budgetUsd) this.stats.pausedReason = 'Budget reached — raise it in Settings to continue.'
       return
     }
     const now = Date.now()
     if (now < this.backoffUntil) return
-    if (w.time - this.mindsT > 2 * HOUR || this.minds.size === 0) this.refreshMinds(w)
     this.recent = this.recent.filter((t) => now - t < 60_000)
-    let slots = Math.min(this.settings.maxConcurrent - this.stats.inFlight, this.settings.maxPerMinute - this.recent.length)
+    const slots = Math.min(this.settings.maxConcurrent - this.stats.inFlight, this.settings.maxPerMinute - this.recent.length)
     if (slots <= 0) return
-
-    // chronicle once a year
-    if (this.settings.chronicler && yearOf(w.time) > this.lastChronicleYear && slots > 0) {
-      this.lastChronicleYear = yearOf(w.time)
-      void this.writeChronicle(w, this.lastChronicleYear - 1)
-      slots--
-    }
 
     const every = this.settings.thinkEveryHours * HOUR
     const cands: { a: Agent; p: number; kind: 'decide' | 'reflect' }[] = []
     for (const id of this.minds) {
       const a = w.agentById.get(id)
       if (!a || !a.alive || a.aiPending || !w.isAdult(a)) continue
-      if (!this.usable(this.modelFor(a))) continue
+      const m = this.mindOf(a)
+      if (!m || m === NATIVE_ID) continue
       const since = w.time - a.aiLastT
       const heardNew = a.heard.some((h) => h.t > a.aiLastT)
       const idle = a.plan.length === 0 && (!a.task || !a.task.fromPlan)
@@ -191,6 +215,63 @@ export class MindManager {
       if (c.kind === 'decide') void this.decide(w, c.a)
       else void this.reflect(w, c.a)
     }
+  }
+
+  // ---------------------------------------------------------------- the built-in Genesis Mind
+
+  /** Called by the world the moment a native-minded person runs out of plan. */
+  private thinkNow(w: World, a: Agent): boolean {
+    if (this.world !== w || this.mindOf(a) !== NATIVE_ID || !w.isAdult(a)) return false
+    if (w.time - a.aiLastT < 20) return false // a plan that failed at once: let instinct cover a moment
+    this.nativeThink(w, a)
+    return true
+  }
+
+  private nativeThink(w: World, a: Agent) {
+    a.urgentThink = false
+    const asked = w.time
+    try {
+      const d = nativeDecide(w, a)
+      this.apply(w, a, d, NATIVE_ID)
+    } catch (e) {
+      a.aiErrors++
+      if (a.aiErrors < 3) console.warn('Genesis Mind:', e)
+    }
+    a.aiDecisions++
+    a.aiLastT = asked
+    const m = (this.stats.byModel[NATIVE_ID] ??= { calls: 0, cost: 0 })
+    m.calls++
+    this.stats.native++
+  }
+
+  /** Re-think when spoken to or when something urgent happens; reflect every few days. */
+  private nativeTick(w: World) {
+    let budget = 10, reflections = 2
+    for (const a of w.living) {
+      if (budget <= 0) break
+      if (a.aiPending || this.mindOf(a) !== NATIVE_ID || !w.isAdult(a)) continue
+      const since = w.time - a.aiLastT
+      const heardNew = a.heard.length > 0 && a.heard[a.heard.length - 1].t > a.aiLastT
+      if ((heardNew && since > 0.4 * HOUR) || (a.urgentThink && since > HOUR)) {
+        // survival tasks are left alone; anything else can be reconsidered
+        const tk = a.task
+        if (tk && (tk.action === 'drink' || tk.action === 'eat' || tk.action === 'sleep' || tk.action === 'war')) continue
+        this.nativeThink(w, a)
+        budget--
+      } else if (reflections > 0 && this.settings.reflections && w.time - a.lastReflectT > 2 * DAY && a.memories.length >= 12 && since > HOUR) {
+        reflections--
+        a.lastReflectT = w.time
+        const r = nativeReflect(w, a)
+        this.applyReflection(w, a, r, NATIVE_ID)
+      }
+    }
+  }
+
+  private nativeChronicle(w: World, year: number) {
+    const c = nativeChronicle(w, year)
+    if (!c) return
+    w.chapters.push({ t: year * YEAR, title: `Year ${year}: ${c.title}`, text: c.text })
+    w.log('ai', `The historian completed a chapter: “${c.title}”.`, '📖')
   }
 
   private account(model: string, u: Usage) {
@@ -288,12 +369,28 @@ export class MindManager {
     // replace the plan; drop instinct busywork, but don't interrupt survival
     a.plan = steps
     const tk = a.task
-    if (tk && !tk.fromPlan && tk.action !== 'drink' && tk.action !== 'eat' && tk.action !== 'sleep' && tk.text !== 'survival' && tk.text !== 'warmth') {
+    if (tk && !tk.fromPlan && tk.action !== 'drink' && tk.action !== 'eat' && tk.action !== 'sleep' && tk.action !== 'war' && tk.text !== 'survival' && tk.text !== 'warmth') {
       a.task = null
       a.moving = false
     }
     const tribe = w.tribeById(a.tribeId)
+    // the Genesis Mind thinks often and for everyone: only the telling moments reach the feed
+    if (model === NATIVE_ID && !say && !steps.some((s) => s.action === 'diplomacy' || s.action === 'decree' || s.action === 'write' || s.action === 'found_tribe' || s.action === 'court') && Math.random() > 0.08) return
     this.pushFeed(w, a, 'thought', a.thought, say, d.say_to || '', steps.map((s) => `${s.action}${s.target ? ' ' + s.target : ''}`).join(' → '), model, tribe?.name, tribe?.color)
+  }
+
+  private applyReflection(w: World, a: Agent, r: Reflection, model: string) {
+    for (const ins of (r.insights ?? []).slice(0, 3)) {
+      if (!ins) continue
+      if (a.reflections.includes(ins.slice(0, 200))) continue
+      a.reflections.push(ins.slice(0, 200))
+      w.remember(a, `I realised: ${ins.slice(0, 200)}`, 6)
+    }
+    if (a.reflections.length > 12) a.reflections.splice(0, a.reflections.length - 12)
+    if (r.goal) a.goal = r.goal.slice(0, 200)
+    if (r.self_image) a.selfImage = r.self_image.slice(0, 240)
+    if (r.beliefs) a.beliefs = r.beliefs.slice(0, 300)
+    if (model !== NATIVE_ID || Math.random() < 0.25) this.pushFeed(w, a, 'reflection', (r.insights ?? []).join(' '), '', '', '', model)
   }
 
   private async reflect(w: World, a: Agent) {
@@ -305,16 +402,7 @@ export class MindManager {
       if (this.world !== w || !a.alive) return
       const r = parseJson<Reflection>(text)
       if (!r) return
-      for (const ins of (r.insights ?? []).slice(0, 3)) {
-        if (!ins) continue
-        a.reflections.push(ins.slice(0, 200))
-        w.remember(a, `I realised: ${ins.slice(0, 200)}`, 6)
-      }
-      if (a.reflections.length > 12) a.reflections.splice(0, a.reflections.length - 12)
-      if (r.goal) a.goal = r.goal.slice(0, 200)
-      if (r.self_image) a.selfImage = r.self_image.slice(0, 240)
-      if (r.beliefs) a.beliefs = r.beliefs.slice(0, 300)
-      this.pushFeed(w, a, 'reflection', (r.insights ?? []).join(' '), '', '', '', model)
+      this.applyReflection(w, a, r, model)
     } catch {
       /* reflections are optional */
     } finally {
@@ -326,9 +414,10 @@ export class MindManager {
   async interview(a: Agent, question: string): Promise<string> {
     const w = this.world
     if (!w) throw new Error('No world')
-    if (!this.usable(this.modelFor(a))) throw new AiError('auth', 'Add an API key or a local model in Minds & settings to listen to minds.')
+    const m = this.mindOf(a) || this.modelFor(a)
+    if (m === NATIVE_ID || this.isNative(m) || !this.usable(m)) return nativeInterview(w, a, question)
     const ctx = buildContext(w, a).replace(/What do you think, say and do next\?$/, '')
-    return this.run(this.modelFor(a), INTERVIEW_SYSTEM, `${ctx}\n\nThe observer asks: "${question.slice(0, 600)}"`, undefined, 'low', 3000)
+    return this.run(m, INTERVIEW_SYSTEM, `${ctx}\n\nThe observer asks: "${question.slice(0, 600)}"`, undefined, 'low', 3000)
   }
 
   async writeChronicle(w: World, year: number): Promise<void> {
@@ -345,9 +434,9 @@ export class MindManager {
       if (c && this.world === w) {
         w.chapters.push({ t: to, title: `Year ${year}: ${c.title}`, text: c.text })
         w.log('ai', `The historian completed a chapter: “${c.title}”.`, '📖')
-      }
+      } else if (this.world === w) this.nativeChronicle(w, year)
     } catch {
-      /* optional */
+      if (this.world === w) this.nativeChronicle(w, year)
     }
   }
 
@@ -364,6 +453,7 @@ export class MindManager {
   /** Rough $/hour estimate at current settings, for the settings panel. */
   estimateHourly(speed: number): number {
     // ~5.5k cached system + ~2.2k context in, ~700 out incl. thinking at low effort
+    if (this.isNative(this.settings.model)) return 0
     const perCall = profileCost(this.profile(this.settings.model), { input: 2200, output: 700, cacheRead: 5500, cacheWrite: 0 })
     const realSecPerGameHour = 2.5 / Math.max(0.25, speed)
     const decisionsPerMindPerRealHour = 3600 / (realSecPerGameHour * Math.max(1.5, this.settings.thinkEveryHours * 0.6))

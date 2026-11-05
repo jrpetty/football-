@@ -45,7 +45,7 @@ export function MainMenu({ onGo }: { onGo: (g: Go) => void }) {
           <button className="menu-btn" onClick={() => onGo('new')}><span>🌍</span><div><b>New world</b><small>Choose the land, the peoples and the seed</small></div></button>
           <button className="menu-btn" onClick={() => onGo('saves')}><span>💾</span><div><b>Load a world</b><small>Saved worlds and files</small></div></button>
           <button className="menu-btn" onClick={() => onGo('settings')}>
-            <span>✦</span><div><b>Minds & providers</b><small>{mind.configured ? `${mind.label(mind.settings.model)} · ${mind.ready ? 'awake' : 'asleep'}` : 'Claude · DeepSeek · Qwen · Kimi · GLM · Ollama · LM Studio'}</small></div>
+            <span>✦</span><div><b>Minds & providers</b><small>{`${mind.label(mind.settings.model)} · ${mind.ready ? 'awake' : 'asleep'}`} · Genesis Mind, Claude, DeepSeek, Qwen, Kimi, GLM, Ollama</small></div>
           </button>
           <button className="menu-btn" onClick={() => onGo('about')}><span>📖</span><div><b>How it works</b><small>What the minds know, and how history unfolds</small></div></button>
           {web && (

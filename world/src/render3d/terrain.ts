@@ -389,10 +389,30 @@ export class Terrain {
       uv.push(cx / W, cy / H)
       return vmap[k]
     }
+    // open water is one quad a tile; along the shore the quad is split finely so
+    // the waterline follows the ground instead of cutting across it in triangles
+    const dry = (x: number, y: number) => x < 0 || y < 0 || x >= W || y >= H || Number.isNaN(hs.level[y * W + x])
+    const N = 4
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if (!want[y * W + x]) continue
-      const a = vert(x, y), b = vert(x + 1, y), c = vert(x, y + 1), d = vert(x + 1, y + 1)
-      idx.push(a, c, b, b, c, d)
+      let shore = false
+      for (let dy = -1; dy <= 1 && !shore; dy++) for (let dx = -1; dx <= 1; dx++) if (dry(x + dx, y + dy)) { shore = true; break }
+      if (!shore) {
+        const a = vert(x, y), b = vert(x + 1, y), c = vert(x, y + 1), d = vert(x + 1, y + 1)
+        idx.push(a, c, b, b, c, d)
+        continue
+      }
+      const l00 = cornerLevel(x, y), l10 = cornerLevel(x + 1, y), l01 = cornerLevel(x, y + 1), l11 = cornerLevel(x + 1, y + 1)
+      const base = pos.length / 3
+      for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+        const u = i / N, v = j / N
+        pos.push(x + u, (l00 * (1 - u) + l10 * u) * (1 - v) + (l01 * (1 - u) + l11 * u) * v, y + v)
+        uv.push((x + u) / W, (y + v) / H)
+      }
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+        const a = base + j * (N + 1) + i, b = a + 1, c = a + N + 1, d = c + 1
+        idx.push(a, c, b, b, c, d)
+      }
     }
     const g = this.waterGeom
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
@@ -425,7 +445,8 @@ export class Terrain {
       // foam where the water is barely deep
       const foam = clamp(1 - depth / 0.035, 0, 1) * 0.3
       tmp.lerp(new THREE.Color('#e8f4f4'), foam)
-      const alpha = clamp(0.72 + depth * 0.6, 0.72, 0.97) * (depth < 0 ? 0 : 1)
+      // the waterline fades out as the water thins to nothing over the sand
+      const alpha = depth <= 0 ? 0 : clamp(0.72 + depth * 0.6, 0.72, 0.97) * clamp(depth / 0.05, 0, 1)
       c.setXYZW(k, tmp.r, tmp.g, tmp.b, alpha)
     }
     c.needsUpdate = true

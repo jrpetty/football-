@@ -6,7 +6,10 @@
 
 import { MODELS, callClaude, AiError, type Effort, type Usage } from './client.ts'
 
-export type ProviderKind = 'anthropic' | 'openai'
+export type ProviderKind = 'anthropic' | 'openai' | 'native'
+
+/** Our own built-in mind: plays with no key, no network and no cost. */
+export const NATIVE_ID = 'genesis-mind'
 
 export interface MindProfile {
   id: string
@@ -51,10 +54,11 @@ export const PROXY_URL = 'http://localhost:8787'
 
 /** Claude models are always available as built-in profiles; their id is the model id. */
 export function builtinProfiles(): MindProfile[] {
-  return MODELS.map((m) => ({
+  const native: MindProfile = { id: NATIVE_ID, label: 'Genesis Mind', kind: 'native', vendor: 'genesis', baseUrl: '', apiKey: '', model: NATIVE_ID, jsonMode: false, useProxy: false, priceIn: 0, priceOut: 0, builtin: true }
+  return [native, ...MODELS.map((m) => ({
     id: m.id, label: m.label, kind: 'anthropic' as const, vendor: 'anthropic', baseUrl: 'https://api.anthropic.com', apiKey: '', model: m.id,
     jsonMode: true, useProxy: false, priceIn: m.input, priceOut: m.output, builtin: true,
-  }))
+  }))]
 }
 
 export function newProfile(v: VendorPreset): MindProfile {
@@ -100,6 +104,10 @@ function endpoint(p: MindProfile, path: string): string {
 
 /** One completion from whichever kind of mind this profile is. */
 export async function complete(p: MindProfile, o: CompleteOpts): Promise<CompleteResult> {
+  if (p.kind === 'native') {
+    // the Genesis Mind plays inside the simulation (see native.ts); here it only answers the connection test
+    return { text: JSON.stringify({ ok: true, hello: 'The Genesis Mind is built in — it is always here.' }), usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
+  }
   if (p.kind === 'anthropic') {
     const key = (p.apiKey || o.anthropicKey).trim()
     if (!key) throw new AiError('auth', 'Add your Anthropic API key in Minds & settings.')

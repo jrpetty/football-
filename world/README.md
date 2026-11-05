@@ -26,10 +26,11 @@ enabled, it's also published at **`/world/`** next to the other apps.
 The app opens on a **title screen** over the living world. Click **Minds &
 providers** to connect AI. Every person can be driven by:
 
-- **Claude**: Opus 5.5 (default), Sonnet 5.5, Haiku 5.5 or Fable 5.1, through the official Anthropic SDK
+- **The Genesis Mind** (default): our own built-in AI. No key, no network, no cost, and it can think for every person at once
+- **Claude**: Opus 5.5, Sonnet 5.5, Haiku 5.5 or Fable 5.1, through the official Anthropic SDK
 - **Chinese model APIs**: DeepSeek, Qwen (Alibaba Cloud), Kimi (Moonshot AI), GLM (Zhipu AI)
 - **Models you download and run yourself**: Ollama, LM Studio, llama.cpp, vLLM, or any OpenAI-compatible server
-- **Instinct**: no key needed. A built-in brain keeps everyone alive and busy.
+- **Instinct**: the reflexes underneath every mind. They keep a body alive between thoughts.
 
 Assign a different mind to each tribe, or to individual people, and see which
 civilisation does best. Keys stay in your browser's `localStorage` and go only
@@ -181,6 +182,13 @@ every relationship, the balance of power and how each war is going.
 as a cottage, trees tower over them, doors fit them, and animals, grass and
 crops are life-sized.
 
+**Nothing passes through anything.** People and animals keep out of walls, tree
+trunks and each other: a crowd parts around a cottage, and a column of soldiers
+spreads out instead of stacking into one body. Sleepers go indoors, smiths
+work inside their forges, and miners vanish underground. Trees beside a
+building grow smaller and lean away, so no crown pokes through a roof. Water
+meets the shore along the ground's own curve instead of cutting across it.
+
 **Lives and lineages.** Personalities use the Big Five plus intelligence and
 strength. Everyone looks like an individual:
 
@@ -230,12 +238,45 @@ plenty, earthquakes and golden ages.
   works toward communal needs.
 - **Reflection.** Every couple of in-game days, each mind distils its memories
   into lessons, a self-image and beliefs. Those evolve into a tribe's culture.
-- **The historian.** Once a year a Claude chronicler writes a chapter of the
-  world's history from that year's records.
+- **The historian.** Once a year a chronicler (your default model, or the
+  Genesis Mind) writes a chapter of the world's history from that year's records.
 - **Ask them anything.** Select a person to ask them a question. The answer
   comes from their own perspective, and it doesn't change the world: they won't
   remember you asked.
-- **Mixed minds.** Choose a mind per tribe or per person, mixing Claude, DeepSeek, Qwen, Kimi, GLM and local models, and see which civilisation does best.
+- **Mixed minds.** Choose a mind per tribe or per person, mixing the Genesis Mind, Claude, DeepSeek, Qwen, Kimi, GLM and local models, and see which civilisation does best.
+
+### The Genesis Mind: our own AI
+
+The Genesis Mind (`src/ai/native.ts`) plays the same game the model minds play,
+from the same information, and produces the same kind of decision: a thought, a
+feeling, a life goal, words spoken aloud and a plan of up to six actions. It
+runs inside the simulation, so it needs no key and costs nothing, and it can
+drive the whole population at once. With *Genesis Mind for everyone else* on,
+anyone without a model mind (or everyone, once the spending cap is reached)
+thinks with it.
+
+- **Deciding.** It weighs projects against each other through the person's
+  personality: feeding the people, finishing a site, a home for the family,
+  tools and clothes, the next building the tribe lacks, research, prospecting
+  and mining, fishing and farming, writing, courtship, teaching, feasts and
+  exploring. It then works backwards through production chains into concrete
+  steps, such as gathering ore, building the smithy and crafting the tools.
+- **Leading.** Leaders set values, beliefs and laws that suit their temperament
+  and their land, so peoples grow apart in culture. They practise statecraft:
+  trade, alliances, gifts, tribute, and suing for peace when a war goes badly.
+  For hard leaders, war is a real temptation, driven by hunger beside full
+  granaries, old insults, ore they cannot find at home, or a world with no room
+  left.
+- **Talking.** It replies to what people say to it, makes small talk in its own
+  voice (warm, blunt, anxious, dreamy or steady), announces what it is about to
+  do, and brings suggestions to the leader, who may make them law.
+- **Reflection, interviews and history.** It distils memories into lessons, a
+  self-image and beliefs. It answers your questions in character. When no model
+  historian is set up, it writes each year's chapter of the chronicle.
+
+In head-to-head runs from the same start, worlds run by the Genesis Mind grow
+several times larger and advance far faster than instinct alone. The peoples
+trade and ally, and they sometimes go to war.
 
 Claude requests go through the official `@anthropic-ai/sdk` from the browser. Other providers use the standard `/chat/completions` endpoint in JSON mode, and any reasoning a local model writes out inline is stripped from its replies. Claude requests use
 adaptive thinking at a chosen effort, structured outputs (a strict JSON schema),
@@ -298,6 +339,7 @@ src/
     client.ts     Anthropic SDK calls, models, pricing, errors
     providers.ts  mind profiles: Claude + OpenAI-compatible (DeepSeek, Qwen, Kimi, GLM, Ollama, LM Studio)
     prompts.ts    system prompt, per-person context, JSON schemas
+    native.ts     the Genesis Mind: our own AI — plans, words, statecraft, reflections, history
     mind.ts       scheduler: who thinks when, rate limit, budget, applying decisions
   render3d/   the 3D view (three.js)
     renderer3d.ts camera, sky, sun & shadows, night lamps, picking, labels, minimap

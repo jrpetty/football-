@@ -72,7 +72,7 @@ function AgentView({ id }: { id: number }) {
           </div>
           <div style={{ marginTop: 4, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {!a.alive && <span className="tag bad">Died of {a.deathCause}</span>}
-            {a.alive && (isMind ? <span className="tag accent">✦ {mind.label(mind.modelFor(a))}{a.aiPending ? ' · thinking…' : ''}</span> : <span className="tag">Instinct{mind.configured ? ' (no mind slot)' : ''}</span>)}
+            {a.alive && (isMind ? <span className="tag accent">{mind.mindOf(a) === 'genesis-mind' ? '🌱' : '✦'} {mind.label(mind.mindOf(a))}{a.aiPending ? ' · thinking…' : ''}</span> : <span className="tag">Instinct{mind.configured ? ' (no mind slot)' : ''}</span>)}
             {a.alive && <span className="tag">{a.feeling}</span>}
             {a.sick > 0 && <span className="tag warn">sick</span>}
           </div>
@@ -108,7 +108,7 @@ function AgentView({ id }: { id: number }) {
         <Section title="Ask them anything">
           <div className="meta" style={{ marginBottom: 4 }}>You listen from outside their world — they won't remember you asked.</div>
           <div className="ask">
-            <input value={q} placeholder={mind.usable(mind.modelFor(a)) ? 'What do you dream about?' : 'Add a mind (API key or local model) first'} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ask()} disabled={asking} />
+            <input value={q} placeholder="What do you dream about?" onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ask()} disabled={asking} />
             <button className="icon-btn primary" onClick={ask} disabled={asking || !q.trim()}>{asking ? '…' : 'Ask'}</button>
           </div>
           {answer && (

@@ -888,6 +888,8 @@ const HANDLERS: Record<ActionKind, Handler> = {
     init(w, a, t) {
       t.label = 'Sleeping'
       t.need = 11
+      // soldiers on campaign sleep where they are, under the stars
+      if (w.dip.campaigns.some((c) => c.units.includes(a.id))) { t.label = 'Sleeping in camp'; return true }
       const home = a.homeId ? w.buildingById.get(a.homeId) : undefined
       if (home) return travel(w, a, t, home.x, home.y, true) || true
       const fire = w.nearestBuilding(a, ['campfire'], true, 20)

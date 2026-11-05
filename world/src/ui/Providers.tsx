@@ -25,14 +25,15 @@ export function ProvidersSection() {
           {mind.profiles.map((p) => {
             const m = MODELS.find((x) => x.id === p.model)
             const v = vendorOf(p)
+            const native = p.kind === 'native'
             const usable = mind.usable(p.id)
             return (
               <button key={p.id} className={`choice ${s.model === p.id ? 'on' : ''}`} onClick={() => mind.update({ model: p.id })} style={{ opacity: usable ? 1 : 0.6 }}>
                 <div className="t">
-                  <span>{p.kind === 'anthropic' ? '✦' : v?.flag} {p.label}</span>
-                  <span className="meta">{p.priceIn === 0 && p.priceOut === 0 ? 'free' : `$${p.priceIn}/$${p.priceOut}`}</span>
+                  <span>{native ? '🌱' : p.kind === 'anthropic' ? '✦' : v?.flag} {p.label}</span>
+                  <span className="meta">{native ? 'built in · free' : p.priceIn === 0 && p.priceOut === 0 ? 'free' : `$${p.priceIn}/$${p.priceOut}`}</span>
                 </div>
-                <div className="d">{m ? m.blurb : `${v?.label ?? 'Custom'} · ${p.model}${p.useProxy ? ' · via proxy' : ''}`}{!usable && ' — needs a key'}</div>
+                <div className="d">{native ? 'Our own AI. Plans, talks, leads, writes and wages war on its own — no key, no network, and it can think for every person at once.' : m ? m.blurb : `${v?.label ?? 'Custom'} · ${p.model}${p.useProxy ? ' · via proxy' : ''}`}{!usable && ' — needs a key'}</div>
               </button>
             )
           })}
@@ -133,7 +134,7 @@ export function ProfileSelect({ value, onChange, emptyLabel, className, style }:
   return (
     <select className={className} style={style} value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{emptyLabel}</option>
-      {mind.profiles.map((p) => <option key={p.id} value={p.id}>{p.kind === 'anthropic' ? '✦ ' : `${vendorOf(p)?.flag ?? ''} `}{p.label}</option>)}
+      {mind.profiles.map((p) => <option key={p.id} value={p.id}>{p.kind === 'native' ? '🌱 ' : p.kind === 'anthropic' ? '✦ ' : `${vendorOf(p)?.flag ?? ''} `}{p.label}</option>)}
     </select>
   )
 }

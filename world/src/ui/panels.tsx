@@ -188,12 +188,14 @@ export function MindsPanel({ onSettings }: { onSettings: () => void }) {
   return (
     <>
       {!mind.configured && (
-        <div className="card" style={{ borderColor: 'rgba(155,140,255,0.4)' }}>
-          <h3>✦ Give them minds</h3>
+        <div className="card" style={{ borderColor: 'rgba(120,200,140,0.4)' }}>
+          <h3>🌱 {mind.ready ? 'The Genesis Mind is awake' : 'Minds are asleep'}</h3>
           <div className="meta" style={{ marginBottom: 10 }}>
-            Right now everyone runs on instinct. Add a Claude key, a DeepSeek / Qwen / Kimi / GLM key, or point it at a model running on your own computer — and each person gets their own mind.
+            {mind.ready
+              ? <>Everyone is thinking with our built-in AI — {mind.stats.native.toLocaleString()} decisions so far, for free. Add Claude, DeepSeek, Qwen, Kimi, GLM or a model on your own computer to give some of them a model mind, and see which people flourish.</>
+              : <>Right now everyone runs on instinct. Turn on the Genesis Mind, or connect Claude, DeepSeek, Qwen, Kimi, GLM or a local model.</>}
           </div>
-          <button className="btn primary" onClick={onSettings}>Connect a mind</button>
+          <button className="btn primary" onClick={onSettings}>{mind.ready ? 'Add a model mind' : 'Wake the minds'}</button>
         </div>
       )}
       {mind.configured && (
@@ -201,7 +203,7 @@ export function MindsPanel({ onSettings }: { onSettings: () => void }) {
           <div className="kv">
             <span className="k">Status</span>
             <span>{st.pausedReason ? <span style={{ color: 'var(--warn)' }}>{st.pausedReason}</span> : mind.ready ? <span style={{ color: 'var(--good)' }}>Live — {st.inFlight} thinking now</span> : 'Paused'}</span>
-            <span className="k">Thoughts</span><span>{st.ok} ({st.errors} failed)</span>
+            <span className="k">Thoughts</span><span>{st.ok} ({st.errors} failed){st.native ? ` · 🌱 ${st.native.toLocaleString()} by the Genesis Mind` : ''}</span>
             <span className="k">Tokens</span><span>{fmtK(st.usage.input + st.usage.cacheRead + st.usage.cacheWrite)} in · {fmtK(st.usage.output)} out · {fmtK(st.usage.cacheRead)} cached</span>
             <span className="k">Spend</span><span>${st.cost.toFixed(3)} of ${mind.settings.budgetUsd.toFixed(2)} budget</span>
           </div>

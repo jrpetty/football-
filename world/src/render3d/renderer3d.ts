@@ -20,17 +20,25 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { B, F } from '../sim/data.ts'
 import { BUILDINGS } from '../sim/buildings.ts'
 import { eraOf } from '../sim/tech.ts'
-import { daylight, hourOf } from '../sim/time.ts'
+import { daylight, hourOf, isNight } from '../sim/time.ts'
 import { clamp, smoothstep } from '../sim/rng.ts'
 import type { World } from '../sim/world.ts'
 import type { Agent } from '../sim/types.ts'
 import { Renderer, TP, type Overlay, type Selection } from '../render/renderer.ts'
 import { Terrain } from './terrain.ts'
-import { Flora, wind } from './flora.ts'
+import { Flora, wind, treeSpot, solidAt } from './flora.ts'
 import { Building3D, glowMat } from './buildings3d.ts'
 import { Person3D, Animal3D } from './character.ts'
 import { Particles, PK, Weather, Clouds, Birds } from './fx.ts'
 import { status, militaryTier } from '../sim/diplomacy.ts'
+import { hash2 } from '../sim/rng.ts'
+
+interface Body { key: number; x: number; y: number; r: number; moving: boolean; sx?: number; sy?: number }
+const hash01 = (tx: number, ty: number) => hash2(tx, ty, 41)
+/** work that happens inside a building (people doing anything else are pushed out of walls instead) */
+const INSIDE_WORK = new Set(['craft', 'research', 'write', 'sleep', 'rest', 'store', 'take', 'gather', 'heal', 'teach'])
+/** structures without an inside */
+const OPEN_AIR = new Set(['campfire', 'stockpile', 'well', 'watchtower', 'monument', 'walls', 'market', 'dock', 'lean_to', 'solar_farm', 'wind_farm', 'evaporation_ponds', 'oil_well', 'offshore_rig', 'launch_pad', 'radio_tower', 'fish_farm', 'harbour'])
 
 const FOV = 40
 
@@ -78,6 +86,8 @@ export class Renderer3D {
   private animals = new Map<number, Animal3D>()
   private buildings = new Map<number, Building3D>()
   private boats = new Map<number, THREE.Group>()
+  /** how far each body is drawn from where the simulation puts it, so none overlap */
+  private offsets = new Map<number, { x: number; y: number }>()
   private particles = new Particles()
   private weather = new Weather()
   private clouds!: Clouds
@@ -364,6 +374,121 @@ export class Renderer3D {
     return w.tribes[0]?.id ?? 0
   }
 
+  /**
+   * Indoors: asleep at home, or at work inside a building (a smith at the
+   * forge, a miner underground). Their bodies are inside walls, so they are not drawn.
+   */
+  private indoors(w: World, a: Agent): boolean {
+    const tk = a.task
+    if (a.moving || !tk || tk.phase === 'travel') {
+      // a child at home after dark
+      if (!a.moving && w.age(a) < 14 && a.homeId && isNight(w.time)) {
+        const h = w.buildingById.get(a.homeId)
+        if (h && h.done && Math.hypot(h.x + 0.5 - a.x, h.y + 0.5 - a.y) < 2.4) return true
+      }
+      return false
+    }
+    if (tk.action === 'sleep' && a.homeId) {
+      const h = w.buildingById.get(a.homeId)
+      if (h && h.done && Math.hypot(h.x + BUILDINGS[h.type].size / 2 - a.x, h.y + BUILDINGS[h.type].size / 2 - a.y) < 2.4) return true
+    }
+    // at work inside a building with walls and a door: they are in there
+    if (!INSIDE_WORK.has(tk.action)) return false
+    const tx = Math.floor(a.x), ty = Math.floor(a.y)
+    const o = w.occ[ty * w.W + tx]
+    if (o) {
+      const b = w.buildingById.get(o - 1)
+      if (b && b.done && !BUILDINGS[b.type].walkable && !OPEN_AIR.has(b.type)) return true
+    }
+    return false
+  }
+
+  /**
+   * Keep every visible body out of walls, tree trunks and each other. Each
+   * body keeps a small, persistent offset from its simulated spot: crowds part
+   * gently instead of jittering, and the offset relaxes away once there's room.
+   */
+  private unclip(w: World, bodies: Body[], dt: number) {
+    const relax = Math.min(1, dt * 0.7)
+    for (const b of bodies) {
+      let o = this.offsets.get(b.key)
+      if (!o) { o = { x: 0, y: 0 }; this.offsets.set(b.key, o) }
+      o.x *= 1 - relax; o.y *= 1 - relax
+      b.sx = b.x; b.sy = b.y
+      b.x += o.x; b.y += o.y
+    }
+    // bodies part: a coarse grid of half-tile cells
+    const grid = new Map<number, Body[]>()
+    for (const b of bodies) {
+      const k = Math.floor(b.x * 2) * 4096 + Math.floor(b.y * 2)
+      const c = grid.get(k)
+      if (c) c.push(b); else grid.set(k, [b])
+    }
+    const push = Math.min(1, dt * 8)
+    for (const b of bodies) {
+      const gx = Math.floor(b.x * 2), gy = Math.floor(b.y * 2)
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        const c = grid.get((gx + dx) * 4096 + gy + dy)
+        if (!c) continue
+        for (const q of c) {
+          if (q.key <= b.key) continue
+          let ex = q.x - b.x, ey = q.y - b.y
+          const min = b.r + q.r
+          const dd = ex * ex + ey * ey
+          if (dd >= min * min) continue
+          let dist = Math.sqrt(dd)
+          if (dist < 1e-4) { const ang = ((b.key * 7919 + q.key * 104729) % 628) / 100; ex = Math.cos(ang); ey = Math.sin(ang); dist = 1 } else { ex /= dist; ey /= dist; dist = (min - dist) }
+          const m = dist * 0.5 * push
+          // the one standing still gives way to the one walking past
+          const wb = b.moving && !q.moving ? 0.3 : !b.moving && q.moving ? 0.7 : 0.5
+          b.x -= ex * m * wb * 2; b.y -= ey * m * wb * 2
+          q.x += ex * m * (1 - wb) * 2; q.y += ey * m * (1 - wb) * 2
+        }
+      }
+    }
+    // walls and trunks are hard: project out of them
+    for (const b of bodies) {
+      for (let pass = 0; pass < 2; pass++) {
+        const tx0 = Math.floor(b.x), ty0 = Math.floor(b.y)
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const tx = tx0 + dx, ty = ty0 + dy
+          if (tx < 0 || ty < 0 || tx >= w.W || ty >= w.H) continue
+          const i = ty * w.W + tx
+          if (solidAt(w, tx, ty)) {
+            const bd = w.buildingById.get(w.occ[i] - 1)!
+            const S = BUILDINGS[bd.type].size, m = 0.06
+            const x0 = bd.x + m - b.r, x1 = bd.x + S - m + b.r, y0 = bd.y + m - b.r, y1 = bd.y + S - m + b.r
+            if (b.x > x0 && b.x < x1 && b.y > y0 && b.y < y1) {
+              const l = b.x - x0, r = x1 - b.x, u = b.y - y0, dn = y1 - b.y
+              const mn = Math.min(l, r, u, dn)
+              // never push someone into the sea or another wall: try the nearest free side
+              if (mn === l) b.x = x0; else if (mn === r) b.x = x1; else if (mn === u) b.y = y0; else b.y = y1
+            }
+          }
+          const f = w.feature[i]
+          if (f >= F.TREE && f <= F.JUNGLE) {
+            for (let k = 0; k < 2; k++) {
+              if (k === 1 && hash01(tx, ty) <= 0.72) continue
+              const sp = treeSpot(w, tx, ty, k)
+              const R = 0.075 * sp.s + b.r
+              const ex = b.x - sp.x, ey = b.y - sp.z
+              const dd = ex * ex + ey * ey
+              if (dd < R * R) {
+                const dist = Math.sqrt(dd) || 1e-3
+                b.x = sp.x + (ex / dist) * R; b.y = sp.z + (ey / dist) * R
+              }
+            }
+          }
+        }
+      }
+      // remember the offset for next frame (a body that jumped far starts afresh)
+      const o = this.offsets.get(b.key)!
+      o.x = b.x - b.sx!; o.y = b.y - b.sy!
+      const L = Math.hypot(o.x, o.y)
+      if (L > 0.8) { o.x *= 0.8 / L; o.y *= 0.8 / L }
+    }
+  }
+
   private eraOfTribe(id: number): number {
     let e = this.eraCache.get(id)
     if (e === undefined) {
@@ -505,31 +630,56 @@ export class Renderer3D {
     // --- people
     const alive = new Set<number>()
     const hs = this.terrain.heights
+    const bodies: Body[] = []
     for (const a of w.agents) {
       if (!a.alive) continue
       alive.add(a.id)
       let p = this.people.get(a.id)
       if (!p) { p = new Person3D(a.id); this.people.set(a.id, p); this.worldGroup.add(p.root) }
       const inView = Math.hypot(a.x - cx, a.y - cz) < view && d < 95
-      p.root.visible = inView
+      const indoors = inView && this.indoors(w, a)
+      p.root.visible = inView && !indoors
+      if (!p.root.visible) { const boat = this.boats.get(a.id); if (boat) boat.visible = false; continue }
+      bodies.push({ key: a.id, x: a.x, y: a.y, r: w.age(a) < 14 ? 0.06 : 0.085, moving: a.moving })
+    }
+    // --- animals join the same crowd: nothing walks through anything else
+    const live = new Set<number>()
+    for (const an of w.animals) {
+      if (!an.alive) continue
+      live.add(an.id)
+      let m = this.animals.get(an.id)
+      if (!m) { m = new Animal3D(an); this.animals.set(an.id, m); this.worldGroup.add(m.root) }
+      m.an = an
+      const inView = Math.hypot(an.x - cx, an.y - cz) < view && d < 80
+      m.root.visible = inView
+      if (inView) bodies.push({ key: -an.id - 1, x: an.x, y: an.y, r: an.kind === 'rabbit' ? 0.05 : an.kind === 'boar' ? 0.1 : 0.12, moving: true })
+    }
+    this.unclip(w, bodies, dt)
+    const at = new Map<number, Body>()
+    for (const b of bodies) at.set(b.key, b)
+    for (const a of w.agents) {
+      if (!a.alive) continue
+      const bd = at.get(a.id)
+      if (!bd) continue
+      const p = this.people.get(a.id)!
       const boat = this.boats.get(a.id)
-      if (!inView) { if (boat) boat.visible = false; continue }
-      const ti = Math.floor(a.y) * w.W + Math.floor(a.x)
-      const bio = w.biome[ti]
+      const x = bd.x, z = bd.y
+      const ti = Math.floor(z) * w.W + Math.floor(x)
+      const bio = w.biome[Math.floor(a.y) * w.W + Math.floor(a.x)]
       const sea = bio === B.DEEP_OCEAN || bio === B.OCEAN || bio === B.SHALLOWS || bio === B.LAKE
       const lv = hs.level[ti]
-      let y = hs.at(a.x, a.y)
+      let y = hs.at(x, z)
       if (sea && !Number.isNaN(lv)) y = lv + 0.08
       const tr = w.tribeById(a.tribeId)
       const camDist = this.camera.position.distanceTo(p.root.position)
-      p.update(a, a.x, y, a.y, t, this.eraOfTribe(a.tribeId), tr?.color ?? '#cccccc', tr?.leaderId === a.id, w.age(a), camDist < 24)
+      p.update(a, x, y, z, t, this.eraOfTribe(a.tribeId), tr?.color ?? '#cccccc', tr?.leaderId === a.id, w.age(a), camDist < 24)
       if (sea) {
         let bm = boat
         const tier = boatTier(w.techs(a.tribeId))
         if (bm && bm.userData.tier !== tier) { this.worldGroup.remove(bm); bm = undefined }
         if (!bm) { bm = makeBoat(tier); this.boats.set(a.id, bm); this.worldGroup.add(bm) }
         bm.visible = true
-        bm.position.set(a.x, lv + Math.sin(t * 1.6 + a.id) * 0.03, a.y)
+        bm.position.set(x, (Number.isNaN(lv) ? y : lv) + Math.sin(t * 1.6 + a.id) * 0.03, z)
         bm.rotation.y = p.heading
         bm.rotation.z = Math.sin(t * 1.2 + a.id) * 0.05
       } else if (boat) boat.visible = false
@@ -542,9 +692,16 @@ export class Renderer3D {
     }
     for (const [id, p] of this.people) if (!alive.has(id)) {
       this.worldGroup.remove(p.root); p.dispose(); this.people.delete(id)
+      this.offsets.delete(id)
       const bm = this.boats.get(id)
       if (bm) { this.worldGroup.remove(bm); this.boats.delete(id) }
     }
+    for (const an of w.animals) {
+      const bd = at.get(-an.id - 1)
+      const m = this.animals.get(an.id)
+      if (bd && m) m.update(bd.x, hs.at(bd.x, bd.y), bd.y, t)
+    }
+    for (const [id, m] of this.animals) if (!live.has(id)) { this.worldGroup.remove(m.root); this.animals.delete(id); this.offsets.delete(-id - 1) }
 
     // --- the clash of battle: sparks for blades, smoke and flashes for guns
     for (const c of w.dip.campaigns) {
@@ -561,20 +718,6 @@ export class Renderer3D {
         } else this.particles.burst(Math.random() < 0.7 ? PK.SPARK : PK.DUST, v.x, v.y, v.z, 3, 0.6)
       }
     }
-
-    // --- animals
-    const live = new Set<number>()
-    for (const an of w.animals) {
-      if (!an.alive) continue
-      live.add(an.id)
-      let m = this.animals.get(an.id)
-      if (!m) { m = new Animal3D(an); this.animals.set(an.id, m); this.worldGroup.add(m.root) }
-      m.an = an
-      const inView = Math.hypot(an.x - cx, an.y - cz) < view && d < 80
-      m.root.visible = inView
-      if (inView) m.update(an.x, hs.at(an.x, an.y), an.y, t)
-    }
-    for (const [id, m] of this.animals) if (!live.has(id)) { this.worldGroup.remove(m.root); this.animals.delete(id) }
 
     // --- selection ring
     const sel = this.selection

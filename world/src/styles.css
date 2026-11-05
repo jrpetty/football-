@@ -55,16 +55,17 @@ button { cursor: pointer; }
   position: absolute; top: 12px; left: 12px; right: 12px; height: 56px;
   display: flex; align-items: center; gap: 14px; padding: 0 12px 0 16px; z-index: 20;
 }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 10px; flex: none; max-width: 170px; }
+.brand > div { min-width: 0; overflow: hidden; }
 .brand .logo { width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8fe0ff, #2a7bd1 55%, #0b2347); box-shadow: 0 0 18px rgba(90, 170, 255, 0.45); position: relative; flex: none; }
 .brand .logo::after { content: ''; position: absolute; inset: 7px 5px 9px 8px; border-radius: 40% 60% 50% 50%; background: #5fbf6a; opacity: 0.9; }
 .brand h1 { font: 700 19px/1 var(--serif); margin: 0; letter-spacing: 0.3px; }
 .brand .world-name { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sep { width: 1px; height: 28px; background: var(--border); flex: none; }
-.clock { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.clock { display: flex; flex-direction: column; line-height: 1.2; flex: none; }
 .clock .big { font-weight: 700; font-size: 14px; white-space: nowrap; }
 .clock .small { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
-.era-badge { padding: 5px 10px; border-radius: 999px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; border: 1px solid; white-space: nowrap; }
+.era-badge { flex: none; padding: 5px 10px; border-radius: 999px; font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; border: 1px solid; white-space: nowrap; }
 .stat-chip { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); white-space: nowrap; font-weight: 600; }
 .stat-chip .lbl { color: var(--muted); font-weight: 500; }
 .spacer { flex: 1; }
@@ -72,7 +73,7 @@ button { cursor: pointer; }
 .speed button { border: 0; background: transparent; padding: 6px 9px; border-radius: 8px; font-weight: 700; font-size: 12px; color: var(--muted); }
 .speed button.on { background: var(--text); color: #0b1020; }
 .speed button:hover:not(.on) { background: rgba(255, 255, 255, 0.08); color: var(--text); }
-.ai-pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-2); background: rgba(155, 140, 255, 0.08); font-weight: 600; white-space: nowrap; }
+.ai-pill { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-2); background: rgba(155, 140, 255, 0.08); font-weight: 600; white-space: nowrap; }
 .ai-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .ai-pill.live .dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 1.4s infinite; }
 .ai-pill.warn { border-color: rgba(255, 180, 84, 0.5); background: rgba(255, 180, 84, 0.08); }
@@ -254,6 +255,9 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .hud-hint { position: absolute; right: 12px; bottom: 12px; z-index: 12; padding: 8px 12px; font-size: 11.5px; color: var(--muted); }
 .hud-hint kbd { background: rgba(255, 255, 255, 0.08); border-radius: 5px; padding: 1px 5px; font: 600 10.5px var(--font); color: var(--text); }
 
+@media (max-width: 1320px) {
+  .hide-lg { display: none !important; }
+}
 @media (max-width: 1100px) {
   .hide-md { display: none !important; }
 }

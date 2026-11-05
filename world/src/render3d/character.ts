@@ -267,7 +267,7 @@ export class Person3D {
     // face the direction of travel
     if (!Number.isNaN(this.lastX)) {
       const dx = x - this.lastX, dz = z - this.lastZ
-      if (dx * dx + dz * dz > 1e-7) this.heading = Math.atan2(dx, dz)
+      if (dx * dx + dz * dz > 2e-6) this.heading = Math.atan2(dx, dz)
     }
     this.lastX = x
     this.lastZ = z
@@ -457,7 +457,7 @@ export class Animal3D {
     this.root.position.set(x, y, z)
     if (!Number.isNaN(this.lastX)) {
       const dx = x - this.lastX, dz = z - this.lastZ
-      if (dx * dx + dz * dz > 1e-7) this.heading = Math.atan2(dx, dz)
+      if (dx * dx + dz * dz > 2e-6) this.heading = Math.atan2(dx, dz)
     }
     this.lastX = x
     this.lastZ = z

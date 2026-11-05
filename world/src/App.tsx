@@ -153,15 +153,15 @@ function TopBar({ onModal, onMenu }: { onModal: (m: ModalKind) => void; onMenu: 
         <div className="big">{SEASON_ICONS[seasonOf(t)]} Year {yearOf(t)} · {SEASONS[seasonOf(t)]} {dayInSeason(t)}</div>
         <div className="small">{formatClock(t)} {partOfDay(t)} · {WEATHER_ICON[w.weather]} {w.weather}{event ? ` · ⚠ ${event.label}` : ''}</div>
       </div>
-      <span className="era-badge hide-sm" style={{ color: era.color, borderColor: era.color + '66', background: era.color + '14' }}>{era.name}</span>
-      <div className="stat-chip hide-md"><span className="lbl">Population</span>{w.living.length}</div>
+      <span className="era-badge hide-lg" style={{ color: era.color, borderColor: era.color + '66', background: era.color + '14' }}>{era.name}</span>
+      <div className="stat-chip hide-lg"><span className="lbl">Population</span>{w.living.length}</div>
       {(() => {
         const wars = w.dip.wars.filter((x) => !x.ended)
         if (!wars.length) return null
         const names = wars.map((x) => `${w.tribeById(x.a)?.name} vs ${w.tribeById(x.b)?.name}`).join(' · ')
         return <div className="stat-chip war-chip" title={names}><span className="lbl">At war</span>⚔️ {wars.length}</div>
       })()}
-      <div className="stat-chip hide-md"><span className="lbl">Tribes</span>{w.tribes.filter((x) => x.alive).length}</div>
+      <div className="stat-chip hide-lg"><span className="lbl">Tribes</span>{w.tribes.filter((x) => x.alive).length}</div>
       <div className="spacer" />
       <button
         className={`ai-pill ${live ? 'live' : ''} ${st.pausedReason ? 'warn' : ''}`}
@@ -169,7 +169,7 @@ function TopBar({ onModal, onMenu }: { onModal: (m: ModalKind) => void; onMenu: 
         title="AI minds — click for settings"
       >
         <span className="dot" />
-        {mind.configured ? (live ? <>{minds} minds · {st.inFlight} thinking · ${st.cost.toFixed(2)}</> : st.pausedReason ? 'Minds paused' : 'Minds asleep') : 'Connect minds'}
+        {!live ? (st.pausedReason ? 'Minds paused' : 'Minds asleep') : mind.configured ? <>{minds} minds · {st.inFlight} thinking · ${st.cost.toFixed(2)}</> : <>🌱 Genesis Mind · {minds} minds</>}
       </button>
       <div className="speed">
         <button className={game.paused ? 'on' : ''} onClick={() => game.togglePause()} title="Pause (Space)">{game.paused ? '▶' : '❚❚'}</button>

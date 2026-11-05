@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { game } from '../game.ts'
 import { mind } from '../ai/mind.ts'
-import { type Effort } from '../ai/client.ts'
+import { DEFAULT_MODEL, type Effort } from '../ai/client.ts'
 import { ProvidersSection, ProfileSelect } from './Providers.tsx'
 import { PRESETS } from '../sim/worldgen.ts'
 import { DEFAULT_CONFIG, type WorldConfig } from '../sim/world.ts'
@@ -39,14 +39,14 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal onClose={onClose} wide>
       <h2>✦ Minds & settings</h2>
-      <p className="lead">Every person can be driven by their own AI mind — Claude, the Chinese model APIs (DeepSeek, Qwen, Kimi, GLM), or models you download and run yourself (Ollama, LM Studio). They decide what to do from what they see, feel, remember and are told — nothing is scripted.</p>
+      <p className="lead">Every person can be driven by their own AI mind — the built-in <b>Genesis Mind</b> (free, no key), Claude, the Chinese model APIs (DeepSeek, Qwen, Kimi, GLM), or models you download and run yourself (Ollama, LM Studio). They decide what to do from what they see, feel, remember and are told — nothing is scripted. Mix them freely and see whose people flourish.</p>
 
       <div className="field">
         <label>Anthropic API key (Claude)</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="input" type={show ? 'text' : 'password'} placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} />
           <button className="btn" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
-          <button className="btn primary" onClick={() => mind.update({ apiKey: key.trim(), enabled: true })}>Save key</button>
+          <button className="btn primary" onClick={() => mind.update({ apiKey: key.trim(), enabled: true, ...(mind.isNative(s.model) && key.trim() ? { model: DEFAULT_MODEL } : {}) })}>Save key</button>
         </div>
         <div className="hint">For Claude minds. Stored only in this browser and sent only to Anthropic. Get one at console.anthropic.com. You can skip this and use another provider or a local model below — and with no minds at all, people live on instinct.</div>
       </div>
@@ -54,6 +54,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       <div className="field">
         <Toggle checked={s.enabled} onChange={(v) => mind.update({ enabled: v })} label={<b>Minds awake</b>} />
         {st.pausedReason && <div className="note warn" style={{ marginTop: 8 }}>{st.pausedReason}</div>}
+        <div style={{ height: 8 }} />
+        <Toggle checked={s.nativeCrowd} onChange={(v) => mind.update({ nativeCrowd: v })} label={<><b>🌱 Genesis Mind for everyone else</b> — people without a model mind (or once the budget runs out) still think, plan, talk, lead and write with our built-in AI, for free</>} />
       </div>
 
       <ProvidersSection />
@@ -121,7 +123,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       <div className="field">
         <Toggle checked={s.reflections} onChange={(v) => mind.update({ reflections: v })} label="Reflection — every couple of days minds distil lessons, beliefs and a sense of self from their memories" />
         <div style={{ height: 8 }} />
-        <Toggle checked={s.chronicler} onChange={(v) => mind.update({ chronicler: v })} label="Historian — a Claude chronicler writes a chapter of history every year" />
+        <Toggle checked={s.chronicler} onChange={(v) => mind.update({ chronicler: v })} label="Historian — a chronicler (your default model, or the Genesis Mind) writes a chapter of history every year" />
       </div>
 
       <div className="note">

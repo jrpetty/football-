@@ -6,11 +6,41 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { B, F } from '../sim/data.ts'
+import { BUILDINGS } from '../sim/buildings.ts'
 import { hash2 } from '../sim/rng.ts'
 import type { World } from '../sim/world.ts'
 import type { Heights } from './terrain.ts'
 
 export const CH = 64 // tiles per flora chunk
+
+/** Is there a building here that a tree's crown (or a person) must keep out of? */
+export function solidAt(w: World, tx: number, ty: number): boolean {
+  if (tx < 0 || ty < 0 || tx >= w.W || ty >= w.H) return false
+  const o = w.occ[ty * w.W + tx]
+  if (!o) return false
+  const b = w.buildingById.get(o - 1)
+  return !!b && !BUILDINGS[b.type].walkable && b.type !== 'mine'
+}
+
+/**
+ * Where a tree stands in its tile, and how big it is (k = 0 the main tree, 1 a
+ * smaller companion). Trees beside a building lean their spot away from it and
+ * grow a little smaller, so no crown pokes through a wall or roof. The renderer
+ * uses the same spots to keep people from walking through trunks.
+ */
+export function treeSpot(w: World, tx: number, ty: number, k: number): { x: number; z: number; s: number } {
+  let ox = (hash2(tx, ty * 7 + k, 5) - 0.5) * 0.45, oz = (hash2(tx * 5 + k, ty, 6) - 0.5) * 0.45
+  let s = 0.72 + hash2(tx * 3 + k, ty, 3) * 0.42 - (k === 1 ? 0.15 : 0)
+  let crowded = false
+  if (solidAt(w, tx + 1, ty)) { ox = Math.min(ox, 0) - 0.12; crowded = true }
+  if (solidAt(w, tx - 1, ty)) { ox = Math.max(ox, 0) + 0.12; crowded = true }
+  if (solidAt(w, tx, ty + 1)) { oz = Math.min(oz, 0) - 0.12; crowded = true }
+  if (solidAt(w, tx, ty - 1)) { oz = Math.max(oz, 0) + 0.12; crowded = true }
+  if (!crowded) for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) if (solidAt(w, tx + dx, ty + dy)) { ox -= dx * 0.08; oz -= dy * 0.08; crowded = true }
+  // right beside a wall only a sapling fits; on a corner, a smaller tree
+  if (crowded) s *= solidAt(w, tx + 1, ty) || solidAt(w, tx - 1, ty) || solidAt(w, tx, ty + 1) || solidAt(w, tx, ty - 1) ? 0.5 : 0.75
+  return { x: tx + 0.5 + Math.max(-0.3, Math.min(0.3, ox)), z: ty + 0.5 + Math.max(-0.3, Math.min(0.3, oz)), s }
+}
 
 type Tint = 'fixed' | 'canopy'
 interface PartDef { geo: THREE.BufferGeometry; tint: Tint; sway: number; shadow: boolean }
@@ -329,12 +359,16 @@ export class Flora {
     const push = (f: number, tx: number, ty: number, k: number) => {
       const i = ty * w.W + tx
       const h = hash2(tx * 3 + k, ty, 3)
-      const ox = (hash2(tx, ty * 7 + k, 5) - 0.5) * 0.45, oz = (hash2(tx * 5 + k, ty, 6) - 0.5) * 0.45
-      const x = tx + 0.5 + ox, z = ty + 0.5 + oz
+      const big = f >= F.TREE && f <= F.JUNGLE
+      let x: number, z: number, sz: number
+      if (big) { const sp = treeSpot(w, tx, ty, k); x = sp.x; z = sp.z; sz = sp.s }
+      else {
+        x = tx + 0.5 + (hash2(tx, ty * 7 + k, 5) - 0.5) * 0.45; z = ty + 0.5 + (hash2(tx * 5 + k, ty, 6) - 0.5) * 0.45
+        sz = 0.8 + h * 0.5
+      }
       let arr = items.get(f)
       if (!arr) { arr = []; items.set(f, arr) }
-      const big = f >= F.TREE && f <= F.JUNGLE
-      arr.push({ x, z, y: hs.at(x, z), s: (big ? 0.72 : 0.8) + h * (big ? 0.42 : 0.5) - (k === 1 ? 0.15 : 0), r: hash2(tx, ty, 8 + k) * Math.PI * 2, h, lean: (hash2(tx, ty, 12) - 0.5) * 0.12, tx, ty, empty: (f === F.BUSH || f === F.FIBER) && w.amount[i] === 0, biome: w.biome[i] })
+      arr.push({ x, z, y: hs.at(x, z), s: sz, r: hash2(tx, ty, 8 + k) * Math.PI * 2, h, lean: (hash2(tx, ty, 12) - 0.5) * 0.12, tx, ty, empty: (f === F.BUSH || f === F.FIBER) && w.amount[i] === 0, biome: w.biome[i] })
     }
     for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) {
       const i = ty * w.W + tx

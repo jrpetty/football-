@@ -100,6 +100,10 @@ export class World implements PathGrid {
   listeners = new Set<(e: ChronicleEntry) => void>()
   /** Set by the AI layer: is this agent's mind driven by Claude right now? */
   aiActive: (a: Agent) => boolean = () => false
+  /** Is this leader steered by an external model (Claude & co.) that makes its own diplomatic calls? */
+  aiLeads: (a: Agent) => boolean = () => false
+  /** A mind that thinks in the same instant (the built-in Genesis Mind): fills an idle person's plan, or returns false. */
+  think: ((a: Agent) => boolean) | null = null
 
   constructor(cfg: WorldConfig, skipGen = false) {
     this.cfg = { ...cfg }
@@ -931,6 +935,10 @@ export class World implements PathGrid {
     } else if (a.plan.length) {
       const step = a.plan.shift()!
       startTask(this, a, step, true)
+    } else if (this.think && this.think(a) && a.plan.length) {
+      // the built-in mind has just thought of a plan
+      startTask(this, a, a.plan.shift()!, true)
+      if (!a.task && a.plan.length) startTask(this, a, a.plan.shift()!, true)
     } else {
       // No plan: the AI mind (if attached) will be asked; meanwhile, instinct.
       if (this.aiActive(a)) a.urgentThink = true

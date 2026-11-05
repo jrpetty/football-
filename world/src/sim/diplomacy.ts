@@ -184,7 +184,7 @@ function similarity(a: Tribe, b: Tribe): number {
   return Math.min(1, n / 3)
 }
 
-function food(w: World, t: Tribe): number {
+export function food(w: World, t: Tribe): number {
   let f = 0
   for (const k in t.storage) if (ITEMS[k as Item]?.food) f += t.storage[k as Item] ?? 0
   return f / Math.max(1, w.members(t.id).length)
@@ -465,7 +465,7 @@ function warsDaily(w: World) {
     const days = (w.time - war.since) / DAY
     for (const [me, them, sign] of [[A, Bt, 1], [Bt, A, -1]] as const) {
       const leader = w.agentById.get(me.leaderId)
-      if (leader && w.aiActive(leader) && w.rng.chance(0.7)) continue // an AI leader makes this call
+      if (leader && w.aiLeads(leader) && w.rng.chance(0.7)) continue // an AI leader makes this call
       const myScore = war.score * sign
       const tired = (war.dead[me.id] ?? 0) * 8 + days * 0.8 + (food(w, me) < 2 ? 20 : 0)
       const want = myScore < -35 || tired > 40 + (1 - (leader?.traits.agreeableness ?? 0.5)) * 30 || (myScore > 50 && days > 12)
@@ -656,7 +656,7 @@ function leaderDecides(w: World, t: Tribe) {
   const leader = w.agentById.get(t.leaderId)
   if (!leader?.alive) return
   // an AI-minded leader mostly decides for themself through the "diplomacy" action
-  if (w.aiActive(leader) && w.rng.chance(0.8)) return
+  if (w.aiLeads(leader) && w.rng.chance(0.8)) return
   const aggression = (1 - leader.traits.agreeableness) * 0.6 + leader.traits.extraversion * 0.15 + (food(w, t) < 2 ? 0.3 : 0)
   const mine = strength(w, t.id)
   for (const o of w.tribes) {
@@ -697,7 +697,7 @@ function leaderDecides(w: World, t: Tribe) {
 }
 
 /** An ore this people needs but only knows of near the other people. */
-function wantedOre(w: World, me: number, them: number): string | null {
+export function wantedOre(w: World, me: number, them: number): string | null {
   const known = w.techs(me)
   const need: Item[] = []
   if (known.has('bronze_working')) need.push('copper', 'tin')

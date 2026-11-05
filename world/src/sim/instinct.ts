@@ -178,7 +178,7 @@ export function instinctStep(w: World, a: Agent): PlanStep {
   return step('gather', pick, 10)
 }
 
-function foodStep(w: World, a: Agent): PlanStep {
+export function foodStep(w: World, a: Agent): PlanStep {
   const known = w.techs(a.tribeId)
   const t = w.tribeById(a.tribeId)
   const farms = t ? w.tribeBuildings(t.id, 'farm') : []
@@ -196,7 +196,7 @@ function foodStep(w: World, a: Agent): PlanStep {
  * intermediates, or build the workshop a recipe needs — recursing through
  * production chains (ore → metal → machinery …) a few levels deep.
  */
-function gatherFor(w: World, a: Agent, missing: string[]): PlanStep {
+export function gatherFor(w: World, a: Agent, missing: string[]): PlanStep {
   for (const m of missing) {
     const [nStr, item] = m.split(' ')
     const s = resolve(w, a, item as Item, Math.max(2, +nStr), 0)
@@ -208,7 +208,7 @@ function gatherFor(w: World, a: Agent, missing: string[]): PlanStep {
 const RAW: Item[] = ['wood', 'stone', 'fiber', 'clay', 'sand', 'berries']
 const ORES: Item[] = ['copper', 'tin', 'iron_ore', 'coal', 'gold', 'oil', 'bauxite', 'uranium', 'lithium']
 
-function resolve(w: World, a: Agent, item: Item, n: number, depth: number): PlanStep | null {
+export function resolve(w: World, a: Agent, item: Item, n: number, depth: number): PlanStep | null {
   const known = w.techs(a.tribeId)
   const room = Math.max(4, CARRY_CAP - invTotal(a.inv))
   if (RAW.includes(item)) return step('gather', item, Math.min(room, Math.max(4, n)))
