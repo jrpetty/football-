@@ -5,6 +5,7 @@
  * money word problems.
  */
 import { finalReply, plainNumber, statedAnswer, viewerText, type CaseVisualInput } from './common.ts';
+import { fractionCompare, snakesBoard, type FractionCompare, type SnakesBoard } from './closeup.ts';
 
 export type MathSeg =
   | { t: 'text'; v: string }
@@ -83,9 +84,15 @@ export interface MathsVisual {
   working: string;
   paper: PaperStyle;
   hedged: boolean;
+  /** Exact-fraction answers (Exact Maths: Ladder): the key and the model's fraction compared exactly. */
+  fraction?: FractionCompare;
+  /** The snakes-and-ladders board of an Exact Maths: Ladder level, when the prompt describes one. */
+  board?: SnakesBoard;
 }
 
 export function mathsVisual(input: CaseVisualInput): MathsVisual | null {
+  // An exact fraction key ("15/128"): compared as fractions, never as the leading number.
+  if (typeof input.expected === 'string' && /^\s*\d+\s*\/\s*\d+\s*$/.test(input.expected)) return fractionMathsVisual(input);
   const key = typeof input.expected === 'number' ? input.expected : plainNumber(String(input.expected ?? ''));
   if (key === null || !input.turns.length) return null;
   const text = viewerText(input.turns[0]!)
@@ -116,7 +123,46 @@ export function mathsVisual(input: CaseVisualInput): MathsVisual | null {
   };
 }
 
+function fractionMathsVisual(input: CaseVisualInput): MathsVisual | null {
+  const f = fractionCompare(input);
+  if (!f || !input.turns.length) return null;
+  const text = viewerText(input.turns[0]!)
+    .replace(/Give it as a fraction[^\n]*/gi, '')
+    .trim();
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  let askIndex = -1;
+  paragraphs.forEach((p, i) => {
+    if (/\?|\b(?:Find|Compute|Determine|How many|What is)\b/.test(p)) askIndex = i;
+  });
+  const ok = input.passed === true || (input.passed === null && f.equal);
+  // Never contradict the scorer.
+  if (input.passed === false && f.equal) return null;
+  const reply = finalReply(input);
+  return {
+    paragraphs,
+    askIndex,
+    key: Number(f.key.p) / Number(f.key.q),
+    keyText: f.keyText,
+    given: f.stated || null,
+    givenValue: f.given ? Number(f.given.p) / Number(f.given.q) : null,
+    ok,
+    working: reply.replace(/^.*final\s+answer\s*[:：].*$/gim, '').trim(),
+    paper: null,
+    hedged: input.detail.hedged === true,
+    fraction: f,
+    board: snakesBoard(input.turns[0]!) ?? undefined,
+  };
+}
+
 export function mathsHeadline(v: MathsVisual): string {
+  if (v.fraction) {
+    const f = v.fraction;
+    if (!f.stated) return 'No final answer given';
+    if (v.hedged) return 'Hedged between answers — marked wrong';
+    if (!f.given) return `Answered “${f.stated.slice(0, 40)}”, not an exact fraction`;
+    if (f.equal) return `Right: exactly ${f.keyText}`;
+    return f.sameDecimals >= 3 ? `Close (${f.sameDecimals} decimal places agree), but not the exact fraction` : `Wrong: about ${f.givenDecimal!.slice(0, 8)} instead of ${f.keyDecimal.slice(0, 8)}`;
+  }
   if (v.given === null || v.given === '') return 'No final answer given';
   if (v.hedged) return `Hedged between answers — marked wrong`;
   if (v.ok) return `Right: ${v.keyText}`;

@@ -589,6 +589,36 @@ function solveTraffic(z: Extract<PlanPuzzle, { kind: 'traffic' }>): PlanFrame[] 
   return path && framesOf(path, (v) => ({ kind: 'traffic', v }));
 }
 
+/**
+ * Towers of Hanoi (any number of pegs) replayed from the plan in the auditor notes ("disk 2 C to A; disk 3 C to B;
+ * …"), move by move: every move must take the top disk of its peg onto a larger disk or an empty peg, and the plan
+ * must end with every disk on the target peg. Cheap for any size, so the four-peg ladder (up to 13 disks, far too
+ * many positions to search in a browser) still gets a step-by-step drawing. Null unless the replay is clean.
+ */
+export function hanoiFramesFromNotes(z: Extract<PlanPuzzle, { kind: 'hanoi' }>, notes: string | undefined): PlanFrame[] | null {
+  const steps = notesPlan(notes);
+  if (!steps) return null;
+  let s = z.start.map((p) => p.slice());
+  const frames: PlanFrame[] = [{ state: { kind: 'hanoi', v: s }, action: null, mark: [], total: 0 }];
+  for (const step of steps) {
+    const m = step.match(/^disk (\d+) ([A-Z]) to ([A-Z])$/i);
+    if (!m) return null;
+    const d = Number(m[1]);
+    const a = z.pegs.indexOf(m[2]!.toUpperCase());
+    const b = z.pegs.indexOf(m[3]!.toUpperCase());
+    if (a < 0 || b < 0 || a === b) return null;
+    if (z.moves && !z.moves.some(([x, y]) => x === a && y === b)) return null;
+    if (s[a]![s[a]!.length - 1] !== d) return null;
+    const under = s[b]![s[b]!.length - 1];
+    if (under !== undefined && under < d) return null;
+    s = s.map((p) => p.slice());
+    s[a]!.pop();
+    s[b]!.push(d);
+    frames.push({ state: { kind: 'hanoi', v: s }, action: `Move disk ${d} from peg ${z.pegs[a]} to peg ${z.pegs[b]}`, mark: [d], total: frames.length });
+  }
+  return s[z.target]!.length === z.disks ? frames : null;
+}
+
 export function solvePlan(z: PlanPuzzle): PlanFrame[] | null {
   switch (z.kind) {
     case 'jugs':
@@ -671,7 +701,8 @@ export function planVisual(input: CaseVisualInput): PlanVisual | null {
   let frames: PlanFrame[] | null = null;
   if (puzzle) {
     try {
-      frames = solvePlan(puzzle);
+      // A plan in the notes replays in a blink; searching is the fallback (and too big for the larger four-peg towers).
+      frames = (puzzle.kind === 'hanoi' ? hanoiFramesFromNotes(puzzle, input.notes) : null) ?? (puzzle.kind === 'hanoi' && puzzle.disks > 9 ? null : solvePlan(puzzle));
     } catch {
       frames = null;
     }

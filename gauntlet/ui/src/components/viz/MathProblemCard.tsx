@@ -8,6 +8,8 @@ import { mathsHeadline, type MathsVisual } from '../../../../src/presenter/visua
 import { cx } from '../ui.tsx';
 import { ToneMark, VizFrame, type VizMode } from './VizFrame.tsx';
 import { TypesetMath } from './TypesetMath.tsx';
+import { DecimalCompare, FractionView, SnakesBoardStrip, SnakesLegend } from './closeup/SnakesBoard.tsx';
+import './closeup/closeup.css';
 
 const PAPER_TITLE = { receipt: 'Receipt', payslip: 'Payslip', bill: 'Bill' } as const;
 
@@ -43,17 +45,39 @@ export function MathProblemCard({ v, mode }: { v: MathsVisual; mode: VizMode }) 
             </p>
           ))}
         </article>
-        <div className="vz-answers">
-          <div className={cx('vz-ans', v.ok ? 'good' : 'bad')}>
-            <span>Model’s final answer</span>
-            <BigNumber value={v.givenValue} text={v.given ?? ''} />
-            <ToneMark tone={v.ok ? 'good' : 'bad'} />
+        {v.fraction ? (
+          <div className="vz-answers lc-inline-root">
+            {v.board && (
+              <div className="vz-ans">
+                <SnakesBoardStrip b={v.board} compact />
+                <SnakesLegend b={v.board} />
+              </div>
+            )}
+            <div className={cx('vz-ans', v.ok ? 'good' : 'bad')}>
+              <span>Model’s final answer</span>
+              {v.fraction.given ? <FractionView f={v.fraction.given} size="md" /> : <b>{v.given || '—'}</b>}
+              {v.fraction.givenDecimal && <DecimalCompare text={v.fraction.givenDecimal} same={v.fraction.equal ? 99 : v.fraction.sameDecimals} tone={v.fraction.equal ? 'good' : 'bad'} />}
+              <ToneMark tone={v.ok ? 'good' : 'bad'} />
+            </div>
+            <div className="vz-ans key">
+              <span>Answer key</span>
+              <FractionView f={v.fraction.key} size="md" tone="key" />
+              <DecimalCompare text={v.fraction.keyDecimal} same={99} tone="key" />
+            </div>
           </div>
-          <div className="vz-ans key">
-            <span>Answer key</span>
-            <BigNumber value={v.key} text={v.keyText} />
+        ) : (
+          <div className="vz-answers">
+            <div className={cx('vz-ans', v.ok ? 'good' : 'bad')}>
+              <span>Model’s final answer</span>
+              <BigNumber value={v.givenValue} text={v.given ?? ''} />
+              <ToneMark tone={v.ok ? 'good' : 'bad'} />
+            </div>
+            <div className="vz-ans key">
+              <span>Answer key</span>
+              <BigNumber value={v.key} text={v.keyText} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
       {v.working && mode === 'inspector' && (
         <details className="vz-working">

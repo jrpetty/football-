@@ -21,7 +21,8 @@ function TileDetail({ t, fn }: { t: CodeTile; fn: string | null }) {
   return (
     <div className={cx('vz-tile-detail', t.status)}>
       <div className="vz-card-k">
-        Test {t.index} · {STATUS_LABEL[t.status]}
+        Test {t.index}
+        {t.name ? ` · ‘${t.name}’` : ''} · {STATUS_LABEL[t.status]}
       </div>
       <dl>
         <dt>Input</dt>
@@ -86,8 +87,8 @@ export function CodeTestBoard({ v, mode }: { v: CodeVisual; mode: VizMode }) {
                     type="button"
                     className={cx('vz-ttile', t.status, shown === t && 'sel')}
                     onClick={() => setSel(t)}
-                    title={`Test ${t.index}: ${STATUS_LABEL[t.status]}`}
-                    aria-label={`Test ${t.index}: ${STATUS_LABEL[t.status]}`}
+                    title={`Test ${t.index}${t.name ? ` (${t.name})` : ''}: ${STATUS_LABEL[t.status]}`}
+                    aria-label={`Test ${t.index}${t.name ? ` (${t.name})` : ''}: ${STATUS_LABEL[t.status]}`}
                     style={{ ['--i' as string]: t.index } as CSSProperties}
                   >
                     <span className="tnum">{t.index}</span>

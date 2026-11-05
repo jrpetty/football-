@@ -101,7 +101,7 @@ function answerGroups(line: string): string[][] {
     .map((g) => g.split(/,\s*/).map((v) => v.trim()).filter(Boolean));
 }
 
-function positionLabels(prompt: string, question: string, n: number): { labels: string[]; noun: string } {
+export function positionLabels(prompt: string, question: string, n: number): { labels: string[]; noun: string } {
   const order = question.match(/in this order:\s*([^.?\n]+)/i);
   if (order) {
     const labels = order[1]!.split(/,\s*/).map((s) => s.trim());

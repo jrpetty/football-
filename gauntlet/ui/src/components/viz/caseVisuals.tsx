@@ -15,7 +15,8 @@ import { instructionVisual } from '../../../../src/presenter/visuals/instruction
 import { extractionVisual } from '../../../../src/presenter/visuals/extraction.ts';
 import { honestyVisual } from '../../../../src/presenter/visuals/honesty.ts';
 import { trickVisual } from '../../../../src/presenter/visuals/trick.ts';
-import { codeVisual } from '../../../../src/presenter/visuals/code.ts';
+import { codeVisual, withTestNames } from '../../../../src/presenter/visuals/code.ts';
+import { businessVisual, type BusinessVisual } from '../../../../src/presenter/visuals/business.ts';
 import { horizonVisual, type RungModel } from '../../../../src/presenter/visuals/horizon.ts';
 import type { VizMode } from './VizFrame.tsx';
 import { DeductionGridVisual } from './DeductionGridVisual.tsx';
@@ -28,8 +29,10 @@ import { HonestyTrapCard } from './HonestyTrapCard.tsx';
 import { TrickAnswerCard } from './TrickAnswerCard.tsx';
 import { CodeTestBoard } from './CodeTestBoard.tsx';
 import { HorizonRungCard } from './HorizonRungCard.tsx';
+import { BusinessAnswerVisual } from './BusinessAnswerVisual.tsx';
+import { engineTestNames } from './closeup/engineNames.ts';
 
-export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code' | 'horizon';
+export type CaseVisualFamily = 'grid' | 'islanders' | 'plan' | 'maths' | 'instruction' | 'extraction' | 'honesty' | 'trick' | 'code' | 'horizon' | 'business';
 
 export interface VisualContext {
   /** Contestant id → display label (judges). */
@@ -100,7 +103,11 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
   code: entry({
     family: 'code',
     caption: 'Every hidden test run against the model’s code: green passed, red wrong or crashed, amber too slow. Below: one failing test and the code itself.',
-    build: codeVisual,
+    // Engineering: Ladder's generator names every hidden test ("chmax on two-valued ranges"); other coding tests have numbers only.
+    build: (input) => {
+      const v = codeVisual(input);
+      return v && input.testId === 'coding.engineering-ladder' ? withTestNames(v, engineTestNames(input.caseId)) : v;
+    },
     render: (v, mode) => <CodeTestBoard v={v} mode={mode} />,
   }),
   horizon: entry({
@@ -108,6 +115,12 @@ const ENTRIES: Record<CaseVisualFamily, Entry<unknown>> = {
     caption: 'One level of a Horizon ladder: where it sits on the ladder, and the model’s answer against the double-checked key. Green matches, red is where it went wrong.',
     build: horizonVisual,
     render: (v, mode, input) => <HorizonRungCard m={v as RungModel} mode={mode} modelLabel={input.modelLabel} />,
+  }),
+  business: entry({
+    family: 'business',
+    caption: 'A big business answer, summarised: points right in each part of the answer, one square per record (green right, amber partly wrong, red wrong), and the first wrong records with the model’s value struck out beside the correct one.',
+    build: businessVisual,
+    render: (v, mode, input) => <BusinessAnswerVisual v={v as BusinessVisual} mode={mode} score={input.score} testId={input.testId} />,
   }),
 };
 
@@ -136,6 +149,18 @@ const BY_ID: Record<string, CaseVisualFamily> = {
   'coding.debug-and-edge-cases': 'code',
   'coding.hard': 'code',
   'coding.frontier': 'code',
+  // Difficulty ladders (config/ladders.json): the Frontier ones reuse their base test's picture; the Business ones
+  // (answers of up to about a thousand records) get the summarised Business picture.
+  'math.exact-ladder': 'maths',
+  'coding.engineering-ladder': 'code',
+  'work.invoices-ladder': 'business',
+  'work.payroll-ladder': 'business',
+  'work.expenses-ladder': 'business',
+  'work.reconciliation-ladder': 'business',
+  'work.crm-ladder': 'business',
+  'work.contract-ladder': 'business',
+  'work.sql-ladder': 'business',
+  'work.support-ladder': 'business',
 };
 
 /** Which visual (if any) draws cases of this test. */
