@@ -1,8 +1,8 @@
 /**
  * Presenter slide for a difficulty-ladder test (Horizon, Frontier Ladders, Business Ladders): "How high can it
- * climb?". Every model's lane is filled up to the highest level it passed reliably, with every attempt's chip
- * on every rung. Drawn only from the run's recorded results, with the test's pass mark (config/ladders.json); the
- * blind-test verdict and the measured strip say what today's models of each size were found to manage.
+ * climb?". The climb: every model a token that climbs, on slide entry, to the highest level it passed reliably,
+ * the wall nobody got past, and the blind-test climbers (what today's small, mid and top models were found to
+ * manage). Drawn only from the run's recorded results, with the test's pass mark (config/ladders.json).
  */
 import type { CSSProperties } from 'react';
 import type { CategoryInfo, CaseResultLite, TestDetail } from '../../types.ts';
@@ -41,7 +41,7 @@ export function LadderSlide({
   contenders: LadderContestant[];
 }) {
   const spec = ladderSpecOf(testId);
-  // What the blind test measured (config/ladders.json "calibration"); the strip down the ladder's left edge shows it per rung.
+  // What the blind test measured (config/ladders.json "calibration"); the climbers beside the mountain show it per level.
   const verdict = ladderVerdictOf(testId);
   return (
     <div className="s-ladder">
@@ -60,7 +60,14 @@ export function LadderSlide({
           <b>What grows:</b> {spec.grows} <span>· {passMarkText(spec.passMark)}</span>
         </p>
       )}
-      {verdict && <p className="s-ladder-verdict">{verdict}</p>}
+      {verdict && (
+        <p className="s-ladder-verdict">
+          <span className="dl-verdict-ico" aria-hidden="true">
+            ✓
+          </span>
+          {verdict}
+        </p>
+      )}
       <div className="s-ladder-main">
         <LadderPanel testId={testId} results={results} contestants={contenders} mode="slide" detail={detail} showHead={false} />
       </div>

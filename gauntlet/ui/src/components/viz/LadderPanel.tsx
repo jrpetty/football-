@@ -6,7 +6,8 @@
  */
 import { useMemo } from 'react';
 import type { TestDetail } from '../../types.ts';
-import { ladderClimbs, ladderLevel, type LadderResultLike } from '../../../../src/core/ladders.ts';
+import { ladderClimbs, ladderLevel, rungSizes, type LadderResultLike } from '../../../../src/core/ladders.ts';
+import { MOCK } from '../../api.ts';
 import { rungCaption } from '../../../../src/presenter/visuals/horizon.ts';
 import { LADDERS, ladderRuleOf, ladderSpecOf, ladderVerdictOf } from '../../ladders.ts';
 import { DifficultyLadder, type DifficultyLadderMode, type LadderClimber } from './DifficultyLadder.tsx';
@@ -39,6 +40,24 @@ export function ladderRungs(testId: string, detail: TestDetail | null | undefine
   return { rungs: Array.from({ length: levels }, (_, i) => spec?.rungs?.[i] ?? fromCases[i] ?? null), levels };
 }
 
+/**
+ * How big each level is, for the bar beside it: read from the rung labels (src/core/ladders.ts rungSizes); when the
+ * labels carry no single growing number, the length of each level's real prompt (its input size). Null (no bar)
+ * when neither is known; the demo's stand-in prompts are not real input, so they never count.
+ */
+export function ladderSizes(rungs: Array<string | null>, detail: TestDetail | null | undefined): { values: number[]; unit: string } | null {
+  const fromLabels = rungSizes(rungs);
+  if (fromLabels) return fromLabels;
+  const def = detail?.definition;
+  if (!def || def.kind !== 'prompt' || def.tags?.includes('demo')) return null;
+  const values: number[] = [];
+  for (const c of def.cases) {
+    const lv = ladderLevel(c.id);
+    if (lv !== null && lv <= rungs.length && typeof c.prompt === 'string' && c.prompt.length > 0) values[lv - 1] = c.prompt.length;
+  }
+  return values.length === rungs.length && values.every((v) => v > 0) ? { values, unit: 'character of input' } : null;
+}
+
 export function buildClimbers(testId: string, results: LadderResultLike[], contestants: LadderContestant[], levels: number): LadderClimber[] {
   const climbs = new Map(ladderClimbs(results, testId, { ...ladderRuleOf(testId), levels }).map((c) => [c.contestantId, c]));
   return contestants
@@ -54,7 +73,13 @@ export function LadderPanel({
   highlight,
   detail: given,
   showHead = true,
+  runId,
+  scope,
 }: {
+  /** The run these results come from (each level up close shows its answers). */
+  runId?: string | null;
+  /** Passed through to the level close-up. */
+  scope?: string;
   testId: string;
   results: LadderResultLike[];
   contestants: LadderContestant[];
@@ -68,12 +93,18 @@ export function LadderPanel({
   const spec = ladderSpecOf(testId);
   const { rungs, levels } = useMemo(() => ladderRungs(testId, detail), [testId, detail]);
   const climbers = useMemo(() => buildClimbers(testId, results, contestants, levels), [testId, results, contestants, levels]);
+  const sizes = useMemo(() => ladderSizes(rungs, detail), [rungs, detail]);
   if (!climbers.length) return null;
   return (
     <DifficultyLadder
+      testId={testId}
+      runId={runId ?? null}
+      scope={scope}
       climbers={climbers}
       levels={levels}
       rungs={rungs}
+      sizes={sizes}
+      demo={MOCK && mode === 'card'}
       mode={mode}
       highlight={highlight}
       title={showHead ? detail?.definition.name ?? spec?.name : undefined}

@@ -7,7 +7,7 @@ import { useAsync } from '../../hooks.ts';
 import type { TestDetail } from '../../types.ts';
 import { LADDERS, ladderSpecOf, ladderVerdictOf } from '../../ladders.ts';
 import { DifficultyLadder } from './DifficultyLadder.tsx';
-import { isBaselineId, ladderRungs } from './LadderPanel.tsx';
+import { isBaselineId, ladderRungs, ladderSizes } from './LadderPanel.tsx';
 
 export function LadderTestCard({ testId, detail }: { testId: string; detail?: TestDetail | null }) {
   const spec = ladderSpecOf(testId);
@@ -19,6 +19,10 @@ export function LadderTestCard({ testId, detail }: { testId: string; detail?: Te
     <section className="card dl-card-wrap" aria-label="Difficulty ladder">
       <div className="card-body">
         <DifficultyLadder
+          testId={testId}
+          runId={null}
+          demo={!!board.data?.demo}
+          sizes={ladderSizes(rungs, detail)}
           title="How high can it climb?"
           eyebrow={board.data?.demo ? 'Difficulty ladder · demo heights' : 'Difficulty ladder'}
           grows={`What grows: ${spec.grows}`}

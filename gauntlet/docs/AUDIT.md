@@ -388,7 +388,7 @@ calibration above and keep showing their design targets, labelled as such.
 * **Claude-family solvers only**, one model per strength. It measures how well a ladder separates strengths, not how
   vendors compare.
 * **A small sample.** Four to six levels per Frontier ladder, two per strength on the Business ladders; untested levels are
-  left blank on the strip, not guessed.
+  left blank in the view, not guessed.
 * **The top model's single-attempt slips show why the height rule uses repeated attempts.** It missed Knights &
   Knaves L2 through a copying slip while passing L4 and L6; one attempt can understate (or, by luck, overstate) a model.
 * **Tool logs.** One top-tier solver once used a shell command to copy its own answer file; it did not run code or read

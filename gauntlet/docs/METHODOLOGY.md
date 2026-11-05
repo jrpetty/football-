@@ -1381,11 +1381,13 @@ each; `"pending": [9, 10]` marks levels still being tested (when the numbers arr
 (or pending) for one tier, tiers small, mid and top only, the date as `YYYY-MM`. The verdict is worked out unless given
 (`calibrationVerdict` in `src/core/ladders.ts`): **top-clears** when the top model passed every level it was tested
 on, **separates** when the highest level passed rises from small to mid to top, otherwise **partly**. Where a ladder has
-a calibration, the strip down the ladder view's left edge shows what was measured, not the targets: a slot per model
-size (S, M, T) on every rung, ✓ where it passed and ✕ where it failed, blank where it was not tested; the card, the test
-page, the Presenter slide and the public site add the one-line verdict ("Blind test, Nov 2026: separates small, mid and
-top models"). A ladder without one (the five Horizon ladders, calibrated separately in `docs/AUDIT.md`) keeps the
-design-target bands, labelled "Built for (design target)". The November 2026 results are in `docs/AUDIT.md`
+a calibration, the ladder view draws what was measured beside the climb: three climbers (small, mid, top model), each
+standing on the highest level it passed, a ✓ on the other levels it passed and a ✕ where it failed (untested levels
+blank), with one line under the picture ("Blind test, Nov 2026: small fell at L4, mid at L6, top at L8";
+`calibrationClimbText`), and a flag when the top model passed every level it was tested on. The card, the test page,
+the Presenter slide and the public site add the one-line verdict ("Blind test, Nov 2026: separates small, mid and top
+models"). A ladder without one (the five Horizon ladders, calibrated separately in `docs/AUDIT.md`) shows no climbers,
+only "Not blind-tested yet". The November 2026 results are in `docs/AUDIT.md`
 ("Difficulty ladders: blind calibration").
 
 **Pass marks.** A rung is passed by an attempt that scores at least the test's `passMark`:

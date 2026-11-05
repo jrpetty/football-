@@ -61,7 +61,7 @@ export const LADDER_DEMO_RUN_SPECS: RunSpec[] = [
     repeats: 3,
     suiteId: 'frontier-ladders',
     createdAt: '2026-10-20T09:00:00Z',
-    notes: 'Demo data — not real results: invented heights for the invented demo models on stand-in levels, shaped like the November 2026 blind test (each ladder’s left-hand strip shows what was really measured). Open a cell for the ladder; the Presenter has a “How high can it climb?” slide per test.',
+    notes: 'Demo data — not real results: invented heights for the invented demo models on stand-in levels, shaped like the November 2026 blind test (each ladder’s blind-test climbers show what was really measured). Open a cell for the ladder; the Presenter has a “How high can it climb?” slide per test.',
   },
   {
     id: LADDER_DEMO_BUSINESS_RUN,

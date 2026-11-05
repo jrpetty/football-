@@ -139,7 +139,7 @@ export default function LeaderboardPage({ area: pinned }: { area?: AreaId } = {}
         {ladderSuite && planned.length
           ? 'These ladder heights are made up, on placeholder levels, to show the layout (demo mode). The ladders are still being built.'
           : ladderSuite
-            ? 'These ladder heights are invented, for invented demo models, to show the layout (demo mode). What real models managed in the blind test is on each ladder’s left-hand strip.'
+            ? 'These ladder heights are invented, for invented demo models, to show the layout (demo mode). What real models managed in the blind test is shown on each ladder as three climbers (small, mid and top model).'
             : `These ${areaInfo(area).name} scores are made up to show the layout (demo mode). Run the ${areaInfo(area).name} tests to see your own.`}
       </DemoBanner>
 
