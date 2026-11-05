@@ -26,6 +26,7 @@ import type {
   RunRequest,
   RunStatus,
   TestDefinition,
+  TestDetail,
 } from '../types.ts';
 import type { RunStreamHandlers } from '../api.ts';
 import { ApiError } from '../api.ts';
@@ -35,6 +36,7 @@ import { AREA_RUN_ID, LIFE_RUN_ID } from './areaDemo.ts';
 import { BUSINESS_LADDERS_SUITE_ID, BUSINESS_SUITE_ID, FRONTIER_LADDERS_SUITE_ID, LIFE_SUITE_ID } from '../../../src/core/areas.ts';
 import { HORIZON_RUN_SPEC } from './horizonMock.ts';
 import { LADDER_DEMO_BUSINESS_RUN, LADDER_DEMO_FRONTIER_RUN, LADDER_DEMO_RULES } from './laddersMock.ts';
+import { isLadderCloseUpTest, ladderCloseUpDetail, ladderCloseUpResult } from './ladderCloseUpMock.ts';
 import { ladderClimbs } from '../../../src/core/ladders.ts';
 import { ladderSpecOf } from '../ladders.ts';
 import {
@@ -803,7 +805,9 @@ export async function handle(method: string, fullPath: string, body: unknown): P
       const t = tests.find((x) => x.id === b);
       if (!t) throw new ApiError(`Test not found: ${b}`, 404);
       const program = t.kind === 'program' ? PROGRAMS.find((p) => p.id === t.program) : undefined;
-      return { definition: t, summary: { ...summaryOf(t), source: sourceOf(t.id) }, rendered: renderedOf(t), program, explainer: (await import('./explainMock.ts')).mockExplainerFor(t, program) };
+      const detail: TestDetail = { definition: t, summary: { ...summaryOf(t), source: sourceOf(t.id) }, rendered: renderedOf(t), program, explainer: (await import('./explainMock.ts')).mockExplainerFor(t, program) };
+      // Difficulty ladders: the real questions, loaded on demand (the demo runs' results stay demo data).
+      return isLadderCloseUpTest(t.id) ? ladderCloseUpDetail(t.id, detail) : detail;
     }
     case 'GET explainers':
       return { explainers: (await import('./explainMock.ts')).mockExplainers() };
@@ -936,7 +940,7 @@ export async function handle(method: string, fullPath: string, body: unknown): P
         const run = getRun(b);
         const lite = run.results.find((r) => r.key === d);
         if (!lite) throw new ApiError(`Result not found: ${d}`, 404);
-        const full = detailFor(lite);
+        const full = isLadderCloseUpTest(lite.testId) ? await ladderCloseUpResult(lite, detailFor(lite)) : detailFor(lite);
         for (const art of full.artifacts) {
           if (mockArtifactUrls.has(`${b}/${art.file}`)) continue; // recorded fixtures register their own URLs
           const content = artifactContent(art);
@@ -956,7 +960,9 @@ export async function handle(method: string, fullPath: string, body: unknown): P
     }
     case 'GET score-answers': {
       const scope = q.get('scope') ?? '';
-      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : suiteRunId(scope.slice(6)));
+      let run = getRun(scope.startsWith('run:') ? scope.slice(4) : suiteRunId(scope.slice(6)));
+      // A pooled scope ("suite:all"): the demo run that has this test (the ladder demo runs, for instance).
+      if (!scope.startsWith('run:') && !run.manifest.tests.some((t) => t.id === q.get('test'))) run = [...specs.keys()].map((id) => getRun(id)).find((r) => r.manifest.tests.some((t) => t.id === q.get('test'))) ?? run;
       return run.results.filter((r) => r.contestantId === q.get('contestant') && r.testId === q.get('test')).map((r) => toScoreAnswer(detailFor(r)));
     }
     case 'GET leaderboard': {

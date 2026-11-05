@@ -9,8 +9,7 @@
  *
  * Modes: "card" (pages and the inspector), "slide" (the Presenter: big type, fills the stage, the climb only).
  */
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useState, type CSSProperties } from 'react';
 import { Seg, cx } from '../ui.tsx';
 import {
   calibrationClimbText,
@@ -325,64 +324,6 @@ function HeightsTable({ lanes, levels }: { lanes: LadderClimber[]; levels: numbe
   );
 }
 
-/**
- * A side sheet over the page (full screen on a phone) for one level up close: Esc or the backdrop closes it, Tab
- * stays inside it, and focus goes back to what opened it.
- */
-function CloseUpSheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const close = useRef(onClose);
-  close.current = onClose;
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const prev = document.activeElement as HTMLElement | null;
-    const focusables = () =>
-      [...el.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])')].filter((x) => x.getClientRects().length > 0);
-    (focusables()[0] ?? el).focus({ preventScroll: true });
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        close.current();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const f = focusables();
-      if (!f.length) {
-        e.preventDefault();
-        el.focus();
-        return;
-      }
-      const first = f[0]!;
-      const last = f[f.length - 1]!;
-      const at = document.activeElement;
-      if (e.shiftKey && (at === first || !el.contains(at))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && (at === last || !el.contains(at))) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey, true);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey, true);
-      document.body.style.overflow = overflow;
-      prev?.focus?.({ preventScroll: true });
-    };
-  }, []);
-  return createPortal(
-    <div className="dl-sheet-root" onMouseDown={(e) => e.target === e.currentTarget && close.current()}>
-      <div ref={ref} className="dl-sheet" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
-}
 
 export function DifficultyLadder({
   testId,
@@ -548,9 +489,7 @@ export function DifficultyLadder({
         </>
       )}
       {closeUp && testId && (
-        <CloseUpSheet label={`Level ${closeUp.level} up close`} onClose={() => setCloseUp(null)}>
-          <LevelCloseUp testId={testId} level={closeUp.level} contestantId={closeUp.contestantId} runId={runId ?? null} scope={scope} mode="panel" onClose={() => setCloseUp(null)} />
-        </CloseUpSheet>
+        <LevelCloseUp testId={testId} level={closeUp.level} contestantId={closeUp.contestantId} runId={runId ?? null} scope={scope} mode="panel" onClose={() => setCloseUp(null)} />
       )}
     </figure>
   );

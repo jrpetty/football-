@@ -18,6 +18,8 @@ export interface CodeTile {
   expected?: unknown;
   got?: string;
   argChars: number;
+  /** What the hidden test checks, when the test's generator published names (e.g. "chmax on two-valued ranges"). */
+  name?: string;
 }
 
 export interface CodeVisual {
@@ -76,12 +78,29 @@ export function codeVisual(input: CaseVisualInput): CodeVisual | null {
   };
 }
 
+/**
+ * Name the tiles from a list of hidden-test names in test order (the generator's labels file). Used only when the
+ * list has exactly one name per recorded test, so a name can never land on the wrong tile.
+ */
+export function withTestNames(v: CodeVisual, names: readonly string[] | undefined): CodeVisual {
+  if (!names || names.length !== v.tiles.length) return v;
+  const tiles = v.tiles.map((t, i) => ({ ...t, name: names[i] }));
+  const byIndex = new Map(tiles.map((t) => [t.index, t]));
+  return {
+    ...v,
+    tiles,
+    groups: v.groups.map((g) => ({ ...g, tiles: g.tiles.map((t) => byIndex.get(t.index)!) })),
+    firstFail: v.firstFail ? byIndex.get(v.firstFail.index)! : null,
+  };
+}
+
 export function codeHeadline(v: CodeVisual): string {
   if (v.loadError) return 'The code did not even load';
   if (!v.total) return 'No tests recorded';
   if (v.passed === v.total) return `All ${v.total} hidden tests pass`;
   const timeouts = v.tiles.filter((t) => t.status === 'timeout').length;
   if (timeouts && timeouts === v.total - v.passed) return `${v.passed} of ${v.total} pass — ${timeouts} too slow`;
+  if (v.total - v.passed === 1 && v.firstFail?.name) return `${v.passed} of ${v.total} hidden tests pass — failed ‘${v.firstFail.name}’`;
   return `${v.passed} of ${v.total} hidden tests pass`;
 }
 

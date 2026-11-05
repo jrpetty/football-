@@ -42,6 +42,7 @@ import { simReplay } from './simReplayMock.ts';
 import { GALLERY_CONTESTANTS, GALLERY_PROGRAMS, GALLERY_RUN_SPEC, GALLERY_TESTS, decorateGallery, galleryDetail } from './galleryMock.ts';
 import { HORIZON_RUN_SPEC, HORIZON_SUITE, HORIZON_TESTS, decorateHorizon, horizonDetail } from './horizonMock.ts';
 import { LADDER_DEMO_RULES, LADDER_DEMO_RUN_SPECS, LADDER_DEMO_SUITES, LADDER_DEMO_TESTS, decorateLadderDemo } from './laddersMock.ts';
+import { decorateLadderCloseUp } from './ladderCloseUpMock.ts';
 import { attachLadderHeights } from '../../../src/core/ladders.ts';
 import { VISUAL_PASS_PROGRAMS, VISUAL_PASS_RUN_SPEC, VISUAL_PASS_TESTS, decorateVisualPass, visualPassDetail } from './visualPassMock.ts';
 import { GAME_JAM_RUN_SPEC, GAME_JAM_SUITE, GAME_JAM_TESTS, decorateGameJam, gameJamDetail } from './gameJamMock.ts';
@@ -905,7 +906,7 @@ export function buildRun(spec: RunSpec): MockRun {
           i++;
           const include = frac >= 1 || rngFrom(`${spec.id}|inc|${c.id}|${t.id}|${caseId}|${rep}`).next() < frac;
           if (!include) continue;
-          results.push(decorateLadderDemo(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t), t));
+          results.push(decorateLadderCloseUp(decorateLadderDemo(applyAreaDemo(genLite(spec.id, cv, t, caseId, rep, created + 2000 + i * 900), t), t)));
         }
       }
     }
@@ -917,7 +918,7 @@ export function newLiveResult(runId: string, contestantId: string, testId: strin
   const c = CONTESTANTS.find((x) => x.id === contestantId);
   const t = testById(testId);
   if (!c || !t) return null;
-  return decorateLadderDemo(applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t), t);
+  return decorateLadderCloseUp(decorateLadderDemo(applyAreaDemo(genLite(runId, c, t, caseId, repeat, Date.now()), t), t));
 }
 
 export const RUN_SPECS: RunSpec[] = [
