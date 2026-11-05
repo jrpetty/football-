@@ -1,0 +1,102 @@
+/* Review page for the rung thumbnails (#/dev/rung-thumbs, mock mode). Not used by any product screen. */
+.rts-page {
+  padding: 24px 32px 48px;
+  background: var(--bg);
+  color: var(--text-1);
+  min-height: 100vh;
+}
+.rts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.rts-head h1 {
+  margin: 0 0 4px;
+}
+.rts-head p {
+  margin: 0;
+  color: var(--text-2);
+}
+.rts-controls {
+  display: flex;
+  gap: 6px;
+}
+.rts-controls button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.rts-controls button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.rts-group h2 {
+  margin: 28px 0 10px;
+  font-size: var(--fs-h3, 1.1rem);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+/* Business ladders sit on Business pages, which set the gold area accent. */
+.rts-group[data-area='business'] {
+  --area-accent: var(--area-business);
+}
+.rts-ladder {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-1);
+  margin-bottom: 8px;
+}
+.rts-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+}
+.rts-name code {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.rts-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.rts-strip li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+.rts-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-1);
+}
+.rts-lv {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.rts-rung {
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: var(--text-3);
+}
