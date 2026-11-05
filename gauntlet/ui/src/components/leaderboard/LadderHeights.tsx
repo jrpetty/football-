@@ -1,7 +1,7 @@
 /**
  * "How high each model climbs": the leaderboard panel of a ladder board (Horizon, Frontier Ladders, Business
  * Ladders, or any run with ladder tests). One row per model, one column per ladder test, each cell the height
- * reached (src/core/ladders.ts) with a ten-rung meter; ladders still being built show as "coming soon".
+ * reached (src/core/ladders.ts) on a small ten-step staircase; ladders still being built show as "coming soon".
  */
 import { useMemo, type CSSProperties } from 'react';
 import type { Leaderboard } from '../../types.ts';
@@ -100,7 +100,7 @@ export function LadderHeightsPanel({ lb, planned = [], demo }: { lb: Leaderboard
                           L{cell.height}
                           {cell.borderline && <span className="height-warn">~</span>}
                         </span>
-                        <RungMeter height={cell.height} levels={cell.levels} onceSolved={cell.onceSolved} color={r.color} />
+                        <RungMeter height={cell.height} levels={cell.levels} onceSolved={cell.onceSolved} color={r.color} size="md" label={`level ${cell.height} of ${cell.levels}`} />
                         {once ? <small className="lh-once">once L{once}</small> : null}
                       </td>
                     );
@@ -112,7 +112,7 @@ export function LadderHeightsPanel({ lb, planned = [], demo }: { lb: Leaderboard
         </div>
         {note && <p className="dl-note lh-note">{note}</p>}
         <p className="lh-key muted">
-          <RungMeter height={4} onceSolved={[6]} color="var(--accent)" label="example meter" /> filled = climbed · outlined = passed once higher up, which does not count · ~ = a rung in the climb was within the noise
+          <RungMeter height={4} onceSolved={[6]} color="var(--accent)" label="example staircase" /> ten steps, each harder than the last: filled = climbed, the dot is the model on its height · dashed = passed once higher up, which does not count · ~ = a level in the climb was within the noise
         </p>
       </div>
     </section>

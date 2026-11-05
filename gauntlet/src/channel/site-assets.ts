@@ -197,6 +197,25 @@ tr:last-child td { border-bottom: 0; }
 pre.prompt { white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 520px; overflow: auto; font-size: 13px; line-height: 1.5; }
 .bar { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; min-width: 80px; }
 .bar i { display: block; height: 100%; background: var(--c, var(--accent)); border-radius: 99px; }
+.h-cell { display: inline-flex; align-items: center; gap: 8px; }
+.stairs { width: 56px; height: 21px; flex: none; }
+.stairs .st { fill: color-mix(in srgb, var(--muted) 25%, transparent); }
+.climb-wrap { margin: 4px 0 16px; }
+.climb { display: block; width: 100%; min-width: 520px; max-width: 760px; height: auto; }
+.climb .step { fill: color-mix(in srgb, var(--muted) 22%, var(--surface)); }
+.climb .ground { fill: color-mix(in srgb, var(--bronze) 45%, var(--surface)); }
+.climb .beyond { fill: color-mix(in srgb, var(--muted) 9%, var(--surface)); stroke: color-mix(in srgb, var(--muted) 35%, transparent); stroke-dasharray: 3 3; }
+.climb .wall { fill: color-mix(in srgb, var(--bad) 18%, var(--surface)); stroke: var(--bad); stroke-dasharray: 4 3; }
+.climb .wall-t { fill: var(--bad); font-size: 10px; font-weight: 700; text-anchor: middle; }
+.climb .lv { fill: var(--muted); font-size: 11px; font-weight: 700; text-anchor: middle; }
+.climb .tok { stroke: var(--surface); stroke-width: 2; }
+.climb .tok.base { stroke: var(--muted); stroke-dasharray: 2 2; }
+.climb .tok-t { fill: #fff; font-size: 8.5px; font-weight: 800; text-anchor: middle; paint-order: stroke; stroke: rgba(0, 0, 0, 0.25); stroke-width: 1.5px; }
+.climb .flag { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.climb .flag.reached { fill: var(--gold); stroke: var(--gold); stroke-dasharray: none; }
+.climb-key { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--text-2); }
+.climb-key li { display: inline-flex; align-items: center; gap: 6px; }
+.climb-key i { width: 10px; height: 10px; border-radius: 50%; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
 .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: block; color: var(--text); box-shadow: var(--shadow); }
 .tcard:hover { text-decoration: none; border-color: var(--accent); }

@@ -402,6 +402,7 @@ export function ResultInspector({
         <details className="dl-panel" open>
           <summary>How high each model climbed the difficulty ladder</summary>
           <LadderPanel
+            runId={runId}
             showHead={false}
             testId={target.testId}
             results={results}

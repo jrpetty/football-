@@ -76,7 +76,7 @@ export interface LaddersConfig {
   about?: string;
   /** Rungs per ladder (10). */
   levels: number;
-  /** How the blind calibration was done (one line, shown beside the measured strip). */
+  /** How the blind calibration was done (one line, shown beside the blind-test climbers). */
   calibrationMethod?: string;
   tests: LadderTestSpec[];
 }
@@ -454,6 +454,98 @@ export function calibrationVerdictText(cal: LadderCalibration, area: LadderArea 
   const lastAhead = !!last && tiers.length > 1 && tiers.slice(0, -1).every((t) => bestOf(cal.tiers[t]) < bestOf(cal.tiers[last]));
   if (!ties.length) return `${head}: partly separates ${andJoin(tiers.map((t) => TIER_WORD[t]))} models${tail}`;
   return `${head}: partly separates — ${andJoin(ties)} models came out level${lastAhead ? `; ${TIER_WORD[last!]} models got further` : ''}${tail}`;
+}
+
+/**
+ * Where one model size got to in the blind test, as a climber: `best` = the highest level it passed (0 = none),
+ * `fell` = the first level it failed above that (null: it failed nothing above its best), and every level passed,
+ * failed and still being tested. `clearedAll`: it passed every level it was tested on.
+ */
+export interface CalibrationClimb {
+  tier: CalibrationTier;
+  best: number;
+  fell: number | null;
+  passed: number[];
+  failed: number[];
+  pending: number[];
+  clearedAll: boolean;
+}
+
+export function calibrationClimb(cal: LadderCalibration, tier: CalibrationTier): CalibrationClimb | null {
+  const r = cal.tiers?.[tier];
+  if (!r) return null;
+  const sort = (xs: readonly number[] | undefined) => [...new Set(xs ?? [])].sort((a, b) => a - b);
+  const passed = sort(r.passed);
+  const failed = sort(r.failed);
+  const best = Math.max(0, ...passed);
+  const above = failed.filter((l) => l > best);
+  return { tier, best, fell: above.length ? above[0]! : null, passed, failed, pending: sort(r.pending), clearedAll: passed.length > 0 && failed.length === 0 };
+}
+
+/**
+ * The blind test as climbers, in one line: "Blind test, Nov 2026: small fell at L4, mid at L6, top at L8" or
+ * "Blind test, Nov 2026: small reached L5, mid L7, top L9". A size that fell is named by the level it fell at; one
+ * that failed nothing above its best by the highest level it passed.
+ */
+export function calibrationClimbText(cal: LadderCalibration): string {
+  const parts: string[] = [];
+  let last = '';
+  for (const t of calibrationTiers(cal)) {
+    const c = calibrationClimb(cal, t)!;
+    const verb = c.fell !== null ? 'fell at' : c.passed.length ? 'reached' : '';
+    const lv = c.fell ?? c.best;
+    if (!verb) parts.push(`${TIER_WORD[t]} not marked yet`);
+    else if (verb === last) parts.push(`${TIER_WORD[t]} ${verb === 'fell at' ? 'at ' : ''}L${lv}`);
+    else parts.push(`${TIER_WORD[t]} ${verb} L${lv}`);
+    last = verb;
+  }
+  const pending = calibrationPendingText(cal);
+  return `Blind test, ${calibrationMonth(cal.date)}: ${parts.join(', ')}${pending ? ` (${pending})` : ''}`;
+}
+
+/** "today’s top model reached L9 — every level tested" when the top size passed every level it was tested on (else null). */
+export function calibrationSummitText(cal: LadderCalibration): string | null {
+  const top = calibrationClimb(cal, 'top');
+  if (!top?.clearedAll) return null;
+  return `today’s top model reached L${top.best} — every level tested${top.pending.length ? ' so far' : ''}`;
+}
+
+// ───────────────────────────── how big each rung is ─────────────────────────────
+
+/** The quantities in a rung label: "1,168 steps" → 1168 "step"; "4×4 grid" → 16 "cell"; "8-digit numbers" → 8 "digit". */
+function quantities(label: string): Array<{ value: number; unit: string }> {
+  const out: Array<{ value: number; unit: string }> = [];
+  const re = /(\d[\d,]*(?:\.\d+)?)(?:\s*[×x]\s*(\d[\d,]*))?(?:\^(\d+))?\s*-?\s*([A-Za-z]*)/g;
+  for (let m = re.exec(label); m; m = re.exec(label)) {
+    const a = Number(m[1]!.replace(/,/g, ''));
+    const b = m[2] ? Number(m[2].replace(/,/g, '')) : 1;
+    const value = m[3] ? a ** Number(m[3]) : a * b;
+    // "8×8 grid" counts its cells; anything else takes the word after the number ("1,168 steps" → step).
+    if (Number.isFinite(value)) out.push({ value, unit: m[2] ? 'cell' : (m[4] ?? '').toLowerCase().replace(/s$/, '') });
+  }
+  return out;
+}
+
+/**
+ * How big each rung is, read from its label (index 0 = level 1), for the "how big is this level" bar: the first or
+ * the last quantity of every label, when every rung has it with the same unit and it never shrinks (of the two, the
+ * one that grows most). Null when the labels do not carry one such number: the bar is then left out, not invented.
+ */
+export function rungSizes(labels: ReadonlyArray<string | null | undefined>): { values: number[]; unit: string } | null {
+  if (labels.length < 2 || labels.some((l) => !l)) return null;
+  const qs = labels.map((l) => quantities(l!));
+  if (qs.some((q) => !q.length)) return null;
+  let pick: { values: number[]; unit: string; growth: number } | null = null;
+  for (const which of ['first', 'last'] as const) {
+    const xs = qs.map((q) => (which === 'first' ? q[0]! : q[q.length - 1]!));
+    const unit = xs[0]!.unit;
+    if (!unit || xs.some((x) => x.unit !== unit)) continue;
+    const values = xs.map((x) => x.value);
+    if (values.some((v, i) => v <= 0 || (i > 0 && v < values[i - 1]!))) continue;
+    const growth = values[values.length - 1]! / values[0]!;
+    if (growth > 1 && (!pick || growth > pick.growth)) pick = { values, unit, growth };
+  }
+  return pick ? { values: pick.values, unit: pick.unit } : null;
 }
 
 /** Problems with one test's calibration (empty = valid). `levels` = the ladder's rungs. */

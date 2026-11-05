@@ -7,7 +7,8 @@ import { Link, pathOf } from '../../router.tsx';
 import { Callout, cx } from '../ui.tsx';
 import { Icon } from '../icons.tsx';
 import { LADDERS, ladderSpecOf, ladderVerdictOf, passMarkText } from '../../ladders.ts';
-import { calibrationMonth, calibrationVerdict, levelsText } from '../../../../src/core/ladders.ts';
+import { calibrationClimbText, calibrationMonth, calibrationVerdict, levelsText } from '../../../../src/core/ladders.ts';
+import { BlindTestMini } from '../viz/ClimbScene.tsx';
 import '../viz/difficulty-ladder.css';
 
 /**
@@ -65,7 +66,7 @@ export function LadderSuiteSoon({ suite }: { suite: SuiteView }) {
   );
 }
 
-/** The ladders by name: what grows, the pass mark, whether each is ready or still coming, and its blind-test verdict. */
+/** The ladders by name: what grows, the pass mark, whether each is ready or still coming, and the blind test as a small climb with its verdict. */
 export function LadderList({ ids, planned }: { ids: string[]; planned?: ReadonlySet<string> }) {
   return (
     <ul className="lh-soon-list">
@@ -75,11 +76,18 @@ export function LadderList({ ids, planned }: { ids: string[]; planned?: Readonly
         const verdict = ladderVerdictOf(id);
         return (
           <li key={id} className={cx(soon && 'soon')}>
-            <span className="lh-mini" aria-hidden="true">
-              {Array.from({ length: 10 }, (_, i) => (
-                <i key={i} />
-              ))}
-            </span>
+            {spec?.calibration ? (
+              <span className="lh-mini-cal" title={calibrationClimbText(spec.calibration)}>
+                <BlindTestMini calibration={spec.calibration} levels={spec.rungs?.length ?? 10} />
+                <small>Blind test</small>
+              </span>
+            ) : (
+              <span className="lh-mini" aria-hidden="true">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <i key={i} />
+                ))}
+              </span>
+            )}
             <div>
               <b>{soon ? spec?.name ?? id : <Link to={pathOf('tests', id)}>{spec?.name ?? id}</Link>}</b>
               {spec && <p>{spec.grows}</p>}
@@ -87,6 +95,7 @@ export function LadderList({ ids, planned }: { ids: string[]; planned?: Readonly
                 <span className={cx('lh-tag', !soon && 'ok')}>{soon ? 'Coming soon' : 'Ready'}</span>
                 <small>{passMarkText(spec?.passMark ?? 1)}</small>
               </span>
+              {spec?.calibration && <p className="lh-climbs">{calibrationClimbText(spec.calibration).replace(/^Blind test, [^:]+: (.)/, (_, c: string) => `Climbers: ${c}`)}.</p>}
               {verdict && <p className="lh-verdict">{verdict}</p>}
             </div>
           </li>

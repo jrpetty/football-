@@ -527,7 +527,7 @@ function captionFor(slide: Slide, deck: Deck): Caption {
       const pm = ladderSpecOf(slide.test.snap.id)?.passMark ?? 1;
       const mark = pm >= 1 ? 'full marks' : `at least ${Math.round(pm * 100)}% of the marks`;
       return {
-        text: 'How high can it climb? Ten levels, each harder than the last. Each model’s lane is filled up to the highest rung it passed without missing one below; the chips show every attempt on every rung.',
+        text: 'How high can it climb? Ten levels, each harder than the last. Each model climbs to the highest level it passed without missing one below; a cracked ledge marks the wall nobody got past.',
         fine: `Passed reliably = ${mark} on ${R > 1 ? 'at least 2 in 3 attempts' : 'its attempt'} · a lucky pass higher up shows as a dashed “once” but does not lift the height · the levels are frozen, so future models climb the same ladder`,
       };
     }

@@ -8,6 +8,7 @@ import { buildHistory } from './history.ts';
 import { esc, historySvg, scatterSvg } from './site-charts.ts';
 import { scoreNameFor } from '../core/areas.ts';
 import { SITE_JS, siteCss } from './site-assets.ts';
+import { climbBlock, miniStairsSvg } from './site-ladder.ts';
 import type { PublicData, PublicModel, PublicSuite, PublicTest } from './types.ts';
 import type { Contestant } from '../core/types.ts';
 
@@ -140,7 +141,7 @@ function leaderboardTable(ctx: Ctx, suite: PublicSuite): string {
 <td data-v="${esc(r.label)}">${modelCell(ctx, '', r)}</td>
 <td data-v="${r.index ?? -1}">${ciBar(r)}</td>
 <td class="num" data-v="${r.indexCi95 ? r.indexCi95[0] : ''}">${r.indexCi95 ? `${fmtIdx(r.indexCi95[0])}–${fmtIdx(r.indexCi95[1])}` : '—'}</td>
-${hasHeight ? `<td class="num" data-v="${r.ladderHeight ?? -1}"><b>${height(r)}</b></td>` : ''}
+${hasHeight ? `<td class="num" data-v="${r.ladderHeight ?? -1}"><span class="h-cell"><b>${height(r)}</b>${typeof r.ladderHeight === 'number' ? miniStairsSvg(r.ladderHeight, 10, base ? 'var(--muted)' : r.color) : ''}</span></td>` : ''}
 <td class="num" data-v="${r.medals.gold * 10000 + r.medals.silver * 100 + r.medals.bronze}">${r.medals.gold}·${r.medals.silver}·${r.medals.bronze}</td>
 <td class="num" data-v="${r.totals.cases ? r.totals.costUsd / r.totals.cases : ''}">${r.manual ? '<span class="muted">n/a</span>' : fmtCost(r.totals.cases ? r.totals.costUsd / r.totals.cases : null)}</td>
 <td class="num" data-v="${r.costPerPoint ?? ''}">${r.manual ? '<span class="muted">n/a</span>' : fmtCost(r.costPerPoint)}</td>
@@ -323,9 +324,11 @@ function testPage(ctx: Ctx, t: PublicTest): string {
       const heightCell = (r: LeaderboardRow) => {
         const l = r.tests[t.id]!.ladder;
         const once = l?.onceSolved[l.onceSolved.length - 1];
-        return l ? `<td class="num"><b>L${l.height}</b>${once ? ` <span class="muted small">once L${once}</span>` : ''}</td>` : '<td class="num">—</td>';
+        return l ? `<td class="num"><span class="h-cell"><b>L${l.height}</b>${miniStairsSvg(l.height, l.levels, isBaselineRow(r, ctx.models) ? 'var(--muted)' : r.color)}</span>${once ? ` <span class="muted small">once L${once}</span>` : ''}</td>` : '<td class="num">—</td>';
       };
-      return `<section class="card"><h2>${esc(s.name)}</h2>${ladder ? '<p class="desc">Height: the highest of the ten levels passed reliably with every level below it. A pass higher up (“once”) does not count.</p>' : ''}<div class="scroll"><table><thead><tr><th>Model</th>${ladder ? '<th class="num">Height</th>' : ''}<th class="num">Score</th><th class="num">95% CI</th><th style="width:35%"></th><th class="num">Pass rate</th><th></th></tr></thead><tbody>${rows
+      const levels = Math.max(10, ...rows.map((r) => r.tests[t.id]!.ladder?.levels ?? 0));
+      const climb = ladder ? climbBlock(rows.filter((r) => r.tests[t.id]!.ladder).map((r) => ({ label: r.label, color: r.color, height: r.tests[t.id]!.ladder!.height, baseline: isBaselineRow(r, ctx.models) })), levels) : '';
+      return `<section class="card"><h2>${esc(s.name)}</h2>${ladder ? '<p class="desc">How high each model climbs: ten levels, each harder than the last. A model stands on the highest level it passed reliably with every level below it; a pass higher up (“once”) does not count.</p>' : ''}${climb}<div class="scroll"><table><thead><tr><th>Model</th>${ladder ? '<th class="num">Height</th>' : ''}<th class="num">Score</th><th class="num">95% CI</th><th style="width:35%"></th><th class="num">Pass rate</th><th></th></tr></thead><tbody>${rows
         .map((r) => {
           const a = r.tests[t.id]!;
           return `<tr><td>${modelCell(ctx, root, r)}</td>${ladder ? heightCell(r) : ''}<td class="num"><b>${fmtPct(a.score)}</b></td><td class="num">${a.ci95 ? `${fmtPct(a.ci95[0])}–${fmtPct(a.ci95[1])}` : '—'}</td><td><div class="bar" style="--c:${esc(r.color)}"><i style="width:${Math.round((a.score ?? 0) * 100)}%"></i></div></td><td class="num">${fmtPct(a.passRate)}%</td><td>${medalFor(r.contestantId)}</td></tr>`;

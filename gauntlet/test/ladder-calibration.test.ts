@@ -7,8 +7,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { caseIds, loadTests } from '../src/core/registry.ts';
 import { loadLadders } from '../src/core/ladders-file.ts';
+import { climbBlock, climbSvg, miniStairsSvg } from '../src/channel/site-ladder.ts';
 import {
   calibrationAt,
+  calibrationClimb,
+  calibrationClimbText,
+  calibrationSummitText,
+  rungSizes,
   calibrationMonth,
   calibrationPendingText,
   calibrationTierText,
@@ -116,4 +121,57 @@ test('plain English: months, level lists, one line per size, pending levels and 
   assert.equal(calibrationVerdictText(plansCfg.calibration!, plansCfg.area), 'Blind test, Nov 2026: separates small, mid and top models');
   const eng = cfg.tests.find((t) => t.id === 'coding.engineering-ladder')!;
   assert.equal(calibrationVerdictText(eng.calibration!, eng.area), 'Blind test, Nov 2026: today’s mid and top models clear every level tested (up to L10); it separates small models only');
+});
+
+test('the blind test as climbers: where each size got to and where it fell, in one line', () => {
+  const grid = cfg.tests.find((t) => t.id === 'reasoning.grid-ladder')!.calibration!;
+  assert.deepEqual(calibrationClimb(grid, 'small'), { tier: 'small', best: 2, fell: 4, passed: [2], failed: [4, 6, 8], pending: [], clearedAll: false });
+  assert.equal(calibrationClimbText(grid), 'Blind test, Nov 2026: small fell at L4, mid at L6, top at L8');
+  assert.equal(calibrationSummitText(grid), null);
+  // A miss below the best level (a copying slip) is drawn, but the climber falls at the first miss above it.
+  const truth = cfg.tests.find((t) => t.id === 'reasoning.truth-ladder')!.calibration!;
+  assert.equal(calibrationClimb(truth, 'top')!.fell, 8);
+  assert.equal(calibrationClimb(truth, 'top')!.best, 6);
+  // Nothing passed: on the ground, fell at the first level tried.
+  const plans = cfg.tests.find((t) => t.id === 'reasoning.plans-ladder')!.calibration!;
+  assert.deepEqual([calibrationClimb(plans, 'small')!.best, calibrationClimb(plans, 'small')!.fell], [0, 2]);
+  // A Business ladder the top model cleared: "reached", and the summit flag.
+  const inv = cfg.tests.find((t) => t.id === 'work.invoices-ladder')!.calibration!;
+  assert.equal(calibrationClimbText(inv), 'Blind test, Nov 2026: small reached L5, mid L7, top L9');
+  assert.equal(calibrationSummitText(inv), 'today’s top model reached L9 — every level tested');
+  const crm = cfg.tests.find((t) => t.id === 'work.crm-ladder')!.calibration!;
+  assert.equal(calibrationClimbText(crm), 'Blind test, Nov 2026: small fell at L5, mid reached L7, top L9');
+  assert.equal(calibrationClimb(cal({ mid: { passed: [2] } as never }), 'top'), null);
+  assert.match(calibrationClimbText(cal({ top: { passed: [], failed: [], pending: [9, 10] } })), /top not marked yet \(L9–L10 still being tested for the top model\)$/);
+});
+
+test('rung sizes: one growing number read from the labels, or no bar at all', () => {
+  const sizes = (id: string) => rungSizes(cfg.tests.find((t) => t.id === id)!.rungs ?? []);
+  assert.deepEqual(sizes('reasoning.grid-ladder'), { values: [10, 16, 23, 26, 29, 46, 52, 71, 104, 172], unit: 'clue' });
+  assert.deepEqual(sizes('horizon.sliding-ladder')?.unit, 'move');
+  assert.deepEqual(sizes('horizon.nonogram-ladder')?.values.slice(0, 2), [64, 100]);
+  assert.deepEqual(sizes('horizon.mind-runner')?.values.at(-1), 73119);
+  assert.deepEqual(sizes('work.crm-ladder')?.unit, 'record');
+  // The labels do not carry one growing number: no bar rather than an invented one.
+  assert.equal(sizes('work.invoices-ladder'), null);
+  assert.equal(sizes('coding.engineering-ladder'), null);
+  assert.equal(rungSizes(['3 steps', null, '9 steps']), null);
+  assert.equal(rungSizes(['9 steps', '3 steps']), null);
+});
+
+test('public site: the climb is a static picture with every height and the wall', () => {
+  const svg = climbSvg(
+    [
+      { label: 'Kite 2.5 Reasoner', color: '#199e70', height: 7 },
+      { label: 'Atlas-4 Ultra', color: '#3987e5', height: 6 },
+      { label: 'Random Baseline', color: '#7f8b9d', height: 0, baseline: true },
+    ],
+    10,
+  );
+  assert.match(svg, /aria-label="The climb: Kite 2.5 Reasoner reached level 7 of 10; Atlas-4 Ultra reached level 6 of 10"/);
+  assert.match(svg, />K2\.5</);
+  assert.equal((svg.match(/class="wall"/g) ?? []).length, 1);
+  assert.match(svg, /Random guessing: level 0 of 10/);
+  assert.match(miniStairsSvg(4.2), /aria-label="height 4.2 of 10"/);
+  assert.match(climbBlock([{ label: 'Kite 2.5 Reasoner', color: '#199e70', height: 10 }]), /flag reached/);
 });
