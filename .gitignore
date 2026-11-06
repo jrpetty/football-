@@ -24,3 +24,8 @@ dist-ssr
 
 # Build info
 node_modules/.tmp
+javac.*.args
+
+# Python bytecode
+__pycache__/
+*.pyc

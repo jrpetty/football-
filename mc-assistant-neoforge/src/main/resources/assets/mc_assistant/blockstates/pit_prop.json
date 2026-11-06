@@ -1,0 +1,18 @@
+{
+  "variants": {
+    "axis=z,half=lower": {
+      "model": "mc_assistant:block/pit_prop_lower"
+    },
+    "axis=z,half=upper": {
+      "model": "mc_assistant:block/pit_prop_upper"
+    },
+    "axis=x,half=lower": {
+      "model": "mc_assistant:block/pit_prop_lower",
+      "y": 90
+    },
+    "axis=x,half=upper": {
+      "model": "mc_assistant:block/pit_prop_upper",
+      "y": 90
+    }
+  }
+}

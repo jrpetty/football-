@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/town_50",
+  "display": {
+    "icon": {
+      "id": "minecraft:lodestone"
+    },
+    "title": {
+      "text": "A Hundred Strong"
+    },
+    "description": {
+      "text": "A town you founded, or are a citizen of, reaches a hundred folk"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

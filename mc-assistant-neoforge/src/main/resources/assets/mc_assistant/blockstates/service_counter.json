@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "mc_assistant:block/service_counter" },
+    "facing=east": { "model": "mc_assistant:block/service_counter", "y": 90 },
+    "facing=south": { "model": "mc_assistant:block/service_counter", "y": 180 },
+    "facing=west": { "model": "mc_assistant:block/service_counter", "y": 270 }
+  }
+}

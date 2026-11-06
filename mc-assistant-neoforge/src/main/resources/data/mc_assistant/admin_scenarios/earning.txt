@@ -1,0 +1,7 @@
+# [admin] A town with work to be had for a player: coin to pay wages, goods in the stores, notices up for open jobs.
+village admin economy coin 1500
+village admin economy fill all
+village admin people add 10
+village jobs post
+village jobs
+say Work is posted: see the town board for open jobs and wanted goods.

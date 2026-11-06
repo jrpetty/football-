@@ -1,0 +1,34 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "crumbs": "mc_assistant:block/dining/crumbs",
+    "particle": "mc_assistant:block/dining/plate_top"
+  },
+  "elements": [
+    {
+      "from": [
+        3.5,
+        2.0,
+        3.5
+      ],
+      "to": [
+        12.5,
+        2.05,
+        12.5
+      ],
+      "faces": {
+        "up": {
+          "texture": "#crumbs",
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ]
+        }
+      }
+    }
+  ]
+}

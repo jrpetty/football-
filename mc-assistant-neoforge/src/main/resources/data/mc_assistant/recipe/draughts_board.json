@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "KW",
+    "PP"
+  ],
+  "key": {
+    "K": [
+      {
+        "item": "minecraft:black_dye"
+      },
+      {
+        "item": "minecraft:ink_sac"
+      }
+    ],
+    "W": [
+      {
+        "item": "minecraft:white_dye"
+      },
+      {
+        "item": "minecraft:bone_meal"
+      }
+    ],
+    "P": {
+      "tag": "minecraft:planks"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:draughts_board",
+    "count": 1
+  }
+}

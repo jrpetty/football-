@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/crossbow",
+  "textures": {
+    "layer0": "mc_assistant:item/arbalest_pulling_1"
+  }
+}

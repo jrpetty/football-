@@ -1,0 +1,46 @@
+# The well: a stone curb round water, four posts and a little pitched roof, a
+# lantern hung inside. The middle of village life.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name well
+layer -1
+FFFFF
+FFFFF
+FFFFF
+FFFFF
+FFFFF
+layer 0
+.....
+.SSS.
+.S~S.
+.SSS.
+.....
+layer 1
+.....
+.P.P.
+.....
+.P.P.
+.....
+layer 2
+.....
+.P.P.
+..j..
+.P.P.
+.....
+layer 3
+vvvvv
+.---.
+.|W|.
+.---.
+^^^^^
+layer 4
+.....
+vvvvv
+.W.W.
+^^^^^
+.....
+layer 5
+.....
+.....
+_____
+.....
+.....

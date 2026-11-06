@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=south": {
+      "model": "mc_assistant:block/milestone"
+    },
+    "facing=west": {
+      "model": "mc_assistant:block/milestone",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "mc_assistant:block/milestone",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "mc_assistant:block/milestone",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,189 @@
+# [civic-land] A knight's manor: the hall-house a town raises on the land it grants a knight, at its edge.
+# Modest and handsome: two storeys on a stone footing, a stone lower course and timber above, glass all round,
+# a lantern over the door. Below, the great room: a long carpet down the middle, a stove and a table either
+# side, bookshelves and chests along the back, casks by the door. A ladder at the back up to the knight's
+# chamber: a bed for the knight and one for a guest, a carpet, a bookshelf and a cask, lanterns hung from the
+# beams. Nobody of the town sleeps in it or takes from its chests (KnightManors).
+# [build-looks] A porch of two log posts under the front eaves, before the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name knightmanor
+layer -1
+...........
+.FFFFFFFFF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FFFFFFFFF.
+...F.k.F...
+layer 0
+...........
+.LwwwwwwwL.
+.w)..H..(w.
+.wK.....Kw.
+.wT.....Uw.
+.w..XXX..w.
+.w..XXX..w.
+.wQ.....Qw.
+.w.......w.
+.LwwwDwwwL.
+...L...L...
+layer 1
+...........
+.LWGWWWGWL.
+.W...H...W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.LWGW.WGWL.
+...L...L...
+layer 2
+...........
+.LWGWWWGWL.
+.W...H...W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.LWGWWWGWL.
+...L.j.L...
+layer 3
+...........
+.LWWWWWWWL.
+.W...H...W.
+.W.......W.
+.W.j...j.W.
+.W.......W.
+.W.......W.
+.W.j...j.W.
+.W.......W.
+.LWWWWWWWL.
+...L.|.L...
+layer 4
+vvvvvvvvvvv
+.L-------L.
+.|fffHfff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.L-------L.
+^^^^^^^^^^^
+layer 5
+...........
+.LWGWWWGWL.
+.W.C...C.W.
+.WB.....BW.
+.W.......W.
+.G.......G.
+.W..XXX..W.
+.G.......G.
+.WK.....QW.
+.LGWGWGWGL.
+...........
+layer 6
+...........
+.LWGWWWGWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.LGWGWGWGL.
+...........
+layer 7
+...........
+.LWWWWWWWL.
+.Wj.....jW.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W...j...W.
+.LWWWWWWWL.
+...........
+layer 8
+vvvvvvvvvvv
+.L-------L.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.L-------L.
+^^^^^^^^^^^
+layer 9
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+layer 10
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+layer 11
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.G.......G.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+layer 12
+...........
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+...........
+layer 13
+...........
+...........
+...........
+...........
+...........
+___________
+...........
+...........
+...........
+...........
+...........

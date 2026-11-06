@@ -1,0 +1,14 @@
+{
+  "loader": "neoforge:separate_transforms",
+  "base": {
+    "parent": "minecraft:item/generated",
+    "textures": {
+      "layer0": "mc_assistant:item/gold_charm"
+    }
+  },
+  "perspectives": {
+    "head": {
+      "parent": "mc_assistant:item/gold_charm_worn"
+    }
+  }
+}

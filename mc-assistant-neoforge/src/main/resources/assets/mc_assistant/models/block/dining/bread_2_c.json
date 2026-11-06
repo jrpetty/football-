@@ -1,0 +1,81 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "crust": "mc_assistant:block/dining/bread",
+    "cut": "mc_assistant:block/dining/bread_cut",
+    "cheese": "mc_assistant:block/dining/cheese",
+    "particle": "mc_assistant:block/dining/bread"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        2.0,
+        5
+      ],
+      "to": [
+        9,
+        5.0,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#crust",
+          "uv": [
+            4,
+            12.0,
+            9,
+            15.0
+          ]
+        },
+        "south": {
+          "texture": "#crust",
+          "uv": [
+            4,
+            12.0,
+            9,
+            15.0
+          ]
+        },
+        "east": {
+          "texture": "#cut",
+          "uv": [
+            5,
+            12.0,
+            10,
+            15.0
+          ]
+        },
+        "west": {
+          "texture": "#crust",
+          "uv": [
+            5,
+            12.0,
+            10,
+            15.0
+          ]
+        },
+        "up": {
+          "texture": "#crust",
+          "uv": [
+            4,
+            5,
+            9,
+            10
+          ]
+        },
+        "down": {
+          "texture": "#crust",
+          "uv": [
+            4,
+            5,
+            9,
+            10
+          ]
+        }
+      }
+    }
+  ]
+}

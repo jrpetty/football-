@@ -1,0 +1,5 @@
+# [admin] A full evening service in the nearest town's restaurant (built beside the heart if it has none).
+village admin economy fill food
+village admin world time dusk
+village dining stage
+say Dinner is on: the cook, the waiter and five diners at the tables.

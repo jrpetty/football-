@@ -1,0 +1,176 @@
+# The playhouse [culture-wonders]: the theatre under a roof, for a town grown past its open-air stage
+# (entity/Theatre, Playbill). A hall of dressed stone with log posts at its corners and tall windows down
+# both sides; at the back a stage of boards a block up off the floor, steps at either end, footlights at
+# its front corners; the curtains (red wool out of the stores) are hung at its sides once it stands. Two
+# rows of benches face the stage, an aisle down the middle to the door, lanterns hung from the tie beams
+# over the house, and a lamp just inside the door either side. The players play here in any weather.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name playhouse
+layer -1
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+FFFFFFFFFFF
+layer 0
+LSSSSSSSSSL
+SfffffffffS
+SfffffffffS
+SfffffffffS
+Sk.......kS
+S.........S
+Svvvv.vvvvS
+S.........S
+Svvvv.vvvvS
+S.........S
+LSSSSDSSSSL
+layer 1
+LSSSSSSSSSL
+S.........S
+S.........S
+S.l.....l.S
+S.........S
+S.........S
+S.........S
+S.........S
+S.........S
+S.........S
+LSSSS.SSSSL
+layer 2
+LSSSSSSSSSL
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S...j.j...S
+LSSSSSSSSSL
+layer 3
+LSSSSSSSSSL
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S...S.S...S
+LSSSSSSSSSL
+layer 4
+LSSSSSSSSSL
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S.........S
+S.........S
+G.........G
+S.........S
+LSSSSSSSSSL
+layer 5
+LSSSSSSSSSL
+S.........S
+S.........S
+S.........S
+S..j...j..S
+S.........S
+S.........S
+S..j...j..S
+S.........S
+S.........S
+LSSSSSSSSSL
+layer 6
+LSSSSSSSSSL
+S.........S
+S.........S
+S.........S
+S---------S
+S.........S
+S.........S
+S---------S
+S.........S
+S.........S
+LSSSSSSSSSL
+layer 7
+>SSSSSSSSS<
+>.........<
+>.........<
+>.........<
+>.........<
+>.........<
+>.........<
+>.........<
+>.........<
+>.........<
+>SSSSSSSSS<
+layer 8
+.>SSSSSSS<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>SSSSSSS<.
+layer 9
+..>SSSSS<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>SSSSS<..
+layer 10
+...>SSS<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>...<...
+...>SSS<...
+layer 11
+....>S<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>.<....
+....>S<....
+layer 12
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....
+.....R.....

@@ -1,0 +1,364 @@
+{
+  "variants": {
+    "bloom=true,facing=south,flower=poppy": {
+      "model": "mc_assistant:block/window_box_poppy"
+    },
+    "bloom=false,facing=south,flower=poppy": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_dandelion"
+    },
+    "bloom=false,facing=south,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_blue_orchid"
+    },
+    "bloom=false,facing=south,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=allium": {
+      "model": "mc_assistant:block/window_box_allium"
+    },
+    "bloom=false,facing=south,flower=allium": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_azure_bluet"
+    },
+    "bloom=false,facing=south,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_red_tulip"
+    },
+    "bloom=false,facing=south,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_orange_tulip"
+    },
+    "bloom=false,facing=south,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_white_tulip"
+    },
+    "bloom=false,facing=south,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_pink_tulip"
+    },
+    "bloom=false,facing=south,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_oxeye_daisy"
+    },
+    "bloom=false,facing=south,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_cornflower"
+    },
+    "bloom=false,facing=south,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=south,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_lily_of_the_valley"
+    },
+    "bloom=false,facing=south,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_faded"
+    },
+    "bloom=true,facing=west,flower=poppy": {
+      "model": "mc_assistant:block/window_box_poppy",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=poppy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_dandelion",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_blue_orchid",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=allium": {
+      "model": "mc_assistant:block/window_box_allium",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=allium": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_azure_bluet",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_red_tulip",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_orange_tulip",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_white_tulip",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_pink_tulip",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_oxeye_daisy",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_cornflower",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=west,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_lily_of_the_valley",
+      "y": 90
+    },
+    "bloom=false,facing=west,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 90
+    },
+    "bloom=true,facing=north,flower=poppy": {
+      "model": "mc_assistant:block/window_box_poppy",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=poppy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_dandelion",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_blue_orchid",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=allium": {
+      "model": "mc_assistant:block/window_box_allium",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=allium": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_azure_bluet",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_red_tulip",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_orange_tulip",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_white_tulip",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_pink_tulip",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_oxeye_daisy",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_cornflower",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=north,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_lily_of_the_valley",
+      "y": 180
+    },
+    "bloom=false,facing=north,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 180
+    },
+    "bloom=true,facing=east,flower=poppy": {
+      "model": "mc_assistant:block/window_box_poppy",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=poppy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_dandelion",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=dandelion": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_blue_orchid",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=blue_orchid": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=allium": {
+      "model": "mc_assistant:block/window_box_allium",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=allium": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_azure_bluet",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=azure_bluet": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_red_tulip",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=red_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_orange_tulip",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=orange_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_white_tulip",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=white_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_pink_tulip",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=pink_tulip": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_oxeye_daisy",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=oxeye_daisy": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_cornflower",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=cornflower": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    },
+    "bloom=true,facing=east,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_lily_of_the_valley",
+      "y": 270
+    },
+    "bloom=false,facing=east,flower=lily_of_the_valley": {
+      "model": "mc_assistant:block/window_box_faded",
+      "y": 270
+    }
+  }
+}

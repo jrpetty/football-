@@ -1,0 +1,167 @@
+name: Village long game
+
+# One village, founded the way a spawner founds one, left alone on a real server for
+# as many game days as fit in the time a runner has (up to sixty): does it keep
+# evolving — ages, buildings, people, great works, colonies — or stall somewhere?
+#
+# A push never cancels a run in progress: the next one waits behind it. While it
+# runs, the report (real-epic.txt) is published to the village-test-latest release
+# every ten minutes, so how far it has got can be read long before it ends.
+
+on:
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+    paths:
+      - "mc-assistant-neoforge/src/**"
+      - "mc-assistant-neoforge/tools/realworld/**"
+      - ".github/workflows/village-long-soak.yml"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Game days to run (at most)"
+        default: "60"
+      minutes:
+        description: "Wall-clock minutes the game may run"
+        default: "300"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: village-long-game
+  cancel-in-progress: false
+
+jobs:
+  epic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Prepare a server directory
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config
+          echo "eula=true" > run/eula.txt
+          cat > run/server.properties <<'EOF'
+          level-seed=7331
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=6
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=soak
+          EOF
+          # The village founds its own colonies; the world's natural ones would only
+          # crowd the measurement.
+          cat > run/config/mc_assistant-common.toml <<'EOF'
+          [villages]
+          naturalVillages = false
+          EOF
+
+      - name: Start the server
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: The long game
+        working-directory: mc-assistant-neoforge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DAYS: ${{ github.event.inputs.days || '60' }}
+          MINUTES: ${{ github.event.inputs.minutes || '300' }}
+        run: |
+          set +e
+          # Replace one asset of the village-test-latest release with the file as it
+          # stands now.
+          publish() {
+            f="$1"; name=$(basename "$f")
+            [ -s "$f" ] || return 0
+            rel=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/releases/tags/village-test-latest")
+            rid=$(echo "$rel" | jq -r '.id // empty')
+            [ -n "$rid" ] || return 0
+            for aid in $(echo "$rel" | jq -r --arg n "$name" '.assets[]? | select(.name==$n) | .id'); do
+              curl -sS -X DELETE -H "Authorization: Bearer $GH_TOKEN" \
+                "https://api.github.com/repos/$REPO/releases/assets/$aid" > /dev/null
+            done
+            curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: text/plain" \
+              --data-binary @"$f" "https://uploads.github.com/repos/$REPO/releases/$rid/assets?name=$name" > /dev/null
+          }
+          echo "[REAL] the long game on $(git rev-parse --short HEAD): up to $DAYS days, $MINUTES minutes" > real-epic.txt
+          ( while sleep 600; do
+              grep -a "MCA-BUILD\|MCA-COLONY\|MCA-GUARD\|MCA-SLOW" run/logs/latest.log 2>/dev/null | tail -60 > epic-tail.txt
+              cat real-epic.txt epic-tail.txt > real-epic-live.txt
+              publish real-epic-live.txt
+              publish epic-metrics.jsonl
+            done ) &
+          LOOP=$!
+          python3 tools/realworld/soak.py epic "$DAYS" "$MINUTES" | tee -a real-epic.txt
+          echo "soak exit: ${PIPESTATUS[0]}"
+          kill $LOOP 2>/dev/null
+          # The day-by-day numbers of every build's long game, kept side by side (the last
+          # twenty builds), and a page of charts drawn from them: a regression is a curve
+          # that bends the wrong way against the build before.
+          publish epic-metrics.jsonl
+          curl -sSLf -o epic-history.json "https://github.com/$REPO/releases/download/village-test-latest/epic-history.json" \
+            || echo '{}' > epic-history.json
+          jq -e . epic-history.json > /dev/null 2>&1 || echo '{}' > epic-history.json
+          if [ -s epic-metrics.jsonl ]; then
+            jq -s . epic-metrics.jsonl > epic-days.json
+            jq --arg sha "$(git rev-parse --short HEAD)" --arg when "$(date -u +%Y-%m-%dT%H:%MZ)" --slurpfile d epic-days.json \
+              '.[$sha] = {when: $when, days: $d[0]} | to_entries | sort_by(.value.when) | .[-20:] | from_entries' \
+              epic-history.json > epic-history.new && mv epic-history.new epic-history.json
+            publish epic-history.json
+            python3 tools/realworld/dashboard.py epic-history.json epic-dashboard.html && publish epic-dashboard.html
+          fi
+          set -e
+          sleep 5
+
+      - name: Collect the server log
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          echo "[REAL] ---- server log: warnings and errors from the mod ----" >> real-epic.txt
+          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|Advanced terminal\|^    at " | tail -150 >> real-epic.txt || true
+          echo "[REAL] ---- stalls ----" >> real-epic.txt
+          grep -a -A 42 "MCA-STALL" run/logs/latest.log 2>/dev/null | head -400 >> real-epic.txt || true
+          echo "[REAL] ---- colonies ----" >> real-epic.txt
+          grep -a "MCA-COLONY" run/logs/latest.log 2>/dev/null | head -60 >> real-epic.txt || true
+          echo "[REAL] ---- why the village was or was not building ----" >> real-epic.txt
+          grep -a "MCA-BUILD" run/logs/latest.log 2>/dev/null | head -400 >> real-epic.txt || true
+          gzip -c run/logs/latest.log > server-epic.log.gz 2>/dev/null || true
+          wc -l real-epic.txt
+
+      - name: Stop the server
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true
+
+      - name: Publish the report
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: village-test-latest
+          name: "Village behaviour test output (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: "Raw output of the empirical village tests. Not a mod build."
+          files: |
+            mc-assistant-neoforge/real-epic.txt
+            mc-assistant-neoforge/server-epic.log.gz
+          overwrite_files: true

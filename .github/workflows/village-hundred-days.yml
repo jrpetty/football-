@@ -1,0 +1,194 @@
+name: Village hundred days
+
+# A village left alone for four hundred game days on a real server: does the town keep growing,
+# trading, building and getting on with its neighbours the whole way? A runner has six hours
+# and a big town runs slower by the day, so it is run in legs (village-hundred-leg.yml): each
+# leg saves the world for the next, and a leg that finds the days all done does nothing. The
+# hundred-day marks (day 10, day 100) are read from the same run's metrics. Started by touching
+# tools/realworld/hundred.trigger.
+
+on:
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+    paths:
+      - "mc-assistant-neoforge/tools/realworld/hundred.trigger"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: village-hundred-days
+  cancel-in-progress: false
+
+jobs:
+  leg1:
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 1, days: 400 }
+    secrets: inherit
+  leg2:
+    needs: leg1
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 2, prev: 1, days: 400 }
+    secrets: inherit
+  leg3:
+    needs: leg2
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 3, prev: 2, days: 400 }
+    secrets: inherit
+  leg4:
+    needs: leg3
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 4, prev: 3, days: 400 }
+    secrets: inherit
+  leg5:
+    needs: leg4
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 5, prev: 4, days: 400 }
+    secrets: inherit
+  leg6:
+    needs: leg5
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 6, prev: 5, days: 400 }
+    secrets: inherit
+  leg7:
+    needs: leg6
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 7, prev: 6, days: 400 }
+    secrets: inherit
+  leg8:
+    needs: leg7
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 8, prev: 7, days: 400 }
+    secrets: inherit
+  leg9:
+    needs: leg8
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 9, prev: 8, days: 400 }
+    secrets: inherit
+  leg10:
+    needs: leg9
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/village-hundred-leg.yml
+    with: { leg: 10, prev: 9, days: 400 }
+    secrets: inherit
+
+  # The town at the end of it, in pictures: the last leg's world loaded by a server, and a
+  # real client on a virtual display photographing it (tools/realworld/photo.py).
+  photos:
+    needs: leg10
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The world the hundred days made
+        uses: actions/download-artifact@v4
+        with:
+          name: hundred-world-10
+          path: carried
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install a virtual display and software OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd
+
+      - name: Prepare the server (with the world) and the client
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config run-client
+          tar -xzf ../carried/hundred.tar.gz -C run
+          cp run/hundred-spot.txt hundred-spot.txt
+          echo "eula=true" > run/eula.txt
+          cat > run/server.properties <<'PROPS'
+          level-seed=7331
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=10
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=hundred-photos
+          PROPS
+          cat > run/config/mc_assistant-common.toml <<'TOML'
+          [villages]
+          naturalVillages = false
+          TOML
+          cat > run-client/options.txt <<'OPTS'
+          onboardAccessibility:false
+          tutorialStep:none
+          pauseOnLostFocus:false
+          narrator:0
+          fancyGraphics:true
+          renderDistance:10
+          simulationDistance:6
+          maxFps:30
+          guiScale:2
+          hideGui:true
+          joinedFirstServer:true
+          skipMultiplayerWarning:true
+          OPTS
+
+      - name: Start the server
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: Start the client on a virtual display
+        working-directory: mc-assistant-neoforge
+        run: |
+          nohup Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          sleep 3
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          for i in $(seq 1 300); do nc -z localhost 25565 && break; sleep 5; done
+          nohup ./gradlew --no-daemon -Psmoke=true runSmoke > client-gradle.log 2>&1 &
+
+      - name: Photograph the town
+        working-directory: mc-assistant-neoforge
+        run: |
+          export DISPLAY=:99
+          set +e
+          python3 tools/realworld/photo.py | tee hundred-photos.txt
+          set -e
+
+      - name: Stop everything
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true; pkill -f "runSmoke" || true; pkill Xvfb || true
+
+      - name: Publish the pictures
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: village-test-latest
+          name: "Village behaviour test output (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: "Raw output of the empirical village tests. Not a mod build."
+          files: |
+            mc-assistant-neoforge/hundred-photos.txt
+            mc-assistant-neoforge/smoke-hundred-*.png
+          overwrite_files: true

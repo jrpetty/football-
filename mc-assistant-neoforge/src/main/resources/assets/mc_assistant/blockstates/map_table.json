@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "mc_assistant:block/map_table"
+    },
+    "facing=east": {
+      "model": "mc_assistant:block/map_table",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "mc_assistant:block/map_table",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "mc_assistant:block/map_table",
+      "y": 270
+    }
+  }
+}

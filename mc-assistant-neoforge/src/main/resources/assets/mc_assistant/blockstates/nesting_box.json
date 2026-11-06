@@ -1,0 +1,124 @@
+{
+ "variants": {
+  "eggs=0,facing=north,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_0"
+  },
+  "eggs=1,facing=north,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_1"
+  },
+  "eggs=2,facing=north,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_2"
+  },
+  "eggs=3,facing=north,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_3"
+  },
+  "eggs=0,facing=north,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_0"
+  },
+  "eggs=1,facing=north,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_1"
+  },
+  "eggs=2,facing=north,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_2"
+  },
+  "eggs=3,facing=north,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_3"
+  },
+  "eggs=0,facing=east,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_0",
+   "y": 90
+  },
+  "eggs=1,facing=east,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_1",
+   "y": 90
+  },
+  "eggs=2,facing=east,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_2",
+   "y": 90
+  },
+  "eggs=3,facing=east,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_3",
+   "y": 90
+  },
+  "eggs=0,facing=east,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_0",
+   "y": 90
+  },
+  "eggs=1,facing=east,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_1",
+   "y": 90
+  },
+  "eggs=2,facing=east,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_2",
+   "y": 90
+  },
+  "eggs=3,facing=east,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_3",
+   "y": 90
+  },
+  "eggs=0,facing=south,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_0",
+   "y": 180
+  },
+  "eggs=1,facing=south,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_1",
+   "y": 180
+  },
+  "eggs=2,facing=south,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_2",
+   "y": 180
+  },
+  "eggs=3,facing=south,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_3",
+   "y": 180
+  },
+  "eggs=0,facing=south,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_0",
+   "y": 180
+  },
+  "eggs=1,facing=south,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_1",
+   "y": 180
+  },
+  "eggs=2,facing=south,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_2",
+   "y": 180
+  },
+  "eggs=3,facing=south,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_3",
+   "y": 180
+  },
+  "eggs=0,facing=west,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_0",
+   "y": 270
+  },
+  "eggs=1,facing=west,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_1",
+   "y": 270
+  },
+  "eggs=2,facing=west,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_2",
+   "y": 270
+  },
+  "eggs=3,facing=west,hay=false": {
+   "model": "mc_assistant:block/nesting_box_bare_3",
+   "y": 270
+  },
+  "eggs=0,facing=west,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_0",
+   "y": 270
+  },
+  "eggs=1,facing=west,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_1",
+   "y": 270
+  },
+  "eggs=2,facing=west,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_2",
+   "y": 270
+  },
+  "eggs=3,facing=west,hay=true": {
+   "model": "mc_assistant:block/nesting_box_hay_3",
+   "y": 270
+  }
+ }
+}

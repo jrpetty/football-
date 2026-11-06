@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/age_iron",
+  "display": {
+    "icon": {
+      "id": "minecraft:diamond"
+    },
+    "title": {
+      "text": "The Diamond Age"
+    },
+    "description": {
+      "text": "A town you founded, or are a citizen of, comes to the Diamond Age"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

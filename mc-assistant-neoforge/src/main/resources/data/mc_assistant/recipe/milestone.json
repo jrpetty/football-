@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "CSC",
+    "CCC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "S": {
+      "tag": "minecraft:signs"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:milestone",
+    "count": 1
+  }
+}

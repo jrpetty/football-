@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "mc_assistant:cheese_wheel"
+    }
+  ],
+  "result": {
+    "count": 4,
+    "id": "mc_assistant:cheese_slice"
+  }
+}

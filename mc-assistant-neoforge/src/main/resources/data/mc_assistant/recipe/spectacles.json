@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "N": { "item": "minecraft:gold_nugget" },
+    "G": { "item": "minecraft:glass_pane" }
+  },
+  "pattern": [
+    "N N",
+    "GNG"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:spectacles"
+  }
+}

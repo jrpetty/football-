@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "hanging=false": {
+      "model": "mc_assistant:block/black_paper_lantern"
+    },
+    "hanging=true": {
+      "model": "mc_assistant:block/black_paper_lantern_hanging"
+    }
+  }
+}

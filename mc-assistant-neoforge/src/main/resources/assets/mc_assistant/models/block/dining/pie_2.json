@@ -1,0 +1,80 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "top": "mc_assistant:block/dining/pie_top",
+    "side": "mc_assistant:block/dining/pie_side",
+    "particle": "mc_assistant:block/dining/pie_top"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        1.0,
+        4
+      ],
+      "to": [
+        9.333333333333332,
+        3.5,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#side",
+          "uv": [
+            4,
+            12.5,
+            9.333,
+            15.0
+          ]
+        },
+        "south": {
+          "texture": "#side",
+          "uv": [
+            4,
+            12.5,
+            9.333,
+            15.0
+          ]
+        },
+        "east": {
+          "texture": "#side",
+          "uv": [
+            4,
+            12.5,
+            11,
+            15.0
+          ]
+        },
+        "west": {
+          "texture": "#side",
+          "uv": [
+            4,
+            12.5,
+            11,
+            15.0
+          ]
+        },
+        "up": {
+          "texture": "#top",
+          "uv": [
+            4,
+            4,
+            9.333,
+            11
+          ]
+        },
+        "down": {
+          "texture": "#side",
+          "uv": [
+            4,
+            4,
+            9.333,
+            11
+          ]
+        }
+      }
+    }
+  ]
+}

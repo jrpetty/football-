@@ -1,0 +1,98 @@
+# The shop: a timber-framed shop with its gable to the street, a wide window either
+# side of the door and a lantern hung from a beam end over it, a window in the gable. Inside, a rug
+# from the door to the counter of casks across the room (the day's goods laid out on it, a gap in the
+# middle to get behind), a cask either side of the door with more goods on it, and behind the counter
+# the shelves: a cask on a cask, a chest either side of the hands' bench (Workshop) with a lamp on it.
+# Every chest can be opened and every cask got at. Lanterns hung from the loft over the floor.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name shop
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wQCTC.w.
+.w.....w.
+.wQQ.QQw.
+.w..X..w.
+.wQ.X.Qw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWGWWL.
+.WQ.l..W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LGG.GGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W..j..W.
+.W.....W.
+.Wj...jW.
+.W.....W.
+.LWWWWWL.
+....j....
+layer 3
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>...|...<
+layer 4
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWGWW<.
+.>.....<.
+layer 5
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 6
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 7
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

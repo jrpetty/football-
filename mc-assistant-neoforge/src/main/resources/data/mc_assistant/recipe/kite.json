@@ -1,0 +1,27 @@
+{
+  "type": "mc_assistant:dyed_shaped",
+  "category": "misc",
+  "pattern": [
+    " P ",
+    "PSP",
+    "DSI"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:paper"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "D": {
+      "tag": "c:dyes"
+    },
+    "I": {
+      "item": "minecraft:string"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:kite",
+    "count": 1
+  }
+}

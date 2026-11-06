@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/citizen",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_apple"
+    },
+    "title": {
+      "text": "Honoured Guest"
+    },
+    "description": {
+      "text": "Be made an honoured guest of a village (or its hero)"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

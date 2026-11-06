@@ -1,0 +1,79 @@
+{
+  "parent": "block/block",
+  "render_type": "minecraft:cutout",
+  "ambientocclusion": false,
+  "textures": {
+    "cookie": "mc_assistant:block/dining/cookie",
+    "particle": "mc_assistant:block/dining/cookie"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        2.0,
+        5
+      ],
+      "to": [
+        7,
+        2.8,
+        8
+      ],
+      "faces": {
+        "north": {
+          "texture": "#cookie",
+          "uv": [
+            4,
+            14.2,
+            7,
+            15.0
+          ]
+        },
+        "south": {
+          "texture": "#cookie",
+          "uv": [
+            4,
+            14.2,
+            7,
+            15.0
+          ]
+        },
+        "east": {
+          "texture": "#cookie",
+          "uv": [
+            5,
+            14.2,
+            8,
+            15.0
+          ]
+        },
+        "west": {
+          "texture": "#cookie",
+          "uv": [
+            5,
+            14.2,
+            8,
+            15.0
+          ]
+        },
+        "up": {
+          "texture": "#cookie",
+          "uv": [
+            4,
+            5,
+            7,
+            8
+          ]
+        },
+        "down": {
+          "texture": "#cookie",
+          "uv": [
+            4,
+            5,
+            7,
+            8
+          ]
+        }
+      }
+    }
+  ]
+}
