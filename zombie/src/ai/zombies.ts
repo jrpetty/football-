@@ -19,6 +19,7 @@ export interface Zombie {
   speed: number; runSpeed: number; senseT: number; alerted: number; lastSeen: THREE.Vector3; horde: number; groanT: number;
   bashRef: any; corpse: Inventory | null; corpseAge: number; frozen: boolean; stuckT: number; lastPos: THREE.Vector3; knock: THREE.Vector3;
 }
+export interface HumanPose { pos: THREE.Vector3; yaw: number; move: number; phase: number; arms: number; atk: number; seed: number; type: 3 | 4; hit: number; visible: boolean }
 export interface Horde { id: number; target: THREE.Vector3; members: number; t: number; toBase: boolean }
 
 const MAX = 700;
@@ -49,6 +50,8 @@ export class Zombies {
   kills = 0;
   private tmpM = new THREE.Matrix4(); private tmpQ = new THREE.Quaternion(); private tmpV = new THREE.Vector3(); private one = new THREE.Vector3(1, 1, 1);
   noiseEvents: { pos: THREE.Vector3; r: number }[] = [];
+  /** non-zombie humans drawn with the same GPU body (player avatar in third person, survivors) */
+  humans: HumanPose[] = [];
 
   constructor(scene: THREE.Scene, private world: World, seed: number) {
     this.rng = new RNG(seed + 31);
@@ -481,6 +484,16 @@ export class Zombies {
       A[n * 4] = z.phase; A[n * 4 + 1] = z.state === 'dead' ? 0 : z.move; A[n * 4 + 2] = z.atkBlend; A[n * 4 + 3] = z.death;
       B[n * 4] = z.hit; B[n * 4 + 1] = z.arms; B[n * 4 + 2] = z.limp; B[n * 4 + 3] = z.deathDir;
       V[n * 4] = z.seed; V[n * 4 + 1] = z.scale; V[n * 4 + 2] = z.lean; V[n * 4 + 3] = z.type;
+      n++;
+    }
+    for (const h of this.humans) {
+      if (n >= MAX || !h.visible) continue;
+      this.tmpQ.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, h.yaw);
+      this.tmpM.compose(h.pos, this.tmpQ, this.one);
+      this.mesh.setMatrixAt(n, this.tmpM);
+      A[n * 4] = h.phase; A[n * 4 + 1] = h.move; A[n * 4 + 2] = h.atk; A[n * 4 + 3] = 0;
+      B[n * 4] = h.hit; B[n * 4 + 1] = h.arms; B[n * 4 + 2] = 0; B[n * 4 + 3] = 1;
+      V[n * 4] = h.seed; V[n * 4 + 1] = 1; V[n * 4 + 2] = 0.2; V[n * 4 + 3] = h.type;
       n++;
     }
     this.mesh.count = n;

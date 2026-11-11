@@ -80,7 +80,7 @@ export const ZOMBIE_VERTEX_BODY = `
   int b = int(aBone + 0.5);
   float ph = aAnim.x; float mv = aAnim.y; float atk = aAnim.z; float death = aAnim.w;
   float hit = aAnim2.x; float arms = aAnim2.y; float limp = aAnim2.z; float ddir = aAnim2.w;
-  float seed = aVar.x; float lean = aVar.z;
+  float seed = aVar.x; float lean = aVar.z; float human = step(2.5, aVar.w);
   float walk = clamp(mv, 0.0, 1.0); float run = clamp(mv - 1.0, 0.0, 1.0);
   float idle = 1.0 - walk;
   float t = uZTime + seed * 10.0;
@@ -90,7 +90,7 @@ export const ZOMBIE_VERTEX_BODY = `
   // ---- head
   if (b == 2) {
     vec3 pv = vec3(0.0, 1.53, 0.0);
-    float tilt = (zh(seed*3.1) - 0.5) * 0.9 + sin(t*0.7)*0.08*idle;
+    float tilt = ((zh(seed*3.1) - 0.5) * 0.9 + sin(t*0.7)*0.08*idle) * (1.0 - human * 0.9);
     float nod = -0.25 * hit + sin(t*1.3)*0.06 + 0.15 * run - atk*0.2;
     p = zrx(zrz(p - pv, tilt), nod) + pv; n = zrx(zrz(n, tilt), nod);
   }
@@ -114,7 +114,7 @@ export const ZOMBIE_VERTEX_BODY = `
   // ---- spine (hunch, lean, flinch, attack lunge)
   if (b >= 1 && b <= 6) {
     vec3 pv = vec3(0.0, 1.02, 0.0);
-    float hunch = 0.22 + lean * 0.25 + run * 0.25 + atk * 0.35 - hit * 0.5;
+    float hunch = mix(0.22 + lean * 0.25, 0.04, human) + run * 0.25 + atk * 0.35 - hit * 0.5;
     float twist = sin(ph) * 0.12 * walk;
     float side = (lean - 0.5) * 0.25 + sin(t*0.9)*0.04;
     p = zry(zrz(zrx(p - pv, hunch), side), twist) + pv; n = zry(zrz(zrx(n, hunch), side), twist);
@@ -168,10 +168,11 @@ export function makeZombieMaterials(timeUniform: { value: number }) {
       vec3 pants = pantsPal[int(zh(sd*5.7)*3.99)];
       if (aVar.w > 1.5) { shirt = vec3(0.2,0.22,0.16); pants = vec3(0.16,0.16,0.12); skin *= vec3(1.05,0.95,0.9); }
       if (aVar.w > 0.5 && aVar.w < 1.5) { skin *= vec3(0.9,0.85,0.85); }
+      if (aVar.w > 2.5) { skin = mix(vec3(0.78,0.6,0.48), vec3(0.45,0.32,0.24), zh(sd*7.0)); shirt = aVar.w > 3.5 ? vec3(0.22,0.3,0.22) : vec3(0.42,0.18,0.12); pants = vec3(0.16,0.2,0.28); }
       vec3 hair = mix(vec3(0.06,0.05,0.04), vec3(0.35,0.3,0.22), zh(sd*9.1));
       int rg = int(aRegion + 0.5);
       vZCol = rg == 0 ? skin : rg == 1 ? shirt : rg == 2 ? pants : rg == 3 ? vec3(0.08,0.07,0.06) : rg == 4 ? hair : vec3(0.9,0.85,0.6);
-      vZRegion = aRegion; vZPos = position;
+      vZRegion = aRegion + (aVar.w > 2.5 ? 10.0 : 0.0); vZPos = position;
       `);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
@@ -185,11 +186,12 @@ float zn(vec3 p){ vec3 i = floor(p); vec3 f = fract(p); f = f*f*(3.0-2.0*f);
       float grime = zn(vZPos * 14.0) * 0.6 + zn(vZPos * 41.0) * 0.4;
       zc *= mix(0.85, 1.02, step(0.5, grime));
       float blood = step(0.66, zn(vZPos * 5.0 + 3.7));
-      if (vZRegion > 4.5) { diffuseColor.rgb = zc; }
-      else { diffuseColor.rgb = mix(zc, vec3(0.22, 0.02, 0.015), blood * 0.85); }
+      float zHuman = step(9.5, vZRegion); float zReg = vZRegion - zHuman * 10.0;
+      if (zReg > 4.5) { diffuseColor.rgb = zHuman > 0.5 ? vec3(0.1) : zc; }
+      else { diffuseColor.rgb = mix(zc, vec3(0.22, 0.02, 0.015), blood * 0.85 * (1.0 - zHuman)); }
       `)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-      if (vZRegion > 4.5) totalEmissiveRadiance += vec3(0.25, 0.22, 0.12);`);
+      if (vZRegion > 4.5 && vZRegion < 9.5) totalEmissiveRadiance += vec3(0.25, 0.22, 0.12);`);
   };
   mat.customProgramCacheKey = () => 'zombie-lp1';
 

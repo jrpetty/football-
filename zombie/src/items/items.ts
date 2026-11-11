@@ -75,7 +75,9 @@ const I: ItemDef[] = [
   { id: 'flashlight', name: 'Flashlight', icon: '🔦', cat: 'tool', weight: 0.4, stack: 1, light: true, desc: 'Press F to toggle. Drains batteries.', weapon: { kind: 'blunt', damage: 8, range: 1.5, speed: 1.6, stamina: 3, knock: 0.3, durability: 200, model: 'flashlight', noise: 3 } },
   { id: 'battery', name: 'Battery', icon: '🔋', cat: 'tool', weight: 0.05, stack: 20, desc: 'Powers the flashlight.' },
   { id: 'lighter', name: 'Lighter', icon: '🔥', cat: 'tool', weight: 0.05, stack: 1, tools: ['fire'], desc: 'Light campfires.' },
-  { id: 'gas_can', name: 'Gas Can', icon: '⛽', cat: 'tool', weight: 4, stack: 1, fuel: 60, desc: 'Fuel. Burns hot in generators.' },
+  { id: 'gas_can', name: 'Gas Can', icon: '⛽', cat: 'tool', weight: 4, stack: 1, fuel: 60, empties: 'gas_can_empty', desc: 'Fuel for vehicles and generators. Use it next to a car to refuel.' },
+  { id: 'gas_can_empty', name: 'Empty Gas Can', icon: '🛢️', cat: 'tool', weight: 0.6, stack: 1, desc: 'Fill at a powered gas pump, or siphon from a parked car (T).' },
+  { id: 'car_keys', name: 'Car Keys', icon: '🔑', cat: 'misc', weight: 0.05, stack: 10, desc: 'Somebody\'s car keys. Opens a random car in town — try the ones nearby.' },
   // ---------- materials ----------
   { id: 'log', name: 'Log', icon: '🪵', cat: 'material', weight: 4, stack: 10, fuel: 18, desc: 'Chopped timber. Saw into planks or burn.' },
   { id: 'plank', name: 'Plank', icon: '🟫', cat: 'material', weight: 1, stack: 30, fuel: 6, desc: 'Basic building material.' },

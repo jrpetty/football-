@@ -19,6 +19,7 @@ export interface Win {
   id: number; glass: THREE.Mesh; broken: boolean; box: Box; barricade: number; barricadeMesh: THREE.Object3D | null; axis: 'x' | 'z'; cx: number; cz: number; y: number; building: Building | null;
 }
 export interface Container { id: number; kind: ContainerKind; label: string; pos: THREE.Vector3; inv: Inventory; generated: boolean; half: THREE.Vector3; building: Building | null; searched?: boolean }
+export interface TownCar { id: number; variant: CarVariant; color: number; yaw: number; pos: THREE.Vector3; size: [number, number, number]; box: Box; container: Container; entry: any; fuel: number; keys: boolean; condition: number; taken: boolean; kind: 'towncar' }
 export interface Building { id: number; kind: string; x: number; z: number; w: number; d: number; floorY: number; ceilY: number; group: THREE.Group; interior: THREE.Group; doors: Door[]; windows: Win[]; containers: Container[]; roof: THREE.Object3D | null; zombieSpawns: THREE.Vector3[]; lamps: THREE.Vector3[] }
 
 const WALL_H = 2.9, WT = 0.2;
@@ -32,7 +33,7 @@ export class Town {
   streetLamps: THREE.Vector3[] = [];
   group = new THREE.Group();
   props = new PropBatcher();
-  carBoxes: { box: Box; pos: THREE.Vector3; container: Container }[] = [];
+  carBoxes: TownCar[] = [];
   private rng: RNG;
   private nextId = 1;
   private occupied: { x0: number; z0: number; x1: number; z1: number }[] = [];
@@ -511,7 +512,7 @@ export class Town {
         const yaw = Math.atan2(dx, dz) + (lane > 0 ? Math.PI : 0) + rng.range(-0.35, 0.35);
         const py = this.terrain.heightAt(px, pz);
         const color = v === 'police' ? 0xffffff : v === 'wreck' ? 0x3a3530 : rng.pick(paints);
-        this.props.add('car_' + v, px, py, pz, yaw, 260, color);
+        const entry = this.props.add('car_' + v, px, py, pz, yaw, 260, color);
         const sz = carTpl.get(v)!.size;
         // approximate oriented car by an AABB of its rotated footprint (shrunk)
         const c = Math.abs(Math.cos(yaw)), s = Math.abs(Math.sin(yaw));
@@ -520,7 +521,9 @@ export class Town {
         const cont = this.addContainer('car_trunk', px - Math.sin(yaw) * sz[2] * 0.45, py + 0.8, pz - Math.cos(yaw) * sz[2] * 0.45, 0.8, 0.5, 0.8, null);
         cont.label = v === 'police' ? 'Police Cruiser Trunk' : 'Car Trunk';
         if (v === 'police') cont.kind = 'police_locker';
-        this.carBoxes.push({ box, pos: new THREE.Vector3(px, py, pz), container: cont });
+        const rec: TownCar = { id: this.carBoxes.length, variant: v, color, yaw, pos: new THREE.Vector3(px, py, pz), size: sz, box, container: cont, entry, fuel: v === 'wreck' ? 0 : rng.range(0, 0.55), keys: rng.chance(0.25), condition: v === 'wreck' ? 0 : rng.range(30, 90), taken: false, kind: 'towncar' };
+        box.ref = rec;
+        this.carBoxes.push(rec);
       }
     }
     // yard dressing: fences, mailboxes, trash, dumpsters behind commercial
@@ -557,7 +560,7 @@ export class Town {
           cg.box('factoryGrey', b.x, b.floorY + 4.6, sz2, 14, 0.6, 9);
           for (const sx of [-5.5, 5.5]) for (const sz3 of [-3, 3]) { cg.box('metal', b.x + sx, b.floorY + 2.2, sz2 + sz3, 0.35, 4.4, 0.35); this.col.addCircle(b.x + sx, sz2 + sz3, 0.25, 5); }
           const canopy = cg.build(); this.group.add(canopy);
-          for (const sx of [-2.5, 2.5]) { this.prop('gas_pump', b.x + sx, b.floorY, sz2, 0, 160); this.col.addBox(b.x + sx - 0.5, b.floorY, sz2 - 0.35, b.x + sx + 0.5, b.floorY + 1.8, sz2 + 0.35, { tag: 'prop' }); }
+          for (const sx of [-2.5, 2.5]) { this.prop('gas_pump', b.x + sx, b.floorY, sz2, 0, 160); this.col.addBox(b.x + sx - 0.5, b.floorY, sz2 - 0.35, b.x + sx + 0.5, b.floorY + 1.8, sz2 + 0.35, { tag: 'prop', ref: { kind: 'pump', cx: b.x + sx, cz: sz2 } }); }
           b.lamps.push(new THREE.Vector3(b.x, b.floorY + 4.2, sz2));
         }
       }

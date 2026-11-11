@@ -98,7 +98,7 @@ export class UI {
       <div class="btnrow"><button class="btn primary" data-a="save-settings">Apply</button><button class="btn" data-a="reload">Apply & reload</button></div></div></div></div>`);
   }
   private controlsModal() {
-    const c: [string, string][] = [['Move', 'W A S D'], ['Sprint', 'Shift'], ['Crouch / sneak', 'C / Ctrl'], ['Jump', 'Space'], ['Attack / fire', 'Left mouse'], ['Aim (guns) / shove (melee)', 'Right mouse'], ['Shove', 'V'], ['Reload', 'R'], ['Interact / loot / open', 'E'], ['Flashlight', 'F'], ['Quick bandage', 'Q'], ['Hotbar', '1 – 8 / wheel'], ['Drop held item', 'G'], ['Inventory & crafting', 'Tab / I'], ['Health', 'H'], ['Skills', 'K'], ['Journal', 'J'], ['Map', 'M'], ['Build menu', 'B'], ['Rotate (build)', 'R'], ['Dismantle mode (build)', 'X'], ['Exit build mode', 'Right mouse / Esc'], ['Save', 'F5'], ['Pause', 'Esc']];
+    const c: [string, string][] = [['Move', 'W A S D'], ['Sprint', 'Shift'], ['Crouch / sneak', 'C / Ctrl'], ['Jump', 'Space'], ['Attack / fire', 'Left mouse'], ['Aim (guns) / shove (melee)', 'Right mouse'], ['Third-person view / car camera', 'V'], ['Secondary action (refuel, hotwire, siphon…)', 'T'], ['Drive / steer / brake', 'W S / A D / Space'], ['Reload', 'R'], ['Interact / loot / open', 'E'], ['Flashlight', 'F'], ['Quick bandage', 'Q'], ['Hotbar', '1 – 8 / wheel'], ['Drop held item', 'G'], ['Inventory & crafting', 'Tab / I'], ['Health', 'H'], ['Skills', 'K'], ['Journal', 'J'], ['Map', 'M'], ['Build menu', 'B'], ['Rotate (build)', 'R'], ['Dismantle mode (build)', 'X'], ['Exit build mode', 'Right mouse / Esc'], ['Save', 'F5'], ['Pause', 'Esc']];
     this.showModal(`<div class="panel window" style="width:720px;height:auto"><div class="top"><h2 style="padding:0 8px">Controls</h2><button class="close" data-a="close-modal">✕</button></div><div class="body" style="display:block"><div class="controls">${c.map(([a, b]) => `<div><span>${a}</span><span class="kbd">${b}</span></div>`).join('')}</div>
     <h3>Survival tips</h3><p class="hint" style="line-height:1.6">Zombies hear sprinting, gunfire, chopping and machinery. Crouch to sneak. Bites infect you — clothing protects. Bandage bleeding wounds fast (Q). Boil lake water at a campfire. Barricade windows with a hammer, planks and nails. Your factory's noise ("heat") attracts hordes — build walls, electric fences and turrets before you scale up. Death is permanent.</p></div></div>`);
   }
@@ -205,7 +205,7 @@ export class UI {
     // prompt
     const it = g.interact;
     if (g.action) { this.els.prompt.innerHTML = ''; }
-    else if (it && !g.buildMode && !this.open) this.els.prompt.innerHTML = `<kbd>E</kbd>${esc(it.label)}${it.sub ? `<div class="sub">${esc(it.sub)}</div>` : ''}`;
+    else if (it && !g.buildMode && !this.open) this.els.prompt.innerHTML = `<kbd>E</kbd>${esc(it.label)}${it.alt ? ` &nbsp; <kbd>T</kbd>${esc(it.alt.label)}` : ''}${it.sub ? `<div class="sub">${esc(it.sub)}</div>` : ''}`;
     else this.els.prompt.innerHTML = '';
     // action
     if (g.action) { this.els.action.classList.remove('hidden'); this.els.actlabel.textContent = g.action.label; (this.els.actbar as HTMLElement).style.width = (g.action.t / g.action.dur * 100) + '%'; }
@@ -219,7 +219,8 @@ export class UI {
     }
     this.els.hotbar.innerHTML = hb;
     const st = p.equippedStack(); const w = st ? item(st.id).weapon : undefined;
-    if (st && w?.kind === 'firearm') this.els.ammo.innerHTML = `<div class="wn">${esc(item(st.id).name)}</div><div class="mag">${st.ammo ?? 0}<span class="res"> / ${p.inv.count(w.ammo!)}</span></div>`;
+    if (g.driving) this.els.ammo.innerHTML = `<div class="wn">${esc(g.driving.variant)} · fuel ${Math.round(g.driving.fuel * 100)}% · condition ${Math.round(g.driving.condition)}%</div><div class="mag">${Math.round(Math.abs(g.driving.speed) * 3.6)}<span class="res"> km/h</span></div>`;
+    else if (st && w?.kind === 'firearm') this.els.ammo.innerHTML = `<div class="wn">${esc(item(st.id).name)}</div><div class="mag">${st.ammo ?? 0}<span class="res"> / ${p.inv.count(w.ammo!)}</span></div>`;
     else if (st) this.els.ammo.innerHTML = `<div class="wn">${esc(item(st.id).name)}</div>${st.id === 'flashlight' ? `<div class="res">battery ${Math.round(st.dur ?? 0)}%</div>` : st.dur !== undefined && w ? `<div class="res">${Math.round(st.dur / w.durability * 100)}% condition</div>` : ''}`;
     else this.els.ammo.innerHTML = '';
     // build bar

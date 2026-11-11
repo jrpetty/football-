@@ -27,9 +27,12 @@ import { Container, Door, Win } from './world/town';
 import { TreeInst } from './world/vegetation';
 import { RNG, clamp, bus, damp, lerp } from './core/util';
 import { UI } from './ui/ui';
+import { Vehicles, Vehicle } from './vehicles/vehicles';
+import type { TownCar } from './world/town';
+import type { HumanPose } from './ai/zombies';
 
 export type GameState = 'loading' | 'menu' | 'cc' | 'play' | 'dead' | 'victory';
-export interface Interact { kind: string; label: string; sub?: string; key?: string; target: any; t: number }
+export interface Interact { kind: string; label: string; sub?: string; key?: string; target: any; t: number; alt?: { label: string; act: () => void } }
 export interface TimedAction { label: string; dur: number; t: number; cancelOnMove: boolean; done: () => void; icon?: string }
 export interface Settings { quality: Quality; fov: number; sens: number; master: number; music: number; sfx: number; dayLen: number; creative: boolean }
 
@@ -70,6 +73,12 @@ export class Game {
   factory!: Factory;
   base!: Base;
   placer!: Placer;
+  vehicles!: Vehicles;
+  driving: Vehicle | null = null;
+  thirdPerson = false;
+  carCam = true;
+  private avatar: HumanPose = { pos: new THREE.Vector3(), yaw: 0, move: 0, phase: 0, arms: 0, atk: 0, seed: 42.7, type: 3, hit: 0, visible: false };
+  private camSmooth = new THREE.Vector3();
   player = new Player();
   input: Input;
   ui!: UI;
@@ -138,6 +147,8 @@ export class Game {
     this.factory = new Factory(this.world, this.lights, this.scene);
     this.base = new Base(this.world, this.lights, this.scene);
     this.placer = new Placer(this.scene, this.world, this.factory, this.base);
+    this.vehicles = new Vehicles(this.world, this.scene);
+    this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
     this.zombies.onHorde = (n, toBase) => {
@@ -261,7 +272,8 @@ export class Game {
     const hrs = this.hours();
 
     if (this.state === 'play') {
-      p.update(dt, this.input, this.world, this.gameMin, uiOpen || !!(this.action && !this.action.cancelOnMove && false));
+      if (this.driving) this.driveFrame(dt, uiOpen);
+      else p.update(dt, this.input, this.world, this.gameMin, uiOpen);
       this.handleInput(dt, uiOpen);
       this.updateAction(dt);
     }
@@ -271,6 +283,7 @@ export class Game {
     if (p.camShake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * p.camShake * 0.1, (Math.random() - 0.5) * p.camShake * 0.1, 0));
     this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
     if (p.sleeping) this.camera.rotation.set(0.3, p.yaw, 0.1, 'YXZ');
+    this.updateCameraMode(dt, eye);
     const targetFov = this.settings.fov * (this.vm.ads > 0.5 && this.heldWeapon()?.ammo === 'ammo_rifle' ? 0.45 : 1 - this.vm.ads * 0.18) * (p.sprinting ? 1.06 : 1);
     this.camera.fov = damp(this.camera.fov, targetFov, 10, dt); this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
@@ -353,6 +366,7 @@ export class Game {
     const kind = !st ? 'none' : w?.kind === 'firearm' ? 'gun' : w ? 'melee' : 'tool';
     this.vm.setItem(st && w ? w.model : st?.id === 'flashlight' ? 'flashlight' : null, kind === 'tool' && !w ? 'none' : kind as any, !!w?.twoHanded);
     this.vm.update(dt, this.camera, { speed: p.speed, sprint: p.sprinting, crouch: p.crouch, lookDX: this.input.mouseDX, lookDY: this.input.mouseDY, aim: this.input.mouse[2] && !this.buildMode && !uiOpen, sun: this.atmo.sun, hemi: this.atmo.hemi, env: this.scene.environment, envI: (this.scene as any).environmentIntensity ?? 1, sway: p.stats.aimSway(), time: this.time, fov: this.camera.fov });
+    this.vm.root.visible = !this.driving && !this.thirdPerson;
     // audio
     audio.setListener(this.camera.position, fwd, new THREE.Vector3(0, 1, 0));
     audio.setAmbience({ wind: this.weather.wind * (p.inside ? 0.3 : 1), rain: this.weather.rain, night: 1 - daylight, indoor: p.inside, insideBase: !!this.factory.hub && p.pos.distanceTo(new THREE.Vector3(this.factory.hub.cx, p.pos.y, this.factory.hub.cz)) < 40 });
@@ -399,6 +413,110 @@ export class Game {
     this.vm.root.visible = true;
   }
 
+
+  // ------------------------------------------------------------------ vehicles & camera
+  private driveFrame(dt: number, uiOpen: boolean) {
+    const v = this.driving!, p = this.player, I = this.input;
+    const inp = { throttle: 0, steer: 0, brake: false };
+    if (!uiOpen) {
+      if (I.down('KeyW')) inp.throttle += 1; if (I.down('KeyS')) inp.throttle -= 1;
+      if (I.down('KeyA')) inp.steer += 1; if (I.down('KeyD')) inp.steer -= 1;
+      inp.brake = I.down('Space');
+      p.yaw -= I.mouseDX * I.sensitivity; p.pitch = clamp(p.pitch - I.mouseDY * I.sensitivity, -1.2, 1.0);
+    }
+    const impact = this.vehicles.drive(v, dt, inp, this.zombies, this.particles, this.atmo.daylight < 0.5);
+    if (impact > 12) { const dmg = (impact - 12) * 2.5; p.stats.addWound('head', dmg > 15 ? 'laceration' : 'scratch', dmg); p.camShake = 0.8; this.renderer.grade.uniforms.uDamage.value = 0.8; this.ui.notify('You slam into the wheel!', 'bad'); }
+    p.pos.copy(v.pos).setY(v.pos.y + 0.4);
+    p.speed = Math.abs(v.speed); p.moving = false; p.sprinting = false; p.noise = 0; p.inside = false;
+    if (!this.vehicles.canStart(v) && Math.abs(v.speed) < 0.2 && (I.hit('KeyW'))) this.ui.notify(v.fuel <= 0 ? 'Out of fuel.' : v.condition <= 0 ? 'The engine is wrecked.' : 'It won\'t start — no keys.', 'bad');
+  }
+  private updateCameraMode(dt: number, eye: THREE.Vector3) {
+    const p = this.player;
+    this.avatar.visible = false;
+    if (this.driving) {
+      const v = this.driving; const f = this.vehicles.forward(v);
+      if (this.carCam) {
+        const yaw = v.yaw + Math.PI + (p.yaw - (v.yaw + Math.PI)) * 0; // chase behind the car, mouse orbit below
+        const orbit = p.yaw - v.yaw - Math.PI;
+        const dir = new THREE.Vector3(Math.sin(v.yaw + orbit * 0.6), 0, Math.cos(v.yaw + orbit * 0.6));
+        void yaw;
+        const target = v.pos.clone().setY(v.pos.y + 1.4);
+        const want = target.clone().addScaledVector(dir, -(v.size[2] * 1.3 + 3)).setY(target.y + 2.2 - p.pitch * 3);
+        const gy = this.world.groundY(want.x, want.z, want.y) + 0.6; if (want.y < gy) want.y = gy;
+        if (this.camSmooth.lengthSq() === 0 || this.camSmooth.distanceTo(want) > 20) this.camSmooth.copy(want);
+        this.camSmooth.lerp(want, 1 - Math.exp(-dt * 6));
+        this.camera.position.copy(this.camSmooth);
+        this.camera.lookAt(target.addScaledVector(f, 3));
+      } else {
+        const r = new THREE.Vector3(f.z, 0, -f.x);
+        this.camera.position.copy(v.pos).addScaledVector(r, -0.38).addScaledVector(f, 0.1).setY(v.pos.y + 1.25);
+        this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+      }
+      return;
+    }
+    if (this.thirdPerson && !p.sleeping) {
+      const fwd = p.forward(); const right = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
+      const pivot = eye.clone().addScaledVector(right, 0.55).setY(eye.y + 0.15);
+      const back = fwd.clone().multiplyScalar(-1);
+      const hit = this.world.col.raycast(pivot, back, 3.4);
+      const dist = Math.min(3.2, hit.t - 0.25);
+      this.camera.position.copy(pivot).addScaledVector(back, Math.max(0.4, dist));
+      const a = this.avatar;
+      a.visible = true; a.pos.copy(p.pos); a.yaw = p.yaw + Math.PI;
+      a.move = p.speed < 0.2 ? 0 : p.speed < 4 ? 1 : 1 + Math.min(1, (p.speed - 4) / 2);
+      a.phase += dt * (p.speed * 3.2 + 0.1);
+      a.arms = this.heldWeapon()?.kind === 'firearm' && this.input.mouse[2] ? 1 : 0;
+      a.atk = Math.max(0, a.atk - dt * 3); if (this.swingTimer > 0) a.atk = 1;
+      a.hit = this.renderer.grade.uniforms.uDamage.value;
+    }
+  }
+  enterVehicle(target: TownCar | Vehicle) {
+    const p = this.player;
+    let v: Vehicle;
+    if (target.kind === 'towncar') {
+      if (target.variant === 'wreck') { this.ui.notify('A burnt-out wreck. Nothing left but scrap.', ''); return; }
+      v = this.vehicles.fromTown(target);
+    } else v = target;
+    if (!v.keys && !v.hotwired && p.inv.count('car_keys') > 0 && this.rng.chance(0.4)) { p.inv.remove('car_keys', 1); v.keys = true; this.ui.notify('🔑 One of your keys fits!', 'good'); }
+    this.vehicles.unpark(v);
+    this.driving = v;
+    p.equipped = null; p.flashlightOn = false; p.crouch = false;
+    p.yaw = v.yaw + Math.PI; p.pitch = -0.1;
+    audio.play('door_close', { pos: v.pos });
+    if (this.vehicles.canStart(v)) { audio.startLoop('engine', 'generator', { pos: v.pos, volume: 0.4 }); this.ui.notify(`Engine running · fuel ${Math.round(v.fuel * 100)}% · condition ${Math.round(v.condition)}%. W/S drive · A/D steer · Space brake · V camera · E exit`, 'good'); }
+    else this.ui.notify(v.fuel <= 0 ? 'No fuel. Bring a gas can (use it next to the car).' : !v.keys && !v.hotwired ? 'No keys. Hotwire it (T from outside) with a screwdriver and Engineering 1, or find keys.' : 'The engine is too damaged to run.', 'bad');
+  }
+  exitVehicle() {
+    const v = this.driving; if (!v) return;
+    if (Math.abs(v.speed) > 4) { this.ui.notify('Slow down first!', ''); return; }
+    const p = this.player;
+    v.speed = 0;
+    const pt = this.vehicles.exitPoint(v);
+    p.pos.copy(pt); p.vel.set(0, 0, 0); p.fallVel = 0;
+    this.vehicles.park(v); this.vehicles.headlight.intensity = 0;
+    audio.stopLoop('engine'); audio.play('door_open', { pos: v.pos });
+    this.driving = null; this.camSmooth.set(0, 0, 0);
+  }
+  private hotwire(target: TownCar | Vehicle) {
+    const p = this.player;
+    if (!p.inv.hasTool('screwdriver') || p.skills.level('engineering') < 1) { this.ui.notify('Hotwiring needs a screwdriver and Engineering 1.', 'bad'); return; }
+    const v = target.kind === 'towncar' ? (target.variant === 'wreck' ? null : this.vehicles.fromTown(target)) : target;
+    if (!v) return;
+    this.startAction({ label: 'Hotwiring…', dur: 6 * (1 - p.skills.level('engineering') * 0.06), cancelOnMove: true, done: () => {
+      if (this.rng.chance(0.75 + p.skills.level('engineering') * 0.05)) { v.hotwired = true; this.ui.notify('The engine coughs to life. Hotwired!', 'good'); p.gainXP('engineering', 10, this.gameMin); }
+      else { this.ui.notify('Sparks — it didn\'t take. Try again.', 'bad'); this.particles.sparks(v.pos.clone().setY(v.pos.y + 1), 8); }
+      this.zombies.noise(p.pos, 10);
+    } });
+  }
+  private carAlt(target: TownCar | Vehicle): Interact['alt'] {
+    const p = this.player;
+    const fuel = target.fuel;
+    if (p.inv.count('gas_can') && fuel < 0.98 && target.variant !== 'wreck') return { label: 'Refuel with gas can', act: () => this.startAction({ label: 'Refuelling…', dur: 3, cancelOnMove: true, done: () => { if (!p.inv.remove('gas_can', 1)) return; target.fuel = Math.min(1, target.fuel + 0.5); p.inv.add('gas_can_empty'); audio.play('splash', { volume: 0.5 }); this.ui.notify(`Fuel ${Math.round(target.fuel * 100)}%`, 'good'); } }) };
+    if (p.inv.count('gas_can_empty') && fuel > 0.1) return { label: 'Siphon fuel into gas can', act: () => this.startAction({ label: 'Siphoning… (it tastes awful)', dur: 5, cancelOnMove: true, done: () => { if (!p.inv.remove('gas_can_empty', 1)) return; const take = Math.min(0.5, target.fuel); target.fuel -= take; p.inv.add(take >= 0.45 ? 'gas_can' : 'gas_can_empty'); audio.play('splash', { volume: 0.5 }); if (take < 0.45) this.ui.notify('Not enough fuel left to fill the can.', ''); else this.ui.notify('Filled a gas can.', 'good'); } }) };
+    if (!target.keys && !(target as Vehicle).hotwired && target.variant !== 'wreck') return { label: 'Hotwire', act: () => this.hotwire(target) };
+    return undefined;
+  }
+
   // ------------------------------------------------------------------ helpers
   luck() { return this.player.skills.level('scavenging') * 0.07 + (this.player.traits.has('lucky') ? 0.3 : 0); }
   townLit() { return this.factory.townPowered && this.atmo.daylight < 0.6; }
@@ -416,6 +534,7 @@ export class Game {
       return;
     }
     if (p.sleeping) { if (I.hit('KeyE') || I.hit('Space')) this.wake(false); return; }
+    if (I.hit('KeyV') && !uiOpen) { if (this.driving) this.carCam = !this.carCam; else this.thirdPerson = !this.thirdPerson; audio.play('ui_click'); }
     if (I.hit('Tab') || I.hit('KeyI')) this.ui.toggle('inventory');
     if (I.hit('KeyH')) this.ui.toggle('health');
     if (I.hit('KeyK')) this.ui.toggle('skills');
@@ -423,7 +542,8 @@ export class Game {
     if (I.hit('KeyM')) this.ui.toggle('map');
     if (I.hit('KeyB')) { if (uiOpen && this.ui.open === 'build') this.ui.closeAll(); else { this.ui.closeAll(); this.ui.toggle('build'); } }
     if (I.hit('F5')) this.save(false);
-    if (uiOpen) { if (!I.locked) return; else return; }
+    if (uiOpen) return;
+    if (this.driving) { if (I.hit('KeyE')) this.exitVehicle(); this.interact = null; return; }
     // hotbar
     for (let i = 0; i < 8; i++) if (I.hit('Digit' + (i + 1))) this.selectHotbar(i);
     if (I.wheel && !this.buildMode) { const cur = p.hotbar.indexOf(p.equipped); let n = cur; for (let k = 0; k < 8; k++) { n = (n + (I.wheel > 0 ? 1 : 7)) % 8; if (p.hotbar[n] !== null && p.inv.byUid(p.hotbar[n]!)) break; } if (p.hotbar[n] !== null) this.selectHotbar(n); }
@@ -436,6 +556,7 @@ export class Game {
     // interact
     this.interact = this.findInteract();
     if (I.hit('KeyE') && this.interact) this.doInteract(this.interact);
+    if (I.hit('KeyT') && this.interact?.alt) this.interact.alt.act();
     if (this.buildMode) {
       if (I.mousePressed[0]) this.buildClick();
       if (I.mouseReleased[0]) this.buildRelease();
@@ -454,7 +575,7 @@ export class Game {
       if (w?.kind === 'firearm') { if (this.fireCooldown <= 0 && this.reloading <= 0 && (w.auto || I.mousePressed[0])) this.fire(st!); }
       else if (this.swingTimer <= 0 && (I.mousePressed[0] || true)) this.startSwing(st);
     }
-    if ((I.hit('KeyV') || (I.mousePressed[2] && w?.kind !== 'firearm')) && this.shoveCD <= 0) this.shove();
+    if (I.mousePressed[2] && w?.kind !== 'firearm' && this.shoveCD <= 0) this.shove();
   }
 
   selectHotbar(i: number) {
@@ -667,6 +788,7 @@ export class Game {
 
   private playerAttacked(z: Zombie) {
     const p = this.player;
+    if (this.driving) { const v = this.driving; if (Math.abs(v.speed) > 2.5 || this.rng.chance(0.7)) { v.condition = Math.max(0, v.condition - 1.5); audio.play('zombie_bang', { pos: v.pos }); return; } }
     this.attackers++;
     // facing a zombie and fresh stamina gives a chance to dodge/defend
     const toZ = Math.atan2(z.pos.x - p.pos.x, z.pos.z - p.pos.z);
@@ -769,6 +891,12 @@ export class Game {
         if (pc.door) consider({ kind: 'pdoor', label: pc.door.open ? 'Close' : 'Open', target: pc, t: hit.t });
         else if (pc.def.kind === 'station') consider(this.stationInteract(pc, hit.t));
         else if (pc.def.kind === 'tower') consider({ kind: 'ladder', label: 'Climb ladder', target: pc, t: hit.t });
+      } else if (ref.kind === 'towncar' || ref.kind === 'vehicle') {
+        const c = ref as TownCar | Vehicle;
+        const wreck = c.variant === 'wreck';
+        consider({ kind: 'car', label: wreck ? 'Burnt-out wreck' : 'Get in', sub: wreck ? undefined : `Fuel ${Math.round(c.fuel * 100)}% · ${c.keys || (c as Vehicle).hotwired ? 'keys in ignition' : 'no keys'} · condition ${Math.round(c.condition)}%`, target: c, t: hit.t, alt: this.carAlt(c) });
+      } else if (ref.kind === 'pump') {
+        consider({ kind: 'pump', label: this.factory.townPowered ? 'Fill gas can' : 'Gas pump (no power)', sub: this.factory.townPowered ? (p.inv.count('gas_can_empty') ? undefined : 'Bring an empty gas can') : 'Restore the town grid with the Grid Uplink', target: ref, t: hit.t });
       } else if ('purity' in ref) {
         const o = ref as OreNode;
         consider({ kind: 'ore', label: `${item(o.type).name} deposit (${o.purity > 1 ? 'Pure' : 'Normal'})`, sub: o.occupied ? 'Being mined' : 'Mine with a pickaxe, or place a Miner', target: o, t: hit.t });
@@ -913,6 +1041,13 @@ export class Game {
         else this.startAction({ label: 'Drinking…', dur: 2.5, cancelOnMove: true, done: () => { p.stats.thirst = Math.min(100, p.stats.thirst + 35); if (this.rng.chance(p.traits.has('iron_gut') ? 0.15 : 0.4)) p.stats.foodPoison = Math.min(1, p.stats.foodPoison + 0.4); audio.play('drink'); } });
         break;
       }
+      case 'car': this.enterVehicle(it.target); break;
+      case 'pump': {
+        if (!this.factory.townPowered) { this.ui.notify('The pumps are dead. Siphon fuel from cars, or restore the grid.', ''); break; }
+        const n = p.inv.count('gas_can_empty'); if (!n) { this.ui.notify('You need an empty gas can.', ''); break; }
+        this.startAction({ label: 'Pumping fuel…', dur: 3, cancelOnMove: true, done: () => { p.inv.remove('gas_can_empty', n); p.inv.add('gas_can', n); audio.play('splash'); } });
+        break;
+      }
       case 'ore': this.ui.notify('Equip a pickaxe and swing at the deposit, or build a Miner on it (B).', ''); break;
     }
   }
@@ -987,6 +1122,7 @@ export class Game {
       this.startAction({ label: `Reading ${d.name}…`, dur: 8, cancelOnMove: true, done: () => { p.skills.bookUntil[d.skillBook as SkillId] = this.gameMin + 60 * 24; p.stats.unhappy = Math.max(0, p.stats.unhappy - 15); this.ui.notify(`📖 ${SKILLS.find(k => k.id === d.skillBook)!.name} XP ×3 for the next day.`, 'xp'); p.inv.removeUid(uid, 1); } });
       return;
     }
+    if (d.id === 'gas_can') { const v = this.vehicles.nearest(p.pos, 4); if (v) { const alt = this.carAlt(v); if (alt) alt.act(); } else this.ui.notify('Use it next to a car, or put it in a generator.', ''); return; }
     if (d.id === 'battery') { const fl = p.inv.find('flashlight'); if (fl) { fl.dur = 100; p.inv.removeUid(uid, 1); audio.play('reload', { volume: 0.4 }); this.ui.notify('Fresh batteries in the flashlight.', 'good'); } return; }
     if (d.id === 'duct_tape') { const st = p.equippedStack(); const w = st ? item(st.id).weapon : undefined; if (st && w && st.dur !== undefined) { st.dur = Math.min(w.durability, st.dur + w.durability * 0.3); p.inv.removeUid(uid, 1); this.ui.notify(`Repaired your ${item(st.id).name}.`, 'good'); } else this.ui.notify('Equip a weapon to repair it with tape.', ''); return; }
     this.ui.notify(`You can't use ${d.name} directly.`, '');
@@ -1249,6 +1385,7 @@ export class Game {
       const data = {
         v: 1, gameMin: this.gameMin, objective: this.objective, stats: this.stats, built: this.builtCounts,
         weather: { kind: this.weather.kind, wet: this.weather.wetness },
+        vehicles: this.vehicles.toJSON(),
         player: this.player.toJSON(), factory: this.factory.toJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
         containers: town.containers.filter(c => c.generated).map(c => [c.id, c.inv.stacks]),
         doors: town.doors.map(d => [d.open ? 1 : 0, Math.round(d.hp), Math.round(d.barricade), d.locked ? 1 : 0]),
@@ -1290,6 +1427,7 @@ export class Game {
       for (const idx of d.veg ?? []) { const t = this.world.veg.insts[idx]; if (t && t.alive) { t.alive = false; this.world.veg.removed.add(idx); if (t.col) this.world.col.removeCircle(t.col); } }
       for (const dr of d.drops ?? []) { const inv = new Inventory(); inv.load(dr[3]); this.world.dropItems(new THREE.Vector3(dr[0], dr[1], dr[2]), inv); }
       if (d.explored) this.explored.set(d.explored);
+      this.vehicles.load(d.vehicles ?? []);
       this.zombies.load(d.zombies ?? []);
       if (d.settings?.creative !== undefined) this.settings.creative = d.settings.creative;
       this.lastSave = this.gameMin;
