@@ -105,16 +105,40 @@ distance. Start on Medium on laptops.
   breakable windows you can climb through, and lootable fridges, cabinets,
   lockers and car trunks. Forests are choppable and there's a lake. The day/night
   cycle and dynamic weather include rain, storms with lightning and fog.
-- **Graphics.** Low-poly art direction: every surface is a flat, faceted
-  colour from a muted palette, lit by the atmosphere.
-  - Sky and light: a painterly gradient sky that melts into the fog at the
-    horizon, crisp two-tone clouds, stars and moon, sky-lit environment maps,
-    soft shadows, bloom, ACES tone mapping and a gentle colour grade with
-    vignette, damage and low-health effects.
-  - World: faceted terrain painted from a splat map; low-poly conifers,
-    autumn birches, snags, bushes and boulders that sway in the wind (with
-    impostors in the distance); chunky GPU grass; a heaving low-poly lake.
-  - Effects: GPU rain, blood decals and particles.
+- **Graphics.** A polished low-poly art direction: every surface is a flat,
+  faceted colour from a muted palette, lit by the atmosphere.
+  - Facets: each face gets subtle tonal variation, with per-object warm/cool
+    drift and baked-looking sky bounce, so surfaces read as hand-painted.
+  - Sky and depth: a painterly gradient sky that melts into the fog, three
+    layers of distant low-poly mountains with atmospheric perspective and
+    snow caps, puffy low-poly clouds plus a crisp high cloud layer, valley
+    mist that pools in low ground, stars and moon.
+  - Light: sky-lit environment maps, soft shadows, bloom, ACES tone mapping
+    and a colour grade that warms at golden hour and cools to teal at night.
+  - World: faceted terrain; low-poly conifers, autumn birches, snags, bushes
+    and boulders with per-tree colour variety, wind sway and snow cover;
+    chunky GPU grass with seasonal wildflowers; a heaving low-poly lake.
+  - Ambient life: tumbling autumn leaves, fireflies on warm nights, sunlit
+    dust, rain and snow, blood decals and particles.
+- **Animation.**
+  - First person: a spring-physics weapon rig with forehand, backhand and
+    overhead swings, knife stabs, heavy overhead chops, staged reloads
+    (magazine out, magazine in, rack), equip raise, breathing, sprint
+    figure-eights, recoil that kicks and settles, and jump, landing, hit
+    and hurt jolts. The camera rolls when you strafe, dips when you land
+    and follows the weight of each swing.
+  - Zombies: GPU-animated skeletons with shambling, limping and flailing
+    runner gaits, heads that track you, twitches, clawing grabs, hit
+    reactions that depend on where you strike, three death styles (knees
+    buckle, topple with momentum, twist sideways), and crawlers that drag
+    themselves along when badly hurt.
+  - Humans: your third-person survivor and NPC survivors have natural
+    walk and run cycles, aiming poses and overhead melee swings.
+  - Animals: articulated deer, rabbits and wolves that walk, trot, gallop
+    and bound, graze with their heads down, track you when alert, flash
+    tails when fleeing and wag them when stalking.
+  - Vehicles: the body leans in turns, squats and dives under throttle and
+    braking, and jolts over bumps.
 - **Audio.** All sound is synthesised with Web Audio:
   - HRTF positional sound effects.
   - Ambience that changes with weather and time of day.

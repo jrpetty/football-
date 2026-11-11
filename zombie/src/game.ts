@@ -25,8 +25,10 @@ import { rollLoot } from './items/loot';
 import { RECIPES, Recipe, Station } from './items/recipes';
 import { Container, Door, Win } from './world/town';
 import { TreeInst, windUniforms } from './world/vegetation';
-import { RNG, clamp, bus, damp, lerp } from './core/util';
+import { RNG, clamp, bus, damp, lerp, smoothstep } from './core/util';
 import { UI } from './ui/ui';
+import { DistantMountains, CloudClusters } from './render/scenery';
+import { AmbientParticles } from './render/ambient';
 import { Animals, Animal } from './ai/animals';
 import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
@@ -70,6 +72,9 @@ export class Game {
   weather!: Weather;
   particles!: Particles;
   lights!: LightPool;
+  mountains!: DistantMountains;
+  cloudClusters!: CloudClusters;
+  ambient!: AmbientParticles;
   world!: World;
   zombies!: Zombies;
   factory!: Factory;
@@ -151,6 +156,9 @@ export class Game {
     this.weather.onThunder = (delay, v) => this.thunderQ.push({ t: delay, v });
     this.particles = new Particles(this.scene);
     this.lights = new LightPool(this.scene, 8);
+    this.mountains = new DistantMountains(this.scene, SEED);
+    this.cloudClusters = new CloudClusters(this.scene, SEED);
+    this.ambient = new AmbientParticles(this.scene);
     await yieldF();
     this.world = new World(this.scene, this.renderer.renderer, SEED, cfg, (p, l) => progress(0.32 + p * 0.55, l));
     await yieldF();
@@ -299,6 +307,14 @@ export class Game {
     if (p.camShake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * p.camShake * 0.1, (Math.random() - 0.5) * p.camShake * 0.1, 0));
     this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
     if (p.sleeping) this.camera.rotation.set(0.3, p.yaw, 0.1, 'YXZ');
+    else if (!this.driving && !this.thirdPerson) {
+      // first-person feel: springs from the viewmodel rig (landing dips, recoil, flinches, strafe roll)
+      if (p.landed > 2) this.vm.land(p.landed); if (p.jumped) this.vm.jump(); if (p.stepped && p.sprinting) this.vm.footstep();
+      const fx = this.vm.camRot;
+      this.camera.rotation.set(p.pitch + fx.x, p.yaw + fx.y, fx.z, 'YXZ');
+      this.camera.position.add(this.vm.camOffset.clone().applyEuler(new THREE.Euler(0, p.yaw, 0)));
+    }
+    p.landed = 0; p.jumped = false; p.stepped = false;
     this.updateCameraMode(dt, eye);
     const targetFov = this.settings.fov * (this.vm.ads > 0.5 && this.heldWeapon()?.ammo === 'ammo_rifle' ? 0.45 : 1 - this.vm.ads * 0.18) * (p.sprinting ? 1.06 : 1);
     this.camera.fov = damp(this.camera.fov, targetFov, 10, dt); this.camera.updateProjectionMatrix();
@@ -362,6 +378,7 @@ export class Game {
     // environment
     this.weather.update(dt, dtGame, this.camera.position, this.time, daylight, p.inside);
     this.atmo.overcast = this.weather.overcast; this.atmo.cloudCover = this.weather.cover; this.atmo.fogBoost = this.weather.fog; this.atmo.lightning = this.weather.lightning;
+    this.updateScenery(dt, p.inside || this.underRoof());
     this.atmo.indoorDim = damp(this.atmo.indoorDim, p.inside || this.underRoof() ? 0.62 : 1, 3, dt);
     this.atmo.update(hrs, dt, this.camera, p.pos, this.time);
     this.renderer.renderer.toneMappingExposure = this.atmo.exposure() * (p.traits.has('night_owl') ? 1.15 : 1);
@@ -401,7 +418,8 @@ export class Game {
     const st = p.equippedStack(); const w = st ? item(st.id).weapon : undefined;
     const kind = !st ? 'none' : w?.kind === 'firearm' ? 'gun' : w ? 'melee' : 'tool';
     this.vm.setItem(st && w ? w.model : st?.id === 'flashlight' ? 'flashlight' : null, kind === 'tool' && !w ? 'none' : kind as any, !!w?.twoHanded);
-    this.vm.update(dt, this.camera, { speed: p.speed, sprint: p.sprinting, crouch: p.crouch, lookDX: this.input.mouseDX, lookDY: this.input.mouseDY, aim: this.input.mouse[2] && !this.buildMode && !uiOpen, sun: this.atmo.sun, hemi: this.atmo.hemi, env: this.scene.environment, envI: (this.scene as any).environmentIntensity ?? 1, sway: p.stats.aimSway(), time: this.time, fov: this.camera.fov });
+    const strafe = p.vel.x * Math.cos(p.yaw) - p.vel.z * Math.sin(p.yaw);
+    this.vm.update(dt, this.camera, { strafe, speed: p.speed, sprint: p.sprinting, crouch: p.crouch, lookDX: this.input.mouseDX, lookDY: this.input.mouseDY, aim: this.input.mouse[2] && !this.buildMode && !uiOpen, sun: this.atmo.sun, hemi: this.atmo.hemi, env: this.scene.environment, envI: (this.scene as any).environmentIntensity ?? 1, sway: p.stats.aimSway(), time: this.time, fov: this.camera.fov });
     this.vm.root.visible = !this.driving && !this.thirdPerson;
     // audio
     audio.setListener(this.camera.position, fwd, new THREE.Vector3(0, 1, 0));
@@ -440,6 +458,7 @@ export class Game {
     this.atmo.overcast = 0.35; this.atmo.cloudCover = 0.6; this.atmo.fogBoost = 0.25;
     this.atmo.update(hrs, dt, this.camera, this.camera.position, this.time);
     this.renderer.renderer.toneMappingExposure = this.atmo.exposure();
+    this.updateScenery(dt, false);
     this.world.update(dt, this.camera.position, this.atmo.sunDir, this.time, 0.4);
     this.zombies.update(dt, 0, { playerPos: new THREE.Vector3(9999, 0, 9999), playerEye: new THREE.Vector3(9999, 0, 9999), playerNoise: 0, playerVisibility: 0, playerAlive: false, playerInside: false, onPlayerAttacked: () => {}, onStructureHit: () => {}, onKill: () => {}, baseCenter: null, baseHeat: 0, daylight: 1, hours: hrs, day: 1, luck: 0 }, this.camera.position);
     this.lights.update(dt, this.camera.position);
@@ -502,7 +521,8 @@ export class Game {
       a.move = p.speed < 0.2 ? 0 : p.speed < 4 ? 1 : 1 + Math.min(1, (p.speed - 4) / 2);
       a.phase += dt * (p.speed * 3.2 + 0.1);
       a.arms = this.heldWeapon()?.kind === 'firearm' && this.input.mouse[2] ? 1 : 0;
-      a.atk = Math.max(0, a.atk - dt * 3); if (this.swingTimer > 0) a.atk = 1;
+      a.atk = Math.max(0, a.atk - dt * 3);
+      a.lookPitch = clamp(p.pitch, -0.8, 0.8); a.lookYaw = 0;
       a.hit = this.renderer.grade.uniforms.uDamage.value;
     }
   }
@@ -597,11 +617,28 @@ export class Game {
     if (!this.rng.chance(p.sprinting ? 0.45 : 0.7)) return;
     const part = this.rng.weighted<PartId>([['legL', 30], ['legR', 30], ['armL', 15], ['armR', 15], ['torso', 10]]);
     const prot = p.protection(part.startsWith('leg') ? 'legs' : 'torso');
-    audio.play('player_hurt'); this.renderer.grade.uniforms.uDamage.value = 0.7; p.camShake = 0.4;
+    audio.play('player_hurt'); this.renderer.grade.uniforms.uDamage.value = 0.7; p.camShake = 0.4; this.vm.hurt();
     if (this.rng.chance(prot.bite)) { this.ui.notify('The wolf\'s teeth catch on your clothes.', ''); return; }
     p.stats.addWound(part, this.rng.chance(0.6) ? 'laceration' : 'scratch', this.rng.range(8, 15));
     this.ui.notify(`🐺 A wolf mauls your ${PARTS.find(q => q.id === part)!.name.toLowerCase()}!`, 'bad');
     this.cancelAction();
+  }
+
+  private updateScenery(dt: number, indoor: boolean) {
+    const a = this.atmo; const cam = this.camera.position;
+    const golden = smoothstep(0.35, 0.02, a.sunDir.y) * a.daylight;
+    this.mountains.update(cam, a.fogColor, a.sunDir, a.night, this.weather.snowCover);
+    const sunCol = a.sun.color.clone();
+    this.cloudClusters.update(cam, this.time, this.weather.cover, sunCol, a.daylight, a.night, this.weather.windDir.clone().multiplyScalar(0.5 + this.weather.wind));
+    const season = this.state === 'play' ? this.season().idx : 0;
+    this.ambient.update(this.time, cam, { season, night: a.night, daylight: a.daylight, rain: this.weather.rain, indoor, wind: this.weather.windDir.clone().multiplyScalar(this.weather.wind), forest: this.world.terrain.forestDensity(cam.x, cam.z) });
+    windUniforms.uFlowers.value = [0.3, 0, 1, 0.75][season];
+    // cinematic grade drifts with the time of day: warm golden hours, teal-blue nights
+    const g = this.renderer.grade.uniforms;
+    g.uGain.value.set(1.03 + golden * 0.07, 1.0 + golden * 0.01, 0.95 - golden * 0.07 + a.night * 0.05);
+    g.uLift.value.set(0.018 - a.night * 0.008, 0.022 + a.night * 0.006, 0.034 + a.night * 0.02);
+    g.uSat.value = 0.97 + golden * 0.08 - a.night * 0.25;
+    void dt;
   }
 
   // ------------------------------------------------------------------ seasons & food
@@ -716,7 +753,7 @@ export class Game {
     const dur = 1 / speed;
     this.swingTimer = dur; this.swingHitAt = dur * 0.42; this.swingStack = st;
     p.stats.stamina -= cost;
-    this.vm.swing(dur);
+    this.vm.swing(dur); this.avatar.atk = 1;
     audio.play(w && w.speed < 0.9 ? 'swing_heavy' : 'swing', { volume: 0.7 });
   }
   private meleeHit() {
@@ -742,7 +779,7 @@ export class Game {
         if (this.rng.chance(0.4)) this.particles.bloodDecal(z.pos.x + dir.x * 0.5, this.world.groundY(z.pos.x, z.pos.z, z.pos.y), z.pos.z + dir.z * 0.5, 0.9);
         audio.play(head ? 'headshot' : w?.kind === 'blade' ? 'hit_flesh' : 'hit_flesh', { pos: at });
         if (head && killed) audio.play('bone_crack', { pos: at, volume: 0.7 });
-        this.ui.hitmark(killed);
+        this.ui.hitmark(killed); this.vm.impact(head ? 1.3 : 1);
         p.gainXP(skillId, killed ? 8 : 3, this.gameMin); p.gainXP('strength', 1, this.gameMin);
         p.bloody = Math.min(1, p.bloody + 0.1);
       }
@@ -943,7 +980,7 @@ export class Game {
     const thick = p.traits.has('thick_skin') ? 0.3 : 0;
     const g = this.renderer.grade.uniforms;
     g.uDamage.value = Math.min(1, g.uDamage.value + 0.6);
-    p.camShake = 0.4;
+    p.camShake = 0.4; this.vm.hurt();
     audio.play('player_hurt');
     if (this.rng.chance(block + thick * (1 - block))) {
       p.stats.parts[part].hp = Math.max(0, p.stats.parts[part].hp - 3);

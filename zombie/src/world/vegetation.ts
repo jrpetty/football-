@@ -9,7 +9,7 @@ import { LAKE, TOWN } from './layout';
 
 export interface TreeInst { x: number; y: number; z: number; s: number; r: number; v: number; kind: 'tree' | 'bush' | 'rock' | 'log'; alive: boolean; hp: number; col?: Circle; idx: number }
 
-export const windUniforms = { uTime: { value: 0 }, uWind: { value: 0.3 }, uSnow: { value: 0 } };
+export const windUniforms = { uTime: { value: 0 }, uWind: { value: 0.3 }, uSnow: { value: 0 }, uFlowers: { value: 0.5 } };
 
 function addWind(mat: THREE.MeshStandardMaterial, strength: number, key: string) {
   const m = mat.clone();
@@ -44,6 +44,7 @@ class Variant {
       const mat = windStrength > 0 ? addWind(p.material, windStrength, key) : p.material;
       const im = new THREE.InstancedMesh(p.geometry, mat, maxNear);
       im.count = 0; im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false;
+      im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxNear * 3).fill(1), 3);
       group.add(im); this.near.push(im);
     }
     if (impostor) {
@@ -57,6 +58,7 @@ class Variant {
       for (let i = 0; i < n.count; i++) { n.setXYZ(i, n.getX(i) * 0.4, 0.9, n.getZ(i) * 0.4); }
       this.far = new THREE.InstancedMesh(geo, mat, maxFar);
       this.far.count = 0; this.far.castShadow = false; this.far.receiveShadow = false; this.far.frustumCulled = false;
+      this.far.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxFar * 3).fill(1), 3);
       group.add(this.far);
     }
   }
@@ -182,19 +184,28 @@ export class Vegetation {
       this.tmpS.setScalar(t.s); this.tmpP.set(t.x, t.y, t.z);
       this.tmpM.compose(this.tmpP, this.tmpQ, this.tmpS);
       if (t.kind === 'tree') {
-        if (d2 < near2) { for (const n of v.near) { if (n.count < n.instanceMatrix.count) n.setMatrixAt(n.count++, this.tmpM); } }
+        const tint = this.tint(t);
+        if (d2 < near2) { for (const n of v.near) { if (n.count < n.instanceMatrix.count) { n.setColorAt(n.count, tint); n.setMatrixAt(n.count++, this.tmpM); } } }
         else if (d2 < far2 && v.far && v.far.count < v.far.instanceMatrix.count) {
           // impostor faces are fixed; rotate randomly is fine
-          v.far.setMatrixAt(v.far.count++, this.tmpM);
+          v.far.setColorAt(v.far.count, tint); v.far.setMatrixAt(v.far.count++, this.tmpM);
         }
       } else {
         const lim = t.kind === 'bush' ? bushFar2 : far2 * 0.5;
-        if (d2 < lim) for (const n of v.near) { if (n.count < n.instanceMatrix.count) n.setMatrixAt(n.count++, this.tmpM); }
+        const tint = this.tint(t);
+        if (d2 < lim) for (const n of v.near) { if (n.count < n.instanceMatrix.count) { n.setColorAt(n.count, tint); n.setMatrixAt(n.count++, this.tmpM); } }
       }
     }
-    for (const v of this.variants) { for (const n of v.near) n.instanceMatrix.needsUpdate = true; if (v.far) v.far.instanceMatrix.needsUpdate = true; }
+    for (const v of this.variants) { for (const n of v.near) { n.instanceMatrix.needsUpdate = true; if (n.instanceColor) n.instanceColor.needsUpdate = true; } if (v.far) { v.far.instanceMatrix.needsUpdate = true; if (v.far.instanceColor) v.far.instanceColor.needsUpdate = true; } }
   }
 
+  private tintC = new THREE.Color();
+  /** per-instance colour variety: brightness and a slight warm/cool hue drift */
+  private tint(t: TreeInst) {
+    const h = hash2(Math.floor(t.x * 3), Math.floor(t.z * 3), 7), k = hash2(Math.floor(t.z * 5), Math.floor(t.x * 5), 11);
+    const b = 0.84 + h * 0.3;
+    return this.tintC.setRGB(b * (0.96 + k * 0.1), b, b * (1.04 - k * 0.1));
+  }
   /** nearest live vegetation instance of kind within radius of point */
   nearest(x: number, z: number, r: number, kinds: TreeInst['kind'][]) {
     let best: TreeInst | null = null, bd = r * r;
@@ -256,11 +267,11 @@ export class Vegetation {
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = { value: 0 }; sh.uniforms.uWind = { value: 0.3 }; sh.uniforms.uCam = { value: new THREE.Vector3() };
       sh.uniforms.tHeight = { value: ht }; sh.uniforms.tSplat = { value: this.terrain.splat };
-      sh.uniforms.uPush = { value: new THREE.Vector3() }; sh.uniforms.uSnowG = windUniforms.uSnow;
+      sh.uniforms.uPush = { value: new THREE.Vector3() }; sh.uniforms.uSnowG = windUniforms.uSnow; sh.uniforms.uFlowers = windUniforms.uFlowers;
       mat.userData.shader = sh;
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', `#include <common>
-attribute vec4 aOff; uniform float uTime, uWind, uSnowG; uniform vec3 uCam; uniform sampler2D tHeight; uniform sampler2D tSplat;
+attribute vec4 aOff; uniform float uTime, uWind, uSnowG, uFlowers; uniform vec3 uCam; uniform sampler2D tHeight; uniform sampler2D tSplat;
 varying float vH; varying float vShade; varying vec3 vGCol;
 float hAt(vec2 p){ vec2 f = (p + ${HALF_WORLD.toFixed(1)}) / ${T_RES.toFixed(2)}; vec2 i = floor(f); vec2 u = f - i;
   float h00 = texture2D(tHeight, (i + 0.5) / ${N.toFixed(1)}).r; float h10 = texture2D(tHeight, (i + vec2(1.5,0.5)) / ${N.toFixed(1)}).r;
@@ -287,6 +298,7 @@ transformed.y -= length(push) * bend * hgt * 0.4;
 transformed += vec3(wp.x, hAt(wp), wp.y);
 vH = t; vShade = aOff.z;
 vGCol = mix(vec3(0.27,0.36,0.15), vec3(0.40,0.42,0.19), step(0.75, aOff.z + sp.g * 0.4)) * (0.92 + aOff.w * 0.12);
+if (aOff.w > 1.0 - 0.045 * uFlowers) { vGCol = aOff.z < 0.33 ? vec3(0.95, 0.93, 0.85) : aOff.z < 0.66 ? vec3(0.95, 0.78, 0.2) : vec3(0.62, 0.4, 0.8); }
 `)
         .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = vec3(0.0, 1.0, 0.0);');
       sh.fragmentShader = sh.fragmentShader

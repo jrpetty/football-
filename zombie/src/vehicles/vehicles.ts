@@ -14,6 +14,8 @@ export interface Vehicle {
   id: number; variant: CarVariant; color: number; obj: THREE.Object3D; pos: THREE.Vector3; yaw: number; speed: number; steer: number;
   fuel: number; condition: number; keys: boolean; hotwired: boolean; size: [number, number, number]; box: Box | null; container: Container;
   pitch: number; roll: number; townId: number; kind: 'vehicle'; noiseT: number; lights: boolean; cx: number; cz: number;
+  /** body suspension springs: lean in turns, squat/dive under throttle and braking, jolts from bumps */
+  bodyRoll: number; bodyRollV: number; bodyPitch: number; bodyPitchV: number; lastSpeed: number; lastY: number;
 }
 
 export interface DriveInput { throttle: number; steer: number; brake: boolean }
@@ -49,6 +51,7 @@ export class Vehicles {
       id: this.nextId++, variant, color, obj: object, pos: new THREE.Vector3(x, this.world.groundY(x, z), z), yaw, speed: 0, steer: 0,
       fuel: o.fuel ?? 0.3, condition: o.condition ?? 60, keys: o.keys ?? false, hotwired: o.hotwired ?? false, size, box: null, container,
       pitch: 0, roll: 0, townId: o.townId ?? -1, kind: 'vehicle', noiseT: 0, lights: false, cx: x, cz: z,
+      bodyRoll: 0, bodyRollV: 0, bodyPitch: 0, bodyPitchV: 0, lastSpeed: 0, lastY: 0,
     };
     this.list.push(v);
     this.settle(v);
@@ -89,7 +92,7 @@ export class Vehicles {
     v.roll = Math.atan2(((fl + bl) - (fr + br)) / 2, hw * 2);
     v.obj.position.copy(v.pos);
     v.obj.rotation.set(0, 0, 0);
-    v.obj.rotateY(v.yaw); v.obj.rotateX(-v.pitch); v.obj.rotateZ(v.roll);
+    v.obj.rotateY(v.yaw); v.obj.rotateX(-v.pitch - v.bodyPitch); v.obj.rotateZ(v.roll + v.bodyRoll);
   }
 
   /** returns impact speed if crashed this frame */
@@ -162,6 +165,18 @@ export class Vehicles {
     if (running) v.fuel = Math.max(0, v.fuel - dt * (0.00025 + Math.abs(inp.throttle) * 0.0011 * (Math.abs(v.speed) / 20 + 0.3)));
     v.noiseT -= dt;
     if (running && v.noiseT <= 0) { v.noiseT = 0.6; zombies.noise(v.pos, 22 + Math.abs(v.speed) * 1.6); }
+    // suspension: lateral g leans the body out of the turn, longitudinal g squats/dives, terrain jolts
+    if (dt > 0) {
+      const latG = v.speed * (v.speed / wheelbase) * Math.tan(v.steer);
+      const lonG = (v.speed - v.lastSpeed) / dt;
+      v.lastSpeed = v.speed;
+      const kR = 60, cR = 7;
+      v.bodyRollV += (-v.bodyRoll * kR - v.bodyRollV * cR + clamp(latG * 0.0045, -0.09, 0.09) * kR) * dt;
+      v.bodyPitchV += (-v.bodyPitch * kR - v.bodyPitchV * cR + clamp(-lonG * 0.006, -0.06, 0.06) * kR) * dt;
+      const jolt = (v.pos.y - v.lastY) / dt; v.lastY = v.pos.y;
+      if (Math.abs(jolt) > 2.5) v.bodyPitchV += clamp(jolt * 0.02, -0.3, 0.3);
+      v.bodyRoll += v.bodyRollV * dt; v.bodyPitch += v.bodyPitchV * dt;
+    }
     this.settle(v);
     this.syncTrunk(v);
     // headlights

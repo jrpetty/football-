@@ -54,6 +54,70 @@ const cache = new Map<string, THREE.MeshStandardMaterial>();
  * atmosphere. Textures are only kept where they carry information (hazard stripes, belt motion).
  */
 export const LOWPOLY = true;
+
+// ---- global shader upgrades (patched once, before any program compiles) ----
+// FACET_VARIATION: per-face tonal variation from the world-space flat normal + a per-object seed, giving
+// hand-painted low-poly facets without textures. Height mist: low-lying fog that pools in valleys.
+(function patchChunks() {
+  const C = THREE.ShaderChunk as any;
+  if (C.__rekindle) return; C.__rekindle = true;
+  C.common = C.common + `
+#ifdef FACET_VARIATION
+varying vec3 vFacetW; varying vec3 vFacetSeed;
+#endif
+#ifdef USE_FOG
+varying float vFogWY;
+#endif
+`;
+  C.project_vertex = C.project_vertex + `
+#ifdef FACET_VARIATION
+  #ifdef USE_INSTANCING
+    vFacetW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+    vFacetSeed = (modelMatrix * vec4(instanceMatrix[3].xyz, 1.0)).xyz;
+  #else
+    vFacetW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+    vFacetSeed = modelMatrix[3].xyz;
+  #endif
+#endif
+`;
+  C.fog_vertex = C.fog_vertex + `
+#ifdef USE_FOG
+  #ifdef USE_INSTANCING
+    vFogWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y;
+  #else
+    vFogWY = (modelMatrix * vec4(transformed, 1.0)).y;
+  #endif
+#endif
+`;
+  C.color_fragment = C.color_fragment + `
+#ifdef FACET_VARIATION
+  {
+    vec3 fN = normalize(cross(dFdx(vFacetW), dFdy(vFacetW)));
+    vec3 q = floor(fN * 7.0 + 0.5) + floor(vFacetSeed * 0.37);
+    float fh = fract(sin(dot(q, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+    float sh = fract(sin(dot(floor(vFacetSeed * 0.5), vec3(7.13, 157.1, 113.7))) * 24634.63);
+    diffuseColor.rgb *= 0.92 + fh * 0.13;
+    diffuseColor.rgb *= mix(vec3(0.97, 1.0, 1.02), vec3(1.04, 1.0, 0.95), sh);
+    // sky bounce on up-facing facets, darker undersides: reads as baked ambient occlusion
+    diffuseColor.rgb *= 0.9 + 0.14 * clamp(fN.y * 0.5 + 0.5, 0.0, 1.0);
+  }
+#endif
+`;
+  C.fog_fragment = `
+#ifdef USE_FOG
+  #ifdef FOG_EXP2
+    float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+    float mist = (1.0 - exp(-vFogDepth * fogDensity * 2.2)) * exp(-max(vFogWY - 1.0, 0.0) * 0.22);
+    fogFactor = clamp(max(fogFactor, mist * 0.55), 0.0, 1.0);
+  #else
+    float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+  #endif
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+#endif
+`;
+})();
+/** opt a material into faceted tonal variation */
+export function facet<T extends THREE.Material>(m: T): T { (m as any).defines = { ...((m as any).defines ?? {}), FACET_VARIATION: '' }; return m; }
 const PALETTE: Partial<Record<MaterialName, [number, number, number]>> = {
   // [colour, roughness, metalness]
   grass: [0x6f7d45, 0.95, 0], dirt: [0x7a6248, 0.95, 0], rock: [0x85847c, 0.9, 0], forestFloor: [0x5a4a34, 0.95, 0],
@@ -73,7 +137,7 @@ const PALETTE: Partial<Record<MaterialName, [number, number, number]>> = {
 export function getFlatMaterial(hex: number, roughness = 0.9, metalness = 0): THREE.MeshStandardMaterial {
   const key = `flat:${hex}:${roughness}:${metalness}`;
   let m = cache.get(key);
-  if (!m) { m = new THREE.MeshStandardMaterial({ name: key, color: hex, roughness, metalness, flatShading: true }); cache.set(key, m); }
+  if (!m) { m = facet(new THREE.MeshStandardMaterial({ name: key, color: hex, roughness, metalness, flatShading: true })); cache.set(key, m); }
   return m;
 }
 function lowpoly(name: MaterialName): THREE.MeshStandardMaterial | null {
@@ -81,11 +145,11 @@ function lowpoly(name: MaterialName): THREE.MeshStandardMaterial | null {
   if (name === 'glassDirty') return new THREE.MeshStandardMaterial({ name, color: 0x9fb4ae, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide });
   if (name === 'pineNeedles' || name === 'leaves') {
     const c = PALETTE[name]!;
-    return new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], flatShading: true, side: THREE.DoubleSide });
+    return facet(new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], flatShading: true, side: THREE.DoubleSide }));
   }
   const c = PALETTE[name];
   if (!c) return null;
-  return new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], metalness: c[2], flatShading: true });
+  return facet(new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], metalness: c[2], flatShading: true }));
 }
 
 function applySet(m: THREE.MeshStandardMaterial, set: PBRSet, metallic: boolean, spec: TexMatSpec = {}): void {
@@ -210,7 +274,7 @@ export function getCarPaint(hex: number): THREE.MeshStandardMaterial {
   const key = `car:${hex}`;
   let m = cache.get(key);
   if (!m && LOWPOLY) {
-    m = new THREE.MeshPhysicalMaterial({ name: `carPaint_${hex.toString(16)}`, color: new THREE.Color(hex).multiplyScalar(0.85), roughness: 0.5, metalness: 0.15, clearcoat: 0.25, clearcoatRoughness: 0.5, flatShading: true });
+    m = facet(new THREE.MeshPhysicalMaterial({ name: `carPaint_${hex.toString(16)}`, color: new THREE.Color(hex).multiplyScalar(0.85), roughness: 0.5, metalness: 0.15, clearcoat: 0.25, clearcoatRoughness: 0.5, flatShading: true }));
     cache.set(key, m);
   }
   if (!m) {

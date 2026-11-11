@@ -36,6 +36,8 @@ export class Player {
   recoilPitch = 0;
   camShake = 0;
   dtStamp = 0;
+  /** one-frame animation events for the camera/viewmodel */
+  landed = 0; jumped = false; stepped = false;
 
   eye(out = new THREE.Vector3()) { return out.set(this.pos.x, this.pos.y + (1.62 - this.crouchT * 0.6), this.pos.z); }
   forward(out = new THREE.Vector3()) { return out.set(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch)); }
@@ -84,7 +86,7 @@ export class Player {
     this.vel.x = damp(this.vel.x, wx * base, accel, dt);
     this.vel.z = damp(this.vel.z, wz * base, accel, dt);
     // jump
-    if (input && input.hit('Space') && this.onGround && !uiOpen && st.stamina > 8 && !this.crouch) { this.fallVel = 4.4; this.onGround = false; st.stamina -= 6; }
+    if (input && input.hit('Space') && this.onGround && !uiOpen && st.stamina > 8 && !this.crouch) { this.fallVel = 4.4; this.onGround = false; st.stamina -= 6; this.jumped = true; }
     this.fallVel -= 16 * dt;
     // integrate
     const prev = this.pos.clone();
@@ -100,7 +102,7 @@ export class Player {
     if (wd > 0.4) { this.vel.multiplyScalar(Math.exp(-dt * 3)); gy = Math.max(gy, world.terrain.heightAt(this.pos.x, this.pos.z)); }
     if (this.pos.y <= gy + 0.02) {
       if (!this.onGround && this.fallVel < -9) { const dmg = (-this.fallVel - 9) * 6; this.stats.addWound(Math.random() < 0.5 ? 'legL' : 'legR', dmg > 25 ? 'fracture' : 'scratch', dmg); audio.play('bone_crack'); this.camShake = 0.5; }
-      if (!this.onGround && this.fallVel < -3) this.footstep(world, 1.2);
+      if (!this.onGround && this.fallVel < -3) { this.footstep(world, 1.2); this.landed = -this.fallVel; }
       this.pos.y = gy; this.fallVel = Math.max(0, this.fallVel); this.onGround = true;
     } else if (this.pos.y > gy + 0.35) this.onGround = false;
     else if (this.fallVel <= 0) { this.pos.y = damp(this.pos.y, gy, 20, dt); this.onGround = true; this.fallVel = 0; }
@@ -112,7 +114,7 @@ export class Player {
     if (this.onGround && this.moving) {
       this.stepDist += moved;
       const stride = this.sprinting ? 1.9 : this.crouch ? 0.9 : 1.45;
-      if (this.stepDist > stride) { this.stepDist = 0; this.footstep(world, this.crouch ? 0.35 : this.sprinting ? 1 : 0.65); }
+      if (this.stepDist > stride) { this.stepDist = 0; this.footstep(world, this.crouch ? 0.35 : this.sprinting ? 1 : 0.65); this.stepped = true; }
     }
     const lf = this.skills.level('lightfoot');
     let noise = this.moving ? (this.sprinting ? 16 : this.crouch ? 2 : 6.5) : 0;

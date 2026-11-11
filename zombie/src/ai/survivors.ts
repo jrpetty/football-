@@ -103,13 +103,13 @@ export class Survivors {
           }
           goal = null; want = 0;
         } else if (d < 1.9) {
-          s.pose.atk = 1;
-          if (s.fireT <= 0) { s.fireT = 0.9; const dir = z.pos.clone().sub(s.pos).normalize(); this.zombies.damage(z, s.role === 'brawler' ? 40 : 22, dir, this.rng.chance(0.15), 1.2, false); audio.play('hit_flesh', { pos: z.pos }); }
+          if (s.fireT <= 0) { s.fireT = 0.9; s.pose.atk = 1; const dir = z.pos.clone().sub(s.pos).normalize(); this.zombies.damage(z, s.role === 'brawler' ? 40 : 22, dir, this.rng.chance(0.15), 1.2, false); audio.play('hit_flesh', { pos: z.pos }); }
           goal = null; want = 0;
         } else if (s.role !== 'shooter' || s.ammo <= 0) { goal = z.pos; want = 3.5; }
       } else { s.pose.arms = 0; }
       if (!s.recruited && z && z.pos.distanceTo(s.pos) < 6) { goal = s.pos.clone().add(s.pos.clone().sub(z.pos).setY(0).normalize().multiplyScalar(5)); want = 4; }
       s.pose.atk = Math.max(0, s.pose.atk - dt * 3);
+      s.pose.lookYaw = z && z.state !== 'dead' ? 0 : clamp(Math.atan2(Math.sin(Math.atan2(ctx.player.x - s.pos.x, ctx.player.z - s.pos.z) - s.yaw), Math.cos(Math.atan2(ctx.player.x - s.pos.x, ctx.player.z - s.pos.z) - s.yaw)), -1, 1) * (s.pos.distanceTo(ctx.player) < 6 ? 1 : 0);
       // zombies hurt survivors at close range
       for (const zz of this.zombies.list) {
         if (zz.state === 'dead' || zz.frozen) continue;

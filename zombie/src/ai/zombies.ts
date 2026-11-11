@@ -18,8 +18,9 @@ export interface Zombie {
   hit: number; arms: number; death: number; deathDir: number; seed: number; scale: number; lean: number; limp: number;
   speed: number; runSpeed: number; senseT: number; alerted: number; lastSeen: THREE.Vector3; horde: number; groanT: number;
   bashRef: any; corpse: Inventory | null; corpseAge: number; frozen: boolean; stuckT: number; lastPos: THREE.Vector3; knock: THREE.Vector3;
+  lookYaw: number; lookPitch: number; hitSide: number; crawl: number; crawler: boolean;
 }
-export interface HumanPose { pos: THREE.Vector3; yaw: number; move: number; phase: number; arms: number; atk: number; seed: number; type: 3 | 4; hit: number; visible: boolean }
+export interface HumanPose { pos: THREE.Vector3; yaw: number; move: number; phase: number; arms: number; atk: number; seed: number; type: 3 | 4; hit: number; visible: boolean; lookYaw?: number; lookPitch?: number }
 export interface Horde { id: number; target: THREE.Vector3; members: number; t: number; toBase: boolean }
 
 const MAX = 700;
@@ -37,7 +38,7 @@ export class Zombies {
   list: Zombie[] = [];
   hordes: Horde[] = [];
   mesh: THREE.InstancedMesh;
-  private aAnim: THREE.InstancedBufferAttribute; private aAnim2: THREE.InstancedBufferAttribute; private aVar: THREE.InstancedBufferAttribute;
+  private aAnim: THREE.InstancedBufferAttribute; private aAnim2: THREE.InstancedBufferAttribute; private aVar: THREE.InstancedBufferAttribute; private aAnim3: THREE.InstancedBufferAttribute;
   private time = { value: 0 };
   private rng: RNG;
   private nextId = 1;
@@ -59,7 +60,8 @@ export class Zombies {
     this.aAnim = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
     this.aAnim2 = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
     this.aVar = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
-    geo.setAttribute('aAnim', this.aAnim); geo.setAttribute('aAnim2', this.aAnim2); geo.setAttribute('aVar', this.aVar);
+    this.aAnim3 = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
+    geo.setAttribute('aAnim', this.aAnim); geo.setAttribute('aAnim2', this.aAnim2); geo.setAttribute('aVar', this.aVar); geo.setAttribute('aAnim3', this.aAnim3);
     const { mat, depth } = makeZombieMaterials(this.time);
     this.mesh = new THREE.InstancedMesh(geo, mat, MAX);
     this.mesh.customDepthMaterial = depth;
@@ -102,6 +104,7 @@ export class Zombies {
       speed: type === 2 ? 1.0 : rng.range(0.7, 1.3), runSpeed: type === 1 ? rng.range(4.6, 5.6) : type === 2 ? 2.6 : rng.range(1.7, 2.6),
       senseT: rng.range(0, 0.5), alerted: 0, lastSeen: new THREE.Vector3(), horde, groanT: rng.range(2, 12), bashRef: null, corpse: null, corpseAge: 0,
       frozen: false, stuckT: 0, lastPos: new THREE.Vector3(x, y, z), knock: new THREE.Vector3(),
+      lookYaw: 0, lookPitch: 0, hitSide: 0, crawl: 0, crawler: false,
     };
     this.list.push(zb);
     return zb;
@@ -190,6 +193,13 @@ export class Zombies {
     for (const z of this.list) {
       if (z.state === 'dead' || z.frozen) continue;
       const s = z.scale;
+      if (z.crawl > 0.5) {
+        const fx = Math.sin(z.yaw), fz = Math.cos(z.yaw);
+        const th = raySphere(o, d, z.pos.x + fx * 0.75 * s, z.pos.y + 0.3 * s, z.pos.z + fz * 0.75 * s, 0.16 * s);
+        if (th > 0 && th < maxT && (!best || th < best.t)) best = { z, t: th, head: true };
+        for (const k of [0.3, -0.1, -0.5]) { const t = raySphere(o, d, z.pos.x + fx * k * s, z.pos.y + 0.22 * s, z.pos.z + fz * k * s, 0.25 * s); if (t > 0 && t < maxT && (!best || t < best.t - 0.05)) best = { z, t, head: false }; }
+        continue;
+      }
       // head sphere
       const hx = z.pos.x + Math.sin(z.yaw) * 0.1 * s, hy = z.pos.y + 1.62 * s, hz = z.pos.z + Math.cos(z.yaw) * 0.1 * s;
       const th = raySphere(o, d, hx, hy, hz, 0.15 * s);
@@ -225,6 +235,8 @@ export class Zombies {
     if (z.state === 'dead') return false;
     z.hp -= dmg * (head ? 3 : 1);
     z.hit = 1;
+    z.hitSide = Math.sign(dir.x * Math.cos(z.yaw) - dir.z * Math.sin(z.yaw)) || 1;
+    if (z.hp > 0 && !z.crawler && z.type !== 2 && z.hp < z.maxHp * 0.32 && this.rng.chance(0.3)) { z.crawler = true; z.speed = 0.45; z.runSpeed = 0.9; z.state = 'stagger'; z.stateT = 0; }
     z.knock.set(dir.x, 0, dir.z).normalize().multiplyScalar(knock * (z.type === 2 ? 0.35 : 1));
     z.alerted = 8;
     if (z.state !== 'chase' && z.state !== 'attack') { z.state = 'chase'; z.stateT = 0; }
@@ -280,7 +292,7 @@ export class Zombies {
       const dP = Math.hypot(z.pos.x - P.x, z.pos.z - P.z);
       z.frozen = dP > 230;
       if (z.state === 'dead') {
-        z.death = Math.min(1, z.death + dt * 2.2); z.corpseAge += dtGameMin;
+        z.death = Math.min(1, z.death + dt * 1.5); z.corpseAge += dtGameMin;
         z.hit = Math.max(0, z.hit - dt * 3);
         if (z.corpseAge > 60 * 24 * 2) this.remove(z);
         continue;
@@ -308,6 +320,16 @@ export class Zombies {
       }
       if (z.state === 'chase' && z.alerted > 0 && dP < 40) seenCount++;
 
+      // ---- look at the player when close, crawl blend
+      {
+        let wantY = 0, wantP = 0;
+        if (dP < 22 && host.playerAlive && (z.state === 'chase' || z.state === 'attack' || z.state === 'investigate' || dP < 8)) {
+          wantY = clamp(angleDiff(z.yaw, Math.atan2(P.x - z.pos.x, P.z - z.pos.z)), -1.2, 1.2);
+          wantP = clamp(Math.atan2(host.playerEye.y - (z.pos.y + 1.6 * z.scale), Math.max(0.5, dP)), -0.6, 0.6);
+        }
+        z.lookYaw += (wantY - z.lookYaw) * Math.min(1, dt * 6); z.lookPitch += (wantP - z.lookPitch) * Math.min(1, dt * 6);
+        z.crawl += ((z.crawler ? 1 : 0) - z.crawl) * Math.min(1, dt * 3);
+      }
       // ---- state machine
       let want = 0; // desired speed
       const dir = this.tmpV.set(0, 0, 0);
@@ -473,7 +495,7 @@ export class Zombies {
 
   private render(cam: THREE.Vector3) {
     let n = 0;
-    const A = this.aAnim.array as Float32Array, B = this.aAnim2.array as Float32Array, V = this.aVar.array as Float32Array;
+    const A = this.aAnim.array as Float32Array, B = this.aAnim2.array as Float32Array, V = this.aVar.array as Float32Array, C = this.aAnim3.array as Float32Array;
     for (const z of this.list) {
       if (n >= MAX) break;
       if (z.frozen) continue;
@@ -483,6 +505,7 @@ export class Zombies {
       this.mesh.setMatrixAt(n, this.tmpM);
       A[n * 4] = z.phase; A[n * 4 + 1] = z.state === 'dead' ? 0 : z.move; A[n * 4 + 2] = z.atkBlend; A[n * 4 + 3] = z.death;
       B[n * 4] = z.hit; B[n * 4 + 1] = z.arms; B[n * 4 + 2] = z.limp; B[n * 4 + 3] = z.deathDir;
+      C[n * 4] = z.lookYaw; C[n * 4 + 1] = z.lookPitch; C[n * 4 + 2] = z.hitSide; C[n * 4 + 3] = z.crawl;
       V[n * 4] = z.seed; V[n * 4 + 1] = z.scale; V[n * 4 + 2] = z.lean; V[n * 4 + 3] = z.type;
       n++;
     }
@@ -494,11 +517,12 @@ export class Zombies {
       A[n * 4] = h.phase; A[n * 4 + 1] = h.move; A[n * 4 + 2] = h.atk; A[n * 4 + 3] = 0;
       B[n * 4] = h.hit; B[n * 4 + 1] = h.arms; B[n * 4 + 2] = 0; B[n * 4 + 3] = 1;
       V[n * 4] = h.seed; V[n * 4 + 1] = 1; V[n * 4 + 2] = 0.2; V[n * 4 + 3] = h.type;
+      C[n * 4] = h.lookYaw ?? 0; C[n * 4 + 1] = h.lookPitch ?? 0; C[n * 4 + 2] = 0; C[n * 4 + 3] = 0;
       n++;
     }
     this.mesh.count = n;
     this.mesh.instanceMatrix.needsUpdate = true;
-    this.aAnim.needsUpdate = true; this.aAnim2.needsUpdate = true; this.aVar.needsUpdate = true;
+    this.aAnim.needsUpdate = true; this.aAnim2.needsUpdate = true; this.aVar.needsUpdate = true; this.aAnim3.needsUpdate = true; this.aAnim3.addUpdateRange(0, n * 4);
     this.aAnim.addUpdateRange(0, n * 4); this.aAnim2.addUpdateRange(0, n * 4); this.aVar.addUpdateRange(0, n * 4);
   }
 

@@ -215,7 +215,7 @@ export class Atmosphere {
     // clouds
     const cm = this.clouds.material as THREE.ShaderMaterial;
     cm.uniforms.uTime.value = time;
-    cm.uniforms.uCover.value = clamp(this.cloudCover, 0, 1);
+    cm.uniforms.uCover.value = clamp((this.cloudCover - 0.4) * 1.6, 0, 1);
     cm.uniforms.uSunCol.value.copy(sunCol).multiplyScalar(lerp(0.4, 1.1, sunUp) * lerp(1, 0.7, oc));
     cm.uniforms.uShade.value.set(0.42, 0.46, 0.52).multiplyScalar(lerp(0.15, 1, sunUp) * lerp(1, 0.75, oc));
     cm.uniforms.uSunDir.value.copy(this.sunDir);

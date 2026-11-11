@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { HALF_WORLD, WORLD_SIZE, Simplex, smoothstep, clamp, lerp } from '../core/util';
 import { Layout, TOWN, LAKE, distToSeg } from './layout';
 import { getCloudNoiseTexture } from '../render/textures';
+import { facet } from '../render/materials';
 
 export const T_RES = 2.5;
 export const T_N = WORLD_SIZE / T_RES; // segments per side
@@ -183,7 +184,7 @@ export class Terrain {
     const CH = 16; // chunks per side
     const per = T_N / CH;
     const N = T_N + 1;
-    this.material = this.makeMaterial();
+    this.material = facet(this.makeMaterial());
     for (let cz = 0; cz < CH; cz++) for (let cx = 0; cx < CH; cx++) {
       const verts = (per + 1) * (per + 1);
       const pos = new Float32Array(verts * 3), nor = new Float32Array(verts * 3);
