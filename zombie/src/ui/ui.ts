@@ -14,7 +14,7 @@ import { LAKE } from '../world/layout';
 import type { Machine } from '../factory/factory';
 import { ACTIONS } from '../core/input';
 
-type PanelName = 'inventory' | 'crafting' | 'health' | 'skills' | 'journal' | 'loot' | 'machine' | 'hub' | 'campfire' | 'build' | 'map';
+type PanelName = 'inventory' | 'crafting' | 'health' | 'skills' | 'journal' | 'loot' | 'machine' | 'hub' | 'campfire' | 'build' | 'map' | 'train';
 const CHAR_TABS: PanelName[] = ['inventory', 'crafting', 'health', 'skills', 'journal'];
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const fmtCost = (cost: Record<string, number>, inv?: Inventory) => Object.entries(cost).map(([k, n]) => `<span class="${inv ? (inv.count(k) >= n ? 'have' : 'lack') : ''}">${item(k).icon} ${n} ${esc(item(k).name)}${inv ? ` (${inv.count(k)})` : ''}</span>`).join(' · ');
@@ -37,7 +37,7 @@ export class UI {
     this.root = document.getElementById('ui')!;
     this.buildHud();
     this.root.addEventListener('click', e => this.onClick(e));
-    this.root.addEventListener('input', e => { const t = e.target as HTMLInputElement; if (t.id === 'craftq') { this.craftQuery = t.value; const l = document.getElementById('craftlist'); if (l) l.innerHTML = this.recipeList(this.g.station, 999, true); } });
+    this.root.addEventListener('input', e => { const t = e.target as HTMLInputElement; if (t.id === 'stname' && this.g.openMachine) (this.g.openMachine as any).stName = t.value || 'Station'; if (t.id === 'trname' && this.g.openTrain) this.g.openTrain.name = t.value || 'Train'; if (t.id === 'craftq') { this.craftQuery = t.value; const l = document.getElementById('craftlist'); if (l) l.innerHTML = this.recipeList(this.g.station, 999, true); } });
     this.root.addEventListener('contextmenu', e => { const t = (e.target as HTMLElement).closest('[data-rc]') as HTMLElement | null; if (t) { e.preventDefault(); this.onRightClick(t); } });
   }
 
@@ -245,7 +245,8 @@ export class UI {
   private panelTick(dt: number) {
     // panels live refresh
     this.refreshT -= dt;
-    if (this.open && (this.dirty || this.refreshT <= 0)) { this.refreshT = this.open === 'map' ? 1 : ['machine', 'hub', 'campfire', 'health'].includes(this.open) ? 0.4 : 1.5; this.dirty = false; this.renderPanel(); }
+    const typing = document.activeElement instanceof HTMLInputElement && document.activeElement.type !== 'range' && !!this.panelEl?.contains(document.activeElement);
+    if (this.open && (this.dirty || (this.refreshT <= 0 && !typing))) { this.refreshT = this.open === 'map' ? 1 : ['machine', 'hub', 'campfire', 'health', 'train'].includes(this.open) ? 0.4 : 1.5; this.dirty = false; this.renderPanel(); }
   }
 
   // ------------------------------------------------------------------ panel management
@@ -260,7 +261,7 @@ export class UI {
   closeAll() {
     if (this.open === 'loot' && this.g.openContainer?.ref && 'mesh' in this.g.openContainer.ref && !this.g.openContainer.inv.stacks.length) this.g.world.removeDrop(this.g.openContainer.ref);
     this.open = null; this.panelEl?.remove(); this.panelEl = null; this.closeModal();
-    this.g.openContainer = null; this.g.openMachine = null; this.g.openPiece = null; this.g.station = 'hand';
+    this.g.openContainer = null; this.g.openMachine = null; this.g.openPiece = null; this.g.openTrain = null; this.g.station = 'hand';
     if (this.g.state === 'play' && !this.g.paused) this.g.input.lock();
     audio.play('ui_close');
   }
@@ -282,6 +283,7 @@ export class UI {
     } else if (n === 'loot') html = this.lootPanel();
     else if (n === 'machine') html = this.machinePanel();
     else if (n === 'hub') html = this.hubPanel();
+    else if (n === 'train') html = this.trainPanel();
     else if (n === 'campfire') html = this.campfirePanel();
     else if (n === 'build') html = this.buildPanel();
     else if (n === 'map') html = `<div class="panel window"><div class="top"><h2 style="padding:0 8px">Map</h2><span class="hint" style="margin-left:12px">Explored areas only · 🏚 outpost · ▲ you</span><button class="close" data-a="close">✕</button></div><div class="body" style="padding:6px"><canvas id="mapcanvas" width="1024" height="1024"></canvas></div></div>`;
@@ -453,9 +455,18 @@ export class UI {
     }
     if (m.inv) {
       const fuelIds = m.type === 'coal_gen' ? ['coal', 'gas_can'] : m.type === 'turret' ? ['ammo_9mm', 'ammo_rifle', 'ammo_shells'] : m.type === 'biomass' ? ['log', 'plank', 'leaves'] : [];
-      body += `<h3>${m.type === 'storage' ? 'Contents' : m.type === 'turret' ? 'Ammunition' : 'Fuel'} ${m.def.power < 0 ? `<span class="hint">· burning ${Math.round(m.fuel)} MJ left</span>` : ''}</h3>
+      body += `<h3>${m.type === 'storage' || m.type === 'train_station' ? 'Contents' : m.type === 'turret' ? 'Ammunition' : 'Fuel'} ${m.def.power < 0 ? `<span class="hint">· burning ${Math.round(m.fuel)} MJ left</span>` : ''}</h3>
         ${fuelIds.length ? `<div class="btnrow">${fuelIds.map(id => `<button class="btn small" data-a="feedinv" data-id="${id}" ${p.inv.count(id) ? '' : 'disabled'}>${item(id).icon} Add ${esc(item(id).name)} (${p.inv.count(id)})</button>`).join('')}</div>` : ''}
-        <div class="ilist" style="margin-top:6px">${m.inv.stacks.map(s => this.itemRow(s, 'm')).join('') || '<div class="hint">Empty</div>'}</div>${m.type === 'storage' ? '<div class="btnrow"><button class="btn" data-a="openstore">Open as container</button></div>' : ''}`;
+        <div class="ilist" style="margin-top:6px">${m.inv.stacks.map(s => this.itemRow(s, 'm')).join('') || '<div class="hint">Empty</div>'}</div>${m.type === 'storage' || m.type === 'train_station' ? '<div class="btnrow"><button class="btn" data-a="openstore">Open as container</button></div>' : ''}`;
+    }
+    if (m.type === 'train_station') {
+      const st = m as any; const rails = g.rails; const stop = rails.stopTile(m);
+      const trains = rails.trains.filter(t => t.schedule.includes(m.id));
+      body = `<h3>Station</h3><div class="statgrid"><div class="k">Name</div><div class="v"><input id="stname" value="${esc(st.stName)}" maxlength="24" style="width:200px"></div>
+        <div class="k">Mode</div><div class="v"><button class="btn small ${st.stMode === 'load' ? 'primary' : ''}" data-a="stmode" data-id="load">⬆ Load trains</button> <button class="btn small ${st.stMode === 'unload' ? 'primary' : ''}" data-a="stmode" data-id="unload">⬇ Unload trains</button></div>
+        <div class="k">Track</div><div class="v">${stop ? '<span class="have">connected</span>' : '<span class="lack">No track beside the station — lay rails along one edge</span>'}</div>
+        <div class="k">Served by</div><div class="v">${trains.map(t => esc(t.name)).join(', ') || '<span class="hint">no trains — add this station to a locomotive schedule</span>'}</div></div>
+        <p class="hint">${st.stMode === 'load' ? 'Belt items into the rear port. Arriving trains take everything (coal is kept back to refuel locomotives).' : 'Arriving trains empty their wagons here. Items leave through the front port onto a belt.'} Keep coal in any station to refuel trains.</p>` + body;
     }
     if (m.fnets && m.fnets.length) body += `<h3>Pipe networks</h3>${m.fnets.map(n => `<div class="hint">${n.fluid ? esc(item(n.fluid).name) : 'empty'}: ${n.amount.toFixed(0)} / ${n.cap}</div>`).join('')}`;
     else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager'].includes(m.type)) body += `<p class="hint lack">Not connected to any pipe. Lay pipes (B → Logistics) touching this building.</p>`;
@@ -464,6 +475,26 @@ export class UI {
     if (m.type === 'uplink') body += `<p class="hint">${m.running ? 'The old town grid is live. Street lights and houses glow at night.' : 'Needs 40 MW to energise the town grid.'}</p>`;
     if (m.type === 'power_pole') body += `<p class="hint">Poles link to other poles within 16 m and to machines within 10 m. Cables are drawn automatically.</p>`;
     return `<div class="panel window" style="width:min(760px,96vw)"><div class="top"><h2 style="padding:0 8px">${m.def.icon} ${esc(m.def.name)}</h2><span class="hint" style="margin-left:10px">HP ${Math.round(m.hp)} / ${m.def.hp}</span><button class="close" data-a="close">✕</button></div><div class="body" style="flex-direction:column"><div class="scroll">${power}<p class="hint">${esc(m.def.desc)}</p>${body}</div></div></div>`;
+  }
+  private trainPanel() {
+    const g = this.g; const t = g.openTrain; if (!t) return '';
+    const p = g.player; const sts = g.rails.stations();
+    const nm = (id: number) => { const m = sts.find(q => q.id === id) as any; return m ? esc(m.stName) : '?'; };
+    const loco = g.rails.locoOf(t);
+    const cargo = t.cars.filter(c => c.inv).reduce((a, c) => a + c.inv!.weight(), 0), cap = t.cars.filter(c => c.inv).length * 600;
+    const sched = t.schedule.map((id, i) => `<div class="req"><span style="width:28px">${i === t.idx % Math.max(1, t.schedule.length) && t.state !== 'idle' ? '▶' : i + 1}</span><span style="flex:1">🚉 ${nm(id)} <span class="hint">· ${esc((sts.find(q => q.id === id) as any)?.stMode ?? '')}</span></span><button class="btn small" data-a="tup" data-i="${i}" ${i ? '' : 'disabled'}>▲</button><button class="btn small" data-a="tdel" data-i="${i}">✕</button></div>`).join('');
+    return `<div class="panel window" style="width:min(820px,96vw)"><div class="top"><h2 style="padding:0 8px">🚂 ${esc(t.name)}</h2><span class="hint" style="margin-left:10px">${t.cars.length} car${t.cars.length > 1 ? 's' : ''} · ${t.speed > 0.3 ? Math.round(t.speed * 3.6) + ' km/h' : 'stopped'}</span><button class="close" data-a="close">✕</button></div><div class="body">
+      <div class="col" style="max-width:340px"><h3>Status</h3><div class="statgrid">
+        <div class="k">Name</div><div class="v"><input id="trname" value="${esc(t.name)}" maxlength="24" style="width:170px"></div>
+        <div class="k">State</div><div class="v">${esc(t.msg)}</div>
+        <div class="k">Fuel</div><div class="v">${loco ? `⚫ ${t.fuel.count('coal')} coal${t.fuel.count('gas_can') ? ` · ⛽ ${t.fuel.count('gas_can')}` : ''}` : '<span class="lack">no locomotive</span>'}</div>
+        <div class="k">Cargo</div><div class="v">${cap ? `${cargo.toFixed(0)} / ${cap} kg` : '<span class="hint">no wagons</span>'}</div></div>
+        <div class="btnrow"><button class="btn ${t.auto ? '' : 'primary'}" data-a="tauto">${t.auto ? '⏸ Hold at stations' : '▶ Run schedule'}</button><button class="btn" data-a="tgo" ${t.schedule.length ? '' : 'disabled'}>⏭ Depart now</button></div>
+        <div class="btnrow"><button class="btn small" data-a="tfuel" ${p.inv.count('coal') || p.inv.count('gas_can') ? '' : 'disabled'}>⚫ Add coal (${p.inv.count('coal')})</button>${loco ? `<button class="btn small" data-a="tride">🚂 Ride in cab</button>` : ''}</div>
+        <h3>Consist</h3><div class="ilist">${t.cars.map((c, i) => `<div class="irow"><span class="ic">${c.kind === 'loco' ? '🚂' : '🚃'}</span><span class="nm">${c.kind === 'loco' ? 'Locomotive' : 'Freight Wagon'}</span>${c.inv ? `<span class="qt">${c.inv.weight().toFixed(0)}/600 kg</span><button class="btn small" data-a="twagon" data-i="${i}">Open</button>` : ''}</div>`).join('')}</div>
+        <p class="hint">Place wagons on the track right behind the train to couple them.</p></div>
+      <div class="col"><h3>Schedule</h3><div class="scroll">${sched || '<div class="hint">Empty. Add at least two stations — the train loops through them in order.</div>'}
+        <h3 style="margin-top:12px">Add stop</h3>${sts.map(m => `<div class="req"><span style="flex:1">🚉 ${esc((m as any).stName)} <span class="hint">· ${(m as any).stMode} · ${Math.round(Math.hypot(m.cx - p.pos.x, m.cz - p.pos.z))} m away${g.rails.stopTile(m) ? '' : ' · <span class="lack">no track</span>'}</span></span><button class="btn small" data-a="tadd" data-id="${m.id}">＋ Add</button></div>`).join('') || '<div class="hint">Build a Freight Station (B → Railways) beside your track.</div>'}</div></div></div></div>`;
   }
   private hubPanel() {
     const g = this.g; const p = g.player;
@@ -543,6 +574,15 @@ export class UI {
       case 'openstore': if (g.openMachine?.inv) { const m = g.openMachine; this.open = null; this.panelEl?.remove(); this.panelEl = null; g.openLoot(m.inv!, m.def.name, m); } break;
       case 'fuse': if (g.openMachine) g.factory.resetFuse(g.openMachine); this.refresh(); break;
       case 'deposit': g.depositHub(t.dataset.id!); break;
+      case 'stmode': if (g.openMachine) { (g.openMachine as any).stMode = t.dataset.id; this.refresh(); } break;
+      case 'tadd': if (g.openTrain) { g.openTrain.schedule.push(Number(t.dataset.id)); this.refresh(); } break;
+      case 'tdel': if (g.openTrain) { g.openTrain.schedule.splice(Number(t.dataset.i), 1); this.refresh(); } break;
+      case 'tup': if (g.openTrain) { const s = g.openTrain.schedule, i = Number(t.dataset.i); [s[i - 1], s[i]] = [s[i], s[i - 1]]; this.refresh(); } break;
+      case 'tauto': if (g.openTrain) { g.openTrain.auto = !g.openTrain.auto; this.refresh(); } break;
+      case 'tgo': if (g.openTrain) { const tr = g.openTrain; if (tr.state === 'dwell') { tr.dwell = 0; if (!tr.auto) { tr.idx = (tr.idx + 1) % Math.max(1, tr.schedule.length); tr.state = 'idle'; g.rails.depart(tr); } } else if (tr.state !== 'moving') g.rails.depart(tr); this.refresh(); } break;
+      case 'tfuel': if (g.openTrain) g.trainFuel(g.openTrain); break;
+      case 'tride': if (g.openTrain) g.rideTrain(g.openTrain); break;
+      case 'twagon': if (g.openTrain) { const tr = g.openTrain; const c = tr.cars[Number(t.dataset.i)]; if (c?.inv) { this.open = null; this.panelEl?.remove(); this.panelEl = null; g.openLoot(c.inv, `${tr.name} wagon`, c); } } break;
       case 'light': if (g.openPiece) g.campfireLight(g.openPiece); break;
       case 'fuel': if (g.openPiece) g.campfireFuel(g.openPiece, t.dataset.id!); break;
     }

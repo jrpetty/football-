@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GRID, tileOf, clamp, RNG } from '../core/util';
 import { MACHINES, MRECIPES, MachineDef, MILESTONES, MRecipe } from './defs';
 import { buildMachineModel } from '../models/machines';
+import { buildStation } from '../models/trains';
 import { buildFluidModel, pipeGeometries, FluidModelId } from '../models/fluids';
 const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler']);
 export interface FluidNet { id: number; fluid: string | null; amount: number; cap: number; pipes: number[]; machines: Machine[] }
@@ -175,13 +176,14 @@ export class Factory {
       x: cx, z: cz, status: '', plinth: null, loopId: null, ...opts,
     };
     if (type === 'storage') m.inv = new Inventory(200);
+    if (type === 'train_station') { m.inv = new Inventory(1200); (m as any).stName = (m as any).stName ?? `Station ${this.machines.filter(q => q.type === 'train_station').length + 1}`; (m as any).stMode = (m as any).stMode ?? 'unload'; }
     if (type === 'turret') m.inv = new Inventory(30);
     if (type === 'biomass' || type === 'coal_gen') m.inv = new Inventory(80);
     if (type === 'smelter') m.recipe = m.recipe ?? null;
     if (type === 'greenhouse') m.recipe = m.recipe ?? 'grow_potato';
     for (const k of tiles) this.tiles.set(k, m);
     if (!isBelt) {
-      const obj = FLUID_MODELS.has(type) ? buildFluidModel(type as FluidModelId) : buildMachineModel(type as any);
+      const obj = type === 'train_station' ? buildStation() : FLUID_MODELS.has(type) ? buildFluidModel(type as FluidModelId) : buildMachineModel(type as any);
       obj.position.set(cx, y, cz); obj.rotation.y = rot * Math.PI / 2;
       // clone status light materials per machine (models already clone but be safe)
       this.group.add(obj); m.obj = obj;
@@ -249,7 +251,7 @@ export class Factory {
   }
   private accepts(m: Machine, id: string): boolean {
     const t = m.type;
-    if (t === 'storage') return !!m.inv && m.inv.weight() + item(id).weight <= m.inv.capacity;
+    if (t === 'storage' || t === 'train_station') return !!m.inv && m.inv.weight() + item(id).weight <= m.inv.capacity;
     if (t === 'turret') return (id === 'ammo_9mm' || id === 'ammo_rifle' || id === 'ammo_shells') && m.inv!.weight() < 25;
     if (t === 'coal_gen') return (id === 'coal' || id === 'gas_can') && m.inv!.count(id) < 50;
     if (t === 'hub') { const ms = MILESTONES[this.tier]; return !!ms && (ms.cost[id] ?? 0) > (this.milestoneProgress[id] ?? 0); }
@@ -263,7 +265,7 @@ export class Factory {
   private insert(m: Machine, id: string): boolean {
     if (!this.accepts(m, id)) return false;
     const t = m.type;
-    if (t === 'storage' || t === 'turret' || t === 'coal_gen') { m.inv!.add(id, 1); return true; }
+    if (t === 'storage' || t === 'turret' || t === 'coal_gen' || t === 'train_station') { m.inv!.add(id, 1); return true; }
     if (t === 'hub') { this.milestoneProgress[id] = (this.milestoneProgress[id] ?? 0) + 1; this.checkMilestone(); return true; }
     if (t === 'splitter' || t === 'merger') { m.inBuf = { __n: 1 }; (m as any).held = id; return true; }
     m.inBuf[id] = (m.inBuf[id] ?? 0) + 1; return true;
@@ -422,8 +424,8 @@ export class Factory {
             if (this.pushOut(m, (m as any).held, tileOf(m.cx), tileOf(m.cz), [Math.round(wx), Math.round(wz)])) { (m as any).held = null; m.inBuf = {}; m.rr = idx + 1; break; }
           }
         }
-      } else if (t === 'storage') {
-        const s = m.inv!.stacks[0];
+      } else if (t === 'storage' || (t === 'train_station' && (m as any).stMode === 'unload')) {
+        const s = m.inv!.stacks.find(q => t === 'storage' || q.id !== 'coal');
         if (s) { const [tx, tz] = this.tileWorld(m, 0, 0); if (this.pushOut(m, s.id, tx, tz, m.dir)) m.inv!.remove(s.id, 1); }
       } else if (t === 'turret') {
         running = this.turret(m, dt, ctx);
@@ -716,7 +718,7 @@ export class Factory {
     return {
       tier: this.tier, progress: this.milestoneProgress, unlocked: [...this.unlocked], dropDay: this.dropDay, nets: this.nets.map(n => n.battery),
       pipes: [...this.pipes.values()].map(p => [p.tx, p.tz]), fnets: this.fnets.map(n => [n.pipes[0], n.fluid, n.amount]),
-      machines: this.machines.map(m => ({ type: m.type, cx: m.cx, cz: m.cz, rot: m.rot, hp: m.hp, recipe: m.recipe, inBuf: m.inBuf, outBuf: m.outBuf, fuel: m.fuel, inv: m.inv?.stacks ?? null, items: m.items, held: (m as any).held ?? null })),
+      machines: this.machines.map(m => ({ type: m.type, cx: m.cx, cz: m.cz, rot: m.rot, hp: m.hp, recipe: m.recipe, inBuf: m.inBuf, outBuf: m.outBuf, fuel: m.fuel, inv: m.inv?.stacks ?? null, items: m.items, held: (m as any).held ?? null, st: m.type === 'train_station' ? [(m as any).stName, (m as any).stMode] : undefined })),
     };
   }
   load(o: any) {
@@ -724,7 +726,7 @@ export class Factory {
     this.tier = o.tier; this.milestoneProgress = o.progress ?? {}; this.dropDay = o.dropDay ?? -1;
     for (const u of o.unlocked ?? []) this.unlocked.add(u);
     for (const s of o.machines) {
-      const m = this.add(s.type, s.cx, s.cz, s.rot);
+      const m = this.add(s.type, s.cx, s.cz, s.rot, s.st ? { stName: s.st[0], stMode: s.st[1] } as any : {});
       m.hp = s.hp; m.recipe = s.recipe; m.inBuf = s.inBuf ?? {}; m.outBuf = s.outBuf ?? {}; m.fuel = s.fuel ?? 0; m.items = s.items ?? [];
       if (s.inv && m.inv) m.inv.load(s.inv);
       if (s.held) (m as any).held = s.held;

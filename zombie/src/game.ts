@@ -33,6 +33,7 @@ import { AmbientParticles } from './render/ambient';
 import { Animals, Animal } from './ai/animals';
 import { CROPS } from './items/content';
 import { Throwables } from './combat/throwables';
+import { Railways, Train } from './factory/trains';
 import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
@@ -88,6 +89,10 @@ export class Game {
   animals!: Animals;
   survivors!: Survivors;
   throwables!: Throwables;
+  rails!: Railways;
+  openTrain: Train | null = null;
+  riding: Train | null = null;
+  private hitByTrainT = 0;
   private burnT = 0;
   private lastFeedDay = 0;
   private loudT = 0;
@@ -178,6 +183,8 @@ export class Game {
     this.animals = new Animals(this.world, this.scene, SEED);
     this.survivors = new Survivors(this.world, this.zombies, SEED);
     this.throwables = new Throwables(this.scene, this.world);
+    this.rails = new Railways(this.world, this.factory, this.scene);
+    this.placer.rails = this.rails;
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
@@ -306,6 +313,11 @@ export class Game {
     if (this.state === 'play') {
       if (this.driving) this.driveFrame(dt, uiOpen);
       else p.update(dt, this.input, this.world, this.gameMin, uiOpen);
+      if (this.riding) {
+        const loco = this.rails.locoOf(this.riding) ?? this.riding.cars[0];
+        if (!loco || !this.rails.trains.includes(this.riding)) this.riding = null;
+        else { loco.obj.updateMatrixWorld(true); p.pos.copy(loco.obj.localToWorld(new THREE.Vector3(0.3, 1.15, 2.4))); p.vel.set(0, 0, 0); p.fallVel = 0; p.onGround = true; }
+      }
       this.handleInput(dt, uiOpen);
       this.updateAction(dt);
     }
@@ -353,6 +365,13 @@ export class Game {
         if (burn) { this.burnT += dmg; if (this.burnT > 6) { this.burnT = 0; p.stats.addWound(this.rng.chance(0.5) ? 'legL' : 'legR', 'burn', 6); this.ui.notify('🔥 You are burning!', 'bad'); audio.play('player_hurt'); } }
         else { const parts: PartId[] = ['torso', 'legL', 'legR', 'armL', 'armR', 'head']; for (let i = 0; i < 3; i++) p.stats.addWound(this.rng.pick(parts), dmg > 30 ? 'laceration' : 'scratch', dmg / 3); this.vm.hurt(); this.renderer.grade.uniforms.uDamage.value = 1; this.ui.notify('💥 Caught in the blast!', 'bad'); }
       } });
+    this.rails.update(dt * Math.min(this.timeMul, 20), { zombies: this.zombies, particles: this.particles, player: p.pos, onPlayerHit: v => {
+      if (this.state !== 'play' || this.riding || this.hitByTrainT > 0) return;
+      this.hitByTrainT = 2; const parts: PartId[] = ['torso', 'legL', 'legR', 'armL', 'armR'];
+      for (let i = 0; i < 3; i++) p.stats.addWound(this.rng.pick(parts), v > 8 ? 'fracture' : 'laceration', v * 2.5);
+      this.vm.hurt(); this.renderer.grade.uniforms.uDamage.value = 1; p.camShake = 1.2; audio.play('bone_crack'); this.ui.notify('🚂 Hit by a train!', 'bad');
+    } });
+    this.hitByTrainT = Math.max(0, this.hitByTrainT - dt);
     this.combatHeat = Math.max(0, this.combatHeat - dt * 0.5);
 
     // survival
@@ -736,6 +755,7 @@ export class Game {
     if (I.hit('F5')) this.save(false);
     if (uiOpen) return;
     if (this.driving) { if (I.hit('KeyE')) this.exitVehicle(); this.interact = null; return; }
+    if (this.riding) { if (I.hit('KeyE') || I.hit('Space')) this.dismountTrain(); else if (I.hit('KeyQ')) { this.openTrain = this.riding; this.ui.toggle('train'); } this.interact = null; return; }
     // hotbar
     for (let i = 0; i < 8; i++) if (I.hit('Digit' + (i + 1))) this.selectHotbar(i);
     if (I.wheel && !this.buildMode) { const cur = p.hotbar.indexOf(p.equipped); let n = cur; for (let k = 0; k < 8; k++) { n = (n + (I.wheel > 0 ? 1 : 7)) % 8; if (p.hotbar[n] !== null && p.inv.byUid(p.hotbar[n]!)) break; } if (p.hotbar[n] !== null) this.selectHotbar(n); }
@@ -1098,6 +1118,10 @@ export class Game {
     const consider = (it: Interact) => { if (it.t < range && (!best || it.t < best.t)) best = it; };
     const hit = this.world.col.raycast(eye, fwd, range + 0.5);
     const wallT = hit.t;
+    if (this.rails.trains.length) {
+      const nc = this.rails.nearestCar(eye.clone().addScaledVector(fwd, 1.6).setY(eye.y - 1.2), 1.6);
+      if (nc) consider({ kind: 'train', label: nc.car.kind === 'loco' ? `${nc.train.name} — Locomotive` : `${nc.train.name} — Freight Wagon`, sub: nc.train.msg, target: nc, t: 1.4, alt: nc.car.kind === 'loco' ? { label: 'Ride in cab', act: () => this.rideTrain(nc.train) } : nc.car.inv ? { label: 'Open cargo', act: () => this.openLoot(nc.car.inv!, `${nc.train.name} wagon`, nc.car) } : undefined });
+    }
     if (hit.obj && (hit.obj as any).ref) {
       const ref = (hit.obj as any).ref;
       if ('pivot' in ref && 'locked' in ref) {
@@ -1252,6 +1276,7 @@ export class Game {
       case 'pcontainer': { const pc = it.target as Piece; this.openLoot(pc.container!.inv, pc.container!.label, pc.container); break; }
       case 'drop': { const d = it.target as Drop; this.openLoot(d.inv, 'Ground', d); break; }
       case 'corpse': { const z = it.target as Zombie; audio.play('search', { pos: z.pos }); this.startAction({ label: 'Searching the body…', dur: 1.2, cancelOnMove: true, done: () => this.openLoot(z.corpse!, 'Corpse', z) }); break; }
+      case 'train': { this.openTrain = it.target.train; this.ui.open = null; this.ui.toggle('train'); break; }
       case 'machine': {
         const m = it.target as Machine;
         if (this.factory.resetFuse(m)) { this.ui.notify('⚡ Fuse reset.', 'good'); return; }
@@ -1524,7 +1549,14 @@ export class Game {
       const { id, tx, tz, cx, cz, axis, rot } = r.data;
       const cost = MACHINES[id]?.cost ?? PIECES[id].cost;
       if (!this.settings.creative && !this.player.inv.takeAll(cost)) return;
-      if (MACHINES[id]) {
+      if (id === 'rail') { this.rails.add(tx, tz); audio.play('machine_place', { pos: new THREE.Vector3(cx, this.player.pos.y, cz) }); }
+      else if (id === 'locomotive' || id === 'freight_wagon') {
+        const t = this.rails.placeCar(id === 'locomotive' ? 'loco' : 'wagon', tx, tz, rot);
+        if (!t) { if (!this.settings.creative) for (const k in cost) this.player.inv.add(k, cost[k]); return; }
+        audio.play('machine_place', { pos: new THREE.Vector3(cx, this.player.pos.y, cz) });
+        if (id === 'locomotive' && t.cars.length === 1) this.ui.notify('🚂 Locomotive placed. Press E on it to set a schedule; load coal into it or into a station.', 'good');
+        this.player.gainXP('engineering', 8, this.gameMin);
+      } else if (MACHINES[id]) {
         const m = this.factory.add(id, cx, cz, rot);
         if (id === 'hub') this.ui.notify('🏚 Survivor Outpost established. Open it (E) to see milestones. Your base is now on the map — and on the horde\'s radar.', 'good');
         audio.play('machine_place', { pos: new THREE.Vector3(cx, m.y, cz) });
@@ -1547,7 +1579,8 @@ export class Game {
     const cost = MACHINES[id].cost;
     let placed = 0;
     for (const s of path) {
-      if (!this.settings.creative && !this.player.inv.takeAll(cost)) { this.ui.notify('Ran out of materials for belts.', 'bad'); break; }
+      if (!this.settings.creative && !this.player.inv.takeAll(cost)) { this.ui.notify(id === 'rail' ? 'Ran out of rails or planks.' : 'Ran out of materials.', 'bad'); break; }
+      if (id === 'rail') { if (!this.rails.canPlace(s.tx, s.tz).ok) { if (!this.settings.creative) for (const k in cost) this.player.inv.add(k, cost[k]); continue; } this.rails.add(s.tx, s.tz); placed++; continue; }
       const [cx, cz] = Factory.centerFor(id, s.tx, s.tz, s.rot);
       if (!this.factory.canPlace(id, cx, cz, s.rot).ok) { if (!this.settings.creative) for (const k in cost) this.player.inv.add(k, cost[k]); continue; }
       if (id === 'pipe') this.factory.addPipe(s.tx, s.tz); else this.factory.add(id, cx, cz, s.rot);
@@ -1557,6 +1590,8 @@ export class Game {
   }
   private dismantle(target: Machine | Piece) {
     const p = this.player;
+    if ((target as any).kind === 'rail') { const t = target as any; this.rails.remove(t.tx, t.tz); if (!this.settings.creative) this.giveOrDrop(this.invOf('rail', 1)); audio.play('deconstruct'); return; }
+    if ((target as any).kind === 'car') { this.removeCar((target as any).train, (target as any).car); return; }
     if ((target as any).kind === 'pipe') { const t = target as any; this.factory.removePipe(t.tx, t.tz); if (!this.settings.creative) this.giveOrDrop(this.invOf('iron_plate', 1)); audio.play('deconstruct'); return; }
     if ('tiles' in target) {
       const m = target as Machine;
@@ -1574,6 +1609,35 @@ export class Game {
     }
     audio.play('deconstruct');
     void p;
+  }
+
+  // ------------------------------------------------------------------ trains
+  rideTrain(t: Train) {
+    if (!this.rails.locoOf(t)) return;
+    this.riding = t; this.ui.closeAll(); audio.play('door_open', { volume: 0.5 });
+    this.ui.notify('🚂 Riding the train. E / Space to step off · Q for the train panel.', 'good');
+  }
+  dismountTrain() {
+    const t = this.riding; if (!t) return; this.riding = null;
+    const c = this.rails.locoOf(t) ?? t.cars[0]; const right = new THREE.Vector3(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
+    const p = c.pos.clone().addScaledVector(right, 2.6); p.y = this.world.groundY(p.x, p.z);
+    this.player.pos.copy(p);
+  }
+  removeCar(t: Train, car: Train['cars'][number]) {
+    if (t.speed > 0.5) { this.ui.notify('Stop the train before dismantling it.', 'bad'); return; }
+    const inv = new Inventory();
+    if (car.inv) for (const s of car.inv.stacks) inv.addStack(s);
+    const def = MACHINES[car.kind === 'loco' ? 'locomotive' : 'freight_wagon'];
+    if (!this.settings.creative) for (const k in def.cost) inv.add(k, def.cost[k]);
+    if (t.cars.length === 1) { for (const s of t.fuel.stacks) inv.addStack(s); this.rails.removeTrain(t); if (this.riding === t) this.riding = null; }
+    else { this.rails.group.remove(car.obj); t.cars.splice(t.cars.indexOf(car), 1); if (!this.rails.locoOf(t)) { for (const s of t.fuel.stacks) inv.addStack(s); t.fuel.stacks = []; t.state = 'idle'; t.msg = 'Needs a locomotive'; } }
+    this.giveOrDrop(inv); audio.play('deconstruct');
+  }
+  trainFuel(t: Train) {
+    const p = this.player; const n = Math.min(p.inv.count('coal'), 40 - t.fuel.count('coal'));
+    if (n > 0) { p.inv.remove('coal', n); t.fuel.add('coal', n); audio.play('pickup'); }
+    else if (p.inv.count('gas_can') && t.fuel.count('gas_can') < 6) { p.inv.remove('gas_can', 1); t.fuel.add('gas_can', 1); audio.play('pickup'); }
+    this.ui.refresh();
   }
 
   setRecipe(m: Machine, id: string | null) {
@@ -1673,6 +1737,15 @@ export class Game {
   }
 
   // ------------------------------------------------------------------ save / load
+  private railsJSON() {
+    const j = this.rails.toJSON(); const sts = this.rails.stations();
+    return { ...j, trains: j.trains.map(t => ({ ...t, schedule: t.schedule.map(id => { const m = sts.find(q => q.id === id); return m ? [m.cx, m.cz] : null; }).filter(Boolean) })) };
+  }
+  private loadRails(o: any) {
+    const sts = this.rails.stations();
+    for (const t of o.trains ?? []) t.schedule = (t.schedule ?? []).map((c: number[]) => sts.find(m => Math.abs(m.cx - c[0]) < 0.1 && Math.abs(m.cz - c[1]) < 0.1)?.id).filter((x: any) => x !== undefined);
+    this.rails.load(o);
+  }
   save(auto: boolean) {
     if (this.state !== 'play') return;
     try {
@@ -1681,7 +1754,7 @@ export class Game {
         v: 1, gameMin: this.gameMin, objective: this.objective, stats: this.stats, built: this.builtCounts,
         weather: { kind: this.weather.kind, wet: this.weather.wetness },
         vehicles: this.vehicles.toJSON(), survivors: this.survivors.toJSON(), lastFeedDay: this.lastFeedDay,
-        player: this.player.toJSON(), factory: this.factory.toJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
+        player: this.player.toJSON(), factory: this.factory.toJSON(), rails: this.railsJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
         containers: town.containers.filter(c => c.generated).map(c => [c.id, c.inv.stacks]),
         doors: town.doors.map(d => [d.open ? 1 : 0, Math.round(d.hp), Math.round(d.barricade), d.locked ? 1 : 0]),
         windows: town.windows.map(w => [w.broken ? 1 : 0, Math.round(w.barricade)]),
@@ -1704,6 +1777,7 @@ export class Game {
       this.factory.engineering = this.player.skills.level('engineering'); this.base.carpentry = this.player.skills.level('carpentry');
       this.base.load(d.base ?? []);
       this.factory.load(d.factory);
+      if (d.rails) this.loadRails(d.rails);
       const town = this.world.town;
       const cmap = new Map<number, any>(d.containers ?? []);
       for (const c of town.containers) { const st = cmap.get(c.id); if (st) { c.generated = true; c.inv.load(st); } }

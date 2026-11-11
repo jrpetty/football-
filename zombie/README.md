@@ -71,9 +71,10 @@ distance. Start on Medium on laptops.
 | 1 | Foothold | Biomass burner, power poles, miner, smelter, belts, storage, floodlights |
 | 2 | Industry | Constructor, coal generator, splitter/merger, electric fence, metal walls, gate, watchtower |
 | 3 | Fortify | Assembler, auto turret, solar, foundry, batteries, concrete walls, ammo crafting |
-| 4 | Automation | Belt Mk.2, Miner Mk.2, wind turbine, greenhouse, radio tower, water pump, pipes, fluid tank, packager |
-| 5 | Rekindle | Medical lab, Grid Uplink, oil pumpjack, refinery, fuel generator |
-| 6 | The Cure | Victory |
+| 4 | Automation | Belt Mk.2, Miner Mk.2, wind turbine, greenhouse, radio tower, water pump, pipes, fluid tank, packager, sprinklers |
+| 5 | Logistics | Railway track, freight stations, locomotives, freight wagons |
+| 6 | Rekindle | Medical lab, Grid Uplink, oil pumpjack, refinery, fuel generator |
+| 7 | The Cure | Victory (10 serum + 10 computers) |
 
 ---
 
@@ -162,6 +163,48 @@ distance. Start on Medium on laptops.
   attracts) with food. Order them to follow you, guard the Outpost, go
   scavenging or wait. They fight, eat from your stores daily, can die, and
   leave if you can't feed them.
+- **Resources and mining.** About 90 ore nodes are scattered across the
+  map: iron, copper, coal, limestone, sulfur, quartz, bauxite and gold, plus
+  crude oil wells. Each has a purity (impure, normal, pure) that scales
+  miner output, and you can see it in the size of the deposit. Boulders in
+  the wild carry ore veins you can pick at by hand.
+- **Production chains.** Over 60 new items and dozens of machine recipes:
+  glass, sand and silica from quartz; alumina and aluminium from bauxite
+  (refinery plus foundry); gold wiring; steel beams, pipes and rails; stators,
+  motors, computers, heavy frames and battery cells; flour, cloth and jars.
+- **Farming.** Eight crops (carrot, potato, corn, wheat, tomato, cabbage,
+  pumpkin, hemp), each with its own growing time and seasons. Plots need
+  water (rain, a watering can, or a sprinkler on a pipe network), and
+  fertiliser speeds growth. Farming skill raises yields and gives back seeds.
+  Compost bins turn rot into fertiliser, chicken coops turn grain into eggs,
+  and drying racks turn meat into jerky.
+- **Cooking and foraging.** A wood stove and campfire cook fresh bread, stews,
+  soups, omelettes, pumpkin pie, fish stew, jam, preserves, herbal tea and
+  poultices, and many meals give buffs. Bushes and the forest floor give
+  berries, mushrooms (some of them odd) and herbs. Hunting gives hides you can
+  tan into leather for boots, gloves, a winter coat and a fur hat.
+- **Weapons and gear.** Spears, steel axes and pickaxes, a quiet crossbow
+  with bolts you can pick up again, scrap armour, a water filter and a
+  survival pack.
+- **Throwables.** Molotovs leave a burning patch that blocks a doorway for
+  ten seconds. Pipe bombs explode with knockback and draw every zombie
+  nearby.
+- **Railways.** Drag to lay track. Corners curve on their own, junctions let
+  trains choose a route, and dead ends get buffer stops. Put Freight Stations
+  beside the track and set each one to *Load* (belt items in) or *Unload*
+  (items go out onto a belt). A locomotive with freight wagons coupled behind
+  it follows a schedule of stations:
+  - It finds its route over the network and slows down to stop at each
+    station.
+  - It reverses out of dead ends.
+  - It transfers cargo at each stop and refuels with coal stored at
+    stations.
+  - Wagons show their load.
+
+  Trains run zombies down and will hurt you if you stand on the line. Press
+  T on a locomotive to ride in the cab (E to step off, Q for the train
+  panel), or E to open the panel, where you edit the schedule, add coal,
+  rename the train and open wagons.
 - **Fluids.** Pipes, a lake water pump, tanks and a packager that bottles
   clean water automatically; later oil pumpjacks, a refinery (fuel, plastic,
   rubber) and fuel generators.
