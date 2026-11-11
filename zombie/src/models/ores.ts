@@ -80,6 +80,14 @@ vec2 oCell(vec3 p) {
   }
   return vec2(sqrt(d), id);
 }
+// sub-parallel vein set: noise runs 3x faster along dir, so its zero sheets lie roughly across dir
+float oVeinA(vec3 p, vec3 dir, float f, float w, float aa) {
+  vec3 q = p * f + dir * dot(p, dir) * f * 2.0;
+  q += vec3(oNoise(q * 0.4 + 3.1), oNoise(q * 0.4 + 7.7), oNoise(q * 0.4 + 1.3)) * 0.35;
+  float v = abs(oNoise(q));
+  float e = max(w * 0.45, aa * f * 4.0);
+  return 1.0 - smoothstep(w - e, w + e * 0.3, v);
+}
 // thin sheets of noise cut by the surface -> branching vein lines; w = half-width in noise units
 float oVein(vec3 p, float f, float w, float aa) {
   vec3 q = p * f; q += vec3(oNoise(q * 0.45 + 3.1), oNoise(q * 0.45 + 7.7), oNoise(q * 0.45 + 1.3)) * 0.7;
@@ -99,7 +107,7 @@ struct OreS { vec3 alb; float rough; float metal; float w; float h; vec3 em; };
 ${NOISE_GLSL}
 vec3 oHost(vec3 c, vec3 base, float tex) {
 #ifdef ORE_MULTI
-  return mix(base, c * tex, 0.3);
+  return base; // wild boulders keep their own rock; only the veins are drawn
 #else
   return c * tex;
 #endif
@@ -111,8 +119,8 @@ float oFade(float f, float aa) { return clamp(1.6 - aa * f * 3.0, 0.0, 1.0); }
 // ---- iron: banded iron formation, red jasper + steel-grey haematite with specular flakes, rust bloom
 OreS oreIron(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r), nug = step(2.5, r);
-  vec3 host = oHost(vec3(0.24, 0.16, 0.115), base, tex);
-  host = mix(host, oHost(vec3(0.46, 0.29, 0.12), base, tex), smoothstep(0.0, 0.6, oFbm(p * 1.3 + 3.0)) * 0.6);
+  vec3 host = oHost(vec3(0.44, 0.31, 0.23), base, tex);
+  host = mix(host, oHost(vec3(0.66, 0.45, 0.22), base, tex), smoothstep(0.0, 0.6, oFbm(p * 1.3 + 3.0)) * 0.6);
   float warp = oNoise(p * 0.5) * 0.28 + oNoise(p * 2.1) * 0.04;
   float b = (dot(p, sd) + warp) * 5.0;
   // irregular layer thicknesses: two incommensurate waves
@@ -122,11 +130,11 @@ OreS oreIron(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   zone = max(zone, chunk);
   float hem = max(smoothstep(0.2, 0.45, s) * zone, nug);
   float jas = smoothstep(-0.05, -0.4, s) * zone * (1.0 - nug);
-  vec3 jasC = mix(vec3(0.30, 0.055, 0.03), vec3(0.42, 0.13, 0.05), fine * 0.5 + 0.5) * tex;
+  vec3 jasC = mix(vec3(0.52, 0.15, 0.09), vec3(0.64, 0.25, 0.12), fine * 0.5 + 0.5) * tex;
   vec3 alb = mix(host, jasC, jas * 0.9);
-  alb = mix(alb, vec3(0.095, 0.085, 0.085) * (0.8 + 0.3 * tex), hem);
+  alb = mix(alb, vec3(0.27, 0.235, 0.225) * (0.8 + 0.3 * tex), hem);
   float rust = smoothstep(0.2, 0.7, oFbm(p * 2.6 + 9.0)) * (1.0 - nug * 0.6);
-  alb = mix(alb, vec3(0.30, 0.10, 0.03) * tex, rust * hem * 0.6);
+  alb = mix(alb, vec3(0.52, 0.24, 0.09) * tex, rust * hem * 0.6);
   vec2 c = oCell(p * 34.0);
   float gl = smoothstep(0.3, 0.12, c.x) * step(0.45, c.y) * hem * oFade(34.0, aa) * (1.0 - rust);
   OreS o = oNew(alb + gl * vec3(0.1, 0.1, 0.11), mix(0.86, 0.6, hem) - gl * 0.4);
@@ -138,23 +146,23 @@ OreS oreIron(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
 // ---- copper: grey host rock with green malachite / blue azurite crusts along veins, native-copper nuggets
 OreS oreCopper(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r), nug = step(2.5, r);
-  vec3 host = oHost(vec3(0.27, 0.27, 0.255), base, tex);
+  vec3 host = oHost(vec3(0.48, 0.46, 0.42), base, tex);
   float vein = oVein(p, 1.3, 0.05 + rich * 0.05, aa);
-  float halo = oVein(p, 1.3, 0.16 + rich * 0.16, aa);
+  float halo = oVein(p, 1.3, 0.1 + rich * 0.08, aa);
   float st = oFbm(p * 1.4 + 5.0) * 0.5 + 0.5;
-  float stain = smoothstep(0.66 - rich * 0.14, 0.76 - rich * 0.14, st);
+  float stain = smoothstep(0.68 - rich * 0.12, 0.78 - rich * 0.12, st);
   stain = max(stain, halo * smoothstep(0.25, 0.6, st + 0.2));
-  stain = max(stain, chunk * smoothstep(0.2, 0.5, st + 0.15));
+  stain = max(stain, chunk * smoothstep(0.4, 0.65, st) * 0.85);
   float rings = sin(oNoise(p * 2.4) * 13.0) * 0.5 + 0.5;
-  vec3 mal = mix(vec3(0.03, 0.24, 0.12), vec3(0.10, 0.42, 0.25), rings * 0.8);
-  float azu = smoothstep(0.55, 0.8, oNoise(p * 1.8 + 21.0)) * stain;
+  vec3 mal = mix(vec3(0.12, 0.34, 0.17), vec3(0.28, 0.54, 0.30), rings * 0.8);
+  float azu = smoothstep(0.62, 0.85, oNoise(p * 1.8 + 21.0)) * stain;
   vec3 alb = mix(host, mal * (0.8 + 0.25 * tex), stain * 0.92);
-  alb = mix(alb, vec3(0.03, 0.09, 0.36) * (0.8 + 0.25 * tex), azu * 0.8);
+  alb = mix(alb, vec3(0.12, 0.26, 0.62) * (0.8 + 0.25 * tex), azu * 0.8);
   vec2 c = oCell(p * 20.0);
   float nugF = smoothstep(0.3, 0.12, c.x) * step(0.78 - rich * 0.2, c.y) * max(stain * 0.5, vein) * oFade(20.0, aa);
   float cuW = max(max(vein * 0.85, nugF), nug);
   float patina = smoothstep(0.3, 0.65, oNoise(p * 9.0 + 2.0)) * 0.6;
-  vec3 cu = mix(vec3(0.90, 0.48, 0.28), vec3(0.50, 0.24, 0.13), smoothstep(0.0, 0.6, oNoise(p * 14.0)));
+  vec3 cu = mix(vec3(0.95, 0.66, 0.5), vec3(0.62, 0.36, 0.24), smoothstep(0.0, 0.6, oNoise(p * 14.0)));
   alb = mix(alb, mix(cu, mal, patina * (1.0 - vein * 0.6)), cuW);
   OreS o = oNew(alb, mix(mix(0.86, 0.7, stain), 0.33, cuW * (1.0 - patina * 0.6)));
   o.metal = cuW * (1.0 - patina * 0.8);
@@ -166,30 +174,31 @@ OreS oreCopper(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa)
 OreS oreCoal(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r);
   float lam = sin(dot(p, sd) * 42.0 + oNoise(p * 3.0) * 2.0);
-  vec3 host = oHost(vec3(0.30, 0.29, 0.275), base, tex) * (0.93 + 0.07 * lam);
+  vec3 host = oHost(vec3(0.40, 0.37, 0.33), base, tex) * (0.93 + 0.07 * lam);
   float ph = dot(p, sd) + oNoise(p * 0.45) * 0.22 + oNoise(p * 2.0) * 0.025;
-  float s = abs(fract(ph * 1.35) - 0.5) * 2.0;
-  float width = 0.2 + rich * 0.4;
+  float s = abs(fract(ph * 1.9) - 0.5) * 2.0;
+  float width = 0.28 + rich * 0.3;
   float seam = max(smoothstep(width + 0.05, width - 0.03, s), chunk);
   // soot washed down from seams
-  float soot = smoothstep(width + 0.4, width, s) * 0.35 * (1.0 - seam);
+  float soot = smoothstep(width + 0.5, width, s) * 0.5 * (1.0 - seam);
   vec2 c = oCell(p * 13.0);
-  vec3 coal = vec3(0.022, 0.022, 0.025) * (0.8 + 0.5 * c.y);
+  vec3 coal = vec3(0.08, 0.08, 0.09) * (0.8 + 0.4 * c.y);
   vec3 alb = mix(host * (1.0 - soot), coal, seam);
   // pyrite specks in the coal
   vec2 c2 = oCell(p * 40.0);
   float py = smoothstep(0.22, 0.1, c2.x) * step(0.93, c2.y) * seam * oFade(40.0, aa);
   alb = mix(alb, vec3(0.75, 0.6, 0.3), py);
-  OreS o = oNew(alb, mix(0.88, 0.16 + c.y * 0.22, seam));
-  o.metal = seam * 0.12 + py * 0.9;
+  float shine = step(0.82, c.y) * oFade(13.0, aa);
+  OreS o = oNew(alb, mix(0.88, mix(0.55, 0.18, shine), seam));
+  o.metal = seam * 0.05 + py * 0.9;
   o.h = seam * (0.006 + (0.5 - c.x) * 0.012) * (1.0 - chunk * 0.5) - lam * 0.0015;
   return o;
 }
 
 // ---- limestone: pale chalky blocks with recessed bedding planes, pitting and faint iron streaks
 OreS oreLime(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
-  vec3 host = oHost(vec3(0.78, 0.75, 0.66), base, tex * 0.4 + 0.6);
-  host = mix(host, vec3(0.62, 0.62, 0.6) * tex, smoothstep(0.1, 0.7, oFbm(p * 0.9 + 2.0)) * 0.45);
+  vec3 host = oHost(vec3(0.88, 0.81, 0.63), base, tex * 0.4 + 0.6);
+  host = mix(host, vec3(0.70, 0.67, 0.6) * tex, smoothstep(0.1, 0.7, oFbm(p * 0.9 + 2.0)) * 0.45);
   float bed = fract(dot(p, sd) * 2.4 + oNoise(p * 0.7) * 0.15);
   float line = smoothstep(0.07, 0.0, abs(bed - 0.5));
   float streak = smoothstep(0.35, 0.8, oNoise(vec3(p.x * 3.0, p.y * 0.35, p.z * 3.0))) * 0.4;
@@ -208,12 +217,12 @@ OreS oreLime(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
 // ---- sulphur: bleached altered rock under a crust of granular yellow crystals, faint glow
 OreS oreSulfur(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r);
-  vec3 host = oHost(vec3(0.60, 0.58, 0.52), base, tex);
-  float crust = smoothstep(0.42 - rich * 0.42, 0.6 - rich * 0.42, n.y * 0.55 + oFbm(p * 2.0 + 1.0) * 0.6 + 0.12);
-  crust = max(crust, max(chunk, oVein(p, 1.4, 0.1, aa) * 0.9));
+  vec3 host = oHost(vec3(0.56, 0.54, 0.48), base, tex);
+  float crust = smoothstep(0.62 - rich * 0.3, 0.74 - rich * 0.3, n.y * 0.45 + oFbm(p * 1.8 + 1.0) * 0.7);
+  crust = max(crust, max(chunk, oVein(p, 1.4, 0.05 + rich * 0.04, aa) * 0.9));
   vec2 c = oCell(p * 22.0);
   float fa = oFade(22.0, aa);
-  vec3 sC = mix(vec3(0.95, 0.80, 0.10), mix(vec3(0.75, 0.58, 0.03), vec3(1.0, 0.93, 0.32), c.y), fa);
+  vec3 sC = mix(vec3(0.90, 0.78, 0.22), mix(vec3(0.74, 0.60, 0.12), vec3(0.96, 0.90, 0.42), c.y), fa);
   sC = mix(sC, vec3(0.85, 0.42, 0.04), smoothstep(0.45, 0.8, oNoise(p * 1.4 + 40.0)) * 0.6);
   float rim = smoothstep(0.0, 0.25, crust) * (1.0 - smoothstep(0.25, 0.6, crust));
   vec3 alb = mix(host, sC, crust);
@@ -229,10 +238,11 @@ OreS oreQuartz(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa)
   float rich = min(r, 1.0), chunk = step(1.5, r);
   vec2 c = oCell(p * 28.0);
   float fa = oFade(28.0, aa);
-  vec3 host = oHost(vec3(0.44, 0.43, 0.44), base, tex);
-  host = mix(host, vec3(0.08, 0.08, 0.09), step(c.y, 0.22) * fa * 0.85);
+  vec3 host = oHost(vec3(0.42, 0.40, 0.39), base, tex);
+  host = mix(host, vec3(0.16, 0.16, 0.17), step(c.y, 0.22) * fa * 0.85);
   host = mix(host, vec3(0.62, 0.46, 0.40) * tex, step(0.82, c.y) * fa * 0.6);
-  float v = max(oVein(p, 0.8, 0.08 + rich * 0.1, aa), chunk);
+  vec3 vd = normalize(cross(sd, vec3(1.0, 0.2, 0.4)));
+  float v = max(max(oVeinA(p, vd, 0.6, 0.05 + rich * 0.06, aa), oVein(p, 1.4, 0.02 + rich * 0.025, aa)), chunk);
   vec3 q = mix(vec3(0.80, 0.80, 0.83), vec3(0.93, 0.92, 0.95), oNoise(p * 6.0) * 0.5 + 0.5);
   vec3 alb = mix(host, q, v);
   OreS o = oNew(alb, mix(0.8, 0.2, v));
@@ -244,51 +254,56 @@ OreS oreQuartz(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa)
 OreS oreBauxite(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r);
   float t2 = tex * 0.4 + 0.6;
-  vec3 host = oHost(vec3(0.52, 0.20, 0.07), base, t2);
-  host = mix(host, oHost(vec3(0.70, 0.42, 0.20), base, t2), smoothstep(0.25, 0.75, oFbm(p * 1.2 + 8.0)) * 0.45);
-  vec2 c = oCell(p * 7.0);
-  float rr = 0.3 + 0.14 * c.y;
-  float on = step(0.55 - rich * 0.4 - chunk * 0.3, fract(c.y * 7.31));
-  float fa = oFade(7.0, aa);
+  vec3 host = oHost(vec3(0.68, 0.34, 0.17), base, t2);
+  host = mix(host, oHost(vec3(0.80, 0.56, 0.36), base, t2), smoothstep(0.25, 0.75, oFbm(p * 1.2 + 8.0)) * 0.45);
+  vec2 c = oCell(p * 10.0);
+  float rr = 0.28 + 0.14 * c.y;
+  float on = step(0.4 - rich * 0.35 - chunk * 0.3, fract(c.y * 7.31));
+  float fa = oFade(10.0, aa);
   float pis = smoothstep(rr, rr - 0.05, c.x) * on;
   float ring = sin(c.x * 50.0) * 0.5 + 0.5;
-  vec3 pc = mix(vec3(0.20, 0.06, 0.03), vec3(0.36, 0.12, 0.05), ring) * (0.75 + 0.4 * fract(c.y * 3.7));
+  vec3 pc = mix(vec3(0.36, 0.13, 0.07), vec3(0.56, 0.25, 0.12), ring) * (0.75 + 0.4 * fract(c.y * 3.7));
   vec3 alb = mix(host, mix(host * 0.6, pc, fa), pis);
   OreS o = oNew(alb, mix(0.9, 0.6, pis * fa));
   o.h = pis * max(rr - c.x, 0.0) * 0.07 * fa;
   return o;
 }
 
-// ---- gold: dark schist with white quartz veins carrying bright gold flecks, limonite halo
+// ---- gold: dark schist cut by a set of white quartz veins carrying bright gold flecks, limonite halo
 OreS oreGold(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa) {
   float rich = min(r, 1.0), chunk = step(1.5, r), nug = step(2.5, r);
-  vec3 host = oHost(vec3(0.24, 0.255, 0.24), base, tex) * (0.92 + 0.08 * sin(dot(p, sd) * 30.0 + oNoise(p * 2.0) * 3.0));
-  float w = 0.07 + rich * 0.09;
-  float v = max(oVein(p, 1.0, w, aa), chunk);
-  float halo = clamp(oVein(p, 1.0, w * 2.6, aa) - v, 0.0, 1.0);
-  vec3 alb = mix(host, vec3(0.45, 0.28, 0.10) * tex, halo * 0.7);
-  alb = mix(alb, vec3(0.86, 0.84, 0.79), v);
-  vec2 c = oCell(p * 24.0);
-  vec2 c2 = oCell(p * 8.0 + 3.0);
-  float fleck = smoothstep(0.32, 0.12, c.x) * step(0.8 - rich * 0.3, c.y) * oFade(24.0, aa);
-  fleck = max(fleck, smoothstep(0.22, 0.12, c2.x) * step(0.88, c2.y));
-  fleck = max(fleck * v, nug);
-  vec3 au = vec3(1.0, 0.72, 0.28) * (0.85 + 0.25 * oNoise(p * 30.0));
+  vec3 host = oHost(vec3(0.42, 0.41, 0.37), base, tex) * (0.92 + 0.08 * sin(dot(p, sd) * 30.0 + oNoise(p * 2.0) * 3.0));
+  vec3 vd = normalize(cross(sd, vec3(0.3, 0.1, 1.0)));
+  float w = 0.06 + rich * 0.06;
+  float v = max(oVeinA(p, vd, 0.7, w, aa), chunk);
+  float halo = clamp(oVeinA(p, vd, 0.7, w * 2.8, aa) - v, 0.0, 1.0);
+  vec3 alb = mix(host, vec3(0.62, 0.42, 0.2) * tex, halo * 0.75);
+  alb = mix(alb, vec3(0.82, 0.80, 0.75) * (0.9 + 0.1 * oNoise(p * 7.0)), v);
+  vec2 c = oCell(p * 16.0);
+  float fleck = smoothstep(0.34, 0.16, c.x) * step(0.72 - rich * 0.25, c.y) * oFade(16.0, aa);
+  vec2 c2 = oCell(p * 5.0 + 3.0);
+  fleck = max(fleck, smoothstep(0.26, 0.14, c2.x) * step(0.55, c2.y));
+  fleck *= max(v, halo * 0.35);
+  // richer pay-streaks: gold smeared along the vein centre
+  fleck = max(fleck, smoothstep(0.25, 0.45, oNoise(p * 5.0 + 11.0)) * smoothstep(0.5, 0.95, v) * (0.4 + rich * 0.6));
+  fleck = max(fleck, nug);
+  vec3 au = vec3(1.0, 0.80, 0.36) * (0.92 + 0.1 * oNoise(p * 30.0));
   alb = mix(alb, au, fleck);
-  OreS o = oNew(alb, mix(mix(0.85, 0.3, v), 0.16, fleck));
+  OreS o = oNew(alb, mix(mix(0.85, 0.32, v), 0.22, fleck));
   o.metal = fleck;
-  o.h = v * 0.008 + fleck * 0.004;
+  o.h = v * 0.008 + fleck * 0.005;
+  o.em = vec3(0.30, 0.19, 0.04) * fleck * 0.35; // a touch of self-light so gold still reads under a grey sky
   return o;
 }
 
 // ---- crude seep: dark oil-sand rock coated in wet tar from the base up
 OreS oreOil(vec3 p, vec3 n, float r, vec3 base, float tex, vec3 sd, float aa, float hgt) {
   float rich = min(r, 1.0), chunk = step(1.5, r);
-  vec3 host = oHost(vec3(0.26, 0.23, 0.2), base, tex);
-  float tar = max(smoothstep(0.35, 0.6, oFbm(p * 1.6) * 0.8 + (0.5 - hgt) * 1.1 + rich * 0.35), chunk);
+  vec3 host = oHost(vec3(0.40, 0.36, 0.31), base, tex);
+  float tar = max(smoothstep(0.3, 0.55, oFbm(p * 1.6) * 0.8 + (0.45 - hgt) * 1.4 + rich * 0.35), chunk);
   float drip = smoothstep(0.55, 0.8, oNoise(vec3(p.x * 6.0, p.y * 0.8, p.z * 6.0))) * smoothstep(1.4, 0.2, hgt);
   tar = max(tar, drip);
-  vec3 alb = mix(host, vec3(0.01, 0.009, 0.008), tar);
+  vec3 alb = mix(host, vec3(0.045, 0.04, 0.035), tar);
   OreS o = oNew(alb, mix(0.85, 0.07, tar));
   o.h = tar * 0.004;
   return o;
@@ -355,6 +370,7 @@ const ORE_VERT_MAIN = /* glsl */`
 
 function patchOre(m: THREE.MeshStandardMaterial, key: string, baseAvg: number) {
   const uniforms = { uOreSnow: snowU, uOreBase: { value: baseAvg } };
+  m.userData.oreUniforms = uniforms;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
@@ -374,13 +390,23 @@ function patchOre(m: THREE.MeshStandardMaterial, key: string, baseAvg: number) {
   vec3 oN = normalize(vOreN);
   float oSeed = dot(floor(vOreSeed * 0.5), vec3(0.137, 0.0, 0.291));
   vec3 oSD = normalize(vec3(sin(oSeed * 17.0) * 0.45, 1.0, cos(oSeed * 23.0) * 0.45));
-  float oTex = clamp(dot(diffuseColor.rgb, vec3(0.3333)) / uOreBase, 0.55, 1.5);
+  // the mineral palette is authored in sRGB-like space: convert in, shade, convert back out
+  float oTex = clamp(pow(dot(diffuseColor.rgb, vec3(0.3333)) / uOreBase, 0.4545), 0.6, 1.4);
+  vec3 oBaseS = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(0.4545));
 #ifdef ORE_MULTI
   int oT = int(vOreType + 0.5);
 #else
   const int oT = ORE_TYPE;
 #endif
-  OreS oreS = oreSurface(oT, vOreP, oN, vOre, diffuseColor.rgb, oTex, oSD, oAA, vOreP.y - vOreSeed.y);
+  OreS oreS = oreSurface(oT, vOreP, oN, vOre, oBaseS, oTex, oSD, oAA, vOreP.y - vOreSeed.y);
+  {
+    // realistic rocks sit around 0.07 linear albedo: bring the dielectric palette down to match (metals keep their F0)
+    float oScale = mix(ORE_ALBEDO_SCALE, 1.0, oreS.metal);
+#ifdef ORE_MULTI
+    oScale = mix(1.0, oScale, clamp(length(oreS.alb - oBaseS) * 5.0, 0.0, 1.0));
+#endif
+    oreS.alb = pow(max(oreS.alb, vec3(0.0)), vec3(2.2)) * oScale;
+  }
   float oSnow = uOreSnow * smoothstep(0.35, 0.75, oN.y + oNoise(vOreP * 2.0) * 0.15);
   diffuseColor.rgb = mix(oreS.alb, vec3(0.92, 0.94, 0.97), oSnow);`)
       .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
@@ -401,10 +427,21 @@ function patchOre(m: THREE.MeshStandardMaterial, key: string, baseAvg: number) {
   m.customProgramCacheKey = () => key;
 }
 
-/** average linear brightness of the base material's albedo, used to extract texture detail */
+/** average linear brightness of the base material's albedo (incl. its texture), used to extract texture detail */
 function baseAverage(base: THREE.MeshStandardMaterial) {
-  const c = base.color; const l = (c.r + c.g + c.b) / 3;
-  return Math.max(0.02, base.map ? l * 0.28 : l);
+  const c = base.color; let l = (c.r + c.g + c.b) / 3;
+  const img = base.map?.image as { data?: ArrayLike<number> } | undefined;
+  if (img?.data && img.data.length >= 4) {
+    const d = img.data, stride = Math.max(4, Math.floor(d.length / 4096 / 4) * 4);
+    let sum = 0, n = 0;
+    for (let i = 0; i + 2 < d.length; i += stride) {
+      const v = (d[i] + d[i + 1] + d[i + 2]) / 765;
+      sum += base.map!.colorSpace === THREE.SRGBColorSpace ? THREE.MathUtils.lerp(v / 12.92, Math.pow((v + 0.055) / 1.055, 2.4), v > 0.04045 ? 1 : 0) : v;
+      n++;
+    }
+    l *= sum / Math.max(1, n);
+  } else if (base.map) l *= 0.15;
+  return Math.max(0.02, l);
 }
 
 const cache = new Map<string, THREE.Material>();
@@ -417,7 +454,7 @@ export function getOreMaterial(type: OreType): THREE.MeshStandardMaterial {
     const base = getMaterial('rock');
     m = base.clone();
     m.name = 'ore_' + type;
-    m.defines = { ...(m.defines ?? {}), ORE_TYPE: ORE_INDEX[type] };
+    m.defines = { ...(m.defines ?? {}), ORE_TYPE: ORE_INDEX[type], ORE_ALBEDO_SCALE: LOWPOLY ? '1.0' : '0.42' };
     facet(m);
     patchOre(m, `ore-${type}-${LOWPOLY ? 'lp' : 'r'}`, baseAverage(base));
     cache.set(key, m);
@@ -432,7 +469,7 @@ export function getOreVeinInstancedMaterial(base: THREE.MeshStandardMaterial): T
   if (!m) {
     m = base.clone();
     m.name = base.name + '_veins';
-    m.defines = { ...(m.defines ?? {}), ORE_MULTI: '', ORE_TYPE: -1 };
+    m.defines = { ...(m.defines ?? {}), ORE_MULTI: '', ORE_TYPE: -1, ORE_ALBEDO_SCALE: LOWPOLY ? '1.0' : '0.42' };
     if (LOWPOLY) facet(m);
     patchOre(m, `ore-multi-${LOWPOLY ? 'lp' : 'r'}-${base.vertexColors ? 'vc' : ''}`, baseAverage(base));
     cache.set(key, m);
@@ -479,7 +516,8 @@ function stainMaterial(type: OreType): THREE.MeshStandardMaterial {
   if (m) return m;
   const s = STAIN[type]!;
   m = new THREE.MeshStandardMaterial({ name: 'ore_stain_' + type, color: 0xffffff, roughness: s[2], metalness: 0, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
-  const u = { uC1: { value: new THREE.Color(s[0]) }, uC2: { value: new THREE.Color(s[1]) }, uStr: { value: s[3] }, uOreSnow: snowU };
+  const k = LOWPOLY ? 1 : 0.5;
+  const u = { uC1: { value: new THREE.Color(s[0]).multiplyScalar(k) }, uC2: { value: new THREE.Color(s[1]).multiplyScalar(k) }, uStr: { value: s[3] }, uOreSnow: snowU };
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader
@@ -621,7 +659,7 @@ function hexCrystal(rad: number, len: number, smoky: number): THREE.BufferGeomet
   const col = new Float32Array(p.count * 3);
   for (let i = 0; i < p.count; i++) {
     const t = THREE.MathUtils.clamp(p.getY(i) / len, 0, 1);
-    const milky = 0.92 - t * 0.42;
+    const milky = 0.62 - t * 0.3;
     col[i * 3] = milky * (1 - smoky * 0.35); col[i * 3 + 1] = milky * (1 - smoky * 0.38); col[i * 3 + 2] = Math.min(1, milky * 1.04 * (1 - smoky * 0.3));
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -635,7 +673,7 @@ function sulfurCrystal(s: number, shade: number): THREE.BufferGeometry {
   g.computeVertexNormals();
   const p = g.getAttribute('position');
   const col = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i++) { col[i * 3] = 1.0 * shade; col[i * 3 + 1] = (0.82 + 0.1 * shade) * shade; col[i * 3 + 2] = 0.12 * shade; }
+  for (let i = 0; i < p.count; i++) { col[i * 3] = 0.72 * shade; col[i * 3 + 1] = (0.52 + 0.08 * shade) * shade; col[i * 3 + 2] = 0.04 * shade; }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   return g;
 }
@@ -804,7 +842,7 @@ export function buildOreDeposit(o: DepositOpts): THREE.Group {
     if (type === 'gold_ore' || type === 'copper_ore' || type === 'iron_ore') {
       for (let i = 0; i < 2 + purity * 2; i++) {
         const a = r() * Math.PI * 2, dd = range(r, 0.8, 2.4) * size, x = Math.cos(a) * dd, z = Math.sin(a) * dd;
-        const s = type === 'gold_ore' ? range(r, 0.03, 0.06) : range(r, 0.06, 0.12);
+        const s = type === 'gold_ore' ? range(r, 0.04, 0.08) : range(r, 0.06, 0.12);
         ore(place(boulderGeo(r, 1, s * 1.3, s * 0.7, s, 0.6), x, ground(x, z) + s * 0.3, z, r() * 6), 3);
       }
     }
