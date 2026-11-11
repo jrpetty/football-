@@ -36,7 +36,7 @@ import type { HumanPose } from './ai/zombies';
 export type GameState = 'loading' | 'menu' | 'cc' | 'play' | 'dead' | 'victory';
 export interface Interact { kind: string; label: string; sub?: string; key?: string; target: any; t: number; alt?: { label: string; act: () => void } }
 export interface TimedAction { label: string; dur: number; t: number; cancelOnMove: boolean; done: () => void; icon?: string }
-export interface Settings { quality: Quality; fov: number; sens: number; master: number; music: number; sfx: number; dayLen: number; creative: boolean }
+export interface Settings { quality: Quality; fov: number; sens: number; master: number; music: number; sfx: number; dayLen: number; creative: boolean; keys?: Record<string, string> }
 
 const SAVE_KEY = 'rekindle_save_v1';
 const SETTINGS_KEY = 'rekindle_settings_v1';
@@ -131,6 +131,7 @@ export class Game {
     try { const s = localStorage.getItem(SETTINGS_KEY); if (s) Object.assign(this.settings, JSON.parse(s)); } catch { /* */ }
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, innerWidth / innerHeight, 0.08, 3000);
     this.input = new Input(canvas);
+    if (this.settings.keys) this.input.setBindings(this.settings.keys);
     this.flashlight = new THREE.SpotLight(0xfff4e0, 0, 45, 0.45, 0.5, 2);
     this.flashlight.castShadow = true; this.flashlight.shadow.mapSize.set(512, 512); this.flashlight.shadow.bias = -0.0005;
     this.scene.add(this.flashlight); this.scene.add(this.flashlight.target);

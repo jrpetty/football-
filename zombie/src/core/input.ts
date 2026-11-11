@@ -1,5 +1,21 @@
 // Keyboard / mouse input with pointer lock.
+export const ACTIONS: [string, string, string][] = [
+  ['KeyW', 'Move forward', 'Movement'], ['KeyS', 'Move back', 'Movement'], ['KeyA', 'Move left / steer left', 'Movement'], ['KeyD', 'Move right / steer right', 'Movement'],
+  ['ShiftLeft', 'Sprint', 'Movement'], ['KeyC', 'Crouch', 'Movement'], ['Space', 'Jump / handbrake', 'Movement'], ['KeyV', 'Camera view', 'Movement'],
+  ['KeyE', 'Interact', 'Actions'], ['KeyT', 'Secondary action', 'Actions'], ['KeyR', 'Reload / rotate', 'Actions'], ['KeyF', 'Flashlight', 'Actions'],
+  ['KeyQ', 'Quick bandage', 'Actions'], ['KeyG', 'Drop held item', 'Actions'], ['KeyX', 'Dismantle mode', 'Actions'],
+  ['Tab', 'Inventory', 'Menus'], ['KeyH', 'Health', 'Menus'], ['KeyK', 'Skills', 'Menus'], ['KeyJ', 'Journal', 'Menus'], ['KeyM', 'Map', 'Menus'], ['KeyB', 'Build menu', 'Menus'],
+];
 export class Input {
+  /** action (default key code) -> physical key code chosen by the player */
+  bindings: Record<string, string> = {};
+  private remap: Record<string, string> = {};
+  capture: ((code: string) => void) | null = null;
+  setBindings(b: Record<string, string>) {
+    this.bindings = { ...b }; this.remap = {};
+    for (const def in this.bindings) { const phys = this.bindings[def]; if (phys && phys !== def) this.remap[phys] = def; }
+  }
+  keyName(def: string) { const c = this.bindings[def] ?? def; return c.replace(/^Key/, '').replace(/^Digit/, '').replace('Left', ' L').replace('Right', ' R'); }
   keys = new Set<string>();
   pressed = new Set<string>();
   released = new Set<string>();
@@ -16,12 +32,14 @@ export class Input {
 
   constructor(private el: HTMLElement) {
     addEventListener('keydown', e => {
+      if (this.capture) { e.preventDefault(); const c = this.capture; this.capture = null; if (e.code !== 'Escape') c(e.code); return; }
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
-      if (!this.keys.has(e.code)) this.pressed.add(e.code);
-      this.keys.add(e.code);
+      const code = this.remap[e.code] ?? e.code;
+      if (!this.keys.has(code)) this.pressed.add(code);
+      this.keys.add(code);
       if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'F1', 'F3'].includes(e.code)) e.preventDefault();
     });
-    addEventListener('keyup', e => { this.keys.delete(e.code); this.released.add(e.code); });
+    addEventListener('keyup', e => { const code = this.remap[e.code] ?? e.code; this.keys.delete(code); this.released.add(code); });
     addEventListener('mousemove', e => { if (this.locked) { this.mouseDX += e.movementX; this.mouseDY += e.movementY; } });
     document.addEventListener('pointerlockerror', () => this.enableFallback());
     addEventListener('mousedown', e => { if (!this.locked) return; this.mouse[e.button] = true; this.mousePressed[e.button] = true; });

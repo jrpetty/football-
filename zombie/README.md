@@ -69,8 +69,8 @@ distance. Start on Medium on laptops.
 | 1 | Foothold | Biomass burner, power poles, miner, smelter, belts, storage, floodlights |
 | 2 | Industry | Constructor, coal generator, splitter/merger, electric fence, metal walls, gate, watchtower |
 | 3 | Fortify | Assembler, auto turret, solar, foundry, batteries, concrete walls, ammo crafting |
-| 4 | Automation | Belt Mk.2, Miner Mk.2, wind turbine, greenhouse, radio tower |
-| 5 | Rekindle | Medical lab, Grid Uplink |
+| 4 | Automation | Belt Mk.2, Miner Mk.2, wind turbine, greenhouse, radio tower, water pump, pipes, fluid tank, packager |
+| 5 | Rekindle | Medical lab, Grid Uplink, oil pumpjack, refinery, fuel generator |
 | 6 | The Cure | Victory |
 
 ---
@@ -119,6 +119,26 @@ distance. Start on Medium on laptops.
   - HRTF positional sound effects.
   - Ambience that changes with weather and time of day.
   - Adaptive music that rises from calm to chase.
+- **Vehicles.** Drive the abandoned cars: find keys or hotwire them, refuel
+  from gas cans, siphon fuel, fill cans at gas pumps once the town grid is
+  back, plough through zombies (it damages the car), repair with kits. Chase
+  or in-car camera.
+- **Third-person view.** Toggle with V to see your survivor.
+- **Seasons.** Autumn, winter, spring and summer, 7 days each. Winter brings
+  frost, snowfall that settles on the ground and trees, and stops outdoor
+  crops growing.
+- **Food spoilage and power.** Fresh food rots. A portable generator lights
+  the house it sits in and keeps its fridge cold (and is loud enough to
+  draw zombies); the Grid Uplink powers every fridge in town.
+- **Wildlife.** Deer and rabbits to hunt and butcher, and wolf packs that
+  stalk you, especially at night. Fish the lake with a rod.
+- **Survivors.** Recruit people you find (and people your radio tower
+  attracts) with food. Order them to follow you, guard the Outpost, go
+  scavenging or wait. They fight, eat from your stores daily, can die, and
+  leave if you can't feed them.
+- **Fluids.** Pipes, a lake water pump, tanks and a packager that bottles
+  clean water automatically; later oil pumpjacks, a refinery (fuel, plastic,
+  rubber) and fuel generators.
 - **Saving.** Autosaves every three game hours and when you sleep. F5 saves
   manually. Saves go to `localStorage`.
 
@@ -127,11 +147,15 @@ distance. Start on Medium on laptops.
 |---|---|
 | Move / sprint / crouch / jump | WASD / Shift / C / Space |
 | Attack · aim (guns) or shove (melee) | LMB · RMB (V shoves) |
-| Interact · reload · flashlight · quick bandage | E · R · F · Q |
+| Interact · secondary action · reload · flashlight · quick bandage | E · T · R · F · Q |
+| Camera (third person on foot, chase/in-car when driving) | V |
+| Drive · steer · brake · get out | W/S · A/D · Space · E |
 | Hotbar | 1–8 / mouse wheel |
 | Inventory & crafting · health · skills · journal · map | Tab · H · K · J · M |
 | Build menu · rotate · dismantle · exit build | B · R · X · RMB |
 | Save · pause | F5 · Esc |
+
+All keyboard keys can be rebound in Settings.
 
 ## Code map
 ```
@@ -140,7 +164,8 @@ src/
   core/              utilities (RNG, simplex noise, event bus), input
   render/            renderer + post FX, sky/atmosphere, weather, particles, light pool, procedural textures & materials
   world/             layout, terrain (splat shader), town generator, vegetation, collision + nav grid, world queries
-  ai/                zombie GPU mesh/shader and the AI director (senses, flow field, hordes)
+  ai/                zombie GPU mesh/shader and AI director, wildlife, survivor NPCs
+  vehicles/          drivable car physics, fuel, collisions
   player/            controller, survival stats, skills/traits/occupations, first-person viewmodel
   items/             item database, inventory, loot tables, crafting recipes
   factory/           machine/recipe/milestone definitions and the factory simulation (belts, power, turrets)

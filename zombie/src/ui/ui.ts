@@ -12,6 +12,7 @@ import { audio } from '../audio/Audio';
 import { HALF_WORLD, WORLD_SIZE } from '../core/util';
 import { LAKE } from '../world/layout';
 import type { Machine } from '../factory/factory';
+import { ACTIONS } from '../core/input';
 
 type PanelName = 'inventory' | 'crafting' | 'health' | 'skills' | 'journal' | 'loot' | 'machine' | 'hub' | 'campfire' | 'build' | 'map';
 const CHAR_TABS: PanelName[] = ['inventory', 'crafting', 'health', 'skills', 'journal'];
@@ -94,6 +95,9 @@ export class UI {
       <label>Music volume <input type="range" id="s-mu" min="0" max="1" step="0.05" value="${s.music}"/></label>
       <label>Day length (real minutes) <select id="s-day">${[16, 24, 36, 48, 72].map(d => `<option ${d === s.dayLen ? 'selected' : ''}>${d}</option>`).join('')}</select></label>
       <label>Creative mode (free building, no material cost) <input type="checkbox" id="s-cr" ${s.creative ? 'checked' : ''}/></label>
+      <h3>Key bindings <span class="hint">(click, then press a key · Esc cancels)</span></h3>
+      <div class="controls">${ACTIONS.map(([def, label]) => `<div><span>${label}</span><button class="btn small" data-a="rebind" data-id="${def}">${this.g.input.keyName(def)}</button></div>`).join('')}</div>
+      <div class="btnrow"><button class="btn small" data-a="resetkeys">Reset keys</button></div>
       <p class="hint">Graphics quality changes apply after reloading the page (your game autosaves).</p>
       <div class="btnrow"><button class="btn primary" data-a="save-settings">Apply</button><button class="btn" data-a="reload">Apply & reload</button></div></div></div></div>`);
   }
@@ -487,6 +491,8 @@ export class UI {
       case 'settings': this.settingsModal(); break;
       case 'controls': this.controlsModal(); break;
       case 'close-modal': this.closeModal(); break;
+      case 'rebind': { const def = t.dataset.id!; t.textContent = '…press a key'; g.input.capture = code => { const k = { ...(g.settings.keys ?? {}) }; k[def] = code; g.settings.keys = k; g.input.setBindings(k); g.saveSettings(); t.textContent = g.input.keyName(def); }; break; }
+      case 'resetkeys': g.settings.keys = {}; g.input.setBindings({}); g.saveSettings(); this.settingsModal(); break;
       case 'save-settings': case 'reload': {
         const s = g.settings; const q = (id: string) => document.getElementById(id) as HTMLInputElement;
         s.quality = q('s-q').value as any; s.fov = Number(q('s-fov').value); s.sens = Number(q('s-sens').value); s.master = Number(q('s-mv').value); s.music = Number(q('s-mu').value); s.dayLen = Number(q('s-day').value); s.creative = q('s-cr').checked;
