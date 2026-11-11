@@ -9,15 +9,15 @@ import { LAKE, TOWN } from './layout';
 
 export interface TreeInst { x: number; y: number; z: number; s: number; r: number; v: number; kind: 'tree' | 'bush' | 'rock' | 'log'; alive: boolean; hp: number; col?: Circle; idx: number }
 
-const windUniforms = { uTime: { value: 0 }, uWind: { value: 0.3 } };
+export const windUniforms = { uTime: { value: 0 }, uWind: { value: 0.3 }, uSnow: { value: 0 } };
 
 function addWind(mat: THREE.MeshStandardMaterial, strength: number, key: string) {
   const m = mat.clone();
   if (strength > 0.2 && m.alphaTest > 0) m.color.multiply(new THREE.Color(0.62, 0.7, 0.6));
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = windUniforms.uTime; sh.uniforms.uWind = windUniforms.uWind;
+    sh.uniforms.uTime = windUniforms.uTime; sh.uniforms.uWind = windUniforms.uWind; sh.uniforms.uSnow = windUniforms.uSnow;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float windWeight;\nuniform float uTime; uniform float uWind;')
+      .replace('#include <common>', '#include <common>\nattribute float windWeight;\nuniform float uTime; uniform float uWind; varying float vSnowUp;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING
         vec3 ip = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
@@ -27,7 +27,10 @@ function addWind(mat: THREE.MeshStandardMaterial, strength: number, key: string)
         float ph = ip.x * 0.13 + ip.z * 0.17;
         float w = windWeight * windWeight * ${strength.toFixed(3)} * (0.4 + uWind);
         transformed.x += (sin(uTime * 1.3 + ph) * 0.6 + sin(uTime * 3.1 + ph * 2.0 + position.y) * 0.25) * w;
-        transformed.z += (cos(uTime * 1.1 + ph * 1.3) * 0.4 + sin(uTime * 2.7 + position.x * 2.0) * 0.2) * w;`);
+        transformed.z += (cos(uTime * 1.1 + ph * 1.3) * 0.4 + sin(uTime * 2.7 + position.x * 2.0) * 0.2) * w;
+        vSnowUp = normal.y;`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uSnow; varying float vSnowUp;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92,0.94,0.97), uSnow * smoothstep(0.25, 0.7, vSnowUp));');
   };
   m.customProgramCacheKey = () => 'wind-' + key + '-' + mat.uuid;
   return m;
@@ -86,7 +89,7 @@ export class Vegetation {
     const models = buildTreeModels();
     const groups: [TreeModel[], TreeInst['kind'], number, boolean][] = [
       [models.pines, 'tree', 0.35, true], [models.firs, 'tree', 0.35, true], [models.birches, 'tree', 0.5, true], [models.dead, 'tree', 0.15, true],
-      [models.bushes, 'bush', 0.6, false], [models.rocks, 'rock', 0, false], [models.logs, 'log', 0, false],
+      [models.bushes, 'bush', 0.6, false], [models.rocks, 'rock', 0.0001, false], [models.logs, 'log', 0.0001, false],
     ];
     const vIndex: Record<string, number[]> = { pine: [], fir: [], birch: [], dead: [], bush: [], rock: [], log: [] };
     const keys = ['pine', 'fir', 'birch', 'dead', 'bush', 'rock', 'log'];
@@ -253,11 +256,11 @@ export class Vegetation {
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = { value: 0 }; sh.uniforms.uWind = { value: 0.3 }; sh.uniforms.uCam = { value: new THREE.Vector3() };
       sh.uniforms.tHeight = { value: ht }; sh.uniforms.tSplat = { value: this.terrain.splat };
-      sh.uniforms.uPush = { value: new THREE.Vector3() };
+      sh.uniforms.uPush = { value: new THREE.Vector3() }; sh.uniforms.uSnowG = windUniforms.uSnow;
       mat.userData.shader = sh;
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', `#include <common>
-attribute vec4 aOff; uniform float uTime, uWind; uniform vec3 uCam; uniform sampler2D tHeight; uniform sampler2D tSplat;
+attribute vec4 aOff; uniform float uTime, uWind, uSnowG; uniform vec3 uCam; uniform sampler2D tHeight; uniform sampler2D tSplat;
 varying float vH; varying float vShade; varying vec3 vGCol;
 float hAt(vec2 p){ vec2 f = (p + ${HALF_WORLD.toFixed(1)}) / ${T_RES.toFixed(2)}; vec2 i = floor(f); vec2 u = f - i;
   float h00 = texture2D(tHeight, (i + 0.5) / ${N.toFixed(1)}).r; float h10 = texture2D(tHeight, (i + vec2(1.5,0.5)) / ${N.toFixed(1)}).r;
@@ -269,7 +272,7 @@ vec4 sp = texture2D(tSplat, (wp + ${HALF_WORLD.toFixed(1)}) / ${WORLD_SIZE.toFix
 float dist = length(wp - uCam.xz);
 float mask = (1.0 - sp.r) * (1.0 - smoothstep(0.25, 0.6, sp.g)) * (1.0 - sp.b * 0.75) * (1.0 - sp.a);
 float fade = 1.0 - smoothstep(${(S * 0.3).toFixed(1)}, ${(S * 0.5).toFixed(1)}, dist);
-float hgt = (0.22 + aOff.z * 0.3) * mask * fade * step(0.15, mask) * smoothstep(0.8, 2.5, dist);
+float hgt = (0.22 + aOff.z * 0.3) * mask * fade * step(0.15, mask) * smoothstep(0.8, 2.5, dist) * (1.0 - smoothstep(0.15, 0.55, uSnowG));
 float ang = aOff.w * 6.2831;
 vec3 transformed = vec3(position.x * (0.7 + aOff.z*0.6), position.y * hgt, 0.0);
 float ca = cos(ang), sa = sin(ang);

@@ -74,7 +74,7 @@ export const MACHINES: Record<string, MachineDef> = {
 
 // ---- player construction pieces (carpentry) & stations
 export type PieceKind = 'foundation' | 'wall' | 'door_wall' | 'window_wall' | 'stairs' | 'roof' | 'gate' | 'tower' | 'station';
-export interface PieceDef { id: string; name: string; icon: string; desc: string; kind: PieceKind; model?: BuildPieceId; prop?: PropId; cost: Record<string, number>; tier: number; skill?: [SkillId, number]; hp: number; station?: string; size?: [number, number] }
+export interface PieceDef { id: string; name: string; icon: string; desc: string; kind: PieceKind; model?: BuildPieceId; prop?: PropId; custom?: 'generator'; cost: Record<string, number>; tier: number; skill?: [SkillId, number]; hp: number; station?: string; size?: [number, number] }
 export const PIECES: Record<string, PieceDef> = {
   wood_foundation: { id: 'wood_foundation', name: 'Wooden Foundation', icon: '🟫', desc: 'A raised 2×2 m floor.', kind: 'foundation', model: 'wood_foundation', cost: { plank: 4, nails: 6 }, tier: 0, hp: 400 },
   wood_wall: { id: 'wood_wall', name: 'Wooden Wall', icon: '🧱', desc: 'Snaps to tile edges.', kind: 'wall', model: 'wood_wall', cost: { plank: 3, nails: 4 }, tier: 0, hp: 350 },
@@ -93,6 +93,7 @@ export const PIECES: Record<string, PieceDef> = {
   crate: { id: 'crate', name: 'Wooden Crate', icon: '📦', desc: 'Storage, 60 kg.', kind: 'station', prop: 'wood_crate_storage', cost: { plank: 4, nails: 4 }, tier: 0, hp: 200, station: 'crate' },
   bed: { id: 'bed', name: 'Bedroll', icon: '🛏️', desc: 'Sleep to pass the night and recover. Sets your respawn... no — death is permanent.', kind: 'station', prop: 'sleeping_bag', cost: { rag: 6 }, tier: 0, hp: 100, station: 'bed' },
   rain_collector: { id: 'rain_collector', name: 'Rain Collector', icon: '🛢️', desc: 'Collects clean rainwater. Fill bottles (E).', kind: 'station', prop: 'rain_collector', cost: { plank: 4, nails: 4, rag: 2 }, tier: 0, hp: 150, station: 'rain' },
+  generator: { id: 'generator', name: 'Portable Generator', icon: '🔌', desc: 'Burns gas to power the building it sits in: lights on, fridges cold (food lasts ~7× longer). Loud — zombies hear it.', kind: 'station', custom: 'generator', cost: { scrap_metal: 10, electronics: 4, wire: 6 }, tier: 0, skill: ['engineering' as any, 1], hp: 250, station: 'generator', size: [1, 1] },
   farm_plot: { id: 'farm_plot', name: 'Farm Plot', icon: '🌱', desc: 'Plant seeds; harvest in a few days. Rain waters it.', kind: 'station', model: 'farm_plot', cost: { plank: 2, nails: 2 }, tier: 0, hp: 100, station: 'farm' },
 };
 

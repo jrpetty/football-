@@ -8,6 +8,7 @@ import { World } from '../world/world';
 import { buildMachineModel } from '../models/machines';
 import { buildPiece } from '../models/buildpieces';
 import { buildProp } from '../models/props';
+import { buildGeneratorModel } from '../models/lowpoly';
 import { Inventory } from '../items/inventory';
 import { audio } from '../audio/Audio';
 
@@ -49,7 +50,7 @@ export class Placer {
   private makeGhost(id: string): THREE.Object3D {
     let o: THREE.Object3D;
     if (MACHINES[id]) o = buildMachineModel(id as any);
-    else { const d = PIECES[id]; o = d.prop ? buildProp(d.prop) : buildPiece(d.model!); }
+    else { const d = PIECES[id]; o = d.custom === 'generator' ? buildGeneratorModel() : d.prop ? buildProp(d.prop) : buildPiece(d.model!); }
     o.traverse(c => { const m = c as THREE.Mesh; if (m.isMesh) { m.material = this.okMat; m.castShadow = false; m.receiveShadow = false; } });
     return o;
   }
@@ -141,7 +142,7 @@ export class Placer {
       this.target = { tx, tz, cx, cz, axis: 0 };
       this.ports.clear();
     }
-    if (def?.skill && carpentry < def.skill[1]) { ok = false; this.reason = `Requires Carpentry ${def.skill[1]}`; }
+    if (def?.skill && (def.skill[0] === 'engineering' ? engineering : carpentry) < def.skill[1]) { ok = false; this.reason = `Requires ${def.skill[0] === 'engineering' ? 'Engineering' : 'Carpentry'} ${def.skill[1]}`; }
     if (!afford) { ok = false; if (!this.reason) this.reason = 'Missing materials'; }
     void engineering;
     this.valid = ok;

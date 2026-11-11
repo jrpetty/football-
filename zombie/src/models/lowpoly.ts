@@ -137,3 +137,21 @@ export function buildLowPolyTreeModels(): LPSet {
   };
   return cached;
 }
+
+/** Portable gasoline generator (survival station), ~1.0 x 0.7 x 0.6 m. */
+export function buildGeneratorModel(): THREE.Group {
+  const g = new THREE.Group();
+  const add = (geo: THREE.BufferGeometry, hex: number, x: number, y: number, z: number, rough = 0.7, metal = 0.2) => { const m = new THREE.Mesh(geo, getFlatMaterial(hex, rough, metal)); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+  // tubular frame
+  for (const sx of [-0.45, 0.45]) for (const sz of [-0.28, 0.28]) add(new THREE.CylinderGeometry(0.025, 0.025, 0.62, 6), 0x2a2c2e, sx, 0.31, sz);
+  for (const sz of [-0.28, 0.28]) { const r = add(new THREE.CylinderGeometry(0.025, 0.025, 0.92, 6), 0x2a2c2e, 0, 0.62, sz); r.rotation.z = Math.PI / 2; }
+  add(new THREE.BoxGeometry(0.62, 0.34, 0.42), 0xc8a020, -0.08, 0.3, 0);       // engine block (yellow)
+  add(new THREE.BoxGeometry(0.3, 0.16, 0.38), 0xb89018, 0.25, 0.52, 0);        // fuel tank
+  add(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8), 0x1a1a1a, 0.25, 0.62, 0); // cap
+  add(new THREE.CylinderGeometry(0.06, 0.06, 0.32, 8), 0x3a3a3a, -0.4, 0.26, 0.12).rotation.x = Math.PI / 2; // muffler
+  add(new THREE.BoxGeometry(0.12, 0.12, 0.05), 0x222222, 0.3, 0.3, 0.23);      // panel
+  const lamp = add(new THREE.SphereGeometry(0.02, 6, 4), 0x30ff60, 0.3, 0.33, 0.26, 0.4, 0);
+  lamp.name = 'genLamp';
+  for (const sz of [-0.3, 0.3]) { const w = add(new THREE.CylinderGeometry(0.08, 0.08, 0.06, 8), 0x151515, -0.42, 0.08, sz, 0.9, 0); w.rotation.x = Math.PI / 2; }
+  return g;
+}

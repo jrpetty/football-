@@ -4,6 +4,7 @@ import { GRID, tileOf } from '../core/util';
 import { PIECES, PieceDef } from '../factory/defs';
 import { buildPiece } from '../models/buildpieces';
 import { buildProp, PROP_SIZES } from '../models/props';
+import { buildGeneratorModel } from '../models/lowpoly';
 import { World, Floor } from '../world/world';
 import { Box } from '../world/collision';
 import { Inventory } from '../items/inventory';
@@ -17,7 +18,7 @@ export interface Piece {
   id: number; def: PieceDef; tx: number; tz: number; axis: 0 | 1; rot: number; y: number; obj: THREE.Object3D; boxes: Box[]; hp: number; maxHp: number;
   floor: Floor | null; container: Container | null; door: { open: boolean; pivot: THREE.Object3D; angle: number; box: Box; width: number } | null;
   fire: { fuel: number; lit: boolean; emitter: Emitter; pos: THREE.Vector3 } | null; farm: { crop: string | null; growth: number; water: number; plant: THREE.Object3D | null } | null;
-  rain: { water: number } | null; cx: number; cz: number; destroyed?: boolean; barricade?: number;
+  rain: { water: number } | null; gen: { fuel: number; on: boolean } | null; cx: number; cz: number; destroyed?: boolean; barricade?: number;
 }
 
 export class Base {
@@ -62,7 +63,7 @@ export class Base {
     const hpMul = 1 + this.carpentry * 0.08;
     let obj: THREE.Object3D; const boxes: Box[] = [];
     let cx = (tx + 0.5) * GRID, cz = (tz + 0.5) * GRID, y = 0;
-    const p: Piece = { id: this.nextId++, def, tx, tz, axis, rot, y: 0, obj: null as any, boxes, hp: def.hp * hpMul, maxHp: def.hp * hpMul, floor: null, container: null, door: null, fire: null, farm: null, rain: null, cx, cz };
+    const p: Piece = { id: this.nextId++, def, tx, tz, axis, rot, y: 0, obj: null as any, boxes, hp: def.hp * hpMul, maxHp: def.hp * hpMul, floor: null, container: null, door: null, fire: null, farm: null, rain: null, gen: null, cx, cz };
     const col = this.world.col;
     if (def.kind === 'wall' || def.kind === 'door_wall' || def.kind === 'window_wall' || def.kind === 'gate') {
       cx = axis === 0 ? (tx + 0.5) * GRID : (tx + 1) * GRID; cz = axis === 0 ? (tz + 1) * GRID : (tz + 0.5) * GRID;
@@ -133,10 +134,10 @@ export class Base {
     } else {
       // stations
       y = load?.y ?? this.tileBaseY(tx, tz);
-      if (def.prop) { obj = buildProp(def.prop); } else obj = buildPiece(def.model!);
+      if (def.custom === 'generator') obj = buildGeneratorModel(); else if (def.prop) { obj = buildProp(def.prop); } else obj = buildPiece(def.model!);
       obj.position.set(cx, y, cz); obj.rotation.y = rot * Math.PI / 2;
       obj.traverse(o => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-      const sz = def.prop ? PROP_SIZES[def.prop] : [2, 0.4, 2];
+      const sz = def.prop ? PROP_SIZES[def.prop] : def.custom === 'generator' ? [1, 0.7, 0.7] : [2, 0.4, 2];
       const r90 = rot % 2 === 1;
       const hw = (r90 ? sz[2] : sz[0]) / 2, hd = (r90 ? sz[0] : sz[2]) / 2;
       if (def.station !== 'farm' && def.station !== 'bed' && def.station !== 'campfire') boxes.push(col.addBox(cx - hw, y, cz - hd, cx + hw, y + sz[1], cz + hd, { tag: 'station', ref: p, navCost: 20 }));
@@ -150,6 +151,7 @@ export class Base {
       }
       if (def.station === 'farm') p.farm = { crop: null, growth: 0, water: 0.5, plant: null };
       if (def.station === 'rain') p.rain = { water: 2 };
+      if (def.station === 'generator') p.gen = { fuel: 0, on: false };
       this.tilesMap.set(`${tx},${tz}`, [...(this.tilesMap.get(`${tx},${tz}`) ?? []), p]);
     }
     if (def.kind === 'foundation' || def.kind === 'roof' || def.kind === 'stairs' || def.kind === 'tower') this.tilesMap.set(`${tx},${tz}`, [...(this.tilesMap.get(`${tx},${tz}`) ?? []), p]);
@@ -198,7 +200,7 @@ export class Base {
     if (p.hp <= 0 && !p.destroyed) { audio.play('wood_break', { pos: new THREE.Vector3(p.cx, p.y + 1, p.cz) }); this.remove(p); bus.emit('notify', `💥 ${p.def.name} destroyed!`, 'bad'); }
   }
 
-  update(dt: number, dtH: number, ctx: { raining: number; particles: any; playerPos: THREE.Vector3 }) {
+  update(dt: number, dtH: number, ctx: { raining: number; particles: any; playerPos: THREE.Vector3; temp?: number }) {
     for (const p of this.pieces) {
       if (p.door) {
         const target = p.door.open ? Math.PI / 2 : 0;
@@ -216,9 +218,10 @@ export class Base {
         p.fire.emitter.on = p.fire.lit; p.fire.emitter.intensity = p.fire.lit ? 45 : 0;
       }
       if (p.rain) p.rain.water = Math.min(10, p.rain.water + dtH * ctx.raining * 2);
+      if (p.gen) { if (p.gen.on) { p.gen.fuel = Math.max(0, p.gen.fuel - dtH); if (p.gen.fuel <= 0) p.gen.on = false; } const l = p.obj.getObjectByName('genLamp') as THREE.Mesh | undefined; if (l) (l.material as THREE.MeshStandardMaterial) = getMaterial(p.gen.on ? 'emissiveGreen' : 'emissiveRed'); }
       if (p.farm && p.farm.crop) {
         p.farm.water = Math.max(0, Math.min(1, p.farm.water + dtH * (ctx.raining * 0.5 - 0.02)));
-        if (p.farm.water > 0.05) p.farm.growth = Math.min(1, p.farm.growth + dtH / 60);
+        if (p.farm.water > 0.05 && (ctx.temp ?? 10) > 3) p.farm.growth = Math.min(1, p.farm.growth + dtH / 60);
         const stage = Math.min(3, Math.floor(p.farm.growth * 4));
         const want = `crop_stage${stage}` as any;
         if (!p.farm.plant || p.farm.plant.userData.stage !== stage) {
@@ -251,7 +254,7 @@ export class Base {
   }
 
   toJSON() {
-    return this.pieces.map(p => ({ id: p.def.id, tx: p.tx, tz: p.tz, axis: p.axis, rot: p.rot, y: p.y, hp: p.hp, open: p.door?.open ?? false, inv: p.container?.inv.stacks ?? null, fire: p.fire ? [p.fire.fuel, p.fire.lit] : null, farm: p.farm ? [p.farm.crop, p.farm.growth, p.farm.water] : null, rain: p.rain?.water ?? null }));
+    return this.pieces.map(p => ({ id: p.def.id, tx: p.tx, tz: p.tz, axis: p.axis, rot: p.rot, y: p.y, hp: p.hp, open: p.door?.open ?? false, inv: p.container?.inv.stacks ?? null, fire: p.fire ? [p.fire.fuel, p.fire.lit] : null, farm: p.farm ? [p.farm.crop, p.farm.growth, p.farm.water] : null, rain: p.rain?.water ?? null, gen: p.gen ? [p.gen.fuel, p.gen.on] : null }));
   }
   load(arr: any[]) {
     for (const p of [...this.pieces]) this.remove(p);
@@ -266,6 +269,7 @@ export class Base {
       if (s.fire && p.fire) { p.fire.fuel = s.fire[0]; p.fire.lit = s.fire[1]; }
       if (s.farm && p.farm) { p.farm.crop = s.farm[0]; p.farm.growth = s.farm[1]; p.farm.water = s.farm[2]; }
       if (s.rain !== null && p.rain) p.rain.water = s.rain;
+      if (s.gen && p.gen) { p.gen.fuel = s.gen[0]; p.gen.on = s.gen[1]; }
     }
   }
 }

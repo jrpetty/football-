@@ -90,7 +90,7 @@ export class Factory {
     this.cables = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x111111 }));
     this.cables.frustumCulled = false;
     this.group.add(this.cables);
-    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'spike_trap']) this.unlocked.add(k);
+    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'spike_trap', 'generator']) this.unlocked.add(k);
   }
 
   // ------------------------------------------------------------------ geometry helpers

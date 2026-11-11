@@ -16,6 +16,8 @@ export class Weather {
   kind: WeatherKind = 'cloudy';
   cover = 0.5; overcast = 0.3; rain = 0; fog = 0; wind = 0.3; tempOffset = 0;
   wetness = 0;              // ground wetness 0..1 (dries slowly)
+  snowCover = 0;            // ground snow 0..1
+  seasonTemp = 0;           // seasonal offset in celsius (set by the game)
   lightning = 0;
   private next = 0;
   private rng: RNG;
@@ -37,23 +39,24 @@ export class Weather {
     g.instanceCount = COUNT;
     const mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, fog: false,
-      uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmount: { value: 0 }, uWind: { value: new THREE.Vector2() }, uLight: { value: 1 } },
-      vertexShader: `attribute vec4 aOff; uniform float uTime; uniform vec3 uCam; uniform float uAmount; uniform vec2 uWind; varying float vA; varying vec2 vUv;
+      uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmount: { value: 0 }, uWind: { value: new THREE.Vector2() }, uLight: { value: 1 }, uSnow: { value: 0 } },
+      vertexShader: `attribute vec4 aOff; uniform float uTime; uniform vec3 uCam; uniform float uAmount; uniform vec2 uWind; uniform float uSnow; varying float vA; varying vec2 vUv; varying float vSnow;
         void main(){
           vUv = uv;
           float box = 36.0;
           vec3 p;
           p.x = mod(aOff.x * box - uCam.x + uWind.x * uTime * 2.0, box) - box*0.5;
           p.z = mod(aOff.z * box - uCam.z + uWind.y * uTime * 2.0, box) - box*0.5;
-          p.y = mod(aOff.y * 24.0 - uTime * (16.0 + aOff.w * 6.0), 24.0) - 8.0;
+          p.y = mod(aOff.y * 24.0 - uTime * mix(16.0 + aOff.w * 6.0, 1.2 + aOff.w * 0.8, uSnow), 24.0) - 8.0;
+          p.x += sin(uTime * 1.3 + aOff.z * 40.0) * 0.4 * uSnow; vSnow = uSnow;
           vec3 wp = uCam + p;
           // billboard around Y, tilt with wind
           vec3 camR = normalize(vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]));
-          vec3 v = wp + camR * position.x + vec3(uWind.x*0.08, 1.0, uWind.y*0.08) * position.y;
+          vec3 v = wp + camR * position.x * mix(1.0, 4.0, uSnow) + vec3(uWind.x*0.08, 1.0, uWind.y*0.08) * position.y * mix(1.0, 0.09, uSnow);
           vA = step(aOff.w, uAmount) * (1.0 - smoothstep(10.0, 18.0, length(p.xz)));
           gl_Position = projectionMatrix * viewMatrix * vec4(v, 1.0);
         }`,
-      fragmentShader: `varying float vA; varying vec2 vUv; uniform float uLight; void main(){ float a = vA * smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.6, vUv.y) * 0.35; gl_FragColor = vec4(vec3(0.75,0.8,0.88)*uLight, a); }`,
+      fragmentShader: `varying float vA; varying vec2 vUv; varying float vSnow; uniform float uLight; void main(){ float a = vA * mix(smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.6, vUv.y) * 0.35, 0.85, vSnow); gl_FragColor = vec4(mix(vec3(0.75,0.8,0.88), vec3(1.0), vSnow)*uLight, a); }`,
     });
     this.rainMesh = new THREE.Mesh(g, mat);
     this.rainMesh.frustumCulled = false;
@@ -79,7 +82,7 @@ export class Weather {
     this.fog = damp(this.fog, p.fog, k, dt);
     this.wind = damp(this.wind, p.wind + Math.sin(time * 0.13) * 0.1, 0.3, dt);
     this.tempOffset = damp(this.tempOffset, p.temp, k, dt);
-    this.wetness = clamp(this.wetness + (this.rain > 0.1 ? this.rain * 0.02 : -0.0025) * dtGameMin, 0, 1);
+    this.wetness = clamp(this.wetness + (this.rain > 0.1 && this.temperature(12) >= 1 ? this.rain * 0.02 : -0.0025) * dtGameMin, 0, 1);
     this.windDir.rotateAround(new THREE.Vector2(), Math.sin(time * 0.01) * 0.0005);
 
     // lightning
@@ -94,6 +97,10 @@ export class Weather {
       }
     }
     const m = this.rainMesh.material as THREE.ShaderMaterial;
+    const snowing = this.temperature(12) < 1;
+    m.uniforms.uSnow.value = snowing ? 1 : 0;
+    this.snowCover = clamp(this.snowCover + (snowing && this.rain > 0.1 ? this.rain * 0.03 : this.temperature(12) > 3 ? -0.01 : 0) * dtGameMin, 0, 1);
+    if (snowing) this.wetness = Math.max(0, this.wetness - 0.01 * dtGameMin);
     m.uniforms.uTime.value = time; m.uniforms.uCam.value.copy(cam); m.uniforms.uAmount.value = this.rain;
     m.uniforms.uWind.value.set(this.windDir.x * this.wind * 3, this.windDir.y * this.wind * 3);
     m.uniforms.uLight.value = 0.25 + daylight * 0.75 + this.lightning;
@@ -102,6 +109,6 @@ export class Weather {
   temperature(hours: number) {
     // base celsius: autumn in the Pacific Northwest
     const diurnal = Math.sin((hours - 9) / 24 * Math.PI * 2) * 5;
-    return 9 + diurnal + this.tempOffset;
+    return 9 + diurnal + this.tempOffset + this.seasonTemp;
   }
 }

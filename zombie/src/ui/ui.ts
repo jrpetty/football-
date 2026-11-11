@@ -174,7 +174,7 @@ export class UI {
     if (this.hudT > 0 && !this.dirty) { this.panelTick(dt); return; }
     this.hudT = 0.1;
     this.els.clock.textContent = g.clock();
-    this.els.day.textContent = `Day ${g.day()} · ${g.weather.kind}`;
+    this.els.day.textContent = `Day ${g.day()} · ${g.season().name} · ${g.weather.temperature(12) < 1 && g.weather.rain > 0.1 ? 'snow' : g.weather.kind}`;
     const t = g.weather.temperature(g.hours());
     this.els.temp.textContent = `${t.toFixed(0)}°C outside · body ${p.stats.bodyTemp.toFixed(1)}°C`;
     // compass

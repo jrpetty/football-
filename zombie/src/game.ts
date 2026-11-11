@@ -24,7 +24,7 @@ import { item, ItemDef } from './items/items';
 import { rollLoot } from './items/loot';
 import { RECIPES, Recipe, Station } from './items/recipes';
 import { Container, Door, Win } from './world/town';
-import { TreeInst } from './world/vegetation';
+import { TreeInst, windUniforms } from './world/vegetation';
 import { RNG, clamp, bus, damp, lerp } from './core/util';
 import { UI } from './ui/ui';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
@@ -100,6 +100,11 @@ export class Game {
   private shoveCD = 0;
   private attackers = 0; private overwhelmT = 0;
   private townLampEmitters: Emitter[] = [];
+  private streetEmitters: Emitter[] = [];
+  private buildingEmitters = new Map<any, Emitter[]>();
+  poweredBuildings = new Set<any>();
+  private spoilT = 0;
+  private genNoiseT = 0;
   private lastSave = 0;
   private music = 0;
   private fallingTrees: ((dt: number) => boolean)[] = [];
@@ -157,8 +162,8 @@ export class Game {
       audio.play('zombie_alert', { volume: 0.4 });
     };
     // town lamp emitters (dark until the Grid Uplink is powered)
-    for (const p of this.world.town.streetLamps) this.townLampEmitters.push(this.lights.add({ pos: p.clone(), color: new THREE.Color(0xffd29a), intensity: 0, distance: 22, on: false }));
-    for (const b of this.world.town.buildings) for (const p of b.lamps) this.townLampEmitters.push(this.lights.add({ pos: p.clone(), color: new THREE.Color(0xffe0b0), intensity: 0, distance: 9, on: false }));
+    for (const p of this.world.town.streetLamps) this.streetEmitters.push(this.lights.add({ pos: p.clone(), color: new THREE.Color(0xffd29a), intensity: 0, distance: 22, on: false }));
+    for (const b of this.world.town.buildings) { const list: Emitter[] = []; for (const p of b.lamps) list.push(this.lights.add({ pos: p.clone(), color: new THREE.Color(0xffe0b0), intensity: 0, distance: 9, on: false })); this.buildingEmitters.set(b, list); }
     progress(0.94, 'Compiling shaders');
     this.ui = new UI(this);
     this.wireEvents();
@@ -297,7 +302,8 @@ export class Game {
       daylight, hours: hrs, day: this.day(), luck: this.luck(),
     }, this.camera.position);
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
-    this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos });
+    this.weather.seasonTemp = this.season().temp;
+    this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs) });
     this.combatHeat = Math.max(0, this.combatHeat - dt * 0.5);
 
     // survival
@@ -342,12 +348,24 @@ export class Game {
     this.atmo.update(hrs, dt, this.camera, p.pos, this.time);
     this.renderer.renderer.toneMappingExposure = this.atmo.exposure() * (p.traits.has('night_owl') ? 1.15 : 1);
     (this.world.terrain.material.userData.uniforms as any).uWet.value = this.weather.wetness * 0.8;
+    (this.world.terrain.material.userData.uniforms as any).uSnow.value = this.weather.snowCover;
+    windUniforms.uSnow.value = this.weather.snowCover;
     this.world.update(dt, this.camera.position, this.atmo.sunDir, this.time, this.weather.wind);
     for (let i = this.fallingTrees.length - 1; i >= 0; i--) if (!this.fallingTrees[i](dt)) this.fallingTrees.splice(i, 1);
     for (let i = this.thunderQ.length - 1; i >= 0; i--) { this.thunderQ[i].t -= dt; if (this.thunderQ[i].t <= 0) { audio.play('thunder', { volume: this.thunderQ[i].v }); this.thunderQ.splice(i, 1); } }
     // town lights
     const lit = this.townLit();
-    for (const e of this.townLampEmitters) { e.on = lit; e.intensity = lit ? (e.distance > 15 ? 160 : 30) : 0; }
+    for (const e of this.streetEmitters) { e.on = lit; e.intensity = lit ? 160 : 0; }
+    this.poweredBuildings.clear();
+    for (const pc of this.base.pieces) if (pc.gen?.on) { const b = this.world.town.buildingAt(pc.cx, pc.cz); if (b) this.poweredBuildings.add(b); }
+    const dark = this.atmo.daylight < 0.6;
+    for (const [b, list] of this.buildingEmitters) { const on = dark && (this.factory.townPowered || this.poweredBuildings.has(b)); for (const e of list) { e.on = on; e.intensity = on ? 30 : 0; } }
+    // generators are loud
+    this.genNoiseT -= dt;
+    if (this.genNoiseT <= 0) { this.genNoiseT = 3; for (const pc of this.base.pieces) if (pc.gen?.on) this.zombies.noise(new THREE.Vector3(pc.cx, pc.y, pc.cz), 26); }
+    // spoilage, every 10 game minutes
+    this.spoilT += dtGame;
+    if (this.spoilT >= 10) { this.ageFood(this.spoilT); this.spoilT = 0; }
     // flashlight
     const fwd = p.forward();
     if (p.flashlightOn) {
@@ -515,6 +533,38 @@ export class Game {
     if (p.inv.count('gas_can_empty') && fuel > 0.1) return { label: 'Siphon fuel into gas can', act: () => this.startAction({ label: 'Siphoning… (it tastes awful)', dur: 5, cancelOnMove: true, done: () => { if (!p.inv.remove('gas_can_empty', 1)) return; const take = Math.min(0.5, target.fuel); target.fuel -= take; p.inv.add(take >= 0.45 ? 'gas_can' : 'gas_can_empty'); audio.play('splash', { volume: 0.5 }); if (take < 0.45) this.ui.notify('Not enough fuel left to fill the can.', ''); else this.ui.notify('Filled a gas can.', 'good'); } }) };
     if (!target.keys && !(target as Vehicle).hotwired && target.variant !== 'wreck') return { label: 'Hotwire', act: () => this.hotwire(target) };
     return undefined;
+  }
+
+  // ------------------------------------------------------------------ seasons & food
+  static SEASON_DAYS = 7;
+  season() {
+    const names = ['Autumn', 'Winter', 'Spring', 'Summer'], temps = [0, -13, 3, 10];
+    const d = (this.gameMin / 1440) / Game.SEASON_DAYS;
+    const i = Math.floor(d) % 4, f = d - Math.floor(d);
+    const prev = temps[(i + 3) % 4];
+    return { name: names[i], idx: i, temp: lerp(prev, temps[i], Math.min(1, f * Game.SEASON_DAYS)) };
+  }
+  private ageFood(minutes: number) {
+    const days = minutes / 1440;
+    const outdoorCold = this.weather.temperature(this.hours()) < 4 ? 0.5 : 1;
+    const age = (inv: Inventory, mul: number) => {
+      for (let i = inv.stacks.length - 1; i >= 0; i--) {
+        const s = inv.stacks[i]; const d = item(s.id);
+        if (!d.spoilDays) continue;
+        s.age = (s.age ?? 0) + days * mul;
+        if (s.age > d.spoilDays * 1.6) { const n = s.n; inv.stacks.splice(i, 1); inv.add('rotten_food', n); }
+      }
+    };
+    age(this.player.inv, outdoorCold);
+    for (const c of this.world.town.containers) {
+      if (!c.generated || !c.inv.stacks.length) continue;
+      const cold = c.kind === 'fridge' && (this.factory.townPowered || (c.building && this.poweredBuildings.has(c.building)));
+      age(c.inv, cold ? 0.14 : outdoorCold);
+    }
+    for (const pc of this.base.pieces) if (pc.container) age(pc.container.inv, outdoorCold);
+    for (const d of this.world.drops) age(d.inv, outdoorCold);
+    for (const v of this.vehicles.list) age(v.container.inv, outdoorCold);
+    for (const m of this.factory.machines) if (m.inv) age(m.inv, m.type === 'storage' ? outdoorCold : 1);
   }
 
   // ------------------------------------------------------------------ helpers
@@ -948,6 +998,7 @@ export class Game {
     if (s === 'crate') return { kind: 'pcontainer', label: 'Wooden Crate', target: pc, t };
     if (s === 'bed') return { kind: 'bed', label: 'Sleep', sub: this.player.stats.fatigue < 30 ? "You're not tired" : this.zombies.nearest(this.player.pos, 15) ? 'Zombies nearby!' : 'Rest until rested', target: pc, t };
     if (s === 'rain') return { kind: 'rain', label: 'Rain Collector', sub: `${pc.rain!.water.toFixed(1)} / 10 water · fill bottle / drink`, target: pc, t };
+    if (s === 'generator') { const g = pc.gen!; return { kind: 'gen', label: g.on ? 'Switch generator off' : 'Start generator', sub: `Fuel ${g.fuel.toFixed(1)} h${g.fuel <= 0 ? ' — refuel with a gas can (T)' : ''}`, target: pc, t, alt: this.player.inv.count('gas_can') ? { label: 'Refuel (gas can)', act: () => this.startAction({ label: 'Refuelling generator…', dur: 2.5, cancelOnMove: true, done: () => { if (!this.player.inv.remove('gas_can', 1)) return; g.fuel = Math.min(24, g.fuel + 12); this.player.inv.add('gas_can_empty'); audio.play('splash', { volume: 0.5 }); } }) } : undefined }; }
     if (s === 'farm') { const f = pc.farm!; return { kind: 'farm', label: f.crop ? (f.growth >= 1 ? `Harvest ${item(f.crop).name}` : `${item(f.crop).name} — ${Math.round(f.growth * 100)}% grown`) : 'Plant seeds', sub: f.crop ? `Water ${Math.round(f.water * 100)}%` : undefined, target: pc, t }; }
     return { kind: 'station', label: pc.def.name, target: pc, t };
   }
@@ -1036,6 +1087,7 @@ export class Game {
         break;
       }
       case 'farm': this.farmInteract(it.target as Piece); break;
+      case 'gen': { const g = (it.target as Piece).gen!; if (!g.on && g.fuel <= 0) { this.ui.notify('No fuel. Pour in a gas can (T).', ''); break; } g.on = !g.on; audio.play(g.on ? 'power_on' : 'power_off', { pos: (it.target as Piece).obj.position }); if (g.on && !this.world.town.buildingAt((it.target as Piece).cx, (it.target as Piece).cz)) this.ui.notify('Running — but it only powers a building it sits inside.', ''); break; }
       case 'water': {
         if (p.inv.count('empty_bottle')) { p.inv.remove('empty_bottle'); p.inv.add('dirty_water'); audio.play('splash'); this.ui.notify('Filled a bottle with lake water. Boil it before drinking.', ''); }
         else this.startAction({ label: 'Drinking…', dur: 2.5, cancelOnMove: true, done: () => { p.stats.thirst = Math.min(100, p.stats.thirst + 35); if (this.rng.chance(p.traits.has('iron_gut') ? 0.15 : 0.4)) p.stats.foodPoison = Math.min(1, p.stats.foodPoison + 0.4); audio.play('drink'); } });
