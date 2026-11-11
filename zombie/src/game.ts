@@ -35,6 +35,7 @@ import { CROPS } from './items/content';
 import { Throwables } from './combat/throwables';
 import { Railways, Train } from './factory/trains';
 import { Town, JOB_INFO } from './town/town';
+import { townWindowMaterial } from './models/town';
 import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
@@ -365,6 +366,7 @@ export class Game {
       if (hrs >= 18 && this.day() > this.lastFeedDay) { this.lastFeedDay = this.day(); this.survivors.feed(() => this.takeBaseFood(), (m, k) => this.ui.notify(m, k), !!this.factory.hub); }
     }
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
+    townWindowMaterial().emissiveIntensity = 0.15 + (1 - daylight) * 1.05;
     this.weather.seasonTemp = this.season().temp;
     this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs), season: this.state === 'play' ? this.season().idx : 0, farming: p.skills.level('farming'), covered: (x, z) => this.world.isInside(x, z), time: this.time });
     this.sprinklers(dt);
@@ -1568,6 +1570,7 @@ export class Game {
         this.player.gainXP('engineering', 8, this.gameMin);
       } else if (MACHINES[id]) {
         const m = this.factory.add(id, cx, cz, rot);
+        if (!id.startsWith('belt')) { const W = (rot % 2 ? m.def.size[1] : m.def.size[0]), D = (rot % 2 ? m.def.size[0] : m.def.size[1]); this.clearGround(cx, cz, W + 0.6, D + 0.6); }
         if (id === 'hub') this.ui.notify('🔔 Settlement founded. Open the Hall (E) to see what your town needs to grow. Build Shelter Houses so survivors have somewhere to live — and mind the noise, hordes will come.', 'good');
         audio.play('machine_place', { pos: new THREE.Vector3(cx, m.y, cz) });
         this.player.gainXP('engineering', 4, this.gameMin);
@@ -1619,6 +1622,17 @@ export class Game {
     }
     audio.play('deconstruct');
     void p;
+  }
+
+  /** clear trees, bushes and boulders under a new building (felled trees leave logs) */
+  private clearGround(cx: number, cz: number, hw: number, hd: number) {
+    const veg = this.world.veg; let last: any = null; let logs = 0;
+    for (const t of veg.insts) {
+      if (!t.alive || Math.abs(t.x - cx) > hw || Math.abs(t.z - cz) > hd) continue;
+      t.alive = false; veg.removed.add(t.idx); if (t.col) this.world.col.removeCircle(t.col); last = t; if (t.kind === 'tree') logs += 2;
+    }
+    if (last) { last.alive = true; veg.kill(last, this.player.pos); }
+    if (logs) { const inv = new Inventory(); inv.add('log', logs); this.world.dropItems(new THREE.Vector3(cx + hw + 0.5, this.world.groundY(cx + hw + 0.5, cz), cz), inv); }
   }
 
   // ------------------------------------------------------------------ trains

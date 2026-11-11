@@ -5,6 +5,7 @@ import type { TreeModel } from '../models/vegetation';
 import { buildLowPolyTreeModels } from '../models/lowpoly';
 import { buildTreeModels as buildRealTreeModels } from '../models/vegetation';
 import { LOWPOLY } from '../render/materials';
+import { getOreVeinInstancedMaterial, setOreSnowUniform, ORE_INDEX, type OreType } from '../models/ores';
 import { Terrain, T_N, T_RES } from './terrain';
 import { CollisionWorld, Circle } from './collision';
 import { LAKE, TOWN } from './layout';
@@ -81,6 +82,8 @@ export class Vegetation {
   group = new THREE.Group();
   insts: TreeInst[] = [];
   private variants: Variant[] = [];
+  /** rock variant index -> matching ore-vein variant (same geometry, mineral-vein shader) */
+  private veinOf = new Map<number, number>();
   private cells = new Map<number, TreeInst[]>();
   private lastCenter = new THREE.Vector2(1e9, 1e9);
   grass!: THREE.Mesh;
@@ -97,11 +100,19 @@ export class Vegetation {
     ];
     const vIndex: Record<string, number[]> = { pine: [], fir: [], birch: [], dead: [], bush: [], rock: [], log: [] };
     const keys = ['pine', 'fir', 'birch', 'dead', 'bush', 'rock', 'log'];
+    setOreSnowUniform(windUniforms.uSnow);
     groups.forEach(([list, kind, wind, imp], gi) => {
       list.forEach((m, mi) => {
         const tex = imp ? this.renderImpostor(m) : null;
         const v = new Variant(m, kind, this.group, kind === 'tree' ? 900 : 1500, kind === 'tree' ? 9000 : 0, tex, wind, keys[gi] + mi);
-        vIndex[keys[gi]].push(this.variants.length); this.variants.push(v);
+        const vi = this.variants.length;
+        vIndex[keys[gi]].push(vi); this.variants.push(v);
+        if (kind === 'rock') {
+          // ore-bearing boulders: same rock, drawn with the mineral-vein shader (mineral picked per instance)
+          const veinModel: TreeModel = { ...m, parts: m.parts.map(p => ({ geometry: p.geometry, material: getOreVeinInstancedMaterial(p.material) })) };
+          this.veinOf.set(vi, this.variants.length);
+          this.variants.push(new Variant(veinModel, kind, this.group, 800, 0, null, 0, 'vein' + mi));
+        }
       });
     });
 
@@ -198,17 +209,18 @@ export class Vegetation {
       } else {
         const lim = t.kind === 'bush' ? bushFar2 : far2 * 0.5;
         const tint = this.tint(t);
-        if (d2 < lim) for (const n of v.near) { if (n.count < n.instanceMatrix.count) { n.setColorAt(n.count, tint); n.setMatrixAt(n.count++, this.tmpM); } }
+        const vv = t.ore ? this.variants[this.veinOf.get(t.v) ?? t.v] : v;
+        if (d2 < lim) for (const n of vv.near) { if (n.count < n.instanceMatrix.count) { n.setColorAt(n.count, tint); n.setMatrixAt(n.count++, this.tmpM); } }
       }
     }
     for (const v of this.variants) { for (const n of v.near) { n.instanceMatrix.needsUpdate = true; if (n.instanceColor) n.instanceColor.needsUpdate = true; } if (v.far) { v.far.instanceMatrix.needsUpdate = true; if (v.far.instanceColor) v.far.instanceColor.needsUpdate = true; } }
   }
 
   private tintC = new THREE.Color();
-  /** per-instance colour variety: brightness and a slight warm/cool hue drift */
-  private static ORE_TINT: Record<string, [number, number, number]> = { iron_ore: [1.25, 0.72, 0.6], copper_ore: [1.25, 0.9, 0.62], coal: [0.45, 0.45, 0.47], sulfur: [1.3, 1.2, 0.55], quartz: [1.35, 1.35, 1.45], bauxite: [1.25, 0.75, 0.55], gold_ore: [1.4, 1.15, 0.5] };
+  /** per-instance colour variety: brightness and a slight warm/cool hue drift.
+   *  Ore boulders instead encode their mineral for the vein shader: r = ORE_INDEX, g = vein richness. */
   private tint(t: TreeInst) {
-    if (t.ore) { const c = Vegetation.ORE_TINT[t.ore] ?? [1, 1, 1]; return this.tintC.setRGB(c[0], c[1], c[2]); }
+    if (t.ore) return this.tintC.setRGB(ORE_INDEX[t.ore as OreType] ?? 0, 0.3 + hash2(Math.floor(t.x * 7), Math.floor(t.z * 7), 3) * 0.3, 1);
     const h = hash2(Math.floor(t.x * 3), Math.floor(t.z * 3), 7), k = hash2(Math.floor(t.z * 5), Math.floor(t.x * 5), 11);
     const b = 0.84 + h * 0.3;
     return this.tintC.setRGB(b * (0.96 + k * 0.1), b, b * (1.04 - k * 0.1));

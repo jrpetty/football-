@@ -55,9 +55,9 @@ function windowMat(): Mat {
 
 interface Kit {
   wood: Mat; woodD: Mat; floor: Mat; roof: Mat; rust: Mat; dark: Mat; metal: Mat; steel: Mat; conc: Mat; brick: Mat;
-  rock: Mat; sidB: Mat; sidG: Mat; sidY: Mat; sidW: Mat; tinRed: Mat; tinGreen: Mat; tarp: Mat; canvas: Mat; sandbag: Mat;
+  rock: Mat; rustSheet: Mat; sidB: Mat; sidG: Mat; sidY: Mat; sidW: Mat; tinRed: Mat; tinGreen: Mat; tarp: Mat; canvas: Mat; sandbag: Mat;
   rope: Mat; black: Mat; rubber: Mat; bark: Mat; endGrain: Mat; win: Mat; flame: Mat; bulb: Mat; ember: Mat; soot: Mat;
-  water: Mat; mortar: Mat; block: Mat; status: Mat; dirt: Mat; white: Mat;
+  water: Mat; slab: Mat; mortar: Mat; block: Mat; status: Mat; dirt: Mat; white: Mat;
 }
 let KIT: Kit | null = null;
 function kit(): Kit {
@@ -66,7 +66,7 @@ function kit(): Kit {
     wood: M('wood'), woodD: M('woodDark'), floor: M('woodFloor'), roof: M('roofMetal'), rust: M('metalRust'),
     dark: M('metalDark'), metal: M('metal'), steel: M('steelBrushed'), conc: M('concrete'), brick: M('brickRed'),
     rock: M('rock'), sidB: M('sidingBlue'), sidG: M('sidingGreen'), sidY: M('sidingYellow'), sidW: M('sidingWhite'),
-    tinRed: tint('roofMetal', 0xc07656), tinGreen: tint('roofMetal', 0x86a07c),
+    tinRed: tint('roofMetal', 0xb47c64), tinGreen: tint('roofMetal', 0x86a07c), rustSheet: tint('metalRust', 0xa89484),
     tarp: tint('fabric', 0x6f9cd0), canvas: tint('fabric', 0xe0d2aa), sandbag: tint('fabric', 0xc4b080),
     rope: flat(0x8e7c58, 0.95, 0), black: M('plasticBlack'), rubber: M('rubber'), bark: M('bark'),
     endGrain: flat(0xb8925e, 0.9, 0), win: windowMat(),
@@ -76,7 +76,7 @@ function kit(): Kit {
     soot: flat(0x1e1b18, 0.95, 0),
     water: ownMat('water', () => new THREE.MeshStandardMaterial({ name: 'town_water', color: 0x2a3c40, roughness: 0.06, metalness: 0.2 })),
     mortar: flat(0x6c675e, 0.95, 0), block: tint('concrete', 0xc4c0b4), status: M('emissiveGreen'),
-    dirt: tint('dirt', 0xd8c49c), white: M('plasticWhite'),
+    dirt: tint('sand', 0xc8b494), white: M('plasticWhite'), slab: tint('concrete', 0x9c988e),
   };
   return KIT;
 }
@@ -119,10 +119,15 @@ function paintPlanks(g: CanvasRenderingContext2D, W: number, H: number, r: () =>
     for (const x of [W * 0.04, W * 0.96]) { g.beginPath(); g.arc(x, i * ph + ph / 2, Math.max(2, H * 0.012), 0, TAU); g.fill(); }
   }
 }
-function paintText(g: CanvasRenderingContext2D, r: () => number, text: string, cx: number, cy: number, size: number, color: string, spacing = 0.06): void {
-  g.font = `900 ${size}px "Arial Black", Impact, "DejaVu Sans", "Liberation Sans", sans-serif`;
+function paintText(g: CanvasRenderingContext2D, r: () => number, text: string, cx: number, cy: number, size: number, color: string, spacing = 0.06, maxFrac = 0.88): void {
+  const font = (sz: number): string => `900 ${sz}px "Arial Black", Impact, "DejaVu Sans", "Liberation Sans", sans-serif`;
+  g.font = font(size);
   g.textBaseline = 'middle'; g.textAlign = 'center';
-  const ws = [...text].map((c) => g.measureText(c).width + size * spacing);
+  const measure = (): number[] => [...text].map((c) => g.measureText(c).width + size * spacing);
+  let ws = measure();
+  const maxW = g.canvas.width * maxFrac;
+  const total0 = ws.reduce((a, b) => a + b, 0);
+  if (total0 > maxW) { size = Math.floor(size * maxW / total0); g.font = font(size); ws = measure(); }
   const total = ws.reduce((a, b) => a + b, 0);
   let x = cx - total / 2;
   [...text].forEach((c, i) => {
@@ -157,7 +162,7 @@ function signMess(): Mat {
 function signHall(): Mat {
   return canvasMat('sign_hall', 4.4, 0x3a4630, (g, W, H, r) => {
     paintPlanks(g, W, H, r, [64, 78, 58], 2);
-    paintText(g, r, 'SETTLEMENT HALL', W / 2, H * 0.52, H * 0.46, '#efe6cc', 0.04);
+    paintText(g, r, 'SETTLEMENT HALL', W / 2, H * 0.52, H * 0.42, '#efe6cc', 0.03, 0.7);
     wear(g, W, H, r, 'rgb(96,74,52)', 220);
   }, 768);
 }
@@ -242,6 +247,16 @@ function hBoards(b: PB, m: THREE.Material, x0: number, x1: number, y0: number, y
     hb(b, x1 - x0 + dx, h - 0.01, t, m, (x0 + x1) / 2 + dx / 2, y0 + (i + 0.5) * h, z + (r() - 0.5) * 0.01, (r() - 0.5) * 0.05, 0, (r() - 0.5) * 0.01);
   }
 }
+/** Painted lap siding (texture carries the boards): a couple of salvaged panels, slightly offset. */
+function siding(b: PB, m: THREE.Material, x0: number, x1: number, y0: number, y1: number, z: number, r: () => number, t = 0.03): void {
+  const n = Math.max(1, Math.round((x1 - x0) / 1.3));
+  const w = (x1 - x0) / n;
+  for (let i = 0; i < n; i++) {
+    const dy = (r() - 0.5) * 0.04;
+    b.box(w - 0.01, y1 - y0 + dy, t, m, x0 + (i + 0.5) * w, (y0 + y1) / 2 + dy / 2, z + (i % 2) * 0.006, 0, 0, (r() - 0.5) * 0.012);
+  }
+  for (let i = 1; i < n; i++) b.box(0.07, y1 - y0, t + 0.012, M('woodDark'), x0 + i * w, (y0 + y1) / 2, z + 0.006);
+}
 /** Corrugated sheet panel (ribs vertical) on a wall, slightly askew. */
 function tin(b: PB, m: THREE.Material, x0: number, x1: number, y0: number, y1: number, z: number, r: () => number, t = 0.025): void {
   b.box(x1 - x0, y1 - y0, t, m, (x0 + x1) / 2, (y0 + y1) / 2, z, 0, 0, (r() - 0.5) * 0.03);
@@ -256,7 +271,7 @@ function windowAt(b: PB, x: number, y: number, z: number, ry: number, w: number,
     b.add(quadGeo(w, h), k.win, 0, 0, 0.012);
     const f = 0.07;
     hb(b, w + f * 2, f, 0.07, frame, 0, h / 2 + f / 2, 0.035);
-    hb(b, w + f * 2 + 0.12, 0.05, 0.13, frame, 0, -h / 2 - 0.025, 0.06);
+    hb(b, w + f * 2 + 0.12, 0.05, 0.1, frame, 0, -h / 2 - 0.025, 0.05);
     b.box(f, h, 0.07, frame, -w / 2 - f / 2, 0, 0.035);
     b.box(f, h, 0.07, frame, w / 2 + f / 2, 0, 0.035);
     if (opts.cross !== false) {
@@ -430,7 +445,7 @@ function blockWall(b: PB, xa: number, xb: number, y0: number, y1: number, holes:
     }
   }
   // lintels
-  for (const h of holes) if (h[3] < y1 - 0.1) b.box(h[1] - h[0] + 0.3, 0.18, t, k.conc, (h[0] + h[1]) / 2, h[3] + 0.09, -t / 2 + 0.005);
+  for (const h of holes) if (h[3] < y1 - 0.1) b.box(h[1] - h[0] + 0.3, 0.18, t, k.block, (h[0] + h[1]) / 2, h[3] + 0.09, -t / 2 + 0.005);
 }
 
 // ---------------------------------------------------------------------------
@@ -448,8 +463,8 @@ function buildShelterHouse(b: PB): Rig {
   hb(b, 3.1, 0.12, 0.06, k.woodD, 0, 0.3, 1.74); // porch rim
   for (const x of [-1.52, 1.52]) zb(b, 0.06, 0.12, 0.76, k.woodD, x, 0.3, 1.36);
   // step
-  hb(b, 1.0, 0.06, 0.22, k.wood, -0.55, 0.21, 1.86);
-  b.blk(0.9, 0.18, 0.2, k.block, -0.55, 0, 1.86);
+  hb(b, 1.0, 0.06, 0.22, k.wood, -0.55, 0.21, 1.83);
+  b.blk(0.9, 0.18, 0.2, k.block, -0.55, 0, 1.83);
   // wall core + corner posts + plates
   b.blk(X * 2 - 0.06, EY - FY, ZF - ZB - 0.06, k.woodD, 0, FY, cz);
   for (const sx of [-1, 1]) for (const z of [ZB, ZF]) b.blk(0.11, EY - FY + 0.05, 0.11, k.wood, sx * X, FY - 0.05, z);
@@ -457,7 +472,7 @@ function buildShelterHouse(b: PB): Rig {
   zb(b, 0.1, 0.1, ZF - ZB, k.wood, -X, EY - 0.05, cz); zb(b, 0.1, 0.1, ZF - ZB, k.wood, X, EY - 0.05, cz);
   // FRONT: blue lap siding left, red-oxide tin right
   b.at(0, 0, ZF, 0, () => {
-    hBoards(b, k.sidB, -X + 0.05, 0.25, FY, EY - 0.1, 0.0, r, 0.19);
+    siding(b, k.sidB, -X + 0.05, 0.25, FY, EY - 0.1, 0.0, r);
     tin(b, k.tinRed, 0.2, X - 0.05, FY + 0.02, EY - 0.12, 0.02, r);
     b.box(0.5, 0.45, 0.03, k.rust, 1.15, FY + 0.45, 0.04, 0, 0, 0.12);
   });
@@ -466,11 +481,11 @@ function buildShelterHouse(b: PB): Rig {
   // RIGHT (+X): galvanised tin, a white siding patch
   b.at(X, 0, cz, Math.PI / 2, () => {
     tin(b, k.roof, -hd + 0.06, hd - 0.06, FY + 0.02, EY - 0.1, 0.0, r);
-    hBoards(b, k.sidW, -0.6, 0.5, FY + 0.15, FY + 1.05, 0.03, r, 0.18);
+    siding(b, k.sidW, -0.6, 0.5, FY + 0.15, FY + 1.05, 0.03, r);
   });
   // LEFT (-X): green siding + shuttered window
   b.at(-X, 0, cz, -Math.PI / 2, () => {
-    hBoards(b, k.sidG, -hd + 0.06, hd - 0.06, FY, EY - 0.1, 0.0, r, 0.19);
+    siding(b, k.sidG, -hd + 0.06, hd - 0.06, FY, EY - 0.1, 0.0, r);
   });
   windowAt(b, -X - 0.03, FY + 1.2, cz + 0.1, -Math.PI / 2, 0.55, 0.55, k.woodD, { shutters: k.wood });
   // BACK: vertical boards + tin patch + boarded window
@@ -478,17 +493,16 @@ function buildShelterHouse(b: PB): Rig {
     vBoards(b, k.wood, -X + 0.05, X - 0.05, FY, EY - 0.1, 0.0, r);
     tin(b, k.tinGreen, -1.2, -0.2, FY + 0.1, FY + 1.2, 0.035, r);
   });
-  windowAt(b, 0.6, FY + 1.25, ZB - 0.04, Math.PI, 0.5, 0.5, k.woodD, { boarded: true });
+  windowAt(b, -0.75, FY + 1.25, ZB - 0.04, Math.PI, 0.5, 0.5, k.woodD, { boarded: true });
   // gables + roof
   const RY = EY + rise;
   for (const sx of [-1, 1]) {
     gableTri(b, k.wood, sx * (X - 0.02), EY, cz, hd + 0.02, rise, 0.05);
-    for (let z = -hd + 0.3; z < hd - 0.2; z += 0.32) b.box(0.04, 0.03, 0.05, k.woodD, sx * X, 0, 0); // (cheap batten placeholder at origin is hidden)
   }
   const ov = 0.22, RL = X * 2 + 0.55;
-  const a = gableRoof(b, RY, cz, hd, rise, ov, RL, [k.roof, k.roof, k.tinGreen, k.roof, k.rust], r);
+  const a = gableRoof(b, RY, cz, hd, rise, ov, RL, [k.roof, k.roof, k.tinGreen, k.roof, k.rustSheet], r);
   onSlope(b, RY, cz, a, 1, () => {
-    b.box(0.7, 0.02, 0.5, k.rust, -0.6, 0.06, 0.9, 0, 0.2, 0);
+    b.box(0.7, 0.02, 0.5, k.rustSheet, -0.6, 0.06, 0.9, 0, 0.2, 0);
     for (const sx of [-1, 1]) b.box(0.12, 0.12, (hd + ov) / Math.cos(a), k.woodD, sx * (RL / 2 - 0.05), -0.04, (hd + ov) / Math.cos(a) / 2);
   });
   onSlope(b, RY, cz, a, -1, () => {
@@ -509,7 +523,7 @@ function buildShelterHouse(b: PB): Rig {
   // porch awning over the door
   for (const x of [-1.2, 0.12]) b.blk(0.09, 2.3 - FY, 0.09, k.wood, x, FY, 1.66);
   hb(b, 1.55, 0.1, 0.1, k.woodD, -0.54, 2.32, 1.66);
-  b.box(1.75, 0.025, 0.95, k.roof, -0.54, 2.43, 1.33, -0.26, 0, 0.02);
+  b.box(1.75, 0.025, 0.95, k.roof, -0.54, 2.45, 1.33, 0.2, 0, 0.02);
   b.box(1.75, 0.08, 0.06, k.woodD, -0.54, 2.53, ZF + 0.04);
   // lantern on a bracket by the door
   b.box(0.04, 0.04, 0.22, k.dark, 0.05, 2.12, ZF + 0.1);
@@ -533,7 +547,7 @@ function buildShelterHouse(b: PB): Rig {
     }
   }
   // bucket + chopping stump by the steps
-  b.cyl(0.13, 0.25, k.metal, 1.2, 0.125, 1.88, 'y', 10, 0.15, true);
+  b.cyl(0.13, 0.25, k.metal, 1.2, FY + 0.125, 1.45, 'y', 10, 0.15, true);
   return (p) => () => {};
 }
 
@@ -546,7 +560,7 @@ function buildBunkhouse(b: PB): Rig {
   const X0 = -2.75, X1 = 1.7, XC = (X0 + X1) / 2, LEN = X1 - X0;
   const containerPaint = tint('factoryPanel', 0x4f7d78);
   // slab
-  b.blk(4.7, 0.12, 4.85, k.conc, XC, 0, -0.5);
+  b.blk(4.7, 0.12, 4.85, k.slab, XC, 0, -0.5);
   const Y0 = 0.12;
   // --- container (back half of ground floor)
   const CZ0 = -2.85, CZ1 = -0.45, CH = 2.5, ccz = (CZ0 + CZ1) / 2;
@@ -575,23 +589,23 @@ function buildBunkhouse(b: PB): Rig {
   b.at(X0, Y0, (CZ1 + FZ) / 2 - 0.1, -Math.PI / 2, () => blockWall(b, -1.0, 0.95, 0, BH, [[-0.4, 0.4, 0.8, 1.6]]));
   b.at(X1, Y0, (CZ1 + FZ) / 2 - 0.1, Math.PI / 2, () => blockWall(b, -0.95, 1.0, 0, BH, []));
   // openings (recessed)
-  for (const x of [XC - 1.4, XC + 1.45]) windowAt(b, x, Y0 + 1.2, FZ - 0.12, 0, 0.78, 0.7, k.woodD, { cross: true });
-  windowAt(b, X0 + 0.12, Y0 + 1.2, (CZ1 + FZ) / 2 - 0.1, -Math.PI / 2, 0.7, 0.7, k.woodD);
-  doorAt(b, XC + 0.3, Y0, FZ - 0.16, 0, 0.84, 1.95, flat(0x6b3a2a, 0.8, 0.1), k.woodD);
+  for (const x of [XC - 1.4, XC + 1.45]) windowAt(b, x, Y0 + 1.2, FZ - 0.095, 0, 0.76, 0.68, k.woodD, { cross: true });
+  windowAt(b, X0 + 0.095, Y0 + 1.2, (CZ1 + FZ) / 2 - 0.1, -Math.PI / 2, 0.66, 0.66, k.woodD);
+  doorAt(b, XC + 0.3, Y0, FZ - 0.095, 0, 0.72, 1.9, k.rust, k.woodD);
   // --- floor band + upper storey
   const U0 = 2.62, U1 = 4.85, UZ0 = -2.82, UZ1 = 1.82, ucz = (UZ0 + UZ1) / 2, uhd = (UZ1 - UZ0) / 2;
   b.blk(LEN + 0.1, 0.2, UZ1 - UZ0, k.woodD, XC, U0 - 0.1, ucz);
   for (let x = X0 + 0.15; x < X1; x += 0.45) b.box(0.08, 0.16, 0.12, k.woodD, x, U0 - 0.2, UZ1 - 0.02);
   for (const x of [X0 + 0.08, XC + 0.3 + 0.75, X1 - 0.08]) b.blk(0.14, U0 - 0.2 - Y0, 0.14, k.wood, x, Y0, UZ1 - 0.1);
-  b.blk(LEN - 0.04, U1 - U0, UZ1 - UZ0 - 0.04, k.woodD, XC, U0 + 0.1, ucz);
-  for (const x of [X0, X1]) for (const z of [UZ0, UZ1]) b.blk(0.12, U1 - U0, 0.12, k.wood, x + (x < 0 ? 0.04 : -0.04), U0 + 0.1, z + (z < 0 ? 0.04 : -0.04));
+  b.blk(LEN - 0.04, U1 - U0 - 0.1, UZ1 - UZ0 - 0.04, k.woodD, XC, U0 + 0.1, ucz);
+  for (const x of [X0, X1]) for (const z of [UZ0, UZ1]) b.blk(0.12, U1 - U0 - 0.1, 0.12, k.wood, x + (x < 0 ? 0.04 : -0.04), U0 + 0.1, z + (z < 0 ? 0.04 : -0.04));
   b.at(XC, 0, UZ1, 0, () => {
-    hBoards(b, k.sidY, -LEN / 2 + 0.06, 0.6, U0 + 0.12, U1, 0.0, r, 0.2);
-    hBoards(b, k.sidB, 0.6, LEN / 2 - 0.06, U0 + 0.12, U1, 0.0, r, 0.2);
+    siding(b, k.sidY, -LEN / 2 + 0.06, 0.6, U0 + 0.12, U1, 0.0, r);
+    siding(b, k.sidB, 0.6, LEN / 2 - 0.06, U0 + 0.12, U1, 0.0, r);
   });
   for (const x of [XC - 1.5, XC, XC + 1.5]) windowAt(b, x, U0 + 1.25, UZ1 + 0.035, 0, 0.7, 0.72, k.wood);
   b.at(X0, 0, ucz, -Math.PI / 2, () => vBoards(b, k.wood, -uhd + 0.06, uhd - 0.06, U0 + 0.12, U1, 0.0, r));
-  for (const z of [ucz - 1.2, ucz + 1.2]) windowAt(b, X0 - 0.035, U0 + 1.25, z, -Math.PI / 2, 0.66, 0.7, k.woodD, { shutters: k.sidG });
+  for (const z of [ucz - 1.2, ucz + 1.2]) windowAt(b, X0 - 0.035, U0 + 1.25, z, -Math.PI / 2, 0.66, 0.7, k.woodD, { shutters: k.sidB });
   b.at(X1, 0, ucz, Math.PI / 2, () => {
     vBoards(b, k.wood, -uhd + 0.06, uhd - 0.06, U0 + 0.12, U1, 0.0, r);
     tin(b, k.tinRed, -0.6, 1.5, U0 + 0.2, U0 + 1.2, 0.035, r);
@@ -599,7 +613,7 @@ function buildBunkhouse(b: PB): Rig {
   b.at(XC, 0, UZ0, Math.PI, () => {
     tin(b, k.roof, -LEN / 2 + 0.06, LEN / 2 - 0.06, U0 + 0.12, U1, 0.0, r);
   });
-  windowAt(b, XC - 0.8, U0 + 1.25, UZ0 - 0.04, Math.PI, 0.66, 0.66, k.woodD);
+  windowAt(b, XC - 0.8, U0 + 1.25, UZ0 - 0.03, Math.PI, 0.66, 0.66, k.woodD);
   // upper door on the +X side, landing + stair
   doorAt(b, X1 + 0.03, U0 + 0.1, -1.75, Math.PI / 2, 0.8, 1.9, k.woodD, k.wood);
   const LX0 = X1 + 0.08, LX1 = 2.88, LZ0 = -2.55, LZ1 = -1.0;
@@ -615,7 +629,7 @@ function buildBunkhouse(b: PB): Rig {
   // stair down to the front
   const SZ0 = LZ1, SZ1 = 2.85, SX0 = X1 + 0.18, SX1 = 2.86;
   const steps = 14;
-  for (const x of [SX0 + 0.03, SX1 - 0.03]) b.beam([x, 0.05, SZ1 - 0.05], [x, U0 + 0.02, SZ0], 0.06, k.woodD, 0.22);
+  for (const x of [SX0 + 0.03, SX1 - 0.03]) b.beam([x, 0.13, SZ1 - 0.08], [x, U0 + 0.02, SZ0], 0.06, k.woodD, 0.22);
   for (let i = 0; i < steps; i++) {
     const t = (i + 0.5) / steps;
     hb(b, SX1 - SX0 - 0.02, 0.045, 0.25, k.wood, (SX0 + SX1) / 2, U0 * (1 - t) + 0.06, SZ0 + (SZ1 - SZ0) * t);
@@ -626,16 +640,18 @@ function buildBunkhouse(b: PB): Rig {
   }
   b.beam([SX1 - 0.03, 1.05, SZ1 - 0.1], [SX1 - 0.03, U0 + 1.1, SZ0], 0.05, k.wood);
   // roof
-  const rise = 0.85, ov = 0.1, RY = U1 + rise;
+  const rise = 0.85, ov = 0.02, RY = U1 + rise;
   for (const sx of [X0, X1]) gableTri(b, k.wood, sx, U1, ucz, uhd, rise);
-  const a = gableRoof(b, RY, ucz, uhd, rise, ov, LEN + 0.22, [k.roof, k.tinGreen, k.roof, k.rust, k.roof], r);
+  b.push(XC, 0, 0);
+  const a = gableRoof(b, RY, ucz, uhd, rise, ov, LEN + 0.22, [k.roof, k.tinGreen, k.roof, k.rustSheet, k.roof], r);
+  b.pop();
   hb(b, LEN + 0.26, 0.13, 0.13, k.dark, XC, RY + 0.03, ucz, Math.PI / 4);
   b.cyl(0.08, 1.5, k.dark, XC - 1.3, RY - 0.1, ucz - 1.0, 'y', 10);
   b.add(cylGeo(0, 0.18, 0.14, 10), k.dark, XC - 1.3, RY + 0.72, ucz - 1.0);
   void a;
   // caged bulb over the ground door + status light
   b.box(0.05, 0.05, 0.25, k.dark, XC + 0.3, 2.3, FZ + 0.1);
-  b.mesh('flame', sphereGeo(0.06, 8, 6), k.bulb, XC + 0.3, 2.2, FZ + 0.2);
+  b.mesh('bulb', sphereGeo(0.06, 8, 6), k.bulb, XC + 0.3, 2.2, FZ + 0.2);
   b.add(cylGeo(0.05, 0.12, 0.08, 8, true), k.dark, XC + 0.3, 2.28, FZ + 0.2);
   b.anchor('lightAnchor', XC + 0.3, 2.15, FZ + 0.45);
   statusLight(b, XC + 0.85, Y0 + 2.0, FZ + 0.03);
@@ -644,7 +660,7 @@ function buildBunkhouse(b: PB): Rig {
     hb(b, 1.3, 0.05, 0.3, k.wood, 0, 0.45, 0);
     for (const sx of [-0.55, 0.55]) b.blk(0.08, 0.42, 0.26, k.woodD, sx, 0.0, 0);
   });
-  barrel(b, flat(0x3a5a3a, 0.6, 0.2), X0 + 0.3, 0.12, FZ + 0.35, 0.26, 0.82);
+  barrel(b, containerPaint, X0 + 0.3, 0.12, FZ + 0.35, 0.26, 0.82);
   // washing line
   const LY = 1.85, lz = 2.55, la = X0 + 0.15, lb = XC + 1.6;
   for (const x of [la, lb]) {
@@ -660,7 +676,7 @@ function buildBunkhouse(b: PB): Rig {
   const half = (lb - la) / 2;
   for (const [x, w, h, m] of cloths) {
     const tt = (x + half) / (2 * half);
-    const sag = 0.06 * 4 * tt * (1 - tt) * 2 - 0.0;
+    const sag = 0.24 * tt * (1 - tt);
     ln.box(w, h, 0.012, m, x, -sag - h / 2 - 0.01, 0, 0, (r() - 0.5) * 0.2, (r() - 0.5) * 0.05);
     for (const s of [-1, 1]) ln.box(0.015, 0.06, 0.025, k.woodD, x + s * w * 0.4, -sag, 0);
   }
@@ -689,7 +705,7 @@ function buildMessHall(b: PB): Rig {
     b.beam([sx * PX, EY - 0.7, z + (z > ZB ? -0.55 : 0.55)], [sx * PX, EY - 0.12, z], 0.08, k.woodD);
     if (z !== ZB && z !== ZF) b.beam([sx * PX, EY - 0.7, z + 0.55], [sx * PX, EY - 0.12, z], 0.08, k.woodD);
   }
-  for (const sx of [-1, 1]) zb(b, 0.16, 0.18, ZF - ZB + 0.3, k.woodD, sx * PX, EY + 0.0, cz);
+  for (const sx of [-1, 1]) zb(b, 0.16, 0.18, ZF - ZB + 0.3, k.woodD, sx * PX, EY - 0.09, cz);
   for (const z of postZ) {
     hb(b, PX * 2 + 0.2, 0.18, 0.14, k.woodD, 0, EY - 0.1, z);
     b.blk(0.12, rise - 0.05, 0.12, k.wood, 0, EY, z);
@@ -698,24 +714,22 @@ function buildMessHall(b: PB): Rig {
   zb(b, 0.14, 0.16, ZF - ZB + 0.3, k.woodD, 0, RY - 0.12, cz);
   // roof (ridge along Z): build in a rotated frame
   const hd = PX, ov = 0.28;
-  b.push(0, 0, 0, 0, Math.PI / 2, 0);
-  const a = gableRoof(b, RY, 0, hd, rise, ov, ZF - ZB + 0.45, [k.roof, k.roof, k.tinRed, k.roof, k.rust, k.tinGreen], r);
+  b.push(0, 0, cz, 0, Math.PI / 2, 0);
+  gableRoof(b, RY, 0, hd, rise, ov, ZF - ZB + 0.45, [k.roof, k.roof, k.tinRed, k.roof, k.rustSheet], r);
   b.pop();
-  // the frame above is centred at z=0, shift: we built length centred at origin; so fix by offset patch
-  void a;
   // back wall + gable
   b.at(0, 0, ZB - 0.11, Math.PI, () => vBoards(b, k.wood, -PX, PX, FY, EY - 0.18, 0.0, r, 0.2));
   gableTriZ(b, k.wood, ZB - 0.1, EY - 0.02, 0, PX + 0.05, rise + 0.02);
   // side half walls
   for (const sx of [-1, 1]) {
     b.at(sx * (PX + 0.1), 0, -1.5, sx * Math.PI / 2, () => hBoards(b, k.woodD, -1.0, 1.0, FY, FY + 0.95, 0, r, 0.19));
-    hb(b, 0.14, 0.05, 2.1, k.wood, sx * (PX + 0.08), FY + 0.97, -1.5, 0, Math.PI / 2, 0);
+    zb(b, 0.14, 0.05, 2.1, k.wood, sx * (PX + 0.08), FY + 0.97, -1.5);
   }
   // brick hearth + chimney (back-left)
   const hx = -1.75, hz = -2.22;
   b.blk(1.4, 0.85, 0.8, k.brick, hx, FY, hz);
-  b.blk(1.5, 0.06, 0.9, k.conc, hx, FY + 0.85, hz);
-  b.box(0.6, 0.38, 0.05, k.soot, hx - 0.2, FY + 0.42, hz + 0.39);
+  b.blk(1.5, 0.06, 0.9, k.dark, hx, FY + 0.85, hz);
+  b.box(0.6, 0.38, 0.05, k.black, hx - 0.2, FY + 0.42, hz + 0.39);
   b.box(0.5, 0.12, 0.04, k.ember, hx - 0.2, FY + 0.3, hz + 0.39);
   for (let i = 0; i < 7; i++) b.rod([hx - 0.6 + i * 0.1, FY + 0.95, hz - 0.3], [hx - 0.6 + i * 0.1, FY + 0.95, hz + 0.3], 0.01, k.dark, 4);
   b.box(0.7, 0.03, 0.03, k.dark, hx - 0.3, FY + 0.95, hz - 0.3);
@@ -724,7 +738,7 @@ function buildMessHall(b: PB): Rig {
   b.add(torusGeo(0.22, 0.015, 4, 14), k.dark, hx + 0.35, FY + 1.25, hz, Math.PI / 2, 0, 0);
   b.cyl(0.1, 0.16, k.metal, hx - 0.35, FY + 1.0, hz + 0.1, 'y', 10, 0.07);
   b.blk(0.56, RY + 0.6 - FY - 0.85, 0.56, k.brick, -2.05, FY + 0.85, -2.35);
-  b.blk(0.66, 0.1, 0.66, k.conc, -2.05, RY + 0.6, -2.35);
+  b.blk(0.66, 0.1, 0.66, k.dark, -2.05, RY + 0.6, -2.35);
   // prep counter + shelf with tins along the back wall
   b.blk(2.0, 0.85, 0.55, k.woodD, 0.2, FY, -2.35);
   hb(b, 2.1, 0.05, 0.62, k.wood, 0.2, FY + 0.875, -2.33);
@@ -733,7 +747,7 @@ function buildMessHall(b: PB): Rig {
   for (let i = 0; i < 11; i++) {
     const shelfY = i % 2 ? FY + 1.62 : FY + 2.07;
     const rr = 0.04 + r() * 0.03;
-    b.cyl(rr, 0.1 + r() * 0.12, i % 3 ? k.metal : flat(0x9a8458, 0.4, 0), -0.7 + i * 0.18, shelfY + 0.08, -2.48, 'y', 8);
+    b.cyl(rr, 0.1 + r() * 0.12, i % 3 ? k.metal : k.white, -0.7 + i * 0.18, shelfY + 0.08, -2.48, 'y', 8);
   }
   b.cyl(0.18, 0.3, k.metal, 0.8, FY + 1.05, -2.3, 'y', 12);
   hb(b, 0.5, 0.03, 0.3, k.wood, -0.3, FY + 0.915, -2.3);
@@ -769,10 +783,12 @@ function buildMessHall(b: PB): Rig {
   b.box(4.85, 0.02, AZ1 - AZ0 + 0.1, k.tarp, 0, (EY - 0.08 + 2.22) / 2, (AZ0 + AZ1) / 2, Math.atan2(EY - 0.08 - 2.22, AZ1 - AZ0), 0, 0);
   b.cyl(0.035, 4.75, k.tarp, 0, 2.23, AZ1 - 0.05, 'x', 6);
   // hanging MESS sign (swings)
-  const sg = b.sub('sign', 0, EY - 0.19, ZF + 0.12);
-  for (const sx of [-0.58, 0.58]) sg.rod([sx, 0, 0], [sx, -0.3, 0], 0.008, k.dark, 4);
-  sg.box(1.42, 0.46, 0.05, k.woodD, 0, -0.53, 0);
-  sg.add(new THREE.PlaneGeometry(1.36, 0.42), signMess(), 0, -0.53, 0.027);
+  const CY = EY + 0.72;
+  hb(b, 2 * PX * (1 - (CY - EY) / rise) + 0.1, 0.14, 0.1, k.woodD, 0, CY, ZF + 0.1);
+  const sg = b.sub('sign', 0, CY - 0.07, ZF + 0.12);
+  for (const sx of [-0.55, 0.55]) sg.rod([sx, 0, 0], [sx, -0.14, 0], 0.008, k.dark, 4);
+  sg.box(1.42, 0.46, 0.05, k.woodD, 0, -0.37, 0);
+  sg.add(new THREE.PlaneGeometry(1.36, 0.42), signMess(), 0, -0.37, 0.027);
   // string lights criss-crossing under the roof + along the awning
   const SY = EY - 0.22;
   stringLights(b, [-PX, SY, ZF], [PX, SY, -0.4], 0.45, 14);
@@ -780,7 +796,7 @@ function buildMessHall(b: PB): Rig {
   stringLights(b, [-PX, SY, -0.4], [PX, SY, ZB + 0.1], 0.4, 12);
   stringLights(b, [-2.3, 2.15, AZ1 - 0.08], [2.3, 2.15, AZ1 - 0.08], 0.25, 13);
   // supplies: barrel, crates, sacks, firewood
-  barrel(b, k.rust, 2.2, FY, -2.25);
+  barrel(b, k.metal, 2.2, FY, -2.25);
   crate(b, 1.65, FY, -2.35, 0.45, 0.2);
   crate(b, 1.7, FY + 0.45, -2.35, 0.36, -0.15);
   sack(b, 2.25, FY, -1.6, 0.4); sack(b, 2.0, FY, -1.35, 1.2);
@@ -841,7 +857,7 @@ function buildWaterTower(b: PB): Rig {
   for (let i = 0; i < 5; i++) zb(b, 0.14, 0.14, 2.5, k.woodD, -1.0 + i * 0.5, T0 + 0.07, 0);
   b.cyl(TR, TH, k.wood, 0, T0 + 0.14 + TH / 2, 0, 'y', 26);
   for (let i = 0; i < 5; i++) b.add(torusGeo(TR + 0.012, 0.02, 4, 26), k.dark, 0, T0 + 0.35 + i * (TH - 0.4) / 4, 0, Math.PI / 2, 0, 0);
-  b.box(0.5, 0.45, 0.02, k.rust, 0.3, T0 + 1.0, TR - 0.005, 0, 0.25, 0.1);
+  b.box(0.36, 0.5, 0.03, k.woodD, 0.3, T0 + 1.0, TR - 0.01, 0, 0.25, 0.04);
   const CY = T0 + 0.14 + TH;
   b.add(cylGeo(0.06, TR + 0.2, 0.78, 26), k.roof, 0, CY + 0.39, 0);
   b.add(torusGeo(TR + 0.19, 0.03, 4, 26), k.dark, 0, CY + 0.01, 0, Math.PI / 2, 0, 0);
@@ -916,15 +932,14 @@ function buildGuardPost(b: PB): Rig {
   sandbagRow(b, 0.3, -S, S - 0.1, -S, DY, 4, r);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (let l = 0; l < 4; l++) b.add(sphereGeo(0.5, 8, 5), k.sandbag, sx * S, DY + 0.08 + l * 0.15, sz * S, 0, Math.PI / 4 + l * 0.3, 0, 0.42, 0.19, 0.32);
   // roof
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) void sx;
   hb(b, 1.8, 0.12, 0.12, k.woodD, 0, TF - 0.06, P);
   hb(b, 1.8, 0.12, 0.12, k.woodD, 0, TB - 0.06, -P);
   const ra = Math.atan2(TF - TB, 2 * P);
-  b.box(1.9, 0.03, 1.9, k.roof, 0, (TF + TB) / 2 + 0.02, 0, -ra, 0, 0);
-  b.box(0.9, 0.025, 0.7, k.rust, 0.4, (TF + TB) / 2 + 0.045, 0.4, -ra, 0.2, 0);
-  for (const s of [-1, 1]) b.box(0.06, 0.06, 1.9, k.woodD, s * 0.55, (TF + TB) / 2 + 0.05, 0, -ra, 0, 0);
+  b.box(1.84, 0.03, 1.84, k.roof, 0, (TF + TB) / 2 + 0.02, 0, -ra, 0, 0);
+  b.box(0.9, 0.025, 0.7, k.rustSheet, 0.4, (TF + TB) / 2 + 0.045, 0.4, -ra, 0.2, 0);
+  for (const s of [-1, 1]) b.box(0.06, 0.06, 1.84, k.woodD, s * 0.55, (TF + TB) / 2 + 0.05, 0, -ra, 0, 0);
   // ladder at the back
-  ladder(b, [0, 0.0, -0.93], [0, DY + 0.75, -0.84], k.woodD, 0.42);
+  ladder(b, [0, 0.0, -0.9], [0, DY + 0.75, -0.83], k.woodD, 0.42);
   // spotlight on a post at the front-right corner
   b.rod([0.45, DY, 0.45], [0.45, DY + 0.75, 0.45], 0.035, k.dark, 6);
   const sp = b.sub('spot', 0.45, DY + 0.8, 0.45);
@@ -973,15 +988,15 @@ function buildLumberYard(b: PB): Rig {
   hb(b, 5.75, 0.18, 0.14, k.woodD, 0, HB - 0.05, ZB);
   hb(b, 5.75, 0.18, 0.14, k.woodD, 0, HF - 0.05, ZF);
   const ra = Math.atan2(HF - HB, ZF - ZB);
-  for (const x of [-2.4, -1.5, -0.5, 0.5, 1.5, 2.4]) b.box(0.07, 0.12, 2.8, k.wood, x, (HB + HF) / 2 + 0.07, (ZB + ZF) / 2, ra, 0, 0);
+  for (const x of [-2.4, -1.5, -0.5, 0.5, 1.5, 2.4]) b.box(0.07, 0.12, 2.75, k.wood, x, (HB + HF) / 2 + 0.07, (ZB + ZF) / 2, -ra, 0, 0);
   // roof sheets, mismatched
   {
-    const L = 2.95 / Math.cos(ra);
+    const L = 2.75 / Math.cos(ra), zc = -1.525, yc = (HB + HF) / 2 + 0.15 + (zc - (ZB + ZF) / 2) * Math.tan(ra);
     let x = -2.9; let i = 0;
-    const mats = [k.roof, k.tinRed, k.roof, k.rust, k.roof];
+    const mats = [k.roof, k.tinRed, k.roof, k.rustSheet, k.roof];
     while (x < 2.9) {
       const w = Math.min(2.9 - x, 0.9 + r() * 0.8);
-      b.box(w + 0.03, 0.03, L, mats[i % mats.length], x + w / 2, (HB + HF) / 2 + 0.15 + (i % 2) * 0.008, (ZB + ZF) / 2 - 0.05, ra, 0, (r() - 0.5) * 0.01);
+      b.box(w + 0.03, 0.03, L, mats[i % mats.length], x + w / 2, yc + (i % 2) * 0.008, zc, -ra, 0, (r() - 0.5) * 0.01);
       x += w; i++;
     }
   }
@@ -1022,7 +1037,7 @@ function buildLumberYard(b: PB): Rig {
     bl.box(0.045, 0.03, 0.009, k.steel, Math.cos(an) * 0.39, Math.sin(an) * 0.39, 0, 0, 0, an + 0.4);
   }
   // sawdust heap under the blade
-  b.add(sphereGeo(0.5, 10, 5, TAU, Math.PI / 2), tint('dirt', 0xf0dcb0), BX + 0.15, Y, BZ, 0, 0, 0, 0.9, 0.22, 0.7);
+  b.add(sphereGeo(0.5, 10, 5, TAU, Math.PI / 2), M('sand'), BX + 0.15, Y, BZ, 0, 0, 0, 0.9, 0.22, 0.7);
   // plank stack under the roof (right)
   const stack = (x0: number, z0: number, layers: number, along: 'x' | 'z', L: number, n: number): void => {
     for (let l = 0; l < layers; l++) {
@@ -1096,8 +1111,9 @@ function buildLumberYard(b: PB): Rig {
 function buildWorkshop(b: PB): Rig {
   const k = kit();
   const r = rng(707);
-  b.blk(5.85, 0.12, 5.85, k.conc, 0, 0, 0);
-  const Y = 0.12, X = 2.75, ZB = -2.75, ZF = 1.35, HF = 3.3, HB = 2.65;
+  const RED = flat(0xa83a26, 0.5, 0.3), BLUE = flat(0x2a5a8a, 0.5, 0.3);
+  b.blk(5.85, 0.12, 5.85, k.slab, 0, 0, 0);
+  const Y = 0.12, X = 2.75, ZB = -2.75, ZF = 1.35, HF = 3.3, HB = 2.65, XW = X + 0.07;
   // frame: posts, header, rafters
   for (const sx of [-1, 1]) {
     b.blk(0.16, HF - Y, 0.16, k.woodD, sx * X, Y, ZF);
@@ -1107,15 +1123,15 @@ function buildWorkshop(b: PB): Rig {
   hb(b, X * 2 + 0.2, 0.26, 0.16, k.dark, 0, HF - 0.2, ZF);
   hb(b, X * 2 + 0.2, 0.16, 0.14, k.woodD, 0, HB - 0.1, ZB);
   const ra = Math.atan2(HF - HB, ZF - ZB);
-  for (let x = -2.3; x <= 2.31; x += 0.92) b.box(0.08, 0.14, ZF - ZB + 0.2, k.wood, x, (HF + HB) / 2 - 0.02, (ZF + ZB) / 2, ra, 0, 0);
+  for (let x = -2.3; x <= 2.31; x += 0.92) b.box(0.08, 0.14, ZF - ZB + 0.2, k.wood, x, (HF + HB) / 2 - 0.02, (ZF + ZB) / 2, -ra, 0, 0);
   // roof
   {
     const L = (ZF - ZB + 0.55) / Math.cos(ra);
     let x = -2.92; let i = 0;
-    const mats = [k.roof, k.roof, k.tinRed, k.roof, k.rust];
+    const mats = [k.roof, k.roof, k.tinRed, k.roof, k.rustSheet];
     while (x < 2.92) {
       const w = Math.min(2.92 - x, 0.8 + r() * 0.9);
-      b.box(w + 0.03, 0.03, L, mats[i % mats.length], x + w / 2, (HF + HB) / 2 + 0.08 + (i % 2) * 0.008, (ZF + ZB) / 2 + 0.17, ra, 0, (r() - 0.5) * 0.01);
+      b.box(w + 0.03, 0.03, L, mats[i % mats.length], x + w / 2, (HF + HB) / 2 + 0.08 + 0.17 * Math.tan(ra) + (i % 2) * 0.008, (ZF + ZB) / 2 + 0.17, -ra, 0, (r() - 0.5) * 0.01);
       x += w; i++;
     }
   }
@@ -1124,7 +1140,7 @@ function buildWorkshop(b: PB): Rig {
     const pts: [number, number][] = [[ZB, Y], [ZF, Y], [ZF, HF - 0.05], [ZB, HB - 0.05]];
     const g = extrudeGeo(pts.map(([z, y]) => [-z, y] as [number, number]), 0.03);
     g.rotateY(Math.PI / 2);
-    b.add(g, sx < 0 ? k.roof : k.tinGreen, sx * (X + 0.1), 0, 0);
+    b.add(g, sx < 0 ? k.roof : k.tinGreen, sx * XW, 0, 0);
     // girts inside
     for (const y of [1.0, 2.0]) zb(b, 0.06, 0.12, ZF - ZB, k.woodD, sx * (X + 0.04), y, (ZF + ZB) / 2);
   }
@@ -1135,13 +1151,15 @@ function buildWorkshop(b: PB): Rig {
   });
   for (const y of [1.0, 2.0]) hb(b, X * 2, 0.12, 0.06, k.woodD, 0, y, ZB - 0.03);
   // patch + small window on the left wall
-  windowAt(b, -X - 0.13, 1.7, -0.9, -Math.PI / 2, 0.8, 0.5, k.woodD);
-  b.box(0.02, 0.7, 0.9, k.rust, X + 0.13, 0.7, 0.2, 0.05, 0, 0);
+  windowAt(b, -XW - 0.02, 1.7, -0.9, -Math.PI / 2, 0.8, 0.5, k.woodD);
+  b.box(0.02, 0.7, 0.9, k.rust, XW + 0.03, 0.7, 0.2, 0.05, 0, 0);
   // rolled tarp door above the opening + sign
-  b.cyl(0.13, X * 2 - 0.1, k.tarp, 0, HF - 0.45, ZF + 0.14, 'x', 10);
-  for (const x of [-1.8, 0, 1.8]) b.add(torusGeo(0.15, 0.012, 4, 10), k.rope, x, HF - 0.45, ZF + 0.14, 0, Math.PI / 2, 0);
-  b.box(2.3, 0.52, 0.04, k.rust, 0, HF + 0.18, ZF + 0.1, -ra * 0.0, 0, 0);
-  b.add(new THREE.PlaneGeometry(2.24, 0.48), signWorkshop(), 0, HF + 0.18, ZF + 0.125);
+  b.cyl(0.1, X * 2 - 0.1, k.canvas, 0, HF - 0.43, ZF + 0.13, 'x', 10);
+  for (const x of [-1.8, 0, 1.8]) b.add(torusGeo(0.11, 0.012, 4, 10), k.rope, x, HF - 0.43, ZF + 0.13, 0, Math.PI / 2, 0);
+  const sgY = HF + 0.48, sgZ = ZF + 0.32;
+  for (const x of [-0.9, 0.9]) b.beam([x, HF + 0.05, sgZ - 0.35], [x, sgY + 0.1, sgZ - 0.03], 0.05, k.dark);
+  b.box(2.3, 0.52, 0.04, k.rust, 0, sgY, sgZ);
+  b.add(new THREE.PlaneGeometry(2.24, 0.48), signWorkshop(), 0, sgY, sgZ + 0.022);
   // workbench + tool wall
   b.at(-0.9, Y, ZB + 0.38, 0, () => {
     hb(b, 3.0, 0.08, 0.66, k.woodD, 0, 0.9, 0);
@@ -1152,7 +1170,7 @@ function buildWorkshop(b: PB): Rig {
     b.box(0.2, 0.08, 0.04, k.dark, 1.2, 1.12, 0.33);
     b.rod([1.2, 1.02, 0.38], [1.2, 1.02, 0.52], 0.012, k.steel, 5);
     // toolbox, battery, parts
-    b.blk(0.5, 0.24, 0.24, flat(0xa83a26, 0.5, 0.3), -1.0, 0.94, -0.12);
+    b.blk(0.5, 0.24, 0.24, RED, -1.0, 0.94, -0.12);
     b.box(0.3, 0.03, 0.03, k.dark, -1.0, 1.21, -0.12);
     b.blk(0.26, 0.2, 0.17, k.black, -0.35, 0.94, 0.1);
     b.cyl(0.08, 0.12, k.rust, 0.3, 1.0, 0.05, 'y', 10);
@@ -1162,7 +1180,7 @@ function buildWorkshop(b: PB): Rig {
   });
   // pegboard + tools
   const PZ = ZB + 0.02;
-  b.box(3.0, 1.15, 0.025, tint('wood', 0xd8b890), -0.9, 1.75, PZ);
+  b.box(3.0, 1.15, 0.025, k.wood, -0.9, 1.75, PZ);
   const tools = (x: number, y: number): void => {
     b.box(0.03, 0.3, 0.02, k.wood, x, y, PZ + 0.03);
     b.box(0.12, 0.05, 0.035, k.dark, x, y + 0.15, PZ + 0.035);
@@ -1171,11 +1189,11 @@ function buildWorkshop(b: PB): Rig {
   for (let i = 0; i < 6; i++) b.box(0.025, 0.14 + i * 0.035, 0.012, k.steel, -1.55 + i * 0.07, 1.85, PZ + 0.025);
   b.box(0.5, 0.14, 0.006, k.steel, -0.8, 1.55, PZ + 0.02, 0, 0, 0.0);
   b.box(0.12, 0.12, 0.025, k.wood, -0.5, 1.55, PZ + 0.025);
-  b.add(torusGeo(0.15, 0.025, 5, 14), tint('rubber', 0xb04020), -0.15, 1.9, PZ + 0.04);
+  b.add(torusGeo(0.15, 0.025, 5, 14), k.rubber, -0.15, 1.9, PZ + 0.04);
   b.cyl(0.17, 0.005, k.steel, 0.3, 1.85, PZ + 0.02, 'z', 20);
-  for (let i = 0; i < 4; i++) b.box(0.025, 0.28, 0.025, i % 2 ? k.dark : flat(0xc0a020, 0.5, 0.2), 0.0 + i * 0.07, 1.45, PZ + 0.03);
+  for (let i = 0; i < 4; i++) b.box(0.025, 0.28, 0.025, i % 2 ? k.dark : RED, 0.0 + i * 0.07, 1.45, PZ + 0.03);
   // gas bottles chained to the back wall + welder cart
-  for (const [x, m] of [[1.05, flat(0x6a2620, 0.55, 0.3)], [1.42, flat(0x2c3a34, 0.55, 0.3)]] as [number, Mat][]) {
+  for (const [x, m] of [[1.05, RED], [1.42, k.dark]] as [number, Mat][]) {
     b.cyl(0.15, 1.15, m, x, Y + 0.575, ZB + 0.25, 'y', 14);
     b.add(sphereGeo(0.15, 14, 6, TAU, Math.PI / 2), m, x, Y + 1.15, ZB + 0.25);
     b.cyl(0.04, 0.1, k.steel, x, Y + 1.33, ZB + 0.25, 'y', 8);
@@ -1184,7 +1202,7 @@ function buildWorkshop(b: PB): Rig {
   b.cable([0.85, 1.0, ZB + 0.1], [1.62, 1.0, ZB + 0.1], 0.0, 0.01, k.dark, 2);
   b.cable([1.05, 1.42, ZB + 0.25], [1.95, 0.85, ZB + 0.55], 0.25, 0.012, k.black, 8);
   b.at(2.1, Y, ZB + 0.55, -0.3, () => {
-    b.blk(0.45, 0.5, 0.6, flat(0x2a5a8a, 0.5, 0.3), 0, 0.12, 0);
+    b.blk(0.45, 0.5, 0.6, BLUE, 0, 0.12, 0);
     for (const sz of [-0.22, 0.22]) b.cyl(0.08, 0.05, k.rubber, -0.2, 0.08, sz, 'x', 10);
     b.box(0.3, 0.15, 0.02, k.dark, 0, 0.45, 0.31);
   });
@@ -1205,29 +1223,29 @@ function buildWorkshop(b: PB): Rig {
   for (const sz of [-0.27, 0.27]) for (let i = 0; i < 3; i++) b.cyl(0.05, 0.08, k.metal, EX - 0.2 + i * 0.2, Y + 0.6, EZ + sz, 'z', 8);
   b.blk(0.8, 0.12, 0.6, k.woodD, EX, Y, EZ);
   hb(b, 1.0, 0.14, 0.14, k.dark, EX, HB + 0.15, EZ, 0, Math.PI / 2, 0);
-  b.box(0.18, 0.22, 0.12, k.hazard ?? k.dark, EX, HB - 0.2, EZ);
+  b.box(0.18, 0.22, 0.12, RED, EX, HB - 0.2, EZ);
   b.rod([EX, HB - 0.3, EZ], [EX, Y + 1.15, EZ], 0.012, k.dark, 4);
   b.add(torusGeo(0.05, 0.012, 4, 8), k.dark, EX, Y + 1.1, EZ);
   // hanging work lamp
   b.rod([-0.3, HF - 0.2, -0.6], [-0.3, 2.65, -0.6], 0.006, k.black, 3);
   b.add(cylGeo(0.05, 0.22, 0.14, 12, true), k.dark, -0.3, 2.6, -0.6);
-  b.mesh('flame', sphereGeo(0.05, 8, 6), k.bulb, -0.3, 2.52, -0.6);
+  b.mesh('bulb', sphereGeo(0.05, 8, 6), k.bulb, -0.3, 2.52, -0.6);
   b.anchor('lightAnchor', -0.3, 2.4, -0.6);
   // welding spark at the vise (flickers while running)
   const spark = emissiveVariant('spark', 'emissiveCool', 0x203040, 0xd8f0ff, 6);
   b.mesh('spark', sphereGeo(0.04, 6, 4), spark, 0.3, Y + 1.12, ZB + 0.63);
   // tyre stack + oil drum by the front left
   for (let i = 0; i < 3; i++) b.add(torusGeo(0.3, 0.12, 6, 14), k.rubber, -2.3, Y + 0.12 + i * 0.22, 1.95, Math.PI / 2, 0, i * 0.4);
-  barrel(b, flat(0x2a4a6a, 0.55, 0.3), -1.6, Y, 2.2, 0.27, 0.84);
+  barrel(b, BLUE, -1.6, Y, 2.2, 0.27, 0.84);
   // scrap pile (front right)
   for (let i = 0; i < 16; i++) {
-    const x = 1.3 + r() * 1.35, z = 1.7 + r() * 1.05, s = 0.15 + r() * 0.35;
+    const x = 1.35 + r() * 1.15, z = 1.75 + r() * 0.85, s = 0.15 + r() * 0.25;
     const m = [k.rust, k.dark, k.metal, k.rust][i % 4];
-    if (i % 5 === 0) b.cyl(0.04 + r() * 0.04, 0.6 + r() * 0.6, m, x, Y + 0.1 + r() * 0.2, z, 'x', 6);
+    if (i % 5 === 0) b.add(cylGeo(0.05, 0.05, 0.5 + r() * 0.4, 6), m, x, Y + 0.1 + r() * 0.2, z, 0, r() * 3, Math.PI / 2);
     else b.box(s, s * (0.2 + r() * 0.6), s * (0.5 + r()), m, x, Y + s * 0.2 + r() * 0.15, z, (r() - 0.5) * 0.8, r() * 3, (r() - 0.5) * 0.8);
   }
-  b.box(1.1, 0.7, 0.02, k.tinRed, 2.5, Y + 0.38, 2.35, 0.2, -0.6, 0.3);
-  b.add(torusGeo(0.32, 0.12, 6, 14), k.rubber, 2.1, Y + 0.13, 2.65, Math.PI / 2, 0, 0);
+  b.box(1.0, 0.7, 0.02, k.tinRed, 2.25, Y + 0.38, 2.3, 0.2, -0.6, 0.3);
+  b.add(torusGeo(0.32, 0.12, 6, 14), k.rubber, 1.85, Y + 0.13, 2.45, Math.PI / 2, 0, 0);
   barrel(b, k.rust, 2.55, Y, 1.75, 0.27, 0.84);
   statusLight(b, X - 0.08, 1.7, ZF + 0.1);
   return (p) => {
@@ -1251,11 +1269,11 @@ function buildHub(b: PB): Rig {
   const cz = (ZB + ZF) / 2;
   // stone plinth
   b.blk(X * 2 + 0.2, FY, ZF - ZB + 0.2, k.rock, 0, 0, cz);
-  hb(b, X * 2 + 0.26, 0.06, ZF - ZB + 0.26, k.conc, 0, FY - 0.03, cz);
+  b.box(X * 2 + 0.26, 0.06, ZF - ZB + 0.26, k.woodD, 0, FY - 0.03, cz);
   // core + log walls
   b.blk(X * 2 - 0.2, EY - FY, ZF - ZB - 0.2, k.woodD, 0, FY, cz);
   const LR = 0.12, ROW = 0.235;
-  const nRows = Math.floor((EY - FY - 0.05) / ROW);
+  const nRows = Math.round((EY - FY) / ROW);
   const holesF: [number, number, number, number][] = [[-0.68, 0.68, FY, FY + 2.15], [-1.75, -0.95, FY + 0.85, FY + 1.75], [0.95, 1.75, FY + 0.85, FY + 1.75]];
   const holesS: [number, number, number, number][] = [[cz - 0.45, cz + 0.45, FY + 0.85, FY + 1.75]];
   const runLogs = (y: number, a0: number, a1: number, holes: [number, number, number, number][], put: (p: number, q: number) => void): void => {
@@ -1272,7 +1290,7 @@ function buildHub(b: PB): Rig {
     b.add(cylGeo(rr, rr, X * 2 + 0.36, 9), k.wood, 0, yA, ZB + 0.02, 0, 0, Math.PI / 2);
     // sides (logs along Z), offset half a row: interlocking corners
     if (yB < EY - 0.05) for (const sx of [-1, 1]) {
-      runLogs(yB, ZB - 0.18, ZF + 0.18, sx > 0 ? holesS : [], (p, q) => b.add(cylGeo(rr, rr, q - p, 9), k.wood, sx * (X - 0.02), yB, (p + q) / 2, Math.PI / 2, 0, 0));
+      runLogs(yB, ZB - 0.18, ZF + 0.18, holesS, (p, q) => b.add(cylGeo(rr, rr, q - p, 9), k.wood, sx * (X - 0.02), yB, (p + q) / 2, Math.PI / 2, 0, 0));
     }
   }
   for (const sx of [-1, 1]) for (const z of [ZF - 0.02, ZB + 0.02]) {
@@ -1291,9 +1309,9 @@ function buildHub(b: PB): Rig {
     b.add(torusGeo(0.06, 0.012, 4, 10), k.dark, -0.12, 1.1, 0.1);
     b.add(torusGeo(0.06, 0.012, 4, 10), k.dark, 0.12, 1.1, 0.1);
   });
-  for (const x of [-1.35, 1.35]) windowAt(b, x, FY + 1.3, ZF - 0.05, 0, 0.76, 0.86, k.woodD, { shutters: k.sidG });
-  windowAt(b, X - 0.05, FY + 1.3, cz, Math.PI / 2, 0.86, 0.86, k.woodD);
-  windowAt(b, -X + 0.05, FY + 1.3, cz, -Math.PI / 2, 0.86, 0.86, k.woodD, { boarded: false });
+  for (const x of [-1.35, 1.35]) windowAt(b, x, FY + 1.3, ZF + 0.05, 0, 0.66, 0.76, k.woodD);
+  windowAt(b, X + 0.05, FY + 1.3, cz, Math.PI / 2, 0.76, 0.76, k.woodD);
+  windowAt(b, -X - 0.05, FY + 1.3, cz, -Math.PI / 2, 0.76, 0.76, k.woodD);
   // gables + sign
   gableTriZ(b, k.wood, ZF - 0.08, EY - 0.02, 0, X + 0.12, rise + 0.02, 0.06);
   gableTriZ(b, k.wood, ZB + 0.06, EY - 0.02, 0, X + 0.12, rise + 0.02, 0.06);
@@ -1301,20 +1319,22 @@ function buildHub(b: PB): Rig {
     const h = (rise) * (1 - Math.abs(x) / (X + 0.12)) - 0.08;
     if (h > 0.1) b.box(0.05, h, 0.03, k.woodD, x, EY + h / 2, ZF - 0.03);
   }
-  b.box(2.5, 0.6, 0.05, k.woodD, 0, EY + 0.55, ZF);
-  b.add(new THREE.PlaneGeometry(2.42, 0.53), signHall(), 0, EY + 0.55, ZF + 0.028);
+  b.box(2.08, 0.52, 0.05, k.woodD, 0, EY + 0.5, ZF);
+  b.add(new THREE.PlaneGeometry(2.0, 0.455), signHall(), 0, EY + 0.5, ZF + 0.028);
   // roof (ridge along Z)
   const ov = 0.3;
-  b.push(0, 0, cz, 0, Math.PI / 2, 0);
-  const a = gableRoof(b, RY, 0, X, rise, ov, ZF - ZB + 0.75, [k.roof, k.roof, k.tinRed, k.roof, k.rust], r, 0.045);
-  onSlope(b, RY, 0, a, 1, () => { for (const s of [-1, 1]) b.box(0.12, 0.14, (X + ov) / Math.cos(a), k.woodD, s * ((ZF - ZB + 0.75) / 2 - 0.05), -0.05, (X + ov) / Math.cos(a) / 2); });
-  onSlope(b, RY, 0, a, -1, () => { for (const s of [-1, 1]) b.box(0.12, 0.14, (X + ov) / Math.cos(a), k.woodD, s * ((ZF - ZB + 0.75) / 2 - 0.05), -0.05, (X + ov) / Math.cos(a) / 2); });
-  hb(b, ZF - ZB + 0.8, 0.14, 0.14, k.dark, 0, RY + 0.035, 0, Math.PI / 4);
+  const RL = 3.47;
+  b.push(0, 0, -1.185, 0, Math.PI / 2, 0);
+  const a = gableRoof(b, RY, 0, X, rise, ov, RL, [k.roof, k.roof, k.tinRed, k.roof, k.rustSheet], r, 0.045);
+  for (const sl of [1, -1]) onSlope(b, RY, 0, a, sl, () => { for (const s of [-1, 1]) b.box(0.12, 0.14, (X + ov) / Math.cos(a), k.woodD, s * (RL / 2 - 0.05), -0.05, (X + ov) / Math.cos(a) / 2); });
+  hb(b, RL + 0.04, 0.14, 0.14, k.dark, 0, RY + 0.035, 0, Math.PI / 4);
   b.pop();
   // stone chimney on the right side
-  b.blk(0.62, 2.2, 0.7, k.rock, X + 0.42, 0, -1.7);
-  b.blk(0.46, RY + 0.4 - 2.2, 0.5, k.rock, X + 0.42, 2.2, -1.7);
-  b.blk(0.56, 0.1, 0.6, k.conc, X + 0.42, RY + 0.4, -1.7);
+  b.blk(0.6, 1.9, 0.78, k.rock, X + 0.4, 0, -1.7);
+  b.add(cylGeo(0.32, 0.425, 0.4, 4).rotateY(Math.PI / 4), k.rock, X + 0.4, 2.1, -1.7, 0, 0, 0, 1, 1, 1.2);
+  b.blk(0.42, RY + 0.35 - 2.3, 0.48, k.brick, X + 0.4, 2.3, -1.7);
+  b.blk(0.52, 0.08, 0.58, k.rock, X + 0.4, RY + 0.35, -1.7);
+  b.blk(0.3, 0.12, 0.36, k.brick, X + 0.4, RY + 0.43, -1.7);
   // porch deck + steps + posts + roof + railing
   const PZ0 = ZF + 0.12, PZ1 = 1.62;
   for (const x of [-2.25, -0.75, 0.75, 2.25]) b.blk(0.24, FY - 0.08, 0.24, k.rock, x, 0, PZ1 - 0.12);
@@ -1332,8 +1352,7 @@ function buildHub(b: PB): Rig {
   }
   hb(b, X * 2 + 0.3, 0.16, 0.14, k.woodD, 0, PH, PZ1 - 0.12);
   const pa = Math.atan2(EY - 0.1 - PH - 0.08, PZ1 + 0.1 - ZF);
-  b.box(X * 2 + 0.5, 0.03, (PZ1 + 0.18 - ZF) / Math.cos(pa), k.roof, 0, (EY - 0.1 + PH + 0.08) / 2 + 0.03, (ZF + PZ1 + 0.18) / 2, -pa, 0, 0);
-  b.box(0.9, 0.025, 0.8, k.rust, -1.2, (EY - 0.1 + PH + 0.08) / 2 + 0.055, (ZF + PZ1) / 2 + 0.1, -pa, 0.15, 0);
+  b.box(X * 2 + 0.5, 0.03, (PZ1 + 0.18 - ZF) / Math.cos(pa), k.roof, 0, (EY - 0.1 + PH + 0.08) / 2 + 0.03, (ZF + PZ1 + 0.18) / 2, pa, 0, 0);
   for (const [x0, x1] of [[-2.25, -0.75], [0.75, 2.25]] as [number, number][]) {
     hb(b, x1 - x0, 0.07, 0.07, k.wood, (x0 + x1) / 2, FY + 0.92, PZ1 - 0.12);
     for (let x = x0 + 0.15; x < x1 - 0.1; x += 0.15) b.blk(0.04, 0.88, 0.04, k.woodD, x, FY, PZ1 - 0.12);
@@ -1355,15 +1374,14 @@ function buildHub(b: PB): Rig {
   const FX = -1.35, FZ = 2.42;
   for (let i = 0; i < 11; i++) {
     const an = (i / 11) * TAU;
-    b.add(sphereGeo(0.5, 6, 4), k.rock, FX + Math.cos(an) * 0.42, 0.05, FZ + Math.sin(an) * 0.42, r(), r() * 3, r(), 0.2 + r() * 0.06, 0.14 + r() * 0.06, 0.17);
+    b.add(sphereGeo(0.5, 6, 4), k.rock, FX + Math.cos(an) * 0.42, 0.07, FZ + Math.sin(an) * 0.42, r(), r() * 3, r(), 0.2 + r() * 0.06, 0.14 + r() * 0.06, 0.17);
   }
   b.add(cylGeo(0.38, 0.4, 0.04, 14), k.soot, FX, 0.02, FZ);
   for (let i = 0; i < 5; i++) {
     const an = (i / 5) * TAU + 0.3;
     b.rod([FX + Math.cos(an) * 0.3, 0.04, FZ + Math.sin(an) * 0.3], [FX + Math.cos(an) * 0.03, 0.48, FZ + Math.sin(an) * 0.03], 0.045, i % 2 ? k.soot : k.bark, 6);
   }
-  hb(b, 0.9, 0.06, 0.25, k.wood, FX, 0.32, FZ - 0.0 + 0.0, 0, 0.4, 0); // log bench? (stand-in seat)
-  b.blk(0.12, 0.28, 0.12, k.woodD, FX - 0.35, 0, FZ + 0.15); b.blk(0.12, 0.28, 0.12, k.woodD, FX + 0.35, 0, FZ - 0.15);
+  log(b, [FX + 0.62, 0.13, FZ - 0.42], [FX + 0.75, 0.13, FZ + 0.4], 0.13);
   // notice board
   b.at(1.2, 0, 2.6, -0.15, () => {
     for (const sx of [-0.5, 0.5]) b.blk(0.09, 1.95, 0.09, k.woodD, sx, 0, 0);
@@ -1386,23 +1404,22 @@ function buildHub(b: PB): Rig {
   bell.rod([0, -0.43, 0], [0, -1.55, 0.05], 0.008, k.rope, 4);
   // flagpole + waving flag (geometry cloned per instance, vertices animated)
   const FPX = 2.6, FPZ = 2.6, FPH = 6.6;
-  b.blk(0.36, 0.25, 0.36, k.conc, FPX, 0, FPZ);
+  b.blk(0.36, 0.25, 0.36, k.rock, FPX, 0, FPZ);
   b.cyl(0.055, FPH, k.steel, FPX, FPH / 2, FPZ, 'y', 8, 0.035);
   b.add(sphereGeo(0.07, 8, 6), bronze, FPX, FPH + 0.04, FPZ);
-  b.rod([FPX + 0.05, 1.2, FPZ], [FPX + 0.05, FPH - 0.05, FPZ], 0.006, k.white, 3);
+  b.rod([FPX + 0.05, 1.2, FPZ], [FPX + 0.05, FPH - 0.05, FPZ], 0.006, k.rope, 3);
   b.box(0.04, 0.1, 0.04, k.dark, FPX + 0.07, 1.2, FPZ);
   const fg = new THREE.PlaneGeometry(1.5, 0.94, 12, 4);
   fg.translate(-0.75, 0, 0);
   // u: 0 at the pole -> 1 at the fly end (pole on the right of the canvas => mirror)
   const uv = fg.attributes.uv as THREE.BufferAttribute;
   for (let i = 0; i < uv.count; i++) uv.setX(i, 1 - uv.getX(i));
-  const flag = b.mesh('flag', fg, flagMat(), FPX - 0.06, FPH - 0.55, FPZ, 0, 0, 0, true);
-  flag.userData.base = Float32Array.from(fg.attributes.position.array as Float32Array);
+  b.mesh('flag', fg, flagMat(), FPX - 0.06, FPH - 0.55, FPZ, 0, 0, 0, true);
   return (p) => {
     const bl = p.get('bell');
     const f = p.get('flag') as THREE.Mesh | undefined;
     const pos = f ? (f.geometry.attributes.position as THREE.BufferAttribute) : null;
-    const base = f ? (f.userData.base as Float32Array) : null;
+    const base = pos ? Float32Array.from(pos.array as Float32Array) : null;
     let acc = 1;
     return (dt, _run, t) => {
       if (bl) { bl.rotation.x = Math.sin(t * 1.1) * 0.04; bl.rotation.z = Math.sin(t * 0.8) * 0.02; }
@@ -1461,7 +1478,7 @@ export function buildTownModel(id: TownModelId): THREE.Group {
     l.push(o);
     const m = o as THREE.Mesh;
     if (m.isMesh && o.name === 'statusLight') { m.material = getMaterial('emissiveGreen').clone(); lights.push(m); }
-    if (m.isMesh && o.name === 'flag') { m.geometry = m.geometry.clone(); m.userData = { ...m.userData }; }
+    if (m.isMesh && o.name === 'flag') m.geometry = m.geometry.clone();
   });
   const parts: Parts = { get: (n) => named.get(n)?.[0], all: (n) => named.get(n) ?? [] };
   const own = t.rig(parts);
