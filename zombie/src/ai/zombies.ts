@@ -3,7 +3,12 @@ import * as THREE from 'three';
 import { RNG, clamp, angleDiff, HALF_WORLD } from '../core/util';
 import { World } from '../world/world';
 import { NAV_N, NAV_SOLID, NAV_FREE } from '../world/collision';
-import { buildZombieGeometry, makeZombieMaterials } from './zombieMesh';
+import { BodyRenderer } from './zombieMesh';
+import { ACT, TOOL, KIND, makeDef, refreshDef, defStamp, newAnim, randomLook as rigRandomLook, gaitFor, strideLen } from './bodyRig';
+import type { BodyDef, HumanLook } from './bodyRig';
+export { ACT, TOOL };
+export type { HumanLook };
+export function randomLook(rng: RNG): HumanLook { return rigRandomLook(rng); }
 import { TOWN } from '../world/layout';
 import { Inventory } from '../items/inventory';
 import { rollLoot } from '../items/loot';
@@ -19,8 +24,10 @@ export interface Zombie {
   speed: number; runSpeed: number; senseT: number; alerted: number; lastSeen: THREE.Vector3; horde: number; groanT: number;
   bashRef: any; corpse: Inventory | null; corpseAge: number; frozen: boolean; stuckT: number; lastPos: THREE.Vector3; knock: THREE.Vector3;
   lookYaw: number; lookPitch: number; hitSide: number; crawl: number; crawler: boolean;
+  def: BodyDef; name?: string; turned?: boolean;
 }
-export interface HumanPose { pos: THREE.Vector3; yaw: number; move: number; phase: number; arms: number; atk: number; seed: number; type: 3 | 4; hit: number; visible: boolean; lookYaw?: number; lookPitch?: number }
+export interface HumanPose { pos: THREE.Vector3; yaw: number; move: number; phase: number; arms: number; atk: number; seed: number; type: 3 | 4; hit: number; visible: boolean; lookYaw?: number; lookPitch?: number;
+  look?: HumanLook; act?: number; tool?: number; sick?: number; prey?: boolean; owner?: unknown; name?: string }
 export interface Horde { id: number; target: THREE.Vector3; members: number; t: number; toBase: boolean }
 
 const MAX = 700;
@@ -38,7 +45,7 @@ export class Zombies {
   list: Zombie[] = [];
   hordes: Horde[] = [];
   mesh: THREE.InstancedMesh;
-  private aAnim: THREE.InstancedBufferAttribute; private aAnim2: THREE.InstancedBufferAttribute; private aVar: THREE.InstancedBufferAttribute; private aAnim3: THREE.InstancedBufferAttribute;
+  private bodies: BodyRenderer; private anim = newAnim(); private hdefs = new WeakMap<HumanPose, BodyDef>();
   private time = { value: 0 };
   private rng: RNG;
   private nextId = 1;
@@ -56,18 +63,8 @@ export class Zombies {
 
   constructor(scene: THREE.Scene, private world: World, seed: number) {
     this.rng = new RNG(seed + 31);
-    const geo = buildZombieGeometry();
-    this.aAnim = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
-    this.aAnim2 = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
-    this.aVar = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
-    this.aAnim3 = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
-    geo.setAttribute('aAnim', this.aAnim); geo.setAttribute('aAnim2', this.aAnim2); geo.setAttribute('aVar', this.aVar); geo.setAttribute('aAnim3', this.aAnim3);
-    const { mat, depth } = makeZombieMaterials(this.time);
-    this.mesh = new THREE.InstancedMesh(geo, mat, MAX);
-    this.mesh.customDepthMaterial = depth;
-    this.mesh.castShadow = true; this.mesh.receiveShadow = true; this.mesh.frustumCulled = false;
-    this.mesh.count = 0;
-    scene.add(this.mesh);
+    this.bodies = new BodyRenderer(scene, MAX);
+    this.mesh = this.bodies.mesh;
   }
 
   // ------------------------------------------------------------------ spawning
@@ -104,8 +101,9 @@ export class Zombies {
       speed: type === 2 ? 1.0 : rng.range(0.7, 1.3), runSpeed: type === 1 ? rng.range(4.6, 5.6) : type === 2 ? 2.6 : rng.range(1.7, 2.6),
       senseT: rng.range(0, 0.5), alerted: 0, lastSeen: new THREE.Vector3(), horde, groanT: rng.range(2, 12), bashRef: null, corpse: null, corpseAge: 0,
       frozen: false, stuckT: 0, lastPos: new THREE.Vector3(x, y, z), knock: new THREE.Vector3(),
-      lookYaw: 0, lookPitch: 0, hitSide: 0, crawl: 0, crawler: false,
+      lookYaw: 0, lookPitch: 0, hitSide: 0, crawl: 0, crawler: false, def: null as any,
     };
+    zb.def = makeDef(type, zb.seed); zb.def.decay = rng.range(0.2, 0.9); zb.def.gait = gaitFor(type, zb.seed); refreshDef(zb.def);
     this.list.push(zb);
     return zb;
   }
@@ -494,36 +492,24 @@ export class Zombies {
   onHorde: ((n: number, toBase: boolean) => void) | null = null;
 
   private render(cam: THREE.Vector3) {
-    let n = 0;
-    const A = this.aAnim.array as Float32Array, B = this.aAnim2.array as Float32Array, V = this.aVar.array as Float32Array, C = this.aAnim3.array as Float32Array;
+    const R = this.bodies, A = this.anim; R.begin();
     for (const z of this.list) {
-      if (n >= MAX) break;
+      if (R.full()) break;
       if (z.frozen) continue;
       if (Math.abs(z.pos.x - cam.x) > 170 || Math.abs(z.pos.z - cam.z) > 170) continue;
-      this.tmpQ.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, z.yaw);
-      this.tmpM.compose(z.pos, this.tmpQ, this.one);
-      this.mesh.setMatrixAt(n, this.tmpM);
-      A[n * 4] = z.phase; A[n * 4 + 1] = z.state === 'dead' ? 0 : z.move; A[n * 4 + 2] = z.atkBlend; A[n * 4 + 3] = z.death;
-      B[n * 4] = z.hit; B[n * 4 + 1] = z.arms; B[n * 4 + 2] = z.limp; B[n * 4 + 3] = z.deathDir;
-      C[n * 4] = z.lookYaw; C[n * 4 + 1] = z.lookPitch; C[n * 4 + 2] = z.hitSide; C[n * 4 + 3] = z.crawl;
-      V[n * 4] = z.seed; V[n * 4 + 1] = z.scale; V[n * 4 + 2] = z.lean; V[n * 4 + 3] = z.type;
-      n++;
+      A.t = this.time.value; A.phase = z.phase; A.speed = z.state === 'dead' ? 0 : Math.hypot(z.vel.x, z.vel.z); A.move = z.move; A.turn = 0; A.arms = z.arms; A.atk = z.atkBlend; A.lunge = Math.sin(this.time.value * 6 + z.seed); A.hit = z.hit; A.hitSide = z.hitSide; A.hitFwd = 1;
+      A.lookYaw = z.lookYaw; A.lookPitch = z.lookPitch; A.crawl = z.crawl; A.limp = z.limp; A.down = 0; A.death = z.death; A.deathStyle = Math.floor(z.seed) % 5; A.deathDir = z.deathDir; A.act = 0; A.actW = 0; A.act2 = 0; A.act2W = 0; A.aux = 0; A.jaw = 0;
+      R.add(A, z.def, z.pos.x, z.pos.y, z.pos.z, z.yaw, z.scale);
     }
     for (const h of this.humans) {
-      if (n >= MAX || !h.visible) continue;
-      this.tmpQ.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, h.yaw);
-      this.tmpM.compose(h.pos, this.tmpQ, this.one);
-      this.mesh.setMatrixAt(n, this.tmpM);
-      A[n * 4] = h.phase; A[n * 4 + 1] = h.move; A[n * 4 + 2] = h.atk; A[n * 4 + 3] = 0;
-      B[n * 4] = h.hit; B[n * 4 + 1] = h.arms; B[n * 4 + 2] = 0; B[n * 4 + 3] = 1;
-      V[n * 4] = h.seed; V[n * 4 + 1] = 1; V[n * 4 + 2] = 0.2; V[n * 4 + 3] = h.type;
-      C[n * 4] = h.lookYaw ?? 0; C[n * 4 + 1] = h.lookPitch ?? 0; C[n * 4 + 2] = 0; C[n * 4 + 3] = 0;
-      n++;
+      if (R.full() || !h.visible) continue;
+      let d = this.hdefs.get(h); if (!d) { d = makeDef(KIND.human, h.seed, h.look); this.hdefs.set(h, d); }
+      d.tool = h.tool ?? 0; d.sick = h.sick ?? 0; if (defStamp(d) !== d.stamp) refreshDef(d);
+      A.t = this.time.value; A.phase = h.phase; A.speed = 0; A.move = h.move; A.turn = 0; A.arms = h.arms; A.atk = h.atk; A.lunge = 0; A.hit = h.hit; A.hitSide = 0; A.hitFwd = 1;
+      A.lookYaw = h.lookYaw ?? 0; A.lookPitch = h.lookPitch ?? 0; A.crawl = 0; A.limp = 0; A.down = 0; A.death = 0; A.act = h.act ?? 0; A.actW = 1; A.act2 = 0; A.act2W = 0; A.aux = 0; A.jaw = 0;
+      R.add(A, d, h.pos.x, h.pos.y, h.pos.z, h.yaw, d.height);
     }
-    this.mesh.count = n;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.aAnim.needsUpdate = true; this.aAnim2.needsUpdate = true; this.aVar.needsUpdate = true; this.aAnim3.needsUpdate = true; this.aAnim3.addUpdateRange(0, n * 4);
-    this.aAnim.addUpdateRange(0, n * 4); this.aAnim2.addUpdateRange(0, n * 4); this.aVar.addUpdateRange(0, n * 4);
+    R.end();
   }
 
   toJSON() {
