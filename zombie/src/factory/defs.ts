@@ -42,10 +42,10 @@ export const MRECIPES: MRecipe[] = [
   { id: 'grow_corn', machine: ['greenhouse'], inp: {}, out: ['corn', 2], time: 30 },
 ];
 
-export type MachineType = MachineModelId | FluidModelId | 'pipe';
+export type MachineType = MachineModelId | FluidModelId | 'pipe' | 'sprinkler' | 'rail' | 'train_station' | 'locomotive' | 'freight_wagon';
 export interface MachineDef {
   type: MachineType; name: string; icon: string; desc: string; size: [number, number]; cost: Record<string, number>;
-  power: number; tier: number; inputs: number[]; outputs: number[]; cat: 'production' | 'logistics' | 'power' | 'defense' | 'special';
+  power: number; tier: number; inputs: number[]; outputs: number[]; cat: 'production' | 'logistics' | 'power' | 'defense' | 'special' | 'transport';
   hp: number; heat: number; height: number; skill?: [SkillId, number];
 }
 // inputs/outputs: tile index along back/front edge

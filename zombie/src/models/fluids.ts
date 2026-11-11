@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { getFlatMaterial, getMaterial } from '../render/materials';
 
-export type FluidModelId = 'water_pump' | 'oil_pump' | 'refinery' | 'fuel_gen' | 'fluid_tank' | 'packager';
-const FOOT: Record<FluidModelId, [number, number]> = { water_pump: [2, 2], oil_pump: [3, 3], refinery: [3, 3], fuel_gen: [2, 2], fluid_tank: [2, 2], packager: [2, 2] };
+export type FluidModelId = 'water_pump' | 'oil_pump' | 'refinery' | 'fuel_gen' | 'fluid_tank' | 'packager' | 'sprinkler';
+const FOOT: Record<FluidModelId, [number, number]> = { water_pump: [2, 2], oil_pump: [3, 3], refinery: [3, 3], fuel_gen: [2, 2], fluid_tank: [2, 2], packager: [2, 2], sprinkler: [1, 1] };
 
 function mk(g: THREE.Object3D, geo: THREE.BufferGeometry, hex: number, x: number, y: number, z: number, rough = 0.7, metal = 0.2) {
   const m = new THREE.Mesh(geo, getFlatMaterial(hex, rough, metal)); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m;
@@ -63,6 +63,13 @@ export function buildFluidModel(id: FluidModelId): THREE.Group {
     mk(g, new THREE.CylinderGeometry(1.75, 1.75, 0.12, 14), DARK, 0, 1.0, 0);
     mk(g, new THREE.BoxGeometry(0.1, 3.4, 0.1), DARK, 1.72, 2.0, 0);
     statusLight(g, 1.0, 1.4, 1.45);
+  } else if (id === 'sprinkler') {
+    g.children[0].scale.set(0.5, 1, 0.5);
+    mk(g, new THREE.CylinderGeometry(0.06, 0.08, 1.0, 8), STEEL, 0, 0.6, 0, 0.4, 0.5);
+    const head = new THREE.Group(); head.position.set(0, 1.1, 0); g.add(head);
+    mk(head, new THREE.CylinderGeometry(0.1, 0.1, 0.08, 8), DARK, 0, 0, 0);
+    const arm = mk(head, new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), STEEL, 0.2, 0.03, 0, 0.4, 0.5); arm.rotation.z = Math.PI / 2 - 0.2;
+    anim = (dt, run) => { if (run) head.rotation.y += dt * 3; };
   } else if (id === 'packager') {
     mk(g, new THREE.BoxGeometry(3.2, 2.2, 3.2), 0x4a7a8a, 0, 1.35, 0);
     mk(g, new THREE.BoxGeometry(1.2, 1.0, 0.2), DARK, 0, 1.0, 1.62);

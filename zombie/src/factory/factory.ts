@@ -4,7 +4,7 @@ import { GRID, tileOf, clamp, RNG } from '../core/util';
 import { MACHINES, MRECIPES, MachineDef, MILESTONES, MRecipe } from './defs';
 import { buildMachineModel } from '../models/machines';
 import { buildFluidModel, pipeGeometries, FluidModelId } from '../models/fluids';
-const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager']);
+const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler']);
 export interface FluidNet { id: number; fluid: string | null; amount: number; cap: number; pipes: number[]; machines: Machine[] }
 import { World, OreNode } from '../world/world';
 import { Inventory } from '../items/inventory';
@@ -102,7 +102,7 @@ export class Factory {
     this.cables = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x111111 }));
     this.cables.frustumCulled = false;
     this.group.add(this.cables);
-    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'spike_trap', 'generator']) this.unlocked.add(k);
+    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'spike_trap', 'generator', 'stove', 'compost_bin', 'chicken_coop', 'drying_rack']) this.unlocked.add(k);
   }
 
   // ------------------------------------------------------------------ geometry helpers
@@ -623,7 +623,7 @@ export class Factory {
     this.tier++; this.milestoneProgress = {};
     for (const u of ms.unlocks) this.unlocked.add(u);
     audio.play('milestone');
-    if (ms.id === 'm6') { this.victory = true; bus.emit('victory'); }
+    if (ms.id === 'm7') { this.victory = true; bus.emit('victory'); }
     bus.emit('milestone', ms);
   }
 
@@ -684,7 +684,7 @@ export class Factory {
   }
   private fluidRoom(m: Machine, fluid: string, amt: number) { return (m.fnets ?? []).some(n => (n.fluid === null || n.fluid === fluid) && n.cap - n.amount >= amt); }
   fluidAvail(m: Machine, fluid: string) { let a = 0; for (const n of m.fnets ?? []) if (n.fluid === fluid) a += n.amount; return a; }
-  private takeFluid(m: Machine, fluid: string, amt: number): number {
+  takeFluid(m: Machine, fluid: string, amt: number): number {
     let got = 0;
     for (const n of m.fnets ?? []) {
       if (n.fluid !== fluid) continue;

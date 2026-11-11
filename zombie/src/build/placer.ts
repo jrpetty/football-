@@ -51,7 +51,7 @@ export class Placer {
   private makeGhost(id: string): THREE.Object3D {
     let o: THREE.Object3D;
     if (id === 'pipe') { const pg = pipeGeometries(); o = new THREE.Group(); o.add(new THREE.Mesh(pg.node, pg.mat), new THREE.Mesh(pg.post, pg.postMat)); }
-    else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager'].includes(id)) o = buildFluidModel(id as any);
+    else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler'].includes(id)) o = buildFluidModel(id as any);
     else if (MACHINES[id]) o = buildMachineModel(id as any);
     else { const d = PIECES[id]; o = d.custom === 'generator' ? buildGeneratorModel() : d.prop ? buildProp(d.prop) : buildPiece(d.model!); }
     o.traverse(c => { const m = c as THREE.Mesh; if (m.isMesh) { m.material = this.okMat; m.castShadow = false; m.receiveShadow = false; } });

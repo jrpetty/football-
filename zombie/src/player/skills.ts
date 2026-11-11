@@ -1,4 +1,4 @@
-export type SkillId = 'fitness' | 'strength' | 'sprinting' | 'lightfoot' | 'blunt' | 'blade' | 'firearms' | 'carpentry' | 'engineering' | 'firstaid' | 'scavenging';
+export type SkillId = 'fitness' | 'strength' | 'sprinting' | 'lightfoot' | 'blunt' | 'blade' | 'firearms' | 'carpentry' | 'engineering' | 'firstaid' | 'scavenging' | 'cooking' | 'farming' | 'foraging';
 export const SKILLS: { id: SkillId; name: string; icon: string; desc: string; group: string }[] = [
   { id: 'fitness', name: 'Fitness', icon: '🫀', desc: 'Max stamina and stamina recovery.', group: 'Physical' },
   { id: 'strength', name: 'Strength', icon: '💪', desc: 'Carry weight and melee damage.', group: 'Physical' },
@@ -11,6 +11,9 @@ export const SKILLS: { id: SkillId; name: string; icon: string; desc: string; gr
   { id: 'engineering', name: 'Engineering', icon: '⚡', desc: 'Machines, electricity, metalwork. Higher levels speed up the factory.', group: 'Crafting' },
   { id: 'firstaid', name: 'First Aid', icon: '⛑️', desc: 'Faster, more effective treatment and healing.', group: 'Survival' },
   { id: 'scavenging', name: 'Scavenging', icon: '🔍', desc: 'Find more loot and search faster.', group: 'Survival' },
+  { id: 'cooking', name: 'Cooking', icon: '🍳', desc: 'Better meals: more nourishment, less spoilage risk, faster cooking.', group: 'Survival' },
+  { id: 'farming', name: 'Farming', icon: '🌾', desc: 'Crops grow faster and yield more.', group: 'Survival' },
+  { id: 'foraging', name: 'Foraging', icon: '🍄', desc: 'Find more berries, mushrooms and herbs; spot poisonous ones.', group: 'Survival' },
 ];
 export const XP_FOR_LEVEL = (lvl: number) => 75 * lvl * (lvl + 1); // cumulative xp to reach lvl
 

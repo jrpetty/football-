@@ -31,6 +31,8 @@ import { UI } from './ui/ui';
 import { DistantMountains, CloudClusters } from './render/scenery';
 import { AmbientParticles } from './render/ambient';
 import { Animals, Animal } from './ai/animals';
+import { CROPS } from './items/content';
+import { Throwables } from './combat/throwables';
 import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
@@ -57,8 +59,9 @@ export const OBJECTIVES: { id: string; title: string; desc: string }[] = [
   { id: 'm2', title: 'Milestone: Industry', desc: 'Deliver ingots and sheet metal. Unlocks Constructors, Coal Generators, electric fences and metal walls.' },
   { id: 'm3', title: 'Milestone: Fortify', desc: 'Mass-produce plates, screws, wire and cable. Unlocks Assemblers and Auto Turrets.' },
   { id: 'm4', title: 'Milestone: Automation', desc: 'Complex parts: reinforced plates, rotors, circuits, concrete. Unlocks the Radio Tower.' },
-  { id: 'm5', title: 'Milestone: Rekindle', desc: 'Frames, steel, circuits and radio parts. Unlocks the Medical Lab and the Grid Uplink.' },
-  { id: 'cure', title: 'The Cure', desc: 'Collect Infected Tissue from the dead. Synthesise 10 Antiviral Serum in the Lab and deliver them to the Outpost.' },
+  { id: 'm5', title: 'Milestone: Logistics', desc: 'Steel beams, motors, frames and glass. Unlocks railways, freight stations, locomotives and wagons.' },
+  { id: 'm6', title: 'Milestone: Rekindle', desc: 'Heavy frames, steel pipe, circuits and radio parts. Unlocks oil, the Medical Lab and the Grid Uplink.' },
+  { id: 'cure', title: 'The Cure', desc: 'Collect Infected Tissue from the dead. Synthesise 10 Antiviral Serum in the Lab and deliver them with 10 computers to the Outpost.' },
   { id: 'done', title: 'Civilisation rekindled', desc: 'The lights are on. The broadcast is out. Keep building.' },
 ];
 
@@ -84,6 +87,8 @@ export class Game {
   vehicles!: Vehicles;
   animals!: Animals;
   survivors!: Survivors;
+  throwables!: Throwables;
+  private burnT = 0;
   private lastFeedDay = 0;
   private loudT = 0;
   driving: Vehicle | null = null;
@@ -172,6 +177,7 @@ export class Game {
     this.vehicles = new Vehicles(this.world, this.scene);
     this.animals = new Animals(this.world, this.scene, SEED);
     this.survivors = new Survivors(this.world, this.zombies, SEED);
+    this.throwables = new Throwables(this.scene, this.world);
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
@@ -339,7 +345,14 @@ export class Game {
     }
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
     this.weather.seasonTemp = this.season().temp;
-    this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs) });
+    this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs), season: this.state === 'play' ? this.season().idx : 0, farming: p.skills.level('farming'), covered: (x, z) => this.world.isInside(x, z), time: this.time });
+    this.sprinklers(dt);
+    this.throwables.update(dt, { zombies: this.zombies, animals: this.animals, particles: this.particles, lights: this.lights, player: p.pos, onShake: k => { p.camShake = Math.max(p.camShake, k); },
+      onPlayerHit: (dmg, burn) => {
+        if (this.state !== 'play') return;
+        if (burn) { this.burnT += dmg; if (this.burnT > 6) { this.burnT = 0; p.stats.addWound(this.rng.chance(0.5) ? 'legL' : 'legR', 'burn', 6); this.ui.notify('🔥 You are burning!', 'bad'); audio.play('player_hurt'); } }
+        else { const parts: PartId[] = ['torso', 'legL', 'legR', 'armL', 'armR', 'head']; for (let i = 0; i < 3; i++) p.stats.addWound(this.rng.pick(parts), dmg > 30 ? 'laceration' : 'scratch', dmg / 3); this.vm.hurt(); this.renderer.grade.uniforms.uDamage.value = 1; this.ui.notify('💥 Caught in the blast!', 'bad'); }
+      } });
     this.combatHeat = Math.max(0, this.combatHeat - dt * 0.5);
 
     // survival
@@ -626,6 +639,25 @@ export class Game {
     this.cancelAction();
   }
 
+  private sprinklerT = 0;
+  private sprinklers(dt: number) {
+    this.sprinklerT -= dt;
+    const spray = this.sprinklerT <= 0; if (spray) this.sprinklerT = 1.5;
+    for (const m of this.factory.machines) {
+      if (m.type !== 'sprinkler') continue;
+      const has = this.factory.fluidAvail(m, 'f_water') >= 0.2;
+      m.running = has;
+      if (!has) continue;
+      if (Math.abs(m.cx - this.player.pos.x) < 60 && Math.abs(m.cz - this.player.pos.z) < 60 && Math.random() < dt * 20) {
+        const a = this.time * 3 + Math.random() * 0.4; const v = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+        this.particles.norm.spawn({ x: m.cx, y: m.y + 1.1, z: m.cz, vx: v.x * 5, vy: 2.5, vz: v.z * 5, life: 1.1, max: 1.1, size: 0.05, r: 0.7, g: 0.8, b: 0.9, grav: 9.8, drag: 0.3, grow: 0, alpha: 0.6 });
+      }
+      if (!spray) continue;
+      this.factory.takeFluid(m, 'f_water', 0.2);
+      for (const pc of this.base.pieces) if (pc.farm && Math.hypot(pc.cx - m.cx, pc.cz - m.cz) < 7) pc.farm.water = 1;
+    }
+  }
+
   private updateScenery(dt: number, indoor: boolean) {
     const a = this.atmo; const cam = this.camera.position;
     const golden = smoothstep(0.35, 0.02, a.sunDir.y) * a.daylight;
@@ -732,7 +764,8 @@ export class Game {
       if (this.swingHitAt > 0) { this.swingHitAt -= dt; if (this.swingHitAt <= 0) this.meleeHit(); }
     }
     if (I.mouse[0] && !this.action) {
-      if (w?.kind === 'firearm') { if (this.fireCooldown <= 0 && this.reloading <= 0 && (w.auto || I.mousePressed[0])) this.fire(st!); }
+      if (st && (st.id === 'molotov' || st.id === 'pipe_bomb')) { if (I.mousePressed[0] && this.fireCooldown <= 0) this.throwItem(st); }
+      else if (w?.kind === 'firearm') { if (this.fireCooldown <= 0 && this.reloading <= 0 && (w.auto || I.mousePressed[0])) this.fire(st!); }
       else if (this.swingTimer <= 0 && (I.mousePressed[0] || true)) this.startSwing(st);
     }
     if (I.mousePressed[2] && w?.kind !== 'firearm' && this.shoveCD <= 0) this.shove();
@@ -844,7 +877,12 @@ export class Game {
     } else if (t.kind === 'rock') {
       if (!w?.mine) { audio.play('hit_metal', { pos: at, volume: 0.6 }); return; }
       audio.play('mine_hit', { pos: at }); this.particles.dust(at, 8, [0.5, 0.5, 0.48]); this.particles.sparks(at, 4);
-      this.giveOrDrop(this.invOf('stone', this.rng.int(1, 2)));
+      const mul = w.mine ?? 1;
+      if (t.ore) {
+        const inv = this.invOf(t.ore, this.rng.int(1, 2) * mul); if (this.rng.chance(0.3)) inv.add('stone', 1); this.giveOrDrop(inv);
+        t.hp -= 20; if (t.hp <= 0) { this.world.veg.kill(t, this.player.pos); this.ui.notify('The vein is exhausted.', ''); }
+      } else this.giveOrDrop(this.invOf('stone', this.rng.int(1, 2) * mul));
+      this.player.gainXP('strength', 1, this.gameMin);
     } else if (t.kind === 'log') {
       if (!w?.tree) return;
       audio.play('chop', { pos: at }); t.hp -= 25;
@@ -857,7 +895,7 @@ export class Game {
     if (!w?.mine) { audio.play('hit_metal', { pos: at, volume: 0.6 }); this.ui.notify('You need a pickaxe to mine ore.', ''); return; }
     audio.play('mine_hit', { pos: at }); this.particles.sparks(at, 8); this.particles.dust(at, 6, [0.4, 0.38, 0.35]);
     this.zombies.noise(p.pos, 12);
-    const n = 1 + (this.rng.chance(0.3 + p.skills.level('strength') * 0.03) ? 1 : 0);
+    const n = Math.max(1, Math.round((1 + (this.rng.chance(0.3 + p.skills.level('strength') * 0.03) ? 1 : 0)) * (w.mine ?? 1) * Math.max(0.5, o.purity)));
     this.giveOrDrop(this.invOf(o.type, n));
     p.gainXP('strength', 1.5, this.gameMin);
   }
@@ -893,6 +931,7 @@ export class Game {
         const falloff = w.pellets ? clamp(1.2 - zh.t / w.range, 0.3, 1) : 1;
         const dmg = w.damage * falloff * (1 + skill * 0.05) * this.rng.range(0.9, 1.1);
         const killed = this.zombies.damage(zh.z, dmg, d, zh.head, w.knock);
+        if (w.ammo === 'bolt' && this.rng.chance(0.75)) { if (killed && zh.z.corpse) zh.z.corpse.add('bolt', 1); else if (!killed) this.world.dropItems(zh.z.pos.clone(), this.invOf('bolt', 1)); }
         const at = eye.clone().addScaledVector(d, zh.t);
         this.particles.blood(at, d, zh.head ? 1.6 : 0.8);
         if (this.rng.chance(0.5)) this.particles.bloodDecal(at.x + d.x, this.world.groundY(at.x, at.z, at.y), at.z + d.z, 1);
@@ -914,13 +953,24 @@ export class Game {
     p.yaw += (Math.random() - 0.5) * w.recoil! * 0.5;
     p.camShake = Math.max(p.camShake, w.recoil! * 3);
     const mz = this.vm.muzzle.clone();
-    this.particles.muzzle(mz, fwd);
-    this.lights.flash(mz.clone().addScaledVector(fwd, 0.3), 0xffb050, 160, 16, 0.06);
-    audio.play(w.ammo === 'ammo_shells' ? 'gunshot_shotgun' : w.ammo === 'ammo_rifle' ? 'gunshot_rifle' : 'gunshot_pistol');
+    if (w.ammo !== 'bolt') { this.particles.muzzle(mz, fwd); this.lights.flash(mz.clone().addScaledVector(fwd, 0.3), 0xffb050, 160, 16, 0.06); }
+    if (w.ammo === 'bolt') audio.play('swing_heavy', { volume: 0.8, pitch: 1.4 });
+    else audio.play(w.ammo === 'ammo_shells' ? 'gunshot_shotgun' : w.ammo === 'ammo_rifle' ? 'gunshot_rifle' : 'gunshot_pistol');
     this.zombies.noise(p.pos, w.noise * (1 - p.skills.level('firearms') * 0.0));
     this.loudT = Math.max(this.loudT, w.noise);
     this.combatHeat += 1.5;
     this.wear(st, 1);
+  }
+  private throwItem(st: Stack) {
+    const p = this.player;
+    this.fireCooldown = 0.8; this.vm.swing(0.5);
+    const kind = st.id as 'molotov' | 'pipe_bomb';
+    p.inv.removeUid(st.uid, 1);
+    if (!p.inv.byUid(st.uid)) { const next = p.inv.find(kind); p.equipped = next ? next.uid : null; }
+    const eye = p.eye(); const fwd = p.forward();
+    setTimeout(() => this.throwables.throw(kind, eye.clone().addScaledVector(fwd, 0.6), fwd, 0.6 + Math.max(0, Math.min(1, (p.pitch + 0.6) / 1.4)) * 0.6 + p.skills.level('strength') * 0.03), 180);
+    audio.play('swing', { volume: 0.6 });
+    this.ui.refresh();
   }
   private startReload() {
     const p = this.player; const st = p.equippedStack(); if (!st) return; const w = item(st.id).weapon;
@@ -1075,7 +1125,7 @@ export class Game {
         consider({ kind: 'pump', label: this.factory.townPowered ? 'Fill gas can' : 'Gas pump (no power)', sub: this.factory.townPowered ? (p.inv.count('gas_can_empty') ? undefined : 'Bring an empty gas can') : 'Restore the town grid with the Grid Uplink', target: ref, t: hit.t });
       } else if ('purity' in ref) {
         const o = ref as OreNode;
-        consider({ kind: 'ore', label: `${item(o.type).name} deposit (${o.purity > 1 ? 'Pure' : 'Normal'})`, sub: o.occupied ? 'Being mined' : 'Mine with a pickaxe, or place a Miner', target: o, t: hit.t });
+        consider({ kind: 'ore', label: `${item(o.type).name} deposit (${o.purity > 1 ? 'Pure' : o.purity < 1 ? 'Impure' : 'Normal'})`, sub: o.occupied ? 'Being mined' : 'Mine with a pickaxe, or place a Miner', target: o, t: hit.t });
       }
     }
     // containers (AABB)
@@ -1100,6 +1150,8 @@ export class Game {
       tmp.min.set(npc.pos.x - 0.4, npc.pos.y, npc.pos.z - 0.4); tmp.max.set(npc.pos.x + 0.4, npc.pos.y + 1.8, npc.pos.z + 0.4);
       if (ray.intersectBox(tmp, hp)) consider(this.npcInteract(npc, hp.distanceTo(eye)));
     }
+    const bush = this.world.veg.nearest(p.pos.x + fwd.x * 1.2, p.pos.z + fwd.z * 1.2, 1.6, ['bush']);
+    if (bush && !best) consider({ kind: 'forage', label: (bush.foraged ?? -9) > this.day() - 2 ? 'Picked clean' : 'Forage', sub: 'Berries, mushrooms, herbs, fibre', target: bush, t: 1.5 });
     const carcass = this.animals.carcassNear(p.pos, 2.6);
     if (carcass) consider({ kind: 'butcher', label: `Butcher ${carcass.type}`, sub: p.inv.hasTool('knife') ? `${this.animals.meat(carcass)} raw meat` : 'Needs a knife or machete', target: carcass, t: Math.max(0.5, carcass.pos.distanceTo(eye) - 0.8) });
     const corpse = this.zombies.corpseNear(p.pos, 2.4);
@@ -1130,6 +1182,10 @@ export class Game {
     if (s === 'workbench') return { kind: 'station', label: 'Workbench', sub: 'Craft', target: pc, t };
     if (s === 'campfire') return { kind: 'station', label: pc.fire!.lit ? 'Campfire (burning)' : 'Campfire', sub: pc.fire!.lit ? `Fuel: ${Math.round(pc.fire!.fuel)} min · cook` : 'Add fuel & light it', target: pc, t };
     if (s === 'crate') return { kind: 'pcontainer', label: 'Wooden Crate', target: pc, t };
+    if (s === 'stove') return { kind: 'station', label: pc.fire!.lit ? 'Wood Stove (lit)' : 'Wood Stove', sub: pc.fire!.lit ? `Fuel: ${Math.round(pc.fire!.fuel)} min · cook meals` : 'Add wood & light it', target: pc, t };
+    if (s === 'compost') return { kind: 'pcontainer', label: 'Compost Bin', sub: `Rotten food, leaves, biomass → fertilizer (${Math.max(0, 8 - pc.proc!.t).toFixed(1)} h)`, target: pc, t };
+    if (s === 'coop') return { kind: 'pcontainer', label: 'Chicken Coop', sub: `Stock grain or seeds · ${pc.container!.inv.count('egg')} eggs`, target: pc, t };
+    if (s === 'rack') return { kind: 'pcontainer', label: 'Smoking Rack', sub: `Hang raw meat → jerky (${Math.max(0, 8 - pc.proc!.t).toFixed(1)} h)`, target: pc, t };
     if (s === 'bed') return { kind: 'bed', label: 'Sleep', sub: this.player.stats.fatigue < 30 ? "You're not tired" : this.zombies.nearest(this.player.pos, 15) ? 'Zombies nearby!' : 'Rest until rested', target: pc, t };
     if (s === 'rain') return { kind: 'rain', label: 'Rain Collector', sub: `${pc.rain!.water.toFixed(1)} / 10 water · fill bottle / drink`, target: pc, t };
     if (s === 'generator') { const g = pc.gen!; return { kind: 'gen', label: g.on ? 'Switch generator off' : 'Start generator', sub: `Fuel ${g.fuel.toFixed(1)} h${g.fuel <= 0 ? ' — refuel with a gas can (T)' : ''}`, target: pc, t, alt: this.player.inv.count('gas_can') ? { label: 'Refuel (gas can)', act: () => this.startAction({ label: 'Refuelling generator…', dur: 2.5, cancelOnMove: true, done: () => { if (!this.player.inv.remove('gas_can', 1)) return; g.fuel = Math.min(24, g.fuel + 12); this.player.inv.add('gas_can_empty'); audio.play('splash', { volume: 0.5 }); } }) } : undefined }; }
@@ -1193,7 +1249,7 @@ export class Game {
         } else this.openLoot(c.inv, c.label, c);
         break;
       }
-      case 'pcontainer': { const pc = it.target as Piece; this.openLoot(pc.container!.inv, 'Wooden Crate', pc.container); break; }
+      case 'pcontainer': { const pc = it.target as Piece; this.openLoot(pc.container!.inv, pc.container!.label, pc.container); break; }
       case 'drop': { const d = it.target as Drop; this.openLoot(d.inv, 'Ground', d); break; }
       case 'corpse': { const z = it.target as Zombie; audio.play('search', { pos: z.pos }); this.startAction({ label: 'Searching the body…', dur: 1.2, cancelOnMove: true, done: () => this.openLoot(z.corpse!, 'Corpse', z) }); break; }
       case 'machine': {
@@ -1208,7 +1264,7 @@ export class Game {
         const pc = it.target as Piece;
         this.openPiece = pc;
         if (pc.def.station === 'workbench') { this.station = 'workbench'; this.ui.toggle('crafting'); }
-        else if (pc.def.station === 'campfire') { this.station = 'campfire'; this.ui.toggle('campfire'); }
+        else if (pc.def.station === 'campfire' || pc.def.station === 'stove') { this.station = pc.def.station as Station; this.ui.toggle('campfire'); }
         audio.play('ui_open');
         break;
       }
@@ -1223,16 +1279,36 @@ export class Game {
       case 'farm': this.farmInteract(it.target as Piece); break;
       case 'gen': { const g = (it.target as Piece).gen!; if (!g.on && g.fuel <= 0) { this.ui.notify('No fuel. Pour in a gas can (T).', ''); break; } g.on = !g.on; audio.play(g.on ? 'power_on' : 'power_off', { pos: (it.target as Piece).obj.position }); if (g.on && !this.world.town.buildingAt((it.target as Piece).cx, (it.target as Piece).cz)) this.ui.notify('Running — but it only powers a building it sits inside.', ''); break; }
       case 'water': {
-        if (p.inv.count('empty_bottle')) { p.inv.remove('empty_bottle'); p.inv.add('dirty_water'); audio.play('splash'); this.ui.notify('Filled a bottle with lake water. Boil it before drinking.', ''); }
-        else this.startAction({ label: 'Drinking…', dur: 2.5, cancelOnMove: true, done: () => { p.stats.thirst = Math.min(100, p.stats.thirst + 35); if (this.rng.chance(p.traits.has('iron_gut') ? 0.15 : 0.4)) p.stats.foodPoison = Math.min(1, p.stats.foodPoison + 0.4); audio.play('drink'); } });
+        const filt = p.inv.hasTool('filter');
+        if (p.inv.count('empty_bottle')) { p.inv.remove('empty_bottle'); p.inv.add(filt ? 'water_bottle' : 'dirty_water'); audio.play('splash'); this.ui.notify(filt ? 'Filtered a bottle of clean water.' : 'Filled a bottle with lake water. Boil it before drinking.', filt ? 'good' : ''); }
+        else this.startAction({ label: 'Drinking…', dur: 2.5, cancelOnMove: true, done: () => { p.stats.thirst = Math.min(100, p.stats.thirst + 35); if (!filt && this.rng.chance(p.traits.has('iron_gut') ? 0.15 : 0.4)) p.stats.foodPoison = Math.min(1, p.stats.foodPoison + 0.4); audio.play('drink'); } });
         break;
       }
       case 'car': this.enterVehicle(it.target); break;
       case 'npc': this.talkTo(it.target as Survivor); break;
+      case 'forage': {
+        const b = it.target as TreeInst;
+        if ((b.foraged ?? -9) > this.day() - 2) { this.ui.notify('Nothing left on this one. Come back in a couple of days.', ''); break; }
+        audio.play('search', { pos: new THREE.Vector3(b.x, b.y, b.z) });
+        this.startAction({ label: 'Foraging…', dur: 2.5 * (1 - p.skills.level('foraging') * 0.05), cancelOnMove: true, done: () => {
+          b.foraged = this.day();
+          const fl = p.skills.level('foraging'), season = this.season().idx, forest = this.world.terrain.forestDensity(b.x, b.z);
+          const inv = new Inventory();
+          if (season !== 1 && this.rng.chance(0.65)) inv.add('berries', this.rng.int(1, 3) + Math.floor(fl / 3));
+          if (season !== 1 && this.rng.chance(0.25 + forest * 0.4 + (season === 0 ? 0.2 : 0))) inv.add(this.rng.chance(0.25 - fl * 0.02) ? 'mushroom_odd' : 'mushroom', this.rng.int(1, 2));
+          if (this.rng.chance(0.35 + fl * 0.03)) inv.add('herbs', this.rng.int(1, 2));
+          if (this.rng.chance(0.15)) inv.add('hemp', this.rng.int(1, 3));
+          if (this.rng.chance(0.08)) inv.add(this.rng.pick(['seeds_hemp', 'seeds_tomato', 'seeds_cabbage', 'seeds_pumpkin', 'seeds_wheat']), this.rng.int(1, 3));
+          inv.add('leaves', this.rng.int(1, 3));
+          p.gainXP('foraging', 4, this.gameMin);
+          this.giveOrDrop(inv);
+        } });
+        break;
+      }
       case 'butcher': {
         const a = it.target as Animal;
         if (!p.inv.hasTool('knife')) { this.ui.notify('You need a knife or machete to butcher it.', ''); break; }
-        this.startAction({ label: `Butchering the ${a.type}…`, dur: a.type === 'rabbit' ? 3 : 7, cancelOnMove: true, done: () => { if (a.butchered) return; a.butchered = true; const inv = new Inventory(); inv.add('raw_meat', this.animals.meat(a)); if (a.type !== 'rabbit') inv.add('rag', 1); this.giveOrDrop(inv); p.bloody = 1; } });
+        this.startAction({ label: `Butchering the ${a.type}…`, dur: a.type === 'rabbit' ? 3 : 7, cancelOnMove: true, done: () => { if (a.butchered) return; a.butchered = true; const inv = new Inventory(); inv.add('raw_meat', this.animals.meat(a)); if (a.type !== 'rabbit') inv.add('hide', a.type === 'deer' ? 2 : 1); else if (this.rng.chance(0.5)) inv.add('hide', 1); p.gainXP('foraging', 3, this.gameMin); this.giveOrDrop(inv); p.bloody = 1; } });
         audio.play('search');
         break;
       }
@@ -1259,13 +1335,22 @@ export class Game {
 
   private farmInteract(pc: Piece) {
     const p = this.player; const f = pc.farm!;
+    if (f.crop && f.growth < 1 && p.inv.count('fertilizer') && f.fert <= 0) {
+      p.inv.remove('fertilizer', 1); f.fert = 3; audio.play('search'); this.ui.notify('Fertilized: faster growth and a bigger harvest.', 'good'); p.gainXP('farming', 2, this.gameMin); return;
+    }
     if (!f.crop) {
       const seed = p.inv.stacks.find(s => item(s.id).crop);
       if (!seed) { this.ui.notify('You have no seeds. Look in garages, sheds and stores.', ''); return; }
-      this.startAction({ label: 'Planting…', dur: 2, cancelOnMove: true, done: () => { if (!p.inv.remove(seed.id, 1)) return; f.crop = item(seed.id).crop!; f.growth = 0; audio.play('search'); } });
+      const crop = CROPS[item(seed.id).crop!];
+      const season = this.season().idx;
+      if (crop && !crop.seasons.includes(season) && !this.world.isInside(pc.cx, pc.cz)) this.ui.notify(`${item(crop.id).name} won't grow in ${this.season().name.toLowerCase()} outdoors — it will wait for its season.`, '');
+      this.startAction({ label: `Planting ${item(seed.id).name}…`, dur: 2, cancelOnMove: true, done: () => { if (!p.inv.remove(seed.id, 1)) return; f.crop = item(seed.id).crop!; f.growth = 0; audio.play('search'); p.gainXP('farming', 2, this.gameMin); } });
     } else if (f.growth >= 1) {
       this.startAction({ label: 'Harvesting…', dur: 2, cancelOnMove: true, done: () => {
-        const inv = new Inventory(); inv.add(f.crop!, 3 + this.rng.int(0, 3)); if (this.rng.chance(0.6)) inv.add('seeds_' + f.crop, this.rng.int(1, 3));
+        const c = CROPS[f.crop!]; const fl = p.skills.level('farming');
+        const n = Math.round(this.rng.int(c?.yield[0] ?? 3, c?.yield[1] ?? 6) * (1 + fl * 0.06) * (f.fert > 0 ? 1.5 : 1));
+        const inv = new Inventory(); inv.add(f.crop!, n); if (this.rng.chance(c?.seedBack ?? 0.6)) inv.add('seeds_' + f.crop, this.rng.int(1, 3));
+        p.gainXP('farming', 8, this.gameMin); f.fert = 0;
         f.crop = null; f.growth = 0; if (f.plant) { this.base.group.remove(f.plant); f.plant = null; } this.giveOrDrop(inv);
       } });
     } else if (p.inv.count('water_bottle') || p.inv.count('dirty_water')) {
@@ -1308,6 +1393,8 @@ export class Game {
         const sick = (d.sick ?? 0) + (spoiled ? 0.6 : 0);
         if (sick > 0 && this.rng.chance(sick * (p.traits.has('iron_gut') ? 0.35 : 1))) { p.stats.foodPoison = Math.min(1, p.stats.foodPoison + 0.45); this.ui.notify('Your stomach turns…', 'bad'); }
         if (d.empties) p.inv.add(d.empties);
+        if (d.id === 'herbal_tea') { p.stats.panic = Math.max(0, p.stats.panic - 40); p.stats.painkillerHrs = Math.max(p.stats.painkillerHrs, 1); }
+        if (['stew', 'veg_soup', 'fish_stew', 'pumpkin_pie', 'bread_fresh', 'omelette'].includes(d.id)) { p.stats.hunger = clamp(p.stats.hunger + p.skills.level('cooking') * 1.5, 0, 100); p.stats.bodyTemp = Math.max(p.stats.bodyTemp, 36.8); }
       } });
       return;
     }
@@ -1399,11 +1486,11 @@ export class Game {
 
   canCraft(r: Recipe, station: Station) {
     const p = this.player;
-    if (r.station !== 'hand' && r.station !== station) return { ok: false, why: `Needs ${r.station}` };
+    if (r.station !== 'hand' && r.station !== station && !(station === 'stove' && r.station === 'campfire')) return { ok: false, why: `Needs ${r.station}` };
     if (r.tier && this.factory.tier < r.tier) return { ok: false, why: `Unlocks at milestone ${r.tier}` };
     if (r.skill && p.skills.level(r.skill[0]) < r.skill[1]) return { ok: false, why: `Requires ${SKILLS.find(s => s.id === r.skill![0])!.name} ${r.skill[1]}` };
     for (const t of r.tools ?? []) if (!p.inv.hasTool(t)) return { ok: false, why: `Needs a ${t}` };
-    if (r.station === 'campfire' && !this.openPiece?.fire?.lit) return { ok: false, why: 'Light the campfire first' };
+    if ((r.station === 'campfire' || r.station === 'stove') && !this.openPiece?.fire?.lit) return { ok: false, why: r.station === 'stove' ? 'Light the stove first' : 'Light the campfire first' };
     if (!this.settings.creative && !p.inv.hasAll(r.inp)) return { ok: false, why: 'Missing ingredients' };
     return { ok: true, why: '' };
   }
@@ -1573,7 +1660,8 @@ export class Game {
       case 'm3': done = this.factory.tier >= 3; break;
       case 'm4': done = this.factory.tier >= 4; break;
       case 'm5': done = this.factory.tier >= 5; break;
-      case 'cure': done = this.factory.tier >= 6; break;
+      case 'm6': done = this.factory.tier >= 6; break;
+      case 'cure': done = this.factory.tier >= 7; break;
     }
     if (done) {
       this.objective++;

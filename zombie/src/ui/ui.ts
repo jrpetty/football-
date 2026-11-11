@@ -37,6 +37,7 @@ export class UI {
     this.root = document.getElementById('ui')!;
     this.buildHud();
     this.root.addEventListener('click', e => this.onClick(e));
+    this.root.addEventListener('input', e => { const t = e.target as HTMLInputElement; if (t.id === 'craftq') { this.craftQuery = t.value; const l = document.getElementById('craftlist'); if (l) l.innerHTML = this.recipeList(this.g.station, 999, true); } });
     this.root.addEventListener('contextmenu', e => { const t = (e.target as HTMLElement).closest('[data-rc]') as HTMLElement | null; if (t) { e.preventDefault(); this.onRightClick(t); } });
   }
 
@@ -353,15 +354,22 @@ export class UI {
   }
 
   // ------------------------------------------------------------------ crafting
-  private recipeList(station: string, limit = 999) {
+  private craftCat = 'all'; private craftQuery = '';
+  private static CRAFT_CATS: [string, string, string[]][] = [['all', 'All', []], ['weapon', 'Weapons', ['weapon', 'ammo']], ['tool', 'Tools', ['tool']], ['medical', 'Medical', ['medical']], ['food', 'Food', ['food', 'drink']], ['clothing', 'Clothing', ['clothing']], ['material', 'Materials', ['material', 'part', 'resource', 'misc', 'seed']]];
+  private recipeList(station: string, limit = 999, filtered = false) {
     const g = this.g;
-    const list = RECIPES.filter(r => r.station === 'hand' || r.station === station).map(r => ({ r, c: g.canCraft(r, g.station) }));
+    const cat = UI.CRAFT_CATS.find(c => c[0] === this.craftCat)!; const q = this.craftQuery.toLowerCase();
+    const list = RECIPES.filter(r => r.station === 'hand' || r.station === station)
+      .filter(r => !filtered || ((cat[0] === 'all' || cat[2].includes(item(r.out[0]).cat)) && (!q || item(r.out[0]).name.toLowerCase().includes(q) || Object.keys(r.inp).some(k => item(k).name.toLowerCase().includes(q)))))
+      .map(r => ({ r, c: g.canCraft(r, g.station) }));
     list.sort((a, b) => Number(b.c.ok) - Number(a.c.ok));
     return list.slice(0, limit).map(({ r, c }) => `<div class="recipe ${c.ok ? '' : 'no'}" data-a="craft" data-id="${r.id}" title="${esc(c.why)}"><span class="ic">${item(r.out[0]).icon}</span><div style="flex:1"><div class="rn">${esc(item(r.out[0]).name)} ×${r.out[1]} <span class="hint">· ${r.station}${r.tools ? ' · ' + r.tools.join(', ') : ''}</span></div><div class="req">${fmtCost(r.inp, g.player.inv)}${c.ok ? '' : ` — <span class="lack">${esc(c.why)}</span>`}</div></div></div>`).join('');
   }
   private craftPanel() {
     const st = this.g.station;
-    return `<div class="col"><h3>${st === 'workbench' ? 'Workbench recipes' : 'Hand crafting'} <span class="hint">${st === 'hand' ? '— use a Workbench or Campfire for more' : ''}</span></h3><div class="scroll">${this.recipeList(st)}</div></div>
+    return `<div class="col"><h3>${st === 'workbench' ? 'Workbench recipes' : 'Hand crafting'} <span class="hint">${st === 'hand' ? '— use a Workbench, Campfire or Stove for more' : ''}</span></h3>
+      <div class="btnrow" style="margin:0 0 8px">${UI.CRAFT_CATS.map(c => `<button class="btn small ${c[0] === this.craftCat ? 'primary' : ''}" data-a="ccat" data-id="${c[0]}">${c[1]}</button>`).join('')}<input class="txt" id="craftq" placeholder="Search recipes or ingredients…" value="${esc(this.craftQuery)}" style="flex:1;min-width:160px;font-size:14px;padding:4px 8px"/></div>
+      <div class="scroll" id="craftlist">${this.recipeList(st, 999, true)}</div></div>
       <div class="col" style="max-width:380px"><h3>Inventory</h3>${this.weightBar()}<div class="scroll"><div class="ilist">${this.g.player.inv.stacks.map(s => this.itemRow(s, 'p')).join('')}</div></div></div>`;
   }
 
@@ -410,7 +418,7 @@ export class UI {
   // ------------------------------------------------------------------ build menu
   private buildPanel() {
     const g = this.g; const p = g.player;
-    const cats: [string, string][] = [['structure', 'Structures'], ['station', 'Survival'], ['production', 'Production'], ['logistics', 'Logistics'], ['power', 'Power'], ['defense', 'Defence'], ['special', 'Special']];
+    const cats: [string, string][] = [['structure', 'Structures'], ['station', 'Survival'], ['production', 'Production'], ['logistics', 'Logistics'], ['transport', 'Railways'], ['power', 'Power'], ['defense', 'Defence'], ['special', 'Special']];
     const entries: { id: string; name: string; icon: string; desc: string; cost: Record<string, number>; tier: number; cat: string; skill?: [SkillId, number] }[] = [];
     for (const d of Object.values(PIECES)) entries.push({ id: d.id, name: d.name, icon: d.icon, desc: d.desc, cost: d.cost, tier: d.tier, cat: d.kind === 'station' ? 'station' : 'structure', skill: d.skill });
     for (const d of Object.values(MACHINES)) entries.push({ id: d.type, name: d.name, icon: d.icon, desc: d.desc + (d.power > 0 ? ` (${d.power} MW)` : d.power < 0 ? ` (+${-d.power} MW)` : ''), cost: d.cost, tier: d.tier, cat: d.type === 'spike_trap' ? 'defense' : d.cat });
@@ -472,11 +480,12 @@ export class UI {
     const g = this.g; const pc = g.openPiece; if (!pc?.fire) return '';
     const p = g.player; const f = pc.fire;
     const fuels = p.inv.stacks.filter(s => item(s.id).fuel && s.id !== 'coal' && s.id !== 'gas_can');
-    return `<div class="panel window" style="width:min(820px,96vw)"><div class="top"><h2 style="padding:0 8px">🔥 Campfire</h2><button class="close" data-a="close">✕</button></div><div class="body">
+    const stove = g.station === 'stove';
+    return `<div class="panel window" style="width:min(820px,96vw)"><div class="top"><h2 style="padding:0 8px">${stove ? '♨️ Wood Stove' : '🔥 Campfire'}</h2><button class="close" data-a="close">✕</button></div><div class="body">
       <div class="col" style="max-width:300px"><h3>Fire</h3><div class="statgrid"><div class="k">Status</div><div class="v">${f.lit ? '<span class="have">burning</span>' : 'cold'}</div><div class="k">Fuel</div><div class="v">${Math.round(f.fuel)} min</div></div>
       <div class="btnrow"><button class="btn primary" data-a="light" ${f.lit ? 'disabled' : ''}>Light (lighter)</button></div><h3>Add fuel</h3><div class="btnrow">${fuels.map(s => `<button class="btn small" data-a="fuel" data-id="${s.id}">${item(s.id).icon} ${esc(item(s.id).name)} (${p.inv.count(s.id)})</button>`).join('') || '<span class="hint">No fuel: logs, planks or biomass.</span>'}</div>
       <p class="hint">Fires keep you warm and dry you off, and let you cook food and boil dirty water. Rain may put it out.</p></div>
-      <div class="col"><h3>Cook</h3><div class="scroll">${RECIPES.filter(r => r.station === 'campfire').map(r => { const c = g.canCraft(r, 'campfire'); return `<div class="recipe ${c.ok ? '' : 'no'}" data-a="craft" data-id="${r.id}"><span class="ic">${item(r.out[0]).icon}</span><div style="flex:1"><div class="rn">${esc(item(r.out[0]).name)}</div><div class="req">${fmtCost(r.inp, p.inv)}${c.ok ? '' : ` — <span class="lack">${esc(c.why)}</span>`}</div></div></div>`; }).join('')}</div></div></div></div>`;
+      <div class="col"><h3>Cook</h3><div class="scroll">${RECIPES.filter(r => r.station === (stove ? 'stove' : 'campfire') || (stove && r.station === 'campfire' && r.id !== 'charcoal')).map(r => { const c = g.canCraft({ ...r, station: stove ? 'stove' : r.station }, g.station); return `<div class="recipe ${c.ok ? '' : 'no'}" data-a="craft" data-id="${r.id}"><span class="ic">${item(r.out[0]).icon}</span><div style="flex:1"><div class="rn">${esc(item(r.out[0]).name)}</div><div class="req">${fmtCost(r.inp, p.inv)}${c.ok ? '' : ` — <span class="lack">${esc(c.why)}</span>`}</div></div></div>`; }).join('')}</div></div></div></div>`;
   }
 
   // ------------------------------------------------------------------ clicks
@@ -525,6 +534,7 @@ export class UI {
       case 'craft': { const r = RECIPES.find(x => x.id === t.dataset.id)!; g.craft(r, g.station); break; }
       case 'treat': g.treat(t.dataset.part as PartId, Number(t.dataset.w), t.dataset.item!); break;
       case 'bcat': this.buildCat = t.dataset.id!; this.renderPanel(); break;
+      case 'ccat': this.craftCat = t.dataset.id!; this.renderPanel(); break;
       case 'pick': g.toggleBuild(true, t.dataset.id!); break;
       case 'mrecipe': if (g.openMachine) g.setRecipe(g.openMachine, t.dataset.id!); break;
       case 'takeout': if (g.openMachine) g.takeOutput(g.openMachine); this.refresh(); break;
@@ -572,7 +582,7 @@ export class UI {
     ctx.fillStyle = '#b8a890';
     const s = N / WORLD_SIZE;
     for (const bd of w.town.buildings) { ctx.fillRect((bd.x - bd.w / 2 + HALF_WORLD) * s, (bd.z - bd.d / 2 + HALF_WORLD) * s, bd.w * s, bd.d * s); }
-    const icon: Record<string, string> = { iron_ore: '#c0583a', copper_ore: '#e08a40', coal: '#202020', stone: '#e0dccf', sulfur: '#e8d040', f_crude: '#6a2a8a' };
+    const icon: Record<string, string> = { iron_ore: '#c0583a', copper_ore: '#e08a40', coal: '#202020', stone: '#e0dccf', sulfur: '#e8d040', f_crude: '#6a2a8a', quartz: '#f0eef8', bauxite: '#c06a3a', gold_ore: '#ffd040' };
     for (const o of w.ores) { ctx.fillStyle = icon[o.type]; ctx.beginPath(); ctx.arc((o.x + HALF_WORLD) * s, (o.z + HALF_WORLD) * s, 4, 0, 7); ctx.fill(); ctx.strokeStyle = '#000'; ctx.stroke(); }
     this.baseMap = c; return c;
   }

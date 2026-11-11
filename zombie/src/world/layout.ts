@@ -3,7 +3,7 @@ import { RNG } from '../core/util';
 
 export interface Road { ax: number; az: number; bx: number; bz: number; w: number; kind: 'highway' | 'street' | 'dirt' }
 export interface Plot { x: number; z: number; w: number; d: number; face: 0 | 1 | 2 | 3; kind: string } // face: 0:+z 1:+x 2:-z 3:-x (door side)
-export interface OreField { type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur' | 'f_crude'; x: number; z: number; purity: number }
+export interface OreField { type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur' | 'f_crude' | 'quartz' | 'bauxite' | 'gold_ore'; x: number; z: number; purity: number }
 
 export const TOWN = { x0: -150, x1: 150, z0: -120, z1: 120, h: 3 };
 export const LAKE = { x: -235, z: 205, r: 62, level: -0.8 };
@@ -93,6 +93,29 @@ export function buildLayout(seed: number) {
     { type: 'f_crude', x: -310, z: 130, purity: 1 },
     { type: 'f_crude', x: 318, z: 60, purity: 2 },
   ];
+  // scatter many more deposits across the wilderness, flavoured by region
+  const R = new RNG(seed + 1234);
+  type T = OreField['type'];
+  const regionTable = (x: number, z: number): [T, number][] => {
+    if (x > 150) return [['iron_ore', 3], ['copper_ore', 2], ['coal', 2], ['gold_ore', 1.2], ['stone', 1], ['quartz', 1]];
+    if (x < -150) return [['sulfur', 2], ['quartz', 2], ['stone', 2], ['iron_ore', 1], ['bauxite', 1], ['copper_ore', 1]];
+    if (z < -150) return [['bauxite', 2], ['iron_ore', 2], ['copper_ore', 2], ['coal', 1], ['stone', 1]];
+    if (z > 150) return [['coal', 2], ['iron_ore', 2], ['quartz', 1], ['gold_ore', 1], ['stone', 1], ['copper_ore', 1]];
+    return [['iron_ore', 2], ['copper_ore', 2], ['stone', 2], ['coal', 1]];
+  };
+  let tries = 0;
+  while (ores.length < 88 && tries++ < 3000) {
+    const x = R.range(-345, 345), z = R.range(-345, 345);
+    if (x > TOWN.x0 - 35 && x < TOWN.x1 + 35 && z > TOWN.z0 - 35 && z < TOWN.z1 + 35) continue;
+    if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 15) continue;
+    if (Math.hypot(x - CABIN.x, z - CABIN.z) < 25) continue;
+    if (plots.some(p => Math.abs(p.x - x) < p.w / 2 + 14 && Math.abs(p.z - z) < p.d / 2 + 14)) continue;
+    if (roads.some(r => distToSeg(x, z, r) < r.w / 2 + 6)) continue;
+    if (ores.some(o => Math.hypot(o.x - x, o.z - z) < 34)) continue;
+    const type: T = R.chance(0.05) ? 'f_crude' : R.weighted(regionTable(x, z));
+    const purity = R.weighted<number>([[0.5, 40], [1, 45], [2, 15]]);
+    ores.push({ type, x, z, purity });
+  }
   return { roads, plots, ores };
 }
 export type Layout = ReturnType<typeof buildLayout>;

@@ -48,7 +48,7 @@ class Pool {
 }
 
 export class Particles {
-  add: Pool; norm: Pool;
+  add: Pool; norm: Pool; // pools are public so systems can spawn custom particles
   decals: THREE.Mesh[] = [];
   private decalGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
   private decalMat: THREE.MeshStandardMaterial;

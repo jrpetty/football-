@@ -5,6 +5,20 @@ import { PIECES, PieceDef } from '../factory/defs';
 import { buildPiece } from '../models/buildpieces';
 import { buildProp, PROP_SIZES } from '../models/props';
 import { buildGeneratorModel } from '../models/lowpoly';
+import { CROPS } from '../items/content';
+import { getFlatMaterial } from '../render/materials';
+
+function buildChicken(i: number): THREE.Group {
+  const g = new THREE.Group(); const white = getFlatMaterial(i === 2 ? 0x8a5a30 : 0xece6da, 0.9), red = getFlatMaterial(0xc02a20, 0.8), yel = getFlatMaterial(0xe0a020, 0.7);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 7, 5), white); body.scale.set(0.85, 0.8, 1.15); body.position.y = 0.22; body.castShadow = true; g.add(body);
+  const head = new THREE.Group(); head.position.set(0, 0.33, 0.14); g.add(head);
+  const hm = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), white); hm.position.set(0, 0.04, 0.04); head.add(hm);
+  const comb = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.06), red); comb.position.set(0, 0.11, 0.04); head.add(comb);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 4), yel); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.03, 0.12); head.add(beak);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.08), white); tail.position.set(0, 0.32, -0.17); tail.rotation.x = -0.4; g.add(tail);
+  for (const s of [-0.05, 0.05]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 4), yel); l.position.set(s, 0.06, 0); g.add(l); }
+  return g;
+}
 import { World, Floor } from '../world/world';
 import { Box } from '../world/collision';
 import { Inventory } from '../items/inventory';
@@ -17,7 +31,8 @@ import { bus } from '../core/util';
 export interface Piece {
   id: number; def: PieceDef; tx: number; tz: number; axis: 0 | 1; rot: number; y: number; obj: THREE.Object3D; boxes: Box[]; hp: number; maxHp: number;
   floor: Floor | null; container: Container | null; door: { open: boolean; pivot: THREE.Object3D; angle: number; box: Box; width: number } | null;
-  fire: { fuel: number; lit: boolean; emitter: Emitter; pos: THREE.Vector3 } | null; farm: { crop: string | null; growth: number; water: number; plant: THREE.Object3D | null } | null;
+  fire: { fuel: number; lit: boolean; emitter: Emitter; pos: THREE.Vector3 } | null; farm: { crop: string | null; growth: number; water: number; plant: THREE.Object3D | null; fert: number } | null;
+  proc: { t: number; chickens?: THREE.Object3D[] } | null;
   rain: { water: number } | null; gen: { fuel: number; on: boolean } | null; cx: number; cz: number; destroyed?: boolean; barricade?: number;
 }
 
@@ -63,7 +78,7 @@ export class Base {
     const hpMul = 1 + this.carpentry * 0.08;
     let obj: THREE.Object3D; const boxes: Box[] = [];
     let cx = (tx + 0.5) * GRID, cz = (tz + 0.5) * GRID, y = 0;
-    const p: Piece = { id: this.nextId++, def, tx, tz, axis, rot, y: 0, obj: null as any, boxes, hp: def.hp * hpMul, maxHp: def.hp * hpMul, floor: null, container: null, door: null, fire: null, farm: null, rain: null, gen: null, cx, cz };
+    const p: Piece = { id: this.nextId++, def, tx, tz, axis, rot, y: 0, obj: null as any, boxes, hp: def.hp * hpMul, maxHp: def.hp * hpMul, floor: null, container: null, door: null, fire: null, farm: null, rain: null, gen: null, proc: null, cx, cz };
     const col = this.world.col;
     if (def.kind === 'wall' || def.kind === 'door_wall' || def.kind === 'window_wall' || def.kind === 'gate') {
       cx = axis === 0 ? (tx + 0.5) * GRID : (tx + 1) * GRID; cz = axis === 0 ? (tz + 1) * GRID : (tz + 0.5) * GRID;
@@ -144,12 +159,18 @@ export class Base {
       if (def.station === 'crate') {
         p.container = { id: 100000 + p.id, kind: 'storage', label: 'Wooden Crate', pos: new THREE.Vector3(cx, y + 0.5, cz), inv: new Inventory(60), generated: true, half: new THREE.Vector3(hw + 0.05, 0.6, hd + 0.05), building: null };
       }
-      if (def.station === 'campfire') {
+      if (def.station === 'campfire' || def.station === 'stove') {
         const anchor = obj.userData.fireAnchor as THREE.Object3D | undefined;
-        const fp = new THREE.Vector3(cx, y + 0.15, cz); if (anchor) { obj.updateMatrixWorld(true); anchor.getWorldPosition(fp); }
+        const fp = new THREE.Vector3(cx, y + (def.station === 'stove' ? 0.6 : 0.15), cz); if (anchor) { obj.updateMatrixWorld(true); anchor.getWorldPosition(fp); }
         p.fire = { fuel: 0, lit: false, emitter: this.lights.add({ pos: fp.clone().setY(fp.y + 0.6), color: new THREE.Color(0xff8a3a), intensity: 0, distance: 14, on: false, flicker: 0.35 }), pos: fp };
       }
-      if (def.station === 'farm') p.farm = { crop: null, growth: 0, water: 0.5, plant: null };
+      if (def.station === 'farm') p.farm = { crop: null, growth: 0, water: 0.5, plant: null, fert: 0 };
+      if (def.station === 'compost' || def.station === 'coop' || def.station === 'rack') {
+        const label = def.station === 'compost' ? 'Compost Bin' : def.station === 'coop' ? 'Chicken Coop' : 'Smoking Rack';
+        p.container = { id: 100000 + p.id, kind: 'storage', label, pos: new THREE.Vector3(cx, y + 0.5, cz), inv: new Inventory(40), generated: true, half: new THREE.Vector3(hw + 0.05, 0.6, hd + 0.05), building: null };
+        p.proc = { t: 0 };
+        if (def.station === 'coop') { p.proc.chickens = []; for (let i = 0; i < 3; i++) { const c = buildChicken(i); c.position.set(cx + (i - 1) * 0.8, y, cz + 1.4); this.group.add(c); p.proc.chickens.push(c); } }
+      }
       if (def.station === 'rain') p.rain = { water: 2 };
       if (def.station === 'generator') p.gen = { fuel: 0, on: false };
       this.tilesMap.set(`${tx},${tz}`, [...(this.tilesMap.get(`${tx},${tz}`) ?? []), p]);
@@ -161,6 +182,36 @@ export class Base {
     this.group.add(obj!);
     this.pieces.push(p);
     return p;
+  }
+
+  /** compost, coop and smoking rack processing */
+  private process(p: Piece, dtH: number, time: number, dt: number) {
+    const inv = p.container!.inv; const pr = p.proc!;
+    pr.t += dtH;
+    if (p.def.station === 'compost' && pr.t >= 8) {
+      pr.t = 0;
+      const organic = ['rotten_food', 'leaves', 'berries', 'mushroom_odd', 'raw_meat', 'wheat'];
+      let units = 0; for (const id of organic) { const n = Math.min(inv.count(id), 12 - units); if (n > 0) { inv.remove(id, n); units += n; } }
+      if (units >= 3) inv.add('fertilizer', Math.floor(units / 3));
+    } else if (p.def.station === 'coop') {
+      if (pr.t >= 12) {
+        pr.t = 0;
+        const feeds = ['wheat', 'corn', 'seeds_wheat', 'seeds_corn', 'seeds_carrot', 'seeds_hemp', 'cabbage'];
+        let fed = 0; for (const id of feeds) { while (fed < 3 && inv.count(id) > 0) { inv.remove(id, 1); fed++; } }
+        if (fed) inv.add('egg', fed + (fed === 3 ? 1 : 0));
+      }
+      // chickens peck around the coop
+      pr.chickens?.forEach((c, i) => {
+        const a = time * 0.3 + i * 2.1; const r = 1.2 + Math.sin(time * 0.7 + i) * 0.5;
+        const nx = p.cx + Math.cos(a) * r, nz = p.cz + Math.sin(a) * r;
+        c.rotation.y = Math.atan2(nx - c.position.x, nz - c.position.z) || c.rotation.y;
+        c.position.x += (nx - c.position.x) * Math.min(1, dt * 0.8); c.position.z += (nz - c.position.z) * Math.min(1, dt * 0.8);
+        c.position.y = p.y + Math.abs(Math.sin(time * 6 + i)) * 0.02;
+        (c.children[1] as THREE.Object3D).rotation.x = Math.max(0, Math.sin(time * 4 + i * 1.7)) * 0.9; // pecking head
+      });
+    } else if (p.def.station === 'rack' && pr.t >= 8) {
+      pr.t = 0; const n = Math.min(inv.count('raw_meat'), 4); if (n) { inv.remove('raw_meat', n); inv.add('jerky', n * 2); }
+    }
   }
 
   roofHeight(tx: number, tz: number) {
@@ -183,6 +234,7 @@ export class Base {
     if (p.floor) this.world.floors.splice(this.world.floors.indexOf(p.floor), 1);
     if (p.fire) this.lights.remove(p.fire.emitter);
     if (p.farm?.plant) this.group.remove(p.farm.plant);
+    p.proc?.chickens?.forEach(c => this.group.remove(c));
     for (const [k, v] of this.edges) if (v === p) this.edges.delete(k);
     const key = `${p.tx},${p.tz}`; const arr = this.tilesMap.get(key); if (arr) this.tilesMap.set(key, arr.filter(q => q !== p));
     this.pieces.splice(this.pieces.indexOf(p), 1);
@@ -200,7 +252,7 @@ export class Base {
     if (p.hp <= 0 && !p.destroyed) { audio.play('wood_break', { pos: new THREE.Vector3(p.cx, p.y + 1, p.cz) }); this.remove(p); bus.emit('notify', `💥 ${p.def.name} destroyed!`, 'bad'); }
   }
 
-  update(dt: number, dtH: number, ctx: { raining: number; particles: any; playerPos: THREE.Vector3; temp?: number }) {
+  update(dt: number, dtH: number, ctx: { raining: number; particles: any; playerPos: THREE.Vector3; temp?: number; season?: number; farming?: number; covered?: (x: number, z: number) => boolean; time?: number }) {
     for (const p of this.pieces) {
       if (p.door) {
         const target = p.door.open ? Math.PI / 2 : 0;
@@ -218,15 +270,25 @@ export class Base {
         p.fire.emitter.on = p.fire.lit; p.fire.emitter.intensity = p.fire.lit ? 45 : 0;
       }
       if (p.rain) p.rain.water = Math.min(10, p.rain.water + dtH * ctx.raining * 2);
+      if (p.proc && p.container) this.process(p, dtH, ctx.time ?? 0, dt);
       if (p.gen) { if (p.gen.on) { p.gen.fuel = Math.max(0, p.gen.fuel - dtH); if (p.gen.fuel <= 0) p.gen.on = false; } const l = p.obj.getObjectByName('genLamp') as THREE.Mesh | undefined; if (l) (l.material as THREE.MeshStandardMaterial) = getMaterial(p.gen.on ? 'emissiveGreen' : 'emissiveRed'); }
       if (p.farm && p.farm.crop) {
+        const crop = CROPS[p.farm.crop];
         p.farm.water = Math.max(0, Math.min(1, p.farm.water + dtH * (ctx.raining * 0.5 - 0.02)));
-        if (p.farm.water > 0.05 && (ctx.temp ?? 10) > 3) p.farm.growth = Math.min(1, p.farm.growth + dtH / 60);
+        const inSeason = !crop || crop.seasons.includes(ctx.season ?? 0) || ctx.covered?.(p.cx, p.cz);
+        const warm = (ctx.temp ?? 10) > 3 || p.farm.crop === 'cabbage';
+        if (p.farm.water > 0.05 && inSeason && warm) {
+          const rate = dtH / ((crop?.days ?? 2.5) * 24) * (p.farm.fert > 0 ? 1.5 : 1) * (1 + (ctx.farming ?? 0) * 0.05);
+          p.farm.growth = Math.min(1, p.farm.growth + rate);
+          if (p.farm.fert > 0) p.farm.fert = Math.max(0, p.farm.fert - dtH / 24);
+        }
         const stage = Math.min(3, Math.floor(p.farm.growth * 4));
         const want = `crop_stage${stage}` as any;
         if (!p.farm.plant || p.farm.plant.userData.stage !== stage) {
           if (p.farm.plant) this.group.remove(p.farm.plant);
-          const pl = buildPiece(want); pl.position.set(p.cx, p.y + 0.3, p.cz); pl.userData.stage = stage; this.group.add(pl); p.farm.plant = pl;
+          const pl = buildPiece(want); pl.position.set(p.cx, p.y + 0.3, p.cz); pl.userData.stage = stage;
+          if (stage >= 3 && crop) { const fm = new THREE.MeshStandardMaterial({ color: crop.color, roughness: 0.6 }); for (let i = 0; i < 7; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(p.farm.crop === 'pumpkin' ? 0.18 : 0.07, 6, 5), fm); f.position.set((Math.sin(i * 2.4) * 0.6), 0.35 + (i % 3) * 0.08, Math.cos(i * 2.4) * 0.6); f.castShadow = true; pl.add(f); } }
+          this.group.add(pl); p.farm.plant = pl;
         }
       }
     }
@@ -254,7 +316,7 @@ export class Base {
   }
 
   toJSON() {
-    return this.pieces.map(p => ({ id: p.def.id, tx: p.tx, tz: p.tz, axis: p.axis, rot: p.rot, y: p.y, hp: p.hp, open: p.door?.open ?? false, inv: p.container?.inv.stacks ?? null, fire: p.fire ? [p.fire.fuel, p.fire.lit] : null, farm: p.farm ? [p.farm.crop, p.farm.growth, p.farm.water] : null, rain: p.rain?.water ?? null, gen: p.gen ? [p.gen.fuel, p.gen.on] : null }));
+    return this.pieces.map(p => ({ id: p.def.id, tx: p.tx, tz: p.tz, axis: p.axis, rot: p.rot, y: p.y, hp: p.hp, open: p.door?.open ?? false, inv: p.container?.inv.stacks ?? null, fire: p.fire ? [p.fire.fuel, p.fire.lit] : null, farm: p.farm ? [p.farm.crop, p.farm.growth, p.farm.water, p.farm.fert] : null, proc: p.proc ? p.proc.t : null, rain: p.rain?.water ?? null, gen: p.gen ? [p.gen.fuel, p.gen.on] : null }));
   }
   load(arr: any[]) {
     for (const p of [...this.pieces]) this.remove(p);
@@ -267,7 +329,8 @@ export class Base {
       if (s.open && p.door) this.toggleDoor(p);
       if (s.inv && p.container) p.container.inv.load(s.inv);
       if (s.fire && p.fire) { p.fire.fuel = s.fire[0]; p.fire.lit = s.fire[1]; }
-      if (s.farm && p.farm) { p.farm.crop = s.farm[0]; p.farm.growth = s.farm[1]; p.farm.water = s.farm[2]; }
+      if (s.farm && p.farm) { p.farm.crop = s.farm[0]; p.farm.growth = s.farm[1]; p.farm.water = s.farm[2]; p.farm.fert = s.farm[3] ?? 0; }
+      if (s.proc !== null && s.proc !== undefined && p.proc) p.proc.t = s.proc;
       if (s.rain !== null && p.rain) p.rain.water = s.rain;
       if (s.gen && p.gen) { p.gen.fuel = s.gen[0]; p.gen.on = s.gen[1]; }
     }

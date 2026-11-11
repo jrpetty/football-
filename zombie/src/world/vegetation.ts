@@ -9,7 +9,7 @@ import { Terrain, T_N, T_RES } from './terrain';
 import { CollisionWorld, Circle } from './collision';
 import { LAKE, TOWN } from './layout';
 
-export interface TreeInst { x: number; y: number; z: number; s: number; r: number; v: number; kind: 'tree' | 'bush' | 'rock' | 'log'; alive: boolean; hp: number; col?: Circle; idx: number }
+export interface TreeInst { x: number; y: number; z: number; s: number; r: number; v: number; kind: 'tree' | 'bush' | 'rock' | 'log'; alive: boolean; hp: number; col?: Circle; idx: number; ore?: string; foraged?: number }
 
 export const windUniforms = { uTime: { value: 0 }, uWind: { value: 0.3 }, uSnow: { value: 0 }, uFlowers: { value: 0.5 } };
 
@@ -128,7 +128,10 @@ export class Vegetation {
         this.insts.push({ x: jx, y, z: jz, s: rng.range(0.7, 1.4), r: rng.range(0, 6.28), v: vi, kind: 'bush', alive: true, hp: 20, idx: this.insts.length });
       } else if (!inTown && rng.chance(0.035 + slope * 0.4)) {
         const vi = rng.pick(vIndex.rock);
-        this.insts.push({ x: jx, y: y - 0.2, z: jz, s: rng.range(0.5, 1.15), r: rng.range(0, 6.28), v: vi, kind: 'rock', alive: true, hp: 200, idx: this.insts.length });
+        // a share of boulders carry ore veins you can hand-mine (tinted by mineral)
+        const veins: [string, number][] = jx > 150 ? [['iron_ore', 3], ['copper_ore', 2], ['coal', 2], ['gold_ore', 0.6]] : jx < -150 ? [['sulfur', 2], ['quartz', 2], ['iron_ore', 1]] : jz < -150 ? [['bauxite', 2], ['iron_ore', 2], ['copper_ore', 1]] : [['iron_ore', 2], ['copper_ore', 2], ['coal', 1], ['quartz', 0.6]];
+        const ore = rng.chance(0.3) ? rng.weighted(veins) : undefined;
+        this.insts.push({ x: jx, y: y - 0.2, z: jz, s: rng.range(0.5, 1.15), r: rng.range(0, 6.28), v: vi, kind: 'rock', alive: true, hp: ore ? 120 : 200, idx: this.insts.length, ore });
       } else if (f > 0.5 && rng.chance(0.03)) {
         const vi = rng.pick(vIndex.log);
         this.insts.push({ x: jx, y, z: jz, s: rng.range(0.8, 1.2), r: rng.range(0, 6.28), v: vi, kind: 'log', alive: true, hp: 60, idx: this.insts.length });
@@ -203,7 +206,9 @@ export class Vegetation {
 
   private tintC = new THREE.Color();
   /** per-instance colour variety: brightness and a slight warm/cool hue drift */
+  private static ORE_TINT: Record<string, [number, number, number]> = { iron_ore: [1.25, 0.72, 0.6], copper_ore: [1.25, 0.9, 0.62], coal: [0.45, 0.45, 0.47], sulfur: [1.3, 1.2, 0.55], quartz: [1.35, 1.35, 1.45], bauxite: [1.25, 0.75, 0.55], gold_ore: [1.4, 1.15, 0.5] };
   private tint(t: TreeInst) {
+    if (t.ore) { const c = Vegetation.ORE_TINT[t.ore] ?? [1, 1, 1]; return this.tintC.setRGB(c[0], c[1], c[2]); }
     const h = hash2(Math.floor(t.x * 3), Math.floor(t.z * 3), 7), k = hash2(Math.floor(t.z * 5), Math.floor(t.x * 5), 11);
     const b = 0.84 + h * 0.3;
     return this.tintC.setRGB(b * (0.96 + k * 0.1), b, b * (1.04 - k * 0.1));

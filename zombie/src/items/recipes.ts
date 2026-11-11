@@ -1,6 +1,6 @@
 import type { SkillId } from '../player/skills';
 
-export type Station = 'hand' | 'workbench' | 'campfire';
+export type Station = 'hand' | 'workbench' | 'campfire' | 'stove';
 export interface Recipe {
   id: string; out: [string, number]; inp: Record<string, number>; tools?: string[]; station: Station;
   time: number; skill?: [SkillId, number]; xp?: [SkillId, number]; tier?: number; keep?: string[];
