@@ -44,6 +44,8 @@ export interface BodyDef {
   gait: number;       // individual walking style (zombies)
   tool: number;
   shape: Float32Array; look: Float32Array; stamp: number;
+  /** per-body random constants, renderer slot and dirty flag (managed by the rig / renderer) */
+  rnd: Float32Array; slot: number; dirty: boolean;
 }
 
 /** Per-frame animation inputs. */
@@ -53,17 +55,22 @@ export interface BodyAnim {
   hit: number; hitSide: number; hitFwd: number;
   lookYaw: number; lookPitch: number;
   crawl: number; limp: number;
-  down: number; downMode: number; downFace: number;
+  down: number; downMode: number; downFace: number; downOff: number;
   death: number; deathStyle: number; deathDir: number;
   act: number; actW: number; act2: number; act2W: number;
   aux: number; jaw: number;
 }
 export function newAnim(): BodyAnim {
   return { t: 0, phase: 0, speed: 0, move: 0, turn: 0, arms: 0, atk: 0, lunge: 0, swing: 0, hit: 0, hitSide: 0, hitFwd: 0, lookYaw: 0, lookPitch: 0, crawl: 0, limp: 0,
-    down: 0, downMode: 0, downFace: 1, death: 0, deathStyle: 0, deathDir: 1, act: 0, actW: 0, act2: 0, act2W: 0, aux: 0, jaw: 0 };
+    down: 0, downMode: 0, downFace: 1, downOff: 0, death: 0, deathStyle: 0, deathDir: 1, act: 0, actW: 0, act2: 0, act2W: 0, aux: 0, jaw: 0 };
 }
 
 // ------------------------------------------------------------------ small maths
+// table-driven sin/cos: posing a body takes ~120 of them, and exactness to 1e-6 is plenty for joints
+const TRIG_N = 4096, TRIG_K = TRIG_N / (Math.PI * 2);
+const TRIG = new Float32Array(TRIG_N + 1); for (let i = 0; i <= TRIG_N; i++) TRIG[i] = Math.sin(i / TRIG_K);
+function fsin(x: number) { const f = x * TRIG_K, i = Math.floor(f), k = f - i, j = i & 4095; return TRIG[j] + (TRIG[j + 1] - TRIG[j]) * k; }
+function fcos(x: number) { return fsin(x + 1.5707963267948966); }
 function fr(x: number) { return x - Math.floor(x); }
 export function hash1(n: number) { return fr(Math.sin(n * 127.1 + 311.7) * 43758.5453); }
 function sst(a: number, b: number, x: number) { const t = x <= a ? 0 : x >= b ? 1 : (x - a) / (b - a); return t * t * (3 - 2 * t); }
@@ -95,15 +102,16 @@ export function makeDef(kind: number, seed: number, look?: HumanLook | null): Bo
     kind, human: kind === KIND.human, seed, skin: L.skin, shirt: L.shirt, pants: L.pants, hair: L.hair,
     build: cl(L.build, 0.7, 1.4), height: cl(L.height, 0.8, 1.25), hairStyle: L.hairStyle | 0,
     lean: hash1(seed * 1.31), decay: 0, sick: 0, armLossL: false, armLossR: false, gait: 0, tool: 0,
-    shape: new Float32Array(NB * 3), look: new Float32Array(24), stamp: -1,
+    shape: new Float32Array(NB * 3), look: new Float32Array(24), stamp: -1, rnd: new Float32Array(8), slot: -1, dirty: true,
   };
+  const r = d.rnd; r[0] = hash1(seed * 3.3); r[1] = hash1(seed * 3.1); r[2] = hash1(seed + 1); r[3] = hash1(seed + 2); r[4] = hash1(seed * 1.7); r[5] = hash1(seed * 2.7); r[6] = hash1(seed * 8.1);
   refreshDef(d);
   return d;
 }
 
-const DECAY_TINT = [[0.6, 0.6, 0.52], [0.36, 0.42, 0.3], [0.2, 0.185, 0.14]];
+const DECAY_TINT = [[0.74, 0.72, 0.64], [0.56, 0.61, 0.5], [0.4, 0.36, 0.3]];
 const TYPE_TINT: Record<number, [number, number, number, number]> = {
-  1: [0.5, 0.36, 0.34, 0.25], 2: [0.34, 0.27, 0.25, 0.45], 3: [0.62, 0.66, 0.7, 0.8], 4: [0.5, 0.52, 0.22, 0.7], 5: [0.36, 0.33, 0.42, 0.55],
+  1: [0.66, 0.5, 0.47, 0.3], 2: [0.5, 0.4, 0.37, 0.5], 3: [0.8, 0.83, 0.86, 0.8], 4: [0.7, 0.72, 0.4, 0.7], 5: [0.55, 0.5, 0.6, 0.55],
 };
 const c3 = [0, 0, 0], c4 = [0, 0, 0];
 function setS(S: Float32Array, b: number, x: number, y: number, z: number) { S[b * 3] = x; S[b * 3 + 1] = y; S[b * 3 + 2] = z; }
@@ -119,7 +127,7 @@ export function refreshDef(d: BodyDef) {
   const sh = 0.96 + h1 * 0.1;                               // shoulder breadth
   for (let b = 0; b < NB; b++) setS(S, b, 1, 1, 1);
   setS(S, 0, bw * (0.98 + h3 * 0.06), 1, 0.9 + bw * 0.1 + (bw > 1.1 ? (bw - 1.1) * 0.6 : 0));
-  setS(S, 1, bw, 1, bw * (bw > 1.08 ? 1 + (bw - 1.08) * 1.2 : 1));
+  setS(S, 1, bw, 1, bw * (bw > 1.05 ? 1 + (bw - 1.05) * 0.7 : 1));
   setS(S, 2, bw * sh, 1, 0.92 + bw * 0.08);
   setS(S, 3, 0.97 + h4 * 0.06, 0.97 + h1 * 0.06, 0.97 + h2 * 0.06);
   for (const b of [5, 6, 8, 9]) setS(S, b, limb, 1, limb);
@@ -163,16 +171,16 @@ export function refreshDef(d: BodyDef) {
     const dc = d.decay;
     // skin: the person's own tone drained toward grey-green, then dark and leathery
     const a = dc < 0.5 ? DECAY_TINT[0] : DECAY_TINT[1], b = dc < 0.5 ? DECAY_TINT[1] : DECAY_TINT[2], t = dc < 0.5 ? dc * 2 : dc * 2 - 1;
-    const keep = 0.55 * (1 - sst(0, 0.5, dc)) + 0.1;
-    for (let i = 0; i < 3; i++) { const tint = a[i] + (b[i] - a[i]) * t; c3[i] = c3[i] * keep + tint * tint * (1 - keep) * (0.85 + h1 * 0.3); }
+    const keep = 0.6 * (1 - sst(0, 0.5, dc)) + 0.2;
+    for (let i = 0; i < 3; i++) { const tint = a[i] + (b[i] - a[i]) * t; c3[i] = c3[i] * keep + Math.pow(tint, 2.2) * (1 - keep) * (0.85 + h1 * 0.3); }
     const tt = TYPE_TINT[K];
-    if (tt) for (let i = 0; i < 3; i++) c3[i] = c3[i] * (1 - tt[3]) + tt[i] * tt[i] * tt[3];
-    const dirt = 0.25 + dc * 0.6;
+    if (tt) for (let i = 0; i < 3; i++) c3[i] = c3[i] * (1 - tt[3]) + Math.pow(tt[i], 2.2) * tt[3];
+    const dirt = 0.15 + dc * 0.5;
     for (let i = 0; i < 3; i++) {
-      shirt[i] = shirt[i] * (1 - dirt * 0.75) + 0.018 * dirt; pants[i] = pants[i] * (1 - dirt * 0.7) + 0.015 * dirt;
+      shirt[i] = shirt[i] * (1 - dirt * 0.6) + 0.03 * dirt; pants[i] = pants[i] * (1 - dirt * 0.55) + 0.028 * dirt;
       hair[i] = hair[i] * (1 - dc * 0.5) + 0.03 * dc;
     }
-    grime = 0.25 + dc * 0.75; blood = 0.3 + h3 * 0.5 + (dc < 0.2 ? 0.2 : 0); rag = 0.04 + dc * 0.1; wound = 0.3 + dc * 0.7;
+    grime = 0.08 + dc * 0.9; blood = 0.25 + h3 * 0.5; rag = 0.03 + dc * 0.1; wound = 0.4 + dc * 0.6;
     // rot eats the clothes
     const tear = (s: number) => hash1(sd * s);
     if (tear(21.1) < 0.25 + dc * 0.6) slL = Math.max(slL, 1.05 + tear(22.2) * 0.4);
@@ -214,6 +222,7 @@ export function refreshDef(d: BodyDef) {
   Lk[16] = d.human ? d.sick * 0.25 : d.decay; Lk[17] = fr(sd * 0.137) * 40; Lk[18] = K + (bareTorso ? 32 : 0) + (bareFeet ? 64 : 0); Lk[19] = lgR;
   Lk[20] = blood; Lk[21] = grime; Lk[22] = rag + wound * 8; Lk[23] = c4[0] + Math.floor(c4[1] * 255) * 4 + Math.floor(c4[2] * 255) * 1024;
   d.stamp = d.decay + d.sick * 3 + d.tool * 7 + (d.armLossL ? 100 : 0) + (d.armLossR ? 200 : 0);
+  d.dirty = true;
 }
 /** cheap change check for callers that mutate decay / sick / tool / limbs */
 export function defStamp(d: BodyDef) { return d.decay + d.sick * 3 + d.tool * 7 + (d.armLossL ? 100 : 0) + (d.armLossR ? 200 : 0); }
@@ -261,7 +270,7 @@ function over3(A: KP, B: KP, C: KP, u: number, w: number) {
 // ------------------------------------------------------------------ key poses
 const HP = Math.PI / 2;
 // lying
-const K_SUPINE = kp({ ry: -0.835, rp: -HP, hdx: -0.05, hdy: 0.35, hdz: 0.1, alp: 0.12, arp: -0.05, ala: 0.42, ara: 0.3, alt: -0.6, art: -0.4, ale: 0.35, are: 0.6, aw: 0,
+const K_SUPINE = kp({ ry: -0.835, rp: -HP, hdx: -0.05, hdy: 0.35, hdz: 0.1, alp: -0.22, arp: -0.2, ala: 0.5, ara: 0.3, alt: -1.3, art: 1.2, ale: 0.7, are: 0.5, aw: 0,
   llp: 0.06, lrp: 0.02, lla: 0.14, lra: 0.2, llt: 0.5, lrt: 0.7, llk: 0.08, lrk: 0.22, llf: 0.5, lrf: 0.5 }, true);
 const K_PRONE = kp({ ry: -0.84, rp: HP, spx: -0.05, chx: -0.08, hdx: -0.25, hdy: 1.15, alp: 2.5, arp: 0.5, ala: 0.75, ara: 0.5, alt: 0.3, art: 0.2, ale: 1.1, are: 0.5,
   llp: 0.03, lrp: 0.0, lla: 0.14, lra: 0.24, llt: 0.4, lrt: 0.9, llk: 0.1, lrk: 0.45, llf: 0.9, lrf: 0.9 }, true);
@@ -269,7 +278,7 @@ const K_SIDE = kp({ ry: -0.8, rp: HP * 0.2, rr: HP * 0.94, rw: 0.3, spx: 0.35, c
   llp: 0.7, lrp: 0.25, lla: 0.0, lra: 0.0, llk: 1.0, lrk: 0.5, llf: 0.5, lrf: 0.5 }, true);
 // getting up from the back: sit up, roll to hands and a knee, stand
 const K_SITUP = kp({ ry: -0.8, rz: 0.02, rp: -0.35, spx: 0.3, chx: 0.3, hdx: 0.25, alp: -0.75, arp: -0.6, ala: 0.3, ara: 0.25, ae: 0.25, aw: -0.6,
-  llp: 1.2, lrp: 0.5, la: 0.2, llk: 1.5, lrk: 0.5, llf: 0.2, lrf: 0.5 }, true);
+  llp: 1.45, lrp: 0.6, la: 0.2, llk: 1.5, lrk: 0.45, llf: 0.3, lrf: 0.5 }, true);
 const K_KNEEL1 = kp({ ry: -0.44, rz: 0.1, rp: 0.5, spx: 0.3, chx: 0.25, hdx: -0.35, alp: 1.0, arp: 0.9, aa: 0.15, ale: 0.25, are: 0.4, aw: -0.7,
   llp: 1.55, lrp: 0.15, la: 0.12, llk: 1.75, lrk: 1.6, llf: 0.0, lrf: 0.9 }, true);
 // getting up from the front: push up, all fours, one knee
@@ -278,7 +287,7 @@ const K_PUSHUP = kp({ ry: -0.6, rz: -0.1, rp: 1.05, spx: -0.3, chx: -0.25, hdx: 
 const K_ALL4 = kp({ ry: -0.47, rp: 1.25, spx: -0.1, chx: -0.1, hdx: -0.6, ap: 1.35, aa: 0.12, ae: 0.12, aw: -1.3,
   llp: 1.35, lrp: 1.2, la: 0.1, llk: 1.6, lrk: 1.55, lf: 0.9 }, true);
 // crawler: prone, dragging itself along (arms animated on top)
-const K_CRAWL = kp({ ry: -0.8, rp: 1.42, spx: -0.2, chx: -0.25, hdx: -0.85, ap: 2.6, aa: 0.35, ae: 0.5, aw: -0.4,
+const K_CRAWL = kp({ ry: -0.8, rp: 1.42, spx: -0.2, chx: -0.25, hdx: -0.85, ap: 2.15, aa: 0.3, ae: 0.9, aw: -0.3,
   llp: 0.02, lrp: -0.05, lla: 0.12, lra: 0.22, llt: 0.4, lrt: 0.8, llk: 0.12, lrk: 0.3, lf: 0.9 }, true);
 // falling
 const K_FALLBACK = kp({ ry: -0.25, rz: -0.3, rp: -0.75, spx: -0.25, chx: -0.2, hdx: 0.35, ap: 1.1, aa: 0.7, ae: 0.5, jaw: 0.5,
@@ -306,8 +315,8 @@ const K_AIM = kp({ chx: 0.05, alp: 1.38, arp: 1.45, ala: 0.0, ara: 0.02, alt: 0.
 const K_SWING_UP = kp({ spx: -0.12, chx: -0.12, chy: 0.25, arp: 2.75, ara: 0.25, art: 0.2, are: 1.2, arw: -0.5, alp: 0.5, ale: 0.9, hdx: -0.1 });
 const K_SWING_DN = kp({ ry: -0.05, spx: 0.3, chx: 0.25, chy: -0.2, arp: 0.95, ara: 0.05, art: 0.2, are: 0.45, arw: 0.5, alp: 0.3, ale: 0.9, hdx: 0.15 });
 const K_TEND = kp({ ry: -0.47, rz: -0.1, rp: 0.38, spx: 0.42, chx: 0.36, hdx: -0.25, ap: 0.72, aa: 0.08, at: 0.25, ae: 0.35, aw: 0.1 });
-const K_SIT = kp({ ry: -0.83, rp: -0.22, spx: 0.3, chx: 0.25, hdx: -0.05, ap: 0.95, aa: 0.25, at: 0.5, ae: 0.75,
-  llp: 1.6, lrp: 1.5, lla: 0.22, lra: 0.28, lk: 1.95, llk: 1.9, lrk: 2.05, lf: 0.25 }, true);
+const K_SIT = kp({ ry: -0.83, rp: -0.22, spx: 0.3, chx: 0.25, hdx: -0.05, ap: 0.85, aa: 0.12, at: 0.3, ae: 0.45,
+  llp: 2.05, lrp: 1.95, lla: 0.16, lra: 0.2, llk: 1.6, lrk: 1.5, llf: 0.65, lrf: 0.6 }, true);
 const K_COWER = kp({ ry: -0.5, rz: -0.12, rp: 0.3, spx: 0.5, chx: 0.45, hdx: 0.45, ap: 2.3, aa: 0.2, at: 1.1, ae: 2.2, aw: 0.3 });
 const K_TALK = kp({ alp: 0.25, ale: 1.1, alt: 0.4, arp: 0.3, are: 0.9, art: 0.3 });
 const K_CARRY = kp({ spx: -0.06, chx: -0.06, ap: 0.5, aa: 0.1, at: 0.45, ae: 1.25, aw: 0.2 });
@@ -325,7 +334,7 @@ const GAITS: Gait[] = [
   /* 3 stiff-arm */ { s0: 0.44, s1: 0.36, duty: 0.7, lift: 0.035, stance: 0.05, bob: 0.008, sway: 0.05, roll: 0.11, lean: -0.02, arm: 0.03, drop: 0.012 },
   /* 4 head-loll */ { s0: 0.52, s1: 0.36, duty: 0.64, lift: 0.04, stance: 0.01, bob: 0.02, sway: 0.035, roll: 0.06, lean: 0.02, arm: 0.34, drop: 0.03 },
   /* 5 sprint    */ { s0: 0.8, s1: 0.36, duty: 0.56, lift: 0.1, stance: 0.0, bob: 0.03, sway: 0.02, roll: 0.04, lean: 0.12, arm: 0.5, drop: 0.03 },
-  /* 6 stomp     */ { s0: 0.8, s1: 0.3, duty: 0.66, lift: 0.1, stance: 0.1, bob: 0.045, sway: 0.07, roll: 0.09, lean: 0.12, arm: 0.2, drop: 0.07 },
+  /* 6 stomp     */ { s0: 0.8, s1: 0.3, duty: 0.66, lift: 0.1, stance: 0.1, bob: 0.04, sway: 0.07, roll: 0.09, lean: 0.12, arm: 0.2, drop: 0.035 },
   /* 7 stalk     */ { s0: 0.8, s1: 0.4, duty: 0.62, lift: 0.09, stance: -0.01, bob: 0.02, sway: 0.02, roll: 0.03, lean: 0.0, arm: 0.1, drop: 0.03 },
   /* 8 waddle    */ { s0: 0.42, s1: 0.3, duty: 0.7, lift: 0.04, stance: 0.13, bob: 0.02, sway: 0.075, roll: 0.14, lean: -0.1, arm: 0.1, drop: 0.035 },
   /* 9 lopsided  */ { s0: 0.6, s1: 0.34, duty: 0.64, lift: 0.07, stance: 0.06, bob: 0.035, sway: 0.05, roll: 0.08, lean: 0.14, arm: 0.12, drop: 0.05 },
@@ -347,14 +356,14 @@ export function strideLen(d: BodyDef, speed: number): number {
 const WQ = new Float64Array(NB * 4), WP = new Float64Array(NB * 3);
 let qx = 0, qy = 0, qz = 0, qw = 1;
 function eYXZ(x: number, y: number, z: number) {
-  const c1 = Math.cos(x * 0.5), c2 = Math.cos(y * 0.5), c3 = Math.cos(z * 0.5), s1 = Math.sin(x * 0.5), s2 = Math.sin(y * 0.5), s3 = Math.sin(z * 0.5);
+  const c1 = fcos(x * 0.5), c2 = fcos(y * 0.5), c3 = fcos(z * 0.5), s1 = fsin(x * 0.5), s2 = fsin(y * 0.5), s3 = fsin(z * 0.5);
   qx = s1 * c2 * c3 + c1 * s2 * s3; qy = c1 * s2 * c3 - s1 * c2 * s3; qz = c1 * c2 * s3 - s1 * s2 * c3; qw = c1 * c2 * c3 + s1 * s2 * s3;
 }
 function eZXY(x: number, y: number, z: number) {
-  const c1 = Math.cos(x * 0.5), c2 = Math.cos(y * 0.5), c3 = Math.cos(z * 0.5), s1 = Math.sin(x * 0.5), s2 = Math.sin(y * 0.5), s3 = Math.sin(z * 0.5);
+  const c1 = fcos(x * 0.5), c2 = fcos(y * 0.5), c3 = fcos(z * 0.5), s1 = fsin(x * 0.5), s2 = fsin(y * 0.5), s3 = fsin(z * 0.5);
   qx = s1 * c2 * c3 - c1 * s2 * s3; qy = c1 * s2 * c3 + s1 * c2 * s3; qz = c1 * c2 * s3 + s1 * s2 * c3; qw = c1 * c2 * c3 - s1 * s2 * s3;
 }
-function eX(x: number) { qx = Math.sin(x * 0.5); qy = 0; qz = 0; qw = Math.cos(x * 0.5); }
+function eX(x: number) { qx = fsin(x * 0.5); qy = 0; qz = 0; qw = fcos(x * 0.5); }
 let SH: Float32Array;
 /** place bone b under parent p using the local rotation in (qx,qy,qz,qw); ox,oy,oz = rest offset from the parent's pivot */
 function bone(b: number, p: number, ox: number, oy: number, oz: number) {
@@ -398,11 +407,11 @@ function gaitFoot(o: number, u: number, S: number, duty: number, lift: number, x
   if (u < duty) { const k = u / duty; z = Ss * (0.5 - k); y = 0; pitch = k > 0.75 ? (k - 0.75) * 1.6 : k < 0.12 ? -(0.12 - k) * 2.0 : 0; }
   else {
     const k = (u - duty) / (1 - duty); const e = k * k * (3 - 2 * k);
-    z = Ss * (-0.5 + e); const sn = Math.sin(Math.PI * Math.pow(k, 0.8)); y = lift * sn * (1 - drag) + Math.min(0.12, S * 0.05) * Math.sin(Math.PI * k) * (1 - drag) * (lift > 0.09 ? 1 : 0.3);
+    z = Ss * (-0.5 + e); const sn = fsin(Math.PI * Math.pow(k, 0.8)); y = lift * sn * (1 - drag) + Math.min(0.12, S * 0.05) * fsin(Math.PI * k) * (1 - drag) * (lift > 0.09 ? 1 : 0.3);
     pitch = (1 - k) * 0.55 * (1 - drag) - k * 0.25;
   }
   if (drag > 0) { z = z * (1 - drag * 0.45) - drag * 0.12 * Math.min(1, S); pitch = 0.25 * drag; }
-  const tl = tw * Math.max(0, Math.sin(u * Math.PI * 2)) * 0.07;   // stepping on the spot while turning
+  const tl = tw * Math.max(0, fsin(u * Math.PI * 2)) * 0.07;   // stepping on the spot while turning
   FT[o] = x; FT[o + 1] = y * w + tl; FT[o + 2] = z * w; FT[o + 3] = pitch * w;
 }
 
@@ -411,10 +420,11 @@ function gaitFoot(o: number, u: number, S: number, duty: number, lift: number, x
  * Everything is in body space: +z forward, origin between the feet on the ground.
  */
 export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) {
-  SH = d.shape;
+  SH = d.shape; const RN = d.rnd;
   P.fill(0); fkW = 0;
   const zomb = !d.human, K = d.kind, sd = d.seed, t = a.t + sd * 7.3;
   const g = d.human ? G_HUMAN : (GAITS[d.gait] ?? GAITS[0]);
+  const lyingDeath = (a.deathStyle | 0) === 5;
   const alive = 1 - sst(0, 0.3, a.death);
   const v = Math.abs(a.speed);
   const walk = d.human ? cl(a.move, 0, 1) : sst(0.04, 0.3, v);
@@ -423,39 +433,39 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
   const ph = a.phase;
   const TWO = Math.PI * 2;
   let gph = ph;
-  if (d.gait === 1) gph = ph + 0.55 * Math.sin(ph);                    // lurch: one long step, one snatched
-  const cs = Math.cos(gph), sn = Math.sin(gph);
+  if (d.gait === 1) gph = ph + 0.55 * fsin(ph);                    // lurch: one long step, one snatched
+  const cs = fcos(gph), sn = fsin(gph);
   const sick = d.human ? d.sick : 0;
   const husk = zomb ? sst(0.6, 1, d.decay) : 0, fresh = zomb ? 1 - sst(0.05, 0.3, d.decay) : 0;
 
   // ---------------- 1. standing base + idle life
   if (zomb) {
-    const hunch = 0.1 + d.lean * 0.16 + husk * 0.1;
-    P[SPX] = hunch + Math.sin(t * 0.6) * 0.025 * idle; P[CHX] = hunch * 0.9 + Math.sin(t * 0.47 + 1) * 0.02;
-    P[SPZ] = (d.lean - 0.5) * 0.12 + Math.sin(t * 0.43) * 0.035 * idle; P[CHZ] = (hash1(sd * 3.3) - 0.5) * 0.16;
-    P[HDX] = 0.12 + Math.sin(t * 0.9) * 0.04; P[HDZ] = (hash1(sd * 3.1) - 0.5) * 0.5 + Math.sin(t * 0.7) * 0.05 * idle;
-    P[HDY] = Math.sin(t * 0.31 + sd) * 0.18 * idle;
-    P[JAW] = 0.18 + husk * 0.25 + Math.max(0, Math.sin(t * 0.8 + sd * 3)) * 0.12;
-    P[ALP] = 0.1; P[ARP] = 0.06; P[ALA] = 0.07 + hash1(sd + 1) * 0.08; P[ARA] = 0.07 + hash1(sd + 2) * 0.08;
-    P[ALE] = 0.2 + hash1(sd * 1.7) * 0.35; P[ARE] = 0.2 + hash1(sd * 2.7) * 0.35; P[ALW] = 0.25; P[ARW] = 0.25;
+    const hunch = (0.07 + d.lean * 0.14) * (0.45 + 0.55 * sst(0, 0.4, d.decay)) + husk * 0.07;
+    P[SPX] = hunch + fsin(t * 0.6) * 0.025 * idle; P[CHX] = hunch * 0.9 + fsin(t * 0.47 + 1) * 0.02;
+    P[SPZ] = (d.lean - 0.5) * 0.12 + fsin(t * 0.43) * 0.035 * idle; P[CHZ] = (RN[0] - 0.5) * 0.16;
+    P[HDX] = 0.12 + fsin(t * 0.9) * 0.04; P[HDZ] = (RN[1] - 0.5) * 0.5 + fsin(t * 0.7) * 0.05 * idle;
+    P[HDY] = fsin(t * 0.31 + sd) * 0.18 * idle;
+    P[JAW] = 0.18 + husk * 0.25 + Math.max(0, fsin(t * 0.8 + sd * 3)) * 0.12;
+    P[ALP] = 0.1; P[ARP] = 0.06; P[ALA] = 0.07 + RN[2] * 0.08; P[ARA] = 0.07 + RN[3] * 0.08;
+    P[ALE] = 0.2 + RN[4] * 0.35; P[ARE] = 0.2 + RN[5] * 0.35; P[ALW] = 0.25; P[ARW] = 0.25;
     P[ALT] = 0.25; P[ART] = 0.25;
     P[RY] = -0.02 - husk * 0.02;
     // a violent tic every so often
-    const tw = Math.pow(Math.max(0, Math.sin(t * 0.73 + sd * 13)), 60);
-    P[HDZ] += tw * 0.5 * Math.sin(t * 38); P[CHX] += tw * 0.12; P[ALE] += tw * 0.5 * Math.sin(t * 31);
+    let tw = fsin(t * 0.73 + sd * 13);
+    if (tw > 0.9) { tw *= tw; tw *= tw; tw *= tw; tw *= tw; tw *= tw; tw *= tw; P[HDZ] += tw * 0.5 * fsin(t * 38); P[CHX] += tw * 0.12; P[ALE] += tw * 0.5 * fsin(t * 31); }
     if (K === KIND.brute) { P[SPX] += 0.12; P[CHX] += 0.16; P[HDX] -= 0.2; P[ALP] = 0.22; P[ARP] = 0.22; P[ALA] = 0.34; P[ARA] = 0.34; P[ALE] = 0.3; P[ARE] = 0.3; P[ALT] = 0.5; P[ART] = 0.5; P[RY] -= 0.05; }
-    else if (K === KIND.bloat) { P[SPX] = -0.08; P[CHX] = -0.04; P[HDX] = 0.2; P[ALA] = 0.62; P[ARA] = 0.62; P[ALP] = 0.0; P[ARP] = 0.0; P[ALE] = 0.3; P[ARE] = 0.3; P[RR] += Math.sin(t * 0.5) * 0.02; }
-    else if (K === KIND.howler) { P[SPX] = 0.06; P[CHX] = 0.12; P[HDX] = -0.12 + Math.sin(t * 0.5) * 0.06; P[ALE] = 0.06; P[ARE] = 0.06; P[ALP] = 0.03; P[ARP] = 0.03; P[ALA] = 0.05; P[ARA] = 0.05; P[JAW] = 0.45 + Math.sin(t * 1.1) * 0.08; }
+    else if (K === KIND.bloat) { P[SPX] = -0.08; P[CHX] = -0.04; P[HDX] = 0.2; P[ALA] = 0.62; P[ARA] = 0.62; P[ALP] = 0.0; P[ARP] = 0.0; P[ALE] = 0.3; P[ARE] = 0.3; P[RR] += fsin(t * 0.5) * 0.02; }
+    else if (K === KIND.howler) { P[SPX] = 0.06; P[CHX] = 0.12; P[HDX] = -0.12 + fsin(t * 0.5) * 0.06; P[ALE] = 0.06; P[ARE] = 0.06; P[ALP] = 0.03; P[ARP] = 0.03; P[ALA] = 0.05; P[ARA] = 0.05; P[JAW] = 0.45 + fsin(t * 1.1) * 0.08; }
     else if (K === KIND.breaker) { P[SPZ] = -0.2; P[CHZ] = -0.16; P[SPX] = 0.22; P[CHX] = 0.2; P[HDZ] = 0.3; P[HDX] = -0.1; P[ARP] = 0.12; P[ARA] = 0.16; P[ARE] = 0.14; P[ALP] = 0.4; P[ALE] = 1.5; P[ALA] = 0.05; P[ALT] = 0.8; P[RY] -= 0.04; }
-    else if (K === KIND.runner) { P[SPX] += 0.06; P[HDX] -= 0.1; P[ALE] += 0.3; P[ARE] += 0.3; P[HDY] += Math.sin(t * 2.3) * 0.12 * idle; }
+    else if (K === KIND.runner) { P[SPX] += 0.06; P[HDX] -= 0.1; P[ALE] += 0.3; P[ARE] += 0.3; P[HDY] += fsin(t * 2.3) * 0.12 * idle; }
     if (d.gait === 3) { P[SPX] = 0.03; P[CHX] = 0.03; }
-    if (d.gait === 4) { P[HDX] = -0.3; P[HDZ] = 0.45 * Math.sin(t * 0.4 + sd); }
+    if (d.gait === 4) { P[HDX] = -0.3; P[HDZ] = 0.45 * fsin(t * 0.4 + sd); }
   } else {
-    const br = Math.sin(t * 1.4);
+    const br = fsin(t * 1.4);
     P[SPX] = 0.02 + sick * 0.14; P[CHX] = 0.02 + br * 0.008 + sick * 0.16; P[HDX] = sick * 0.3;
     P[ALA] = 0.07; P[ARA] = 0.07; P[ALE] = 0.16; P[ARE] = 0.16; P[ALT] = 0.3; P[ART] = 0.3; P[ALP] = 0.02; P[ARP] = 0.02;
-    P[SPZ] = Math.sin(t * 0.37) * (0.012 + sick * 0.05) * idle; P[RX] = Math.sin(t * 0.37) * (0.006 + sick * 0.03) * idle;
-    P[HDY] = Math.sin(t * 0.23 + sd) * 0.06 * idle;
+    P[SPZ] = fsin(t * 0.37) * (0.012 + sick * 0.05) * idle; P[RX] = fsin(t * 0.37) * (0.006 + sick * 0.03) * idle;
+    P[HDY] = fsin(t * 0.23 + sd) * 0.06 * idle;
   }
 
   // ---------------- 2. locomotion: pelvis motion + upper-body counter swing (feet come from IK below)
@@ -464,7 +474,7 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
   let bob = g.bob + (0.05 - g.bob) * run, sway = g.sway * (1 - run * 0.7), roll = g.roll * (1 - run * 0.6);
   if (d.human) { S = G_HUMAN.s0 * (0.72 + 0.28 * Math.min(1, a.move)) ; }
   if (walk > 0.001 || a.turn > 0.01) {
-    P[RY] += (-g.drop * (1 - run * 0.5) - bob * (0.5 + 0.5 * Math.cos(2 * gph + 0.5))) * walk;
+    P[RY] += (-g.drop * (1 - run * 0.5) - bob * (0.5 + 0.5 * fcos(2 * gph + 0.5))) * walk;
     P[RX] += sway * sn * walk; P[RR] += roll * sn * walk * (zomb ? 1 : -0.6); P[RW] += 0.09 * cs * walk * (1 + run);
     P[SPY] -= 0.1 * cs * walk * (1 + run * 0.6); P[CHY] -= 0.08 * cs * walk * (1 + run);
     const leanF = (g.lean + (zomb ? 0.34 : 0.2) * run) * walk;
@@ -473,41 +483,49 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     if (d.human) {
       const am = (g.arm + 0.45 * run) * walk;
       P[ALP] += -am * cs; P[ARP] += am * cs;
-      P[ALE] += (0.15 + 1.25 * run) * walk + Math.max(0, -cs) * 0.25 * walk; P[ARE] += (0.15 + 1.25 * run) * walk + Math.max(0, cs) * 0.25 * walk;
-      P[HDX] += Math.sin(gph * 2) * 0.02 * walk;
+      P[ALE] += (0.05 + 1.35 * run) * walk + Math.max(0, -cs) * 0.22 * walk; P[ARE] += (0.05 + 1.35 * run) * walk + Math.max(0, cs) * 0.22 * walk;
+      P[HDX] += fsin(gph * 2) * 0.02 * walk;
     } else {
       // dead arms: pendulums that lag the stride
       const am = g.arm * walk * (1 + run * 0.8), lag = 0.7;
-      P[ALP] += -am * Math.cos(gph - lag); P[ARP] += am * Math.cos(gph - lag);
-      P[HDX] += Math.sin(gph * 2 + 0.6) * 0.04 * walk; P[HDZ] += sn * 0.05 * walk;
-      if (d.gait === 1) { const pulse = Math.max(0, Math.sin(gph)); P[SPX] += 0.2 * pulse * walk; P[CHZ] += 0.14 * walk; P[HDX] += 0.12 * pulse * walk; }
+      P[ALP] += -am * fcos(gph - lag); P[ARP] += am * fcos(gph - lag);
+      P[HDX] += fsin(gph * 2 + 0.6) * 0.04 * walk; P[HDZ] += sn * 0.05 * walk;
+      if (d.gait === 1) { const pulse = Math.max(0, fsin(gph)); P[SPX] += 0.2 * pulse * walk; P[CHZ] += 0.14 * walk; P[HDX] += 0.12 * pulse * walk; }
       if (d.gait === 2) { P[SPZ] += 0.14 * walk; P[RX] += 0.03 * walk; P[ALA] += 0.35 * walk * (0.6 + 0.4 * sn); P[ALP] += 0.2 * walk; }
       if (d.gait === 3) { P[ALP] += 1.25 * walk; P[ARP] += 1.2 * walk; P[ALE] *= 1 - walk * 0.8; P[ARE] *= 1 - walk * 0.8; P[ALW] += 0.3 * walk; P[ARW] += 0.3 * walk; }
-      if (d.gait === 4) { P[HDZ] += 0.3 * Math.sin(gph * 0.5 + sd) * walk; P[HDX] -= 0.1 * walk; }
+      if (d.gait === 4) { P[HDZ] += 0.3 * fsin(gph * 0.5 + sd) * walk; P[HDX] -= 0.1 * walk; }
       if (d.gait === 6) { P[CHY] -= 0.12 * cs * walk; P[SPX] += 0.06 * Math.abs(sn) * walk; }
       if (d.gait === 8) { P[ALP] += 0.12 * cs * walk; P[ARP] -= 0.12 * cs * walk; }
-      if (d.gait === 9) { P[ARP] += 0.3 * Math.cos(gph - 1.2) * walk; P[SPZ] -= 0.05 * walk; }
+      if (d.gait === 9) { P[ARP] += 0.3 * fcos(gph - 1.2) * walk; P[SPZ] -= 0.05 * walk; }
       if (run > 0) {
         // sprinting dead: arms thrash, elbows loose, head thrust forward
         const fl = run * (K === KIND.runner ? 1 : 0.55);
-        P[ALP] += (0.5 + 0.6 * Math.sin(t * 11 + sd)) * fl - 0.5 * cs * fl; P[ARP] += (0.5 + 0.6 * Math.sin(t * 12.3 + sd * 2)) * fl + 0.5 * cs * fl;
-        P[ALE] += (0.8 + 0.5 * Math.sin(t * 9 + 1)) * fl; P[ARE] += (0.8 + 0.5 * Math.sin(t * 10 + 2)) * fl;
+        P[ALP] += (0.5 + 0.6 * fsin(t * 11 + sd)) * fl - 0.5 * cs * fl; P[ARP] += (0.5 + 0.6 * fsin(t * 12.3 + sd * 2)) * fl + 0.5 * cs * fl;
+        P[ALE] += (0.8 + 0.5 * fsin(t * 9 + 1)) * fl; P[ARE] += (0.8 + 0.5 * fsin(t * 10 + 2)) * fl;
         P[ALA] += 0.2 * fl; P[ARA] += 0.2 * fl; P[HDX] -= 0.15 * fl; P[JAW] += 0.4 * fl;
       }
     }
   }
-  if (sick > 0) { P[RX] += Math.sin(gph * 0.5) * 0.04 * sick * walk; P[HDZ] += Math.sin(t * 0.8) * 0.08 * sick; }
+  if (sick > 0) { P[RX] += fsin(gph * 0.5) * 0.04 * sick * walk; P[HDZ] += fsin(t * 0.8) * 0.08 * sick; }
 
   // ---------------- 3. arms: reaching for prey / aiming
   if (zomb) {
     const r = a.arms * alive * (K === KIND.bloat ? 0.55 : K === KIND.howler ? 0.8 : 1);
     if (r > 0.001) {
       over(K_REACH, r);
-      P[ALP] += Math.sin(t * 2.3 + sd) * 0.1 * r; P[ARP] += Math.sin(t * 2.9 + sd * 2) * 0.1 * r; P[ALE] += Math.sin(t * 3.7) * 0.12 * r; P[ARE] += Math.sin(t * 4.1 + 1) * 0.12 * r;
+      P[ALP] += fsin(t * 2.3 + sd) * 0.1 * r; P[ARP] += fsin(t * 2.9 + sd * 2) * 0.1 * r; P[ALE] += fsin(t * 3.7) * 0.12 * r; P[ARE] += fsin(t * 4.1 + 1) * 0.12 * r;
       P[SPX] += 0.06 * r; P[JAW] += 0.3 * r;
       if (K === KIND.breaker) { P[ARP] -= 0.9 * r; P[ARE] -= 0.1 * r; }
     }
   } else if (a.arms > 0.001) over(K_AIM, a.arms);
+
+  if (d.human && d.tool > 1 && a.arms < 0.5) {
+    // how each tool is carried while the hands are otherwise idle (long tools rest tip-up)
+    const tl = d.tool, k = 1 - a.arms * 2;
+    if (tl === TOOL.hoe) { P[ARE] += 0.5 * k; P[ARW] -= 0.95 * k; P[ARP] += 0.1 * k; }
+    else if (tl === TOOL.axe || tl === TOOL.bat) { P[ARE] += 0.3 * k; P[ARW] -= 0.55 * k; }
+    else if (tl === TOOL.wrench || tl === TOOL.ladle) { P[ARE] += 0.25 * k; P[ARW] -= 0.3 * k; }
+  }
 
   // ---------------- 4. acts (cross-faded pair)
   for (let i = 0; i < 2; i++) {
@@ -515,20 +533,20 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     if (w <= 0.001 || act === 0) continue;
     switch (act) {
       case ACT.swing: { const u = fr(t * 0.8), k = u < 0.55 ? sst(0, 0.55, u) : 1 - sst(0.55, 0.72, u); over(K_SWING_DN, w); over(K_SWING_UP, w * k); break; }
-      case ACT.tend: over(K_TEND, w); P[ALP] += Math.sin(t * 3.1) * 0.14 * w; P[ARP] += Math.sin(t * 3.1 + 2) * 0.14 * w; P[ALE] += Math.sin(t * 3.1 + 1) * 0.12 * w; P[ARE] += Math.cos(t * 3.1) * 0.12 * w; break;
-      case ACT.sit: over(K_SIT, w); P[HDY] += Math.sin(t * 0.4 + sd) * 0.2 * w; break;
-      case ACT.cower: over(K_COWER, w); P[SPX] += Math.sin(t * 17) * 0.012 * w; P[HDY] += Math.sin(t * 2.2) * 0.1 * w; break;
-      case ACT.talk: over(K_TALK, w); P[ALP] += Math.sin(t * 2.6 + sd) * 0.16 * w; P[ALE] += Math.sin(t * 3.4) * 0.22 * w; P[ARP] += Math.sin(t * 1.9 + 2) * 0.12 * w; P[ARE] += Math.sin(t * 2.7 + sd) * 0.2 * w; P[HDX] += Math.sin(t * 2.1) * 0.05 * w; P[HDZ] += Math.sin(t * 1.3) * 0.05 * w; P[JAW] += Math.max(0, Math.sin(t * 9)) * 0.12 * w; break;
+      case ACT.tend: over(K_TEND, w); P[ALP] += fsin(t * 3.1) * 0.14 * w; P[ARP] += fsin(t * 3.1 + 2) * 0.14 * w; P[ALE] += fsin(t * 3.1 + 1) * 0.12 * w; P[ARE] += fcos(t * 3.1) * 0.12 * w; break;
+      case ACT.sit: over(K_SIT, w); P[HDY] += fsin(t * 0.4 + sd) * 0.2 * w; break;
+      case ACT.cower: over(K_COWER, w); P[SPX] += fsin(t * 17) * 0.012 * w; P[HDY] += fsin(t * 2.2) * 0.1 * w; break;
+      case ACT.talk: over(K_TALK, w); P[ALP] += fsin(t * 2.6 + sd) * 0.16 * w; P[ALE] += fsin(t * 3.4) * 0.22 * w; P[ARP] += fsin(t * 1.9 + 2) * 0.12 * w; P[ARE] += fsin(t * 2.7 + sd) * 0.2 * w; P[HDX] += fsin(t * 2.1) * 0.05 * w; P[HDZ] += fsin(t * 1.3) * 0.05 * w; P[JAW] += Math.max(0, fsin(t * 9)) * 0.12 * w; break;
       case ACT.carry: over(K_CARRY, w); break;
-      case ACT.lie: over(K_SUPINE, w); P[CHX] += Math.sin(t * 1.1) * 0.01 * w; break;
-      case ACT.wave: over(K_WAVE, w); P[ARE] += Math.sin(t * 7) * 0.4 * w; break;
-      case ACT.stir: over(K_STIR, w); P[ARP] += Math.sin(t * 3.4) * 0.09 * w; P[ARA] += Math.cos(t * 3.4) * 0.1 * w; P[ART] += Math.cos(t * 3.4) * 0.15 * w; break;
-      case ACT.eat: { over(K_EAT, w); const b2 = 0.5 + 0.5 * Math.sin(t * 2.2); P[ARE] -= b2 * 0.9 * w; P[ARP] -= b2 * 0.3 * w; P[JAW] += (1 - b2) * 0.2 * w; break; }
-      case ZACT.feed: over(K_FEED, w); P[HDX] += Math.sin(t * 7.3) * 0.14 * w; P[HDZ] += Math.sin(t * 5.1) * 0.12 * w; P[CHX] += Math.sin(t * 3.6) * 0.05 * w; P[ALP] += Math.sin(t * 4.7) * 0.2 * w; P[ARP] += Math.sin(t * 4.1 + 2) * 0.2 * w; P[ALE] += Math.sin(t * 4.7 + 1) * 0.2 * w; P[JAW] = 0.3 + 0.3 * Math.sin(t * 9); break;
-      case ZACT.slump: over(K_SLUMP, w); P[SPZ] += Math.sin(t * 0.33 + sd) * 0.04 * w; break;
-      case ZACT.sniff: over(K_SNIFF, w); P[HDX] += Math.max(0, Math.sin(t * 5.5)) * -0.08 * w; P[HDY] += Math.sin(t * 0.9) * 0.4 * w; break;
-      case ZACT.paw: over(K_PAW, w); P[ALP] += Math.sin(t * 2.2) * 0.35 * w; P[ARP] += Math.sin(t * 2.2 + 3.1) * 0.35 * w; P[ALE] += Math.sin(t * 2.2 + 1) * 0.25 * w; P[ARE] += Math.sin(t * 2.2 + 4) * 0.25 * w; break;
-      case ZACT.scream: over(K_SCREAM, w); P[HDZ] += Math.sin(t * 23) * 0.04 * w; P[CHX] += Math.sin(t * 31) * 0.015 * w; break;
+      case ACT.lie: over(K_SUPINE, w); P[CHX] += fsin(t * 1.1) * 0.01 * w; break;
+      case ACT.wave: over(K_WAVE, w); P[ARE] += fsin(t * 7) * 0.4 * w; break;
+      case ACT.stir: over(K_STIR, w); P[ARP] += fsin(t * 3.4) * 0.09 * w; P[ARA] += fcos(t * 3.4) * 0.1 * w; P[ART] += fcos(t * 3.4) * 0.15 * w; break;
+      case ACT.eat: { over(K_EAT, w); const b2 = 0.5 + 0.5 * fsin(t * 2.2); P[ARE] -= b2 * 0.9 * w; P[ARP] -= b2 * 0.3 * w; P[JAW] += (1 - b2) * 0.2 * w; break; }
+      case ZACT.feed: over(K_FEED, w); P[HDX] += fsin(t * 7.3) * 0.14 * w; P[HDZ] += fsin(t * 5.1) * 0.12 * w; P[CHX] += fsin(t * 3.6) * 0.05 * w; P[ALP] += fsin(t * 4.7) * 0.2 * w; P[ARP] += fsin(t * 4.1 + 2) * 0.2 * w; P[ALE] += fsin(t * 4.7 + 1) * 0.2 * w; P[JAW] = 0.3 + 0.3 * fsin(t * 9); break;
+      case ZACT.slump: over(K_SLUMP, w); P[SPZ] += fsin(t * 0.33 + sd) * 0.04 * w; break;
+      case ZACT.sniff: over(K_SNIFF, w); P[HDX] += Math.max(0, fsin(t * 5.5)) * -0.08 * w; P[HDY] += fsin(t * 0.9) * 0.4 * w; break;
+      case ZACT.paw: over(K_PAW, w); P[ALP] += fsin(t * 2.2) * 0.35 * w; P[ARP] += fsin(t * 2.2 + 3.1) * 0.35 * w; P[ALE] += fsin(t * 2.2 + 1) * 0.25 * w; P[ARE] += fsin(t * 2.2 + 4) * 0.25 * w; break;
+      case ZACT.scream: over(K_SCREAM, w); P[HDZ] += fsin(t * 23) * 0.04 * w; P[CHX] += fsin(t * 31) * 0.015 * w; break;
     }
   }
 
@@ -543,12 +561,12 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
         over(K_STRIKE, at * (0.3 + 0.7 * Math.max(0, lu))); over(K_WINDUP, at * Math.max(0, -lu));
         // clawing between bites
         const cw = at * (1 - Math.abs(lu)) * 0.5;
-        P[ALP] += Math.sin(t * 13) * 0.35 * cw; P[ARP] += Math.sin(t * 13 + 2.6) * 0.35 * cw;
+        P[ALP] += fsin(t * 13) * 0.35 * cw; P[ARP] += fsin(t * 13 + 2.6) * 0.35 * cw;
       }
     }
   } else if (a.swing > 0.001 || a.atk > 0.001) {
     // melee: the old one-shot swing (atk counts 1 -> 0)
-    const k = Math.sin((1 - a.atk) * Math.PI) * (a.atk > 0.001 ? 1 : 0);
+    const k = fsin((1 - a.atk) * Math.PI) * (a.atk > 0.001 ? 1 : 0);
     if (k > 0) { P[ARP] += 2.3 * k; P[ARA] += 0.3 * k; P[ARE] += 0.5 * k * (1 - a.atk); P[CHY] += (a.atk - 0.5) * 0.9 * k; P[SPX] += 0.15 * k * (1 - a.atk); }
   }
 
@@ -565,12 +583,12 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
 
   // ---------------- 7. crawling
   if (a.crawl > 0.001) {
-    const c = a.crawl * alive;
+    const c = a.crawl * (lyingDeath ? 1 : alive);
     over(K_CRAWL, c);
-    const pl = Math.sin(ph), pr = Math.sin(ph + Math.PI);
-    P[ALP] += (pl * 0.45) * c; P[ARP] += (pr * 0.45) * c; P[ALE] += (0.35 - pl * 0.5) * c; P[ARE] += (0.35 - pr * 0.5) * c;
+    const pl = fsin(ph), pr = fsin(ph + Math.PI);
+    P[ALP] += (pl * 0.55) * c; P[ARP] += (pr * 0.55) * c; P[ALE] += (-pl * 0.6) * c; P[ARE] += (-pr * 0.6) * c;
     P[RR] += pl * 0.12 * c; P[CHY] += pl * 0.15 * c; P[RY] += Math.abs(pl) * 0.02 * c;
-    P[HDY] += cl(a.lookYaw, -1, 1) * 0.3 * c; P[HDX] += Math.sin(t * 2) * 0.06 * c;
+    P[HDY] += cl(a.lookYaw, -1, 1) * 0.3 * c; P[HDX] += fsin(t * 2) * 0.06 * c;
   }
 
   // ---------------- 8. knocked down / rising
@@ -578,9 +596,9 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     const dn = a.down, sup = a.downFace >= 0;
     if (a.downMode < 0.5) {           // falling: stand -> stumble -> floor
       if (sup) over3(K_FALLBACK, K_FALLBACK, K_SUPINE, dn * 2, Math.min(1, dn * 3)); else over3(K_FALLFWD, K_FALLFWD, K_PRONE, dn * 2, Math.min(1, dn * 3));
-      if (dn > 0.5) P[RZ] += (sup ? -0.55 : 0.55) * sst(0.5, 1, dn);
+      if (dn > 0.3) P[RZ] += a.downOff * sst(0.3, 1, dn);
     } else {                          // rising: floor -> prop up -> knees -> stand
-      const sh = Math.sin(t * 9) * 0.03 * Math.sin(dn * Math.PI);
+      const sh = fsin(t * 9) * 0.03 * fsin(dn * Math.PI);
       if (sup) {
         if (dn > 0.62) { over(K_SITUP, 1); over(K_SUPINE, sst(0.62, 1, dn)); }
         else if (dn > 0.3) { over(K_KNEEL1, 1); over(K_SITUP, sst(0.3, 0.62, dn)); }
@@ -592,7 +610,7 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
         else over(K_KNEEL1, sst(0, 0.22, dn));
       }
       P[CHX] += sh; P[HDZ] += sh * 2;
-      P[RZ] += (sup ? -0.55 : 0.55) * sst(0.3, 0.9, dn);
+      P[RZ] += a.downOff * sst(0.3, 0.9, dn);
     }
   }
 
@@ -600,7 +618,9 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
   if (a.death > 0.001) {
     const dt = a.death, st = a.deathStyle | 0;
     const e = sst(0, 1, dt);
-    if (st === 0) {            // knees give way, pitch onto the face
+    if (st === 5) {            // already on the ground: it just stops moving
+      P[HDX] += 0.3 * e; P[HDZ] += 0.2 * e;
+    } else if (st === 0) {     // knees give way, pitch onto the face
       over3(K_KNEES, K_KNEES, K_PRONE, dt < 0.4 ? dt / 0.4 : 1 + (dt - 0.4) / 0.6, Math.min(1, dt * 4)); P[RZ] += 0.5 * sst(0.4, 1, dt);
     } else if (st === 1) {     // thrown onto the back
       over3(K_FALLBACK, K_FALLBACK, K_SUPINE, dt < 0.45 ? dt / 0.45 : 1 + (dt - 0.45) / 0.55, Math.min(1, dt * 4)); P[RZ] -= 0.75 * sst(0.2, 1, dt);
@@ -610,7 +630,7 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     } else if (st === 3) {     // stiff as a board, face first
       over(K_PRONE, sst(0.55, 1, dt));
       const th = sst(0, 0.85, dt) * HP; P[RP] = th * (1 - sst(0.55, 1, dt)) + P[RP] * sst(0.55, 1, dt);
-      const lv = 1 - sst(0.55, 1, dt); P[RY] += (0.9 * Math.cos(th) - 0.9) * lv; P[RZ] += 0.9 * Math.sin(th) * lv + 0.9 * (1 - lv);
+      const lv = 1 - sst(0.55, 1, dt); P[RY] += (0.9 * fcos(th) - 0.9) * lv; P[RZ] += 0.9 * fsin(th) * lv + 0.9 * (1 - lv);
     } else {                   // drops to its knees, sways, folds backward
       over3(K_KNEES, K_KNEES, K_SUPINE, dt < 0.5 ? dt / 0.5 : 1 + (dt - 0.5) / 0.5, Math.min(1, dt * 4));
       if (dt > 0.5) { const k2 = sst(0.5, 1, dt); LG[3] += (2.3 - LG[3]) * k2 * 0.8; LG[8] += (2.2 - LG[8]) * k2 * 0.8; LG[0] += (-0.1 - LG[0]) * k2; LG[5] += (-0.15 - LG[5]) * k2; P[RZ] -= 0.35 * k2; }
@@ -629,7 +649,7 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     if (d.gait === 3) { FT[3] *= 0.3; FT[7] *= 0.3; }
     if (run > 0) { FT[2] -= 0.1 * run; FT[6] -= 0.1 * run; }
     legIK(0, 0, rootY); legIK(1, 4, rootY);
-    const tout = zomb ? 0.1 + hash1(sd * 8.1) * 0.25 : 0.14;
+    const tout = zomb ? 0.04 + RN[6] * 0.2 : 0.07;
     P[LEG0 + 2] = tout; P[LEG0 + 7] = tout + (d.gait === 2 ? 0.5 : 0);
     if (fkW > 0) for (let i = 0; i < 10; i++) P[LEG0 + i] += (LG[i] - P[LEG0 + i]) * fkW;
   } else for (let i = 0; i < 10; i++) P[LEG0 + i] = LG[i];
@@ -656,8 +676,8 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
   // aux: the bloat's gut hangs off the spine; the howler's throat sac off the head
   qx = 0; qy = 0; qz = 0; qw = 1;
   let auxS = 1;
-  if (K === KIND.howler) { bone(17, 3, 0, 0.055, 0.05); auxS = 0.55 + a.aux * 1.1 + Math.sin(t * 3) * 0.04; }
-  else { bone(17, 1, OFF[51], OFF[52], OFF[53]); auxS = 1 + a.aux * 0.28 + Math.sin(t * 2.1) * 0.025 + (walk > 0 ? Math.sin(gph * 2) * 0.03 * walk : 0); }
+  if (K === KIND.howler) { bone(17, 3, 0, 0.055, 0.05); auxS = 0.55 + a.aux * 1.1 + fsin(t * 3) * 0.04; }
+  else { bone(17, 1, OFF[51], OFF[52], OFF[53]); auxS = 1 + a.aux * 0.28 + fsin(t * 2.1) * 0.025 + (walk > 0 ? fsin(gph * 2) * 0.03 * walk : 0); }
 
   for (let b = 0; b < NB; b++) {
     const k = o + b * 12, q = b * 4, p = b * 3;

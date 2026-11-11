@@ -43,12 +43,13 @@ export function buildZombieGeometry(): THREE.BufferGeometry {
   const P: G[] = [];
   const add = (g: G, bone: number, region: number, feat = 0) => { P.push(tag(g, bone, region, feat)); };
   // ---- trunk
-  add(ball(1, 0, 0.98, 0, 0.165, 0.135, 0.122, 12, 8), B.HIP, R.pants);
-  add(tube(0.176, 0.152, 0.99, 1.33, 0, 0, 12, 1, 0.68, true, 2), B.SPINE, R.shirt);
-  add(warp(ball(1, 0, 1.365, 0, 0.192, 0.155, 0.126, 12, 8), v => { if (v.y > 1.4) { const k = (v.y - 1.4) / 0.12; v.x *= 1 - k * 0.12; } if (v.z < 0) v.z *= 0.92; }), B.CHEST, R.shirt);
+  add(warp(ball(1, 0, 0.975, 0, 0.172, 0.14, 0.126, 10, 6), v => { if (v.y < 0.93) v.x *= 1.04; }), B.HIP, R.pants);
+  add(warp(ball(1, 0, 1.15, 0, 0.165, 0.21, 0.116, 12, 6), v => { const t = (v.y - 1.15) / 0.21, k = Math.sqrt(1 + t * t * 0.9); v.x *= k * (1 + (v.y - 1.15) * 0.22); v.z *= k; }), B.SPINE, R.shirt);
+  add(warp(tube(0.19, 0.17, 1.24, 1.45, 0, 0, 12, 1, 0.66, true, 2), v => { if (v.z > 0.05 && v.y > 1.3 && v.y < 1.42) v.z *= 1.06; }), B.CHEST, R.shirt);
+  add(ball(1, 0, 1.45, 0, 0.19, 0.062, 0.1255, 12, 5, Math.PI * 0.5), B.CHEST, R.shirt);
   // ---- neck, head, face
-  add(tube(0.05, 0.056, 1.46, 1.61, 0, -0.008, 8), B.HEAD, R.skin);
-  add(warp(ball(1, 0, 1.68, 0.01, 0.098, 0.118, 0.11, 14, 10), v => { if (v.y < 1.68) { const k = (1.68 - v.y) / 0.118; v.x *= 1 - k * 0.22; if (v.z > 0.01) v.z = 0.01 + (v.z - 0.01) * (1 - k * 0.1); } }), B.HEAD, R.skin);
+  add(tube(0.052, 0.06, 1.455, 1.61, 0, -0.008, 8), B.HEAD, R.skin);
+  add(warp(ball(1, 0, 1.68, 0.01, 0.098, 0.118, 0.11, 12, 9), v => { if (v.y < 1.68) { const k = (1.68 - v.y) / 0.118; v.x *= 1 - k * 0.22; if (v.z > 0.01) v.z = 0.01 + (v.z - 0.01) * (1 - k * 0.1); } }), B.HEAD, R.skin);
   add(warp(box(0.108, 0.058, 0.108, 0, 1.592, 0.047), v => { if (v.z > 0.05) v.x *= 0.72; if (v.y < 1.58) { v.x *= 0.86; if (v.z > 0.05) v.z -= 0.012; } }), B.JAW, R.skin);
   add(box(0.066, 0.03, 0.02, 0, 1.607, 0.086), B.HEAD, R.gore);
   add(box(0.058, 0.012, 0.012, 0, 1.617, 0.093), B.HEAD, R.bone);
@@ -60,10 +61,10 @@ export function buildZombieGeometry(): THREE.BufferGeometry {
     add(ball(1, s * 0.098, 1.672, 0.0, 0.012, 0.03, 0.02, 5, 4), B.HEAD, R.skin);
   }
   // ---- hair & hats (features)
-  add(ball(1, 0, 1.713, -0.008, 0.104, 0.098, 0.116, 12, 6, Math.PI * 0.64), B.HEAD, R.hair, F.hair);
+  add(warp(ball(1, 0, 1.716, -0.005, 0.106, 0.101, 0.122, 10, 5, Math.PI * 0.64), v => { if (v.z > 0.03 && v.y < 1.757) v.z = 0.03 + (v.z - 0.03) * 0.72; }), B.HEAD, R.hair, F.hair);
   add(warp(ball(1, 0, 1.6, -0.068, 0.11, 0.165, 0.078, 9, 6), v => { if (v.z > -0.03 && Math.abs(v.x) < 0.07) v.z = -0.03; }), B.HEAD, R.hair, F.hairLong);
-  add(ball(1, 0, 1.724, -0.004, 0.107, 0.1, 0.119, 12, 6, Math.PI * 0.58), B.HEAD, R.hat, F.beanie);
-  add(tube(0.109, 0.109, 1.722, 1.756, 0, -0.004, 12, 1, 1.11), B.HEAD, R.hat, F.beanie);
+  add(ball(1, 0, 1.724, -0.004, 0.107, 0.1, 0.119, 10, 5, Math.PI * 0.58), B.HEAD, R.hat, F.beanie);
+  add(tube(0.109, 0.109, 1.722, 1.756, 0, -0.004, 10, 1, 1.11), B.HEAD, R.hat, F.beanie);
   add(box(0.13, 0.012, 0.085, 0, 1.728, 0.15, 0.12), B.HEAD, R.hat, F.brim);
   add(ball(0.042, 0, 1.712, -0.128, 1, 1, 1, 6, 4), B.HEAD, R.hair, F.bun);
   add(ball(1, 0, 1.63, -0.122, 0.026, 0.06, 0.026, 5, 4), B.HEAD, R.hair, F.bun);
@@ -72,29 +73,29 @@ export function buildZombieGeometry(): THREE.BufferGeometry {
   for (const s of [1, -1]) {
     const L = s > 0; const x = s * PIV[B.UAL * 3];
     const ua = L ? B.UAL : B.UAR, fa = L ? B.FAL : B.FAR, hn = L ? B.HNL : B.HNR, fore = L ? F.foreL : F.foreR, stump = L ? F.stumpL : F.stumpR;
-    add(ball(0.063, x, 1.44, 0, 1, 1, 1, 8, 6), ua, R.sleeve);
-    add(tube(0.052, 0.044, 1.16, 1.44, x, 0, 8), ua, R.sleeve);
-    add(ball(0.044, x, 1.16, 0, 1, 1, 1, 7, 5), fa, R.sleeve, fore);
-    add(tube(0.043, 0.032, 0.9, 1.16, x, 0, 8), fa, R.sleeve, fore);
-    add(ball(0.031, x, 0.9, 0, 1, 1, 1, 6, 4), hn, R.skin, fore);
-    add(box(0.028, 0.092, 0.076, x, 0.856, 0.004), hn, R.skin, fore);
-    add(box(0.024, 0.078, 0.07, x - s * 0.012, 0.778, 0.012, -0.22, 0, -s * 0.3), hn, R.skin, fore);
-    add(box(0.02, 0.052, 0.022, x - s * 0.012, 0.85, 0.05, -0.5), hn, R.skin, fore);
+    add(ball(0.066, x, 1.44, 0, 1, 1, 1, 8, 5), ua, R.sleeve);
+    add(tube(0.064, 0.048, 1.16, 1.44, x, 0, 8), ua, R.sleeve);
+    add(ball(0.0485, x, 1.16, 0, 1, 1, 1, 7, 5), fa, R.sleeve, fore);
+    add(warp(tube(0.048, 0.036, 0.9, 1.16, x, 0, 8, 1, 1, true, 2), v => { if (v.y > 1.0 && v.y < 1.06) { v.x = x + (v.x - x) * 1.08; v.z *= 1.08; } }), fa, R.sleeve, fore);
+    add(ball(0.035, x, 0.9, 0, 1, 1, 1, 6, 4), hn, R.skin, fore);
+    add(box(0.036, 0.095, 0.082, x, 0.855, 0.004), hn, R.skin, fore);
+    add(box(0.03, 0.08, 0.076, x - s * 0.014, 0.776, 0.014, -0.25, 0, -s * 0.32), hn, R.skin, fore);
+    add(box(0.024, 0.056, 0.026, x - s * 0.012, 0.85, 0.054, -0.5), hn, R.skin, fore);
     // stump: ragged flesh cap + a spur of bone
-    add(ball(0.045, x, 1.165, 0, 1, 0.7, 1, 6, 4), ua, R.gore, stump);
+    add(ball(0.049, x, 1.165, 0, 1, 0.7, 1, 6, 4), ua, R.gore, stump);
     add(tube(0.011, 0.016, 1.07, 1.16, x, 0, 5, 1, 1, false), ua, R.bone, stump);
   }
   // ---- legs
   for (const s of [1, -1]) {
     const L = s > 0; const x = s * PIV[B.THL * 3];
     const th = L ? B.THL : B.THR, sh = L ? B.SHL : B.SHR, ft = L ? B.FTL : B.FTR;
-    add(ball(0.088, x, 0.93, 0, 1, 1, 1, 10, 7), th, R.pants);
-    add(tube(0.086, 0.06, 0.5, 0.93, x, 0, 10), th, R.leg);
-    add(ball(0.059, x, 0.5, 0, 1, 1, 1, 8, 6), sh, R.leg);
-    add(warp(tube(0.057, 0.039, 0.08, 0.5, x, 0, 9, 1, 1, true, 2), v => { if (v.y > 0.25 && v.y < 0.35 && v.z < 0) v.z *= 1.22; }), sh, R.leg);
-    add(ball(0.041, x, 0.08, 0, 1, 1, 1, 6, 4), ft, R.shoe);
-    add(warp(box(0.09, 0.07, 0.2, x, 0.035, 0.035), v => { if (v.z < 0 && v.y > 0.04) v.y -= 0.008; }), ft, R.shoe);
-    add(warp(box(0.086, 0.05, 0.08, x, 0.025, 0.17), v => { if (v.z > 0.18) { v.y = Math.min(v.y, 0.036); v.x = x + (v.x - x) * 0.82; } }), ft, R.shoe);
+    add(ball(0.094, x, 0.93, 0, 1, 1, 1, 8, 6), th, R.pants);
+    add(tube(0.094, 0.066, 0.5, 0.93, x, 0, 10), th, R.leg);
+    add(ball(0.065, x, 0.5, 0, 1, 1, 1, 7, 5), sh, R.leg);
+    add(warp(tube(0.064, 0.044, 0.08, 0.5, x, 0, 9, 1, 1, true, 3), v => { if (v.y > 0.22 && v.y < 0.42 && v.z < 0) v.z *= 1.22; }), sh, R.leg);
+    add(ball(0.046, x, 0.08, 0, 1, 1, 1, 6, 4), ft, R.shoe);
+    add(warp(box(0.098, 0.074, 0.21, x, 0.037, 0.035), v => { if (v.z < 0 && v.y > 0.04) v.y -= 0.008; }), ft, R.shoe);
+    add(warp(box(0.094, 0.054, 0.085, x, 0.027, 0.175), v => { if (v.z > 0.18) { v.y = Math.min(v.y, 0.036); v.x = x + (v.x - x) * 0.82; } }), ft, R.shoe);
   }
   // ---- tools, held in the right hand (grip at the palm; long tools run forward, guns along the forearm)
   {
@@ -119,7 +120,7 @@ export function buildZombieGeometry(): THREE.BufferGeometry {
   {
     const ax = PIV[B.AUX * 3], ay = PIV[B.AUX * 3 + 1], az = PIV[B.AUX * 3 + 2];
     // bloat: distended gut and gas sacs
-    add(ball(0.2, ax, ay, az, 1, 1, 1, 12, 8), B.AUX, R.growth, F.bloat);
+    add(ball(0.2, ax, ay, az, 1, 1, 1, 10, 7), B.AUX, R.growth, F.bloat);
     add(ball(0.06, ax + 0.11, ay + 0.09, az + 0.14, 1, 1, 1, 6, 4), B.AUX, R.growth, F.bloat);
     add(ball(0.05, ax - 0.1, ay - 0.06, az + 0.16, 1, 1, 1, 6, 4), B.AUX, R.growth, F.bloat);
     add(ball(0.075, 0.1, 1.43, -0.11, 1, 1, 1, 6, 4), B.CHEST, R.growth, F.bloat);
@@ -218,13 +219,13 @@ const FRAG_COLOR = `
     bool cloth = reg > 0.5 && reg < 2.5;
     if (reg > 5.5 && reg < 7.5) {
       // sleeves and trouser legs end at a per-body height; rot leaves the hem ragged
-      float cut = vZSkin.w + (n2 - 0.5) * rag * 1.6 + (n1 - 0.5) * rag;
+      float cut = vZSkin.w + (n1 - 0.5) * rag * 1.9 + (n2 - 0.5) * rag * 0.35;
       if (vZPos.y < cut) { zc = skin; isSkin = 1.0; } else { cloth = true; if (vZPos.y < cut + 0.012) zc *= 0.7; }
     }
     if (isSkin > 0.5) {
       zc *= mix(0.86, 1.06, n1) * mix(1.0, mix(0.8, 1.05, n2), 1.0 - human);
       // rot: dark mottling, and ribs showing through where the shirt is gone
-      zc = mix(zc, zc * vec3(0.42, 0.44, 0.36), (1.0 - human) * smoothstep(0.52, 0.75, n3) * (0.35 + decay * 0.55));
+      zc = mix(zc, zc * vec3(0.5, 0.5, 0.42), (1.0 - human) * smoothstep(0.55, 0.78, n3) * (0.3 + decay * 0.45));
       if (reg > 16.5) {
         float rib = smoothstep(0.55, 0.95, sin(vZPos.y * 95.0 + abs(vZPos.x) * 14.0)) * smoothstep(1.2, 1.26, vZPos.y) * (1.0 - smoothstep(1.4, 1.46, vZPos.y)) * step(0.0, vZPos.z) * smoothstep(0.02, 0.05, abs(vZPos.x));
         zc *= 1.0 - rib * (0.12 + 0.3 * decay) * (1.0 - human);
@@ -247,13 +248,13 @@ const FRAG_COLOR = `
       if (reg < 4.5 || (reg > 5.5 && reg < 8.5) || reg > 14.5) {
         // grime, heaviest on the legs
         float gq = grime * (0.7 + 0.6 * smoothstep(0.7, 0.1, vZPos.y));
-        zc = mix(zc, zc * vec3(0.4, 0.36, 0.28) + vec3(0.012, 0.01, 0.006), gq * smoothstep(0.38, 0.72, n1 * 0.6 + n3 * 0.4));
+        zc = mix(zc, zc * vec3(0.5, 0.45, 0.36) + vec3(0.012, 0.01, 0.006), gq * smoothstep(0.42, 0.75, n1 * 0.6 + n3 * 0.4));
         // old blood: splashes, plus the mouth and hands that did the feeding
         float bz = zn(np * ZF4 + 3.7);
-        float bl = smoothstep(0.02, 0.08, bz - mix(0.86, 0.5, blood));
+        float bl = smoothstep(0.02, 0.08, bz - mix(0.92, 0.62, blood)) * step(0.12, vZPos.y);
         float mouth = smoothstep(1.66, 1.6, vZPos.y) * smoothstep(1.45, 1.52, vZPos.y) * smoothstep(-0.02, 0.05, vZPos.z) * step(abs(vZPos.x), 0.09);
         float hands = smoothstep(0.98, 0.86, vZPos.y) * step(0.16, abs(vZPos.x)) * step(0.7, vZPos.y);
-        float chest = smoothstep(1.5, 1.4, vZPos.y) * smoothstep(1.2, 1.3, vZPos.y) * smoothstep(0.03, 0.1, vZPos.z) * step(abs(vZPos.x), 0.16) * step(reg, 1.5);
+        float chest = smoothstep(1.5, 1.42, vZPos.y) * smoothstep(1.22, 1.36, vZPos.y) * smoothstep(0.03, 0.1, vZPos.z) * smoothstep(0.13, 0.04, abs(vZPos.x)) * step(reg, 1.5) * smoothstep(0.35, 0.7, n3);
         bl = max(bl, clamp((mouth + hands + chest * 0.8) * (0.4 + blood) * smoothstep(0.25, 0.6, n1 + n2 * 0.4), 0.0, 1.0));
         zc = mix(zc, mix(vec3(0.2, 0.012, 0.01), vec3(0.07, 0.014, 0.01), decay * 0.8 + n2 * 0.2), bl * 0.9);
         // wounds: torn flesh, bone showing in the old ones
@@ -261,7 +262,7 @@ const FRAG_COLOR = `
           float fi = float(i) * 7.31 + seed;
           vec3 wp = vec3((zh1(fi) - 0.5) * 0.44, 0.45 + zh1(fi + 1.7) * 1.05, (zh1(fi + 3.1) - 0.5) * 0.22);
           float wr = (0.035 + 0.05 * zh1(fi + 5.3)) * wound;
-          float dq = length((vZPos - wp) * vec3(1.0, 0.7, 1.0)) + (n2 - 0.5) * 0.02;
+          float dq = length((vZPos - wp) * vec3(1.0, 0.7, 1.0)) + (n2 - 0.5) * 0.02 + (n1 - 0.5) * 0.035;
           if (dq < wr) { zc = mix(vec3(0.17, 0.014, 0.012), vec3(0.05, 0.01, 0.008), smoothstep(wr, wr * 0.4, dq)); if (dq < wr * 0.42 && decay > 0.35) zc = vec3(0.62, 0.58, 0.46) * mix(0.8, 1.0, n2); }
         }
       }
@@ -271,7 +272,7 @@ const FRAG_COLOR = `
   }
 `;
 const FRAG_EMIT = `
-  if (vZCol.w > 4.5 && vZCol.w < 5.5 && vZMisc.x < 0.5) totalEmissiveRadiance += (vZMisc.w > 2.5 && vZMisc.w < 3.5 ? vec3(0.5, 0.12, 0.05) : vec3(0.3, 0.28, 0.16)) * (0.06 + 0.5 * uZNight);
+  if (vZCol.w > 4.5 && vZCol.w < 5.5 && vZMisc.x < 0.5) totalEmissiveRadiance += (vZMisc.w > 2.5 && vZMisc.w < 3.5 ? vec3(0.7, 0.16, 0.06) : vec3(0.42, 0.4, 0.22)) * (0.05 + 0.75 * uZNight);
   if (vZCol.w > 14.5 && vZCol.w < 15.5) totalEmissiveRadiance += vec3(0.1, 0.11, 0.02) * (0.15 + 0.5 * uZNight) * smoothstep(0.55, 0.8, zn(vZPos * 14.0 + vZFx.w));
 `;
 
@@ -320,8 +321,9 @@ export class BodyRenderer {
     this.data = new Float32Array(max * ROW);
     this.tex = new THREE.DataTexture(this.data, ROW_TEXELS, max, THREE.RGBAFormat, THREE.FloatType);
     this.tex.magFilter = this.tex.minFilter = THREE.NearestFilter; this.tex.generateMipmaps = false; this.tex.needsUpdate = true;
-    const slots = new Float32Array(max); for (let i = 0; i < max; i++) slots[i] = i;
-    this.slot = new THREE.InstancedBufferAttribute(slots, 1);
+    const slots = new Float32Array(max);
+    this.slot = new THREE.InstancedBufferAttribute(slots, 1).setUsage(THREE.DynamicDrawUsage) as THREE.InstancedBufferAttribute;
+    this.used = new Int32Array(max);
     geo.setAttribute('aSlot', this.slot);
     const { mat, depth } = makeZombieMaterials({ value: this.tex }, this.night);
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
@@ -332,23 +334,43 @@ export class BodyRenderer {
     scene.add(this.mesh);
   }
   get vertexCount() { return this.mesh.geometry.attributes.position.count; }
-  begin() { this.n = 0; }
+  private owner: (BodyDef | null)[] = []; private used: Int32Array; private frame = 2; private scan = 0;
+  /** bodies whose pose was recomputed this frame (the rest reused last frame's row) */
+  posed = 0;
+  begin() { this.n = 0; this.posed = 0; this.frame++; }
   get count() { return this.n; }
   full() { return this.n >= this.max; }
-  add(a: BodyAnim, d: BodyDef, x: number, y: number, z: number, yaw: number, scale: number) {
+  private alloc(): number {
+    const f = this.frame, used = this.used, max = this.max;
+    for (let pass = 0; pass < 2; pass++) for (let i = 0; i < max; i++) {
+      const s = (this.scan + i) % max;
+      if (used[s] < f - 1 + pass) { this.scan = (s + 1) % max; return s; }
+    }
+    return -1;
+  }
+  /**
+   * Draw one body this frame. Every body keeps its own row in the bone texture, so far-off or motionless ones
+   * can skip re-posing: lod 0 = pose every frame, k > 0 = every (k+1)th frame, -1 = only when new or dirty.
+   */
+  add(a: BodyAnim, d: BodyDef, x: number, y: number, z: number, yaw: number, scale: number, lod = 0) {
     const n = this.n; if (n >= this.max) return;
+    let s = d.slot, fresh = false;
+    if (s < 0 || this.owner[s] !== d) { s = this.alloc(); if (s < 0) return; this.owner[s] = d; d.slot = s; fresh = true; }
+    this.used[s] = this.frame;
+    (this.slot.array as Float32Array)[n] = s;
     this.tmpQ.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, yaw);
     this.tmpM.compose(this.tmpP.set(x, y, z), this.tmpQ, this.tmpS.set(scale, scale, scale));
     this.mesh.setMatrixAt(n, this.tmpM);
-    const o = n * ROW;
-    poseBody(a, d, this.data, o);
-    this.data.set(d.look, o + LOOK_AT);
+    const o = s * ROW;
+    if (fresh || lod === 0 || (lod > 0 && (this.frame + s) % (lod + 1) === 0)) { poseBody(a, d, this.data, o); this.posed++; }
+    if (fresh || d.dirty) { this.data.set(d.look, o + LOOK_AT); d.dirty = false; }
     this.n = n + 1;
   }
   end() {
     this.mesh.count = this.n;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.mesh.instanceMatrix.clearUpdateRanges(); this.mesh.instanceMatrix.addUpdateRange(0, this.n * 16);
+    this.slot.needsUpdate = true; this.slot.clearUpdateRanges(); this.slot.addUpdateRange(0, this.n);
     this.tex.needsUpdate = true;
   }
 }

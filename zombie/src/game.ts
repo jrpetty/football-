@@ -105,6 +105,7 @@ export class Game {
   private loudT = 0;
   driving: Vehicle | null = null;
   thirdPerson = false;
+  private howlT = 0;
   carCam = true;
   private avatar: HumanPose = { pos: new THREE.Vector3(), yaw: 0, move: 0, phase: 0, arms: 0, atk: 0, seed: 42.7, type: 3, hit: 0, visible: false };
   private camSmooth = new THREE.Vector3();
@@ -189,6 +190,7 @@ export class Game {
     this.vehicles = new Vehicles(this.world, this.scene);
     this.animals = new Animals(this.world, this.scene, SEED);
     this.survivors = new Survivors(this.world, this.zombies, SEED);
+    this.survivors.contactDamage = false;
     this.throwables = new Throwables(this.scene, this.world);
     this.rails = new Railways(this.world, this.factory, this.scene);
     this.placer.rails = this.rails;
@@ -197,6 +199,26 @@ export class Game {
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
+    // the dead hunt everyone: their hits on residents are resolved by the people system (damage, bites, death)
+    this.zombies.onHumanAttacked = (pose, z, dmg) => { const s = pose.owner as Survivor | undefined; if (s && !s.dead) this.survivors.attacked(s, z, dmg, { notify: (m, k) => this.ui.notify(m, k) }); };
+    this.zombies.onBurst = (pos, radius) => {
+      const p = this.player;
+      for (let i = 0; i < 5; i++) this.particles.smoke(pos.clone().add(new THREE.Vector3(this.rng.range(-1, 1), 0.6 + i * 0.3, this.rng.range(-1, 1))), 0.55);
+      this.particles.blood(pos.clone().setY(pos.y + 1), new THREE.Vector3(0, 1, 0), 2);
+      const d = p.pos.distanceTo(pos);
+      if (d < radius && this.state === 'play') {
+        const k = 1 - d / radius;
+        p.stats.addWound('torso', 'burn', 6 + 12 * k); p.stats.sickness = Math.min(100, p.stats.sickness + 18 * k);
+        this.vm.hurt(); this.renderer.grade.uniforms.uDamage.value = 0.7; audio.play('player_hurt');
+        this.ui.notify('☣ A bloat bursts over you — the spray burns and turns your stomach. Kill them from a distance.', 'bad');
+      }
+      for (const s of this.survivors.list) if (!s.dead && !s.hidden && s.away <= 0 && s.pos.distanceTo(pos) < radius) this.survivors.attacked(s, null, 22 * (1 - s.pos.distanceTo(pos) / radius) + 6, { notify: (m, k) => this.ui.notify(m, k) });
+    };
+    this.zombies.onHowl = (pos) => {
+      if (this.howlT > 0 || this.state !== 'play') return;
+      this.howlT = 25;
+      if (pos.distanceTo(this.player.pos) < 90) this.ui.notify('📢 A howler is screaming — everything dead within earshot is coming. Silence it first.', 'bad');
+    };
     this.zombies.onHorde = (n, toBase) => {
       this.hordeWarning = 8;
       bus.emit('notify', toBase ? `☠ A horde of ~${n} is heading for your base! Your factory noise drew them in.` : `☠ A horde of ~${n} is migrating through the area. Stay quiet.`, 'bad');
@@ -355,8 +377,9 @@ export class Game {
       playerPos: p.pos, playerEye: eye, playerNoise: p.noise, playerVisibility: p.visibility * (this.flashlight.intensity > 0 ? 1.4 : 1), playerAlive: this.state === 'play', playerInside: p.inside,
       onPlayerAttacked: z => this.playerAttacked(z), onStructureHit: (ref, dmg, z) => this.structureHit(ref, dmg, z), onKill: (z, by) => this.onKill(z, by),
       baseCenter: this.factory.hub ? new THREE.Vector3(this.factory.hub.cx, 0, this.factory.hub.cz) : null, baseHeat: this.factory.heat + this.combatHeat,
-      daylight, hours: hrs, day: this.day(), luck: this.luck(),
+      daylight, hours: hrs, day: this.day(), luck: this.luck(), playerBleeding: p.stats.bleeding() > 0.3,
     }, this.camera.position);
+    this.howlT = Math.max(0, this.howlT - dt);
     this.loudT = Math.max(0, this.loudT - dt * 30);
     this.animals.update(dt, { pos: p.pos, noise: Math.max(p.noise, this.loudT, this.driving ? 30 : 0), crouch: p.crouch, alive: this.state === 'play' }, 1 - daylight, a => this.wolfBite(a));
     if (this.state === 'play') {
@@ -1170,6 +1193,7 @@ export class Game {
 
   private onKill(z: Zombie, byPlayer: boolean) {
     if (byPlayer) { this.player.kills++; this.stats.kills++; }
+    if (z.turned && z.name) this.ui.notify(byPlayer ? `🕯 You put down what was left of ${z.name}.` : `🕯 What was left of ${z.name} has been put down.`, '');
     this.particles.bloodDecal(z.pos.x, this.world.groundY(z.pos.x, z.pos.z, z.pos.y), z.pos.z, 1.4);
   }
 
@@ -1780,6 +1804,8 @@ export class Game {
     if (this.state !== 'play') return;
     this.state = 'dead';
     this.player.stats.dead = true;
+    // the bitten don't stay down: your own body gets back up where it fell
+    if (this.player.stats.knoxInfected) { this.avatar.pos.copy(this.player.pos); this.avatar.name = this.player.name; this.zombies.spawnTurned(this.avatar); }
     audio.play('player_death');
     this.input.unlock();
     try { localStorage.removeItem(SAVE_KEY); } catch { /* */ }
