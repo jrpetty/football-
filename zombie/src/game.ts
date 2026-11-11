@@ -18,6 +18,7 @@ import { ViewModel } from './player/viewmodel';
 import { PARTS, PartId, WoundType } from './player/stats';
 import { OCCUPATIONS, SkillId, SKILLS } from './player/skills';
 import { Input } from './core/input';
+import { setLowPoly, LOWPOLY } from './render/materials';
 import { audio } from './audio/Audio';
 import { Inventory, Stack, makeStack } from './items/inventory';
 import { item, ItemDef } from './items/items';
@@ -38,7 +39,7 @@ import type { HumanPose } from './ai/zombies';
 export type GameState = 'loading' | 'menu' | 'cc' | 'play' | 'dead' | 'victory';
 export interface Interact { kind: string; label: string; sub?: string; key?: string; target: any; t: number; alt?: { label: string; act: () => void } }
 export interface TimedAction { label: string; dur: number; t: number; cancelOnMove: boolean; done: () => void; icon?: string }
-export interface Settings { quality: Quality; fov: number; sens: number; master: number; music: number; sfx: number; dayLen: number; creative: boolean; keys?: Record<string, string> }
+export interface Settings { quality: Quality; fov: number; sens: number; master: number; music: number; sfx: number; dayLen: number; creative: boolean; keys?: Record<string, string>; style?: 'realistic' | 'lowpoly' }
 
 const SAVE_KEY = 'rekindle_save_v1';
 const SETTINGS_KEY = 'rekindle_settings_v1';
@@ -134,6 +135,7 @@ export class Game {
     this.canvas = canvas;
     this.settings = { quality: 'high', fov: 75, sens: 1, master: 0.8, music: 0.45, sfx: 1, dayLen: 24, creative: false };
     try { const s = localStorage.getItem(SETTINGS_KEY); if (s) Object.assign(this.settings, JSON.parse(s)); } catch { /* */ }
+    setLowPoly(this.settings.style === 'lowpoly');
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, innerWidth / innerHeight, 0.08, 3000);
     this.input = new Input(canvas);
     if (this.settings.keys) this.input.setBindings(this.settings.keys);
@@ -149,7 +151,7 @@ export class Game {
     const cfg = QUALITY[this.settings.quality];
     this.renderer = new Renderer(this.canvas, this.settings.quality);
     progress(0.02, 'Generating textures');
-    await initTextures('low', (p, l) => progress(0.02 + p * 0.3, l)); // low-poly style only needs a few utility textures
+    await initTextures(LOWPOLY ? 'low' : cfg.tex, (p, l) => progress(0.02 + p * 0.3, l)); // low-poly only needs a few utility textures
     const yieldF = () => new Promise(r => setTimeout(r, 0));
     this.atmo = new Atmosphere(this.scene, this.renderer.renderer, cfg.shadow, cfg.shadowExtent, cfg.far);
     this.weather = new Weather(this.scene, SEED);
@@ -629,7 +631,8 @@ export class Game {
     const golden = smoothstep(0.35, 0.02, a.sunDir.y) * a.daylight;
     this.mountains.update(cam, a.fogColor, a.sunDir, a.night, this.weather.snowCover);
     const sunCol = a.sun.color.clone();
-    this.cloudClusters.update(cam, this.time, this.weather.cover, sunCol, a.daylight, a.night, this.weather.windDir.clone().multiplyScalar(0.5 + this.weather.wind));
+    this.cloudClusters.group.visible = LOWPOLY;
+    if (LOWPOLY) this.cloudClusters.update(cam, this.time, this.weather.cover, sunCol, a.daylight, a.night, this.weather.windDir.clone().multiplyScalar(0.5 + this.weather.wind));
     const season = this.state === 'play' ? this.season().idx : 0;
     this.ambient.update(this.time, cam, { season, night: a.night, daylight: a.daylight, rain: this.weather.rain, indoor, wind: this.weather.windDir.clone().multiplyScalar(this.weather.wind), forest: this.world.terrain.forestDensity(cam.x, cam.z) });
     windUniforms.uFlowers.value = [0.3, 0, 1, 0.75][season];
@@ -637,7 +640,8 @@ export class Game {
     const g = this.renderer.grade.uniforms;
     g.uGain.value.set(1.03 + golden * 0.07, 1.0 + golden * 0.01, 0.95 - golden * 0.07 + a.night * 0.05);
     g.uLift.value.set(0.018 - a.night * 0.008, 0.022 + a.night * 0.006, 0.034 + a.night * 0.02);
-    g.uSat.value = 0.97 + golden * 0.08 - a.night * 0.25;
+    g.uSat.value = (LOWPOLY ? 0.97 : 0.88) + golden * 0.08 - a.night * 0.25;
+    if (!LOWPOLY) { g.uGrain.value = 0.038; g.uChroma.value = 0.0011; g.uContrast.value = 1.08; }
     void dt;
   }
 

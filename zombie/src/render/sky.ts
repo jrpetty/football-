@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { clamp, lerp, smoothstep } from '../core/util';
 import { getCloudNoiseTexture } from './textures';
+import { Sky } from 'three/examples/jsm/objects/Sky.js';
+import { LOWPOLY } from './materials';
 
 export class Atmosphere {
   sky: THREE.Mesh;
@@ -48,10 +50,17 @@ export class Atmosphere {
           gl_FragColor = vec4(col, 1.0);
         }`,
     });
-    this.sky = new THREE.Mesh(new THREE.SphereGeometry(2400, 32, 16), skyMat);
+    if (LOWPOLY) {
+      this.sky = new THREE.Mesh(new THREE.SphereGeometry(2400, 32, 16), skyMat);
+      this.envSky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), skyMat);
+    } else {
+      // physically based scattering sky (Preetham) for the realistic style
+      const sk = new Sky(); sk.scale.setScalar(2400);
+      const u = sk.material.uniforms; u.turbidity.value = 8; u.rayleigh.value = 1.2; u.mieCoefficient.value = 0.006; u.mieDirectionalG.value = 0.86;
+      this.sky = sk; const es = new Sky(); es.scale.setScalar(900); this.envSky = es;
+    }
     this.sky.frustumCulled = false; this.sky.renderOrder = -3;
     scene.add(this.sky);
-    this.envSky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), skyMat);
     this.envScene.add(this.envSky);
     this.pmrem = new THREE.PMREMGenerator(renderer);
 
@@ -76,18 +85,18 @@ export class Atmosphere {
       uniforms: {
         tNoise: { value: getCloudNoiseTexture() }, uTime: { value: 0 }, uCover: { value: 0.5 },
         uSunCol: { value: new THREE.Color(1, 1, 1) }, uShade: { value: new THREE.Color(0.5, 0.55, 0.6) }, uSunDir: { value: new THREE.Vector3() }, uDark: { value: 0 },
-        uFlash: { value: 0 },
+        uFlash: { value: 0 }, uSoft: { value: LOWPOLY ? 0.05 : 0.38 },
       },
       vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: `uniform sampler2D tNoise; uniform float uTime, uCover, uDark, uFlash; uniform vec3 uSunCol, uShade, uSunDir; varying vec3 vW;
+      fragmentShader: `uniform sampler2D tNoise; uniform float uTime, uCover, uDark, uFlash, uSoft; uniform vec3 uSunCol, uShade, uSunDir; varying vec3 vW;
         void main(){
           vec2 p = vW.xz * 0.00022 + vec2(uTime*0.004, uTime*0.0016);
           float n = texture2D(tNoise, p).r * 0.6 + texture2D(tNoise, p*2.7 + 0.3).r * 0.28 + texture2D(tNoise, p*7.1 - uTime*0.002).r * 0.12;
-          float d = smoothstep(1.0 - uCover + 0.02, 1.0 - uCover + 0.07, n);
+          float d = smoothstep(1.0 - uCover + 0.02 - uSoft * 0.2, 1.0 - uCover + 0.02 + uSoft, n);
           // fake self-shadowing toward sun
           float n2 = texture2D(tNoise, p + uSunDir.xz * 0.012).r * 0.6 + texture2D(tNoise, (p + uSunDir.xz*0.012)*2.7 + 0.3).r * 0.28;
           float shadow = clamp((n2 - n) * 4.0 + 0.5, 0.0, 1.0);
-          vec3 col = mix(uSunCol, uShade, smoothstep(0.45, 0.55, shadow) * 0.85);
+          vec3 col = mix(uSunCol, uShade, smoothstep(0.5 - uSoft * 1.2 - 0.05, 0.5 + uSoft * 1.2 + 0.05, shadow) * 0.85 + d * uSoft * 0.5);
           col = mix(col, vec3(0.02,0.025,0.035), uDark) + vec3(0.6,0.65,0.8) * uFlash;
           float dist = length(vW.xz - cameraPosition.xz);
           float fade = 1.0 - smoothstep(1500.0, 2900.0, dist);
@@ -168,7 +177,7 @@ export class Atmosphere {
     const useMoon = this.sunDir.y < 0.02;
     const ldir = useMoon ? this.moonDir : this.sunDir;
     const sunCol = new THREE.Color().setRGB(1, lerp(0.95, 0.62, golden), lerp(0.88, 0.4, golden));
-    const sunI = sunUp * lerp(2.7, 0.8, oc) * lerp(1, 0.7, golden);
+    const sunI = sunUp * lerp(LOWPOLY ? 2.7 : 3.2, 0.8, oc) * lerp(1, 0.7, golden);
     const moonI = (1 - sunUp) * smoothstep(0.0, 0.25, this.moonDir.y) * lerp(0.75, 0.3, oc);
     if (useMoon) { this.sun.color.setRGB(0.55, 0.65, 0.95); this.sun.intensity = moonI + this.lightning * 4; }
     else { this.sun.color.copy(sunCol); this.sun.intensity = sunI + this.lightning * 4; }
@@ -194,9 +203,21 @@ export class Atmosphere {
     const baseDensity = 2.2 / this.far;
     this.fog.density = baseDensity * (1 + oc * 1.4 + this.fogBoost * 4) + this.night * 0.002;
 
+    if (!LOWPOLY) {
+      const u = (this.sky as Sky).material.uniforms;
+      u.sunPosition.value.copy(this.sunDir).multiplyScalar(1000);
+      u.turbidity.value = lerp(8, 16, oc); u.rayleigh.value = lerp(1.0, 0.4, oc) + golden * 1.2;
+      u.mieCoefficient.value = lerp(0.004, 0.02, oc);
+      const hz = this.haze.material as THREE.ShaderMaterial;
+      hz.uniforms.uColor.value.copy(this.fogColor);
+      hz.uniforms.uStrength.value = Math.min(1, 0.85 + oc * 0.15 + this.night * 0.15 + this.fogBoost);
+      hz.uniforms.uHeight.value = 0.3 + oc * 0.35 + this.fogBoost * 0.4;
+      this.haze.position.copy(camera.position); this.haze.visible = true;
+    }
     // gradient sky colours
     const su = (this.sky.material as THREE.ShaderMaterial).uniforms;
     const zen = new THREE.Color(0x5a82b0).lerp(new THREE.Color(0x8e99a1), oc).lerp(new THREE.Color(0x4f5f86), golden * (1 - oc * 0.6)).lerp(new THREE.Color(0x05080f), this.night);
+    if (LOWPOLY) {
     su.uZenith.value.copy(zen);
     su.uHorizon.value.copy(this.fogColor);
     su.uGround.value.copy(this.fogColor).multiplyScalar(0.8);
@@ -205,6 +226,7 @@ export class Atmosphere {
     su.uGlow.value = (0.4 + golden * 1.2) * (1 - oc * 0.8);
     su.uDisc.value = (1 - smoothstep(0.5, 0.9, this.cloudCover)) * sunUp;
     this.haze.visible = false;
+    }
     // haze
     const hm = this.haze.material as THREE.ShaderMaterial;
     hm.uniforms.uColor.value.copy(this.fogColor);
@@ -215,7 +237,7 @@ export class Atmosphere {
     // clouds
     const cm = this.clouds.material as THREE.ShaderMaterial;
     cm.uniforms.uTime.value = time;
-    cm.uniforms.uCover.value = clamp((this.cloudCover - 0.4) * 1.6, 0, 1);
+    cm.uniforms.uCover.value = LOWPOLY ? clamp((this.cloudCover - 0.4) * 1.6, 0, 1) : clamp(this.cloudCover, 0, 1);
     cm.uniforms.uSunCol.value.copy(sunCol).multiplyScalar(lerp(0.4, 1.1, sunUp) * lerp(1, 0.7, oc));
     cm.uniforms.uShade.value.set(0.42, 0.46, 0.52).multiplyScalar(lerp(0.15, 1, sunUp) * lerp(1, 0.75, oc));
     cm.uniforms.uSunDir.value.copy(this.sunDir);
@@ -240,6 +262,7 @@ export class Atmosphere {
 
   private refreshEnv(hours: number, oc: number) {
     this.lastEnvT = hours; this.lastEnvCloud = oc;
+    if (!LOWPOLY) { const eu = (this.envSky as Sky).material.uniforms, su = (this.sky as Sky).material.uniforms; eu.sunPosition.value.copy(su.sunPosition.value); eu.turbidity.value = su.turbidity.value; eu.rayleigh.value = su.rayleigh.value; eu.mieCoefficient.value = su.mieCoefficient.value; eu.mieDirectionalG.value = su.mieDirectionalG.value; }
     const old = this.envRT;
     this.envRT = this.pmrem.fromScene(this.envScene, 0, 0.1, 2000);
     this.scene.environment = this.envRT.texture;

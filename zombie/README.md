@@ -8,9 +8,11 @@ ruined Pacific Northwest town. Over time it turns into Satisfactory-style
 factory building: power grids, conveyor lines and automated defences, until you
 synthesise a cure and switch the town's lights back on.
 
-Built with Three.js, TypeScript and Vite. The art style is faceted low-poly in
-the spirit of *The Long Dark*: flat colours, painterly gradient skies, heavy
-atmospheric fog and strong light. Everything is procedural: terrain, town,
+Built with Three.js, TypeScript and Vite. There are two art styles (Settings →
+Art style): **Realistic** (the default: PBR textured materials, smooth shading,
+textured terrain, needle-and-leaf trees, a physical scattering sky, reflective
+water, film grain) and **Low-poly** (faceted flat colours in the spirit of
+*The Long Dark*, painterly skies and puffy clouds). Everything is procedural: terrain, town,
 interiors, 3D models, sound effects and music. The repo has no image or audio
 files.
 

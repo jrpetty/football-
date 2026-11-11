@@ -2,7 +2,9 @@
 import * as THREE from 'three';
 import { HALF_WORLD, WORLD_SIZE, hash2, RNG, clamp } from '../core/util';
 import type { TreeModel } from '../models/vegetation';
-import { buildLowPolyTreeModels as buildTreeModels } from '../models/lowpoly';
+import { buildLowPolyTreeModels } from '../models/lowpoly';
+import { buildTreeModels as buildRealTreeModels } from '../models/vegetation';
+import { LOWPOLY } from '../render/materials';
 import { Terrain, T_N, T_RES } from './terrain';
 import { CollisionWorld, Circle } from './collision';
 import { LAKE, TOWN } from './layout';
@@ -88,7 +90,7 @@ export class Vegetation {
   removed = new Set<number>();
 
   constructor(private terrain: Terrain, private col: CollisionWorld, private renderer: THREE.WebGLRenderer, seed: number, density: number, private grassDensity: number, blocked: (x: number, z: number) => boolean) {
-    const models = buildTreeModels();
+    const models = LOWPOLY ? buildLowPolyTreeModels() : buildRealTreeModels();
     const groups: [TreeModel[], TreeInst['kind'], number, boolean][] = [
       [models.pines, 'tree', 0.35, true], [models.firs, 'tree', 0.35, true], [models.birches, 'tree', 0.5, true], [models.dead, 'tree', 0.15, true],
       [models.bushes, 'bush', 0.6, false], [models.rocks, 'rock', 0.0001, false], [models.logs, 'log', 0.0001, false],
@@ -243,9 +245,9 @@ export class Vegetation {
 
   private buildGrass() {
     const S = 70; // patch size (m)
-    const count = Math.floor(70000 * this.grassDensity);
+    const count = Math.floor((LOWPOLY ? 70000 : 170000) * this.grassDensity);
     // blade: 3 segments tapered
-    const bw = 0.12, bh = 0.8;
+    const bw = LOWPOLY ? 0.12 : 0.055, bh = LOWPOLY ? 0.8 : 1;
     const pos = [-bw / 2, 0, 0, bw / 2, 0, 0, -bw * 0.38, bh * 0.4, 0.0, bw * 0.38, bh * 0.4, 0.0, -bw * 0.2, bh * 0.75, 0.0, bw * 0.2, bh * 0.75, 0.0, 0, bh, 0];
     const idx = [0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4, 4, 5, 6];
     const base = new THREE.BufferGeometry();
@@ -283,7 +285,7 @@ vec4 sp = texture2D(tSplat, (wp + ${HALF_WORLD.toFixed(1)}) / ${WORLD_SIZE.toFix
 float dist = length(wp - uCam.xz);
 float mask = (1.0 - sp.r) * (1.0 - smoothstep(0.25, 0.6, sp.g)) * (1.0 - sp.b * 0.75) * (1.0 - sp.a);
 float fade = 1.0 - smoothstep(${(S * 0.3).toFixed(1)}, ${(S * 0.5).toFixed(1)}, dist);
-float hgt = (0.22 + aOff.z * 0.3) * mask * fade * step(0.15, mask) * smoothstep(0.8, 2.5, dist) * (1.0 - smoothstep(0.15, 0.55, uSnowG));
+float hgt = ${LOWPOLY ? '(0.22 + aOff.z * 0.3)' : '(0.32 + aOff.z * 0.5)'} * mask * fade * step(0.15, mask) * smoothstep(0.8, 2.5, dist) * (1.0 - smoothstep(0.15, 0.55, uSnowG));
 float ang = aOff.w * 6.2831;
 vec3 transformed = vec3(position.x * (0.7 + aOff.z*0.6), position.y * hgt, 0.0);
 float ca = cos(ang), sa = sin(ang);
@@ -297,14 +299,14 @@ transformed.xz += (wind + push + vec2(aOff.z - 0.5, aOff.w - 0.5) * 0.3) * bend 
 transformed.y -= length(push) * bend * hgt * 0.4;
 transformed += vec3(wp.x, hAt(wp), wp.y);
 vH = t; vShade = aOff.z;
-vGCol = mix(vec3(0.27,0.36,0.15), vec3(0.40,0.42,0.19), step(0.75, aOff.z + sp.g * 0.4)) * (0.92 + aOff.w * 0.12);
+vGCol = ${LOWPOLY ? 'mix(vec3(0.27,0.36,0.15), vec3(0.40,0.42,0.19), step(0.75, aOff.z + sp.g * 0.4)) * (0.92 + aOff.w * 0.12)' : 'mix(vec3(0.17,0.25,0.08), vec3(0.38,0.38,0.17), smoothstep(0.3, 0.9, sp.g + aOff.z * 0.5)) * (0.8 + aOff.w * 0.35)'};
 if (aOff.w > 1.0 - 0.045 * uFlowers) { vGCol = aOff.z < 0.33 ? vec3(0.95, 0.93, 0.85) : aOff.z < 0.66 ? vec3(0.95, 0.78, 0.2) : vec3(0.62, 0.4, 0.8); }
 `)
         .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = vec3(0.0, 1.0, 0.0);');
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying float vH; varying float vShade; varying vec3 vGCol;')
         .replace('#include <map_fragment>', `#include <map_fragment>
-diffuseColor.rgb *= mix(vGCol * 0.95, vGCol * 1.18, smoothstep(0.0, 0.7, vH));`);
+diffuseColor.rgb *= ${LOWPOLY ? 'mix(vGCol * 0.95, vGCol * 1.18, smoothstep(0.0, 0.7, vH))' : 'mix(vGCol * 0.35, vGCol * 1.12 + vec3(0.03,0.04,0.0), vH)'};`);
     };
     mat.customProgramCacheKey = () => 'grass-v1';
     this.grassMat = mat;

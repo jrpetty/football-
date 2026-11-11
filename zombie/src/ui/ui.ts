@@ -88,6 +88,7 @@ export class UI {
     const s = this.g.settings;
     this.showModal(`<div class="panel window" style="width:560px;height:auto;max-height:90vh"><div class="top"><h2 style="padding:0 8px">Settings</h2><button class="close" data-a="close-modal">✕</button></div>
       <div class="body" style="display:block" class="settings"><div class="settings">
+      <label>Art style <select id="s-style"><option value="realistic" ${s.style !== 'lowpoly' ? 'selected' : ''}>Realistic</option><option value="lowpoly" ${s.style === 'lowpoly' ? 'selected' : ''}>Low-poly</option></select></label>
       <label>Graphics quality <select id="s-q">${['low', 'medium', 'high', 'ultra'].map(q => `<option ${q === s.quality ? 'selected' : ''}>${q}</option>`).join('')}</select></label>
       <label>Field of view <input type="range" id="s-fov" min="60" max="100" value="${s.fov}"/></label>
       <label>Mouse sensitivity <input type="range" id="s-sens" min="0.3" max="2.5" step="0.05" value="${s.sens}"/></label>
@@ -98,7 +99,7 @@ export class UI {
       <h3>Key bindings <span class="hint">(click, then press a key · Esc cancels)</span></h3>
       <div class="controls">${ACTIONS.map(([def, label]) => `<div><span>${label}</span><button class="btn small" data-a="rebind" data-id="${def}">${this.g.input.keyName(def)}</button></div>`).join('')}</div>
       <div class="btnrow"><button class="btn small" data-a="resetkeys">Reset keys</button></div>
-      <p class="hint">Graphics quality changes apply after reloading the page (your game autosaves).</p>
+      <p class="hint">Art style and graphics quality changes apply after reloading the page (your game autosaves).</p>
       <div class="btnrow"><button class="btn primary" data-a="save-settings">Apply</button><button class="btn" data-a="reload">Apply & reload</button></div></div></div></div>`);
   }
   private controlsModal() {
@@ -495,7 +496,7 @@ export class UI {
       case 'resetkeys': g.settings.keys = {}; g.input.setBindings({}); g.saveSettings(); this.settingsModal(); break;
       case 'save-settings': case 'reload': {
         const s = g.settings; const q = (id: string) => document.getElementById(id) as HTMLInputElement;
-        s.quality = q('s-q').value as any; s.fov = Number(q('s-fov').value); s.sens = Number(q('s-sens').value); s.master = Number(q('s-mv').value); s.music = Number(q('s-mu').value); s.dayLen = Number(q('s-day').value); s.creative = q('s-cr').checked;
+        s.quality = q('s-q').value as any; s.style = (document.getElementById('s-style') as HTMLSelectElement).value as any; s.fov = Number(q('s-fov').value); s.sens = Number(q('s-sens').value); s.master = Number(q('s-mv').value); s.music = Number(q('s-mu').value); s.dayLen = Number(q('s-day').value); s.creative = q('s-cr').checked;
         g.input.sensitivity = 0.0022 * s.sens; audio.setVolumes({ master: s.master, music: s.music }); g.saveSettings();
         if (a === 'reload') { g.save(true); location.reload(); } else this.closeModal();
         break;

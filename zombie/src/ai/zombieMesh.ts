@@ -1,6 +1,7 @@
 // Procedural zombie body with per-vertex bone ids, animated entirely on the GPU (one draw call for the whole horde).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { LOWPOLY } from '../render/materials';
 
 // bone ids
 const HIP = 0, SPINE = 1, HEAD = 2, UAL = 3, FAL = 4, UAR = 5, FAR = 6, THL = 7, SHL = 8, THR = 9, SHR = 10;
@@ -16,8 +17,8 @@ function part(g: THREE.BufferGeometry, bone: number, region: number, x: number, 
   geo.deleteAttribute('uv');
   return geo;
 }
-const cyl = (rt: number, rb: number, h: number, seg = 6) => new THREE.CylinderGeometry(rt, rb, h, Math.min(seg, 6), 1);
-const sph = (r: number, w = 10, h = 8) => new THREE.IcosahedronGeometry(r, 1);
+const cyl = (rt: number, rb: number, h: number, seg = 8) => new THREE.CylinderGeometry(rt, rb, h, LOWPOLY ? Math.min(seg, 6) : seg + 2, LOWPOLY ? 1 : 2);
+const sph = (r: number, w = 10, h = 8) => LOWPOLY ? new THREE.IcosahedronGeometry(r, 1) : new THREE.SphereGeometry(r, w + 2, h + 2);
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d, 1, 1, 1);
 
 export function buildZombieGeometry(): THREE.BufferGeometry {
@@ -214,8 +215,8 @@ export const ZOMBIE_VERTEX_BODY = `
 `;
 
 export function makeZombieMaterials(timeUniform: { value: number }) {
-  const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, flatShading: true });
-  (mat as any).defines = { FACET_VARIATION: '' };
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, flatShading: LOWPOLY });
+  if (LOWPOLY) (mat as any).defines = { FACET_VARIATION: '' };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uZTime = timeUniform;
     sh.vertexShader = sh.vertexShader
@@ -256,7 +257,7 @@ float zn(vec3 p){ vec3 i = floor(p); vec3 f = fract(p); f = f*f*(3.0-2.0*f);
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       if (vZRegion > 4.5 && vZRegion < 9.5) totalEmissiveRadiance += vec3(0.25, 0.22, 0.12);`);
   };
-  mat.customProgramCacheKey = () => 'zombie-lp2';
+  mat.customProgramCacheKey = () => 'zombie-lp2-' + (LOWPOLY ? 'f' : 's');
 
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   depth.onBeforeCompile = (sh) => {

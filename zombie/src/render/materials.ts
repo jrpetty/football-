@@ -53,7 +53,9 @@ const cache = new Map<string, THREE.MeshStandardMaterial>();
  * Low-poly art direction: every surface is a flat, faceted colour (The Long Dark-style), lit by the
  * atmosphere. Textures are only kept where they carry information (hazard stripes, belt motion).
  */
-export const LOWPOLY = true;
+/** art style switch, set once at boot from settings before any material is built */
+export let LOWPOLY = false;
+export function setLowPoly(v: boolean) { LOWPOLY = v; }
 
 // ---- global shader upgrades (patched once, before any program compiles) ----
 // FACET_VARIATION: per-face tonal variation from the world-space flat normal + a per-object seed, giving
@@ -82,11 +84,7 @@ varying float vFogWY;
 `;
   C.fog_vertex = C.fog_vertex + `
 #ifdef USE_FOG
-  #ifdef USE_INSTANCING
-    vFogWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y;
-  #else
-    vFogWY = (modelMatrix * vec4(transformed, 1.0)).y;
-  #endif
+  vFogWY = (inverse(viewMatrix) * mvPosition).y;
 #endif
 `;
   C.color_fragment = C.color_fragment + `
@@ -117,7 +115,7 @@ varying float vFogWY;
 `;
 })();
 /** opt a material into faceted tonal variation */
-export function facet<T extends THREE.Material>(m: T): T { (m as any).defines = { ...((m as any).defines ?? {}), FACET_VARIATION: '' }; return m; }
+export function facet<T extends THREE.Material>(m: T): T { if (!LOWPOLY) return m; (m as any).defines = { ...((m as any).defines ?? {}), FACET_VARIATION: '' }; return m; }
 const PALETTE: Partial<Record<MaterialName, [number, number, number]>> = {
   // [colour, roughness, metalness]
   grass: [0x6f7d45, 0.95, 0], dirt: [0x7a6248, 0.95, 0], rock: [0x85847c, 0.9, 0], forestFloor: [0x5a4a34, 0.95, 0],

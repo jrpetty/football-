@@ -2,6 +2,9 @@
 import * as THREE from 'three';
 import { RNG, snapGrid, HALF_WORLD } from '../core/util';
 import { buildLayout, Layout, LAKE } from './layout';
+import { Water } from 'three/examples/jsm/objects/Water.js';
+import { getWaterNormalTexture } from '../render/textures';
+import { LOWPOLY } from '../render/materials';
 import { Terrain } from './terrain';
 import { CollisionWorld } from './collision';
 import { Town } from './town';
@@ -84,6 +87,18 @@ export class World {
   }
 
   private buildWater() {
+    if (!LOWPOLY) {
+      const water = new Water(new THREE.CircleGeometry(LAKE.r + 14, 64), {
+        textureWidth: 512, textureHeight: 512, waterNormals: getWaterNormalTexture(),
+        sunDirection: new THREE.Vector3(0, 1, 0), sunColor: 0xffffff, waterColor: 0x0f2226, distortionScale: 2.6, fog: true,
+      });
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(LAKE.x, LAKE.level, LAKE.z);
+      (water.material as THREE.ShaderMaterial).uniforms.size.value = 3;
+      this.water = water; this.realWater = true;
+      this.group.add(water);
+      return;
+    }
     // low-poly lake: faceted, gently heaving triangles
     const geo = new THREE.CircleGeometry(LAKE.r + 14, 48, 0, Math.PI * 2).toNonIndexed();
     const g2 = new THREE.PlaneGeometry((LAKE.r + 14) * 2, (LAKE.r + 14) * 2, 40, 40).toNonIndexed();
@@ -105,6 +120,7 @@ export class World {
     this.group.add(water);
   }
   waterTime = { value: 0 };
+  private realWater = false;
 
   /** walkable ground height (terrain, building floors, player foundations) */
   groundY(x: number, z: number, feetY = Infinity) {
@@ -130,8 +146,9 @@ export class World {
     this.town.props.update(cam);
     if (this.water) {
       const d = Math.hypot(cam.x - LAKE.x, cam.z - LAKE.z);
-      this.water.visible = d < 420;
+      this.water.visible = d < (this.realWater ? 260 : 420);
       this.waterTime.value = time;
+      if (this.realWater) { const u = (this.water.material as THREE.ShaderMaterial).uniforms; u.time.value = time * 0.6; u.sunDirection.value.copy(sunDir); }
     }
     for (const d of this.drops) { d.age += dt; d.mesh.rotation.y += dt * 0.5; }
     // interiors far away hidden
