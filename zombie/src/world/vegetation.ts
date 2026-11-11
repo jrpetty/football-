@@ -1,7 +1,8 @@
 // Forests (instanced trees with impostor LOD + wind), bushes, rocks, and an infinite GPU grass field.
 import * as THREE from 'three';
 import { HALF_WORLD, WORLD_SIZE, hash2, RNG, clamp } from '../core/util';
-import { buildTreeModels, TreeModel } from '../models/vegetation';
+import type { TreeModel } from '../models/vegetation';
+import { buildLowPolyTreeModels as buildTreeModels } from '../models/lowpoly';
 import { Terrain, T_N, T_RES } from './terrain';
 import { CollisionWorld, Circle } from './collision';
 import { LAKE, TOWN } from './layout';
@@ -77,7 +78,7 @@ export class Vegetation {
   private lastCenter = new THREE.Vector2(1e9, 1e9);
   grass!: THREE.Mesh;
   private grassMat!: THREE.MeshStandardMaterial;
-  nearDist = 85;
+  nearDist = 140;
   private tmpM = new THREE.Matrix4(); private tmpQ = new THREE.Quaternion(); private tmpS = new THREE.Vector3(); private tmpP = new THREE.Vector3();
   removed = new Set<number>();
 
@@ -120,7 +121,7 @@ export class Vegetation {
         this.insts.push({ x: jx, y, z: jz, s: rng.range(0.7, 1.4), r: rng.range(0, 6.28), v: vi, kind: 'bush', alive: true, hp: 20, idx: this.insts.length });
       } else if (!inTown && rng.chance(0.035 + slope * 0.4)) {
         const vi = rng.pick(vIndex.rock);
-        this.insts.push({ x: jx, y: y - 0.2, z: jz, s: rng.range(0.6, 1.8), r: rng.range(0, 6.28), v: vi, kind: 'rock', alive: true, hp: 200, idx: this.insts.length });
+        this.insts.push({ x: jx, y: y - 0.2, z: jz, s: rng.range(0.5, 1.15), r: rng.range(0, 6.28), v: vi, kind: 'rock', alive: true, hp: 200, idx: this.insts.length });
       } else if (f > 0.5 && rng.chance(0.03)) {
         const vi = rng.pick(vIndex.log);
         this.insts.push({ x: jx, y, z: jz, s: rng.range(0.8, 1.2), r: rng.range(0, 6.28), v: vi, kind: 'log', alive: true, hp: 60, idx: this.insts.length });
@@ -228,9 +229,9 @@ export class Vegetation {
 
   private buildGrass() {
     const S = 70; // patch size (m)
-    const count = Math.floor(160000 * this.grassDensity);
+    const count = Math.floor(70000 * this.grassDensity);
     // blade: 3 segments tapered
-    const bw = 0.07, bh = 1;
+    const bw = 0.12, bh = 0.8;
     const pos = [-bw / 2, 0, 0, bw / 2, 0, 0, -bw * 0.38, bh * 0.4, 0.0, bw * 0.38, bh * 0.4, 0.0, -bw * 0.2, bh * 0.75, 0.0, bw * 0.2, bh * 0.75, 0.0, 0, bh, 0];
     const idx = [0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4, 4, 5, 6];
     const base = new THREE.BufferGeometry();
@@ -268,7 +269,7 @@ vec4 sp = texture2D(tSplat, (wp + ${HALF_WORLD.toFixed(1)}) / ${WORLD_SIZE.toFix
 float dist = length(wp - uCam.xz);
 float mask = (1.0 - sp.r) * (1.0 - smoothstep(0.25, 0.6, sp.g)) * (1.0 - sp.b * 0.75) * (1.0 - sp.a);
 float fade = 1.0 - smoothstep(${(S * 0.3).toFixed(1)}, ${(S * 0.5).toFixed(1)}, dist);
-float hgt = (0.35 + aOff.z * 0.55) * mask * fade * step(0.15, mask);
+float hgt = (0.22 + aOff.z * 0.3) * mask * fade * step(0.15, mask) * smoothstep(0.8, 2.5, dist);
 float ang = aOff.w * 6.2831;
 vec3 transformed = vec3(position.x * (0.7 + aOff.z*0.6), position.y * hgt, 0.0);
 float ca = cos(ang), sa = sin(ang);
@@ -282,13 +283,13 @@ transformed.xz += (wind + push + vec2(aOff.z - 0.5, aOff.w - 0.5) * 0.3) * bend 
 transformed.y -= length(push) * bend * hgt * 0.4;
 transformed += vec3(wp.x, hAt(wp), wp.y);
 vH = t; vShade = aOff.z;
-vGCol = mix(vec3(0.20,0.28,0.10), vec3(0.42,0.43,0.20), smoothstep(0.3, 0.8, sp.g + aOff.z * 0.4)) * (0.85 + aOff.w * 0.3);
+vGCol = mix(vec3(0.27,0.36,0.15), vec3(0.40,0.42,0.19), step(0.75, aOff.z + sp.g * 0.4)) * (0.92 + aOff.w * 0.12);
 `)
         .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nobjectNormal = vec3(0.0, 1.0, 0.0);');
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', '#include <common>\nvarying float vH; varying float vShade; varying vec3 vGCol;')
         .replace('#include <map_fragment>', `#include <map_fragment>
-diffuseColor.rgb *= mix(vGCol * 0.3, vGCol * 0.95 + vec3(0.02,0.03,0.0), vH);`);
+diffuseColor.rgb *= mix(vGCol * 0.95, vGCol * 1.18, smoothstep(0.0, 0.7, vH));`);
     };
     mat.customProgramCacheKey = () => 'grass-v1';
     this.grassMat = mat;

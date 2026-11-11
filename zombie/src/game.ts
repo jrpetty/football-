@@ -123,7 +123,7 @@ export class Game {
     const cfg = QUALITY[this.settings.quality];
     this.renderer = new Renderer(this.canvas, this.settings.quality);
     progress(0.02, 'Generating textures');
-    await initTextures(cfg.tex, (p, l) => progress(0.02 + p * 0.3, l));
+    await initTextures('low', (p, l) => progress(0.02 + p * 0.3, l)); // low-poly style only needs a few utility textures
     const yieldF = () => new Promise(r => setTimeout(r, 0));
     this.atmo = new Atmosphere(this.scene, this.renderer.renderer, cfg.shadow, cfg.shadowExtent, cfg.far);
     this.weather = new Weather(this.scene, SEED);
@@ -325,7 +325,7 @@ export class Game {
     // environment
     this.weather.update(dt, dtGame, this.camera.position, this.time, daylight, p.inside);
     this.atmo.overcast = this.weather.overcast; this.atmo.cloudCover = this.weather.cover; this.atmo.fogBoost = this.weather.fog; this.atmo.lightning = this.weather.lightning;
-    this.atmo.indoorDim = damp(this.atmo.indoorDim, p.inside || this.underRoof() ? 0.38 : 1, 3, dt);
+    this.atmo.indoorDim = damp(this.atmo.indoorDim, p.inside || this.underRoof() ? 0.62 : 1, 3, dt);
     this.atmo.update(hrs, dt, this.camera, p.pos, this.time);
     this.renderer.renderer.toneMappingExposure = this.atmo.exposure() * (p.traits.has('night_owl') ? 1.15 : 1);
     (this.world.terrain.material.userData.uniforms as any).uWet.value = this.weather.wetness * 0.8;

@@ -16,8 +16,8 @@ function part(g: THREE.BufferGeometry, bone: number, region: number, x: number, 
   geo.deleteAttribute('uv');
   return geo;
 }
-const cyl = (rt: number, rb: number, h: number, seg = 8) => new THREE.CylinderGeometry(rt, rb, h, seg, 2);
-const sph = (r: number, w = 10, h = 8) => new THREE.SphereGeometry(r, w, h);
+const cyl = (rt: number, rb: number, h: number, seg = 6) => new THREE.CylinderGeometry(rt, rb, h, Math.min(seg, 6), 1);
+const sph = (r: number, w = 10, h = 8) => new THREE.IcosahedronGeometry(r, 1);
 const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d, 1, 1, 1);
 
 export function buildZombieGeometry(): THREE.BufferGeometry {
@@ -152,7 +152,7 @@ export const ZOMBIE_VERTEX_BODY = `
 `;
 
 export function makeZombieMaterials(timeUniform: { value: number }) {
-  const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, metalness: 0 });
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, flatShading: true });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uZTime = timeUniform;
     sh.vertexShader = sh.vertexShader
@@ -183,15 +183,15 @@ float zn(vec3 p){ vec3 i = floor(p); vec3 f = fract(p); f = f*f*(3.0-2.0*f);
       .replace('#include <color_fragment>', `#include <color_fragment>
       vec3 zc = vZCol;
       float grime = zn(vZPos * 14.0) * 0.6 + zn(vZPos * 41.0) * 0.4;
-      zc *= mix(0.6, 1.05, grime);
-      float blood = smoothstep(0.62, 0.8, zn(vZPos * 6.0 + 3.7) * 0.7 + zn(vZPos * 23.0) * 0.3);
+      zc *= mix(0.85, 1.02, step(0.5, grime));
+      float blood = step(0.66, zn(vZPos * 5.0 + 3.7));
       if (vZRegion > 4.5) { diffuseColor.rgb = zc; }
       else { diffuseColor.rgb = mix(zc, vec3(0.22, 0.02, 0.015), blood * 0.85); }
       `)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       if (vZRegion > 4.5) totalEmissiveRadiance += vec3(0.25, 0.22, 0.12);`);
   };
-  mat.customProgramCacheKey = () => 'zombie-v3';
+  mat.customProgramCacheKey = () => 'zombie-lp1';
 
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   depth.onBeforeCompile = (sh) => {

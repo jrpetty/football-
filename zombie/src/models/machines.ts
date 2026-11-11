@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { getMaterial, getTintedMaterial, type MaterialName } from '../render/materials';
 import { getPaintedTexSet } from '../render/textures';
+import { LOWPOLY, getFlatMaterial } from '../render/materials';
 import { PB, boxGeo, cylGeo, sphereGeo, torusGeo, hopperGeo, quadGeo, extrudeGeo, cboxGeo, rng, mergedGeo, type V3 } from './machinegeom';
 
 export type MachineModelId =
@@ -59,6 +60,7 @@ function softenWear(m: THREE.MeshStandardMaterial, hex: number, wear: number): v
 function paint(hex: number): THREE.MeshStandardMaterial {
   const key = 'paint:' + hex;
   let m = tintCache.get(key);
+  if (!m && LOWPOLY) { m = getFlatMaterial(hex, 0.7, 0.05); tintCache.set(key, m); }
   if (!m) {
     try {
       const set = getPaintedTexSet('factoryPanel', hex);

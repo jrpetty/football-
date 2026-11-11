@@ -49,6 +49,45 @@ const TEX_SPECS: Partial<Record<TexName, TexMatSpec>> = {
 
 const cache = new Map<string, THREE.MeshStandardMaterial>();
 
+/**
+ * Low-poly art direction: every surface is a flat, faceted colour (The Long Dark-style), lit by the
+ * atmosphere. Textures are only kept where they carry information (hazard stripes, belt motion).
+ */
+export const LOWPOLY = true;
+const PALETTE: Partial<Record<MaterialName, [number, number, number]>> = {
+  // [colour, roughness, metalness]
+  grass: [0x6f7d45, 0.95, 0], dirt: [0x7a6248, 0.95, 0], rock: [0x85847c, 0.9, 0], forestFloor: [0x5a4a34, 0.95, 0],
+  mud: [0x4e3f30, 0.85, 0], sand: [0xb8a57e, 0.95, 0], asphalt: [0x3e3f42, 0.9, 0], sidewalk: [0x9a968c, 0.92, 0],
+  concrete: [0xa29f96, 0.92, 0], brick: [0x8c5242, 0.9, 0], brickRed: [0x9a4535, 0.9, 0], siding: [0xc8c2b0, 0.85, 0],
+  plaster: [0xd6cdb8, 0.92, 0], woodFloor: [0x8a6440, 0.75, 0], tile: [0xc9c6bc, 0.6, 0], roofShingle: [0x4a4440, 0.92, 0],
+  roofMetal: [0x6e706e, 0.6, 0.3], wood: [0x9a7650, 0.85, 0], woodDark: [0x5c4430, 0.85, 0], bark: [0x5a4434, 0.95, 0],
+  birchBark: [0xd8d4c8, 0.9, 0], metal: [0x8e9296, 0.55, 0.35], metalRust: [0x8a5432, 0.8, 0.15], metalDark: [0x3e4246, 0.6, 0.3],
+  steelBrushed: [0xb0b4b8, 0.4, 0.45], fabric: [0x6a645a, 0.95, 0], factoryPanel: [0xc4c2ba, 0.7, 0.1], grating: [0x6a6e70, 0.6, 0.3],
+  soil: [0x4a3626, 0.95, 0], rubber: [0x1e1e1e, 0.92, 0], plasticBlack: [0x1a1a1a, 0.6, 0], plasticWhite: [0xd2d0c8, 0.55, 0],
+  chrome: [0xb8bcc0, 0.3, 0.6], factoryOrange: [0xd8641e, 0.7, 0.05], factoryGrey: [0x5a5e60, 0.7, 0.1],
+  sidingWhite: [0xddd6c4, 0.85, 0], sidingBlue: [0x7d93a0, 0.85, 0], sidingGreen: [0x87957a, 0.85, 0], sidingYellow: [0xcdb984, 0.85, 0],
+  pineNeedles: [0x3c5a3a, 0.9, 0], leaves: [0x6e8a3e, 0.9, 0], skinPale: [0xb8ad9c, 0.85, 0], clothDenim: [0x4e6a8a, 0.95, 0],
+  clothDark: [0x3a3834, 0.95, 0],
+};
+/** A flat faceted material in the low-poly palette. */
+export function getFlatMaterial(hex: number, roughness = 0.9, metalness = 0): THREE.MeshStandardMaterial {
+  const key = `flat:${hex}:${roughness}:${metalness}`;
+  let m = cache.get(key);
+  if (!m) { m = new THREE.MeshStandardMaterial({ name: key, color: hex, roughness, metalness, flatShading: true }); cache.set(key, m); }
+  return m;
+}
+function lowpoly(name: MaterialName): THREE.MeshStandardMaterial | null {
+  if (!LOWPOLY) return null;
+  if (name === 'glassDirty') return new THREE.MeshStandardMaterial({ name, color: 0x9fb4ae, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide });
+  if (name === 'pineNeedles' || name === 'leaves') {
+    const c = PALETTE[name]!;
+    return new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], flatShading: true, side: THREE.DoubleSide });
+  }
+  const c = PALETTE[name];
+  if (!c) return null;
+  return new THREE.MeshStandardMaterial({ name, color: c[0], roughness: c[1], metalness: c[2], flatShading: true });
+}
+
 function applySet(m: THREE.MeshStandardMaterial, set: PBRSet, metallic: boolean, spec: TexMatSpec = {}): void {
   m.map = set.map;
   m.normalMap = set.normalMap;
@@ -160,7 +199,7 @@ function build(name: MaterialName): THREE.MeshStandardMaterial {
 export function getMaterial(name: MaterialName): THREE.MeshStandardMaterial {
   let m = cache.get(name);
   if (!m) {
-    m = build(name);
+    m = lowpoly(name) ?? build(name);
     cache.set(name, m);
   }
   return m;
@@ -170,6 +209,10 @@ export function getMaterial(name: MaterialName): THREE.MeshStandardMaterial {
 export function getCarPaint(hex: number): THREE.MeshStandardMaterial {
   const key = `car:${hex}`;
   let m = cache.get(key);
+  if (!m && LOWPOLY) {
+    m = new THREE.MeshPhysicalMaterial({ name: `carPaint_${hex.toString(16)}`, color: new THREE.Color(hex).multiplyScalar(0.85), roughness: 0.5, metalness: 0.15, clearcoat: 0.25, clearcoatRoughness: 0.5, flatShading: true });
+    cache.set(key, m);
+  }
   if (!m) {
     const set = getPaintedTexSet('carPaint', hex);
     const p = new THREE.MeshPhysicalMaterial({ name: `carPaint_${hex.toString(16)}` });

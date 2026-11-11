@@ -8,9 +8,11 @@ ruined Pacific Northwest town. Over time it turns into Satisfactory-style
 factory building: power grids, conveyor lines and automated defences, until you
 synthesise a cure and switch the town's lights back on.
 
-Built with Three.js, TypeScript and Vite. Everything is procedural: terrain,
-town, interiors, textures, 3D models, sound effects and music. The repo has no
-image or audio files.
+Built with Three.js, TypeScript and Vite. The art style is faceted low-poly in
+the spirit of *The Long Dark*: flat colours, painterly gradient skies, heavy
+atmospheric fog and strong light. Everything is procedural: terrain, town,
+interiors, 3D models, sound effects and music. The repo has no image or audio
+files.
 
 ---
 
@@ -103,15 +105,15 @@ distance. Start on Medium on laptops.
   breakable windows you can climb through, and lootable fridges, cabinets,
   lockers and car trunks. Forests are choppable and there's a lake. The day/night
   cycle and dynamic weather include rain, storms with lightning and fog.
-- **Graphics.**
-  - Lighting and atmosphere: PBR materials from procedural textures, a
-    physical sky with a horizon haze dome, a cloud layer, stars and moon, and
-    sky-lit environment maps.
-  - Shadows and post: soft shadows, GTAO, bloom, ACES tone mapping, and a
-    cinematic grade with chromatic aberration, vignette, film grain, damage
-    and low-health effects.
-  - Vegetation: wind-animated instanced trees with impostor LOD, and
-    interactive GPU grass.
+- **Graphics.** Low-poly art direction: every surface is a flat, faceted
+  colour from a muted palette, lit by the atmosphere.
+  - Sky and light: a painterly gradient sky that melts into the fog at the
+    horizon, crisp two-tone clouds, stars and moon, sky-lit environment maps,
+    soft shadows, bloom, ACES tone mapping and a gentle colour grade with
+    vignette, damage and low-health effects.
+  - World: faceted terrain painted from a splat map; low-poly conifers,
+    autumn birches, snags, bushes and boulders that sway in the wind (with
+    impostors in the distance); chunky GPU grass; a heaving low-poly lake.
   - Effects: GPU rain, blood decals and particles.
 - **Audio.** All sound is synthesised with Web Audio:
   - HRTF positional sound effects.

@@ -1,11 +1,10 @@
 // Atmosphere: physically-based sky, volumetric-looking cloud layer, stars, moon, sun/moon light, fog, environment lighting.
 import * as THREE from 'three';
-import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { clamp, lerp, smoothstep } from '../core/util';
 import { getCloudNoiseTexture } from './textures';
 
 export class Atmosphere {
-  sky: Sky;
+  sky: THREE.Mesh;
   sun: THREE.DirectionalLight;
   hemi: THREE.HemisphereLight;
   fog: THREE.FogExp2;
@@ -18,7 +17,7 @@ export class Atmosphere {
   stars: THREE.Points;
   moon: THREE.Mesh;
   private envScene = new THREE.Scene();
-  private envSky: Sky;
+  private envSky: THREE.Mesh;
   private pmrem: THREE.PMREMGenerator;
   private envRT: THREE.WebGLRenderTarget | null = null;
   private lastEnvT = -999;
@@ -33,13 +32,26 @@ export class Atmosphere {
 
   constructor(private scene: THREE.Scene, private renderer: THREE.WebGLRenderer, shadowSize: number, shadowExtent: number, private far: number) {
     this.shadowExtent = shadowExtent;
-    this.sky = new Sky();
-    this.sky.scale.setScalar(2400);
-    const u = this.sky.material.uniforms;
-    u.turbidity.value = 6; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.006; u.mieDirectionalG.value = 0.86;
+    // stylised gradient sky (zenith -> horizon, matching the fog colour exactly) with a soft sun glow
+    const skyMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uGround: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color() }, uGlow: { value: 0.5 }, uDisc: { value: 1 } },
+      vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`,
+      fragmentShader: `uniform vec3 uZenith, uHorizon, uGround, uSunCol, uSunDir; uniform float uGlow, uDisc; varying vec3 vDir;
+        void main(){
+          vec3 d = normalize(vDir);
+          float h = d.y;
+          vec3 col = h > 0.0 ? mix(uHorizon, uZenith, pow(smoothstep(0.0, 0.75, h), 0.7)) : mix(uHorizon, uGround, smoothstep(0.0, -0.2, h));
+          float s = max(dot(d, normalize(uSunDir)), 0.0);
+          col += uSunCol * (pow(s, 8.0) * 0.35 + pow(s, 64.0) * 0.5) * uGlow;
+          col = mix(col, uSunCol * 3.0, smoothstep(0.9993, 0.9996, s) * uDisc);
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    });
+    this.sky = new THREE.Mesh(new THREE.SphereGeometry(2400, 32, 16), skyMat);
+    this.sky.frustumCulled = false; this.sky.renderOrder = -3;
     scene.add(this.sky);
-
-    this.envSky = new Sky(); this.envSky.scale.setScalar(1000);
+    this.envSky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), skyMat);
     this.envScene.add(this.envSky);
     this.pmrem = new THREE.PMREMGenerator(renderer);
 
@@ -71,15 +83,15 @@ export class Atmosphere {
         void main(){
           vec2 p = vW.xz * 0.00022 + vec2(uTime*0.004, uTime*0.0016);
           float n = texture2D(tNoise, p).r * 0.6 + texture2D(tNoise, p*2.7 + 0.3).r * 0.28 + texture2D(tNoise, p*7.1 - uTime*0.002).r * 0.12;
-          float d = smoothstep(1.0 - uCover - 0.05, 1.0 - uCover + 0.35, n);
+          float d = smoothstep(1.0 - uCover + 0.02, 1.0 - uCover + 0.07, n);
           // fake self-shadowing toward sun
           float n2 = texture2D(tNoise, p + uSunDir.xz * 0.012).r * 0.6 + texture2D(tNoise, (p + uSunDir.xz*0.012)*2.7 + 0.3).r * 0.28;
           float shadow = clamp((n2 - n) * 4.0 + 0.5, 0.0, 1.0);
-          vec3 col = mix(uSunCol, uShade, shadow * 0.8 + d * 0.3);
+          vec3 col = mix(uSunCol, uShade, smoothstep(0.45, 0.55, shadow) * 0.85);
           col = mix(col, vec3(0.02,0.025,0.035), uDark) + vec3(0.6,0.65,0.8) * uFlash;
           float dist = length(vW.xz - cameraPosition.xz);
           float fade = 1.0 - smoothstep(1500.0, 2900.0, dist);
-          gl_FragColor = vec4(col, d * fade * 0.97);
+          gl_FragColor = vec4(col, d * fade * 0.94);
         }`,
     });
     this.clouds = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000).rotateX(Math.PI / 2), cloudMat);
@@ -150,18 +162,13 @@ export class Atmosphere {
     const golden = smoothstep(0.35, 0.02, this.sunDir.y) * sunUp;
     const oc = this.overcast;
 
-    const u = this.sky.material.uniforms;
-    u.sunPosition.value.copy(this.sunDir).multiplyScalar(1000);
-    u.turbidity.value = lerp(8, 16, oc); u.rayleigh.value = lerp(1.0, 0.4, oc) + golden * 1.2;
-    u.mieCoefficient.value = lerp(0.004, 0.02, oc);
     this.sky.position.copy(camera.position);
-    // sky gets darker under overcast and at night (sky shader has no exposure, so tint via tonemapping exposure in game)
 
     // light
     const useMoon = this.sunDir.y < 0.02;
     const ldir = useMoon ? this.moonDir : this.sunDir;
     const sunCol = new THREE.Color().setRGB(1, lerp(0.95, 0.62, golden), lerp(0.88, 0.4, golden));
-    const sunI = sunUp * lerp(3.4, 0.9, oc) * lerp(1, 0.65, golden);
+    const sunI = sunUp * lerp(2.7, 0.8, oc) * lerp(1, 0.7, golden);
     const moonI = (1 - sunUp) * smoothstep(0.0, 0.25, this.moonDir.y) * lerp(0.75, 0.3, oc);
     if (useMoon) { this.sun.color.setRGB(0.55, 0.65, 0.95); this.sun.intensity = moonI + this.lightning * 4; }
     else { this.sun.color.copy(sunCol); this.sun.intensity = sunI + this.lightning * 4; }
@@ -187,6 +194,17 @@ export class Atmosphere {
     const baseDensity = 2.2 / this.far;
     this.fog.density = baseDensity * (1 + oc * 1.4 + this.fogBoost * 4) + this.night * 0.002;
 
+    // gradient sky colours
+    const su = (this.sky.material as THREE.ShaderMaterial).uniforms;
+    const zen = new THREE.Color(0x5a82b0).lerp(new THREE.Color(0x8e99a1), oc).lerp(new THREE.Color(0x4f5f86), golden * (1 - oc * 0.6)).lerp(new THREE.Color(0x05080f), this.night);
+    su.uZenith.value.copy(zen);
+    su.uHorizon.value.copy(this.fogColor);
+    su.uGround.value.copy(this.fogColor).multiplyScalar(0.8);
+    su.uSunDir.value.copy(this.sunDir);
+    su.uSunCol.value.copy(sunCol).multiplyScalar(sunUp);
+    su.uGlow.value = (0.4 + golden * 1.2) * (1 - oc * 0.8);
+    su.uDisc.value = (1 - smoothstep(0.5, 0.9, this.cloudCover)) * sunUp;
+    this.haze.visible = false;
     // haze
     const hm = this.haze.material as THREE.ShaderMaterial;
     hm.uniforms.uColor.value.copy(this.fogColor);
@@ -222,10 +240,6 @@ export class Atmosphere {
 
   private refreshEnv(hours: number, oc: number) {
     this.lastEnvT = hours; this.lastEnvCloud = oc;
-    const eu = this.envSky.material.uniforms; const su = this.sky.material.uniforms;
-    eu.sunPosition.value.copy(su.sunPosition.value);
-    eu.turbidity.value = su.turbidity.value; eu.rayleigh.value = su.rayleigh.value;
-    eu.mieCoefficient.value = su.mieCoefficient.value; eu.mieDirectionalG.value = su.mieDirectionalG.value;
     const old = this.envRT;
     this.envRT = this.pmrem.fromScene(this.envScene, 0, 0.1, 2000);
     this.scene.environment = this.envRT.texture;

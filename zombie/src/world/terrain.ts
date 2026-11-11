@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { HALF_WORLD, WORLD_SIZE, Simplex, smoothstep, clamp, lerp } from '../core/util';
 import { Layout, TOWN, LAKE, distToSeg } from './layout';
-import { getTexSet, getCloudNoiseTexture } from '../render/textures';
+import { getCloudNoiseTexture } from '../render/textures';
 
 export const T_RES = 2.5;
 export const T_N = WORLD_SIZE / T_RES; // segments per side
@@ -218,98 +218,51 @@ export class Terrain {
   }
 
   private makeMaterial() {
-    const sets = { grass: getTexSet('grass'), dirt: getTexSet('dirt'), rock: getTexSet('rock'), floor: getTexSet('forestFloor'), asphalt: getTexSet('asphalt'), sand: getTexSet('sand') };
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, metalness: 0 });
+    // Low-poly look: faceted (flat-shaded) terrain painted with flat colours from the splat map.
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0, flatShading: true });
     const uniforms: Record<string, THREE.IUniform> = {
       tSplat: { value: this.splat },
       tNoise: { value: getCloudNoiseTexture() },
       uWet: { value: 0 },
       uSnow: { value: 0 },
     };
-    const names = ['grass', 'dirt', 'rock', 'floor', 'asphalt', 'sand'] as const;
-    for (const n of names) {
-      uniforms['t_' + n] = { value: sets[n].map };
-      uniforms['n_' + n] = { value: sets[n].normalMap };
-      uniforms['r_' + n] = { value: sets[n].roughnessMap };
-    }
     mat.userData.uniforms = uniforms;
     mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, uniforms);
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNor;')
-        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed,1.0)).xyz;\nvWNor = normalize(mat3(modelMatrix) * objectNormal);');
-      const decl = names.map(n => `uniform sampler2D t_${n}; uniform sampler2D n_${n}; uniform sampler2D r_${n};`).join('\n');
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed,1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-varying vec3 vWPos; varying vec3 vWNor;
+varying vec3 vWPos;
 uniform sampler2D tSplat; uniform sampler2D tNoise; uniform float uWet; uniform float uSnow;
-${decl}
-vec4 tW; // weights grass,dirt,rock,floor
-float wAsph; float wSand;
-vec2 tUV; vec2 tUV2;
-vec3 sampleAlb(sampler2D t){ return mix(texture2D(t,tUV).rgb, texture2D(t,tUV2).rgb, 0.35); }
-vec3 sampleNor(sampler2D t){ return texture2D(t,tUV).xyz*2.0-1.0; }
-float sampleR(sampler2D t){ return texture2D(t,tUV).g; }
 `)
         .replace('#include <map_fragment>', `
 {
+  vec3 fn = normalize(cross(dFdx(vWPos), dFdy(vWPos)));
+  if (fn.y < 0.0) fn = -fn;
   vec2 suv = (vWPos.xz + ${HALF_WORLD.toFixed(1)}) / ${WORLD_SIZE.toFixed(1)};
   vec4 sp = texture2D(tSplat, suv);
-  float macro = texture2D(tNoise, vWPos.xz * 0.004).r;
-  float macro2 = texture2D(tNoise, vWPos.xz * 0.021 + 0.37).r;
-  float slope = 1.0 - clamp(vWNor.y, 0.0, 1.0);
-  float rockW = smoothstep(0.22, 0.42, slope + (macro2 - 0.5) * 0.15);
-  tUV = vWPos.xz * 0.25; tUV2 = vWPos.xz * 0.061 + vec2(0.31, 0.77);
-  float dirtW = clamp(sp.g + smoothstep(0.62, 0.8, macro2) * 0.5, 0.0, 1.0);
-  float floorW = sp.b;
-  wAsph = sp.r; wSand = sp.a;
-  tW = vec4(1.0, dirtW, rockW, floorW);
-  // sequential blend weights
-  vec3 alb = sampleAlb(t_grass);
-  alb *= mix(vec3(0.85, 0.95, 0.75), vec3(1.08, 1.0, 0.85), macro); // grass colour variation (dry patches)
-  alb = mix(alb, sampleAlb(t_floor), floorW);
-  alb = mix(alb, sampleAlb(t_dirt), dirtW * (1.0 - floorW * 0.5));
-  alb = mix(alb, sampleAlb(t_sand), wSand);
-  alb = mix(alb, sampleAlb(t_rock), rockW);
-  vec3 asph = texture2D(t_asphalt, vWPos.xz * 0.18).rgb * 0.5;
-  alb = mix(alb, asph, wAsph);
-  alb *= mix(0.86, 1.1, macro);
-  alb *= mix(1.0, 0.55, uWet * (1.0 - rockW * 0.3));
-  alb = mix(alb, vec3(0.92,0.94,0.97), uSnow * smoothstep(0.3, 0.0, slope));
+  float macro = texture2D(tNoise, vWPos.xz * 0.003).r;
+  float macro2 = texture2D(tNoise, vWPos.xz * 0.017 + 0.37).r;
+  float slope = 1.0 - clamp(fn.y, 0.0, 1.0);
+  float rockW = smoothstep(0.2, 0.3, slope + (macro2 - 0.5) * 0.12);
+  vec3 grassA = vec3(0.27, 0.36, 0.16), grassB = vec3(0.38, 0.40, 0.19);
+  vec3 alb = mix(grassA, grassB, smoothstep(0.45, 0.7, macro));
+  alb = mix(alb, vec3(0.30, 0.25, 0.17), smoothstep(0.3, 0.6, sp.b));            // forest floor
+  alb = mix(alb, vec3(0.40, 0.32, 0.23), smoothstep(0.45, 0.7, sp.g + (macro2 - 0.5) * 0.3)); // dirt
+  alb = mix(alb, vec3(0.62, 0.56, 0.42), smoothstep(0.3, 0.6, sp.a));            // sand
+  alb = mix(alb, vec3(0.50, 0.49, 0.46) * mix(0.9, 1.08, macro2), rockW);          // rock faces
+  alb = mix(alb, vec3(0.22, 0.225, 0.235), smoothstep(0.4, 0.6, sp.r));          // asphalt
+  alb *= mix(0.92, 1.06, macro);
+  alb *= mix(1.0, 0.62, uWet * (1.0 - rockW * 0.3));
+  alb = mix(alb, vec3(0.9, 0.92, 0.95), uSnow * smoothstep(0.3, 0.0, slope));
   diffuseColor.rgb *= alb;
 }
 `)
-        .replace('#include <roughnessmap_fragment>', `
-float roughnessFactor = roughness;
-{
-  float r = sampleR(r_grass);
-  r = mix(r, sampleR(r_floor), tW.w);
-  r = mix(r, sampleR(r_dirt), tW.y);
-  r = mix(r, sampleR(r_sand), wSand);
-  r = mix(r, sampleR(r_rock), tW.z);
-  r = mix(r, texture2D(r_asphalt, vWPos.xz * 0.18).g, wAsph);
-  roughnessFactor = mix(r, r * 0.35, uWet);
-}
-`)
-        .replace('#include <normal_fragment_maps>', `
-{
-  vec3 tn = sampleNor(n_grass);
-  tn = mix(tn, sampleNor(n_floor), tW.w);
-  tn = mix(tn, sampleNor(n_dirt), tW.y);
-  tn = mix(tn, sampleNor(n_sand), wSand);
-  tn = mix(tn, sampleNor(n_rock), tW.z);
-  tn = mix(tn, texture2D(n_asphalt, vWPos.xz * 0.18).xyz*2.0-1.0, wAsph);
-  vec3 wn = normalize(vWNor);
-  vec3 up = abs(wn.y) < 0.99 ? vec3(0.0,1.0,0.0) : vec3(1.0,0.0,0.0);
-  vec3 T = normalize(cross(up, wn)); vec3 B = cross(wn, T);
-  // world tangent frame aligned with xz texture axes
-  T = normalize(vec3(1.0,0.0,0.0) - wn * wn.x); B = normalize(cross(T, wn));
-  vec3 pn = normalize(T * tn.x * 0.9 + B * -tn.y * 0.9 + wn * max(tn.z, 0.2));
-  normal = normalize((viewMatrix * vec4(pn, 0.0)).xyz);
-}
-`);
+        .replace('#include <roughnessmap_fragment>', `float roughnessFactor = mix(roughness, 0.35, uWet);`);
     };
-    mat.customProgramCacheKey = () => 'terrain-splat-v1';
+    mat.customProgramCacheKey = () => 'terrain-lowpoly-v1';
     return mat;
   }
 }

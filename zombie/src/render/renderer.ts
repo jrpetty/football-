@@ -19,9 +19,9 @@ export const QUALITY: Record<Quality, QualityCfg> = {
 const GradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    uTime: { value: 0 }, uVignette: { value: 0.32 }, uGrain: { value: 0.045 }, uSat: { value: 0.86 }, uContrast: { value: 1.08 },
-    uLift: { value: new THREE.Vector3(0.01, 0.012, 0.02) }, uGain: { value: new THREE.Vector3(1.02, 1.0, 0.96) },
-    uDamage: { value: 0 }, uLowHealth: { value: 0 }, uBlur: { value: 0 }, uChroma: { value: 0.0012 }, uFade: { value: 0 },
+    uTime: { value: 0 }, uVignette: { value: 0.28 }, uGrain: { value: 0.018 }, uSat: { value: 0.95 }, uContrast: { value: 1.06 },
+    uLift: { value: new THREE.Vector3(0.02, 0.022, 0.035) }, uGain: { value: new THREE.Vector3(1.04, 1.0, 0.94) },
+    uDamage: { value: 0 }, uLowHealth: { value: 0 }, uBlur: { value: 0 }, uChroma: { value: 0.0 }, uFade: { value: 0 },
     uPanic: { value: 0 }, uSick: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
