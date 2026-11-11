@@ -83,7 +83,13 @@ export const BACKGROUNDS: Background[] = [
 export const background = (id: string) => BACKGROUNDS.find(b => b.id === id) ?? BACKGROUNDS[BACKGROUNDS.length - 3];
 
 // ---------------------------------------------------------------- looks (same shape as HumanLook in zombies.ts)
-export interface Look { skin: number; shirt: number; pants: number; hair: number; build: number; height: number; hairStyle: number }
+export interface Look { skin: number; shirt: number; pants: number; hair: number; build: number; height: number; hairStyle: number; outfit?: number; jacket?: number; gear?: number }
+/** what a past life leaves people wearing: [outfit (1 jacket, 2 vest, 3 rolled sleeves), jacket colours, gear bits (1 pack, 2 tool belt)] */
+const DRESS: Record<string, [number, number[], number]> = {
+  mechanic: [3, [], 2], lineman: [1, [0xb8862f, 0x3a3f2e], 2], carpenter: [3, [], 2], deputy: [2, [0x2a2c30, 0x3a3f2e], 0], soldier: [2, [0x3a3f2e, 0x4a4a3a], 1],
+  hunter: [2, [0x4a3f2a, 0x6a4a2a], 1], logger: [1, [0x6a2f25, 0x35453a], 0], trucker: [1, [0x2a3442, 0x4a3828], 0], drifter: [1, [0x55524a, 0x1f1f22], 1],
+  farmhand: [3, [], 0], gardener: [3, [], 0], cook: [3, [], 0], student: [0, [], 1], vet: [2, [0x35453a], 0],
+};
 const SKIN = [0xf0c9a5, 0xe4b48c, 0xd29b72, 0xb97f55, 0x94603c, 0x6f4429, 0x513220];
 const HAIR = [0x1c1611, 0x2e2118, 0x4a3220, 0x6b4a2a, 0x8f6a3a, 0xb8925a, 0x7a2f1a];
 const GREY = [0x9a9690, 0xc4c0b8, 0x6f6c68];
@@ -148,6 +154,8 @@ export function makePersona(rng: RNG, taken: (first: string) => boolean, day = 1
     build: Math.min(1.25, Math.max(0.85, rng.range(0.9, 1.12) + heavy + (traits.includes('tough') ? 0.06 : 0) - (traits.includes('frail') ? 0.06 : 0))),
     height: rng.range(0.92, 1.08) - (age > 62 ? 0.02 : 0),
   };
+  const dress = DRESS[bg.id];
+  if (dress && rng.chance(0.75)) { look.outfit = dress[0]; if (dress[1].length) look.jacket = rng.pick(dress[1]); look.gear = dress[2]; }
   const owl = traits.includes('nightowl'), lark = traits.includes('earlybird');
   let first = rng.pick(FIRST);
   for (let i = 0; i < 30 && taken(first); i++) first = rng.pick(FIRST);

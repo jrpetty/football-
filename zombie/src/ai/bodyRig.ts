@@ -8,16 +8,18 @@ export const BONE = { HIP: 0, SPINE: 1, CHEST: 2, HEAD: 3, JAW: 4, UAL: 5, FAL: 
 export const ROW_TEXELS = 64;
 export const ROW = ROW_TEXELS * 4;
 export const LOOK_AT = NB * 12;
+/** floats in a body's look block (10 texels) */
+export const LOOK_N = 40;
 
-const SHX = 0.225, SHY = 1.44, ELY = 1.16, WRY = 0.90, HPX = 0.09, HPY = 0.93, KNY = 0.50, ANK = 0.08;
+const SHX = 0.168, SHY = 1.45, ELY = 1.16, WRY = 0.905, HPX = 0.088, HPY = 0.93, KNY = 0.50, ANK = 0.085;
 /** rest-pose pivots (metres; +x is the body's left, +z forward) */
 export const PIV: number[] = [
-  0, 0.95, 0,   0, 1.06, 0,   0, 1.27, 0,   0, 1.50, -0.005,   0, 1.645, -0.02,
+  0, 0.95, 0,   0, 1.06, -0.045,   0, 1.27, -0.04,   0, 1.515, -0.006,   0, 1.642, -0.03,
   SHX, SHY, 0,  SHX, ELY, 0,  SHX, WRY, 0,
   -SHX, SHY, 0, -SHX, ELY, 0, -SHX, WRY, 0,
   HPX, HPY, 0,  HPX, KNY, 0,  HPX, ANK, 0,
   -HPX, HPY, 0, -HPX, KNY, 0, -HPX, ANK, 0,
-  0, 1.12, 0.06,
+  0, 1.13, 0.075,
 ];
 const L1 = HPY - KNY, L2 = KNY - ANK;
 
@@ -28,15 +30,23 @@ export const TOOL = { none: 0, gun: 1, axe: 2, hoe: 3, wrench: 4, bat: 5, medbag
 /** zombie-only poses, driven through the same act channel */
 export const ZACT = { feed: 20, slump: 21, sniff: 22, paw: 23, scream: 24 } as const;
 /** feature bits: optional geometry that is collapsed unless the body's mask has the bit */
-export const FEAT = { hair: 1, hairLong: 2, beanie: 3, bun: 4, beard: 5, foreL: 6, foreR: 7, stumpL: 8, stumpR: 9, tool0: 9 /* +TOOL id */, bloat: 17, hump: 18, club: 19, throat: 20, brim: 21 } as const;
+export const FEAT = { hair: 1, hairLong: 2, beanie: 3, bun: 4, beard: 5, foreL: 6, foreR: 7, stumpL: 8, stumpR: 9, tool0: 9 /* +TOOL id */, bloat: 17, hump: 18, club: 19, throat: 20, brim: 21, jacket: 22, pack: 23, belt: 24, paunch: 25 } as const;
+/** what someone wears over the basics */
+export const OUTFIT = { plain: 0, jacket: 1, vest: 2, rolled: 3 } as const;
 
-export interface HumanLook { skin: number; shirt: number; pants: number; hair: number; build: number; height: number; hairStyle: number }
+export interface HumanLook {
+  skin: number; shirt: number; pants: number; hair: number; build: number; height: number; hairStyle: number;
+  /** optional extras; anything left out is chosen from the person's seed */
+  outfit?: number;    // OUTFIT.*: 0 shirt only, 1 open jacket, 2 gilet / vest, 3 shirt with rolled sleeves
+  jacket?: number;    // 0xRRGGBB of the jacket / vest
+  gear?: number;      // bit 1 backpack, bit 2 tool belt
+}
 
 /** Static description of one body: who they are and what they look like. */
 export interface BodyDef {
   kind: number; human: boolean; seed: number;
   skin: number; shirt: number; pants: number; hair: number;
-  build: number; height: number; hairStyle: number;
+  build: number; height: number; hairStyle: number; outfit: number; jacket: number; gear: number;
   lean: number;       // 0..1 habitual hunch
   decay: number;      // zombies: 0 fresh .. 1 husk
   sick: number;       // humans: 0..1 infection
@@ -59,6 +69,8 @@ export interface BodyAnim {
   death: number; deathStyle: number; deathDir: number;
   act: number; actW: number; act2: number; act2W: number;
   aux: number; jaw: number;
+  /** 0..1: how far this body may settle into a resting stance when idle (the living only; default 1) */
+  stance?: number;
 }
 export function newAnim(): BodyAnim {
   return { t: 0, phase: 0, speed: 0, move: 0, turn: 0, arms: 0, atk: 0, lunge: 0, swing: 0, hit: 0, hitSide: 0, hitFwd: 0, lookYaw: 0, lookPitch: 0, crawl: 0, limp: 0,
@@ -89,31 +101,41 @@ const HAIR_W: number[] = [0, 0, 0, 1, 2, 2, 3, 4, 5, 5];
 export function randomLook(rng: { next(): number }): HumanLook {
   const pick = (a: number[]) => a[Math.floor(rng.next() * a.length) % a.length];
   const b = rng.next();
-  return { skin: pick(H_SKIN), shirt: pick(H_SHIRT), pants: pick(H_PANTS), hair: pick(H_HAIR), build: 0.85 + b * b * 0.4 + rng.next() * 0.08, height: 0.92 + rng.next() * 0.16, hairStyle: HAIR_W[Math.floor(rng.next() * HAIR_W.length) % HAIR_W.length] };
+  const si = Math.floor(rng.next() * H_SKIN.length) % H_SKIN.length, hr = rng.next(), hi = si >= 3 ? (hr < 0.82 ? Math.floor(hr / 0.82 * 3) : 7 + Math.floor((hr - 0.82) / 0.18 * 2)) : Math.floor(hr * H_HAIR.length);
+  return { skin: H_SKIN[si], shirt: pick(H_SHIRT), pants: pick(H_PANTS), hair: H_HAIR[Math.min(hi, H_HAIR.length - 1)], build: 0.85 + b * b * 0.4 + rng.next() * 0.08, height: 0.92 + rng.next() * 0.16, hairStyle: HAIR_W[Math.floor(rng.next() * HAIR_W.length) % HAIR_W.length] };
 }
 /** the stable look a seed implies (used for humans that were not given one) */
 export function lookFromSeed(seed: number): HumanLook {
   let k = 0; return randomLook({ next: () => hash1(seed * 3.7 + (k++) * 17.13 + 0.5) });
 }
 
+const J_COL = [0x3a3f2e, 0x4a3828, 0x2a3442, 0x55524a, 0x6a4a2a, 0x1f1f22, 0x6a2f25, 0x35453a];
+const BOOT_COL = [0x2a2420, 0x1a1a1c, 0x4a3a28, 0x33302c];
+const KIT_COL = [0x4a5a3a, 0x2a3a5a, 0x5a4a3a, 0x4a4a4a, 0x7a2a2a, 0x8a6a3a];
+
 export function makeDef(kind: number, seed: number, look?: HumanLook | null): BodyDef {
   const L = look ?? lookFromSeed(seed);
+  const ho = hash1(seed * 41.3);
   const d: BodyDef = {
     kind, human: kind === KIND.human, seed, skin: L.skin, shirt: L.shirt, pants: L.pants, hair: L.hair,
     build: cl(L.build, 0.7, 1.4), height: cl(L.height, 0.8, 1.25), hairStyle: L.hairStyle | 0,
+    outfit: L.outfit ?? (ho < 0.22 ? OUTFIT.jacket : ho < 0.32 ? OUTFIT.vest : ho < 0.46 ? OUTFIT.rolled : OUTFIT.plain),
+    jacket: L.jacket ?? J_COL[Math.floor(hash1(seed * 42.7) * J_COL.length) % J_COL.length],
+    gear: L.gear ?? ((hash1(seed * 43.1) < 0.18 ? 1 : 0) | (hash1(seed * 44.7) < 0.15 ? 2 : 0)),
     lean: hash1(seed * 1.31), decay: 0, sick: 0, armLossL: false, armLossR: false, gait: 0, tool: 0,
-    shape: new Float32Array(NB * 3), look: new Float32Array(24), stamp: -1, rnd: new Float32Array(8), slot: -1, dirty: true,
+    shape: new Float32Array(NB * 3), look: new Float32Array(LOOK_N), stamp: -1, rnd: new Float32Array(8), slot: -1, dirty: true,
   };
-  const r = d.rnd; r[0] = hash1(seed * 3.3); r[1] = hash1(seed * 3.1); r[2] = hash1(seed + 1); r[3] = hash1(seed + 2); r[4] = hash1(seed * 1.7); r[5] = hash1(seed * 2.7); r[6] = hash1(seed * 8.1);
+  const r = d.rnd; r[0] = hash1(seed * 3.3); r[1] = hash1(seed * 3.1); r[2] = hash1(seed + 1); r[3] = hash1(seed + 2); r[4] = hash1(seed * 1.7); r[5] = hash1(seed * 2.7); r[6] = hash1(seed * 8.1); r[7] = hash1(seed * 5.9);
   refreshDef(d);
   return d;
 }
 
+// srgb-ish tints the rot pulls skin toward (fresh pallor -> grey-green -> dark leather), and per-strain casts
 const DECAY_TINT = [[0.74, 0.72, 0.64], [0.56, 0.61, 0.5], [0.4, 0.36, 0.3]];
 const TYPE_TINT: Record<number, [number, number, number, number]> = {
   1: [0.66, 0.5, 0.47, 0.3], 2: [0.5, 0.4, 0.37, 0.5], 3: [0.8, 0.83, 0.86, 0.8], 4: [0.7, 0.72, 0.4, 0.7], 5: [0.55, 0.5, 0.6, 0.55],
 };
-const c3 = [0, 0, 0], c4 = [0, 0, 0];
+const c3 = [0, 0, 0], c4 = [0, 0, 0], c5 = [0, 0, 0], c6 = [0, 0, 0];
 function setS(S: Float32Array, b: number, x: number, y: number, z: number) { S[b * 3] = x; S[b * 3 + 1] = y; S[b * 3 + 2] = z; }
 
 /** Recompute the bone scales (silhouette) and the shader look block. Call after changing decay / limbs / look. */
@@ -122,51 +144,64 @@ export function refreshDef(d: BodyDef) {
   const h1 = hash1(sd * 2.17), h2 = hash1(sd * 4.91), h3 = hash1(sd * 7.77), h4 = hash1(sd * 9.3);
   // ---- silhouette: every bone has its own (x, y, z) scale about its pivot
   const husk = d.human ? 0 : sst(0.6, 1, d.decay);
-  let bw = d.build * (1 - husk * 0.16);                    // overall width
-  const limb = Math.pow(bw, 0.75) * (0.96 + h2 * 0.08);
-  const sh = 0.96 + h1 * 0.1;                               // shoulder breadth
+  const bw = d.build * (1 - husk * 0.14);                  // overall width
+  const limb = Math.pow(bw, 0.8) * (0.97 + h2 * 0.07);
+  const sh = 0.97 + h1 * 0.08;                              // shoulder breadth
+  const heavy = Math.max(0, bw - 1.04);
+  const jacketed = d.outfit === OUTFIT.jacket ? 1.07 : 1;
   for (let b = 0; b < NB; b++) setS(S, b, 1, 1, 1);
-  setS(S, 0, bw * (0.98 + h3 * 0.06), 1, 0.9 + bw * 0.1 + (bw > 1.1 ? (bw - 1.1) * 0.6 : 0));
-  setS(S, 1, bw, 1, bw * (bw > 1.05 ? 1 + (bw - 1.05) * 0.7 : 1));
-  setS(S, 2, bw * sh, 1, 0.92 + bw * 0.08);
-  setS(S, 3, 0.97 + h4 * 0.06, 0.97 + h1 * 0.06, 0.97 + h2 * 0.06);
-  for (const b of [5, 6, 8, 9]) setS(S, b, limb, 1, limb);
-  for (const b of [11, 12, 14, 15]) setS(S, b, limb * (bw > 1.1 ? 1.06 : 1), 1, limb * (bw > 1.1 ? 1.06 : 1));
+  setS(S, 0, bw * (0.98 + h3 * 0.05), 1, 0.92 + bw * 0.08 + heavy * 0.5);
+  setS(S, 1, bw * (1 + heavy * 0.5), 1, bw * (1 + heavy * 2.4));
+  setS(S, 2, (0.6 + bw * 0.4) * sh, 1, 0.9 + bw * 0.1 + heavy * 0.3);
+  setS(S, 3, (0.97 + h4 * 0.06) * (1 + heavy * 0.25), 0.97 + h1 * 0.06, 0.97 + h2 * 0.06);
+  if (d.human) { const hs = 1.06; S[9] *= hs; S[10] *= hs; S[11] *= hs; setS(S, 4, S[9], S[10], S[11]); }   // the living carry a slightly larger head: reads friendlier, and as a person at range
+  for (const b of [5, 8]) setS(S, b, limb * jacketed, 1, limb * jacketed);
+  for (const b of [6, 9]) setS(S, b, limb * jacketed, 1, limb * jacketed);
+  for (const b of [11, 12, 14, 15]) setS(S, b, limb * (1 + heavy * 0.4), 1, limb * (1 + heavy * 0.4));
+  let paunch = 0;
   setS(S, 17, 0, 0, 0);
   if (K === KIND.runner) {
-    setS(S, 1, bw * 0.9, 1, bw * 0.9); setS(S, 2, bw * sh * 0.95, 1, 0.92);
-    for (const b of [5, 6, 8, 9, 11, 12, 14, 15]) setS(S, b, limb * 0.9, 1, limb * 0.9);
+    setS(S, 1, bw * 0.92, 1, bw * 0.92); setS(S, 2, (0.6 + bw * 0.4) * sh * 0.96, 1, 0.94);
+    for (const b of [5, 6, 8, 9, 11, 12, 14, 15]) setS(S, b, limb * 0.92, 1, limb * 0.92);
+    paunch = 0; setS(S, 17, 0, 0, 0);
   } else if (K === KIND.brute) {
-    setS(S, 0, 1.32, 1.05, 1.32); setS(S, 1, 1.42, 1.1, 1.5); setS(S, 2, 1.58, 1.16, 1.5); setS(S, 3, 1.06, 1.02, 1.08); setS(S, 4, 1.25, 1.2, 1.15);
-    setS(S, 5, 1.75, 1.14, 1.75); setS(S, 8, 1.75, 1.14, 1.75); setS(S, 6, 1.85, 1.16, 1.85); setS(S, 9, 1.85, 1.16, 1.85); setS(S, 7, 1.7, 1.4, 1.7); setS(S, 10, 1.7, 1.4, 1.7);
+    setS(S, 0, 1.3, 1.05, 1.3); setS(S, 1, 1.45, 1.1, 1.5); setS(S, 2, 1.55, 1.16, 1.5); setS(S, 3, 1.05, 1.0, 1.06); setS(S, 4, 1.2, 1.15, 1.12);
+    setS(S, 5, 1.75, 1.14, 1.75); setS(S, 8, 1.75, 1.14, 1.75); setS(S, 6, 1.85, 1.16, 1.85); setS(S, 9, 1.85, 1.16, 1.85); setS(S, 7, 1.6, 1.35, 1.6); setS(S, 10, 1.6, 1.35, 1.6);
     setS(S, 11, 1.4, 0.98, 1.4); setS(S, 14, 1.4, 0.98, 1.4); setS(S, 12, 1.4, 0.98, 1.4); setS(S, 15, 1.4, 0.98, 1.4); setS(S, 13, 1.3, 1.2, 1.2); setS(S, 16, 1.3, 1.2, 1.2);
+    paunch = 0.9; setS(S, 17, 1.2, 0.95, 0.9);
   } else if (K === KIND.howler) {
-    setS(S, 0, 0.84, 1, 0.84); setS(S, 1, 0.76, 1.1, 0.74); setS(S, 2, 0.9, 1.08, 0.8); setS(S, 3, 0.9, 1.16, 0.96); setS(S, 4, 1, 1.55, 1.12);
-    for (const b of [5, 8]) setS(S, b, 0.74, 1.16, 0.74); for (const b of [6, 9]) setS(S, b, 0.72, 1.24, 0.72); setS(S, 7, 0.9, 1.45, 0.9); setS(S, 10, 0.9, 1.45, 0.9);
-    for (const b of [11, 14]) setS(S, b, 0.76, 1.06, 0.76); for (const b of [12, 15]) setS(S, b, 0.76, 1.06, 0.76);
-    setS(S, 17, 1, 1, 1);
+    setS(S, 0, 0.84, 1, 0.84); setS(S, 1, 0.78, 1.1, 0.76); setS(S, 2, 0.9, 1.08, 0.82); setS(S, 3, 0.92, 1.14, 0.97); setS(S, 4, 1, 1.45, 1.1);
+    for (const b of [5, 8]) setS(S, b, 0.76, 1.16, 0.76); for (const b of [6, 9]) setS(S, b, 0.74, 1.24, 0.74); setS(S, 7, 0.9, 1.4, 0.9); setS(S, 10, 0.9, 1.4, 0.9);
+    for (const b of [11, 14]) setS(S, b, 0.78, 1.06, 0.78); for (const b of [12, 15]) setS(S, b, 0.78, 1.06, 0.78);
+    paunch = 0; setS(S, 17, 1, 1, 1);
   } else if (K === KIND.bloat) {
-    setS(S, 0, 1.5, 1.08, 1.6); setS(S, 1, 1.7, 1.06, 1.85); setS(S, 2, 1.38, 1.02, 1.5); setS(S, 3, 1.08, 0.98, 1.1);
+    setS(S, 0, 1.45, 1.06, 1.5); setS(S, 1, 1.6, 1.06, 1.7); setS(S, 2, 1.36, 1.02, 1.45); setS(S, 3, 1.08, 0.98, 1.1);
     for (const b of [5, 8]) setS(S, b, 1.35, 0.96, 1.35); for (const b of [6, 9]) setS(S, b, 1.2, 0.94, 1.2);
     for (const b of [11, 14]) setS(S, b, 1.42, 0.94, 1.42); for (const b of [12, 15]) setS(S, b, 1.25, 0.94, 1.25);
-    setS(S, 17, 1.62, 1.42, 1.62);
+    paunch = 1; setS(S, 17, 2.0, 2.0, 2.3);
   } else if (K === KIND.breaker) {
     setS(S, 0, 1.12, 1, 1.12); setS(S, 1, 1.15, 1.02, 1.15); setS(S, 2, 1.3, 1.06, 1.25); setS(S, 3, 1, 0.98, 1);
     setS(S, 5, 0.74, 0.92, 0.74); setS(S, 6, 0.68, 0.9, 0.68); setS(S, 7, 0.85, 0.9, 0.85);
-    setS(S, 8, 1.6, 1.12, 1.6); setS(S, 9, 2.5, 1.3, 2.5); setS(S, 10, 2.3, 1.7, 2.3);
+    setS(S, 8, 1.6, 1.12, 1.6); setS(S, 9, 2.5, 1.3, 2.5); setS(S, 10, 2.2, 1.6, 2.2);
     for (const b of [11, 14, 12, 15]) setS(S, b, 1.15, 1, 1.15);
+    paunch = 0; setS(S, 17, 0, 0, 0);
   }
-  // ---- look block: 6 texels
+  // ---- look block
   const Lk = d.look;
   hexLin(d.skin, c3);
   let grime = 0, blood = 0, rag = 0, wound = 0;
-  let shirt = [0, 0, 0], pants = [0, 0, 0], hair = [0, 0, 0];
-  hexLin(d.shirt, shirt); hexLin(d.pants, pants); hexLin(d.hair, hair);
-  // clothing cut: sleeves end at sleeveY, trouser legs at legY (rest-pose heights). Derived from the seed so a
-  // turned person keeps the clothes they died in.
-  const longSleeve = hash1(sd * 11.3) < 0.55, shorts = hash1(sd * 13.7) < 0.12;
-  let slL = longSleeve ? 0.905 : 1.3, slR = slL, lgL = shorts ? 0.56 : 0.075, lgR = lgL;
+  const shirt = [0, 0, 0], pants = [0, 0, 0], hair = [0, 0, 0];
+  hexLin(d.shirt, shirt); hexLin(d.pants, pants); hexLin(d.hair, hair); hexLin(d.jacket, c5);
+  hexLin(BOOT_COL[Math.floor(hash1(sd * 47.3) * BOOT_COL.length) % BOOT_COL.length], c6);
+  // clothing cut: sleeves end at sleeveY, trouser legs at legY (rest-pose heights); all derived from the seed
+  // so that someone who turns keeps the clothes they died in
+  const hs0 = hash1(sd * 45.9); const style = hs0 < 0.3 ? 0 : hs0 < 0.55 ? 1 : hs0 < 0.8 ? 2 : 3;   // tee, shirt, jumper, plaid
+  let outfit = d.outfit;
+  const longSleeve = style === 0 ? hash1(sd * 11.3) < 0.15 : true, shorts = hash1(sd * 13.7) < 0.1;
+  let slL = outfit === OUTFIT.jacket ? 0.9 : outfit === OUTFIT.rolled ? 1.125 : longSleeve ? 0.9 : 1.31, slR = slL;
+  let lgL = shorts ? 0.56 : 0.05, lgR = lgL;
   let bareTorso = 0, bareFeet = 0;
+  let gear = d.gear;
   if (!d.human) {
     const dc = d.decay;
     // skin: the person's own tone drained toward grey-green, then dark and leathery
@@ -177,7 +212,7 @@ export function refreshDef(d: BodyDef) {
     if (tt) for (let i = 0; i < 3; i++) c3[i] = c3[i] * (1 - tt[3]) + Math.pow(tt[i], 2.2) * tt[3];
     const dirt = 0.15 + dc * 0.5;
     for (let i = 0; i < 3; i++) {
-      shirt[i] = shirt[i] * (1 - dirt * 0.6) + 0.03 * dirt; pants[i] = pants[i] * (1 - dirt * 0.55) + 0.028 * dirt;
+      shirt[i] = shirt[i] * (1 - dirt * 0.6) + 0.03 * dirt; pants[i] = pants[i] * (1 - dirt * 0.55) + 0.028 * dirt; c5[i] = c5[i] * (1 - dirt * 0.5) + 0.028 * dirt;
       hair[i] = hair[i] * (1 - dc * 0.5) + 0.03 * dc;
     }
     grime = 0.08 + dc * 0.9; blood = 0.25 + h3 * 0.5; rag = 0.03 + dc * 0.1; wound = 0.4 + dc * 0.6;
@@ -189,8 +224,10 @@ export function refreshDef(d: BodyDef) {
     if (tear(27.7) < 0.15 + dc * 0.65) lgR = Math.max(lgR, 0.2 + tear(28.8) * 0.45);
     if (tear(29.9) < dc * dc * 0.75 - 0.04 || K === KIND.howler || K === KIND.bloat || (K === KIND.brute && tear(30.3) < 0.6)) bareTorso = 1;
     if (tear(31.1) < 0.1 + dc * 0.7) bareFeet = 1;
-    if (K === KIND.bloat) { slL = slR = 1.5; }
-    if (K === KIND.howler) { slL = slR = 1.5; lgL = Math.max(lgL, 0.45); lgR = Math.max(lgR, 0.4); bareFeet = 1; }
+    if (dc > 0.7 || K >= 2) gear = 0;
+    if (bareTorso || K >= 2 || tear(32.5) < dc - 0.35) outfit = OUTFIT.plain;
+    if (K === KIND.bloat) { slL = slR = 1.6; }
+    if (K === KIND.howler) { slL = slR = 1.6; lgL = Math.max(lgL, 0.45); lgR = Math.max(lgR, 0.4); bareFeet = 1; }
   } else {
     // the living: pallor and sweat as the fever climbs
     const s = d.sick;
@@ -198,7 +235,7 @@ export function refreshDef(d: BodyDef) {
     grime = 0.05 + s * 0.1; blood = 0;
   }
   // feature mask
-  let mask = 0; const bit = (f: number) => { mask |= 1 << f; };
+  let mask = 0; const bit = (f: number) => { mask += Math.pow(2, f); };
   const hs = d.hairStyle;
   const bald = !d.human && (hash1(sd * 33.3) < d.decay * 0.9 - 0.15 || K === KIND.bloat || K === KIND.howler);
   if (hs !== 1 && !bald) bit(FEAT.hair);
@@ -213,15 +250,24 @@ export function refreshDef(d: BodyDef) {
   if (K === KIND.brute) bit(FEAT.hump);
   if (K === KIND.breaker) bit(FEAT.club);
   if (K === KIND.howler) bit(FEAT.throat);
-  // hat colour
-  hexLin([0x7a2a2a, 0x2a3a5a, 0x4a4a4a, 0x4a5a3a, 0x8a6a3a][Math.floor(hash1(sd * 37.9) * 5) % 5], c4);
-  Lk[0] = c3[0]; Lk[1] = c3[1]; Lk[2] = c3[2]; Lk[3] = mask;
+  if (outfit === OUTFIT.jacket || outfit === OUTFIT.vest) bit(FEAT.jacket);
+  if (gear & 1) bit(FEAT.pack);
+  if (gear & 2) bit(FEAT.belt);
+  if (paunch > 0 && K !== KIND.howler) bit(FEAT.paunch);
+  const flags = (outfit === OUTFIT.jacket ? 1 : 0) | (outfit === OUTFIT.vest ? 2 : 0) | (outfit === OUTFIT.rolled ? 4 : 0) | (gear & 1 ? 8 : 0) | (gear & 2 ? 16 : 0) | (bareTorso ? 32 : 0) | (bareFeet ? 64 : 0)
+    | (hs !== 5 && hash1(sd * 39.7) < 0.3 ? 128 : 0) | (hs === 5 && !bald ? 256 : 0);
+  hexLin(KIT_COL[Math.floor(hash1(sd * 37.9) * KIT_COL.length) % KIT_COL.length], c4);
+  Lk[0] = c3[0]; Lk[1] = c3[1]; Lk[2] = c3[2]; Lk[3] = mask % 65536;
   Lk[4] = shirt[0]; Lk[5] = shirt[1]; Lk[6] = shirt[2]; Lk[7] = slL;
   Lk[8] = pants[0]; Lk[9] = pants[1]; Lk[10] = pants[2]; Lk[11] = slR;
   Lk[12] = hair[0]; Lk[13] = hair[1]; Lk[14] = hair[2]; Lk[15] = lgL;
-  Lk[16] = d.human ? d.sick * 0.25 : d.decay; Lk[17] = fr(sd * 0.137) * 40; Lk[18] = K + (bareTorso ? 32 : 0) + (bareFeet ? 64 : 0); Lk[19] = lgR;
-  Lk[20] = blood; Lk[21] = grime; Lk[22] = rag + wound * 8; Lk[23] = c4[0] + Math.floor(c4[1] * 255) * 4 + Math.floor(c4[2] * 255) * 1024;
-  d.stamp = d.decay + d.sick * 3 + d.tool * 7 + (d.armLossL ? 100 : 0) + (d.armLossR ? 200 : 0);
+  Lk[16] = d.human ? d.sick * 0.25 : d.decay; Lk[17] = fr(sd * 0.137) * 40; Lk[18] = K; Lk[19] = lgR;
+  Lk[20] = blood; Lk[21] = grime; Lk[22] = rag; Lk[23] = wound;
+  Lk[24] = c5[0]; Lk[25] = c5[1]; Lk[26] = c5[2]; Lk[27] = flags;
+  Lk[28] = c4[0]; Lk[29] = c4[1]; Lk[30] = c4[2]; Lk[31] = Math.floor(hash1(sd * 49.1) * 10);
+  Lk[32] = c6[0]; Lk[33] = c6[1]; Lk[34] = c6[2]; Lk[35] = style;
+  Lk[36] = Math.floor(mask / 65536); Lk[37] = 0; Lk[38] = 0; Lk[39] = 0;
+  d.stamp = defStamp(d);
   d.dirty = true;
 }
 /** cheap change check for callers that mutate decay / sick / tool / limbs */
@@ -318,6 +364,13 @@ const K_TEND = kp({ ry: -0.47, rz: -0.1, rp: 0.38, spx: 0.42, chx: 0.36, hdx: -0
 const K_SIT = kp({ ry: -0.83, rp: -0.22, spx: 0.3, chx: 0.25, hdx: -0.05, ap: 0.85, aa: 0.12, at: 0.3, ae: 0.45,
   llp: 2.05, lrp: 1.95, lla: 0.16, lra: 0.2, llk: 1.6, lrk: 1.5, llf: 0.65, lrf: 0.6 }, true);
 const K_COWER = kp({ ry: -0.5, rz: -0.12, rp: 0.3, spx: 0.5, chx: 0.45, hdx: 0.45, ap: 2.3, aa: 0.2, at: 1.1, ae: 2.2, aw: 0.3 });
+// how the living stand when they have nothing in their hands
+const K_HIPS = kp({ aa: 0.62, ap: -0.28, at: 1.25, ae: 1.72, aw: 0.35, chx: -0.03 });
+const K_CROSS = kp({ alp: 0.52, ala: 0.02, alt: 1.32, ale: 1.72, alw: 0.1, arp: 0.42, ara: 0.04, art: 1.36, are: 1.86, arw: 0.1, chx: 0.04 });
+const K_BELT = kp({ ap: 0.1, aa: 0.2, at: 1.0, ae: 1.02, aw: 0.3 });
+const K_ONEHIP = kp({ ala: 0.62, alp: -0.28, alt: 1.25, ale: 1.72, alw: 0.35, spz: 0.03 });
+const K_HIPR = kp({ ara: 0.62, arp: -0.28, art: 1.25, are: 1.72, arw: 0.35, spz: -0.03 });
+const STANCES = [null, K_HIPS, K_CROSS, K_BELT, K_ONEHIP, null, K_BELT, K_CROSS, K_HIPR, null];
 const K_TALK = kp({ alp: 0.25, ale: 1.1, alt: 0.4, arp: 0.3, are: 0.9, art: 0.3 });
 const K_CARRY = kp({ spx: -0.06, chx: -0.06, ap: 0.5, aa: 0.1, at: 0.45, ae: 1.25, aw: 0.2 });
 const K_WAVE = kp({ arp: 0.3, ara: 2.5, art: -1.2, are: 0.5, chz: 0.06, hdx: -0.08 });
@@ -461,11 +514,25 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     if (d.gait === 3) { P[SPX] = 0.03; P[CHX] = 0.03; }
     if (d.gait === 4) { P[HDX] = -0.3; P[HDZ] = 0.45 * fsin(t * 0.4 + sd); }
   } else {
-    const br = fsin(t * 1.4);
-    P[SPX] = 0.02 + sick * 0.14; P[CHX] = 0.02 + br * 0.008 + sick * 0.16; P[HDX] = sick * 0.3;
-    P[ALA] = 0.07; P[ARA] = 0.07; P[ALE] = 0.16; P[ARE] = 0.16; P[ALT] = 0.3; P[ART] = 0.3; P[ALP] = 0.02; P[ARP] = 0.02;
-    P[SPZ] = fsin(t * 0.37) * (0.012 + sick * 0.05) * idle; P[RX] = fsin(t * 0.37) * (0.006 + sick * 0.03) * idle;
-    P[HDY] = fsin(t * 0.23 + sd) * 0.06 * idle;
+    // the living: breathe, settle their weight onto one leg and then the other, glance about
+    const br = fsin(t * 1.5 + sd);
+    const ws0 = fsin(t * 0.29 + sd * 2), ws = (ws0 > 0 ? 1 : -1) * sst(0.15, 0.75, Math.abs(ws0)) * idle * (1 - sick * 0.5);
+    P[SPX] = 0.015 + sick * 0.14 - br * 0.004; P[CHX] = 0.02 + br * 0.012 + sick * 0.16; P[HDX] = sick * 0.3 - br * 0.006 + fsin(t * 0.17 + sd * 4) * 0.03 * idle;
+    P[RX] = ws * 0.026 + fsin(t * 0.37) * sick * 0.03 * idle; P[RR] = ws * 0.03; P[SPZ] = -ws * 0.028 + fsin(t * 0.41) * sick * 0.05 * idle; P[CHZ] = -ws * 0.012; P[HDZ] = ws * 0.022;
+    P[RY] = -Math.abs(ws) * 0.006; P[RW] = ws * 0.04; P[CHY] = -ws * 0.03;
+    const gl = fsin(t * 0.071 + sd * 3), glance = sst(0.55, 0.95, Math.abs(gl)) * (gl > 0 ? 1 : -1);
+    P[HDY] = (glance * 0.42 + fsin(t * 0.23 + sd) * 0.05) * idle * (1 - sick * 0.6);
+    P[ALA] = 0.075 + br * 0.004; P[ARA] = 0.075 + br * 0.004; P[ALE] = 0.2 + RN[4] * 0.14; P[ARE] = 0.2 + RN[5] * 0.14; P[ALT] = 0.4; P[ART] = 0.4;
+    P[ALP] = 0.03 + ws * 0.02 + fsin(t * 0.5 + 1) * 0.008; P[ARP] = 0.03 - ws * 0.02 + fsin(t * 0.47) * 0.008; P[ALW] = 0.08; P[ARW] = 0.08;
+    // standing about with empty hands: each person drifts between a few stances of their own (hands on hips,
+    // arms folded, hands clasped in front, one fist on a hip), holding each for a while
+    const rest = idle * (1 - Math.min(1, a.actW + a.act2W)) * (1 - Math.min(1, a.arms * 2)) * (d.tool > 1 ? 0 : 1) * (1 - sick) * alive * (a.stance === undefined ? 1 : a.stance);
+    if (rest > 0.01) {
+      const span = 17 + RN[2] * 12, u = t / span + sd * 3.7, slot = Math.floor(u), f = u - slot;
+      const pick = (n: number) => STANCES[Math.floor(hash1(n * 12.9898 + sd * 4.1) * STANCES.length) % STANCES.length];
+      const A = pick(slot), Bk = pick(slot + 1), x = sst(0.9, 1, f);
+      if (A) over(A, rest * (1 - x)); if (Bk) over(Bk, rest * x);
+    }
   }
 
   // ---------------- 2. locomotion: pelvis motion + upper-body counter swing (feet come from IK below)
@@ -649,7 +716,7 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     if (d.gait === 3) { FT[3] *= 0.3; FT[7] *= 0.3; }
     if (run > 0) { FT[2] -= 0.1 * run; FT[6] -= 0.1 * run; }
     legIK(0, 0, rootY); legIK(1, 4, rootY);
-    const tout = zomb ? 0.04 + RN[6] * 0.2 : 0.07;
+    const tout = zomb ? 0.03 + RN[6] * 0.16 : 0.035;
     P[LEG0 + 2] = tout; P[LEG0 + 7] = tout + (d.gait === 2 ? 0.5 : 0);
     if (fkW > 0) for (let i = 0; i < 10; i++) P[LEG0 + i] += (LG[i] - P[LEG0 + i]) * fkW;
   } else for (let i = 0; i < 10; i++) P[LEG0 + i] = LG[i];
@@ -676,7 +743,8 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
   // aux: the bloat's gut hangs off the spine; the howler's throat sac off the head
   qx = 0; qy = 0; qz = 0; qw = 1;
   let auxS = 1;
-  if (K === KIND.howler) { bone(17, 3, 0, 0.055, 0.05); auxS = 0.55 + a.aux * 1.1 + fsin(t * 3) * 0.04; }
+  if (K === KIND.howler) { bone(17, 3, 0, 0.05, 0.06); auxS = 0.55 + a.aux * 1.1 + fsin(t * 3) * 0.04; }
+  else if (d.human) { bone(17, 1, OFF[51], OFF[52], OFF[53]); auxS = 1 + fsin(t * 1.4) * 0.012; }
   else { bone(17, 1, OFF[51], OFF[52], OFF[53]); auxS = 1 + a.aux * 0.28 + fsin(t * 2.1) * 0.025 + (walk > 0 ? fsin(gph * 2) * 0.03 * walk : 0); }
 
   for (let b = 0; b < NB; b++) {
@@ -686,5 +754,8 @@ export function poseBody(a: BodyAnim, d: BodyDef, out: Float32Array, o: number) 
     out[k + 8] = SH[p]; out[k + 9] = SH[p + 1]; out[k + 10] = SH[p + 2]; out[k + 11] = 0;
   }
   const k17 = o + 17 * 12 + 8; out[k17] *= auxS; out[k17 + 1] *= auxS; out[k17 + 2] *= auxS;
+  // spare floats the shader reads: blink (head) and how far the jaw hangs
+  out[o + 3 * 12 + 7] = d.human ? (fr(t * 0.27 + RN[7] * 3) < 0.035 || (a.act === ACT.lie && a.actW > 0.5) || d.sick > 0.9 ? 1 : 0) : 0;
+  out[o + 4 * 12 + 7] = P[JAW];
   // missing forearms are collapsed by the feature mask; nothing to do here
 }

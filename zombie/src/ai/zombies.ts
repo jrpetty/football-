@@ -704,7 +704,7 @@ export class Zombies {
           if (z.stateT > z.pause) {
             if (z.horde) { const hd = this.hordes.find(q => q.id === z.horde); if (hd) { this.setState(z, 'investigate'); z.target.copy(hd.target).add(this.tmpV2.set(this.rng.range(-10, 10), 0, this.rng.range(-10, 10))); break; } z.horde = 0; }
             // by day many simply stop; some lie down among the dead
-            const sleepy = hash1(z.seed * 4.7) < 0.62 && !z.crawler && z.type !== 1;
+            const sleepy = hash1(z.seed * 4.7) < 0.62 && !z.crawler && z.type !== 1 && z.decay > 0.2;
             if (host.daylight > 0.6 && sleepy && z.enraged <= 0 && this.rng.chance(0.5)) {
               this.setState(z, 'dormant'); z.wakeT = this.rng.range(0, 40);
               z.lying = z.type === 0 && hash1(z.seed * 9.9) < 0.3 && this.navAt(z.pos.x, z.pos.z) === NAV_FREE;
@@ -1100,7 +1100,7 @@ export class Zombies {
   private camF = new THREE.Vector3();
   private render(cam: THREE.Vector3, host: ZombieHost) {
     const R = this.bodies, A = this.anim, now = this.time.value, dt = this.lastDt;
-    R.night.value = 1 - host.daylight;
+    R.night.value = 1 - host.daylight; R.amb.value = 0.04 + 0.44 * host.daylight;
     // cheap view culling against last frame's camera (generous: shadows and fast turns)
     const c = R.cam; let cull = false; const f = this.camF;
     if (c) { c.getWorldDirection(f); cull = true; }
@@ -1144,6 +1144,7 @@ export class Zombies {
       A.hit = h.hit; A.hitSide = 0; A.hitFwd = 1; A.lookYaw = h.lookYaw ?? 0; A.lookPitch = h.lookPitch ?? 0;
       A.crawl = 0; A.limp = 0; A.down = 0; A.downMode = 0; A.downFace = 1; A.downOff = 0; A.death = 0; A.deathStyle = 0; A.deathDir = 1;
       A.act = s.act; A.actW = s.actW; A.act2 = s.act2; A.act2W = s.act2W; A.aux = 0; A.jaw = 0;
+      A.stance = h.type === 3 ? 0 : 1;
       R.add(A, d, h.pos.x, h.pos.y, h.pos.z, h.yaw, d.height, lod);
     }
     R.end();

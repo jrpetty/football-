@@ -210,10 +210,14 @@ export class Town {
         let t = s.task && s.task.kind === 'chop' ? s.task : null;
         if (!t) {
           const a = ((s.id * 1.7 + Math.floor(now / 90)) % 6.283), r = 12 + (s.id * 5) % 14;
-          const tr = this.world.veg.nearest(work.cx + Math.cos(a) * r, work.cz + Math.sin(a) * r, 26, ['tree']);
-          const tx = tr ? tr.x : work.cx + Math.cos(a) * r, tz = tr ? tr.z : work.cz + Math.sin(a) * r;
-          const dx = yard.x - tx, dz = yard.z - tz, d = Math.hypot(dx, dz) || 1;
-          t = s.task = { kind: 'chop', x: tx + dx / d * 1.3, z: tz + dz / d * 1.3, t: 0, phase: 0, ref: tr ? 1 : 0 };
+          // a real tree: one near this trip's bearing, else the nearest standing anywhere in reach; with no timber
+          // left to fell they stay at the yard and work through the log pile
+          const tr = this.world.veg.nearest(work.cx + Math.cos(a) * r, work.cz + Math.sin(a) * r, 26, ['tree']) ?? this.world.veg.nearest(work.cx, work.cz, 75, ['tree']);
+          if (!tr) t = s.task = { kind: 'chop', x: yard.x, z: yard.z, t: now + 40, phase: 3, ref: 0 };
+          else {
+            const dx = yard.x - tr.x, dz = yard.z - tr.z, d = Math.hypot(dx, dz) || 1;
+            t = s.task = { kind: 'chop', x: tr.x + dx / d * 1.3, z: tr.z + dz / d * 1.3, t: 0, phase: 0, ref: 1 };
+          }
         }
         const tree = new THREE.Vector3(t.x, s.pos.y, t.z);
         if (t.phase === 0) { if (Math.hypot(s.pos.x - t.x, s.pos.z - t.z) < 1.2) { t.phase = 1; t.t = now + 26; } return { pos: tree, want: 2, tool: TOOL.axe, doing: 'Walking to the timber', arrive: 0.8 }; }
