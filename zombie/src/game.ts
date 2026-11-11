@@ -28,6 +28,7 @@ import { TreeInst, windUniforms } from './world/vegetation';
 import { RNG, clamp, bus, damp, lerp } from './core/util';
 import { UI } from './ui/ui';
 import { Animals, Animal } from './ai/animals';
+import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
 import type { HumanPose } from './ai/zombies';
@@ -76,6 +77,8 @@ export class Game {
   placer!: Placer;
   vehicles!: Vehicles;
   animals!: Animals;
+  survivors!: Survivors;
+  private lastFeedDay = 0;
   private loudT = 0;
   driving: Vehicle | null = null;
   thirdPerson = false;
@@ -157,6 +160,7 @@ export class Game {
     this.placer = new Placer(this.scene, this.world, this.factory, this.base);
     this.vehicles = new Vehicles(this.world, this.scene);
     this.animals = new Animals(this.world, this.scene, SEED);
+    this.survivors = new Survivors(this.world, this.zombies, SEED);
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
@@ -230,6 +234,7 @@ export class Game {
     p.yaw = Math.PI * 0.75;
     this.zombies.populate();
     this.animals.populate();
+    this.survivors.populate();
     this.gameMin = 8 * 60 + 30;
     this.objective = 0;
     this.startPlay();
@@ -308,6 +313,11 @@ export class Game {
     }, this.camera.position);
     this.loudT = Math.max(0, this.loudT - dt * 30);
     this.animals.update(dt, { pos: p.pos, noise: Math.max(p.noise, this.loudT, this.driving ? 30 : 0), crouch: p.crouch, alive: this.state === 'play' }, 1 - daylight, a => this.wolfBite(a));
+    if (this.state === 'play') {
+      const hub = this.factory.hub ? new THREE.Vector3(this.factory.hub.cx, 0, this.factory.hub.cz) : null;
+      this.survivors.update(dt, dtGame, { player: p.pos, hub, particles: this.particles, notify: (m, k) => this.ui.notify(m, k), deposit: inv => this.world.dropItems((hub ?? p.pos).clone().add(new THREE.Vector3(4, 0, 0)), inv) });
+      if (hrs >= 18 && this.day() > this.lastFeedDay) { this.lastFeedDay = this.day(); this.survivors.feed(() => this.takeBaseFood(), (m, k) => this.ui.notify(m, k)); }
+    }
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
     this.weather.seasonTemp = this.season().temp;
     this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs) });
@@ -540,6 +550,44 @@ export class Game {
     if (p.inv.count('gas_can_empty') && fuel > 0.1) return { label: 'Siphon fuel into gas can', act: () => this.startAction({ label: 'Siphoning… (it tastes awful)', dur: 5, cancelOnMove: true, done: () => { if (!p.inv.remove('gas_can_empty', 1)) return; const take = Math.min(0.5, target.fuel); target.fuel -= take; p.inv.add(take >= 0.45 ? 'gas_can' : 'gas_can_empty'); audio.play('splash', { volume: 0.5 }); if (take < 0.45) this.ui.notify('Not enough fuel left to fill the can.', ''); else this.ui.notify('Filled a gas can.', 'good'); } }) };
     if (!target.keys && !(target as Vehicle).hotwired && target.variant !== 'wreck') return { label: 'Hotwire', act: () => this.hotwire(target) };
     return undefined;
+  }
+
+  private npcInteract(s: Survivor, t: number): Interact {
+    const p = this.player;
+    const roleTxt = s.role === 'shooter' ? `shooter · ${s.ammo} rounds` : s.role === 'brawler' ? 'brawler' : 'scavenger';
+    if (!s.recruited) return { kind: 'npc', label: `Talk to ${s.name}`, sub: `Survivor (${roleTxt}) · ${p.inv.stacks.some(x => item(x.id).cat === 'food') ? 'offer food to recruit' : 'they want food'}`, target: s, t };
+    const next: Record<string, string> = { follow: 'Guard the Outpost', guard: 'Go scavenging (6 h)', scavenge: 'Wait here', wait: 'Follow me' };
+    const alt = s.role === 'shooter' && p.inv.count('ammo_9mm') ? { label: 'Give 9mm ammo', act: () => { const k = Math.min(30, p.inv.count('ammo_9mm')); p.inv.remove('ammo_9mm', k); s.ammo += k; this.ui.notify(`${s.name} now has ${s.ammo} rounds.`, ''); } } : undefined;
+    return { kind: 'npc', label: `${s.name}: ${next[s.order]}`, sub: `${roleTxt} · ${s.order} · health ${Math.round(s.hp)}%`, target: s, t, alt };
+  }
+  private talkTo(s: Survivor) {
+    const p = this.player;
+    if (!s.recruited) {
+      const food = p.inv.stacks.filter(x => item(x.id).cat === 'food' && x.id !== 'rotten_food').sort((a, b) => (item(a.id).hunger ?? 0) - (item(b.id).hunger ?? 0))[0];
+      if (!food) { this.ui.notify(`${s.name}: "${this.survivors.line('recruit')}"`, ''); return; }
+      p.inv.removeUid(food.uid, 1);
+      s.recruited = true; s.order = 'follow';
+      this.ui.notify(`${s.name} takes the ${item(food.id).name}. "${this.survivors.line('joined')}" (E to give orders)`, 'good');
+      audio.play('objective');
+      return;
+    }
+    const cycle: Record<string, Survivor['order']> = { follow: 'guard', guard: 'scavenge', scavenge: 'wait', wait: 'follow' };
+    let o = cycle[s.order];
+    if (o === 'guard' && !this.factory.hub) o = 'scavenge';
+    if (o === 'scavenge' && !this.factory.hub) o = 'wait';
+    s.order = o;
+    if (o === 'scavenge') { s.away = 360; this.ui.notify(`${s.name} heads out to scavenge. Back in ~6 hours.`, ''); }
+    else if (o === 'wait') { s.anchor.copy(s.pos); this.ui.notify(`${s.name} will wait here.`, ''); }
+    else this.ui.notify(`${s.name}: ${o === 'follow' ? '"Right behind you."' : '"I\'ll keep watch at the Outpost."'}`, '');
+  }
+  /** take one food item from storage near the Outpost (crates, storage containers) */
+  private takeBaseFood(): boolean {
+    const hub = this.factory.hub; if (!hub) return false;
+    const invs: Inventory[] = [];
+    for (const pc of this.base.pieces) if (pc.container && Math.hypot(pc.cx - hub.cx, pc.cz - hub.cz) < 40) invs.push(pc.container.inv);
+    for (const m of this.factory.machines) if (m.type === 'storage' && m.inv && Math.hypot(m.cx - hub.cx, m.cz - hub.cz) < 40) invs.push(m.inv);
+    for (const inv of invs) { const s = inv.stacks.find(x => item(x.id).cat === 'food' && x.id !== 'rotten_food'); if (s) { inv.removeUid(s.uid, 1); return true; } }
+    return false;
   }
 
   private wolfBite(a: Animal) {
@@ -1004,6 +1052,11 @@ export class Game {
       tmp.min.copy(d.pos).sub(new THREE.Vector3(0.45, 0.1, 0.45)); tmp.max.copy(d.pos).add(new THREE.Vector3(0.45, 0.5, 0.45));
       if (ray.intersectBox(tmp, hp)) consider({ kind: 'drop', label: 'Items', sub: `${d.inv.stacks.length} stacks`, target: d, t: hp.distanceTo(eye) });
     }
+    const npc = this.survivors.nearest(p.pos, 3);
+    if (npc) {
+      tmp.min.set(npc.pos.x - 0.4, npc.pos.y, npc.pos.z - 0.4); tmp.max.set(npc.pos.x + 0.4, npc.pos.y + 1.8, npc.pos.z + 0.4);
+      if (ray.intersectBox(tmp, hp)) consider(this.npcInteract(npc, hp.distanceTo(eye)));
+    }
     const carcass = this.animals.carcassNear(p.pos, 2.6);
     if (carcass) consider({ kind: 'butcher', label: `Butcher ${carcass.type}`, sub: p.inv.hasTool('knife') ? `${this.animals.meat(carcass)} raw meat` : 'Needs a knife or machete', target: carcass, t: Math.max(0.5, carcass.pos.distanceTo(eye) - 0.8) });
     const corpse = this.zombies.corpseNear(p.pos, 2.4);
@@ -1132,6 +1185,7 @@ export class Game {
         break;
       }
       case 'car': this.enterVehicle(it.target); break;
+      case 'npc': this.talkTo(it.target as Survivor); break;
       case 'butcher': {
         const a = it.target as Animal;
         if (!p.inv.hasTool('knife')) { this.ui.notify('You need a knife or machete to butcher it.', ''); break; }
@@ -1440,6 +1494,7 @@ export class Game {
     inv.add('mre', 2); inv.add('water_bottle', 2);
     this.world.dropItems(pos, inv);
     this.ui.notify('📻 Radio: "Supply drop delivered near your tower. Stay safe out there." ', 'good');
+    if (this.rng.chance(0.4)) { const s = this.survivors.spawn(pos.x + 3, pos.z + 3); this.ui.notify(`📻 A survivor named ${s.name} followed the broadcast to your tower. Talk to them.`, 'good'); }
     audio.play('objective');
   }
 
@@ -1491,7 +1546,7 @@ export class Game {
       const data = {
         v: 1, gameMin: this.gameMin, objective: this.objective, stats: this.stats, built: this.builtCounts,
         weather: { kind: this.weather.kind, wet: this.weather.wetness },
-        vehicles: this.vehicles.toJSON(),
+        vehicles: this.vehicles.toJSON(), survivors: this.survivors.toJSON(), lastFeedDay: this.lastFeedDay,
         player: this.player.toJSON(), factory: this.factory.toJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
         containers: town.containers.filter(c => c.generated).map(c => [c.id, c.inv.stacks]),
         doors: town.doors.map(d => [d.open ? 1 : 0, Math.round(d.hp), Math.round(d.barricade), d.locked ? 1 : 0]),
@@ -1535,6 +1590,8 @@ export class Game {
       if (d.explored) this.explored.set(d.explored);
       this.vehicles.load(d.vehicles ?? []);
       this.animals.populate();
+      if (d.survivors) this.survivors.load(d.survivors); else this.survivors.populate();
+      this.lastFeedDay = d.lastFeedDay ?? this.day();
       this.zombies.load(d.zombies ?? []);
       if (d.settings?.creative !== undefined) this.settings.creative = d.settings.creative;
       this.lastSave = this.gameMin;
