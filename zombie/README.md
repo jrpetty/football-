@@ -106,16 +106,34 @@ Each level needs supplies delivered to the Settlement Hall *and* a living town.
   cost or give points. Eleven skills level up through use (Fitness, Strength,
   Sprinting, Lightfooted, Blunt, Blade, Firearms, Carpentry, Engineering,
   First Aid, Scavenging). Skill books triple XP gain for a day.
-- **Zombies.**
-  - Rendering: hundreds of instanced zombies animated on the GPU in one draw
-    call.
-  - Types: walkers, runners and brutes.
-  - Senses: sight depends on light, crouching and your flashlight. Hearing
-    picks up footsteps, gunfire, chopping, breaking glass and machines.
-  - Pathing: they follow a flow field around buildings and bash through doors,
-    barricades, walls and machines.
-  - Hordes migrate at night or home in on a noisy base. Four or more grabbing
-    you at once can drag you down.
+- **Zombies.** They were people, and they keep rotting.
+  - Six kinds. Walkers, runners and brutes from day one; then **howlers**
+    (day 3: frail, but their scream calls and enrages everything within
+    46 m), **bloats** (day 5: slow, and they rupture when killed with a body
+    shot — a headshot drops them clean) and **breakers** (day 8: one arm
+    fused into a club that tears down what you built).
+  - Decay. The newly dead are fresh: fast, strong, almost human to look at.
+    Over about two days they slow into shamblers, and after a fortnight
+    into dry, brittle husks. Clothes, skin, hair, wounds and gait all follow.
+  - Senses. A sight cone that shrinks in the dark and when you crouch;
+    hearing for footsteps, gunfire, chopping, glass and machines; and smell
+    — if you are bleeding they find you from further off.
+  - Habits. By day about half of them stand dormant or lie among the
+    corpses until something disturbs them; at night all of them wake and
+    roam further. Loose packs drift together. A lost target is searched for
+    where it was last seen, then given up.
+  - They hunt your residents as well as you, kneel to feed on the dead, and
+    crowd a door only as far as there is room to reach it.
+  - Injury. Leg hits make crawlers, arm hits take the arm off, a hard blow
+    staggers or floors them and they get back up, sprinters trip.
+  - Turning. Anyone who dies infected — a resident, or you — rises where
+    they fell wearing the same clothes and the same face, and keeps their
+    name ("what's left of Marcus").
+  - Pathing: they follow a flow field around buildings and bash through
+    doors, barricades, walls and machines. Hordes migrate at night or home
+    in on a noisy base. Four or more grabbing you at once can drag you down.
+  - Rendering: one instanced, skinned body for every zombie and person —
+    hundreds on screen in one draw call.
 - **Combat.** Melee has swing arcs, headshots, knockback, shoves and weapon
   durability. Firearms have spread, recoil, aim-down-sights, magazines and
   reloads. Every gunshot can be heard for blocks.
@@ -145,11 +163,16 @@ Each level needs supplies delivered to the Settlement Hall *and* a living town.
     figure-eights, recoil that kicks and settles, and jump, landing, hit
     and hurt jolts. The camera rolls when you strafe, dips when you land
     and follows the weight of each swing.
-  - Zombies: GPU-animated skeletons with shambling, limping and flailing
-    runner gaits, heads that track you, twitches, clawing grabs, hit
-    reactions that depend on where you strike, three death styles (knees
-    buckle, topple with momentum, twist sideways), and crawlers that drag
-    themselves along when badly hurt.
+  - Bodies: an 18-bone skeleton posed per body, feet planted by leg IK so
+    nobody slides. Zombies have five walking gaits plus sprint, stomp, stalk
+    and waddle, turn in place, sniff, slump and paw at walls, lunge with a
+    wind-up, crawl, climb back to their feet from their back or their face,
+    and fall five different ways.
+  - People breathe, blink, shift their weight, glance around, and when their
+    hands are empty settle into stances of their own — arms folded, hands
+    on hips, hands clasped. Working poses (swinging an axe or hammer,
+    kneeling at a crop, stirring a pot, carrying, talking, waving, eating,
+    sitting, cowering) use the tool actually in their hand.
   - Humans: your third-person survivor and NPC survivors have natural
     walk and run cycles, aiming poses and overhead melee swings.
   - Animals: articulated deer, rabbits and wolves that walk, trot, gallop
@@ -175,6 +198,11 @@ Each level needs supplies delivered to the Settlement Hall *and* a living town.
 - **Wildlife.** Deer and rabbits to hunt and butcher, and wolf packs that
   stalk you, especially at night. Fish the lake with a rod.
 - **People.** Everyone you meet is an individual, and stays one.
+  - How they look: skin, hair (cropped, long, tied back, beanie, cap,
+    bearded, greying with age), build and height are their own, and so are
+    their clothes — tee, button shirt, jumper or flannel, with a jacket,
+    gilet or rolled sleeves, a pack or a tool belt depending on the life
+    they came from.
   - Who they are: a name, an age, a past life (nurse, logger, deputy, line
     cook, teacher… 18 backgrounds) that sets what they already know and how
     they dress, and two or three temperament traits out of 20 (Brave,
@@ -292,7 +320,7 @@ src/
   core/              utilities (RNG, simplex noise, event bus), input
   render/            renderer + post FX, sky/atmosphere, weather, particles, light pool, procedural textures & materials
   world/             layout, terrain (splat shader), town generator, vegetation, collision + nav grid, world queries
-  ai/                zombie GPU mesh/shader and AI director, wildlife; people: personas & skills (people.ts), behaviour (survivors.ts), pathfinding (pathing.ts)
+  ai/                the shared character body: skeleton + poses (bodyRig.ts), mesh (bodyGeo.ts), skinning + clothing shader (zombieMesh.ts); zombie AI director (zombies.ts), wildlife; people: personas & skills (people.ts), behaviour (survivors.ts), pathfinding (pathing.ts)
   vehicles/          drivable car physics, fuel, collisions
   player/            controller, survival stats, skills/traits/occupations, first-person viewmodel
   items/             item database, inventory, loot tables, crafting recipes
