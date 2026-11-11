@@ -811,6 +811,7 @@ export class Game {
   }
   private hitOre(o: OreNode, w: any, at: THREE.Vector3) {
     const p = this.player;
+    if (o.type === 'f_crude') { this.ui.notify('Oil seeps from the ground here. You need an Oil Pumpjack (milestone 5).', ''); return; }
     if (!w?.mine) { audio.play('hit_metal', { pos: at, volume: 0.6 }); this.ui.notify('You need a pickaxe to mine ore.', ''); return; }
     audio.play('mine_hit', { pos: at }); this.particles.sparks(at, 8); this.particles.dust(at, 6, [0.4, 0.38, 0.35]);
     this.zombies.noise(p.pos, 12);
@@ -1282,6 +1283,7 @@ export class Game {
       this.startAction({ label: `Reading ${d.name}…`, dur: 8, cancelOnMove: true, done: () => { p.skills.bookUntil[d.skillBook as SkillId] = this.gameMin + 60 * 24; p.stats.unhappy = Math.max(0, p.stats.unhappy - 15); this.ui.notify(`📖 ${SKILLS.find(k => k.id === d.skillBook)!.name} XP ×3 for the next day.`, 'xp'); p.inv.removeUid(uid, 1); } });
       return;
     }
+    if (d.id === 'repair_kit') { const v = this.vehicles.nearest(p.pos, 4); if (!v) { this.ui.notify('Use it next to a vehicle.', ''); return; } this.startAction({ label: 'Repairing the vehicle…', dur: 8, cancelOnMove: true, done: () => { if (!p.inv.remove('repair_kit', 1)) return; v.condition = Math.min(100, v.condition + 50); p.gainXP('engineering', 8, this.gameMin); this.ui.notify(`Vehicle condition ${Math.round(v.condition)}%`, 'good'); } }); audio.play('build_hammer'); return; }
     if (d.id === 'gas_can') { const v = this.vehicles.nearest(p.pos, 4); if (v) { const alt = this.carAlt(v); if (alt) alt.act(); } else this.ui.notify('Use it next to a car, or put it in a generator.', ''); return; }
     if (d.id === 'battery') { const fl = p.inv.find('flashlight'); if (fl) { fl.dur = 100; p.inv.removeUid(uid, 1); audio.play('reload', { volume: 0.4 }); this.ui.notify('Fresh batteries in the flashlight.', 'good'); } return; }
     if (d.id === 'duct_tape') { const st = p.equippedStack(); const w = st ? item(st.id).weapon : undefined; if (st && w && st.dur !== undefined) { st.dur = Math.min(w.durability, st.dur + w.durability * 0.3); p.inv.removeUid(uid, 1); this.ui.notify(`Repaired your ${item(st.id).name}.`, 'good'); } else this.ui.notify('Equip a weapon to repair it with tape.', ''); return; }
@@ -1419,12 +1421,14 @@ export class Game {
       if (!this.settings.creative && !this.player.inv.takeAll(cost)) { this.ui.notify('Ran out of materials for belts.', 'bad'); break; }
       const [cx, cz] = Factory.centerFor(id, s.tx, s.tz, s.rot);
       if (!this.factory.canPlace(id, cx, cz, s.rot).ok) { if (!this.settings.creative) for (const k in cost) this.player.inv.add(k, cost[k]); continue; }
-      this.factory.add(id, cx, cz, s.rot); placed++;
+      if (id === 'pipe') this.factory.addPipe(s.tx, s.tz); else this.factory.add(id, cx, cz, s.rot);
+      placed++;
     }
     if (placed) { audio.play('machine_place'); this.builtCounts[id] = (this.builtCounts[id] ?? 0) + placed; this.checkObjectives(); }
   }
   private dismantle(target: Machine | Piece) {
     const p = this.player;
+    if ((target as any).kind === 'pipe') { const t = target as any; this.factory.removePipe(t.tx, t.tz); if (!this.settings.creative) this.giveOrDrop(this.invOf('iron_plate', 1)); audio.play('deconstruct'); return; }
     if ('tiles' in target) {
       const m = target as Machine;
       const inv = this.factory.contents(m);

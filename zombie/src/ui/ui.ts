@@ -428,7 +428,7 @@ export class UI {
     const power = m.def.power !== 0 || m.type === 'power_pole' || m.type === 'battery' ? `<div class="statgrid" style="margin-bottom:8px"><div class="k">Grid</div><div class="v">${net ? `${net.supply.toFixed(0)} MW supply / ${net.demand.toFixed(0)} MW demand` : '<span class="lack">Not connected — place a Power Pole within 10 m</span>'}</div>${net?.batteryCap ? `<div class="k">Batteries</div><div class="v">${net.battery.toFixed(0)} / ${net.batteryCap} MJ</div>` : ''}${net?.tripped ? `<div class="k">Fuse</div><div class="v"><button class="btn small primary" data-a="fuse">Reset fuse</button></div>` : ''}<div class="k">This machine</div><div class="v">${m.def.power > 0 ? m.def.power + ' MW' : m.def.power < 0 ? 'produces ' + (-m.def.power) + ' MW' : '—'} · ${m.powered ? '<span class="have">powered</span>' : m.def.power > 0 ? '<span class="lack">unpowered</span>' : ''}</div></div>` : '';
     let body = '';
     if (recipes.length) {
-      body += `<h3>Recipe</h3><div class="ilist">${recipes.map(rc => `<div class="recipe ${m.recipe === rc.id ? 'sel' : ''}" style="${m.recipe === rc.id ? 'border-color:var(--accent)' : ''}" data-a="mrecipe" data-id="${rc.id}"><span class="ic">${item(rc.out[0]).icon}</span><div style="flex:1"><div class="rn">${esc(item(rc.out[0]).name)} ×${rc.out[1]} <span class="hint">· ${rc.time}s · ${(rc.out[1] * 60 / rc.time).toFixed(0)}/min</span></div><div class="req">${Object.entries(rc.inp).map(([k, n]) => `${item(k).icon} ${n} ${esc(item(k).name)}`).join(' + ') || 'no inputs'}</div></div></div>`).join('')}</div>`;
+      body += `<h3>Recipe</h3><div class="ilist">${recipes.map(rc => `<div class="recipe ${m.recipe === rc.id ? 'sel' : ''}" style="${m.recipe === rc.id ? 'border-color:var(--accent)' : ''}" data-a="mrecipe" data-id="${rc.id}"><span class="ic">${item(rc.out[0]).icon}</span><div style="flex:1"><div class="rn">${esc(item(rc.out[0]).name)} ×${rc.fluidOut ? rc.fluidOut[1] : rc.out[1]} <span class="hint">· ${rc.time}s · ${((rc.fluidOut ? rc.fluidOut[1] : rc.out[1]) * 60 / rc.time).toFixed(0)}/min</span></div><div class="req">${[...Object.entries(rc.inp), ...(rc.fluidIn ? [rc.fluidIn] : [])].map(([k, n]) => `${item(k).icon} ${n} ${esc(item(k).name)}`).join(' + ') || 'no inputs'}</div></div></div>`).join('')}</div>`;
     }
     if (r || m.type.startsWith('miner')) {
       const ins = r ? Object.keys(r.inp) : [];
@@ -444,6 +444,8 @@ export class UI {
         ${fuelIds.length ? `<div class="btnrow">${fuelIds.map(id => `<button class="btn small" data-a="feedinv" data-id="${id}" ${p.inv.count(id) ? '' : 'disabled'}>${item(id).icon} Add ${esc(item(id).name)} (${p.inv.count(id)})</button>`).join('')}</div>` : ''}
         <div class="ilist" style="margin-top:6px">${m.inv.stacks.map(s => this.itemRow(s, 'm')).join('') || '<div class="hint">Empty</div>'}</div>${m.type === 'storage' ? '<div class="btnrow"><button class="btn" data-a="openstore">Open as container</button></div>' : ''}`;
     }
+    if (m.fnets && m.fnets.length) body += `<h3>Pipe networks</h3>${m.fnets.map(n => `<div class="hint">${n.fluid ? esc(item(n.fluid).name) : 'empty'}: ${n.amount.toFixed(0)} / ${n.cap}</div>`).join('')}`;
+    else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager'].includes(m.type)) body += `<p class="hint lack">Not connected to any pipe. Lay pipes (B → Logistics) touching this building.</p>`;
     if (m.type.startsWith('belt')) body += `<p class="hint">${m.items.length} items on this segment: ${m.items.map(i => item(i.id).icon).join(' ')}</p>`;
     if (m.type === 'radio_tower') body += `<p class="hint">${m.powered ? 'Broadcasting. A supply drop arrives near the tower each day at noon.' : 'Needs 20 MW to broadcast.'}</p>`;
     if (m.type === 'uplink') body += `<p class="hint">${m.running ? 'The old town grid is live. Street lights and houses glow at night.' : 'Needs 40 MW to energise the town grid.'}</p>`;
@@ -563,7 +565,7 @@ export class UI {
     ctx.fillStyle = '#b8a890';
     const s = N / WORLD_SIZE;
     for (const bd of w.town.buildings) { ctx.fillRect((bd.x - bd.w / 2 + HALF_WORLD) * s, (bd.z - bd.d / 2 + HALF_WORLD) * s, bd.w * s, bd.d * s); }
-    const icon: Record<string, string> = { iron_ore: '#c0583a', copper_ore: '#e08a40', coal: '#202020', stone: '#e0dccf', sulfur: '#e8d040' };
+    const icon: Record<string, string> = { iron_ore: '#c0583a', copper_ore: '#e08a40', coal: '#202020', stone: '#e0dccf', sulfur: '#e8d040', f_crude: '#6a2a8a' };
     for (const o of w.ores) { ctx.fillStyle = icon[o.type]; ctx.beginPath(); ctx.arc((o.x + HALF_WORLD) * s, (o.z + HALF_WORLD) * s, 4, 0, 7); ctx.fill(); ctx.strokeStyle = '#000'; ctx.stroke(); }
     this.baseMap = c; return c;
   }

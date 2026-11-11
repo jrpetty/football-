@@ -1,10 +1,11 @@
 // Machine, recipe, buildable and milestone definitions.
 import type { MachineModelId } from '../models/machines';
+import type { FluidModelId } from '../models/fluids';
 import type { BuildPieceId } from '../models/buildpieces';
 import type { PropId } from '../models/props';
 import type { SkillId } from '../player/skills';
 
-export interface MRecipe { id: string; machine: string[]; inp: Record<string, number>; out: [string, number]; time: number }
+export interface MRecipe { id: string; machine: string[]; inp: Record<string, number>; out: [string, number]; time: number; fluidIn?: [string, number]; fluidOut?: [string, number] }
 export const MRECIPES: MRecipe[] = [
   { id: 'smelt_iron', machine: ['smelter'], inp: { iron_ore: 1 }, out: ['iron_ingot', 1], time: 2 },
   { id: 'smelt_copper', machine: ['smelter'], inp: { copper_ore: 1 }, out: ['copper_ingot', 1], time: 2 },
@@ -31,12 +32,17 @@ export const MRECIPES: MRecipe[] = [
   { id: 'antibiotics', machine: ['lab'], inp: { sulfur: 2, coal: 1 }, out: ['antibiotics', 2], time: 12 },
   { id: 'bandage_lab', machine: ['lab'], inp: { wire: 2, coal: 1 }, out: ['bandage', 4], time: 8 },
   { id: 'serum', machine: ['lab'], inp: { zombie_tissue: 3, antibiotics: 1 }, out: ['serum', 1], time: 30 },
+  { id: 'refine_fuel', machine: ['refinery'], inp: {}, fluidIn: ['f_crude', 3], fluidOut: ['f_fuel', 2], out: ['f_fuel', 0], time: 2 },
+  { id: 'refine_plastic', machine: ['refinery'], inp: {}, fluidIn: ['f_crude', 3], out: ['plastic', 2], time: 4 },
+  { id: 'refine_rubber', machine: ['refinery'], inp: {}, fluidIn: ['f_crude', 3], out: ['rubber', 2], time: 4 },
+  { id: 'pack_water', machine: ['packager'], inp: { empty_bottle: 1 }, fluidIn: ['f_water', 2], out: ['water_bottle', 1], time: 2 },
+  { id: 'pack_fuel', machine: ['packager'], inp: { gas_can_empty: 1 }, fluidIn: ['f_fuel', 6], out: ['gas_can', 1], time: 3 },
   { id: 'grow_carrot', machine: ['greenhouse'], inp: {}, out: ['carrot', 2], time: 30 },
   { id: 'grow_potato', machine: ['greenhouse'], inp: {}, out: ['potato', 2], time: 30 },
   { id: 'grow_corn', machine: ['greenhouse'], inp: {}, out: ['corn', 2], time: 30 },
 ];
 
-export type MachineType = MachineModelId;
+export type MachineType = MachineModelId | FluidModelId | 'pipe';
 export interface MachineDef {
   type: MachineType; name: string; icon: string; desc: string; size: [number, number]; cost: Record<string, number>;
   power: number; tier: number; inputs: number[]; outputs: number[]; cat: 'production' | 'logistics' | 'power' | 'defense' | 'special';
@@ -69,6 +75,13 @@ export const MACHINES: Record<string, MachineDef> = {
   electric_fence: { type: 'electric_fence', name: 'Electric Fence', icon: '⚡', desc: 'Blocks and electrocutes zombies. 3 MW.', size: [1, 1], cost: { copper_ingot: 4, iron_ingot: 2 }, power: 3, tier: 2, inputs: [], outputs: [], cat: 'defense', hp: 500, heat: 0, height: 2.2 },
   spike_trap: { type: 'spike_trap', name: 'Spike Trap', icon: '🔺', desc: 'Damages and slows zombies that walk over it.', size: [1, 1], cost: { plank: 3, nails: 6 }, power: 0, tier: 0, inputs: [], outputs: [], cat: 'defense', hp: 200, heat: 0, height: 0.6 },
   radio_tower: { type: 'radio_tower', name: 'Radio Tower', icon: '📡', desc: 'Contacts other survivors: daily supply drops. Needed to broadcast the cure. 20 MW.', size: [2, 2], cost: { reinforced_plate: 10, circuit: 10, cable: 20, radio_parts: 2 }, power: 20, tier: 4, inputs: [], outputs: [], cat: 'special', hp: 800, heat: 1, height: 25 },
+  water_pump: { type: 'water_pump', name: 'Water Pump', icon: '🚰', desc: 'Place it in the lake. Pumps clean water into connected pipes. 8 MW.', size: [2, 2], cost: { iron_plate: 10, rotor: 2, cable: 6 }, power: 8, tier: 4, inputs: [], outputs: [], cat: 'production', hp: 500, heat: 1, height: 3 },
+  pipe: { type: 'pipe', name: 'Pipe', icon: '🧪', desc: 'Carries fluids between pumps, tanks and machines. Drag to lay a line; can cross over belts.', size: [1, 1], cost: { iron_plate: 1 }, power: 0, tier: 4, inputs: [], outputs: [], cat: 'logistics', hp: 150, heat: 0, height: 1.3 },
+  fluid_tank: { type: 'fluid_tank', name: 'Fluid Tank', icon: '🛢️', desc: 'Stores 600 units of one fluid.', size: [2, 2], cost: { iron_plate: 20, screws: 40 }, power: 0, tier: 4, inputs: [], outputs: [], cat: 'logistics', hp: 600, heat: 0, height: 4 },
+  packager: { type: 'packager', name: 'Packager', icon: '📥', desc: 'Fills empty bottles with pumped water and empty gas cans with fuel. Belt in empty containers at the back.', size: [2, 2], cost: { reinforced_plate: 4, circuit: 2 }, power: 6, tier: 4, inputs: [0], outputs: [0], cat: 'production', hp: 500, heat: 1, height: 3 },
+  oil_pump: { type: 'oil_pump', name: 'Oil Pumpjack', icon: '🛢️', desc: 'Centre it on an oil deposit. Pumps crude oil into pipes. 20 MW.', size: [3, 3], cost: { modular_frame: 4, rotor: 6, cable: 20 }, power: 20, tier: 5, inputs: [], outputs: [], cat: 'production', hp: 900, heat: 4, height: 5 },
+  refinery: { type: 'refinery', name: 'Refinery', icon: '🏭', desc: 'Crude oil in by pipe → fuel (out by pipe), plastic or rubber (out the front port). 25 MW.', size: [3, 3], cost: { modular_frame: 6, steel_ingot: 30, circuit: 10 }, power: 25, tier: 5, inputs: [], outputs: [1], cat: 'production', hp: 900, heat: 4, height: 10 },
+  fuel_gen: { type: 'fuel_gen', name: 'Fuel Generator', icon: '⚡', desc: '80 MW from piped fuel.', size: [2, 2], cost: { reinforced_plate: 10, rotor: 6, circuit: 6 }, power: -80, tier: 5, inputs: [], outputs: [], cat: 'power', hp: 800, heat: 4, height: 4 },
   uplink: { type: 'uplink', name: 'Grid Uplink', icon: '🔌', desc: 'Restores power to the old town grid. The lights come back on. 40 MW.', size: [3, 3], cost: { modular_frame: 10, cable: 60, steel_ingot: 40 }, power: 40, tier: 5, inputs: [], outputs: [], cat: 'special', hp: 1200, heat: 2, height: 9 },
 };
 
@@ -102,7 +115,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'm1', name: 'Foothold', desc: 'Scavenge the town to bootstrap power and smelting.', cost: { plank: 30, nails: 60, scrap_metal: 20, electronics: 6 }, unlocks: ['biomass', 'power_pole', 'miner', 'smelter', 'belt', 'storage', 'floodlight'] },
   { id: 'm2', name: 'Industry', desc: 'Refined metal opens real manufacturing.', cost: { iron_ingot: 60, copper_ingot: 30, sheet_metal: 6 }, unlocks: ['constructor', 'coal_gen', 'splitter', 'merger', 'electric_fence', 'metal_foundation', 'metal_wall', 'metal_wall_door', 'gate', 'watchtower'] },
   { id: 'm3', name: 'Fortify', desc: 'Automated defences and complex parts.', cost: { iron_plate: 80, screws: 200, wire: 80, cable: 30 }, unlocks: ['assembler', 'turret', 'solar', 'foundry', 'battery', 'concrete_wall'] },
-  { id: 'm4', name: 'Automation', desc: 'Scale up. Reach out to other survivors.', cost: { reinforced_plate: 30, rotor: 20, circuit: 20, concrete: 60 }, unlocks: ['belt2', 'miner2', 'wind_turbine', 'greenhouse', 'radio_tower'] },
-  { id: 'm5', name: 'Rekindle', desc: 'Restore the grid. Begin the search for a cure.', cost: { modular_frame: 20, steel_ingot: 80, circuit: 50, radio_parts: 4 }, unlocks: ['lab', 'uplink'] },
+  { id: 'm4', name: 'Automation', desc: 'Scale up. Reach out to other survivors.', cost: { reinforced_plate: 30, rotor: 20, circuit: 20, concrete: 60 }, unlocks: ['belt2', 'miner2', 'wind_turbine', 'greenhouse', 'radio_tower', 'water_pump', 'pipe', 'fluid_tank', 'packager'] },
+  { id: 'm5', name: 'Rekindle', desc: 'Restore the grid. Begin the search for a cure.', cost: { modular_frame: 20, steel_ingot: 80, circuit: 50, radio_parts: 4 }, unlocks: ['lab', 'uplink', 'oil_pump', 'refinery', 'fuel_gen'] },
   { id: 'm6', name: 'The Cure', desc: 'Synthesise the antiviral serum and broadcast the formula to the world.', cost: { serum: 10 }, unlocks: [] },
 ];

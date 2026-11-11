@@ -26,6 +26,7 @@ export const RECIPES: Recipe[] = [
   { id: 'hammer_wb', out: ['hammer', 1], inp: { scrap_metal: 2, plank: 1 }, station: 'workbench', time: 6, xp: ['engineering', 4] },
   { id: 'wrench_wb', out: ['wrench', 1], inp: { scrap_metal: 3 }, tools: ['hammer'], station: 'workbench', time: 6, xp: ['engineering', 4] },
   { id: 'fishing_rod', out: ['fishing_rod', 1], inp: { plank: 1, rope: 1, nails: 1 }, station: 'workbench', time: 6 },
+  { id: 'repair_kit', out: ['repair_kit', 1], inp: { rubber: 2, sheet_metal: 2, screws: 10 }, tools: ['wrench'], station: 'workbench', time: 10, skill: ['engineering', 2], xp: ['engineering', 10] },
   { id: 'rope', out: ['rope', 1], inp: { rag: 3 }, station: 'workbench', time: 4 },
   { id: 'sledge_wb', out: ['sledgehammer', 1], inp: { sheet_metal: 2, plank: 2, duct_tape: 1 }, tools: ['hammer'], station: 'workbench', time: 12, skill: ['engineering', 3], xp: ['engineering', 12] },
   { id: 'ammo_9mm', out: ['ammo_9mm', 15], inp: { gunpowder: 2, scrap_metal: 1 }, tools: ['screwdriver'], station: 'workbench', time: 8, skill: ['firearms', 2], xp: ['firearms', 6], tier: 3 },

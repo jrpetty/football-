@@ -10,11 +10,11 @@ import { getMaterial, getTintedMaterial } from '../render/materials';
 import { Inventory } from '../items/inventory';
 import type { QualityCfg } from '../render/renderer';
 
-export interface OreNode { id: number; type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur'; x: number; z: number; y: number; purity: number; mesh: THREE.Object3D; occupied: boolean; manualLeft: number }
+export interface OreNode { id: number; type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur' | 'f_crude'; x: number; z: number; y: number; purity: number; mesh: THREE.Object3D; occupied: boolean; manualLeft: number }
 export interface Floor { x0: number; z0: number; x1: number; z1: number; y: number; ref?: any; ramp?: { axis: 'x' | 'z'; dir: number; y0: number; y1: number } }
 export interface Drop { id: number; pos: THREE.Vector3; inv: Inventory; mesh: THREE.Object3D; age: number }
 
-const ORE_COL: Record<OreNode['type'], number> = { iron_ore: 0x9a4a32, copper_ore: 0xc0703a, coal: 0x1c1c1e, stone: 0xb9b2a2, sulfur: 0xd8c33a };
+const ORE_COL: Record<OreNode['type'], number> = { iron_ore: 0x9a4a32, copper_ore: 0xc0703a, coal: 0x1c1c1e, stone: 0xb9b2a2, sulfur: 0xd8c33a, f_crude: 0x101010 };
 
 export class World {
   layout: Layout;

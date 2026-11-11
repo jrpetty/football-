@@ -3,7 +3,7 @@ import { RNG } from '../core/util';
 
 export interface Road { ax: number; az: number; bx: number; bz: number; w: number; kind: 'highway' | 'street' | 'dirt' }
 export interface Plot { x: number; z: number; w: number; d: number; face: 0 | 1 | 2 | 3; kind: string } // face: 0:+z 1:+x 2:-z 3:-x (door side)
-export interface OreField { type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur'; x: number; z: number; purity: number }
+export interface OreField { type: 'iron_ore' | 'copper_ore' | 'coal' | 'stone' | 'sulfur' | 'f_crude'; x: number; z: number; purity: number }
 
 export const TOWN = { x0: -150, x1: 150, z0: -120, z1: 120, h: 3 };
 export const LAKE = { x: -235, z: 205, r: 62, level: -0.8 };
@@ -89,6 +89,9 @@ export function buildLayout(seed: number) {
     { type: 'copper_ore', x: 200, z: -300, purity: 1 },
     { type: 'iron_ore', x: 330, z: -200, purity: 2 },
     { type: 'stone', x: -300, z: -300, purity: 1 },
+    { type: 'f_crude', x: 150, z: -318, purity: 1 },
+    { type: 'f_crude', x: -310, z: 130, purity: 1 },
+    { type: 'f_crude', x: 318, z: 60, purity: 2 },
   ];
   return { roads, plots, ores };
 }

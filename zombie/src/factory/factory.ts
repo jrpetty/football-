@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { GRID, tileOf, clamp, RNG } from '../core/util';
 import { MACHINES, MRECIPES, MachineDef, MILESTONES, MRecipe } from './defs';
 import { buildMachineModel } from '../models/machines';
+import { buildFluidModel, pipeGeometries, FluidModelId } from '../models/fluids';
+const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager']);
+export interface FluidNet { id: number; fluid: string | null; amount: number; cap: number; pipes: number[]; machines: Machine[] }
 import { World, OreNode } from '../world/world';
 import { Inventory } from '../items/inventory';
 import { item } from '../items/items';
@@ -19,6 +22,7 @@ export interface Machine {
   progress: number; powered: boolean; running: boolean; fuel: number; inv: Inventory | null; net: number;
   items: BeltItem[]; dir: [number, number]; rr: number; node: OreNode | null; box: Box | null; emitter: Emitter | null;
   yaw: number; pitch: number; cooldown: number; target: any; senseT: number; x: number; z: number; destroyed?: boolean; tripReset?: boolean; status: string; plinth: THREE.Object3D | null; loopId: string | null;
+  fnets?: FluidNet[];
 }
 interface Net { id: number; supply: number; demand: number; tripped: boolean; battery: number; batteryCap: number; members: Machine[] }
 
@@ -57,6 +61,10 @@ export class Factory {
   private itemMeshes: THREE.InstancedMesh[] = [];
   private cables: THREE.LineSegments;
   private dirtyPower = true; private dirtyBelts = true;
+  pipes = new Map<number, { tx: number; tz: number; y: number }>();
+  fnets: FluidNet[] = [];
+  private dirtyFluids = true;
+  private pipeMeshes: THREE.InstancedMesh[] = [];
   private tmpM = new THREE.Matrix4(); private tmpQ = new THREE.Quaternion(); private tmpV = new THREE.Vector3(); private tmpS = new THREE.Vector3(1, 1, 1);
   private rng = new RNG(4242);
   engineering = 0; // skill level, speeds machines
@@ -86,6 +94,10 @@ export class Factory {
       im.count = 0; im.castShadow = true; im.frustumCulled = false;
       im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(4000 * 3), 3);
       this.group.add(im); this.itemMeshes.push(im);
+    }
+    const pg = pipeGeometries();
+    for (const [geo, mat] of [[pg.node, pg.mat], [pg.post, pg.postMat], [pg.arm, pg.mat]] as [THREE.BufferGeometry, THREE.Material][]) {
+      const im = new THREE.InstancedMesh(geo, mat, 4000); im.count = 0; im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; this.group.add(im); this.pipeMeshes.push(im);
     }
     this.cables = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x111111 }));
     this.cables.frustumCulled = false;
@@ -124,8 +136,17 @@ export class Factory {
     const def = MACHINES[type];
     for (const k of this.footprint(type, cx, cz, rot)) if (this.tiles.has(k)) return { ok: false, reason: 'Blocked by another machine' };
     const half = Math.max(def.size[0], def.size[1]) * GRID / 2;
+    if (type === 'pipe') { const tx = tileOf(cx), tz = tileOf(cz); if (this.pipes.has(tkey(tx, tz))) return { ok: false, reason: 'Pipe already here' }; const mm = this.tiles.get(tkey(tx, tz)); if (mm && !mm.type.startsWith('belt')) return { ok: false, reason: 'Blocked by a machine' }; return { ok: true }; }
+    for (const k of this.footprint(type, cx, cz, rot)) if (this.pipes.has(k)) return { ok: false, reason: 'Blocked by a pipe' };
+    if (type === 'oil_pump') {
+      const node = this.world.ores.find(o => o.type === 'f_crude' && Math.abs(o.x - cx) < 0.5 && Math.abs(o.z - cz) < 0.5);
+      if (!node) return { ok: false, reason: 'Centre it on an oil deposit' };
+      if (node.occupied) return { ok: false, reason: 'Deposit already tapped' };
+      return { ok: true, node };
+    }
+    if (type === 'water_pump') { if (this.world.waterDepth(cx, cz) < 0.3) return { ok: false, reason: 'Must be placed in the lake' }; return { ok: true }; }
     if (type === 'miner' || type === 'miner2') {
-      const node = this.world.ores.find(o => Math.abs(o.x - cx) < 0.5 && Math.abs(o.z - cz) < 0.5);
+      const node = this.world.ores.find(o => o.type !== 'f_crude' && Math.abs(o.x - cx) < 0.5 && Math.abs(o.z - cz) < 0.5);
       if (!node) return { ok: false, reason: 'Miners must be centred on an ore deposit' };
       if (node.occupied) return { ok: false, reason: 'Deposit already has a miner' };
       return { ok: true, node };
@@ -160,7 +181,7 @@ export class Factory {
     if (type === 'greenhouse') m.recipe = m.recipe ?? 'grow_potato';
     for (const k of tiles) this.tiles.set(k, m);
     if (!isBelt) {
-      const obj = buildMachineModel(type as any);
+      const obj = FLUID_MODELS.has(type) ? buildFluidModel(type as FluidModelId) : buildMachineModel(type as any);
       obj.position.set(cx, y, cz); obj.rotation.y = rot * Math.PI / 2;
       // clone status light materials per machine (models already clone but be safe)
       this.group.add(obj); m.obj = obj;
@@ -187,6 +208,8 @@ export class Factory {
       const node = this.world.ores.find(o => Math.abs(o.x - cx) < 0.5 && Math.abs(o.z - cz) < 0.5) ?? null;
       m.node = node; if (node) node.occupied = true;
     }
+    if (type === 'oil_pump') { const node = this.world.ores.find(o => o.type === 'f_crude' && Math.abs(o.x - cx) < 0.5 && Math.abs(o.z - cz) < 0.5) ?? null; m.node = node; if (node) node.occupied = true; }
+    if (FLUID_MODELS.has(type)) this.dirtyFluids = true;
     if (type === 'hub') this.hub = m;
     this.machines.push(m);
     this.dirtyPower = true;
@@ -204,6 +227,7 @@ export class Factory {
     if (m === this.hub) this.hub = null;
     this.machines.splice(this.machines.indexOf(m), 1);
     this.dirtyPower = true; if (m.type.startsWith('belt')) this.dirtyBelts = true;
+    if (FLUID_MODELS.has(m.type)) this.dirtyFluids = true;
   }
   /** all items held by a machine (for refunds/drops) */
   contents(m: Machine): Inventory {
@@ -323,6 +347,7 @@ export class Factory {
   // ------------------------------------------------------------------ update
   update(dt: number, ctx: { daylight: number; overcast: number; wind: number; playerPos: THREE.Vector3; zombies: any; particles: any; hours: number; day: number; onDrop: (p: THREE.Vector3) => void }) {
     if (this.dirtyPower) this.rebuildPower();
+    if (this.dirtyFluids) this.rebuildFluids();
     const speedMul = 1 + this.engineering * 0.04;
     // ---- power accounting
     let batteryStore = 0;
@@ -370,12 +395,23 @@ export class Factory {
           const tot = Object.values(m.outBuf).reduce((a, b) => a + b, 0);
           if (tot < 40) { running = true; m.progress += dt * (t === 'miner2' ? 1 : 0.5) * m.node.purity * speedMul; while (m.progress >= 1) { m.progress -= 1; m.outBuf[m.node.type] = (m.outBuf[m.node.type] ?? 0) + 1; } }
         }
-      } else if (['smelter', 'constructor', 'assembler', 'foundry', 'lab', 'greenhouse'].includes(t)) {
+      } else if (t === 'water_pump' || t === 'oil_pump') {
+        if (m.powered && (t === 'water_pump' || m.node)) {
+          const fl = t === 'water_pump' ? 'f_water' : 'f_crude';
+          const amt = (t === 'water_pump' ? 2 : 1 * (m.node?.purity ?? 1)) * dt * speedMul;
+          running = this.pushFluid(m, fl, amt) > 0;
+        }
+      } else if (t === 'fluid_tank') { running = false;
+      } else if (['smelter', 'constructor', 'assembler', 'foundry', 'lab', 'greenhouse', 'refinery', 'packager'].includes(t)) {
         const r = this.recipe(m);
         if (r && m.powered && this.canRun(m)) {
           running = true;
           m.progress += dt * speedMul / r.time;
-          if (m.progress >= 1) { m.progress = 0; for (const k in r.inp) m.inBuf[k] -= r.inp[k]; m.outBuf[r.out[0]] = (m.outBuf[r.out[0]] ?? 0) + r.out[1]; }
+          if (m.progress >= 1) {
+            m.progress = 0; for (const k in r.inp) m.inBuf[k] -= r.inp[k];
+            if (r.fluidIn) this.takeFluid(m, r.fluidIn[0], r.fluidIn[1]);
+            if (r.fluidOut) this.pushFluid(m, r.fluidOut[0], r.fluidOut[1]); else m.outBuf[r.out[0]] = (m.outBuf[r.out[0]] ?? 0) + r.out[1];
+          }
         }
       } else if (t === 'splitter' || t === 'merger') {
         if ((m as any).held) {
@@ -449,6 +485,7 @@ export class Factory {
   }
 
   private refuel(m: Machine): boolean {
+    if (m.type === 'fuel_gen') { if (this.takeFluid(m, 'f_fuel', 1) >= 1) { m.fuel += 160; return true; } return false; }
     if (!m.inv) return false;
     for (const s of m.inv.stacks) {
       const f = item(s.id).fuel; if (!f) continue;
@@ -460,6 +497,8 @@ export class Factory {
   private canRun(m: Machine) {
     const r = this.recipe(m); if (!r) return false;
     for (const k in r.inp) if ((m.inBuf[k] ?? 0) < r.inp[k]) return false;
+    if (r.fluidIn && this.fluidAvail(m, r.fluidIn[0]) < r.fluidIn[1]) return false;
+    if (r.fluidOut && !this.fluidRoom(m, r.fluidOut[0], r.fluidOut[1])) return false;
     return (m.outBuf[r.out[0]] ?? 0) < 60;
   }
   private turret(m: Machine, dt: number, ctx: any): boolean {
@@ -601,9 +640,82 @@ export class Factory {
 
   netOf(m: Machine) { return m.net >= 0 ? this.nets[m.net] : null; }
 
+  // ------------------------------------------------------------------ fluids
+  addPipe(tx: number, tz: number) {
+    const k = tkey(tx, tz); if (this.pipes.has(k)) return;
+    this.pipes.set(k, { tx, tz, y: this.world.groundY((tx + 0.5) * GRID, (tz + 0.5) * GRID) });
+    this.dirtyFluids = true;
+  }
+  removePipe(tx: number, tz: number) { if (this.pipes.delete(tkey(tx, tz))) this.dirtyFluids = true; }
+  pipeAt(x: number, z: number) { const tx = tileOf(x), tz = tileOf(z); return this.pipes.has(tkey(tx, tz)) ? { kind: 'pipe' as const, tx, tz, cx: (tx + 0.5) * GRID, cz: (tz + 0.5) * GRID } : null; }
+  private rebuildFluids() {
+    this.dirtyFluids = false;
+    const old = this.fnets;
+    const seen = new Set<number>(); this.fnets = [];
+    for (const m of this.machines) m.fnets = [];
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const [k, pp] of this.pipes) {
+      if (seen.has(k)) continue;
+      const net: FluidNet = { id: this.fnets.length, fluid: null, amount: 0, cap: 0, pipes: [], machines: [] };
+      const stack = [pp]; seen.add(k);
+      while (stack.length) {
+        const c = stack.pop()!; const ck = tkey(c.tx, c.tz); net.pipes.push(ck); net.cap += 40;
+        for (const [dx, dz] of dirs) {
+          const nk = tkey(c.tx + dx, c.tz + dz);
+          const np = this.pipes.get(nk); if (np && !seen.has(nk)) { seen.add(nk); stack.push(np); }
+          const m = this.tiles.get(nk);
+          if (m && FLUID_MODELS.has(m.type) && !net.machines.includes(m)) { net.machines.push(m); m.fnets!.push(net); if (m.type === 'fluid_tank') net.cap += 600; }
+        }
+      }
+      // carry over contents from the previous network that shared pipes
+      const prev = old.find(o => o.pipes.some(p => net.pipes.includes(p)));
+      if (prev) { net.fluid = prev.fluid; net.amount = Math.min(net.cap, prev.amount); }
+      this.fnets.push(net);
+    }
+    this.renderPipes();
+  }
+  private pushFluid(m: Machine, fluid: string, amt: number): number {
+    for (const n of m.fnets ?? []) {
+      if (n.fluid !== null && n.fluid !== fluid) continue;
+      const k = Math.min(amt, n.cap - n.amount); if (k <= 0) continue;
+      n.fluid = fluid; n.amount += k; return k;
+    }
+    return 0;
+  }
+  private fluidRoom(m: Machine, fluid: string, amt: number) { return (m.fnets ?? []).some(n => (n.fluid === null || n.fluid === fluid) && n.cap - n.amount >= amt); }
+  fluidAvail(m: Machine, fluid: string) { let a = 0; for (const n of m.fnets ?? []) if (n.fluid === fluid) a += n.amount; return a; }
+  private takeFluid(m: Machine, fluid: string, amt: number): number {
+    let got = 0;
+    for (const n of m.fnets ?? []) {
+      if (n.fluid !== fluid) continue;
+      const k = Math.min(amt - got, n.amount); n.amount -= k; got += k; if (n.amount <= 0.001) { n.amount = 0; n.fluid = null; }
+      if (got >= amt) break;
+    }
+    return got;
+  }
+  private renderPipes() {
+    const [node, post, arm] = this.pipeMeshes; let n = 0, a = 0;
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
+    for (const [, p] of this.pipes) {
+      const cx = (p.tx + 0.5) * GRID, cz = (p.tz + 0.5) * GRID;
+      V.set(cx, p.y, cz); Q.identity(); M.compose(V, Q, S);
+      if (n < 4000) { node.setMatrixAt(n, M); post.setMatrixAt(n, M); n++; }
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nk = tkey(p.tx + dx, p.tz + dz);
+        const m = this.tiles.get(nk);
+        if (!this.pipes.has(nk) && !(m && FLUID_MODELS.has(m.type))) continue;
+        Q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(dx, dz)); M.compose(V, Q, S);
+        if (a < 4000) arm.setMatrixAt(a++, M);
+      }
+    }
+    node.count = n; post.count = n; arm.count = a;
+    for (const im of this.pipeMeshes) im.instanceMatrix.needsUpdate = true;
+  }
+
   toJSON() {
     return {
       tier: this.tier, progress: this.milestoneProgress, unlocked: [...this.unlocked], dropDay: this.dropDay, nets: this.nets.map(n => n.battery),
+      pipes: [...this.pipes.values()].map(p => [p.tx, p.tz]), fnets: this.fnets.map(n => [n.pipes[0], n.fluid, n.amount]),
       machines: this.machines.map(m => ({ type: m.type, cx: m.cx, cz: m.cz, rot: m.rot, hp: m.hp, recipe: m.recipe, inBuf: m.inBuf, outBuf: m.outBuf, fuel: m.fuel, inv: m.inv?.stacks ?? null, items: m.items, held: (m as any).held ?? null })),
     };
   }
@@ -617,6 +729,9 @@ export class Factory {
       if (s.inv && m.inv) m.inv.load(s.inv);
       if (s.held) (m as any).held = s.held;
     }
+    for (const [tx, tz] of o.pipes ?? []) this.addPipe(tx, tz);
+    this.rebuildFluids();
+    for (const [k, fl, amt] of o.fnets ?? []) { const n = this.fnets.find(q => q.pipes.includes(k)); if (n) { n.fluid = fl; n.amount = amt; } }
     this.rebuildPower();
     (o.nets ?? []).forEach((b: number, i: number) => { if (this.nets[i]) this.nets[i].battery = b; });
   }

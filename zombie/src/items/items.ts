@@ -112,6 +112,12 @@ const I: ItemDef[] = [
   { id: 'circuit', name: 'Circuit Board', icon: '💾', cat: 'part', weight: 0.2, stack: 100, desc: 'Electronic logic.' },
   { id: 'gunpowder', name: 'Gunpowder', icon: '🧂', cat: 'part', weight: 0.1, stack: 200, desc: 'Coal and sulfur. Handle with care.' },
   { id: 'modular_frame', name: 'Modular Frame', icon: '🔲', cat: 'part', weight: 3, stack: 50, desc: 'Structural frame for advanced builds.' },
+  { id: 'plastic', name: 'Plastic', icon: '🟦', cat: 'part', weight: 0.3, stack: 200, desc: 'Refined from crude oil.' },
+  { id: 'rubber', name: 'Rubber', icon: '⚫', cat: 'part', weight: 0.4, stack: 200, desc: 'Refined from crude oil.' },
+  { id: 'repair_kit', name: 'Vehicle Repair Kit', icon: '🧰', cat: 'tool', weight: 3, stack: 5, desc: 'Use next to a vehicle to restore 50% condition.' },
+  { id: 'f_water', name: 'Water (fluid)', icon: '💧', cat: 'resource', weight: 0, stack: 1, desc: 'Pumped water.' },
+  { id: 'f_crude', name: 'Crude Oil', icon: '🛢️', cat: 'resource', weight: 0, stack: 1, desc: 'Pumped from an oil deposit.' },
+  { id: 'f_fuel', name: 'Fuel (fluid)', icon: '⛽', cat: 'resource', weight: 0, stack: 1, desc: 'Refined fuel.' },
   { id: 'zombie_tissue', name: 'Infected Tissue', icon: '🧫', cat: 'misc', weight: 0.1, stack: 50, desc: 'Sample from the infected. A lab could study it...' },
   // ---------- clothing ----------
   { id: 'hoodie', name: 'Hoodie', icon: '🧥', cat: 'clothing', weight: 0.6, stack: 1, cloth: { slot: 'torso', insul: 0.35, bite: 0.05, scratch: 0.2 }, desc: 'Warm-ish.' },

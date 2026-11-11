@@ -9,6 +9,7 @@ import { buildMachineModel } from '../models/machines';
 import { buildPiece } from '../models/buildpieces';
 import { buildProp } from '../models/props';
 import { buildGeneratorModel } from '../models/lowpoly';
+import { buildFluidModel, pipeGeometries } from '../models/fluids';
 import { Inventory } from '../items/inventory';
 import { audio } from '../audio/Audio';
 
@@ -49,7 +50,9 @@ export class Placer {
 
   private makeGhost(id: string): THREE.Object3D {
     let o: THREE.Object3D;
-    if (MACHINES[id]) o = buildMachineModel(id as any);
+    if (id === 'pipe') { const pg = pipeGeometries(); o = new THREE.Group(); o.add(new THREE.Mesh(pg.node, pg.mat), new THREE.Mesh(pg.post, pg.postMat)); }
+    else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager'].includes(id)) o = buildFluidModel(id as any);
+    else if (MACHINES[id]) o = buildMachineModel(id as any);
     else { const d = PIECES[id]; o = d.custom === 'generator' ? buildGeneratorModel() : d.prop ? buildProp(d.prop) : buildPiece(d.model!); }
     o.traverse(c => { const m = c as THREE.Mesh; if (m.isMesh) { m.material = this.okMat; m.castShadow = false; m.receiveShadow = false; } });
     return o;
@@ -87,6 +90,7 @@ export class Placer {
       if (hit.obj && 'ref' in hit.obj && hit.obj.ref) target = hit.obj.ref;
       if (!target && p) {
         target = this.factory.machineAtPos(p.x, p.z);
+        if (!target) { const pp = this.factory.pipeAt(p.x, p.z); if (pp) target = pp as any; }
         if (!target) target = this.base.pieces.find(q => Math.abs(q.cx - p.x) < 1 && Math.abs(q.cz - p.z) < 1 && (q.def.kind === 'foundation' || q.def.kind === 'station' || q.def.kind === 'stairs' || q.def.kind === 'roof')) ?? null;
       }
       if (target !== this.hover) {
@@ -108,14 +112,14 @@ export class Placer {
       const tx = tileOf(p.x), tz = tileOf(p.z);
       let [cx, cz] = Factory.centerFor(id, tx, tz, this.rot);
       // snap miners to nearby deposits
-      if (id === 'miner' || id === 'miner2') { const node = this.world.ores.find(o => Math.hypot(o.x - p.x, o.z - p.z) < 4 && !o.occupied); if (node) { cx = node.x; cz = node.z; } }
+      if (id === 'miner' || id === 'miner2' || id === 'oil_pump') { const node = this.world.ores.find(o => Math.hypot(o.x - p.x, o.z - p.z) < 4 && !o.occupied && (id === 'oil_pump') === (o.type === 'f_crude')); if (node) { cx = node.x; cz = node.z; } }
       const res = this.factory.canPlace(id, cx, cz, this.rot);
       if (!res.ok) { ok = false; this.reason = res.reason ?? ''; }
-      const y = id === 'belt' || id === 'belt2' ? this.world.groundY(cx, cz) : Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]].map(([a, b]) => this.world.groundY(cx + a * MACHINES[id].size[0] * 0.9, cz + b * MACHINES[id].size[1] * 0.9)));
+      const y = id === 'belt' || id === 'belt2' || id === 'pipe' ? this.world.groundY(cx, cz) : Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]].map(([a, b]) => this.world.groundY(cx + a * MACHINES[id].size[0] * 0.9, cz + b * MACHINES[id].size[1] * 0.9)));
       g.position.set(cx, y, cz); g.rotation.y = this.rot * Math.PI / 2;
       this.target = { tx: tileOf(cx), tz: tileOf(cz), cx, cz, axis: 0 };
       this.drawPorts(id, cx, cz, y);
-      if (this.dragStart && (id === 'belt' || id === 'belt2')) this.previewBelts(id, this.dragStart, { tx, tz });
+      if (this.dragStart && (id === 'belt' || id === 'belt2' || id === 'pipe')) this.previewBelts(id, this.dragStart, { tx, tz });
     } else if (def.kind === 'wall' || def.kind === 'door_wall' || def.kind === 'window_wall' || def.kind === 'gate') {
       const e = Base.nearestEdge(p.x, p.z);
       let cx = e.cx, cz = e.cz;
@@ -187,7 +191,7 @@ export class Placer {
       const g = this.makeGhost(id);
       const cx = (s.tx + 0.5) * GRID, cz = (s.tz + 0.5) * GRID;
       g.position.set(cx, this.world.groundY(cx, cz), cz); g.rotation.y = s.rot * Math.PI / 2;
-      this.setGhostMat(g, !this.factory.machineAtTile(s.tx, s.tz));
+      this.setGhostMat(g, id === 'pipe' ? this.factory.canPlace('pipe', cx, cz, 0).ok : !this.factory.machineAtTile(s.tx, s.tz));
       this.scene.add(g); this.beltGhosts.push(g);
     }
   }
@@ -196,7 +200,7 @@ export class Placer {
   begin(): { kind: string; data?: any } | null {
     if (this.dismantle) { if (this.hover) { const h = this.hover; this.clearHover(); return { kind: 'dismantle', data: h }; } return null; }
     if (!this.selected || !this.target) return null;
-    if (this.selected === 'belt' || this.selected === 'belt2') { this.dragStart = { tx: this.target.tx, tz: this.target.tz }; return { kind: 'drag' }; }
+    if (this.selected === 'belt' || this.selected === 'belt2' || this.selected === 'pipe') { this.dragStart = { tx: this.target.tx, tz: this.target.tz }; return { kind: 'drag' }; }
     if (!this.valid) { audio.play('ui_error'); return { kind: 'invalid', data: this.reason }; }
     return { kind: 'place', data: { id: this.selected, ...this.target, rot: this.rot } };
   }
@@ -205,6 +209,7 @@ export class Placer {
     if (!this.dragStart || !this.target) { this.dragStart = null; return null; }
     const path = this.beltPath(this.dragStart, { tx: this.target.tx, tz: this.target.tz });
     this.dragStart = null; this.clearBelts(); if (this.ghost) this.ghost.visible = true;
+    if (this.selected === 'pipe') return path.filter(s => this.factory.canPlace('pipe', (s.tx + 0.5) * 2, (s.tz + 0.5) * 2, 0).ok);
     return path.filter(s => !this.factory.machineAtTile(s.tx, s.tz));
   }
 }
