@@ -160,7 +160,9 @@ func add_box(mn: Vector3, mx: Vector3, tag := "", ref = null, raster := true, na
 	b.min = mn; b.max = mx; b.tag = tag; b.ref = ref
 	_boxes[b.id] = b
 	_each_cell(mn.x, mn.z, mx.x, mx.z, b.id, true)
-	if raster and mx.y > 0.6 and mn.y < 1.6:
+	# anything standing between knee and head height (above the ground it stands on) blocks the nav grid
+	var gy := height_at((mn.x + mx.x) * 0.5, (mn.z + mx.z) * 0.5)
+	if raster and mx.y > gy + 0.6 and mn.y < gy + 1.6:
 		_raster_box(b, nav_cost, ref, false)
 	return b
 
@@ -208,6 +210,14 @@ func _raster_box(b: Box, v: int, ref, clear: bool) -> void:
 				nav[i] = v
 				if ref != null and v != NAV_SOLID:
 					nav_ref[i] = ref
+
+## mark a solid box's cells as something that can be broken through (a window, say), whatever was there
+func mark_breakable(b: Box, cost: int, ref) -> void:
+	var x0 := maxi(0, int(floor(b.min.x + HALF))); var x1 := mini(NAV_N - 1, int(floor(b.max.x - 0.001 + HALF)))
+	var z0 := maxi(0, int(floor(b.min.z + HALF))); var z1 := mini(NAV_N - 1, int(floor(b.max.z - 0.001 + HALF)))
+	for x in range(x0, x1 + 1):
+		for z in range(z0, z1 + 1):
+			nav[z * NAV_N + x] = cost; nav_ref[z * NAV_N + x] = ref
 
 func _raster_circle(c: Circle, v: int) -> void:
 	var x0 := maxi(0, int(floor(c.x - c.r * 0.7 + HALF))); var x1 := mini(NAV_N - 1, int(floor(c.x + c.r * 0.7 + HALF)))

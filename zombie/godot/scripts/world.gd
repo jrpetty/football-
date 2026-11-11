@@ -234,6 +234,7 @@ func _build_town() -> void:
 		w["kind"] = "window"; w["id"] = id
 		if w.box != null:
 			w.box.ref = w
+			WorldData.mark_breakable(w.box, 45, w)      # the dead can come through a window
 	for c in containers:
 		c["kind_id"] = String(c.kind); c["kind"] = "container"
 		c["pos_v"] = Vector3(c.pos[0], c.pos[1], c.pos[2]); c["half_v"] = Vector3(c.half[0], c.half[1], c.half[2])

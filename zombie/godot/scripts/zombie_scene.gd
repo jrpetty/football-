@@ -88,12 +88,11 @@ func _ground() -> void:
 			var p := [Vector3(x0, 0, z0), Vector3(x0 + size, 0, z0), Vector3(x0 + size, 0, z0 + size), Vector3(x0, 0, z0 + size)]
 			for k in 4: p[k].y = W.height_at(p[k].x, p[k].z)
 			for k in [0, 1, 2, 0, 2, 3]:
-				st.set_color(Color(0.3, 0.33, 0.24).lerp(Color(0.36, 0.33, 0.22), W.forest_at(p[k].x, p[k].z)))
 				st.add_vertex(p[k])
 	st.generate_normals()
 	var mi := MeshInstance3D.new()
 	mi.mesh = st.commit()
-	var gm := StandardMaterial3D.new(); gm.vertex_color_use_as_albedo = true; gm.roughness = 1.0
+	var gm := StandardMaterial3D.new(); gm.albedo_color = Color(0.3, 0.33, 0.24); gm.roughness = 1.0
 	mi.material_override = gm
 	add_child(mi)
 
