@@ -11,7 +11,8 @@ import { buildProp } from '../models/props';
 import { buildGeneratorModel } from '../models/lowpoly';
 import { buildFluidModel, pipeGeometries } from '../models/fluids';
 import { Inventory } from '../items/inventory';
-import { buildLocomotive, buildWagon, trackGeometries } from '../models/trains';
+import { buildLocomotive, buildWagon, trackGeometries, buildStation } from '../models/trains';
+import { buildTownModel, TOWN_FOOT, TownModelId } from '../models/town';
 import type { Railways } from '../factory/trains';
 import { audio } from '../audio/Audio';
 
@@ -58,6 +59,8 @@ export class Placer {
     else if (id === 'freight_wagon') o = buildWagon();
     else if (id === 'pipe') { const pg = pipeGeometries(); o = new THREE.Group(); o.add(new THREE.Mesh(pg.node, pg.mat), new THREE.Mesh(pg.post, pg.postMat)); }
     else if (['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler'].includes(id)) o = buildFluidModel(id as any);
+    else if (id in TOWN_FOOT) o = buildTownModel(id as TownModelId);
+    else if (id === 'train_station') o = buildStation();
     else if (MACHINES[id]) o = buildMachineModel(id as any);
     else { const d = PIECES[id]; o = d.custom === 'generator' ? buildGeneratorModel() : d.prop ? buildProp(d.prop) : buildPiece(d.model!); }
     o.traverse(c => { const m = c as THREE.Mesh; if (m.isMesh) { m.material = this.okMat; m.castShadow = false; m.receiveShadow = false; } });

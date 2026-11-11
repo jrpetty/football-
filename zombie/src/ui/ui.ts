@@ -8,6 +8,7 @@ import { RECIPES, Recipe } from '../items/recipes';
 import { PARTS, PartId } from '../player/stats';
 import { SKILLS, TRAITS, OCCUPATIONS, SkillId } from '../player/skills';
 import { MACHINES, PIECES, MILESTONES, MRECIPES } from '../factory/defs';
+import { TOWN, JOB_INFO, LEVEL_NAMES } from '../town/town';
 import { audio } from '../audio/Audio';
 import { HALF_WORLD, WORLD_SIZE } from '../core/util';
 import { LAKE } from '../world/layout';
@@ -26,7 +27,7 @@ export class UI {
   private modal: HTMLElement | null = null;
   private sel: number | null = null;
   private selSide: 'p' | 'c' = 'p';
-  private buildCat = 'structure';
+  private buildCat = 'town';
   private refreshT = 0; private dirty = false;
   private mapCanvas: HTMLCanvasElement | null = null;
   private baseMap: HTMLCanvasElement | null = null;
@@ -121,15 +122,15 @@ export class UI {
     const e = document.createElement('div'); e.className = 'endscreen';
     const days = Math.floor(p.stats.hoursSurvived / 24), hrs = Math.floor(p.stats.hoursSurvived % 24);
     e.innerHTML = `<h1>THIS IS HOW YOU DIED</h1><div class="cause">${esc(p.name)} — ${esc(cause)}</div>
-      <div class="stats"><div>${days}d ${hrs}h<span>SURVIVED</span></div><div>${p.kills}<span>ZOMBIES KILLED</span></div><div>${this.g.stats.built}<span>THINGS BUILT</span></div><div>${this.g.factory.tier}<span>MILESTONES</span></div></div>
+      <div class="stats"><div>${days}d ${hrs}h<span>SURVIVED</span></div><div>${p.kills}<span>ZOMBIES KILLED</span></div><div>${this.g.stats.built}<span>THINGS BUILT</span></div><div>${this.g.town.residents().length}<span>RESIDENTS</span></div></div>
       <button class="btn primary" data-a="restart" style="font-size:20px;padding:12px 30px">New survivor</button>`;
     this.root.appendChild(e);
   }
   showVictory() {
     const p = this.g.player;
     const e = document.createElement('div'); e.className = 'endscreen win';
-    e.innerHTML = `<h1 style="color:var(--accent2)">CIVILISATION REKINDLED</h1><div class="cause">The serum works. The formula is broadcast on every frequency. Across the valley, lights flicker back on.</div>
-      <div class="stats"><div>${this.g.day()}<span>DAYS</span></div><div>${p.kills}<span>ZOMBIES KILLED</span></div><div>${this.g.factory.machines.length}<span>MACHINES</span></div><div>${this.g.stats.crafted}<span>CRAFTED</span></div></div>
+    e.innerHTML = `<h1 style="color:var(--accent2)">A CITY REKINDLED</h1><div class="cause">Twenty people sleep safe behind your walls. The street lights are on. Smoke rises from the mess hall chimney, and somewhere a child is laughing. The valley has a city again.</div>
+      <div class="stats"><div>${this.g.day()}<span>DAYS</span></div><div>${p.kills}<span>ZOMBIES KILLED</span></div><div>${this.g.town.residents().length}<span>RESIDENTS</span></div><div>${this.g.stats.crafted}<span>CRAFTED</span></div></div>
       <button class="btn primary" data-a="keep-playing" style="font-size:20px;padding:12px 30px">Keep building</button>`;
     this.root.appendChild(e);
   }
@@ -413,24 +414,24 @@ export class UI {
   private journalPanel() {
     const g = this.g;
     return `<div class="col"><h3>Objectives</h3><div class="scroll">${OBJECTIVES.map((o, i) => `<div class="ms ${i < g.objective ? 'done' : i === g.objective ? 'cur' : ''}"><div class="mn"><span>${i < g.objective ? '✔ ' : ''}${esc(o.title)}</span></div><div class="hint">${esc(o.desc)}</div></div>`).join('')}</div></div>
-      <div class="col" style="max-width:380px"><h3>Record</h3><div class="statgrid"><div class="k">Days survived</div><div class="v">${Math.floor(g.player.stats.hoursSurvived / 24)}</div><div class="k">Zombies killed</div><div class="v">${g.player.kills}</div><div class="k">Items crafted</div><div class="v">${g.stats.crafted}</div><div class="k">Structures built</div><div class="v">${g.stats.built}</div><div class="k">Milestones</div><div class="v">${g.factory.tier} / ${MILESTONES.length}</div><div class="k">Machines</div><div class="v">${g.factory.machines.filter(m => !m.type.startsWith('belt')).length}</div></div>
+      <div class="col" style="max-width:380px"><h3>Record</h3><div class="statgrid"><div class="k">Days survived</div><div class="v">${Math.floor(g.player.stats.hoursSurvived / 24)}</div><div class="k">Zombies killed</div><div class="v">${g.player.kills}</div><div class="k">Items crafted</div><div class="v">${g.stats.crafted}</div><div class="k">Structures built</div><div class="v">${g.stats.built}</div><div class="k">Settlement</div><div class="v">${LEVEL_NAMES[g.factory.tier]} · ${g.town.residents().length} residents</div><div class="k">Machines</div><div class="v">${g.factory.machines.filter(m => !m.type.startsWith('belt')).length}</div></div>
       <h3>Notes</h3><p class="hint" style="line-height:1.6">"Day 22. The radio says the Knox virus spreads by bite. Scratches sometimes. If you get bitten, that's it — unless someone, somewhere, builds a lab and finds a cure. The power plant on the ridge has been dark for weeks. Somebody needs to get the grid back."</p></div>`;
   }
 
   // ------------------------------------------------------------------ build menu
   private buildPanel() {
     const g = this.g; const p = g.player;
-    const cats: [string, string][] = [['structure', 'Structures'], ['station', 'Survival'], ['production', 'Production'], ['logistics', 'Logistics'], ['transport', 'Railways'], ['power', 'Power'], ['defense', 'Defence'], ['special', 'Special']];
+    const cats: [string, string][] = [['town', 'Town'], ['structure', 'Structures'], ['station', 'Survival'], ['production', 'Production'], ['logistics', 'Logistics'], ['transport', 'Railways'], ['power', 'Power'], ['defense', 'Defence'], ['special', 'Special']];
     const entries: { id: string; name: string; icon: string; desc: string; cost: Record<string, number>; tier: number; cat: string; skill?: [SkillId, number] }[] = [];
     for (const d of Object.values(PIECES)) entries.push({ id: d.id, name: d.name, icon: d.icon, desc: d.desc, cost: d.cost, tier: d.tier, cat: d.kind === 'station' ? 'station' : 'structure', skill: d.skill });
     for (const d of Object.values(MACHINES)) entries.push({ id: d.type, name: d.name, icon: d.icon, desc: d.desc + (d.power > 0 ? ` (${d.power} MW)` : d.power < 0 ? ` (+${-d.power} MW)` : ''), cost: d.cost, tier: d.tier, cat: d.type === 'spike_trap' ? 'defense' : d.cat });
     const list = entries.filter(e => e.cat === this.buildCat);
     return `<div class="panel window"><div class="top">${cats.map(([k, l]) => `<button class="tab ${k === this.buildCat ? 'on' : ''}" data-a="bcat" data-id="${k}">${l}</button>`).join('')}<button class="close" data-a="close">✕</button></div>
-      <div class="body" style="flex-direction:column"><div class="hint" style="margin-bottom:8px">Tier ${g.factory.tier} unlocked${g.settings.creative ? ' · CREATIVE (free)' : ''}. Complete milestones at the Survivor Outpost to unlock more. ${g.factory.hub ? '' : '<b style="color:var(--accent2)">Build the Survivor Outpost (Special) to start your tech tree.</b>'}</div>
+      <div class="body" style="flex-direction:column"><div class="hint" style="margin-bottom:8px">Your settlement: <b>${LEVEL_NAMES[g.factory.tier]}</b>${g.settings.creative ? ' · CREATIVE (free)' : ''}. Grow it at the Settlement Hall to unlock more. ${g.factory.hub ? '' : '<b style="color:var(--accent2)">Build the Settlement Hall (Town) to found your settlement.</b>'}</div>
       <div class="scroll"><div class="bgrid">${list.map(e => {
         const unlocked = g.factory.unlocked.has(e.id) || g.settings.creative;
         const afford = g.settings.creative || p.inv.hasAll(e.cost);
-        return `<div class="bcard ${unlocked ? '' : 'lock'}" data-a="${unlocked ? 'pick' : ''}" data-id="${e.id}" title="${esc(e.desc)}"><span class="tier">${unlocked ? '' : '🔒 '}T${e.tier}</span><div class="bi">${e.icon}</div><div class="bn">${esc(e.name)}</div><div class="bc">${unlocked ? fmtCost(e.cost, p.inv) : esc(MILESTONES.find(m => m.unlocks.includes(e.id))?.name ? 'Unlocks: ' + MILESTONES.find(m => m.unlocks.includes(e.id))!.name : '')}</div>${e.skill ? `<div class="bc">Carpentry ${e.skill[1]}</div>` : ''}${unlocked && !afford ? '<div class="bc lack">missing materials</div>' : ''}</div>`;
+        return `<div class="bcard ${unlocked ? '' : 'lock'}" data-a="${unlocked ? 'pick' : ''}" data-id="${e.id}" title="${esc(e.desc)}"><span class="tier">${unlocked ? '' : '🔒 ' + esc(LEVEL_NAMES[Math.min(e.tier, LEVEL_NAMES.length - 1)])}</span><div class="bi">${e.icon}</div><div class="bn">${esc(e.name)}</div><div class="bc">${unlocked ? fmtCost(e.cost, p.inv) : esc(MILESTONES.find(m => m.unlocks.includes(e.id))?.name ? 'Unlocks at ' + MILESTONES.find(m => m.unlocks.includes(e.id))!.name : '')}</div>${e.skill ? `<div class="bc">Carpentry ${e.skill[1]}</div>` : ''}${unlocked && !afford ? '<div class="bc lack">missing materials</div>' : ''}</div>`;
       }).join('')}</div></div></div></div>`;
   }
 
@@ -451,13 +452,25 @@ export class UI {
         <div class="statgrid" style="margin-top:8px">${ins.map(k => `<div class="k">${item(k).icon} ${esc(item(k).name)} (in)</div><div class="v">${m.inBuf[k] ?? 0} <button class="btn small" data-a="feed" data-id="${k}" ${p.inv.count(k) ? '' : 'disabled'}>Insert (${p.inv.count(k)})</button></div>`).join('')}
         ${Object.keys(m.outBuf).filter(k => m.outBuf[k] > 0).map(k => `<div class="k">${item(k).icon} ${esc(item(k).name)} (out)</div><div class="v">${m.outBuf[k]}</div>`).join('')}</div>
         <div class="btnrow"><button class="btn primary" data-a="takeout">Take output</button></div>`;
-      if (m.node) body += `<p class="hint">Deposit: ${esc(item(m.node.type).name)} (${m.node.purity > 1 ? 'pure ×2' : 'normal'}). Output exits the front port — run a belt from there.</p>`;
+      if (m.node) body += `<p class="hint">Deposit: ${esc(item(m.node.type).name)} (${m.node.purity > 1 ? 'rich seam ×2' : m.node.purity < 1 ? 'thin seam ×½' : 'normal seam'}). Output exits the front port — run a belt from there.</p>`;
     }
     if (m.inv) {
       const fuelIds = m.type === 'coal_gen' ? ['coal', 'gas_can'] : m.type === 'turret' ? ['ammo_9mm', 'ammo_rifle', 'ammo_shells'] : m.type === 'biomass' ? ['log', 'plank', 'leaves'] : [];
-      body += `<h3>${m.type === 'storage' || m.type === 'train_station' ? 'Contents' : m.type === 'turret' ? 'Ammunition' : 'Fuel'} ${m.def.power < 0 ? `<span class="hint">· burning ${Math.round(m.fuel)} MJ left</span>` : ''}</h3>
+      body += `<h3>${m.type === 'storage' || m.type === 'train_station' || m.type === 'mess_hall' || m.type === 'lumber_yard' || m.type === 'lab' || m.type === 'guard_post' ? 'Contents' : m.type === 'turret' ? 'Ammunition' : 'Fuel'} ${m.def.power < 0 ? `<span class="hint">· burning ${Math.round(m.fuel)} MJ left</span>` : ''}</h3>
         ${fuelIds.length ? `<div class="btnrow">${fuelIds.map(id => `<button class="btn small" data-a="feedinv" data-id="${id}" ${p.inv.count(id) ? '' : 'disabled'}>${item(id).icon} Add ${esc(item(id).name)} (${p.inv.count(id)})</button>`).join('')}</div>` : ''}
-        <div class="ilist" style="margin-top:6px">${m.inv.stacks.map(s => this.itemRow(s, 'm')).join('') || '<div class="hint">Empty</div>'}</div>${m.type === 'storage' || m.type === 'train_station' ? '<div class="btnrow"><button class="btn" data-a="openstore">Open as container</button></div>' : ''}`;
+        <div class="ilist" style="margin-top:6px">${m.inv.stacks.map(s => this.itemRow(s, 'm')).join('') || '<div class="hint">Empty</div>'}</div>${m.type === 'storage' || m.type === 'train_station' || m.type === 'mess_hall' || m.type === 'lumber_yard' || m.type === 'lab' || m.type === 'guard_post' ? '<div class="btnrow"><button class="btn" data-a="openstore">Open as container</button></div>' : ''}`;
+    }
+    if (TOWN[m.type] && m.type !== 'hub') {
+      const T = g.town; const folk = T.residents();
+      const lives = folk.filter(s => s.home === m.id), works = folk.filter(s => s.work === m.id);
+      const info = TOWN[m.type];
+      let tb = '';
+      if (info.beds) tb += `<div class="k">Residents</div><div class="v">${lives.map(s => esc(s.name)).join(', ') || '<span class="hint">empty</span>'} (${lives.length}/${info.beds})</div>`;
+      if (info.job) tb += `<div class="k">${JOB_INFO[info.job].icon} ${JOB_INFO[info.job].name}${(info.slots ?? 1) > 1 ? 's' : ''}</div><div class="v">${works.map(s => esc(s.name)).join(', ') || '<span class="lack">nobody — an idle resident will take the job</span>'} (${works.length}/${info.slots ?? 1})</div>`;
+      if (m.type === 'water_tower') tb += `<div class="k">Water</div><div class="v">${Math.round((m as any).water ?? 0)} / 400 L ${m.fnets?.length ? '<span class="have">· piped</span>' : '<span class="hint">· fills with rain; pipe in from a water pump for more</span>'}</div>`;
+      if (m.type === 'guard_post') tb += `<div class="k">Ammo</div><div class="v">${m.inv?.count('ammo_9mm') ?? 0} × 9mm · ${m.inv?.count('ammo_rifle') ?? 0} × rifle <button class="btn small" data-a="feedinv" data-id="ammo_9mm" ${p.inv.count('ammo_9mm') ? '' : 'disabled'}>Add 9mm</button> <button class="btn small" data-a="feedinv" data-id="ammo_rifle" ${p.inv.count('ammo_rifle') ? '' : 'disabled'}>Add rifle</button></div>`;
+      if (m.type === 'mess_hall') tb += `<div class="k">Kitchen</div><div class="v">${m.inv?.stacks.filter(s => T.isMeal(s.id)).reduce((a, s) => a + s.n, 0) ?? 0} hot meals ready · cooks any stove recipe from what's stored here</div>`;
+      body = `<div class="statgrid" style="margin-bottom:8px">${tb}</div>` + body;
     }
     if (m.type === 'train_station') {
       const st = m as any; const rails = g.rails; const stop = rails.stopTile(m);
@@ -496,16 +509,45 @@ export class UI {
       <div class="col"><h3>Schedule</h3><div class="scroll">${sched || '<div class="hint">Empty. Add at least two stations — the train loops through them in order.</div>'}
         <h3 style="margin-top:12px">Add stop</h3>${sts.map(m => `<div class="req"><span style="flex:1">🚉 ${esc((m as any).stName)} <span class="hint">· ${(m as any).stMode} · ${Math.round(Math.hypot(m.cx - p.pos.x, m.cz - p.pos.z))} m away${g.rails.stopTile(m) ? '' : ' · <span class="lack">no track</span>'}</span></span><button class="btn small" data-a="tadd" data-id="${m.id}">＋ Add</button></div>`).join('') || '<div class="hint">Build a Freight Station (B → Railways) beside your track.</div>'}</div></div></div></div>`;
   }
+  private hubTab: 'level' | 'people' = 'level';
   private hubPanel() {
-    const g = this.g; const p = g.player;
-    return `<div class="panel window" style="width:min(860px,96vw)"><div class="top"><h2 style="padding:0 8px">🏚️ Survivor Outpost — Milestones</h2><button class="close" data-a="close">✕</button></div><div class="body" style="flex-direction:column"><div class="scroll">
-      <p class="hint">Deliver parts by hand or with a conveyor into the Outpost's rear port. Each milestone unlocks new buildings. Base heat: <b>${(g.factory.heat + g.combatHeat).toFixed(0)}</b> — running machines make noise that draws hordes.</p>
-      ${MILESTONES.map((ms, i) => {
-        const done = i < g.factory.tier, cur = i === g.factory.tier;
-        return `<div class="ms ${done ? 'done' : cur ? 'cur' : ''}"><div class="mn"><span>${done ? '✔ ' : cur ? '▶ ' : '🔒 '}Tier ${i + 1}: ${esc(ms.name)}</span><span class="hint">${ms.unlocks.map(u => (MACHINES[u] ?? PIECES[u])?.icon ?? '').join(' ')}</span></div><div class="hint">${esc(ms.desc)}</div>
-        ${cur ? Object.entries(ms.cost).map(([k, n]) => { const have = g.factory.milestoneProgress[k] ?? 0; return `<div class="req"><span style="width:200px">${item(k).icon} ${esc(item(k).name)}</span><div class="bar"><div style="width:${have / n * 100}%"></div></div><span>${have} / ${n}</span><button class="btn small" data-a="deposit" data-id="${k}" ${p.inv.count(k) && have < n ? '' : 'disabled'}>Deliver (${p.inv.count(k)})</button></div>`; }).join('') : ''}
-        ${!done ? `<div class="hint" style="margin-top:4px">Unlocks: ${ms.unlocks.map(u => esc((MACHINES[u] ?? PIECES[u])?.name ?? u)).join(', ') || 'Victory'}</div>` : ''}</div>`;
-      }).join('')}</div></div></div>`;
+    const g = this.g; const p = g.player; const T = g.town; const st = T.computeStats();
+    const lvl = g.factory.tier; const ms = MILESTONES[lvl];
+    const bar = (v: number, max: number, col = 'var(--accent)') => `<div class="bar" style="flex:1"><div style="width:${Math.max(0, Math.min(100, v / max * 100))}%;background:${col}"></div></div>`;
+    const happyCol = (h: number) => h >= 65 ? 'var(--good)' : h >= 40 ? 'var(--accent2)' : 'var(--bad)';
+    const tabs = `<button class="tab ${this.hubTab === 'level' ? 'on' : ''}" data-a="hubtab" data-id="level">Settlement</button><button class="tab ${this.hubTab === 'people' ? 'on' : ''}" data-a="hubtab" data-id="people">Residents (${st.residents})</button>`;
+    let body = '';
+    if (this.hubTab === 'level') {
+      const req = ms?.req; const miss = T.missing(req);
+      const reqRows = req ? ([
+        ['residents', '👥 Residents', st.residents, req.residents], ['beds', '🛏 Beds', st.beds, req.beds], ['food', '🍞 Food in store', st.food, req.food], ['water', '💧 Days of water', Math.floor(st.water), req.water],
+        ['defence', '🛡 Defences', st.defence, req.defence], ['power', '⚡ Power (MW)', Math.round(st.power), req.power], ['happiness', '🙂 Happiness %', Math.round(st.happiness), req.happiness],
+      ] as [string, string, number, number | undefined][]).filter(r => r[3]).map(([, l, v, n]) => `<div class="req"><span style="width:180px">${l}</span>${bar(v, n!, v >= n! ? 'var(--good)' : 'var(--accent)')}<span style="width:90px;text-align:right">${v} / ${n}</span><span style="width:24px">${v >= n! ? '✔' : ''}</span></div>`).join('')
+        + (req.grid ? `<div class="req"><span style="width:180px">💡 Town grid</span><span style="flex:1">${g.factory.townPowered ? '<span class="have">restored ✔</span>' : '<span class="lack">dark — power the Grid Uplink</span>'}</span></div>` : '') : '';
+      const supply = ms ? Object.entries(ms.cost).map(([k, n]) => { const have = g.factory.milestoneProgress[k] ?? 0; return `<div class="req"><span style="width:200px">${item(k).icon} ${esc(item(k).name)}</span>${bar(have, n)}<span style="width:90px;text-align:right">${have} / ${n}</span><button class="btn small" data-a="deposit" data-id="${k}" ${p.inv.count(k) && have < n ? '' : 'disabled'}>Deliver (${p.inv.count(k)})</button></div>`; }).join('') : '';
+      body = `<div class="statgrid" style="margin-bottom:10px"><div class="k">Settlement</div><div class="v"><b style="font-size:18px">${LEVEL_NAMES[lvl]}</b></div>
+          <div class="k">Residents</div><div class="v">${st.residents} · ${st.beds} beds${st.homeless ? ` · <span class="lack">${st.homeless} homeless</span>` : ''}</div>
+          <div class="k">Happiness</div><div class="v" style="display:flex;gap:8px;align-items:center">${bar(st.happiness, 100, happyCol(st.happiness))}<span>${Math.round(st.happiness)}%</span></div>
+          <div class="k">Stores</div><div class="v">🍞 ${st.food} food · 💧 ${Math.floor(st.water)} days water · 🛡 ${st.defence} defences</div>
+          <div class="k">Noise</div><div class="v">${(g.factory.heat + g.combatHeat).toFixed(0)} <span class="hint">— running machines draw hordes</span></div></div>
+        ${ms ? `<h3>Next: ${esc(ms.name)}</h3><p class="hint">${esc(ms.desc)}</p><h3>Your town needs</h3>${reqRows}<h3>Supplies to deliver <span class="hint">· by hand or conveyor into the hall's rear</span></h3>${supply}
+          <div class="hint" style="margin-top:6px">${g.factory.suppliesDone() && miss.length ? `<span class="lack">Supplies delivered — still need: ${esc(miss.join(', '))}</span>` : ''}</div>
+          <div class="hint" style="margin-top:6px">Unlocks: ${ms.unlocks.map(u => `${(MACHINES[u] ?? PIECES[u])?.icon ?? ''} ${esc((MACHINES[u] ?? PIECES[u])?.name ?? u)}`).join(', ') || 'the end of the beginning'}</div>`
+          : `<h3>A city again.</h3><p class="hint">Keep your people fed, watered, housed and safe. Hordes will keep coming.</p>`}
+        <h3 style="margin-top:14px">The road</h3><div class="hint">${LEVEL_NAMES.map((n, i) => i < lvl ? `<span class="have">${n}</span>` : i === lvl ? `<b>${n}</b>` : n).join(' → ')}</div>
+        <p class="hint" style="margin-top:10px">Newcomers arrive each morning when you have free beds, food in store and a happy town (a powered Radio Tower brings more). People leave if they go hungry for 3 days, thirsty for 2, or are miserable.</p>`;
+    } else {
+      const folk = T.residents();
+      const jobs = Object.keys(JOB_INFO) as (keyof typeof JOB_INFO)[];
+      const bName = (id: number) => { const m = g.factory.machines.find(q => q.id === id); return m ? `${m.def.icon} ${esc(m.def.name)}` : '<span class="lack">none</span>'; };
+      body = `<div class="hint" style="margin-bottom:6px">Jobs: ${jobs.map(j => `${JOB_INFO[j].icon} ${st.jobs[j] ?? 0}`).join(' · ')} — residents pick jobs at open workplaces on their own; pin one by choosing it below.</div>
+        <div class="ilist">${folk.map(s => `<div class="irow" style="flex-wrap:wrap;gap:6px;cursor:default"><span class="ic">${s.order === 'work' ? JOB_INFO[s.job].icon : s.order === 'follow' ? '🚶' : s.order === 'scavenge' ? '🎒' : '⏸'}</span><span class="nm" style="min-width:110px"><b>${esc(s.name)}</b> <span class="hint">${s.role}</span></span>
+          <span class="hint" style="min-width:150px">${s.order === 'work' ? `🏠 ${s.home >= 0 ? bName(s.home) : '<span class="lack">homeless</span>'}` : s.order === 'scavenge' ? `scavenging · back in ${Math.ceil(s.away / 60)} h` : s.order === 'follow' ? 'following you' : 'waiting'}</span>
+          <span style="width:90px;display:flex;align-items:center;gap:4px" title="happiness">${bar(s.happy, 100, happyCol(s.happy))}</span><span class="hint" style="width:70px">❤ ${Math.round(s.hp)}%${s.hungry ? ' 🍽' : ''}${s.thirsty ? ' 💧' : ''}</span>
+          ${s.order === 'work' ? `<span style="display:flex;gap:2px">${jobs.map(j => `<button class="btn small ${s.job === j ? 'primary' : ''}" data-a="setjob" data-id="${s.id}" data-job="${j}" title="${esc(JOB_INFO[j].name + ': ' + JOB_INFO[j].desc)}">${JOB_INFO[j].icon}</button>`).join('')}</span>` : `<button class="btn small" data-a="sendtown" data-id="${s.id}">Send to town</button>`}</div>`).join('') || '<div class="hint">Nobody lives here yet. Find survivors holed up around the map, win them over with food, and send them home.</div>'}</div>
+        <p class="hint" style="margin-top:8px">${jobs.map(j => `${JOB_INFO[j].icon} <b>${JOB_INFO[j].name}</b>: ${esc(JOB_INFO[j].desc)}`).join('<br>')}</p>`;
+    }
+    return `<div class="panel window" style="width:min(900px,96vw)"><div class="top"><h2 style="padding:0 8px">🔔 Settlement Hall</h2>${tabs}<button class="close" data-a="close">✕</button></div><div class="body" style="flex-direction:column"><div class="scroll">${body}</div></div></div>`;
   }
   private campfirePanel() {
     const g = this.g; const pc = g.openPiece; if (!pc?.fire) return '';
@@ -574,6 +616,9 @@ export class UI {
       case 'openstore': if (g.openMachine?.inv) { const m = g.openMachine; this.open = null; this.panelEl?.remove(); this.panelEl = null; g.openLoot(m.inv!, m.def.name, m); } break;
       case 'fuse': if (g.openMachine) g.factory.resetFuse(g.openMachine); this.refresh(); break;
       case 'deposit': g.depositHub(t.dataset.id!); break;
+      case 'hubtab': this.hubTab = t.dataset.id as any; this.renderPanel(); break;
+      case 'setjob': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s) { g.town.setJob(s, t.dataset.job as any); this.refresh(); } break; }
+      case 'sendtown': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s && g.factory.hub) { s.order = 'work'; s.away = 0; this.refresh(); } break; }
       case 'stmode': if (g.openMachine) { (g.openMachine as any).stMode = t.dataset.id; this.refresh(); } break;
       case 'tadd': if (g.openTrain) { g.openTrain.schedule.push(Number(t.dataset.id)); this.refresh(); } break;
       case 'tdel': if (g.openTrain) { g.openTrain.schedule.splice(Number(t.dataset.i), 1); this.refresh(); } break;

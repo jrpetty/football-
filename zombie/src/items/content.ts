@@ -177,15 +177,54 @@ Object.assign(MACHINES, {
   freight_wagon: { type: 'freight_wagon', name: 'Freight Wagon', icon: '🚃', desc: 'Carries 600 kg. Place on track behind a locomotive.', size: [1, 1], cost: { steel_beam: 4, iron_plate: 20 }, power: 0, tier: 5, inputs: [], outputs: [], cat: 'transport', hp: 1000, heat: 0, height: 2.5 },
 });
 
-// ---- tech tree: 7 tiers
+// ---- town buildings: homes, food, water, jobs
+Object.assign(MACHINES, {
+  shelter_house: { type: 'shelter_house', name: 'Shelter House', icon: '🏠', desc: 'A patched-together home for 4 residents. People without a bed are miserable — and nobody new moves in without one.', size: [2, 2], cost: { plank: 16, nails: 24, scrap_metal: 4 }, power: 0, tier: 0, inputs: [], outputs: [], cat: 'town', hp: 700, heat: 0, height: 4 },
+  guard_post: { type: 'guard_post', name: 'Guard Post', icon: '🛡️', desc: 'A sandbagged lookout. A resident guard stands watch and shoots zombies — keep 9mm or rifle ammo inside.', size: [1, 1], cost: { plank: 8, nails: 10, rag: 4 }, power: 0, tier: 0, inputs: [], outputs: [], cat: 'town', hp: 600, heat: 0, height: 3 },
+  mess_hall: { type: 'mess_hall', name: 'Mess Hall', icon: '🍲', desc: 'A cook turns the ingredients stored here into hot meals (any stove recipe). Residents eat here each evening — hot food keeps them happy. Belt food in at the back.', size: [3, 3], cost: { plank: 24, nails: 30, stone: 12, scrap_metal: 6 }, power: 0, tier: 1, inputs: [1], outputs: [], cat: 'town', hp: 900, heat: 1, height: 4 },
+  water_tower: { type: 'water_tower', name: 'Water Tower', icon: '🗼', desc: 'Holds 400 L for the town and its farm plots. Fills from rain, or from a water pump through pipes. Each resident drinks 4 L a day.', size: [2, 2], cost: { plank: 20, nails: 20, scrap_metal: 10, rope: 2 }, power: 0, tier: 1, inputs: [], outputs: [], cat: 'town', hp: 800, heat: 0, height: 7 },
+  lumber_yard: { type: 'lumber_yard', name: 'Lumber Yard', icon: '🪓', desc: 'Two lumberjacks fell trees and saw planks. Logs and planks pile up inside.', size: [3, 3], cost: { plank: 10, nails: 12, scrap_metal: 6 }, power: 0, tier: 1, inputs: [], outputs: [], cat: 'town', hp: 700, heat: 1, height: 4 },
+  workshop: { type: 'workshop', name: 'Repair Shop', icon: '🔧', desc: 'A mechanic patches up damaged walls, doors and machines around town.', size: [3, 3], cost: { iron_plate: 10, plank: 12, scrap_metal: 10 }, power: 0, tier: 2, inputs: [], outputs: [], cat: 'town', hp: 900, heat: 1, height: 4 },
+  bunkhouse: { type: 'bunkhouse', name: 'Bunkhouse', icon: '🏢', desc: 'A two-storey dormitory for 10 residents.', size: [3, 3], cost: { concrete: 30, iron_plate: 16, plank: 20, glass: 6 }, power: 0, tier: 3, inputs: [], outputs: [], cat: 'town', hp: 1600, heat: 0, height: 7 },
+});
+
+// ---- our own names: salvaged, hand-built, post-collapse
+const rename = (id: string, name: string, desc?: string, icon?: string) => { const m = MACHINES[id]; if (m) { m.name = name; if (desc) m.desc = desc; if (icon) m.icon = icon; } };
+MACHINES.hub.cat = 'town';
+rename('hub', 'Settlement Hall', 'The heart of your town. Residents gather here and it sleeps two. Deliver supplies to grow the settlement — each new level unlocks new buildings.', '🔔');
+rename('miner', 'Ore Drill', 'Bores into an ore seam. 30 ore/min on a normal seam, more on a rich one.', '⛏️');
+rename('miner2', 'Deep Drill', 'Heavy drill: 60 ore/min on a normal seam.');
+rename('smelter', 'Furnace', 'Melts ore into ingots and sand into glass.');
+rename('foundry', 'Steel Mill', 'Alloys iron with coal into steel; smelts alumina into aluminium.');
+rename('constructor', 'Machine Shop', 'Lathes and presses: plates, rods, bolts, wire, concrete, nails, beams.', '🛠️');
+rename('assembler', 'Fabrication Shop', 'Joins two parts: riveted plates, rotors, circuits, motors, gunpowder, ammunition.', '🏗️');
+rename('biomass', 'Wood Boiler', '10 MW steam from logs, planks or leaves. Feed it by hand.', '🪵');
+rename('coal_gen', 'Coal Steam Engine', '50 MW. Burns coal from a belt or by hand. Loud and smoky.');
+rename('belt', 'Roller Conveyor', '60 items/min. Click and drag to lay a line.');
+rename('belt2', 'Powered Conveyor', '120 items/min.');
+rename('lab', 'Clinic', 'A medic heals residents here and turns rags into bandages. Brews antibiotics, and from infected tissue, the serum that stops a bite turning you.', '🏥');
+rename('radio_tower', 'Radio Tower', 'Broadcasts to survivors across the valley: more newcomers find your town, and a supply drop lands each noon. 20 MW.');
+rename('greenhouse', 'Greenhouse', 'Grows vegetables year-round under glass. Food security.');
+rename('storage', 'Storage Shed', 'Holds 200 kg. Residents eat from it. Belt in at the back, out at the front.', '📦');
+const renameItem = (id: string, name: string, desc?: string) => { const d = ITEMS[id]; if (d) { d.name = name; if (desc) d.desc = desc; } };
+renameItem('screws', 'Bolts', 'Nuts and bolts. You can never have enough.');
+renameItem('reinforced_plate', 'Riveted Plate', 'Two plates riveted together. Tough.');
+renameItem('modular_frame', 'Steel Frame', 'Welded box frame for big builds.');
+renameItem('heavy_frame', 'Girder', 'Massive load-bearing steel girder.');
+renameItem('stator', 'Copper Coil', 'Wire wound on a steel core. Half of a motor.');
+renameItem('motor', 'Electric Motor', 'Coil and rotor. Drives pumps, locomotives and big machines.');
+renameItem('computer', 'Control Panel', 'Circuits and switches in a box. Runs the grid.');
+renameItem('serum', 'Antiviral Serum', 'Stops and reverses a zombie bite. Brewed at the Clinic from infected tissue.');
+
+// ---- settlement levels: grow from a camp to a city. Each needs supplies delivered to the hall AND a living town.
 MILESTONES.splice(0, MILESTONES.length,
-  { id: 'm1', name: 'Foothold', desc: 'Scavenge the town to bootstrap power and smelting.', cost: { plank: 30, nails: 60, scrap_metal: 20, electronics: 6 }, unlocks: ['biomass', 'power_pole', 'miner', 'smelter', 'belt', 'storage', 'floodlight'] },
-  { id: 'm2', name: 'Industry', desc: 'Refined metal opens real manufacturing.', cost: { iron_ingot: 60, copper_ingot: 30, sheet_metal: 6 }, unlocks: ['constructor', 'coal_gen', 'splitter', 'merger', 'electric_fence', 'metal_foundation', 'metal_wall', 'metal_wall_door', 'gate', 'watchtower'] },
-  { id: 'm3', name: 'Fortify', desc: 'Automated defences and complex parts.', cost: { iron_plate: 80, screws: 200, wire: 80, cable: 30 }, unlocks: ['assembler', 'turret', 'solar', 'foundry', 'battery', 'concrete_wall'] },
-  { id: 'm4', name: 'Automation', desc: 'Scale up. Pipes, water and food security. Reach out to other survivors.', cost: { reinforced_plate: 30, rotor: 20, circuit: 20, concrete: 60 }, unlocks: ['belt2', 'miner2', 'wind_turbine', 'greenhouse', 'radio_tower', 'water_pump', 'pipe', 'fluid_tank', 'packager', 'sprinkler'] },
-  { id: 'm5', name: 'Logistics', desc: 'Steel, glass and motors. Lay railways and run freight trains between your outposts.', cost: { steel_beam: 40, motor: 8, modular_frame: 12, glass: 30 }, unlocks: ['rail', 'train_station', 'locomotive', 'freight_wagon'] },
-  { id: 'm6', name: 'Rekindle', desc: 'Oil, plastics and the town grid. Begin the search for a cure.', cost: { heavy_frame: 6, steel_pipe: 60, circuit: 50, radio_parts: 4 }, unlocks: ['lab', 'uplink', 'oil_pump', 'refinery', 'fuel_gen'] },
-  { id: 'm7', name: 'The Cure', desc: 'Synthesise the antiviral serum and broadcast the formula to the world.', cost: { serum: 10, computer: 10 }, unlocks: [] },
+  { id: 'm1', name: 'Outpost', desc: 'Get people under a roof and the first fires burning. Recruit a survivor with food and give them a bed.', req: { residents: 1, beds: 4 }, cost: { plank: 30, nails: 60, scrap_metal: 20, electronics: 6 }, unlocks: ['biomass', 'power_pole', 'miner', 'smelter', 'belt', 'storage', 'floodlight', 'mess_hall', 'water_tower', 'lumber_yard'] },
+  { id: 'm2', name: 'Settlement', desc: 'Feed people properly and smelt your own metal. Newcomers arrive each morning when there are free beds and food in store.', req: { residents: 3, beds: 6, food: 20 }, cost: { iron_ingot: 60, copper_ingot: 30, sheet_metal: 6 }, unlocks: ['constructor', 'coal_gen', 'splitter', 'merger', 'electric_fence', 'metal_foundation', 'metal_wall', 'metal_wall_door', 'gate', 'watchtower', 'workshop', 'lab'] },
+  { id: 'm3', name: 'Village', desc: 'Defend what you have built. Guards, turrets and walls let people sleep at night.', req: { residents: 6, defence: 4, happiness: 50 }, cost: { iron_plate: 80, screws: 150, wire: 80, cable: 30 }, unlocks: ['assembler', 'turret', 'solar', 'foundry', 'battery', 'concrete_wall', 'bunkhouse'] },
+  { id: 'm4', name: 'Town', desc: 'Running water, greenhouses and power for everyone. Reach out by radio to bring more people in.', req: { residents: 10, power: 40, happiness: 55 }, cost: { reinforced_plate: 30, rotor: 20, circuit: 20, concrete: 60 }, unlocks: ['belt2', 'miner2', 'wind_turbine', 'greenhouse', 'radio_tower', 'water_pump', 'pipe', 'fluid_tank', 'packager', 'sprinkler'] },
+  { id: 'm5', name: 'Railhead', desc: 'Steel, glass and motors. Lay track out to the far mines and farms and run freight home.', req: { residents: 14, food: 60 }, cost: { steel_beam: 40, motor: 8, modular_frame: 12, glass: 30 }, unlocks: ['rail', 'train_station', 'locomotive', 'freight_wagon'] },
+  { id: 'm6', name: 'Lights On', desc: 'Fuel, plastics and the old town grid. Bring the street lights back.', req: { residents: 17, happiness: 60, defence: 8 }, cost: { heavy_frame: 6, steel_pipe: 60, circuit: 50, radio_parts: 4 }, unlocks: ['uplink', 'oil_pump', 'refinery', 'fuel_gen'] },
+  { id: 'm7', name: 'City', desc: 'Twenty souls, a lit grid, full stores and walls that hold. The valley has a city again — now keep it alive.', req: { residents: 20, grid: true, happiness: 65, defence: 10 }, cost: { concrete: 200, glass: 60, steel_beam: 60, cloth: 40 }, unlocks: [] },
 );
 
 // ---- crops

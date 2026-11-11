@@ -4,8 +4,10 @@ import { GRID, tileOf, clamp, RNG } from '../core/util';
 import { MACHINES, MRECIPES, MachineDef, MILESTONES, MRecipe } from './defs';
 import { buildMachineModel } from '../models/machines';
 import { buildStation } from '../models/trains';
+import { buildTownModel, TownModelId } from '../models/town';
+const TOWN_MODELS = new Set(['shelter_house', 'bunkhouse', 'mess_hall', 'water_tower', 'guard_post', 'lumber_yard', 'workshop', 'hub']);
 import { buildFluidModel, pipeGeometries, FluidModelId } from '../models/fluids';
-const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler']);
+const FLUID_MODELS = new Set(['water_pump', 'oil_pump', 'refinery', 'fuel_gen', 'fluid_tank', 'packager', 'sprinkler', 'water_tower']);
 export interface FluidNet { id: number; fluid: string | null; amount: number; cap: number; pipes: number[]; machines: Machine[] }
 import { World, OreNode } from '../world/world';
 import { Inventory } from '../items/inventory';
@@ -103,7 +105,7 @@ export class Factory {
     this.cables = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x111111 }));
     this.cables.frustumCulled = false;
     this.group.add(this.cables);
-    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'spike_trap', 'generator', 'stove', 'compost_bin', 'chicken_coop', 'drying_rack']) this.unlocked.add(k);
+    for (const k of ['wood_foundation', 'wood_wall', 'wood_wall_window', 'wood_wall_door', 'wood_stairs', 'wood_roof', 'workbench', 'campfire', 'crate', 'bed', 'rain_collector', 'farm_plot', 'hub', 'shelter_house', 'guard_post', 'spike_trap', 'generator', 'stove', 'compost_bin', 'chicken_coop', 'drying_rack']) this.unlocked.add(k);
   }
 
   // ------------------------------------------------------------------ geometry helpers
@@ -155,7 +157,7 @@ export class Factory {
     if (this.world.ores.some(o => Math.abs(o.x - cx) < half + 1.5 && Math.abs(o.z - cz) < half + 1.5)) return { ok: false, reason: 'Too close to an ore deposit' };
     if (this.world.town.isOccupied(cx, cz, half - 1)) return { ok: false, reason: 'Inside a building' };
     if (this.world.waterDepth(cx, cz) > 0.3) return { ok: false, reason: 'In water' };
-    if (type === 'hub' && this.hub) return { ok: false, reason: 'You already have an Outpost' };
+    if (type === 'hub' && this.hub) return { ok: false, reason: 'You already have a Settlement Hall' };
     return { ok: true };
   }
 
@@ -178,12 +180,15 @@ export class Factory {
     if (type === 'storage') m.inv = new Inventory(200);
     if (type === 'train_station') { m.inv = new Inventory(1200); (m as any).stName = (m as any).stName ?? `Station ${this.machines.filter(q => q.type === 'train_station').length + 1}`; (m as any).stMode = (m as any).stMode ?? 'unload'; }
     if (type === 'turret') m.inv = new Inventory(30);
+    if (type === 'mess_hall' || type === 'lumber_yard') m.inv = new Inventory(300);
+    if (type === 'guard_post') m.inv = new Inventory(25);
+    if (type === 'lab') m.inv = new Inventory(40);
     if (type === 'biomass' || type === 'coal_gen') m.inv = new Inventory(80);
     if (type === 'smelter') m.recipe = m.recipe ?? null;
     if (type === 'greenhouse') m.recipe = m.recipe ?? 'grow_potato';
     for (const k of tiles) this.tiles.set(k, m);
     if (!isBelt) {
-      const obj = type === 'train_station' ? buildStation() : FLUID_MODELS.has(type) ? buildFluidModel(type as FluidModelId) : buildMachineModel(type as any);
+      const obj = TOWN_MODELS.has(type) ? buildTownModel(type as TownModelId) : type === 'train_station' ? buildStation() : FLUID_MODELS.has(type) ? buildFluidModel(type as FluidModelId) : buildMachineModel(type as any);
       obj.position.set(cx, y, cz); obj.rotation.y = rot * Math.PI / 2;
       // clone status light materials per machine (models already clone but be safe)
       this.group.add(obj); m.obj = obj;
@@ -251,7 +256,7 @@ export class Factory {
   }
   private accepts(m: Machine, id: string): boolean {
     const t = m.type;
-    if (t === 'storage' || t === 'train_station') return !!m.inv && m.inv.weight() + item(id).weight <= m.inv.capacity;
+    if (t === 'storage' || t === 'train_station' || t === 'mess_hall') return !!m.inv && m.inv.weight() + item(id).weight <= m.inv.capacity;
     if (t === 'turret') return (id === 'ammo_9mm' || id === 'ammo_rifle' || id === 'ammo_shells') && m.inv!.weight() < 25;
     if (t === 'coal_gen') return (id === 'coal' || id === 'gas_can') && m.inv!.count(id) < 50;
     if (t === 'hub') { const ms = MILESTONES[this.tier]; return !!ms && (ms.cost[id] ?? 0) > (this.milestoneProgress[id] ?? 0); }
@@ -265,7 +270,7 @@ export class Factory {
   private insert(m: Machine, id: string): boolean {
     if (!this.accepts(m, id)) return false;
     const t = m.type;
-    if (t === 'storage' || t === 'turret' || t === 'coal_gen' || t === 'train_station') { m.inv!.add(id, 1); return true; }
+    if (t === 'storage' || t === 'turret' || t === 'coal_gen' || t === 'train_station' || t === 'mess_hall') { m.inv!.add(id, 1); return true; }
     if (t === 'hub') { this.milestoneProgress[id] = (this.milestoneProgress[id] ?? 0) + 1; this.checkMilestone(); return true; }
     if (t === 'splitter' || t === 'merger') { m.inBuf = { __n: 1 }; (m as any).held = id; return true; }
     m.inBuf[id] = (m.inBuf[id] ?? 0) + 1; return true;
@@ -456,6 +461,7 @@ export class Factory {
           if (this.pushOut(m, id, tx, tz, m.dir)) m.outBuf[id]--;
         }
       }
+      if (TOWN_MODELS.has(t) && t !== 'hub') running = !!(m as any).staffed;
       m.running = running;
       if (running && hub && Math.hypot(m.cx - hub.cx, m.cz - hub.cz) < 90) heat += m.def.heat;
       // visuals
@@ -619,9 +625,13 @@ export class Factory {
     if (k > 0) { this.milestoneProgress[id] = (this.milestoneProgress[id] ?? 0) + k; this.checkMilestone(); }
     return k;
   }
-  private checkMilestone() {
+  /** settlement requirements still missing for a level (set by the game: residents, beds, food...) */
+  levelMissing: (ms: typeof MILESTONES[number]) => string[] = () => [];
+  suppliesDone() { const ms = MILESTONES[this.tier]; if (!ms) return false; for (const k in ms.cost) if ((this.milestoneProgress[k] ?? 0) < ms.cost[k]) return false; return true; }
+  checkMilestone() {
     const ms = MILESTONES[this.tier]; if (!ms) return;
-    for (const k in ms.cost) if ((this.milestoneProgress[k] ?? 0) < ms.cost[k]) return;
+    if (!this.suppliesDone()) return;
+    if (this.levelMissing(ms).length) return;
     this.tier++; this.milestoneProgress = {};
     for (const u of ms.unlocks) this.unlocked.add(u);
     audio.play('milestone');

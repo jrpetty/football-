@@ -2,15 +2,15 @@
 import * as THREE from 'three';
 import { RNG, snapGrid, HALF_WORLD } from '../core/util';
 import { buildLayout, Layout, LAKE } from './layout';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Water } from 'three/examples/jsm/objects/Water.js';
 import { getWaterNormalTexture } from '../render/textures';
 import { LOWPOLY } from '../render/materials';
 import { Terrain } from './terrain';
 import { CollisionWorld } from './collision';
 import { Town } from './town';
-import { Vegetation } from './vegetation';
-import { getMaterial, getTintedMaterial } from '../render/materials';
+import { Vegetation, windUniforms } from './vegetation';
+import { buildOreDeposit, setOreSnowUniform } from '../models/ores';
+import { getMaterial } from '../render/materials';
 import { Inventory } from '../items/inventory';
 import type { QualityCfg } from '../render/renderer';
 
@@ -18,7 +18,6 @@ export interface OreNode { id: number; type: 'iron_ore' | 'copper_ore' | 'coal' 
 export interface Floor { x0: number; z0: number; x1: number; z1: number; y: number; ref?: any; ramp?: { axis: 'x' | 'z'; dir: number; y0: number; y1: number } }
 export interface Drop { id: number; pos: THREE.Vector3; inv: Inventory; mesh: THREE.Object3D; age: number }
 
-const ORE_COL: Record<OreNode['type'], number> = { iron_ore: 0x9a4a32, copper_ore: 0xc0703a, coal: 0x1c1c1e, stone: 0xb9b2a2, sulfur: 0xd8c33a, f_crude: 0x101010, quartz: 0xe8e4f0, bauxite: 0xb0603a, gold_ore: 0xe8c040 };
 
 export class World {
   layout: Layout;
@@ -56,36 +55,11 @@ export class World {
 
   private buildOres() {
     const rng = new RNG(this.seed + 5);
+    setOreSnowUniform(windUniforms.uSnow);
     let id = 1;
     for (const o of this.layout.ores) {
       const y = this.terrain.heightAt(o.x, o.z);
-      const g = new THREE.Group();
-      const rockMat = getMaterial('rock');
-      const rockG: THREE.BufferGeometry[] = [], oreG: THREE.BufferGeometry[] = [], cryG: THREE.BufferGeometry[] = [];
-      const bake = (geo: THREE.BufferGeometry, m: THREE.Object3D) => { m.updateMatrix(); const c = (geo.index ? geo.toNonIndexed() : geo.clone()); c.applyMatrix4(m.matrix); c.deleteAttribute('uv'); return c; };
-      const size = o.purity >= 2 ? 1.25 : o.purity < 1 ? 0.75 : 1;
-      const oreMat = getTintedMaterial('rock', ORE_COL[o.type]);
-      const crystalMat = new THREE.MeshStandardMaterial({ color: ORE_COL[o.type], roughness: o.type === 'coal' ? 0.6 : 0.35, metalness: o.type === 'iron_ore' || o.type === 'copper_ore' ? 0.6 : 0.1, emissive: o.type === 'sulfur' ? 0x332a00 : 0x000000 });
-      for (let i = 0; i < 9; i++) {
-        const geo = new THREE.IcosahedronGeometry(1, 1);
-        const p = geo.attributes.position as THREE.BufferAttribute;
-        for (let k = 0; k < p.count; k++) { const v = new THREE.Vector3().fromBufferAttribute(p, k); v.multiplyScalar(0.75 + rng.next() * 0.45); p.setXYZ(k, v.x, v.y * 0.7, v.z); }
-        geo.computeVertexNormals();
-        const m = new THREE.Object3D();
-        const a = rng.next() * Math.PI * 2, r = i === 0 ? 0 : rng.range(0.8, 2.6) * size;
-        m.position.set(Math.cos(a) * r, -0.2, Math.sin(a) * r); m.scale.setScalar((i === 0 ? 1.6 : rng.range(0.6, 1.2)) * size); m.rotation.set(rng.next(), rng.next() * 6, rng.next());
-        (i < 4 ? rockG : oreG).push(bake(geo, m));
-      }
-      for (let i = 0; i < 10; i++) {
-        const c = new THREE.Object3D();
-        const a = rng.next() * Math.PI * 2, r = rng.range(0.3, 2.4) * size;
-        c.position.set(Math.cos(a) * r, rng.range(0.1, 0.9), Math.sin(a) * r); c.scale.set(0.6, rng.range(1, 2.2), 0.6); c.rotation.set(rng.range(-0.5, 0.5), rng.next() * 6, rng.range(-0.5, 0.5));
-        cryG.push(bake(new THREE.OctahedronGeometry(0.3, 0), c));
-      }
-      for (const [list, mat, cast] of [[rockG, rockMat, true], [oreG, oreMat, true], [cryG, crystalMat, true]] as [THREE.BufferGeometry[], THREE.Material, boolean][]) {
-        const merged = mergeGeometries(list, false); if (!merged) continue; merged.computeVertexNormals();
-        const mesh = new THREE.Mesh(merged, mat); mesh.castShadow = cast; mesh.receiveShadow = true; g.add(mesh);
-      }
+      const g = buildOreDeposit({ type: o.type, purity: o.purity, rand: () => rng.next(), ground: (lx, lz) => this.terrain.heightAt(o.x + lx, o.z + lz) - y });
       g.position.set(o.x, y, o.z);
       this.group.add(g);
       const node: OreNode = { id: id++, type: o.type, x: o.x, z: o.z, y, purity: o.purity, mesh: g, occupied: false, manualLeft: 1e9 };

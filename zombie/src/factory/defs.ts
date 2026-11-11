@@ -42,10 +42,10 @@ export const MRECIPES: MRecipe[] = [
   { id: 'grow_corn', machine: ['greenhouse'], inp: {}, out: ['corn', 2], time: 30 },
 ];
 
-export type MachineType = MachineModelId | FluidModelId | 'pipe' | 'sprinkler' | 'rail' | 'train_station' | 'locomotive' | 'freight_wagon';
+export type MachineType = MachineModelId | FluidModelId | 'pipe' | 'sprinkler' | 'rail' | 'train_station' | 'locomotive' | 'freight_wagon' | 'shelter_house' | 'bunkhouse' | 'mess_hall' | 'water_tower' | 'guard_post' | 'lumber_yard' | 'workshop';
 export interface MachineDef {
   type: MachineType; name: string; icon: string; desc: string; size: [number, number]; cost: Record<string, number>;
-  power: number; tier: number; inputs: number[]; outputs: number[]; cat: 'production' | 'logistics' | 'power' | 'defense' | 'special' | 'transport';
+  power: number; tier: number; inputs: number[]; outputs: number[]; cat: 'production' | 'logistics' | 'power' | 'defense' | 'special' | 'transport' | 'town';
   hp: number; heat: number; height: number; skill?: [SkillId, number];
 }
 // inputs/outputs: tile index along back/front edge
@@ -110,7 +110,7 @@ export const PIECES: Record<string, PieceDef> = {
   farm_plot: { id: 'farm_plot', name: 'Farm Plot', icon: '🌱', desc: 'Plant seeds; harvest in a few days. Rain waters it.', kind: 'station', model: 'farm_plot', cost: { plank: 2, nails: 2 }, tier: 0, hp: 100, station: 'farm' },
 };
 
-export interface Milestone { id: string; name: string; desc: string; cost: Record<string, number>; unlocks: string[] }
+export interface Milestone { id: string; name: string; desc: string; cost: Record<string, number>; unlocks: string[]; req?: { residents?: number; beds?: number; food?: number; defence?: number; power?: number; happiness?: number; grid?: boolean; water?: number } }
 export const MILESTONES: Milestone[] = [
   { id: 'm1', name: 'Foothold', desc: 'Scavenge the town to bootstrap power and smelting.', cost: { plank: 30, nails: 60, scrap_metal: 20, electronics: 6 }, unlocks: ['biomass', 'power_pole', 'miner', 'smelter', 'belt', 'storage', 'floodlight'] },
   { id: 'm2', name: 'Industry', desc: 'Refined metal opens real manufacturing.', cost: { iron_ingot: 60, copper_ingot: 30, sheet_metal: 6 }, unlocks: ['constructor', 'coal_gen', 'splitter', 'merger', 'electric_fence', 'metal_foundation', 'metal_wall', 'metal_wall_door', 'gate', 'watchtower'] },

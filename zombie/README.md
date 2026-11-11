@@ -4,9 +4,10 @@
 
 REKINDLE is an open-world, first-person zombie survival game that runs in the
 browser. It starts as a tense, Project Zomboid–style fight to stay alive in a
-ruined Pacific Northwest town. Over time it turns into Satisfactory-style
-factory building: power grids, conveyor lines and automated defences, until you
-synthesise a cure and switch the town's lights back on.
+ruined Pacific Northwest town. Over time you take in survivors, give them homes
+and jobs, and grow a settlement from a camp into a city, with its own mines,
+workshops, power and railways. The goal is simple: build a city and keep it
+alive.
 
 Built with Three.js, TypeScript and Vite. There are two art styles (Settings →
 Art style): **Realistic** (the default: PBR textured materials, smooth shading,
@@ -46,28 +47,41 @@ distance. Start on Medium on laptops.
    Searching each container takes time, and a lot of them are already empty.
 2. **Survive.** Manage hunger, thirst, fatigue, body temperature and wetness.
    Wounds are tracked per body part: bleeding, infection and fractures. A bite
-   means the Knox infection, which kills you in about 2.5 days unless you find
-   the cure. Death is permanent.
+   means the Knox infection, which kills you in about 2.5 days unless you take
+   the serum. Death is permanent.
 3. **Fortify.** Barricade windows and doors with a hammer, planks and nails.
    Build walls, doors, foundations, stairs, watchtowers, campfires, rain
    collectors, beds and farm plots.
-4. **Establish the Outpost.** The Survivor Outpost is your HQ and tech tree.
-   Deliver parts to it to complete milestones.
-5. **Automate.** Put miners on ore deposits and run conveyor belts into
-   smelters, constructors and assemblers. Split and merge lines. Power it all
-   with biomass burners, coal generators, solar and wind, linked by power poles
-   (watch for tripped fuses).
-6. **Defend.** Machines make noise. Your base's **heat** draws hordes to it,
-   so build auto turrets fed with factory-made ammo, electric fences, spike
-   traps and floodlights.
-7. **Rekindle.** Restore the town grid with the Grid Uplink. Build a Radio
-   Tower for supply drops. Collect infected tissue from the dead, synthesise
-   **10 Antiviral Serum** in the Medical Lab and deliver it to the Outpost to
-   win.
+4. **Found a settlement.** Build the Settlement Hall, then a Shelter House.
+   Win over survivors with food and send them home. Each resident takes a job
+   on their own: farmer, cook, guard, lumberjack, mechanic or medic.
+5. **Keep people alive.** Residents eat every evening (a hot meal from the Mess
+   Hall keeps them happy) and need clean water (Water Tower). They need a bed.
+   Newcomers walk in each morning if there's room, food and a good mood. People
+   leave when they go hungry, thirsty or are miserable.
+6. **Dig in and power up.** Ore drills on mineral seams, furnaces, machine
+   shops, conveyors, boilers and power poles turn scrap into steel, glass,
+   concrete and motors.
+7. **Defend.** Machines make noise, and your town's **heat** draws hordes. Build
+   guard posts (a resident stands watch with your ammo), turrets, walls, gates,
+   electric fences and floodlights.
+8. **Become a city.** Lay railways out to far mines and farms, restore the old
+   town grid, and grow to 20 happy residents behind walls that hold.
 
-### Milestones
-| Tier | Name | Unlocks |
+### Settlement levels
+Each level needs supplies delivered to the Settlement Hall *and* a living town.
+
+| Level | Your town needs | Unlocks |
 |---|---|---|
+| Outpost | 1 resident, 4 beds | Wood boiler, power poles, ore drill, furnace, conveyors, storage, floodlights, mess hall, water tower, lumber yard |
+| Settlement | 3 residents, 6 beds, 20 food | Machine shop, coal steam engine, splitter/merger, electric fence, metal walls, gate, watchtower, repair shop, clinic |
+| Village | 6 residents, 4 defences, 50% happy | Fabrication shop, turrets, solar, steel mill, batteries, concrete walls, bunkhouse |
+| Town | 10 residents, 40 MW, 55% happy | Powered conveyor, deep drill, wind, greenhouse, radio tower, water pump, pipes, tanks, packager, sprinklers |
+| Railhead | 14 residents, 60 food | Railway track, freight stations, locomotives, wagons |
+| Lights On | 17 residents, 8 defences, 60% happy | Grid Uplink, oil pumpjack, refinery, fuel generator |
+| City | 20 residents, town grid on, 10 defences, 65% happy | You've built a city. Now keep it standing. |
+
+---|---|---|
 | 1 | Foothold | Biomass burner, power poles, miner, smelter, belts, storage, floodlights |
 | 2 | Industry | Constructor, coal generator, splitter/merger, electric fence, metal walls, gate, watchtower |
 | 3 | Fortify | Assembler, auto turret, solar, foundry, batteries, concrete walls, ammo crafting |
@@ -86,7 +100,8 @@ distance. Start on Medium on laptops.
   scratch, laceration, bite, fracture. Wounds bleed, get infected and heal
   over time. There are 16 Zomboid-style moodles.
 - **Medicine.** Rags and sterile bandages, disinfectant, sutures, splints,
-  painkillers, antibiotics and the serum.
+  painkillers, antibiotics, and the serum the Clinic brews from infected
+  tissue, the only thing that stops a bite from turning you.
 - **Character.** Eight occupations and 18 positive and negative traits that
   cost or give points. Eleven skills level up through use (Fitness, Strength,
   Sprinting, Lightfooted, Blunt, Blade, Firearms, Carpentry, Engineering,
@@ -160,13 +175,27 @@ distance. Start on Medium on laptops.
 - **Wildlife.** Deer and rabbits to hunt and butcher, and wolf packs that
   stalk you, especially at night. Fish the lake with a rod.
 - **Survivors.** Recruit people you find (and people your radio tower
-  attracts) with food. Order them to follow you, guard the Outpost, go
-  scavenging or wait. They fight, eat from your stores daily, can die, and
-  leave if you can't feed them.
+  attracts) with food. Order them to follow you, live and work in town,
+  go scavenging or wait. They fight, can die, and leave if you can't look
+  after them.
+- **Town life.**
+  - Buildings: Shelter Houses (4 beds) and Bunkhouses (10), the Mess Hall,
+    Water Tower, Lumber Yard, Repair Shop, Clinic and Guard Posts.
+  - Daily routine: residents walk to work in the morning, gather at the mess
+    hall in the evening and go home to sleep. They shelter when zombies get
+    inside the town.
+  - Jobs: farmers water, harvest and replant your plots; cooks turn stored
+    ingredients into stove meals; guards shoot from their posts; lumberjacks
+    bring in logs and planks; mechanics repair walls and machines; medics heal
+    people and make bandages.
+  - Happiness comes from a bed, hot food, water, amenities, lights, feeling
+    safe and good health. It sets how fast people work and whether newcomers
+    come. Manage everyone from the Settlement Hall's Residents tab, where you
+    can also pin someone's job.
 - **Resources and mining.** About 90 ore nodes are scattered across the
   map: iron, copper, coal, limestone, sulfur, quartz, bauxite and gold, plus
-  crude oil wells. Each has a purity (impure, normal, pure) that scales
-  miner output, and you can see it in the size of the deposit. Boulders in
+  crude oil wells. Each seam is thin, normal or rich, which scales drill
+  output and shows in the size of the deposit. Boulders in
   the wild carry ore veins you can pick at by hand.
 - **Production chains.** Over 60 new items and dozens of machine recipes:
   glass, sand and silica from quartz; alumina and aluminium from bauxite
@@ -237,9 +266,10 @@ src/
   vehicles/          drivable car physics, fuel, collisions
   player/            controller, survival stats, skills/traits/occupations, first-person viewmodel
   items/             item database, inventory, loot tables, crafting recipes
-  factory/           machine/recipe/milestone definitions and the factory simulation (belts, power, turrets)
+  town/              settlement simulation: residents, homes, jobs, needs, happiness, newcomers
+  factory/           machine/recipe/settlement-level definitions and the factory simulation (belts, power, turrets)
   build/             player structures and the holographic placement system
-  models/            procedural 3D models: weapons, props, cars, trees, machines, build pieces
+  models/            procedural 3D models: weapons, props, cars, trees, machines, town buildings, trains, build pieces
   audio/             procedural Web Audio engine: SFX, loops, ambience, adaptive music
   ui/                DOM HUD, menus and panels
 preview/             dev galleries for textures, models, machines and audio (npx vite --config preview/vite.config.ts)

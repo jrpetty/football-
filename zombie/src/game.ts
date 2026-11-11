@@ -34,6 +34,7 @@ import { Animals, Animal } from './ai/animals';
 import { CROPS } from './items/content';
 import { Throwables } from './combat/throwables';
 import { Railways, Train } from './factory/trains';
+import { Town, JOB_INFO } from './town/town';
 import { Survivors, Survivor } from './ai/survivors';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
@@ -53,17 +54,19 @@ export const OBJECTIVES: { id: string; title: string; desc: string }[] = [
   { id: 'supplies', title: 'Food & water', desc: 'Scavenge food and drink. Kitchens, fridges and stores are your best bet. Mind your moodles.' },
   { id: 'workbench', title: 'Set up a workbench', desc: 'Open the Build menu (B) and place a Workbench. Planks come from logs (axe/saw) or scavenging; nails from scrap.' },
   { id: 'shelter', title: 'Fortify a shelter', desc: 'Build at least 4 walls and a door — or barricade a house (hold a hammer, E on windows & doors).' },
-  { id: 'hub', title: 'Establish the Outpost', desc: 'Build the Survivor Outpost (B → Special). It becomes your HQ and tech tree. Noise from your base will draw hordes.' },
-  { id: 'm1', title: 'Milestone: Foothold', desc: 'Deliver planks, nails, scrap metal and electronics to the Outpost to unlock power and industry.' },
-  { id: 'power', title: 'Spark the grid', desc: 'Place a Biomass Burner, fuel it, and connect machines with Power Poles.' },
-  { id: 'mine', title: 'First automation', desc: 'Put a Miner on an ore deposit, run a Conveyor Belt into a Smelter, and collect ingots.' },
-  { id: 'm2', title: 'Milestone: Industry', desc: 'Deliver ingots and sheet metal. Unlocks Constructors, Coal Generators, electric fences and metal walls.' },
-  { id: 'm3', title: 'Milestone: Fortify', desc: 'Mass-produce plates, screws, wire and cable. Unlocks Assemblers and Auto Turrets.' },
-  { id: 'm4', title: 'Milestone: Automation', desc: 'Complex parts: reinforced plates, rotors, circuits, concrete. Unlocks the Radio Tower.' },
-  { id: 'm5', title: 'Milestone: Logistics', desc: 'Steel beams, motors, frames and glass. Unlocks railways, freight stations, locomotives and wagons.' },
-  { id: 'm6', title: 'Milestone: Rekindle', desc: 'Heavy frames, steel pipe, circuits and radio parts. Unlocks oil, the Medical Lab and the Grid Uplink.' },
-  { id: 'cure', title: 'The Cure', desc: 'Collect Infected Tissue from the dead. Synthesise 10 Antiviral Serum in the Lab and deliver them with 10 computers to the Outpost.' },
-  { id: 'done', title: 'Civilisation rekindled', desc: 'The lights are on. The broadcast is out. Keep building.' },
+  { id: 'hub', title: 'Found your settlement', desc: 'Build the Settlement Hall (B → Town). Your town grows around it. Noise from your base will draw hordes.' },
+  { id: 'recruit', title: 'Your first resident', desc: 'Find a survivor holed up in town and offer them food. Then talk to them again to send them to live in your settlement — build a Shelter House so they have a bed.' },
+  { id: 'm1', title: 'Level up: Outpost', desc: 'Deliver planks, nails, scrap metal and electronics to the Settlement Hall, with one resident and four beds.' },
+  { id: 'feed', title: 'Feed the town', desc: 'Build a Mess Hall and stock it with ingredients — a resident becomes its cook. Add a Water Tower. Fed, housed people stay; newcomers arrive each morning when there are free beds and food.' },
+  { id: 'power', title: 'Spark the grid', desc: 'Place a Wood Boiler, fuel it, and connect machines with Power Poles.' },
+  { id: 'mine', title: 'Dig in', desc: 'Put an Ore Drill on an ore seam, run a conveyor into a Furnace, and collect ingots.' },
+  { id: 'm2', title: 'Level up: Settlement', desc: 'Three residents, six beds, 20 food in store, plus ingots and sheet metal delivered. Unlocks the Machine Shop, Clinic, Repair Shop and metal walls.' },
+  { id: 'm3', title: 'Level up: Village', desc: 'Six residents, four defences (guard posts, turrets, watchtowers) and a happy town. Unlocks turrets, the Steel Mill and the Bunkhouse.' },
+  { id: 'm4', title: 'Level up: Town', desc: 'Ten residents and 40 MW of power. Unlocks greenhouses, running water and the Radio Tower.' },
+  { id: 'm5', title: 'Level up: Railhead', desc: 'Fourteen residents and full stores. Unlocks railways and freight trains.' },
+  { id: 'm6', title: 'Level up: Lights On', desc: 'Seventeen residents. Unlocks oil, fuel generators and the Grid Uplink.' },
+  { id: 'city', title: 'Become a City', desc: 'Twenty residents, the town grid restored, strong defences and a happy population.' },
+  { id: 'done', title: 'A city again', desc: 'The valley has a city. Keep it fed, lit and standing.' },
 ];
 
 export class Game {
@@ -90,9 +93,11 @@ export class Game {
   survivors!: Survivors;
   throwables!: Throwables;
   rails!: Railways;
+  town!: Town;
   openTrain: Train | null = null;
   riding: Train | null = null;
   private hitByTrainT = 0;
+  private townT = 0;
   private burnT = 0;
   private lastFeedDay = 0;
   private loudT = 0;
@@ -185,6 +190,8 @@ export class Game {
     this.throwables = new Throwables(this.scene, this.world);
     this.rails = new Railways(this.world, this.factory, this.scene);
     this.placer.rails = this.rails;
+    this.town = new Town(this.world, this.factory, this.base, this.survivors, (m, k) => this.ui.notify(m, k));
+    this.factory.levelMissing = ms => this.town.missing(ms.req);
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
@@ -213,7 +220,7 @@ export class Game {
   private wireEvents() {
     bus.on('notify', (msg: string, kind?: string) => this.ui.notify(msg, kind));
     bus.on('milestone', (ms: any) => {
-      this.ui.notify(`🏆 Milestone complete: ${ms.name}! Unlocked: ${ms.unlocks.map((u: string) => (MACHINES[u] ?? PIECES[u])?.name ?? u).join(', ') || '—'}`, 'good');
+      this.ui.notify(`🔔 Your settlement is now a ${ms.name}! The bell rings out across the valley. Unlocked: ${ms.unlocks.map((u: string) => (MACHINES[u] ?? PIECES[u])?.name ?? u).join(', ') || '—'}`, 'good');
       this.checkObjectives();
     });
     bus.on('victory', () => { this.state = 'victory'; this.input.unlock(); this.ui.showVictory(); audio.play('milestone'); });
@@ -352,8 +359,10 @@ export class Game {
     this.animals.update(dt, { pos: p.pos, noise: Math.max(p.noise, this.loudT, this.driving ? 30 : 0), crouch: p.crouch, alive: this.state === 'play' }, 1 - daylight, a => this.wolfBite(a));
     if (this.state === 'play') {
       const hub = this.factory.hub ? new THREE.Vector3(this.factory.hub.cx, 0, this.factory.hub.cz) : null;
-      this.survivors.update(dt, dtGame, { player: p.pos, hub, particles: this.particles, notify: (m, k) => this.ui.notify(m, k), deposit: inv => this.world.dropItems((hub ?? p.pos).clone().add(new THREE.Vector3(4, 0, 0)), inv) });
-      if (hrs >= 18 && this.day() > this.lastFeedDay) { this.lastFeedDay = this.day(); this.survivors.feed(() => this.takeBaseFood(), (m, k) => this.ui.notify(m, k)); }
+      this.survivors.update(dt, dtGame, { player: p.pos, hub, particles: this.particles, notify: (m, k) => this.ui.notify(m, k), deposit: inv => this.world.dropItems((hub ?? p.pos).clone().add(new THREE.Vector3(4, 0, 0)), inv), townGoal: s => this.town.goal(s, hrs) });
+      this.town.update(dtGame, { hours: hrs, day: this.day(), raining: this.weather.rain, radio: this.factory.machines.some(m => m.type === 'radio_tower' && m.powered), lit: this.factory.townPowered || this.factory.machines.some(m => m.type === 'floodlight' && m.running) });
+      this.townT -= dt; if (this.townT <= 0) { this.townT = 1.5; this.factory.checkMilestone(); const h = this.factory.hub; if (h && this.zombies.list.some(z => z.state !== 'dead' && !z.frozen && Math.abs(z.pos.x - h.cx) < 30 && Math.abs(z.pos.z - h.cz) < 30)) this.town.alarm(); }
+      if (hrs >= 18 && this.day() > this.lastFeedDay) { this.lastFeedDay = this.day(); this.survivors.feed(() => this.takeBaseFood(), (m, k) => this.ui.notify(m, k), !!this.factory.hub); }
     }
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
     this.weather.seasonTemp = this.season().temp;
@@ -611,9 +620,10 @@ export class Game {
     const p = this.player;
     const roleTxt = s.role === 'shooter' ? `shooter · ${s.ammo} rounds` : s.role === 'brawler' ? 'brawler' : 'scavenger';
     if (!s.recruited) return { kind: 'npc', label: `Talk to ${s.name}`, sub: `Survivor (${roleTxt}) · ${p.inv.stacks.some(x => item(x.id).cat === 'food') ? 'offer food to recruit' : 'they want food'}`, target: s, t };
-    const next: Record<string, string> = { follow: 'Guard the Outpost', guard: 'Go scavenging (6 h)', scavenge: 'Wait here', wait: 'Follow me' };
+    const next: Record<string, string> = { follow: this.factory.hub ? 'Live and work in town' : 'Wait here', work: 'Go scavenging (6 h)', guard: 'Go scavenging (6 h)', scavenge: 'Wait here', wait: 'Follow me' };
     const alt = s.role === 'shooter' && p.inv.count('ammo_9mm') ? { label: 'Give 9mm ammo', act: () => { const k = Math.min(30, p.inv.count('ammo_9mm')); p.inv.remove('ammo_9mm', k); s.ammo += k; this.ui.notify(`${s.name} now has ${s.ammo} rounds.`, ''); } } : undefined;
-    return { kind: 'npc', label: `${s.name}: ${next[s.order]}`, sub: `${roleTxt} · ${s.order} · health ${Math.round(s.hp)}%`, target: s, t, alt };
+    const jobTxt = s.order === 'work' ? `${JOB_INFO[s.job].icon} ${JOB_INFO[s.job].name} · ${s.home >= 0 ? 'housed' : 'homeless'} · ${Math.round(s.happy)}% happy` : s.order;
+    return { kind: 'npc', label: `${s.name}: ${next[s.order]}`, sub: `${roleTxt} · ${jobTxt} · health ${Math.round(s.hp)}%`, target: s, t, alt };
   }
   private talkTo(s: Survivor) {
     const p = this.player;
@@ -622,20 +632,20 @@ export class Game {
       if (!food) { this.ui.notify(`${s.name}: "${this.survivors.line('recruit')}"`, ''); return; }
       p.inv.removeUid(food.uid, 1);
       s.recruited = true; s.order = 'follow';
-      this.ui.notify(`${s.name} takes the ${item(food.id).name}. "${this.survivors.line('joined')}" (E to give orders)`, 'good');
+      this.ui.notify(`${s.name} takes the ${item(food.id).name}. "${this.survivors.line('joined')}" ${this.factory.hub ? 'Talk again to send them to live in your settlement.' : 'Build a Settlement Hall so they have somewhere to live.'}`, 'good');
       audio.play('objective');
       return;
     }
-    const cycle: Record<string, Survivor['order']> = { follow: 'guard', guard: 'scavenge', scavenge: 'wait', wait: 'follow' };
+    const cycle: Record<string, Survivor['order']> = { follow: 'work', work: 'scavenge', guard: 'scavenge', scavenge: 'wait', wait: 'follow' };
     let o = cycle[s.order];
-    if (o === 'guard' && !this.factory.hub) o = 'scavenge';
-    if (o === 'scavenge' && !this.factory.hub) o = 'wait';
+    if (o === 'work' && !this.factory.hub) o = 'wait';
     s.order = o;
     if (o === 'scavenge') { s.away = 360; this.ui.notify(`${s.name} heads out to scavenge. Back in ~6 hours.`, ''); }
     else if (o === 'wait') { s.anchor.copy(s.pos); this.ui.notify(`${s.name} will wait here.`, ''); }
-    else this.ui.notify(`${s.name}: ${o === 'follow' ? '"Right behind you."' : '"I\'ll keep watch at the Outpost."'}`, '');
+    else if (o === 'work') { this.town.computeStats(); this.ui.notify(`${s.name}: "${s.home >= 0 || this.town.stats.beds > this.town.stats.residents ? 'Home. Feels strange to say it.' : 'Where do I sleep? You\'ll need to build another house.'}" — they'll find a job in town. Manage residents at the Settlement Hall.`, 'good'); }
+    else this.ui.notify(`${s.name}: "Right behind you."`, '');
   }
-  /** take one food item from storage near the Outpost (crates, storage containers) */
+  /** take one food item from storage near the Settlement Hall (crates, storage containers) */
   private takeBaseFood(): boolean {
     const hub = this.factory.hub; if (!hub) return false;
     const invs: Inventory[] = [];
@@ -911,7 +921,7 @@ export class Game {
   }
   private hitOre(o: OreNode, w: any, at: THREE.Vector3) {
     const p = this.player;
-    if (o.type === 'f_crude') { this.ui.notify('Oil seeps from the ground here. You need an Oil Pumpjack (milestone 5).', ''); return; }
+    if (o.type === 'f_crude') { this.ui.notify('Oil seeps from the ground here. You need an Oil Pumpjack (unlocks at Lights On).', ''); return; }
     if (!w?.mine) { audio.play('hit_metal', { pos: at, volume: 0.6 }); this.ui.notify('You need a pickaxe to mine ore.', ''); return; }
     audio.play('mine_hit', { pos: at }); this.particles.sparks(at, 8); this.particles.dust(at, 6, [0.4, 0.38, 0.35]);
     this.zombies.noise(p.pos, 12);
@@ -1149,7 +1159,7 @@ export class Game {
         consider({ kind: 'pump', label: this.factory.townPowered ? 'Fill gas can' : 'Gas pump (no power)', sub: this.factory.townPowered ? (p.inv.count('gas_can_empty') ? undefined : 'Bring an empty gas can') : 'Restore the town grid with the Grid Uplink', target: ref, t: hit.t });
       } else if ('purity' in ref) {
         const o = ref as OreNode;
-        consider({ kind: 'ore', label: `${item(o.type).name} deposit (${o.purity > 1 ? 'Pure' : o.purity < 1 ? 'Impure' : 'Normal'})`, sub: o.occupied ? 'Being mined' : 'Mine with a pickaxe, or place a Miner', target: o, t: hit.t });
+        consider({ kind: 'ore', label: `${item(o.type).name} seam (${o.purity > 1 ? 'rich' : o.purity < 1 ? 'thin' : 'normal'})`, sub: o.occupied ? 'Being drilled' : 'Mine with a pickaxe, or set an Ore Drill on it', target: o, t: hit.t });
       }
     }
     // containers (AABB)
@@ -1352,7 +1362,7 @@ export class Game {
         this.startAction({ label: 'Pumping fuel…', dur: 3, cancelOnMove: true, done: () => { p.inv.remove('gas_can_empty', n); p.inv.add('gas_can', n); audio.play('splash'); } });
         break;
       }
-      case 'ore': this.ui.notify('Equip a pickaxe and swing at the deposit, or build a Miner on it (B).', ''); break;
+      case 'ore': this.ui.notify('Equip a pickaxe and swing at the seam, or set an Ore Drill on it (B).', ''); break;
     }
   }
 
@@ -1512,7 +1522,7 @@ export class Game {
   canCraft(r: Recipe, station: Station) {
     const p = this.player;
     if (r.station !== 'hand' && r.station !== station && !(station === 'stove' && r.station === 'campfire')) return { ok: false, why: `Needs ${r.station}` };
-    if (r.tier && this.factory.tier < r.tier) return { ok: false, why: `Unlocks at milestone ${r.tier}` };
+    if (r.tier && this.factory.tier < r.tier) return { ok: false, why: `Unlocks when your settlement becomes a ${MILESTONES[r.tier - 1]?.name ?? 'bigger town'}` };
     if (r.skill && p.skills.level(r.skill[0]) < r.skill[1]) return { ok: false, why: `Requires ${SKILLS.find(s => s.id === r.skill![0])!.name} ${r.skill[1]}` };
     for (const t of r.tools ?? []) if (!p.inv.hasTool(t)) return { ok: false, why: `Needs a ${t}` };
     if ((r.station === 'campfire' || r.station === 'stove') && !this.openPiece?.fire?.lit) return { ok: false, why: r.station === 'stove' ? 'Light the stove first' : 'Light the campfire first' };
@@ -1558,7 +1568,7 @@ export class Game {
         this.player.gainXP('engineering', 8, this.gameMin);
       } else if (MACHINES[id]) {
         const m = this.factory.add(id, cx, cz, rot);
-        if (id === 'hub') this.ui.notify('🏚 Survivor Outpost established. Open it (E) to see milestones. Your base is now on the map — and on the horde\'s radar.', 'good');
+        if (id === 'hub') this.ui.notify('🔔 Settlement founded. Open the Hall (E) to see what your town needs to grow. Build Shelter Houses so survivors have somewhere to live — and mind the noise, hordes will come.', 'good');
         audio.play('machine_place', { pos: new THREE.Vector3(cx, m.y, cz) });
         this.player.gainXP('engineering', 4, this.gameMin);
       } else {
@@ -1717,6 +1727,8 @@ export class Game {
       case 'workbench': done = (this.builtCounts.workbench ?? 0) > 0 || this.base.pieces.some(q => q.def.id === 'workbench'); break;
       case 'shelter': done = this.base.pieces.filter(q => q.def.kind.includes('wall') || q.def.kind === 'gate').length >= 5 || (this.builtCounts.barricade ?? 0) >= 4; break;
       case 'hub': done = !!this.factory.hub; break;
+      case 'recruit': done = this.survivors.list.some(q => q.recruited && !q.dead && q.order === 'work'); break;
+      case 'feed': done = this.factory.machines.some(m => m.type === 'mess_hall') && this.factory.machines.some(m => m.type === 'water_tower'); break;
       case 'm1': done = this.factory.tier >= 1; break;
       case 'power': done = this.factory.machines.some(m => m.def.power < 0 && m.fuel > 0) && this.factory.machines.some(m => m.type === 'power_pole'); break;
       case 'mine': done = this.factory.machines.some(m => m.type === 'miner' && m.running) && this.factory.machines.some(m => m.type === 'smelter' && (m.running || Object.values(m.outBuf).some(v => v > 0))); break;
@@ -1725,7 +1737,7 @@ export class Game {
       case 'm4': done = this.factory.tier >= 4; break;
       case 'm5': done = this.factory.tier >= 5; break;
       case 'm6': done = this.factory.tier >= 6; break;
-      case 'cure': done = this.factory.tier >= 7; break;
+      case 'city': done = this.factory.tier >= 7; break;
     }
     if (done) {
       this.objective++;
@@ -1754,7 +1766,7 @@ export class Game {
         v: 1, gameMin: this.gameMin, objective: this.objective, stats: this.stats, built: this.builtCounts,
         weather: { kind: this.weather.kind, wet: this.weather.wetness },
         vehicles: this.vehicles.toJSON(), survivors: this.survivors.toJSON(), lastFeedDay: this.lastFeedDay,
-        player: this.player.toJSON(), factory: this.factory.toJSON(), rails: this.railsJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
+        player: this.player.toJSON(), factory: this.factory.toJSON(), rails: this.railsJSON(), town: this.town.toJSON(), base: this.base.toJSON(), zombies: this.zombies.toJSON(),
         containers: town.containers.filter(c => c.generated).map(c => [c.id, c.inv.stacks]),
         doors: town.doors.map(d => [d.open ? 1 : 0, Math.round(d.hp), Math.round(d.barricade), d.locked ? 1 : 0]),
         windows: town.windows.map(w => [w.broken ? 1 : 0, Math.round(w.barricade)]),
@@ -1799,6 +1811,7 @@ export class Game {
       this.vehicles.load(d.vehicles ?? []);
       this.animals.populate();
       if (d.survivors) this.survivors.load(d.survivors); else this.survivors.populate();
+      this.town.load(d.town);
       this.lastFeedDay = d.lastFeedDay ?? this.day();
       this.zombies.load(d.zombies ?? []);
       if (d.settings?.creative !== undefined) this.settings.creative = d.settings.creative;
