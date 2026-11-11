@@ -221,3 +221,5 @@ input.txt { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--line2); colo
 .bubble .who { font-family: var(--head); font-size: 13px; letter-spacing: 0.04em; color: var(--text); text-shadow: 0 1px 3px #000, 0 0 6px #000; }
 .bubble .who span { color: var(--dim); font-size: 11px; }
 .chip { display: inline-block; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line2); background: rgba(255, 255, 255, 0.04); border-radius: 10px; cursor: help; }
+.window .req { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 3px 0; }
+.window .req .bar, .window .irow .bar, .window .statgrid .bar { width: auto; min-width: 0; height: 5px; }
