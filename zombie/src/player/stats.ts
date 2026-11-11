@@ -151,7 +151,7 @@ export class Stats {
     const h = this.health();
     if (h <= 0) {
       this.dead = true;
-      this.deathCause = this.knoxInfected && this.knox > 0.9 ? 'Succumbed to the Knox infection.' : this.bloodLoss > 60 ? 'Bled out.' : this.thirst <= 0 ? 'Died of dehydration.' : this.hunger <= 0 ? 'Starved to death.' : this.bodyTemp < 34.5 ? 'Froze to death.' : this.sickness > 60 ? 'Died of sickness.' : 'Died of injuries.';
+      this.deathCause = this.knoxInfected && this.knox > 0.9 ? 'Succumbed to the grey fever.' : this.bloodLoss > 60 ? 'Bled out.' : this.thirst <= 0 ? 'Died of dehydration.' : this.hunger <= 0 ? 'Starved to death.' : this.bodyTemp < 34.5 ? 'Froze to death.' : this.sickness > 60 ? 'Died of sickness.' : 'Died of injuries.';
       ev.push('dead');
     }
     return ev;

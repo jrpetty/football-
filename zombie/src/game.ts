@@ -37,6 +37,7 @@ import { Railways, Train } from './factory/trains';
 import { Town, JOB_INFO } from './town/town';
 import { townWindowMaterial } from './models/town';
 import { Survivors, Survivor } from './ai/survivors';
+import { background, trait as ptrait, personLevel, totalXp, rankName, skillLevel, maxHp as pMaxHp, think as pthink } from './ai/people';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
 import type { HumanPose } from './ai/zombies';
@@ -360,9 +361,9 @@ export class Game {
     this.animals.update(dt, { pos: p.pos, noise: Math.max(p.noise, this.loudT, this.driving ? 30 : 0), crouch: p.crouch, alive: this.state === 'play' }, 1 - daylight, a => this.wolfBite(a));
     if (this.state === 'play') {
       const hub = this.factory.hub ? new THREE.Vector3(this.factory.hub.cx, 0, this.factory.hub.cz) : null;
-      this.survivors.update(dt, dtGame, { player: p.pos, hub, particles: this.particles, notify: (m, k) => this.ui.notify(m, k), deposit: inv => this.world.dropItems((hub ?? p.pos).clone().add(new THREE.Vector3(4, 0, 0)), inv), townGoal: s => this.town.goal(s, hrs) });
-      this.town.update(dtGame, { hours: hrs, day: this.day(), raining: this.weather.rain, radio: this.factory.machines.some(m => m.type === 'radio_tower' && m.powered), lit: this.factory.townPowered || this.factory.machines.some(m => m.type === 'floodlight' && m.running) });
-      this.townT -= dt; if (this.townT <= 0) { this.townT = 1.5; this.factory.checkMilestone(); const h = this.factory.hub; if (h && this.zombies.list.some(z => z.state !== 'dead' && !z.frozen && Math.abs(z.pos.x - h.cx) < 30 && Math.abs(z.pos.z - h.cz) < 30)) this.town.alarm(); }
+      this.survivors.update(dt, dtGame, { player: p.pos, playerYaw: p.yaw + Math.PI, hub, particles: this.particles, notify: (m, k) => this.ui.notify(m, k), deposit: inv => this.world.dropItems((hub ?? p.pos).clone().add(new THREE.Vector3(4, 0, 0)), inv), townGoal: s => this.town.goal(s, hrs), now: this.gameMin, hours: hrs, daylight, alarm: at => { if (hub && Math.hypot(at.x - hub.x, at.z - hub.z) < 60) this.town.alarm(at); } });
+      this.town.update(dtGame, { now: this.gameMin, hours: hrs, day: this.day(), raining: this.weather.rain, radio: this.factory.machines.some(m => m.type === 'radio_tower' && m.powered), lit: this.factory.townPowered || this.factory.machines.some(m => m.type === 'floodlight' && m.running) });
+      this.townT -= dt; if (this.townT <= 0) { this.townT = 1.5; this.factory.checkMilestone(); const h = this.factory.hub; const zin = h && this.zombies.list.find(z => z.state !== 'dead' && !z.frozen && Math.abs(z.pos.x - h.cx) < 30 && Math.abs(z.pos.z - h.cz) < 30); if (zin) this.town.alarm(zin.pos); }
       if (hrs >= 18 && this.day() > this.lastFeedDay) { this.lastFeedDay = this.day(); this.survivors.feed(() => this.takeBaseFood(), (m, k) => this.ui.notify(m, k), !!this.factory.hub); }
     }
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
@@ -484,6 +485,7 @@ export class Game {
     g.uPanic.value = clamp((p.stats.panic - 40) / 100, 0, 0.5);
     g.uSick.value = clamp(Math.max(p.stats.sickness, p.stats.knoxInfected ? p.stats.knox * 100 : 0) / 100, 0, 1);
     g.uFade.value = damp(g.uFade.value, p.sleeping ? 0.92 : this.state === 'dead' ? 0.6 : 0, 2, dt);
+    this.peopleBubbles();
     this.ui.update(dt);
     this.renderer.render(dt);
     this.input.endFrame();
@@ -619,33 +621,82 @@ export class Game {
   }
 
   private npcInteract(s: Survivor, t: number): Interact {
-    const p = this.player;
-    const roleTxt = s.role === 'shooter' ? `shooter · ${s.ammo} rounds` : s.role === 'brawler' ? 'brawler' : 'scavenger';
-    if (!s.recruited) return { kind: 'npc', label: `Talk to ${s.name}`, sub: `Survivor (${roleTxt}) · ${p.inv.stacks.some(x => item(x.id).cat === 'food') ? 'offer food to recruit' : 'they want food'}`, target: s, t };
-    const next: Record<string, string> = { follow: this.factory.hub ? 'Live and work in town' : 'Wait here', work: 'Go scavenging (6 h)', guard: 'Go scavenging (6 h)', scavenge: 'Wait here', wait: 'Follow me' };
-    const alt = s.role === 'shooter' && p.inv.count('ammo_9mm') ? { label: 'Give 9mm ammo', act: () => { const k = Math.min(30, p.inv.count('ammo_9mm')); p.inv.remove('ammo_9mm', k); s.ammo += k; this.ui.notify(`${s.name} now has ${s.ammo} rounds.`, ''); } } : undefined;
-    const jobTxt = s.order === 'work' ? `${JOB_INFO[s.job].icon} ${JOB_INFO[s.job].name} · ${s.home >= 0 ? 'housed' : 'homeless'} · ${Math.round(s.happy)}% happy` : s.order;
-    return { kind: 'npc', label: `${s.name}: ${next[s.order]}`, sub: `${roleTxt} · ${jobTxt} · health ${Math.round(s.hp)}%`, target: s, t, alt };
+    const p = this.player; const sp = s.p;
+    const who = `${sp.age}, ${background(sp.bg).name.toLowerCase()} · ${sp.traits.map(q => ptrait(q).name).join(', ')}`;
+    if (!s.recruited) return { kind: 'npc', label: `Talk to ${sp.first} ${sp.last}`, sub: `${who} · ${p.inv.stacks.some(x => item(x.id).cat === 'food') ? 'offer food and they\'ll join you' : 'they want food before they\'ll trust you'}`, target: s, t };
+    const next: Record<string, string> = { follow: this.factory.hub ? 'Live and work in town' : 'Wait here', work: 'Follow me', guard: 'Follow me', scavenge: 'Wait here', wait: 'Follow me' };
+    let alt: Interact['alt'];
+    if (s.infect > 0 && p.inv.count('serum')) alt = { label: 'Give antiviral serum', act: () => this.giveSerum(s) };
+    else if ((s.role === 'shooter' || s.job === 'guard') && p.inv.count('ammo_9mm') && s.ammo < 20) alt = { label: `Give 9mm ammo (has ${s.ammo})`, act: () => this.giveAmmo(s) };
+    else alt = { label: 'Profile, skills & orders', act: () => this.ui.showPerson(s.id) };
+    const L = personLevel(totalXp(sp));
+    const state = s.infect > 0.35 ? ' · 🤒 feverish' : s.infect > 0 ? ' · 🩸 bitten' : s.hp < pMaxHp(sp) * 0.5 ? ' · wounded' : '';
+    const jobTxt = s.order === 'work' ? `${JOB_INFO[s.job].icon} ${JOB_INFO[s.job].name}` : s.order === 'follow' ? 'with you' : s.order;
+    return { kind: 'npc', label: `${s.name}: ${next[s.order]}`, sub: `Lv ${L} ${rankName(L)} · ${jobTxt} · ${s.doing}${state} · ${Math.round(s.happy)}% happy`, target: s, t, alt };
   }
   private talkTo(s: Survivor) {
     const p = this.player;
     if (!s.recruited) {
       const food = p.inv.stacks.filter(x => item(x.id).cat === 'food' && x.id !== 'rotten_food').sort((a, b) => (item(a.id).hunger ?? 0) - (item(b.id).hunger ?? 0))[0];
-      if (!food) { this.ui.notify(`${s.name}: "${this.survivors.line('recruit')}"`, ''); return; }
+      if (!food) { this.survivors.speak(s, 'stranger', 4.5); return; }
       p.inv.removeUid(food.uid, 1);
-      s.recruited = true; s.order = 'follow';
-      this.ui.notify(`${s.name} takes the ${item(food.id).name}. "${this.survivors.line('joined')}" ${this.factory.hub ? 'Talk again to send them to live in your settlement.' : 'Build a Settlement Hall so they have somewhere to live.'}`, 'good');
+      s.recruited = true; s.order = 'follow'; s.p.joinedDay = this.day();
+      pthink(s.p, this.gameMin, 'arrived', 'Someone shared their food', 10, 72);
+      this.survivors.speak(s, 'joined', 5);
+      this.ui.notify(`${s.p.first} ${s.p.last} (${background(s.p.bg).name.toLowerCase()}) takes the ${item(food.id).name} and joins you. ${this.factory.hub ? 'Talk again to send them to live in your settlement.' : 'Build a Settlement Hall so they have somewhere to live.'}`, 'good');
       audio.play('objective');
       return;
     }
-    const cycle: Record<string, Survivor['order']> = { follow: 'work', work: 'scavenge', guard: 'scavenge', scavenge: 'wait', wait: 'follow' };
+    const cycle: Record<string, Survivor['order']> = { follow: 'work', work: 'follow', guard: 'follow', scavenge: 'wait', wait: 'follow' };
     let o = cycle[s.order];
     if (o === 'work' && !this.factory.hub) o = 'wait';
-    s.order = o;
-    if (o === 'scavenge') { s.away = 360; this.ui.notify(`${s.name} heads out to scavenge. Back in ~6 hours.`, ''); }
-    else if (o === 'wait') { s.anchor.copy(s.pos); this.ui.notify(`${s.name} will wait here.`, ''); }
-    else if (o === 'work') { this.town.computeStats(); this.ui.notify(`${s.name}: "${s.home >= 0 || this.town.stats.beds > this.town.stats.residents ? 'Home. Feels strange to say it.' : 'Where do I sleep? You\'ll need to build another house.'}" — they'll find a job in town. Manage residents at the Settlement Hall.`, 'good'); }
-    else this.ui.notify(`${s.name}: "Right behind you."`, '');
+    this.orderPerson(s, o);
+  }
+  /** change what someone is doing: live in town, follow, scavenge or wait */
+  orderPerson(s: Survivor, o: Survivor['order']) {
+    if (s.dead || !s.recruited) return;
+    if (o === 'work' && !this.factory.hub) { this.ui.notify('Build a Settlement Hall first — they need a town to live in.', 'bad'); return; }
+    if (o === 'scavenge' && s.infect > 0.35) { this.ui.notify(`${s.name} is too sick to go anywhere.`, 'bad'); return; }
+    s.order = o; s.task = null; s.chat = null; s.hidden = false; s.goal = null; s.senseT = 0;
+    if (o === 'scavenge') { s.away = 360; this.ui.notify(`🎒 ${s.name} heads out to scavenge (skill ${skillLevel(s.p.xp.scavenging)}). Back in ~6 hours.`, ''); }
+    else if (o === 'wait') { s.away = 0; s.anchor.copy(s.pos); this.survivors.speak(s, 'wait'); }
+    else if (o === 'work') {
+      s.away = 0; if (!s.p.joinedDay || s.p.joinedDay < 1) s.p.joinedDay = this.day();
+      this.town.computeStats();
+      this.survivors.sayText(s, s.home >= 0 || this.town.stats.beds > this.town.stats.residents - 1 ? 'Home. Feels strange to say it.' : 'Where do I sleep? You\'ll need another house.', 5);
+      this.ui.notify(`${s.name} will live in town and take whatever post suits them. See everyone at the Settlement Hall → Residents.`, 'good');
+    } else { s.away = 0; this.survivors.speak(s, 'follow'); }
+  }
+  giveSerum(s: Survivor) {
+    const p = this.player; if (!p.inv.count('serum') || s.dead) return;
+    p.inv.remove('serum', 1);
+    if (this.survivors.cure(s)) { this.ui.notify(`🧪 You give ${s.name} the serum. The fever breaks.`, 'good'); this.survivors.sayText(s, 'I thought that was it. …Thank you.', 6); }
+    else this.ui.notify(`${s.name} wasn't infected — the dose is wasted.`, '');
+    audio.play('bandage');
+  }
+  giveAmmo(s: Survivor) {
+    const p = this.player; const k = Math.min(30, p.inv.count('ammo_9mm')); if (!k) return;
+    p.inv.remove('ammo_9mm', k); s.ammo += k; if (s.role !== 'shooter' && s.job !== 'guard') s.role = 'shooter';
+    this.ui.notify(`${s.name} now has ${s.ammo} rounds.`, '');
+  }
+  /** name tags and speech bubbles for people near the camera */
+  private peopleBubbles() {
+    const out: { x: number; y: number; name: string; say: string; dim: number; tag: string }[] = [];
+    if (this.state === 'play' && !this.ui.open) {
+      const cam = this.camera; const v = new THREE.Vector3(); const w = innerWidth, h = innerHeight;
+      for (const s of this.survivors.list) {
+        if (s.dead || s.hidden || s.away > 0) continue;
+        const d = s.pos.distanceTo(cam.position);
+        const talking = s.sayT > 0 && !!s.say;
+        if (d > (talking ? 26 : 11)) continue;
+        v.set(s.pos.x, s.pos.y + 1.95 * (s.p.look.height ?? 1), s.pos.z).project(cam);
+        if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05) continue;
+        if (d > 5 && this.world.col.blocked(cam.position.x, cam.position.y, cam.position.z, s.pos.x, s.pos.y + 1.6, s.pos.z)) continue;
+        out.push({ x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h, name: d < 11 || talking ? s.name : '', say: talking ? s.say : '', dim: clamp(1.25 - d / (talking ? 26 : 11), 0.25, 1), tag: !s.recruited ? 'stranger' : s.infect > 0.35 ? '🤒' : s.infect > 0 ? '🩸' : '' });
+        if (out.length >= 14) break;
+      }
+    }
+    this.ui.bubbles(out);
   }
   /** take one food item from storage near the Settlement Hall (crates, storage containers) */
   private takeBaseFood(): boolean {
@@ -1181,6 +1232,11 @@ export class Game {
       tmp.min.copy(d.pos).sub(new THREE.Vector3(0.45, 0.1, 0.45)); tmp.max.copy(d.pos).add(new THREE.Vector3(0.45, 0.5, 0.45));
       if (ray.intersectBox(tmp, hp)) consider({ kind: 'drop', label: 'Items', sub: `${d.inv.stacks.length} stacks`, target: d, t: hp.distanceTo(eye) });
     }
+    const fallen = this.survivors.bodyNear(p.pos, 2.6);
+    if (fallen) {
+      tmp.min.set(fallen.pos.x - 0.9, fallen.pos.y - 0.1, fallen.pos.z - 0.9); tmp.max.set(fallen.pos.x + 0.9, fallen.pos.y + 0.7, fallen.pos.z + 0.9);
+      if (ray.intersectBox(tmp, hp)) consider({ kind: 'body', label: `Lay ${fallen.p.first} ${fallen.p.last} to rest`, sub: fallen.willTurn ? `They will get back up in about ${Math.max(5, Math.ceil(fallen.body / 5) * 5)} s unless you do` : 'Give them a proper burial', target: fallen, t: hp.distanceTo(eye) });
+    }
     const npc = this.survivors.nearest(p.pos, 3);
     if (npc) {
       tmp.min.set(npc.pos.x - 0.4, npc.pos.y, npc.pos.z - 0.4); tmp.max.set(npc.pos.x + 0.4, npc.pos.y + 1.8, npc.pos.z + 0.4);
@@ -1323,6 +1379,7 @@ export class Game {
       }
       case 'car': this.enterVehicle(it.target); break;
       case 'npc': this.talkTo(it.target as Survivor); break;
+      case 'body': { const b = it.target as Survivor; this.startAction({ label: `Laying ${b.name} to rest…`, dur: 3.5, cancelOnMove: true, done: () => { if (this.survivors.layToRest(b)) { this.ui.notify(`⚰ ${b.p.first} ${b.p.last} is at rest. The town will remember that you did right by them.`, ''); audio.play('deconstruct'); } } }); break; }
       case 'forage': {
         const b = it.target as TreeInst;
         if ((b.foraged ?? -9) > this.day() - 2) { this.ui.notify('Nothing left on this one. Come back in a couple of days.', ''); break; }

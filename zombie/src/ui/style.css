@@ -213,3 +213,11 @@ input.txt { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--line2); colo
 #mapcanvas { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
 .tooltip { position: fixed; z-index: 60; background: var(--bg2); border: 1px solid var(--line2); padding: 8px 10px; font-size: 12px; max-width: 260px; pointer-events: none; }
 @media (max-width: 800px) { #minimap, #compass { display: none; } #notes { width: 260px; } }
+
+/* people: name tags, speech, trait chips */
+#bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+.bubble { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; will-change: transform; }
+.bubble .say { display: inline-block; max-width: 260px; white-space: normal; background: rgba(14, 13, 11, 0.86); border: 1px solid var(--line2); color: var(--text); font-size: 13px; line-height: 1.3; padding: 4px 9px; border-radius: 9px; margin-bottom: 3px; }
+.bubble .who { font-family: var(--head); font-size: 13px; letter-spacing: 0.04em; color: var(--text); text-shadow: 0 1px 3px #000, 0 0 6px #000; }
+.bubble .who span { color: var(--dim); font-size: 11px; }
+.chip { display: inline-block; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line2); background: rgba(255, 255, 255, 0.04); border-radius: 10px; cursor: help; }

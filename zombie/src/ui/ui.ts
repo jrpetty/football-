@@ -10,6 +10,8 @@ import { SKILLS, TRAITS, OCCUPATIONS, SkillId } from '../player/skills';
 import { MACHINES, PIECES, MILESTONES, MRECIPES } from '../factory/defs';
 import { TOWN, JOB_INFO, LEVEL_NAMES } from '../town/town';
 import { audio } from '../audio/Audio';
+import type { Survivor } from '../ai/survivors';
+import { PSKILLS, PTRAITS, JOB_SKILL, skillLevel, skillProgress, personLevel, levelProgress, totalXp, rankName, bioLine, maxHp as pMaxHp } from '../ai/people';
 import { HALF_WORLD, WORLD_SIZE } from '../core/util';
 import { LAKE } from '../world/layout';
 import type { Machine } from '../factory/factory';
@@ -164,6 +166,18 @@ export class UI {
     this.els.cstrip.innerHTML = marks.join('') + '<div id="cpois"></div>';
   }
 
+  /** name tags and speech over people's heads */
+  private bubbleEl: HTMLDivElement | null = null; private bubblePool: HTMLDivElement[] = [];
+  bubbles(list: { x: number; y: number; name: string; say: string; dim: number; tag: string }[]) {
+    if (!this.bubbleEl) { this.bubbleEl = document.createElement('div'); this.bubbleEl.id = 'bubbles'; document.body.appendChild(this.bubbleEl); }
+    while (this.bubblePool.length < list.length) { const e = document.createElement('div'); e.className = 'bubble'; this.bubbleEl.appendChild(e); this.bubblePool.push(e); }
+    this.bubblePool.forEach((e, i) => {
+      const b = list[i]; if (!b) { if (e.style.display !== 'none') e.style.display = 'none'; return; }
+      const html = `${b.say ? `<div class="say">${esc(b.say)}</div>` : ''}<div class="who">${esc(b.name)}${b.tag ? ` <span>${esc(b.tag)}</span>` : ''}</div>`;
+      if ((e as any)._h !== html) { e.innerHTML = html; (e as any)._h = html; }
+      e.style.display = ''; e.style.opacity = String(b.dim); e.style.transform = `translate(-50%,-100%) translate(${b.x.toFixed(1)}px,${b.y.toFixed(1)}px)`;
+    });
+  }
   notify(msg: string, kind = '') {
     const n = document.createElement('div'); n.className = 'note ' + (kind ?? ''); n.innerHTML = esc(msg);
     this.els.notes.prepend(n);
@@ -415,7 +429,7 @@ export class UI {
     const g = this.g;
     return `<div class="col"><h3>Objectives</h3><div class="scroll">${OBJECTIVES.map((o, i) => `<div class="ms ${i < g.objective ? 'done' : i === g.objective ? 'cur' : ''}"><div class="mn"><span>${i < g.objective ? '✔ ' : ''}${esc(o.title)}</span></div><div class="hint">${esc(o.desc)}</div></div>`).join('')}</div></div>
       <div class="col" style="max-width:380px"><h3>Record</h3><div class="statgrid"><div class="k">Days survived</div><div class="v">${Math.floor(g.player.stats.hoursSurvived / 24)}</div><div class="k">Zombies killed</div><div class="v">${g.player.kills}</div><div class="k">Items crafted</div><div class="v">${g.stats.crafted}</div><div class="k">Structures built</div><div class="v">${g.stats.built}</div><div class="k">Settlement</div><div class="v">${LEVEL_NAMES[g.factory.tier]} · ${g.town.residents().length} residents</div><div class="k">Machines</div><div class="v">${g.factory.machines.filter(m => !m.type.startsWith('belt')).length}</div></div>
-      <h3>Notes</h3><p class="hint" style="line-height:1.6">"Day 22. The radio says the Knox virus spreads by bite. Scratches sometimes. If you get bitten, that's it — unless someone, somewhere, builds a lab and finds a cure. The power plant on the ridge has been dark for weeks. Somebody needs to get the grid back."</p></div>`;
+      <h3>Notes</h3><p class="hint" style="line-height:1.6">"Day 22. The radio says the grey fever spreads by bite. Scratches sometimes. If you get bitten, that's it — unless someone, somewhere, builds a lab and finds a cure. The power plant on the ridge has been dark for weeks. Somebody needs to get the grid back."</p></div>`;
   }
 
   // ------------------------------------------------------------------ build menu
@@ -510,6 +524,9 @@ export class UI {
         <h3 style="margin-top:12px">Add stop</h3>${sts.map(m => `<div class="req"><span style="flex:1">🚉 ${esc((m as any).stName)} <span class="hint">· ${(m as any).stMode} · ${Math.round(Math.hypot(m.cx - p.pos.x, m.cz - p.pos.z))} m away${g.rails.stopTile(m) ? '' : ' · <span class="lack">no track</span>'}</span></span><button class="btn small" data-a="tadd" data-id="${m.id}">＋ Add</button></div>`).join('') || '<div class="hint">Build a Freight Station (B → Railways) beside your track.</div>'}</div></div></div></div>`;
   }
   private hubTab: 'level' | 'people' = 'level';
+  private personId = -1;
+  /** open the residents roster on one person */
+  showPerson(id: number) { this.hubTab = 'people'; this.personId = id; if (this.open !== 'hub') { this.open = null; this.toggle('hub'); } else this.refresh(); }
   private hubPanel() {
     const g = this.g; const p = g.player; const T = g.town; const st = T.computeStats();
     const lvl = g.factory.tier; const ms = MILESTONES[lvl];
@@ -540,14 +557,44 @@ export class UI {
       const folk = T.residents();
       const jobs = Object.keys(JOB_INFO) as (keyof typeof JOB_INFO)[];
       const bName = (id: number) => { const m = g.factory.machines.find(q => q.id === id); return m ? `${m.def.icon} ${esc(m.def.name)}` : '<span class="lack">none</span>'; };
-      body = `<div class="hint" style="margin-bottom:6px">Jobs: ${jobs.map(j => `${JOB_INFO[j].icon} ${st.jobs[j] ?? 0}`).join(' · ')} — residents pick jobs at open workplaces on their own; pin one by choosing it below.</div>
-        <div class="ilist">${folk.map(s => `<div class="irow" style="flex-wrap:wrap;gap:6px;cursor:default"><span class="ic">${s.order === 'work' ? JOB_INFO[s.job].icon : s.order === 'follow' ? '🚶' : s.order === 'scavenge' ? '🎒' : '⏸'}</span><span class="nm" style="min-width:110px"><b>${esc(s.name)}</b> <span class="hint">${s.role}</span></span>
-          <span class="hint" style="min-width:150px">${s.order === 'work' ? `🏠 ${s.home >= 0 ? bName(s.home) : '<span class="lack">homeless</span>'}` : s.order === 'scavenge' ? `scavenging · back in ${Math.ceil(s.away / 60)} h` : s.order === 'follow' ? 'following you' : 'waiting'}</span>
-          <span style="width:90px;display:flex;align-items:center;gap:4px" title="happiness">${bar(s.happy, 100, happyCol(s.happy))}</span><span class="hint" style="width:70px">❤ ${Math.round(s.hp)}%${s.hungry ? ' 🍽' : ''}${s.thirsty ? ' 💧' : ''}</span>
-          ${s.order === 'work' ? `<span style="display:flex;gap:2px">${jobs.map(j => `<button class="btn small ${s.job === j ? 'primary' : ''}" data-a="setjob" data-id="${s.id}" data-job="${j}" title="${esc(JOB_INFO[j].name + ': ' + JOB_INFO[j].desc)}">${JOB_INFO[j].icon}</button>`).join('')}</span>` : `<button class="btn small" data-a="sendtown" data-id="${s.id}">Send to town</button>`}</div>`).join('') || '<div class="hint">Nobody lives here yet. Find survivors holed up around the map, win them over with food, and send them home.</div>'}</div>
-        <p class="hint" style="margin-top:8px">${jobs.map(j => `${JOB_INFO[j].icon} <b>${JOB_INFO[j].name}</b>: ${esc(JOB_INFO[j].desc)}`).join('<br>')}</p>`;
+      if (!folk.some(s => s.id === this.personId)) this.personId = folk[0]?.id ?? -1;
+      const sel = folk.find(s => s.id === this.personId) ?? null;
+      const flags = (s: Survivor) => `${s.infect > 0 ? '<span title="bitten">🩸</span>' : ''}${s.hungry ? '<span title="hungry">🍽</span>' : ''}${s.thirsty ? '<span title="thirsty">💧</span>' : ''}${s.order === 'work' && s.home < 0 ? '<span title="homeless">⛺</span>' : ''}`;
+      const rows = folk.map(s => `<div class="irow ${s === sel ? 'sel' : ''}" data-a="selperson" data-id="${s.id}"><span class="ic">${s.order === 'work' ? JOB_INFO[s.job].icon : s.order === 'follow' ? '🚶' : s.order === 'scavenge' ? '🎒' : '⏸'}</span>
+          <span class="nm"><b>${esc(s.name)}</b> <span class="hint">Lv ${personLevel(totalXp(s.p))} · ${esc(s.doing)}</span></span>${flags(s)}
+          <span style="width:54px" title="mood ${Math.round(s.happy)}%">${bar(s.happy, 100, happyCol(s.happy))}</span></div>`).join('');
+      let card = '<div class="hint">Nobody lives here yet. Find survivors holed up around the map, win them over with food, and send them home.</div>';
+      if (sel) {
+        const sp = sel.p; const L = personLevel(totalXp(sp)); const mh = pMaxHp(sp);
+        const chip = (t: string) => { const d = PTRAITS.find(q => q.id === t)!; return `<span class="chip" title="${esc(d.desc)}">${d.icon} ${esc(d.name)}</span>`; };
+        const thoughts = [...sp.thoughts].sort((a, b) => b.v - a.v).map(t => `<div class="req"><span style="flex:1">${esc(t.text)}</span><span class="${t.v >= 0 ? 'have' : 'lack'}">${t.v >= 0 ? '+' : ''}${Math.round(t.v)}</span></div>`).join('');
+        const friends = folk.filter(o => (sp.bonds[o.id] ?? 0) > 40).map(o => esc(o.name)), rivals = folk.filter(o => (sp.bonds[o.id] ?? 0) < -30).map(o => esc(o.name));
+        const skills = PSKILLS.map(k => { const l = skillLevel(sp.xp[k.id]); return `<div class="req" title="${esc(k.desc)}"><span style="width:150px">${k.icon} ${k.name}${sp.loves.includes(k.id) ? ' <span title="Takes to it: learns 50% faster and enjoys the work" style="color:var(--accent2)">★</span>' : ''}</span>${bar(skillProgress(sp.xp[k.id]), 1)}<span style="width:56px;text-align:right"><b>${l}</b><span class="hint"> /10</span></span></div>`; }).join('');
+        const where = sel.order === 'work' ? `🏠 ${sel.home >= 0 ? bName(sel.home) : '<span class="lack">homeless</span>'}${sel.work >= 0 ? ` · works at ${bName(sel.work)}` : ''}${sel.nightShift ? ' · night shift' : ''}` : sel.order === 'scavenge' ? `scavenging · back in ${Math.ceil(sel.away / 60)} h` : sel.order === 'follow' ? 'travelling with you' : 'waiting where you left them';
+        const serum = p.inv.count('serum');
+        const ammoN = p.inv.count('ammo_9mm');
+        card = `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><h3 style="margin:0">${esc(sp.first)} ${esc(sp.last)}</h3><span><b>Level ${L}</b> <span class="hint">${esc(rankName(L))}</span></span></div>
+          <div class="req" style="margin:4px 0 6px">${bar(levelProgress(totalXp(sp)), 1, 'var(--accent2)')}</div>
+          <div class="hint" style="margin-bottom:6px">${esc(bioLine(sp))}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${sp.traits.map(chip).join('')}${sp.hates ? `<span class="chip" title="Unhappy if made to do this job">🙅 Won't enjoy: ${JOB_INFO[sp.hates].name}</span>` : ''}</div>
+          <div class="statgrid"><div class="k">Doing</div><div class="v">${esc(sel.doing)}${sel.say && sel.sayT > 0 ? ` <span class="hint">— “${esc(sel.say)}”</span>` : ''}</div>
+            <div class="k">Life</div><div class="v">${where}</div>
+            <div class="k">Health</div><div class="v" style="display:flex;gap:8px;align-items:center">${bar(sel.hp, mh, sel.hp > mh * 0.5 ? 'var(--good)' : 'var(--bad)')}<span>${Math.round(sel.hp)} / ${mh}</span></div>
+            ${sel.infect > 0 ? `<div class="k">Bite</div><div class="v" style="display:flex;gap:8px;align-items:center">${bar(sel.infect, 1, 'var(--bad)')}<span class="lack">${sel.infect < 0.35 ? 'bitten' : sel.infect < 0.75 ? 'feverish' : 'turning'}${sel.antibio > 0 ? ' · on antibiotics' : ''}</span><button class="btn small" data-a="pserum" data-id="${sel.id}" ${serum ? '' : 'disabled'}>Give serum (${serum})</button></div>` : ''}
+            <div class="k">Mood</div><div class="v" style="display:flex;gap:8px;align-items:center">${bar(sel.happy, 100, happyCol(sel.happy))}<span>${Math.round(sel.happy)}%</span></div></div>
+          ${thoughts ? `<h3>On their mind</h3>${thoughts}` : ''}
+          <h3>Skills <span class="hint">· grow with use</span></h3>${skills}
+          <h3>Job</h3><div style="display:flex;flex-wrap:wrap;gap:4px">${sel.order === 'work' ? jobs.map(j => `<button class="btn small ${sel.job === j ? 'primary' : ''}" data-a="setjob" data-id="${sel.id}" data-job="${j}" title="${esc(JOB_INFO[j].desc)}">${JOB_INFO[j].icon} ${JOB_INFO[j].name}${j !== 'idle' ? ` <span class="hint">${skillLevel(sp.xp[JOB_SKILL[j]])}</span>` : ''}</button>`).join('') : '<span class="hint">Not living in town.</span>'}</div>
+          <div class="hint" style="margin-top:4px">${sel.jobLock ? 'Pinned by you — choose Odd jobs to let them pick for themselves.' : 'They take whichever open post suits them best. Numbers show their skill for each job.'}</div>
+          <h3>Orders</h3><div style="display:flex;flex-wrap:wrap;gap:4px">${([['work', '🏘 Live in town'], ['follow', '🚶 Follow me'], ['scavenge', '🎒 Scavenge (6 h)'], ['wait', '⏸ Wait here']] as [string, string][]).map(([o, l]) => `<button class="btn small ${sel.order === o ? 'primary' : ''}" data-a="porder" data-id="${sel.id}" data-o="${o}" ${o === 'work' && !g.factory.hub ? 'disabled' : ''}>${l}</button>`).join('')}
+            ${sel.role === 'shooter' || sel.job === 'guard' ? `<button class="btn small" data-a="pammo" data-id="${sel.id}" ${ammoN ? '' : 'disabled'}>Give 9mm (${sel.ammo} held)</button>` : ''}</div>
+          <h3>People</h3><div class="hint">${friends.length ? `Friends: ${friends.join(', ')}` : 'No close friends yet.'}${rivals.length ? ` · Can't stand: ${rivals.join(', ')}` : ''}</div>
+          <h3>Record</h3><div class="hint">${sp.daysHere} day${sp.daysHere === 1 ? '' : 's'} in town · ${sp.kills} kills · ${sp.harvests} harvests · ${sp.meals} meals cooked · ${sp.repairs} repairs · ${sp.healed} healed · ${sp.runs} scavenging runs · ${sp.wounds} wounds</div>`;
+      }
+      body = `<div class="hint" style="margin-bottom:6px">Jobs: ${jobs.map(j => `${JOB_INFO[j].icon} ${st.jobs[j] ?? 0}`).join(' · ')} — everyone here is their own person: skills grow with the work they do, and their temperament decides how they cope.</div>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap"><div class="ilist" style="flex:1 1 280px;max-width:340px">${rows}</div><div style="flex:2 1 380px;min-width:0">${card}</div></div>`;
     }
-    return `<div class="panel window" style="width:min(900px,96vw)"><div class="top"><h2 style="padding:0 8px">🔔 Settlement Hall</h2>${tabs}<button class="close" data-a="close">✕</button></div><div class="body" style="flex-direction:column"><div class="scroll">${body}</div></div></div>`;
+    return `<div class="panel window" style="width:min(980px,96vw)"><div class="top"><h2 style="padding:0 8px">${g.factory.hub ? '🔔 Settlement Hall' : '👥 Your people'}</h2>${tabs}<button class="close" data-a="close">✕</button></div><div class="body" style="flex-direction:column"><div class="scroll">${body}</div></div></div>`;
   }
   private campfirePanel() {
     const g = this.g; const pc = g.openPiece; if (!pc?.fire) return '';
@@ -618,6 +665,10 @@ export class UI {
       case 'deposit': g.depositHub(t.dataset.id!); break;
       case 'hubtab': this.hubTab = t.dataset.id as any; this.renderPanel(); break;
       case 'setjob': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s) { g.town.setJob(s, t.dataset.job as any); this.refresh(); } break; }
+      case 'selperson': this.personId = Number(t.dataset.id); this.refresh(); break;
+      case 'porder': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s) { g.orderPerson(s, t.dataset.o as any); this.refresh(); } break; }
+      case 'pserum': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s) { g.giveSerum(s); this.refresh(); } break; }
+      case 'pammo': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s) { g.giveAmmo(s); this.refresh(); } break; }
       case 'sendtown': { const s = g.survivors.list.find(q => q.id === Number(t.dataset.id)); if (s && g.factory.hub) { s.order = 'work'; s.away = 0; this.refresh(); } break; }
       case 'stmode': if (g.openMachine) { (g.openMachine as any).stMode = t.dataset.id; this.refresh(); } break;
       case 'tadd': if (g.openTrain) { g.openTrain.schedule.push(Number(t.dataset.id)); this.refresh(); } break;

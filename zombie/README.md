@@ -174,20 +174,50 @@ Each level needs supplies delivered to the Settlement Hall *and* a living town.
   draw zombies); the Grid Uplink powers every fridge in town.
 - **Wildlife.** Deer and rabbits to hunt and butcher, and wolf packs that
   stalk you, especially at night. Fish the lake with a rod.
-- **Survivors.** Recruit people you find (and people your radio tower
-  attracts) with food. Order them to follow you, live and work in town,
-  go scavenging or wait. They fight, can die, and leave if you can't look
-  after them.
+- **People.** Everyone you meet is an individual, and stays one.
+  - Who they are: a name, an age, a past life (nurse, logger, deputy, line
+    cook, teacher… 18 backgrounds) that sets what they already know and how
+    they dress, and two or three temperament traits out of 20 (Brave,
+    Skittish, Hard worker, Idler, Cheerful, Brooding, Quick study, Night owl,
+    Green thumb, Steady hands, Loner, Thick blood…).
+  - Skills and levels: eight skills (Marksmanship, Brawling, Farming,
+    Cooking, Handiwork, Medicine, Scavenging, Labour) grow from 0 to 10 with
+    use. Skill sets how much work gets done, how well they shoot and whether
+    they come back from a scavenging run. Each person takes to one or two
+    skills (★: learns 50% faster, enjoys the work) and may resent a job. An
+    overall level and rank (Newcomer → Pillar of the town) adds health and
+    nerve.
+  - Minds of their own: they path around buildings and through doors, keep
+    their own hours (early risers, night owls, a night watch), take breaks,
+    haul and stack when there's nothing better to do, greet you, and say what
+    they think in speech bubbles.
+  - Mood: a list of thoughts you can read ("Ate a hot meal", "Lost a friend",
+    "Resents being made cook") adds up to happiness. Friendships and grudges
+    grow out of evening conversations; friends move in together and grieve.
+  - Danger: each person weighs their nerve — temperament, skill, weapon,
+    wounds, friends nearby, how many dead are coming — and fights, holds a
+    line or bolts for home shouting the alarm.
+  - The bite: a zombie hit can break the skin. A bitten resident sickens over
+    about 30 hours (bitten → feverish → delirious) and then turns, in the
+    middle of your town. Antiviral serum cures it; a medic with antibiotics
+    only buys time. Anyone killed by the dead gets back up within a minute or
+    two unless you lay them to rest first.
+  - Orders: talk to someone to have them follow you or live in town; open
+    their profile (alt-interact, or Settlement Hall → Residents) for skills,
+    thoughts, friends, job pinning, scavenging runs, ammo and serum.
 - **Town life.**
   - Buildings: Shelter Houses (4 beds) and Bunkhouses (10), the Mess Hall,
     Water Tower, Lumber Yard, Repair Shop, Clinic and Guard Posts.
-  - Daily routine: residents walk to work in the morning, gather at the mess
-    hall in the evening and go home to sleep. They shelter when zombies get
-    inside the town.
-  - Jobs: farmers water, harvest and replant your plots; cooks turn stored
-    ingredients into stove meals; guards shoot from their posts; lumberjacks
-    bring in logs and planks; mechanics repair walls and machines; medics heal
-    people and make bandages.
+  - Daily routine: residents walk to work in the morning, break at noon,
+    eat together at the mess hall, sit by the fire or talk in the evening and
+    go home to sleep. When the bell rings, fighters rally to the threat and
+    everyone else runs for their own front door.
+  - Jobs go to whoever suits them best, and a better-qualified newcomer will
+    take over a post. Farmers hoe, water, harvest and replant (4–9 plots each
+    by skill); cooks turn stored ingredients into stove meals; guards shoot
+    from their posts in day and night watches; lumberjacks walk out to fell
+    timber and haul it back; mechanics walk to whatever is most damaged and
+    mend it; medics go to the wounded, treat bites and make bandages.
   - Happiness comes from a bed, hot food, water, amenities, lights, feeling
     safe and good health. It sets how fast people work and whether newcomers
     come. Manage everyone from the Settlement Hall's Residents tab, where you
@@ -262,7 +292,7 @@ src/
   core/              utilities (RNG, simplex noise, event bus), input
   render/            renderer + post FX, sky/atmosphere, weather, particles, light pool, procedural textures & materials
   world/             layout, terrain (splat shader), town generator, vegetation, collision + nav grid, world queries
-  ai/                zombie GPU mesh/shader and AI director, wildlife, survivor NPCs
+  ai/                zombie GPU mesh/shader and AI director, wildlife; people: personas & skills (people.ts), behaviour (survivors.ts), pathfinding (pathing.ts)
   vehicles/          drivable car physics, fuel, collisions
   player/            controller, survival stats, skills/traits/occupations, first-person viewmodel
   items/             item database, inventory, loot tables, crafting recipes

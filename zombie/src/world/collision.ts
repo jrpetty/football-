@@ -96,13 +96,13 @@ export class CollisionWorld {
 
   private qbuf: (Box | Circle)[] = [];
   /** Resolve a vertical cylinder (feet at y, height h, radius r) against the world. Mutates pos. Returns true if collided. */
-  resolveCylinder(pos: THREE.Vector3, r: number, h: number, stepHeight = 0.45, ignoreTag?: string): { hit: boolean; groundY: number } {
+  resolveCylinder(pos: THREE.Vector3, r: number, h: number, stepHeight = 0.45, ignoreTag?: string, ignoreTag2?: string): { hit: boolean; groundY: number } {
     const res = { hit: false, groundY: -Infinity };
     const list = this.query(pos.x - r - 0.1, pos.z - r - 0.1, pos.x + r + 0.1, pos.z + r + 0.1, this.qbuf);
     for (let iter = 0; iter < 2; iter++) {
       for (const o of list) {
         if ('minX' in o) {
-          if (ignoreTag && o.tag === ignoreTag) continue;
+          if (ignoreTag && (o.tag === ignoreTag || o.tag === ignoreTag2)) continue;
           if (pos.y + h <= o.minY || pos.y >= o.maxY) continue;
           // standable top (stairs, foundations, low props)
           if (o.maxY - pos.y <= stepHeight && pos.x > o.minX - r * 0.5 && pos.x < o.maxX + r * 0.5 && pos.z > o.minZ - r * 0.5 && pos.z < o.maxZ + r * 0.5) {

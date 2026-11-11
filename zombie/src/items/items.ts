@@ -51,7 +51,7 @@ const I: ItemDef[] = [
   { id: 'antibiotics', name: 'Antibiotics', icon: '💉', cat: 'medical', weight: 0.1, stack: 10, med: 'antibiotic', desc: 'Fights wound infection and sickness.' },
   { id: 'splint', name: 'Splint', icon: '🦴', cat: 'medical', weight: 0.4, stack: 5, med: 'splint', desc: 'Set fractured limbs so they can heal.' },
   { id: 'suture_kit', name: 'Suture Kit', icon: '🪡', cat: 'medical', weight: 0.1, stack: 5, med: 'suture', desc: 'Stitch deep lacerations — they heal far faster.' },
-  { id: 'serum', name: 'Antiviral Serum', icon: '🧪', cat: 'medical', weight: 0.1, stack: 10, med: 'serum', desc: 'The cure. Halts and reverses the Knox infection. Civilisation\'s hope.' },
+  { id: 'serum', name: 'Antiviral Serum', icon: '🧪', cat: 'medical', weight: 0.1, stack: 10, med: 'serum', desc: 'The cure. Halts and reverses the grey fever. Civilisation\'s hope.' },
   // ---------- weapons ----------
   { id: 'bat', name: 'Baseball Bat', icon: '🏏', cat: 'weapon', weight: 1.0, stack: 1, desc: 'Reliable blunt weapon.', weapon: { kind: 'blunt', damage: 34, range: 2.2, speed: 1.15, stamina: 7, knock: 1.4, durability: 160, model: 'bat', noise: 6, twoHanded: true } },
   { id: 'bat_nails', name: 'Spiked Bat', icon: '🏏', cat: 'weapon', weight: 1.2, stack: 1, desc: 'A bat with nails driven through it.', weapon: { kind: 'blunt', damage: 48, range: 2.2, speed: 1.05, stamina: 8, knock: 1.3, durability: 140, model: 'bat_nails', noise: 6, twoHanded: true } },
