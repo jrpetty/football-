@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Texture Gallery</title>
+<style>
+  html, body { margin: 0; background: #1b1d1f; color: #ddd; font: 12px/1.3 system-ui, sans-serif; }
+  #info { position: fixed; left: 8px; top: 6px; z-index: 2; background: rgba(0,0,0,.5); padding: 4px 8px; }
+  #labels div { position: absolute; transform: translateX(-50%); color: #eee; text-shadow: 0 1px 2px #000; white-space: nowrap; font-size: 11px; }
+  canvas { display: block; }
+  .flat { display: inline-block; margin: 4px; vertical-align: top; }
+  .flat canvas { display: inline-block; margin-right: 2px; }
+</style>
+</head>
+<body>
+<div id="info">loading…</div>
+<div id="labels"></div>
+<div id="flat"></div>
+<script type="module" src="./textures.ts"></script>
+</body>
+</html>

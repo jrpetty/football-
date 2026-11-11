@@ -1,0 +1,22 @@
+{
+  "name": "rekindle",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "REKINDLE — open-world zombie survival with late-game automation",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build && node scripts/build-single.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.21"
+  }
+}

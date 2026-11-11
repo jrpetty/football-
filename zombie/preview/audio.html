@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>REKINDLE Audio Lab</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: #111214; color: #d8d4cc; font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 8px; letter-spacing: 0.08em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #9a8f7c; margin: 18px 0 6px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #23252a; color: #e6e0d4; border: 1px solid #3a3d44; border-radius: 4px; padding: 5px 9px; cursor: pointer; font: inherit; font-size: 12px; }
+  button:hover { background: #2e3138; }
+  button.on { background: #5a3b1c; border-color: #a86a2c; }
+  label { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; font-size: 12px; }
+  input[type=range] { width: 140px; }
+  #stats { font-family: ui-monospace, monospace; font-size: 12px; color: #8fa; }
+</style>
+</head>
+<body>
+<h1>REKINDLE — procedural audio lab</h1>
+<button id="init">Init audio</button> <span id="stats"></span>
+<h2>Positional</h2>
+<label>distance <input id="dist" type="range" min="0" max="200" value="0" /> <span id="distv">0 m (2D)</span></label>
+<label>angle <input id="ang" type="range" min="-180" max="180" value="0" /> <span id="angv">0°</span></label>
+<h2>One-shots</h2>
+<div class="grid" id="sfx"></div>
+<h2>Loops</h2>
+<div class="grid" id="loops"></div>
+<h2>Music</h2>
+<label>intensity <input id="music" type="range" min="0" max="100" value="0" /> <span id="musicv">0</span></label>
+<h2>Ambience</h2>
+<label>wind <input id="wind" type="range" min="0" max="100" value="30" /></label>
+<label>rain <input id="rain" type="range" min="0" max="100" value="0" /></label>
+<label>night <input id="night" type="range" min="0" max="100" value="0" /></label>
+<label><input id="indoor" type="checkbox" /> indoor</label>
+<label><input id="base" type="checkbox" /> inside base</label>
+<h2>Mix</h2>
+<label>low health <input id="lh" type="range" min="0" max="100" value="0" /></label>
+<label>master <input id="vm" type="range" min="0" max="100" value="80" /></label>
+<label>sfx <input id="vs" type="range" min="0" max="100" value="100" /></label>
+<label>music <input id="vmu" type="range" min="0" max="100" value="40" /></label>
+<label>ambience <input id="va" type="range" min="0" max="100" value="70" /></label>
+<button id="pause">Suspend</button>
+<script type="module" src="./audio.ts"></script>
+</body>
+</html>
