@@ -35,6 +35,8 @@ const I: ItemDef[] = [
   { id: 'potato', name: 'Potato', icon: '🥔', cat: 'food', weight: 0.3, stack: 20, hunger: 8, spoilDays: 20, cookTo: 'baked_potato', desc: 'Better cooked.' },
   { id: 'baked_potato', name: 'Baked Potato', icon: '🥔', cat: 'food', weight: 0.3, stack: 10, hunger: 24, spoilDays: 3, desc: 'Warm and filling.' },
   { id: 'corn', name: 'Corn', icon: '🌽', cat: 'food', weight: 0.3, stack: 20, hunger: 12, spoilDays: 8, desc: 'Sweet corn.' },
+  { id: 'raw_fish', name: 'Raw Fish', icon: '🐟', cat: 'food', weight: 0.6, stack: 5, hunger: 12, sick: 0.35, spoilDays: 2, cookTo: 'cooked_fish', desc: 'Fresh from the lake. Cook it.' },
+  { id: 'cooked_fish', name: 'Cooked Fish', icon: '🍣', cat: 'food', weight: 0.5, stack: 5, hunger: 30, spoilDays: 2, mood: 4, desc: 'Flaky and hot.' },
   { id: 'rotten_food', name: 'Rotten Food', icon: '🤢', cat: 'food', weight: 0.3, stack: 10, hunger: 6, sick: 0.85, desc: 'You would have to be desperate.' },
   // ---------- drink ----------
   { id: 'water_bottle', name: 'Water Bottle', icon: '💧', cat: 'drink', weight: 0.6, stack: 5, thirst: 40, empties: 'empty_bottle', desc: 'Clean, safe drinking water.' },
@@ -73,6 +75,7 @@ const I: ItemDef[] = [
   { id: 'screwdriver', name: 'Screwdriver', icon: '🪛', cat: 'tool', weight: 0.2, stack: 1, tools: ['screwdriver'], desc: 'Needed for electronics and machine work.' },
   { id: 'wrench', name: 'Wrench', icon: '🔧', cat: 'tool', weight: 0.6, stack: 1, tools: ['wrench'], desc: 'Needed to assemble machines.' },
   { id: 'flashlight', name: 'Flashlight', icon: '🔦', cat: 'tool', weight: 0.4, stack: 1, light: true, desc: 'Press F to toggle. Drains batteries.', weapon: { kind: 'blunt', damage: 8, range: 1.5, speed: 1.6, stamina: 3, knock: 0.3, durability: 200, model: 'flashlight', noise: 3 } },
+  { id: 'fishing_rod', name: 'Fishing Rod', icon: '🎣', cat: 'tool', weight: 0.8, stack: 1, tools: ['fishing'], desc: 'Look at the lake and press E to fish.' },
   { id: 'battery', name: 'Battery', icon: '🔋', cat: 'tool', weight: 0.05, stack: 20, desc: 'Powers the flashlight.' },
   { id: 'lighter', name: 'Lighter', icon: '🔥', cat: 'tool', weight: 0.05, stack: 1, tools: ['fire'], desc: 'Light campfires.' },
   { id: 'gas_can', name: 'Gas Can', icon: '⛽', cat: 'tool', weight: 4, stack: 1, fuel: 60, empties: 'gas_can_empty', desc: 'Fuel for vehicles and generators. Use it next to a car to refuel.' },

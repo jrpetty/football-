@@ -25,6 +25,7 @@ export const RECIPES: Recipe[] = [
   { id: 'axe_wb', out: ['axe', 1], inp: { sheet_metal: 1, plank: 2, rope: 1 }, tools: ['hammer'], station: 'workbench', time: 10, skill: ['engineering', 1], xp: ['engineering', 8] },
   { id: 'hammer_wb', out: ['hammer', 1], inp: { scrap_metal: 2, plank: 1 }, station: 'workbench', time: 6, xp: ['engineering', 4] },
   { id: 'wrench_wb', out: ['wrench', 1], inp: { scrap_metal: 3 }, tools: ['hammer'], station: 'workbench', time: 6, xp: ['engineering', 4] },
+  { id: 'fishing_rod', out: ['fishing_rod', 1], inp: { plank: 1, rope: 1, nails: 1 }, station: 'workbench', time: 6 },
   { id: 'rope', out: ['rope', 1], inp: { rag: 3 }, station: 'workbench', time: 4 },
   { id: 'sledge_wb', out: ['sledgehammer', 1], inp: { sheet_metal: 2, plank: 2, duct_tape: 1 }, tools: ['hammer'], station: 'workbench', time: 12, skill: ['engineering', 3], xp: ['engineering', 12] },
   { id: 'ammo_9mm', out: ['ammo_9mm', 15], inp: { gunpowder: 2, scrap_metal: 1 }, tools: ['screwdriver'], station: 'workbench', time: 8, skill: ['firearms', 2], xp: ['firearms', 6], tier: 3 },
@@ -43,6 +44,7 @@ export const RECIPES: Recipe[] = [
   // ---- campfire ----
   { id: 'cook_meat', out: ['cooked_meat', 1], inp: { raw_meat: 1 }, station: 'campfire', time: 6 },
   { id: 'bake_potato', out: ['baked_potato', 1], inp: { potato: 1 }, station: 'campfire', time: 6 },
+  { id: 'cook_fish', out: ['cooked_fish', 1], inp: { raw_fish: 1 }, station: 'campfire', time: 6 },
   { id: 'boil_water', out: ['water_bottle', 1], inp: { dirty_water: 1 }, station: 'campfire', time: 6 },
   { id: 'sterilize_rag', out: ['bandage', 1], inp: { rag: 2, water_bottle: 1 }, station: 'campfire', time: 8, xp: ['firstaid', 4] },
 ];

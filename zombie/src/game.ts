@@ -27,6 +27,7 @@ import { Container, Door, Win } from './world/town';
 import { TreeInst, windUniforms } from './world/vegetation';
 import { RNG, clamp, bus, damp, lerp } from './core/util';
 import { UI } from './ui/ui';
+import { Animals, Animal } from './ai/animals';
 import { Vehicles, Vehicle } from './vehicles/vehicles';
 import type { TownCar } from './world/town';
 import type { HumanPose } from './ai/zombies';
@@ -74,6 +75,8 @@ export class Game {
   base!: Base;
   placer!: Placer;
   vehicles!: Vehicles;
+  animals!: Animals;
+  private loudT = 0;
   driving: Vehicle | null = null;
   thirdPerson = false;
   carCam = true;
@@ -153,6 +156,7 @@ export class Game {
     this.base = new Base(this.world, this.lights, this.scene);
     this.placer = new Placer(this.scene, this.world, this.factory, this.base);
     this.vehicles = new Vehicles(this.world, this.scene);
+    this.animals = new Animals(this.world, this.scene, SEED);
     this.zombies.humans.push(this.avatar);
     this.vm = new ViewModel(this.settings.fov);
     this.renderer.setup(this.scene, this.camera, this.vm.scene, this.vm.camera);
@@ -225,6 +229,7 @@ export class Game {
     p.pos.set(SPAWN.x, this.world.groundY(SPAWN.x, SPAWN.z) + 0.1, SPAWN.z);
     p.yaw = Math.PI * 0.75;
     this.zombies.populate();
+    this.animals.populate();
     this.gameMin = 8 * 60 + 30;
     this.objective = 0;
     this.startPlay();
@@ -301,6 +306,8 @@ export class Game {
       baseCenter: this.factory.hub ? new THREE.Vector3(this.factory.hub.cx, 0, this.factory.hub.cz) : null, baseHeat: this.factory.heat + this.combatHeat,
       daylight, hours: hrs, day: this.day(), luck: this.luck(),
     }, this.camera.position);
+    this.loudT = Math.max(0, this.loudT - dt * 30);
+    this.animals.update(dt, { pos: p.pos, noise: Math.max(p.noise, this.loudT, this.driving ? 30 : 0), crouch: p.crouch, alive: this.state === 'play' }, 1 - daylight, a => this.wolfBite(a));
     this.factory.update(dt * Math.min(this.timeMul, 20), { daylight, overcast: this.weather.overcast, wind: this.weather.wind, playerPos: p.pos, zombies: this.zombies, particles: this.particles, hours: hrs, day: this.day(), onDrop: pos => this.supplyDrop(pos) });
     this.weather.seasonTemp = this.season().temp;
     this.base.update(dt, dtGame / 60, { raining: this.weather.rain, particles: this.particles, playerPos: p.pos, temp: this.weather.temperature(hrs) });
@@ -535,6 +542,19 @@ export class Game {
     return undefined;
   }
 
+  private wolfBite(a: Animal) {
+    const p = this.player;
+    if (this.driving) return;
+    if (!this.rng.chance(p.sprinting ? 0.45 : 0.7)) return;
+    const part = this.rng.weighted<PartId>([['legL', 30], ['legR', 30], ['armL', 15], ['armR', 15], ['torso', 10]]);
+    const prot = p.protection(part.startsWith('leg') ? 'legs' : 'torso');
+    audio.play('player_hurt'); this.renderer.grade.uniforms.uDamage.value = 0.7; p.camShake = 0.4;
+    if (this.rng.chance(prot.bite)) { this.ui.notify('The wolf\'s teeth catch on your clothes.', ''); return; }
+    p.stats.addWound(part, this.rng.chance(0.6) ? 'laceration' : 'scratch', this.rng.range(8, 15));
+    this.ui.notify(`🐺 A wolf mauls your ${PARTS.find(q => q.id === part)!.name.toLowerCase()}!`, 'bad');
+    this.cancelAction();
+  }
+
   // ------------------------------------------------------------------ seasons & food
   static SEASON_DAYS = 7;
   season() {
@@ -682,6 +702,15 @@ export class Game {
       p.camShake = Math.max(p.camShake, 0.15);
       return;
     }
+    const beasts = this.animals.inArc(eye, flat, range);
+    if (beasts.length) {
+      const a = beasts[0];
+      const dmg = (w?.damage ?? 9) * (1 + skill * 0.07) * p.stats.meleeMult() * this.rng.range(0.85, 1.15);
+      const killed = this.animals.damage(a, dmg, p.pos);
+      this.particles.blood(a.pos.clone().setY(a.pos.y + 0.6), flat, 0.8); audio.play('hit_flesh', { pos: a.pos });
+      this.ui.hitmark(killed); if (st && w) this.wear(st, 1);
+      return;
+    }
     // environment targets
     const hit = this.world.col.raycast(eye, fwd, range + 0.3);
     if (hit.obj) {
@@ -764,7 +793,12 @@ export class Game {
       const d = fwd.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2 * spread, (Math.random() - 0.5) * 2 * spread, (Math.random() - 0.5) * 2 * spread)).normalize();
       const wh = this.world.col.raycast(eye, d, w.range);
       const zh = this.zombies.raycast(eye, d, Math.min(w.range, wh.t));
-      if (zh) {
+      const ah = this.animals.raycast(eye, d, Math.min(w.range, wh.t, zh ? zh.t : Infinity));
+      if (ah) {
+        const killed = this.animals.damage(ah.a, w.damage * (w.pellets ? clamp(1.2 - ah.t / w.range, 0.3, 1) : 1), eye);
+        this.particles.blood(eye.clone().addScaledVector(d, ah.t), d, 0.7); hitAny = true; killedAny = killedAny || killed;
+        if (killed) p.gainXP('firearms', 4, this.gameMin);
+      } else if (zh) {
         const falloff = w.pellets ? clamp(1.2 - zh.t / w.range, 0.3, 1) : 1;
         const dmg = w.damage * falloff * (1 + skill * 0.05) * this.rng.range(0.9, 1.1);
         const killed = this.zombies.damage(zh.z, dmg, d, zh.head, w.knock);
@@ -793,6 +827,7 @@ export class Game {
     this.lights.flash(mz.clone().addScaledVector(fwd, 0.3), 0xffb050, 160, 16, 0.06);
     audio.play(w.ammo === 'ammo_shells' ? 'gunshot_shotgun' : w.ammo === 'ammo_rifle' ? 'gunshot_rifle' : 'gunshot_pistol');
     this.zombies.noise(p.pos, w.noise * (1 - p.skills.level('firearms') * 0.0));
+    this.loudT = Math.max(this.loudT, w.noise);
     this.combatHeat += 1.5;
     this.wear(st, 1);
   }
@@ -969,6 +1004,8 @@ export class Game {
       tmp.min.copy(d.pos).sub(new THREE.Vector3(0.45, 0.1, 0.45)); tmp.max.copy(d.pos).add(new THREE.Vector3(0.45, 0.5, 0.45));
       if (ray.intersectBox(tmp, hp)) consider({ kind: 'drop', label: 'Items', sub: `${d.inv.stacks.length} stacks`, target: d, t: hp.distanceTo(eye) });
     }
+    const carcass = this.animals.carcassNear(p.pos, 2.6);
+    if (carcass) consider({ kind: 'butcher', label: `Butcher ${carcass.type}`, sub: p.inv.hasTool('knife') ? `${this.animals.meat(carcass)} raw meat` : 'Needs a knife or machete', target: carcass, t: Math.max(0.5, carcass.pos.distanceTo(eye) - 0.8) });
     const corpse = this.zombies.corpseNear(p.pos, 2.4);
     if (corpse) {
       tmp.min.set(corpse.pos.x - 0.9, corpse.pos.y - 0.1, corpse.pos.z - 0.9); tmp.max.set(corpse.pos.x + 0.9, corpse.pos.y + 0.6, corpse.pos.z + 0.9);
@@ -987,7 +1024,8 @@ export class Game {
     }
     // water
     if (!best && this.world.nearWater(p.pos.x + fwd.x * 1.5, p.pos.z + fwd.z * 1.5) && fwd.y < -0.2) {
-      consider({ kind: 'water', label: p.inv.count('empty_bottle') ? 'Fill bottle (dirty water)' : 'Drink from the lake', sub: 'Untreated water can make you sick', target: null, t: 2 });
+      const fish = p.inv.hasTool('fishing');
+      consider({ kind: fish ? 'fish' : 'water', label: fish ? 'Fish' : p.inv.count('empty_bottle') ? 'Fill bottle (dirty water)' : 'Drink from the lake', sub: fish ? 'Patience…' : 'Untreated water can make you sick', target: null, t: 2, alt: fish ? { label: p.inv.count('empty_bottle') ? 'Fill bottle' : 'Drink', act: () => this.doInteract({ kind: 'water', label: '', target: null, t: 0 }) } : undefined });
     }
     return best;
   }
@@ -1094,6 +1132,22 @@ export class Game {
         break;
       }
       case 'car': this.enterVehicle(it.target); break;
+      case 'butcher': {
+        const a = it.target as Animal;
+        if (!p.inv.hasTool('knife')) { this.ui.notify('You need a knife or machete to butcher it.', ''); break; }
+        this.startAction({ label: `Butchering the ${a.type}…`, dur: a.type === 'rabbit' ? 3 : 7, cancelOnMove: true, done: () => { if (a.butchered) return; a.butchered = true; const inv = new Inventory(); inv.add('raw_meat', this.animals.meat(a)); if (a.type !== 'rabbit') inv.add('rag', 1); this.giveOrDrop(inv); p.bloody = 1; } });
+        audio.play('search');
+        break;
+      }
+      case 'fish': {
+        const dur = this.rng.range(8, 18);
+        this.startAction({ label: 'Fishing… (stay still)', dur, cancelOnMove: true, done: () => {
+          if (this.rng.chance(0.5 + this.luck() * 0.3)) { p.inv.add('raw_fish', 1); audio.play('splash'); this.ui.notify('🐟 Caught a fish!', 'good'); }
+          else this.ui.notify('Nothing bites. Try again.', '');
+        } });
+        audio.play('splash', { volume: 0.4 });
+        break;
+      }
       case 'pump': {
         if (!this.factory.townPowered) { this.ui.notify('The pumps are dead. Siphon fuel from cars, or restore the grid.', ''); break; }
         const n = p.inv.count('gas_can_empty'); if (!n) { this.ui.notify('You need an empty gas can.', ''); break; }
@@ -1480,6 +1534,7 @@ export class Game {
       for (const dr of d.drops ?? []) { const inv = new Inventory(); inv.load(dr[3]); this.world.dropItems(new THREE.Vector3(dr[0], dr[1], dr[2]), inv); }
       if (d.explored) this.explored.set(d.explored);
       this.vehicles.load(d.vehicles ?? []);
+      this.animals.populate();
       this.zombies.load(d.zombies ?? []);
       if (d.settings?.creative !== undefined) this.settings.creative = d.settings.creative;
       this.lastSave = this.gameMin;
