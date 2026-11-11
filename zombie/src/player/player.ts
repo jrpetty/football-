@@ -40,7 +40,7 @@ export class Player {
   eye(out = new THREE.Vector3()) { return out.set(this.pos.x, this.pos.y + (1.62 - this.crouchT * 0.6), this.pos.z); }
   forward(out = new THREE.Vector3()) { return out.set(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch)); }
   capacity() {
-    let c = 14 + this.skills.level('strength') * 1.6;
+    let c = 18 + this.skills.level('strength') * 1.6;
     if (this.traits.has('strong')) c += 3; if (this.traits.has('weak')) c -= 3;
     for (const s of Object.values(this.worn)) if (s) c += item(s.id).cloth?.capacity ?? 0;
     return c;

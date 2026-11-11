@@ -148,3 +148,12 @@ src/
 
 *Built for coaches and analysts. Swap in your own squad, footage and matches
 from the **Squad**, **Matches**, **Video** and **Data** screens.*
+
+---
+
+## 🔥 Also in this repo: REKINDLE (zombie survival + automation game)
+
+The [`zombie/`](zombie/) folder holds a separate browser game: an open-world,
+first-person zombie survival game that becomes a factory-automation game
+later on. To play it, download [`zombie/rekindle.html`](zombie/rekindle.html)
+and double-click it. See [`zombie/README.md`](zombie/README.md) for details.

@@ -174,6 +174,7 @@ export class Game {
       if (id === 'engineering') this.factory.engineering = lvl;
       if (id === 'carpentry') this.base.carpentry = lvl;
     };
+    this.canvas.addEventListener('click', () => { if (this.state === 'play' && !this.paused && !this.ui.anyOpen() && !this.input.locked) this.input.lock(); });
     this.input.onLockChange = (l) => { if (!l && this.state === 'play' && !this.ui.anyOpen() && !this.paused) this.pause(true); };
   }
 
