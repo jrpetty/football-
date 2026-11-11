@@ -26,7 +26,8 @@ func _ready() -> void:
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.tonemap_white = 7.0
-	env.tonemap_exposure = 1.08
+	# Forward+ and Mobile come out darker and harder than Compatibility for the same lights
+	env.tonemap_exposure = 1.0 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 1.38
 	env.fog_enabled = true
 	env.fog_sky_affect = 0.0
 	env.fog_aerial_perspective = 0.6
@@ -85,7 +86,7 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	# moon: opposite the sun
 	var mdir := Vector3(-dir.x, maxf(0.25, -dir.y), -dir.z).normalized()
 	moon.look_at_from_position(mdir * 100.0, Vector3.ZERO, Vector3.UP)
-	moon.light_energy = (1.0 - daylight) * 0.22
+	moon.light_energy = (1.0 - daylight) * 0.4
 	moon.visible = moon.light_energy > 0.005
 
 	var top_day := _lerp_col(Color(0.3, 0.48, 0.74), Color(0.46, 0.5, 0.54), oc)
@@ -102,10 +103,10 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	sky_mat.sky_energy_multiplier = lerpf(0.7, 1.15, daylight)
 	# shade is lit by the sky plus a little that never goes away (bounce by day, starlight by night)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_color = _lerp_col(Color(0.16, 0.2, 0.32), Color(0.62, 0.64, 0.6), daylight)
-	env.ambient_light_sky_contribution = 0.72
-	env.ambient_light_energy = lerpf(0.6, lerpf(2.1, 2.2, oc), daylight)
+	env.ambient_light_color = _lerp_col(Color(0.2, 0.26, 0.42), Color(0.62, 0.64, 0.6), daylight)
+	env.ambient_light_sky_contribution = lerpf(0.3, 0.72, daylight)
+	env.ambient_light_energy = lerpf(1.1, lerpf(2.1, 2.2, oc), daylight)
 	env.fog_light_color = hor.lerp(top, 0.25)
-	env.fog_light_energy = lerpf(0.5, 1.0, daylight)
-	env.fog_density = lerpf(0.0016, 0.0045, oc)
+	env.fog_light_energy = lerpf(0.4, 0.8, daylight)
+	env.fog_density = lerpf(0.0011, 0.004, oc)
 	env.fog_sun_scatter = 0.15 * daylight

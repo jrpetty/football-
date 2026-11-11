@@ -85,7 +85,7 @@ func update(dt: float, mouse: Vector2, speed: float, on_ground: bool) -> void:
 	var rest := Vector3(0.24, -0.27, -0.5) if not firearm else Vector3(0.2, -0.17, -0.5)
 	var aim := Vector3(0.0, -0.085, -0.32)
 	var p := rest.lerp(aim, ads)
-	var r := Vector3(0.03, 0.2, -0.04).lerp(Vector3.ZERO, ads) if firearm else Vector3(-0.55, 0.3, 0.12)
+	var r := Vector3(0.03, 0.1, -0.03).lerp(Vector3.ZERO, ads) if firearm else Vector3(-0.55, 0.3, 0.12)
 	p += Vector3(sin(_bob) * 0.012, absf(cos(_bob)) * -0.014, 0.0) * amp * (1.0 - ads * 0.8)
 	p += Vector3(_sway.x, _sway.y, 0.0)
 	r += Vector3(_sway.y * 1.5, _sway.x * 2.0, _sway.x * 1.5)

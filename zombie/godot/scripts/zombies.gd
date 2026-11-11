@@ -2,15 +2,30 @@ class_name Zombies
 extends Node3D
 ## The dead. A port of the web game's zombie director and AI (src/ai/zombies.ts), drawn through Bodies.
 ##
-## Senses (sight cone scaled by daylight and how visible the quarry is, hearing, the smell of blood), a day/night
-## rhythm (many stand or lie dormant by day), loose packs, a life cycle (fresh -> shambler -> husk), six strains,
-## and hunting of every living thing: the player and any Prey registered with add_prey().
+## Senses (a sight cone scaled by daylight and by how visible the quarry is, hearing, the smell of blood), a
+## day / night rhythm (many stand or lie dormant by day), loose packs, a life cycle (fresh -> shambler -> husk),
+## six strains, and hunting of every living thing: the player, and any Prey registered with add_prey().
 ##
-## Built for GDScript speed: each zombie *thinks* a few times a second (staggered; more often when hunting close
-## by), and between thoughts only walks along the heading it chose. Zombies far from the player are frozen and
-## have no body at all.
+##   var zombies := Zombies.new(); add_child(zombies)      # makes its own Bodies child: zombies.bodies (share it)
+##   zombies.populate()                                     # the starting population (town rooms, streets, wilds)
+##   zombies.update(delta, game_minutes_passed, host)       # once per frame; host keys are listed at update()
 ##
-##   zombies.update(delta, game_minutes_passed, host)     # once per frame; host keys listed at update()
+##   signals   player_attacked(z, dmg)  human_attacked(prey, z, dmg)  killed(z, headshot)  howl(pos, radius, z)
+##             burst(pos, radius, z)  structure_hit(ref, dmg)  horde_spawned(n, to_base)
+##   the living   add_prey(owner, name, body_id) -> Prey (keep prey.pos / move / quiet / visible / alive current),
+##                remove_prey(prey), add_carrion(pos, seconds), noise(pos, radius)
+##   the dead     spawn(x, z, type, horde, opts), spawn_turned(prey_or_dict), spawn_horde(...), remove(z), clear()
+##   combat       raycast(origin, dir, max) -> {zombie, t, part, head, side} or {},  damage(z, amount, dir, opts),
+##                kill(z, dir), in_arc(...), nearest(pos, r), corpse_near(pos, r)
+##   words        describe(z), stage(z), pick_type(day)
+##   saving       to_rows(), load_rows(rows)
+##   each Zombie  pos, yaw, type, hp, max_hp, state (a StringName: idle wander investigate chase attack bash stagger
+##                dead dormant feed search scream down rise), name, turned, decay, age, crawler, prey, body, loot
+##
+## Built for GDScript speed: a zombie *thinks* a few times a second (staggered; most often when hunting close by)
+## and between thoughts only walks along the heading it chose. Beyond 230 m of the player it is frozen, and it
+## has a body in the shared Bodies renderer only within about 190 m.
+## Tests: scripts/zombie_test.gd (behaviour), scripts/zombie_perf.gd (cost), scripts/zombie_scene.tscn (to look at).
 
 signal player_attacked(z, dmg)
 signal human_attacked(prey, z, dmg)
@@ -92,7 +107,9 @@ class Zombie:
 	var decay := 0.0
 	var name := ""
 	var turned := false
+	## who struck last (and so who killed it); free for the game: whatever was put on the corpse to be found
 	var by_player := false
+	var loot = null
 	## the Prey it is after; null while hunting = the player
 	var prey: Prey = null
 	## Bodies id, or -1 while it is too far away to be drawn
@@ -149,6 +166,8 @@ class Zombie:
 	var dp := 0.0
 	var push := Vector3.ZERO
 	var res_n := 0
+	var res_d := 0.0
+	var gone := false
 
 ## Something the dead can see and attack: a person, or the player's avatar. Keep pos / yaw / move up to date.
 class Prey:
@@ -192,6 +211,9 @@ var carrion: Array[Carrion] = []
 var kills := 0
 ## hordes at night and stragglers wandering in from the wilds; turn off for staged scenes and tests
 var director_enabled := true
+## optional: called as on_structure_hit(ref, dmg) whenever the dead strike something breakable — the same
+## moment as the structure_hit signal. `ref` is the WorldData.nav_ref entry (a door, a built piece).
+var on_structure_hit := Callable()
 ## what update() reported last: zombies chasing the player, near the player, and with eyes on the player
 var chasing := 0
 var near_count := 0
@@ -250,6 +272,9 @@ var _f_limit := 36
 var _obst := PackedByteArray()
 var _n_floors := -1
 var _made := 0
+var _alerts := 0
+var _walking := false
+var _gone := false
 
 func _init() -> void:
 	_rng.seed = 20261111 + 31
@@ -871,6 +896,7 @@ func kill(z: Zombie, dir: Vector3, by_player := true, headshot := false) -> void
 	var fwd := sin(z.yaw) * dir.x + cos(z.yaw) * dir.z       # > 0: struck from behind
 	var side := absf(dir.x * cos(z.yaw) - dir.z * sin(z.yaw))
 	var lying := z.crawler or z.state == S_DOWN or (z.state == S_RISE and z.down_stage < 2) or (z.state == S_DORMANT and z.lying)
+	var was_down := z.state == S_DOWN
 	if lying: z.death_style = 5
 	elif z.type == BLOAT or z.type == BRUTE: z.death_style = 0 if fwd > 0.0 else (1 if _rng.randf() < 0.5 else 4)
 	elif side > 0.75: z.death_style = 2
@@ -884,12 +910,15 @@ func kill(z: Zombie, dir: Vector3, by_player := true, headshot := false) -> void
 	z.state = S_DEAD; z.state_t = 0.0; z.hp = 0.0; z.prey = null; z.bash_ref = null; z.want = 0.0; z.vel = Vector3.ZERO; z.moving = false
 	z.by_player = by_player
 	if z.death_style == 5:
+		# already on the ground: it sinks back and lies still
 		if z.crawler: _play(z, &"death_crawl", 1.0, true)
+		elif was_down: _play(z, &"lie_back" if z.down_face >= 0 else &"lie_front", 1.0, true)
+		else: _play(z, &"lie_back0" if z.down_face >= 0 else &"lie_front0", 1.0, true)
 	else:
 		_play(z, StringName("death_%d" % z.death_style), 1.0, true)
 	if by_player:
 		kills += 1
-	_active.erase(z)
+	_drop_active(z)
 	killed.emit(z, headshot)
 	if z.burst:
 		_rupture(z)
@@ -925,8 +954,20 @@ func _rupture(z: Zombie) -> void:
 			var ref = _ref_at(z.pos.x + i, z.pos.z + j)
 			if ref != null and not seen.has(ref):
 				seen.append(ref)
-				structure_hit.emit(ref, 55.0)
+				_hit_structure(ref, 55.0)
 	burst.emit(z.pos, R, z)
+
+func _hit_structure(ref, dmg: float) -> void:
+	structure_hit.emit(ref, dmg)
+	if on_structure_hit.is_valid():
+		on_structure_hit.call(ref, dmg)
+
+## take a zombie off the thinking list (put off while that list is being walked)
+func _drop_active(z: Zombie) -> void:
+	if _walking:
+		z.gone = true; _gone = true
+	else:
+		_active.erase(z)
 
 func remove(z: Zombie) -> void:
 	if z.body >= 0:
@@ -934,7 +975,7 @@ func remove(z: Zombie) -> void:
 	if z.feed_at != null:
 		z.feed_at.feeders = maxi(0, z.feed_at.feeders - 1)
 	list.erase(z)
-	_active.erase(z)
+	_drop_active(z)
 
 func clear() -> void:
 	for z in list:
@@ -949,7 +990,8 @@ func _set_state(z: Zombie, s: StringName) -> void:
 		return
 	if z.state == S_FEED and z.feed_at != null:
 		z.feed_at.feeders = maxi(0, z.feed_at.feeders - 1); z.feed_at = null
-	z.state = s; z.state_t = 0.0; z.pivot = false; z.think_t = 0.0
+	# (the next thought comes soon, but a crowd roused by one sound does not all think in the same frame)
+	z.state = s; z.state_t = 0.0; z.pivot = false; z.think_t = minf(z.think_t, _rng.randf() * 0.1)
 	if s != S_BASH:
 		z.bash_ref = null
 	if s == S_ATTACK or s == S_BASH:
@@ -998,10 +1040,16 @@ func _make_body(z: Zombie) -> void:
 	z.anim = &""
 	if z.state == S_DEAD:
 		# a corpse come back into view: lying as it fell
-		var dc: StringName = &"death_crawl" if (z.death_style == 5 and z.crawler) else &"lie_back" if z.death_style == 5 else StringName("death_%d" % z.death_style)
+		var dc: StringName = StringName("death_%d" % z.death_style)
+		if z.death_style == 5:
+			dc = &"death_crawl" if z.crawler else (clip if String(clip).begins_with("lie_") else &"lie_back0")
 		bodies.set_anim(z.body, dc, {"phase": 1.0, "speed": 0.0, "fade": 0.0})
 		z.anim = dc
 	elif clip != &"":
+		# something that was already on the ground is found lying, not falling again
+		var cs := String(clip)
+		if cs.begins_with("drop_"): clip = StringName("lie_" + cs.substr(5))
+		elif cs.begins_with("fall_"): clip = StringName("lie_" + cs.substr(5))
 		_play(z, clip, v if v >= 0.0 else 1.0, true)
 
 ## start hunting: p = a Prey, or null for the player
@@ -1026,6 +1074,9 @@ func _engage(z: Zombie, p: Prey, tp: Vector3, quiet := false) -> void:
 		_alert_neighbours(z, p, tp)
 
 func _alert_neighbours(z: Zombie, p: Prey, tp: Vector3) -> void:
+	_alerts += 1
+	if _alerts > 3:
+		return                        # the others noticing in this same instant have roused them already
 	var R := 12.0 if p != null else 18.0
 	var n := 0
 	for o in _active:
@@ -1143,12 +1194,21 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 	var near := 0
 	var px := _pp.x; var pz := _pp.z
 	var damp := exp(-dt * 6.0); var ease_y := minf(1.0, dt * 12.0)
-	_made = 0
+	_made = 0; _alerts = 0
+	# thoughts are spread over the frames; should too many fall due at once, the rest wait a frame or two
+	var budget := maxi(30, _active.size() / 5)
+	_walking = true
 	for z in _active:
+		if z.gone:
+			continue
 		z.think_t -= dt
 		if z.think_t <= 0.0:
-			_think(z, dt_game_min)
-		if z.frozen:
+			if budget > 0:
+				budget -= 1
+				_think(z, dt_game_min)
+			else:
+				z.think_t = _rng.randf() * 0.05
+		if z.frozen or z.gone:
 			continue
 		if z.state == S_CHASE:
 			if z.prey == null:
@@ -1176,15 +1236,29 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 					z.yaw += clampf(wrapf(z.face - z.yaw, -PI, PI), -z.turn_rate * 1.6 * dt, z.turn_rate * 1.6 * dt)
 			var mx := (z.vel.x + z.knock.x + z.push.x) * dt; var mz := (z.vel.z + z.knock.z + z.push.z) * dt
 			var nxp := z.pos.x + mx; var nzp := z.pos.z + mz
-			# never step into a wall or a door between thoughts (the full collision pass runs when it thinks)
 			var ix := int(floor(nxp + HALF)); var iz := int(floor(nzp + HALF))
 			if ix >= 0 and iz >= 0 and ix < NAV_N and iz < NAV_N:
-				if _nav[iz * NAV_N + ix] == 0 or (ix == int(floor(z.pos.x + HALF)) and iz == int(floor(z.pos.z + HALF))):
-					z.pos.x = nxp; z.pos.z = nzp
+				z.pos.x = nxp; z.pos.z = nzp
+				# beside a wall, a door or a post the collision pass cannot wait for the next thought: it runs
+				# again every few hand-widths of travel, so nothing is ever walked through
+				var ci := iz * NAV_N + ix
+				if _nav[ci] != 0 or (_obst[ci] & 1) != 0:
+					z.res_d += absf(mx) + absf(mz)
+					if z.res_d > (0.15 if _nav[ci] != 0 else 0.25):
+						z.res_d = 0.0
+						z.pos = _W.resolve(z.pos, 0.3 * z.scale, 1.7, 0.45, "window_broken").pos
 			z.knock *= damp
 			z.pos.y += (z.ground - z.pos.y) * ease_y
 			if z.body >= 0:
 				bodies.set_pose(z.body, z.pos, z.yaw)
+	_walking = false
+	if _gone:
+		_gone = false
+		var keep: Array[Zombie] = []
+		for z in _active:
+			if z.gone: z.gone = false
+			else: keep.append(z)
+		_active = keep
 	# the frozen: a few per frame are checked to see if the player has come near
 	var n_all := list.size()
 	if n_all > 0:
@@ -1239,15 +1313,12 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 		z.frozen = true; z.moving = false; z.think_t = 1.0
 		if z.body >= 0:
 			bodies.remove_body(z.body); z.body = -1
-		_active.erase(z)
+		_drop_active(z)
 		return
 	z.frozen = false
 	if z.body < 0 and dp < BODY_IN:
-		if _made < 6 or dp < 30.0:           # a few a frame: a crowd coming into range must not cost a hitch
+		if _made < 6 or (dp < 30.0 and _made < 20):          # a few a frame: a crowd coming into range must not cost a hitch
 			_made += 1; _make_body(z)
-		else:
-			z.think_t = 0.0
-			return
 	elif z.body >= 0 and dp > BODY_OUT:
 		bodies.remove_body(z.body); z.body = -1
 	var hunting := z.state == S_CHASE or z.state == S_ATTACK or z.state == S_BASH
@@ -1356,7 +1427,9 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 								var far := _rng.randf_range(6.0, 26.0) if _night > 0.5 else _rng.randf_range(3.0, 11.0)
 								z.target = Vector3(z.pos.x + cos(a) * far, 0, z.pos.z + sin(a) * far)
 		S_DORMANT:
-			clip = (&"drop_back0" if z.down_face >= 0 else &"drop_front0") if z.lying else &"slump"
+			if not z.lying: clip = &"slump"
+			elif z.anim == &"lie_back0" or z.anim == &"lie_front0": clip = z.anim          # found already lying (a save, a staged scene)
+			else: clip = &"drop_back0" if z.down_face >= 0 else &"drop_front0"
 			if _daylight < 0.4 or z.enraged > 0.0:
 				z.wake_t -= e * (30.0 if z.enraged > 0.0 else 1.0)
 				if z.wake_t <= 0.0:
@@ -1489,7 +1562,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 				z.atk_t += e
 				if not z.struck and z.atk_t >= float(st.wind) + 0.07:
 					z.struck = true
-					structure_hit.emit(ref, float(st.wreck) * (z.dmg_mul if z.type <= 1 else 1.0))
+					_hit_structure(ref, float(st.wreck) * (z.dmg_mul if z.type <= 1 else 1.0))
 				if z.after != S_INVESTIGATE and dT < 1.5 and (h != null or _p_alive):
 					_set_state(z, S_ATTACK)
 				elif z.atk_t >= z.atk_period:
@@ -1533,7 +1606,9 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 		var gx := int(floor(z.pos.x)); var gz := int(floor(z.pos.z))
 		var my_r := (0.46 if z.type == BLOAT else 0.32) * z.scale
 		var pxs := 0.0; var pzs := 0.0
-		for i in range(-1, 2):
+		# (those standing and striking in a press only need this every other thought)
+		var i0 := -1 if (z.state != S_ATTACK or (z.res_n & 1) == 0) else 2
+		for i in range(i0, 2):
 			var row := (gx + i + 1000) * 4096 + gz + 1000
 			for j in range(-1, 2):
 				var cell = _grid.get(row + j)

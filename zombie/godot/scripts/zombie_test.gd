@@ -53,7 +53,12 @@ func fresh(seed := 7) -> void:
 
 func _on_structure(ref, dmg) -> void:
 	ev.structure.append([ref, dmg])
-	if ref is Dictionary and ref.has("hp"):
+	if ref is Dictionary and ref.get("kind", "") == "door":
+		# what the game does with a door: wear it down, then it swings open for good
+		ref.hp -= dmg
+		if ref.hp <= 0.0 and not ref.open:
+			ref.open = true; W.set_solid(ref.box, false, 30)
+	elif ref is Dictionary and ref.has("hp"):
 		ref.hp -= dmg
 		if ref.hp <= 0.0 and not ref.get("destroyed", false):
 			ref["destroyed"] = true
@@ -124,6 +129,8 @@ func run() -> void:
 	t_knockdown()
 	t_search()
 	t_bash()
+	t_structures()
+	t_real_door()
 	t_turned()
 	t_noise_and_smell()
 	t_day_night_and_save()
@@ -437,6 +444,86 @@ func t_bash() -> void:
 	for r in refs:
 		if not r.get("destroyed", false): W.remove_box(r.box)
 	ok(W.nav_at(C.x + 2.8, C.z) == 0 and W.nav_ref.is_empty(), "test walls removed from the world again")
+
+func t_structures() -> void:
+	print("\n-- breakers, and prey out of reach")
+	fresh()
+	_set_player(at(-90, 0))
+	host.daylight = 0.0; host.hours = 23.0
+	step(0.1)
+	var y: float = at(0, 0).y
+	# something the player built, a little off the breaker's road
+	var built := {"kind": "wall", "built": true, "hp": 400.0}
+	built["box"] = W.add_box(Vector3(C.x + 3.0, y - 0.5, C.z + 3.0), Vector3(C.x + 5.0, y + 2.5, C.z + 3.3), "wall", built, false)
+	W._raster_box(built.box, 40, built, false)
+	var h = zs.spawn_horde(C.x + 4.0, C.z - 14.0, 1, at(4, 20), true)
+	var br = zs.list[0]
+	br.type = 5; zs._apply_decay(br, true)
+	var t := until(func(): return not ev.structure.is_empty(), 40.0)
+	ok(t > 0.0 and is_same(ev.structure[0][0], built) and ev.structure[0][1] > 60.0, "a breaker in a horde turns aside to smash a built wall (%.0f damage after %.1f s)" % [ev.structure[0][1] if t > 0.0 else 0.0, t])
+	var t2 := until(func(): return built.get("destroyed", false), 60.0)
+	ok(t2 > 0.0, "and keeps at it until it is down (%.1f s more, %d blows)" % [t2, ev.structure.size()])
+	if not built.get("destroyed", false): W.remove_box(built.box)
+	# a person up out of reach, on nothing they can break
+	fresh()
+	_set_player(at(-90, 0))
+	step(0.1)
+	var p = zs.add_prey(null, "Ana")
+	p.pos = at(0, 0) + Vector3(0, 2.6, 0); p.move = 0.0
+	var z = zs.spawn(C.x + 8.0, C.z, 0, 0, {"decay": 0.4})
+	face_to(z, p.pos)
+	var seq: Array = [z.state]
+	var t3 := until(func():
+		if seq.back() != z.state: seq.append(z.state)
+		return z.ignore == p, 30.0)
+	ok(t3 > 0.0 and ev.human.is_empty(), "prey 2.6 m up: it comes, cannot reach, and gives up on her for a while (%s, %.1f s)" % [seq, t3])
+	step(6.0)
+	ok(z.prey == null and ev.human.is_empty(), "it does not come straight back (state %s)" % z.state)
+
+## doors set up from the town's own file, exactly as World does it
+func doors_like_world() -> Dictionary:
+	var town = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world/town.json"))
+	var out := {}
+	for d in town.doors:
+		var box = W.export_box.get(int(d.box))
+		if box == null:
+			continue
+		var ref := {"kind": "door", "id": int(d.id), "data": d, "box": box, "open": bool(d.open), "hp": float(d.hp), "locked": bool(d.locked)}
+		box.ref = ref; box.tag = "door"
+		if not ref.open: W._raster_box(box, 30, ref, false)
+		out[int(d.id)] = ref
+	return out
+
+func t_real_door() -> void:
+	print("\n-- a real house: a horde at the front door")
+	fresh()
+	var doors := doors_like_world()
+	ok(doors.size() > 100 and not W.nav_ref.is_empty(), "%d doors of the town in the nav grid" % doors.size())
+	# house 1 (-105, -72): the player just inside its front door (door 3, on the north wall)
+	var inside := Vector3(-108.1, 3.508, -68.8)
+	_set_player(inside)
+	host.player_inside = true; host.daylight = 0.0; host.hours = 23.0; host.day = 9
+	host.base_center = inside; host.base_heat = 60.0
+	step(0.1)
+	var h = zs.spawn_horde(-108.0, -48.0, 14, inside, true)
+	var types := {}
+	for z in zs.list: types[z.type] = int(types.get(z.type, 0)) + 1
+	var t := until(func(): return not ev.structure.is_empty(), 120.0, 1.0 / 30.0)
+	ok(t > 0.0 and ev.structure[0][0].get("kind", "") == "door", "the horde (%s) reaches the house and starts on a door after %.0f s" % [types, t])
+	var house_doors := [doors[3], doors[10]]
+	var t2 := until(func(): return house_doors[0].open or house_doors[1].open, 240.0, 1.0 / 30.0)
+	var hits := {}
+	for e in ev.structure: hits[int(e[0].id)] = int(hits.get(int(e[0].id), 0)) + 1
+	ok(t2 > 0.0, "an outer door gives way %.0f s later (blows per door id: %s)" % [t2, hits])
+	var t3 := until(func(): return not ev.player.is_empty(), 180.0, 1.0 / 30.0)
+	var in_house := 0
+	for z in zs.list:
+		if z.pos.x > -112.0 and z.pos.x < -98.0 and z.pos.z > -77.0 and z.pos.z < -67.0: in_house += 1
+	ok(t3 > 0.0, "they come in and attack the player (%.0f s after the door; %d inside the house, states %s)" % [t3, in_house, states()])
+	var through_walls := 0
+	for z in zs.list:
+		if W.resolve(z.pos, 0.02, 1.7).pos.distance_to(z.pos) > 0.01: through_walls += 1
+	ok(through_walls == 0, "nobody is standing in a wall (%d)" % through_walls)
 
 func t_turned() -> void:
 	print("\n-- the newly turned")

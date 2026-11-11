@@ -26,7 +26,7 @@ var counts := {"player_attacked": 0, "human_attacked": 0, "howl": 0, "burst": 0,
 var cast := {}
 # screenshot plan: [sim time, view, file name]
 var plan: Array = [[0.6, 0, "01_start_overview"], [0.6, 2, "02_dormant_group"], [0.6, 3, "03_feeding_group"], [2.2, 1, "04_they_notice"],
-	[4.0, 4, "05_howler"], [5.5, 1, "06_closing_in"], [7.4, 0, "07_overview_knockdown"], [9.0, 1, "08_at_the_player"], [9.6, 5, "09_person_attacked"], [14.0, 0, "10_overview_late"], [14.0, 1, "11_melee"]]
+	[-1.0, 4, "05_howler"], [5.5, 1, "06_closing_in"], [7.4, 0, "07_overview_knockdown"], [9.0, 1, "08_at_the_player"], [9.6, 5, "09_person_attacked"], [14.0, 0, "10_overview_late"], [14.0, 1, "11_melee"]]
 var _wait := 0
 
 func at(dx: float, dz: float) -> Vector3:
@@ -70,9 +70,10 @@ func _ready() -> void:
 		zs.bodies.set_process(false)          # stepped by hand below, in fixed steps
 
 func _light() -> void:
-	sun.light_energy = 0.06 if night else 1.25
-	env.ambient_light_energy = 0.12 if night else 0.9
-	env.background_energy_multiplier = 0.05 if night else 1.0
+	sun.light_energy = 0.22 if night else 1.25
+	sun.light_color = Color(0.62, 0.72, 1.0) if night else Color(1.0, 0.96, 0.9)
+	env.ambient_light_energy = 0.3 if night else 0.9
+	env.background_energy_multiplier = 0.08 if night else 1.0
 	host["daylight"] = 0.0 if night else 1.0
 	host["hours"] = 1.0 if night else 12.0
 
@@ -230,7 +231,9 @@ func _process(delta: float) -> void:
 		return
 	if plan.is_empty():
 		return
-	if t >= float(plan[0][0]):
+	# (a time below zero: when the howler is in full cry)
+	var due: bool = t >= float(plan[0][0]) if float(plan[0][0]) >= 0.0 else ((cast.howler.state == &"scream" and cast.howler.state_t > 0.7) or t > 12.0)
+	if due:
 		_view(int(plan[0][1]))
 		_wait = 3
 		return

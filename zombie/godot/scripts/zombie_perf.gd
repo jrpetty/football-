@@ -71,8 +71,20 @@ func ring(n: int, r0: float, r1: float, type := -1) -> void:
 		zs.spawn(x, z, type if type >= 0 else zs.pick_type(8), 0, {"y": W.height_at(x, z) + 0.6})
 		made += 1
 
+## how steady this machine is: the same fixed piece of arithmetic timed 3000 times
+func jitter() -> void:
+	var times := PackedFloat32Array()
+	for k in 3000:
+		var a := Time.get_ticks_usec()
+		var x := 0.0
+		for i in 12000: x += sin(i * 0.001) * 0.5
+		times.append((Time.get_ticks_usec() - a) / 1000.0)
+	times.sort()
+	print("machine check: a fixed loop takes median %.2f ms, 95%% %.2f, worst %.2f — spikes beyond that ratio below are the machine's, not the code's\n" % [times[1500], times[2850], times[2999]])
+
 func run() -> void:
 	print("Zombies.update() cost per frame, 60 fps steps, real map\n")
+	jitter()
 	# 1. the game as it starts: whole population, player at the cabin, then walking into town
 	fresh()
 	set_player(W.info.spawn.x, W.info.spawn.z)

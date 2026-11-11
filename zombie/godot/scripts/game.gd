@@ -53,7 +53,7 @@ func _ready() -> void:
 	cam = Camera3D.new(); cam.far = 1400.0; cam.near = 0.06; cam.fov = 75.0; add_child(cam)
 	cam.make_current()
 	vm = ViewModel.new(); cam.add_child(vm)
-	flashlight = SpotLight3D.new(); flashlight.spot_range = 45.0; flashlight.spot_angle = 26.0; flashlight.spot_attenuation = 1.4
+	flashlight = SpotLight3D.new(); flashlight.spot_range = 55.0; flashlight.spot_angle = 30.0; flashlight.spot_attenuation = 0.9; flashlight.spot_angle_attenuation = 0.6
 	flashlight.light_color = Color(1.0, 0.96, 0.88); flashlight.light_energy = 0.0; flashlight.shadow_enabled = true
 	cam.add_child(flashlight)
 	fx = Fx.new(); add_child(fx)
@@ -694,7 +694,7 @@ func _update_flashlight(dt: float) -> void:
 		player.flashlight_on = false
 	if player.flashlight_on and fl != null:
 		fl.dur = maxf(0.0, float(fl.dur) - dt * 0.12)
-	flashlight.light_energy = lerpf(flashlight.light_energy, 9.0 if player.flashlight_on else 0.0, 1.0 - exp(-dt * 20.0))
+	flashlight.light_energy = lerpf(flashlight.light_energy, 36.0 if player.flashlight_on else 0.0, 1.0 - exp(-dt * 20.0))
 	flashlight.visible = flashlight.light_energy > 0.05
 
 # ------------------------------------------------------------------ combat

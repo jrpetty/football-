@@ -55,8 +55,7 @@ void vertex() {
 
 void fragment() {
 	vec3 c = mix(v_col * 0.35, v_col * 1.12 + vec3(0.03, 0.04, 0.0), v_h) * bright;
-	// colours above are linear light; the Compatibility renderer wants them display-encoded
-	ALBEDO = OUTPUT_IS_SRGB ? pow(c, vec3(1.0 / 2.2)) : c;
+	ALBEDO = c;
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
 	// light the blade the same from both faces
