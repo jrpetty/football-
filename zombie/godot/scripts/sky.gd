@@ -32,7 +32,7 @@ func _ready() -> void:
 	env.fog_aerial_perspective = 0.6
 	env.ssao_enabled = true
 	env.ssao_radius = 1.2
-	env.ssao_intensity = 1.6
+	env.ssao_intensity = 1.2
 	env.ssil_enabled = false
 	env.glow_enabled = true
 	env.glow_intensity = 0.35
@@ -88,8 +88,8 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	moon.light_energy = (1.0 - daylight) * 0.22
 	moon.visible = moon.light_energy > 0.005
 
-	var top_day := _lerp_col(Color(0.24, 0.42, 0.7), Color(0.44, 0.48, 0.52), oc)
-	var hor_day := _lerp_col(Color(0.7, 0.79, 0.88), Color(0.62, 0.64, 0.66), oc)
+	var top_day := _lerp_col(Color(0.3, 0.48, 0.74), Color(0.46, 0.5, 0.54), oc)
+	var hor_day := _lerp_col(Color(0.74, 0.82, 0.9), Color(0.64, 0.66, 0.68), oc)
 	var top_dusk := Color(0.16, 0.2, 0.38); var hor_dusk := Color(0.92, 0.52, 0.3)
 	var top_night := Color(0.018, 0.026, 0.055); var hor_night := Color(0.04, 0.055, 0.09)
 	var top := _lerp_col(top_night, top_day, daylight); top = _lerp_col(top, top_dusk, twilight * 0.7)
@@ -104,7 +104,7 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_color = _lerp_col(Color(0.16, 0.2, 0.32), Color(0.62, 0.64, 0.6), daylight)
 	env.ambient_light_sky_contribution = 0.72
-	env.ambient_light_energy = lerpf(0.55, lerpf(1.55, 1.7, oc), daylight)
+	env.ambient_light_energy = lerpf(0.6, lerpf(2.1, 2.2, oc), daylight)
 	env.fog_light_color = hor.lerp(top, 0.25)
 	env.fog_light_energy = lerpf(0.5, 1.0, daylight)
 	env.fog_density = lerpf(0.0016, 0.0045, oc)

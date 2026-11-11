@@ -19,6 +19,13 @@ files.
 
 ---
 
+## Godot version
+
+A Godot 4 port lives in [`godot/`](godot/README.md): open that folder with Godot 4.4+ and press Play. It is being
+rebuilt in stages from this web version — the world, survival, looting, combat and the dead are in; building,
+machines, railways and the settlement are still to come. Its content (models, world, items, sounds, characters)
+is exported from this code by `scripts/godot-export/`.
+
 ## Play
 
 **No install:** download `rekindle.html` and double-click it. It's the whole

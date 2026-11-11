@@ -31,6 +31,7 @@ static func xform(e: Array) -> Transform3D:
 
 func build() -> void:
 	_build_terrain()
+	_build_grass()
 	_build_water()
 	_build_town()
 	_build_props()
@@ -82,6 +83,38 @@ func _build_terrain() -> void:
 			var mi := MeshInstance3D.new(); mi.mesh = mesh
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			root.add_child(mi)
+
+var grass: MultiMeshInstance3D
+var grass_mat: ShaderMaterial
+func _build_grass(count := 150000) -> void:
+	const S := 70.0
+	var bw := 0.055
+	var pos := PackedVector3Array([Vector3(-bw / 2, 0, 0), Vector3(bw / 2, 0, 0), Vector3(-bw * 0.38, 0.4, 0), Vector3(bw * 0.38, 0.4, 0), Vector3(-bw * 0.2, 0.75, 0), Vector3(bw * 0.2, 0.75, 0), Vector3(0, 1, 0)])
+	var uv := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(0, 0.4), Vector2(1, 0.4), Vector2(0, 0.75), Vector2(1, 0.75), Vector2(0.5, 1)])
+	var nor := PackedVector3Array(); nor.resize(7); nor.fill(Vector3.UP)
+	var arr := []; arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = pos; arr[Mesh.ARRAY_NORMAL] = nor; arr[Mesh.ARRAY_TEX_UV] = uv
+	arr[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4, 4, 5, 6])
+	var blade := ArrayMesh.new(); blade.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	grass_mat = ShaderMaterial.new(); grass_mat.shader = load("res://shaders/grass.gdshader")
+	var himg := Image.create_from_data(WorldData.hn, WorldData.hn, false, Image.FORMAT_RF, WorldData.heights.to_byte_array())
+	grass_mat.set_shader_parameter("height_tex", ImageTexture.create_from_image(himg))
+	grass_mat.set_shader_parameter("splat", terrain_mat.get_shader_parameter("splat"))
+	grass_mat.set_shader_parameter("patch_size", S)
+	grass_mat.set_shader_parameter("height_n", float(WorldData.hn))
+	blade.surface_set_material(0, grass_mat)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D; mm.use_custom_data = true; mm.mesh = blade
+	mm.instance_count = count
+	var r := RandomNumberGenerator.new(); r.seed = 77
+	var ident := Transform3D.IDENTITY
+	for i in count:
+		mm.set_instance_transform(i, ident)
+		mm.set_instance_custom_data(i, Color(r.randf(), r.randf(), r.randf(), r.randf()))
+	mm.custom_aabb = AABB(Vector3(-420, -60, -420), Vector3(840, 240, 840))
+	grass = MultiMeshInstance3D.new(); grass.name = "Grass"; grass.multimesh = mm
+	grass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(grass)
 
 func _build_water() -> void:
 	var lake: Dictionary = WorldData.lake

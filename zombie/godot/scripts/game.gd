@@ -42,6 +42,8 @@ var _mouse := Vector2.ZERO
 var _food_tick := 0.0
 var loud_t := 0.0
 var shots_mode := false
+var fx: Fx
+var _groan_t := 3.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -54,6 +56,7 @@ func _ready() -> void:
 	flashlight = SpotLight3D.new(); flashlight.spot_range = 45.0; flashlight.spot_angle = 26.0; flashlight.spot_attenuation = 1.4
 	flashlight.light_color = Color(1.0, 0.96, 0.88); flashlight.light_energy = 0.0; flashlight.shadow_enabled = true
 	cam.add_child(flashlight)
+	fx = Fx.new(); add_child(fx)
 	hud = Hud.new(); hud.game = self; add_child(hud)
 	hud.use_item.connect(use_item)
 	hud.drop_item.connect(func(uid: int) -> void: drop_stack(uid, 1 << 20))
@@ -276,6 +279,15 @@ func _process(dt: float) -> void:
 		hud.set_prompt("")
 	if zombies != null:
 		loud_t = maxf(0.0, loud_t - dt * 8.0)
+		_groan_t -= dt
+		if _groan_t <= 0.0:
+			_groan_t = rng.randf_range(2.5, 7.0)
+			var near: Array = []
+			for z in zombies.list:
+				if String(z.state) != "dead" and String(z.state) != "dormant" and z.pos.distance_squared_to(p.pos) < 1300.0: near.append(z)
+			if not near.is_empty():
+				var gz = near[rng.randi() % near.size()]
+				Sfx.play("zombie_alert" if String(gz.state) in ["chase", "attack"] else "zombie_groan", {"pos": gz.pos + Vector3(0, 1.5, 0), "pitch": 0.7 if int(gz.type) in [2, 5] else 1.0})
 		zombies.update(dt, dt_min, {"player_pos": p.pos, "player_eye": p.eye(), "player_noise": maxf(p.noise, loud_t), "player_visibility": p.visibility, "player_alive": true, "player_inside": p.inside, "player_bleeding": p.stats.bleeding() > 0.3, "base_center": null, "base_heat": 0.0, "daylight": sky.daylight, "hours": hours(), "day": day(), "luck": 0.0, "camera_pos": cam.global_position})
 	# camera
 	var shake := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), 0.0) * p.cam_shake * 0.03
@@ -289,6 +301,9 @@ func _process(dt: float) -> void:
 	_mouse = Vector2.ZERO
 	_update_flashlight(dt)
 	sky.set_time(hours(), [0.0, 1.0, 0.2, -0.3][season()])
+	if world.grass_mat != null:
+		world.grass_mat.set_shader_parameter("player_pos", p.pos)
+		world.grass_mat.set_shader_parameter("flowers", [0.3, 0.0, 1.0, 0.75][season()])
 	_objectives()
 	hud.update_hud(dt)
 	if game_min > autosave_at:
@@ -768,6 +783,7 @@ func _melee_hit() -> void:
 			var killed: bool = zombies.damage(z, dmg, dir, {"head": head, "knock": (float(w.knock) if w != null else 0.5) * 1.5, "by_player": true})
 			hud.hitmark(killed)
 			Sfx.play("headshot" if head else "hit_flesh", {"pos": z.pos + Vector3(0, 1.3, 0)})
+			fx.blood(z.pos + Vector3(0, 1.6 if head else 1.2, 0), dir)
 			p.gain_xp(skill_id, 8.0 if killed else 3.0, game_min); p.gain_xp("strength", 1.0, game_min)
 			p.bloody = minf(1.0, p.bloody + 0.1)
 		_noise(p.pos, float(w.noise) if w != null else 4.0)
@@ -783,7 +799,7 @@ func _melee_hit() -> void:
 			if st != null and w != null: _wear(st, 1.0)
 			return
 		p.cam_shake = maxf(p.cam_shake, 0.08)
-		Sfx.play("hit_wood", {"volume": 0.7})
+		Sfx.play("hit_wood", {"volume": 0.7}); fx.dust(eye + fwd * float(hit.t))
 		_noise(p.pos, 5.0)
 		var ref = hit.obj.ref
 		if ref is Dictionary and String(ref.get("kind", "")) == "window" and not ref.broken:
@@ -890,6 +906,8 @@ func _fire(st) -> void:
 			var head := int(zh.get("part", 1)) == 0
 			var killed: bool = zombies.damage(zh.zombie, float(w.damage) * falloff * (1.0 + skill * 0.05) * rng.randf_range(0.9, 1.1), d, {"head": head, "knock": float(w.knock), "by_player": true})
 			hit_any = true; killed_any = killed_any or killed
+			fx.blood(eye + d * float(zh.t), d)
+			if head and killed: Sfx.play("headshot", {"pos": eye + d * float(zh.t), "volume": 0.8})
 			if killed: p.gain_xp("firearms", 6.0, game_min)
 		elif wh.obj != null and wh.obj is WorldData.Box and wh.obj.ref is Dictionary and String(wh.obj.ref.get("kind", "")) == "window" and float(wh.t) < lim + 0.01 and not wh.obj.ref.broken:
 			_break_window(wh.obj.ref)
@@ -957,6 +975,7 @@ func _wire_zombies() -> void:
 
 func _player_attacked(z, _dmg := 0.0) -> void:
 	if state != "play": return
+	Sfx.play("zombie_attack", {"pos": z.pos + Vector3(0, 1.4, 0)})
 	var p := player
 	var to_z := atan2(z.pos.x - p.pos.x, z.pos.z - p.pos.z)
 	var facing := absf(angle_difference(p.yaw + PI, to_z)) < 0.8
@@ -998,6 +1017,7 @@ func _weighted(list: Array):
 	return list[0][0]
 
 func _on_kill(z, _headshot := false) -> void:
+	Sfx.play("zombie_death", {"pos": z.pos + Vector3(0, 1.2, 0), "pitch": 0.7 if int(z.type) in [2, 5] else (1.4 if int(z.type) == 3 else 1.0)})
 	var by_player: bool = z.get("by_player") == true
 	if by_player: player.kills += 1
 	var nm = z.get("name")
