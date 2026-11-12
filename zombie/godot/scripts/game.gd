@@ -1292,6 +1292,11 @@ func _debug_shots() -> void:
 	for a in args:
 		if a.begins_with("--only="): only = a.substr(7)
 	await get_tree().process_frame
+	if only == "" or only == "menu":
+		for i in 24: await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("user://shot_menu.png")
+		print("shot menu")
 	new_game("police")
 	var sp: Dictionary = WorldData.info.spawn
 	var views := [

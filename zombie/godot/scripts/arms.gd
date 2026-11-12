@@ -191,7 +191,7 @@ func _hand(vp: PackedVector3Array, vn: PackedVector3Array, vc: PackedFloat32Arra
 		for k in seg:
 			var ph := TAU * k / seg
 			var d := Vector3(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
-			pts.append(Vector3(d.x * 0.021, 0.004 + d.y * 0.027, d.z * 0.0275)); nrs.append(d)
+			pts.append(Vector3(d.x * 0.0165, 0.006 + d.y * 0.022, d.z * 0.0245)); nrs.append(d)
 	for a in lat:
 		for k in seg:
 			var a0 := wb + a * seg + k; var a1 := wb + a * seg + (k + 1) % seg
