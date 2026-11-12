@@ -52,6 +52,10 @@ var shots_mode := false
 const MODULES := ["sys_build", "sys_craft", "sys_sleep", "sys_cook", "sys_map", "arms", "music", "weather"]
 var modules: Dictionary = {}
 var fx: Fx
+var post: ColorRect
+var post_mat: ShaderMaterial
+var _hit_fx := 0.0
+var _hitstop := 0.0
 var _groan_t := 3.0
 
 func _ready() -> void:
@@ -66,6 +70,10 @@ func _ready() -> void:
 	flashlight.light_color = Color(1.0, 0.96, 0.88); flashlight.light_energy = 0.0; flashlight.shadow_enabled = true
 	cam.add_child(flashlight)
 	fx = Fx.new(); add_child(fx)
+	var pl := CanvasLayer.new(); pl.layer = 1; add_child(pl)
+	post = ColorRect.new(); post.set_anchors_preset(Control.PRESET_FULL_RECT); post.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	post_mat = ShaderMaterial.new(); post_mat.shader = load("res://shaders/post.gdshader"); post.material = post_mat
+	pl.add_child(post)
 	hud = Hud.new(); hud.game = self; add_child(hud)
 	hud.use_item.connect(use_item)
 	hud.drop_item.connect(func(uid: int) -> void: drop_stack(uid, 1 << 20))
@@ -283,6 +291,10 @@ func _assign_hotbar(uid: int, slot: int) -> void:
 
 # ------------------------------------------------------------------ frame
 func _process(dt: float) -> void:
+	# a landed blow holds the world still for a few frames
+	if _hitstop > 0.0:
+		_hitstop -= dt / maxf(Engine.time_scale, 0.01)
+		Engine.time_scale = 0.12 if _hitstop > 0.0 else 1.0
 	dt = minf(dt, 0.1)
 	time += dt
 	if state == "menu":
@@ -348,6 +360,12 @@ func _process(dt: float) -> void:
 	_mouse = Vector2.ZERO
 	_update_flashlight(dt)
 	Sfx.indoor = p.inside
+	_hit_fx = maxf(0.0, _hit_fx - dt * 1.6)
+	post_mat.set_shader_parameter("hit", _hit_fx)
+	post_mat.set_shader_parameter("hurt", clampf((45.0 - p.stats.health()) / 45.0, 0.0, 1.0))
+	post_mat.set_shader_parameter("night", 1.0 - sky.daylight)
+	# colour drains as you weaken
+	sky.env.adjustment_saturation = lerpf(1.05, 0.35, clampf((40.0 - p.stats.health()) / 40.0, 0.0, 1.0))
 	sky.indoor = move_toward(sky.indoor, 1.0 if p.inside else 0.0, dt * 1.5)
 	_apply_view_settings()
 	sky.set_time(hours(), [0.0, 1.0, 0.2, -0.3][season()])
@@ -860,6 +878,8 @@ func _melee_hit() -> void:
 			hud.hitmark(killed)
 			Sfx.play("headshot" if head else "hit_flesh", {"pos": z.pos + Vector3(0, 1.3, 0)})
 			fx.blood(z.pos + Vector3(0, 1.6 if head else 1.2, 0), dir)
+			_hitstop = 0.07 if killed else 0.045
+			if rng.randf() < 0.4: fx.blood_pool(z.pos + dir * 0.5, 0.8)
 			p.gain_xp(skill_id, 8.0 if killed else 3.0, game_min); p.gain_xp("strength", 1.0, game_min)
 			p.bloody = minf(1.0, p.bloody + 0.1)
 		_noise(p.pos, float(w.noise) if w != null else 4.0)
@@ -1068,6 +1088,7 @@ func _player_attacked(z, _dmg := 0.0) -> void:
 	var type := String(_weighted([["scratch", 55], ["laceration", 30], ["bite", 25 if brute else 15]]))
 	var block: float = prot.bite if type == "bite" else prot.scratch
 	hud.damage_flash(0.6); p.cam_shake = 0.4
+	_hit_fx = 1.0
 	Sfx.play("player_hurt")
 	var pname := ""
 	for q in Stats.PARTS:
@@ -1093,6 +1114,7 @@ func _weighted(list: Array):
 	return list[0][0]
 
 func _on_kill(z, _headshot := false) -> void:
+	fx.blood_pool(z.pos, 1.3)
 	Sfx.play("zombie_death", {"pos": z.pos + Vector3(0, 1.2, 0), "pitch": 0.7 if int(z.type) in [2, 5] else (1.4 if int(z.type) == 3 else 1.0)})
 	var by_player: bool = z.get("by_player") == true
 	if by_player: player.kills += 1

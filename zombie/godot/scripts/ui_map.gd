@@ -58,7 +58,7 @@ static func prepare(world) -> void:
 				cars.append(quad)
 		count_searched()
 	if base == null and _task < 0 and WorldData.heights.size() > 0:
-		_task = WorkerThreadPool.add_task(_bake.bind(WorldData.heights, WorldData.hn, WorldData.hres, WorldData.forest, WorldData.forest_n, WorldData.lake.duplicate()))
+		_task = WorkerThreadPool.add_task(UiMap._bake.bind(WorldData.heights, WorldData.hn, WorldData.hres, WorldData.forest, WorldData.forest_n, WorldData.lake.duplicate()))
 
 ## true once the ground texture exists
 static func ready() -> bool:

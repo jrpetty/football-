@@ -41,6 +41,7 @@ var jumped := false
 var stepped := false
 var step_surface := "grass"
 var _step_dist := 0.0
+var _stand_y := INF
 ## scripted walking (tests, cut-scenes): a world-space direction used instead of the keys while it is not zero
 var auto_dir := Vector3.ZERO
 var auto_sprint := false
@@ -160,14 +161,23 @@ func update(dt: float, control: bool, now: float) -> void:
 	vel.z = damp(vel.z, wz * base, accel, dt)
 	fall_vel -= 16.0 * dt
 	var prev := pos
-	pos.x += vel.x * dt; pos.z += vel.z * dt; pos.y += fall_vel * dt
+	pos.y += fall_vel * dt
 	var h := 1.8 - crouch_t * 0.6
-	var res := WorldData.resolve(pos, 0.32, h, 0.45)
-	pos = res.pos
+	# a long step is taken in pieces, each one collided, so that a thin wall is never jumped at a low frame rate
+	var mvx := vel.x * dt; var mvz := vel.z * dt
+	var pieces := maxi(1, int(ceil(sqrt(mvx * mvx + mvz * mvz) / 0.2)))
+	var top := -INF
+	# what is a wall and what is a step is judged from the ground the player stands on (or last stood on): a jump
+	# does not turn a waist-high wall into something to walk onto
+	var feet := minf(pos.y, _stand_y)
+	for _i in pieces:
+		pos.x = clampf(pos.x + mvx / pieces, -380.0, 380.0); pos.z = clampf(pos.z + mvz / pieces, -380.0, 380.0)
+		var res := WorldData.resolve(Vector3(pos.x, feet, pos.z), 0.32, h + pos.y - feet, 0.45)
+		pos.x = res.pos.x; pos.z = res.pos.z
+		top = float(res.ground_y)
 	var gy := WorldData.ground_y(pos.x, pos.z, pos.y)
-	if float(res.ground_y) > gy:
-		gy = float(res.ground_y)
-	pos.x = clampf(pos.x, -380.0, 380.0); pos.z = clampf(pos.z, -380.0, 380.0)
+	if top > gy:
+		gy = top
 	var wd := WorldData.water_depth(pos.x, pos.z)
 	if wd > 0.4:
 		vel *= exp(-dt * 3.0)
@@ -179,11 +189,15 @@ func update(dt: float, control: bool, now: float) -> void:
 			cam_shake = 0.5
 		if not on_ground and fall_vel < -3.0:
 			landed = -fall_vel; stepped = true
-		pos.y = gy; fall_vel = maxf(0.0, fall_vel); on_ground = true
+		# up a step (a doorstep, a porch, a crate) the view rises quickly instead of jumping
+		pos.y = gy if gy - pos.y < 0.1 else minf(gy, pos.y + 6.0 * dt)
+		fall_vel = maxf(0.0, fall_vel); on_ground = true
+		_stand_y = gy
 	elif pos.y > gy + 0.35:
 		on_ground = false
 	elif fall_vel <= 0.0:
 		pos.y = damp(pos.y, gy, 20.0, dt); on_ground = true; fall_vel = 0.0
+		_stand_y = gy
 	var moved := Vector2(pos.x - prev.x, pos.z - prev.z).length()
 	speed = moved / maxf(dt, 1e-4)
 	moving = speed > 0.3

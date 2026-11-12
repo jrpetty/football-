@@ -13,6 +13,7 @@ uniform float snow = 0.0;
 uniform float flowers = 0.5;
 uniform vec3 player_pos = vec3(0.0);
 uniform float bright = 1.0;
+uniform float water_level = -0.8;
 
 varying float v_h;
 varying vec3 v_col;
@@ -46,7 +47,10 @@ void vertex() {
 	vec2 push = ad < 1.4 ? normalize(away + 0.001) * (1.4 - ad) * 0.6 : vec2(0.0);
 	local.xz += (w + push + vec2(off.z - 0.5, off.w - 0.5) * 0.3) * bend * hgt;
 	local.y -= length(push) * bend * hgt * 0.4;
-	VERTEX = local + vec3(wp.x, h_at(wp), wp.y);
+	float gy = h_at(wp);
+	// nothing grows under the lake
+	local *= smoothstep(water_level - 0.03, water_level + 0.08, gy);
+	VERTEX = local + vec3(wp.x, gy, wp.y);
 	NORMAL = vec3(0.0, 1.0, 0.0);
 	v_h = t;
 	v_col = mix(vec3(0.13, 0.2, 0.05), vec3(0.3, 0.3, 0.12), smoothstep(0.3, 0.9, sp.g + off.z * 0.5)) * (0.8 + off.w * 0.35);

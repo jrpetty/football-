@@ -158,10 +158,8 @@ func _build_window(sound: bool) -> void:
 	var keep := 0
 	if _scroll != null and is_instance_valid(_scroll):
 		keep = _scroll.scroll_vertical
-	var v: VBoxContainer = U.open(game, "craft", 980.0, 580.0, "", sound)
+	var v: VBoxContainer = U.open(game, "craft", 1000.0, 620.0, "Crafting — at the workbench" if station == "workbench" else "Crafting", sound)
 	var head := HBoxContainer.new(); head.add_theme_constant_override("separation", 6)
-	var title: Label = hud.label("Crafting", 24); title.custom_minimum_size = Vector2(124, 0)
-	head.add_child(title)
 	for c in CATS:
 		var key := String(c[0])
 		head.add_child(U.tab_button(hud, String(c[1]), cat == key, func() -> void:
@@ -186,8 +184,7 @@ func _build_window(sound: bool) -> void:
 	for group in [["Ready to make", ready], ["Missing something", short], ["At a workbench", elsewhere]]:
 		if group[1].is_empty():
 			continue
-		var gl: Label = hud.label("%s  ·  %d" % [group[0], group[1].size()], 13, Hud.ACCENT)
-		rows.add_child(gl)
+		rows.add_child(U.caption(hud, "%s  ·  %d" % [group[0], group[1].size()]))
 		for e in group[1]:
 			if first == null: first = e[0]
 			rows.add_child(_row(e[0], String(e[1])))
@@ -250,7 +247,7 @@ func _show(r: Dictionary) -> void:
 	top.add_child(tv); _detail.add_child(top)
 	var desc: Label = hud.label(String(d.desc), 14, Hud.DIM); desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.custom_minimum_size = Vector2(316, 0)
 	_detail.add_child(desc)
-	_detail.add_child(hud.label("Ingredients", 13, Hud.ACCENT))
+	_detail.add_child(U.caption(hud, "Ingredients"))
 	for k in r.inp:
 		var have: int = p.inv.count(String(k)); var need := int(r.inp[k])
 		var line := HBoxContainer.new(); line.add_theme_constant_override("separation", 8)
@@ -260,7 +257,7 @@ func _show(r: Dictionary) -> void:
 		line.add_child(hud.label("%d / %d" % [have, need], 15, Hud.GOOD if have >= need else Hud.BAD))
 		_detail.add_child(line)
 	if r.has("tools"):
-		_detail.add_child(hud.label("Tools", 13, Hud.ACCENT))
+		_detail.add_child(U.caption(hud, "Tools"))
 		for t in r.tools:
 			var has: bool = p.inv.has_tool(String(t))
 			_detail.add_child(hud.label("%s   %s" % [String(t).capitalize(), "in your pack" if has else "you have none"], 15, Hud.INK if has else Hud.BAD))

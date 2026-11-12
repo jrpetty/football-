@@ -41,5 +41,6 @@ void fragment() {
 	ROUGHNESS = mix(0.12, 0.5, foam);
 	METALLIC = 0.0;
 	SPECULAR = 0.45;
-	ALPHA = clamp(mix(mix(0.25, 0.94, murk), 0.98, fres) + foam * 0.5, 0.0, 1.0) * smoothstep(radius, radius - 6.0, length(wpos.xz - NODE_POSITION_WORLD.xz));
+	// the edge of the water thins to nothing, so the coarse ground mesh does not show as steps
+	ALPHA = clamp(mix(mix(0.25, 0.94, murk), 0.98, fres) + foam * 0.5, 0.0, 1.0) * smoothstep(0.0, 0.14, thick) * smoothstep(radius, radius - 6.0, length(wpos.xz - NODE_POSITION_WORLD.xz));
 }

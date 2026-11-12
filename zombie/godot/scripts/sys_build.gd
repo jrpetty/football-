@@ -410,7 +410,8 @@ func place(id: String, tx: int, tz: int, axis: int, rot: int, y: float, opts: Di
 				var oz: float = s * (wide / 2.0 - side / 2.0) if axis == 1 else 0.0
 				var shw := side / 2.0 if axis == 0 else 0.12; var shd := 0.12 if axis == 0 else side / 2.0
 				if side > 0.05:
-					_add_box(p, Vector3(cx + ox - shw, lo, cz + oz - shd), Vector3(cx + ox + shw, y + 3.0, cz + oz + shd), "pwall", NAV_WALL)
+					# the posts share their nav cells with the doorway: solid, but the cells belong to the leaf
+					_add_box(p, Vector3(cx + ox - shw, lo, cz + oz - shd), Vector3(cx + ox + shw, y + 3.0, cz + oz + shd), "pwall", 0)
 			var lhw := leaf_w / 2.0 if axis == 0 else 0.1; var lhd := 0.1 if axis == 0 else leaf_w / 2.0
 			var door_box: WorldData.Box = WorldData.add_box(Vector3(cx - lhw, y, cz - lhd), Vector3(cx + lhw, y + 2.3, cz + lhd), "pdoor", p, false)
 			p["door_box"] = door_box; p["door_nav"] = _at_ground(door_box.min, door_box.max)
@@ -927,7 +928,8 @@ func barricade(t: Dictionary, _carpentry := 0, amount := -1.0, step := -1.0) -> 
 func _seal(t: Dictionary) -> void:
 	var box: WorldData.Box = t.box
 	WorldData.set_solid(box, true, NAV_BARRICADE)
-	WorldData.mark_breakable(box, NAV_BARRICADE, t)
+	if String(t.kind) == "window":
+		WorldData.mark_breakable(box, NAV_BARRICADE, t)      # as the world does for every window: wall cells included
 	box.tag = "door" if String(t.kind) == "door" else "window"
 
 func _unbarricade(t: Dictionary) -> void:

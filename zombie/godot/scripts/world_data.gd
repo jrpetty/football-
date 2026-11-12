@@ -27,6 +27,17 @@ var _circles: Dictionary = {}         # id -> Circle
 var _cells: Dictionary = {}           # cell key -> PackedInt32Array of ids
 var _next_id := 1
 var export_box: Dictionary = {}       # the exporter's box id -> Box (doors and windows refer to these)
+## bumped whenever a collider appears, goes, or changes between solid and not: anything that keeps a list of
+## nearby colliders compares this to know when to look again
+var version := 0
+## per nav cell: bit 1 = some collider reaches to within about 0.8 m of the cell, bit 2 = a floor or deck is there.
+## A body in a cell with neither bit stands on open ground and needs no collision pass at all.
+var solid_map := PackedByteArray()
+## raised ground outside the buildings (porch decks): [x0, z0, x1, z1, y]. Like floors for where feet stand,
+## but not "indoors".
+var decks: Array = []
+var _ground_idx: Dictionary = {}      # 8 m cell -> the floors and decks that reach into it
+var _static_floors := 0
 
 class Box:
 	var id: int
@@ -35,6 +46,8 @@ class Box:
 	var solid := true
 	var tag := ""
 	var ref = null
+	## a window sill carries its window's box here: once that is no longer solid, the dead may climb over the sill
+	var link = null
 
 class Circle:
 	var id: int
@@ -50,6 +63,7 @@ func _ready() -> void:
 	load_world()
 
 func load_world() -> void:
+	solid_map.resize(NAV_N * NAV_N)
 	var f := FileAccess.open("res://data/world.json", FileAccess.READ)
 	if f == null:
 		push_error("data/world.json is missing — run the exporter")
@@ -70,6 +84,134 @@ func load_world() -> void:
 	for c in info.circles:
 		var ci := add_circle(float(c[0]), float(c[1]), float(c[2]), float(c[3]), null, false)
 		ci.kind = String(c[4]); ci.ref = int(c[5])
+	_derive_colliders()
+	_static_floors = floors.size()
+	for fl in floors: _index_ground(fl)
+	for d in decks: _index_ground(d)
+
+# ------------------------------------------------------------------ what the exported collision leaves out
+## Things you can see but the exported boxes do not cover: the foundations and porch decks of the houses, the
+## porch posts, the sills under windows (so that a broken window can be climbed through), and any placed prop
+## big enough to matter that has no box of its own. All derived here from the same files the picture is built from.
+func _derive_colliders() -> void:
+	# window sills: the low wall box sharing a window's footprint
+	var by_tag_window: Array = []
+	for b in _boxes.values():
+		if b.tag == "window" or b.tag == "window_broken": by_tag_window.append(b)
+	for wb in by_tag_window:
+		for o in query(wb.min.x - 0.05, wb.min.z - 0.05, wb.max.x + 0.05, wb.max.z + 0.05):
+			if o is Box and o != wb and o.tag == "wall" and absf(o.min.y - wb.min.y) < 0.05 and o.max.y < wb.max.y - 0.3 \
+					and o.min.x > wb.min.x - 0.06 and o.max.x < wb.max.x + 0.06 and o.min.z > wb.min.z - 0.06 and o.max.z < wb.max.z + 0.06:
+				o.link = wb
+	# foundations: the block a building stands on is solid from the side wherever it is too high to step onto
+	for fl in floors:
+		var lo := INF
+		for k in 9:
+			lo = minf(lo, height_at(lerpf(fl[0], fl[2], (k % 3) * 0.5), lerpf(fl[1], fl[3], (k / 3) * 0.5)))
+		add_box(Vector3(fl[0], lo - 1.5, fl[1]), Vector3(fl[2], float(fl[4]) - 0.02, fl[3]), "foundation", null, false)
+	var town = null
+	if FileAccess.file_exists("res://assets/world/town.json"):
+		town = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world/town.json"))
+	if town is Dictionary:
+		_derive_porches(town)
+	_derive_props()
+
+## the deck and the two roof posts in front of each house's front door
+func _derive_porches(town: Dictionary) -> void:
+	var by_pos := {}
+	for b in town.get("buildings", []): by_pos["%d,%d" % [int(b.x), int(b.z)]] = b
+	for p in info.get("plots", []):
+		var kind := String(p.kind)
+		if not (kind in ["house", "house_l", "cabin", "diner"]):
+			continue
+		var b = by_pos.get("%d,%d" % [int(p.x), int(p.z)])
+		if b == null:
+			continue
+		var face := int(p.face)
+		var fdx := 1.0 if face == 1 else (-1.0 if face == 3 else 0.0)
+		var fdz := 1.0 if face == 0 else (-1.0 if face == 2 else 0.0)
+		var along := face == 0 or face == 2
+		var door_off = null
+		for d in town.get("doors", []):
+			if int(d.building) != int(b.id): continue
+			if along and String(d.axis) == "x" and absf(float(d.cz) - (float(p.z) + fdz * float(p.d) * 0.5)) < 0.3: door_off = float(d.cx) - float(p.x)
+			elif not along and String(d.axis) == "z" and absf(float(d.cx) - (float(p.x) + fdx * float(p.w) * 0.5)) < 0.3: door_off = float(d.cz) - float(p.z)
+		if door_off == null:
+			continue
+		var px: float = float(p.x) + (float(door_off) if along else fdx * (float(p.w) * 0.5 + 1.0))
+		var pz: float = float(p.z) + (fdz * (float(p.d) * 0.5 + 1.0) if along else float(door_off))
+		var hx := 1.5 if along else 1.0; var hz := 1.0 if along else 1.5
+		var y: float = float(b.floorY) - 0.05
+		decks.append([px - hx, pz - hz, px + hx, pz + hz, y, int(b.id)])
+		var lo := minf(minf(height_at(px - hx, pz - hz), height_at(px + hx, pz - hz)), minf(height_at(px - hx, pz + hz), height_at(px + hx, pz + hz)))
+		add_box(Vector3(px - hx, lo - 1.5, pz - hz), Vector3(px + hx, y - 0.02, pz + hz), "foundation", null, false)
+		if kind != "cabin":
+			for s in [-1.0, 1.0]:
+				var c := add_circle(px + (s * 1.4 if along else fdx * 0.9), pz + (fdz * 0.9 if along else s * 1.4), 0.09, 2.6, null, false)
+				c.kind = "post"; c.y0 = y - 0.3; c.y1 = y + 2.5
+
+## placed props with no collider of their own
+func _derive_props() -> void:
+	if not FileAccess.file_exists("res://assets/world/props.json") or not FileAccess.file_exists("res://assets/models/props/index.json"):
+		return
+	var props = JSON.parse_string(FileAccess.get_file_as_string("res://assets/world/props.json"))
+	var sizes = JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/props/index.json"))
+	if not (props is Dictionary) or not (sizes is Dictionary):
+		return
+	for e in props.get("entries", []):
+		var t := String(e.t)
+		if not t.begins_with("p_"):
+			continue
+		var sz = sizes.get(t.substr(2), {}).get("size")
+		if sz == null:
+			continue
+		var m: Array = e.m
+		var bx := Vector3(m[0], m[1], m[2]); var bz := Vector3(m[8], m[9], m[10]); var org := Vector3(m[12], m[13], m[14])
+		var hx: float = float(sz[0]) * 0.5 * bx.length(); var hz: float = float(sz[2]) * 0.5 * bz.length()
+		var tall: float = float(sz[1]) * Vector3(m[4], m[5], m[6]).length()
+		if tall < 0.5 or minf(hx, hz) < 0.15:
+			continue
+		if _point_covered(org.x, org.y + minf(tall * 0.5, 0.9), org.z):
+			continue
+		var ux := bx.normalized(); var uz := bz.normalized()
+		if absf(ux.x) > 0.985 or absf(ux.z) > 0.985:
+			var ex := absf(ux.x) * hx + absf(uz.x) * hz; var ez := absf(ux.z) * hx + absf(uz.z) * hz
+			add_box(Vector3(org.x - ex, org.y, org.z - ez), Vector3(org.x + ex, org.y + tall, org.z + ez), "prop")
+		else:
+			# turned at an angle: a row of cylinders along its length
+			var long_x := hx >= hz
+			var r := minf(hx, hz); var half := maxf(hx, hz) - r
+			var axis := ux if long_x else uz
+			var n := maxi(1, int(ceil(half / maxf(r, 0.05))) + 1)
+			for i in n:
+				var t2 := 0.0 if n == 1 else lerpf(-half, half, i / float(n - 1))
+				var c := add_circle(org.x + axis.x * t2, org.z + axis.z * t2, r, tall, null, r > 0.25)
+				c.kind = "prop"; c.y0 = org.y - 0.2; c.y1 = org.y + tall
+
+func _point_covered(x: float, y: float, z: float) -> bool:
+	for o in query(x - 0.3, z - 0.3, x + 0.3, z + 0.3):
+		if o is Box:
+			if x > o.min.x - 0.05 and x < o.max.x + 0.05 and z > o.min.z - 0.05 and z < o.max.z + 0.05 and y > o.min.y - 0.1 and y < o.max.y + 0.1: return true
+		elif Vector2(x - o.x, z - o.z).length() < o.r + 0.05 and y > o.y0 - 0.1 and y < o.y1 + 0.1: return true
+	return false
+
+func _index_ground(row: Array) -> void:
+	var x0 := int(floor(float(row[0]) / CELL)); var x1 := int(floor(float(row[2]) / CELL))
+	var z0 := int(floor(float(row[1]) / CELL)); var z1 := int(floor(float(row[3]) / CELL))
+	for cx in range(x0, x1 + 1):
+		for cz in range(z0, z1 + 1):
+			var k := _key(cx, cz)
+			if not _ground_idx.has(k): _ground_idx[k] = []
+			_ground_idx[k].append(row)
+	_mark(float(row[0]) - 0.6, float(row[1]) - 0.6, float(row[2]) + 0.6, float(row[3]) + 0.6, 2)
+
+func _mark(x0: float, z0: float, x1: float, z1: float, bit: int) -> void:
+	var ax := maxi(0, int(floor(x0 + HALF))); var bx := mini(NAV_N - 1, int(floor(x1 + HALF)))
+	var az := maxi(0, int(floor(z0 + HALF))); var bz := mini(NAV_N - 1, int(floor(z1 + HALF)))
+	for iz in range(az, bz + 1):
+		var row := iz * NAV_N
+		for ix in range(ax, bx + 1):
+			solid_map[row + ix] |= bit
 
 # ------------------------------------------------------------------ terrain
 func height_at(x: float, z: float) -> float:
@@ -95,14 +237,24 @@ func forest_at(x: float, z: float) -> float:
 	var j := clampi(int(round((z + HALF) / 4.0)), 0, forest_n - 1)
 	return forest[j * forest_n + i] / 255.0
 
-## walkable ground height: terrain, or a building floor / foundation the feet can reach
+## walkable ground height: terrain, or a building floor / porch deck / foundation the feet can reach
 func ground_y(x: float, z: float, feet_y: float = INF) -> float:
 	var y := height_at(x, z)
-	for f in floors:
+	var a = _ground_idx.get(_key(int(floor(x / CELL)), int(floor(z / CELL))))
+	if a != null:
+		for f in a:
+			if x > f[0] and x < f[2] and z > f[1] and z < f[3]:
+				var fy: float = f[4]
+				if fy > y and fy <= feet_y + 0.55:
+					y = fy
+	# floors laid since the world was loaded (the player's own)
+	for i in range(_static_floors, floors.size()):
+		var f: Array = floors[i]
 		if x > f[0] and x < f[2] and z > f[1] and z < f[3]:
 			var fy: float = f[4]
 			if fy > y and fy <= feet_y + 0.55:
 				y = fy
+			solid_map[clampi(int(floor(z + HALF)), 0, NAV_N - 1) * NAV_N + clampi(int(floor(x + HALF)), 0, NAV_N - 1)] |= 2
 	return y
 
 func floor_at(x: float, z: float) -> Array:
@@ -160,6 +312,8 @@ func add_box(mn: Vector3, mx: Vector3, tag := "", ref = null, raster := true, na
 	b.min = mn; b.max = mx; b.tag = tag; b.ref = ref
 	_boxes[b.id] = b
 	_each_cell(mn.x, mn.z, mx.x, mx.z, b.id, true)
+	_mark(mn.x - 0.8, mn.z - 0.8, mx.x + 0.8, mx.z + 0.8, 1)
+	version += 1
 	# anything standing between knee and head height (above the ground it stands on) blocks the nav grid
 	var gy := height_at((mn.x + mx.x) * 0.5, (mn.z + mx.z) * 0.5)
 	if raster and mx.y > gy + 0.6 and mn.y < gy + 1.6:
@@ -170,6 +324,7 @@ func remove_box(b: Box) -> void:
 	if not _boxes.has(b.id):
 		return
 	_boxes.erase(b.id)
+	version += 1
 	_each_cell(b.min.x, b.min.z, b.max.x, b.max.z, b.id, false)
 	_raster_box(b, NAV_FREE, null, true)
 
@@ -180,6 +335,8 @@ func add_circle(x: float, z: float, r: float, h: float, ref = null, raster := tr
 	c.y0 = height_at(x, z) - 0.5; c.y1 = c.y0 + 0.5 + maxf(h, 1.0)
 	_circles[c.id] = c
 	_each_cell(x - r, z - r, x + r, z + r, c.id, true)
+	_mark(x - r - 0.8, z - r - 0.8, x + r + 0.8, z + r + 0.8, 1)
+	version += 1
 	if raster and r > 0.25:
 		_raster_circle(c, NAV_SOLID)
 	return c
@@ -188,12 +345,14 @@ func remove_circle(c: Circle) -> void:
 	if not _circles.has(c.id):
 		return
 	_circles.erase(c.id)
+	version += 1
 	_each_cell(c.x - c.r, c.z - c.r, c.x + c.r, c.z + c.r, c.id, false)
 	if c.r > 0.25:
 		_raster_circle(c, NAV_FREE)
 
 func set_solid(b: Box, solid: bool, nav_cost := NAV_SOLID) -> void:
 	b.solid = solid
+	version += 1
 	_raster_box(b, nav_cost if solid else NAV_FREE, b.ref if solid else null, not solid)
 
 func _raster_box(b: Box, v: int, ref, clear: bool) -> void:
@@ -256,20 +415,23 @@ func query(min_x: float, min_z: float, max_x: float, max_z: float) -> Array:
 	return out
 
 ## Push a standing cylinder (feet at pos.y) out of the world. Returns {pos, hit, ground_y}: ground_y is the top
-## of anything low enough to step onto (-INF if nothing).
+## of anything low enough to step onto that the body's centre is over (-INF if nothing). Things no higher than
+## `step` above the feet are never walls: you walk onto them. A foundation or deck is a wall only where its top
+## is out of reach of ground_y() (0.55 m).
 func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", ignore_tag2 := "") -> Dictionary:
 	var hit := false
 	var gy := -INF
 	var list := query(pos.x - r - 0.1, pos.z - r - 0.1, pos.x + r + 0.1, pos.z + r + 0.1)
-	for _iter in 2:
+	for _iter in 4:
+		var moved := false
 		for o in list:
 			if o is Box:
 				if ignore_tag != "" and (o.tag == ignore_tag or o.tag == ignore_tag2):
 					continue
 				if pos.y + h <= o.min.y or pos.y >= o.max.y:
 					continue
-				if o.max.y - pos.y <= step and pos.x > o.min.x - r * 0.5 and pos.x < o.max.x + r * 0.5 and pos.z > o.min.z - r * 0.5 and pos.z < o.max.z + r * 0.5:
-					if o.max.y > gy:
+				if o.max.y - pos.y <= (0.56 if o.tag == "foundation" else step):
+					if o.tag != "foundation" and o.max.y > gy and pos.x > o.min.x and pos.x < o.max.x and pos.z > o.min.z and pos.z < o.max.z:
 						gy = o.max.y
 					continue
 				var cx := clampf(pos.x, o.min.x, o.max.x); var cz := clampf(pos.z, o.min.z, o.max.z)
@@ -287,7 +449,7 @@ func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", i
 				else:
 					var d := sqrt(d2)
 					pos.x += dx / d * (r - d); pos.z += dz / d * (r - d)
-				hit = true
+				hit = true; moved = true
 			else:
 				if pos.y > o.y1 or pos.y + h < o.y0:
 					continue
@@ -297,7 +459,9 @@ func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", i
 					continue
 				var e := sqrt(e2)
 				pos.x += ex / e * (rr - e); pos.z += ez / e * (rr - e)
-				hit = true
+				hit = true; moved = true
+		if not moved:
+			break
 	return {"pos": pos, "hit": hit, "ground_y": gy}
 
 ## the interface the character code uses: just the corrected position

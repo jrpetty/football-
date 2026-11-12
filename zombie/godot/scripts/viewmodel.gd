@@ -18,14 +18,32 @@ var _sway := Vector2.ZERO
 var _bob := 0.0
 var muzzle := Vector3.ZERO
 var flash: OmniLight3D
+var flash_mesh: MeshInstance3D
+var _anchors: Dictionary = {}
+var _muzzle_local := Vector3(0, 0.06, -0.3)
 var _cache: Dictionary = {}
 var two_handed := false
+var _flash_t := 0.0
 var firearm := false
 
 func _ready() -> void:
 	holder = Node3D.new(); add_child(holder)
 	flash = OmniLight3D.new(); flash.light_color = Color(1.0, 0.72, 0.35); flash.omni_range = 14.0; flash.light_energy = 0.0
 	add_child(flash)
+	# the flash itself: two crossed additive quads at the muzzle, shown for a frame or two
+	flash_mesh = MeshInstance3D.new()
+	var q := QuadMesh.new(); q.size = Vector2(0.22, 0.22)
+	var fm := StandardMaterial3D.new()
+	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; fm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var g := GradientTexture2D.new(); g.fill = GradientTexture2D.FILL_RADIAL; g.fill_from = Vector2(0.5, 0.5); g.fill_to = Vector2(0.5, 0.0)
+	var gr := Gradient.new(); gr.set_color(0, Color(1.0, 0.92, 0.7, 1.0)); gr.set_color(1, Color(1.0, 0.5, 0.1, 0.0)); g.gradient = gr
+	fm.albedo_texture = g; fm.albedo_color = Color(3.0, 2.4, 1.6)
+	q.material = fm
+	flash_mesh.mesh = q; flash_mesh.visible = false; flash_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(flash_mesh)
+	var idx = World.read_json("res://assets/models/held/index.json")
+	if idx is Dictionary: _anchors = idx
 
 func set_item(id: String) -> void:
 	if id == current:
@@ -52,6 +70,8 @@ func set_item(id: String) -> void:
 	Mats.apply(model)
 	_no_shadows(model)
 	holder.add_child(model)
+	var an = _anchors.get(mid, {}).get("anchors", {}).get("muzzle")
+	_muzzle_local = Vector3(an[0], an[1], an[2]) if an != null else Vector3(0, 0.06, -0.3)
 
 func _no_shadows(n: Node) -> void:
 	if n is GeometryInstance3D:
@@ -65,6 +85,10 @@ func swing(dur: float) -> void:
 func recoil(k: float) -> void:
 	recoil_k = minf(1.5, recoil_k + k)
 	flash.light_energy = 6.0
+	flash_mesh.position = _muzzle_local + Vector3(0, 0, -0.06)
+	flash_mesh.rotation.z = randf() * TAU
+	flash_mesh.scale = Vector3.ONE * randf_range(0.8, 1.3)
+	_flash_t = 0.045
 
 func reload(dur: float) -> void:
 	reload_dur = dur; reload_t = dur
@@ -108,4 +132,6 @@ func update(dt: float, mouse: Vector2, speed: float, on_ground: bool) -> void:
 	holder.position = p
 	holder.rotation = r
 	flash.position = p + Vector3(0.0, 0.05, -0.5)
+	_flash_t -= dt
+	flash_mesh.visible = _flash_t > 0.0
 	holder.visible = model != null and use_t <= 0.0

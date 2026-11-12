@@ -116,6 +116,7 @@ func _build_grass(count := 260000) -> void:
 	grass_mat.set_shader_parameter("splat", terrain_mat.get_shader_parameter("splat"))
 	grass_mat.set_shader_parameter("patch_size", S)
 	grass_mat.set_shader_parameter("height_n", float(WorldData.hn))
+	grass_mat.set_shader_parameter("water_level", float(WorldData.lake.level))
 	blade.surface_set_material(0, grass_mat)
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D; mm.use_custom_data = true; mm.mesh = blade

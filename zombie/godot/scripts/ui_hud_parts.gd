@@ -59,6 +59,8 @@ class Compass extends Control:
 			i += 2
 		# places: on the line, or pinned to the end you should turn towards
 		for m in marks:
+			if m.get("hide", false):
+				continue
 			var rel2 := wrapf(float(m.bearing) - heading, -180.0, 180.0)
 			var x3 := clampf(half + rel2 * PX, 10.0, size.x - 10.0)
 			var off := absf(rel2 * PX) > half - 10.0
@@ -289,7 +291,7 @@ class Vitals extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		custom_minimum_size = Vector2(286, 96)
 
-	func _set(i: int, v: float) -> bool:
+	func _put(i: int, v: float) -> bool:
 		if absf(vals[i] - v) <= 0.25:
 			return false
 		if int(round(vals[i])) != int(round(v)):
@@ -298,10 +300,10 @@ class Vitals extends Control:
 		return true
 
 	func set_values(health: float, stamina: float, food: float, water: float, stamina_cap: float, pulse_: float) -> void:
-		var changed := _set(0, health)
-		changed = _set(1, stamina) or changed
-		changed = _set(2, food) or changed
-		changed = _set(3, water) or changed
+		var changed := _put(0, health)
+		changed = _put(1, stamina) or changed
+		changed = _put(2, food) or changed
+		changed = _put(3, water) or changed
 		if absf(stamina_cap - cap) > 0.01:
 			cap = stamina_cap; changed = true
 		var low := vals[0] < 30.0 or vals[2] < 12.0 or vals[3] < 12.0

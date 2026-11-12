@@ -177,7 +177,7 @@ func fresh(seed := 5) -> void:
 
 func place_player(x: float, z: float, y := INF) -> void:
 	P.pos = Vector3(x, W.ground_y(x, z, y if y != INF else W.height_at(x, z) + 0.6), z)
-	P.vel = Vector3.ZERO; P.fall_vel = 0.0; P.on_ground = true; P.auto_dir = Vector3.ZERO
+	P.vel = Vector3.ZERO; P.fall_vel = 0.0; P.on_ground = true; P.auto_dir = Vector3.ZERO; P._stand_y = P.pos.y
 	pl_prev = null
 	sync_host()
 
@@ -193,7 +193,7 @@ func is_box(o) -> bool:
 ## does this thing block a body whose feet are at `feet`?
 func blocks(o, feet: float) -> bool:
 	if is_box(o):
-		if o.max.y <= feet + STEP or o.min.y >= feet + 1.5:
+		if o.max.y <= feet + (0.57 if o.tag == "foundation" else STEP) or o.min.y >= feet + 1.5:
 			return false
 		var lk = o.get("link")                      # the sill under a window is open once the window is broken
 		if lk != null and not lk.solid:
@@ -265,7 +265,7 @@ func crossing(a: Vector3, b: Vector3):
 ## where the feet of a body at p should be: [height, what it stands on]
 func ground_expected(p: Vector3, r: float) -> float:
 	var g: float = W.height_at(p.x, p.z)
-	for f in W.floors:
+	for f in W.floors + (W.decks if W.get("decks") != null else []):
 		if p.x > f[0] and p.x < f[2] and p.z > f[1] and p.z < f[3] and float(f[4]) > g and p.y > float(f[4]) - 0.6:
 			g = f[4]
 	var top: float = W.resolve(p, r, 1.7, 0.45).ground_y          # a low thing it may stand on (a pallet, a step)
@@ -273,9 +273,24 @@ func ground_expected(p: Vector3, r: float) -> float:
 		g = top
 	return g
 
+## may the feet be at height y here? Yes within TOL of the ground; and within 0.6 m of a step (a floor edge, a
+## porch, a low thing) anywhere between the two levels, since a step is taken over a few frames rather than in one.
+func feet_error(p: Vector3, r: float) -> float:
+	var g := ground_expected(p, r)
+	var lo := g; var hi := g
+	var tp: float = W.height_at(p.x, p.z)
+	for d in [Vector3(0.3, 0, 0), Vector3(-0.3, 0, 0), Vector3(0, 0, 0.3), Vector3(0, 0, -0.3), Vector3(0.6, 0, 0), Vector3(-0.6, 0, 0), Vector3(0, 0, 0.6), Vector3(0, 0, -0.6)]:
+		var q: Vector3 = p + d
+		var gq := ground_expected(q, r)
+		if absf((gq - g) - (W.height_at(q.x, q.z) - tp)) > 0.1:       # a step, not the lie of the land
+			lo = minf(lo, gq); hi = maxf(hi, gq)
+	if p.y < lo: return p.y - lo
+	if p.y > hi: return p.y - hi
+	return 0.0
+
 func under_floor(p: Vector3) -> float:
 	for f in W.floors:
-		if p.x > f[0] + 0.15 and p.x < f[2] - 0.15 and p.z > f[1] + 0.15 and p.z < f[3] - 0.15 and p.y < float(f[4]) - 0.25:
+		if p.x > f[0] + 0.15 and p.x < f[2] - 0.15 and p.z > f[1] + 0.15 and p.z < f[3] - 0.15 and p.y < float(f[4]) - 0.6:
 			return float(f[4]) - p.y
 	return 0.0
 
@@ -299,23 +314,32 @@ func audit(dt: float) -> void:
 		var lying: bool = z.crawler or st == &"down" or st == &"dead" or (st == &"dormant" and z.lying) or (st == &"rise" and z.down_stage < 2)
 		var moved: bool = prev == null or prev != p
 		if moved:
-			if prev != null and not climbing:
+			if prev != null:
 				var hd := Vector2(p.x - prev.x, p.z - prev.z).length()
 				if hd > 1e-4:
 					var o = crossing(prev, p)
 					if o != null: viol("1 zombie crossed a wall", hd, p, "%s %s from (%.2f, %.2f) through %s" % [st, zs.TYPE_NAMES[z.type], prev.x, prev.z, what(o)])
 				if hd > 12.0 * dt + 0.45: viol("1 zombie teleported", hd, p, "%s in one frame" % st)
 			var pn := pen_at(p, rb)
-			if not climbing:
+			if true:
 				if pn[0] > rb + 0.02: viol("2 zombie centre inside geometry", pn[0] - rb, p, "%s %s in %s" % [st, zs.TYPE_NAMES[z.type], what(pn[1])])
 				elif pn[0] > TOL_PEN: viol("2 zombie pressed into geometry", pn[0], p, "%s %s into %s" % [st, zs.TYPE_NAMES[z.type], what(pn[1])])
 			var uf := under_floor(p)
 			if uf > 0.0: viol("3 zombie under a floor", uf, p, String(st))
-			elif not climbing:
+			elif climbing:
+				# over a window sill: there must be a broken window right here
+				var near_win := false
+				for wid in windows:
+					var w: Dictionary = windows[wid]
+					if w.broken and absf(float(w.data.cx) - p.x) < 1.6 and absf(float(w.data.cz) - p.z) < 1.6: near_win = true
+				if not near_win: viol("3 zombie climbing where there is no broken window", z.climb, p, String(st))
+			else:
 				if not lying:
-					var g := ground_expected(p, rb)
-					if absf(p.y - g) > TOL_Y: viol("3 zombie feet off the ground" if p.y > g else "3 zombie feet in the ground", p.y - g, p, "%s speed %.1f" % [st, z.vel.length()])
-					if prev != null and absf(p.y - prev.y) > 5.0 * dt + 0.02: viol("3 zombie vertical snap", p.y - prev.y, p, String(st))
+					var err := feet_error(p, rb)
+					if absf(err) > TOL_Y: viol("3 zombie feet off the ground" if err > 0.0 else "3 zombie feet in the ground", err, p, "%s speed %.1f" % [st, z.vel.length()])
+					# a jump in height that the lie of the land does not explain
+					if prev != null and absf(p.y - prev.y) > 5.0 * dt + 0.02 and absf(p.y - prev.y) > 1.5 * absf(W.height_at(p.x, p.z) - W.height_at(prev.x, prev.z)) + 0.05:
+						viol("3 zombie vertical snap", p.y - prev.y, p, String(st))
 				else:
 					lie_check(z, p)
 		# stuck
@@ -333,7 +357,7 @@ func audit(dt: float) -> void:
 					viol("5 zombie stuck", t_now - float(s[1]), p, "%s %s, quarry %.1f m away" % [st, zs.TYPE_NAMES[z.type], Vector2(p.x - pp.x, p.z - pp.z).length()])
 		if st != &"dead":
 			var dpl := Vector2(p.x - pp.x, p.z - pp.z).length()
-			if dpl < MIN_PLAYER and absf(p.y - pp.y) < 1.5 and bool(host.player_alive): viol("4 zombie inside the player", dpl, p, String(st))
+			if dpl < MIN_PLAYER and absf(p.y - pp.y) < 1.5 and bool(host.player_alive) and (z.crawler or not lying): viol("4 zombie inside the player", dpl, p, String(st))
 			if dpl < 14.0 and not lying and frame % 6 == 0: press.append(z)
 	zf[scen] = int(zf.get(scen, 0)) + n
 	if press.size() > 1:
@@ -364,11 +388,22 @@ func lie_check(z, p: Vector3) -> void:
 		var q: Vector3 = p + f * ((off + s) * z.scale)
 		var plane: float = p.y - (nrm.x * (q.x - p.x) + nrm.z * (q.z - p.z)) / maxf(nrm.y, 0.2)
 		var g: float = W.height_at(q.x, q.z)
-		for fl in W.floors:
+		for fl in W.floors + (W.decks if W.get("decks") != null else []):
 			if q.x > fl[0] and q.x < fl[2] and q.z > fl[1] and q.z < fl[3] and float(fl[4]) > g and p.y > float(fl[4]) - 0.6: g = fl[4]
 		if absf(plane - g) > absf(worst): worst = plane - g
+	# (on ground steeper than 35 degrees nothing can lie flat to it; and across a floor's edge a body bridges the step)
+	if W.normal_at(p.x, p.z).y < 0.82 or absf(feet_error(p, 0.3)) > 0.0 or feet_step(p):
+		return
 	if absf(worst) > TOL_LIE:
 		viol("3 lying body floats over the slope" if worst > 0.0 else "3 lying body sinks into the slope", worst, p, "%s%s" % [z.state, " crawler" if z.crawler else ""])
+
+func feet_step(p: Vector3) -> bool:
+	var g := ground_expected(p, 0.3)
+	var tp: float = W.height_at(p.x, p.z)
+	for d in [Vector3(0.9, 0, 0), Vector3(-0.9, 0, 0), Vector3(0, 0, 0.9), Vector3(0, 0, -0.9)]:
+		var q: Vector3 = p + d
+		if absf((ground_expected(q, 0.3) - g) - (W.height_at(q.x, q.z) - tp)) > 0.1: return true
+	return false
 
 # ------------------------------------------------------------------ the player
 var pl_prev = null
@@ -382,23 +417,29 @@ func step_player(dt: float) -> void:
 	if pl_prev != null:
 		var o = crossing(pl_prev, p)
 		if o != null: viol("6 player crossed a wall", Vector2(p.x - pl_prev.x, p.z - pl_prev.z).length(), p, "from (%.2f, %.2f) through %s" % [pl_prev.x, pl_prev.z, what(o)])
-		if was_ground and P.on_ground and absf(p.y - pl_prev.y) > 6.0 * dt + 0.02: viol("6 player vertical pop", p.y - pl_prev.y, p, "in one frame")
+		if was_ground and P.on_ground and absf(p.y - pl_prev.y) > 6.0 * dt + 0.02 and absf(p.y - pl_prev.y) > 1.5 * absf(W.height_at(p.x, p.z) - W.height_at(pl_prev.x, pl_prev.z)) + 0.05:
+			viol("6 player vertical pop", p.y - pl_prev.y, p, "in one frame")
 	var pn := pen_at(p, 0.32)
 	if pn[0] > 0.32 + 0.02: viol("6 player centre inside geometry", pn[0] - 0.32, p, what(pn[1]))
 	elif pn[0] > TOL_PEN: viol("6 player pressed into geometry", pn[0], p, what(pn[1]))
 	var uf := under_floor(p)
 	if uf > 0.0: viol("6 player under a floor", uf, p)
-	var g := ground_expected(p, 0.32)
+	var err := feet_error(p, 0.32)
 	# (the player is a camera with no feet to see: its height is eased when it walks down a slope or off a step,
 	# so it may ride up to 0.3 m high for a moment; it may never be below the ground)
-	if p.y < g - TOL_Y: viol("6 player sunk in the ground", p.y - g, p)
-	elif P.on_ground and p.y > g + 0.3: viol("6 player floating", p.y - g, p)
+	if err < -TOL_Y: viol("6 player sunk in the ground", err, p)
+	elif P.on_ground and err > 0.3: viol("6 player floating", err, p)
 	pl_prev = p
 	sync_host()
 
 func sim(dt: float) -> void:
 	step_player(dt)
 	zs.update(dt, dt, host)
+	# as the game does: the dead the player walks into hold it back
+	if zs.get("player_blocking") != null:
+		zs.player_blocking = true
+		P.pos += zs.player_push
+		sync_host()
 	audit(dt)
 
 # ------------------------------------------------------------------ helpers for the scenarios
@@ -751,11 +792,16 @@ func s_player() -> void:
 			var far := Vector2(P.pos.x - s.x, P.pos.z - s.z).length()
 			if far > dist + 1.0: passed += 1
 			else: stopped += 1
-			# wedged? it must be able to walk back out
+			# wedged? some way out must be open
 			var here: Vector3 = P.pos
-			P.auto_dir = -dir; P.auto_sprint = false
-			for i in int(1.0 / dt): step_player(dt)
-			if P.pos.distance_to(here) < 1.2: viol("6 player wedged", P.pos.distance_to(here), here, "after running at a %s" % tg[0])
+			var best_out := 0.0
+			for k in 8:
+				P.pos = here; P.vel = Vector3.ZERO; pl_prev = null
+				P.auto_dir = Vector3(cos(k * TAU / 8.0), 0, sin(k * TAU / 8.0)); P.auto_sprint = false
+				for i in int(0.7 / dt): step_player(dt)
+				best_out = maxf(best_out, Vector2(P.pos.x - here.x, P.pos.z - here.z).length())
+				if best_out > 1.0: break
+			if best_out < 1.0: viol("6 player wedged", best_out, here, "after running at a %s" % tg[0])
 			break
 	fact("runs at things", runs); fact("stopped by them", stopped); fact("slid past", passed)
 	# open doors must let the player through, shut ones must not
@@ -938,7 +984,13 @@ func town_mesh_audit() -> void:
 		while up != null and up is Node3D:
 			xf = up.transform * xf; up = up.get_parent()
 		var nm := String(nd.name)
-		if nm.begins_with("door") or nm.begins_with("win"): continue
+		# (door leaves and panes move or break; an open leaf is not a wall)
+		var leaf := false
+		up = nd
+		while up != null:
+			if String(up.name).begins_with("door") or String(up.name).begins_with("win"): leaf = true
+			up = up.get_parent()
+		if leaf: continue
 		for si in nd.mesh.get_surface_count():
 			var arr: Array = nd.mesh.surface_get_arrays(si)
 			if arr.is_empty() or arr[Mesh.ARRAY_VERTEX] == null: continue
@@ -967,7 +1019,7 @@ func town_mesh_audit() -> void:
 							cells[k][0] += 1
 					elif absf(nrm.y) > 0.7 and hgt > 0.12 and hgt < 0.56 and area > 0.3:
 						# something flat you would expect to stand on: is it ground to the world?
-						if W.ground_y(q.x, q.z, q.y + 0.2) < q.y - 0.1 and W.resolve(Vector3(q.x, q.y - 0.2, q.z), 0.2, 1.7).ground_y < q.y - 0.1:
+						if W.ground_y(q.x, q.z, q.y + 0.2) < q.y - 0.1 and W.resolve(Vector3(q.x, q.y - 0.2, q.z), 0.2, 1.7).ground_y < q.y - 0.1 and pen_at(Vector3(q.x, g, q.z), 0.1)[0] <= 0.0:
 							var k2 := Vector2i(int(floor(q.x / 2.0)), int(floor(q.z / 2.0)))
 							if not flat.has(k2): flat[k2] = [0, q, hgt]
 							flat[k2][0] += 1

@@ -165,8 +165,26 @@ class Zombie:
 	var anim_v := -1.0
 	var dp := 0.0
 	var push := Vector3.ZERO
-	var res_n := 0
-	var res_d := 0.0
+	## the ground's normal under a body that is lying on it (UP while it stands)
+	var normal := Vector3.UP
+	## > 0 while it is going over the sill of a broken window
+	var climb := 0.0
+	# what stands close by, looked up once per stretch of ground: walls as [x0, z0, x1, z1], trunks as [x, z, r]
+	var nb := PackedFloat32Array()
+	var nc := PackedFloat32Array()
+	var low: Array = []
+	var sills: Array = []
+	var over_sill = null
+	var near_x := 1e9
+	var near_z := 1e9
+	var near_y := 0.0
+	var near_v := -1
+	var raised := false
+	var act := 0.0
+	var blocked_t := 0.0
+	var wait_t := 0.0
+	var tries := 0
+	var held_by_wall := false
 	var gone := false
 
 ## Something the dead can see and attack: a person, or the player's avatar. Keep pos / yaw / move up to date.
@@ -214,6 +232,13 @@ var director_enabled := true
 ## optional: called as on_structure_hit(ref, dmg) whenever the dead strike something breakable — the same
 ## moment as the structure_hit signal. `ref` is the WorldData.nav_ref entry (a door, a built piece).
 var on_structure_hit := Callable()
+## How far the player was held back this frame by the dead it walked into. With `player_blocking` on, a zombie
+## gives way to the player only at a shove's pace and the rest comes back here: the game adds it to the player's
+## position after update() (`player.pos += zombies.player_push`). With it off, zombies simply step aside.
+var player_push := Vector3.ZERO
+var player_blocking := false
+const KEEP := 0.62             # no zombie's centre comes closer to the player's than this
+const KEEP_PREY := 0.58
 ## what update() reported last: zombies chasing the player, near the player, and with eyes on the player
 var chasing := 0
 var near_count := 0
@@ -269,8 +294,10 @@ var _f_wait := 0.0
 var _f_need := 0.0              # how far out the field is wanted (the farthest zombie using it)
 var _f_limit := 36
 # per nav cell: 1 = something static stands within reach, 2 = a building floor is overhead/underfoot
-var _obst := PackedByteArray()
-var _n_floors := -1
+var _smap := PackedByteArray()
+var _hs := PackedFloat32Array()
+var _hn := 321
+var _hres := 2.5
 var _made := 0
 var _alerts := 0
 var _walking := false
@@ -282,8 +309,7 @@ func _init() -> void:
 func _ready() -> void:
 	_W = get_node_or_null("/root/WorldData")
 	if _W != null:
-		_nav = _W.nav
-	_build_static()
+		_bind_world()
 	if bodies == null:
 		bodies = Bodies.new()
 		bodies.name = "Bodies"
@@ -293,34 +319,11 @@ func _ready() -> void:
 ## Use a world other than the WorldData autoload (tests).
 func set_world(w: Node) -> void:
 	_W = w
-	_nav = w.nav
-	_build_static()
+	_bind_world()
 
-## Where the world's fixed things are, so that a zombie out in the open can skip the collision pass.
-func _build_static() -> void:
-	_obst = PackedByteArray(); _obst.resize(NAV_N * NAV_N)
-	if _W == null or not (_W.info is Dictionary) or _W.info.is_empty():
-		_obst.fill(3)
-		return
-	for b in _W.info.get("boxes", []):
-		_mark(float(b[0]) - 0.7, float(b[2]) - 0.7, float(b[3]) + 0.7, float(b[5]) + 0.7, 1)
-	for c in _W.info.get("circles", []):
-		var r := float(c[2]) + 0.7
-		_mark(float(c[0]) - r, float(c[1]) - r, float(c[0]) + r, float(c[1]) + r, 1)
-	_mark_floors()
-
-func _mark_floors() -> void:
-	_n_floors = _W.floors.size()
-	for f in _W.floors:
-		_mark(float(f[0]) - 0.5, float(f[1]) - 0.5, float(f[2]) + 0.5, float(f[3]) + 0.5, 2)
-
-func _mark(x0: float, z0: float, x1: float, z1: float, bit: int) -> void:
-	var ax := maxi(0, int(floor(x0 + HALF))); var bx := mini(NAV_N - 1, int(floor(x1 + HALF)))
-	var az := maxi(0, int(floor(z0 + HALF))); var bz := mini(NAV_N - 1, int(floor(z1 + HALF)))
-	for iz in range(az, bz + 1):
-		var row := iz * NAV_N
-		for ix in range(ax, bx + 1):
-			_obst[row + ix] |= bit
+func _bind_world() -> void:
+	_nav = _W.nav; _smap = _W.solid_map
+	_hs = _W.heights; _hn = _W.hn; _hres = _W.hres
 
 func seed_rng(s: int) -> void:
 	_rng.seed = s + 31
@@ -441,7 +444,13 @@ func spawn(x: float, z: float, type: int, horde := 0, opts := {}) -> Zombie:
 	zb.scale = clampf(float(zb.look.get("height", base_look.height)), 0.8, 1.25) * float(TYPE_SCALE[type])
 	# without a floor given, stand on the ground (or a ground floor), never on the storeys above it
 	var y: float = _W.ground_y(x, z, float(opts.y) if opts.has("y") else _W.height_at(x, z) + 0.6)
+	# never inside a wall or a wardrobe
+	var clear: Vector3 = _W.resolve(Vector3(x, y, z), 0.3 * zb.scale + 0.02, 1.7).pos
+	if clear.x != x or clear.z != z:
+		x = clear.x; z = clear.z
+		y = _W.ground_y(x, z, y)
 	zb.pos = Vector3(x, y, z); zb.ground = y; zb.last_pos = zb.pos
+	zb.raised = y > _W.height_at(x, z) + 0.001
 	zb.target = zb.pos; zb.last_seen = zb.pos
 	zb.yaw = _rng.randf_range(0.0, TAU)
 	zb.state_t = _rng.randf_range(0.0, 5.0)
@@ -476,7 +485,10 @@ func spawn_turned(who) -> Zombie:
 	var z := spawn(pos.x, pos.z, WALKER, 0, {"decay": 0.0, "seed": seed, "look": look, "name": nm})
 	if z == null:
 		return null
-	z.turned = true; z.yaw = yaw; z.pos.y = pos.y; z.ground = pos.y
+	z.turned = true; z.yaw = yaw
+	if absf(z.pos.x - pos.x) < 0.01 and absf(z.pos.z - pos.z) < 0.01:
+		z.pos.y = pos.y; z.ground = pos.y
+	_lay(z, true, 0.0)
 	z.gait = 0 if Bodies.hash1(seed * 6.13) < 0.5 else 1
 	z.arm_loss_l = false; z.arm_loss_r = false
 	z.state = S_RISE; z.state_t = 0.0; z.down_face = 1; z.down_stage = 0; z.lying = true
@@ -542,6 +554,103 @@ func _apply_decay(z: Zombie, init := false) -> void:
 		bodies.set_state(z.body, {"decay": d, "arm_loss_l": z.arm_loss_l, "arm_loss_r": z.arm_loss_r})
 
 # ------------------------------------------------------------------ nav helpers
+
+## flat on the ground: knocked down, lying dormant, or not yet risen
+func _flat(z: Zombie) -> bool:
+	return z.state == S_DOWN or (z.state == S_DORMANT and z.lying) or (z.state == S_RISE and z.down_stage < 2)
+
+## What stands within reach of z, sorted once into what the collision pass needs: walls (anything rising more than
+## a step above its feet), trunks and posts, low things it can walk onto, and the sills of broken windows.
+func _look_near(z: Zombie) -> void:
+	var x := z.pos.x; var zz := z.pos.z; var feet := z.pos.y
+	z.near_x = x; z.near_z = zz; z.near_y = feet; z.near_v = _W.version
+	var nb := PackedFloat32Array(); var nc := PackedFloat32Array()
+	z.low.clear(); z.sills.clear()
+	for o in _W.query(x - 1.6, zz - 1.6, x + 1.6, zz + 1.6):
+		var tag = o.get("tag")
+		if tag == null:
+			if o.y1 > feet + 0.45 and o.y0 < feet + 1.55:
+				nc.append(o.x); nc.append(o.z); nc.append(o.r)
+			continue
+		var up: float = o.max.y - feet
+		if o.min.y >= feet + 1.55 or up <= -0.6:
+			continue
+		if tag == "foundation":
+			if up <= 0.56: continue
+		elif up <= 0.45:
+			z.low.append(o)
+			continue
+		var lk = o.link
+		if lk != null and not lk.solid:
+			z.sills.append(o)              # the window above it is broken: a way in, not a wall
+			continue
+		nb.append(o.min.x); nb.append(o.min.z); nb.append(o.max.x); nb.append(o.max.z)
+	z.nb = nb; z.nc = nc
+
+## Push z out of the walls and trunks around it (sliding along them), and note a broken window's sill under it.
+func _collide(z: Zombie) -> void:
+	var x := z.pos.x; var zz := z.pos.z
+	if z.near_v != _W.version or absf(x - z.near_x) > 0.7 or absf(zz - z.near_z) > 0.7 or absf(z.pos.y - z.near_y) > 0.25:
+		_look_near(z)
+	var r := 0.3 * z.scale
+	var nb := z.nb; var nc := z.nc
+	var nbn := nb.size(); var ncn := nc.size()
+	if nbn > 0 or ncn > 0:
+		for _pass in 3:
+			var hit := false
+			var i := 0
+			while i < nbn:
+				var x0 := nb[i]; var z0 := nb[i + 1]; var x1 := nb[i + 2]; var z1 := nb[i + 3]
+				i += 4
+				var cx := x0 if x < x0 else (x1 if x > x1 else x)
+				var cz := z0 if zz < z0 else (z1 if zz > z1 else zz)
+				var dx := x - cx; var dz := zz - cz
+				var d2 := dx * dx + dz * dz
+				if d2 >= r * r:
+					continue
+				if d2 < 1e-8:
+					# the centre is inside: out by the nearest face
+					var pl := x - x0; var pr := x1 - x; var pb := zz - z0; var pf := z1 - zz
+					var m := minf(minf(pl, pr), minf(pb, pf))
+					if m == pl: x = x0 - r
+					elif m == pr: x = x1 + r
+					elif m == pb: zz = z0 - r
+					else: zz = z1 + r
+				else:
+					var d := sqrt(d2)
+					x += dx / d * (r - d); zz += dz / d * (r - d)
+				hit = true
+			i = 0
+			while i < ncn:
+				var ex := x - nc[i]; var ez := zz - nc[i + 1]; var rr := r + nc[i + 2]
+				i += 3
+				var e2 := ex * ex + ez * ez
+				if e2 >= rr * rr or e2 < 1e-8:
+					continue
+				var e := sqrt(e2)
+				x += ex / e * (rr - e); zz += ez / e * (rr - e)
+				hit = true
+			if not hit:
+				break
+		z.pos.x = x; z.pos.z = zz
+	z.over_sill = null
+	for s in z.sills:
+		if x > s.min.x - r and x < s.max.x + r and zz > s.min.z - r and zz < s.max.z + r:
+			z.over_sill = s
+
+## Lay a body along the slope it is on (or stand it straight again).
+func _lay(z: Zombie, flat: bool, secs := 0.45) -> void:
+	var n := Vector3.UP
+	if flat and not z.raised:
+		n = _W.normal_at(z.pos.x, z.pos.z)
+		if n.y < 0.82:
+			# no steeper than 35 degrees: on a cliff it lies as flat as that allows
+			n = (Vector3(n.x, 0.0, n.z).normalized() * 0.5736 + Vector3(0.0, 0.8192, 0.0))
+	if n.distance_squared_to(z.normal) < 2e-4:
+		return
+	z.normal = n
+	if z.body >= 0:
+		bodies.set_tilt(z.body, n, secs)
 
 func _nav_at(x: float, z: float) -> int:
 	var ix := int(floor(x + HALF)); var iz := int(floor(z + HALF))
@@ -884,6 +993,7 @@ func _knock_down(z: Zombie, face: int, after: StringName) -> void:
 	z.lie_t = _rng.randf_range(0.5, 1.5) * (1.0 + z.decay * 0.6); z.rise_dur = _rng.randf_range(1.5, 2.1) * (0.85 + z.decay * 0.6); z.after = after
 	z.lying = false; z.want = 0.0
 	_play(z, &"fall_back" if face >= 0 else &"fall_front", 1.0, true)
+	_lay(z, true, 0.5)
 
 func _get_up(z: Zombie, after: StringName, delay: float) -> void:
 	_set_state(z, S_RISE)
@@ -907,6 +1017,7 @@ func kill(z: Zombie, dir: Vector3, by_player := true, headshot := false) -> void
 	if z.feed_at != null:
 		z.feed_at.feeders = maxi(0, z.feed_at.feeders - 1); z.feed_at = null
 	z.died_at = _game_min
+	_lay(z, true, 0.6)
 	z.state = S_DEAD; z.state_t = 0.0; z.hp = 0.0; z.prey = null; z.bash_ref = null; z.want = 0.0; z.vel = Vector3.ZERO; z.moving = false
 	z.by_player = by_player
 	if z.death_style == 5:
@@ -1036,6 +1147,8 @@ func _make_body(z: Zombie) -> void:
 	b.gait = z.gait
 	bodies.set_state(z.body, {"decay": z.decay, "arm_loss_l": z.arm_loss_l, "arm_loss_r": z.arm_loss_r})
 	bodies.set_pose(z.body, z.pos, z.yaw)
+	if z.normal != Vector3.UP:
+		bodies.set_tilt(z.body, z.normal, 0.0)
 	var clip := z.anim; var v := z.anim_v
 	z.anim = &""
 	if z.state == S_DEAD:
@@ -1131,8 +1244,7 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 	_time += dt
 	_game_min += dt_game_min
 	_nav = _W.nav
-	if _W.floors.size() != _n_floors:
-		_mark_floors()
+	_smap = _W.solid_map
 	_pp = host.get("player_pos", Vector3.ZERO)
 	_pe = host.get("player_eye", _pp + Vector3(0, 1.6, 0))
 	_p_noise = float(host.get("player_noise", 0.0)); _p_vis = float(host.get("player_visibility", 1.0))
@@ -1193,7 +1305,12 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 	_c_chase = 0; _c_seen = 0
 	var near := 0
 	var px := _pp.x; var pz := _pp.z
-	var damp := exp(-dt * 6.0); var ease_y := minf(1.0, dt * 12.0)
+	var damp := exp(-dt * 6.0)
+	var py := _pp.y
+	var keep2 := KEEP * KEEP if _p_alive else -1.0
+	var give := 1.3 * dt if player_blocking else 9.0
+	var smap := _smap
+	player_push = Vector3.ZERO
 	_made = 0; _alerts = 0
 	# thoughts are spread over the frames; should too many fall due at once, the rest wait a frame or two
 	var budget := maxi(30, _active.size() / 5)
@@ -1216,7 +1333,35 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 				if z.alerted > 0.0 and z.dp < 40.0: _c_seen += 1
 		if z.dp < 25.0:
 			near += 1
+		# ---- nothing stands inside the player: it steps back (at a shove's pace if the player is solid to it)
+		var ddx := z.pos.x - px; var ddz := z.pos.z - pz
+		var d2 := ddx * ddx + ddz * ddz
+		var shoved := false
+		var hold := -1.0                 # how close to the player it may be at the end of this frame
+		if d2 < 2.2 and keep2 > 0.0 and absf(z.pos.y - py) < 1.5 and (z.crawler or not _flat(z)):
+			var d := sqrt(d2)
+			hold = KEEP
+			if d < KEEP:
+				# the player has walked into it: it steps back (at a shove's pace if the player is solid to it)
+				if d < 1e-4:
+					ddx = sin(z.yaw); ddz = cos(z.yaw); d = 1.0
+				var back := minf(KEEP - d, give)
+				z.pos.x += ddx / d * back; z.pos.z += ddz / d * back
+				hold = d + back
+				shoved = true
+		var q := z.prey
+		if q != null and q.alive:
+			var qx := z.pos.x - q.pos.x; var qz := z.pos.z - q.pos.z
+			var q2 := qx * qx + qz * qz
+			if q2 < KEEP_PREY * KEEP_PREY and q2 > 1e-8 and absf(z.pos.y - q.pos.y) < 1.5:
+				var qd := sqrt(q2)
+				z.pos.x += qx / qd * (KEEP_PREY - qd); z.pos.z += qz / qd * (KEEP_PREY - qd)
+				shoved = true
+		if not (z.moving or shoved):
+			continue
+		if not z.moving: hold = -1.0 if not shoved else hold
 		# ---- walk the heading chosen at the last thought
+		var mx := 0.0; var mz := 0.0
 		if z.moving:
 			var want := z.want
 			if want > 0.0:
@@ -1234,23 +1379,77 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 				z.vel.x *= damp; z.vel.z *= damp
 				if not is_nan(z.face):
 					z.yaw += clampf(wrapf(z.face - z.yaw, -PI, PI), -z.turn_rate * 1.6 * dt, z.turn_rate * 1.6 * dt)
-			var mx := (z.vel.x + z.knock.x + z.push.x) * dt; var mz := (z.vel.z + z.knock.z + z.push.z) * dt
-			var nxp := z.pos.x + mx; var nzp := z.pos.z + mz
-			var ix := int(floor(nxp + HALF)); var iz := int(floor(nzp + HALF))
-			if ix >= 0 and iz >= 0 and ix < NAV_N and iz < NAV_N:
-				z.pos.x = nxp; z.pos.z = nzp
-				# beside a wall, a door or a post the collision pass cannot wait for the next thought: it runs
-				# again every few hand-widths of travel, so nothing is ever walked through
-				var ci := iz * NAV_N + ix
-				if _nav[ci] != 0 or (_obst[ci] & 1) != 0:
-					z.res_d += absf(mx) + absf(mz)
-					if z.res_d > (0.15 if _nav[ci] != 0 else 0.25):
-						z.res_d = 0.0
-						z.pos = _W.resolve(z.pos, 0.3 * z.scale, 1.7, 0.45, "window_broken").pos
+			mx = (z.vel.x + z.knock.x + z.push.x) * dt; mz = (z.vel.z + z.knock.z + z.push.z) * dt
 			z.knock *= damp
-			z.pos.y += (z.ground - z.pos.y) * ease_y
-			if z.body >= 0:
-				bodies.set_pose(z.body, z.pos, z.yaw)
+			if z.climb > 0.0:
+				mx *= 0.45; mz *= 0.45           # hauling itself over a window sill
+		var nxp := z.pos.x + mx; var nzp := z.pos.z + mz
+		if hold > 0.0:
+			# its own steps never carry it into the player
+			var hx := nxp - px; var hz := nzp - pz
+			var h2 := hx * hx + hz * hz
+			if h2 < hold * hold and h2 > 1e-8:
+				var hd := sqrt(h2)
+				nxp = px + hx / hd * hold; nzp = pz + hz / hd * hold
+				mx = nxp - z.pos.x; mz = nzp - z.pos.z
+		var ix := int(floor(nxp + HALF)); var iz := int(floor(nzp + HALF))
+		if ix < 0 or iz < 0 or ix >= NAV_N or iz >= NAV_N:
+			continue
+		var fl := smap[iz * NAV_N + ix]
+		if (fl & 1) == 0:
+			# open ground: nothing to run into
+			z.pos.x = nxp; z.pos.z = nzp
+			z.over_sill = null
+		else:
+			# beside a wall, a door, a trunk: collide every step, and take a long step in pieces so that
+			# nothing thin is ever jumped
+			var len := sqrt(mx * mx + mz * mz)
+			var n := 1 if len <= 0.2 else int(ceil(len / 0.2))
+			var sx := mx / n; var sz := mz / n
+			for _k in n:
+				z.pos.x += sx; z.pos.z += sz
+				_collide(z)
+		if z.over_sill != null: z.climb = 0.6
+		elif z.climb > 0.0: z.climb = maxf(0.0, z.climb - dt)
+		if hold > 0.0 and player_blocking:
+			# whatever it could not give (a wall behind it, or the player coming on too fast) holds the player back
+			var rx := z.pos.x - px; var rz := z.pos.z - pz
+			var r2 := rx * rx + rz * rz
+			if r2 < keep2 and r2 > 1e-8:
+				var rd := sqrt(r2)
+				player_push.x -= rx / rd * (KEEP - rd); player_push.z -= rz / rd * (KEEP - rd)
+		# ---- feet on the ground. Terrain is followed exactly; a step (a floor edge, a porch, a crate) is
+		# taken at 5 m/s, so nothing snaps up or down
+		var x := z.pos.x; var zz := z.pos.z
+		var gfx := clampf((x + HALF) / _hres, 0.0, _hn - 1.0001); var gfz := clampf((zz + HALF) / _hres, 0.0, _hn - 1.0001)
+		var gi := int(gfx); var gj := int(gfz)
+		var gu := gfx - gi; var gv := gfz - gj
+		var go := gj * _hn + gi
+		var g := 0.0
+		if gu + gv < 1.0:
+			var h00 := _hs[go]
+			g = h00 + (_hs[go + 1] - h00) * gu + (_hs[go + _hn] - h00) * gv
+		else:
+			var h11 := _hs[go + _hn + 1]
+			g = h11 + (_hs[go + _hn] - h11) * (1.0 - gu) + (_hs[go + 1] - h11) * (1.0 - gv)
+		var terrain := g
+		if (fl & 2) != 0:
+			g = _W.ground_y(x, zz, z.pos.y)
+		if (fl & 1) != 0:
+			for o in z.low:
+				if x > o.min.x and x < o.max.x and zz > o.min.z and zz < o.max.z and o.max.y > g and o.max.y - z.pos.y <= 0.46:
+					g = o.max.y
+			if z.over_sill != null and z.over_sill.max.y > g:
+				g = z.over_sill.max.y
+		z.ground = g
+		if g > terrain + 0.001 or z.raised:
+			var y := move_toward(z.pos.y, g, 5.0 * dt)
+			z.pos.y = y
+			z.raised = g > terrain + 0.001 or absf(y - g) > 0.004
+		else:
+			z.pos.y = g
+		if z.body >= 0:
+			bodies.set_pose(z.body, z.pos, z.yaw)
 	_walking = false
 	if _gone:
 		_gone = false
@@ -1411,6 +1610,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 						if z.lying:
 							z.down_face = 1 if Bodies.hash1(z.seed * 2.3) < 0.5 else -1
 							_play(z, &"drop_back0" if z.down_face >= 0 else &"drop_front0", 1.0, true)
+							_lay(z, true, 0.9)
 					else:
 						var c: Carrion = _find_carrion(z, 14.0 + _night * 8.0) if (z.sated <= 0.0 and z.type != HOWLER) else null
 						if c != null:
@@ -1580,6 +1780,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 			if z.down_stage == 0 and z.state_t > 0.55 + z.lie_t:
 				z.down_stage = 1; z.state_t = 0.0
 				_play(z, &"rise_back" if back else &"rise_front", 2.0 / z.rise_dur, true); clip = z.anim
+				_lay(z, false, z.rise_dur * 0.7)
 			elif z.down_stage == 1 and z.state_t > z.rise_dur:
 				_set_state(z, S_INVESTIGATE if z.after == S_INVESTIGATE else S_IDLE if z.after == S_IDLE else S_CHASE)
 		S_RISE:
@@ -1590,90 +1791,128 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 				if z.state_t >= z.lie_t:
 					z.down_stage = 1; z.state_t = 0.0
 					_play(z, &"rise_back0" if back2 else &"rise_front0", 2.0 / z.rise_dur, true); clip = z.anim
+					_lay(z, false, z.rise_dur * 0.7)
 			elif z.state_t > z.rise_dur:
 				z.lying = false; z.down_stage = 2
 				var nx: StringName = S_INVESTIGATE if z.after == S_INVESTIGATE else S_CHASE if z.after == S_CHASE else S_IDLE
 				_set_state(z, nx)
 				if nx == S_IDLE: z.pause = 0.6
 
-	# ---- collisions, ground and neighbours (only for bodies that are actually moving)
+	# ---- how it is really getting on, and the others around it
 	var sp_now := sqrt(z.vel.x * z.vel.x + z.vel.z * z.vel.z)
+	var covered := Vector2(z.pos.x - z.last_pos.x, z.pos.z - z.last_pos.z).length() / maxf(e, 0.03)
+	z.last_pos = z.pos
+	z.act = lerpf(z.act, covered, 0.65)
 	var moved := sp_now > 0.02 or z.knock.length_squared() > 0.01 or want > 0.0
+	var crowd_ahead := false
+	if z.wait_t > 0.0:
+		# standing in the press, or at a wall, waiting
+		z.wait_t -= e
+		if want > 0.0:
+			want = 0.0; face = atan2(z.dir.x, z.dir.z) if z.dir != Vector3.ZERO else NAN
+			if clip == &"walk" or clip == &"chase": clip = &"paw" if z.held_by_wall else &"idle"
 	if not (moved or z.moving):
 		z.push = Vector3.ZERO
 	else:
-		# shoulder past the others (eased in over the frames until the next thought, so nobody pops sideways)
+		# shoulder clear of the others (eased in over the frames until the next thought, so nobody pops
+		# sideways), and do not walk into the back of whoever is in front: slow, stop, lean round them
 		var gx := int(floor(z.pos.x)); var gz := int(floor(z.pos.z))
 		var my_r := (0.46 if z.type == BLOAT else 0.32) * z.scale
 		var pxs := 0.0; var pzs := 0.0
-		# (those standing and striking in a press only need this every other thought)
-		var i0 := -1 if (z.state != S_ATTACK or (z.res_n & 1) == 0) else 2
-		for i in range(i0, 2):
+		var slow := 1.0; var side := 0.0
+		var dirx := z.dir.x; var dirz := z.dir.z
+		var upright := z.crawler or not _flat(z)
+		for i in range(-1, 2):
 			var row := (gx + i + 1000) * 4096 + gz + 1000
 			for j in range(-1, 2):
 				var cell = _grid.get(row + j)
 				if cell == null:
 					continue
 				for o: Zombie in cell:
-					if o == z:
+					if o == z or not upright or o.state == S_DOWN or (o.lying and o.state != S_CHASE and o.state != S_ATTACK):
 						continue
 					var sx := z.pos.x - o.pos.x; var sz := z.pos.z - o.pos.z
 					var d2 := sx * sx + sz * sz
 					var rr := my_r + (0.46 if o.type == BLOAT else 0.32) * o.scale
-					if d2 < rr * rr and d2 > 1e-6:
+					if d2 < 1e-6 or absf(z.pos.y - o.pos.y) > 1.2:
+						continue
+					if d2 < rr * rr:
 						var d := sqrt(d2); var push := (rr - d) * 0.5 / d
 						pxs += sx * push; pzs += sz * push
+					if want > 0.0 and d2 < (rr + 0.4) * (rr + 0.4):
+						var d := sqrt(d2)
+						var ahead := -(sx * dirx + sz * dirz) / d            # 1: dead ahead
+						if ahead > 0.3:
+							var k := clampf((d - rr - 0.04) / 0.36, 0.0, 1.0)
+							if k < slow:
+								slow = k
+								side = sx * dirz - sz * dirx                 # which side of my path it stands on
 		if pxs != 0.0 or pzs != 0.0:
 			var pl := sqrt(pxs * pxs + pzs * pzs)
-			var k := minf(pl, 0.35) / pl / maxf(z.think_t, 0.08)
+			var k := minf(pl, 0.5) / pl / maxf(z.think_t, 0.08)
 			z.push = Vector3(pxs * k, 0.0, pzs * k)
 		else:
 			z.push = Vector3.ZERO
-		# the living are solid too
-		if dp < 0.6 and dp > 1e-4:
-			z.pos.x = px + ddx / dp * 0.6; z.pos.z = pz + ddz / dp * 0.6
-		if h != null and dT < 0.55 and dT > 1e-4:
-			z.pos.x = T.x + (z.pos.x - T.x) / dT * 0.55; z.pos.z = T.z + (z.pos.z - T.z) / dT * 0.55
-		# walls and things: the full pass only where something stands close by (and now and then regardless)
-		var ix := clampi(int(floor(z.pos.x + HALF)), 1, NAV_N - 2); var iz := clampi(int(floor(z.pos.z + HALF)), 1, NAV_N - 2)
-		var ci := iz * NAV_N + ix
-		var ob := _obst[ci]
-		z.res_n -= 1
-		if (ob & 1) != 0 or z.res_n <= 0 or _nav[ci] != 0 or _nav[ci - 1] != 0 or _nav[ci + 1] != 0 or _nav[ci - NAV_N] != 0 or _nav[ci + NAV_N] != 0 \
-				or _nav[ci - NAV_N - 1] != 0 or _nav[ci - NAV_N + 1] != 0 or _nav[ci + NAV_N - 1] != 0 or _nav[ci + NAV_N + 1] != 0:
-			z.res_n = 4
-			var res: Dictionary = _W.resolve(z.pos, 0.3 * z.scale, 1.7, 0.45, "window_broken")
-			z.pos.x = res.pos.x; z.pos.z = res.pos.z
-			z.ground = maxf(_W.ground_y(z.pos.x, z.pos.z, z.pos.y), minf(float(res.ground_y), z.pos.y + 0.5))
-		elif (ob & 2) != 0:
-			z.ground = _W.ground_y(z.pos.x, z.pos.z, z.pos.y)
-		else:
-			z.ground = _W.height_at(z.pos.x, z.pos.z)
-		# stuck against something while wandering: give up on that spot
-		if (z.state == S_WANDER or z.state == S_INVESTIGATE or z.state == S_FEED) and want > 0.0 and not z.pivot:
-			if z.pos.distance_squared_to(z.last_pos) < 0.0144 * e * e:
-				z.stuck_t += e
-				if z.stuck_t > 2.0:
-					z.stuck_t = 0.0
+		if slow < 1.0 and want > 0.0:
+			crowd_ahead = true
+			# round the one in front, on the side with more room; no faster than the gap allows
+			var sgn := 1.0 if side > 0.0 else -1.0
+			var turn := (1.0 - slow) * 0.9
+			var ndx := dirx + (dirz * sgn) * turn; var ndz := dirz + (-dirx * sgn) * turn
+			var nl := sqrt(ndx * ndx + ndz * ndz)
+			if nl > 1e-4:
+				z.dir = Vector3(ndx / nl, 0.0, ndz / nl)
+			want *= slow
+			if slow <= 0.02: want = minf(want, 0.12)          # shoulder to shoulder: only edge sideways
+	# ---- getting nowhere? It stops pushing and waits (paws at the wall, stands in the press), then tries again
+	# another way; after a few tries it gives the idea up. Nothing marches on the spot.
+	if want > 0.1 and not z.pivot and z.act < 0.22 * minf(want, 1.2) and z.climb <= 0.0:
+		z.blocked_t += e
+	else:
+		z.blocked_t = maxf(0.0, z.blocked_t - e * 2.0)
+		if z.act > 0.5: z.tries = 0
+	if z.blocked_t > (0.7 if crowd_ahead else 1.1) and want > 0.0:
+		z.blocked_t = 0.0
+		z.tries += 1
+		z.wait_t = (0.8 + _rng.randf() * 1.4) if crowd_ahead else (1.0 + _rng.randf() * 1.0)
+		z.held_by_wall = not crowd_ahead
+		z.avoid = -z.avoid if z.avoid != 0 else (1 if _rng.randf() < 0.5 else -1); z.avoid_t = 4.0       # next time, round the other way
+		want = 0.0; face = atan2(z.dir.x, z.dir.z) if z.dir != Vector3.ZERO else NAN
+		if not crowd_ahead:
+			if z.state == S_WANDER or z.state == S_INVESTIGATE or z.state == S_FEED:
+				if z.tries >= 2:
+					z.tries = 0
 					if z.state == S_FEED: z.sated = 20.0
-					_set_state(z, S_IDLE); want = 0.0
-			else:
-				z.stuck_t = 0.0
-		z.last_pos = z.pos
+					_set_state(z, S_IDLE)
+			elif z.state == S_SEARCH:
+				z.state_t = (floor(z.state_t / 2.6) + 1.0) * 2.6          # try the next spot
+			elif z.state == S_CHASE and z.tries >= 4:
+				# it cannot get there from here: lose the scent and cast about
+				z.tries = 0; z.alerted = 0.0; z.prey = null
+				_set_state(z, S_SEARCH)
+	# a body on the ground lies along the slope
+	if z.crawler:
+		_lay(z, true, 0.35)
 	if z.state == S_DEAD:
 		return
 	z.want = want
 	z.face = face
 	z.turn_rate = float(st.turn) * (1.5 if hunting else 1.0) * (1.15 - z.decay * 0.4) * (0.6 if z.crawler else 1.0)
-	z.moving = want > 0.0 or sp_now > 0.02 or z.knock.length_squared() > 0.01 or not is_nan(face) or z.push != Vector3.ZERO
+	z.moving = want > 0.0 or sp_now > 0.02 or z.knock.length_squared() > 0.01 or not is_nan(face) or z.push != Vector3.ZERO or absf(z.pos.y - z.ground) > 0.004 or z.climb > 0.0
+	# the legs go at the pace the body really moves: held by a wall or the press, it does not walk on the spot
+	var held := want > 0.0 and z.blocked_t > 0.5
+	sp_now = minf(sp_now, maxf(z.act * 1.15, 0.0)) if want > 0.0 else sp_now
 	# ---- which clip that is
-	if z.crawler:
-		# prone whatever it is doing: dragging itself along, or clawing from the ground
-		var busy := z.state == S_ATTACK or z.state == S_BASH or z.state == S_STAGGER
+	if z.crawler or z.climb > 0.0:
+		# prone whatever it is doing: dragging itself along, clawing from the ground, going over a sill
+		var busy := z.state == S_ATTACK or z.state == S_BASH or z.state == S_STAGGER or z.climb > 0.0
 		_play_crawl(z, maxf(sp_now, 0.5 if busy else 0.012), 0.25)
 		return
 	elif clip == &"walk" or clip == &"chase":
-		if z.pivot or sp_now < 0.08:
+		if held and not z.pivot:
+			# pressed against something: paw at it rather than march in place
+			clip = &"paw" if not crowd_ahead else &"idle"; clip_v = 1.0
+		elif z.pivot or sp_now < 0.08:
 			clip = &"turn" if z.pivot else (&"idle" if want <= 0.0 else clip)
 			clip_v = 1.0 if clip != &"walk" and clip != &"chase" else maxf(sp_now, 0.15)
 		else:
@@ -1682,6 +1921,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 			elif clip == &"chase" and sp_now < float(st.walk[1]) * 0.9 and z.type != 1: clip = &"walk"
 	if z.state == S_ATTACK or z.state == S_BASH or z.state == S_DOWN or z.state == S_RISE or z.state == S_SCREAM or z.state == S_STAGGER:
 		if z.state == S_RISE and z.down_stage == 0 and z.anim != clip: _play(z, clip, 1.0, false)
+		elif z.anim == &"crawl" and (z.state == S_ATTACK or z.state == S_BASH): _play(z, &"attack", 1.0, true)        # back on its feet after a window
 		return          # those states started their clip themselves
 	_play(z, clip, clip_v)
 
@@ -1920,4 +2160,5 @@ func load_rows(rows: Array) -> void:
 				if f & 32:
 					z.lying = true; z.down_face = 1 if Bodies.hash1(z.seed * 2.3) < 0.5 else -1
 					z.anim = &"lie_back0" if z.down_face >= 0 else &"lie_front0"
+					_lay(z, true, 0.0)
 		z.hp = minf(z.max_hp, maxf(1.0, float(a[3]) if a.size() > 3 else z.max_hp))

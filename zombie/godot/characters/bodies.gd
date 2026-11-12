@@ -75,6 +75,8 @@ class Body:
 	var auto_idle := false; var next_stance := 0.0
 	var look_yaw := 0.0; var look_pitch := 0.0
 	var pos := Vector3.ZERO; var yaw := 0.0; var placed := false
+	# the slope it lies on: the body's up axis leans from n_from to n_to over n_dur seconds
+	var normal := Vector3.UP; var n_from := Vector3.UP; var n_to := Vector3.UP; var n_t := 0.0; var n_dur := 0.0
 
 var multimesh: MultiMesh
 var material: ShaderMaterial
@@ -89,6 +91,7 @@ var _free: Array[int] = []
 var _hi := 0
 var _time := 0.0
 var _stance_t := 0.0
+var _tilting := {}
 
 func _ready() -> void:
 	_load()
@@ -105,6 +108,18 @@ func _process(delta: float) -> void:
 	if _dirty:
 		_tex.update(_img)
 		_dirty = false
+	if not _tilting.is_empty():
+		for id in _tilting.keys():
+			var b: Body = _bodies[id] if id < _bodies.size() else null
+			if b == null:
+				_tilting.erase(id); continue
+			b.n_t += delta
+			var k := 1.0 if b.n_dur <= 0.0 else clampf(b.n_t / b.n_dur, 0.0, 1.0)
+			k = k * k * (3.0 - 2.0 * k)
+			b.normal = b.n_from.lerp(b.n_to, k).normalized()
+			if k >= 1.0:
+				b.normal = b.n_to; _tilting.erase(id)
+			_place(id, b)
 
 # ------------------------------------------------------------------ public API
 
@@ -152,6 +167,7 @@ func remove_body(id: int) -> void:
 	if not _valid(id):
 		return
 	_bodies[id] = null
+	_tilting.erase(id)
 	_free.append(id)
 	multimesh.set_instance_transform(id, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
 	while _hi > 0 and _bodies[_hi - 1] == null:
@@ -170,10 +186,33 @@ func set_pose(id: int, pos: Vector3, yaw: float) -> void:
 	if b.placed and b.yaw == yaw and b.pos == pos:
 		return
 	b.pos = pos; b.yaw = yaw; b.placed = true
+	_place(id, b)
+
+func _place(id: int, b: Body) -> void:
 	var s := b.scale
-	var c := cos(yaw) * s
-	var sn := sin(yaw) * s
-	multimesh.set_instance_transform(id, Transform3D(Vector3(c, 0.0, -sn), Vector3(0.0, s, 0.0), Vector3(sn, 0.0, c), pos))
+	var c := cos(b.yaw) * s
+	var sn := sin(b.yaw) * s
+	if b.normal.y > 0.9999:
+		multimesh.set_instance_transform(id, Transform3D(Vector3(c, 0.0, -sn), Vector3(0.0, s, 0.0), Vector3(sn, 0.0, c), b.pos))
+	else:
+		# lean the whole body so that its up axis is the ground's normal (it keeps facing the same way)
+		var lean := Basis(Quaternion(Vector3.UP, b.normal))
+		multimesh.set_instance_transform(id, Transform3D(lean * Basis(Vector3(c, 0.0, -sn), Vector3(0.0, s, 0.0), Vector3(sn, 0.0, c)), b.pos))
+
+## Lay a body along a slope: its up axis eases to `normal` over `seconds` (Vector3.UP stands it straight again).
+## For bodies on the ground — the dead, the knocked down, crawlers — so they neither float over a hillside nor
+## sink into it.
+func set_tilt(id: int, normal: Vector3, seconds := 0.4) -> void:
+	var b := _bodies[id]
+	if b.n_to.distance_squared_to(normal) < 1e-5 and (seconds > 0.0 or b.normal.distance_squared_to(normal) < 1e-5):
+		return
+	b.n_from = b.normal; b.n_to = normal; b.n_t = 0.0; b.n_dur = seconds
+	if seconds <= 0.0:
+		b.normal = normal
+		_tilting.erase(id)
+		if b.placed: _place(id, b)
+	else:
+		_tilting[id] = true
 
 ## Play a clip. Options (all optional):
 ##   speed       gaits ("walk", "chase", "run", "crawl", ...): ground speed in m/s, so the feet match the ground;

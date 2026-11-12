@@ -55,7 +55,7 @@ static func cost_row(hud, inv: Inventory, cost: Dictionary, size := 13, names :=
 		var text := "%d/%d" % [have, need]
 		if names:
 			text = "%s  %d/%d" % [String(Items.def(id).name), have, need]
-		chip.add_child(hud.label(text, size, hud.INK if have >= need else hud.BAD))
+		chip.add_child(hud.label(text, size, Hud.INK if have >= need else Hud.BAD))
 		row.add_child(chip)
 	return row
 
@@ -71,35 +71,32 @@ static func close(game, sound := true) -> void:
 	if sound:
 		Sfx.play("ui_close")
 
-## a flat list row that behaves like the inventory's rows
-static func row_button(hud, height := 44.0) -> Button:
+## a flat list row to fill with your own children: quiet until the pointer is on it
+static func row_button(_hud, height := 44.0) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, height)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_stylebox_override("normal", hud.box(Color(1, 1, 1, 0.04), 4))
-	b.add_theme_stylebox_override("hover", hud.box(Color(0.93, 0.62, 0.25, 0.22), 4))
-	b.add_theme_stylebox_override("pressed", hud.box(Color(0.93, 0.62, 0.25, 0.35), 4))
-	b.add_theme_stylebox_override("disabled", hud.box(Color(1, 1, 1, 0.02), 4))
+	b.add_theme_stylebox_override("normal", Hud.box(Color(1, 1, 1, 0.045), 2))
+	b.add_theme_stylebox_override("hover", Hud.box(Color(Hud.ACCENT, 0.13), 2, Hud.ACCENT, 1))
+	b.add_theme_stylebox_override("pressed", Hud.box(Color(Hud.ACCENT, 0.26), 2, Hud.ACCENT, 1))
+	b.add_theme_stylebox_override("disabled", Hud.box(Color(1, 1, 1, 0.015), 2))
 	return b
 
-## a small toggle used for tabs and filters
-static func tab_button(hud, text: String, on: bool, cb: Callable, w := 0.0) -> Button:
+## one of a row of choices; the chosen one stays lit (the theme's pressed look)
+static func tab_button(_hud, text: String, on: bool, cb: Callable, w := 0.0) -> Button:
 	var b := Button.new()
-	b.text = text
+	b.text = text.to_upper()
 	b.focus_mode = Control.FOCUS_NONE
+	b.toggle_mode = true
+	b.button_pressed = on
 	b.custom_minimum_size = Vector2(w, 32)
-	b.add_theme_font_size_override("font_size", 15)
-	var normal: StyleBoxFlat = hud.box(Color(0.3, 0.22, 0.12, 1.0) if on else Color(0.14, 0.14, 0.13, 0.95), 5, hud.ACCENT if on else Color(0.3, 0.29, 0.26), 1)
-	normal.content_margin_left = 14; normal.content_margin_right = 14
-	var hover: StyleBoxFlat = hud.box(Color(0.24, 0.2, 0.14, 0.98), 5, hud.ACCENT, 1)
-	hover.content_margin_left = 14; hover.content_margin_right = 14
-	b.add_theme_stylebox_override("normal", normal)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("pressed", hover)
-	b.add_theme_color_override("font_color", hud.INK)
 	b.pressed.connect(cb)
 	return b
+
+## a small heading over a group of things
+static func caption(hud, text: String) -> Label:
+	return hud.label(text.to_upper(), 12, Hud.ACCENT)
 
 static func item_icon(hud, id: String, px: float) -> TextureRect:
 	var t := TextureRect.new()

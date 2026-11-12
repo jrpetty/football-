@@ -45,7 +45,6 @@ func _ready() -> void:
 	_layer = CanvasLayer.new(); _layer.layer = 4
 	add_child(_layer)
 	_bar = PanelContainer.new()
-	_bar.add_theme_stylebox_override("panel", Hud.box(Hud.PANEL, 8, Color(1, 1, 1, 0.08), 1))
 	_bar.anchor_left = 0.5; _bar.anchor_right = 0.5; _bar.anchor_top = 1.0; _bar.anchor_bottom = 1.0
 	_bar.offset_left = 0; _bar.offset_right = 0; _bar.offset_top = -88; _bar.offset_bottom = -88
 	_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH; _bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -486,10 +485,8 @@ func _update_bar() -> void:
 func open_menu() -> void:
 	var g = build.game
 	var hud = g.hud
-	var v: VBoxContainer = U.open(g, "build", 980.0, 580.0, "", not (hud.is_open() and hud.window_kind == "build"))
+	var v: VBoxContainer = U.open(g, "build", 1020.0, 640.0, "Build", not (hud.is_open() and hud.window_kind == "build"))
 	var head := HBoxContainer.new(); head.add_theme_constant_override("separation", 8)
-	var title: Label = hud.label("Build", 24); title.custom_minimum_size = Vector2(110, 0)
-	head.add_child(title)
 	for tb in TABS:
 		var key := String(tb[0])
 		head.add_child(U.tab_button(hud, String(tb[1]), tab == key, func() -> void:
