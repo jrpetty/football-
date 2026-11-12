@@ -117,7 +117,7 @@ func states() -> Dictionary:
 	return out
 
 func run() -> void:
-	C = find_open(44)
+	C = find_open(38)
 	print("open ground at ", C, "  (nav ", W.nav.size(), " cells, ", W.info.boxes.size(), " boxes)")
 	ok(C != Vector3.ZERO, "found open ground in the real map")
 	t_chase_attack()
@@ -460,6 +460,7 @@ func t_structures() -> void:
 	var br = zs.list[0]
 	br.type = 5; zs._apply_decay(br, true)
 	var t := until(func(): return not ev.structure.is_empty(), 40.0)
+	if t < 0.0: print("    breaker: ", br.state, " at ", br.pos, " target ", br.target, " horde ", br.horde, " wait ", br.wait_t, " tries ", br.tries, " type ", br.type, " list ", zs.list.size())
 	ok(t > 0.0 and is_same(ev.structure[0][0], built) and ev.structure[0][1] > 60.0, "a breaker in a horde turns aside to smash a built wall (%.0f damage after %.1f s)" % [ev.structure[0][1] if t > 0.0 else 0.0, t])
 	var t2 := until(func(): return built.get("destroyed", false), 60.0)
 	ok(t2 > 0.0, "and keeps at it until it is down (%.1f s more, %d blows)" % [t2, ev.structure.size()])

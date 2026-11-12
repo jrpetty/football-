@@ -68,6 +68,7 @@ func _process(_d: float) -> bool:
 	if want("c"): s_forest()
 	if want("e"): s_populate()
 	if want("f"): s_turned()
+	if want("g"): s_built()
 	var bad := report()
 	print("\n(%.0f s)" % ((Time.get_ticks_msec() - t0) / 1000.0))
 	if zs != null:
@@ -154,6 +155,28 @@ func reset_structures() -> void:
 
 func on_structure(ref, dmg) -> void:
 	if not (ref is Dictionary): return
+	# a blow lands only from where the body is: within arm's reach of the thing, and facing it
+	var zk = zs.get("last_striker")
+	if zk != null:
+		var bxs: Array = []
+		if ref.get("box") != null: bxs.append(ref.box)
+		if ref.get("boxes") is Array: bxs.append_array(ref.boxes)
+		var gap := INF; var at := Vector3.ZERO
+		for b in bxs:
+			var cx := clampf(zk.pos.x, b.min.x, b.max.x); var cz := clampf(zk.pos.z, b.min.z, b.max.z)
+			var d := Vector2(cx - zk.pos.x, cz - zk.pos.z).length()
+			if d < gap:
+				gap = d; at = Vector3(cx, zk.pos.y, cz)
+		bump("blows on structures")
+		if gap < INF:
+			if gap > 0.3 * zk.scale + 0.75: viol("7 blow on a door / wall from out of reach", gap, zk.pos, "%s struck a %s %.2f m away" % [zs.TYPE_NAMES[zk.type], ref.get("kind", "?"), gap])
+			elif gap > 0.1 and absf(wrapf(atan2(at.x - zk.pos.x, at.z - zk.pos.z) - zk.yaw, -PI, PI)) > 1.2: viol("7 blow struck while facing away", absf(wrapf(atan2(at.x - zk.pos.x, at.z - zk.pos.z) - zk.yaw, -PI, PI)), zk.pos, String(ref.get("kind", "?")))
+	if ref.get("built", false):
+		ref.hp -= dmg
+		if ref.hp <= 0.0 and not ref.get("destroyed", false):
+			ref["destroyed"] = true; bump("built pieces broken")
+			for b in ref.boxes: W.remove_box(b)
+		return
 	if ref.get("kind", "") == "door" and not ref.open:
 		ref.hp -= dmg
 		if ref.hp <= 0.0:
@@ -169,7 +192,15 @@ func fresh(seed := 5) -> void:
 	zs.seed_rng(seed)
 	zs.director_enabled = false
 	zs.structure_hit.connect(on_structure)
-	zs.player_attacked.connect(func(_z, _d): bump("blows on the player"))
+	zs.player_attacked.connect(func(z, _d):
+		bump("blows on the player")
+		var d := Vector2(z.pos.x - P.pos.x, z.pos.z - P.pos.z).length()
+		if d > 1.45 * z.scale + 0.25: viol("7 blow on the player from out of reach", d, z.pos, "%s, %.2f m" % [zs.TYPE_NAMES[z.type], d])
+		elif absf(wrapf(atan2(P.pos.x - z.pos.x, P.pos.z - z.pos.z) - z.yaw, -PI, PI)) > 1.2: viol("7 blow struck while facing away", 0.0, z.pos, "at the player"))
+	zs.human_attacked.connect(func(pr, z, _d):
+		bump("blows on people")
+		var d := Vector2(z.pos.x - pr.pos.x, z.pos.z - pr.pos.z).length()
+		if d > 1.45 * z.scale + 0.25: viol("7 blow on a person from out of reach", d, z.pos, "%s, %.2f m" % [zs.TYPE_NAMES[z.type], d]))
 	last.clear(); stuck.clear()
 	host = {"player_pos": Vector3.ZERO, "player_noise": 0.0, "player_visibility": 1.0, "player_alive": true, "player_inside": false,
 		"player_bleeding": false, "base_center": null, "base_heat": 0.0, "daylight": 1.0, "hours": 12.0, "day": 9, "luck": 0.0}
@@ -279,10 +310,13 @@ func feet_error(p: Vector3, r: float) -> float:
 	var g := ground_expected(p, r)
 	var lo := g; var hi := g
 	var tp: float = W.height_at(p.x, p.z)
-	for d in [Vector3(0.3, 0, 0), Vector3(-0.3, 0, 0), Vector3(0, 0, 0.3), Vector3(0, 0, -0.3), Vector3(0.6, 0, 0), Vector3(-0.6, 0, 0), Vector3(0, 0, 0.6), Vector3(0, 0, -0.6)]:
+	for d in [Vector3(0.13, 0, 0), Vector3(-0.13, 0, 0), Vector3(0, 0, 0.13), Vector3(0, 0, -0.13), Vector3(0.3, 0, 0), Vector3(-0.3, 0, 0), Vector3(0, 0, 0.3), Vector3(0, 0, -0.3), Vector3(0.6, 0, 0), Vector3(-0.6, 0, 0), Vector3(0, 0, 0.6), Vector3(0, 0, -0.6)]:
 		var q: Vector3 = p + d
-		var gq := ground_expected(q, r)
-		if absf((gq - g) - (W.height_at(q.x, q.z) - tp)) > 0.1:       # a step, not the lie of the land
+		var gq := ground_expected(Vector3(q.x, p.y + 0.3, q.z) if d.length() < 0.2 else q, r)
+		var jump := absf((gq - g) - (W.height_at(q.x, q.z) - tp))
+		# a step, not the lie of the land: a stair tread counts from the next tread only, a big step (a porch,
+		# a doorstep) from up to 0.6 m off
+		if jump > 0.1 and (d.length() < 0.2 or jump > 0.25):
 			lo = minf(lo, gq); hi = maxf(hi, gq)
 	if p.y < lo: return p.y - lo
 	if p.y > hi: return p.y - hi
@@ -290,6 +324,7 @@ func feet_error(p: Vector3, r: float) -> float:
 
 func under_floor(p: Vector3) -> float:
 	for f in W.floors:
+		if f.size() > 5 and int(f[5]) < 0: continue            # (a floor the player built may have room under it)
 		if p.x > f[0] + 0.15 and p.x < f[2] - 0.15 and p.z > f[1] + 0.15 and p.z < f[3] - 0.15 and p.y < float(f[4]) - 0.6:
 			return float(f[4]) - p.y
 	return 0.0
@@ -313,6 +348,10 @@ func audit(dt: float) -> void:
 		var rb: float = 0.3 * z.scale
 		var lying: bool = z.crawler or st == &"down" or st == &"dead" or (st == &"dormant" and z.lying) or (st == &"rise" and z.down_stage < 2)
 		var moved: bool = prev == null or prev != p
+		# (dropping off an edge — a deck, the open side of a flight of stairs — is a fall, not a fault)
+		if moved and prev != null and prev.y - p.y > 3.0 * dt and p.y - ground_expected(p, rb) > 0.25:
+			bump("frames spent falling")
+			continue
 		if moved:
 			if prev != null:
 				var hd := Vector2(p.x - prev.x, p.z - prev.z).length()
@@ -746,6 +785,93 @@ func s_turned() -> void:
 					zs.damage(z, 9999.0, Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)).normalized(), {"by_player": false, "part": 1})
 	host.player_alive = true
 	fact("states", counts())
+
+# ------------------------------------------------------------------ (g) what the player builds: foundations, walls, stairs, a roof deck
+var built_boxes: Array = []
+var built_floors: Array = []
+
+func build_floor(x0: float, z0: float, x1: float, z1: float, y: float, id: int) -> void:
+	var e := [x0, z0, x1, z1, y, -id]
+	W.floors.append(e); built_floors.append(e)
+	if W.has_method("mark_ground"): W.mark_ground(x0, z0, x1, z1)
+
+func build_box(mn: Vector3, mx: Vector3, tag: String, ref, cost: int) -> void:
+	var b = W.add_box(mn, mx, tag, ref, false)
+	built_boxes.append(b)
+	if ref != null: ref.boxes.append(b)
+	if cost > 0: W._raster_box(b, cost, ref, false)
+
+func s_built() -> void:
+	scen = "g built"
+	print("-- (g) the player's own building: a walled foundation with the player inside, stairs up to a roof deck")
+	fresh(41)
+	var cx := -126.0; var cz := -78.0
+	var gy: float = W.height_at(cx, cz)
+	var y := gy + 0.3
+	# a 6 x 6 m foundation, walled all round (each wall a built piece with hit points)
+	for i in 3:
+		for j in 3:
+			build_floor(cx - 3.0 + i * 2.0, cz - 3.0 + j * 2.0, cx - 1.0 + i * 2.0, cz - 1.0 + j * 2.0, y, 100 + i * 3 + j)
+	var walls: Array = []
+	for k in 12:
+		var ref := {"kind": "piece", "built": true, "hp": 140.0, "boxes": [], "destroyed": false, "id": 200 + k}
+		var side := k / 3; var seg := k % 3
+		var a0 := -3.0 + seg * 2.0
+		if side == 0: build_box(Vector3(cx + a0, y, cz - 3.1), Vector3(cx + a0 + 2.0, y + 2.6, cz - 2.9), "pwall", ref, 25)
+		elif side == 1: build_box(Vector3(cx + a0, y, cz + 2.9), Vector3(cx + a0 + 2.0, y + 2.6, cz + 3.1), "pwall", ref, 25)
+		elif side == 2: build_box(Vector3(cx - 3.1, y, cz + a0), Vector3(cx - 2.9, y + 2.6, cz + a0 + 2.0), "pwall", ref, 25)
+		else: build_box(Vector3(cx + 2.9, y, cz + a0), Vector3(cx + 3.1, y + 2.6, cz + a0 + 2.0), "pwall", ref, 25)
+		walls.append(ref)
+	# beside it: a flight of stairs (sixteen treads, as the build system lays them) up to a deck 3.15 m up
+	var sx := cx + 14.0; var sz := cz
+	var sy: float = W.height_at(sx, sz)
+	for i in 16:
+		build_floor(sx - 1.0, sz - 1.0 + 2.0 * i / 16.0, sx + 1.0, sz - 1.0 + 2.0 * (i + 1) / 16.0 + 0.002, sy + 3.15 / 16.0 * (i + 1), 300)
+	var rise := 3.15 / 16.0
+	for k in 3:
+		for side in [-1.0, 1.0]:
+			build_box(Vector3(sx + minf(side * 0.94, side), sy, sz - 1.0 + 0.5 * k), Vector3(sx + maxf(side * 0.94, side), sy + rise * (4 * k + 7) + 0.5, sz - 0.5 + 0.5 * k), "pstairs", null, 0)
+	build_box(Vector3(sx - 0.94, sy, sz + 0.1), Vector3(sx + 0.94, sy + rise * 7 - 0.02, sz + 0.2), "pstairs", null, 0)
+	for i in 2:
+		for j in 2:
+			build_floor(sx - 2.0 + i * 2.0, sz + 1.0 + j * 2.0, sx + i * 2.0, sz + 3.0 + j * 2.0, sy + 3.15, 310 + i * 2 + j)
+	build_box(Vector3(sx - 2.0, sy, sz + 1.0), Vector3(sx + 2.0, sy + 2.55, sz + 5.0), "pfloor", null, 255)        # (the space under the deck is closed in)
+	place_player(cx, cz, y + 0.2)
+	host.base_center = P.pos; host.base_heat = 80.0
+	zs.update(0.016, 0.016, host)
+	zs.spawn_horde(cx - 24.0, cz - 6.0, 26, P.pos, true)
+	# climbers: sent up the stairs to the deck and back down
+	var climbers: Array = []
+	for k in 8:
+		var zb = zs.spawn(sx + (k % 2) * 0.8 - 0.4, sz - 3.0 - k * 1.2, 1 if k % 3 == 0 else 0, 0, {"decay": 0.4})
+		zb.state = &"investigate"; zb.target = Vector3(sx, sy + 3.15, sz + 3.0); zb.alerted = 0.0; zb.pause = 999.0
+		climbers.append(zb)
+	fact("zombies", zs.list.size())
+	var dt := 1.0 / 60.0
+	var top_reached := 0; var seen_top := {}
+	for i in int((40.0 if quick else 110.0) / dt):
+		host.player_noise = 40.0 if (i % 300) < 3 else 0.0
+		sim(dt)
+		if i % 20 == 0:
+			for zb in climbers:
+				if zb.state == &"dead": continue
+				if zb.pos.y > sy + 2.9 and not seen_top.has(zb.id):
+					seen_top[zb.id] = true; top_reached += 1
+				# keep them walking: up, then down again
+				if zb.state != &"investigate" and zb.state != &"chase" and zb.state != &"attack":
+					zb.state = &"investigate"; zb.state_t = 0.0
+					zb.target = Vector3(sx, sy, sz - 6.0) if zb.pos.y > sy + 2.0 else Vector3(sx, sy + 3.15, sz + 3.0)
+	fact("climbers that reached the deck", "%d of %d" % [top_reached, climbers.size()])
+	var down := 0
+	for w in walls:
+		if w.destroyed: down += 1
+	fact("walls broken", down); fact("states", counts())
+	for b in built_boxes:
+		if W._boxes.has(b.id): W.remove_box(b)
+	for e in built_floors:
+		for i in range(W.floors.size() - 1, -1, -1):
+			if is_same(W.floors[i], e): W.floors.remove_at(i)
+	built_boxes.clear(); built_floors.clear()
 
 # ------------------------------------------------------------------ the player alone
 func s_player() -> void:

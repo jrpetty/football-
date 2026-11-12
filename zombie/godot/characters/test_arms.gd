@@ -67,7 +67,10 @@ func _ready() -> void:
 	add_child(arms)
 	if night:
 		arms.set_meta("night", 1.0)
-	if shots_dir != "":
+	if shots_dir != "" and OS.get_cmdline_user_args().has("--one"):
+		plan = [["pistol", 0.5, "ads", "pistol_aim"], ["shotgun", 0.7, "", "shotgun"]]
+		_begin()
+	elif shots_dir != "":
 		# [item, seconds to settle, what to do, name]
 		plan = [["", 0.6, "", "a0"], ["pistol", 0.6, "", "pistol"], ["pistol", 0.5, "ads", "pistol_aim"], ["rifle", 0.7, "", "rifle"], ["rifle", 0.5, "ads", "rifle_aim"], ["shotgun", 0.7, "", "shotgun"],
 			["bat", 0.7, "", "bat"], ["bat", 0.22, "swing", "bat_swing"], ["knife", 0.7, "", "knife"], ["axe", 0.7, "", "axe"], ["", 0.7, "", "hands"], ["", 0.14, "swing", "hands_punch"], ["", 0.12, "shove", "hands_shove"],

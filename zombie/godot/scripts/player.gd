@@ -224,8 +224,12 @@ func update(dt: float, control: bool, now: float) -> void:
 	var amp := minf(1.0, speed / 5.0) * (1.0 if on_ground else 0.0)
 	head_bob = Vector3(sin(_bob) * 0.03 * amp, absf(cos(_bob)) * 0.05 * amp, 0.0)
 	cam_shake = maxf(0.0, cam_shake - dt * 2.0)
-	var fl := WorldData.floor_at(pos.x, pos.z)
-	inside = not fl.is_empty() and absf(float(fl[4]) - pos.y) < 1.0
+	# indoors: on the floor of a building of the town (floors the player has laid carry a negative id: a bare
+	# foundation is not a room)
+	inside = false
+	for fl in WorldData.floors:
+		if pos.x > fl[0] and pos.x < fl[2] and pos.z > fl[1] and pos.z < fl[3] and absf(float(fl[4]) - pos.y) < 1.0 and (fl.size() < 6 or int(fl[5]) >= 0):
+			inside = true; break
 	step_surface = "wood" if inside else "grass"
 	if sprinting:
 		gain_xp("sprinting", dt * 0.8, now); gain_xp("fitness", dt * 0.5, now)

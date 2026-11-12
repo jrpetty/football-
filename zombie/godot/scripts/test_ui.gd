@@ -92,6 +92,8 @@ func WorldData_() -> Node:
 func _run() -> void:
 	await process_frame
 	await process_frame
+	while not game.booted:
+		await process_frame
 	map_lib = load("res://scripts/ui_map.gd"); items_lib = load("res://scripts/items.gd")
 	var hud = game.hud
 	var settings: Node = root.get_node("Settings")

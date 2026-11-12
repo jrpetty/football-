@@ -60,26 +60,40 @@ var _groan_t := 3.0
 
 func _ready() -> void:
 	rng.randomize()
+	state = "loading"
 	sky = SkyRig.new(); add_child(sky)
-	world = World.new(); world.name = "World"; add_child(world)
-	world.build()
 	cam = Camera3D.new(); cam.far = 1400.0; cam.near = 0.06; cam.fov = 75.0; add_child(cam)
 	cam.make_current()
-	vm = ViewModel.new(); cam.add_child(vm)
-	flashlight = SpotLight3D.new(); flashlight.spot_range = 55.0; flashlight.spot_angle = 30.0; flashlight.spot_attenuation = 0.9; flashlight.spot_angle_attenuation = 0.6
-	flashlight.light_color = Color(1.0, 0.96, 0.88); flashlight.light_energy = 0.0; flashlight.shadow_enabled = true
-	cam.add_child(flashlight)
-	fx = Fx.new(); add_child(fx)
 	var pl := CanvasLayer.new(); pl.layer = 1; add_child(pl)
 	post = ColorRect.new(); post.set_anchors_preset(Control.PRESET_FULL_RECT); post.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	post_mat = ShaderMaterial.new(); post_mat.shader = load("res://shaders/post.gdshader"); post.material = post_mat
 	pl.add_child(post)
+	# the interface comes first so there is something to look at while the valley is put together
 	hud = Hud.new(); hud.game = self; add_child(hud)
 	hud.use_item.connect(use_item)
 	hud.drop_item.connect(func(uid: int) -> void: drop_stack(uid, 1 << 20))
 	hud.move_item.connect(_on_move_item)
 	hud.treat_wound.connect(treat)
 	hud.menu_action.connect(_on_menu)
+	hud.assign_hotbar.connect(_assign_hotbar)
+	hud.take_all.connect(_take_all)
+	world = World.new(); world.name = "World"; add_child(world)
+	var steps := [[0.05, "Raising the valley", world._build_terrain], [0.22, "Sowing the grass", world._build_grass], [0.3, "Filling the lake", world._build_water],
+		[0.4, "Building the town", world._build_town], [0.6, "Leaving things where they fell", world._build_props], [0.72, "Growing the forest", world._build_veg], [0.86, "Seaming the rock", world._build_ores]]
+	for st in steps:
+		if hud.has_method("show_loading"):
+			hud.show_loading(float(st[0]), String(st[1]))
+			await get_tree().process_frame
+			await get_tree().process_frame
+		st[2].call()
+	if hud.has_method("show_loading"):
+		hud.show_loading(0.94, "Waking the dead")
+		await get_tree().process_frame
+	vm = ViewModel.new(); cam.add_child(vm)
+	flashlight = SpotLight3D.new(); flashlight.spot_range = 55.0; flashlight.spot_angle = 30.0; flashlight.spot_attenuation = 0.9; flashlight.spot_angle_attenuation = 0.6
+	flashlight.light_color = Color(1.0, 0.96, 0.88); flashlight.light_energy = 0.0; flashlight.shadow_enabled = true
+	cam.add_child(flashlight)
+	fx = Fx.new(); add_child(fx)
 	player = Player.new()
 	player.level_up.connect(func(sk: String, lv: int) -> void: hud.notify("%s is now level %d." % [sk.capitalize(), lv], "xp"))
 	if ResourceLoader.exists("res://scripts/zombies.gd"):
@@ -96,10 +110,12 @@ func _ready() -> void:
 				node.set("game", self)
 				add_child(node); modules[m] = node
 	shots_mode = OS.get_cmdline_user_args().has("--shots")
+	if hud.has_method("hide_loading"): hud.hide_loading()
 	_to_menu()
+	booted = true
 	if boot_action == "new":
 		boot_action = ""
-		new_game.call_deferred()
+		_new_from_setup.call_deferred(boot_setup)
 	if shots_mode:
 		_debug_shots()
 	if OS.get_cmdline_user_args().has("--selftest"):
@@ -151,17 +167,24 @@ func _to_menu() -> void:
 	hud.show_menu("main")
 
 static var boot_action := ""
+static var boot_setup: Dictionary = {}
 var _played := false
+var booted := false               # true once the world is built and the menu is up
+var paused := false
+
+func _new_from_setup(setup: Dictionary) -> void:
+	new_game(String(setup.get("occupation", "unemployed")), setup)
 
 func _on_menu(a: String) -> void:
 	match a:
 		"new":
-			if _played:
+			var setup: Dictionary = hud.new_game_setup.duplicate(true) if hud.get("new_game_setup") is Dictionary else {}
+			if _played and get_tree().current_scene == self:
 				# doors, windows, felled trees and built things belong to the last life: start from a clean world
-				boot_action = "new"
+				boot_action = "new"; boot_setup = setup
 				get_tree().reload_current_scene()
 			else:
-				new_game()
+				_new_from_setup(setup)
 		"continue": continue_game()
 		"quit": get_tree().quit()
 		"resume": _resume()
@@ -172,6 +195,7 @@ func _on_menu(a: String) -> void:
 			get_tree().reload_current_scene()
 
 func _resume() -> void:
+	paused = false
 	hud.close_window()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -191,18 +215,27 @@ func _start_play() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	autosave_at = game_min + 180.0
 
-func new_game(occupation := "unemployed") -> void:
+func new_game(occupation := "unemployed", setup: Dictionary = {}) -> void:
 	if has_save():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	player = Player.new()
 	player.level_up.connect(func(sk: String, lv: int) -> void: hud.notify("%s is now level %d." % [sk.capitalize(), lv], "xp"))
 	var p := player
 	p.occupation = occupation
+	p.name = String(setup.get("name", p.name))
+	for t in setup.get("traits", []): p.traits[String(t)] = true
 	var occs: Array = World.read_json("res://data/skills.json").occupations
 	for o in occs:
 		if String(o.id) == occupation:
 			for k in o.skills: p.bonus[k] = int(o.skills[k])
 			for it in o.items: p.inv.add(String(it[0]), int(it[1]))
+	if p.traits.has("athletic"): p.bonus["fitness"] = int(p.bonus.get("fitness", 0)) + 2
+	if p.traits.has("unfit"): p.bonus["fitness"] = int(p.bonus.get("fitness", 0)) - 2
+	if p.traits.has("strong"): p.bonus["strength"] = int(p.bonus.get("strength", 0)) + 2
+	if p.traits.has("weak"): p.bonus["strength"] = int(p.bonus.get("strength", 0)) - 2
+	if p.traits.has("handy"):
+		p.bonus["carpentry"] = int(p.bonus.get("carpentry", 0)) + 1; p.bonus["engineering"] = int(p.bonus.get("engineering", 0)) + 1
+	for k in p.bonus: p.bonus[k] = maxi(0, int(p.bonus[k]))
 	p.inv.add("water_bottle", 1); p.inv.add("chips", 1); p.inv.add("flashlight", 1); p.inv.add("battery", 2); p.inv.add("rag", 2)
 	for id in ["jeans", "hoodie", "sneakers"]:
 		if Items.exists(id) and Items.def(id).has("cloth"):
@@ -273,6 +306,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 			return
 		match k:
 			KEY_ESCAPE:
+				paused = true
 				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE; hud.show_menu("pause")
 			KEY_TAB, KEY_I: _open_inventory(null)
 			KEY_H:
@@ -313,9 +347,16 @@ func _process(dt: float) -> void:
 		Engine.time_scale = 0.12 if _hitstop > 0.0 else 1.0
 	dt = minf(dt, 0.1)
 	time += dt
+	if state == "loading":
+		return
 	if state == "menu":
 		_menu_frame(dt)
 		return
+	if paused and state == "play":
+		if not hud.is_open(): paused = false       # the menu was closed some other way
+		else:
+			hud.update_hud(dt)
+			return
 	if state == "dead":
 		sky.set_time(hours())
 		return
@@ -366,7 +407,7 @@ func _process(dt: float) -> void:
 		zombies.update(dt, dt_min, {"player_pos": p.pos, "player_eye": p.eye(), "player_noise": maxf(p.noise, loud_t), "player_visibility": p.visibility, "player_alive": true, "player_inside": p.inside, "player_bleeding": p.stats.bleeding() > 0.3, "base_center": null, "base_heat": 0.0, "daylight": sky.daylight, "hours": hours(), "day": day(), "luck": 0.0, "camera_pos": cam.global_position})
 	# camera
 	var shake := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), 0.0) * p.cam_shake * 0.03
-	cam.position = p.eye() + Basis(Vector3.UP, p.yaw) * p.head_bob + shake
+	cam.position = p.eye() + (Basis(Vector3.UP, p.yaw) * p.head_bob if Settings.v("head_bob") else Vector3.ZERO) + shake
 	cam.rotation = Vector3(p.pitch, p.yaw, 0.0)
 	cam.fov = lerpf(cam.fov, (float(Settings.v("fov")) + (6.0 if p.sprinting else 0.0)) * (1.0 - 0.22 * vm.ads), 1.0 - exp(-dt * 8.0))
 	var es = p.equipped_stack()
@@ -650,6 +691,14 @@ func drop_stack(uid: int, n: int) -> void:
 	var f := p.forward(); f.y = 0.0
 	world.drop_items(p.pos + f.normalized() * 0.8, inv)
 	Sfx.play("drop")
+	hud.refresh()
+
+func take_off(slot: String) -> void:
+	var st = player.worn.get(slot)
+	if st == null: return
+	player.worn[slot] = null
+	player.inv.add_stack(st)
+	Sfx.play("zipper")
 	hud.refresh()
 
 func give_or_drop(id: String, n: int) -> void:
@@ -1110,6 +1159,7 @@ func _player_attacked(z, _dmg := 0.0) -> void:
 	var type := String(_weighted([["scratch", 55], ["laceration", 30], ["bite", 25 if brute else 15]]))
 	var block: float = prot.bite if type == "bite" else prot.scratch
 	hud.damage_flash(0.6); p.cam_shake = 0.4
+	if hud.has_method("damage_from"): hud.damage_from(z.pos)
 	_hit_fx = 1.0
 	Sfx.play("player_hurt")
 	var pname := ""
@@ -1151,6 +1201,7 @@ func _on_burst(pos: Vector3, radius: float, _z = null) -> void:
 		player.stats.add_wound("torso" if rng.randf() < 0.5 else "armL", "burn", 8.0 * (1.0 - d / radius) + 4.0)
 		player.stats.food_poison = minf(1.0, player.stats.food_poison + 0.25)
 		hud.damage_flash(0.5); hud.notify("A bloat ruptures over you.", "bad")
+		if hud.has_method("damage_from"): hud.damage_from(pos)
 
 func _structure_hit(ref, dmg: float) -> void:
 	if not (ref is Dictionary): return

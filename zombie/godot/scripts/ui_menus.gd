@@ -225,7 +225,7 @@ func _page_pause() -> void:
 	col.add_child(_item("Save game", func() -> void: hud.menu_action.emit("save")))
 	col.add_child(_item("Settings", func() -> void: _show_page("settings")))
 	col.add_child(_item("Save and quit to menu", func() -> void: hud.menu_action.emit("menu")))
-	_foot("The world keeps moving while you are in this menu", [["Arrows", "Select"], ["Enter", "Choose"], ["Esc", "Resume"]])
+	_foot("Paused", [["Arrows", "Select"], ["Enter", "Choose"], ["Esc", "Resume"]])
 	_focus_first(col)
 
 # ------------------------------------------------------------------ death

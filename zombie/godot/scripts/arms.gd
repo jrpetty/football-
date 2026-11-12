@@ -95,7 +95,7 @@ func _build() -> bool:
 				vp.append(Vector3(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2])); vn.append(Vector3(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]))
 				for c in 4: vc.append(cus[v * 4 + c])
 			vi.append(remap[v])
-	for side in 2:
+	for side in (0 if OS.get_cmdline_user_args().has("--nohands") else 2):
 		for pose in POSES.size():
 			_hand(vp, vn, vc, vi, side == 1, pose, hand_tag[1 if side == 1 else 0])
 	var arrays := []
@@ -139,15 +139,15 @@ func _build() -> bool:
 #   three directions (palm side x, toward fingers -y, toward the index side z)
 const POSES := [
 	# grip: closed round a handle that lies across the palm
-	[[1.05, 1.45, 0.75], [1.1, 1.5, 0.8], [1.15, 1.5, 0.8], [1.2, 1.5, 0.85], [Vector3(0.75, -0.45, 0.5), Vector3(0.9, -0.3, -0.3), Vector3(0.6, -0.2, -0.75)]],
+	[[1.05, 1.45, 0.75], [1.1, 1.5, 0.8], [1.15, 1.5, 0.8], [1.2, 1.5, 0.85], [Vector3(0.7, -0.6, 0.35), Vector3(0.75, -0.55, -0.35), Vector3(0.35, -0.5, -0.8)]],
 	# pistol: the same, the index finger laid forward along the frame, off the trigger
 	[[0.25, 0.3, 0.2], [1.1, 1.5, 0.8], [1.15, 1.5, 0.8], [1.2, 1.5, 0.85], [Vector3(0.6, -0.55, 0.55), Vector3(0.75, -0.6, -0.1), Vector3(0.5, -0.8, -0.3)]],
 	# fist
-	[[1.4, 1.75, 1.0], [1.45, 1.75, 1.0], [1.45, 1.75, 1.0], [1.5, 1.75, 1.0], [Vector3(0.8, -0.5, 0.35), Vector3(0.95, -0.25, -0.2), Vector3(0.7, -0.5, -0.55)]],
+	[[1.4, 1.75, 1.0], [1.45, 1.75, 1.0], [1.45, 1.75, 1.0], [1.5, 1.75, 1.0], [Vector3(0.55, -0.75, 0.1), Vector3(0.5, -0.6, -0.6), Vector3(0.1, -0.5, -0.85)]],
 	# open: a flat hand, fingers a little spread, to shove with
 	[[0.12, 0.15, 0.1], [0.08, 0.12, 0.1], [0.1, 0.14, 0.1], [0.16, 0.18, 0.12], [Vector3(0.25, -0.45, 0.85), Vector3(0.15, -0.6, 0.78), Vector3(0.1, -0.75, 0.65)]],
 	# support: cupped under a fore-end
-	[[0.7, 0.95, 0.5], [0.75, 1.0, 0.5], [0.8, 1.0, 0.55], [0.85, 1.0, 0.6], [Vector3(0.55, -0.4, 0.72), Vector3(0.75, -0.55, 0.3), Vector3(0.7, -0.7, -0.1)]],
+	[[0.85, 1.15, 0.6], [0.9, 1.2, 0.6], [0.95, 1.2, 0.65], [1.0, 1.2, 0.7], [Vector3(0.45, -0.5, 0.74), Vector3(0.6, -0.7, 0.4), Vector3(0.6, -0.78, 0.15)]],
 ]
 const POSE_BONE_R := [11, 12, 13, 14, 15]
 const POSE_BONE_L := [16, 0, 1, 3, 4]
@@ -164,7 +164,7 @@ func _hand(vp: PackedVector3Array, vn: PackedVector3Array, vc: PackedFloat32Arra
 	var pts := PackedVector3Array(); var nrs := PackedVector3Array(); var tri := PackedInt32Array()
 	# palm: a rounded slab from inside the cuff down to the knuckles
 	var ring_n := 16
-	var rows := [[0.04, 0.02, 0.025, 0.0], [0.018, 0.017, 0.0255, 0.0], [0.0, 0.0145, 0.027, -0.001], [-0.016, 0.0148, 0.032, -0.002], [-0.034, 0.015, 0.037, -0.003], [-0.052, 0.0145, 0.0405, -0.004], [-0.07, 0.0135, 0.0412, -0.004], [-0.086, 0.0115, 0.04, -0.004], [-0.094, 0.007, 0.034, -0.004]]
+	var rows := [[0.012, 0.012, 0.022, 0.0], [0.0, 0.0145, 0.027, -0.001], [-0.016, 0.0148, 0.032, -0.002], [-0.034, 0.015, 0.037, -0.003], [-0.052, 0.0145, 0.0405, -0.004], [-0.07, 0.0135, 0.0412, -0.004], [-0.086, 0.0115, 0.04, -0.004], [-0.094, 0.007, 0.034, -0.004]]
 	for r in rows.size():
 		var e: Array = rows[r]
 		for k in ring_n:
@@ -183,6 +183,19 @@ func _hand(vp: PackedVector3Array, vn: PackedVector3Array, vc: PackedFloat32Arra
 	pts.append(Vector3(0.0, -0.096, -0.004)); nrs.append(Vector3(0, -1, 0))
 	for k in ring_n:
 		tri.append_array([(rows.size() - 1) * ring_n + k, (rows.size() - 1) * ring_n + (k + 1) % ring_n, cap])
+	# the wrist: a ball in the cuff, so that however the hand is bent there is no gap and nothing pokes out
+	var wb := pts.size()
+	var seg := 10; var lat := 6
+	for a in lat + 1:
+		var th := PI * a / lat
+		for k in seg:
+			var ph := TAU * k / seg
+			var d := Vector3(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
+			pts.append(Vector3(d.x * 0.021, 0.004 + d.y * 0.027, d.z * 0.0275)); nrs.append(d)
+	for a in lat:
+		for k in seg:
+			var a0 := wb + a * seg + k; var a1 := wb + a * seg + (k + 1) % seg
+			tri.append_array([a0, a1, a0 + seg, a1, a1 + seg, a0 + seg])
 	# fingers
 	var fz := [0.0275, 0.0095, -0.0085, -0.0255]
 	var fl := [[0.043, 0.026, 0.021], [0.047, 0.029, 0.022], [0.043, 0.027, 0.021], [0.034, 0.02, 0.019]]
@@ -361,6 +374,10 @@ func _process(dt: float) -> void:
 			lb = hb * _mirror(grip_r)
 			if kind == 3:
 				rb = hb * Basis(Vector3(0, 0, 1), 0.2) * grip_r
+				if vm.current == "flashlight":
+					# a barrel lying forward in the hand: held from below, palm up, thumb along it
+					rb = hb * Basis(Vector3(0, 0, 1), -0.5) * Basis(Vector3(0, 1, 0), Vector3(1, 0, 0), Vector3(0, 0, -1))
+					grip = Vector3(0.0, 0.0, 0.05)
 		rw = H * grip - rb * Vector3(PALM, -HOOK, 0.0)
 		if two:
 			lw = H * fore - lb * Vector3(-PALM, -HOOK, 0.0)
@@ -411,8 +428,10 @@ func _solve(arm: int, shoulder: Vector3, wrist: Vector3, hand: Basis, pole: Vect
 	var d := to.length()
 	var reach := L_UP + L_FORE - 0.004
 	if d > reach:
-		# farther than an arm reaches: the shoulder comes forward with it (it is out of sight below the view)
-		shoulder = wrist - to / d * reach
+		# farther than an arm reaches from the shoulder (a long gun's fore-end): the arm comes up to it from
+		# below the view instead, so its upper end is never in sight
+		var deep := Vector3(0.3 if arm == 1 else -0.3, -0.95, wrist.z + 0.6)
+		shoulder = wrist + (deep - wrist).normalized() * reach
 		to = wrist - shoulder; d = reach
 	d = maxf(d, 0.08)
 	var dir := to / d

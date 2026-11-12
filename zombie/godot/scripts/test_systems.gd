@@ -117,7 +117,8 @@ func _run() -> void:
 	W = root.get_node("WorldData")
 	game = load("res://main.tscn").instantiate()
 	root.add_child(game)
-	await frames(3)
+	while not game.booted:
+		await frames(1)
 	game.new_game("police")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	await frames(5)

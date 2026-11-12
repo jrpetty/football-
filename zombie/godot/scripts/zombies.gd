@@ -241,6 +241,7 @@ var on_structure_hit := Callable()
 ## position after update() (`player.pos += zombies.player_push`). With it off, zombies simply step aside.
 var player_push := Vector3.ZERO
 var player_blocking := false
+const REACH := 1.4             # how far from its own centre a blow lands (times the body's scale)
 const KEEP := 0.62             # no zombie's centre comes closer to the player's than this
 const KEEP_PREY := 0.58
 ## what update() reported last: zombies chasing the player, near the player, and with eyes on the player
@@ -715,6 +716,34 @@ func _bashable(ref) -> bool:
 		return false
 	return true
 
+## The nearest point of a breakable thing to `from` (in plan): its box or boxes if it has them, else the cells of
+## the nav grid that carry it.
+func _ref_near(ref, from: Vector3) -> Vector3:
+	var best := Vector3(from.x, from.y, from.z); var bd := INF
+	var boxes: Array = []
+	var b1 = _rget(ref, "box", null)
+	if b1 != null: boxes.append(b1)
+	var bs = _rget(ref, "boxes", null)
+	if bs is Array: boxes.append_array(bs)
+	for b in boxes:
+		if b == null: continue
+		var cx := clampf(from.x, b.min.x, b.max.x); var cz := clampf(from.z, b.min.z, b.max.z)
+		var d := (cx - from.x) * (cx - from.x) + (cz - from.z) * (cz - from.z)
+		if d < bd:
+			bd = d; best = Vector3(cx, from.y, cz)
+	if bd < INF:
+		return best
+	var gx := int(floor(from.x + HALF)); var gz := int(floor(from.z + HALF))
+	for i in range(-3, 4):
+		for j in range(-3, 4):
+			var idx := (gz + j) * NAV_N + gx + i
+			if gx + i < 0 or gz + j < 0 or gx + i >= NAV_N or gz + j >= NAV_N or not is_same(_W.nav_ref.get(idx), ref): continue
+			var cx := clampf(from.x, gx + i - HALF, gx + i + 1 - HALF); var cz := clampf(from.z, gz + j - HALF, gz + j + 1 - HALF)
+			var d := (cx - from.x) * (cx - from.x) + (cz - from.z) * (cz - from.z)
+			if d < bd:
+				bd = d; best = Vector3(cx, from.y, cz)
+	return best if bd < INF else _ref_pos(ref, from)
+
 static func _ref_pos(ref, fallback: Vector3) -> Vector3:
 	var d = ref
 	if ref is Dictionary and ref.has("data"):
@@ -1102,8 +1131,12 @@ func _rupture(z: Zombie) -> void:
 			var ref = _ref_at(z.pos.x + i, z.pos.z + j)
 			if ref != null and not seen.has(ref):
 				seen.append(ref)
+				last_striker = null
 				_hit_structure(ref, 55.0)
 	burst.emit(z.pos, R, z)
+
+## who struck the last structure_hit blow (null for a bloat's burst): the signal itself carries only the thing hit
+var last_striker: Zombie = null
 
 func _hit_structure(ref, dmg: float) -> void:
 	structure_hit.emit(ref, dmg)
@@ -1281,6 +1314,7 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 	_time += dt
 	_game_min += dt_game_min
 	_nav = _W.nav
+	_W.sync_floors()
 	_smap = _W.solid_map
 	_pp = host.get("player_pos", Vector3.ZERO)
 	_pe = host.get("player_eye", _pp + Vector3(0, 1.6, 0))
@@ -1767,7 +1801,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 						# sprinting dead trip over their own feet now and then
 						if z.state == S_CHASE and (z.type == 1 or z.decay < 0.2) and not z.crawler and z.vel.length() > 3.6 and _rng.randf() < e * 0.035:
 							_knock_down(z, -1, S_CHASE); z.lie_t *= 0.5
-						elif z.state == S_CHASE and seen and dT < 1.25 + 0.3 * z.scale and absf(z.pos.y - T.y) < 1.4:
+						elif z.state == S_CHASE and seen and dT < REACH * z.scale + 0.15 and absf(z.pos.y - T.y) < 1.4:
 							_set_state(z, S_ATTACK)
 		S_ATTACK:
 			clip = &"attack"
@@ -1775,16 +1809,20 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 				_set_state(z, S_WANDER)
 			else:
 				face = atan2(T.x - z.pos.x, T.z - z.pos.z)
+				if dT > 0.95:
+					# shuffle right up to it while the arms come round
+					z.dir = Vector3(T.x - z.pos.x, 0.0, T.z - z.pos.z) / dT
+					want = minf(z.speed, 1.0) * clampf((dT - 0.9) / 0.4, 0.2, 1.0); face = NAN
 				z.atk_t += e
 				if not z.struck and z.atk_t >= float(st.wind) + 0.07:
 					z.struck = true
-					if dT < 1.65 * z.scale + (0.3 if z.type == BREAKER else 0.0) and absf(wrapf(face - z.yaw, -PI, PI)) < 1.0:
+					if dT < REACH * z.scale + (0.15 if z.type == BREAKER else 0.0) and absf(wrapf(atan2(T.x - z.pos.x, T.z - z.pos.z) - z.yaw, -PI, PI)) < 0.9:
 						if h != null: human_attacked.emit(h, z, float(st.dmg) * z.dmg_mul)
 						elif _p_alive: player_attacked.emit(z, float(st.dmg) * z.dmg_mul)
 				if z.atk_t >= z.atk_period:
 					z.atk_t -= z.atk_period; z.struck = false
-					if dT > 1.9 * z.scale: _set_state(z, S_CHASE)
-				elif dT > 2.6 * z.scale:
+					if dT > REACH * z.scale + 0.45: _set_state(z, S_CHASE)
+				elif dT > 2.4 * z.scale:
 					_set_state(z, S_CHASE)
 		S_BASH:
 			clip = &"attack"
@@ -1792,19 +1830,36 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 			if not _bashable(ref) or z.state_t > 20.0:
 				_set_state(z, S_INVESTIGATE if z.after == S_INVESTIGATE else S_CHASE)
 			else:
-				var rp := _ref_pos(ref, z.pos)
-				face = atan2(rp.x - z.pos.x, rp.z - z.pos.z)
-				z.atk_t += e
-				if not z.struck and z.atk_t >= float(st.wind) + 0.07:
-					z.struck = true
-					_hit_structure(ref, float(st.wreck) * (z.dmg_mul if z.type <= 1 else 1.0))
-				if z.after != S_INVESTIGATE and dT < 1.5 and (h != null or _p_alive):
-					_set_state(z, S_ATTACK)
-				elif z.atk_t >= z.atk_period:
-					# one blow, then think again about whether it is still in the way
-					var tg := z.target
-					_set_state(z, S_INVESTIGATE if z.after == S_INVESTIGATE else S_CHASE)
-					z.target = tg
+				# a blow lands only from where the body is: walk up to the thing first, square on to it
+				var rp := _ref_near(ref, z.pos)
+				var gap := Vector2(rp.x - z.pos.x, rp.z - z.pos.z).length()
+				var reach := 0.3 * z.scale + 0.6
+				if gap > 0.05: face = atan2(rp.x - z.pos.x, rp.z - z.pos.z)
+				if gap > reach:
+					z.dir = Vector3(rp.x - z.pos.x, 0.0, rp.z - z.pos.z) / gap
+					want = z.speed * 1.2; face = NAN
+					clip = &"walk"
+					z.atk_t = 0.0; z.struck = false
+					if z.anim == &"attack" and not z.crawler: _play(z, &"walk", z.act, false)
+				else:
+					if z.anim != &"attack" and not z.crawler:
+						z.atk_t = 0.0; z.struck = false
+						_play(z, &"attack", 1.0, true)
+					z.atk_t += e
+					if not z.struck and z.atk_t >= float(st.wind) + 0.07:
+						z.struck = true
+						if is_nan(face) or absf(wrapf(face - z.yaw, -PI, PI)) < 0.9:
+							last_striker = z
+							_hit_structure(ref, float(st.wreck) * (z.dmg_mul if z.type <= 1 else 1.0))
+						else:
+							z.struck = false; z.atk_t = float(st.wind) * 0.5          # not round to it yet: wind up again
+					if z.after != S_INVESTIGATE and dT < 1.4 and (h != null or _p_alive):
+						_set_state(z, S_ATTACK)
+					elif z.atk_t >= z.atk_period:
+						# one blow, then think again about whether it is still in the way
+						var tg := z.target
+						_set_state(z, S_INVESTIGATE if z.after == S_INVESTIGATE else S_CHASE)
+						z.target = tg
 		S_STAGGER:
 			clip = z.anim if String(z.anim).begins_with("hit") else &"hit_f"
 			if z.state_t > 0.7:
@@ -1874,9 +1929,9 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 					if d2 < rr * rr:
 						var d := sqrt(d2); var push := (rr - d) * 0.5 / d
 						pxs += sx * push; pzs += sz * push
-						if d < 0.44 and upright and (o.crawler or not _flat(o)):
+						if d < 0.5 and upright and (o.crawler or not _flat(o)):
 							# far too close (two that ran into the same spot): step clear at once
-							var jump := (0.44 - d) / d
+							var jump := (0.5 - d) / d
 							z.pos.x += sx * jump; z.pos.z += sz * jump
 							if (_smap[clampi(int(floor(z.pos.z + HALF)), 0, NAV_N - 1) * NAV_N + clampi(int(floor(z.pos.x + HALF)), 0, NAV_N - 1)] & 1) != 0: _collide(z)
 					if want > 0.0 and d2 < (rr + 0.4) * (rr + 0.4):

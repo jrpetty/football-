@@ -38,6 +38,7 @@ var solid_map := PackedByteArray()
 var decks: Array = []
 var _ground_idx: Dictionary = {}      # 8 m cell -> the floors and decks that reach into it
 var _static_floors := 0
+var _floors_marked := 0
 
 class Box:
 	var id: int
@@ -85,7 +86,7 @@ func load_world() -> void:
 		var ci := add_circle(float(c[0]), float(c[1]), float(c[2]), float(c[3]), null, false)
 		ci.kind = String(c[4]); ci.ref = int(c[5])
 	_derive_colliders()
-	_static_floors = floors.size()
+	_static_floors = floors.size(); _floors_marked = floors.size()
 	for fl in floors: _index_ground(fl)
 	for d in decks: _index_ground(d)
 
@@ -205,6 +206,24 @@ func _index_ground(row: Array) -> void:
 			_ground_idx[k].append(row)
 	_mark(float(row[0]) - 0.6, float(row[1]) - 0.6, float(row[2]) + 0.6, float(row[3]) + 0.6, 2)
 
+## Tell the world that the rectangle holds walkable ground other than the terrain — a floor, a deck, a stair
+## tread appended to `floors`. Bodies only look for a floor where this has been said (solid_map bit 2), so call
+## it for anything laid after loading (sync_floors() does it for every floor added since the last call).
+func mark_ground(x0: float, z0: float, x1: float, z1: float) -> void:
+	_mark(x0 - 0.6, z0 - 0.6, x1 + 0.6, z1 + 0.6, 2)
+
+## Flag every floor appended to `floors` since the world was loaded. Cheap when nothing has changed; the dead call
+## it once a frame, so nothing has to remember to.
+func sync_floors() -> void:
+	if floors.size() == _floors_marked:
+		return
+	for i in range(_static_floors, floors.size()):
+		var f: Array = floors[i]
+		_mark(float(f[0]) - 0.6, float(f[1]) - 0.6, float(f[2]) + 0.6, float(f[3]) + 0.6, 2)
+	_floors_marked = floors.size()
+	version += 1
+
+## (mark_ground and the collider calls use this; kept callable by its old name)
 func _mark(x0: float, z0: float, x1: float, z1: float, bit: int) -> void:
 	var ax := maxi(0, int(floor(x0 + HALF))); var bx := mini(NAV_N - 1, int(floor(x1 + HALF)))
 	var az := maxi(0, int(floor(z0 + HALF))); var bz := mini(NAV_N - 1, int(floor(z1 + HALF)))
