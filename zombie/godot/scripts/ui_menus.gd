@@ -20,8 +20,6 @@ const TIPS := [
 	"A gunshot carries for blocks. A bat does not.",
 	"Press M for the map. Buildings you have gone through are marked off.",
 ]
-const CONTROLS := [["Move", "W A S D"], ["Sprint", "Shift"], ["Crouch / sneak", "C"], ["Jump", "Space"], ["Attack / fire", "LMB"], ["Aim a gun / shove", "RMB"], ["Reload", "R"], ["Interact, search, open", "E"], ["Flashlight", "F"], ["Bandage the worst wound", "Q"], ["Inventory", "Tab"], ["Health and skills", "H"], ["Map", "M"], ["Hotbar", "1 – 8"], ["Take all while searching", "R"], ["Save", "F5"], ["Pause", "Esc"]]
-const SETTING_TABS := [["game", "Game"], ["graphics", "Display"], ["audio", "Sound"], ["controls", "Controls"]]
 
 var hud: Hud
 var kind := ""
@@ -30,7 +28,6 @@ var _win: Control = null
 var _holder: Control = null
 var _backdrop: UiHudParts.Backdrop = null
 var _text := ""
-var _tab := "game"
 var _busy := false
 var _data: Dictionary = {}
 var _art: Texture2D = null
@@ -43,8 +40,6 @@ var _c_summary: VBoxContainer
 var _c_begin: Button
 var _c_note: Label
 var _c_trait_btns: Dictionary = {}
-var _set_body: VBoxContainer
-var _set_tabs: Dictionary = {}
 
 func _init(h: Hud) -> void:
 	hud = h
@@ -93,6 +88,7 @@ func show(kind_: String, text := "") -> void:
 	_holder = Control.new(); _holder.set_anchors_preset(Control.PRESET_FULL_RECT); _holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_win.add_child(_holder)
 	hud.root.add_child(_win)
+	hud._layout()
 	if hud.loading != null:
 		hud.root.move_child(hud.loading, hud.root.get_child_count() - 1)
 	_show_page("")
@@ -102,6 +98,8 @@ func show(kind_: String, text := "") -> void:
 func _show_page(p: String) -> void:
 	if _holder == null:
 		return
+	if page == "settings" and p != "settings":
+		hud.settings.closed()
 	page = p
 	for c in _holder.get_children():
 		c.queue_free()
@@ -302,133 +300,10 @@ func _framed(title: String, w: float, h: float) -> VBoxContainer:
 	return v
 
 # ------------------------------------------------------------------ settings
+## the same pages the in-game Settings tab shows (ui_settings.gd), framed for the menus
 func _page_settings() -> void:
-	var v := _framed("Settings", 980.0, 660.0)
-	var tabs := HBoxContainer.new(); tabs.add_theme_constant_override("separation", 0)
-	_set_tabs.clear()
-	for t in SETTING_TABS:
-		var b := Button.new(); b.text = String(t[1]).to_upper(); b.toggle_mode = true; b.custom_minimum_size = Vector2(150, 38)
-		b.button_pressed = String(t[0]) == _tab
-		var id := String(t[0])
-		b.pressed.connect(func() -> void:
-			hud.click()
-			_tab = id
-			for k in _set_tabs: _set_tabs[k].set_pressed_no_signal(k == id)
-			_fill_settings())
-		_set_tabs[id] = b; tabs.add_child(b)
-	v.add_child(tabs)
-	var sc := ScrollContainer.new(); sc.size_flags_vertical = Control.SIZE_EXPAND_FILL; sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_set_body = VBoxContainer.new(); _set_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL; _set_body.add_theme_constant_override("separation", 2)
-	sc.add_child(_set_body); v.add_child(sc)
-	var foot := HBoxContainer.new()
-	var reset := func() -> void:
-		Settings.reset()
-		_fill_settings()
-	foot.add_child(hud.button("Reset to defaults", reset, 210.0))
-	foot.add_child(UiKit.spacer(0, 0, true))
-	var back := _big_button("Back", func() -> void: _show_page(""), true); back.custom_minimum_size = Vector2(160, 38)
-	foot.add_child(back)
-	v.add_child(foot)
-	_fill_settings()
-
-func _fill_settings() -> void:
-	for c in _set_body.get_children():
-		c.queue_free()
-	match _tab:
-		"game":
-			_slider("Field of view", "How wide you see. Wider shows more and distorts the edges.", "fov", 60.0, 100.0, 1.0, func(x: float) -> String: return "%d°" % int(x))
-			_slider("Mouse sensitivity", "", "mouse_sens", 0.3, 2.5, 0.05, func(x: float) -> String: return "×%.2f" % x)
-			_check("Invert vertical look", "", "invert_y")
-			_check("Head bob", "The camera moves with your steps.", "head_bob")
-			_choice("Length of a day", "Real minutes for one day and night.", "day_len", [[16.0, "16"], [24.0, "24"], [36.0, "36"], [48.0, "48"], [72.0, "72"]], 62.0)
-			_check("Minimap", "A small map in the corner of the screen.", "minimap")
-			_check("Minimap turns with you", "Off keeps north at the top.", "minimap_rotate")
-		"graphics":
-			var seg := UiKit.Segmented.new([["low", "Low"], ["medium", "Medium"], ["high", "High"], ["ultra", "Ultra"]], String(Settings.v("quality")), 90.0)
-			seg.picked.connect(func(val) -> void:
-				hud.click()
-				Settings.apply_preset(String(val))
-				_fill_settings())
-			_row("Quality", "Sets everything below at once." if Settings.matches_preset() else "Changed by hand since the preset was chosen.", seg)
-			_slider("Render scale", "Draws the world at a lower resolution to gain speed. The interface stays sharp.", "render_scale", 0.5, 1.0, 0.05, func(x: float) -> String: return "%d%%" % int(round(x * 100.0)))
-			_check("Shadows", "", "shadows")
-			_check("Global illumination", "Bounced light. Needs the Forward+ renderer.", "gi")
-			_check("Volumetric fog", "Light shafts and mist with depth.", "volumetric_fog")
-			_slider("Grass density", "", "grass", 0.25, 1.5, 0.05, func(x: float) -> String: return "%d%%" % int(round(x * 100.0)))
-			_check("V-sync", "Matches frames to the screen; removes tearing.", "vsync")
-			_check("Fullscreen", "", "fullscreen")
-		"audio":
-			for e in [["Master volume", "master_vol"], ["Music", "music_vol"], ["Effects", "sfx_vol"]]:
-				_slider(String(e[0]), "", String(e[1]), 0.0, 1.0, 0.05, func(x: float) -> String: return "%d%%" % int(round(x * 100.0)))
-		"controls":
-			var grid := GridContainer.new(); grid.columns = 2; grid.add_theme_constant_override("h_separation", 40); grid.add_theme_constant_override("v_separation", 0)
-			grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			for e in CONTROLS:
-				var r := HBoxContainer.new(); r.custom_minimum_size = Vector2(430, 40); r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				var l := UiKit.body(String(e[0]), 15, UiTheme.INK); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				r.add_child(l)
-				for part in String(e[1]).split(" ", false):
-					if part == "–":
-						var dash := UiKit.body("to", 13, UiTheme.FAINT); dash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-						r.add_child(dash)
-					else:
-						r.add_child(UiKit.KeyCap.new(part, 13))
-				var wrap := VBoxContainer.new(); wrap.add_theme_constant_override("separation", 0); wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				wrap.add_child(r)
-				var line := ColorRect.new(); line.color = Color(1, 1, 1, 0.05); line.custom_minimum_size = Vector2(0, 1)
-				wrap.add_child(line)
-				grid.add_child(wrap)
-			_set_body.add_child(grid)
-			var note := UiKit.body("Keys cannot be rebound yet.", 13, UiTheme.FAINT)
-			_set_body.add_child(UiKit.spacer(8)); _set_body.add_child(note)
-
-func _row(title: String, hint: String, control: Control, value: Label = null) -> void:
-	var r := HBoxContainer.new(); r.custom_minimum_size = Vector2(0, 52); r.add_theme_constant_override("separation", 14)
-	var tv := VBoxContainer.new(); tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; tv.alignment = BoxContainer.ALIGNMENT_CENTER
-	tv.add_theme_constant_override("separation", 0)
-	tv.add_child(UiKit.body(title, 16, UiTheme.INK))
-	if hint != "":
-		tv.add_child(UiKit.body(hint, 13, UiTheme.FAINT))
-	r.add_child(tv)
-	control.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	r.add_child(control)
-	if value != null:
-		value.custom_minimum_size = Vector2(64, 0); value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		value.add_theme_font_override("font", UiTheme.font("num"))
-		r.add_child(value)
-	else:
-		r.add_child(UiKit.spacer(0, 64))
-	_set_body.add_child(r)
-	var line := ColorRect.new(); line.color = Color(1, 1, 1, 0.05); line.custom_minimum_size = Vector2(0, 1); line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_set_body.add_child(line)
-
-func _slider(title: String, hint: String, key: String, lo: float, hi: float, step: float, fmt: Callable) -> void:
-	var s := HSlider.new(); s.min_value = lo; s.max_value = hi; s.step = step; s.custom_minimum_size = Vector2(360, 24)
-	s.value = float(Settings.v(key))
-	var val := UiKit.body(String(fmt.call(s.value)), 15, UiTheme.INK)
-	s.value_changed.connect(func(x: float) -> void:
-		Settings.set_value(key, x)
-		val.text = String(fmt.call(x)))
-	_row(title, hint, s, val)
-
-func _check(title: String, hint: String, key: String) -> void:
-	var c := CheckBox.new(); c.button_pressed = bool(Settings.v(key))
-	c.toggled.connect(func(on: bool) -> void:
-		hud.click()
-		Settings.set_value(key, on))
-	var holder := HBoxContainer.new(); holder.custom_minimum_size = Vector2(360, 0); holder.alignment = BoxContainer.ALIGNMENT_END
-	holder.add_child(c)
-	_row(title, hint, holder)
-
-func _choice(title: String, hint: String, key: String, options: Array, w: float) -> void:
-	var seg := UiKit.Segmented.new(options, Settings.v(key), w)
-	seg.picked.connect(func(val) -> void:
-		hud.click()
-		Settings.set_value(key, val))
-	var holder := HBoxContainer.new(); holder.custom_minimum_size = Vector2(360, 0); holder.alignment = BoxContainer.ALIGNMENT_END
-	holder.add_child(seg)
-	_row(title, hint, holder)
+	var v := _framed("Settings", 1240.0, 720.0)
+	hud.settings.build(v, _win, func() -> void: _show_page(""))
 
 # ------------------------------------------------------------------ character creation
 func _begin_create() -> void:
@@ -466,7 +341,7 @@ func _page_create() -> void:
 	left.add_child(UiKit.caption("Occupation — what you did before", UiTheme.DIM, 12))
 	var group := ButtonGroup.new()
 	for o in data().get("occupations", []):
-		var card := Card.new(String(o.name), String(o.desc), "%+d" % int(o.points) if int(o.points) != 0 else "0", UiTheme.GOOD if int(o.points) > 0 else (UiTheme.BAD if int(o.points) < 0 else UiTheme.DIM), 58.0)
+		var card := Card.new(String(o.name), String(o.desc), "%+d" % int(o.points) if int(o.points) != 0 else "0", UiTheme.good() if int(o.points) > 0 else (UiTheme.bad() if int(o.points) < 0 else UiTheme.DIM), 58.0)
 		card.button_group = group; card.button_pressed = String(o.id) == _occ
 		var oid := String(o.id)
 		card.pressed.connect(func() -> void:
@@ -482,7 +357,7 @@ func _page_create() -> void:
 	th.add_child(UiKit.caption("Traits — good ones cost points, flaws pay for them", UiTheme.DIM, 12))
 	th.add_child(UiKit.spacer(0, 0, true))
 	th.add_child(UiKit.caption("Points left", UiTheme.DIM, 12))
-	_c_points = UiKit.heading("0", 26, UiTheme.GOOD); _c_points.add_theme_font_override("font", UiTheme.font("num"))
+	_c_points = UiKit.heading("0", 26, UiTheme.good()); _c_points.add_theme_font_override("font", UiTheme.font("num"))
 	_c_points.custom_minimum_size = Vector2(48, 0); _c_points.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	th.add_child(_c_points)
 	mid.add_child(th)
@@ -491,7 +366,7 @@ func _page_create() -> void:
 	var bad := VBoxContainer.new(); bad.size_flags_horizontal = Control.SIZE_EXPAND_FILL; bad.add_theme_constant_override("separation", 4)
 	for t in data().get("traits", []):
 		var cost := int(t.cost)
-		var tc := Card.new(String(t.name), String(t.desc), ("-%d" % cost) if cost > 0 else ("+%d" % -cost), UiTheme.WARN if cost > 0 else UiTheme.GOOD, 50.0)
+		var tc := Card.new(String(t.name), String(t.desc), ("-%d" % cost) if cost > 0 else ("+%d" % -cost), UiTheme.warn() if cost > 0 else UiTheme.good(), 50.0)
 		tc.button_pressed = _traits.has(String(t.id))
 		var tid := String(t.id)
 		tc.toggled.connect(func(on: bool) -> void:
@@ -510,7 +385,7 @@ func _page_create() -> void:
 	var box := UiKit.Frame.new(Color(1, 1, 1, 0.025), 16.0); box.marks = false; box.grain = 0.0; box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_c_summary = VBoxContainer.new(); _c_summary.add_theme_constant_override("separation", 6)
 	box.add_child(_c_summary); right.add_child(box)
-	_c_note = UiKit.body("", 13, UiTheme.BAD, true); _c_note.custom_minimum_size = Vector2(320, 0)
+	_c_note = UiKit.body("", 13, UiTheme.bad(), true); _c_note.custom_minimum_size = Vector2(320, 0)
 	right.add_child(_c_note)
 	_c_begin = _big_button("Begin — day 1", func() -> void: _begin_game(), true)
 	_c_begin.custom_minimum_size = Vector2(0, 52); _c_begin.add_theme_font_size_override("font_size", 19)
@@ -538,7 +413,7 @@ func _create_update() -> void:
 			b.disabled = off; b.queue_redraw()
 	var pts := points_left()
 	_c_points.text = "%+d" % pts if pts != 0 else "0"
-	_c_points.add_theme_color_override("font_color", UiTheme.BAD if pts < 0 else UiTheme.GOOD)
+	_c_points.add_theme_color_override("font_color", UiTheme.bad() if pts < 0 else UiTheme.good())
 	_c_begin.disabled = pts < 0
 	_c_note.text = "You have spent %d more %s than you have. Drop a trait or take a flaw." % [-pts, "point" if pts == -1 else "points"] if pts < 0 else ""
 	_c_note.visible = pts < 0
@@ -563,7 +438,7 @@ func _create_update() -> void:
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE; ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		var nl := UiKit.body(String(sk.name), 14, UiTheme.INK); nl.custom_minimum_size = Vector2(98, 0)
 		var pips := UiKit.Pips.new(maxi(lv, 0), 0.0, 120.0, 8.0); pips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var num := UiKit.body("%+d" % lv, 14, UiTheme.GOOD if lv > 0 else UiTheme.BAD); num.custom_minimum_size = Vector2(26, 0); num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		var num := UiKit.body("%+d" % lv, 14, UiTheme.good() if lv > 0 else UiTheme.bad()); num.custom_minimum_size = Vector2(26, 0); num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		r.add_child(ic); r.add_child(nl); r.add_child(pips); r.add_child(num)
 		_c_summary.add_child(r)
 	if not any:
@@ -682,11 +557,18 @@ func build_loading() -> Control:
 	c.add_child(col)
 	c.set_meta("bar", bar); c.set_meta("what", what); c.set_meta("pct", pct); c.set_meta("tip", tip)
 	c.set_meta("i", randi() % TIPS.size())
-	tip.text = TIPS[int(c.get_meta("i"))]
+	tip.text = tip_text(int(c.get_meta("i")))
+	c.set_meta("tipc", tipc)
 	c.visible = false
 	return c
 
+## a tip, with the keys it mentions named as they are bound now
+func tip_text(i: int) -> String:
+	return String(TIPS[i % TIPS.size()]).replace("Q treats", Settings.key_name("bandage") + " treats").replace("Press M ", "Press %s " % Settings.key_name("map"))
+
 func set_loading(c: Control, progress: float, text: String) -> void:
+	var tips: bool = Settings.v("tips")
+	(c.get_meta("tip") as Label).visible = tips; (c.get_meta("tipc") as Label).visible = tips
 	(c.get_meta("bar") as UiKit.Meter).set_value(clampf(progress, 0.0, 1.0))
 	(c.get_meta("what") as Label).text = text.to_upper()
 	(c.get_meta("pct") as Label).text = "%d%%" % int(round(clampf(progress, 0.0, 1.0) * 100.0))
@@ -697,7 +579,7 @@ func next_tip(c: Control) -> void:
 	c.set_meta("i", i)
 	var tw := tip.create_tween()
 	tw.tween_property(tip, "modulate:a", 0.0, 0.3)
-	tw.tween_callback(func() -> void: tip.text = TIPS[i])
+	tw.tween_callback(func() -> void: tip.text = tip_text(i))
 	tw.tween_property(tip, "modulate:a", 1.0, 0.3)
 
 # ------------------------------------------------------------------ pieces

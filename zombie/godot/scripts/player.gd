@@ -124,6 +124,14 @@ func protection(slot: String) -> Dictionary:
 	var cl = Items.def(s.id).get("cloth", {})
 	return {"bite": float(cl.get("bite", 0.0)), "scratch": float(cl.get("scratch", 0.0))}
 
+## Is a movement action held? Asks Settings (which knows the player's own key bindings, and whether sprint is a
+## toggle); until Settings can answer, the default physical key.
+static func key_down(action: String, fallback: Key) -> bool:
+	var st = Engine.get_main_loop().root.get_node_or_null("Settings") if Engine.get_main_loop() is SceneTree else null
+	if st != null and st.has_method("key_down"):
+		return bool(st.key_down(action))
+	return Input.is_physical_key_pressed(fallback)
+
 static func damp(a: float, b: float, k: float, dt: float) -> float:
 	return lerpf(a, b, 1.0 - exp(-k * dt))
 
@@ -136,14 +144,14 @@ func update(dt: float, control: bool, now: float) -> void:
 	pitch = clampf(pitch, -1.5, 1.5)
 	var fx := 0.0; var fz := 0.0
 	if control and not sleeping:
-		if Input.is_physical_key_pressed(KEY_W): fz -= 1.0
-		if Input.is_physical_key_pressed(KEY_S): fz += 1.0
-		if Input.is_physical_key_pressed(KEY_A): fx -= 1.0
-		if Input.is_physical_key_pressed(KEY_D): fx += 1.0
+		if key_down("forward", KEY_W): fz -= 1.0
+		if key_down("back", KEY_S): fz += 1.0
+		if key_down("left", KEY_A): fx -= 1.0
+		if key_down("right", KEY_D): fx += 1.0
 	var l := sqrt(fx * fx + fz * fz)
 	if l > 0.0:
 		fx /= l; fz /= l
-	var want_sprint := control and Input.is_physical_key_pressed(KEY_SHIFT) and fz < 0.0 and not crouch and st.can_sprint(wr)
+	var want_sprint := control and key_down("sprint", KEY_SHIFT) and fz < 0.0 and not crouch and st.can_sprint(wr)
 	var scripted := auto_dir.x != 0.0 or auto_dir.z != 0.0
 	if scripted:
 		l = 1.0; want_sprint = auto_sprint and not crouch

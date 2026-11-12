@@ -18,6 +18,12 @@ static func text(ci: CanvasItem, kind: String, pos: Vector2, s: String, size: in
 static func text_w(kind: String, s: String, size: int) -> float:
 	return UiTheme.font(kind).get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
+## a temperature in the unit the player chose (Settings "temp_unit")
+static func temp(celsius: float, decimals := 1) -> String:
+	if String(Settings.v("temp_unit")) == "f":
+		return ("%." + str(decimals) + "f°F") % (celsius * 9.0 / 5.0 + 32.0)
+	return ("%." + str(decimals) + "f°C") % celsius
+
 ## the text, or as much of it as fits in `width` with an ellipsis
 static func fit(kind: String, s: String, size: int, width: float) -> String:
 	var f := UiTheme.font(kind)

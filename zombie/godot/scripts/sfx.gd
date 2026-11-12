@@ -55,7 +55,11 @@ func play(name: String, opts: Dictionary = {}) -> void:
 	var st := _stream(name, randi() % maxi(1, int(def.get("vars", 1))))
 	if st == null:
 		return
-	var vol: float = float(def.get("vol", 1.0)) * float(opts.get("volume", 1.0)) * master
+	# interface clicks and the sounds of the world at large have their own volume sliders
+	var chan := master
+	if name.begins_with("ui_"): chan = float(Settings.v("ui_vol"))
+	elif name.begins_with("amb_") or name == "thunder": chan = float(Settings.v("ambience_vol"))
+	var vol: float = float(def.get("vol", 1.0)) * float(opts.get("volume", 1.0)) * chan
 	var jitter := float(def.get("jitter", 0.0))
 	var pitch: float = float(opts.get("pitch", 1.0)) * (1.0 + randf_range(-jitter, jitter))
 	var db := linear_to_db(clampf(vol, 0.0001, 4.0)) + 6.0

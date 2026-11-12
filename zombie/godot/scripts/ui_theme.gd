@@ -20,6 +20,21 @@ const GOOD := Color(0.56, 0.75, 0.38)
 const BLUE := Color(0.45, 0.67, 0.86)
 const SHADOW := Color(0, 0, 0, 0.6)
 
+## status colours that do not lean on red against green (the "colour-blind-safe" option): blue, yellow, orange
+const CB_GOOD := Color(0.4, 0.7, 0.95)
+const CB_WARN := Color(0.96, 0.84, 0.32)
+const CB_BAD := Color(0.95, 0.5, 0.12)
+static var cb := false
+
+static func good() -> Color:
+	return CB_GOOD if cb else GOOD
+
+static func warn() -> Color:
+	return CB_WARN if cb else WARN
+
+static func bad() -> Color:
+	return CB_BAD if cb else BAD
+
 static var _fonts: Dictionary = {}
 static var _theme: Theme = null
 static var _tex: Dictionary = {}
@@ -72,11 +87,13 @@ static func empty(mx := 0.0, my := 0.0) -> StyleBoxEmpty:
 
 ## the colour of a 0–100 condition: good, worn, failing
 static func condition(pct: float) -> Color:
-	if pct > 60.0: return GOOD
-	if pct > 30.0: return WARN
-	return BAD
+	if pct > 60.0: return good()
+	if pct > 30.0: return warn()
+	return bad()
 
 static func level_color(level: int) -> Color:
+	if cb:
+		return [DIM, Color(0.75, 0.86, 0.95), CB_WARN, CB_BAD, Color(1.0, 0.36, 0.5)][clampi(level, 0, 4)]
 	return [DIM, ACCENT2, WARN, Color(0.95, 0.52, 0.27), BAD][clampi(level, 0, 4)]
 
 # ------------------------------------------------------------------ small generated images

@@ -146,6 +146,15 @@ func _build_water() -> void:
 
 # ------------------------------------------------------------------ exported scenes
 ## instance an exported .glb: real materials, hidden library, and its instanced meshes as MultiMeshes
+var veg_distance := 1.0           # the "vegetation distance" option: scales how far trees, bushes and clutter are drawn
+var _ranged: Array = []
+
+func set_veg_distance(k: float) -> void:
+	veg_distance = clampf(k, 0.3, 1.5)
+	for mmi in _ranged:
+		if is_instance_valid(mmi):
+			mmi.visibility_range_end = float(mmi.get_meta("range_base")) * veg_distance
+
 func spawn_export(path: String, parent: Node3D, cell := 96.0, range_end := 0.0) -> Node3D:
 	var scene: PackedScene = load(path + ".glb")
 	if scene == null:
@@ -214,7 +223,9 @@ func build_multimeshes(parent: Node3D, lib: Node, by_mesh: Dictionary, cell := 9
 			mmi.multimesh = mm
 			mmi.position = centre
 			if range_end > 0.0:
-				mmi.visibility_range_end = range_end + cell * 0.75
+				mmi.visibility_range_end = (range_end + cell * 0.75) * veg_distance
+				mmi.set_meta("range_base", range_end + cell * 0.75)
+				_ranged.append(mmi)
 				mmi.visibility_range_end_margin = 12.0
 				mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 			if shadows.has(mesh_name) and not shadows[mesh_name]:

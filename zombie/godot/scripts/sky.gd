@@ -9,6 +9,7 @@ var sky_mat: ShaderMaterial
 var cloud_time := 0.0
 var wind := 0.3
 var fog_extra := 0.0          # weather adds to the haze
+var view_fog := 0.0           # a shorter view distance closes in with haze rather than a hard edge
 var quality := ""
 var cam_attr: CameraAttributesPractical
 var world_env: WorldEnvironment
@@ -121,7 +122,7 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	env.ambient_light_energy = lerpf(1.1, lerpf(2.1, 2.2, oc), daylight)
 	env.fog_light_color = hor.lerp(top, 0.25)
 	env.fog_light_energy = lerpf(0.4, 0.8, daylight)
-	env.fog_density = lerpf(0.0011, 0.004, oc) + fog_extra
+	env.fog_density = lerpf(0.0011, 0.004, oc) + fog_extra + view_fog
 	env.volumetric_fog_density = (0.004 + oc * 0.012 + fog_extra * 6.0) * lerpf(0.5, 1.0, daylight)
 	env.volumetric_fog_albedo = hor.lerp(Color.WHITE, 0.4)
 	# indoors the sky reaches you only through windows
@@ -130,30 +131,31 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 
 func _process(dt: float) -> void:
 	cloud_time += dt * (0.6 + wind * 2.4)
-	var q := String(Settings.v("quality")) + str(Settings.v("gi")) + str(Settings.v("volumetric_fog")) + str(Settings.v("shadows"))
+	var q := "%s|%s|%s|%s|%s|%s" % [Settings.v("shadow_quality"), Settings.v("ssao"), Settings.v("gi"), Settings.v("volumetric_fog"), Settings.v("bloom"), Settings.v("brightness")]
 	if q != quality:
 		quality = q
 		apply_quality()
 
-## graphics options -> renderer features. Global illumination only on the top preset: it is the costly one.
+## graphics options -> renderer features. Each option is its own switch; the quality preset only sets them.
 func apply_quality() -> void:
-	var lvl := ["low", "medium", "high", "ultra"].find(String(Settings.v("quality")))
-	if lvl < 0: lvl = 2
+	var lvl := clampi(int(float(Settings.v("shadow_quality"))) - 1, 0, 3)       # shadow detail, 0 low … 3 ultra
 	var forward := RenderingServer.get_current_rendering_method() == "forward_plus"
-	env.ssao_enabled = lvl >= 1
-	env.ssil_enabled = lvl >= 3 and forward
-	env.sdfgi_enabled = lvl >= 3 and forward and bool(Settings.v("gi"))
+	var gi := forward and bool(Settings.v("gi"))
+	env.ssao_enabled = forward and bool(Settings.v("ssao"))
+	env.ssil_enabled = gi
+	env.sdfgi_enabled = gi
+	env.adjustment_brightness = clampf(float(Settings.v("brightness")), 0.5, 1.6)
 	env.sdfgi_cascades = 4
 	env.sdfgi_min_cell_size = 0.4
 	env.sdfgi_use_occlusion = true
 	env.sdfgi_energy = 1.0
-	env.volumetric_fog_enabled = lvl >= 2 and forward and bool(Settings.v("volumetric_fog"))
+	env.volumetric_fog_enabled = forward and bool(Settings.v("volumetric_fog"))
 	env.volumetric_fog_length = 160.0
 	env.volumetric_fog_gi_inject = 0.6
 	env.volumetric_fog_anisotropy = 0.55
 	env.volumetric_fog_sky_affect = 0.0
-	env.glow_enabled = lvl >= 1
-	var shadows := bool(Settings.v("shadows"))
+	env.glow_enabled = bool(Settings.v("bloom"))
+	var shadows := float(Settings.v("shadow_quality")) >= 1.0
 	sun.shadow_enabled = shadows
 	moon.shadow_enabled = shadows and lvl >= 2
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if lvl >= 2 else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS

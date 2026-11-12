@@ -156,9 +156,9 @@ func mod_input(ev: InputEvent) -> bool:
 		return false
 	if ev is InputEventKey and ev.pressed and not ev.echo:
 		var k: int = ev.physical_keycode
-		if k == KEY_ESCAPE or k == KEY_F5:
+		if k == KEY_ESCAPE or Settings.is_action(ev, "pause") or Settings.is_action(ev, "save"):
 			return false                       # pausing and saving still work
-		if k == KEY_E or k == KEY_SPACE:
+		if Settings.is_action(ev, "interact") or Settings.is_action(ev, "jump"):
 			wake(false)
 		return true                            # nothing else reaches a sleeper
 	return ev is InputEventMouseButton
@@ -190,7 +190,7 @@ func mod_process(dt: float, _dt_min: float, _ui_open: bool) -> void:
 		_box.visible = p.sleeping
 		_box.modulate.a = clampf(_fade.color.a / 0.92, 0.0, 1.0)
 		if p.sleeping:
-			_sub.text = "Fatigue %d%%   ·   E or Space to get up" % int(round(p.stats.fatigue))
+			_sub.text = "Fatigue %d%%   ·   %s or %s to get up" % [int(round(p.stats.fatigue)), Settings.key_name("interact"), Settings.key_name("jump")]
 
 func _process(_dt: float) -> void:
 	# mod_process stops when the game leaves play (death, the menu): do not leave the dark behind

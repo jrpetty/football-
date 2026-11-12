@@ -97,7 +97,7 @@ func build(v: VBoxContainer, cont) -> void:
 		left.add_child(_list_block(list_c))
 		var take := hud.button("Take all", func() -> void: _take_all(), 150.0)
 		var trow := HBoxContainer.new(); trow.add_child(take); trow.add_child(UiKit.spacer(0, 4))
-		trow.add_child(UiKit.KeyCap.new("R")); left.add_child(trow)
+		trow.add_child(UiKit.KeyCap.new(Settings.key_name("take_all"))); left.add_child(trow)
 	else:
 		_c_lbl = null
 		left.add_child(UiKit.heading("Wearing", 17, UiTheme.INK))
@@ -155,7 +155,7 @@ func build(v: VBoxContainer, cont) -> void:
 	mv.add_child(_rule())
 	var hc := HBoxContainer.new()
 	hc.add_child(UiKit.caption("Hotbar", UiTheme.DIM, 12)); hc.add_child(UiKit.spacer(0, 0, true))
-	hc.add_child(UiKit.caption("click a slot, or press 1–8", UiTheme.FAINT, 11))
+	hc.add_child(UiKit.caption("click a slot, or press its key", UiTheme.FAINT, 11))
 	mv.add_child(hc)
 	strip = HotStrip.new(self); mv.add_child(strip)
 	mid.add_child(mv); cols.add_child(mid)
@@ -167,7 +167,7 @@ func build(v: VBoxContainer, cont) -> void:
 	_w_lbl = UiKit.body("", 14, UiTheme.DIM); _w_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; _w_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_w_lbl.add_theme_font_override("font", UiTheme.font("num"))
 	rh.add_child(_w_lbl); right.add_child(rh)
-	_w_meter = UiKit.Meter.new(100.0, 4.0, UiTheme.GOOD); _w_meter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_w_meter = UiKit.Meter.new(100.0, 4.0, UiTheme.good()); _w_meter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.add_child(_w_meter)
 	list_p = ItemsView.new(self, "p", p.inv)
 	right.add_child(_list_block(list_p))
@@ -175,7 +175,9 @@ func build(v: VBoxContainer, cont) -> void:
 
 	# foot: what the keys do, and whatever you are busy doing
 	var foot := HBoxContainer.new(); foot.add_theme_constant_override("separation", 6)
-	var hints: Array = [["LMB", "Take / store"], ["R", "Take all"], ["1-8", "Hotbar slot"], ["Arrows", "Select"], ["Enter", "Move"], ["Tab", "Close"]] if cont != null else [["LMB", "Use / equip / wear"], ["RMB", "Drop"], ["1-8", "Hotbar slot"], ["Arrows", "Select"], ["Enter", "Use"], ["H", "Health"], ["Tab", "Close"]]
+	var S := Settings
+	var slots := "%s-%s" % [S.key_name("hotbar1"), S.key_name("hotbar8")]
+	var hints: Array = [["LMB", "Take / store"], [S.key_name("take_all"), "Take all"], [slots, "Hotbar slot"], ["Arrows", "Select"], ["Enter", "Move"], [S.key_name("inventory"), "Close"]] if cont != null else [["LMB", "Use / equip / wear"], ["RMB", "Drop"], [slots, "Hotbar slot"], ["Arrows", "Select"], ["Enter", "Use"], [S.key_name("health"), "Health"], [S.key_name("inventory"), "Close"]]
 	for hnt in hints:
 		foot.add_child(UiKit.KeyCap.new(String(hnt[0]), 12))
 		var hl := UiKit.body(String(hnt[1]), 13, UiTheme.DIM); hl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -336,8 +338,8 @@ func tick(dt: float) -> void:
 		_weight = w
 		var cap := p.capacity(); var r := w / maxf(1.0, cap)
 		_w_lbl.text = ("%.1f / %.0f kg" % [w, cap]) + ("   OVERLOADED" if r > 1.0 else "")
-		_w_lbl.add_theme_color_override("font_color", UiTheme.BAD if r > 1.0 else (UiTheme.WARN if r > 0.85 else UiTheme.DIM))
-		_w_meter.set_value(minf(1.0, r), UiTheme.BAD if r > 1.0 else (UiTheme.WARN if r > 0.85 else UiTheme.GOOD))
+		_w_lbl.add_theme_color_override("font_color", UiTheme.bad() if r > 1.0 else (UiTheme.warn() if r > 0.85 else UiTheme.DIM))
+		_w_meter.set_value(minf(1.0, r), UiTheme.bad() if r > 1.0 else (UiTheme.warn() if r > 0.85 else UiTheme.good()))
 		_summary()
 	if _c_lbl != null and hud.container != null:
 		var inv: Inventory = hud.container.inv
@@ -447,9 +449,9 @@ func _stats(s: Dictionary, d: Dictionary, p: Player) -> Array:
 		out.append(["Damage", ("%d × %d" % [int(w.damage), int(w.pellets)]) if w.has("pellets") else str(int(w.damage))])
 		if gun:
 			out.append(["Range", "%d m" % int(w.range)])
-			out.append(["Loaded", "%d of %d" % [int(s.get("ammo", 0)), int(w.mag)], UiTheme.BAD if int(s.get("ammo", 0)) == 0 else UiTheme.INK])
+			out.append(["Loaded", "%d of %d" % [int(s.get("ammo", 0)), int(w.mag)], UiTheme.bad() if int(s.get("ammo", 0)) == 0 else UiTheme.INK])
 			out.append(["Takes", "%s (you carry %d)" % [String(Items.def(String(w.ammo)).name), p.inv.count(String(w.ammo))]])
-			out.append(["Heard from", "%d m" % int(w.noise), UiTheme.WARN])
+			out.append(["Heard from", "%d m" % int(w.noise), UiTheme.warn()])
 		else:
 			out.append(["Reach", "%.1f m" % float(w.range)])
 			out.append(["Speed", "%.1f swings a second" % float(w.speed)])
@@ -469,16 +471,16 @@ func _stats(s: Dictionary, d: Dictionary, p: Player) -> Array:
 		out.append(["Warmth", "%d%%" % int(round(float(c.get("insul", 0.0)) * 100.0))])
 		out.append(["Stops bites", "%d%%" % int(round(float(c.get("bite", 0.0)) * 100.0))])
 		out.append(["Stops scratches", "%d%%" % int(round(float(c.get("scratch", 0.0)) * 100.0))])
-		if float(c.get("capacity", 0.0)) > 0.0: out.append(["Carry", "+%d kg" % int(c.capacity), UiTheme.GOOD])
-	if d.has("hunger"): out.append(["Food", "%+d" % int(d.hunger), UiTheme.GOOD if float(d.hunger) > 0.0 else UiTheme.BAD])
-	if d.has("thirst"): out.append(["Water", "%+d" % int(d.thirst), UiTheme.GOOD if float(d.thirst) > 0.0 else UiTheme.BAD])
+		if float(c.get("capacity", 0.0)) > 0.0: out.append(["Carry", "+%d kg" % int(c.capacity), UiTheme.good()])
+	if d.has("hunger"): out.append(["Food", "%+d" % int(d.hunger), UiTheme.good() if float(d.hunger) > 0.0 else UiTheme.bad()])
+	if d.has("thirst"): out.append(["Water", "%+d" % int(d.thirst), UiTheme.good() if float(d.thirst) > 0.0 else UiTheme.bad()])
 	if float(d.get("mood", 0.0)) != 0.0: out.append(["Mood", "%+d" % int(d.mood)])
 	if d.has("spoilDays"):
 		var left := float(d.spoilDays) - float(s.get("age", 0.0))
 		out.append(["Keeps", ("%.1f more days" % left) if left > 0.0 else "Rotten — it will make you ill", UiTheme.condition(left / float(d.spoilDays) * 100.0)])
 	elif String(d.cat) == "food" or String(d.cat) == "drink":
 		out.append(["Keeps", "Does not spoil"])
-	if float(d.get("sick", 0.0)) > 0.0: out.append(["Risk", "May make you ill", UiTheme.WARN])
+	if float(d.get("sick", 0.0)) > 0.0: out.append(["Risk", "May make you ill", UiTheme.warn()])
 	if d.has("med"): out.append(["Use", String(MED_USE.get(String(d.med), "Medical supply."))])
 	if d.has("skillBook"): out.append(["Use", "Triples what you learn in %s for a day." % String(d.skillBook).capitalize()])
 	if d.has("tools"): out.append(["Works as", ", ".join(PackedStringArray(d.tools)).capitalize()])

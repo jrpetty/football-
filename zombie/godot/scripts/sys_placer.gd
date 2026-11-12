@@ -132,32 +132,33 @@ func input(ev: InputEvent) -> bool:
 	if g.state != "play" or g.player.sleeping:
 		return false
 	var hud = g.hud
-	if ev is InputEventKey and ev.pressed and not ev.echo:
-		var k: int = ev.physical_keycode
-		if k == KEY_B:
-			if hud.is_open():
-				if hud.window_kind == "build":
-					U.close(g)
-					return true
-				if hud.window_kind in ["main", "pause", "dead"]:
-					return false
-			open_menu()
-			return true
+	# every key here is whatever the player bound it to (Settings); Esc always leaves
+	if not ((ev is InputEventKey or ev is InputEventMouseButton) and ev.pressed and not ev.is_echo()):
+		return false
+	var pointer: bool = Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if Settings.is_action(ev, "build") and (ev is InputEventKey or pointer):
 		if hud.is_open():
-			return false
-		if active:
-			if k == KEY_R:
-				rot = (rot + 1) % 4; Sfx.play("ui_click"); return true
-			if k == KEY_X:
-				dismantle = not dismantle; Sfx.play("ui_click")
-				_clear_ghost(); _set_hover(null); _bar_sig = ""
+			if hud.window_kind == "build":
+				U.close(g)
 				return true
-			if k == KEY_ESCAPE:
-				set_active(false); Sfx.play("ui_close"); return true
-	elif ev is InputEventMouseButton and ev.pressed and active and not hud.is_open() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		if ev.button_index == MOUSE_BUTTON_LEFT:
+			if hud.window_kind in ["main", "pause", "dead"]:
+				return false
+		open_menu()
+		return true
+	if hud.is_open() or not active:
+		return false
+	if Settings.is_action(ev, "rotate"):
+		rot = (rot + 1) % 4; Sfx.play("ui_click"); return true
+	if Settings.is_action(ev, "dismantle"):
+		dismantle = not dismantle; Sfx.play("ui_click")
+		_clear_ghost(); _set_hover(null); _bar_sig = ""
+		return true
+	if (ev is InputEventKey and ev.physical_keycode == KEY_ESCAPE) or Settings.is_action(ev, "pause"):
+		set_active(false); Sfx.play("ui_close"); return true
+	if pointer:
+		if Settings.is_action(ev, "attack"):
 			click(); return true
-		if ev.button_index == MOUSE_BUTTON_RIGHT:
+		if Settings.is_action(ev, "aim"):
 			set_active(false); Sfx.play("ui_close"); return true
 	return false
 
@@ -459,11 +460,11 @@ func _update_bar() -> void:
 			line = "%s  ·  %s" % [String(hover.name), why if why != "" else ("gives back " + U.cost_text(build.refund_of(hover)) if not build.free_build else "free build")]
 		var l: Label = hud.label(line, 14); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_bar_box.add_child(l)
-		var hint: Label = hud.label("LMB take down   ·   X back to building   ·   B menu   ·   RMB / Esc leave", 12, Hud.DIM); hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var hint: Label = hud.label("%s take down   ·   %s back to building   ·   %s menu   ·   %s / Esc leave" % [Settings.key_name("attack"), Settings.key_name("dismantle"), Settings.key_name("build"), Settings.key_name("aim")], 12, Hud.DIM); hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_bar_box.add_child(hint)
 		return
 	if selected == "":
-		_bar_box.add_child(hud.label("Pick something from the build menu (B)", 14, Hud.DIM))
+		_bar_box.add_child(hud.label("Pick something from the build menu (%s)" % Settings.key_name("build"), 14, Hud.DIM))
 		return
 	var def: Dictionary = build.defs[selected]
 	var name_l: Label = hud.label(String(def.name), 17); name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -471,11 +472,11 @@ func _update_bar() -> void:
 	var cc := CenterContainer.new(); cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cc.add_child(U.cost_row(hud, inv, U.cost_of(def.cost), 14, true))
 	_bar_box.add_child(cc)
-	var state := "LMB build" if valid else reason
+	var state := (Settings.key_name("attack") + " build") if valid else reason
 	if target.is_empty(): state = "Aim at the ground within reach"
 	var st: Label = hud.label(state, 14, Hud.DIM if target.is_empty() else (Hud.GOOD if valid else Hud.BAD)); st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar_box.add_child(st)
-	var hint2: Label = hud.label("R rotate   ·   X dismantle   ·   B menu   ·   RMB / Esc leave", 12, Hud.DIM); hint2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var hint2: Label = hud.label("%s rotate   ·   %s dismantle   ·   %s menu   ·   %s / Esc leave" % [Settings.key_name("rotate"), Settings.key_name("dismantle"), Settings.key_name("build"), Settings.key_name("aim")], 12, Hud.DIM); hint2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar_box.add_child(hint2)
 
 # ------------------------------------------------------------------ the build menu
@@ -506,7 +507,7 @@ func open_menu() -> void:
 		if ("station" if String(def.kind) == "station" else "structure") != tab:
 			continue
 		grid.add_child(_card(String(id), def))
-	v.add_child(hud.label("Click a piece to carry its plan into the world   ·   there: LMB build · R rotate · X dismantle · RMB leave   ·   B / Esc: close", 12, Hud.DIM))
+	v.add_child(hud.label("Click a piece to carry its plan into the world   ·   there: %s build · %s rotate · %s dismantle · %s leave   ·   %s / Esc: close" % [Settings.key_name("attack"), Settings.key_name("rotate"), Settings.key_name("dismantle"), Settings.key_name("aim"), Settings.key_name("build")], 12, Hud.DIM))
 
 func _card(id: String, def: Dictionary) -> Control:
 	var g = build.game

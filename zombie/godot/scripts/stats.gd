@@ -94,8 +94,9 @@ func update(dt_real: float, dt_h: float, c: Dictionary) -> Array:
 	var fitness: float = c.get("fitness", 0.0)
 	hours_survived += dt_h
 	var sleep_mul := 0.4 if sleeping else 1.0
-	hunger -= dt_h * 3.2 * sleep_mul * (1.0 + exertion * 0.6)
-	thirst -= dt_h * 4.6 * sleep_mul * (1.0 + exertion * 0.8) * (1.5 if body_temp > 37.6 else 1.0)
+	var needs: float = c.get("needs_rate", 1.0)         # the difficulty dial for hunger and thirst
+	hunger -= dt_h * 3.2 * needs * sleep_mul * (1.0 + exertion * 0.6)
+	thirst -= dt_h * 4.6 * needs * sleep_mul * (1.0 + exertion * 0.8) * (1.5 if body_temp > 37.6 else 1.0)
 	if sleeping:
 		fatigue -= dt_h * (9.0 if tr.has("insomniac") else 13.0)
 	else:

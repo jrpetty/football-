@@ -315,7 +315,7 @@ class View extends Control:
 		for cpos in chasers:
 			var cs := to_screen(cpos)
 			draw_circle(cs, 2.6, Color(0, 0, 0, 0.6), true, -1.0, true)
-			draw_circle(cs, 1.8, UiTheme.BAD, true, -1.0, true)
+			draw_circle(cs, 1.8, UiTheme.bad(), true, -1.0, true)
 		# you
 		var ps := to_screen(player)
 		var rot := 0.0001 if turn else -yaw + 0.0001

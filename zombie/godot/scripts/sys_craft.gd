@@ -103,7 +103,7 @@ func craft(r: Dictionary, at := "hand", fire = null) -> bool:
 func mod_input(ev: InputEvent) -> bool:
 	if game.state != "play" or game.player.sleeping:
 		return false
-	if ev is InputEventKey and ev.pressed and not ev.echo and ev.physical_keycode == KEY_N:
+	if (ev is InputEventKey or ev is InputEventMouseButton) and ev.pressed and not ev.is_echo() and Settings.is_action(ev, "craft"):
 		var hud = game.hud
 		if hud.is_open():
 			if hud.window_kind == "craft":
@@ -198,7 +198,7 @@ func _build_window(sound: bool) -> void:
 	if show != null:
 		_show(show)
 	var foot := HBoxContainer.new(); foot.add_theme_constant_override("separation", 12)
-	var hint: Label = hud.label("Click a recipe to make it   ·   N / Esc: close", 12, Hud.DIM); hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hint: Label = hud.label("Click a recipe to make it   ·   %s / Esc: close" % Settings.key_name("craft"), 12, Hud.DIM); hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(hint)
 	_bar_lbl = hud.label("", 13); _bar_lbl.visible = false
 	_bar = hud._bar(Hud.ACCENT, 240.0, 8.0); _bar.visible = false; _bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER

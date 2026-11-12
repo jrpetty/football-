@@ -61,7 +61,7 @@ class Compass extends Control:
 			var x2 := half + rel * PX
 			if x2 > 4.0 and x2 < size.x - 4.0:
 				var a2 := threats[i + 1] * (1.0 - pow(absf(x2 - half) / half, 3.0))
-				draw_rect(Rect2(x2 - 2.0, base_y + 3.0, 4.0, 5.0), Color(UiTheme.BAD, a2))
+				draw_rect(Rect2(x2 - 2.0, base_y + 3.0, 4.0, 5.0), Color(UiTheme.bad(), a2))
 			i += 2
 		# places: on the line, or pinned to the end you should turn towards
 		for m in marks:
@@ -99,7 +99,7 @@ class Stealth extends Control:
 			queue_redraw()
 
 	func _draw() -> void:
-		var col: Color = [UiTheme.INK, UiTheme.WARN, UiTheme.BAD][state]
+		var col: Color = [UiTheme.INK, UiTheme.warn(), UiTheme.bad()][state]
 		var cx := size.x * 0.5
 		var open := clampf((vis - 0.3) / 0.75, 0.12, 1.0)
 		UiKit.eye(self, Rect2(cx - 15.0, 3.0, 30.0, 18.0), open if state == 0 else 1.0, Color(0, 0, 0, 0.5), 4.0)
@@ -125,8 +125,16 @@ class Crosshair extends Control:
 	var hit_t := 0.0
 	var hit_kill := false
 	var reload := -1.0                   # 0–1 while reloading
+	var style := 0                       # the "crosshair" option: 0 full · 1 dot · 2 off
+	var tint := Color.WHITE
+	var steady_dot := false              # the "centre dot" comfort option: always there, never moves
+	var show_hits := true
 	var _sig := -1
 	var _hit_shown := false
+
+	func restyle(style_: int, tint_: Color, dot: bool, hits: bool) -> void:
+		style = style_; tint = tint_; steady_dot = dot; show_hits = hits
+		queue_redraw()
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -139,28 +147,33 @@ class Crosshair extends Control:
 			queue_redraw()
 
 	func _draw() -> void:
-		var ink := Color(1, 1, 1, 0.88)
+		var ink := Color(tint, 0.9)
 		var edge := Color(0, 0, 0, 0.45)
-		if mode == 2:
+		if style == 2:
+			pass
+		elif mode == 2:
 			draw_arc(Vector2.ZERO, 6.0, 0.0, TAU, 24, edge, 3.0, true)
 			draw_arc(Vector2.ZERO, 6.0, 0.0, TAU, 24, ink, 1.4, true)
 			draw_circle(Vector2.ZERO, 1.4, ink, true, -1.0, true)
 		else:
 			var a := 1.0 - ads * 0.85
-			if mode == 1 and a > 0.03:
+			if mode == 1 and a > 0.03 and style == 0:
 				var g := 6.0 + spread
 				for dir in ARMS:
 					draw_line(dir * (g - 1.0), dir * (g + 8.0), Color(edge, edge.a * a), 3.6)
 					draw_line(dir * g, dir * (g + 7.0), Color(ink, ink.a * a), 1.6)
 			draw_circle(Vector2.ZERO, 2.4, edge, true, -1.0, true)
 			draw_circle(Vector2.ZERO, 1.5, ink, true, -1.0, true)
+		if steady_dot:
+			draw_circle(Vector2.ZERO, 3.2, Color(0, 0, 0, 0.55), true, -1.0, true)
+			draw_circle(Vector2.ZERO, 2.2, Color(tint, 1.0), true, -1.0, true)
 		if reload >= 0.0:
 			draw_arc(Vector2.ZERO, 16.0, -PI * 0.5, -PI * 0.5 + TAU, 40, Color(0, 0, 0, 0.3), 3.0, true)
 			draw_arc(Vector2.ZERO, 16.0, -PI * 0.5, -PI * 0.5 + TAU * clampf(reload, 0.0, 1.0), 40, UiTheme.ACCENT2, 2.0, true)
-		if hit_t > 0.0:
+		if hit_t > 0.0 and show_hits:
 			var life := 0.45 if hit_kill else 0.22
 			var k := 1.0 - hit_t / life
-			var c := Color(UiTheme.BAD if hit_kill else Color.WHITE, minf(1.0, hit_t / life * 2.0))
+			var c := Color(UiTheme.bad() if hit_kill else Color.WHITE, minf(1.0, hit_t / life * 2.0))
 			var r := (9.0 if hit_kill else 7.0) + k * 6.0
 			var l := 9.0 if hit_kill else 6.0
 			for dv in DIAG:
@@ -245,7 +258,7 @@ void fragment() {
 		material = m
 		visible = false
 
-	func update(dt: float, flash: float, low: float, bleed: float) -> void:
+	func update(dt: float, flash: float, low: float, bleed: float, calm := false) -> void:
 		var on := flash > 0.004 or low > 0.004 or bleed > 0.004
 		if on != visible:
 			visible = on
@@ -254,6 +267,8 @@ void fragment() {
 		# a heartbeat: two quick thumps, a rest; quicker the worse things are
 		_phase = fmod(_phase + dt * (1.1 + low * 0.9), 1.0)
 		var b := maxf(exp(-pow((_phase - 0.08) * 14.0, 2.0)), 0.7 * exp(-pow((_phase - 0.3) * 14.0, 2.0)))
+		if calm:
+			b = 0.4                             # "reduce flashing": the edge holds steady instead of beating
 		var m: ShaderMaterial = material
 		if absf(flash - _flash) > 0.003: _flash = flash; m.set_shader_parameter("flash", flash)
 		if absf(low - _low) > 0.003: _low = low; m.set_shader_parameter("low", low)
@@ -291,6 +306,7 @@ class Backdrop extends Control:
 # ------------------------------------------------------------------ vitals
 class Vitals extends Control:
 	const ROWS := [["heart", Color(0.8, 0.27, 0.22)], ["bolt", Color(0.66, 0.76, 0.36)], ["food", Color(0.88, 0.62, 0.26)], ["drop", Color(0.4, 0.64, 0.86)]]
+	const CB_ROWS := [Color(0.95, 0.5, 0.12), Color(0.4, 0.7, 0.95), Color(0.96, 0.84, 0.32), Color(0.62, 0.56, 0.9)]
 	var vals := PackedFloat32Array([100, 100, 100, 100])
 	var cap := 1.0                       # how much of the stamina bar tiredness leaves you
 	var _txt: Array = ["100", "100", "100", "100"]
@@ -327,11 +343,11 @@ class Vitals extends Control:
 			var h := 8.0 if i == 0 else 5.0
 			var v := vals[i]
 			var crit := (i == 0 and v < 30.0) or (i >= 2 and v < 12.0)
-			var col: Color = ROWS[i][1]
+			var col: Color = (CB_ROWS[i] if UiTheme.cb else ROWS[i][1])
 			var ink := UiTheme.INK
 			if crit:
-				ink = UiTheme.BAD.lerp(UiTheme.INK, pulse * 0.6)
-				col = col.lerp(UiTheme.BAD, 0.5)
+				ink = UiTheme.bad().lerp(UiTheme.INK, pulse * 0.6)
+				col = col.lerp(UiTheme.bad(), 0.5)
 			var gy := y + (2.0 if i == 0 else 0.0)
 			UiKit.glyph(self, "food" if i == 2 else String(ROWS[i][0]), Rect2(1.0, gy + 1.0, 16.0, 16.0), Color(0, 0, 0, 0.5))
 			UiKit.glyph(self, "food" if i == 2 else String(ROWS[i][0]), Rect2(0.0, gy, 16.0, 16.0), ink)
@@ -402,7 +418,7 @@ class Hotbar extends Control:
 			if float(sl.dur) >= 0.0:
 				UiKit.bar(self, Rect2(r.position + Vector2(5, SLOT - 7), Vector2(SLOT - 10, 3)), float(sl.dur), UiTheme.condition(float(sl.dur) * 100.0), Color(0, 0, 0, 0.6))
 			if int(sl.ammo) >= 0:
-				UiKit.text(self, "num", r.position + Vector2(0, SLOT - 26), str(int(sl.ammo)), 13, UiTheme.INK if int(sl.ammo) > 0 else UiTheme.BAD, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 5)
+				UiKit.text(self, "num", r.position + Vector2(0, SLOT - 26), str(int(sl.ammo)), 13, UiTheme.INK if int(sl.ammo) > 0 else UiTheme.bad(), HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 5)
 			elif int(sl.n) > 1:
 				UiKit.text(self, "num", r.position + Vector2(0, SLOT - 24), str(int(sl.n)), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 5)
 
@@ -435,8 +451,8 @@ class Weapon extends Control:
 			if sig == _sig: return
 			_sig = sig
 			title = String(d.name).to_upper(); big = str(mag); small = "/ %d" % res; frac = -1.0
-			big_col = UiTheme.BAD if mag == 0 else (UiTheme.WARN if mag * 4 <= int(w.mag) else UiTheme.INK)
-			hint = "RELOADING" if reloading else ("R  RELOAD" if mag == 0 and res > 0 else ("NO AMMUNITION" if mag == 0 else ""))
+			big_col = UiTheme.bad() if mag == 0 else (UiTheme.warn() if mag * 4 <= int(w.mag) else UiTheme.INK)
+			hint = "RELOADING" if reloading else ((Settings.key_name("reload").to_upper() + "  RELOAD") if mag == 0 and res > 0 else ("NO AMMUNITION" if mag == 0 else ""))
 		else:
 			var pct := -1.0
 			if d.get("light", false): pct = float(es.get("dur", 0.0))

@@ -97,6 +97,7 @@ func _run() -> void:
 	map_lib = load("res://scripts/ui_map.gd"); items_lib = load("res://scripts/items.gd")
 	var hud = game.hud
 	var settings: Node = root.get_node("Settings")
+	settings.persist = false                  # nothing done here reaches the player's settings file
 	if checks:
 		await _checks(hud, settings)
 		return
@@ -141,11 +142,9 @@ func _run() -> void:
 		hud.menus._traits = {}
 		hud.menus._show_page("")
 	if want("settings"):
-		for t in ["game", "graphics", "audio", "controls"]:
-			hud.menus._tab = t
-			hud.menus._show_page("settings")
-			await shot("settings_" + t, 0.4)
-		hud.menus._tab = "game"
+		hud.settings.tab = "game"
+		hud.menus._show_page("settings")
+		await shot("menu_settings", 0.4)
 		hud.menus._show_page("")
 
 	# into play
@@ -268,6 +267,48 @@ func _run() -> void:
 			m.view.center = Vector2(-70, -40); m.view.zoom = 3.4; m.view.queue_redraw()
 			await shot("map_close", 0.3)
 			game._resume()
+	if want("tabs"):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		for t in ["craft", "build"]:
+			hud.open_tab(t)
+			await shot("tab_" + t, 0.5)
+		game._resume()
+	if want("settings"):
+		# every settings page, reached from the in-game tab
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		hud.open_tab("settings")
+		for t in ["game", "interface", "display", "audio", "controls", "comfort"]:
+			hud.settings.show_tab(t)
+			await shot("settings_" + t, 0.4)
+			if t == "display" or t == "controls":
+				hud.settings._scroll.scroll_vertical = 560
+				await shot("settings_%s_2" % t, 0.3)
+			if t == "controls":
+				hud.settings._scroll.scroll_vertical = 1250
+				await shot("settings_controls_3", 0.3)
+		# a key waiting to be pressed, and a clash waiting for an answer
+		hud.settings.show_tab("controls")
+		hud.settings._capture = {"action": "jump", "slot": 1}
+		hud.settings._pending = {"action": "interact", "slot": 0, "code": KEY_F, "clash": ["flashlight"]}
+		hud.settings._fill()
+		await wait(0.1)
+		hud.settings._scroll.scroll_vertical = 640
+		await shot("settings_rebind", 0.3)
+		hud.settings._capture = {}; hud.settings._pending = {}
+		hud.settings.show_tab("display")
+		hud.settings._display_change("window_mode", "borderless")
+		await shot("settings_keep", 0.4)
+		hud.settings._revert_display()
+		hud.settings.show_tab("game")
+		# what some of the options look like in play
+		game._resume()
+		settings.values["colorblind"] = true; settings.changed.emit("colorblind")
+		settings.values["hud_scale"] = 1.25; settings.changed.emit("hud_scale")
+		settings.values["crosshair_color"] = "cyan"; settings.values["center_dot"] = true; settings.values["temp_unit"] = "f"
+		settings.changed.emit("crosshair_color"); settings.changed.emit("temp_unit")
+		await shot("hud_options", 0.8)
+		for k in ["colorblind", "hud_scale", "crosshair_color", "center_dot", "temp_unit"]:
+			settings.values[k] = settings.DEFAULTS[k]; settings.changed.emit(k)
 	if want("north"):
 		settings.values["minimap_rotate"] = false; settings.changed.emit("minimap_rotate")
 		await shot("hud_north_up", 0.5)
@@ -276,8 +317,9 @@ func _run() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		hud.show_menu("pause")
 		await shot("pause", 0.5)
-		hud.menus._tab = "graphics"; hud.menus._show_page("settings")
+		hud.settings.tab = "display"; hud.menus._show_page("settings")
 		await shot("pause_settings", 0.4)
+		hud.settings.tab = "game"
 		hud.menus._show_page("")
 		game._resume()
 	if want("continue"):
@@ -316,18 +358,24 @@ func mouse(c: Control, pos: Vector2, button := 0) -> void:
 
 func _checks(hud, settings) -> void:
 	var before: Dictionary = settings.values.duplicate()
+	settings.reset(); settings.reset_bindings()
 	ok("main menu is up", hud.window_kind == "main" and game.state == "menu")
 	hud.menus._show_page("settings")
 	await wait(0.1)
-	ok("settings page opens", hud.menus.page == "settings" and hud.menus._set_body.get_child_count() > 4)
+	ok("settings page opens", hud.menus.page == "settings" and hud.settings._body.get_child_count() > 4)
 	settings.set_value("fov", 88.0)
 	ok("a setting is stored", float(settings.v("fov")) == 88.0)
 	settings.apply_preset("low")
-	ok("preset sets its options", String(settings.v("quality")) == "low" and not bool(settings.v("shadows")) and settings.matches_preset())
-	settings.set_value("shadows", true)
+	ok("preset sets its options", String(settings.v("quality")) == "low" and float(settings.v("shadow_quality")) == 1.0 and not bool(settings.v("bloom")) and settings.matches_preset())
+	settings.set_value("bloom", true)
 	ok("a hand change is noticed", not settings.matches_preset())
 	settings.reset()
 	ok("reset restores defaults", float(settings.v("fov")) == 75.0 and String(settings.v("quality")) == "high" and settings.matches_preset())
+	for t in ["game", "interface", "display", "audio", "controls", "comfort"]:
+		hud.settings.show_tab(t)
+		await wait(0.05)
+		ok("settings page: " + t, hud.settings._body.get_child_count() > 6, str(hud.settings._body.get_child_count()))
+	hud.settings.show_tab("game")
 	key(KEY_ESCAPE)
 	ok("Esc steps back to the menu", hud.menus.page == "" and hud.window_kind == "main")
 	# character creation → play
@@ -476,11 +524,13 @@ func _checks(hud, settings) -> void:
 	key(KEY_ESCAPE)
 	await wait(0.1)
 	ok("Esc pauses", hud.window_kind == "pause")
+	ok("the simulation is paused", game.paused)
 	hud.menus._show_page("settings")
 	key(KEY_ESCAPE)
 	ok("Esc leaves settings, not the pause menu", hud.window_kind == "pause" and hud.menus.page == "")
 	key(KEY_ESCAPE)
 	ok("Esc resumes", hud.window == null)
+	await _settings_checks(hud, settings, p)
 	# a minute of play with everything live, for errors
 	p.equipped = int(p.inv.find("bat").uid)
 	for i in 3: game.zombies.spawn(p.pos.x + 6.0 + i, p.pos.z + 2.0, 0)
@@ -499,10 +549,208 @@ func _checks(hud, settings) -> void:
 		await wait(0.1)
 	ok("a new survivor can start from the death screen", game.state == "play" and hud.play.visible and game.player.occupation == "unemployed")
 	for k in before: settings.values[k] = before[k]
-	settings.save()
+	settings.reset_bindings()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(game.SAVE_PATH))
 	print("UI CHECK ", "OK" if fails == 0 else "FAILED (%d)" % fails)
 	quit(0 if fails == 0 else 1)
 
 func Items_def(id) -> Dictionary:
 	return items_lib.def(String(id))
+
+func press(ev_code: int) -> void:
+	# a key (positive) or a mouse button (negative), as Settings codes them
+	if ev_code > 0:
+		key(ev_code)
+	else:
+		var ev := InputEventMouseButton.new(); ev.button_index = -ev_code; ev.pressed = true; ev.position = Vector2(5, 5)
+		root.push_input(ev)
+
+func _settings_checks(hud, settings, p) -> void:
+	var S = settings
+	# ---- the binding API
+	ok("defaults are today's keys", S.key_name("interact") == "E" and S.key_name("attack") == "LMB" and S.key_name("inventory") == "Tab" and S.key_name("pause") == "Esc" and S.key_name("hotbar3") == "3")
+	var ev := InputEventKey.new(); ev.physical_keycode = KEY_I; ev.pressed = true
+	ok("is_action matches either slot", S.is_action(ev, "inventory") and not S.is_action(ev, "health") and S.hotbar_index(ev) == -1)
+	ok("a clash is found", S.conflicts("interact", KEY_F) == ["flashlight"])
+	ok("keys that never apply at once may be shared", S.conflicts("rotate", KEY_R).is_empty() and S.conflicts("take_all", KEY_R).is_empty())
+	ok("binding without stealing changes nothing on a clash", S.set_binding("interact", 0, KEY_F, false) == ["flashlight"] and S.key_name("interact") == "E")
+	S.set_binding("interact", 0, KEY_F, true)
+	ok("binding with stealing takes the key", S.key_name("interact") == "F" and S.key_name("flashlight") == "" and not S.is_default_binding("flashlight"))
+	S.reset_binding("flashlight")
+	ok("resetting a row takes its key back", S.key_name("flashlight") == "F" and S.key_name("interact") == "")
+	S.reset_bindings()
+	ok("reset all", S.key_name("interact") == "E" and S.is_default_binding("flashlight"))
+	# ---- rebinding through the page, and the game following it
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	hud.open_tab("settings")
+	await wait(0.1)
+	ok("the Settings tab opens in play", hud.window_kind == "settings" and hud.settings._built and game.state == "play")
+	hud.settings.show_tab("controls")
+	await wait(0.05)
+	var bind_btn: Button = null
+	for b in hud.window.find_children("*", "Button", true, false):
+		if b.has_meta("bind") and b.get_meta("bind") == ["map", 0]: bind_btn = b
+	ok("the map row shows its key", bind_btn != null)
+	if bind_btn != null:
+		bind_btn.pressed.emit()
+		ok("clicking a key waits for the next press", hud.settings.capturing())
+		key(KEY_G)
+		ok("the next key becomes the binding", S.key_name("map") == "G" and not hud.settings.capturing() and hud.window_kind == "settings")
+	hud.settings._capture = {"action": "craft", "slot": 0}
+	key(KEY_G)
+	ok("a clash asks before taking the key", S.key_name("craft") == "N" and hud.settings._pending.get("action", "") == "craft" and S.key_name("map") == "G")
+	await wait(0.05)
+	var take_btn: Button = null
+	for b in hud.window.find_children("*", "Button", true, false):
+		if (b as Button).text == "USE IT HERE INSTEAD": take_btn = b
+	ok("the clash offers a choice", take_btn != null)
+	if take_btn != null:
+		take_btn.pressed.emit()
+		ok("taking it moves the key", S.key_name("craft") == "G" and S.key_name("map") == "")
+	hud.settings._capture = {"action": "flashlight", "slot": 1}
+	press(-8)
+	ok("a mouse button can be bound", S.binding("flashlight")[1] == -8 and S.code_name(-8) == "Mouse 4")
+	hud.settings._capture = {"action": "flashlight", "slot": 1}
+	key(KEY_BACKSPACE)
+	ok("Backspace clears a slot", S.binding("flashlight")[1] == 0)
+	hud.settings._capture = {"action": "jump", "slot": 0}
+	key(KEY_ESCAPE)
+	ok("Esc cancels without closing the window", S.key_name("jump") == "Space" and hud.window_kind == "settings")
+	S.set_binding("map", 0, KEY_K); S.set_binding("interact", 0, KEY_U); S.set_binding("inventory", 0, KEY_O); S.set_binding("hotbar2", 0, KEY_P)
+	key(KEY_O)
+	await wait(0.1)
+	ok("the new inventory key hops to the inventory", hud.window_kind == "inv")
+	key(KEY_K)
+	await wait(0.1)
+	ok("the new map key opens the map", hud.window_kind == "map")
+	key(KEY_M)
+	ok("the old map key does nothing now", hud.window_kind == "map")
+	key(KEY_K)
+	ok("and the new one closes it", hud.window == null)
+	game.target = {"kind": "door", "locked": false, "open": false}
+	hud.set_prompt("[E]  Open door")
+	ok("prompts show the bound key", hud.prompt.key == "U", hud.prompt.key)
+	var fl0: bool = p.flashlight_on
+	key(KEY_F)
+	ok("an untouched key still works", p.flashlight_on != fl0 or p.inv.find("flashlight") == null)
+	p.hotbar[1] = int(p.inv.find("bat").uid); p.equipped = null
+	key(KEY_P)
+	ok("a rebound hotbar key selects its slot", p.equipped != null and int(p.equipped) == int(p.inv.find("bat").uid))
+	S.reset_bindings()
+	ok("the HUD's tab bar offers crafting, building and settings", true)
+	for t in ["craft", "build", "settings", "health", "inv"]:
+		hud.open_tab(t)
+		await wait(0.1)
+		ok("tab: " + t, hud.window_kind == t, hud.window_kind)
+	game._resume()
+	# ---- hold or toggle
+	S.set_value("toggle_crouch", true); p.crouch = false
+	key(KEY_C)
+	ok("crouch toggles", p.crouch)
+	key(KEY_C)
+	S.set_value("toggle_crouch", false)
+	key(KEY_C)
+	await wait(0.1)
+	ok("crouch as a hold lets go when the key is up", not p.crouch)
+	S.set_value("toggle_crouch", true)
+	S.set_value("toggle_sprint", true)
+	var fwd := InputEventKey.new(); fwd.physical_keycode = KEY_W; fwd.keycode = KEY_W; fwd.pressed = true
+	Input.parse_input_event(fwd); Input.flush_buffered_events()
+	key(KEY_SHIFT)
+	var on1: bool = S.key_down("sprint")
+	key(KEY_SHIFT)
+	var on2: bool = S.key_down("sprint")
+	var fwd_up := InputEventKey.new(); fwd_up.physical_keycode = KEY_W; fwd_up.keycode = KEY_W; fwd_up.pressed = false
+	Input.parse_input_event(fwd_up); Input.flush_buffered_events()
+	ok("sprint as a toggle latches and unlatches", on1 and not on2)
+	S.set_value("toggle_sprint", false)
+	# ---- options the HUD owns
+	S.set_value("hud_scale", 1.2)
+	ok("interface size scales the HUD", absf(hud.play.scale.x - 1.2) < 0.001 and absf(hud.play.size.x * 1.2 - hud.root.size.x) < 1.0)
+	S.set_value("hud_scale", 1.0)
+	S.set_value("show_compass", false); S.set_value("show_objective", false); S.set_value("minimap", false)
+	ok("compass, objective and minimap hide", not hud.compass.visible and not hud.obj_panel.visible and not hud.minimap_frame.visible)
+	S.set_value("show_compass", true); S.set_value("show_objective", true); S.set_value("minimap", true)
+	S.set_value("hud_opacity", 0.5)
+	await wait(0.6)
+	ok("HUD opacity", absf(hud.play.modulate.a - 0.5) < 0.02, str(hud.play.modulate.a))
+	S.set_value("hud_opacity", 1.0)
+	S.set_value("crosshair", "off"); S.set_value("crosshair_color", "cyan"); S.set_value("center_dot", true)
+	ok("crosshair style, colour and centre dot", hud.crosshair.style == 2 and hud.crosshair.tint.b > 0.9 and hud.crosshair.tint.r < 0.6 and hud.crosshair.steady_dot)
+	S.set_value("hit_markers", false)
+	hud.hit_t = 0.0; hud.hitmark(true)
+	ok("hit markers off", hud.hit_t == 0.0)
+	S.set_value("hit_markers", true); S.set_value("crosshair", "full"); S.set_value("crosshair_color", "white"); S.set_value("center_dot", false)
+	S.set_value("temp_unit", "f")
+	await wait(0.3)
+	ok("temperature in Fahrenheit", hud.temp_lbl.text.ends_with("°F"), hud.temp_lbl.text)
+	S.set_value("temp_unit", "c")
+	S.set_value("colorblind", true)
+	ok("colour-blind palette", UiTheme_().cb and UiTheme_().bad().g > 0.45)
+	S.set_value("colorblind", false)
+	S.set_value("reduce_flash", true)
+	hud.flash_a = 0.0; hud.damage_flash(0.6)
+	ok("reduce flashing softens the hit flash", hud.flash_a < 0.25, str(hud.flash_a))
+	S.set_value("reduce_flash", false)
+	S.set_value("tips", false)
+	await wait(0.6)
+	ok("hints off hides the objective's description", hud.obj_desc.text == "")
+	S.set_value("tips", true)
+	# ---- options the world and the renderer own
+	S.set_value("aa", "msaa4"); S.set_value("render_scale", 0.6); S.set_value("view_dist", 0.4); S.set_value("veg_dist", 0.5); S.set_value("aniso", 2.0)
+	S.set_value("film_grain", 1.0); S.set_value("vignette", 0.0); S.set_value("grass", 0.5); S.set_value("fps_cap", 60.0)
+	S.set_value("shadow_quality", 0.0); S.set_value("bloom", false); S.set_value("brightness", 1.2)
+	await wait(0.3)
+	ok("anti-aliasing and render scale reach the viewport", root.msaa_3d == Viewport.MSAA_4X and absf(root.scaling_3d_scale - 0.6) < 0.001 and root.anisotropic_filtering_level == Viewport.ANISOTROPY_2X)
+	ok("view and vegetation distance", game.cam.far < 500.0 and game.sky.view_fog > 0.0 and absf(game.world.veg_distance - 0.5) < 0.001)
+	ok("grass density", game.world.grass == null or game.world.grass.multimesh.visible_instance_count == int(game.world.grass.multimesh.instance_count * 0.5))
+	ok("film grain and vignette reach the picture", absf(float(game.post_mat.get_shader_parameter("grain")) - 0.06) < 0.001 and float(game.post_mat.get_shader_parameter("vignette")) == 0.0)
+	ok("frame cap", Engine.max_fps == 60)
+	ok("shadows, bloom and brightness reach the sky", not game.sky.sun.shadow_enabled and not game.sky.env.glow_enabled and absf(game.sky.env.adjustment_brightness - 1.2) < 0.001)
+	S.reset(S.PAGES.display)
+	await wait(0.3)
+	ok("resetting the page puts them back", root.msaa_3d == Viewport.MSAA_2X and game.cam.far > 1300.0 and Engine.max_fps == 0 and game.sky.sun.shadow_enabled)
+	# ---- difficulty
+	S.apply_preset("hard", "difficulty")
+	ok("difficulty sets its dials", float(S.v("zombie_damage")) == 1.5 and float(S.v("needs_rate")) == 1.35 and S.matches_preset("difficulty"))
+	var st2 = load("res://scripts/stats.gd").new()
+	var st3 = load("res://scripts/stats.gd").new()
+	st2.update(1.0, 1.0, {"needs_rate": 2.0}); st3.update(1.0, 1.0, {})
+	ok("hunger and thirst follow the dial", absf((85.0 - st2.hunger) - 2.0 * (85.0 - st3.hunger)) < 0.01 and st2.thirst < st3.thirst)
+	var n0: int = game.zombies.list.size()
+	game.zombies.clear(); game.zombies.populate(game.world.buildings)
+	var full: int = game.zombies.list.size()
+	game._scale_population(0.5)
+	var thin: int = game.zombies.list.size()
+	game._scale_population(1.5)
+	ok("zombie numbers follow the dial", thin < full * 0.65 and game.zombies.list.size() > thin * 1.3, "%d -> %d -> %d" % [full, thin, game.zombies.list.size()])
+	game.zombies.clear()
+	S.apply_preset("normal", "difficulty")
+	S.set_value("autosave_hours", 1.0)
+	await wait(0.1)
+	ok("a shorter autosave interval takes effect at once", game.autosave_at <= game.game_min + 60.0 + 0.01)
+	S.set_value("autosave_hours", 3.0)
+	# ---- sound
+	S.set_value("master_vol", 0.0)
+	ok("master volume at zero mutes", AudioServer.is_bus_mute(0))
+	S.set_value("master_vol", 0.9)
+	S.notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	var muted: bool = AudioServer.is_bus_mute(0)
+	S.notification(NOTIFICATION_APPLICATION_FOCUS_IN)
+	ok("muted while the window is not in focus", muted and not AudioServer.is_bus_mute(0))
+	# ---- "keep these display settings?"
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	hud.open_tab("settings"); hud.settings.show_tab("display")
+	hud.settings._display_change("window_mode", "borderless")
+	ok("a display change asks to be kept", hud.settings._confirm != null and String(S.v("window_mode")) == "borderless")
+	hud.settings._confirm_t = 0.05
+	await wait(0.3)
+	ok("unanswered, it goes back", hud.settings._confirm == null and String(S.v("window_mode")) == "windowed")
+	hud.settings._display_change("window_size", "1280x720")
+	hud.settings._keep_display()
+	ok("kept, it stays", String(S.v("window_size")) == "1280x720" and hud.settings._confirm == null)
+	S.reset_page("display")
+	game._resume()
+
+func UiTheme_():
+	return load("res://scripts/ui_theme.gd")

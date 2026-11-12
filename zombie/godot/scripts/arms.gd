@@ -20,7 +20,6 @@ const TORSO := {"hoodie": [0x56606b, 0], "leather_jacket": [0x2b211b, 1], "polic
 
 var game
 var show := true
-var debug := false
 var shoulder_r := Vector3(0.21, -0.36, 0.02)
 var shoulder_l := Vector3(-0.21, -0.36, 0.02)
 var hand_scale := 1.0
@@ -95,7 +94,7 @@ func _build() -> bool:
 				vp.append(Vector3(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2])); vn.append(Vector3(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]))
 				for c in 4: vc.append(cus[v * 4 + c])
 			vi.append(remap[v])
-	for side in (0 if OS.get_cmdline_user_args().has("--nohands") else 2):
+	for side in 2:
 		for pose in POSES.size():
 			_hand(vp, vn, vc, vi, side == 1, pose, hand_tag[1 if side == 1 else 0])
 	var arrays := []
@@ -126,10 +125,6 @@ func _build() -> bool:
 	_mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF          # no shadow of floating arms in the world
 	_mmi.name = "Arms"
 	vm.add_child(_mmi)
-	if debug and OS.get_cmdline_user_args().has("--plain"):
-		var mt := StandardMaterial3D.new(); mt.albedo_color = Color(1, 0.5, 0.2); mt.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; mt.cull_mode = BaseMaterial3D.CULL_DISABLED
-		_mmi.material_override = mt
-		for i in 2: mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(0, -1.25, -0.7)))
 	return true
 
 # ------------------------------------------------------------------ hands with fingers
@@ -353,7 +348,7 @@ func _process(dt: float) -> void:
 			# a shove: open hands, palms forward, fingers up
 			rb = Basis(Vector3(0, 1, 0), 0.15) * Basis(Vector3(1, 0, 0), 1.25 + 0.2 * sw) * Basis(Vector3(0, 0, 1), 1.45) * grip_r
 			lb = Basis(Vector3(0, 1, 0), -0.15) * Basis(Vector3(1, 0, 0), 1.25 + 0.2 * sw) * Basis(Vector3(0, 0, 1), -1.45) * grip_r
-			rw += Vector3(-0.04, 0.05, 0.0) * sw; lw += Vector3(0.04, 0.05, 0.0) * sw
+			rw += Vector3(0.07, 0.05, 0.0) * sw; lw += Vector3(-0.07, 0.05, 0.0) * sw          # shoulder width apart
 	else:
 		var grip := Vector3(0.0, 0.0, 0.0)             # where the right hand closes, in the held model's space
 		var fore := Vector3(0.0, 0.0, -0.3)
@@ -401,8 +396,6 @@ func _process(dt: float) -> void:
 		_rw = rw; _rb = rb
 		var kl := 1.0 if two and _two > 0.98 else 1.0 - exp(-dt * 12.0)
 		_lw = _lw.lerp(lw, kl); _lb = Basis(_lb.get_rotation_quaternion().slerp(lb.get_rotation_quaternion(), kl))
-	if debug and Engine.get_process_frames() % 20 == 0:
-		print("arms: tris ", _mmi.multimesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size() / 3, " kind ", kind, " rw ", _rw, " lw ", _lw, " holder ", H.origin, " row0 ", _row.get_pixel(0, 0), " scaleUAR ", _row.get_pixel(18, 0), " vis ", _mmi.is_visible_in_tree())
 	_solve(1, shoulder_r, _rw, _rb, Vector3(0.55, -0.8, 0.25))
 	_solve(0, shoulder_l, _lw, _lb, Vector3(-0.55, -0.8, 0.25))
 	# which hands: the pose in use gets the wrist's transform, the others stay shrunk away
@@ -444,24 +437,20 @@ func _solve(arm: int, shoulder: Vector3, wrist: Vector3, hand: Basis, pole: Vect
 	var uy := (shoulder - elbow).normalized()
 	var fy := (elbow - wrist).normalized()
 	var bend := (wrist - elbow) - uy * (wrist - elbow).dot(uy)
-	var uz := bend.normalized() if bend.length() > 1e-4 else hand.z
-	var ub := Basis(uy.cross(uz).normalized(), uy, uz).orthonormalized()
-	# forearm: twisted half way to the hand, so the wrist does not candy-wrap
+	# forearm: twisted most of the way to the hand, so the wrist does not candy-wrap
 	var hz := hand.z - fy * hand.z.dot(fy)
-	var fz0 := uz - fy * uz.dot(fy)
-	var fz := (fz0.normalized() * 0.4 + (hz.normalized() if hz.length() > 1e-4 else fz0.normalized()) * 0.6).normalized()
+	var hzn := hz.normalized() if hz.length() > 1e-4 else Vector3.UP
+	var bz := bend.normalized() if bend.length() > 1e-4 else hzn
+	var straight := clampf(1.0 - h / 0.12, 0.0, 1.0)             # 1 when the arm is nearly straight
+	var fz0 := bz - fy * bz.dot(fy)
+	var fz := ((fz0.normalized() if fz0.length() > 1e-4 else hzn) * 0.4 * (1.0 - straight) + hzn * (0.6 + 0.4 * straight)).normalized()
 	var fb := Basis(fy.cross(fz).normalized(), fy, fz).orthonormalized()
-	if debug:
-		for k in 3:
-			var nm := "dbg%d%d" % [arm, k]
-			var m: MeshInstance3D = game.vm.get_node_or_null(nm)
-			if m == null:
-				m = MeshInstance3D.new(); m.name = nm
-				var sp := SphereMesh.new(); sp.radius = 0.02; sp.height = 0.04; m.mesh = sp
-				var mt := StandardMaterial3D.new(); mt.albedo_color = Color(1, 0, 0) if k == 0 else Color(0, 1, 0) if k == 1 else Color(0, 0, 1); mt.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-				m.material_override = mt
-				game.vm.add_child(m)
-			m.position = wrist if k == 0 else elbow if k == 1 else shoulder
+	# upper arm: bent toward the forearm; a straight arm has no bend to go by and takes the forearm's twist,
+	# so that the elbow does not pinch
+	var uz0 := fz - uy * fz.dot(uy)
+	var uz := (bz * (1.0 - straight) + (uz0.normalized() if uz0.length() > 1e-4 else bz) * straight).normalized()
+	uz = (uz - uy * uz.dot(uy)).normalized()
+	var ub := Basis(uy.cross(uz).normalized(), uy, uz).orthonormalized()
 	_bone(arm, ua, ub, shoulder)
 	_bone(arm, fa, fb, elbow)
 	_bone(arm, hn, hand.orthonormalized(), wrist)

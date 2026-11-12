@@ -42,7 +42,7 @@ func build(v: VBoxContainer) -> void:
 	left.add_child(UiKit.heading("Body", 17))
 	figure = Figure.new(self); left.add_child(figure)
 	var key := HBoxContainer.new(); key.alignment = BoxContainer.ALIGNMENT_CENTER; key.add_theme_constant_override("separation", 14)
-	for k in [["Sound", UiTheme.GOOD], ["Hurt", UiTheme.WARN], ["Failing", UiTheme.BAD]]:
+	for k in [["Sound", UiTheme.good()], ["Hurt", UiTheme.warn()], ["Failing", UiTheme.bad()]]:
 		var sw := ColorRect.new(); sw.color = k[1]; sw.custom_minimum_size = Vector2(10, 10); sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var kh := HBoxContainer.new(); kh.add_theme_constant_override("separation", 6)
 		kh.add_child(sw); kh.add_child(UiKit.caption(String(k[0]), UiTheme.DIM, 11)); key.add_child(kh)
@@ -58,7 +58,7 @@ func build(v: VBoxContainer) -> void:
 	var tip := UiKit.body("Bandage bleeding wounds immediately. Rags stop bleeding but get dirty — disinfect and re-bandage. Fractures need a splint to heal.", 13, UiTheme.FAINT, true)
 	mid.add_child(tip)
 	var foot := HBoxContainer.new(); foot.add_theme_constant_override("separation", 6)
-	for hnt in [["Q", "Bandage the worst wound"], ["Tab", "Inventory"], ["H", "Close"]]:
+	for hnt in [[Settings.key_name("bandage"), "Bandage the worst wound"], [Settings.key_name("inventory"), "Inventory"], [Settings.key_name("health"), "Close"]]:
 		foot.add_child(UiKit.KeyCap.new(String(hnt[0]), 12))
 		var hl := UiKit.body(String(hnt[1]), 13, UiTheme.DIM); hl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		foot.add_child(hl); foot.add_child(UiKit.spacer(0, 8))
@@ -75,7 +75,7 @@ func build(v: VBoxContainer) -> void:
 		vl.add_theme_font_override("font", UiTheme.font("num"))
 		grid.add_child(kl); grid.add_child(vl); _vals[row[0]] = vl
 	right.add_child(grid)
-	var fb := UiKit.Frame.new(Color(UiTheme.BAD, 0.12), 10.0, Color(UiTheme.BAD, 0.6)); fb.marks = false; fb.grain = 0.0
+	var fb := UiKit.Frame.new(Color(UiTheme.bad(), 0.12), 10.0, Color(UiTheme.bad(), 0.6)); fb.marks = false; fb.grain = 0.0
 	_fever = UiKit.body("", 13, Color(1.0, 0.78, 0.72), true); _fever.custom_minimum_size = Vector2(330, 0)
 	fb.add_child(_fever); fb.visible = false; _fever_box = fb
 	right.add_child(fb)
@@ -135,15 +135,15 @@ func _numbers() -> void:
 	var st := p.stats
 	var hp := st.health()
 	_put("health", "%d%%" % int(round(hp)), UiTheme.condition(hp))
-	_put("blood", "%d%%" % int(round(st.blood_loss)), UiTheme.BAD if st.blood_loss > 30.0 else (UiTheme.WARN if st.blood_loss > 8.0 else UiTheme.INK))
-	_put("pain", str(int(round(st.pain))), UiTheme.WARN if st.pain > 35.0 else UiTheme.INK)
-	_put("panic", str(int(round(st.panic))), UiTheme.WARN if st.panic > 40.0 else UiTheme.INK)
-	_put("temp", "%.1f°C" % st.body_temp, UiTheme.BLUE if st.body_temp < 36.2 else (UiTheme.BAD if st.body_temp > 37.6 else UiTheme.INK))
+	_put("blood", "%d%%" % int(round(st.blood_loss)), UiTheme.bad() if st.blood_loss > 30.0 else (UiTheme.warn() if st.blood_loss > 8.0 else UiTheme.INK))
+	_put("pain", str(int(round(st.pain))), UiTheme.warn() if st.pain > 35.0 else UiTheme.INK)
+	_put("panic", str(int(round(st.panic))), UiTheme.warn() if st.panic > 40.0 else UiTheme.INK)
+	_put("temp", UiKit.temp(st.body_temp), UiTheme.BLUE if st.body_temp < 36.2 else (UiTheme.bad() if st.body_temp > 37.6 else UiTheme.INK))
 	_put("wet", "%d%%" % int(round(st.wetness * 100.0)))
-	_put("sick", str(int(round(st.sickness))), UiTheme.WARN if st.sickness > 15.0 else UiTheme.INK)
+	_put("sick", str(int(round(st.sickness))), UiTheme.warn() if st.sickness > 15.0 else UiTheme.INK)
 	_put("mood", str(int(round(st.unhappy))))
 	_put("insul", str(int(round(p.insulation() * 100.0))))
-	_put("carry", "%.1f / %.0f kg" % [p.weight(), p.capacity()], UiTheme.BAD if p.weight_ratio() > 1.0 else UiTheme.INK)
+	_put("carry", "%.1f / %.0f kg" % [p.weight(), p.capacity()], UiTheme.bad() if p.weight_ratio() > 1.0 else UiTheme.INK)
 	_put("pk", ("%.1f h" % st.painkiller_hrs) if st.painkiller_hrs > 0.0 else "—")
 	_put("ab", ("%.1f h" % st.antibiotic_hrs) if st.antibiotic_hrs > 0.0 else "—")
 	var fever := st.knox_infected and st.knox >= 0.15
@@ -196,7 +196,7 @@ func _wounds() -> void:
 			if w.stitched: desc += " · stitched"
 			if w.splinted: desc += " · splinted"
 			if float(w.infection) > 0.05: desc += " · infected %d%%" % int(float(w.infection) * 100.0)
-			var dot := ColorRect.new(); dot.color = UiTheme.BAD if bad else UiTheme.DIM; dot.custom_minimum_size = Vector2(4, 16); dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			var dot := ColorRect.new(); dot.color = UiTheme.bad() if bad else UiTheme.DIM; dot.custom_minimum_size = Vector2(4, 16); dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			var dl := UiKit.body(desc, 14, Color(1.0, 0.72, 0.64) if bad else UiTheme.INK); dl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			dl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; dl.clip_text = true
 			dl.tooltip_text = desc; dl.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -251,7 +251,7 @@ class Figure extends Control:
 		for id in ["legL", "legR", "armL", "armR", "torso", "head"]:
 			var pd: Dictionary = st.parts[id]
 			var hp := float(pd.hp)
-			var col := UiTheme.GOOD.lerp(UiTheme.WARN, clampf((100.0 - hp) / 45.0, 0.0, 1.0)).lerp(UiTheme.BAD, clampf((60.0 - hp) / 40.0, 0.0, 1.0))
+			var col := UiTheme.good().lerp(UiTheme.warn(), clampf((100.0 - hp) / 45.0, 0.0, 1.0)).lerp(UiTheme.bad(), clampf((60.0 - hp) / 40.0, 0.0, 1.0))
 			var fill := Color(col.r * 0.5, col.g * 0.5, col.b * 0.5, 0.55 + (100.0 - hp) * 0.003)
 			var centre := Vector2(150, 44)
 			if id == "head":
@@ -273,14 +273,14 @@ class Figure extends Control:
 				if open:
 					bleeding = true
 					var k := 0.5 + 0.5 * sin(t * 5.0)
-					draw_circle(pos, 7.0 + k * 3.0, Color(UiTheme.BAD, 0.3 * (1.0 - k)), true, -1.0, true)
-					draw_circle(pos, 5.0, UiTheme.BAD, true, -1.0, true)
+					draw_circle(pos, 7.0 + k * 3.0, Color(UiTheme.bad(), 0.3 * (1.0 - k)), true, -1.0, true)
+					draw_circle(pos, 5.0, UiTheme.bad(), true, -1.0, true)
 				elif w.bandaged:
 					draw_rect(Rect2(pos - Vector2(6, 3), Vector2(12, 6)), Color(0.86, 0.84, 0.78) if not w.dirty else Color(0.6, 0.5, 0.36))
 					draw_rect(Rect2(pos - Vector2(6, 3), Vector2(12, 6)), Color(0, 0, 0, 0.6), false, 1.0)
 				else:
 					draw_circle(pos, 4.0, Color(0, 0, 0, 0.55), true, -1.0, true)
-					draw_arc(pos, 4.0, 0.0, TAU, 16, UiTheme.WARN, 1.5, true)
+					draw_arc(pos, 4.0, 0.0, TAU, 16, UiTheme.warn(), 1.5, true)
 				if float(w.infection) > 0.05:
 					draw_arc(pos, 8.5, 0.0, TAU, 20, Color(0.62, 0.78, 0.3), 1.5, true)
 				n += 1

@@ -154,7 +154,7 @@ func _near_fire() -> bool:
 func objective_text() -> String:
 	if state != "play" or objective >= OBJECTIVES.size():
 		return ""
-	return "%s\n%s" % [OBJECTIVES[objective][0], OBJECTIVES[objective][1]]
+	return "%s\n%s" % [OBJECTIVES[objective][0], String(OBJECTIVES[objective][1]).replace("Tab opens", Settings.key_name("inventory") + " opens")]
 
 # ------------------------------------------------------------------ menus and game flow
 func has_save() -> bool:
@@ -269,9 +269,21 @@ func new_game(occupation := "unemployed", setup: Dictionary = {}) -> void:
 	if zombies != null and zombies.has_method("populate"):
 		zombies.clear()
 		zombies.populate(world.buildings)
+		_scale_population(float(Settings.v("zombie_count")))
 	_start_play()
 	_mods("mod_started", [true])
 	hud.notify("Day 1. The outbreak was three weeks ago. The radio went silent yesterday.", "good")
+
+## the "zombie numbers" difficulty dial: thins the valley's population or thickens it, once, as a game starts
+func _scale_population(k: float) -> void:
+	if zombies == null or absf(k - 1.0) < 0.02 or not zombies.has_method("remove"):
+		return
+	var all: Array = zombies.list.duplicate()
+	for z in all:
+		if k < 1.0:
+			if rng.randf() > k: zombies.remove(z)
+		elif rng.randf() < k - 1.0:
+			zombies.spawn(z.pos.x + rng.randf_range(-1.5, 1.5), z.pos.z + rng.randf_range(-1.5, 1.5), int(z.type), 0, {"y": z.pos.y})
 
 func _die() -> void:
 	state = "dead"
@@ -287,41 +299,45 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if state != "play":
 		return
 	if ev is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sens := 0.0022 * float(Settings.v("mouse_sens"))
+		var sens := 0.0022 * float(Settings.v("mouse_sens")) * lerpf(1.0, float(Settings.v("ads_sens")), vm.ads)
 		player.yaw -= ev.relative.x * sens
 		player.pitch = clampf(player.pitch - ev.relative.y * sens * (-1.0 if Settings.v("invert_y") else 1.0), -1.5, 1.5)
 		_mouse += ev.relative
 	for mk in modules:
 		if modules[mk].has_method("mod_input") and modules[mk].mod_input(ev):
 			return
-	if ev is InputEventKey and ev.pressed and not ev.echo:
-		var k: int = ev.physical_keycode
+	# every key here is whatever the player bound it to (Settings); Esc always backs out of a window
+	if (ev is InputEventKey or ev is InputEventMouseButton) and ev.pressed and not ev.is_echo():
+		var S := Settings
+		var esc: bool = ev is InputEventKey and ev.physical_keycode == KEY_ESCAPE
+		var slot := S.hotbar_index(ev)
 		if hud.is_open():
-			if k == KEY_ESCAPE or k == KEY_TAB or k == KEY_I or (k == KEY_H and hud.window_kind == "health") or (k == KEY_E and hud.window_kind == "inv"):
+			if ev is InputEventMouseButton and not esc and not (S.is_action(ev, "inventory") or S.is_action(ev, "health") or S.is_action(ev, "take_all") or slot >= 0):
+				pass
+			elif esc or S.is_action(ev, "pause") or S.is_action(ev, "inventory") or (S.is_action(ev, "health") and hud.window_kind == "health") or (S.is_action(ev, "interact") and hud.window_kind == "inv" and ev is InputEventKey):
 				_resume()
-			elif k == KEY_R and hud.window_kind == "inv" and hud.container != null:
+			elif S.is_action(ev, "take_all") and hud.window_kind == "inv" and hud.container != null:
 				_take_all()
-			elif k >= KEY_1 and k <= KEY_8 and hud.window_kind == "inv" and not hud.hover_in_container:
-				_assign_hotbar(hud.hover_uid, k - KEY_1)
+			elif slot >= 0 and hud.window_kind == "inv" and not hud.hover_in_container:
+				_assign_hotbar(hud.hover_uid, slot)
 			return
-		match k:
-			KEY_ESCAPE:
-				paused = true
-				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE; hud.show_menu("pause")
-			KEY_TAB, KEY_I: _open_inventory(null)
-			KEY_H:
-				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE; hud.open_health()
-			KEY_E: _interact()
-			KEY_F: _toggle_flashlight()
-			KEY_Q: quick_heal()
-			KEY_R: _start_reload()
-			KEY_C, KEY_CTRL: player.crouch = not player.crouch
-			KEY_SPACE: player.jump()
-			KEY_F5:
-				save_game(false)
-			_:
-				if k >= KEY_1 and k <= KEY_8:
-					select_hotbar(k - KEY_1)
+		if esc or S.is_action(ev, "pause"):
+			paused = true
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE; hud.show_menu("pause")
+		elif Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and ev is InputEventMouseButton:
+			pass                                 # a click that only takes the pointer back
+		elif S.is_action(ev, "inventory"): _open_inventory(null)
+		elif S.is_action(ev, "health"):
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE; hud.open_health()
+		elif S.is_action(ev, "interact"): _interact()
+		elif S.is_action(ev, "flashlight"): _toggle_flashlight()
+		elif S.is_action(ev, "bandage"): quick_heal()
+		elif S.is_action(ev, "reload"): _start_reload()
+		elif S.is_action(ev, "crouch"):
+			if S.v("toggle_crouch"): player.crouch = not player.crouch
+		elif S.is_action(ev, "jump"): player.jump()
+		elif S.is_action(ev, "save"): save_game(false)
+		elif slot >= 0: select_hotbar(slot)
 	if ev is InputEventMouseButton and ev.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not hud.is_open():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -370,6 +386,8 @@ func _process(dt: float) -> void:
 	if p.sleeping:
 		dt_min *= 40.0
 	game_min += dt_min
+	if not Settings.v("toggle_crouch"):
+		p.crouch = not ui_open and not blocked and Settings.key_down("crouch")       # hold to crouch
 	p.update(dt, not ui_open and not blocked, game_min)
 	_mods("mod_process", [dt, dt_min, ui_open])
 	if p.stepped:
@@ -378,7 +396,7 @@ func _process(dt: float) -> void:
 	var seen := 0
 	if zombies != null:
 		seen = int(zombies.get("seen_count")) if zombies.get("seen_count") != null else 0
-	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": _near_fire(), "indoors": _sheltered(), "raining": (modules.weather.rain_on_player() if modules.has("weather") else 0.0), "rain_protect": _rain_protect(), "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4 or _near_fire(), "bloody_hands": p.bloody > 0.5})
+	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": _near_fire(), "indoors": _sheltered(), "raining": (modules.weather.rain_on_player() if modules.has("weather") else 0.0), "rain_protect": _rain_protect(), "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4 or _near_fire(), "bloody_hands": p.bloody > 0.5, "needs_rate": float(Settings.v("needs_rate"))})
 	for e in ev:
 		if e == "dead":
 			_die(); return
@@ -406,13 +424,13 @@ func _process(dt: float) -> void:
 				Sfx.play("zombie_alert" if String(gz.state) in ["chase", "attack"] else "zombie_groan", {"pos": gz.pos + Vector3(0, 1.5, 0), "pitch": 0.7 if int(gz.type) in [2, 5] else 1.0})
 		zombies.update(dt, dt_min, {"player_pos": p.pos, "player_eye": p.eye(), "player_noise": maxf(p.noise, loud_t), "player_visibility": p.visibility, "player_alive": true, "player_inside": p.inside, "player_bleeding": p.stats.bleeding() > 0.3, "base_center": null, "base_heat": 0.0, "daylight": sky.daylight, "hours": hours(), "day": day(), "luck": 0.0, "camera_pos": cam.global_position})
 	# camera
-	var shake := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), 0.0) * p.cam_shake * 0.03
+	var shake := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), 0.0) * p.cam_shake * 0.03 * float(Settings.v("cam_shake"))
 	cam.position = p.eye() + (Basis(Vector3.UP, p.yaw) * p.head_bob if Settings.v("head_bob") else Vector3.ZERO) + shake
 	cam.rotation = Vector3(p.pitch, p.yaw, 0.0)
 	cam.fov = lerpf(cam.fov, (float(Settings.v("fov")) + (6.0 if p.sprinting else 0.0)) * (1.0 - 0.22 * vm.ads), 1.0 - exp(-dt * 8.0))
 	var es = p.equipped_stack()
 	vm.set_item(String(es.id) if es != null else "")
-	vm.want_ads = not ui_open and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	vm.want_ads = not ui_open and Settings.key_down("aim")
 	vm.update(dt, _mouse, p.speed, p.on_ground)
 	_mouse = Vector2.ZERO
 	_update_flashlight(dt)
@@ -431,26 +449,40 @@ func _process(dt: float) -> void:
 		world.grass_mat.set_shader_parameter("flowers", [0.3, 0.0, 1.0, 0.75][season()])
 	_objectives()
 	hud.update_hud(dt)
+	var every := clampf(float(Settings.v("autosave_hours")), 0.5, 24.0) * 60.0
+	autosave_at = minf(autosave_at, game_min + every)        # a shorter interval takes effect at once
 	if game_min > autosave_at:
-		autosave_at = game_min + 180.0
-		save_game(true)
+		autosave_at = game_min + every
+		if Settings.v("autosave"): save_game(true)
 
 var _view_sig := ""
 ## graphics options that live on the viewport rather than in the environment
 func _apply_view_settings() -> void:
-	var sig := "%s|%s|%s|%s" % [Settings.v("quality"), Settings.v("render_scale"), Settings.v("grass"), Settings.v("vsync")]
+	var S := Settings
+	var sig := "%s|%s|%s|%s|%s|%s|%s|%s|%s" % [S.v("aa"), S.v("render_scale"), S.v("upscaler"), S.v("grass"), S.v("veg_dist"), S.v("view_dist"), S.v("aniso"), S.v("film_grain"), S.v("vignette")]
 	if sig == _view_sig:
 		return
 	_view_sig = sig
-	var lvl := ["low", "medium", "high", "ultra"].find(String(Settings.v("quality")))
-	if lvl < 0: lvl = 2
 	var vp := get_viewport()
-	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_2X, Viewport.MSAA_4X][lvl]
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if lvl == 0 else Viewport.SCREEN_SPACE_AA_DISABLED
-	vp.scaling_3d_scale = clampf(float(Settings.v("render_scale")), 0.5, 1.0)
+	var aa := String(S.v("aa"))
+	vp.msaa_3d = Viewport.MSAA_4X if aa == "msaa4" else (Viewport.MSAA_2X if aa == "msaa2" else Viewport.MSAA_DISABLED)
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if aa == "fxaa" else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.use_taa = aa == "taa"
+	var up := String(S.v("upscaler"))
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2 if up == "fsr2" else (Viewport.SCALING_3D_MODE_FSR if up == "fsr" else Viewport.SCALING_3D_MODE_BILINEAR)
+	vp.scaling_3d_scale = clampf(float(S.v("render_scale")), 0.5, 1.0)
+	var an := int(float(S.v("aniso")))
+	vp.anisotropic_filtering_level = Viewport.ANISOTROPY_16X if an >= 16 else (Viewport.ANISOTROPY_8X if an >= 8 else (Viewport.ANISOTROPY_4X if an >= 4 else (Viewport.ANISOTROPY_2X if an >= 2 else Viewport.ANISOTROPY_DISABLED)))
 	if world.grass != null:
 		var mm: MultiMesh = world.grass.multimesh
-		mm.visible_instance_count = int(mm.instance_count * clampf([0.3, 0.6, 1.0, 1.0][lvl] * float(Settings.v("grass")), 0.0, 1.0))
+		mm.visible_instance_count = int(mm.instance_count * clampf(float(S.v("grass")), 0.0, 1.0))
+	world.set_veg_distance(float(S.v("veg_dist")))
+	# view distance: the far plane comes in, and haze thickens so the world fades out instead of ending
+	var vd := clampf(float(S.v("view_dist")), 0.4, 1.0)
+	cam.far = lerpf(420.0, 1400.0, (vd - 0.4) / 0.6)
+	sky.view_fog = (1.0 - vd) * 0.006
+	post_mat.set_shader_parameter("grain", clampf(float(S.v("film_grain")), 0.0, 1.0) * 0.06)
+	post_mat.set_shader_parameter("vignette", clampf(float(S.v("vignette")), 0.0, 1.0) * 0.6)
 
 func _menu_frame(_dt: float) -> void:
 	_apply_view_settings()
@@ -880,16 +912,17 @@ func _update_combat(dt: float, ui_open: bool) -> void:
 			return
 	var st = p.equipped_stack()
 	var w = _weapon(st)
-	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var lmb := Settings.key_down("attack")
+	var rmb := Settings.key_down("aim")
 	if lmb:
 		if w != null and String(w.kind) == "firearm":
 			if fire_cooldown <= 0.0 and reloading <= 0.0 and (bool(w.get("auto", false)) or not _lmb_was):
 				_fire(st)
 		elif swing_timer <= 0.0 and fire_cooldown <= 0.0:
 			_start_swing(st)
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not _rmb_was and (w == null or String(w.kind) != "firearm") and shove_cd <= 0.0:
+	if rmb and not _rmb_was and (w == null or String(w.kind) != "firearm") and shove_cd <= 0.0:
 		_shove()
-	_lmb_was = lmb; _rmb_was = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	_lmb_was = lmb; _rmb_was = rmb
 var _lmb_was := false
 var _rmb_was := false
 
@@ -1160,7 +1193,7 @@ func _player_attacked(z, _dmg := 0.0) -> void:
 	var block: float = prot.bite if type == "bite" else prot.scratch
 	hud.damage_flash(0.6); p.cam_shake = 0.4
 	if hud.has_method("damage_from"): hud.damage_from(z.pos)
-	_hit_fx = 1.0
+	_hit_fx = 0.25 if Settings.v("reduce_flash") else 1.0
 	Sfx.play("player_hurt")
 	var pname := ""
 	for q in Stats.PARTS:
@@ -1169,7 +1202,7 @@ func _player_attacked(z, _dmg := 0.0) -> void:
 		p.stats.parts[part].hp = maxf(0.0, float(p.stats.parts[part].hp) - 3.0)
 		hud.notify("Your clothing stopped a %s to the %s." % [type, pname], ""); return
 	var dmg := rng.randf_range(16, 26) if type == "bite" else (rng.randf_range(10, 18) if type == "laceration" else rng.randf_range(5, 9))
-	p.stats.add_wound(part, type, dmg * (1.6 if brute else 1.0))
+	p.stats.add_wound(part, type, dmg * (1.6 if brute else 1.0) * float(Settings.v("zombie_damage")))
 	var infect := 1.0 if type == "bite" else (0.25 if type == "laceration" else 0.07)
 	if rng.randf() < infect: p.stats.knox_infected = true
 	hud.notify("%s on the %s!%s" % ["BITTEN" if type == "bite" else ("Lacerated" if type == "laceration" else "Scratched"), pname, " That is not good." if type == "bite" else ""], "bad")
@@ -1198,7 +1231,7 @@ func _on_burst(pos: Vector3, radius: float, _z = null) -> void:
 	if state != "play": return
 	var d := pos.distance_to(player.pos)
 	if d < radius:
-		player.stats.add_wound("torso" if rng.randf() < 0.5 else "armL", "burn", 8.0 * (1.0 - d / radius) + 4.0)
+		player.stats.add_wound("torso" if rng.randf() < 0.5 else "armL", "burn", (8.0 * (1.0 - d / radius) + 4.0) * float(Settings.v("zombie_damage")))
 		player.stats.food_poison = minf(1.0, player.stats.food_poison + 0.25)
 		hud.damage_flash(0.5); hud.notify("A bloat ruptures over you.", "bad")
 		if hud.has_method("damage_from"): hud.damage_from(pos)

@@ -20,7 +20,10 @@ const ACCENT := UiTheme.ACCENT
 const BAD := UiTheme.BAD
 const GOOD := UiTheme.GOOD
 const EDGE := 28.0                    # the margin every HUD element keeps from the screen edge
-const TABS := [["inv", "Inventory", "Tab"], ["health", "Health", "H"], ["map", "Map", "M"]]
+## the windows that share one tab bar: [kind, title, the action whose key opens it, the module it needs]
+const TABS := [["inv", "Inventory", "inventory", ""], ["health", "Health", "health", ""], ["map", "Map", "map", "sys_map"], ["craft", "Crafting", "craft", "sys_craft"], ["build", "Build", "build", "sys_build"], ["settings", "Settings", "", ""]]
+const WINDOW_NEED := Vector2(1300, 770)      # room a tabbed window wants; the interface scale stops short of overflowing it
+const MENU_NEED := Vector2(1470, 810)
 
 var game
 var root: Control
@@ -39,6 +42,7 @@ var play: Control                  # everything that only shows while playing
 var inventory: UiInventory
 var health: UiHealth
 var menus: UiMenus
+var settings: UiSettings
 var loading: Control = null
 var clock_lbl: Label
 var sub_lbl: Label
@@ -98,6 +102,10 @@ var _held_t := 0.0
 var _threats := PackedFloat32Array()
 var _chasers := PackedVector2Array()
 var _marks_n := -1
+var _show_map := true
+var _show_obj := true
+var _opacity := 1.0
+var _reduce := false
 var _load_tip := 0
 var _load_t := 0.0
 
@@ -115,8 +123,15 @@ func _ready() -> void:
 	inventory = UiInventory.new(self)
 	health = UiHealth.new(self)
 	menus = UiMenus.new(self)
+	settings = UiSettings.new(self)
+	UiTheme.cb = bool(Settings.v("colorblind"))
 	_build_hud()
 	Settings.changed.connect(_on_setting)
+	Settings.bindings_changed.connect(func() -> void:
+		_prompt_raw = "\u0001"; _moodle_sig = ""; weapon._sig = -1)
+	root.resized.connect(_layout)
+	_restyle()
+	_layout.call_deferred()
 
 # ------------------------------------------------------------------ small builders
 ## an icon from assets/icons (item_<id>, m_<moodle>, ui_*, skill_<id>), toned down to sit with the palette
@@ -182,7 +197,7 @@ static func place(c: Control, ax: float, ay: float, x: float, y: float, w := 0.0
 
 # ------------------------------------------------------------------ always-on HUD
 func _build_hud() -> void:
-	play = Control.new(); play.set_anchors_preset(Control.PRESET_FULL_RECT); play.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	play = Control.new(); play.mouse_filter = Control.MOUSE_FILTER_IGNORE       # sized by _layout(), which also scales it
 	root.add_child(play)
 
 	# top left: the time, the day, the weather on your skin
@@ -267,16 +282,56 @@ func _build_hud() -> void:
 	root.move_child(fx, 0)
 
 func _on_setting(key: String) -> void:
-	if key == "minimap" or key == "minimap_rotate":
-		minimap_frame.visible = bool(Settings.v("minimap")); place_lbl.visible = minimap_frame.visible
-		minimap.turn = bool(Settings.v("minimap_rotate")); minimap.queue_redraw()
+	match key:
+		"hud_scale": _layout()
+		"colorblind":
+			UiTheme.cb = bool(Settings.v("colorblind"))
+			_moodle_sig = ""; vitals.queue_redraw(); hotbar.queue_redraw(); weapon._sig = -1; stealth._sig = -1
+			if window != null and window_kind == "health": open_health()
+		"temp_unit": _temp_key = -999; _clock_min = -1
+		"tips": _moodle_sig = ""; _obj_text = "\u0001"
+		_: _restyle()
+
+## the show / hide and crosshair options
+func _restyle() -> void:
+	_show_map = bool(Settings.v("minimap"))
+	minimap_frame.visible = _show_map; place_lbl.visible = _show_map
+	minimap.turn = bool(Settings.v("minimap_rotate")); minimap.queue_redraw()
+	compass.visible = bool(Settings.v("show_compass"))
+	_show_obj = bool(Settings.v("show_objective"))
+	obj_panel.visible = _show_obj and _obj_text != "" and _obj_text != "\u0001"
+	_opacity = clampf(float(Settings.v("hud_opacity")), 0.2, 1.0)
+	_reduce = bool(Settings.v("reduce_flash"))
+	var style := ["full", "dot", "off"].find(String(Settings.v("crosshair")))
+	crosshair.restyle(maxi(style, 0), UiSettings.CROSS_COLORS.get(String(Settings.v("crosshair_color")), Color.WHITE), bool(Settings.v("center_dot")), bool(Settings.v("hit_markers")))
+
+## sizes the HUD and the open window for the "interface size" option. A scaled control is given a smaller
+## canvas to lay itself out on, so anchors still mean the screen's edges.
+func _layout() -> void:
+	var vs := root.size
+	if vs.x <= 0.0:
+		return
+	var s := clampf(float(Settings.v("hud_scale")), 0.7, 1.5)
+	_fit(play, s, vs)
+	_moodle_sig = ""                 # the status column re-checks how much room it has
+	if window != null and is_instance_valid(window):
+		var need := MENU_NEED if window_kind in ["main", "pause", "dead"] else WINDOW_NEED
+		_fit(window, minf(s, minf(vs.x / need.x, vs.y / need.y)), vs)
+
+func _fit(c: Control, s: float, vs: Vector2) -> void:
+	c.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	c.scale = Vector2(s, s)
+	c.position = Vector2.ZERO
+	c.size = vs / s
 
 func hitmark(killed: bool) -> void:
+	if not crosshair.show_hits:
+		return
 	hit_t = 0.45 if killed else 0.22; hit_kill = killed
 	crosshair.hit_t = hit_t; crosshair.hit_kill = killed; crosshair.queue_redraw()
 
 func damage_flash(amount := 0.6) -> void:
-	flash_a = minf(0.75, flash_a + amount)
+	flash_a = minf(0.75, flash_a + amount) if not _reduce else minf(0.2, flash_a + amount * 0.3)
 	_flash_frame = Engine.get_process_frames()
 
 ## shows which way a hit came from: a red arc on that side of the crosshair
@@ -303,8 +358,8 @@ func notify(text: String, kind := "") -> void:
 			(last.get_meta("label") as Label).text = "%s  ×%d" % [text, c]
 			return
 	var col := UiTheme.INK; var bar_col := Color(UiTheme.INK, 0.35)
-	if kind == "bad": col = Color(1.0, 0.72, 0.64); bar_col = UiTheme.BAD
-	elif kind == "good": col = Color(0.8, 0.92, 0.66); bar_col = UiTheme.GOOD
+	if kind == "bad": col = Color(1.0, 0.72, 0.64); bar_col = UiTheme.bad()
+	elif kind == "good": col = Color(0.8, 0.92, 0.66); bar_col = UiTheme.good()
 	elif kind == "xp": col = UiTheme.ACCENT2; bar_col = UiTheme.ACCENT
 	var sb := UiTheme.flat_m(Color(0.02, 0.022, 0.02, 0.62), bar_col, 0, 12, 6, 0)
 	sb.border_width_left = 3
@@ -352,6 +407,7 @@ func set_prompt(text: String) -> void:
 		var e := text.find("]")
 		if e > 0:
 			key = text.substr(1, e - 1); verb = text.substr(e + 1).strip_edges()
+			if key == "E": key = Settings.key_name("interact")       # every "[E]" prompt means the interact key
 	var nm := ""; var sub := ""
 	if tgt is Dictionary:
 		match String(tgt.get("kind", "")):
@@ -390,6 +446,8 @@ func _process(dt: float) -> void:
 	_time += dt
 	if notes != null and notes.get_child_count() > 0:
 		_tick_notes(dt)
+	if settings._built:
+		settings.tick(dt)
 	if loading != null and loading.visible:
 		_load_t += dt
 		if _load_t > 6.0:
@@ -407,7 +465,7 @@ func update_hud(dt: float) -> void:
 	# screen edge: the blow, then how badly off you are
 	flash_a = maxf(0.0, flash_a - dt * 0.9)
 	var bleed := st.bleeding()
-	fx.update(dt, flash_a, clampf((38.0 - hp) / 38.0, 0.0, 1.0), clampf(bleed / 3.0, 0.0, 1.0) * 0.85)
+	fx.update(dt, flash_a, clampf((38.0 - hp) / 38.0, 0.0, 1.0), clampf(bleed / 3.0, 0.0, 1.0) * 0.85, _reduce)
 
 	# clock: text only when the minute turns
 	var hrs: float = game.hours()
@@ -428,8 +486,8 @@ func update_hud(dt: float) -> void:
 		var temp := int(round(game.ambient_temp()))
 		if temp != _temp_key:
 			_temp_key = temp
-			temp_lbl.text = "%d°C" % temp
-			temp_lbl.add_theme_color_override("font_color", UiTheme.BLUE if temp <= 2 else (UiTheme.WARN if temp >= 28 else DIM))
+			temp_lbl.text = UiKit.temp(float(temp), 0)
+			temp_lbl.add_theme_color_override("font_color", UiTheme.BLUE if temp <= 2 else (UiTheme.warn() if temp >= 28 else DIM))
 
 	vitals.set_values(hp, st.stamina / maxf(1.0, st.max_stamina) * 100.0, st.hunger, st.thirst, clampf(st.max_stamina / 100.0, 0.2, 1.0), 0.5 + 0.5 * sin(_time * 6.0))
 	hotbar.refresh(p)
@@ -454,7 +512,7 @@ func update_hud(dt: float) -> void:
 	var heading := fposmod(rad_to_deg(-p.yaw), 360.0)
 	compass.set_heading(heading)
 	ring.tick(dt, heading)
-	if minimap_frame.visible:
+	if _show_map:
 		minimap.track(p.pos, p.yaw, dt)
 
 	# crosshair
@@ -496,7 +554,7 @@ func update_hud(dt: float) -> void:
 	if _slower <= 0.0:
 		_slower = 0.5
 		_objective(game.objective_text())
-		if place_lbl.visible:
+		if _show_map:
 			var pn := UiMap.place_name(p.pos.x, p.pos.z)
 			if pn != place_lbl.text: place_lbl.text = pn
 	if obj_panel.visible:
@@ -506,7 +564,7 @@ func update_hud(dt: float) -> void:
 			obj_desc.modulate.a = move_toward(obj_desc.modulate.a, da, dt * 0.8)
 			if obj_desc.modulate.a <= 0.0 and obj_desc.visible: obj_desc.visible = false
 	# the HUD steps back while a window has the floor
-	var pa := 0.22 if open else 1.0
+	var pa := (0.22 if open else 1.0) * _opacity
 	if play.modulate.a != pa:
 		play.modulate.a = move_toward(play.modulate.a, pa, dt * 6.0)
 	if open:
@@ -584,12 +642,12 @@ func _objective(text: String) -> void:
 		return
 	var first := _obj_text == "\u0001"
 	_obj_text = text
-	obj_panel.visible = text != ""
+	obj_panel.visible = text != "" and _show_obj
 	if text == "":
 		return
 	var nl := text.find("\n")
 	obj_title.text = text if nl < 0 else text.substr(0, nl)
-	obj_desc.text = "" if nl < 0 else text.substr(nl + 1)
+	obj_desc.text = "" if (nl < 0 or not Settings.v("tips")) else text.substr(nl + 1)
 	obj_desc.visible = obj_desc.text != ""; obj_desc.modulate.a = 1.0
 	_obj_age = 0.0
 	if not first:
@@ -616,6 +674,18 @@ func _moodles(list: Array) -> void:
 	_moodle_sig = sig
 	for c in moodle_box.get_children():
 		c.queue_free()
+	# room for the column: from under the objective down to the weapon read-out
+	var avail := play.size.y - EDGE - (206.0 if _show_map else 0.0) - (obj_panel.size.y + 10.0 if obj_panel.visible else 0.0) - 130.0
+	if list.size() * 41.0 > avail:
+		# too many for one labelled column at this size: icons only, side by side
+		var grid := GridContainer.new(); grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		grid.columns = clampi(int(ceil(list.size() / maxf(1.0, floor(avail / 41.0)))), 2, 5)
+		grid.size_flags_horizontal = Control.SIZE_SHRINK_END
+		grid.add_theme_constant_override("h_separation", 5); grid.add_theme_constant_override("v_separation", 5)
+		for m in list:
+			grid.add_child(_moodle_tile(String(m.id), int(m.level)))
+		moodle_box.add_child(grid)
+		return
 	for m in list:
 		var lv2 := int(m.level)
 		var col := UiTheme.level_color(lv2)
@@ -625,19 +695,11 @@ func _moodles(list: Array) -> void:
 		tv.alignment = BoxContainer.ALIGNMENT_CENTER
 		var nl := label(String(m.label), 15, col); nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		tv.add_child(nl)
-		if float(_moodle_tell.get(String(m.id), 0.0)) > _time and list.size() <= 7:
-			var dl := label(String(m.desc), 13, UiTheme.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		if float(_moodle_tell.get(String(m.id), 0.0)) > _time and list.size() <= 7 and Settings.v("tips"):
+			var dl := label(String(m.desc).replace("(H)", "(%s)" % Settings.key_name("health")), 13, UiTheme.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; dl.custom_minimum_size = Vector2(196, 0)
 			tv.add_child(dl)
-		var tile := Control.new(); tile.custom_minimum_size = Vector2(36, 36); tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var tex := icon("m_" + String(m.id))
-		tile.draw.connect(func() -> void:
-			tile.draw_rect(Rect2(0, 0, 36, 36), Color(0.02, 0.022, 0.02, 0.6))
-			tile.draw_rect(Rect2(0, 0, 36, 36), Color(col, 0.85), false, 1.0)
-			if tex != null: tile.draw_texture_rect(tex, Rect2(5, 3, 26, 26), false)
-			for i in 4:
-				tile.draw_rect(Rect2(4.0 + i * 7.5, 31.0, 5.5, 2.0), col if i < lv2 else Color(1, 1, 1, 0.14)))
+		var tile := _moodle_tile(String(m.id), lv2)
 		var chip := PanelContainer.new(); chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.add_theme_stylebox_override("panel", _moodle_slab)
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -645,12 +707,25 @@ func _moodles(list: Array) -> void:
 		h.add_theme_constant_override("separation", 0)
 		h.add_child(chip); h.add_child(tile); moodle_box.add_child(h)
 
+func _moodle_tile(id: String, level: int) -> Control:
+	var col := UiTheme.level_color(level)
+	var tile := Control.new(); tile.custom_minimum_size = Vector2(36, 36); tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var tex := icon("m_" + id)
+	tile.draw.connect(func() -> void:
+		tile.draw_rect(Rect2(0, 0, 36, 36), Color(0.02, 0.022, 0.02, 0.6))
+		tile.draw_rect(Rect2(0, 0, 36, 36), Color(col, 0.85), false, 1.0)
+		if tex != null: tile.draw_texture_rect(tex, Rect2(5, 3, 26, 26), false)
+		for i in 4:
+			tile.draw_rect(Rect2(4.0 + i * 7.5, 31.0, 5.5, 2.0), col if i < level else Color(1, 1, 1, 0.14)))
+	return tile
+
 # ------------------------------------------------------------------ windows
 func close_window() -> void:
 	if window != null:
 		window.queue_free()
 	window = null; window_kind = ""; container = null; hover_uid = -1
-	inventory.closed(); health.closed(); menus.closed()
+	inventory.closed(); health.closed(); menus.closed(); settings.closed()
 
 func _open(kind: String, w: float, h: float, title: String, tabs := true) -> VBoxContainer:
 	var same := window != null and window_kind == kind
@@ -664,15 +739,18 @@ func _open(kind: String, w: float, h: float, title: String, tabs := true) -> VBo
 	var tabbed := false
 	for t in TABS:
 		if t[0] == kind and tabs: tabbed = true
+	if tabbed:
+		w = maxf(w, 1240.0); h = maxf(h, 720.0)        # the tab bar keeps its place as you move between windows
+		frame.custom_minimum_size = Vector2(w, h)
 	if title != "" or tabbed:
 		var head := HBoxContainer.new(); head.add_theme_constant_override("separation", 4)
 		head.custom_minimum_size = Vector2(0, 50)
 		head.add_child(UiKit.spacer(0, 14))
 		if tabbed and game != null and String(game.get("state")) == "play":
 			for t in TABS:
-				if t[0] == "map" and not (game.modules is Dictionary and game.modules.has("sys_map")):
+				if String(t[3]) != "" and not (game.modules is Dictionary and game.modules.has(String(t[3]))):
 					continue
-				head.add_child(_tab(String(t[0]), String(t[1]), String(t[2]), t[0] == kind))
+				head.add_child(_tab(String(t[0]), String(t[1]), Settings.key_name(String(t[2])) if String(t[2]) != "" else "", t[0] == kind))
 		else:
 			var tl := UiKit.heading(title, 21, UiTheme.ACCENT2); tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			head.add_child(UiKit.spacer(0, 6)); head.add_child(tl)
@@ -689,6 +767,7 @@ func _open(kind: String, w: float, h: float, title: String, tabs := true) -> VBo
 	col.get_child(col.get_child_count() - 1).size_flags_vertical = Control.SIZE_EXPAND_FILL
 	frame.add_child(col); cc.add_child(frame); window.add_child(cc)
 	root.add_child(window)
+	_layout()
 	if loading != null:
 		root.move_child(loading, root.get_child_count() - 1)
 	if not same:
@@ -699,9 +778,9 @@ func _open(kind: String, w: float, h: float, title: String, tabs := true) -> VBo
 func _tab(kind: String, text: String, key: String, on: bool) -> Button:
 	var b := Button.new(); b.text = text.to_upper(); b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(0, 50)
-	b.add_theme_font_size_override("font_size", 18)
-	var line := UiTheme.flat_m(Color(0, 0, 0, 0), UiTheme.ACCENT, 0, 16, 0, 0); line.border_width_bottom = 2; line.draw_center = false
-	var none := UiTheme.empty(16, 0)
+	b.add_theme_font_size_override("font_size", 17)
+	var line := UiTheme.flat_m(Color(0, 0, 0, 0), UiTheme.ACCENT, 0, 14, 0, 0); line.border_width_bottom = 2; line.draw_center = false
+	var none := UiTheme.empty(14, 0)
 	b.add_theme_stylebox_override("normal", line if on else none); b.add_theme_stylebox_override("hover", line if on else none)
 	b.add_theme_stylebox_override("pressed", line); b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	b.add_theme_color_override("font_color", UiTheme.ACCENT2 if on else UiTheme.DIM)
@@ -717,9 +796,26 @@ func open_tab(kind: String) -> void:
 	match kind:
 		"inv": open_inventory(null)
 		"health": open_health()
+		"settings": open_settings()
 		"map":
 			var m = game.modules.get("sys_map") if game.modules is Dictionary else null
 			if m != null and m.has_method("open_map"): m.open_map()
+		"craft":
+			var c = game.modules.get("sys_craft") if game.modules is Dictionary else null
+			var sb = game.modules.get("sys_build") if game.modules is Dictionary else null
+			if c != null and c.has_method("open"):
+				var bench = sb.station_near(game.player.pos, 3.0, "workbench") if (sb != null and sb.has_method("station_near")) else null
+				c.open("workbench" if bench != null else "hand", bench)
+		"build":
+			var bd = game.modules.get("sys_build") if game.modules is Dictionary else null
+			if bd != null and bd.get("placer") != null and bd.placer.has_method("open_menu"):
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+				bd.placer.open_menu()
+
+## the settings pages as a tab of the in-game window (the menus show the same pages)
+func open_settings() -> void:
+	var v := _open("settings", 1240.0, 720.0, "")
+	settings.build(v, window)
 
 func _close_button() -> Button:
 	var b := Button.new(); b.custom_minimum_size = Vector2(32, 32); b.focus_mode = Control.FOCUS_NONE
@@ -802,23 +898,32 @@ func hide_loading() -> void:
 
 # ------------------------------------------------------------------ keys the HUD keeps for itself
 func _input(ev: InputEvent) -> void:
-	if not (ev is InputEventKey) or not ev.pressed:
+	var key: bool = ev is InputEventKey
+	if not ((key or ev is InputEventMouseButton) and ev.pressed):
 		return
 	if loading != null and loading.visible and loading.modulate.a >= 1.0:
-		get_viewport().set_input_as_handled()
+		if key: get_viewport().set_input_as_handled()
 		return
 	if window == null:
+		return
+	# a key being rebound, or the "keep these display settings?" card, comes before everything
+	if settings.input(ev):
+		get_viewport().set_input_as_handled()
+		return
+	if not key:
 		return
 	if menus.key(ev):
 		get_viewport().set_input_as_handled()
 	elif window_kind == "inv" and inventory.key(ev):
 		get_viewport().set_input_as_handled()
-	elif not ev.echo and game != null and String(game.get("state")) == "play" and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		# hop between the character windows without closing them first
-		var k: int = ev.physical_keycode
-		if k == KEY_H and window_kind == "inv":
+	elif not ev.echo and game != null and String(game.get("state")) == "play" and not (window_kind in ["main", "pause", "dead"]):
+		# hop between the tabbed windows without closing them first
+		if Settings.is_action(ev, "health") and window_kind != "health":
 			click(); open_health(); get_viewport().set_input_as_handled()
-		elif (k == KEY_TAB or k == KEY_I) and (window_kind == "health" or window_kind == "map"):
+		elif Settings.is_action(ev, "inventory") and (window_kind != "inv" or container != null) and _is_tab(window_kind):
 			click(); open_inventory(null); get_viewport().set_input_as_handled()
-		elif k == KEY_H and window_kind == "map":
-			click(); open_health(); get_viewport().set_input_as_handled()
+
+func _is_tab(kind: String) -> bool:
+	for t in TABS:
+		if t[0] == kind and kind != "inv": return true
+	return false

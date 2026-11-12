@@ -84,11 +84,12 @@ func swing(dur: float) -> void:
 
 func recoil(k: float) -> void:
 	recoil_k = minf(1.5, recoil_k + k)
-	flash.light_energy = 6.0
+	var soft: bool = Settings.v("reduce_flash")          # the option that tames sudden bright flashes
+	flash.light_energy = 1.0 if soft else 6.0
 	flash_mesh.position = _muzzle_local + Vector3(0, 0, -0.06)
 	flash_mesh.rotation.z = randf() * TAU
 	flash_mesh.scale = Vector3.ONE * randf_range(0.8, 1.3)
-	_flash_t = 0.045
+	_flash_t = 0.0 if soft else 0.045
 
 func reload(dur: float) -> void:
 	reload_dur = dur; reload_t = dur

@@ -18,13 +18,13 @@ func mod_started(new_game: bool) -> void:
 	UiMap.count_searched()
 
 func mod_input(ev: InputEvent) -> bool:
-	if ev is InputEventKey and ev.pressed and not ev.echo and ev.physical_keycode == KEY_M:
+	if (ev is InputEventKey or ev is InputEventMouseButton) and ev.pressed and not ev.is_echo() and Settings.is_action(ev, "map"):
 		var hud = game.hud
 		if hud.window_kind == "map":
 			hud.close_window()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			return true
-		if not hud.is_open() or hud.window_kind == "inv" or hud.window_kind == "health":
+		if not hud.is_open() or not (hud.window_kind in ["main", "pause", "dead"]):
 			open_map()
 			return true
 	return false
@@ -47,7 +47,7 @@ func open_map() -> void:
 		var l := UiKit.body(String(e[2]), 13, UiTheme.DIM); l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		foot.add_child(l); foot.add_child(UiKit.spacer(0, 10))
 	foot.add_child(UiKit.spacer(0, 0, true))
-	for e in [["LMB", "Drag"], ["Wheel", "Zoom"], ["RMB", "Marker"], ["M", "Close"]]:
+	for e in [["LMB", "Drag"], ["Wheel", "Zoom"], ["RMB", "Marker"], [Settings.key_name("map"), "Close"]]:
 		foot.add_child(UiKit.KeyCap.new(String(e[0]), 12))
 		var l2 := UiKit.body(String(e[1]), 13, UiTheme.DIM); l2.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		foot.add_child(l2); foot.add_child(UiKit.spacer(0, 8))

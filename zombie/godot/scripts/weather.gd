@@ -113,7 +113,7 @@ func mod_process(dt: float, dt_game_min: float, _ui_open: bool) -> void:
 		_rain_mat.direction = Vector3(0.1 + wind * 0.35, -1, 0.05 + wind * 0.2)
 	# lightning
 	_flash_t = maxf(0.0, _flash_t - dt)
-	_flash.light_energy = 2.2 * pow(_flash_t / 0.22, 2.0) if _flash_t > 0.0 else 0.0
+	_flash.light_energy = (0.35 if Settings.v("reduce_flash") else 2.2) * pow(_flash_t / 0.22, 2.0) if _flash_t > 0.0 else 0.0
 	_flash.visible = _flash_t > 0.0
 	if kind == "storm":
 		_thunder_t -= dt

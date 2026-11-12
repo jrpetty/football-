@@ -49,7 +49,7 @@ static func _fade(p: AudioStreamPlayer, target: float, dt: float, rate := 1.2) -
 	p.volume_db = linear_to_db(maxf(cur, 0.0001))
 
 func _process(dt: float) -> void:
-	var mv := float(Settings.v("music_vol")); var sv := float(Settings.v("sfx_vol"))
+	var mv := float(Settings.v("music_vol")); var sv := float(Settings.v("ambience_vol"))
 	var playing: bool = game != null and game.state == "play"
 	var menu: bool = game != null and game.state == "menu"
 	# danger: how many are on you, smoothed so the music doesn't flicker

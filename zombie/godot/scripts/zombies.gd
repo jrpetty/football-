@@ -1395,7 +1395,7 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 				budget -= 1
 				_think(z, dt_game_min)
 			else:
-				z.think_t = _rng.randf() * 0.05
+				z.think_t = Bodies.hash1(z.seed * 2.9 + _time * 5.3) * 0.05
 		if z.frozen or z.gone:
 			continue
 		if z.state == S_CHASE:
