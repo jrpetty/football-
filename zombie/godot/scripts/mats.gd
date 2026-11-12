@@ -5,6 +5,19 @@ class_name Mats
 static var _defs: Dictionary = {}
 static var _cache: Dictionary = {}
 static var _tex: Dictionary = {}
+static var _over: Dictionary = {}
+static var _over_loaded := false
+
+## photographic replacements for some of the procedural textures: original file -> {map, normal, rough, tint, uv}
+static func overrides() -> Dictionary:
+	if not _over_loaded:
+		_over_loaded = true
+		var f := FileAccess.open("res://assets/tex/overrides.json", FileAccess.READ)
+		if f != null:
+			var o = JSON.parse_string(f.get_as_text())
+			if o is Dictionary:
+				_over = o
+	return _over
 
 static func defs() -> Dictionary:
 	if _defs.is_empty():
@@ -34,24 +47,30 @@ static func get_mat(id: String, tint := false) -> Material:
 	m.roughness = float(d.roughness)
 	m.metallic = float(d.metalness)
 	var scale := Vector3(float(d.repeat[0]), float(d.repeat[1]), 1.0)
+	var ov = overrides().get(d.map) if d.map != null else null
+	var map = d.map; var nmap = d.normalMap; var rmap = d.roughnessMap; var amap = d.aoMap
+	if ov != null:
+		map = ov.map; nmap = ov.normal; rmap = ov.rough; amap = ov.rough
+		scale *= float(ov.uv)
+		m.albedo_color = m.albedo_color * Color(float(ov.tint[0]), float(ov.tint[1]), float(ov.tint[2]))
 	m.uv1_scale = scale
-	if d.map != null:
-		m.albedo_texture = tex(d.map)
-	if d.normalMap != null:
+	if map != null:
+		m.albedo_texture = tex(map)
+	if nmap != null:
 		m.normal_enabled = true
-		m.normal_texture = tex(d.normalMap)
+		m.normal_texture = tex(nmap)
 		m.normal_scale = float(d.normalScale)
-	if d.roughnessMap != null:
-		m.roughness_texture = tex(d.roughnessMap)
+	if rmap != null:
+		m.roughness_texture = tex(rmap)
 		m.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
 		m.roughness = 1.0
 	if d.metalnessMap != null:
 		m.metallic_texture = tex(d.metalnessMap)
 		m.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
 		m.metallic = 1.0
-	if d.aoMap != null:
+	if amap != null:
 		m.ao_enabled = true
-		m.ao_texture = tex(d.aoMap)
+		m.ao_texture = tex(amap)
 		m.ao_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
 		m.ao_light_affect = 0.25
 	var em := Color(String(d.emissive))
@@ -79,6 +98,33 @@ static func get_mat(id: String, tint := false) -> Material:
 		m.clearcoat_roughness = 0.45
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	_cache[key] = m
+	return m
+
+## the wind-blown version of a plant material: leaves (alpha-cut) flutter, trunks only lean
+static var foliage_mats: Array = []
+static func foliage(id: String) -> Material:
+	var key := id + "#f"
+	if _cache.has(key):
+		return _cache[key]
+	var d = defs().get(id)
+	if d == null:
+		return null
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/foliage.gdshader")
+	m.resource_name = id
+	var leaf := float(d.alphaTest) > 0.0
+	if d.map != null:
+		m.set_shader_parameter("albedo_tex", tex(d.map))
+	if d.normalMap != null and not leaf:
+		m.set_shader_parameter("normal_tex", tex(d.normalMap)); m.set_shader_parameter("use_normal", true)
+	var c := Color(String(d.color))
+	# needles and leaves were painted for a brighter sky than this one
+	m.set_shader_parameter("tint", Color(c.r, c.g, c.b) * (Color(0.74, 0.8, 0.66) if leaf else Color.WHITE))
+	m.set_shader_parameter("alpha_cut", float(d.alphaTest) if leaf else 0.0)
+	m.set_shader_parameter("leaf", 1.0 if leaf else 0.0)
+	m.set_shader_parameter("roughness", 0.8 if leaf else float(d.roughness))
+	_cache[key] = m
+	foliage_mats.append(m)
 	return m
 
 ## swap the placeholder materials on every mesh under `root` for the real ones (by name)

@@ -1,0 +1,101 @@
+{
+ "t154.webp": {
+  "map": "hf_plaster_a.webp",
+  "normal": "hf_plaster_n.webp",
+  "rough": "hf_plaster_r.webp",
+  "tint": [
+   0.791,
+   0.783,
+   0.761
+  ],
+  "uv": 1.0
+ },
+ "t122.webp": {
+  "map": "hf_siding_a.webp",
+  "normal": "hf_siding_n.webp",
+  "rough": "hf_siding_r.webp",
+  "tint": [
+   0.865,
+   0.854,
+   0.803
+  ],
+  "uv": 0.625
+ },
+ "t119.webp": {
+  "map": "hf_siding_a.webp",
+  "normal": "hf_siding_n.webp",
+  "rough": "hf_siding_r.webp",
+  "tint": [
+   0.508,
+   0.59,
+   0.634
+  ],
+  "uv": 0.625
+ },
+ "t125.webp": {
+  "map": "hf_siding_a.webp",
+  "normal": "hf_siding_n.webp",
+  "rough": "hf_siding_r.webp",
+  "tint": [
+   0.805,
+   0.733,
+   0.528
+  ],
+  "uv": 0.625
+ },
+ "t123.webp": {
+  "map": "hf_siding_a.webp",
+  "normal": "hf_siding_n.webp",
+  "rough": "hf_siding_r.webp",
+  "tint": [
+   0.546,
+   0.598,
+   0.491
+  ],
+  "uv": 0.625
+ },
+ "t84.webp": {
+  "map": "hf_brick_a.webp",
+  "normal": "hf_brick_n.webp",
+  "rough": "hf_brick_r.webp",
+  "tint": [
+   0.743,
+   0.678,
+   0.678
+  ],
+  "uv": 0.42
+ },
+ "t157.webp": {
+  "map": "hf_brick_a.webp",
+  "normal": "hf_brick_n.webp",
+  "rough": "hf_brick_r.webp",
+  "tint": [
+   0.765,
+   0.945,
+   0.931
+  ],
+  "uv": 0.42
+ },
+ "t151.webp": {
+  "map": "hf_shingle_a.webp",
+  "normal": "hf_shingle_n.webp",
+  "rough": "hf_shingle_r.webp",
+  "tint": [
+   0.537,
+   0.534,
+   0.486
+  ],
+  "uv": 0.47
+ },
+ "t27.webp": {
+  "map": "hf_concrete_a.webp",
+  "normal": "hf_concrete_n.webp",
+  "rough": "hf_concrete_r.webp",
+  "tint": [
+   0.722,
+   0.709,
+   0.685
+  ],
+  "uv": 1.0
+ }
+}

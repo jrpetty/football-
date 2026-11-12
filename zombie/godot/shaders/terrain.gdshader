@@ -25,6 +25,9 @@ uniform sampler2D r_sand : filter_linear_mipmap, repeat_enable;
 uniform float wet = 0.0;
 uniform float snow = 0.0;
 uniform float bright = 1.0;
+uniform float uv_scale = 0.25;
+uniform float road_scale = 0.18;
+uniform vec3 grass_tint : source_color = vec3(1.0);
 
 varying vec3 wpos;
 varying vec3 wnor;
@@ -46,20 +49,21 @@ void fragment() {
 	float macro2 = texture(noise_tex, wpos.xz * 0.021 + 0.37).r;
 	float slope = 1.0 - clamp(wnor.y, 0.0, 1.0);
 	float rock_w = smoothstep(0.22, 0.42, slope + (macro2 - 0.5) * 0.15);
-	vec2 uv1 = wpos.xz * 0.25;
+	vec2 uv1 = wpos.xz * uv_scale;
+	vec2 uvr = wpos.xz * road_scale;
 	vec2 uv2 = wpos.xz * 0.061 + vec2(0.31, 0.77);
 	float dirt_w = clamp(sp.g + smoothstep(0.62, 0.8, macro2) * 0.5, 0.0, 1.0);
 	float floor_w = sp.b;
 	float asph_w = sp.r;
 	float sand_w = sp.a;
 
-	vec3 a = alb(t_grass, uv1, uv2);
+	vec3 a = alb(t_grass, uv1, uv2) * grass_tint;
 	a *= mix(vec3(0.85, 0.95, 0.75), vec3(1.08, 1.0, 0.85), macro);
 	a = mix(a, alb(t_floor, uv1, uv2), floor_w);
 	a = mix(a, alb(t_dirt, uv1, uv2), dirt_w * (1.0 - floor_w * 0.5));
 	a = mix(a, alb(t_sand, uv1, uv2), sand_w);
 	a = mix(a, alb(t_rock, uv1, uv2), rock_w);
-	vec3 asph = min(texture(t_asphalt, wpos.xz * 0.18).rgb, vec3(0.36)) * 0.8;
+	vec3 asph = min(texture(t_asphalt, uvr).rgb, vec3(0.36)) * 0.8;
 	a = mix(a, asph, asph_w);
 	a *= mix(0.86, 1.1, macro);
 	a *= mix(1.0, 0.55, wet * (1.0 - rock_w * 0.3));
@@ -71,7 +75,7 @@ void fragment() {
 	r = mix(r, texture(r_dirt, uv1).g, dirt_w);
 	r = mix(r, texture(r_sand, uv1).g, sand_w);
 	r = mix(r, texture(r_rock, uv1).g, rock_w);
-	r = mix(r, max(0.62, texture(r_asphalt, wpos.xz * 0.18).g), asph_w);
+	r = mix(r, max(0.62, texture(r_asphalt, uvr).g), asph_w);
 	ROUGHNESS = mix(mix(r, r * 0.35, wet), 0.95, asph_w * (1.0 - wet));
 	METALLIC = 0.0;
 
@@ -80,7 +84,7 @@ void fragment() {
 	n = mix(n, texture(n_dirt, uv1).xyz, dirt_w);
 	n = mix(n, texture(n_sand, uv1).xyz, sand_w);
 	n = mix(n, texture(n_rock, uv1).xyz, rock_w);
-	n = mix(n, texture(n_asphalt, wpos.xz * 0.18).xyz, asph_w);
+	n = mix(n, texture(n_asphalt, uvr).xyz, asph_w);
 	NORMAL_MAP = n;
 	NORMAL_MAP_DEPTH = mix(1.0, 0.55, asph_w);
 }

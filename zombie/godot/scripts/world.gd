@@ -13,6 +13,7 @@ var buildings: Dictionary = {}    # id -> {node, interior, data}
 var containers: Array = []
 var terrain_mat: ShaderMaterial
 var water: MeshInstance3D
+var water_mat: ShaderMaterial
 var veg_map: Dictionary = {}      # vegetation index -> [[MultiMesh, instance], ...]
 var veg_circle: Dictionary = {}   # vegetation index -> its collision cylinder
 var veg_hp: Dictionary = {}       # vegetation index -> hit points left (only once it has been hit)
@@ -49,11 +50,24 @@ func _build_terrain() -> void:
 	terrain_mat.set_shader_parameter("splat", ImageTexture.create_from_image(simg))
 	terrain_mat.set_shader_parameter("noise_tex", Mats.tex(info.noise))
 	var names := {"grass": "grass", "dirt": "dirt", "rock": "rock", "floor": "forestFloor", "asphalt": "asphalt", "sand": "sand"}
+	var photo := {"grass": "grass", "dirt": "dirt", "rock": "rock", "floor": "forest", "asphalt": "asphalt", "sand": "sand"}
+	var photos := true
 	for k in names:
 		var s: Dictionary = info.sets[names[k]]
-		terrain_mat.set_shader_parameter("t_" + k, Mats.tex(s.map))
-		terrain_mat.set_shader_parameter("n_" + k, Mats.tex(s.normal))
-		terrain_mat.set_shader_parameter("r_" + k, Mats.tex(s.rough))
+		var base := "res://assets/tex/hf_%s" % photo[k]
+		if ResourceLoader.exists(base + "_a.webp"):
+			terrain_mat.set_shader_parameter("t_" + k, load(base + "_a.webp"))
+			terrain_mat.set_shader_parameter("n_" + k, load(base + "_n.webp"))
+			terrain_mat.set_shader_parameter("r_" + k, load(base + "_r.webp"))
+		else:
+			photos = false
+			terrain_mat.set_shader_parameter("t_" + k, Mats.tex(s.map))
+			terrain_mat.set_shader_parameter("n_" + k, Mats.tex(s.normal))
+			terrain_mat.set_shader_parameter("r_" + k, Mats.tex(s.rough))
+	# photographic tiles cover less ground each than the painted ones did
+	terrain_mat.set_shader_parameter("uv_scale", 0.45 if photos else 0.25)
+	terrain_mat.set_shader_parameter("road_scale", 0.3 if photos else 0.18)
+	terrain_mat.set_shader_parameter("grass_tint", Color(0.8, 0.8, 0.6) if photos else Color.WHITE)
 	var n := WorldData.hn
 	var res := WorldData.hres
 	var hs := WorldData.heights
@@ -86,9 +100,9 @@ func _build_terrain() -> void:
 
 var grass: MultiMeshInstance3D
 var grass_mat: ShaderMaterial
-func _build_grass(count := 150000) -> void:
+func _build_grass(count := 260000) -> void:
 	const S := 70.0
-	var bw := 0.055
+	var bw := 0.03
 	var pos := PackedVector3Array([Vector3(-bw / 2, 0, 0), Vector3(bw / 2, 0, 0), Vector3(-bw * 0.38, 0.4, 0), Vector3(bw * 0.38, 0.4, 0), Vector3(-bw * 0.2, 0.75, 0), Vector3(bw * 0.2, 0.75, 0), Vector3(0, 1, 0)])
 	var uv := PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(0, 0.4), Vector2(1, 0.4), Vector2(0, 0.75), Vector2(1, 0.75), Vector2(0.5, 1)])
 	var nor := PackedVector3Array(); nor.resize(7); nor.fill(Vector3.UP)
@@ -124,6 +138,7 @@ func _build_water() -> void:
 	var mat := ShaderMaterial.new(); mat.shader = load("res://shaders/water.gdshader")
 	mat.set_shader_parameter("normal_tex", Mats.tex(WorldData.info.water.normal))
 	mat.set_shader_parameter("radius", lake.r + 14.0)
+	water_mat = mat
 	water.material_override = mat
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(water)
@@ -346,6 +361,21 @@ func _build_veg() -> void:
 	lib.visible = false
 	veg_data = read_json("res://assets/world/veg.json")
 	veg_inst = FileAccess.get_file_as_bytes("res://data/veg.bin").to_float32_array()
+	# trees and bushes get the wind shader (their own copies of the meshes: bark is shared with other things)
+	for variant in veg_data.variants:
+		if String(variant.kind) in ["tree", "bush"]:
+			for part in variant.parts:
+				var mi := lib.get_node_or_null(String(part)) as MeshInstance3D
+				if mi == null or mi.mesh == null or mi.has_meta("windy"):
+					continue
+				var dup: Mesh = mi.mesh.duplicate()
+				for sfc in dup.get_surface_count():
+					var cur := dup.surface_get_material(sfc)
+					if cur != null:
+						var fm := Mats.foliage(cur.resource_name)
+						if fm != null:
+							dup.surface_set_material(sfc, fm)
+				mi.mesh = dup; mi.set_meta("windy", true)
 	var groups := {"tree": {}, "bush": {}, "rock": {}, "log": {}}
 	for i in int(veg_data.count):
 		var o := i * 6
@@ -369,3 +399,14 @@ func _build_ores() -> void:
 	var n := spawn_export("res://assets/world/ores", self, 96.0, 320.0)
 	if n != null:
 		n.name = "Ores"
+
+## wind (0 calm .. 1 gale), wetness and snow reach every shader that cares
+func set_weather(wind: float, wet: float, snow: float) -> void:
+	if terrain_mat != null:
+		terrain_mat.set_shader_parameter("wet", wet); terrain_mat.set_shader_parameter("snow", snow)
+	if grass_mat != null:
+		grass_mat.set_shader_parameter("wind", wind); grass_mat.set_shader_parameter("snow", snow)
+	if water_mat != null:
+		water_mat.set_shader_parameter("wind", wind)
+	for m in Mats.foliage_mats:
+		m.set_shader_parameter("wind", wind)

@@ -108,7 +108,18 @@ func season_name() -> String:
 	return SEASONS[season()]
 
 func ambient_temp() -> float:
-	return SEASON_TEMP[season()] + 5.0 * sin((hours() - 9.0) / 24.0 * TAU)
+	return SEASON_TEMP[season()] + 5.0 * sin((hours() - 9.0) / 24.0 * TAU) + (modules.weather.temp_offset() if modules.has("weather") else 0.0)
+
+func _rain_protect() -> float:
+	var r := 0.0
+	for st in player.worn.values():
+		if st != null:
+			var cl = Items.def(st.id).get("cloth")
+			if cl != null: r = maxf(r, float(cl.get("rain", 0.0)))
+	return r
+
+func _near_fire() -> bool:
+	return modules.has("sys_cook") and modules.sys_cook.has_method("is_near_fire") and modules.sys_cook.is_near_fire(player.pos)
 
 func objective_text() -> String:
 	if state != "play" or objective >= OBJECTIVES.size():
@@ -298,7 +309,7 @@ func _process(dt: float) -> void:
 	var seen := 0
 	if zombies != null:
 		seen = int(zombies.get("seen_count")) if zombies.get("seen_count") != null else 0
-	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": false, "indoors": p.inside, "raining": 0.0, "rain_protect": 0.0, "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4, "bloody_hands": p.bloody > 0.5})
+	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": _near_fire(), "indoors": p.inside, "raining": (modules.weather.rain_on_player() if modules.has("weather") else 0.0), "rain_protect": _rain_protect(), "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4, "bloody_hands": p.bloody > 0.5})
 	for e in ev:
 		if e == "dead":
 			_die(); return
@@ -336,6 +347,9 @@ func _process(dt: float) -> void:
 	vm.update(dt, _mouse, p.speed, p.on_ground)
 	_mouse = Vector2.ZERO
 	_update_flashlight(dt)
+	Sfx.indoor = p.inside
+	sky.indoor = move_toward(sky.indoor, 1.0 if p.inside else 0.0, dt * 1.5)
+	_apply_view_settings()
 	sky.set_time(hours(), [0.0, 1.0, 0.2, -0.3][season()])
 	if world.grass_mat != null:
 		world.grass_mat.set_shader_parameter("player_pos", p.pos)
@@ -346,7 +360,25 @@ func _process(dt: float) -> void:
 		autosave_at = game_min + 180.0
 		save_game(true)
 
+var _view_sig := ""
+## graphics options that live on the viewport rather than in the environment
+func _apply_view_settings() -> void:
+	var sig := "%s|%s|%s|%s" % [Settings.v("quality"), Settings.v("render_scale"), Settings.v("grass"), Settings.v("vsync")]
+	if sig == _view_sig:
+		return
+	_view_sig = sig
+	var lvl := ["low", "medium", "high", "ultra"].find(String(Settings.v("quality")))
+	if lvl < 0: lvl = 2
+	var vp := get_viewport()
+	vp.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_2X, Viewport.MSAA_4X][lvl]
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if lvl == 0 else Viewport.SCREEN_SPACE_AA_DISABLED
+	vp.scaling_3d_scale = clampf(float(Settings.v("render_scale")), 0.5, 1.0)
+	if world.grass != null:
+		var mm: MultiMesh = world.grass.multimesh
+		mm.visible_instance_count = int(mm.instance_count * clampf([0.3, 0.6, 1.0, 1.0][lvl] * float(Settings.v("grass")), 0.0, 1.0))
+
 func _menu_frame(_dt: float) -> void:
+	_apply_view_settings()
 	var a := time * 0.03
 	var c := Vector3(0.0, 0.0, 0.0); c.y = WorldData.height_at(0.0, 0.0)
 	var pos := c + Vector3(cos(a) * 150.0, 46.0, sin(a) * 150.0)
@@ -1167,21 +1199,24 @@ func _debug_shots() -> void:
 	new_game("police")
 	var sp: Dictionary = WorldData.info.spawn
 	var views := [
-		["spawn", Vector3(sp.x, 0, sp.z), PI * 0.75, -0.05, 8.5],
-		["town_street", Vector3(-6, 0, -70), PI, -0.03, 11.5],
-		["town_main", Vector3(-100, 0, 3), -PI / 2.0, 0.0, 16.5],
-		["lake", Vector3(-170, 0, 150), 0.86, -0.05, 18.4],
-		["night", Vector3(-6, 0, -40), PI, 0.0, 23.0],
+		["spawn", Vector3(sp.x, 0, sp.z), PI * 0.75, -0.05, 8.5, "clear"],
+		["town_street", Vector3(-6, 0, -70), PI, -0.03, 11.5, "clear"],
+		["town_main", Vector3(-100, 0, 3), -PI / 2.0, 0.0, 16.5, "cloudy"],
+		["lake", Vector3(-178, 0, 162), 2.21, -0.08, 18.6, "clear"],
+		["rain", Vector3(-30, 0, 4), -PI / 2.0, 0.0, 14.0, "rain"],
+		["dusk", Vector3(-62, 0, -40), 1.9, 0.04, 19.4, "cloudy"],
+		["night", Vector3(-6, 0, -40), PI, 0.0, 23.0, "clear"],
 	]
 	for v in views:
 		if only != "" and only != String(v[0]): continue
 		var pp: Vector3 = v[1]; pp.y = WorldData.ground_y(pp.x, pp.z)
 		player.pos = pp; player.yaw = float(v[2]); player.pitch = float(v[3]); player.vel = Vector3.ZERO
 		game_min = float(v[4]) * 60.0
+		if modules.has("weather"): modules.weather.set_kind(String(v[5]), true)
 		player.flashlight_on = String(v[0]) == "night"
 		if String(v[0]) == "town_street":
 			player.equipped = player.hotbar[0]
-		for i in 8:
+		for i in 12:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		get_viewport().get_texture().get_image().save_png("user://shot_%s.png" % v[0])

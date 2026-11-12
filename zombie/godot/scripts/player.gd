@@ -41,6 +41,9 @@ var jumped := false
 var stepped := false
 var step_surface := "grass"
 var _step_dist := 0.0
+## scripted walking (tests, cut-scenes): a world-space direction used instead of the keys while it is not zero
+var auto_dir := Vector3.ZERO
+var auto_sprint := false
 var _bob := 0.0
 signal level_up(skill: String, level: int)
 
@@ -140,12 +143,18 @@ func update(dt: float, control: bool, now: float) -> void:
 	if l > 0.0:
 		fx /= l; fz /= l
 	var want_sprint := control and Input.is_physical_key_pressed(KEY_SHIFT) and fz < 0.0 and not crouch and st.can_sprint(wr)
+	var scripted := auto_dir.x != 0.0 or auto_dir.z != 0.0
+	if scripted:
+		l = 1.0; want_sprint = auto_sprint and not crouch
 	sprinting = want_sprint and l > 0.0
 	var base := 1.6 if crouch else (6.0 + level("sprinting") * 0.12 + (0.4 if traits.has("athletic") else 0.0) if sprinting else 3.3)
 	if traits.has("obese"): base *= 0.93
 	base *= st.speed_mult(wr)
 	var cs := cos(yaw); var sn := sin(yaw)
 	var wx := fx * cs + fz * sn; var wz := -fx * sn + fz * cs
+	if scripted:
+		var al := sqrt(auto_dir.x * auto_dir.x + auto_dir.z * auto_dir.z)
+		wx = auto_dir.x / al; wz = auto_dir.z / al
 	var accel := 12.0 if on_ground else 2.0
 	vel.x = damp(vel.x, wx * base, accel, dt)
 	vel.z = damp(vel.z, wz * base, accel, dt)

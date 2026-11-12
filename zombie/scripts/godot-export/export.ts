@@ -27,7 +27,7 @@ import { buildLocomotive, buildWagon, buildStation } from '/src/models/trains';
 import { buildGeneratorModel } from '/src/models/lowpoly';
 import { SFX, INTERNAL } from '/src/audio/sfx';
 import { LOOPS } from '/src/audio/loops';
-import { finalize, makeLoopable } from '/src/audio/dsp';
+import { finalize, makeLoopable, noise, bq, gain, osc } from '/src/audio/dsp';
 
 const SEED = 20261111;      // the game's world seed (src/game.ts)
 const W = window as any;
@@ -272,6 +272,41 @@ async function run() {
       const bytes = wav(lb); total += bytes.length;
       await save(`assets/sfx/loop_${name}.wav`, bytes);
       index['loop_' + name] = { loop: true, vol: def.vol ?? 1, len: def.len };
+    }
+    // ambience beds (the web game builds these live; here they are rendered as loops)
+    const beds: Record<string, [number, (ctx: OfflineAudioContext, out: AudioNode, len: number) => void]> = {
+      amb_wind: [16, (ctx, out, len) => {
+        const lo = noise(ctx, 'brown', 0, len + 1); const lf = bq(ctx, 'lowpass', 320, 0.5); const lg = gain(ctx, 0.9); lo.connect(lf).connect(lg).connect(out);
+        const hi = noise(ctx, 'pink', 0, len + 1); const hf = bq(ctx, 'bandpass', 700, 1.6); const hg = gain(ctx, 0.25); hi.connect(hf).connect(hg).connect(out);
+        // gusts: whole numbers of cycles over the loop, so the ends meet
+        for (const [node, base, depth, cyc] of [[lg.gain, 0.9, 0.35, 2], [hg.gain, 0.25, 0.2, 3], [hf.frequency, 700, 260, 1]] as [AudioParam, number, number, number][]) {
+          const l = osc(ctx, 'sine', cyc / len, 0, len + 1); const d = gain(ctx, depth); l.connect(d).connect(node); node.value = base;
+        }
+      }],
+      amb_rain: [12, (ctx, out, len) => {
+        const a = noise(ctx, 'white', 0, len + 1); const hp = bq(ctx, 'highpass', 1800, 0.5); const lp = bq(ctx, 'lowpass', 9000, 0.5); const g = gain(ctx, 0.5); a.connect(hp).connect(lp).connect(g).connect(out);
+        const b = noise(ctx, 'pink', 0, len + 1, 0.7); const bp = bq(ctx, 'bandpass', 420, 0.8); const g2 = gain(ctx, 0.45); b.connect(bp).connect(g2).connect(out);
+        // individual drops on leaves and roofs
+        let t = 0.02; let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+        while (t < len) { const o = osc(ctx, 'sine', 1400 + rnd() * 2600, t, t + 0.05); const e = gain(ctx, 0); e.gain.setValueAtTime(0.05 + rnd() * 0.07, t); e.gain.exponentialRampToValueAtTime(0.0008, t + 0.04); o.connect(e).connect(out); t += 0.012 + rnd() * 0.05; }
+      }],
+      amb_night: [14, (ctx, out, len) => {
+        // crickets: three voices chirping at their own rates, plus a hush of air
+        const air = noise(ctx, 'pink', 0, len + 1); const af = bq(ctx, 'lowpass', 900, 0.5); const ag = gain(ctx, 0.12); air.connect(af).connect(ag).connect(out);
+        for (const [f, rate, amp, off] of [[4300, 14, 0.09, 0], [3900, 11, 0.07, 0.31], [4750, 17, 0.05, 0.67]]) {
+          for (let t = off; t < len; t += 1 / rate * 4) for (let k = 0; k < 3; k++) { const t0 = t + k / rate * 0.9; if (t0 > len - 0.05) break; const o = osc(ctx, 'sine', f, t0, t0 + 0.03); const e = gain(ctx, 0); e.gain.setValueAtTime(0, t0); e.gain.linearRampToValueAtTime(amp, t0 + 0.006); e.gain.linearRampToValueAtTime(0, t0 + 0.026); o.connect(e).connect(out); }
+        }
+      }],
+      amb_room: [10, (ctx, out, len) => { const a = noise(ctx, 'brown', 0, len + 1); const f = bq(ctx, 'lowpass', 180, 0.6); const g = gain(ctx, 0.8); a.connect(f).connect(g).connect(out); }],
+    };
+    for (const [name, [len, build]] of Object.entries(beds)) {
+      const off = new OfflineAudioContext(1, Math.ceil((len + 0.3) * SR), SR);
+      const out = off.createGain(); out.connect(off.destination); build(off, out, len);
+      const lb = makeLoopable(await off.startRendering(), len);
+      const d = lb.getChannelData(0); let pk = 0; for (let i = 0; i < d.length; i++) pk = Math.max(pk, Math.abs(d[i])); if (pk > 0) for (let i = 0; i < d.length; i++) d[i] *= 0.8 / pk;
+      const bytes = wav(lb); total += bytes.length;
+      await save(`assets/sfx/${name}.wav`, bytes);
+      index[name] = { loop: true, vol: 1, len };
     }
     await saveJSON('assets/sfx/index.json', index);
     log('audio', Object.keys(index).length, 'sounds', (total / 1e6).toFixed(1) + ' MB');

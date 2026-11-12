@@ -5,16 +5,22 @@ extends Node3D
 var sun: DirectionalLight3D
 var moon: DirectionalLight3D
 var env: Environment
-var sky_mat: ProceduralSkyMaterial
+var sky_mat: ShaderMaterial
+var cloud_time := 0.0
+var wind := 0.3
+var fog_extra := 0.0          # weather adds to the haze
+var quality := ""
+var cam_attr: CameraAttributesPractical
 var world_env: WorldEnvironment
 var daylight := 1.0          # 0 at night .. 1 in full day
 var overcast := 0.0
 var indoor := 0.0
 
 func _ready() -> void:
-	sky_mat = ProceduralSkyMaterial.new()
-	sky_mat.sun_angle_max = 28.0
-	sky_mat.sun_curve = 0.12
+	sky_mat = ShaderMaterial.new()
+	sky_mat.shader = load("res://shaders/sky.gdshader")
+	if WorldData.info.has("terrain"):
+		sky_mat.set_shader_parameter("noise_tex", Mats.tex(WorldData.info.terrain.noise))
 	var s := Sky.new()
 	s.sky_material = sky_mat
 	s.radiance_size = Sky.RADIANCE_SIZE_128
@@ -95,12 +101,19 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	var top_night := Color(0.018, 0.026, 0.055); var hor_night := Color(0.04, 0.055, 0.09)
 	var top := _lerp_col(top_night, top_day, daylight); top = _lerp_col(top, top_dusk, twilight * 0.7)
 	var hor := _lerp_col(hor_night, hor_day, daylight); hor = _lerp_col(hor, hor_dusk, twilight * 0.85 * (1.0 - oc))
-	sky_mat.sky_top_color = top
-	sky_mat.sky_horizon_color = hor
-	sky_mat.ground_horizon_color = hor
-	sky_mat.ground_bottom_color = _lerp_col(Color(0.02, 0.02, 0.025), Color(0.2, 0.2, 0.18), daylight)
-	sky_mat.sky_curve = 0.12
-	sky_mat.sky_energy_multiplier = lerpf(0.7, 1.15, daylight)
+	sky_mat.set_shader_parameter("top_color", top)
+	sky_mat.set_shader_parameter("horizon_color", hor)
+	sky_mat.set_shader_parameter("ground_color", _lerp_col(Color(0.02, 0.02, 0.025), Color(0.2, 0.2, 0.18), daylight))
+	sky_mat.set_shader_parameter("energy", lerpf(0.7, 1.15, daylight))
+	sky_mat.set_shader_parameter("night", 1.0 - daylight)
+	sky_mat.set_shader_parameter("moon_dir", mdir)
+	sky_mat.set_shader_parameter("cloud_cover", clampf(0.32 + oc * 0.68, 0.0, 1.0))
+	sky_mat.set_shader_parameter("cloud_time", cloud_time)
+	var c_day := _lerp_col(Color(1.0, 0.99, 0.96), Color(0.62, 0.64, 0.67), oc)
+	var c_lit := _lerp_col(Color(0.07, 0.085, 0.13), c_day, daylight)
+	c_lit = _lerp_col(c_lit, Color(1.0, 0.62, 0.4), twilight * 0.75 * (1.0 - oc))
+	sky_mat.set_shader_parameter("cloud_light", c_lit)
+	sky_mat.set_shader_parameter("cloud_dark", _lerp_col(Color(0.02, 0.025, 0.04), _lerp_col(Color(0.5, 0.54, 0.62), Color(0.3, 0.32, 0.35), oc), daylight))
 	# shade is lit by the sky plus a little that never goes away (bounce by day, starlight by night)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_color = _lerp_col(Color(0.2, 0.26, 0.42), Color(0.62, 0.64, 0.6), daylight)
@@ -108,5 +121,42 @@ func set_time(hours: float, season_tilt := 0.0) -> void:
 	env.ambient_light_energy = lerpf(1.1, lerpf(2.1, 2.2, oc), daylight)
 	env.fog_light_color = hor.lerp(top, 0.25)
 	env.fog_light_energy = lerpf(0.4, 0.8, daylight)
-	env.fog_density = lerpf(0.0011, 0.004, oc)
+	env.fog_density = lerpf(0.0011, 0.004, oc) + fog_extra
+	env.volumetric_fog_density = (0.004 + oc * 0.012 + fog_extra * 6.0) * lerpf(0.5, 1.0, daylight)
+	env.volumetric_fog_albedo = hor.lerp(Color.WHITE, 0.4)
+	# indoors the sky reaches you only through windows
+	env.ambient_light_energy *= lerpf(1.0, 0.42, indoor)
 	env.fog_sun_scatter = 0.15 * daylight
+
+func _process(dt: float) -> void:
+	cloud_time += dt * (0.6 + wind * 2.4)
+	var q := String(Settings.v("quality")) + str(Settings.v("gi")) + str(Settings.v("volumetric_fog")) + str(Settings.v("shadows"))
+	if q != quality:
+		quality = q
+		apply_quality()
+
+## graphics options -> renderer features. Global illumination only on the top preset: it is the costly one.
+func apply_quality() -> void:
+	var lvl := ["low", "medium", "high", "ultra"].find(String(Settings.v("quality")))
+	if lvl < 0: lvl = 2
+	var forward := RenderingServer.get_current_rendering_method() == "forward_plus"
+	env.ssao_enabled = lvl >= 1
+	env.ssil_enabled = lvl >= 3 and forward
+	env.sdfgi_enabled = lvl >= 3 and forward and bool(Settings.v("gi"))
+	env.sdfgi_cascades = 4
+	env.sdfgi_min_cell_size = 0.4
+	env.sdfgi_use_occlusion = true
+	env.sdfgi_energy = 1.0
+	env.volumetric_fog_enabled = lvl >= 2 and forward and bool(Settings.v("volumetric_fog"))
+	env.volumetric_fog_length = 160.0
+	env.volumetric_fog_gi_inject = 0.6
+	env.volumetric_fog_anisotropy = 0.55
+	env.volumetric_fog_sky_affect = 0.0
+	env.glow_enabled = lvl >= 1
+	var shadows := bool(Settings.v("shadows"))
+	sun.shadow_enabled = shadows
+	moon.shadow_enabled = shadows and lvl >= 2
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if lvl >= 2 else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_max_distance = [70.0, 110.0, 160.0, 220.0][lvl]
+	RenderingServer.directional_shadow_atlas_set_size([1024, 2048, 4096, 8192][lvl], true)
+	RenderingServer.directional_soft_shadow_filter_set_quality([RenderingServer.SHADOW_QUALITY_SOFT_VERY_LOW, RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM, RenderingServer.SHADOW_QUALITY_SOFT_HIGH][lvl])

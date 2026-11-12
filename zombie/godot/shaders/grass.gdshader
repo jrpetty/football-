@@ -32,9 +32,9 @@ void vertex() {
 	vec2 wp = mod(off.xy * patch_size - cam + half_s, patch_size) - half_s + cam;
 	vec4 sp = textureLod(splat, (wp + 400.0) / 800.0, 0.0);
 	float dist = length(wp - cam);
-	float mask = (1.0 - sp.r) * (1.0 - smoothstep(0.25, 0.6, sp.g)) * (1.0 - sp.b * 0.75) * (1.0 - sp.a);
+	float mask = (1.0 - sp.r) * (1.0 - smoothstep(0.25, 0.6, sp.g)) * (1.0 - smoothstep(0.15, 0.7, sp.b)) * (1.0 - sp.a);
 	float fade = 1.0 - smoothstep(patch_size * 0.3, patch_size * 0.5, dist);
-	float hgt = (0.32 + off.z * 0.5) * mask * fade * step(0.15, mask) * smoothstep(0.6, 2.0, dist) * (1.0 - smoothstep(0.15, 0.55, snow));
+	float hgt = (0.14 + off.z * off.z * 0.42) * mask * fade * step(0.3, mask) * smoothstep(0.4, 1.6, dist) * (1.0 - smoothstep(0.15, 0.55, snow));
 	float ang = off.w * 6.2831;
 	// the blade mesh is a flat strip in x/y, one metre tall
 	vec3 local = vec3(VERTEX.x * (0.7 + off.z * 0.6), VERTEX.y * hgt, 0.0);
@@ -49,12 +49,12 @@ void vertex() {
 	VERTEX = local + vec3(wp.x, h_at(wp), wp.y);
 	NORMAL = vec3(0.0, 1.0, 0.0);
 	v_h = t;
-	v_col = mix(vec3(0.17, 0.25, 0.08), vec3(0.38, 0.38, 0.17), smoothstep(0.3, 0.9, sp.g + off.z * 0.5)) * (0.8 + off.w * 0.35);
+	v_col = mix(vec3(0.13, 0.2, 0.05), vec3(0.3, 0.3, 0.12), smoothstep(0.3, 0.9, sp.g + off.z * 0.5)) * (0.8 + off.w * 0.35);
 	if (off.w > 1.0 - 0.045 * flowers) { v_col = off.z < 0.33 ? vec3(0.95, 0.93, 0.85) : (off.z < 0.66 ? vec3(0.95, 0.78, 0.2) : vec3(0.62, 0.4, 0.8)); }
 }
 
 void fragment() {
-	vec3 c = mix(v_col * 0.35, v_col * 1.12 + vec3(0.03, 0.04, 0.0), v_h) * bright;
+	vec3 c = mix(v_col * 0.55, v_col * 1.1 + vec3(0.02, 0.03, 0.0), v_h) * bright;
 	ALBEDO = c;
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
