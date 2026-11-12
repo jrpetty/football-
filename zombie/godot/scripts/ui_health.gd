@@ -5,6 +5,7 @@ extends RefCounted
 ## rebuilt only when a wound or your medical supplies change.
 
 const VITALS := [["health", "Overall health"], ["blood", "Blood loss"], ["pain", "Pain"], ["panic", "Panic"], ["temp", "Body temperature"], ["wet", "Wetness"], ["sick", "Sickness"], ["mood", "Unhappiness"], ["insul", "Insulation"], ["carry", "Carry"], ["pk", "Painkillers"], ["ab", "Antibiotics"]]
+const TREAT := {"bandage": "Bandage", "rag": "Bind with a rag", "disinfect": "Disinfect", "splint": "Splint", "suture": "Stitch"}
 const WOUND_NAMES := {"scratch": "Scratch", "laceration": "Laceration", "bite": "Bite", "bullet": "Bullet wound", "fracture": "Fracture", "burn": "Burn"}
 
 var hud: Hud
@@ -81,7 +82,7 @@ func build(v: VBoxContainer) -> void:
 	right.add_child(UiKit.spacer(2))
 	right.add_child(UiKit.heading("Skills", 17))
 	var ssc := ScrollContainer.new(); ssc.size_flags_vertical = Control.SIZE_EXPAND_FILL; ssc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var sv := VBoxContainer.new(); sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; sv.add_theme_constant_override("separation", 4)
+	var sv := VBoxContainer.new(); sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; sv.add_theme_constant_override("separation", 2)
 	var group := ""
 	for sk in _data.get("skills", []):
 		var id := String(sk.id)
@@ -211,9 +212,10 @@ func _wounds() -> void:
 				brow.add_child(tl)
 				for opt in opts:
 					var pid := String(part[0]); var idx := wi; var item_id := String(opt)
-					var b := hud.button(String(Items.def(item_id).name), func() -> void: hud.treat_wound.emit(pid, idx, item_id), 0.0)
-					b.custom_minimum_size = Vector2(0, 28); b.add_theme_font_size_override("font_size", 12)
-					b.tooltip_text = String(UiInventory.MED_USE.get(String(Items.def(item_id).get("med", "")), ""))
+					var med := String(Items.def(item_id).get("med", ""))
+					var b := hud.button(String(TREAT.get(med, Items.def(item_id).name)), func() -> void: hud.treat_wound.emit(pid, idx, item_id), 0.0)
+					b.custom_minimum_size = Vector2(0, 28); b.add_theme_font_size_override("font_size", 13)
+					b.tooltip_text = "%s — %s" % [String(Items.def(item_id).name), String(UiInventory.MED_USE.get(med, ""))]
 					brow.add_child(b)
 				cv.add_child(brow)
 			wi += 1
@@ -236,10 +238,10 @@ class Figure extends Control:
 			for i in range(pts.size() - 1, -1, -1):
 				out.append(Vector2(300.0 - pts[i].x, pts[i].y))
 			return out
-		shapes["torso"] = PackedVector2Array([Vector2(138, 86), Vector2(162, 86), Vector2(166, 100), Vector2(198, 108), Vector2(202, 150), Vector2(190, 252), Vector2(110, 252), Vector2(98, 150), Vector2(102, 108), Vector2(134, 100)])
-		shapes["armL"] = PackedVector2Array([Vector2(96, 110), Vector2(78, 122), Vector2(60, 196), Vector2(46, 268), Vector2(42, 292), Vector2(58, 298), Vector2(66, 272), Vector2(82, 204), Vector2(94, 156)])
+		shapes["torso"] = PackedVector2Array([Vector2(140, 74), Vector2(160, 74), Vector2(163, 90), Vector2(196, 100), Vector2(204, 116), Vector2(199, 164), Vector2(189, 208), Vector2(193, 254), Vector2(107, 254), Vector2(111, 208), Vector2(101, 164), Vector2(96, 116), Vector2(104, 100), Vector2(137, 90)])
+		shapes["armL"] = PackedVector2Array([Vector2(92, 110), Vector2(78, 126), Vector2(66, 190), Vector2(54, 252), Vector2(45, 280), Vector2(51, 298), Vector2(64, 298), Vector2(70, 280), Vector2(73, 256), Vector2(85, 194), Vector2(95, 146)])
 		shapes["armR"] = mirror.call(shapes["armL"])
-		shapes["legL"] = PackedVector2Array([Vector2(108, 258), Vector2(148, 258), Vector2(146, 350), Vector2(140, 436), Vector2(142, 458), Vector2(100, 458), Vector2(112, 436), Vector2(110, 350)])
+		shapes["legL"] = PackedVector2Array([Vector2(106, 259), Vector2(148, 259), Vector2(147, 302), Vector2(143, 358), Vector2(140, 432), Vector2(145, 462), Vector2(101, 462), Vector2(111, 432), Vector2(108, 358), Vector2(104, 302)])
 		shapes["legR"] = mirror.call(shapes["legL"])
 
 	func _draw() -> void:
@@ -251,10 +253,10 @@ class Figure extends Control:
 			var hp := float(pd.hp)
 			var col := UiTheme.GOOD.lerp(UiTheme.WARN, clampf((100.0 - hp) / 45.0, 0.0, 1.0)).lerp(UiTheme.BAD, clampf((60.0 - hp) / 40.0, 0.0, 1.0))
 			var fill := Color(col.r * 0.5, col.g * 0.5, col.b * 0.5, 0.55 + (100.0 - hp) * 0.003)
-			var centre := Vector2(150, 50)
+			var centre := Vector2(150, 44)
 			if id == "head":
-				draw_circle(centre, 34.0, fill, true, -1.0, true)
-				draw_arc(centre, 34.0, 0.0, TAU, 40, col, 1.5, true)
+				draw_circle(centre, 29.0, fill, true, -1.0, true)
+				draw_arc(centre, 29.0, 0.0, TAU, 40, col, 1.5, true)
 			else:
 				var pts: PackedVector2Array = shapes[id]
 				draw_colored_polygon(pts, fill)
@@ -283,7 +285,7 @@ class Figure extends Control:
 					draw_arc(pos, 8.5, 0.0, TAU, 20, Color(0.62, 0.78, 0.3), 1.5, true)
 				n += 1
 		# part names with their numbers, out to the sides
-		for e in [["head", Vector2(196, 34), false], ["torso", Vector2(214, 176), false], ["armL", Vector2(0, 150), true], ["armR", Vector2(248, 150), false], ["legL", Vector2(34, 400), true], ["legR", Vector2(212, 400), false]]:
+		for e in [["head", Vector2(190, 28), false], ["torso", Vector2(214, 176), false], ["armL", Vector2(0, 150), true], ["armR", Vector2(248, 150), false], ["legL", Vector2(34, 400), true], ["legR", Vector2(212, 400), false]]:
 			var hp2 := float(st.parts[e[0]].hp)
 			var nm := ""
 			for q in Stats.PARTS:

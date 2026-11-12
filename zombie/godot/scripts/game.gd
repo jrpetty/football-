@@ -97,6 +97,9 @@ func _ready() -> void:
 				add_child(node); modules[m] = node
 	shots_mode = OS.get_cmdline_user_args().has("--shots")
 	_to_menu()
+	if boot_action == "new":
+		boot_action = ""
+		new_game.call_deferred()
 	if shots_mode:
 		_debug_shots()
 	if OS.get_cmdline_user_args().has("--selftest"):
@@ -117,6 +120,9 @@ func season_name() -> String:
 
 func ambient_temp() -> float:
 	return SEASON_TEMP[season()] + 5.0 * sin((hours() - 9.0) / 24.0 * TAU) + (modules.weather.temp_offset() if modules.has("weather") else 0.0)
+
+func _sheltered() -> bool:
+	return player.inside or (modules.has("sys_build") and modules.sys_build.has_method("under_roof") and modules.sys_build.under_roof(player.pos))
 
 func _rain_protect() -> float:
 	var r := 0.0
@@ -144,9 +150,18 @@ func _to_menu() -> void:
 	hud.set_playing(false)
 	hud.show_menu("main")
 
+static var boot_action := ""
+var _played := false
+
 func _on_menu(a: String) -> void:
 	match a:
-		"new": new_game()
+		"new":
+			if _played:
+				# doors, windows, felled trees and built things belong to the last life: start from a clean world
+				boot_action = "new"
+				get_tree().reload_current_scene()
+			else:
+				new_game()
 		"continue": continue_game()
 		"quit": get_tree().quit()
 		"resume": _resume()
@@ -171,6 +186,7 @@ func make_noise(pos: Vector3, radius: float) -> void:
 
 func _start_play() -> void:
 	state = "play"
+	_played = true
 	hud.close_window(); hud.set_playing(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	autosave_at = game_min + 180.0
@@ -321,7 +337,7 @@ func _process(dt: float) -> void:
 	var seen := 0
 	if zombies != null:
 		seen = int(zombies.get("seen_count")) if zombies.get("seen_count") != null else 0
-	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": _near_fire(), "indoors": p.inside, "raining": (modules.weather.rain_on_player() if modules.has("weather") else 0.0), "rain_protect": _rain_protect(), "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4, "bloody_hands": p.bloody > 0.5})
+	var ev: Array = p.stats.update(dt, dt_min / 60.0, {"moving": p.moving, "sprinting": p.sprinting, "exertion": exertion, "ambient_temp": ambient_temp(), "insulation": p.insulation(), "near_fire": _near_fire(), "indoors": _sheltered(), "raining": (modules.weather.rain_on_player() if modules.has("weather") else 0.0), "rain_protect": _rain_protect(), "sleeping": p.sleeping, "fitness": float(p.level("fitness")), "traits": p.traits, "weight_ratio": p.weight_ratio(), "zombies_seen": seen, "in_light": sky.daylight > 0.4 or _near_fire(), "bloody_hands": p.bloody > 0.5})
 	for e in ev:
 		if e == "dead":
 			_die(); return
@@ -809,6 +825,10 @@ func _update_combat(dt: float, ui_open: bool) -> void:
 		if reloading <= 0.0: _finish_reload()
 	if ui_open or action != null or p.sleeping:
 		return
+	for mk in modules:
+		if modules[mk].has_method("mod_blocks_attack") and modules[mk].mod_blocks_attack():
+			_lmb_was = true; _rmb_was = true
+			return
 	var st = p.equipped_stack()
 	var w = _weapon(st)
 	var lmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
@@ -902,6 +922,8 @@ func _melee_hit() -> void:
 			_break_window(ref)
 
 func _break_window(w: Dictionary) -> void:
+	if float(w.get("barricade", 0)) > 0.0:
+		Sfx.play("hit_wood", {"volume": 0.7}); return
 	w.broken = true
 	if w.node != null: w.node.visible = false
 	if w.box != null: WorldData.set_solid(w.box, false)
@@ -1132,6 +1154,7 @@ func _on_burst(pos: Vector3, radius: float, _z = null) -> void:
 
 func _structure_hit(ref, dmg: float) -> void:
 	if not (ref is Dictionary): return
+	if ref.get("built", false) or float(ref.get("barricade", 0)) > 0.0: return     # the build system handles its own
 	if String(ref.get("kind", "")) == "door" and not ref.open:
 		ref.hp = float(ref.hp) - dmg
 		if float(ref.hp) <= 0.0:

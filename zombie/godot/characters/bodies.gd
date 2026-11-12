@@ -322,6 +322,13 @@ func has_clip(id: int, clip: StringName) -> bool:
 func current_clip(id: int) -> StringName:
 	return _bodies[id].asked
 
+## The 36 texels that describe a body to the shader (look, bone scales, animation), for anything that draws the
+## body mesh on its own account with the same material — the first-person arms do.
+func row_pixels(id: int) -> Array:
+	var out: Array = []
+	for k in TEX_W: out.append(_img.get_pixel(k, id))
+	return out
+
 ## Uniform scale the body is drawn at (height x kind).
 func body_scale(id: int) -> float:
 	return _bodies[id].scale

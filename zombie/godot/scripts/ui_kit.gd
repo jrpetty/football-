@@ -12,7 +12,7 @@ static func text(ci: CanvasItem, kind: String, pos: Vector2, s: String, size: in
 	var f := UiTheme.font(kind)
 	var p := Vector2(pos.x, pos.y + f.get_ascent(size))
 	if edge:
-		ci.draw_string_outline(f, p, s, align, width, size, 4, Color(0, 0, 0, 0.42 * col.a))
+		ci.draw_string_outline(f, p, s, align, width, size, 5, Color(0, 0, 0, 0.6 * col.a))
 	ci.draw_string(f, p, s, align, width, size, col)
 
 static func text_w(kind: String, s: String, size: int) -> float:
@@ -109,7 +109,7 @@ static func glyph(ci: CanvasItem, name: String, rect: Rect2, col: Color, rot := 
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 ## an eye that opens with `open` (0 shut … 1 wide)
-static func eye(ci: CanvasItem, rect: Rect2, open: float, col: Color) -> void:
+static func eye(ci: CanvasItem, rect: Rect2, open: float, col: Color, width := 1.6) -> void:
 	var c := rect.get_center(); var hw := rect.size.x * 0.5; var hh := rect.size.y * 0.5 * clampf(open, 0.08, 1.0)
 	var top := PackedVector2Array(); var bot := PackedVector2Array()
 	for i in 13:
@@ -117,8 +117,8 @@ static func eye(ci: CanvasItem, rect: Rect2, open: float, col: Color) -> void:
 		var x := c.x - hw + t * hw * 2.0
 		var k := sin(t * PI)
 		top.append(Vector2(x, c.y - k * hh)); bot.append(Vector2(x, c.y + k * hh))
-	ci.draw_polyline(top, col, 1.6, true)
-	ci.draw_polyline(bot, col, 1.6, true)
+	ci.draw_polyline(top, col, width, true)
+	ci.draw_polyline(bot, col, width, true)
 	if open > 0.2:
 		ci.draw_circle(c, minf(hh * 0.72, rect.size.y * 0.3), col, true, -1.0, true)
 

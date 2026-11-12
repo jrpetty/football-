@@ -418,6 +418,21 @@ func test_building() -> void:
 		"nav %s floors %d/%d boxes %d/%d refs %d/%d" % [nav_sum() == nav0, W.floors.size(), floors0, W._boxes.size(), boxes0, W.nav_ref.size(), refs0])
 	for d in game.world.drops.duplicate():
 		game.world.remove_drop(d)
+	# the whole catalogue, one of each: every model loads, every piece comes down clean
+	stock()
+	var i := 0
+	var bad: Array = []
+	for id in build.defs:
+		var kind := String(build.defs[id].kind)
+		var q = put(String(id), tx0 - 5 + (i % 5) * 2, tz0 - 5 + int(i / 5.0) * 2, 0, 0 if build.EDGE_KINDS.has(kind) else -1)
+		i += 1
+		if q == null or q.node == null or q.node.find_children("*", "MeshInstance3D", true, false).is_empty():
+			bad.append("%s (%s)" % [id, placer.reason])
+	ok("every piece in the catalogue can be built", bad.is_empty() and build.list.size() == build.defs.size(), "%d pieces%s" % [build.list.size(), "" if bad.is_empty() else ", not " + ", ".join(bad)])
+	for q in build.list.duplicate():
+		build.remove(q)
+	await frames(3)
+	ok("and removed without a trace", build.list.is_empty() and nav_sum() == nav0 and W.floors.size() == floors0 and W._boxes.size() == boxes0 and W.nav_ref.size() == refs0)
 
 # ------------------------------------------------------------------ the dead against walls
 ## keep every horde member heading for a spot (a horde scatters its members' goals around the target)

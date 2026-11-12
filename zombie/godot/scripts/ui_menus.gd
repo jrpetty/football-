@@ -81,11 +81,13 @@ func show(kind_: String, text := "") -> void:
 	match kind:
 		"main":
 			_backdrop.art = key_art()
-			_backdrop.left = 0.86 if _backdrop.art != null else 0.8
+			_backdrop.left = 0.86
+			if _backdrop.art == null:
+				_backdrop.shade = 0.34          # the live world can be midday-bright; the menu still has to read
 		"pause":
 			_backdrop.shade = 0.5; _backdrop.left = 0.7
 		"dead":
-			_backdrop.shade = 0.7; _backdrop.left = 0.3
+			_backdrop.shade = 0.86; _backdrop.left = 0.3
 			hud.play.visible = false; hud.fx.visible = false
 	_win.add_child(_backdrop)
 	_holder = Control.new(); _holder.set_anchors_preset(Control.PRESET_FULL_RECT); _holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -715,10 +717,15 @@ class Logo extends Control:
 		var f := UiTheme.font("logo" if fs >= 90 else "title")
 		var y := f.get_ascent(fs) - fs * 0.12
 		var x := 18.0
-		draw_string_outline(f, Vector2(x, y), a + b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, maxi(4, fs / 10), Color(0, 0, 0, 0.3))
+		# the second part starts where it would in the whole word, so the letter spacing is even across the join
+		var xb := x + f.get_string_size(a + b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x - f.get_string_size(b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var edge := maxi(4, fs / 10)
+		draw_string_outline(f, Vector2(x, y), a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, edge, Color(0, 0, 0, 0.3))
+		if b != "":
+			draw_string_outline(f, Vector2(xb, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, edge, Color(0, 0, 0, 0.3))
 		draw_string(f, Vector2(x, y), a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col_a)
 		if b != "":
-			draw_string(f, Vector2(x + f.get_string_size(a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.ACCENT)
+			draw_string(f, Vector2(xb, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.ACCENT)
 		if rule:
 			draw_rect(Rect2(x + 2.0, size.y - 5.0, maxf(40.0, fs * 0.6), 2.0), UiTheme.ACCENT)
 

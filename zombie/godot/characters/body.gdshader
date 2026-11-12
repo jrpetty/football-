@@ -25,7 +25,9 @@ varying flat vec2 vZInfo;
 varying flat float vZJaw;
 
 const vec3 ZPIV[18] = {vec3(0.0000, 0.9500, 0.0000), vec3(0.0000, 1.0600, -0.0450), vec3(0.0000, 1.2700, -0.0400), vec3(0.0000, 1.5150, -0.0060), vec3(0.0000, 1.6420, -0.0300), vec3(0.1680, 1.4500, 0.0000), vec3(0.1680, 1.1600, 0.0000), vec3(0.1680, 0.9050, 0.0000), vec3(-0.1680, 1.4500, 0.0000), vec3(-0.1680, 1.1600, 0.0000), vec3(-0.1680, 0.9050, 0.0000), vec3(0.0880, 0.9300, 0.0000), vec3(0.0880, 0.5000, 0.0000), vec3(0.0880, 0.0850, 0.0000), vec3(-0.0880, 0.9300, 0.0000), vec3(-0.0880, 0.5000, 0.0000), vec3(-0.0880, 0.0850, 0.0000), vec3(0.0000, 1.1300, 0.0750)};
-const vec2 CLIP_SIZE = vec2(180.0, 2048.0);
+// the size of clip_tex in texels (a uniform so that a caller with poses of its own, like the first-person arms,
+// can give the same shader a small texture it rewrites every frame)
+uniform vec2 clip_size = vec2(180.0, 2048.0);
 const int SCALE0 = 10;      // body_tex columns: 0..9 look, 10..27 bone scales, 28.. animation
 const int ANIM0 = 28;
 
@@ -42,7 +44,7 @@ vec3 to_srgb(vec3 c) { c = max(c, vec3(0.0)); return mix(1.055 * pow(c, vec3(1.0
 float zsm(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 
 vec4 clip_at(vec2 org, float f, int col) {
-	return textureLod(clip_tex, vec2(org.x + float(col) + 0.5, org.y + f + 0.5) / CLIP_SIZE, 0.0);
+	return textureLod(clip_tex, vec2(org.x + float(col) + 0.5, org.y + f + 0.5) / clip_size, 0.0);
 }
 float clip_frame(vec4 a, vec4 b) {
 	// a = (column, first row, frames, frames per second), b = (start time, start frame, loops, -)

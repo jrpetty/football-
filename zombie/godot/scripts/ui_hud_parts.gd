@@ -6,6 +6,8 @@ class_name UiHudParts
 # ------------------------------------------------------------------ compass
 class Compass extends Control:
 	const PX := 3.3                      # pixels per degree
+	const CARD := ["N", "E", "S", "W"]
+	const INTER := ["NE", "SE", "SW", "NW"]
 	var heading := 0.0                   # degrees, 0 = north, 90 = east
 	var marks: Array = []                # [{bearing, glyph, col, label}]
 	var threats := PackedFloat32Array()  # bearing, strength, bearing, strength…
@@ -27,6 +29,10 @@ class Compass extends Control:
 		_drawn = heading; _dirty = false
 		var half := size.x * 0.5
 		var base_y := 30.0
+		# a strip of shade so the marks read against a bright sky
+		var sh := Color(0, 0, 0, 0.42); var sz := Color(0, 0, 0, 0.0)
+		draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(half, 0), Vector2(half, 39), Vector2(0, 39)]), PackedColorArray([sz, sh, sh, sz]))
+		draw_polygon(PackedVector2Array([Vector2(half, 0), Vector2(size.x, 0), Vector2(size.x, 39), Vector2(half, 39)]), PackedColorArray([sh, sz, sz, sh]))
 		draw_polyline_colors(PackedVector2Array([Vector2(0, base_y), Vector2(half, base_y), Vector2(size.x, base_y)]), PackedColorArray([Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.0)]), 1.0)
 		var first := int(floor((heading - half / PX) / 5.0)) * 5
 		var d := first
@@ -39,10 +45,10 @@ class Compass extends Control:
 				if dn % 90 == 0:
 					var north := dn == 0
 					draw_line(Vector2(x, base_y - 7), Vector2(x, base_y), Color(UiTheme.ACCENT2 if north else UiTheme.INK, a), 2.0)
-					UiKit.text(self, "head", Vector2(x - 20, 0), ["N", "E", "S", "W"][dn / 90], 18, Color(UiTheme.ACCENT2 if north else UiTheme.INK, a), HORIZONTAL_ALIGNMENT_CENTER, 40)
+					UiKit.text(self, "head", Vector2(x - 20, 0), CARD[dn / 90], 18, Color(UiTheme.ACCENT2 if north else UiTheme.INK, a), HORIZONTAL_ALIGNMENT_CENTER, 40)
 				elif dn % 45 == 0:
 					draw_line(Vector2(x, base_y - 6), Vector2(x, base_y), Color(UiTheme.INK, a * 0.75), 1.0)
-					UiKit.text(self, "cap", Vector2(x - 20, 6), ["NE", "SE", "SW", "NW"][(dn - 45) / 90], 11, Color(UiTheme.DIM, a), HORIZONTAL_ALIGNMENT_CENTER, 40)
+					UiKit.text(self, "cap", Vector2(x - 20, 6), INTER[(dn - 45) / 90], 12, Color(UiTheme.DIM, a), HORIZONTAL_ALIGNMENT_CENTER, 40)
 				elif dn % 15 == 0:
 					draw_line(Vector2(x, base_y - 5), Vector2(x, base_y), Color(UiTheme.INK, a * 0.6), 1.0)
 				else:
@@ -69,7 +75,7 @@ class Compass extends Control:
 			draw_rect(Rect2(x3 - 9.0, base_y + 3.0, 18.0, 18.0), Color(0, 0, 0, 0.35 * col.a))
 			UiKit.glyph(self, String(m.glyph), Rect2(x3 - 6.0, base_y + 6.0, 12.0, 12.0), col)
 			if not off and absf(rel2) < 9.0 and String(m.label) != "":
-				UiKit.text(self, "cap", Vector2(x3 - 90.0, base_y + 24.0), String(m.label), 11, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 180)
+				UiKit.text(self, "cap", Vector2(x3 - 90.0, base_y + 24.0), String(m.label), 12, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 180)
 		# where you are looking
 		draw_line(Vector2(half, base_y - 9), Vector2(half, base_y + 2), UiTheme.ACCENT, 2.0)
 
@@ -96,19 +102,23 @@ class Stealth extends Control:
 		var col: Color = [UiTheme.INK, UiTheme.WARN, UiTheme.BAD][state]
 		var cx := size.x * 0.5
 		var open := clampf((vis - 0.3) / 0.75, 0.12, 1.0)
+		UiKit.eye(self, Rect2(cx - 15.0, 3.0, 30.0, 18.0), open if state == 0 else 1.0, Color(0, 0, 0, 0.5), 4.0)
 		UiKit.eye(self, Rect2(cx - 15.0, 2.0, 30.0, 18.0), open if state == 0 else 1.0, col)
 		# how loud you are: five bars to the right of the eye
 		var lvl := int(ceil(clampf(noise / 16.0, 0.0, 1.0) * 5.0))
 		for i in 5:
 			var h := 4.0 + i * 2.5
-			draw_rect(Rect2(cx + 24.0 + i * 5.0, 19.0 - h, 3.0, h), Color(col, 0.9) if i < lvl else Color(1, 1, 1, 0.16))
+			draw_rect(Rect2(cx + 23.0 + i * 5.0, 18.0 - h, 5.0, h + 2.0), Color(0, 0, 0, 0.3))
+			draw_rect(Rect2(cx + 24.0 + i * 5.0, 19.0 - h, 3.0, h), Color(col, 0.95) if i < lvl else Color(1, 1, 1, 0.3))
 		var word := "HUNTED" if state == 2 else ("SEEN" if state == 1 else ("HIDDEN" if vis < 0.5 else ("VISIBLE" if vis < 1.0 else "EXPOSED")))
 		if state == 2 and count > 1:
 			word = "HUNTED  ×%d" % count
-		UiKit.text(self, "cap", Vector2(cx - 24.0 - 120.0, 4.0), word, 11, col, HORIZONTAL_ALIGNMENT_RIGHT, 120)
+		UiKit.text(self, "cap", Vector2(cx - 24.0 - 120.0, 4.0), word, 12, col, HORIZONTAL_ALIGNMENT_RIGHT, 120)
 
 # ------------------------------------------------------------------ crosshair, hit marker, damage direction
 class Crosshair extends Control:
+	const ARMS := [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]
+	const DIAG := [Vector2(0.7071, 0.7071), Vector2(-0.7071, 0.7071), Vector2(-0.7071, -0.7071), Vector2(0.7071, -0.7071)]
 	var spread := 0.0                    # pixels the arms sit away from the centre
 	var mode := 0                        # 0 dot · 1 firearm · 2 interact
 	var ads := 0.0
@@ -116,14 +126,16 @@ class Crosshair extends Control:
 	var hit_kill := false
 	var reload := -1.0                   # 0–1 while reloading
 	var _sig := -1
+	var _hit_shown := false
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func set_state(sp: float, md: int, aim: float, rl: float) -> void:
 		var sig := int(sp * 4.0) + md * 1000 + int(aim * 20.0) * 10000 + int(rl * 100.0) * 1000000
-		if sig != _sig or hit_t > 0.0:
+		if sig != _sig or hit_t > 0.0 or _hit_shown:
 			_sig = sig; spread = sp; mode = md; ads = aim; reload = rl
+			_hit_shown = hit_t > 0.0
 			queue_redraw()
 
 	func _draw() -> void:
@@ -137,7 +149,7 @@ class Crosshair extends Control:
 			var a := 1.0 - ads * 0.85
 			if mode == 1 and a > 0.03:
 				var g := 6.0 + spread
-				for dir in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+				for dir in ARMS:
 					draw_line(dir * (g - 1.0), dir * (g + 8.0), Color(edge, edge.a * a), 3.6)
 					draw_line(dir * g, dir * (g + 7.0), Color(ink, ink.a * a), 1.6)
 			draw_circle(Vector2.ZERO, 2.4, edge, true, -1.0, true)
@@ -151,8 +163,7 @@ class Crosshair extends Control:
 			var c := Color(UiTheme.BAD if hit_kill else Color.WHITE, minf(1.0, hit_t / life * 2.0))
 			var r := (9.0 if hit_kill else 7.0) + k * 6.0
 			var l := 9.0 if hit_kill else 6.0
-			for a2 in [PI * 0.25, PI * 0.75, PI * 1.25, PI * 1.75]:
-				var dv := Vector2(cos(a2), sin(a2))
+			for dv in DIAG:
 				draw_line(dv * r, dv * (r + l), Color(0, 0, 0, c.a * 0.5), 4.0, true)
 				draw_line(dv * r, dv * (r + l), c, 2.2 if hit_kill else 1.8, true)
 
@@ -188,11 +199,9 @@ class DamageRing extends Control:
 			var rel := deg_to_rad(wrapf(float(h[0]) - heading, -180.0, 180.0)) - PI * 0.5
 			var a := clampf(float(h[1]) / LIFE * 1.6, 0.0, 1.0)
 			var r := 118.0 + (1.0 - float(h[1]) / LIFE) * 10.0
-			draw_arc(Vector2.ZERO, r, rel - 0.34, rel + 0.34, 20, Color(0.75, 0.08, 0.05, 0.55 * a), 12.0, true)
-			draw_arc(Vector2.ZERO, r + 5.0, rel - 0.2, rel + 0.2, 14, Color(0.95, 0.25, 0.15, 0.9 * a), 3.0, true)
-			var tip := Vector2(cos(rel), sin(rel))
-			var side := Vector2(-tip.y, tip.x)
-			draw_colored_polygon(PackedVector2Array([tip * (r + 22.0), tip * (r + 9.0) + side * 9.0, tip * (r + 9.0) - side * 9.0]), Color(0.95, 0.25, 0.15, 0.9 * a))
+			draw_arc(Vector2.ZERO, r, rel - 0.42, rel + 0.42, 24, Color(0.6, 0.05, 0.03, 0.4 * a), 5.0, true)
+			draw_arc(Vector2.ZERO, r + 3.0, rel - 0.3, rel + 0.3, 20, Color(0.8, 0.1, 0.06, 0.6 * a), 9.0, true)
+			draw_arc(Vector2.ZERO, r + 8.0, rel - 0.16, rel + 0.16, 14, Color(0.98, 0.3, 0.2, 0.95 * a), 5.0, true)
 
 # ------------------------------------------------------------------ the hurt / bleeding screen edge
 class ScreenFx extends ColorRect:
@@ -333,7 +342,7 @@ class Vitals extends Control:
 			if i == 1 and cap < 0.995:
 				draw_rect(Rect2(bx + bw * cap, by, bw * (1.0 - cap), h), Color(0, 0, 0, 0.45))
 			draw_rect(Rect2(bx, by, bw * clampf(v / 100.0, 0.0, 1.0) * (cap if i == 1 else 1.0), h), col)
-			UiKit.text(self, "num", Vector2(bx + bw + 10.0, gy - 2.0), _txt[i], 15 if i == 0 else 13, ink if (crit or i == 0) else UiTheme.DIM)
+			UiKit.text(self, "num", Vector2(bx + bw + 10.0, gy - 2.0), _txt[i], 16 if i == 0 else 14, ink if (crit or i == 0) else Color(0.8, 0.78, 0.72))
 
 # ------------------------------------------------------------------ hotbar
 class Hotbar extends Control:
@@ -444,13 +453,13 @@ class Weapon extends Control:
 		if title == "":
 			return
 		var w := size.x
-		UiKit.text(self, "head", Vector2(0, 0), title, 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_RIGHT, w)
+		UiKit.text(self, "head", Vector2(0, 0), title, 14, Color(0.8, 0.78, 0.72), HORIZONTAL_ALIGNMENT_RIGHT, w)
 		if big != "":
 			var sw := UiKit.text_w("num", small, 20) + 8.0
 			UiKit.text(self, "num", Vector2(0, 18), big, 44, big_col, HORIZONTAL_ALIGNMENT_RIGHT, w - sw)
-			UiKit.text(self, "num", Vector2(0, 40), small, 20, UiTheme.DIM, HORIZONTAL_ALIGNMENT_RIGHT, w)
+			UiKit.text(self, "num", Vector2(0, 40), small, 20, Color(0.8, 0.78, 0.72), HORIZONTAL_ALIGNMENT_RIGHT, w)
 			if hint != "":
-				UiKit.text(self, "cap", Vector2(0, 70), hint, 11, UiTheme.ACCENT2, HORIZONTAL_ALIGNMENT_RIGHT, w)
+				UiKit.text(self, "cap", Vector2(0, 70), hint, 12, UiTheme.ACCENT2, HORIZONTAL_ALIGNMENT_RIGHT, w)
 		elif small != "":
 			UiKit.text(self, "cap", Vector2(0, 24), small, 12, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT, w)
 			if frac >= 0.0:
@@ -485,9 +494,20 @@ class Prompt extends Control:
 
 	func _draw() -> void:
 		var y := 0.0
+		# a patch of shade, just wide enough for the words
+		var wide := 0.0
+		if name_ != "": wide = UiKit.text_w("cap", name_.to_upper(), 13)
+		if verb != "": wide = maxf(wide, UiKit.text_w("body", verb, 17) + (UiKit.keycap_size(key, 14).x + 9.0 if key != "" else 0.0))
+		if sub != "": wide = maxf(wide, UiKit.text_w("body", sub, 13))
+		var tall := (22.0 if name_ != "" else 0.0) + (28.0 if verb != "" else 0.0) + (20.0 if sub != "" else 0.0)
+		var z := Color(0, 0, 0, 0.0); var k := Color(0, 0, 0, 0.36)
+		var x0 := -wide * 0.5 - 46.0; var x1 := -wide * 0.5 - 6.0; var x2 := wide * 0.5 + 6.0; var x3 := wide * 0.5 + 46.0
+		draw_polygon(PackedVector2Array([Vector2(x0, -5), Vector2(x1, -5), Vector2(x1, tall + 3), Vector2(x0, tall + 3)]), PackedColorArray([z, k, k, z]))
+		draw_rect(Rect2(x1, -5, x2 - x1, tall + 8), k)
+		draw_polygon(PackedVector2Array([Vector2(x2, -5), Vector2(x3, -5), Vector2(x3, tall + 3), Vector2(x2, tall + 3)]), PackedColorArray([k, z, z, k]))
 		if name_ != "":
-			UiKit.text(self, "cap", Vector2(-200, y), name_.to_upper(), 12, UiTheme.ACCENT2, HORIZONTAL_ALIGNMENT_CENTER, 400)
-			y += 20.0
+			UiKit.text(self, "cap", Vector2(-200, y), name_.to_upper(), 13, UiTheme.ACCENT2, HORIZONTAL_ALIGNMENT_CENTER, 400)
+			y += 22.0
 		if verb != "":
 			var fs := 17
 			var tw := UiKit.text_w("body", verb, fs)

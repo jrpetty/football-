@@ -476,7 +476,7 @@ func _update_bar() -> void:
 	_bar_box.add_child(cc)
 	var state := "LMB build" if valid else reason
 	if target.is_empty(): state = "Aim at the ground within reach"
-	var st: Label = hud.label(state, 14, Hud.GOOD if valid else Hud.BAD); st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var st: Label = hud.label(state, 14, Hud.DIM if target.is_empty() else (Hud.GOOD if valid else Hud.BAD)); st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar_box.add_child(st)
 	var hint2: Label = hud.label("R rotate   ·   X dismantle   ·   B menu   ·   RMB / Esc leave", 12, Hud.DIM); hint2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar_box.add_child(hint2)
@@ -519,15 +519,15 @@ func _card(id: String, def: Dictionary) -> Control:
 	var open: bool = build.unlocked(id)
 	var skill: String = build.skill_missing(id)
 	var afford: bool = build.free_build or U.has_all(inv, cost)
-	var b: Button = U.row_button(hud, 118.0)
-	b.custom_minimum_size = Vector2(312, 118)
+	var b: Button = U.row_button(hud, 128.0)
+	b.custom_minimum_size = Vector2(312, 128)
 	b.disabled = not open
 	var box := VBoxContainer.new(); box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.offset_left = 10; box.offset_right = -10; box.offset_top = 7; box.offset_bottom = -7
 	box.add_theme_constant_override("separation", 3); box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(hud.label(String(def.name), 17, Hud.INK if open and skill == "" and afford else Hud.DIM))
 	var desc: Label = hud.label(_blurb(def), 12, Hud.DIM)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.custom_minimum_size = Vector2(290, 34); desc.max_lines_visible = 2
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; desc.custom_minimum_size = Vector2(290, 42); desc.max_lines_visible = 2
 	desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	box.add_child(desc)
 	if open:

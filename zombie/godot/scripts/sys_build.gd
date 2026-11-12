@@ -147,7 +147,7 @@ func mod_load(data) -> void:
 			continue
 		if String(b[0]) == "door" and float(b[3]) > 0.0:
 			t.hp = float(b[3])              # the game restored the shield value; put the real one back first
-		barricade(t, 0, float(b[2]), float(b[4]))
+		barricade(t, float(b[2]), float(b[4]))
 	# a door that still carries a shield but no boards (a save from a different build): give it its own strength back
 	for id in world.doors:
 		var d: Dictionary = world.doors[id]
@@ -912,7 +912,7 @@ func barricade_step() -> float:
 	return 60.0 * (1.0 + game.player.level("carpentry") * 0.15)
 
 ## Board up a town door or window (one more layer, up to four). `amount` and `step` restore a saved one.
-func barricade(t: Dictionary, _carpentry := 0, amount := -1.0, step := -1.0) -> void:
+func barricade(t: Dictionary, amount := -1.0, step := -1.0) -> void:
 	var box: WorldData.Box = t.box
 	if box == null:
 		return

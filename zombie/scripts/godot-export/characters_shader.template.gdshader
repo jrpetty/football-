@@ -42,7 +42,7 @@ vec3 to_srgb(vec3 c) { c = max(c, vec3(0.0)); return mix(1.055 * pow(c, vec3(1.0
 float zsm(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
 
 vec4 clip_at(vec2 org, float f, int col) {
-	return textureLod(clip_tex, vec2(org.x + float(col) + 0.5, org.y + f + 0.5) / CLIP_SIZE, 0.0);
+	return textureLod(clip_tex, vec2(org.x + float(col) + 0.5, org.y + f + 0.5) / clip_size, 0.0);
 }
 float clip_frame(vec4 a, vec4 b) {
 	// a = (column, first row, frames, frames per second), b = (start time, start frame, loops, -)

@@ -60,6 +60,7 @@ var minimap: UiMap.View = null
 var minimap_frame: Control
 var place_lbl: Label
 var obj_box: VBoxContainer
+var obj_panel: PanelContainer
 var obj_title: Label
 var obj_desc: Label
 var moodle_box: VBoxContainer
@@ -84,6 +85,7 @@ var _prompt_key := ""
 var _obj_text := "\u0001"
 var _obj_age := 0.0
 var _moodle_sig := ""
+var _moodle_slab: StyleBoxFlat = UiTheme.flat_m(Color(0.02, 0.022, 0.02, 0.5), Color(0, 0, 0, 0), 0, 9, 2, 0)
 var _moodle_level: Dictionary = {}
 var _moodle_tell: Dictionary = {}
 var _spread := 0.0
@@ -122,18 +124,24 @@ func icon(key: String) -> Texture2D:
 	if _icon_cache.has(key):
 		return _icon_cache[key]
 	var tex: Texture2D = null
-	if icons.has(key):
+	var img: Image = null
+	# the interface's own drawings (assets/ui/icons) stand in for the weakest of the shared set
+	var own := "res://assets/ui/icons/%s.png" % key
+	if ResourceLoader.exists(own):
+		var o = load(own)
+		if o is Texture2D:
+			tex = o; img = o.get_image()
+	elif icons.has(key):
 		var src = load("res://assets/icons/" + String(icons[key]))
 		if src is Texture2D:
-			tex = src
-			var img: Image = src.get_image()
-			if img != null and not img.is_empty():
-				if img.is_compressed():
-					img.decompress()
-				img.convert(Image.FORMAT_RGBA8)
-				img.adjust_bcs(0.94, 1.04, 0.62)
-				img.generate_mipmaps()
-				tex = ImageTexture.create_from_image(img)
+			tex = src; img = src.get_image()
+	if img != null and not img.is_empty():
+		if img.is_compressed():
+			img.decompress()
+		img.convert(Image.FORMAT_RGBA8)
+		img.adjust_bcs(0.94, 1.04, 0.62)
+		img.generate_mipmaps()
+		tex = ImageTexture.create_from_image(img)
 	_icon_cache[key] = tex
 	return tex
 
@@ -147,7 +155,7 @@ static func box(col: Color, radius := 6, border := Color(0, 0, 0, 0), bw := 0) -
 func label(text: String, size := 16, col := INK) -> Label:
 	var l := Label.new(); l.text = text
 	l.add_theme_font_size_override("font_size", size); l.add_theme_color_override("font_color", col)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.4)); l.add_theme_constant_override("outline_size", 4)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6)); l.add_theme_constant_override("outline_size", 5)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
 
@@ -215,11 +223,16 @@ func _build_hud() -> void:
 	var oc := UiKit.caption("Objective", UiTheme.ACCENT2, 12); oc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	oc.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.45)); oc.add_theme_constant_override("outline_size", 4)
 	obj_title = label("", 16); obj_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	obj_desc = label("", 14, DIM); obj_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; obj_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	obj_desc.custom_minimum_size = Vector2(250, 0)
-	obj_box.add_child(UiKit.spacer(6)); obj_box.add_child(oc); obj_box.add_child(obj_title); obj_box.add_child(obj_desc)
-	obj_box.visible = false
-	side.add_child(obj_box)
+	obj_desc = label("", 14, Color(0.76, 0.74, 0.68)); obj_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; obj_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	obj_desc.custom_minimum_size = Vector2(228, 0)
+	obj_box.add_child(oc); obj_box.add_child(obj_title); obj_box.add_child(obj_desc)
+	var osb := UiTheme.flat_m(Color(0.02, 0.022, 0.02, 0.52), Color(UiTheme.ACCENT, 0.85), 0, 10, 6, 0); osb.border_width_right = 2
+	obj_panel = PanelContainer.new(); obj_panel.add_theme_stylebox_override("panel", osb); obj_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	obj_panel.size_flags_horizontal = Control.SIZE_SHRINK_END
+	obj_panel.add_child(obj_box)
+	obj_panel.visible = false
+	side.add_child(UiKit.spacer(2))
+	side.add_child(obj_panel)
 	side.add_child(UiKit.spacer(6))
 	moodle_box = VBoxContainer.new(); moodle_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; moodle_box.add_theme_constant_override("separation", 5)
 	side.add_child(moodle_box)
@@ -248,8 +261,10 @@ func _build_hud() -> void:
 	prompt = UiHudParts.Prompt.new(); place(prompt, 0.5, 0.5, 0, 46.0); play.add_child(prompt)
 	action_box = UiHudParts.ActionBar.new(); place(action_box, 0.5, 0.5, 0, 118.0); play.add_child(action_box)
 
+	# the hurt edge sits under the HUD, so the read-outs stay clean while the view reddens
 	fx = UiHudParts.ScreenFx.new(); fx.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(fx)
+	root.move_child(fx, 0)
 
 func _on_setting(key: String) -> void:
 	if key == "minimap" or key == "minimap_rotate":
@@ -484,12 +499,16 @@ func update_hud(dt: float) -> void:
 		if place_lbl.visible:
 			var pn := UiMap.place_name(p.pos.x, p.pos.z)
 			if pn != place_lbl.text: place_lbl.text = pn
-	if obj_box.visible:
+	if obj_panel.visible:
 		_obj_age += dt
 		var da := 1.0 if _obj_age < 16.0 else 0.0
 		if obj_desc.modulate.a != da:
 			obj_desc.modulate.a = move_toward(obj_desc.modulate.a, da, dt * 0.8)
 			if obj_desc.modulate.a <= 0.0 and obj_desc.visible: obj_desc.visible = false
+	# the HUD steps back while a window has the floor
+	var pa := 0.22 if open else 1.0
+	if play.modulate.a != pa:
+		play.modulate.a = move_toward(play.modulate.a, pa, dt * 6.0)
 	if open:
 		if window_kind == "inv": inventory.tick(dt)
 		elif window_kind == "health": health.tick(dt)
@@ -531,7 +550,7 @@ func _slow_tick(p: Player, st: Stats) -> void:
 	if lt != null: loud = maxf(loud, minf(16.0, float(lt)))
 	var state := 2 if chasing > 0 else (1 if seen > 0 else 0)
 	stealth.set_state(p.visibility, loud, state, chasing, p.crouch)
-	var sa := 0.95 if (state > 0 or p.crouch) else 0.5
+	var sa := 1.0 if (state > 0 or p.crouch) else 0.72
 	if stealth.modulate.a != sa: stealth.modulate.a = sa
 	_moodles(st.moodles(p.weight_ratio()))
 
@@ -565,7 +584,7 @@ func _objective(text: String) -> void:
 		return
 	var first := _obj_text == "\u0001"
 	_obj_text = text
-	obj_box.visible = text != ""
+	obj_panel.visible = text != ""
 	if text == "":
 		return
 	var nl := text.find("\n")
@@ -606,7 +625,7 @@ func _moodles(list: Array) -> void:
 		tv.alignment = BoxContainer.ALIGNMENT_CENTER
 		var nl := label(String(m.label), 15, col); nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		tv.add_child(nl)
-		if float(_moodle_tell.get(String(m.id), 0.0)) > _time:
+		if float(_moodle_tell.get(String(m.id), 0.0)) > _time and list.size() <= 7:
 			var dl := label(String(m.desc), 13, UiTheme.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; dl.custom_minimum_size = Vector2(196, 0)
 			tv.add_child(dl)
@@ -619,7 +638,12 @@ func _moodles(list: Array) -> void:
 			if tex != null: tile.draw_texture_rect(tex, Rect2(5, 3, 26, 26), false)
 			for i in 4:
 				tile.draw_rect(Rect2(4.0 + i * 7.5, 31.0, 5.5, 2.0), col if i < lv2 else Color(1, 1, 1, 0.14)))
-		h.add_child(tv); h.add_child(tile); moodle_box.add_child(h)
+		var chip := PanelContainer.new(); chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_theme_stylebox_override("panel", _moodle_slab)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chip.add_child(tv)
+		h.add_theme_constant_override("separation", 0)
+		h.add_child(chip); h.add_child(tile); moodle_box.add_child(h)
 
 # ------------------------------------------------------------------ windows
 func close_window() -> void:
@@ -633,7 +657,7 @@ func _open(kind: String, w: float, h: float, title: String, tabs := true) -> VBo
 	close_window()
 	window_kind = kind
 	window = Control.new(); window.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var shade := ColorRect.new(); shade.set_anchors_preset(Control.PRESET_FULL_RECT); shade.color = Color(0.01, 0.012, 0.01, 0.55); window.add_child(shade)
+	var shade := ColorRect.new(); shade.set_anchors_preset(Control.PRESET_FULL_RECT); shade.color = Color(0.01, 0.012, 0.01, 0.66); window.add_child(shade)
 	var cc := CenterContainer.new(); cc.set_anchors_preset(Control.PRESET_FULL_RECT); cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var frame := UiKit.Frame.new(); frame.custom_minimum_size = Vector2(w, h)
 	var col := VBoxContainer.new(); col.add_theme_constant_override("separation", 0)
@@ -710,7 +734,7 @@ func open_window(kind: String, w: float, h: float, title: String) -> VBoxContain
 	return _open(kind, w, h, title)
 
 func open_inventory(cont = null) -> void:
-	var v := _open("inv", 1240.0, 700.0, String(cont.label) if cont != null else "", cont == null)
+	var v := _open("inv", 1240.0, 720.0, String(cont.label) if cont != null else "", cont == null)
 	container = cont
 	inventory.build(v, cont)
 
@@ -723,7 +747,7 @@ func refresh() -> void:
 		health.refresh()
 
 func open_health() -> void:
-	var v := _open("health", 1240.0, 700.0, "")
+	var v := _open("health", 1240.0, 720.0, "")
 	health.build(v)
 
 func _treatments(w: Dictionary) -> Array:
@@ -747,6 +771,7 @@ func show_menu(kind: String, text := "") -> void:
 
 func set_playing(on: bool) -> void:
 	play.visible = on
+	play.modulate.a = 1.0
 	if on:
 		action_box.set_action("", 0.0)
 		_prompt_raw = "\u0001"

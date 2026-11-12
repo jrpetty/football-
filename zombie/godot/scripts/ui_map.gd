@@ -295,10 +295,10 @@ class View extends Control:
 				if cleared2 and zoom > 0.9:
 					UiKit.glyph(self, "check", Rect2(c - Vector2(5, 5), Vector2(10, 10)), Color(0.1, 0.1, 0.09))
 				if String(e.name) != "" and zoom > 1.25:
-					UiKit.text(self, "cap", Vector2(c.x - 90.0, c.y + e.rect.size.y * 0.5 * zoom + 3.0), String(e.name).to_upper(), 11, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 180)
+					_label(Vector2(c.x - 90.0, c.y + e.rect.size.y * 0.5 * zoom + 4.0), String(e.name).to_upper(), 12, 180.0)
 			if zoom < 1.25:
 				var tc := to_screen(UiMap.town.get_center())
-				UiKit.text(self, "head", Vector2(tc.x - 100.0, tc.y - 10.0), "THE TOWN", 15, Color(UiTheme.INK, 0.9), HORIZONTAL_ALIGNMENT_CENTER, 200)
+				_label(Vector2(tc.x - 100.0, tc.y - 28.0), "THE TOWN", 14, 200.0)
 			var lake: Dictionary = WorldData.lake
 			var lc := to_screen(Vector2(float(lake.x), float(lake.z)))
 			UiKit.text(self, "cap", Vector2(lc.x - 60.0, lc.y - 7.0), "LAKE", 12, Color(0.72, 0.82, 0.9, 0.9), HORIZONTAL_ALIGNMENT_CENTER, 120)
@@ -339,6 +339,12 @@ class View extends Control:
 				draw_rect(Rect2(hp, Vector2(tw, 22.0)), Color(0.03, 0.03, 0.03, 0.92))
 				draw_rect(Rect2(hp, Vector2(tw, 22.0)), UiTheme.LINE2, false, 1.0)
 				UiKit.text(self, "cap", hp + Vector2(10, 3), line, 12, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, -1, false)
+
+	func _label(pos: Vector2, s: String, fs: int, w: float) -> void:
+		var f := UiTheme.font("cap")
+		var p := Vector2(pos.x, pos.y + f.get_ascent(fs))
+		draw_string_outline(f, p, s, HORIZONTAL_ALIGNMENT_CENTER, w, fs, 6, Color(0.03, 0.035, 0.03, 0.85))
+		draw_string(f, p, s, HORIZONTAL_ALIGNMENT_CENTER, w, fs, UiTheme.INK)
 
 	func _pin_to_edge(p: Vector2) -> Vector2:
 		var m := 9.0

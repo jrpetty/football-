@@ -152,13 +152,13 @@ func _on_placed(p: Dictionary) -> void:
 		# the firebox door faces the front of the stove
 		light.position += Basis(Vector3.UP, int(p.rot) * PI / 2.0) * Vector3(0, 0, 0.45)
 	add_child(light)
-	var flames := _particles(28 if not stove else 10, 0.7, at + Vector3(0, 0.08, 0), 0.16 if not stove else 0.08)
+	var flames := _particles(22 if not stove else 9, 0.7, at + Vector3(0, 0.08, 0), 0.15 if not stove else 0.08)
 	flames.direction = Vector3.UP; flames.spread = 14.0
 	flames.initial_velocity_min = 0.6; flames.initial_velocity_max = 1.25
 	flames.gravity = Vector3(0, 1.4, 0)
-	flames.scale_amount_min = 0.2 if not stove else 0.1; flames.scale_amount_max = 0.36 if not stove else 0.16
+	flames.scale_amount_min = 0.16 if not stove else 0.09; flames.scale_amount_max = 0.3 if not stove else 0.15
 	flames.scale_amount_curve = _curve([[0.0, 0.5], [0.2, 1.0], [1.0, 0.0]])
-	flames.color_ramp = _ramp([[0.0, Color(1.0, 0.88, 0.5, 0.0)], [0.12, Color(1.0, 0.78, 0.32, 0.9)], [0.5, Color(1.0, 0.42, 0.1, 0.75)], [1.0, Color(0.6, 0.1, 0.02, 0.0)]])
+	flames.color_ramp = _ramp([[0.0, Color(1.0, 0.86, 0.45, 0.0)], [0.12, Color(1.0, 0.72, 0.28, 0.5)], [0.5, Color(1.0, 0.38, 0.08, 0.38)], [1.0, Color(0.6, 0.1, 0.02, 0.0)]])
 	flames.mesh = _quad(true)
 	var smoke := _particles(18, 3.4, at + Vector3(0, 0.55 if not stove else 0.62, 0), 0.1)
 	smoke.direction = Vector3.UP; smoke.spread = 10.0

@@ -34,7 +34,7 @@ func open_map() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	UiMap.prepare(game.get("world"))
 	UiMap.count_searched()
-	var v: VBoxContainer = hud.open_window("map", 1240.0, 700.0, "Map")
+	var v: VBoxContainer = hud.open_window("map", 1240.0, 720.0, "Map")
 	view = UiMap.View.new(game, false)
 	view.track(game.player.pos, game.player.yaw, 0.0)
 	var frame := UiKit.Frame.new(UiMap.C_VOID, 1.0, UiTheme.LINE2); frame.marks = false; frame.grain = 0.0

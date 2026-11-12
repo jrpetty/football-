@@ -267,7 +267,7 @@ export async function run(o: { root: string; outDir: string; template: string })
   const lk = portLook(src);
   const piv: string[] = []; for (let b = 0; b < NB; b++) piv.push(`vec3(${PIV[b * 3].toFixed(4)}, ${PIV[b * 3 + 1].toFixed(4)}, ${PIV[b * 3 + 2].toFixed(4)})`);
   let sh = fs.readFileSync(o.template, 'utf8');
-  sh = sh.replace('/*%PIV%*/', `const vec3 ZPIV[${NB}] = {${piv.join(', ')}};`).replace('/*%CLIP_SIZE%*/', `const vec2 CLIP_SIZE = vec2(${W}.0, ${H}.0);`)
+  sh = sh.replace('/*%PIV%*/', `const vec3 ZPIV[${NB}] = {${piv.join(', ')}};`).replace('/*%CLIP_SIZE%*/', `// the size of clip_tex in texels (a uniform so that a caller with poses of its own, like the first-person arms,\n// can give the same shader a small texture it rewrites every frame)\nuniform vec2 clip_size = vec2(${W}.0, ${H}.0);`)
     .replace('/*%LOOK_DECL%*/', lk.decl).replace('/*%LOOK_COLOR%*/', lk.color).replace('/*%LOOK_EMIT%*/', lk.emit);
   fs.writeFileSync(path.join(o.outDir, 'body.gdshader'), sh);
   const frames = all.reduce((s, c) => s + c.frames.length, 0);
