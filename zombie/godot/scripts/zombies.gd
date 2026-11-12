@@ -461,12 +461,21 @@ func spawn(x: float, z: float, type: int, horde := 0, opts := {}) -> Zombie:
 	var y: float = _W.ground_y(x, z, float(opts.y) if opts.has("y") else _W.height_at(x, z) + 0.6)
 	# never inside a wall or a wardrobe
 	var rr := 0.3 * zb.scale + 0.02
-	var fit: Dictionary = _W.resolve(Vector3(x, y, z), rr, 1.7)
+	# pushed out of one thing it may land in the next, so settle until nothing moves; and a gap too narrow to
+	# stand in is no place to stand: take the nearest spot with room instead
+	var settle := func(p0: Vector3) -> Dictionary:
+		var f: Dictionary = _W.resolve(p0, rr, 1.7)
+		for _k in 5:
+			var again: Dictionary = _W.resolve(f.pos, rr, 1.7)
+			if again.pos.distance_squared_to(f.pos) < 1e-6:
+				f = again; break
+			f = again
+		return f
+	var fit: Dictionary = settle.call(Vector3(x, y, z))
 	if fit.get("jam", false):
-		# a gap too narrow to stand in: the nearest spot with room
-		for k in 24:
-			var a := k * 2.4; var d := 0.4 + 0.1 * k
-			fit = _W.resolve(Vector3(x + cos(a) * d, y, z + sin(a) * d), rr, 1.7)
+		for k in 40:
+			var a := k * 2.4; var d := 0.4 + 0.08 * k
+			fit = settle.call(Vector3(x + cos(a) * d, y, z + sin(a) * d))
 			if not fit.get("jam", false): break
 	var clear: Vector3 = fit.pos
 	if clear.x != x or clear.z != z:
