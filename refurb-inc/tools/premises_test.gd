@@ -1,0 +1,213 @@
+extends Node
+## Moves one company through all seven premises and checks each level works:
+## equipment auto-layout (no overlaps, inside the floor), stock travels with equipment, loose stock relocated,
+## lorry delivers to that building's docks, player spawns inside.
+##   godot --headless --path . res://tools/premises_test.tscn
+
+var _fails: PackedStringArray = []
+var _level: LevelRoot
+
+
+func _check_site() -> void:
+	## Nobody falls through the map: solid ground everywhere inside the site fence, and the fence encloses
+	## the building, spawns, goods-in and docks while keeping players off the road.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var site := _level.site
+	_check(site != null and site.bounds.size.x > 6.0 and site.bounds.size.y > 6.0, "site fence built (%s, %d bare cells filled with %d slabs)" % [str(site.bounds) if site else "-", site.filled_cells if site else 0, site.slabs if site else 0])
+	if site == null:
+		return
+	var inside := true
+	for fr: Rect2 in _level.floor_rects:
+		inside = inside and site.bounds.encloses(fr)
+	for n in [_level.goods_in, _level.lorry_drop, _level.safe_drop]:
+		if n:
+			inside = inside and site.contains(n.global_position)
+	_check(inside, "fence encloses the building floor and goods-in")
+	var space := _level.get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.new()
+	q.collision_mask = 1
+	var holes := 0
+	var step := 1.0
+	var b := site.bounds
+	var x := b.position.x + 0.3
+	while x < b.end.x - 0.3:
+		var z := b.position.y + 0.3
+		while z < b.end.y - 0.3:
+			q.from = Vector3(x, 0.6, z)
+			q.to = Vector3(x, -3.0, z)
+			if space.intersect_ray(q).is_empty():
+				holes += 1
+				if holes <= 3:
+					print("     no ground at ", Vector2(x, z))
+			z += step
+		x += step
+	_check(holes == 0, "ground under every metre of the site (%d holes)" % holes)
+	# Walk straight out of the front door: the fence stops you before the road.
+	var probe := PhysicsRayQueryParameters3D.new()
+	probe.collision_mask = 1
+	probe.from = Vector3(0, 1.0, b.end.y - 1.0)
+	probe.to = Vector3(0, 1.0, b.end.y + 5.0)
+	_check(not space.intersect_ray(probe).is_empty(), "site fence blocks walking into the road")
+
+
+func _check_style_and_logistics(forklift: Item) -> void:
+	## The company's look is applied in this premises, and the forklift came along and found a parking spot.
+	for i in 6:
+		await get_tree().physics_frame
+	await _frames(2)
+	var st: PremisesStyle = _level.style
+	_check(st != null and not st.paint_targets().is_empty() and st.painted(), "walls painted (%d wall meshes)" % (st.paint_targets().size() if st else 0))
+	_check(st != null and st.line_count() > 0, "floor lines painted")
+	var doors := st.doors() if st else []
+	_check(doors.size() >= 1, "roller doors found for signage (%d)" % doors.size())
+	var logos := 0
+	for d: Node in doors:
+		if d.find_child("ShutterLogo", true, false):
+			logos += 1
+	_check(logos == doors.size(), "logo on every shutter (%d/%d)" % [logos, doors.size()])
+	var frames := Game.state.fixtures.values().filter(func(f): return f.type == "eotm_frame" and f.placed)
+	_check(frames.size() == 1, "Employee of the Month frame hung up")
+	var t := 0.0
+	while forklift.loc.get("relocate", false) and t < 3.0:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	var fp: Array = forklift.loc.get("p", [0, -9, 0])
+	var g := _level.goods_in.global_position if _level.goods_in else Vector3.ZERO
+	_check(not forklift.loc.get("relocate", false) and absf(float(fp[1]) - g.y) < 0.35, "forklift parked near goods-in at %s" % str(fp))
+	var fv: ItemView = _level.item_views.get(forklift.id)
+	_check(fv != null and fv.visible and fv.forklift != null, "forklift visible")
+
+
+func _check(c: bool, m: String) -> void:
+	print("  %s %s" % ["✔" if c else "✖", m])
+	if not c:
+		_fails.append(m)
+
+
+func _ready() -> void:
+	Engine.time_scale = 10.0
+	Game.new_game(99)
+	var s := Game.state
+	var sim := Game.sim
+	s.cash = 10_000_000
+	await _load_level()
+	# Put a unit on the test bench so we can check it moves with the equipment.
+	var lot: Dictionary = s.lots.values().filter(func(l): return l.status == "open")[0]
+	sim.c_buy_lot(1, {"lot": lot.id})
+	sim.deliver_lot(lot.id, Vector3(0, 0.02, 5.6))
+	await _frames(3)
+	var unit: Item = s.items.values().filter(func(i): return i.kind == Item.KIND_UNIT)[0]
+	s.set_loc(unit, {"t": "slot", "slot": "bench_1:unit"})
+	# Make the premises ours (it should follow us everywhere), and get a forklift delivered.
+	for kv in [["paint", "racing_green"], ["markings", "both"], ["accent", "teal"], ["logo", "ring"]]:
+		sim.execute(1, "set_premises", {"key": kv[0], "value": kv[1]})
+	sim.execute(1, "buy_fixture", {"type": "poster_motto"})
+	_level._auto_layout()            # hung on a wall for us
+	sim.deliver_parcel({"items": [Item.KIND_FORKLIFT], "parts": {}, "consumables": {}}, Vector3(0, 0.02, 5.6))
+	var forklift: Item = s.items.values().filter(func(i): return i.kind == Item.KIND_FORKLIFT)[0]
+	var racked: Item = null
+	# Extra equipment bought along the way should find space in bigger buildings.
+	for id in Content.building_order:
+		print("\n== %s" % id)
+		if id != "garage":
+			var r := sim.execute(1, "move_building", {"building": id})
+			_check(r.ok, "move command accepted")
+			await _load_level()
+		_check(_level.building_id == id, "level scene is %s" % id)
+		_check(s.building_id == id, "state building is %s" % id)
+		var placed := 0
+		var bad := 0
+		for fid in s.fixtures:
+			var f: Dictionary = s.fixtures[fid]
+			if f.placed:
+				placed += 1
+				if not _level.can_place(f.type, Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), fid):
+					bad += 1
+					print("     overlap/out-of-bounds: ", fid, " ", f.p, " r", f.r)
+		_check(placed == s.fixtures.size(), "all %d pieces of equipment placed (%d)" % [s.fixtures.size(), placed])
+		_check(bad == 0, "no equipment overlaps or outside the floor")
+		_check(_level.fixture_nodes.size() == placed, "equipment nodes spawned")
+		_check(s.item_in_slot("bench_1:unit") == unit and _level.item_views.has(unit.id) and _level.item_views[unit.id].visible, "unit on the test bench came along")
+		var pallets := s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET)
+		var relocated := pallets.all(func(p): return not p.loc.get("relocate", false))
+		_check(relocated, "loose pallets placed in the goods-in area")
+		await _check_site()
+		await _check_style_and_logistics(forklift)
+		if racked:
+			var rv: ItemView = _level.item_views.get(racked.id)
+			var slot: SnapSlot = _level.slot_nodes.get(str(racked.loc.get("slot", "")))
+			_check(rv != null and rv.visible and slot != null and rv.global_position.distance_to(slot.global_position) < 0.05, "racked pallet came along, still in its bay (%s)" % Logistics.pallet_location(s, racked))
+		if id == "industrial":
+			# Pallet racking finds room in an industrial unit; put a pallet of stock up on level 2.
+			sim.c_buy_fixture(1, {"type": "pallet_rack"})
+			_level._auto_layout()
+			await _frames(3)
+			var rid := ""
+			for fid in s.fixtures:
+				if s.fixtures[fid].type == "pallet_rack":
+					rid = fid
+			_check(rid != "" and s.fixtures[rid].placed, "pallet racking placed")
+			if rid != "":
+				racked = s.new_item(Item.KIND_PALLET)
+				var lay := Sim.pallet_layout("kestrel_swift_14")
+				racked.data = {"cell": lay.cell, "grid": lay.grid}
+				s.set_loc(racked, {"t": "slot", "slot": "%s:b0l1" % rid})
+				var u := s.new_item(Item.KIND_UNIT)
+				u.unit = sim.lots.roll_unit("kestrel_swift_14", 0.5)
+				s.set_loc(u, {"t": "slot", "slot": "i%d:0" % racked.id})
+				await _frames(3)
+				_check(Logistics.unit_location(s, u) == "%s · level 2 · bay 1" % s.fixtures[rid].label, "stock app: %s" % Logistics.unit_location(s, u))
+		var player: Node3D = _level.local_player()
+		_check(player != null and _level.floor_rects.any(func(r): return r.has_point(Vector2(player.global_position.x, player.global_position.z))), "player spawned on the floor")
+		# Lorry delivery to this building's dock
+		var lot2: Dictionary = {}
+		sim.refresh_lot_board(true)
+		for l in s.lots.values():
+			if l.status == "open":
+				lot2 = l
+				break
+		sim.c_buy_lot(1, {"lot": lot2.id})
+		var before := s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET).size()
+		sim.end_day()
+		sim.start_next_day()
+		sim.advance_minutes(65)
+		var t := 0.0
+		while s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET).size() == before and t < 120.0:
+			await get_tree().process_frame
+			t += get_process_delta_time()
+		var newest: Item = null
+		for it: Item in s.items.values():
+			if it.kind == Item.KIND_PALLET and (newest == null or it.id > newest.id):
+				newest = it
+		_check(newest != null and s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET).size() > before, "lorry delivered a pallet")
+		if newest:
+			var p := Vector3(newest.loc.p[0], newest.loc.p[1], newest.loc.p[2])
+			print("     pallet dropped at ", p)
+			_check(p.y > -0.5, "pallet landed at ground/floor level")
+		# Buy one of each piece of equipment in tiers ≥ 3 and let it auto-place there.
+		if int(Content.building(id).tier) >= 3:
+			for type in ["test_bench", "metal_shelf"]:
+				sim.c_buy_fixture(1, {"type": type})
+			_level._auto_layout()
+			var unplaced := s.fixtures.values().filter(func(f): return not f.placed).size()
+			_check(unplaced == 0, "new equipment found space (%d unplaced)" % unplaced)
+	print("\nPREMISES TEST %s (%d failures)" % ["PASSED" if _fails.is_empty() else "FAILED", _fails.size()])
+	Engine.time_scale = 1.0
+	get_tree().quit(0 if _fails.is_empty() else 1)
+
+
+func _load_level() -> void:
+	if _level:
+		remove_child(_level)
+		_level.queue_free()
+		await get_tree().process_frame
+	_level = load(load("res://scripts/game_root.gd").level_path(Game.state.building_id)).instantiate()
+	add_child(_level)
+	await _frames(5)
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await get_tree().process_frame

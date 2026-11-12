@@ -1,0 +1,206 @@
+{
+  "_comment": "Global tuning. Money in whole pounds (GBP). Times in game minutes unless noted.",
+  "start_cash": 2500,
+  "start_reputation": 8,
+  "day_start_hour": 9,
+  "day_end_hour": 17,
+  "real_seconds_per_day": 900,
+  "rent_due_weekday": 4,
+  "overdraft_warning": -500,
+  "overdraft_fee_weekly": 40,
+  "overdraft_rep_penalty": 3,
+  "lot_price_swing": [
+    0.6,
+    1.3
+  ],
+  "lot_trade_ratio": 0.4,
+  "lot_listing_days": [
+    1,
+    3
+  ],
+  "lots_on_board": [
+    4,
+    7
+  ],
+  "lot_cutoff_hour": 15,
+  "fault_rate_bad": 0.34,
+  "fault_rate_good": 0.06,
+  "cosmetic_issues_bad": 3.2,
+  "cosmetic_issues_good": 0.6,
+  "multi_fault_chance": 0.25,
+  "lorry_arrival_hour": 10,
+  "courier_collections": [
+    720,
+    990
+  ],
+  "courier_parcel_drop_minute": 720,
+  "test_minutes": 30,
+  "image_minutes": 45,
+  "grade_secs": 4.0,
+  "pack_secs": 5.0,
+  "flogit_fee_pct": 0.1,
+  "flogit_postage": 9,
+  "flogit_postage_large": 26,
+  "flogit_base_rate_per_hour": 0.09,
+  "flogit_rep_rate_bonus": 0.003,
+  "flogit_auto_list_on_grade": true,
+  "flogit_first_sale_max_ratio": 1.15,
+  "flogit_price_elasticity": 3.0,
+  "flogit_spares_rate_mult": 1.6,
+  "dispatch_deadline_hours": 16,
+  "rep_on_time": 1.0,
+  "rep_late": -3.0,
+  "rep_missed": -6.0,
+  "rep_wrong_grade": -4.0,
+  "rep_max": 100,
+  "xp_per_level": [
+    0,
+    200,
+    650,
+    1500,
+    3000,
+    5500
+  ],
+  "xp": {
+    "test": 6,
+    "image": 4,
+    "repair_l1": 12,
+    "repair_l2": 25,
+    "repair_l3": 45,
+    "grade": 3,
+    "pack": 6,
+    "haul": 1,
+    "buy_unit": 2,
+    "ship": 5,
+    "pallet_move": 3,
+    "build": 4,
+    "upgrade": 4
+  },
+  "build_secs_mult": 0.8,
+  "grade_miss_base": 0.1,
+  "grade_miss_per_level": 0.012,
+  "start_items": [
+    {
+      "kind": "usb_test",
+      "slot": "bench_1:park_a"
+    },
+    {
+      "kind": "usb_image",
+      "slot": "bench_1:park_b"
+    },
+    {
+      "kind": "pallet_truck",
+      "p": [
+        -0.95,
+        0.02,
+        2.95
+      ],
+      "r": [
+        0,
+        0.7071,
+        0,
+        0.7071
+      ]
+    }
+  ],
+  "start_parts": {
+    "ram_ddr4_8": 2,
+    "ssd_nvme_256": 2,
+    "ssd_sata_256": 1
+  },
+  "start_building": "garage",
+  "start_fixtures": [
+    {
+      "id": "office_1",
+      "type": "office_desk",
+      "label": "Office PC"
+    },
+    {
+      "id": "bench_1",
+      "type": "test_bench",
+      "label": "Test bench 1"
+    },
+    {
+      "id": "repair_1",
+      "type": "repair_bench",
+      "label": "Repair bench"
+    },
+    {
+      "id": "parts",
+      "type": "parts_shelf",
+      "label": "Parts bins"
+    },
+    {
+      "id": "grade_1",
+      "type": "grading_desk",
+      "label": "Grading desk"
+    },
+    {
+      "id": "pack_1",
+      "type": "packing_table",
+      "label": "Packing table"
+    },
+    {
+      "id": "courier_1",
+      "type": "courier_shelf",
+      "label": "OUTGOING"
+    },
+    {
+      "id": "shelf_a",
+      "type": "metal_shelf",
+      "label": "Shelf A"
+    },
+    {
+      "id": "shelf_b",
+      "type": "metal_shelf",
+      "label": "Shelf B"
+    },
+    {
+      "id": "eotm_1",
+      "type": "eotm_frame",
+      "label": "Employee of the Month"
+    }
+  ],
+  "forklift_kw": 2.4,
+  "forklift_charge_kw": 0.25,
+  "first_day_express": true,
+  "first_day_lorry_minutes": 30,
+  "first_day_parcel_minutes": 20,
+  "electricity_per_kwh": 0.28,
+  "lighting_w_per_m2": 5.0,
+  "power_idle_frac": 0.15,
+  "belt_speed_tiers": [
+    {"id": "standard", "name": "Standard", "speed_mult": 1.0, "power_mult": 1.0, "cost": 0},
+    {"id": "fast", "name": "Fast", "speed_mult": 1.7, "power_mult": 1.4, "cost": 350},
+    {"id": "express", "name": "Express", "speed_mult": 2.5, "power_mult": 1.9, "cost": 800}
+  ],
+  "overtime": {
+    "_comment": "Night shift licence (shop.json): at day_end_hour the host may keep working until one of these end hours (24+ = the next morning). Time runs at the normal speed; lorries and couriers keep their usual schedule. Staff on shift earn pay_mult × their hourly rate (weekly wage / hours_per_week) for every overtime hour, paid with Friday's wages. Players get tired after tired_from_hour (walk and hold actions slow down) until they have a brew. Floodlights draw flood_kw each (2 + loading bays) while it's dark.",
+    "options": [
+      {"id": "20", "name": "Until 20:00", "end_hour": 20},
+      {"id": "22", "name": "Until 22:00", "end_hour": 22},
+      {"id": "night", "name": "Through the night (06:00)", "end_hour": 30}
+    ],
+    "pay_mult": 1.5,
+    "hours_per_week": 40,
+    "tired_from_hour": 0,
+    "tired_until_hour": 6,
+    "tired_walk_mult": 0.85,
+    "tired_hold_mult": 1.25,
+    "flood_kw": 0.15
+  },
+  "kettle_kwh": 0.11,
+  "kettle_boil_secs": 16.0,
+  "kettle_cold_secs": 300.0,
+  "scrap_value": {
+    "laptop": 14,
+    "desktop": 11,
+    "server": 30,
+    "monitor": 5,
+    "switch": 9,
+    "wifi_ap": 3,
+    "dock": 4,
+    "tablet": 8,
+    "phone": 7
+  }
+}

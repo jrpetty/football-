@@ -1,0 +1,741 @@
+{
+  "_comment": "Placeable equipment. footprint = [width_x, depth_z] metres when facing +Z (with clearance). price = Shop price for an extra one. station_type mirrors the wrapper scene's StationBase type. auto = automation behaviour (belt/arm/rack/robot), read by Automation and Sim.",
+  "fixtures": [
+    {
+      "id": "office_desk",
+      "name": "Office desk + PC",
+      "scene": "res://scenes/stations/office_desk.tscn",
+      "footprint": [
+        1.5,
+        1.5
+      ],
+      "height": 1.3,
+      "price": 450,
+      "power_kw": 0.4,
+      "desc": "Runs PaneOS: purchasing, sales, stock, finance. More PCs = more people buying and listing at once.",
+      "back": 0.36,
+      "front": 1.14,
+      "idle_frac": 0.35
+    },
+    {
+      "id": "test_bench",
+      "name": "Test bench",
+      "scene": "res://scenes/stations/test_bench.tscn",
+      "footprint": [
+        1.45,
+        0.8
+      ],
+      "height": 1.4,
+      "price": 380,
+      "power_kw": 0.6,
+      "desc": "One unit + one USB at a time. Diagnostics or wipe & image.",
+      "back": 0.4,
+      "front": 1.1,
+      "idle_frac": 0.2
+    },
+    {
+      "id": "repair_bench",
+      "name": "Repair bench",
+      "scene": "res://scenes/stations/repair_bench.tscn",
+      "footprint": [
+        1.65,
+        0.8
+      ],
+      "height": 1.9,
+      "price": 520,
+      "power_kw": 0.3,
+      "desc": "ESD mat, tools and a lamp. Fix faults with parts from the bins.",
+      "back": 0.4,
+      "front": 1.1,
+      "idle_frac": 0.1
+    },
+    {
+      "id": "build_bench",
+      "name": "Server build bench",
+      "scene": "res://scenes/stations/build_bench.tscn",
+      "footprint": [
+        1.65,
+        0.8
+      ],
+      "height": 1.9,
+      "price": 680,
+      "power_kw": 0.35,
+      "desc": "Custom server builds for business buyers: put a server or a barebones chassis on it and fit CPUs, memory, drives, PSUs and a RAID card from the bins (the screen ticks off the customer's spec). Also fits RAM and SSD upgrades.",
+      "back": 0.4,
+      "front": 1.1,
+      "idle_frac": 0.1
+    },
+    {
+      "id": "grading_desk",
+      "name": "Grading desk",
+      "scene": "res://scenes/stations/grading_desk.tscn",
+      "footprint": [
+        1.25,
+        0.74
+      ],
+      "height": 1.1,
+      "price": 300,
+      "power_kw": 0.2,
+      "desc": "Light box and label printer for consistent grading.",
+      "back": 0.37,
+      "front": 1.07,
+      "idle_frac": 0.25
+    },
+    {
+      "id": "packing_table",
+      "name": "Packing table",
+      "scene": "res://scenes/stations/packing_table.tscn",
+      "footprint": [
+        1.65,
+        0.84
+      ],
+      "height": 1.6,
+      "price": 340,
+      "power_kw": 0.1,
+      "desc": "Boxes, foam, tape gun and label printer.",
+      "back": 0.42,
+      "front": 1.12,
+      "idle_frac": 0.2
+    },
+    {
+      "id": "metal_shelf",
+      "name": "Stock shelving (12 bays)",
+      "scene": "res://scenes/stations/metal_shelf.tscn",
+      "footprint": [
+        1.25,
+        0.5
+      ],
+      "height": 1.9,
+      "price": 160,
+      "power_kw": 0.0,
+      "desc": "Boltless steel shelving. Four decks of three laptops or small desktops. Too shallow for servers and towers."
+    },
+    {
+      "id": "heavy_rack",
+      "name": "Heavy-duty racking (6 bays)",
+      "scene": "res://scenes/stations/heavy_rack.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.8,
+      "price": 280,
+      "power_kw": 0.0,
+      "desc": "Pallet-racking style bays for rack servers, tower servers and tower desktops (laptops fit too)."
+    },
+    {
+      "id": "courier_shelf",
+      "name": "OUTGOING shelf",
+      "scene": "res://scenes/stations/courier_shelf.tscn",
+      "footprint": [
+        1.37,
+        0.9
+      ],
+      "height": 1.4,
+      "price": 180,
+      "power_kw": 0.0,
+      "desc": "The courier collects packed orders from here. Two floor bays take large boxes (towers, rack servers)."
+    },
+    {
+      "id": "parts_shelf",
+      "name": "Parts bins",
+      "scene": "res://scenes/stations/parts_shelf.tscn",
+      "footprint": [
+        1.05,
+        0.44
+      ],
+      "height": 1.6,
+      "price": 200,
+      "power_kw": 0.0,
+      "desc": "Spare parts storage. Repair benches draw from bins."
+    },
+    {
+      "id": "conveyor",
+      "name": "Roller conveyor (2 m)",
+      "scene": "res://scenes/automation/conveyor.tscn",
+      "footprint": [
+        1.02,
+        2.0
+      ],
+      "height": 0.95,
+      "price": 650,
+      "power_kw": 0.25,
+      "desc": "Powered rollers, 0.6 m between the rails (19-inch rack servers fit). Ends snap together; an open end is a pick-up point for robot arms; put kit on the near end to send it along.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 2.0,
+        "speed": 0.6,
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.05
+    },
+    {
+      "id": "conveyor_curve_r",
+      "name": "Conveyor curve (right)",
+      "scene": "res://scenes/automation/conveyor_curve_r.tscn",
+      "footprint": [
+        1.49,
+        1.49
+      ],
+      "height": 0.95,
+      "price": 900,
+      "power_kw": 0.25,
+      "desc": "90-degree turn to the right.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "radius": 1.0,
+        "turn": "right",
+        "speed": 0.6,
+        "height": 0.856,
+        "half_width": 0.492
+      },
+      "idle_frac": 0.05
+    },
+    {
+      "id": "conveyor_curve_l",
+      "name": "Conveyor curve (left)",
+      "scene": "res://scenes/automation/conveyor_curve_l.tscn",
+      "footprint": [
+        1.49,
+        1.49
+      ],
+      "height": 0.95,
+      "price": 900,
+      "power_kw": 0.25,
+      "desc": "90-degree turn to the left.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "radius": 1.0,
+        "turn": "left",
+        "speed": 0.6,
+        "height": 0.856,
+        "half_width": 0.492
+      },
+      "idle_frac": 0.05
+    },
+    {
+      "id": "conveyor_scanner",
+      "name": "Goods-in scanner",
+      "scene": "res://scenes/automation/conveyor_scanner.tscn",
+      "footprint": [
+        1.24,
+        1.0
+      ],
+      "height": 1.6,
+      "price": 2400,
+      "power_kw": 0.3,
+      "desc": "Barcode arch on a conveyor: every unit through it is booked into stock automatically.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.0,
+        "speed": 0.6,
+        "device": "scanner",
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.3
+    },
+    {
+      "id": "conveyor_sorter",
+      "name": "Diverter / sorter",
+      "scene": "res://scenes/automation/conveyor_sorter.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 1.2,
+      "price": 3200,
+      "power_kw": 0.5,
+      "desc": "Routes kit left, right or straight on by what it needs next. Look at an exit and press E to change its rule.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "sorter",
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.1
+    },
+    {
+      "id": "conveyor_grader",
+      "name": "Vision grader",
+      "scene": "res://scenes/automation/conveyor_grader.tscn",
+      "footprint": [
+        1.24,
+        1.4
+      ],
+      "height": 1.8,
+      "price": 5200,
+      "power_kw": 0.8,
+      "desc": "Camera tunnel that grades imaged units as they pass and lists them on Flogit.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "grader",
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.3
+    },
+    {
+      "id": "robot_arm",
+      "name": "Pick-and-place robot arm",
+      "scene": "res://scenes/automation/robot_arm.tscn",
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "height": 2.2,
+      "price": 18000,
+      "power_kw": 2.2,
+      "desc": "Picks kit up within 1.8 m and puts it where it needs to go next: racks, robots, conveyors, stock, OUTGOING.",
+      "auto": {
+        "kind": "arm",
+        "reach": 1.8,
+        "cycle": 3.6
+      },
+      "idle_frac": 0.15
+    },
+    {
+      "id": "rack_test",
+      "name": "Network test rack (6 bays)",
+      "scene": "res://scenes/automation/rack_test.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.9,
+      "price": 6500,
+      "power_kw": 1.2,
+      "desc": "Network-booted diagnostics for six units at once. No USB needed; robot arms can load it.",
+      "auto": {
+        "kind": "rack",
+        "speed": 1.6
+      },
+      "idle_frac": 0.2
+    },
+    {
+      "id": "rack_image",
+      "name": "Network imaging rack (6 bays)",
+      "scene": "res://scenes/automation/rack_image.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.9,
+      "price": 7200,
+      "power_kw": 1.2,
+      "desc": "Secure wipe and PaneOS deploy for six units at once over the network.",
+      "auto": {
+        "kind": "rack",
+        "speed": 2.0
+      },
+      "idle_frac": 0.2
+    },
+    {
+      "id": "robot_repair",
+      "name": "Repair robot cell",
+      "scene": "res://scenes/automation/robot_repair.tscn",
+      "footprint": [
+        1.6,
+        1.0
+      ],
+      "height": 2.0,
+      "price": 24000,
+      "power_kw": 2.5,
+      "desc": "Fixes level 1 faults (batteries, RAM, drives, keys, fans, PSUs) using parts from the bins.",
+      "auto": {
+        "kind": "robot",
+        "max_tier": 1,
+        "speed": 1.0
+      },
+      "idle_frac": 0.12
+    },
+    {
+      "id": "robot_pack",
+      "name": "Packing robot",
+      "scene": "res://scenes/automation/robot_pack.tscn",
+      "footprint": [
+        1.6,
+        1.0
+      ],
+      "height": 1.6,
+      "price": 16000,
+      "power_kw": 1.5,
+      "desc": "Boxes, tapes and labels sold units; the parcel comes out ready for the OUTGOING shelf.",
+      "auto": {
+        "kind": "robot",
+        "speed": 1.0
+      },
+      "idle_frac": 0.12
+    },
+    {
+      "id": "conveyor_bend",
+      "name": "Flexible conveyor bend",
+      "scene": "res://scenes/automation/conveyor_bend.tscn",
+      "footprint": [
+        1.5,
+        1.5
+      ],
+      "height": 0.95,
+      "price": 1100,
+      "power_kw": 0.3,
+      "idle_frac": 0.05,
+      "desc": "Bends to any angle from 15° to 180° (scroll while placing), tighter or wider (Shift+scroll), left or right (T). Up to 4 m of belt.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "origin": "in",
+        "angle": 90,
+        "radius": 1.0,
+        "turn": "right",
+        "speed": 0.6,
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_merge",
+      "name": "Merger (side input right)",
+      "scene": "res://scenes/automation/conveyor_merge.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 0.95,
+      "price": 1800,
+      "power_kw": 0.35,
+      "idle_frac": 0.08,
+      "desc": "A side conveyor joins the line here; kit merges in when there's a gap.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "merge",
+        "side": "left",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_merge_r",
+      "name": "Merger (side input left)",
+      "scene": "res://scenes/automation/conveyor_merge_r.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 0.95,
+      "price": 1800,
+      "power_kw": 0.35,
+      "idle_frac": 0.08,
+      "desc": "A side conveyor joins the line here; kit merges in when there's a gap.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "merge",
+        "side": "right",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "stock_tower",
+      "name": "Automated stock tower (24 trays)",
+      "scene": "res://scenes/automation/stock_tower.tscn",
+      "footprint": [
+        1.4,
+        1.1
+      ],
+      "height": 2.6,
+      "price": 21000,
+      "power_kw": 1.8,
+      "idle_frac": 0.1,
+      "desc": "Vertical lift store. Feed graded stock in by conveyor (front-left hatch); when it sells, it comes out on the right-hand hatch on its own. You can load and pick by hand too.",
+      "auto": {
+        "kind": "store"
+      }
+    },
+    {
+      "id": "recycle_cage",
+      "name": "WEEE recycling cage",
+      "scene": "res://scenes/automation/recycle_cage.tscn",
+      "footprint": [
+        1.0,
+        0.8
+      ],
+      "height": 1.3,
+      "price": 350,
+      "power_kw": 0.0,
+      "desc": "Kit that can never be fixed goes in here for licensed recycling — paid as scrap. Robot arms use it for units with locked accounts or dead boards beyond repair."
+    },
+    {
+      "id": "conveyor_splitter",
+      "name": "Splitter / balancer",
+      "scene": "res://scenes/automation/conveyor_splitter.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 1.3,
+      "price": 2600,
+      "power_kw": 0.4,
+      "idle_frac": 0.08,
+      "desc": "One line in, two out (left and right). Alternate shares kit between two lines; Overflow fills the left and only uses the right when the left backs up. Press E on it to switch.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "splitter",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_gate",
+      "name": "Stop gate (1 m)",
+      "scene": "res://scenes/automation/conveyor_gate.tscn",
+      "footprint": [
+        1.1,
+        1.0
+      ],
+      "height": 1.5,
+      "price": 950,
+      "power_kw": 0.15,
+      "idle_frac": 0.05,
+      "desc": "A pneumatic gate across the belt. Press E to hold the line (kit waits behind it — safe to step in and sort things out) or open it again.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.0,
+        "speed": 0.6,
+        "device": "gate",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "work_hatch",
+      "name": "People's hatch (take & send on)",
+      "scene": "res://scenes/automation/work_hatch.tscn",
+      "footprint": [
+        1.3,
+        1.6
+      ],
+      "height": 1.95,
+      "price": 1400,
+      "power_kw": 0.25,
+      "idle_frac": 0.05,
+      "desc": "Lets people join the line anywhere. Kit coming in stops at the pick face for a person to take; anything put on the far half rides on down the line. Chains like a 1.6 m conveyor.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.6,
+        "speed": 0.6,
+        "device": "hatch",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "line_monitor",
+      "name": "Line monitor",
+      "scene": "res://scenes/automation/line_monitor.tscn",
+      "footprint": [
+        1.0,
+        0.7
+      ],
+      "height": 2.6,
+      "price": 1200,
+      "power_kw": 0.18,
+      "idle_frac": 1.0,
+      "desc": "A big floor-standing screen that shows the line live: machine moves per hour, kit on the belts, what every machine is doing, and the bottleneck in red.",
+      "auto": {
+        "kind": "monitor"
+      }
+    },
+    {
+      "id": "pallet_rack",
+      "name": "Pallet racking (3 bays × 3 levels)",
+      "group": "Logistics",
+      "scene": "res://scenes/stations/pallet_rack.tscn",
+      "footprint": [3.25, 1.5],
+      "back": 0.62,
+      "front": 0.88,
+      "height": 4.1,
+      "price": 1450,
+      "power_kw": 0.0,
+      "desc": "Proper pallet racking: nine bays for whole pallets of stock. A forklift reaches every level; the bottom level works with the hand pallet truck too. Units on racked pallets stay in the Stock app.",
+      "pallet": {"bays": 3, "bay_w": 1.0, "levels": [0.0, 1.45, 2.9], "depth": 1.1, "upright_h": 4.0, "label": "Racking R%d"}
+    },
+    {
+      "id": "pallet_rack_low",
+      "name": "Low pallet racking (2 bays × 2 levels)",
+      "group": "Logistics",
+      "scene": "res://scenes/stations/pallet_rack_low.tscn",
+      "footprint": [2.25, 1.5],
+      "back": 0.62,
+      "front": 0.88,
+      "height": 2.6,
+      "price": 820,
+      "power_kw": 0.0,
+      "desc": "Two levels of pallet racking that fit under a low roof (garages and lock-ups). Forklift for the top level, pallet truck or forklift for the floor.",
+      "pallet": {"bays": 2, "bay_w": 1.0, "levels": [0.0, 1.3], "depth": 1.1, "upright_h": 2.5, "label": "Racking R%d"}
+    },
+    {
+      "id": "pallet_bay",
+      "name": "Pallet unload bay",
+      "group": "Logistics",
+      "scene": "res://scenes/stations/pallet_bay.tscn",
+      "footprint": [1.5, 1.2],
+      "height": 0.4,
+      "price": 240,
+      "power_kw": 0.0,
+      "desc": "A marked floor bay with yellow guides. Drop a pallet in it with the forklift or pallet truck and any robot arm in reach unloads it onto the goods-in conveyor (or straight to a test rack).",
+      "pallet": {"bays": 1, "bay_w": 1.3, "levels": [0.0], "depth": 1.0, "station": "pallet_bay", "label": "Unload bay %d"}
+    },
+    {
+      "id": "plant_tall",
+      "name": "Office plant (tall)",
+      "group": "Decor",
+      "decor": true,
+      "scene": "res://scenes/decor/plant_tall.tscn",
+      "footprint": [0.6, 0.6],
+      "height": 1.6,
+      "price": 65,
+      "power_kw": 0.0,
+      "desc": "A big leafy yucca in a glazed pot. Makes the place feel looked after. Doesn't need much — like most of your staff."
+    },
+    {
+      "id": "plant_small",
+      "name": "Snake plant",
+      "group": "Decor",
+      "decor": true,
+      "scene": "res://scenes/decor/plant_small.tscn",
+      "footprint": [0.45, 0.45],
+      "height": 0.8,
+      "price": 28,
+      "power_kw": 0.0,
+      "desc": "Unkillable. Perfect for a workshop."
+    },
+    {
+      "id": "rug",
+      "name": "Entrance mat / rug",
+      "group": "Decor",
+      "decor": true,
+      "overlap": true,
+      "scene": "res://scenes/decor/rug.tscn",
+      "footprint": [1.8, 1.2],
+      "height": 0.02,
+      "price": 45,
+      "power_kw": 0.0,
+      "desc": "Heavy-duty rug in your accent colour. Lies flat, so desks and benches can stand on it."
+    },
+    {
+      "id": "site_radio",
+      "name": "Site radio",
+      "group": "Decor",
+      "decor": true,
+      "scene": "res://scenes/decor/site_radio.tscn",
+      "footprint": [0.5, 0.4],
+      "height": 0.5,
+      "price": 90,
+      "power_kw": 0.01,
+      "idle_frac": 1.0,
+      "desc": "A chunky builder's radio in a roll cage. Press E to switch it on or off. Every workshop needs one."
+    },
+    {
+      "id": "wall_clock",
+      "name": "Wall clock",
+      "group": "Decor",
+      "decor": true,
+      "mount": "wall",
+      "overlap": true,
+      "scene": "res://scenes/decor/wall_clock.tscn",
+      "footprint": [0.5, 0.2],
+      "back": 0.0,
+      "front": 0.2,
+      "height": 2.2,
+      "price": 22,
+      "power_kw": 0.0,
+      "desc": "A station-style wall clock that keeps the in-game time. Place it against a wall."
+    },
+    {
+      "id": "poster_safety",
+      "name": "Poster: Lift with your legs",
+      "group": "Decor",
+      "decor": true,
+      "mount": "wall",
+      "overlap": true,
+      "scene": "res://scenes/decor/poster_safety.tscn",
+      "footprint": [0.7, 0.2],
+      "back": 0.0,
+      "front": 0.2,
+      "height": 2.0,
+      "price": 12,
+      "power_kw": 0.0,
+      "desc": "Framed health & safety poster. Place it against a wall."
+    },
+    {
+      "id": "poster_motto",
+      "name": "Poster: Buy it. Fix it. Flip it.",
+      "group": "Decor",
+      "decor": true,
+      "mount": "wall",
+      "overlap": true,
+      "scene": "res://scenes/decor/poster_motto.tscn",
+      "footprint": [0.7, 0.2],
+      "back": 0.0,
+      "front": 0.2,
+      "height": 2.0,
+      "price": 15,
+      "power_kw": 0.0,
+      "desc": "Your company motto, framed, in your accent colour. Place it against a wall."
+    },
+    {
+      "id": "poster_retro",
+      "name": "Poster: Halden home computer (1987)",
+      "group": "Decor",
+      "decor": true,
+      "mount": "wall",
+      "overlap": true,
+      "scene": "res://scenes/decor/poster_retro.tscn",
+      "footprint": [0.7, 0.2],
+      "back": 0.0,
+      "front": 0.2,
+      "height": 2.0,
+      "price": 18,
+      "power_kw": 0.0,
+      "desc": "A vintage advert for the Halden HC-64. Before your time. Place it against a wall."
+    },
+    {
+      "id": "eotm_frame",
+      "name": "Employee of the Month frame",
+      "group": "Decor",
+      "decor": true,
+      "mount": "wall",
+      "overlap": true,
+      "scene": "res://scenes/decor/eotm_frame.tscn",
+      "footprint": [0.7, 0.2],
+      "back": 0.0,
+      "front": 0.2,
+      "height": 2.0,
+      "price": 25,
+      "power_kw": 0.0,
+      "desc": "Whoever did the most work last week goes up on the wall every Monday — with their photo if they've uploaded one."
+    }
+  ]
+}

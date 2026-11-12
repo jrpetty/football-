@@ -1,0 +1,106 @@
+{
+  "_comment": "Flogit reviews. Every delivered Flogit order gets 1–5 stars and a comment a few working hours after the courier collects it (delay_hours). Score = base + the factors that apply + noise, rounded and clamped to 1–5. overgraded: the grade on the listing was better than the unit really was (a flaw the grader missed). fast: dispatched within fast_hours working hours of the sale. late / very_late: dispatched after the deadline (very late = very_late_hours or more). bargain / pricey: price paid vs the guide for the unit's TRUE grade. battery: laptops/tablets/phones below battery_below %. worn_grades: buyers of worn kit are a touch harsher. rep: reputation nudge per star. Comments are picked from the strongest reason; placeholders {thing} {grade} {flaw} {flaw_lc} {model} {price}.",
+  "delay_hours": [1, 6],
+  "base": 4.4,
+  "noise": 0.45,
+  "fast_hours": 3,
+  "fast": 0.7,
+  "late": -1.6,
+  "very_late_hours": 8,
+  "very_late": -2.8,
+  "overgraded": -3.4,
+  "bargain_ratio": 0.88,
+  "bargain": 0.5,
+  "pricey_ratio": 1.18,
+  "pricey": -0.9,
+  "battery_below": 65,
+  "battery": -0.9,
+  "worn_grades": {"C": -0.15, "D": -0.3},
+  "rep": {"1": -1.0, "2": -0.4, "3": 0.0, "4": 0.15, "5": 0.3},
+  "things": {"laptop": "laptop", "desktop": "PC", "server": "server", "monitor": "monitor", "switch": "switch", "wifi_ap": "access point", "dock": "dock", "tablet": "tablet", "phone": "phone"},
+  "reasons": {"overgraded": "Grade didn't match", "very_late": "Very late", "late": "Late", "battery": "Tired battery", "pricey": "Felt overpriced", "fast": "Speedy dispatch", "bargain": "Bargain", "great": "Delighted", "good": "Happy", "ok": "It's fine", "poor": "Disappointed", "spares": "Spares buyer"},
+  "comments": {
+    "overgraded": [
+      "Said {grade} grade. {flaw}. Not impressed.",
+      "Listing said grade {grade}. My nan's reading glasses are in better nick. ({flaw})",
+      "'Grade {grade}' my foot. {flaw}.",
+      "Lovely {thing}, apart from the bit nobody mentioned: {flaw_lc}.",
+      "Grade {grade}? Grade 'having a laugh', more like. {flaw}.",
+      "Specs as described. Condition, not so much — {flaw_lc}.",
+      "If that's grade {grade}, I'm the King of Belgium. {flaw}."
+    ],
+    "very_late": [
+      "Ordered it for my daughter's first term. She's graduated.",
+      "Arrived that late I'd already bought another one. Now I've got two.",
+      "Posted by carrier pigeon, I assume. A tired one.",
+      "Took longer than the roadworks on the A64. Never again.",
+      "Three working days late and not a word. Shocking."
+    ],
+    "late": [
+      "Took that long I'd forgotten I'd ordered it.",
+      "Arrived eventually. My beard grew an inch waiting.",
+      "Good {thing}. Shame it came via the scenic route.",
+      "Dispatch slower than a Monday morning.",
+      "Fine once it turned up. Emphasis on 'once'."
+    ],
+    "battery": [
+      "Battery lasts about as long as a Year 9 attention span.",
+      "Works great, plugged in. The battery's more of a suggestion.",
+      "Have to sit next to a socket like it's 1998.",
+      "Battery dies faster than my phone at a festival."
+    ],
+    "pricey": [
+      "Nice kit, but I paid new-car-smell money for it.",
+      "Does the job. Wallet's still in recovery.",
+      "Bit steep, but it works, so I'll stop moaning. Mostly.",
+      "Pricey for what it is. Mum says I got done.",
+      "Saw the same thing cheaper the day after. Typical."
+    ],
+    "fast": [
+      "Arrived before I'd finished my tea.",
+      "Ordered at lunch, here by teatime. Witchcraft.",
+      "Quicker than my broadband. Cracking seller.",
+      "Blink and you'd miss the courier. Superb.",
+      "Posted same day and packed like the crown jewels.",
+      "So quick the dog didn't have time to bark at the van."
+    ],
+    "bargain": [
+      "Proper bargain. Don't tell the other half what I paid.",
+      "Cheaper than a night out in Leeds and lasts a lot longer.",
+      "At that price I bought one for my brother-in-law. He's still not grateful.",
+      "Absolute steal. Feel like I should check it's not nicked.",
+      "Bargain of the year. Would flog with again."
+    ],
+    "great": [
+      "Exactly as described. Would flog with again.",
+      "Mint condition, works a treat. Ta very much.",
+      "Better than the one my work gave me. Don't tell IT.",
+      "Spotless. Packed better than my last house move.",
+      "Five stars. Would give six but the form won't let me.",
+      "Smells faintly of new. Lovely stuff."
+    ],
+    "good": [
+      "Does what it says on the tin. Ta.",
+      "Good {thing}, good seller, good grief that box had a lot of tape.",
+      "Solid. Minor wear, as described. Happy.",
+      "Arrived safe and sound. Kids already fighting over it.",
+      "No complaints, and I always have complaints."
+    ],
+    "ok": [
+      "It's fine. It's a {thing}. It does {thing} things.",
+      "Middle of the road. Like a Ford Mondeo.",
+      "Not bad, not amazing. A very British three stars.",
+      "As described, give or take. Fair enough."
+    ],
+    "poor": [
+      "Works, but I expected better.",
+      "Meh. Bit of a let-down, if I'm honest.",
+      "Arrived. Switched on. That's about the best I can say."
+    ],
+    "spares": [
+      "Sold as spares, arrived as spares. Honest seller.",
+      "Bought it to tinker with. My shed is now a hospital ward.",
+      "Exactly as broken as advertised. Respect."
+    ]
+  }
+}

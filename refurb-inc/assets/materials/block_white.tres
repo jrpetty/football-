@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/albedo.png" id="1_insqo"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/normal.png" id="2_48hb3"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/roughness.png" id="3_m6ndo"]
+
+[resource]
+resource_name = "block_white"
+albedo_color = Color(0.97, 0.97, 0.96, 1)
+albedo_texture = ExtResource("1_insqo")
+roughness_texture = ExtResource("3_m6ndo")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_48hb3")
+uv1_scale = Vector3(0.5555556, 0.5555556, 0.5555556)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

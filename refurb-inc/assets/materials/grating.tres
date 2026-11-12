@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/metal_grating/albedo.png" id="1_1v5bm"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/metal_grating/normal.png" id="2_sfnbv"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/metal_grating/roughness.png" id="3_2bawg"]
+
+[resource]
+resource_name = "grating"
+albedo_texture = ExtResource("1_1v5bm")
+metallic = 0.6
+roughness_texture = ExtResource("3_2bawg")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_sfnbv")
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

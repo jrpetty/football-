@@ -1,0 +1,12 @@
+{
+  "makers": [
+    {"id": "corvex", "name": "Corvex", "kind": "system", "tagline": "Built for business."},
+    {"id": "halden", "name": "Halden", "kind": "system", "tagline": "Engineered in Bristol."},
+    {"id": "northstar", "name": "Northstar", "kind": "system", "tagline": "Point the way."},
+    {"id": "brightline", "name": "Brightline", "kind": "system", "tagline": "Light. Bright. Done."},
+    {"id": "kestrel", "name": "Kestrel", "kind": "system", "tagline": "Value that flies."},
+    {"id": "vortex", "name": "Vortex", "kind": "cpu"},
+    {"id": "arcturo", "name": "Arcturo", "kind": "cpu"},
+    {"id": "linkwell", "name": "Linkwell", "kind": "network"}
+  ]
+}

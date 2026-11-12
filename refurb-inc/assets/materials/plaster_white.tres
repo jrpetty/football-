@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "plaster_white"
+albedo_color = Color(0.93, 0.93, 0.91, 1)
+roughness = 0.85

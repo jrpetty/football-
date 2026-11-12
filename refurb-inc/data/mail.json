@@ -1,0 +1,15 @@
+{
+  "_comment": "Office PC mail. day = first in-game day index (0-based) the mail appears.",
+  "mail": [
+    {"day": 0, "from": "Auntie Pat", "subject": "Good luck with the new venture!",
+     "body": "Hello love,\n\nYour uncle says you can have the garage as long as you need it — just keep the bike out of the rain and don't touch his paint tins.\n\nI've told everyone at the WI you fix computers now. Mrs Okafor's grandson needs a laptop for college, so make sure you sell him a good one.\n\nKettle's in the corner. Proud of you.\n\nPat x"},
+    {"day": 0, "from": "You (notes to self)", "subject": "How this works — read me first",
+     "body": "1. PURCHASING: buy a lot of ex-corporate laptops. Cheap lots are cheap for a reason (more faults, more wear). The lorry brings it next morning.\n\n2. HAUL: carry laptops in from the pallet on the drive (up to 3 at once). Hover over a unit to see its cosmetic condition.\n\n3. TEST: put a unit on the test bench and plug in the DiagnostiKit USB. It runs by itself — go and do something else. Testing is always accurate.\n\n4. REPAIR: faulty units go to the repair bench. Hold E to fix. You need the right part in the parts bins (order in the Shop — it comes with the courier).\n\n5. IMAGE: swap the bench USB for the PaneOS USB to wipe and install a fresh OS.\n\n6. GRADE: hold E at the grading desk. A/B/C/D depends on wear and battery health.\n\n7. SELL: shelve it, list it on Flogit. Price below guide = sells faster.\n\n8. SHIP: when it sells, pack it at the packing table and put the box on the OUTGOING shelf before the courier comes (12:00 and 16:30).\n\nRent is due every Friday. Don't let the cash run dry."},
+    {"day": 0, "from": "Northgate Bank — Business Banking", "subject": "Your new business account",
+     "body": "Dear {company},\n\nYour business current account is now open. We've arranged an informal overdraft buffer of £500 to help with cash flow.\n\nIf the account remains overdrawn at the end of a week, a fee of £40 applies and it may affect your standing with suppliers.\n\nKind regards,\nSmall Business Team"},
+    {"day": 1, "from": "Flogit", "subject": "Tips for new sellers",
+     "body": "Welcome to Flogit!\n\n• Buyers love fair prices. Listings at or below the guide price sell much faster.\n• Grade honestly. Accurate grades build your seller rating.\n• Dispatch on time — late parcels cost you rating, and a buyer who waits too long will cancel.\n• Spares/Repairs listings sell quickly to tinkerers, but for much less.\n\nHappy selling!\nThe Flogit Team"},
+    {"day": 3, "from": "Gareth (old work mate)", "subject": "Refresh season",
+     "body": "Alright,\n\nHeard you've gone into refurb. Tip: big organisations swap kit on a schedule — banks every 3 years, schools every 2, that logistics lot every year. Check the refresh calendar in your purchasing app and keep cash back for the big lots.\n\nAlso: never trust 'sold as seen'. Half of those have had the drives pulled.\n\nG"}
+  ]
+}

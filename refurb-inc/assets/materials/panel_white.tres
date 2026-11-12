@@ -1,0 +1,20 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/albedo.png" id="1_551si"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/normal.png" id="2_5iv80"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/roughness.png" id="3_07065"]
+
+[resource]
+resource_name = "panel_white"
+albedo_color = Color(0.94, 0.95, 0.96, 1)
+albedo_texture = ExtResource("1_551si")
+metallic = 0.3
+roughness_texture = ExtResource("3_07065")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_5iv80")
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

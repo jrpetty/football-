@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/peripherals/usb_dock/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/peripherals/usb_dock/material.tres" id="2"]
+
+
+[node name="UsbDock" type="Node3D"]
+metadata/footprint = Vector3(0.20000, 0.03698, 0.10699)
+metadata/source_tier = "USB-C docking station"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

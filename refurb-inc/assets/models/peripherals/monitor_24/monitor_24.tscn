@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/peripherals/monitor_24/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/peripherals/monitor_24/material.tres" id="2"]
+
+
+[node name="Monitor24" type="Node3D"]
+metadata/footprint = Vector3(0.54000, 0.39793, 0.13982)
+metadata/source_tier = "24in monitor"
+metadata/surfaces = [[0.110, 0.16, -0.269, 0.269, -0.055, 0.012]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

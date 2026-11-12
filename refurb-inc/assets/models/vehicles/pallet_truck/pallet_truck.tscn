@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/pallet_truck/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/vehicles/pallet_truck/material.tres" id="2"]
+
+
+[node name="PalletTruck" type="Node3D"]
+metadata/footprint = Vector3(0.48412, 1.02684, 1.55000)
+metadata/source_tier = "Manual pallet truck"
+metadata/surfaces = [[0.060, 1.00, -0.239, 0.241, -0.759, 0.774]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

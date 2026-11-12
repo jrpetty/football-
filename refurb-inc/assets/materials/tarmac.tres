@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/tarmac/albedo.png" id="1_10by0"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/tarmac/normal.png" id="2_o7bkd"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/tarmac/roughness.png" id="3_2jw5d"]
+
+[resource]
+resource_name = "tarmac"
+albedo_texture = ExtResource("1_10by0")
+metallic_specular = 0.3
+roughness_texture = ExtResource("3_2jw5d")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_o7bkd")
+uv1_scale = Vector3(0.33333334, 0.33333334, 0.33333334)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5
