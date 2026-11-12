@@ -17,6 +17,7 @@ window/stretch/aspect="expand"
 
 [autoload]
 
+Settings="*res://scripts/settings.gd"
 WorldData="*res://scripts/world_data.gd"
 Sfx="*res://scripts/sfx.gd"
 

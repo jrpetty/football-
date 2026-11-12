@@ -255,6 +255,10 @@ func _open(kind: String, w: float, h: float, title: String) -> VBoxContainer:
 	pc.add_child(v); window.add_child(pc); root.add_child(window)
 	return v
 
+## a blank centred window for other systems to fill; returns its content column
+func open_window(kind: String, w: float, h: float, title: String) -> VBoxContainer:
+	return _open(kind, w, h, title)
+
 func open_inventory(cont = null) -> void:
 	var v := _open("inv", 980.0, 560.0, "")
 	container = cont

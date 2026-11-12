@@ -42,6 +42,15 @@ var _mouse := Vector2.ZERO
 var _food_tick := 0.0
 var loud_t := 0.0
 var shots_mode := false
+## Optional systems, each a script in this list if it exists. A module is a Node with `var game` and any of:
+##   mod_started(new_game: bool)                      a game began or was loaded
+##   mod_input(ev: InputEvent) -> bool                true = consumed (called before the game's own keys)
+##   mod_process(dt, dt_game_min, ui_open)            every frame of play
+##   mod_interact(eye, fwd, reach, wall_t) -> Dictionary   {} or {t, prompt, act: Callable}
+##   mod_blocks_control() -> bool                     true while the player may not move (asleep, placing…)
+##   mod_save() -> Variant / mod_load(data)           persisted under the module's file name
+const MODULES := ["sys_build", "sys_craft", "sys_sleep", "sys_cook", "sys_map", "arms", "music", "weather"]
+var modules: Dictionary = {}
 var fx: Fx
 var _groan_t := 3.0
 
@@ -70,6 +79,14 @@ func _ready() -> void:
 		if zs != null and zs.can_instantiate():
 			zombies = zs.new(); zombies.name = "Zombies"; add_child(zombies)
 			_wire_zombies()
+	for m in MODULES:
+		var path := "res://scripts/%s.gd" % m
+		if ResourceLoader.exists(path):
+			var sc = load(path)
+			if sc != null and sc.can_instantiate():
+				var node = sc.new(); node.name = m.to_pascal_case()
+				node.set("game", self)
+				add_child(node); modules[m] = node
 	shots_mode = OS.get_cmdline_user_args().has("--shots")
 	_to_menu()
 	if shots_mode:
@@ -124,6 +141,15 @@ func _resume() -> void:
 	hud.close_window()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
+func _mods(method: String, args: Array = []) -> void:
+	for k in modules:
+		if modules[k].has_method(method):
+			modules[k].callv(method, args)
+
+func make_noise(pos: Vector3, radius: float) -> void:
+	_noise(pos, radius)
+	loud_t = maxf(loud_t, radius) if pos.distance_to(player.pos) < 2.0 else loud_t
+
 func _start_play() -> void:
 	state = "play"
 	hud.close_window(); hud.set_playing(true)
@@ -176,6 +202,7 @@ func new_game(occupation := "unemployed") -> void:
 		zombies.clear()
 		zombies.populate(world.buildings)
 	_start_play()
+	_mods("mod_started", [true])
 	hud.notify("Day 1. The outbreak was three weeks ago. The radio went silent yesterday.", "good")
 
 func _die() -> void:
@@ -192,9 +219,13 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if state != "play":
 		return
 	if ev is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		player.yaw -= ev.relative.x * 0.0022
-		player.pitch = clampf(player.pitch - ev.relative.y * 0.0022, -1.5, 1.5)
+		var sens := 0.0022 * float(Settings.v("mouse_sens"))
+		player.yaw -= ev.relative.x * sens
+		player.pitch = clampf(player.pitch - ev.relative.y * sens * (-1.0 if Settings.v("invert_y") else 1.0), -1.5, 1.5)
 		_mouse += ev.relative
+	for mk in modules:
+		if modules[mk].has_method("mod_input") and modules[mk].mod_input(ev):
+			return
 	if ev is InputEventKey and ev.pressed and not ev.echo:
 		var k: int = ev.physical_keycode
 		if hud.is_open():
@@ -251,11 +282,16 @@ func _process(dt: float) -> void:
 		return
 	var p := player
 	var ui_open := hud.is_open() or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
+	var blocked := false
+	for mk in modules:
+		if modules[mk].has_method("mod_blocks_control") and modules[mk].mod_blocks_control(): blocked = true
+	day_len = float(Settings.v("day_len"))
 	var dt_min := dt * 1440.0 / (day_len * 60.0)
 	if p.sleeping:
 		dt_min *= 40.0
 	game_min += dt_min
-	p.update(dt, not ui_open, game_min)
+	p.update(dt, not ui_open and not blocked, game_min)
+	_mods("mod_process", [dt, dt_min, ui_open])
 	if p.stepped:
 		Sfx.play("footstep_wood" if p.inside else ("footstep_road" if _on_road(p.pos) else "footstep_grass"), {"volume": (0.35 if p.crouch else (1.0 if p.sprinting else 0.65)) * (1.2 if p.landed > 0.0 else 1.0)})
 	var exertion := 1.0 if p.sprinting else (0.6 if swing_timer > 0.0 else (0.2 if p.moving else 0.0))
@@ -293,7 +329,7 @@ func _process(dt: float) -> void:
 	var shake := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), 0.0) * p.cam_shake * 0.03
 	cam.position = p.eye() + Basis(Vector3.UP, p.yaw) * p.head_bob + shake
 	cam.rotation = Vector3(p.pitch, p.yaw, 0.0)
-	cam.fov = lerpf(cam.fov, (75.0 + (6.0 if p.sprinting else 0.0)) * (1.0 - 0.22 * vm.ads), 1.0 - exp(-dt * 8.0))
+	cam.fov = lerpf(cam.fov, (float(Settings.v("fov")) + (6.0 if p.sprinting else 0.0)) * (1.0 - 0.22 * vm.ads), 1.0 - exp(-dt * 8.0))
 	var es = p.equipped_stack()
 	vm.set_item(String(es.id) if es != null else "")
 	vm.want_ads = not ui_open and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
@@ -405,6 +441,11 @@ func _find_interact():
 		var t2 := _box_ray(eye, fwd, cp - h, cp + h, RANGE)
 		if t2 < best_t and t2 <= wall_t + 0.6:
 			best = c; best_t = t2
+	for mk in modules:
+		if modules[mk].has_method("mod_interact"):
+			var cand: Dictionary = modules[mk].mod_interact(eye, fwd, RANGE, wall_t)
+			if not cand.is_empty() and float(cand.get("t", INF)) < best_t:
+				best = {"kind": "module", "prompt": String(cand.get("prompt", "")), "act": cand.get("act")}; best_t = float(cand.t)
 	if best == null and p.pitch < -0.25 and WorldData.near_water(p.pos.x + fwd.x * 1.5, p.pos.z + fwd.z * 1.5):
 		best = {"kind": "water"}
 	return best
@@ -421,6 +462,7 @@ func _prompt(t) -> String:
 			return "[E]  Search %s" % String(t.label) if not t.get("searched", false) else "[E]  Open %s" % String(t.label)
 		"drop": return "[E]  Pick through the %s" % String(t.label).to_lower()
 		"water": return "[E]  Drink from the lake"
+		"module": return String(t.prompt)
 	return ""
 
 func _interact() -> void:
@@ -428,6 +470,8 @@ func _interact() -> void:
 	if t == null or action != null:
 		return
 	match String(t.get("kind", "")):
+		"module":
+			if t.act is Callable: t.act.call()
 		"door":
 			if t.locked and not t.open:
 				var crowbar: bool = player.inv.has_tool("pry") or player.inv.count("crowbar") > 0
@@ -1064,6 +1108,10 @@ func save_game(auto: bool) -> void:
 		if world.windows[id].broken: broken.append(id)
 	var o := {"v": 1, "game_min": game_min, "objective": objective, "player": player.to_dict(), "doors": door_rows, "containers": cont_rows, "drops": drop_rows, "windows": broken, "veg_dead": world.veg_dead.keys(), "veg_hp": world.veg_hp}
 	if zombies != null and zombies.has_method("to_rows"): o["zombies"] = zombies.to_rows()
+	var md := {}
+	for k in modules:
+		if modules[k].has_method("mod_save"): md[k] = modules[k].mod_save()
+	o["modules"] = md
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(o)); f.close()
@@ -1103,7 +1151,11 @@ func continue_game() -> void:
 	var vh: Dictionary = o.get("veg_hp", {})
 	for k in vh: world.veg_hp[int(k)] = float(vh[k])
 	if zombies != null and zombies.has_method("load_rows") and o.has("zombies"): zombies.load_rows(o.zombies)
+	var md: Dictionary = o.get("modules", {})
+	for k in modules:
+		if md.has(k) and modules[k].has_method("mod_load"): modules[k].mod_load(md[k])
 	_start_play()
+	_mods("mod_started", [false])
 
 # ------------------------------------------------------------------ development: screenshots
 func _debug_shots() -> void:
