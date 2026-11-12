@@ -22,6 +22,13 @@ extends Node3D
 ##   each Zombie  pos, yaw, type, hp, max_hp, state (a StringName: idle wander investigate chase attack bash stagger
 ##                dead dormant feed search scream down rise), name, turned, decay, age, crawler, prey, body, loot
 ##
+## Solid: every moving body is collided every frame against the walls, furniture, trunks and posts near it (looked
+## up once per stretch of ground, see _look_near / _collide), long steps are taken in pieces, feet follow the
+## terrain exactly and take steps (floors, porches, stairs, crates) at 5 m/s, bodies keep clear of each other and
+## of the player, a broken window is climbed through over its sill, and anything on the ground lies along the
+## slope. scripts/test_noclip.gd audits all of it. For the player to be held back by the dead it walks into, set
+## `player_blocking = true` and add `player_push` to the player's position after each update().
+##
 ## Built for GDScript speed: a zombie *thinks* a few times a second (staggered; most often when hunting close by)
 ## and between thoughts only walks along the heading it chose. Beyond 230 m of the player it is frozen, and it
 ## has a body in the shared Bodies renderer only within about 190 m.
@@ -173,6 +180,7 @@ class Zombie:
 	var nb := PackedFloat32Array()
 	var nc := PackedFloat32Array()
 	var step_top := -INF
+	var jammed := false
 	var safe_x := 0.0
 	var safe_z := 0.0
 	var sills: Array = []
@@ -186,6 +194,8 @@ class Zombie:
 	var blocked_t := 0.0
 	var wait_t := 0.0
 	var tries := 0
+	var nn: Zombie = null
+	var nn2: Zombie = null
 	var anc := Vector3.ZERO
 	var anc_t := 0.0
 	var held_by_wall := false
@@ -601,12 +611,24 @@ func _look_near(z: Zombie) -> void:
 ## sill is under it. If it ends up squeezed where it does not fit, it goes back to where it last stood clear.
 func _collide(z: Zombie) -> void:
 	var x := z.pos.x; var zz := z.pos.z
-	var feet := z.pos.y
-	if z.near_v != _W.version or absf(x - z.near_x) > 0.7 or absf(zz - z.near_z) > 0.7 or absf(feet - z.near_y) > 0.6:
+	# (what is a wall and what is a step is judged from where the feet are going: stepping off a ledge, the
+	# ledge is beside the body at once, not something it sinks down through)
+	if z.near_v != _W.version or absf(x - z.near_x) > 0.7 or absf(zz - z.near_z) > 0.7 or absf(z.pos.y - z.near_y) > 0.6:
 		_look_near(z)
 	var r := 0.3 * z.scale
 	var nb := z.nb; var nc := z.nc
 	var nbn := nb.size(); var ncn := nc.size()
+	# what holds the body up where it now is: the ground (terrain, a floor), a low thing under it, a sill
+	var under: float = _W.ground_y(x, zz, z.pos.y) if (_smap[clampi(int(floor(zz + HALF)), 0, NAV_N - 1) * NAV_N + clampi(int(floor(x + HALF)), 0, NAV_N - 1)] & 2) != 0 else _W.height_at(x, zz)
+	# (a body found inside a thing's outline with no room to stand beside it scrambles up onto it)
+	var lift := 1.2 if z.jammed else 0.46
+	var k := 0
+	while k < nbn:
+		if nb[k + 6] < 0.5 and x > nb[k] and x < nb[k + 2] and zz > nb[k + 1] and zz < nb[k + 3] and nb[k + 4] > under and nb[k + 4] - z.pos.y <= lift and nb[k + 4] - z.pos.y > -0.3: under = nb[k + 4]
+		k += 7
+	for s in z.sills:
+		if x > s.min.x - r - 0.12 and x < s.max.x + r + 0.12 and zz > s.min.z - r - 0.12 and zz < s.max.z + r + 0.12 and s.max.y > under: under = s.max.y
+	var feet := minf(z.pos.y, under + 0.02)
 	var head := feet + 1.55
 	var top := -INF
 	var jam := false
@@ -619,7 +641,7 @@ func _collide(z: Zombie) -> void:
 				var up := nb[i + 4] - feet
 				if up <= nb[i + 6] or nb[i + 5] >= head:
 					# overhead, or low enough to walk onto: its top is ground when the body is over it
-					if up > -0.3 and nb[i + 6] < 0.5 and x > x0 and x < x1 and zz > z0 and zz < z1 and nb[i + 4] > top and up <= 0.46: top = nb[i + 4]
+					if up > -0.3 and nb[i + 6] < 0.5 and x > x0 and x < x1 and zz > z0 and zz < z1 and nb[i + 4] > top and nb[i + 4] - z.pos.y <= lift: top = nb[i + 4]
 					i += 7
 					continue
 				i += 7
@@ -667,13 +689,16 @@ func _collide(z: Zombie) -> void:
 			x = z.safe_x; zz = z.safe_z
 		else:
 			z.safe_x = x; z.safe_z = zz
+		z.jammed = jam
 		z.pos.x = x; z.pos.z = zz
 	else:
-		z.safe_x = x; z.safe_z = zz
+		z.safe_x = x; z.safe_z = zz; z.jammed = false
 	z.step_top = top
 	z.over_sill = null
+	# (a little way past the sill it is still coming off it, so that whatever stands just inside the window is
+	# met at sill height: stepped onto if it is low enough from there, not sunk into)
 	for s in z.sills:
-		if x > s.min.x - r and x < s.max.x + r and zz > s.min.z - r and zz < s.max.z + r:
+		if x > s.min.x - r - 0.12 and x < s.max.x + r + 0.12 and zz > s.min.z - r - 0.12 and zz < s.max.z + r + 0.12:
 			z.over_sill = s
 
 ## Lay a body along the slope it is on (or stand it straight again).
@@ -1455,6 +1480,22 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 			if z.climb > 0.0:
 				mx *= 0.45; mz *= 0.45           # hauling itself over a window sill
 		var nxp := z.pos.x + mx; var nzp := z.pos.z + mz
+		var nb2 := z.nn
+		if nb2 != null:
+			# never into the one standing nearest (the thought-time shouldering does the rest)
+			var ox := nxp - nb2.pos.x; var oz := nzp - nb2.pos.z
+			var o2 := ox * ox + oz * oz
+			if o2 < 0.2116 and o2 > 1e-6 and nb2.state != S_DEAD:
+				var od := sqrt(o2)
+				nxp = nb2.pos.x + ox / od * 0.46; nzp = nb2.pos.z + oz / od * 0.46
+			nb2 = z.nn2
+			if nb2 != null:
+				ox = nxp - nb2.pos.x; oz = nzp - nb2.pos.z
+				o2 = ox * ox + oz * oz
+				if o2 < 0.2116 and o2 > 1e-6 and nb2.state != S_DEAD:
+					var od2 := sqrt(o2)
+					nxp = nb2.pos.x + ox / od2 * 0.46; nzp = nb2.pos.z + oz / od2 * 0.46
+			mx = nxp - z.pos.x; mz = nzp - z.pos.z
 		if hold > 0.0:
 			# its own steps never carry it into the player
 			var hx := nxp - px; var hz := nzp - pz
@@ -1477,9 +1518,20 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 			var len := sqrt(mx * mx + mz * mz)
 			var n := 1 if len <= 0.2 else int(ceil(len / 0.2))
 			var sx := mx / n; var sz := mz / n
+			var bx0 := z.pos.x; var bz0 := z.pos.z
 			for _k in n:
 				z.pos.x += sx; z.pos.z += sz
 				_collide(z)
+			# a wall may have turned the step aside into whoever stands nearest: then it is not taken at all
+			for oi in 2:
+				var other: Zombie = z.nn if oi == 0 else z.nn2
+				if other == null or other.state == S_DEAD:
+					continue
+				var ax := z.pos.x - other.pos.x; var az := z.pos.z - other.pos.z
+				var a2 := ax * ax + az * az
+				if a2 < 0.1764 and a2 < (bx0 - other.pos.x) * (bx0 - other.pos.x) + (bz0 - other.pos.z) * (bz0 - other.pos.z):
+					z.pos.x = bx0; z.pos.z = bz0; z.safe_x = bx0; z.safe_z = bz0
+					break
 		if z.over_sill != null: z.climb = 0.25
 		elif z.climb > 0.0 and absf(z.pos.y - z.ground) < 0.03: z.climb = maxf(0.0, z.climb - dt)         # (still climbing until it has come down the far side)
 		if hold > 0.0 and player_blocking:
@@ -1910,6 +1962,9 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 		var my_r := (0.46 if z.type == BLOAT else 0.32) * z.scale
 		var pxs := 0.0; var pzs := 0.0
 		var slow := 1.0; var side := 0.0; var lead := 0.0
+		var nn_d2 := 1.7; var nn2_d2 := 1.7
+		var sill_busy := false; var back_out := false
+		z.nn = null; z.nn2 = null
 		var dirx := z.dir.x; var dirz := z.dir.z
 		var upright := z.crawler or not _flat(z)
 		for i in range(-1, 2):
@@ -1924,16 +1979,32 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 					var sx := z.pos.x - o.pos.x; var sz := z.pos.z - o.pos.z
 					var d2 := sx * sx + sz * sz
 					var rr := my_r + (0.46 if o.type == BLOAT else 0.32) * o.scale
-					if d2 < 1e-6 or absf(z.pos.y - o.pos.y) > 1.2:
+					if d2 < 1e-6 or absf(z.pos.y - o.pos.y) > 1.7:          # (a body is that tall: anything nearer in height is in the way)
 						continue
+					if o.crawler or not _flat(o):
+						if d2 < nn_d2:
+							nn2_d2 = nn_d2; z.nn2 = z.nn
+							nn_d2 = d2; z.nn = o
+						elif d2 < nn2_d2:
+							nn2_d2 = d2; z.nn2 = o
 					if d2 < rr * rr:
 						var d := sqrt(d2); var push := (rr - d) * 0.5 / d
 						pxs += sx * push; pzs += sz * push
 						if d < 0.5 and upright and (o.crawler or not _flat(o)):
 							# far too close (two that ran into the same spot): step clear at once
-							var jump := (0.5 - d) / d
+							var jump := minf(0.5 - d, 0.1) / d            # (a hand's width a thought: never enough to carry it into a wall)
 							z.pos.x += sx * jump; z.pos.z += sz * jump
 							if (_smap[clampi(int(floor(z.pos.z + HALF)), 0, NAV_N - 1) * NAV_N + clampi(int(floor(z.pos.x + HALF)), 0, NAV_N - 1)] & 1) != 0: _collide(z)
+					if o.climb > 0.0 and d2 < (rr + 0.7) * (rr + 0.7):
+						# someone is in the window: one at a time. Whoever is not in it yet waits clear of it; of
+						# two in it together, the later one backs out
+						if z.climb <= 0.0:
+							if want > 0.0 and -(sx * dirx + sz * dirz) > 0.0: sill_busy = true
+							if d2 < rr * rr:
+								var dd := sqrt(d2); var extra := (rr - dd) * 0.5 / dd
+								pxs += sx * extra; pzs += sz * extra
+						elif o.id < z.id and d2 < (rr + 0.25) * (rr + 0.25):
+							sill_busy = true; back_out = true
 					if want > 0.0 and d2 < (rr + 0.4) * (rr + 0.4):
 						var d := sqrt(d2)
 						var ahead := -(sx * dirx + sz * dirz) / d            # 1: dead ahead
@@ -1950,7 +2021,13 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 			z.push = Vector3(pxs * k, 0.0, pzs * k)
 		else:
 			z.push = Vector3.ZERO
-		if slow < 1.0 and want > 0.0:
+		if back_out and z.dir != Vector3.ZERO:
+			z.dir = -z.dir; want = maxf(z.speed, 0.8); crowd_ahead = true
+		elif sill_busy:
+			crowd_ahead = true
+			want = 0.0; face = atan2(z.dir.x, z.dir.z) if z.dir != Vector3.ZERO else NAN
+			if clip == &"walk" or clip == &"chase": clip = &"idle"
+		elif slow < 1.0 and want > 0.0:
 			if lead > 0.3:
 				# following someone who is walking the same way: keep their pace, a step behind
 				want = minf(want, want * slow + lead)
@@ -1966,7 +2043,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 				want *= maxf(slow, 0.55)
 	# ---- getting nowhere? It stops pushing and waits (paws at the wall, stands in the press), then tries again
 	# another way; after a few tries it gives the idea up. Nothing marches on the spot.
-	if want <= 0.1 or z.pivot or z.climb > 0.0:
+	if want <= 0.1 or z.climb > 0.0:
 		z.anc = z.pos; z.anc_t = 0.0
 	elif Vector2(z.pos.x - z.anc.x, z.pos.z - z.anc.z).length_squared() > 0.09:
 		z.anc = z.pos; z.anc_t = 0.0; z.tries = 0

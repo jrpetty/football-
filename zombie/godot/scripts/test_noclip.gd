@@ -6,13 +6,28 @@ extends SceneTree
 ## everything you can see that is big enough to matter must have something in WorldData that blocks it.
 ## Exit code 1 when any check counts a violation.
 ##
-## Tolerances (metres):
-##   wall crossing     the step from last frame's position to this one may not cut through a solid box that
-##                     rises more than STEP above the feet (shrunk by 3 cm, so sliding along a face is fine)
-##   penetration       body radius 0.3 x scale (zombies), 0.32 (player): at most TOL_PEN into a wall or a trunk
-##   ground            upright bodies: feet within TOL_Y of the ground; lying bodies: within TOL_LIE along their length
-##   overlap           two upright zombies never closer than MIN_PAIR; no zombie closer than MIN_PLAYER to the player
-##   stuck             wants to move (chase / investigate) and covers under 0.35 m in STUCK_T seconds
+## What is checked, every simulated frame, and the tolerances (metres):
+##   1 wall crossing   the step from last frame's position to this one may not cut through a solid box that
+##                     rises more than STEP above the feet (shrunk by 3 cm, so sliding along a face is fine), nor
+##                     through the core of a trunk; no jump of more than 12 m/s + 0.45 m in one frame. The sill
+##                     under a window is not a wall once the window above it is broken (the dead climb through).
+##   2 penetration     body radius 0.3 x scale (zombies), 0.32 (player): at most TOL_PEN into a wall or a trunk
+##   3 ground          upright: feet within TOL_Y of the ground (terrain, a floor, a deck, a stair tread, a low
+##                     thing stood on). Within 0.6 m of a step of more than 0.25 m (0.13 m for a stair tread) the
+##                     feet may be anywhere between the two levels, since a step is taken over a few frames; a
+##                     body dropping off an edge at more than 3 m/s is falling, not floating. Lying bodies: within
+##                     TOL_LIE along their length (not judged on ground steeper than 35 degrees or across a step).
+##                     The player is a camera with no feet to see: it may ride up to 0.4 m high while its height
+##                     is eased down a slope, never below the ground.
+##   4 overlap         two upright zombies never closer than MIN_PAIR; none closer than MIN_PLAYER to the player
+##   5 stuck           wants to move (chase / investigate) and covers under 0.35 m in STUCK_T seconds
+##   6 the player      the same crossing / penetration / ground checks; never wedged (some way out is open);
+##                     open doors let it through and shut ones do not
+##   7 reach           a blow on a door, wall or window lands only from within 0.3 x scale + 0.75 m of it and
+##                     facing it; a blow on the player or a person only from within 1.45 x scale + 0.25 m
+## Scenarios: p the player alone, d a crowd in the open, a a horde through the town (60 and 30 fps), b hiding in
+## houses, c forest / slopes / rocks, e the starting population, f the turned and the fallen, g player-built
+## foundations, walls, stairs and a deck.  --only=a,b,…  --quick  --trace
 
 const ZScript := preload("res://scripts/zombies.gd")
 const STEP := 0.5
@@ -112,6 +127,12 @@ func report() -> int:
 		for v in h: tot += v
 		if tot > 0:
 			print("  %-10s nearest-neighbour distance in the press: <0.3 m %.2f%%  0.3-0.4 %.2f%%  0.4-0.5 %.1f%%  0.5-0.6 %.1f%%  0.6-0.8 %.1f%%  (of %d samples)" % [s, h[0] * 100.0 / tot, h[1] * 100.0 / tot, h[2] * 100.0 / tot, h[3] * 100.0 / tot, h[4] * 100.0 / tot, tot])
+	# an audit that audited nothing has not passed
+	for sname in note:
+		if not String(sname).begins_with("p ") and sname != "data" and int(zf.get(sname, 0)) < 1000:
+			scen = sname; viol("0 the audit did not run", float(zf.get(sname, 0)), Vector3.ZERO, "no zombie frames in this scenario")
+	if zs == null or not zs.has_method("update"):
+		scen = "setup"; viol("0 the audit did not run", 0.0, Vector3.ZERO, "zombies.gd did not load")
 	var keys: Array = res.keys(); keys.sort()
 	var bad := 0
 	print("")
@@ -349,7 +370,7 @@ func audit(dt: float) -> void:
 		var lying: bool = z.crawler or st == &"down" or st == &"dead" or (st == &"dormant" and z.lying) or (st == &"rise" and z.down_stage < 2)
 		var moved: bool = prev == null or prev != p
 		# (dropping off an edge — a deck, the open side of a flight of stairs — is a fall, not a fault)
-		if moved and prev != null and prev.y - p.y > 3.0 * dt and p.y - ground_expected(p, rb) > 0.25:
+		if moved and prev != null and prev.y - p.y > 3.0 * dt and p.y - ground_expected(p, rb) > TOL_Y:
 			bump("frames spent falling")
 			continue
 		if moved:
@@ -362,7 +383,11 @@ func audit(dt: float) -> void:
 			var pn := pen_at(p, rb)
 			if true:
 				if pn[0] > rb + 0.02: viol("2 zombie centre inside geometry", pn[0] - rb, p, "%s %s in %s" % [st, zs.TYPE_NAMES[z.type], what(pn[1])])
-				elif pn[0] > TOL_PEN: viol("2 zombie pressed into geometry", pn[0], p, "%s %s into %s" % [st, zs.TYPE_NAMES[z.type], what(pn[1])])
+				elif pn[0] > TOL_PEN:
+					viol("2 zombie pressed into geometry", pn[0], p, "%s %s into %s" % [st, zs.TYPE_NAMES[z.type], what(pn[1])])
+					if pn[0] > 0.2 and OS.get_cmdline_user_args().has("--trace") and dbg_n < 6:
+						dbg_n += 1
+						print("   TRACE pos ", p, " prev ", prev, " ground ", z.ground, " step_top ", z.step_top, " raised ", z.raised, " climb ", z.climb, " over_sill ", z.over_sill != null, " safe ", Vector2(z.safe_x, z.safe_z), " near ", Vector3(z.near_x, z.near_y, z.near_z), " ver ", z.near_v, "/", W.version, " box top ", pn[1].max.y if is_box(pn[1]) else 0.0, " nb ", z.nb)
 			var uf := under_floor(p)
 			if uf > 0.0: viol("3 zombie under a floor", uf, p, String(st))
 			elif climbing:
@@ -396,7 +421,7 @@ func audit(dt: float) -> void:
 					viol("5 zombie stuck", t_now - float(s[1]), p, "%s %s, quarry %.1f m away" % [st, zs.TYPE_NAMES[z.type], Vector2(p.x - pp.x, p.z - pp.z).length()])
 		if st != &"dead":
 			var dpl := Vector2(p.x - pp.x, p.z - pp.z).length()
-			if dpl < MIN_PLAYER and absf(p.y - pp.y) < 1.5 and bool(host.player_alive) and (z.crawler or not lying): viol("4 zombie inside the player", dpl, p, String(st))
+			if dpl < MIN_PLAYER and absf(p.y - pp.y) < 1.2 and bool(host.player_alive) and (z.crawler or not lying): viol("4 zombie inside the player", dpl, p, String(st))
 			if dpl < 14.0 and not lying and frame % 6 == 0: press.append(z)
 	zf[scen] = int(zf.get(scen, 0)) + n
 	if press.size() > 1:
@@ -412,6 +437,10 @@ func audit(dt: float) -> void:
 				if d < best and absf(a.pos.y - b.pos.y) < 1.0: best = d
 				if j > i and d < MIN_PAIR and absf(a.pos.y - b.pos.y) < 1.0:
 					viol("4 zombies inside each other", d, a.pos, "%s + %s" % [a.state, b.state])
+					if d < 0.25 and OS.get_cmdline_user_args().has("--trace") and dbg_n < 8:
+						dbg_n += 1
+						for q in [a, b]:
+							print("   PAIR id ", q.id, " ", q.state, " pos ", q.pos, " climb ", snappedf(q.climb, 0.01), " sill ", q.over_sill != null, " want ", snappedf(q.want, 0.01), " wait ", snappedf(q.wait_t, 0.1), " moving ", q.moving, " jam ", q.jammed, " nn ", q.nn.id if q.nn != null else 0, "/", q.nn2.id if q.nn2 != null else 0, " push ", q.push.snapped(Vector3.ONE * 0.01), " vel ", q.vel.snapped(Vector3.ONE * 0.01), " think_t ", snappedf(q.think_t, 0.01), " ground ", snappedf(q.ground, 0.01), " type ", q.type, " crawler ", q.crawler)
 			if best < 0.8:
 				h[0 if best < 0.3 else 1 if best < 0.4 else 2 if best < 0.5 else 3 if best < 0.6 else 4] += 1
 
@@ -447,6 +476,7 @@ func feet_step(p: Vector3) -> bool:
 # ------------------------------------------------------------------ the player
 var pl_prev = null
 var pl_frames := 0
+var dbg_n := 0
 
 func step_player(dt: float) -> void:
 	var was_ground: bool = P.on_ground
@@ -648,7 +678,9 @@ func entry_check(p: Vector3, b: Dictionary) -> void:
 	for id in windows:
 		var w: Dictionary = windows[id]
 		if int(w.data.building) == int(b.id) and w.broken: best = minf(best, Vector2(float(w.data.cx) - p.x, float(w.data.cz) - p.z).length())
-	if best > 2.2 and pen_at(p, 0.75)[0] > 0.0: viol("1 zombie came in where there is no opening", best, p, "nearest open door / broken window of building %d" % int(b.id))
+	# (an open doorway with no door in it is an opening too: nothing between here and just outside)
+	var out := Vector3(p.x - float(b.x), 0, 0) if absf(absf(p.x - float(b.x)) - float(b.w) * 0.5) < absf(absf(p.z - float(b.z)) - float(b.d) * 0.5) else Vector3(0, 0, p.z - float(b.z))
+	if best > 2.2 and crossing(p, p + out.normalized() * 1.2) != null: viol("1 zombie came in where there is no opening", best, p, "nearest open door / broken window of building %d" % int(b.id))
 
 # ------------------------------------------------------------------ (c) forest and slopes
 func s_forest() -> void:
