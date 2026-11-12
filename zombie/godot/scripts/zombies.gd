@@ -184,6 +184,8 @@ class Zombie:
 	var blocked_t := 0.0
 	var wait_t := 0.0
 	var tries := 0
+	var anc := Vector3.ZERO
+	var anc_t := 0.0
 	var held_by_wall := false
 	var gone := false
 
@@ -1839,6 +1841,11 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 					if d2 < rr * rr:
 						var d := sqrt(d2); var push := (rr - d) * 0.5 / d
 						pxs += sx * push; pzs += sz * push
+						if d < 0.44 and upright and (o.crawler or not _flat(o)):
+							# far too close (two that ran into the same spot): step clear at once
+							var jump := (0.44 - d) / d
+							z.pos.x += sx * jump; z.pos.z += sz * jump
+							if (_smap[clampi(int(floor(z.pos.z + HALF)), 0, NAV_N - 1) * NAV_N + clampi(int(floor(z.pos.x + HALF)), 0, NAV_N - 1)] & 1) != 0: _collide(z)
 					if want > 0.0 and d2 < (rr + 0.4) * (rr + 0.4):
 						var d := sqrt(d2)
 						var ahead := -(sx * dirx + sz * dirz) / d            # 1: dead ahead
@@ -1866,13 +1873,15 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 			if slow <= 0.02: want = minf(want, 0.12)          # shoulder to shoulder: only edge sideways
 	# ---- getting nowhere? It stops pushing and waits (paws at the wall, stands in the press), then tries again
 	# another way; after a few tries it gives the idea up. Nothing marches on the spot.
-	if want > 0.1 and not z.pivot and z.act < 0.22 * minf(want, 1.2) and z.climb <= 0.0:
-		z.blocked_t += e
+	if want <= 0.1 or z.pivot or z.climb > 0.0:
+		z.anc = z.pos; z.anc_t = 0.0
+	elif Vector2(z.pos.x - z.anc.x, z.pos.z - z.anc.z).length_squared() > 0.09:
+		z.anc = z.pos; z.anc_t = 0.0; z.tries = 0
 	else:
-		z.blocked_t = maxf(0.0, z.blocked_t - e * 2.0)
-		if z.act > 0.5: z.tries = 0
-	if z.blocked_t > (0.7 if crowd_ahead else 1.1) and want > 0.0:
-		z.blocked_t = 0.0
+		z.anc_t += e
+	z.blocked_t = z.anc_t
+	if z.anc_t > (0.8 if crowd_ahead else 1.2) and want > 0.0:
+		z.anc_t = 0.0; z.anc = z.pos
 		z.tries += 1
 		z.wait_t = (0.8 + _rng.randf() * 1.4) if crowd_ahead else (1.0 + _rng.randf() * 1.0)
 		z.held_by_wall = not crowd_ahead
@@ -1900,7 +1909,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 	z.turn_rate = float(st.turn) * (1.5 if hunting else 1.0) * (1.15 - z.decay * 0.4) * (0.6 if z.crawler else 1.0)
 	z.moving = want > 0.0 or sp_now > 0.02 or z.knock.length_squared() > 0.01 or not is_nan(face) or z.push != Vector3.ZERO or absf(z.pos.y - z.ground) > 0.004 or z.climb > 0.0
 	# the legs go at the pace the body really moves: held by a wall or the press, it does not walk on the spot
-	var held := want > 0.0 and z.blocked_t > 0.5
+	var held := want > 0.0 and z.blocked_t > 0.5 and z.act < 0.3
 	sp_now = minf(sp_now, maxf(z.act * 1.15, 0.0)) if want > 0.0 else sp_now
 	# ---- which clip that is
 	if z.crawler or z.climb > 0.0:

@@ -207,15 +207,15 @@ func _build_hud() -> void:
 		minimap_frame.draw_rect(Rect2(0, 0, 178, 178), Color(0, 0, 0, 0.7), false, 1.0)
 		UiKit.corners(minimap_frame, Rect2(-3, -3, 184, 184), Color(UiTheme.INK, 0.6), 10.0))
 	side.add_child(minimap_frame)
-	place_lbl = UiKit.caption("", UiTheme.INK, 11); place_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	place_lbl = UiKit.caption("", UiTheme.INK, 12); place_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	place_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.45)); place_lbl.add_theme_constant_override("outline_size", 4)
 	side.add_child(place_lbl)
 	minimap_frame.visible = bool(Settings.v("minimap")); place_lbl.visible = minimap_frame.visible
 	obj_box = VBoxContainer.new(); obj_box.mouse_filter = Control.MOUSE_FILTER_IGNORE; obj_box.add_theme_constant_override("separation", 0)
-	var oc := UiKit.caption("Objective", UiTheme.ACCENT2, 11); oc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var oc := UiKit.caption("Objective", UiTheme.ACCENT2, 12); oc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	oc.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.45)); oc.add_theme_constant_override("outline_size", 4)
 	obj_title = label("", 16); obj_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	obj_desc = label("", 13, DIM); obj_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; obj_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	obj_desc = label("", 14, DIM); obj_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; obj_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	obj_desc.custom_minimum_size = Vector2(250, 0)
 	obj_box.add_child(UiKit.spacer(6)); obj_box.add_child(oc); obj_box.add_child(obj_title); obj_box.add_child(obj_desc)
 	obj_box.visible = false
@@ -604,10 +604,10 @@ func _moodles(list: Array) -> void:
 		h.add_theme_constant_override("separation", 9)
 		var tv := VBoxContainer.new(); tv.mouse_filter = Control.MOUSE_FILTER_IGNORE; tv.add_theme_constant_override("separation", -2)
 		tv.alignment = BoxContainer.ALIGNMENT_CENTER
-		var nl := label(String(m.label), 14, col); nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		var nl := label(String(m.label), 15, col); nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		tv.add_child(nl)
 		if float(_moodle_tell.get(String(m.id), 0.0)) > _time:
-			var dl := label(String(m.desc), 12, UiTheme.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			var dl := label(String(m.desc), 13, UiTheme.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; dl.custom_minimum_size = Vector2(196, 0)
 			tv.add_child(dl)
 		var tile := Control.new(); tile.custom_minimum_size = Vector2(36, 36); tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -760,8 +760,9 @@ func show_loading(progress: float, text := "") -> void:
 		root.add_child(loading)
 	root.move_child(loading, root.get_child_count() - 1)
 	if not loading.visible or loading.modulate.a < 1.0:
-		var tw = loading.get_meta("fade", null)
-		if tw is Tween and tw.is_valid(): tw.kill()
+		if loading.has_meta("fade"):
+			var tw = loading.get_meta("fade")
+			if tw is Tween and tw.is_valid(): tw.kill()
 		loading.visible = true; loading.modulate.a = 1.0
 		_load_t = 0.0
 	menus.set_loading(loading, progress, text)

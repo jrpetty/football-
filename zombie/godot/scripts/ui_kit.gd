@@ -18,6 +18,18 @@ static func text(ci: CanvasItem, kind: String, pos: Vector2, s: String, size: in
 static func text_w(kind: String, s: String, size: int) -> float:
 	return UiTheme.font(kind).get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 
+## the text, or as much of it as fits in `width` with an ellipsis
+static func fit(kind: String, s: String, size: int, width: float) -> String:
+	var f := UiTheme.font(kind)
+	if f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= width:
+		return s
+	var lo := 0; var hi := s.length()
+	while lo < hi:
+		var mid := (lo + hi + 1) / 2
+		if f.get_string_size(s.substr(0, mid).strip_edges() + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= width: lo = mid
+		else: hi = mid - 1
+	return s.substr(0, lo).strip_edges() + "…"
+
 # ------------------------------------------------------------------ pictograms
 static func _arc(c: Vector2, r: float, a0: float, a1: float, n: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()
@@ -60,15 +72,20 @@ static func _shape(name: String) -> PackedVector2Array:
 
 ## a monochrome pictogram inside `rect`: heart, bolt, drop, food, house, diamond, pin, moon, sun, arrow, check,
 ## cross, tri_down, skull
-static func glyph(ci: CanvasItem, name: String, rect: Rect2, col: Color) -> void:
-	ci.draw_set_transform(rect.position, 0.0, rect.size)
+static func glyph(ci: CanvasItem, name: String, rect: Rect2, col: Color, rot := 0.0) -> void:
+	if rot == 0.0:
+		ci.draw_set_transform(rect.position, 0.0, rect.size)
+	else:
+		ci.draw_set_transform_matrix(Transform2D(rot, rect.get_center()) * Transform2D(0.0, rect.size, 0.0, -rect.size * 0.5))
 	var lw := 1.0 / maxf(1.0, rect.size.x)
 	match name:
 		"food":
-			ci.draw_circle(Vector2(0.36, 0.62), 0.3, col, true, -1.0, true)
-			ci.draw_circle(Vector2(0.64, 0.62), 0.3, col, true, -1.0, true)
-			ci.draw_line(Vector2(0.5, 0.36), Vector2(0.56, 0.1), col, 0.09, true)
-			ci.draw_colored_polygon(_shape("leaf"), col)
+			# a leg of meat: the joint, the bone, its knuckle
+			ci.draw_circle(Vector2(0.62, 0.38), 0.3, col, true, -1.0, true)
+			ci.draw_circle(Vector2(0.48, 0.52), 0.24, col, true, -1.0, true)
+			ci.draw_line(Vector2(0.44, 0.56), Vector2(0.16, 0.84), col, 0.13, true)
+			ci.draw_circle(Vector2(0.1, 0.8), 0.09, col, true, -1.0, true)
+			ci.draw_circle(Vector2(0.2, 0.9), 0.09, col, true, -1.0, true)
 		"sun":
 			ci.draw_circle(Vector2(0.5, 0.5), 0.22, col, true, -1.0, true)
 			for i in 8:

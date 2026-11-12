@@ -181,7 +181,7 @@ func _page_main() -> void:
 	if has:
 		var info := _save_line()
 		if info != "":
-			col.add_child(UiKit.margin(UiKit.caption(info, UiTheme.ACCENT2, 12), 20, -6, 0, 8))
+			col.add_child(UiKit.margin(UiKit.caption(info, UiTheme.DIM, 12), 20, -2, 0, 10))
 	col.add_child(_item("New game", func() -> void: _begin_create()))
 	col.add_child(_item("Settings", func() -> void: _show_page("settings")))
 	col.add_child(_item("Quit", func() -> void: hud.menu_action.emit("quit")))
@@ -240,7 +240,7 @@ func _page_dead() -> void:
 	var kicker := UiKit.caption("Day %d  ·  %s" % [g.day(), g.season_name()] if g != null else "", UiTheme.DIM, 13)
 	kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(kicker)
-	var title := Logo.new(62, "THIS IS HOW YOU DIED", "", Color(0.82, 0.25, 0.18))
+	var title := Logo.new(62, "THIS IS HOW YOU DIED", "", Color(0.8, 0.24, 0.17), false)
 	title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	v.add_child(title)
 	var cl := UiKit.body("%s  —  %s" % [who, cause], 20, UiTheme.INK); cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -443,13 +443,13 @@ func points_left() -> int:
 	return pts
 
 func _page_create() -> void:
-	var v := _framed("Create your survivor", 1340.0, 760.0)
+	var v := _framed("Create your survivor", 1420.0, 760.0)
 	var cols := HBoxContainer.new(); cols.add_theme_constant_override("separation", 24); cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(cols)
 	_c_trait_btns.clear()
 
 	# who you were
-	var left := VBoxContainer.new(); left.custom_minimum_size = Vector2(390, 0); left.add_theme_constant_override("separation", 6)
+	var left := VBoxContainer.new(); left.custom_minimum_size = Vector2(430, 0); left.add_theme_constant_override("separation", 6)
 	left.add_child(UiKit.caption("Name", UiTheme.DIM, 12))
 	var nrow := HBoxContainer.new()
 	var le := LineEdit.new(); le.text = _name; le.max_length = 24; le.size_flags_horizontal = Control.SIZE_EXPAND_FILL; le.placeholder_text = "Survivor"
@@ -705,8 +705,9 @@ class Logo extends Control:
 	var b := "KINDLE"
 	var fs := 104
 	var col_a := UiTheme.INK
-	func _init(size_ := 104, first := "RE", second := "KINDLE", col := UiTheme.INK) -> void:
-		fs = size_; a = first; b = second; col_a = col
+	var rule := true
+	func _init(size_ := 104, first := "RE", second := "KINDLE", col := UiTheme.INK, with_rule := true) -> void:
+		fs = size_; a = first; b = second; col_a = col; rule = with_rule
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var f := UiTheme.font("logo" if fs >= 90 else "title")
 		custom_minimum_size = Vector2(f.get_string_size(a + b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 24.0, f.get_height(fs) * 0.92 + 10.0)
@@ -718,7 +719,8 @@ class Logo extends Control:
 		draw_string(f, Vector2(x, y), a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col_a)
 		if b != "":
 			draw_string(f, Vector2(x + f.get_string_size(a, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x, y), b, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, UiTheme.ACCENT)
-		draw_rect(Rect2(x + 2.0, size.y - 5.0, maxf(40.0, fs * 0.6), 2.0), UiTheme.ACCENT)
+		if rule:
+			draw_rect(Rect2(x + 2.0, size.y - 5.0, maxf(40.0, fs * 0.6), 2.0), UiTheme.ACCENT)
 
 ## a selectable card: a title, one line of description, a figure on the right
 class Card extends Button:
@@ -742,5 +744,5 @@ class Card extends Button:
 		var tw := UiKit.text_w("num", tag, 16) + 14.0
 		UiKit.text(self, "head", Vector2(14, size.y * 0.5 - 20.0), title.to_upper(), 15, Color(UiTheme.ACCENT2 if on else UiTheme.INK, k), HORIZONTAL_ALIGNMENT_LEFT, size.x - tw - 22.0, false)
 		var f := UiTheme.font("body")
-		draw_string(f, Vector2(14, size.y * 0.5 + 2.0 + f.get_ascent(13)), desc, HORIZONTAL_ALIGNMENT_LEFT, size.x - tw - 22.0, 13, Color(UiTheme.DIM, k))
+		draw_string(f, Vector2(14, size.y * 0.5 + 2.0 + f.get_ascent(13)), UiKit.fit("body", desc, 13, size.x - tw - 24.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(UiTheme.DIM, k))
 		UiKit.text(self, "num", Vector2(size.x - tw, size.y * 0.5 - 11.0), tag, 16, Color(tag_col, k), HORIZONTAL_ALIGNMENT_RIGHT, tw - 12.0, false)

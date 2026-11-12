@@ -950,18 +950,39 @@ func audit_data() -> void:
 	for c in town.cars:
 		var p := Vector3(c.pos[0], c.pos[1] + 0.6, c.pos[2])
 		if not covered(p): viol("data: car without a collider", 0.0, p, String(c.variant))
-	# door thresholds a body cannot step over
-	var high := 0
+	# every outside door must be reachable on foot: from the doorway outwards, some way down to open ground that a
+	# body coming the other way could climb (no rise over 0.55 m)
+	var doors_checked := 0
 	for id in doors:
 		var d: Dictionary = doors[id]
 		var b: Dictionary = bld[int(d.data.building)]
 		var ax := String(d.data.axis) == "x"
+		var outside := false
 		for sgn in [-1.0, 1.0]:
-			var q := Vector3(float(d.data.cx) + (0.0 if ax else sgn * 1.3), 0, float(d.data.cz) + (sgn * 1.3 if ax else 0.0))
-			if not W.floor_at(q.x, q.z).is_empty(): continue
-			var step_up: float = float(b.floorY) - W.ground_y(q.x, q.z, float(b.floorY))
-			if step_up > 0.55:
-				high += 1; viol("data: doorstep higher than a body can climb", step_up, q, "door %d of %s %d" % [id, b.kind, int(b.id)])
+			if W.floor_at(float(d.data.cx) + (0.0 if ax else sgn * 1.3), float(d.data.cz) + (sgn * 1.3 if ax else 0.0)).is_empty(): outside = true
+		if not outside: continue
+		doors_checked += 1
+		var start := Vector3(float(d.data.cx), float(b.floorY), float(d.data.cz))
+		var seen := {Vector2i(0, 0): start.y}
+		var q: Array = [Vector2i(0, 0)]
+		var ok := false; var head := 0
+		while head < q.size() and not ok:
+			var c: Vector2i = q[head]; head += 1
+			var cy: float = seen[c]
+			for k in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				var n: Vector2i = c + k
+				if seen.has(n) or absi(n.x) > 16 or absi(n.y) > 16: continue
+				var np := Vector3(start.x + n.x * 0.5, 0, start.z + n.y * 0.5)
+				var ny: float = W.ground_y(np.x, np.z, cy)
+				if cy - ny > 0.55: continue                       # too high a step for someone coming up
+				np.y = ny
+				if n != Vector2i(0, 0) and pen_at(np, 0.25)[0] > 0.1 and Vector2(n).length() > 1.5: continue
+				seen[n] = ny
+				q.append(n)
+				if Vector2(n).length() > 12.0 and W.floor_at(np.x, np.z).is_empty(): ok = true
+		if not ok:
+			viol("data: door that cannot be reached on foot (the ground outside is too far below)", float(b.floorY) - W.height_at(start.x, start.z), start, "door %d of %s %d" % [id, b.kind, int(b.id)])
+	fact("outside doors checked", doors_checked)
 	town_mesh_audit()
 
 ## Walk the town's own triangles: anything standing 0.5 - 1.6 m above the walkable ground with nothing in

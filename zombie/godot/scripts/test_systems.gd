@@ -596,7 +596,7 @@ func test_cooking() -> void:
 	stand(fx, fz - 1.4)
 	game._face(fx, float(fire.y) + 0.2, fz)
 	var t = game._find_interact()
-	ok("looking at the campfire offers it, cold", t != null and String(t.get("prompt", "")).contains("Campfire") and String(t.prompt).contains("cold"), str(t.get("prompt", "")) if t != null else "nothing")
+	ok("looking at the campfire offers it, cold", t != null and String(t.get("prompt", "")) == "[E]  Tend the campfire  ·  cold", str(t.get("prompt", "")) if t != null else "nothing")
 	if t != null:
 		game.target = t; game._interact()
 	ok("E opens the cooking window", game.hud.window_kind == "cook" and is_same(cook.open_piece, fire))

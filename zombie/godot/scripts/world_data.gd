@@ -122,7 +122,7 @@ func _derive_porches(town: Dictionary) -> void:
 	for b in town.get("buildings", []): by_pos["%d,%d" % [int(b.x), int(b.z)]] = b
 	for p in info.get("plots", []):
 		var kind := String(p.kind)
-		if not (kind in ["house", "house_l", "cabin", "diner"]):
+		if not (kind in ["house", "house_l", "cabin", "barn", "diner"]):
 			continue
 		var b = by_pos.get("%d,%d" % [int(p.x), int(p.z)])
 		if b == null:
@@ -137,7 +137,7 @@ func _derive_porches(town: Dictionary) -> void:
 			if along and String(d.axis) == "x" and absf(float(d.cz) - (float(p.z) + fdz * float(p.d) * 0.5)) < 0.3: door_off = float(d.cx) - float(p.x)
 			elif not along and String(d.axis) == "z" and absf(float(d.cx) - (float(p.x) + fdx * float(p.w) * 0.5)) < 0.3: door_off = float(d.cz) - float(p.z)
 		if door_off == null:
-			continue
+			continue          # (the barn: its deck is not in front of a door, and only the exporter knows where it is)
 		var px: float = float(p.x) + (float(door_off) if along else fdx * (float(p.w) * 0.5 + 1.0))
 		var pz: float = float(p.z) + (fdz * (float(p.d) * 0.5 + 1.0) if along else float(door_off))
 		var hx := 1.5 if along else 1.0; var hz := 1.0 if along else 1.5
@@ -428,10 +428,12 @@ func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", i
 			if o is Box:
 				if ignore_tag != "" and (o.tag == ignore_tag or o.tag == ignore_tag2):
 					continue
-				if pos.y + h <= o.min.y or pos.y >= o.max.y:
+				if pos.y + h <= o.min.y:
 					continue
-				if o.max.y - pos.y <= (0.56 if o.tag == "foundation" else step):
-					if o.tag != "foundation" and o.max.y > gy and pos.x > o.min.x and pos.x < o.max.x and pos.z > o.min.z and pos.z < o.max.z:
+				var up: float = o.max.y - pos.y
+				if up <= (0.56 if o.tag == "foundation" else step):
+					# at or below a step from the feet: something to stand on, not a wall
+					if up > -0.3 and o.tag != "foundation" and o.max.y > gy and pos.x > o.min.x and pos.x < o.max.x and pos.z > o.min.z and pos.z < o.max.z:
 						gy = o.max.y
 					continue
 				var cx := clampf(pos.x, o.min.x, o.max.x); var cz := clampf(pos.z, o.min.z, o.max.z)

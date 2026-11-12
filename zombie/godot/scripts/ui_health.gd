@@ -65,17 +65,17 @@ func build(v: VBoxContainer) -> void:
 	cols.add_child(mid)
 
 	# right: condition and skills
-	var right := VBoxContainer.new(); right.custom_minimum_size = Vector2(380, 0); right.add_theme_constant_override("separation", 8)
+	var right := VBoxContainer.new(); right.custom_minimum_size = Vector2(372, 0); right.add_theme_constant_override("separation", 8)
 	right.add_child(UiKit.heading("Condition", 17))
 	var grid := GridContainer.new(); grid.columns = 4; grid.add_theme_constant_override("h_separation", 10); grid.add_theme_constant_override("v_separation", 5)
 	for row in VITALS:
-		var kl := UiKit.body(String(row[1]), 13, UiTheme.DIM); kl.custom_minimum_size = Vector2(118, 0)
-		var vl := UiKit.body("", 13, UiTheme.INK); vl.custom_minimum_size = Vector2(56, 0); vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		var kl := UiKit.body(String(row[1]), 13, UiTheme.DIM); kl.custom_minimum_size = Vector2(112, 0)
+		var vl := UiKit.body("", 13, UiTheme.INK); vl.custom_minimum_size = Vector2(54, 0); vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		vl.add_theme_font_override("font", UiTheme.font("num"))
 		grid.add_child(kl); grid.add_child(vl); _vals[row[0]] = vl
 	right.add_child(grid)
 	var fb := UiKit.Frame.new(Color(UiTheme.BAD, 0.12), 10.0, Color(UiTheme.BAD, 0.6)); fb.marks = false; fb.grain = 0.0
-	_fever = UiKit.body("", 13, Color(1.0, 0.78, 0.72), true); _fever.custom_minimum_size = Vector2(340, 0)
+	_fever = UiKit.body("", 13, Color(1.0, 0.78, 0.72), true); _fever.custom_minimum_size = Vector2(330, 0)
 	fb.add_child(_fever); fb.visible = false; _fever_box = fb
 	right.add_child(fb)
 	right.add_child(UiKit.spacer(2))
@@ -99,7 +99,7 @@ func build(v: VBoxContainer) -> void:
 		var pips := UiKit.Pips.new(0, 0.0, 150.0, 8.0); pips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var lv := UiKit.body("0", 14, UiTheme.INK); lv.custom_minimum_size = Vector2(22, 0); lv.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		lv.add_theme_font_override("font", UiTheme.font("num"))
-		var boost := UiKit.caption("×3", UiTheme.BLUE, 11); boost.custom_minimum_size = Vector2(20, 0); boost.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var boost := UiKit.caption("×3", UiTheme.BLUE, 12); boost.custom_minimum_size = Vector2(20, 0); boost.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row2.add_child(ic); row2.add_child(nl); row2.add_child(pips); row2.add_child(boost); row2.add_child(lv)
 		sv.add_child(row2); _skills[id] = [pips, lv, boost]
 	ssc.add_child(sv); right.add_child(ssc)
@@ -202,14 +202,20 @@ func _wounds() -> void:
 			var healed := UiKit.body("%d%% healed" % int(round((1.0 - clampf(float(w.heal), 0.0, 1.0)) * 100.0)), 12, UiTheme.FAINT)
 			healed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(dot); row.add_child(dl); row.add_child(healed)
-			for opt in hud._treatments(w):
-				var pid := String(part[0]); var idx := wi; var item_id := String(opt)
-				var b := hud.button(String(Items.def(item_id).name), func() -> void: hud.treat_wound.emit(pid, idx, item_id), 0.0)
-				b.custom_minimum_size = Vector2(0, 28); b.add_theme_font_size_override("font_size", 12)
-				b.icon = hud.icon("item_" + item_id); b.expand_icon = true; b.add_theme_constant_override("icon_max_width", 16)
-				b.tooltip_text = String(UiInventory.MED_USE.get(String(Items.def(item_id).get("med", "")), ""))
-				row.add_child(b)
 			cv.add_child(row)
+			var opts: Array = hud._treatments(w)
+			if not opts.is_empty():
+				var brow := HBoxContainer.new(); brow.add_theme_constant_override("separation", 6)
+				brow.add_child(UiKit.spacer(0, 4))
+				var tl := UiKit.caption("Treat with", UiTheme.FAINT, 11); tl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				brow.add_child(tl)
+				for opt in opts:
+					var pid := String(part[0]); var idx := wi; var item_id := String(opt)
+					var b := hud.button(String(Items.def(item_id).name), func() -> void: hud.treat_wound.emit(pid, idx, item_id), 0.0)
+					b.custom_minimum_size = Vector2(0, 28); b.add_theme_font_size_override("font_size", 12)
+					b.tooltip_text = String(UiInventory.MED_USE.get(String(Items.def(item_id).get("med", "")), ""))
+					brow.add_child(b)
+				cv.add_child(brow)
 			wi += 1
 		if pd2.wounds.is_empty():
 			cv.add_child(UiKit.body("No wounds", 13, UiTheme.FAINT))

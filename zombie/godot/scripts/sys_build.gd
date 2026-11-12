@@ -52,6 +52,8 @@ var _moving: Array = []               # doors swinging
 var _owners: Dictionary = {}          # nav index -> [[box id, cost, piece], ...]
 var _under: Dictionary = {}           # nav index -> [value, ref] as it was before anything was built there
 var _barricaded: Dictionary = {}      # "d12" / "w40" -> the town door or window
+var _auto: Array = []                 # the few pieces that do something by themselves (rain collectors, racks, compost)
+var _auto_min := 0.0
 var _slow_t := 0.0
 var _bang_t := 0.0
 var _splat_img: Image = null
@@ -94,10 +96,11 @@ func mod_process(dt: float, dt_min: float, ui_open: bool) -> void:
 		_update_doors(dt)
 	_bang_t = maxf(0.0, _bang_t - dt)
 	_slow_t += dt
+	_auto_min += dt_min
 	if _slow_t >= 0.25:
 		_poll_barricades()
-		_slow_t = 0.0
-	_update_stations(dt_min)
+		_update_stations(_auto_min)
+		_slow_t = 0.0; _auto_min = 0.0
 	if _splat_dirty:
 		_push_splat()
 	placer.frame(dt, ui_open)
@@ -157,7 +160,7 @@ func clear() -> void:
 		remove(p)
 	for key in _barricaded.keys():
 		_unbarricade(_barricaded[key])
-	list.clear(); _by_id.clear(); _edges.clear(); _tiles.clear(); _moving.clear()
+	list.clear(); _by_id.clear(); _edges.clear(); _tiles.clear(); _moving.clear(); _auto.clear()
 	_next_id = 1
 
 # ------------------------------------------------------------------ the grid
@@ -353,8 +356,14 @@ func _remove_box(b: WorldData.Box) -> void:
 	_unraster(b)
 	b.ref = null
 
+## tell whoever caches nearby colliders (the dead do) that something changed without a box coming or going
+func _touch() -> void:
+	var v = WorldData.get("version")
+	if v != null:
+		WorldData.set("version", int(v) + 1)
+
 func _add_floor(p: Dictionary, x0: float, z0: float, x1: float, z1: float, y: float) -> void:
-	var entry := [x0, z0, x1, z1, y, int(p.id)]
+	var entry := [x0, z0, x1, z1, y, -int(p.id)]       # the town's floors carry a building id there; ours are negative
 	WorldData.floors.append(entry)
 	p.floors.append(entry)
 
@@ -525,6 +534,8 @@ func _station(p: Dictionary, def: Dictionary, model: Node3D, cx: float, cz: floa
 		p["fire"] = {"fuel": 0.0, "lit": false, "pos": fp}
 	if st == "rain":
 		p["rain"] = 2.0
+	if p.has("rain") or p.has("proc"):
+		_auto.append(p)
 
 # ------------------------------------------------------------------ removing and damage
 func remove(p: Dictionary) -> void:
@@ -554,6 +565,8 @@ func remove(p: Dictionary) -> void:
 		if is_same(list[i], p): list.remove_at(i)
 	for i in range(_moving.size() - 1, -1, -1):
 		if is_same(_moving[i], p): _moving.remove_at(i)
+	for i in range(_auto.size() - 1, -1, -1):
+		if is_same(_auto[i], p): _auto.remove_at(i)
 	_by_id.erase(int(p.id))
 	if p.node != null and is_instance_valid(p.node):
 		p.node.queue_free()
@@ -677,6 +690,7 @@ func set_door(p: Dictionary, open: bool, instant := false) -> void:
 	p.open = open
 	var b: WorldData.Box = p.door_box
 	b.solid = not open
+	_touch()
 	if p.door_nav:
 		if open: _unraster(b)
 		else: _raster(b, NAV_DOOR, p)
@@ -714,9 +728,11 @@ func _update_doors(dt: float) -> void:
 
 # ------------------------------------------------------------------ stations that work on their own
 func _update_stations(dt_min: float) -> void:
+	if _auto.is_empty():
+		return
 	var dt_h := dt_min / 60.0
 	var rain := raining()
-	for p in list:
+	for p in _auto:
 		if p.has("rain") and rain > 0.0:
 			p.rain = minf(10.0, float(p.rain) + dt_h * rain * 2.0)
 		elif p.has("proc"):

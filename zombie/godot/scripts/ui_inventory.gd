@@ -41,6 +41,8 @@ var _c_lbl: Label
 var _a_lbl: Label
 var _a_meter: UiKit.Meter
 var _sum: Dictionary = {}
+var _meters: Dictionary = {}
+var _meter_t := 0.0
 var _weight := -1.0
 var _cweight := -1.0
 var _detail_sig := ""
@@ -58,7 +60,7 @@ func build(v: VBoxContainer, cont) -> void:
 	_built = true
 	sel_uid = -1; sel_side = "p"; sel_slot = ""; sel_index = 0
 	_weight = -1.0; _cweight = -1.0; _detail_sig = "\u0001"
-	_filter_btns.clear(); _sort_btns.clear(); _sum.clear()
+	_filter_btns.clear(); _sort_btns.clear(); _sum.clear(); _meters.clear(); _meter_t = 0.0
 	var p: Player = hud.game.player
 	v.add_theme_constant_override("separation", 12)
 
@@ -108,6 +110,16 @@ func build(v: VBoxContainer, cont) -> void:
 			var val := UiKit.body("", 14, UiTheme.INK); val.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			grid.add_child(k); grid.add_child(val); _sum[row[0]] = val
 		left.add_child(grid)
+		left.add_child(UiKit.spacer(4))
+		left.add_child(UiKit.heading("Condition", 17, UiTheme.INK))
+		for row in [["health", "Health", Color(0.8, 0.27, 0.22)], ["food", "Fullness", Color(0.88, 0.62, 0.26)], ["water", "Hydration", Color(0.4, 0.64, 0.86)], ["rest", "Rest", Color(0.62, 0.52, 0.8)]]:
+			var mr := HBoxContainer.new(); mr.add_theme_constant_override("separation", 10)
+			var ml := UiKit.body(String(row[1]), 14, UiTheme.DIM); ml.custom_minimum_size = Vector2(96, 0)
+			var mm := UiKit.Meter.new(200.0, 5.0, row[2]); mm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var mv2 := UiKit.body("", 13, UiTheme.INK); mv2.custom_minimum_size = Vector2(44, 0); mv2.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			mv2.add_theme_font_override("font", UiTheme.font("num"))
+			mr.add_child(ml); mr.add_child(mm); mr.add_child(mv2)
+			left.add_child(mr); _meters[row[0]] = [mm, mv2]
 		left.add_child(UiKit.spacer(0, 0, true))
 	cols.add_child(left)
 
@@ -306,10 +318,19 @@ func refresh() -> void:
 	tick(0.0)
 	_summary()
 
-func tick(_dt: float) -> void:
+func tick(dt: float) -> void:
 	if not _built:
 		return
 	var p: Player = hud.game.player
+	_meter_t -= dt
+	if _meter_t <= 0.0 and not _meters.is_empty():
+		_meter_t = 0.3
+		var st := p.stats
+		for e in [["health", st.health()], ["food", st.hunger], ["water", st.thirst], ["rest", 100.0 - st.fatigue]]:
+			var pair: Array = _meters[e[0]]
+			(pair[0] as UiKit.Meter).set_value(float(e[1]) / 100.0)
+			var txt := "%d%%" % int(round(float(e[1])))
+			if (pair[1] as Label).text != txt: (pair[1] as Label).text = txt
 	var w := p.weight()
 	if absf(w - _weight) > 0.005:
 		_weight = w
@@ -659,7 +680,8 @@ class ItemsView extends Control:
 			if held: name_w -= 44.0
 			var nm := String(d.name)
 			var f := UiTheme.font("body")
-			draw_string(f, Vector2(46, y + 9.0 + f.get_ascent(15)), nm, HORIZONTAL_ALIGNMENT_LEFT, name_w, 15, UiTheme.ACCENT2 if held else UiTheme.INK)
+			nm = UiKit.fit("body", nm, 15, name_w)
+			draw_string(f, Vector2(46, y + 9.0 + f.get_ascent(15)), nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UiTheme.ACCENT2 if held else UiTheme.INK)
 			var tx := 46.0 + minf(name_w, f.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x) + 8.0
 			if held:
 				draw_rect(Rect2(tx, y + 10.0, 38.0, 17.0), Color(UiTheme.ACCENT, 0.9), false, 1.0)
@@ -737,7 +759,7 @@ class EquipView extends Control:
 				if tex != null:
 					draw_texture_rect(tex, Rect2(tile.position + Vector2(9, 9), tile.size - Vector2(18, 18)), false)
 				var f := UiTheme.font("body")
-				draw_string(f, r.position + Vector2(CELL.y + 12.0, 29.0 + f.get_ascent(15)), String(Items.def(s.id).name), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - CELL.y - 16.0, 15, UiTheme.INK)
+				draw_string(f, r.position + Vector2(CELL.y + 12.0, 29.0 + f.get_ascent(15)), UiKit.fit("body", String(Items.def(s.id).name), 15, r.size.x - CELL.y - 16.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UiTheme.INK)
 			else:
 				UiKit.corners(self, tile.grow(-10.0), Color(1, 1, 1, 0.12), 6.0)
 				UiKit.text(self, "body", r.position + Vector2(CELL.y + 12.0, 29.0), "Nothing", 14, UiTheme.FAINT, HORIZONTAL_ALIGNMENT_LEFT, -1, false)

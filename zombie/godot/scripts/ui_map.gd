@@ -181,6 +181,7 @@ class View extends Control:
 		player = Vector2(pos.x, pos.z); yaw = yaw_
 		if follow:
 			center = player
+			if not mini: _clamp()
 		_idle += dt
 		var ok := UiMap.ready()
 		if ok != _had_base or _stamp != UiMap.searched_stamp or absf(pos.x - _last.x) > 0.12 or absf(pos.z - _last.y) > 0.12 or absf(yaw_ - _last.z) > 0.004 or _idle > 0.5:
@@ -225,7 +226,7 @@ class View extends Control:
 
 	func zoom_at(at: Vector2, factor: float) -> void:
 		var before := to_world(at)
-		zoom = clampf(zoom * factor, minf(size.x, size.y) / (UiMap.HALF * 2.0), 8.0)
+		zoom = clampf(zoom * factor, minf(size.x, size.y) / (UiMap.HALF * 2.0) * 0.96, 8.0)
 		center += before - to_world(at)
 		follow = false
 		_clamp(); queue_redraw()
@@ -234,7 +235,12 @@ class View extends Control:
 		follow = true; center = player; queue_redraw()
 
 	func _clamp() -> void:
-		center.x = clampf(center.x, -UiMap.HALF, UiMap.HALF); center.y = clampf(center.y, -UiMap.HALF, UiMap.HALF)
+		# never show more of the void beyond the valley than the zoom forces
+		if size.x <= 0.0:
+			return
+		var hw := size.x * 0.5 / zoom; var hh := size.y * 0.5 / zoom
+		center.x = 0.0 if hw >= UiMap.HALF else clampf(center.x, -UiMap.HALF + hw, UiMap.HALF - hw)
+		center.y = 0.0 if hh >= UiMap.HALF else clampf(center.y, -UiMap.HALF + hh, UiMap.HALF - hh)
 
 	func _toggle_marker(w: Vector2) -> void:
 		for i in UiMap.markers.size():
@@ -312,13 +318,10 @@ class View extends Control:
 			draw_circle(cs, 1.8, UiTheme.BAD, true, -1.0, true)
 		# you
 		var ps := to_screen(player)
-		var rot := 0.0 if turn else -yaw
-		draw_set_transform(ps, rot, Vector2.ONE)
-		var s := 15.0 if not mini else 13.0
-		UiKit.glyph(self, "arrow", Rect2(-s * 0.5 - 1.0, -s * 0.5 - 1.0, s + 2.0, s + 2.0), Color(0, 0, 0, 0.7))
-		draw_set_transform(ps, rot, Vector2.ONE)
-		UiKit.glyph(self, "arrow", Rect2(-s * 0.5 + 1.0, -s * 0.5 + 1.0, s - 2.0, s - 2.0), UiTheme.ACCENT2)
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var rot := 0.0001 if turn else -yaw + 0.0001
+		var s := 17.0 if not mini else 14.0
+		UiKit.glyph(self, "arrow", Rect2(ps - Vector2(s, s) * 0.5 - Vector2(2, 2), Vector2(s + 4.0, s + 4.0)), Color(0, 0, 0, 0.75), rot)
+		UiKit.glyph(self, "arrow", Rect2(ps - Vector2(s, s) * 0.5, Vector2(s, s)), UiTheme.ACCENT2, rot)
 		if mini:
 			# which way is north
 			var nv := Vector2(0, -1).rotated(yaw if turn else 0.0)

@@ -12,6 +12,8 @@ var use_3d := false
 var plates := false
 var plate_rect: TextureRect = null
 var taken: Array = []
+var map_lib
+var items_lib
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -78,6 +80,7 @@ func WorldData_() -> Node:
 func _run() -> void:
 	await process_frame
 	await process_frame
+	map_lib = load("res://scripts/ui_map.gd"); items_lib = load("res://scripts/items.gd")
 	var hud = game.hud
 	var settings: Node = root.get_node("Settings")
 	if plates:
@@ -169,7 +172,7 @@ func _run() -> void:
 		plate("day")
 	if want("inventory"):
 		for give in [["canned_beans", 3], ["bread", 1], ["bandage", 3], ["disinfectant", 1], ["bat", 1], ["axe", 1], ["leather_jacket", 1], ["plank", 8], ["nails", 30], ["duct_tape", 1], ["book_firstaid", 1], ["ammo_9mm", 24], ["apple", 2], ["school_bag", 1], ["hammer", 1]]:
-			if Items.exists(String(give[0])): p.inv.add(String(give[0]), int(give[1]))
+			if items_lib.exists(String(give[0])): p.inv.add(String(give[0]), int(give[1]))
 		var bat = p.inv.find("bat")
 		if bat != null:
 			bat.dur = 61.0; p.hotbar[2] = int(bat.uid)
@@ -194,7 +197,7 @@ func _run() -> void:
 			var inv = game.world.container_inv(fridge)
 			var keep = inv.capacity; inv.capacity = INF
 			for give in [["canned_soup", 2], ["water_bottle", 2], ["chocolate", 1], ["knife", 1]]:
-				if Items.exists(String(give[0])): inv.add(String(give[0]), int(give[1]))
+				if items_lib.exists(String(give[0])): inv.add(String(give[0]), int(give[1]))
 			inv.capacity = keep
 			fridge["searched"] = true
 			game._open_inventory({"label": String(fridge.label), "inv": inv, "ref": fridge})
@@ -224,9 +227,9 @@ func _run() -> void:
 		if m != null:
 			for c in game.world.containers:
 				if int(c.building) in [1, 28]: c["searched"] = true
-			UiMap.markers.append({"x": -60.0, "z": 30.0})
+			map_lib.markers.append({"x": -60.0, "z": 30.0})
 			for i in 80:
-				if UiMap.ready(): break
+				if map_lib.ready(): break
 				await wait(0.1)
 			m.open_map()
 			await shot("map", 0.5)

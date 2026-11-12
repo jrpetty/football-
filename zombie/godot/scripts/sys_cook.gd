@@ -53,11 +53,12 @@ func fire_name(p: Dictionary) -> String:
 	return "Wood stove" if String(p.station) == "stove" else "Campfire"
 
 func fire_prompt(p: Dictionary) -> String:
+	var what := "Tend the %s" % fire_name(p).to_lower()
 	if p.fire.lit:
-		return "%s  ·  burning, %d min of fuel left" % [fire_name(p), int(ceil(float(p.fire.fuel)))]
+		return "%s  ·  burning, %d min of fuel left" % [what, int(ceil(float(p.fire.fuel)))]
 	if float(p.fire.fuel) > 0.0:
-		return "%s  ·  laid with %d min of fuel, not lit" % [fire_name(p), int(ceil(float(p.fire.fuel)))]
-	return "%s  ·  cold" % fire_name(p)
+		return "%s  ·  laid with %d min of fuel, not lit" % [what, int(ceil(float(p.fire.fuel)))]
+	return "%s  ·  cold" % what
 
 func fuels() -> Array:
 	var out: Array = []
