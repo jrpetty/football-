@@ -172,7 +172,9 @@ class Zombie:
 	# what stands close by, looked up once per stretch of ground: walls as [x0, z0, x1, z1], trunks as [x, z, r]
 	var nb := PackedFloat32Array()
 	var nc := PackedFloat32Array()
-	var low: Array = []
+	var step_top := -INF
+	var safe_x := 0.0
+	var safe_z := 0.0
 	var sills: Array = []
 	var over_sill = null
 	var near_x := 1e9
@@ -447,12 +449,21 @@ func spawn(x: float, z: float, type: int, horde := 0, opts := {}) -> Zombie:
 	# without a floor given, stand on the ground (or a ground floor), never on the storeys above it
 	var y: float = _W.ground_y(x, z, float(opts.y) if opts.has("y") else _W.height_at(x, z) + 0.6)
 	# never inside a wall or a wardrobe
-	var clear: Vector3 = _W.resolve(Vector3(x, y, z), 0.3 * zb.scale + 0.02, 1.7).pos
+	var rr := 0.3 * zb.scale + 0.02
+	var fit: Dictionary = _W.resolve(Vector3(x, y, z), rr, 1.7)
+	if fit.get("jam", false):
+		# a gap too narrow to stand in: the nearest spot with room
+		for k in 24:
+			var a := k * 2.4; var d := 0.4 + 0.1 * k
+			fit = _W.resolve(Vector3(x + cos(a) * d, y, z + sin(a) * d), rr, 1.7)
+			if not fit.get("jam", false): break
+	var clear: Vector3 = fit.pos
 	if clear.x != x or clear.z != z:
 		x = clear.x; z = clear.z
 		y = _W.ground_y(x, z, y)
 	zb.pos = Vector3(x, y, z); zb.ground = y; zb.last_pos = zb.pos
 	zb.raised = y > _W.height_at(x, z) + 0.001
+	zb.safe_x = x; zb.safe_z = z
 	zb.target = zb.pos; zb.last_seen = zb.pos
 	zb.yaw = _rng.randf_range(0.0, TAU)
 	zb.state_t = _rng.randf_range(0.0, 5.0)
@@ -561,54 +572,64 @@ func _apply_decay(z: Zombie, init := false) -> void:
 func _flat(z: Zombie) -> bool:
 	return z.state == S_DOWN or (z.state == S_DORMANT and z.lying) or (z.state == S_RISE and z.down_stage < 2)
 
-## What stands within reach of z, sorted once into what the collision pass needs: walls (anything rising more than
-## a step above its feet), trunks and posts, low things it can walk onto, and the sills of broken windows.
+## What stands within reach of z, looked up once per stretch of ground: boxes as [x0, z0, x1, z1, top, bottom,
+## step] (step = how far above the feet its top may be and still be walked onto, not into), trunks and posts as
+## [x, z, r, top, bottom], and the sills of broken windows.
 func _look_near(z: Zombie) -> void:
 	var x := z.pos.x; var zz := z.pos.z; var feet := z.pos.y
 	z.near_x = x; z.near_z = zz; z.near_y = feet; z.near_v = _W.version
 	var nb := PackedFloat32Array(); var nc := PackedFloat32Array()
-	z.low.clear(); z.sills.clear()
+	z.sills.clear()
 	for o in _W.query(x - 1.6, zz - 1.6, x + 1.6, zz + 1.6):
 		var tag = o.get("tag")
 		if tag == null:
-			if o.y1 > feet + 0.45 and o.y0 < feet + 1.55:
-				nc.append(o.x); nc.append(o.z); nc.append(o.r)
+			if o.y1 > feet - 0.6 and o.y0 < feet + 2.3:
+				nc.append(o.x); nc.append(o.z); nc.append(o.r); nc.append(o.y1); nc.append(o.y0)
 			continue
-		var up: float = o.max.y - feet
-		if o.min.y >= feet + 1.55 or up <= -0.6:
-			continue
-		if tag == "foundation":
-			if up <= 0.56: continue
-		elif up <= 0.45:
-			z.low.append(o)
+		if o.min.y >= feet + 2.3 or o.max.y <= feet - 0.9:
 			continue
 		var lk = o.link
 		if lk != null and not lk.solid:
 			z.sills.append(o)              # the window above it is broken: a way in, not a wall
 			continue
 		nb.append(o.min.x); nb.append(o.min.z); nb.append(o.max.x); nb.append(o.max.z)
+		nb.append(o.max.y); nb.append(o.min.y); nb.append(0.56 if tag == "foundation" else 0.45)
 	z.nb = nb; z.nc = nc
 
-## Push z out of the walls and trunks around it (sliding along them), and note a broken window's sill under it.
+## Push z out of the walls and trunks around it (sliding along them); note what low thing or broken window's
+## sill is under it. If it ends up squeezed where it does not fit, it goes back to where it last stood clear.
 func _collide(z: Zombie) -> void:
 	var x := z.pos.x; var zz := z.pos.z
-	if z.near_v != _W.version or absf(x - z.near_x) > 0.7 or absf(zz - z.near_z) > 0.7 or absf(z.pos.y - z.near_y) > 0.25:
+	var feet := z.pos.y
+	if z.near_v != _W.version or absf(x - z.near_x) > 0.7 or absf(zz - z.near_z) > 0.7 or absf(feet - z.near_y) > 0.6:
 		_look_near(z)
 	var r := 0.3 * z.scale
 	var nb := z.nb; var nc := z.nc
 	var nbn := nb.size(); var ncn := nc.size()
+	var head := feet + 1.55
+	var top := -INF
+	var jam := false
 	if nbn > 0 or ncn > 0:
-		for _pass in 3:
+		for _pass in 4:
 			var hit := false
 			var i := 0
 			while i < nbn:
 				var x0 := nb[i]; var z0 := nb[i + 1]; var x1 := nb[i + 2]; var z1 := nb[i + 3]
-				i += 4
+				var up := nb[i + 4] - feet
+				if up <= nb[i + 6] or nb[i + 5] >= head:
+					# overhead, or low enough to walk onto: its top is ground when the body is over it
+					if up > -0.3 and nb[i + 6] < 0.5 and x > x0 and x < x1 and zz > z0 and zz < z1 and nb[i + 4] > top and up <= 0.46: top = nb[i + 4]
+					i += 7
+					continue
+				i += 7
 				var cx := x0 if x < x0 else (x1 if x > x1 else x)
 				var cz := z0 if zz < z0 else (z1 if zz > z1 else zz)
 				var dx := x - cx; var dz := zz - cz
 				var d2 := dx * dx + dz * dz
 				if d2 >= r * r:
+					continue
+				if _pass == 3:
+					if d2 < (r - 0.03) * (r - 0.03): jam = true
 					continue
 				if d2 < 1e-8:
 					# the centre is inside: out by the nearest face
@@ -625,16 +646,30 @@ func _collide(z: Zombie) -> void:
 			i = 0
 			while i < ncn:
 				var ex := x - nc[i]; var ez := zz - nc[i + 1]; var rr := r + nc[i + 2]
-				i += 3
+				var skip := nc[i + 3] <= feet + 0.45 or nc[i + 4] >= head
+				i += 5
+				if skip:
+					continue
 				var e2 := ex * ex + ez * ez
 				if e2 >= rr * rr or e2 < 1e-8:
+					continue
+				if _pass == 3:
+					if e2 < (rr - 0.03) * (rr - 0.03): jam = true
 					continue
 				var e := sqrt(e2)
 				x += ex / e * (rr - e); zz += ez / e * (rr - e)
 				hit = true
 			if not hit:
 				break
+		if jam:
+			# two things closer together than it is wide: it does not go in there
+			x = z.safe_x; zz = z.safe_z
+		else:
+			z.safe_x = x; z.safe_z = zz
 		z.pos.x = x; z.pos.z = zz
+	else:
+		z.safe_x = x; z.safe_z = zz
+	z.step_top = top
 	z.over_sill = null
 	for s in z.sills:
 		if x > s.min.x - r and x < s.max.x + r and zz > s.min.z - r and zz < s.max.z + r:
@@ -1401,7 +1436,7 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 		if (fl & 1) == 0:
 			# open ground: nothing to run into
 			z.pos.x = nxp; z.pos.z = nzp
-			z.over_sill = null
+			z.over_sill = null; z.safe_x = nxp; z.safe_z = nzp
 		else:
 			# beside a wall, a door, a trunk: collide every step, and take a long step in pieces so that
 			# nothing thin is ever jumped
@@ -1411,8 +1446,8 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 			for _k in n:
 				z.pos.x += sx; z.pos.z += sz
 				_collide(z)
-		if z.over_sill != null: z.climb = 0.6
-		elif z.climb > 0.0: z.climb = maxf(0.0, z.climb - dt)
+		if z.over_sill != null: z.climb = 0.25
+		elif z.climb > 0.0 and absf(z.pos.y - z.ground) < 0.03: z.climb = maxf(0.0, z.climb - dt)         # (still climbing until it has come down the far side)
 		if hold > 0.0 and player_blocking:
 			# whatever it could not give (a wall behind it, or the player coming on too fast) holds the player back
 			var rx := z.pos.x - px; var rz := z.pos.z - pz
@@ -1438,9 +1473,7 @@ func update(dt: float, dt_game_min: float, host: Dictionary) -> void:
 		if (fl & 2) != 0:
 			g = _W.ground_y(x, zz, z.pos.y)
 		if (fl & 1) != 0:
-			for o in z.low:
-				if x > o.min.x and x < o.max.x and zz > o.min.z and zz < o.max.z and o.max.y > g and o.max.y - z.pos.y <= 0.46:
-					g = o.max.y
+			if z.step_top > g: g = z.step_top
 			if z.over_sill != null and z.over_sill.max.y > g:
 				g = z.over_sill.max.y
 		z.ground = g

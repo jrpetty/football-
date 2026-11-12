@@ -246,7 +246,9 @@ func test_building() -> void:
 	ok("the foundation is built, paid for, and teaches carpentry", build.list.size() == 1 and p.inv.count("plank") == planks0 - 4 and p.xp.carpentry == xp0 + 4.0, "%d pieces, %d planks" % [build.list.size(), p.inv.count("plank")])
 	placer._update_aim()
 	ok("the same tile is now refused", not placer.valid and placer.reason == "Tile occupied", placer.reason)
+	ok("no swinging or shooting while placing", build.mod_blocks_attack())
 	placer.set_active(false)
+	ok("and hands free again on leaving build mode", not build.mod_blocks_attack())
 	var f0: Dictionary = build.list[0]
 	var top := float(f0.y) + 0.3
 	ok("foundation: a walkable top", W.floors.size() == floors0 + 1 and absf(W.ground_y(float(f0.cx), float(f0.cz), top) - top) < 0.001)
@@ -508,6 +510,75 @@ func test_zombies_and_walls() -> void:
 	for q in build.list.duplicate():
 		build.remove(q)
 	await frames(2)
+	await test_zombie_paths()
+
+## one horde member put at a spot and told where to go
+func lone_zombie(at: Vector3, to: Vector3):
+	game.zombies.spawn_horde(at.x, at.z, 1, to)
+	var z = game.zombies.list[game.zombies.list.size() - 1]
+	z.pos = Vector3(at.x, W.ground_y(at.x, at.z), at.z); z.target = to
+	return z
+
+func test_zombie_paths() -> void:
+	var tx0 := tile_of(site.x); var tz0 := tile_of(site.z)
+	stand(site.x - 9.0, site.z - 9.0)
+	# an open door in a run of wall: the way through is the doorway, not the frame
+	var parts: Array = []
+	for i in range(-2, 3):
+		parts.append(put("wood_wall_door" if i == 0 else "wood_wall", tx0 + i, tz0, 0, 0))
+	if parts.has(null):
+		ok("a wall with a door in it", false, placer.reason); return
+	var door: Dictionary = parts[2]
+	build.set_door(door, true, true)
+	var dx := float(door.cx); var dz := float(door.cz)
+	var goal := Vector3(dx, W.height_at(dx, dz + 4.0), dz + 4.0)
+	var z = lone_zombie(Vector3(dx + 0.15, 0, dz - 4.0), goal)
+	var clipped := false; var crossed_at := INF; var floated := 0.0
+	var t0: float = game.time
+	while game.time - t0 < 25.0 and z.pos.z < dz + 1.5 and String(z.state) != "dead":
+		send_at(goal)
+		p.pos = Vector3(site.x - 9.0, p.pos.y, site.z - 9.0); p.vel = Vector3.ZERO
+		if absf(z.pos.z - dz) < 0.4:
+			crossed_at = minf(crossed_at, 9.0) if absf(z.pos.x - dx) > 0.31 else minf(crossed_at, absf(z.pos.x - dx))
+			if absf(z.pos.x - dx) > 0.31: clipped = true
+		floated = maxf(floated, absf(z.pos.y - W.ground_y(z.pos.x, z.pos.z, z.pos.y)))
+		await process_frame
+	ok("a zombie walks through an open built door", z.pos.z >= dz + 1.5, "reached z %+.2f past the wall, state %s" % [z.pos.z - dz, z.state])
+	ok("through the doorway itself: no clipping the frame, feet on the ground", not clipped and floated < 0.12, "%.2f m off the door's centre line at most, %.2f m off the ground at most" % [crossed_at, floated])
+	game.zombies.clear()
+	build.set_door(door, false, true)
+	z = lone_zombie(Vector3(dx + 0.15, 0, dz - 4.0), goal)
+	hits.clear()
+	await wait(10.0, func() -> bool: return not hits.is_empty())
+	ok("shut, the same door stops it and takes the blows", z.pos.z < dz and not hits.is_empty() and is_same(hits[0][0], door), "z %+.2f, %d hits" % [z.pos.z - dz, hits.size()])
+	game.zombies.clear()
+	for q in build.list.duplicate():
+		build.remove(q)
+	# stairs to a roof: it climbs tread by tread, between the sides
+	var st = put("wood_stairs", tx0, tz0, 0)
+	var roof = put("wood_roof", tx0, tz0 + 1)
+	if st == null or roof == null:
+		ok("stairs to a roof", false, placer.reason); return
+	var sx := float(st.cx); var sz := float(st.cz); var sy := float(st.y)
+	goal = Vector3(sx, sy + 3.15, sz + 2.0)
+	z = lone_zombie(Vector3(sx, 0, sz - 3.5), goal)
+	var worst := 0.0; var wide := 0.0; var top := 0.0
+	t0 = game.time
+	while game.time - t0 < 30.0 and String(z.state) != "dead":
+		send_at(goal)
+		p.pos = Vector3(site.x - 9.0, p.pos.y, site.z - 9.0); p.vel = Vector3.ZERO
+		if absf(z.pos.z - sz) < 1.0:
+			worst = maxf(worst, absf(z.pos.y - W.ground_y(z.pos.x, z.pos.z, z.pos.y)))
+			wide = maxf(wide, absf(z.pos.x - sx))
+		top = maxf(top, z.pos.y - sy)
+		if z.pos.z > sz + 1.3 and z.pos.y > sy + 3.0: break
+		await process_frame
+	ok("a zombie climbs player-built stairs onto the roof", top > 3.0 and z.pos.z > sz + 1.0, "rose %.2f m, ended z %+.2f, state %s" % [top, z.pos.z - sz, z.state])
+	ok("on the treads all the way: no floating, no sinking in, no leaving by the side", worst < 0.3 and wide < 0.7, "%.2f m off the treads at most, %.2f m off the centre line at most" % [worst, wide])
+	game.zombies.clear()
+	for q in build.list.duplicate():
+		build.remove(q)
+	await frames(2)
 
 # ------------------------------------------------------------------ barricades
 func _front_of(d: Dictionary, dist: float) -> Vector3:
@@ -572,7 +643,7 @@ func test_barricades() -> void:
 	await wait(0.6)
 	ok("a boarded door stays shut whatever opens it", not door.open and door.box.solid)
 	game.zombies.structure_hit.emit(door, 40.0)
-	ok("the dead strike the boards first, not the door", absf(float(door.barricade) - (step * 2.0 - 40.0)) < 0.01 and float(door.get("hp_real", 0.0)) == hp0 and not door.open)
+	ok("the dead strike the boards first, not the door", absf(float(door.barricade) - (step * 2.0 - 40.0)) < 0.01 and float(door.hp) == hp0 and not door.open)
 	game.zombies.structure_hit.emit(door, step * 2.0)
 	ok("boards torn down: the door is itself again", float(door.barricade) <= 0.0 and door.get("bar_node") == null and float(door.hp) == hp0 and door.box.solid and W.nav_at(float(dd.cx), float(dd.cz)) == 30, "hp %.0f nav %d" % [float(door.hp), W.nav_at(float(dd.cx), float(dd.cz))])
 	# the window
@@ -589,12 +660,27 @@ func test_barricades() -> void:
 	ok("window barricaded", float(win.get("barricade", 0.0)) == step and win.get("bar_node") != null and win.box.solid and W.nav_at(float(wd.cx), float(wd.cz)) == 45)
 	game.zombies.structure_hit.emit(win, 20.0)
 	await wait(0.5)
-	ok("a blow breaks the glass but the boards hold the opening", win.box.solid and float(win.barricade) == step - 20.0 and W.nav_at(float(wd.cx), float(wd.cz)) == 45)
+	ok("a blow lands on the boards and the glass behind them is untouched", not win.broken and win.box.solid and float(win.barricade) == step - 20.0 and W.nav_at(float(wd.cx), float(wd.cz)) == 45)
+	game._break_window(win)
+	ok("nor can the player knock the glass out through the boards", not win.broken and win.box.solid)
 	p.equipped = null
 	p.inv.add("crowbar", 1)
 	t = game._find_interact()
 	ok("a crowbar offers to pry the boards off", t != null and String(t.get("prompt", "")).contains("Pry the boards off the window"), str(t.get("prompt", "")) if t != null else "nothing")
 	game.zombies.structure_hit.emit(win, step)
+	ok("the last board goes: the window is whole again, shut, and still a way in to break", float(win.barricade) <= 0.0 and win.get("bar_node") == null and not win.broken and win.box.solid and W.nav_at(float(wd.cx), float(wd.cz)) == 45 and is_same(W.nav_ref.get(W.nav_index(float(wd.cx), float(wd.cz))), win))
+	game.zombies.structure_hit.emit(win, 20.0)
+	ok("the next blow breaks the glass and the dead can come through", win.broken and not win.box.solid)
+	# boards over a window that is already broken
+	build.barricade(win)
+	ok("a broken window can be boarded shut", win.box.solid and float(win.barricade) == step and W.nav_at(float(wd.cx), float(wd.cz)) == 45)
+	if t != null:
+		var planks1 = p.inv.count("plank")
+		game.target = game._find_interact(); game._interact()       # the crowbar
+		await wait_action()
+		ok("prying the boards off gives a plank back and leaves the broken window open", float(win.barricade) <= 0.0 and not win.box.solid and win.get("bar_node") == null and p.inv.count("plank") == planks1 + 1, "%d planks back" % (p.inv.count("plank") - planks1))
+	build.barricade(win)
+	game.zombies.structure_hit.emit(win, step + 1.0)
 	ok("boards torn off a broken window leave it open", float(win.barricade) <= 0.0 and not win.box.solid and win.get("bar_node") == null)
 	p.inv.remove("crowbar", 1)
 
@@ -817,8 +903,15 @@ func test_save_load() -> void:
 	await frames(3)
 	ok("load: the fire still burns, with its fuel and its light", fire2 != null and fire2.fire.lit and float(fire2.fire.fuel) > 190.0 and cook.fires.size() == 1 and cook.fires[0].light.visible)
 	ok("load: the stairs can be climbed", W.ground_y(float(stairs.cx) + 0.95, float(stairs.cz), float(stairs.y) + 3.0) > float(stairs.y) + 3.0)
-	ok("load: the door's boards and its own strength", absf(float(tdoor.get("barricade", 0.0)) - bar_amount) < 0.01 and float(tdoor.get("hp_real", 0.0)) == door_hp and tdoor.get("bar_node") != null and is_instance_valid(tdoor.bar_node) and tdoor.box.solid, "boards %.0f/%.0f, door %.0f/%.0f" % [float(tdoor.get("barricade", 0.0)), bar_amount, float(tdoor.get("hp_real", 0.0)), door_hp])
+	ok("load: the door's boards and its own strength", absf(float(tdoor.get("barricade", 0.0)) - bar_amount) < 0.01 and float(tdoor.hp) == door_hp and tdoor.get("bar_node") != null and is_instance_valid(tdoor.bar_node) and tdoor.box.solid, "boards %.0f/%.0f, door %.0f/%.0f" % [float(tdoor.get("barricade", 0.0)), bar_amount, float(tdoor.hp), door_hp])
 	ok("load: the window's boards", float(twin.get("barricade", 0.0)) > 0.0 and twin.box.solid and W.nav_at(float(twin.data.cx), float(twin.data.cz)) == 45)
+	# a save from before the game loop left boarded doors alone: the door's hit points were parked at 1e9
+	var old: Dictionary = build.mod_save()
+	for b in old.barricades:
+		if String(b[0]) == "door": b[3] = door_hp
+	tdoor.hp = 1.0e9
+	build.mod_load(old)
+	ok("an old save's parked door strength is put right", float(tdoor.hp) == door_hp and absf(float(tdoor.barricade) - bar_amount) < 0.01 and build.list.size() == n_pieces, "door %.0f" % float(tdoor.hp))
 	# a new game starts clean
 	game.new_game("police")
 	await frames(4)

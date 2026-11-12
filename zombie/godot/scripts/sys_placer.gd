@@ -166,9 +166,6 @@ func frame(dt: float, ui_open: bool) -> void:
 	if not active:
 		return
 	var g = build.game
-	# hands are busy with the plan: no swinging, shooting or shoving while placing
-	g.set("fire_cooldown", maxf(float(g.get("fire_cooldown")), 0.25))
-	g.set("shove_cd", maxf(float(g.get("shove_cd")), 0.25))
 	if _pending != null:
 		if g.action == null:
 			_pending = null

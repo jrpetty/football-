@@ -415,7 +415,8 @@ func query(min_x: float, min_z: float, max_x: float, max_z: float) -> Array:
 	return out
 
 ## Push a standing cylinder (feet at pos.y) out of the world. Returns {pos, hit, ground_y}: ground_y is the top
-## of anything low enough to step onto that the body's centre is over (-INF if nothing). Things no higher than
+## of anything low enough to step onto that the body's centre is over (-INF if nothing); jam is true when the
+## body does not fit where it is (two things closer together than it is wide). Things no higher than
 ## `step` above the feet are never walls: you walk onto them. A foundation or deck is a wall only where its top
 ## is out of reach of ground_y() (0.55 m).
 func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", ignore_tag2 := "") -> Dictionary:
@@ -464,7 +465,18 @@ func resolve(pos: Vector3, r: float, h: float, step := 0.45, ignore_tag := "", i
 				hit = true; moved = true
 		if not moved:
 			break
-	return {"pos": pos, "hit": hit, "ground_y": gy}
+	# still inside something after all that: two things closer together than the body is wide
+	var jam := false
+	if hit:
+		for o in list:
+			if o is Box:
+				if (ignore_tag != "" and (o.tag == ignore_tag or o.tag == ignore_tag2)) or pos.y + h <= o.min.y or o.max.y - pos.y <= (0.56 if o.tag == "foundation" else step):
+					continue
+				var ex2 := pos.x - clampf(pos.x, o.min.x, o.max.x); var ez2 := pos.z - clampf(pos.z, o.min.z, o.max.z)
+				if ex2 * ex2 + ez2 * ez2 < (r - 0.03) * (r - 0.03): jam = true
+			elif not (pos.y > o.y1 or pos.y + h < o.y0):
+				if Vector2(pos.x - o.x, pos.z - o.z).length() < r + o.r - 0.03: jam = true
+	return {"pos": pos, "hit": hit, "ground_y": gy, "jam": jam}
 
 ## the interface the character code uses: just the corrected position
 func resolve_cylinder(pos: Vector3, r: float, h: float) -> Vector3:

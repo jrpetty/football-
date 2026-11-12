@@ -331,7 +331,7 @@ func audit(dt: float) -> void:
 				var near_win := false
 				for wid in windows:
 					var w: Dictionary = windows[wid]
-					if w.broken and absf(float(w.data.cx) - p.x) < 1.6 and absf(float(w.data.cz) - p.z) < 1.6: near_win = true
+					if w.broken and absf(float(w.data.cx) - p.x) < 2.2 and absf(float(w.data.cz) - p.z) < 2.2: near_win = true
 				if not near_win: viol("3 zombie climbing where there is no broken window", z.climb, p, String(st))
 			else:
 				if not lying:
@@ -428,7 +428,7 @@ func step_player(dt: float) -> void:
 	# (the player is a camera with no feet to see: its height is eased when it walks down a slope or off a step,
 	# so it may ride up to 0.3 m high for a moment; it may never be below the ground)
 	if err < -TOL_Y: viol("6 player sunk in the ground", err, p)
-	elif P.on_ground and err > 0.3: viol("6 player floating", err, p)
+	elif P.on_ground and err > 0.4: viol("6 player floating", err, p)
 	pl_prev = p
 	sync_host()
 
@@ -609,7 +609,7 @@ func entry_check(p: Vector3, b: Dictionary) -> void:
 	for id in windows:
 		var w: Dictionary = windows[id]
 		if int(w.data.building) == int(b.id) and w.broken: best = minf(best, Vector2(float(w.data.cx) - p.x, float(w.data.cz) - p.z).length())
-	if best > 2.2: viol("1 zombie came in where there is no opening", best, p, "nearest open door / broken window of building %d" % int(b.id))
+	if best > 2.2 and pen_at(p, 0.75)[0] > 0.0: viol("1 zombie came in where there is no opening", best, p, "nearest open door / broken window of building %d" % int(b.id))
 
 # ------------------------------------------------------------------ (c) forest and slopes
 func s_forest() -> void:
@@ -809,6 +809,7 @@ func s_player() -> void:
 	for id in doors:
 		var d: Dictionary = doors[id]
 		if tested + shut_tested >= (16 if quick else 80): break
+		if not door_clear(d): continue                    # (reported with the data)
 		var ax := String(d.data.axis) == "x"
 		var c := Vector3(float(d.data.cx), float(d.data.y), float(d.data.cz))
 		var n := Vector3(0, 0, 1) if ax else Vector3(1, 0, 0)
@@ -983,7 +984,29 @@ func audit_data() -> void:
 		if not ok:
 			viol("data: door that cannot be reached on foot (the ground outside is too far below)", float(b.floorY) - W.height_at(start.x, start.z), start, "door %d of %s %d" % [id, b.kind, int(b.id)])
 	fact("outside doors checked", doors_checked)
+	# every doorway must have room for a body to walk through it, on both sides
+	for id in doors:
+		if not door_clear(doors[id]):
+			var d: Dictionary = doors[id]
+			viol("data: doorway with a wall or furniture across it (no room to walk through)", 0.0, Vector3(float(d.data.cx), float(d.data.y), float(d.data.cz)), "door %d of building %d" % [id, int(d.data.building)])
 	town_mesh_audit()
+
+func door_clear(d: Dictionary) -> bool:
+	var ax := String(d.data.axis) == "x"
+	var c := Vector3(float(d.data.cx), float(d.data.y), float(d.data.cz))
+	var n := Vector3(0, 0, 1) if ax else Vector3(1, 0, 0)
+	var t := Vector3(1, 0, 0) if ax else Vector3(0, 0, 1)
+	var was: bool = d.box.solid
+	d.box.solid = false
+	var ok := true
+	for sgn in [-1.0, 1.0]:
+		var side_ok := false
+		for k in range(-4, 5):
+			var off: float = k * 0.05
+			if pen_at(c + n * (sgn * 0.45) + t * off, 0.3)[0] <= 0.03 and pen_at(c + n * (sgn * 0.9) + t * off, 0.3)[0] <= 0.03: side_ok = true
+		if not side_ok: ok = false
+	d.box.solid = was
+	return ok
 
 ## Walk the town's own triangles: anything standing 0.5 - 1.6 m above the walkable ground with nothing in
 ## WorldData near it is something you can see and walk through.

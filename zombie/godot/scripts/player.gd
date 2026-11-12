@@ -171,8 +171,13 @@ func update(dt: float, control: bool, now: float) -> void:
 	# does not turn a waist-high wall into something to walk onto
 	var feet := minf(pos.y, _stand_y)
 	for _i in pieces:
+		var bx := pos.x; var bz := pos.z
 		pos.x = clampf(pos.x + mvx / pieces, -380.0, 380.0); pos.z = clampf(pos.z + mvz / pieces, -380.0, 380.0)
 		var res := WorldData.resolve(Vector3(pos.x, feet, pos.z), 0.32, h + pos.y - feet, 0.45)
+		if res.jam:
+			# a gap narrower than the body: it does not go in
+			pos.x = bx; pos.z = bz; vel.x = 0.0; vel.z = 0.0
+			break
 		pos.x = res.pos.x; pos.z = res.pos.z
 		top = float(res.ground_y)
 	var gy := WorldData.ground_y(pos.x, pos.z, pos.y)
@@ -190,7 +195,8 @@ func update(dt: float, control: bool, now: float) -> void:
 		if not on_ground and fall_vel < -3.0:
 			landed = -fall_vel; stepped = true
 		# up a step (a doorstep, a porch, a crate) the view rises quickly instead of jumping
-		pos.y = gy if gy - pos.y < 0.1 else minf(gy, pos.y + 6.0 * dt)
+		# (only a step: a hillside, however steep, is followed exactly)
+		pos.y = gy if (gy - pos.y < 0.1 or gy <= WorldData.height_at(pos.x, pos.z) + 0.001) else minf(gy, pos.y + 6.0 * dt)
 		fall_vel = maxf(0.0, fall_vel); on_ground = true
 		_stand_y = gy
 	elif pos.y > gy + 0.35:

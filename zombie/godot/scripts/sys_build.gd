@@ -23,7 +23,7 @@ const NOT_YET := ["farm_plot", "generator", "chicken_coop"]
 const STAIR_STEPS := 16
 const STAIR_RISE := 3.15
 const BARRICADE_COST := {"plank": 2, "nails": 3}
-const DOOR_SHIELD := 1.0e9          # a boarded door's own hit points are out of reach until the boards are gone
+const OLD_SHIELD := 5.0e8           # saves from before the game loop left boarded doors alone parked their hit points above this
 const NAV_WALL := 25
 const NAV_DOOR := 30
 const NAV_STATION := 20
@@ -91,6 +91,10 @@ func mod_started(new_game: bool) -> void:
 func mod_input(ev: InputEvent) -> bool:
 	return placer.input(ev)
 
+## hands are busy with the plan: no swinging, shooting or shoving while placing
+func mod_blocks_attack() -> bool:
+	return placer.active
+
 func mod_process(dt: float, dt_min: float, ui_open: bool) -> void:
 	if not _moving.is_empty():
 		_update_doors(dt)
@@ -117,7 +121,7 @@ func mod_save() -> Variant:
 	var bars: Array = []
 	for key in _barricaded:
 		var t: Dictionary = _barricaded[key]
-		bars.append([String(t.kind), int(t.id), float(t.barricade), float(t.get("hp_real", 0.0)), float(t.get("bar_step", 60.0))])
+		bars.append([String(t.kind), int(t.id), float(t.barricade), float(t.hp) if String(t.kind) == "door" else 0.0, float(t.get("bar_step", 60.0))])
 	return {"v": 1, "pieces": rows, "barricades": bars, "tier": tier}
 
 func mod_load(data) -> void:
@@ -145,14 +149,16 @@ func mod_load(data) -> void:
 		var t = world.doors.get(int(b[1])) if String(b[0]) == "door" else world.windows.get(int(b[1]))
 		if t == null:
 			continue
-		if String(b[0]) == "door" and float(b[3]) > 0.0:
-			t.hp = float(b[3])              # the game restored the shield value; put the real one back first
 		barricade(t, float(b[2]), float(b[4]))
-	# a door that still carries a shield but no boards (a save from a different build): give it its own strength back
+	# an older save kept a boarded door's hit points out of reach behind a huge number: give each its own back
+	var real := {}
+	for b in data.get("barricades", []):
+		if String(b[0]) == "door" and float(b[3]) > 0.0:
+			real[int(b[1])] = float(b[3])
 	for id in world.doors:
 		var d: Dictionary = world.doors[id]
-		if float(d.hp) > DOOR_SHIELD * 0.5 and float(d.get("barricade", 0.0)) <= 0.0:
-			d.hp = float(d.data.hp)
+		if float(d.hp) > OLD_SHIELD:
+			d.hp = float(real.get(int(id), d.data.hp))
 
 ## everything built and boarded goes, and the world is as it was
 func clear() -> void:
@@ -366,6 +372,9 @@ func _add_floor(p: Dictionary, x0: float, z0: float, x1: float, z1: float, y: fl
 	var entry := [x0, z0, x1, z1, y, -int(p.id)]       # the town's floors carry a building id there; ours are negative
 	WorldData.floors.append(entry)
 	p.floors.append(entry)
+	# the dead look for a floor only in cells flagged as having one
+	if WorldData.has_method("_mark") and WorldData.get("solid_map") != null:
+		WorldData._mark(x0 - 0.6, z0 - 0.6, x1 + 0.6, z1 + 0.6, 2)
 
 func _remove_floor(entry: Array) -> void:
 	for i in range(WorldData.floors.size() - 1, -1, -1):
@@ -921,8 +930,6 @@ func barricade(t: Dictionary, amount := -1.0, step := -1.0) -> void:
 	var cur := float(t.get("barricade", 0.0))
 	if cur <= 0.0:
 		t["bar_tag"] = box.tag; t["bar_solid"] = box.solid
-		if is_door:
-			t["hp_real"] = float(t.hp); t.hp = DOOR_SHIELD
 	t["bar_step"] = add
 	t["barricade"] = amount if amount > 0.0 else minf(add * 4.0, cur + add)
 	if t.get("bar_node") == null or not is_instance_valid(t.bar_node):
@@ -957,8 +964,6 @@ func _unbarricade(t: Dictionary) -> void:
 	var box: WorldData.Box = t.box
 	box.tag = String(t.get("bar_tag", box.tag))
 	if String(t.kind) == "door":
-		if float(t.hp) > DOOR_SHIELD * 0.5:
-			t.hp = float(t.get("hp_real", t.data.hp))
 		WorldData.set_solid(box, not t.open, NAV_DOOR)
 	elif t.broken or not bool(t.get("bar_solid", true)):
 		WorldData.set_solid(box, false)
@@ -978,23 +983,18 @@ func _hit_barricade(t: Dictionary, dmg: float) -> void:
 		Sfx.play("wood_break", {"pos": pos})
 		if game.state == "play" and pos.distance_to(game.player.pos) < 40.0:
 			game.hud.notify("A barricade has been torn down.", "bad")
-	else:
-		_seal(t)             # the game's own handler opens a struck window; the boards hold it shut
 
-## the game opens doors and breaks glass without knowing about boards: put a boarded opening back as it should be
+## a boarded opening stays shut whatever else swings the door or knocks the glass out
 func _poll_barricades() -> void:
 	for key in _barricaded:
 		var t: Dictionary = _barricaded[key]
-		var box: WorldData.Box = t.box
 		if String(t.kind) == "door":
 			if t.open:
 				game.world.set_door(t, false)
 				t.angle = 0.0; t.target = 0.0
 				game.world.apply_door(t)
 				_seal(t)
-			if float(t.hp) < DOOR_SHIELD * 0.5:
-				t["hp_real"] = float(t.hp); t.hp = DOOR_SHIELD
-		elif not box.solid:
+		elif not t.box.solid:
 			_seal(t)
 
 func _opening_interact(t: Dictionary, at: float) -> Dictionary:
