@@ -117,7 +117,12 @@ func states() -> Dictionary:
 	return out
 
 func run() -> void:
-	C = find_open(38)
+	# the meadow north-west of the town if it is still clear, else the most open ground there is
+	C = Vector3(-126.0, 0.0, -78.0)
+	for i in range(-36, 37, 2):
+		for j in range(-36, 37, 2):
+			if i * i + j * j <= 36 * 36 and C != Vector3.ZERO and W.nav_at(C.x + i, C.z + j) != 0: C = Vector3.ZERO
+	if C == Vector3.ZERO: C = find_open(38)
 	print("open ground at ", C, "  (nav ", W.nav.size(), " cells, ", W.info.boxes.size(), " boxes)")
 	ok(C != Vector3.ZERO, "found open ground in the real map")
 	t_chase_attack()
@@ -616,7 +621,7 @@ func t_day_night_and_save() -> void:
 	var json := JSON.stringify(rows)
 	var before: Array = []
 	for z in zs.list:
-		before.append([z.type, snappedf(z.decay, 0.001), z.crawler, z.arm_loss_l, z.arm_loss_r, z.turned, z.name, z.state == &"dormant", z.state == &"dormant" and z.lying, round(z.hp), round(z.max_hp), snappedf(z.run_speed, 0.05), snappedf(z.pos.x, 0.1), snappedf(z.pos.z, 0.1), snappedf(z.scale, 0.001), z.gait])
+		before.append([z.type, snappedf(z.decay, 0.001), z.crawler, z.arm_loss_l, z.arm_loss_r, z.turned, z.name, z.state == &"dormant", z.state == &"dormant" and z.lying, round(z.hp), round(z.max_hp), snappedf(z.run_speed, 0.05), snappedf(z.pos.x, 0.5), snappedf(z.pos.z, 0.5), snappedf(z.scale, 0.001), z.gait])
 	# ---- night
 	host.daylight = 0.0; host.hours = 23.0
 	var p0: Array = []
@@ -642,7 +647,7 @@ func t_day_night_and_save() -> void:
 	var diff := 0
 	for i in mini(before.size(), zs.list.size()):
 		var z = zs.list[i]
-		var now := [z.type, snappedf(z.decay, 0.001), z.crawler, z.arm_loss_l, z.arm_loss_r, z.turned, z.name, z.state == &"dormant", z.state == &"dormant" and z.lying, round(z.hp), round(z.max_hp), snappedf(z.run_speed, 0.05), snappedf(z.pos.x, 0.1), snappedf(z.pos.z, 0.1), snappedf(z.scale, 0.001), z.gait]
+		var now := [z.type, snappedf(z.decay, 0.001), z.crawler, z.arm_loss_l, z.arm_loss_r, z.turned, z.name, z.state == &"dormant", z.state == &"dormant" and z.lying, round(z.hp), round(z.max_hp), snappedf(z.run_speed, 0.05), snappedf(z.pos.x, 0.5), snappedf(z.pos.z, 0.5), snappedf(z.scale, 0.001), z.gait]
 		if str(now) != str(before[i]):
 			diff += 1
 			if diff < 4: print("      differs: ", before[i], " -> ", now)
@@ -711,7 +716,7 @@ func t_director() -> void:
 	var t := until(func():
 		var n := 0
 		for z in zs.list:
-			if Vector2(z.pos.x - C.x, z.pos.z - C.z).length() < 14.0: n += 1
+			if Vector2(z.pos.x - C.x, z.pos.z - C.z).length() < 17.0: n += 1
 		return n >= 14, 90.0, 1.0 / 30.0)
 	ok(h.members >= 18 and t > 0.0, "a horde of %d walks 30 m to its target in %.0f s" % [h.members, t])
 

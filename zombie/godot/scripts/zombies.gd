@@ -1172,7 +1172,7 @@ func _set_state(z: Zombie, s: StringName) -> void:
 	if z.state == S_FEED and z.feed_at != null:
 		z.feed_at.feeders = maxi(0, z.feed_at.feeders - 1); z.feed_at = null
 	# (the next thought comes soon, but a crowd roused by one sound does not all think in the same frame)
-	z.state = s; z.state_t = 0.0; z.pivot = false; z.think_t = minf(z.think_t, _rng.randf() * 0.1)
+	z.state = s; z.state_t = 0.0; z.pivot = false; z.think_t = minf(z.think_t, Bodies.hash1(z.seed * 3.3 + _time * 7.7) * 0.1)
 	if s != S_BASH:
 		z.bash_ref = null
 	if s == S_ATTACK or s == S_BASH:
@@ -1909,7 +1909,7 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 		var gx := int(floor(z.pos.x)); var gz := int(floor(z.pos.z))
 		var my_r := (0.46 if z.type == BLOAT else 0.32) * z.scale
 		var pxs := 0.0; var pzs := 0.0
-		var slow := 1.0; var side := 0.0
+		var slow := 1.0; var side := 0.0; var lead := 0.0
 		var dirx := z.dir.x; var dirz := z.dir.z
 		var upright := z.crawler or not _flat(z)
 		for i in range(-1, 2):
@@ -1937,11 +1937,13 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 					if want > 0.0 and d2 < (rr + 0.4) * (rr + 0.4):
 						var d := sqrt(d2)
 						var ahead := -(sx * dirx + sz * dirz) / d            # 1: dead ahead
-						if ahead > 0.3:
+						if ahead > 0.6:
 							var k := clampf((d - rr - 0.04) / 0.36, 0.0, 1.0)
 							if k < slow:
 								slow = k
 								side = sx * dirz - sz * dirx                 # which side of my path it stands on
+								# how fast the one in front is itself going my way
+								lead = maxf(0.0, o.vel.x * dirx + o.vel.z * dirz) if o.act > 0.15 else 0.0
 		if pxs != 0.0 or pzs != 0.0:
 			var pl := sqrt(pxs * pxs + pzs * pzs)
 			var k := minf(pl, 0.5) / pl / maxf(z.think_t, 0.08)
@@ -1949,16 +1951,19 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 		else:
 			z.push = Vector3.ZERO
 		if slow < 1.0 and want > 0.0:
-			crowd_ahead = true
-			# round the one in front, on the side with more room; no faster than the gap allows
-			var sgn := 1.0 if side > 0.0 else -1.0
-			var turn := (1.0 - slow) * 0.9
-			var ndx := dirx + (dirz * sgn) * turn; var ndz := dirz + (-dirx * sgn) * turn
-			var nl := sqrt(ndx * ndx + ndz * ndz)
-			if nl > 1e-4:
-				z.dir = Vector3(ndx / nl, 0.0, ndz / nl)
-			want *= slow
-			if slow <= 0.02: want = minf(want, 0.12)          # shoulder to shoulder: only edge sideways
+			if lead > 0.3:
+				# following someone who is walking the same way: keep their pace, a step behind
+				want = minf(want, want * slow + lead)
+			else:
+				# someone standing in the way: round them, on the side with more room. The closer, the more
+				# sideways; touching, it only slides past and does not push
+				crowd_ahead = true
+				var sgn := 1.0 if side > 0.0 else -1.0
+				var ndx := dirx * slow + (dirz * sgn) * (1.0 - slow); var ndz := dirz * slow + (-dirx * sgn) * (1.0 - slow)
+				var nl := sqrt(ndx * ndx + ndz * ndz)
+				if nl > 1e-4:
+					z.dir = Vector3(ndx / nl, 0.0, ndz / nl)
+				want *= maxf(slow, 0.55)
 	# ---- getting nowhere? It stops pushing and waits (paws at the wall, stands in the press), then tries again
 	# another way; after a few tries it gives the idea up. Nothing marches on the spot.
 	if want <= 0.1 or z.pivot or z.climb > 0.0:
@@ -1971,17 +1976,19 @@ func _think(z: Zombie, dt_game_min: float) -> void:
 	if z.anc_t > (0.8 if crowd_ahead else 1.2) and want > 0.0:
 		z.anc_t = 0.0; z.anc = z.pos
 		z.tries += 1
-		z.wait_t = (0.8 + _rng.randf() * 1.4) if crowd_ahead else (1.0 + _rng.randf() * 1.0)
+		var jit := Bodies.hash1(z.seed * 5.1 + _time * 3.7)             # (its own dice: the world's are not disturbed)
+		z.wait_t = (0.8 + jit * 1.4) if crowd_ahead else (1.0 + jit * 1.0)
 		z.held_by_wall = not crowd_ahead
-		z.avoid = -z.avoid if z.avoid != 0 else (1 if _rng.randf() < 0.5 else -1); z.avoid_t = 4.0       # next time, round the other way
+		z.avoid = -z.avoid if z.avoid != 0 else (1 if jit < 0.5 else -1); z.avoid_t = 4.0       # next time, round the other way
 		want = 0.0; face = atan2(z.dir.x, z.dir.z) if z.dir != Vector3.ZERO else NAN
-		if not crowd_ahead:
-			if z.state == S_WANDER or z.state == S_INVESTIGATE or z.state == S_FEED:
-				if z.tries >= 2:
-					z.tries = 0
-					if z.state == S_FEED: z.sated = 20.0
-					_set_state(z, S_IDLE)
-			elif z.state == S_SEARCH:
+		if z.state == S_WANDER or z.state == S_INVESTIGATE or z.state == S_FEED:
+			# somewhere it cannot get to (a wall in the way, or others standing on the spot): near enough
+			if z.tries >= 2 or (crowd_ahead and Vector2(z.target.x - z.pos.x, z.target.z - z.pos.z).length() < 3.5):
+				z.tries = 0
+				if z.state == S_FEED: z.sated = 20.0
+				_set_state(z, S_IDLE)
+		elif not crowd_ahead:
+			if z.state == S_SEARCH:
 				z.state_t = (floor(z.state_t / 2.6) + 1.0) * 2.6          # try the next spot
 			elif z.state == S_CHASE and z.tries >= 4:
 				# it cannot get there from here: lose the scent and cast about
