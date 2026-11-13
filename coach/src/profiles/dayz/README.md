@@ -1,6 +1,6 @@
 # DayZ map data
 
-Built by `scripts/build-dayz-data.mjs` from two sources, kept in separate files because their licences differ.
+Places and features are built by `scripts/build-dayz-data.mjs`, guns by `scripts/build-dayz-weapons.mjs`, from two sources kept in separate files because their licences differ.
 
 ## places.<map>.json — named places
 
@@ -11,6 +11,10 @@ Each position was checked against the game's own building list (below): a settle
 ## world.<map>.json — the game's features
 
 From **Bohemia Interactive's DayZ Central Economy** files (https://github.com/BohemiaInteractive/DayZ-Central-Economy): water pumps, fuel stations, medical, police, fire and military buildings, lighthouses, helicopter crash, police car and convoy spawn points, contaminated zones, player spawn points, and the lootable buildings by type near each place. Licence: **Arma and DayZ Public License Share Alike (ADPL-SA)** (https://www.bohemia.net/community/licenses/arma-and-dayz-public-license-share-alike-adpl-sa): attribution, non-commercial, DayZ/Arma only, share alike. © Bohemia Interactive a.s. DAYZ® is a registered trademark of Bohemia Interactive a.s.
+
+## weapons.json — guns
+
+Built by `scripts/build-dayz-weapons.mjs`. From the **DayZ Wiki** weapon pages and its "Weapons, damage and armor" ammunition table (CC BY-NC-SA 3.0, read 2026-11-13; the table gives DayZ 1.12 values): descriptions, fire modes, rate of fire, recoil, noise, sights and zeroing, damage, shock, muzzle speed and air friction. From the **Central Economy** files (ADPL-SA): where each gun spawns, its loot tiers and count, and the magazines and attachments it spawns with. The bullet drop is worked out from the speed and air friction. The look of each gun is written for this pack; no images are bundled.
 
 ## Before any commercial use
 

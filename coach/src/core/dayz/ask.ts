@@ -97,6 +97,8 @@ const MECHANICS: readonly (readonly [RegExp, string, string])[] = [
   [/\bstomach\b|\bvomit|\bstuffed\b|\bthrow(?:ing)? up\b/, 'cook-your-food', 'Food, water and stomach'],
   [/\binfected\b|\bzombies?\b/, 'quiet-around-infected', ''],
   [/\bloot\b|\bcentral economy\b|\btier\b/, '', 'Loot and the Central Economy'],
+  [/\bjam(?:s|med|ming)?\b|\bmisfire|\bcleaning kit\b|\bweapon condition\b|\bruined gun\b/, '', 'Weapon condition'],
+  [/\bzero(?:ing|ed)?\b|\bpage ?(?:up|down)\b/, '', 'Zeroing'],
 ]
 
 /** A survival question answered from the pack (what it is, the fix, the numbers), or null. */

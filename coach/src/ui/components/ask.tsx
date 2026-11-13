@@ -12,8 +12,8 @@ import type { CoachSession, QaEntry, SessionState } from '../session.ts'
 
 export function suggestedQuestions(profile: GameProfile): string[] {
   const out: string[] = []
-  // DayZ: places first (a sign spelled the way it looks works too).
-  if (profile.id === 'dayz') out.push('Where is Typobo?', 'How do I get from Cherno to NWAF?', 'Nearest water to Turovo', 'Where am I?')
+  // DayZ: places and guns (a sign spelled the way it looks works too).
+  if (profile.id === 'dayz') out.push('Where is Typobo?', 'How do I get from Cherno to NWAF?', 'Where am I?', 'Mosin range', 'Where can I find an M4?')
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
   if (heatmaps.has('conceded')) out.push('Where do I concede the most?')
   if (heatmaps.has('turnovers')) out.push('Where are my passes failing?')

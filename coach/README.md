@@ -554,10 +554,22 @@ Then press **Choose the game window**, play, and listen.
     zones. **"Where am I?"** from the last road sign read off your screen.
   - Survival questions (cholera, salmonella, splints, blood types, gas
     zones, bleeding, stamina) from the pack's own reference.
+  - **Guns (60 of them).** "What does the KA-M look like?" (shape, stock,
+    magazine, what real gun it is), "Mosin range" (zeroed at 100 m, aim
+    about 59 cm high at 300 m and 1.2 m at 400 m, worked out from the
+    game's own speed and drag for the round), "Where can I find an M4?"
+    (where it spawns on the map you are on, its loot tier and about how
+    many there are), "What attachments go on the AKM?", "What uses
+    7.62x39?", "Mosin vs SVD", "Best sniper" or "best pistol" (hardest
+    hitting that actually spawns, and the easiest of those to find). Real
+    names (AKM, SKS, SVD, Glock, MP5) work as well as the game's (KA-M,
+    SK 59/66, VSD, Mlock-91, SG5-K). Jamming, weapon condition and
+    zeroing are in the reference.
   - With screen reading on, the coach reads the status icons (health,
     blood, water, energy, temperature, bleeding, broken bones, sickness)
     and road signs: offline, it tells you to bandage, drink, eat, get warm
-    or splint, and names each town as you pass its sign. On public servers
+    or splint, names each town as you pass its sign, and names the gun you
+    pick up with its round, magazines and drop. On public servers
     that waits for the end of the life or the session.
 
   All answered on your PC, no cloud needed. Places: Chernarus 97,
@@ -566,7 +578,10 @@ Then press **Choose the game window**, play, and listen.
   on the wiki are left out (e.g. Gieraltów, Topolin and Sitnik on
   Livonia). Water pumps, medical, police, fire stations, military,
   lighthouses, crash and police-car spots, contaminated zones and spawns:
-  Bohemia Interactive's server files (ADPL-SA). Both licences are
+  Bohemia Interactive's server files (ADPL-SA). Guns: the wiki's weapon
+  pages and ammunition table (DayZ 1.12 numbers), with spawns, magazines
+  and attachments from the same server files; no pictures are bundled,
+  each answer can point to the gun's wiki page. Both licences are
   non-commercial: see `src/profiles/dayz/README.md`.
 - **Your usual.** Once three of your matches have a reading at a
   checkpoint, the coach compares you with yourself as well as with the

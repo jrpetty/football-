@@ -1,0 +1,3075 @@
+{
+ "source": "DayZ Wiki weapon pages and ammunition table (dayz.fandom.com, CC BY-NC-SA 3.0); Bohemia Interactive DayZ Central Economy (ADPL-SA); looks written for this pack.",
+ "licence": "Non-commercial use only (CC BY-NC-SA 3.0 and ADPL-SA). Replace before any commercial use.",
+ "items": [
+  {
+   "id": "dayz-ka-m",
+   "name": "KA-M",
+   "aliases": [
+    "AKM",
+    "AK",
+    "AK-47",
+    "AK47",
+    "KAM"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "7.62x39mm",
+    "magazines": "30-round, 75-round drum",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3,
+    "zeroing": "100m (Iron Sights); 100m-1000m (PSO-1/PSO-1-1); 100m (Kobra); 200m (P1-87-L); 100m-700m (1PN51)",
+    "maxSightM": 1000,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 740,
+    "hold100": 0,
+    "speed100": 641,
+    "hold200": 0.24,
+    "speed200": 556,
+    "hold300": 0.8,
+    "speed300": 482,
+    "hold400": 1.79,
+    "speed400": 417,
+    "hold600": 5.65,
+    "speed600": 314,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tier 4), about 3 on the map",
+    "whereLivonia": "military buildings; helicopter crashes and convoys, about 2 on the map",
+    "whereSakhal": "underground bunkers, about 2 on the map",
+    "rarity": "Very Rare",
+    "variants": "Black, Camo",
+    "spawnsWith": "Kashtan scope, PSO-1-1 scope, KA suppressor, other buttstocks, other handguards",
+    "sights": "PSO-1, PSO-1-1, Kobra, P1-87-L, 1PN51"
+   },
+   "summary": "KA-M: assault rifle, modelled on the AKM, firing 7.62x39mm. Selective-fire assault rifle fed from a detachable magazine. Modernised version of classic KA-47 with lot of attachments available. The KA-M is a highly sought after assault rifle in DayZ. A late-game, highly customisable, tier 4 assault rifle, the KA-M is chambered in 7.62x39mm Rounds.",
+   "strengths": [
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Classic AK shape: curved 30-round magazine (or a round 75-round drum), gas tube over the barrel, slanted muzzle brake, wood or black polymer stock and handguard; a side rail takes KA optics such as the PSO-1.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/KA-M. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tier 4), about 3 on the map. Livonia: military buildings; helicopter crashes and convoys, about 2 on the map. Sakhal: underground bunkers, about 2 on the map"
+  },
+  {
+   "id": "dayz-ka-74",
+   "name": "KA-74",
+   "aliases": [
+    "AK74",
+    "AK-74",
+    "AK 74"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.45x39mm",
+    "magazines": "30-round, 45-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.1,
+    "zeroing": "100m (Iron Sights); 100m-1000m (PSO-1/PSO-1-1); 100m (Kobra); 200m (P1-87-L); 100m-700m (1PN51)",
+    "maxSightM": 1000,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 880,
+    "hold100": 0,
+    "speed100": 856,
+    "hold200": 0.13,
+    "speed200": 834,
+    "hold300": 0.41,
+    "speed300": 811,
+    "hold400": 0.83,
+    "speed400": 790,
+    "hold600": 2.16,
+    "speed600": 748,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings; helicopter crashes and convoys, about 6 on the map",
+    "whereLivonia": "helicopter crashes and convoys only",
+    "whereSakhal": "military buildings (loot tier 3), about 4 on the map",
+    "rarity": "Very Rare",
+    "variants": "Black, Green (unobtainable)",
+    "spawnsWith": "Kashtan scope, PSO-1-1 scope, other buttstocks, other handguards",
+    "sights": "PSO-1, PSO-1-1, Kobra, P1-87-L, 1PN51"
+   },
+   "summary": "KA-74: assault rifle, modelled on the AK-74, firing 5.45x39mm. Selective-fire assault rifle fed from a detachable magazine. Replacement of KA-M with compatible attachments. The KA-74 is a select-fire assault rifle chambered for the 5.45x39mm cartridge. Fed from detachable 30rnd or 45rnd magazines.",
+   "strengths": [
+    "Fast round (880 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "AK shape with a slimmer, more gently curved orange-brown or black magazine and a large two-port muzzle brake; plum or black furniture; takes KA optics on the side rail.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/KA-74. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys, about 6 on the map. Livonia: helicopter crashes and convoys only. Sakhal: military buildings (loot tier 3), about 4 on the map"
+  },
+  {
+   "id": "dayz-kas-74u",
+   "name": "KAS-74U",
+   "aliases": [
+    "AKS74U",
+    "AKS-74U",
+    "AKS",
+    "Krinkov",
+    "KAS"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.45x39mm",
+    "magazines": "30-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 2.7,
+    "zeroing": "50m - 300m Hip-Fire/Iron Sights)",
+    "maxSightM": 300,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 880,
+    "hold100": 0.03,
+    "speed100": 856,
+    "hold200": 0.2,
+    "speed200": 834,
+    "hold300": 0.51,
+    "speed300": 811,
+    "hold400": 0.96,
+    "speed400": 790,
+    "hold600": 2.36,
+    "speed600": 748,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tier 3), about 8 on the map",
+    "whereLivonia": "helicopter crashes and convoys only",
+    "whereSakhal": "military buildings (loot tier 3), about 24 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "other buttstocks"
+   },
+   "summary": "KAS-74U: assault rifle, modelled on the AKS-74U, firing 5.45x39mm. Selective-fire assault rifle fed from a detachable magazine. Shortened version of KA-74 with some compatible attachments. The KAS-74U is for all intents an purposes a downgrade of the KA-74, in terms of raw damage, DPS and range, at the tradeoff of decreased weight. It maintains compatibility with all of the former's magazines and buttstocks, including the large 45-round magazine.",
+   "strengths": [
+    "Fast round (880 m/s): little lead and drop at range",
+    "Takes a suppressor"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Very short AK carbine: stubby barrel ending in a fat cylindrical muzzle booster, folding skeleton stock, hinged top cover with a flip rear sight; same curved 5.45 magazines as the KA-74.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/KAS-74U. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tier 3), about 8 on the map. Livonia: helicopter crashes and convoys only. Sakhal: military buildings (loot tier 3), about 24 on the map"
+  },
+  {
+   "id": "dayz-ka-101",
+   "name": "KA-101",
+   "aliases": [
+    "AK101",
+    "AK-101",
+    "AK 101"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "30-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.1,
+    "zeroing": "50m - 300m Hip-Fire/Iron Sights); 100m - 1000m PSO-1 Scope/PSO-1-1 Scope); 100m (Kobra Sights); 200m (P1-87-L Scope); 100m - 700m 1PN51 Scope)",
+    "maxSightM": 1000,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 3-4), about 4 on the map",
+    "whereLivonia": "underground bunkers (loot tier 3), about 2 on the map",
+    "whereSakhal": "special event spots; helicopter crashes and convoys, about 3 on the map",
+    "rarity": "Very Rare",
+    "variants": "Unpainted, Black, Green",
+    "spawnsWith": "Kashtan scope, PSO-1-1 scope, other buttstocks, other handguards",
+    "sights": "Kobra Sights, P1-87-L Scope"
+   },
+   "summary": "KA-101: assault rifle, modelled on the AK-101, firing 5.56x45mm. Selective-fire assault rifle fed from a detachable magazine. Export version of modernised KA-74M with compatible attachments. The KA-101 is an assault rifle found in DayZ, chambered in 5.56x45mm Rounds.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Modern black AK with a side-folding polymer stock, a nearly straight black 5.56 magazine and a two-port muzzle brake; takes KA optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/KA-101. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 3-4), about 4 on the map. Livonia: underground bunkers (loot tier 3), about 2 on the map. Sakhal: special event spots; helicopter crashes and convoys, about 3 on the map"
+  },
+  {
+   "id": "dayz-m4-a1",
+   "name": "M4-A1",
+   "aliases": [
+    "M4",
+    "M4A1",
+    "M4 A1"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "10-round, 20-round, 30-round, 40-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 900,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 2.3,
+    "zeroing": "25m (No Sights); 25m - 100m (Combat/RVN); 25m - 200m (Baraka/BUIS/Carry Handle); 100m - 600m (ATOG 4x32); 100m - 700m (NV-PVS4); 100m - 800m (ATOG 6x48)",
+    "maxSightM": 800,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "contaminated zones, about 1 on the map",
+    "whereLivonia": "contaminated zones, about 1 on the map",
+    "whereSakhal": "special event spots; helicopter crashes and convoys, about 2 on the map",
+    "rarity": "extremely rare",
+    "variants": "Unpainted, Black, Green",
+    "spawnsWith": "backup iron sights, carry-handle sight, other buttstocks, other handguards",
+    "sights": "Combat, RVN, Baraka, BUIS, Carry Handle, ATOG 4x32, NV-PVS4, ATOG 6x48"
+   },
+   "summary": "M4-A1: assault rifle, modelled on the M4A1 carbine, firing 5.56x45mm. Selective-fire assault rifle, fed from a standardised detachable magazine. Offers a lot of customisation with attachments. The M4-A1 is a select-fire assault rifle, chambered for the 5.56x45mm intermediate cartridge, fed from detachable box magazines.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "High rate of fire (about 900 rounds a minute)",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "look": "Black carbine: telescoping stock, straight 30-round STANAG magazine, flat-top rail (often a carry-handle sight), short ribbed or railed handguard; many stocks, handguards, optics and suppressors fit.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/M4-A1. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: contaminated zones, about 1 on the map. Livonia: contaminated zones, about 1 on the map. Sakhal: special event spots; helicopter crashes and convoys, about 2 on the map"
+  },
+  {
+   "id": "dayz-m16-a2",
+   "name": "M16-A2",
+   "aliases": [
+    "M16",
+    "M16A2",
+    "M16 A2"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "10-round, 20-round, 30-round, 40-round",
+    "fireModes": "Semi-Auto, 3-Round Burst",
+    "rpm": 550,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 4,
+    "zeroing": "25m - 200m (Hip-Fire/Iron Sights)",
+    "maxSightM": 200,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 3-4), about 4 on the map",
+    "whereLivonia": "military buildings (loot tier 3), about 5 on the map",
+    "whereSakhal": "military buildings (loot tier 4), about 2 on the map",
+    "rarity": "Rare",
+    "variants": "M4-A1"
+   },
+   "summary": "M16-A2: assault rifle, modelled on the M16A2, firing 5.56x45mm. Selective-fire assault rifle, fed from a standardised detachable magazine. Although it lacks support for custom optics, the long barrel and high rate of fire offer remarkable firepower. The M16-A2 is a weapon suited for short to medium range firing. The high rate of fire in burst mode makes it suitable for accurate shots at low to medium ranges, and its semi-auto fire mode allows for greater control at further distances, however, long range firing is not recommended as you only have access to iron-sights.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "Takes a suppressor"
+   ],
+   "look": "Long black rifle with a fixed solid stock, fixed carry handle with the rear sight on top, triangular front sight post and round ribbed handguard; takes M4 magazines but no optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/M16-A2. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 3-4), about 4 on the map. Livonia: military buildings (loot tier 3), about 5 on the map. Sakhal: military buildings (loot tier 4), about 2 on the map"
+  },
+  {
+   "id": "dayz-le-mas",
+   "name": "LE-MAS",
+   "aliases": [
+    "FAMAS",
+    "LEMAS",
+    "LE MAS"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "25-round",
+    "fireModes": "Semi-Auto, Burst Fire, Full-Auto",
+    "rpm": 900,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.6,
+    "zeroing": "25m - 200m (Iron Sights)",
+    "maxSightM": 200,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings; helicopter crashes and convoys, about 8 on the map",
+    "whereLivonia": "military buildings (loot tiers 2-3), about 4 on the map",
+    "whereSakhal": "military buildings (loot tier 4), about 2 on the map",
+    "rarity": "Very Rare",
+    "variants": "Sawed-off LE-MAS"
+   },
+   "summary": "LE-MAS: assault rifle, modelled on the FAMAS F1, firing 5.56x45mm. A bullpup assault rifle, designed to be compact and sustain a high rate of fire. The F1 variant supports semi-auto, burst and full auto mode. It's fed by a dedicated detachable magazine. The LE-MAS is an automatic rifle in DayZ. It was added in patch 1.14 alongside its magazine.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "High rate of fire (about 900 rounds a minute)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Bullpup (magazine behind the grip) with a long carrying handle running along the top that holds the sights; short 25-round magazine; bipod legs folded under the barrel.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/LE-MAS. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys, about 8 on the map. Livonia: military buildings (loot tiers 2-3), about 4 on the map. Sakhal: military buildings (loot tier 4), about 2 on the map"
+  },
+  {
+   "id": "dayz-aur-a1",
+   "name": "AUR A1",
+   "aliases": [
+    "AUG A1",
+    "AUG",
+    "Aug Short",
+    "AugShort"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "30-round",
+    "fireModes": "Semi-Auto, Burst, Full-Auto",
+    "rpm": 600,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 3.2,
+    "zeroing": "300m - 400mm (Hip-Fire/Integral Scope); 50m - 400m (BUIS)",
+    "maxSightM": 400,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0,
+    "speed100": 900,
+    "hold200": 0.12,
+    "speed200": 810,
+    "hold300": 0.39,
+    "speed300": 729,
+    "hold400": 0.85,
+    "speed400": 657,
+    "hold600": 2.5,
+    "speed600": 532,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tiers 3-4), about 4 on the map",
+    "whereLivonia": "military buildings (loot tiers 2-3), about 4 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Rare Very Rare",
+    "variants": "AUR AX",
+    "sights": "BUIS"
+   },
+   "summary": "AUR A1: assault rifle, modelled on the Steyr AUG A1 (short barrel), firing 5.56x45mm. A selective fire bullpup weapon. The compact design and the short barrel make the weapon suitable for CQB. It's fed by a dedicated magazine.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "Takes a suppressor"
+   ],
+   "weaknesses": [
+    "Rare very rare: magazines and ammo are scarce too"
+   ],
+   "look": "Green bullpup with a smooth one-piece stock, a large trigger guard enclosing the whole hand, a translucent magazine and an integral low-power scope on a handle.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/AUR_A1. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 3-4), about 4 on the map. Livonia: military buildings (loot tiers 2-3), about 4 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-aur-ax",
+   "name": "AUR AX",
+   "aliases": [
+    "AUG AX",
+    "AUG A3",
+    "Aug"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "30-round",
+    "fireModes": "Semi-Auto, Burst, Full-Auto",
+    "rpm": 600,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 3.6,
+    "zeroing": "300m (Hip-Fire/Iron Sights); 25m - 100m Combat Sights/RVN Sights); 25m - 200m Baraka Sights); 100m - 600m ATOG 4x32 Scope); 100m - 800m ATOG 6x48 Scope); 100m - 700m NV-PVS4 Scope)",
+    "maxSightM": 800,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0,
+    "speed100": 900,
+    "hold200": 0.12,
+    "speed200": 810,
+    "hold300": 0.39,
+    "speed300": 729,
+    "hold400": 0.85,
+    "speed400": 657,
+    "hold600": 2.5,
+    "speed600": 532,
+    "zeroForHold": 100,
+    "whereChernarus": "contaminated zones, about 1 on the map",
+    "whereLivonia": "underground bunkers (loot tier 3), about 2 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Extremely Rare",
+    "variants": "AUR A1",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, universal flashlight"
+   },
+   "summary": "AUR AX: assault rifle, modelled on the Steyr AUG A3, firing 5.56x45mm. A selective fire bullpup weapon. A modern variant of the AUR A1. The railing on the top and the magazine docking system have been adapted to work with standard western accessories.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "look": "Same bullpup body as the AUR A1 with a long top rail in place of the built-in scope, so it takes western optics; uses standard M4 magazines.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/AUR_AX. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: contaminated zones, about 1 on the map. Livonia: underground bunkers (loot tier 3), about 2 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sval",
+   "name": "SVAL",
+   "aliases": [
+    "AS VAL",
+    "ASVAL",
+    "AS Val"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "9x39mm",
+    "magazines": "10-round, 20-round, 30-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 900,
+    "recoil": "Medium",
+    "noise": "1 (Very Quiet)",
+    "weightKg": 3.2,
+    "zeroing": "160m (Hip-Fire/Iron Sights); 25m - 100m Combat Sights/RVN Sights); 25m - 200m Baraka Sights); 100m - 600m ATOG 4x32 Scope); 100m - 800m ATOG 6x48 Scope); 100m - 700m NV-PVS4 Scope)",
+    "maxSightM": 800,
+    "damage": 95,
+    "shock": 66,
+    "muzzleSpeed": 320,
+    "hold100": 0,
+    "speed100": 303,
+    "hold200": 1.07,
+    "speed200": 287,
+    "hold300": 3.34,
+    "speed300": 271,
+    "hold400": 6.94,
+    "speed400": 257,
+    "hold600": 18.78,
+    "speed600": 231,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tier 4), about 3 on the map",
+    "whereLivonia": "military buildings (loot tier 3), about 5 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Extremely Rare",
+    "variants": "Vikhr, VSS",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, universal flashlight"
+   },
+   "summary": "SVAL: assault rifle, modelled on the AS Val, firing 9x39mm. A derivative of the VSS, outfitted to support universal attachments. As a derivative of the VSS, the SVAL is integrally suppressed, which in conjunction with the subsonic nature of the 9x39mm cartridge, makes it the quietest rifle available.",
+   "strengths": [
+    "High rate of fire (about 900 rounds a minute)",
+    "Very quiet: integral suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Slow round (320 m/s): big drop past 100 m",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "look": "Thick integrated suppressor making up the whole front half, skeleton folding stock, short 20-round 9x39 magazine; a top rail takes universal optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/SVAL. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tier 4), about 3 on the map. Livonia: military buildings (loot tier 3), about 5 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-vikhr",
+   "name": "Vikhr",
+   "aliases": [
+    "SR-3M",
+    "SR3M"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "9x39mm",
+    "magazines": "10-round, 20-round, 30-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 900,
+    "recoil": "Moderate",
+    "noise": "4 (Loud)",
+    "weightKg": 2.2,
+    "zeroing": "100m (Hip Fire / Iron Sights)",
+    "maxSightM": 100,
+    "damage": 95,
+    "shock": 66,
+    "muzzleSpeed": 320,
+    "hold100": 0,
+    "speed100": 303,
+    "hold200": 1.07,
+    "speed200": 287,
+    "hold300": 3.34,
+    "speed300": 271,
+    "hold400": 6.94,
+    "speed400": 257,
+    "hold600": 18.78,
+    "speed600": 231,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tiers 2-3), about 4 on the map",
+    "whereLivonia": "military buildings (loot tier 3), about 4 on the map",
+    "whereSakhal": "military buildings (loot tier 3), about 24 on the map",
+    "rarity": "Very Rare",
+    "spawnsWith": "Kashtan scope, PSO-1 scope"
+   },
+   "summary": "Vikhr: assault rifle, modelled on the SR-3M Vikhr, firing 9x39mm. A compact firearm heavily influenced by the ASVAL and VSS. It can carry side-mounted optics but lacks an integral suppressor. The Vikhr is an assault rifle in DayZ. It was added in the 1.24 Experimental Patch on 16th January 2024.",
+   "strengths": [
+    "High rate of fire (about 900 rounds a minute)"
+   ],
+   "weaknesses": [
+    "Slow round (320 m/s): big drop past 100 m",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "look": "Compact carbine like a shortened VSS without the suppressor: short barrel, top folding stock, vertical foregrip, 30-round 9x39 magazine; side rail for optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Vikhr. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 2-3), about 4 on the map. Livonia: military buildings (loot tier 3), about 4 on the map. Sakhal: military buildings (loot tier 3), about 24 on the map"
+  },
+  {
+   "id": "dayz-lar",
+   "name": "LAR",
+   "aliases": [
+    "FAL",
+    "FN FAL"
+   ],
+   "category": "weapon",
+   "class": "battle_rifle",
+   "bestRange": "mid-long",
+   "stats": {
+    "calibre": ".308 WIN",
+    "magazines": "20-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "Very high",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3.7,
+    "zeroing": "25m (No Sights); 25m - 100m (Combat/RVN); 25m - 200m (Baraka); 100m - 600m (ATOG 4x32); 100m - 700m (NV-PVS4); 100m - 800m (ATOG 6x48)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "contaminated zones, about 2 on the map",
+    "whereLivonia": "contaminated zones, about 2 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Extremely Rare",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, other buttstocks",
+    "sights": "Combat, RVN, Baraka, ATOG 4x32, NV-PVS4, ATOG 6x48"
+   },
+   "summary": "LAR: battle rifle, modelled on the FN FAL, firing .308 WIN. Selective-fire battle rifle, fed from a detachable magazine. Open for customisation with attachments.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Very high recoil: hard to control in bursts",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Long battle rifle with a carrying handle at the balance point, straight 20-round .308 magazine, slotted flash hider, and a fixed or folding stock; rail for western optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/LAR. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: contaminated zones, about 2 on the map. Livonia: contaminated zones, about 2 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-scr-17",
+   "name": "SCR 17",
+   "aliases": [
+    "SCAR",
+    "SCAR-H",
+    "SCARH",
+    "SCR"
+   ],
+   "category": "weapon",
+   "class": "battle_rifle",
+   "bestRange": "mid-long",
+   "stats": {
+    "calibre": ".308 WIN",
+    "magazines": "20-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "Very high",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3.7,
+    "zeroing": "25m (No Sights); 25m - 100m (Combat/RVN); 25m - 200m (Baraka); 100m - 600m (ATOG 4x32); 100m - 700m (NV-PVS4); ; 25m - 200m (Baraka)100m - ; 800m (ATOG 6x48)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "underground bunkers, military buildings; helicopter crashes and convoys (loot tier 3), about 1 on the map",
+    "whereSakhal": "special event spots; helicopter crashes and convoys, about 2 on the map",
+    "rarity": "Extremely Rare",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, other buttstocks",
+    "sights": "Combat, RVN, Baraka, ATOG 4x32, NV-PVS4, ATOG 6x48"
+   },
+   "summary": "SCR 17: battle rifle, modelled on the FN SCAR-H, firing .308 WIN. Selective-fire battle rifle, fed from a detachable magazine. Open for customisation with attachments.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Very high recoil: hard to control in bursts",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Angular modern rifle with a full-length top rail, folding adjustable stock, flat receiver sides and a straight 20-round .308 magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/SCR_17. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: underground bunkers, military buildings; helicopter crashes and convoys (loot tier 3), about 1 on the map. Sakhal: special event spots; helicopter crashes and convoys, about 2 on the map"
+  },
+  {
+   "id": "dayz-dmr",
+   "name": "DMR",
+   "aliases": [
+    "M14",
+    "M-14"
+   ],
+   "category": "weapon",
+   "class": "marksman_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": ".308 WIN",
+    "magazines": "10-round, 20-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 500,
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 2.7,
+    "zeroing": "50m - 250m (Iron Sights); 25m - 100m (Combat/RVN); 25m - 200m (Baraka); 100m - 600m (ATOG 4x32); 100m - 700m (NV-PVS4); 100m - 800m (ATOG 6x48)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings; helicopter crashes and convoys, about 2 on the map",
+    "whereLivonia": "contaminated zones, about 3 on the map",
+    "whereSakhal": "special event spots; helicopter crashes and convoys, about 3 on the map",
+    "rarity": "Extremely rare",
+    "spawnsWith": "RVN sight, mini sight, ATOG 4x32 scope, ATOG 6x48 scope",
+    "sights": "Combat, RVN, Baraka, ATOG 4x32, NV-PVS4, ATOG 6x48"
+   },
+   "summary": "DMR: marksman rifle, modelled on the M14, firing .308 WIN. Semi-automatic rifle, loaded from a detachable magazine. It has a rail that allows for the use of Western-made scopes. It's suitable for long-range precision, but has a significant kick when shot in quick succession. The DMR is an extremely rare marksman rifle in DayZ. As a late-game firearm, the DMR is chambered in .308 WIN Rounds. The DMR is found in helicopter crash sites and military convoys. Much like its iconic presence in the original Arma 2 DayZ mod, it sports olive green fiberglass furniture and Picatinny rails to allow for any western optics to be attached, and is extremely powerful.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Traditional wooden stock running almost the full length, short straight 20-round magazine, rear aperture sight, rail on top for western scopes.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/DMR. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys, about 2 on the map. Livonia: contaminated zones, about 3 on the map. Sakhal: special event spots; helicopter crashes and convoys, about 3 on the map"
+  },
+  {
+   "id": "dayz-vsd",
+   "name": "VSD",
+   "aliases": [
+    "SVD",
+    "Dragunov"
+   ],
+   "category": "weapon",
+   "class": "marksman_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "7.62x54mmR",
+    "magazines": "10-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 480,
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3.7,
+    "zeroing": "100m - 1000m Hip-Fire/Iron Sights); 100m - 1000m PSO-1 Scope/PSO-1-1 Scope); 100m (Kobra Sights); 200m (P1-87-L Scope); 100m - 700m 1PN51 Scope)",
+    "maxSightM": 1000,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 790,
+    "hold100": 0,
+    "speed100": 729,
+    "hold200": 0.19,
+    "speed200": 673,
+    "hold300": 0.59,
+    "speed300": 621,
+    "hold400": 1.24,
+    "speed400": 574,
+    "hold600": 3.51,
+    "speed600": 489,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings; helicopter crashes and convoys, about 4 on the map",
+    "whereLivonia": "military buildings; helicopter crashes and convoys, about 4 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Extremely Rare",
+    "spawnsWith": "Kashtan scope, PSO-1-1 scope",
+    "sights": "Kobra Sights, P1-87-L Scope"
+   },
+   "summary": "VSD: marksman rifle, modelled on the SVD Dragunov, firing 7.62x54mmR. Semi-automatic marksmen rifle fed from a detachable magazine. Compatible with KA scopes. The VSD is a late-game, military marksman/sniper rifle in DayZ. Largely considered to be an \"end-game\" weapon, the VSD is chambered in 7.62x54mmR Rounds.",
+   "strengths": [
+    "Hard-hitting 7.62x54mmR (110 damage, 100 shock a hit)",
+    "Fast round (790 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Very long, slim rifle with a skeleton thumbhole stock, short 10-round magazine, long thin barrel with slotted flash hider; the PSO-1 scope sits on the left side rail.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/VSD. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys, about 4 on the map. Livonia: military buildings; helicopter crashes and convoys, about 4 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-vss",
+   "name": "VSS",
+   "aliases": [
+    "Vintorez"
+   ],
+   "category": "weapon",
+   "class": "marksman_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "9x39mm",
+    "magazines": "10-round, 20-round, 30-round",
+    "fireModes": "Semi-Auto, full auto",
+    "rpm": 900,
+    "recoil": "Low",
+    "noise": "1 (Very Quiet)",
+    "weightKg": 2,
+    "zeroing": "100m - 400m Hip-Fire/Iron Sights); 100m - 1000m PSO-1 Scope/PSO-1-1 Scope); 100m (Kobra Sights); 200m (P1-87-L Scope); 100m - 700m 1PN51 Scope)",
+    "maxSightM": 1000,
+    "damage": 95,
+    "shock": 66,
+    "muzzleSpeed": 320,
+    "hold100": 0,
+    "speed100": 303,
+    "hold200": 1.07,
+    "speed200": 287,
+    "hold300": 3.34,
+    "speed300": 271,
+    "hold400": 6.94,
+    "speed400": 257,
+    "hold600": 18.78,
+    "speed600": 231,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tiers 3-4), about 6 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "military buildings (loot tier 3), about 4 on the map",
+    "rarity": "Very Rare",
+    "variants": "SVAL, Vikhr",
+    "spawnsWith": "PSO-1-1 scope",
+    "sights": "Kobra Sights, P1-87-L Scope"
+   },
+   "summary": "VSS: marksman rifle, modelled on the VSS Vintorez, firing 9x39mm. Selective-fire integrally suppressed marksmen rifle, fed from a detachable magazine. Compatible with KA scopes. The rifle’s main selling point – its fixed suppressor, along with the subsonic nature of the 9x39mm cartridge make it the quietest rifle available in game, tied with its assault rifle variant – the SVAL. They’re only audible at up to 125m, giving them unparalleled stealth characteristics.",
+   "strengths": [
+    "High rate of fire (about 900 rounds a minute)",
+    "Very quiet: integral suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "Slow round (320 m/s): big drop past 100 m",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Wooden skeleton stock with a fat integrated suppressor over the whole barrel; short 10-round 9x39 magazine (20s fit); side rail for KA optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/VSS. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 3-4), about 6 on the map. Livonia: not in the loot (event or crafted only). Sakhal: military buildings (loot tier 3), about 4 on the map"
+  },
+  {
+   "id": "dayz-mosin-91-30",
+   "name": "Mosin 91/30",
+   "aliases": [
+    "Mosin",
+    "Mosin Nagant",
+    "Mosin 9130",
+    "Mosin 91 30",
+    "Mosin9130"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "7.62x54mmR",
+    "internalMagazine": "5",
+    "fireModes": "Single",
+    "rpm": 27,
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 4,
+    "zeroing": "100m - 1000m; 100m - 1300m (PU Scope)",
+    "maxSightM": 1300,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 790,
+    "hold100": 0,
+    "speed100": 729,
+    "hold200": 0.19,
+    "speed200": 673,
+    "hold300": 0.59,
+    "speed300": 621,
+    "hold400": 1.24,
+    "speed400": 574,
+    "hold600": 3.51,
+    "speed600": 489,
+    "zeroForHold": 100,
+    "whereChernarus": "town houses, village houses (loot tiers 2-4), about 65 on the map",
+    "whereLivonia": "village houses, hunting stands and lodges (loot tiers 2-3), about 36 on the map",
+    "whereSakhal": "hunting stands and lodges (loot tier 2), about 35 on the map",
+    "rarity": "Uncommon",
+    "variants": "Sawed-off Mosin 91/30",
+    "spawnsWith": "Mosin compensator, PU scope",
+    "sights": "PU Scope"
+   },
+   "summary": "Mosin 91/30: bolt-action rifle, modelled on the Mosin-Nagant 91/30, firing 7.62x54mmR. Five shot bolt-action rifle, fed from internal magazine. Still usable today due to its sturdiness. The Mosin 91/30 is a powerful mid-game, medium to long-range rifle chambered in 7.62x54mmR. The Mosin is sought as a strong choice for its accuracy and stopping power against fellow Survivors, however its limited internal magazine capacity, slow bolt-action mechanism and long length makes it unsuitable for close-range encounters.",
+   "strengths": [
+    "Hard-hitting 7.62x54mmR (110 damage, 100 shock a hit)",
+    "Fast round (790 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1300 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Long wooden rifle with a straight bolt handle sticking out to the side, no detachable magazine (loads 5 from the top), hooded front sight; the PU scope mounts offset above the bolt.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Mosin_91%2F30. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 2-4), about 65 on the map. Livonia: village houses, hunting stands and lodges (loot tiers 2-3), about 36 on the map. Sakhal: hunting stands and lodges (loot tier 2), about 35 on the map"
+  },
+  {
+   "id": "dayz-sk-59-66",
+   "name": "SK 59/66",
+   "aliases": [
+    "SKS",
+    "SK 59",
+    "SK59"
+   ],
+   "category": "weapon",
+   "class": "semi_auto_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "7.62x39mm",
+    "internalMagazine": "10",
+    "fireModes": "Semi-Auto",
+    "rpm": 480,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.9,
+    "zeroing": "50m - 300m Hip-Fire/Iron Sights); 100m - 1300m PU Scope)",
+    "maxSightM": 1300,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 641,
+    "hold200": 0.34,
+    "speed200": 556,
+    "hold300": 0.95,
+    "speed300": 482,
+    "hold400": 1.99,
+    "speed400": 417,
+    "hold600": 5.96,
+    "speed600": 314,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings; helicopter crashes and convoys (loot tiers 2-4), about 20 on the map",
+    "whereLivonia": "military buildings; helicopter crashes and convoys (loot tiers 2-3), about 12 on the map",
+    "whereSakhal": "military buildings; helicopter crashes and convoys (loot tiers 2-3), about 17 on the map",
+    "rarity": "Uncommon",
+    "spawnsWith": "PSO-1 scope, Kobra sight"
+   },
+   "summary": "SK 59/66: semi-automatic rifle, modelled on the SKS (M59/66), firing 7.62x39mm. A ten-shot semi-automatic rifle, fed from an internal magazine. Older model, but still reliable. The SK 59/66 is a semi-automatic rifle in DayZ. Featuring a 10-round internal magazine, the SK 59/66 is a mid-game, mid-range, tier 3 rifle chambered in 7.62x39mm.",
+   "strengths": [
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 1300 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts"
+   ],
+   "look": "Wooden semi-automatic with a fixed 10-round magazine in front of the trigger guard, folding bayonet under the barrel and a grenade-launcher sleeve on the muzzle.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/SK_59%2F66. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys (loot tiers 2-4), about 20 on the map. Livonia: military buildings; helicopter crashes and convoys (loot tiers 2-3), about 12 on the map. Sakhal: military buildings; helicopter crashes and convoys (lo"
+  },
+  {
+   "id": "dayz-cr-527",
+   "name": "CR-527",
+   "aliases": [
+    "CZ527",
+    "CZ 527",
+    "CZ"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "7.62x39mm",
+    "magazines": "5-round",
+    "fireModes": "Single",
+    "rpm": 27,
+    "recoil": "Medium",
+    "noise": "5 (Very Loud)",
+    "weightKg": 2.7,
+    "zeroing": "200m (Hip-Fire/Iron Sights); 200m - 800m Hunting Scope)",
+    "maxSightM": 800,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 740,
+    "hold100": -0.12,
+    "speed100": 641,
+    "hold200": 0,
+    "speed200": 556,
+    "hold300": 0.44,
+    "speed300": 482,
+    "hold400": 1.31,
+    "speed400": 417,
+    "hold600": 4.93,
+    "speed600": 314,
+    "zeroForHold": 200,
+    "whereChernarus": "farms, hunting stands and lodges (loot tiers 1-3), about 50 on the map",
+    "whereLivonia": "village houses, hunting stands and lodges (loot tiers 2-3), about 70 on the map",
+    "whereSakhal": "farms, hunting stands and lodges, about 50 on the map",
+    "rarity": "Uncommon",
+    "variants": "Green, Black, Camo",
+    "spawnsWith": "Sportpoint sight, hunting scope"
+   },
+   "summary": "CR-527: bolt-action rifle, modelled on the CZ 527, firing 7.62x39mm. A bolt-action hunting rifle, fed from a detachable magazine. It is light and accurate at intermediate ranges. Respected for its light weight (at only 2.7kg), ruggedness and great accuracy, the CR-527 is often the first proper rifle that players will get their hands on. It’s a good medium-range weapon, but its usefulness in close quarters is limited by the bolt-action’s low rate of fire (Only ~27 rounds per minute).",
+   "strengths": [
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Light wooden (or painted) hunting rifle with a short bolt and a small flush 5-round magazine; takes a hunting scope or Sportpoint sight.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/CR-527. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: farms, hunting stands and lodges (loot tiers 1-3), about 50 on the map. Livonia: village houses, hunting stands and lodges (loot tiers 2-3), about 70 on the map. Sakhal: farms, hunting stands and lodges, about 50 on the map"
+  },
+  {
+   "id": "dayz-cr-550-savanna",
+   "name": "CR-550 Savanna",
+   "aliases": [
+    "CZ550",
+    "CZ 550",
+    "Savanna",
+    "CR-550",
+    "CR550"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": ".308 WIN",
+    "magazines": "10-round",
+    "fireModes": "Single",
+    "recoil": "Very High",
+    "weightKg": 3.3,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0,
+    "speed100": 680,
+    "hold200": 0.21,
+    "speed200": 624,
+    "hold300": 0.68,
+    "speed300": 573,
+    "hold400": 1.44,
+    "speed400": 527,
+    "hold600": 4.1,
+    "speed600": 444,
+    "zeroForHold": 100,
+    "whereChernarus": "hunting stands and lodges (loot tiers 3-4), about 14 on the map",
+    "whereLivonia": "hunting stands and lodges (loot tier 3), about 5 on the map",
+    "whereSakhal": "hunting stands and lodges, about 15 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "Sportpoint sight, hunting scope"
+   },
+   "summary": "CR-550 Savanna: bolt-action rifle, modelled on the CZ 550, firing .308 WIN. A bolt-action rifle, fed from a detachable magazine. Sturdy and built to last.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range"
+   ],
+   "weaknesses": [
+    "Very high recoil: hard to control in bursts"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Full-size wooden hunting rifle with a long barrel, turned-down bolt and small detachable magazine; scope mounts on top.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/CR-550_Savanna. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: hunting stands and lodges (loot tiers 3-4), about 14 on the map. Livonia: hunting stands and lodges (loot tier 3), about 5 on the map. Sakhal: hunting stands and lodges, about 15 on the map"
+  },
+  {
+   "id": "dayz-m70-tundra",
+   "name": "M70 Tundra",
+   "aliases": [
+    "Winchester",
+    "Winchester 70",
+    "M70",
+    "Tundra",
+    "Winchester70"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": ".308 WIN",
+    "internalMagazine": "5",
+    "fireModes": "Single",
+    "rpm": 120,
+    "recoil": "Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 1.5,
+    "zeroing": "200m (Hip-Fire/Iron Sights); 200m - 800m (Hunting Scope)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": -0.11,
+    "speed100": 680,
+    "hold200": 0,
+    "speed200": 624,
+    "hold300": 0.36,
+    "speed300": 573,
+    "hold400": 1.02,
+    "speed400": 527,
+    "hold600": 3.46,
+    "speed600": 444,
+    "zeroForHold": 200,
+    "whereChernarus": "hunting stands and lodges (loot tiers 3-4), about 7 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "hunting stands and lodges (loot tier 2), about 7 on the map",
+    "rarity": "Very Common",
+    "variants": "Green, Black, Blue, Grey",
+    "spawnsWith": "Sportpoint sight, hunting scope",
+    "sights": "Hunting Scope"
+   },
+   "summary": "M70 Tundra: bolt-action rifle, modelled on the Winchester Model 70, firing .308 WIN. Five shot bolt-action hunting rifle, fed from an internal magazine. Reliability and high performance of a proven design. The M70 Tundra is a bolt-action sporting rifle in DayZ. It is a good choice for a long-range weapon, as it is able to instantly kill, or at least knock unconscious, most targets even at extreme range. It is very effective when paired with a Hunting Scope.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Slim hunting rifle with a smooth sporter stock (wood or painted), internal 5-round magazine and a bolt handle bent down; usually wears a hunting scope.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/M70_Tundra. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: hunting stands and lodges (loot tiers 3-4), about 7 on the map. Livonia: not in the loot (event or crafted only). Sakhal: hunting stands and lodges (loot tier 2), about 7 on the map"
+  },
+  {
+   "id": "dayz-ssg-82",
+   "name": "SSG 82",
+   "aliases": [
+    "SSG82",
+    "SSG"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "5.45x39mm",
+    "magazines": "5-round",
+    "fireModes": "Bolt-Action",
+    "rpm": 27,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 4.5,
+    "zeroing": "100m (Fixed)",
+    "maxSightM": 100,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 880,
+    "hold100": 0,
+    "speed100": 856,
+    "hold200": 0.13,
+    "speed200": 834,
+    "hold300": 0.41,
+    "speed300": 811,
+    "hold400": 0.83,
+    "speed400": 790,
+    "hold600": 2.16,
+    "speed600": 748,
+    "zeroForHold": 100,
+    "whereChernarus": "police stations (loot tiers 3-4), about 12 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "police stations (loot tiers 2-3), about 6 on the map",
+    "rarity": "Very Rare"
+   },
+   "summary": "SSG 82: bolt-action rifle, modelled on the SSG 82, firing 5.45x39mm. A bolt-action sniper rifle fed from a detachable magazine. Designed to be used by law enforcement in urban environments. The SSG 82 is a sniper rifle in DayZ. It was added in the 1.19 Experimental Patch.",
+   "strengths": [
+    "Fast round (880 m/s): little lead and drop at range",
+    "Takes a suppressor"
+   ],
+   "weaknesses": [
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Wooden police sniper rifle with a thumbhole-style stock, built-in fixed scope and a small 5.45 magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/SSG_82. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations (loot tiers 3-4), about 12 on the map. Livonia: not in the loot (event or crafted only). Sakhal: police stations (loot tiers 2-3), about 6 on the map"
+  },
+  {
+   "id": "dayz-vs-89",
+   "name": "VS-89",
+   "aliases": [
+    "SV98",
+    "SV-98",
+    "VS89"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "7.62x54mmR",
+    "magazines": "10-round",
+    "fireModes": "Bolt-Action",
+    "rpm": 27,
+    "recoil": "High",
+    "noise": "6 (Very Loud)",
+    "weightKg": 5.8,
+    "zeroing": "100m - 600m (Iron Sights)",
+    "maxSightM": 600,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 790,
+    "hold100": 0,
+    "speed100": 729,
+    "hold200": 0.19,
+    "speed200": 673,
+    "hold300": 0.59,
+    "speed300": 621,
+    "hold400": 1.24,
+    "speed400": 574,
+    "hold600": 3.51,
+    "speed600": 489,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tier 4), about 2 on the map",
+    "whereLivonia": "military buildings; helicopter crashes and convoys, about 4 on the map",
+    "whereSakhal": "underground bunkers, about 3 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "RVN sight, mini sight, ATOG 4x32 scope, ATOG 6x48 scope"
+   },
+   "summary": "VS-89: bolt-action rifle, modelled on the SV-98, firing 7.62x54mmR. Bolt-action sniper rifle of the highest precision. With the possibility of attaching scopes, it is perfect for engagement in long-range combat. The VS-89 is a bolt-action sniper rifle in DayZ. It was added in the 1.25 Experimental Patch.",
+   "strengths": [
+    "Hard-hitting 7.62x54mmR (110 damage, 100 shock a hit)",
+    "Fast round (790 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 600 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Heavy sniper rifle with an adjustable skeleton stock, thick barrel with a muzzle brake, bipod and 10-round box magazine; long top rail for scopes.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/VS-89. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tier 4), about 2 on the map. Livonia: military buildings; helicopter crashes and convoys, about 4 on the map. Sakhal: underground bunkers, about 3 on the map"
+  },
+  {
+   "id": "dayz-pioneer",
+   "name": "Pioneer",
+   "aliases": [
+    "Steyr Scout",
+    "Scout"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "long",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "magazines": "5-round",
+    "fireModes": "Single",
+    "rpm": 27,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 2.7,
+    "zeroing": "50m - 300m Hip-Fire/Iron Sights); 25m - 100m Combat Sights/RVN Sights); 25m - 200m Baraka Sights); 100m - 600m ATOG 4x32 Scope); 100m - 800m ATOG 6x48 Scope); 100m - 700m NV-PVS4 Scope)",
+    "maxSightM": 800,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "the prison, police stations; helicopter crashes and convoys (loot tiers 2-3), about 6 on the map",
+    "whereLivonia": "military buildings, the prison, police stations; helicopter crashes and convoys (loot tiers 2-3), about 16 on the map",
+    "whereSakhal": "helicopter crashes and convoys only",
+    "rarity": "Rare",
+    "variants": "Standard, Chernarus, Livonia",
+    "spawnsWith": "Combat sight, ATOG 4x32 scope, RVN sight, ATOG 6x48 scope, standardised suppressor"
+   },
+   "summary": "Pioneer: bolt-action rifle, modelled on the Steyr Scout, firing 5.56x45mm. The Pioneer is a versatile, accurate and light-weight bolt-action rifle, used by the special police units. The Pioneer is a sniper rifle in DayZ. It was introduced in the 1.12 Experimental patch on 1st April 2021.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "tips": [
+    "Zero the scope to the range (Page Up / Page Down) before you shoot past 200 m."
+   ],
+   "look": "Compact black or painted bolt-action with a forward rail for a long eye-relief scope, folded bipod in the fore-end and a small 5.56 magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Pioneer. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: the prison, police stations; helicopter crashes and convoys (loot tiers 2-3), about 6 on the map. Livonia: military buildings, the prison, police stations; helicopter crashes and convoys (loot tiers 2-3), about 16 on the map. Sakhal: helicopter crashes a"
+  },
+  {
+   "id": "dayz-repeater-carbine",
+   "name": "Repeater Carbine",
+   "aliases": [
+    "Repeater",
+    "Lever action"
+   ],
+   "category": "weapon",
+   "class": "lever_action_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".357",
+    "internalMagazine": "7",
+    "fireModes": "Single (Lever-Action)",
+    "rpm": 37,
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 2.7,
+    "zeroing": "50m - 300m (Hip-Fire/Iron Sights)",
+    "maxSightM": 300,
+    "damage": 105,
+    "shock": 66,
+    "muzzleSpeed": 383,
+    "hold100": 0.19,
+    "speed100": 333,
+    "hold200": 1.28,
+    "speed200": 289,
+    "hold300": 3.54,
+    "speed300": 252,
+    "hold400": 7.36,
+    "speed400": 219,
+    "hold600": 21.88,
+    "speed600": 166,
+    "zeroForHold": 50,
+    "whereChernarus": "farms (loot tiers 2-3), about 30 on the map",
+    "whereLivonia": "farms (loot tiers 1-2), about 20 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Rare"
+   },
+   "summary": "Repeater Carbine: lever-action rifle, modelled on the Winchester 1873 style lever-action, firing .357. Seven-shot lever-action carbine, fed from an internal magazine. Proven and reliable, with a dash of the Old West style. A powerful early-game firearm, the Repeater can kill an unarmored survivor in two hits, and its comparatively high rate of fire makes it more forgiving than other early-game firearms, such as the BK-18.",
+   "strengths": [
+    "Hard-hitting .357 (105 damage, 66 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Slow round (383 m/s): big drop past 100 m"
+   ],
+   "look": "Old-West carbine: wooden stock, brass-coloured or steel receiver, lever loop under the grip and a tube magazine under the barrel.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Repeater_Carbine. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: farms (loot tiers 2-3), about 30 on the map. Livonia: farms (loot tiers 1-2), about 20 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-bk-18",
+   "name": "BK-18",
+   "aliases": [
+    "Izh18",
+    "IZH-18",
+    "BK18"
+   ],
+   "category": "weapon",
+   "class": "break_action_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "7.62x39mm",
+    "internalMagazine": "1",
+    "fireModes": "Single (Break-action)",
+    "rpm": 14,
+    "recoil": "High",
+    "noise": "3 (Loud)",
+    "weightKg": 3.2,
+    "zeroing": "200m (Iron Sights) (Fixed)",
+    "maxSightM": 200,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 740,
+    "hold100": -0.12,
+    "speed100": 641,
+    "hold200": 0,
+    "speed200": 556,
+    "hold300": 0.44,
+    "speed300": 482,
+    "hold400": 1.31,
+    "speed400": 417,
+    "hold600": 4.93,
+    "speed600": 314,
+    "zeroForHold": 200,
+    "whereChernarus": "farms, village houses (loot tiers 2-3), about 50 on the map",
+    "whereLivonia": "village houses, hunting stands and lodges (loot tier 2), about 35 on the map",
+    "whereSakhal": "farms, village houses (loot tier 1), about 25 on the map",
+    "rarity": "Common",
+    "variants": "Sawed-off BK-18"
+   },
+   "summary": "BK-18: break-action rifle, modelled on the IZh-18, firing 7.62x39mm. Single shot break action hunting rifle. Designed with simplicity, built to last. A rudimentary break-action rifle, liked by both civilians and hunters for its reliability, and as such, commonly found throughout Chernarus, Livonia and Sakhal.",
+   "strengths": [
+    "Fast round (740 m/s): little lead and drop at range"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "One shot before reloading"
+   ],
+   "look": "Simple single-barrel break-action rifle with a plain wooden stock; it opens at the hinge to load one round.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/BK-18. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: farms, village houses (loot tiers 2-3), about 50 on the map. Livonia: village houses, hunting stands and lodges (loot tier 2), about 35 on the map. Sakhal: farms, village houses (loot tier 1), about 25 on the map"
+  },
+  {
+   "id": "dayz-blaze",
+   "name": "Blaze",
+   "aliases": [
+    "B95",
+    "Blaser"
+   ],
+   "category": "weapon",
+   "class": "break_action_rifle",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": ".308 WIN",
+    "internalMagazine": "2",
+    "fireModes": "Single, Double",
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 2.8,
+    "zeroing": "50m - 200m (Hip-Fire/Iron Sights); 200m - 800m (Hunting Scope)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "hunting stands and lodges (loot tiers 3-4), about 18 on the map",
+    "whereLivonia": "hunting stands and lodges (loot tiers 2-3), about 8 on the map",
+    "whereSakhal": "hunting stands and lodges (loot tier 2), about 6 on the map",
+    "rarity": "Uncommon",
+    "variants": "Sawed-off Blaze",
+    "spawnsWith": "Sportpoint sight, hunting scope",
+    "sights": "Hunting Scope"
+   },
+   "summary": "Blaze: break-action rifle, modelled on the Blaser B95 style double rifle, firing .308 WIN. Double-barreled break-action rifle loaded with two .308 WIN rounds. The Blaze is a type of } in DayZ. Its low recoil and dual barrel configuration allows for immediate follow-up shots making it capable of engaging targets at medium range with ease. The same attributes make it semi-effective in close quarters, limited mostly by having to reload after two shots.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Two shots before reloading"
+   ],
+   "look": "Elegant over-and-under double rifle with a wooden stock, opening at the hinge for two .308 rounds; usually scoped.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Blaze. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: hunting stands and lodges (loot tiers 3-4), about 18 on the map. Livonia: hunting stands and lodges (loot tiers 2-3), about 8 on the map. Sakhal: hunting stands and lodges (loot tier 2), about 6 on the map"
+  },
+  {
+   "id": "dayz-sg5-k",
+   "name": "SG5-K",
+   "aliases": [
+    "MP5",
+    "MP5K",
+    "MP5-K",
+    "SG5",
+    "SG5K"
+   ],
+   "category": "weapon",
+   "class": "smg",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": "9x19mm",
+    "magazines": "15-round, 30-round",
+    "fireModes": "Full-Auto, Burst, Semi-Auto",
+    "rpm": 900,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 1.8,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 100m Combat Sights/RVN Sights); 25m - 200m Baraka Sights); 100m - 600m ATOG 4x32 Scope); 100m - 800m ATOG 6x48 Scope); 100m - 700m NV-PVS4 Scope)",
+    "maxSightM": 800,
+    "damage": 26,
+    "shock": 33,
+    "muzzleSpeed": 360,
+    "hold100": 0.26,
+    "speed100": 267,
+    "hold200": 1.94,
+    "speed200": 198,
+    "hold300": 6.21,
+    "speed300": 147,
+    "hold400": 15.22,
+    "speed400": 109,
+    "hold600": 66.48,
+    "speed600": 64,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 2-3), about 16 on the map",
+    "whereLivonia": "military buildings (loot tier 2), about 12 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Rare",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, SG5 compensator, pistol suppressor, other handguards, other buttstocks"
+   },
+   "summary": "SG5-K: submachine gun, modelled on the MP5K, firing 9x19mm. Selective-fire submachine gun, fed from a detachable magazine. Very high rate of fire. As a pistol calibre firing platform, the SG5-K performs well in short-range engagements, and its compact size lends itself well to CQC and indoor firefights. Performs best against unarmored targets.",
+   "strengths": [
+    "High rate of fire (about 900 rounds a minute)",
+    "Takes a suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Slow round (360 m/s): big drop past 100 m"
+   ],
+   "look": "Short black SMG with a curved 30-round magazine, front vertical grip, no barrel to speak of; rails for optics and a suppressor.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/SG5-K. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 2-3), about 16 on the map. Livonia: military buildings (loot tier 2), about 12 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-usg-45",
+   "name": "USG-45",
+   "aliases": [
+    "UMP",
+    "UMP45",
+    "UMP-45",
+    "USG",
+    "USG45"
+   ],
+   "category": "weapon",
+   "class": "smg",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".45 ACP",
+    "magazines": "25-round",
+    "fireModes": "Semi-Auto, Full Auto",
+    "rpm": 600,
+    "recoil": "Low",
+    "noise": "3 (Normal)",
+    "weightKg": 2.2,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 100m Combat Sights/RVN Sights); 25m - 200m Baraka Sights); 100m - 600m ATOG 4x32 Scope); 100m - 800m ATOG 6x48 Scope); 100m - 700m NV-PVS4 Scope)",
+    "maxSightM": 800,
+    "damage": 34,
+    "shock": 33,
+    "muzzleSpeed": 260,
+    "hold100": 0.42,
+    "speed100": 225,
+    "hold200": 2.8,
+    "speed200": 195,
+    "hold300": 7.78,
+    "speed300": 169,
+    "hold400": 16.26,
+    "speed400": 146,
+    "hold600": 48.82,
+    "speed600": 111,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tier 3), about 12 on the map",
+    "whereLivonia": "military buildings (loot tiers 2-3), about 12 on the map",
+    "whereSakhal": "military buildings (loot tier 4), about 2 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "Combat sight, Baraka sight, RVN sight, mini sight, ATOG 4x32 scope, pistol suppressor, universal flashlight"
+   },
+   "summary": "USG-45: submachine gun, modelled on the HK UMP45, firing .45 ACP. Selective-fire submachine gun fed from a detachable magazine. High calibre makes up for slower fire rate. The USG-45 is a select-fire submachine gun in DayZ. Infrequently found in military installations around Chernarus, the USG-45 is a mid-sized, tier 3 submachine gun chambered in .45 ACP.",
+   "strengths": [
+    "Very quiet: integral suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "Slow round (260 m/s): big drop past 100 m"
+   ],
+   "look": "Boxy black polymer SMG with a side-folding stock and a straight 25-round .45 magazine; rails on top.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/USG-45. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tier 3), about 12 on the map. Livonia: military buildings (loot tiers 2-3), about 12 on the map. Sakhal: military buildings (loot tier 4), about 2 on the map"
+  },
+  {
+   "id": "dayz-bizon",
+   "name": "Bizon",
+   "aliases": [
+    "PP19",
+    "PP-19",
+    "PP-19 Bizon"
+   ],
+   "category": "weapon",
+   "class": "smg",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".380 ACP",
+    "magazines": "64-round",
+    "fireModes": "Semi-Auto, Full-Auto",
+    "rpm": 600,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 2.9,
+    "zeroing": "75m (Hip-Fire/Iron Sights); 100m - 1000m PSO-1 Scope/PSO-1-1 Scope); 100m (Kobra Sights); 200m (P1-87-L Scope); 100m - 700m 1PN51 Scope)",
+    "maxSightM": 1000,
+    "damage": 21,
+    "shock": 33,
+    "muzzleSpeed": 290,
+    "hold100": 0,
+    "speed100": 247,
+    "hold200": 1.62,
+    "speed200": 211,
+    "hold300": 5.48,
+    "speed300": 180,
+    "hold400": 12.41,
+    "speed400": 153,
+    "hold600": 40.6,
+    "speed600": 113,
+    "zeroForHold": 100,
+    "whereChernarus": "military buildings (loot tiers 2-3), about 14 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "military buildings (loot tiers 2-3), about 13 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "pistol suppressor, PSO-1-1 scope, PSO-1 scope, Kobra sight, other buttstocks",
+    "sights": "Kobra Sights, P1-87-L Scope"
+   },
+   "summary": "Bizon: submachine gun, modelled on the PP-19 Bizon, firing .380 ACP. Selective-fire submachine gun, fed from an unusual cylindrical magazine. Pistol calibre bullets allow low recoil and long sustained fire.",
+   "strengths": [
+    "Takes a suppressor",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "Slow round (290 m/s): big drop past 100 m"
+   ],
+   "look": "AK-like receiver and folding stock with a long cylindrical helical magazine running under the barrel instead of a box magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Bizon. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 2-3), about 14 on the map. Livonia: not in the loot (event or crafted only). Sakhal: military buildings (loot tiers 2-3), about 13 on the map"
+  },
+  {
+   "id": "dayz-cr-61-skorpion",
+   "name": "CR-61 Skorpion",
+   "aliases": [
+    "Skorpion",
+    "Scorpion",
+    "CZ61",
+    "CR-61",
+    "CR61"
+   ],
+   "category": "weapon",
+   "class": "smg",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".380 ACP",
+    "magazines": "20-round",
+    "fireModes": "Semi-Auto, Full Auto",
+    "rpm": 950,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 1.3,
+    "zeroing": "75m - 150m",
+    "maxSightM": 150,
+    "damage": 21,
+    "shock": 33,
+    "muzzleSpeed": 290,
+    "hold100": 0,
+    "speed100": 247,
+    "hold200": 1.62,
+    "speed200": 211,
+    "hold300": 5.48,
+    "speed300": 180,
+    "hold400": 12.41,
+    "speed400": 153,
+    "hold600": 40.6,
+    "speed600": 113,
+    "zeroForHold": 100,
+    "whereChernarus": "police stations; helicopter crashes and convoys, about 5 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "military buildings (loot tier 2), about 17 on the map",
+    "rarity": "Uncommon",
+    "spawnsWith": "pistol suppressor"
+   },
+   "summary": "CR-61 Skorpion: submachine gun, modelled on the vz. 61 Skorpion, firing .380 ACP. Compact selective-fire submachine gun, fed from a detachable magazine. Often used as a sidearm.",
+   "strengths": [
+    "High rate of fire (about 950 rounds a minute)"
+   ],
+   "weaknesses": [
+    "Slow round (290 m/s): big drop past 100 m"
+   ],
+   "look": "Tiny machine pistol with a wire stock folded over the top and a slightly curved 20-round magazine in front of the trigger.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/CR-61_Skorpion. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations; helicopter crashes and convoys, about 5 on the map. Livonia: not in the loot (event or crafted only). Sakhal: military buildings (loot tier 2), about 17 on the map"
+  },
+  {
+   "id": "dayz-rak-37",
+   "name": "RAK-37",
+   "aliases": [
+    "PM73",
+    "PM-63",
+    "RAK",
+    "RAK37",
+    "PM73Rak"
+   ],
+   "category": "weapon",
+   "class": "smg",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".380 ACP",
+    "magazines": "15-round, 25-round",
+    "fireModes": "Full-Auto",
+    "rpm": 600,
+    "recoil": "High",
+    "noise": "3 (Medium)",
+    "weightKg": 1.6,
+    "zeroing": "50m (Hip-Fire/Iron Sights)",
+    "maxSightM": 50,
+    "damage": 21,
+    "shock": 33,
+    "muzzleSpeed": 290,
+    "hold100": 0.34,
+    "speed100": 247,
+    "hold200": 2.3,
+    "speed200": 211,
+    "hold300": 6.5,
+    "speed300": 180,
+    "hold400": 13.77,
+    "speed400": 153,
+    "hold600": 42.65,
+    "speed600": 113,
+    "zeroForHold": 50,
+    "whereChernarus": "police stations; helicopter crashes and convoys, about 5 on the map",
+    "whereLivonia": "police stations; helicopter crashes and convoys, about 8 on the map",
+    "whereSakhal": "police stations; helicopter crashes and convoys, about 4 on the map",
+    "rarity": "Uncommon"
+   },
+   "summary": "RAK-37: submachine gun, modelled on the PM-63 RAK, firing .380 ACP. A fully automatic submachine gun with the characteristics of a self-loading pistol. It is fed from a small detachable magazine and. The RAK-37 is a submachine gun in DayZ, re-added to the game in the 1.28 Experimental Patch.",
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Slow round (290 m/s): big drop past 100 m"
+   ],
+   "tips": [
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "Pistol-sized machine pistol with a sliding top, a spoon-shaped muzzle compensator, folding front grip and a magazine in the grip.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/RAK-37. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations; helicopter crashes and convoys, about 5 on the map. Livonia: police stations; helicopter crashes and convoys, about 8 on the map. Sakhal: police stations; helicopter crashes and convoys, about 4 on the map"
+  },
+  {
+   "id": "dayz-bk-133",
+   "name": "BK-133",
+   "aliases": [
+    "MP133",
+    "MP-133",
+    "Pump",
+    "Pump shotgun",
+    "BK133",
+    "Mp133Shotgun"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "internalMagazine": "5",
+    "fireModes": "Single (Pump-Action)",
+    "rpm": 39,
+    "recoil": "Medium",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3.3,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 50m ; (Mini Sights)",
+    "maxSightM": 50,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "police stations (loot tiers 3-4), about 10 on the map",
+    "whereLivonia": "police stations, about 25 on the map",
+    "whereSakhal": "police stations (loot tiers 2-3), about 9 on the map",
+    "rarity": "Uncommon",
+    "variants": "MP-133 Shotgun with a Pistol Grip (Non-spawning)",
+    "sights": "Mini Sights"
+   },
+   "summary": "BK-133: shotgun, modelled on the MP-133, firing 12ga. Six shot pump action shotgun fed from internal magazine. Good for hunting dangerous game. A solid mid-game platform, and an exponential upgrade over the BK-12 or BK-43 shotguns. With a total capacity of 5+1 shells, the BK-133 is a lot more flexible than its break-action predecessors, giving it a much-needed edge in firefights.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "Buckshot spreads fast: close range only (slugs reach further)"
+   ],
+   "tips": [
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Pump-action shotgun with a wooden or black stock, sliding fore-end under the barrel and a tube magazine; takes mini sights.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/BK-133. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations (loot tiers 3-4), about 10 on the map. Livonia: police stations, about 25 on the map. Sakhal: police stations (loot tiers 2-3), about 9 on the map"
+  },
+  {
+   "id": "dayz-bk-43",
+   "name": "BK-43",
+   "aliases": [
+    "Izh43",
+    "IZH-43",
+    "Double barrel",
+    "Double-barrel",
+    "BK43",
+    "Izh43Shotgun"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "internalMagazine": "2",
+    "fireModes": "Single, Double",
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3,
+    "zeroing": "25m (Hip-Fire/Iron Sights) (Fixed)",
+    "maxSightM": 25,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "farms (loot tiers 2-3), about 30 on the map",
+    "whereLivonia": "farms (loot tiers 1-2), about 25 on the map",
+    "whereSakhal": "village houses (loot tiers 1-2), about 25 on the map",
+    "rarity": "Uncommon",
+    "variants": "Sawed-off BK-43"
+   },
+   "summary": "BK-43: shotgun, modelled on the IZh-43, firing 12ga. Double-barreled break-action shotgun. Old and reliable design, capable of firing both barrels simultaneously. A rugged and reliable double-barrel break-action shotgun, very popular among farmers.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Buckshot spreads fast: close range only (slugs reach further)",
+    "Two shots before reloading"
+   ],
+   "tips": [
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Side-by-side double-barrel shotgun with a wooden stock, breaking open at the hinge for two shells.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/BK-43. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: farms (loot tiers 2-3), about 30 on the map. Livonia: farms (loot tiers 1-2), about 25 on the map. Sakhal: village houses (loot tiers 1-2), about 25 on the map"
+  },
+  {
+   "id": "dayz-bk-12",
+   "name": "BK-12",
+   "aliases": [
+    "Izh18 shotgun",
+    "BK12",
+    "Spartan",
+    "Izh18Shotgun"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "internalMagazine": "1",
+    "fireModes": "Single",
+    "rpm": 17,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.2,
+    "zeroing": "25m (Iron Sights)",
+    "maxSightM": 25,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "town houses, village houses (loot tiers 2-3), about 55 on the map",
+    "whereLivonia": "town houses, village houses (loot tier 1), about 40 on the map",
+    "whereSakhal": "farms, town houses, village houses (loot tiers 1-2), about 30 on the map",
+    "rarity": "Common"
+   },
+   "summary": "BK-12: shotgun, modelled on the IZh-18 shotgun, firing 12ga. An old break-action shotgun, also known as the \"Spartan\". Very effective deterrent against wildlife and other threats. As a breech-loaded break-action, it can only house one shell at a time, much like the BK-18 rifle, or the Longhorn hunting pistol.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Buckshot spreads fast: close range only (slugs reach further)",
+    "One shot before reloading"
+   ],
+   "tips": [
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Single-barrel break-action shotgun with a plain wooden stock: one shell at a time.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/BK-12. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 2-3), about 55 on the map. Livonia: town houses, village houses (loot tier 1), about 40 on the map. Sakhal: farms, town houses, village houses (loot tiers 1-2), about 30 on the map"
+  },
+  {
+   "id": "dayz-vaiga",
+   "name": "Vaiga",
+   "aliases": [
+    "Saiga",
+    "Saiga 12",
+    "Saiga-12"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "magazines": "5-round, 8-round",
+    "fireModes": "Semi-Auto, Full Auto",
+    "rpm": 48,
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3.6,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 100m - 1000m PSO-1 Scope/PSO-1-1 Scope); 100m (Kobra Sights); 200m (P1-87-L Scope); 100m - 700m 1PN51 Scope)",
+    "maxSightM": 1000,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "military buildings (loot tiers 2-3), about 12 on the map",
+    "whereLivonia": "military buildings (loot tier 2), about 10 on the map",
+    "whereSakhal": "military buildings (loot tiers 2-3), about 22 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "other buttstocks",
+    "sights": "Kobra Sights, P1-87-L Scope"
+   },
+   "summary": "Vaiga: shotgun, modelled on the Saiga-12, firing 12ga. Selective-fire shotgun fed from a detachable magazine. Similar in design to the KA assault rifles, it can mount most compatible scopes. The Vaiga is a magazine-fed, selective fire shotgun in DayZ.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)",
+    "Optics zero out to 1000 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Buckshot spreads fast: close range only (slugs reach further)"
+   ],
+   "tips": [
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "AK-shaped shotgun: AK receiver and stock with a thick, boxy curved magazine (or a big drum) holding 12-gauge shells; takes KA optics.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Vaiga. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 2-3), about 12 on the map. Livonia: military buildings (loot tier 2), about 10 on the map. Sakhal: military buildings (loot tiers 2-3), about 22 on the map"
+  },
+  {
+   "id": "dayz-r12",
+   "name": "R12",
+   "aliases": [
+    "R-12",
+    "Remington"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "fireModes": "Semi-Auto",
+    "rpm": 212,
+    "noise": "4 (Very Loud)",
+    "weightKg": 3.3,
+    "zeroing": "25m (Iron Sights)",
+    "maxSightM": 25,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "police stations (loot tiers 3-4), about 6 on the map",
+    "whereLivonia": "police stations (loot tiers 2-3), about 5 on the map",
+    "whereSakhal": "police stations; helicopter crashes and convoys, about 4 on the map",
+    "rarity": "Rare",
+    "spawnsWith": "universal flashlight, mini sight"
+   },
+   "summary": "R12: shotgun, modelled on the Remington 1100 style semi-auto, firing 12ga. Seven-shot tactical semi-automatic shotgun fed from an internal magazine. Handy in intense close-quarters engagements. The R12 is a semi-automatic shotgun in DayZ, added in Update 1.28.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "Buckshot spreads fast: close range only (slugs reach further)"
+   ],
+   "tips": [
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Black tactical semi-automatic shotgun with a pistol-grip stock, long tube magazine and a top rail for optics and a light.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/R12. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations (loot tiers 3-4), about 6 on the map. Livonia: police stations (loot tiers 2-3), about 5 on the map. Sakhal: police stations; helicopter crashes and convoys, about 4 on the map"
+  },
+  {
+   "id": "dayz-mlock-91",
+   "name": "Mlock-91",
+   "aliases": [
+    "Glock",
+    "Glock 19",
+    "Mlock",
+    "Mlock91",
+    "Glock19"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "9x19mm",
+    "magazines": "15-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Medium",
+    "noise": "2 (Quiet)",
+    "weightKg": 1.3,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 50m Mini Sights)",
+    "maxSightM": 50,
+    "damage": 26,
+    "shock": 33,
+    "muzzleSpeed": 360,
+    "hold100": 0.26,
+    "speed100": 267,
+    "hold200": 1.94,
+    "speed200": 198,
+    "hold300": 6.21,
+    "speed300": 147,
+    "hold400": 15.22,
+    "speed400": 109,
+    "hold600": 66.48,
+    "speed600": 64,
+    "zeroForHold": 50,
+    "whereChernarus": "police stations (loot tiers 1-2), about 40 on the map",
+    "whereLivonia": "police stations, about 25 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Uncommon",
+    "spawnsWith": "pistol suppressor, pistol flashlight"
+   },
+   "summary": "Mlock-91: pistol, modelled on the Glock 19, firing 9x19mm. Semi-automatic pistol, fed from a detachable magazine. Affordable and compact, it's very popular. An early-game staple, still relevant in mid-game combat scenarios. Along the CR-75, the Mlock-91 occupies the niche of an ‘intermediate’ pistol, nested between the IJ-70 or P1 early-game pistols, and end-game handguns, like the FX-45.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (360 m/s): big drop past 100 m"
+   ],
+   "look": "Blocky black or tan polymer pistol with a squared slide and a 15-round magazine; rail for a light, threads for a suppressor.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Mlock-91. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: police stations (loot tiers 1-2), about 40 on the map. Livonia: police stations, about 25 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-cr-75",
+   "name": "CR-75",
+   "aliases": [
+    "CZ75",
+    "CZ 75",
+    "CR75"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "9x19mm",
+    "magazines": "15-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 1,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 50m Mini Sights)",
+    "maxSightM": 50,
+    "damage": 26,
+    "shock": 33,
+    "muzzleSpeed": 360,
+    "hold100": 0.26,
+    "speed100": 267,
+    "hold200": 1.94,
+    "speed200": 198,
+    "hold300": 6.21,
+    "speed300": 147,
+    "hold400": 15.22,
+    "speed400": 109,
+    "hold600": 66.48,
+    "speed600": 64,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 1-2), about 20 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "police stations, about 12 on the map",
+    "rarity": "Uncommon",
+    "spawnsWith": "pistol suppressor, pistol flashlight"
+   },
+   "summary": "CR-75: pistol, modelled on the CZ 75, firing 9x19mm. Semi-automatic pistol, fed from a detachable magazine. Popular due to good quality and affordable price. The CR-75 is a handgun in DayZ. == Overview == The CR-75 is a semi-automatic handgun chambered for the 9x19mm cartridge, and fed from detachable 15-round magazines.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (360 m/s): big drop past 100 m"
+   ],
+   "look": "Steel pistol with a slide that rides inside the frame, rounded hammer and a 15-round magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/CR-75. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 1-2), about 20 on the map. Livonia: not in the loot (event or crafted only). Sakhal: police stations, about 12 on the map"
+  },
+  {
+   "id": "dayz-fx-45",
+   "name": "FX-45",
+   "aliases": [
+    "FNX",
+    "FNX45",
+    "FNX-45",
+    "FX45"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".45 ACP",
+    "magazines": "15-round",
+    "rpm": 450,
+    "recoil": "2",
+    "noise": "3 (Loud) 2 (Quiet) (Pistol Suppressor, Plastic Bottle Suppressor)",
+    "weightKg": 1,
+    "zeroing": "25m",
+    "maxSightM": 25,
+    "damage": 34,
+    "shock": 33,
+    "muzzleSpeed": 260,
+    "hold100": 0.42,
+    "speed100": 225,
+    "hold200": 2.8,
+    "speed200": 195,
+    "hold300": 7.78,
+    "speed300": 169,
+    "hold400": 16.26,
+    "speed400": 146,
+    "hold600": 48.82,
+    "speed600": 111,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 2-4), about 14 on the map",
+    "whereLivonia": "military buildings (loot tiers 1-2), about 15 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Uncommon",
+    "spawnsWith": "pistol suppressor, pistol flashlight, pistol red dot"
+   },
+   "summary": "FX-45: pistol, modelled on the FNX-45, firing .45 ACP. The FX-45 is a semi-automatic handgun chambered in .45 ACP.",
+   "weaknesses": [
+    "Slow round (260 m/s): big drop past 100 m"
+   ],
+   "look": "Large black polymer .45 with slide serrations front and back, a rail for a light and a 15-round magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/FX-45. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 2-4), about 14 on the map. Livonia: military buildings (loot tiers 1-2), about 15 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-kolt-1911",
+   "name": "Kolt 1911",
+   "aliases": [
+    "1911",
+    "Colt",
+    "Colt 1911",
+    "M1911",
+    "Colt1911"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".45 ACP",
+    "magazines": "7-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Medium",
+    "noise": "3 (Normal)",
+    "weightKg": 1.1,
+    "zeroing": "25m (Hip-Fire/Iron Sights)",
+    "maxSightM": 25,
+    "damage": 34,
+    "shock": 33,
+    "muzzleSpeed": 260,
+    "hold100": 0.42,
+    "speed100": 225,
+    "hold200": 2.8,
+    "speed200": 195,
+    "hold300": 7.78,
+    "speed300": 169,
+    "hold400": 16.26,
+    "speed400": 146,
+    "hold600": 48.82,
+    "speed600": 111,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 1-2), about 26 on the map",
+    "whereLivonia": "military buildings (loot tier 1), about 35 on the map",
+    "whereSakhal": "military buildings (loot tiers 1-2), about 34 on the map",
+    "rarity": "Rare",
+    "variants": "Engraved",
+    "spawnsWith": "pistol suppressor"
+   },
+   "summary": "Kolt 1911: pistol, modelled on the Colt M1911, firing .45 ACP. Semi-automatic pistol, fed from a detachable magazine. Almost a century-old design, it can still hold its own in a fight. The Kolt 1911 is a type of weapon in DayZ. It is a potent sidearm which fires .45 ACP rounds, which can stagger targets.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (260 m/s): big drop past 100 m"
+   ],
+   "look": "Classic slim steel pistol with a grip safety, exposed hammer and a 7-round single-stack magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Kolt_1911. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 1-2), about 26 on the map. Livonia: military buildings (loot tier 1), about 35 on the map. Sakhal: military buildings (loot tiers 1-2), about 34 on the map"
+  },
+  {
+   "id": "dayz-engraved-kolt-1911",
+   "name": "Engraved Kolt 1911",
+   "aliases": [
+    "Engraved 1911",
+    "Engraved Colt",
+    "Engraved1911"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".45 ACP",
+    "magazines": "7-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Medium",
+    "noise": "3 (Normal)",
+    "weightKg": 1.1,
+    "zeroing": "25m (Hip-Fire/Iron Sights)",
+    "maxSightM": 25,
+    "damage": 34,
+    "shock": 33,
+    "muzzleSpeed": 260,
+    "hold100": 0.42,
+    "speed100": 225,
+    "hold200": 2.8,
+    "speed200": 195,
+    "hold300": 7.78,
+    "speed300": 169,
+    "hold400": 16.26,
+    "speed400": 146,
+    "hold600": 48.82,
+    "speed600": 111,
+    "zeroForHold": 50,
+    "whereChernarus": "military buildings (loot tiers 1-2), about 5 on the map",
+    "whereLivonia": "military buildings, village houses, about 10 on the map",
+    "whereSakhal": "military buildings, village houses, about 3 on the map",
+    "rarity": "Extremely Rare",
+    "variants": "Kolt 1911",
+    "spawnsWith": "pistol suppressor"
+   },
+   "summary": "Engraved Kolt 1911: pistol, modelled on the Colt M1911 (engraved), firing .45 ACP. Semi-automatic pistol, fed from a detachable magazine. This variant had been engraved by an unknown artist. The Engraved Kolt 1911 is a type of weapon in DayZ. It is a special version of the Kolt 1911 pistol which is functionally identical but boasts a different visual design, featuring engraved patterns on the slide as well as white grips with skull emblems.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (260 m/s): big drop past 100 m",
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "look": "The Kolt 1911 with ornate engraving over the slide and frame.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Engraved_Kolt_1911. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings (loot tiers 1-2), about 5 on the map. Livonia: military buildings, village houses, about 10 on the map. Sakhal: military buildings, village houses, about 3 on the map"
+  },
+  {
+   "id": "dayz-ij-70",
+   "name": "IJ-70",
+   "aliases": [
+    "Makarov",
+    "IJ70",
+    "MakarovIJ70"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".380 ACP",
+    "magazines": "8-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 0.8,
+    "zeroing": "25m (Hip-Fire/Iron Sights)",
+    "maxSightM": 25,
+    "damage": 21,
+    "shock": 33,
+    "muzzleSpeed": 290,
+    "hold100": 0.34,
+    "speed100": 247,
+    "hold200": 2.3,
+    "speed200": 211,
+    "hold300": 6.5,
+    "speed300": 180,
+    "hold400": 13.77,
+    "speed400": 153,
+    "hold600": 42.65,
+    "speed600": 113,
+    "zeroForHold": 50,
+    "whereChernarus": "town houses, village houses (loot tiers 1-2), about 70 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "military buildings, about 38 on the map",
+    "rarity": "Common",
+    "variants": "6P9 Makarov PB"
+   },
+   "summary": "IJ-70: pistol, modelled on the IZh-70 (Makarov), firing .380 ACP. Semi-automatic pistol, fed from a detachable magazine. Produced in large quantities. The IJ-70 is a semi-automatic handgun chambered in .380 ACP. Commonly found around towns and villages in Chernarus, this is often a survivor's first firearm.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (290 m/s): big drop past 100 m"
+   ],
+   "look": "Small rounded pistol with a brown grip, double-action hammer and a short 8-round magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/IJ-70. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 1-2), about 70 on the map. Livonia: not in the loot (event or crafted only). Sakhal: military buildings, about 38 on the map"
+  },
+  {
+   "id": "dayz-mk-ii",
+   "name": "MK II",
+   "aliases": [
+    "MK2",
+    "MKII",
+    "Mk 2",
+    "Ruger"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".22 LR",
+    "magazines": "10-round",
+    "fireModes": "Semi-Automatic",
+    "rpm": 450,
+    "recoil": "Low",
+    "noise": "1 ((Very Quiet) Integrally Suppressed)",
+    "weightKg": 1.3,
+    "zeroing": "25m (Hip-Fire/Iron Sights)",
+    "maxSightM": 25,
+    "whereChernarus": "town houses, village houses (loot tiers 1-2), about 30 on the map",
+    "whereLivonia": "village houses (loot tiers 1-2), about 38 on the map",
+    "whereSakhal": "village houses (loot tiers 1-2), about 32 on the map",
+    "rarity": "Uncommon"
+   },
+   "summary": "MK II: pistol, modelled on the Ruger Mk II style suppressed .22, firing .22 LR. Semi-automatic, integrally-suppressed pistol, fed from a detachable magazine. Stealthy and lethal at short range. The MK II is a semi-automatic integrally-suppressed handgun, chambered in .22 LR Rounds.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "look": "Long thin pistol whose whole barrel is a thick integral suppressor; angled grip like a Luger.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/MK_II. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 1-2), about 30 on the map. Livonia: village houses (loot tiers 1-2), about 38 on the map. Sakhal: village houses (loot tiers 1-2), about 32 on the map"
+  },
+  {
+   "id": "dayz-p1",
+   "name": "P1",
+   "aliases": [
+    "Walther",
+    "P38",
+    "Walther P1"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "9x19mm",
+    "magazines": "8-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 450,
+    "recoil": "Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 1,
+    "zeroing": "25m (Iron Sights) (Fixed)",
+    "maxSightM": 25,
+    "damage": 26,
+    "shock": 33,
+    "muzzleSpeed": 360,
+    "hold100": 0.26,
+    "speed100": 267,
+    "hold200": 1.94,
+    "speed200": 198,
+    "hold300": 6.21,
+    "speed300": 147,
+    "hold400": 15.22,
+    "speed400": 109,
+    "hold600": 66.48,
+    "speed600": 64,
+    "zeroForHold": 50,
+    "whereChernarus": "town houses, village houses (loot tiers 1-2), about 50 on the map",
+    "whereLivonia": "town houses, village houses (loot tiers 1-2), about 40 on the map",
+    "whereSakhal": "military buildings, village houses (loot tiers 1-2), about 25 on the map",
+    "rarity": "Common",
+    "spawnsWith": "pistol suppressor"
+   },
+   "summary": "P1: pistol, modelled on the Walther P1, firing 9x19mm. An old semi-automatic pistol. After many years it's still pretty capable of delivering bullets on target. Fed from a detachable magazine. A respectable early-game pistol, with more punch than the IJ-70, but less ammunition capacity than the CR-75 or Mlock-91. It is oftentimes the player’s first ‘proper’ pistol.",
+   "weaknesses": [
+    "Slow round (360 m/s): big drop past 100 m"
+   ],
+   "look": "Old black pistol with a slide cut open over the barrel and an exposed hammer; 8-round magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/P1. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 1-2), about 50 on the map. Livonia: town houses, village houses (loot tiers 1-2), about 40 on the map. Sakhal: military buildings, village houses (loot tiers 1-2), about 25 on the map"
+  },
+  {
+   "id": "dayz-deagle",
+   "name": "Deagle",
+   "aliases": [
+    "Desert Eagle",
+    "Deag"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".357",
+    "magazines": "9-round",
+    "fireModes": "Semi-Auto",
+    "rpm": 300,
+    "recoil": "Medium",
+    "noise": "3 (Medium)",
+    "weightKg": 1.5,
+    "zeroing": "25m (Hip-Fire/Iron Sights); 25m - 50m Mini Sights)",
+    "maxSightM": 50,
+    "damage": 105,
+    "shock": 66,
+    "muzzleSpeed": 383,
+    "hold100": 0.19,
+    "speed100": 333,
+    "hold200": 1.28,
+    "speed200": 289,
+    "hold300": 3.54,
+    "speed300": 252,
+    "hold400": 7.36,
+    "speed400": 219,
+    "hold600": 21.88,
+    "speed600": 166,
+    "zeroForHold": 50,
+    "whereChernarus": "town houses (loot tiers 1-2), about 25 on the map",
+    "whereLivonia": "town houses, about 16 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Very Rare",
+    "variants": "Silver, Gold"
+   },
+   "summary": "Deagle: pistol, modelled on the Desert Eagle, firing .357. Large, semi-automatic pistol, fed from a detachable magazine. Equipped with railed barrel, it hits way above its weight. The Deagle is a semi-automatic handgun chambered in .357 rounds. Commonly found around towns, it has two variants; a standard silver finish, and an ostentatious gold variant.",
+   "strengths": [
+    "Hard-hitting .357 (105 damage, 66 shock a hit)",
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "Slow round (383 m/s): big drop past 100 m",
+    "Very rare: magazines and ammo are scarce too"
+   ],
+   "look": "Big, heavy pistol with a triangular barrel profile and top rail; silver (or gold) finish; 9-round magazine.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Deagle. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses (loot tiers 1-2), about 25 on the map. Livonia: town houses, about 16 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-revolver",
+   "name": "Revolver",
+   "aliases": [
+    "Magnum",
+    "357",
+    ".357"
+   ],
+   "category": "weapon",
+   "class": "revolver",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".357",
+    "internalMagazine": "6",
+    "fireModes": "Semi-Auto (Double-Action)",
+    "rpm": 280,
+    "recoil": "High",
+    "noise": "2 (Quiet)",
+    "weightKg": 1.4,
+    "zeroing": "25m (Hip-Fire/Iron Sights); (Fixed)",
+    "maxSightM": 25,
+    "damage": 105,
+    "shock": 66,
+    "muzzleSpeed": 383,
+    "hold100": 0.19,
+    "speed100": 333,
+    "hold200": 1.28,
+    "speed200": 289,
+    "hold300": 3.54,
+    "speed300": 252,
+    "hold400": 7.36,
+    "speed400": 219,
+    "hold600": 21.88,
+    "speed600": 166,
+    "zeroForHold": 50,
+    "whereChernarus": "town houses (loot tier 1), about 25 on the map",
+    "whereLivonia": "town houses, village houses (loot tiers 1-2), about 22 on the map",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Rare",
+    "variants": "Sawed-off Revolver"
+   },
+   "summary": "Revolver: revolver, modelled on the .357 Magnum revolver, firing .357. Six shot double-action revolver. Compared to pistols, it is relatively slow to load and requires frequent maintenance. On the plus side, it can deliver exceptional damage at short to medium ranges. The Revolver is a handgun in DayZ. == Overview == The Revolver, often referred to as the Magnum, after its ammunition, is a double-action revolver, featuring a six-round cylinder, chambered for the .357 Magnum cartridge.",
+   "strengths": [
+    "Hard-hitting .357 (105 damage, 66 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Slow round (383 m/s): big drop past 100 m"
+   ],
+   "look": "Six-shot revolver with a swing-out cylinder, long barrel and wooden grip.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Revolver. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses (loot tier 1), about 25 on the map. Livonia: town houses, village houses (loot tiers 1-2), about 22 on the map. Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-derringer",
+   "name": "Derringer",
+   "aliases": [],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".357",
+    "internalMagazine": "2",
+    "fireModes": "Single",
+    "rpm": 17,
+    "recoil": "Very High",
+    "noise": "3 (Medium)",
+    "weightKg": 0.4,
+    "zeroing": "25m (Hip Fire / Iron Sights)",
+    "maxSightM": 25,
+    "damage": 105,
+    "shock": 66,
+    "muzzleSpeed": 383,
+    "hold100": 0.19,
+    "speed100": 333,
+    "hold200": 1.28,
+    "speed200": 289,
+    "hold300": 3.54,
+    "speed300": 252,
+    "hold400": 7.36,
+    "speed400": 219,
+    "hold600": 21.88,
+    "speed600": 166,
+    "zeroForHold": 50,
+    "whereChernarus": "town houses (loot tiers 1-2), about 20 on the map",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Uncommon",
+    "variants": "Black, Grey, Pink"
+   },
+   "summary": "Derringer: pistol, modelled on the Derringer, firing .357. Double-barreled break-action pistol. Combines compact dimensions and powerful ammunition. A short-ranged personal defense weapon, the Derringer is best used point blank, as its damage potential decreases significantly with distance. It also lacks a proper set of iron sights, making longer-range shots even more difficult.",
+   "strengths": [
+    "Hard-hitting .357 (105 damage, 66 shock a hit)"
+   ],
+   "weaknesses": [
+    "Very high recoil: hard to control in bursts",
+    "Slow round (383 m/s): big drop past 100 m",
+    "Two shots before reloading"
+   ],
+   "look": "Palm-sized two-barrel pistol (over-and-under) that tips open to load; black, grey or pink.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Derringer. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses (loot tiers 1-2), about 20 on the map. Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-longhorn",
+   "name": "Longhorn",
+   "aliases": [
+    "Contender"
+   ],
+   "category": "weapon",
+   "class": "pistol",
+   "bestRange": "close",
+   "stats": {
+    "calibre": ".308 WIN",
+    "internalMagazine": "1",
+    "fireModes": "Single",
+    "recoil": "Medium",
+    "noise": "4 (Very Loud)",
+    "weightKg": 2.1,
+    "zeroing": "25m (No sights); 100m (Handgun Scope)",
+    "maxSightM": 100,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "hunting stands and lodges (loot tiers 2-3), about 25 on the map",
+    "whereLivonia": "hunting stands and lodges (loot tiers 1-2), about 12 on the map",
+    "whereSakhal": "hunting stands and lodges, about 16 on the map",
+    "rarity": "Rare",
+    "sights": "Handgun Scope"
+   },
+   "summary": "Longhorn: pistol, modelled on the Thompson/Center Contender style hunting pistol, firing .308 WIN. Single shot break action hunting pistol. The powerful ammunition makes it most suited for big game. The Longhorn is a break action, long range pistol. It is loud and needs to be reloaded after each shot, making it unsuitable for close range personal protection.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range"
+   ],
+   "weaknesses": [
+    "One shot before reloading"
+   ],
+   "look": "Long single-shot break-action hunting pistol with a long barrel, usually with a handgun scope.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Longhorn. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: hunting stands and lodges (loot tiers 2-3), about 25 on the map. Livonia: hunting stands and lodges (loot tiers 1-2), about 12 on the map. Sakhal: hunting stands and lodges, about 16 on the map"
+  },
+  {
+   "id": "dayz-sporter-22",
+   "name": "Sporter 22",
+   "aliases": [
+    "Ruger 10/22",
+    "10/22",
+    "1022",
+    "Sporter",
+    "22 rifle",
+    "Ruger1022"
+   ],
+   "category": "weapon",
+   "class": "rimfire_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".22 LR",
+    "magazines": "15-round, 30-round",
+    "fireModes": "Semi-Auto",
+    "recoil": "Very Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 2.3,
+    "zeroing": "100m (Hip-Fire/Iron Sights); 200m - 800m Hunting Scope)",
+    "maxSightM": 800,
+    "whereChernarus": "town houses, village houses (loot tiers 1-2), about 35 on the map",
+    "whereLivonia": "town houses, village houses (loot tier 1), about 18 on the map",
+    "whereSakhal": "town houses, village houses (loot tiers 1-2), about 30 on the map",
+    "rarity": "Uncommon",
+    "variants": "Black, Green",
+    "spawnsWith": "Sportpoint sight, hunting scope"
+   },
+   "summary": "Sporter 22: .22 rifle, modelled on the Ruger 10/22, firing .22 LR. Semi-automatic rifle, fed from a detachable magazine. Great for recreational activities, like target shooting, plinking, and even small-game hunting.",
+   "strengths": [
+    "Very quiet: integral suppressor",
+    "Optics zero out to 800 m"
+   ],
+   "look": "Small light rifle with a wooden or painted stock and a rotary or curved .22 magazine; takes a hunting scope.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sporter_22. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: town houses, village houses (loot tiers 1-2), about 35 on the map. Livonia: town houses, village houses (loot tier 1), about 18 on the map. Sakhal: town houses, village houses (loot tiers 1-2), about 30 on the map"
+  },
+  {
+   "id": "dayz-crossbow",
+   "name": "Crossbow",
+   "aliases": [],
+   "category": "weapon",
+   "class": "crossbow",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": "crossbow bolt",
+    "internalMagazine": "1",
+    "fireModes": "Single",
+    "noise": "1 (Very Quiet)",
+    "weightKg": 2.7,
+    "whereChernarus": "hunting stands and lodges, farms (loot tiers 2-3), about 13 on the map",
+    "whereLivonia": "hunting stands and lodges, farms (loot tiers 1-2), about 20 on the map",
+    "whereSakhal": "hunting stands and lodges, town houses, farms, about 13 on the map",
+    "rarity": "Uncommon",
+    "variants": "Autumn (Chernarus only), Black, Summer (Livonia only), Wood"
+   },
+   "summary": "Crossbow: crossbow, modelled on the Hunting crossbow, firing crossbow bolt. A type of bow consisting of a horizontal limb, assembly mounted on a stock that can launch projectiles called bolts. It can take down even bigger animals. The Crossbow is a type of ranged weapon, consisting of a bow mounted on a stock, which shoots bolts. The crossbow is a quiet weapon, effective in close ranges -- capable of killing unarmored survivors and most infected instantly with a body shot. It is the only weapon with craftable ammunition.",
+   "strengths": [
+    "Very quiet: integral suppressor"
+   ],
+   "weaknesses": [
+    "One shot before reloading"
+   ],
+   "look": "Rifle stock with horizontal bow limbs at the front and a string across; fires bolts, almost silent.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Crossbow. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: hunting stands and lodges, farms (loot tiers 2-3), about 13 on the map. Livonia: hunting stands and lodges, farms (loot tiers 1-2), about 20 on the map. Sakhal: hunting stands and lodges, town houses, farms, about 13 on the map"
+  },
+  {
+   "id": "dayz-m79",
+   "name": "M79",
+   "aliases": [
+    "Thumper",
+    "Grenade launcher",
+    "40mm"
+   ],
+   "category": "weapon",
+   "class": "grenade_launcher",
+   "bestRange": "mid",
+   "stats": {
+    "calibre": "40mm grenade",
+    "fireModes": "Single-Shot Break-Action",
+    "rpm": 30,
+    "recoil": "Medium",
+    "noise": "4 (Loud)",
+    "weightKg": 2.7,
+    "zeroing": "75m (Iron Sights)",
+    "maxSightM": 75,
+    "whereChernarus": "military buildings; helicopter crashes and convoys, about 3 on the map",
+    "whereLivonia": "military buildings, about 3 on the map",
+    "whereSakhal": "military buildings (loot tier 4), about 4 on the map",
+    "rarity": "Extremely Rare"
+   },
+   "summary": "M79: grenade launcher, modelled on the M79 grenade launcher, firing 40mm grenade. Break-action grenade launcher. Might look antiquated, but still effective. The M79 is a grenade launcher in DayZ. It was added in the 1.23 Experimental Patch.",
+   "weaknesses": [
+    "Extremely rare: magazines and ammo are scarce too"
+   ],
+   "look": "Short fat single barrel on a wooden stock, breaking open to load one 40 mm grenade; flip-up ladder sight.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/M79. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: military buildings; helicopter crashes and convoys, about 3 on the map. Livonia: military buildings, about 3 on the map. Sakhal: military buildings (loot tier 4), about 4 on the map"
+  },
+  {
+   "id": "dayz-signal-pistol",
+   "name": "Signal Pistol",
+   "aliases": [
+    "Flare gun",
+    "Flaregun",
+    "Flare pistol"
+   ],
+   "category": "weapon",
+   "class": "flare_gun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "flare",
+    "internalMagazine": "1",
+    "fireModes": "Single",
+    "recoil": "Low",
+    "noise": "2 (Quiet)",
+    "weightKg": 0.4,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "rarity": "Rare"
+   },
+   "summary": "Signal Pistol: flare pistol, modelled on the Flare pistol, firing flare. Simple breech loaded signal pistol. Launching flares at long distances, it can be a handy tool for communication, orientation, or just illumination. The Signal Pistol is a piece of equipment in DayZ. This gun is used to fire Flares to create a source of light. Once fired, a flare will hang in the air for a short time and light up the area around it in a glow dependent on the cartrige colour. Once it reaches the ground, it extinguishes and the light source goes out shortly after.",
+   "weaknesses": [
+    "One shot before reloading"
+   ],
+   "look": "Wide-bore orange or black single-shot pistol that breaks open to load a flare.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Signal_Pistol. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-mosin-91-30",
+   "name": "Sawed-off Mosin 91/30",
+   "aliases": [
+    "Sawed off Mosin",
+    "Sawn-off Mosin",
+    "Obrez",
+    "SawedoffMosin9130"
+   ],
+   "category": "weapon",
+   "class": "bolt_action_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": "7.62x54mmR",
+    "internalMagazine": "5",
+    "fireModes": "Single",
+    "rpm": 60,
+    "recoil": "Medium",
+    "noise": "5 (Very Loud)",
+    "weightKg": 3,
+    "zeroing": "50m (Hip-Fire/Iron Sights); 100m - 1300m (PU Scope)",
+    "maxSightM": 1300,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 790,
+    "hold100": 0.04,
+    "speed100": 729,
+    "hold200": 0.27,
+    "speed200": 673,
+    "hold300": 0.71,
+    "speed300": 621,
+    "hold400": 1.41,
+    "speed400": 574,
+    "hold600": 3.76,
+    "speed600": 489,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "Mosin 91/30",
+    "sights": "PU Scope"
+   },
+   "summary": "Sawed-off Mosin 91/30: bolt-action rifle, modelled on the Mosin-Nagant (cut down), firing 7.62x54mmR. Sawed-off five shot bolt-action rifle, fed from internal magazine. Still usable today due to its sturdiness. The Sawed-off Mosin 91/30 is a sawed-off bolt-action rifle in DayZ. The Sawed-off Mosin 91/30 is created using a Mosin 91/30 and a Hacksaw and is chambered in 7.62x54mmR.",
+   "strengths": [
+    "Hard-hitting 7.62x54mmR (110 damage, 100 shock a hit)",
+    "Fast round (790 m/s): little lead and drop at range",
+    "Optics zero out to 1300 m"
+   ],
+   "tips": [
+    "Made by sawing down the Mosin 91/30 with a hacksaw: shorter and handier, less accurate at range."
+   ],
+   "look": "Mosin cut down to pistol length: short barrel and stock sawn off behind the grip.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_Mosin_91%2F30. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-bk-43",
+   "name": "Sawed-off BK-43",
+   "aliases": [
+    "Sawed off shotgun",
+    "Sawn-off shotgun",
+    "Sawed-off double barrel",
+    "SawedoffIzh43Shotgun"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "internalMagazine": "2",
+    "fireModes": "Single, Double",
+    "recoil": "High",
+    "noise": "5 (Very Loud)",
+    "weightKg": 2.6,
+    "zeroing": "25m (Hip-Fire/Iron Sights)",
+    "maxSightM": 25,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "BK-43"
+   },
+   "summary": "Sawed-off BK-43: shotgun, modelled on the IZh-43 (cut down), firing 12ga. Sawed-off double-barreled break-action shotgun. Old and reliable design, capable of firing both barrels simultaneously. It features the same two firing modes as its original varietal; single, when one shell is fired for every trigger pull, and double – where both shells are expended at once, dealing devastating damage to a target at close range.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Buckshot spreads fast: close range only (slugs reach further)",
+    "Two shots before reloading"
+   ],
+   "tips": [
+    "Made by sawing down the BK-43 with a hacksaw: shorter and handier, less accurate at range.",
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Double-barrel shotgun with the barrels and stock cut short.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_BK-43. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-le-mas",
+   "name": "Sawed-off LE-MAS",
+   "aliases": [
+    "Sawed off FAMAS",
+    "SawedoffFAMAS"
+   ],
+   "category": "weapon",
+   "class": "assault_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": "5.56x45mm",
+    "fireModes": "Semi-Auto, Burst Fire, Full-Auto",
+    "rpm": 900,
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 3.6,
+    "zeroing": "25m - 200m (Iron Sights)",
+    "maxSightM": 200,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 1000,
+    "hold100": 0.03,
+    "speed100": 900,
+    "hold200": 0.18,
+    "speed200": 810,
+    "hold300": 0.48,
+    "speed300": 729,
+    "hold400": 0.96,
+    "speed400": 657,
+    "hold600": 2.67,
+    "speed600": 532,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "LE-MAS"
+   },
+   "summary": "Sawed-off LE-MAS: assault rifle, modelled on the FAMAS (handle cut off), firing 5.56x45mm. A bullpup assault rifle, designed to be compact and sustain a high rate of fire. The F1 variant supports semi-auto, burst and full auto modes. The handle has been sawed-off for some reason. It's fed by a dedicated detachable magazine. The Sawed-off LE-MAS is an automatic rifle in DayZ, crafted by sawing off a LE-MAS. It was added in patch 1.15.",
+   "strengths": [
+    "Fast round (1000 m/s): little lead and drop at range",
+    "High rate of fire (about 900 rounds a minute)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts"
+   ],
+   "tips": [
+    "Made by sawing down the LE-MAS with a hacksaw: shorter and handier, less accurate at range.",
+    "Use single shots past about 50 m; full auto only up close."
+   ],
+   "look": "The LE-MAS bullpup with its long carrying handle sawn off, so no iron sights on top.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_LE-MAS. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-blaze",
+   "name": "Sawed-off Blaze",
+   "aliases": [
+    "Sawed off Blaze",
+    "SawedoffB95"
+   ],
+   "category": "weapon",
+   "class": "break_action_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".308 WIN",
+    "internalMagazine": "2",
+    "fireModes": "Single, Double",
+    "recoil": "High",
+    "noise": "4 (Loud)",
+    "weightKg": 2,
+    "zeroing": "50m - 200m (Hip-Fire/Iron Sights); 200m - 800m (Hunting Scope)",
+    "maxSightM": 800,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 680,
+    "hold200": 0.31,
+    "speed200": 624,
+    "hold300": 0.82,
+    "speed300": 573,
+    "hold400": 1.64,
+    "speed400": 527,
+    "hold600": 4.39,
+    "speed600": 444,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "Blaze",
+    "sights": "Hunting Scope"
+   },
+   "summary": "Sawed-off Blaze: break-action rifle, modelled on the Blaze (cut down), firing .308 WIN. Sawed-off double-barreled break-action rifle loaded with two .308 WIN rounds. The Sawed-off Blaze is a sawed-off two-shot rifle in DayZ. Created from a Blaze and a Hacksaw, the Sawed-off Blaze is a concealable, early-game, high end rifle chambered in .308 WIN Rounds.",
+   "strengths": [
+    "Hard-hitting .308 WIN (110 damage, 100 shock a hit)",
+    "Fast round (740 m/s): little lead and drop at range",
+    "Optics zero out to 800 m"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Two shots before reloading"
+   ],
+   "tips": [
+    "Made by sawing down the Blaze with a hacksaw: shorter and handier, less accurate at range."
+   ],
+   "look": "Blaze double rifle with the barrels and stock cut short.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_Blaze. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-bk-18",
+   "name": "Sawed-off BK-18",
+   "aliases": [
+    "Sawed off BK-18",
+    "SawedoffIzh18"
+   ],
+   "category": "weapon",
+   "class": "break_action_rifle",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": "7.62x39mm",
+    "internalMagazine": "1",
+    "fireModes": "Single (Break-action)",
+    "rpm": 14,
+    "recoil": "High",
+    "noise": "3 (Loud)",
+    "weightKg": 2.8,
+    "zeroing": "25m (Iron Sights) (Fixed)",
+    "maxSightM": 25,
+    "damage": 55,
+    "shock": 66,
+    "muzzleSpeed": 740,
+    "hold100": 0.05,
+    "speed100": 641,
+    "hold200": 0.34,
+    "speed200": 556,
+    "hold300": 0.95,
+    "speed300": 482,
+    "hold400": 1.99,
+    "speed400": 417,
+    "hold600": 5.96,
+    "speed600": 314,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "BK-18"
+   },
+   "summary": "Sawed-off BK-18: break-action rifle, modelled on the IZh-18 (cut down), firing 7.62x39mm. Sawed-off single shot break action hunting rifle, designed with simplicity, built to last. The Sawed-Off BK-18 sacrifices direct firepower and accuracy for improved handling in tight quarters. The rifle loses its front iron sight, and has a fixed zero of 25m. This should also be considered the weapon's maximum effective range in this configuration.",
+   "strengths": [
+    "Fast round (740 m/s): little lead and drop at range"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "One shot before reloading"
+   ],
+   "tips": [
+    "Made by sawing down the BK-18 with a hacksaw: shorter and handier, less accurate at range."
+   ],
+   "look": "Single-shot rifle cut down to a short barrel and pistol grip.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_BK-18. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-bk-12",
+   "name": "Sawed-off BK-12",
+   "aliases": [
+    "Sawed off BK-12",
+    "SawedoffIzh18Shotgun"
+   ],
+   "category": "weapon",
+   "class": "shotgun",
+   "bestRange": "close",
+   "stats": {
+    "calibre": "12ga",
+    "internalMagazine": "1",
+    "fireModes": "Single",
+    "rpm": 17,
+    "weightKg": 2.6,
+    "zeroing": "25m",
+    "maxSightM": 25,
+    "damage": 110,
+    "shock": 100,
+    "muzzleSpeed": 420,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)"
+   },
+   "summary": "Sawed-off BK-12: shotgun, modelled on the IZh-18 shotgun (cut down), firing 12ga. Sawed-off old break-action shotgun, also known as the \"Spartan\". Very effective deterrent against wildlife and other threats. The Sawed-off BK-12 is a shotgun in DayZ. It was added in Update 1.19.",
+   "strengths": [
+    "Hard-hitting 12ga (110 damage, 100 shock a hit)"
+   ],
+   "weaknesses": [
+    "Buckshot spreads fast: close range only (slugs reach further)",
+    "One shot before reloading"
+   ],
+   "tips": [
+    "Made by sawing down the BK-12 with a hacksaw: shorter and handier, less accurate at range.",
+    "Carry slugs for anything past 30 m and buckshot for buildings."
+   ],
+   "look": "Single-barrel shotgun cut down to a short barrel and pistol grip.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_BK-12. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  },
+  {
+   "id": "dayz-sawed-off-revolver",
+   "name": "Sawed-off Revolver",
+   "aliases": [
+    "Snub revolver",
+    "Sawed off Revolver",
+    "SawedoffMagnum"
+   ],
+   "category": "weapon",
+   "class": "revolver",
+   "bestRange": "close-mid",
+   "stats": {
+    "calibre": ".357",
+    "internalMagazine": "6",
+    "fireModes": "Semi-Auto (Double-Action)",
+    "rpm": 280,
+    "recoil": "High",
+    "noise": "2 (Quiet)",
+    "weightKg": 1,
+    "zeroing": "25m (Hip Fire / Iron Sights)",
+    "maxSightM": 25,
+    "damage": 105,
+    "shock": 66,
+    "muzzleSpeed": 383,
+    "hold100": 0.19,
+    "speed100": 333,
+    "hold200": 1.28,
+    "speed200": 289,
+    "hold300": 3.54,
+    "speed300": 252,
+    "hold400": 7.36,
+    "speed400": 219,
+    "hold600": 21.88,
+    "speed600": 166,
+    "zeroForHold": 50,
+    "whereChernarus": "not in the loot (event or crafted only)",
+    "whereLivonia": "not in the loot (event or crafted only)",
+    "whereSakhal": "not in the loot (event or crafted only)",
+    "variants": "Revolver"
+   },
+   "summary": "Sawed-off Revolver: revolver, modelled on the .357 revolver (snub), firing .357. Sawed-off six shot double-action revolver. Compared to pistols, it's relatively slow to load and requires frequent maintenance. On the plus side, it can deliver exceptional damage at short to medium ranges. A modified version of the nominal Revolver, the Sawed-Off Revolver sacrifices raw firepower, accuracy and recoil control for a shorter overall length and lower weight. The weight decrease is noticeable, as the Snubnose only weighs 1kg, compared to the original’s 1.4kg.",
+   "strengths": [
+    "Hard-hitting .357 (105 damage, 66 shock a hit)"
+   ],
+   "weaknesses": [
+    "High recoil: hard to control in bursts",
+    "Slow round (383 m/s): big drop past 100 m"
+   ],
+   "tips": [
+    "Made by sawing down the Revolver with a hacksaw: shorter and handier, less accurate at range."
+   ],
+   "look": "The revolver with its barrel cut to a stub.",
+   "notes": "Wiki: https://dayz.fandom.com/wiki/Sawed-off_Revolver. Ammo numbers from the wiki's DayZ 1.12 table; spawns from Bohemia's Central Economy files. Chernarus: not in the loot (event or crafted only). Livonia: not in the loot (event or crafted only). Sakhal: not in the loot (event or crafted only)"
+  }
+ ]
+}

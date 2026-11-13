@@ -17,6 +17,7 @@ import { BenchmarkTracker, specFor, type BenchmarkResult } from './analyses/benc
 import { ProductionTracker, type ProductionSummary } from './aoe4/production.ts'
 import { GoldForCastle, RESOURCES, WORKER_KEYS, type Workers } from './aoe4/workers.ts'
 import { signLine } from './dayz/ask.ts'
+import { gunLine } from './dayz/guns.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { ReadingLogger } from './truth/readingLog.ts'
 import { SourceAgreement, type AgreementRow } from './truth/agreement.ts'
@@ -1095,10 +1096,11 @@ export class CoachEngine {
       }
       if (v.observedAt <= w.pendingAt) continue
       this.watched.set(spec.key, { value, pending: null, pendingAt: -Infinity })
-      // The first value of a match is where the player already is, not news (a road sign always is).
-      if (w.value === null && spec.key !== 'roadSign') continue
-      // DayZ: a road sign becomes the place it names and what is next to it.
-      const line = (spec.key === 'roadSign' ? signLine(value, { ...this.gameContext, ...this.contextStrings() }) : null) ?? fillReadings(spec.text, this.reading)
+      // The first value of a match is where the player already is, not news (a road sign, or a gun picked up, always is).
+      if (w.value === null && spec.key !== 'roadSign' && spec.key !== 'weaponInHands') continue
+      // DayZ: a road sign becomes the place it names and what is next to it; a gun in hand, its round, magazines and range.
+      const line =
+        (spec.key === 'roadSign' ? signLine(value, { ...this.gameContext, ...this.contextStrings() }) : spec.key === 'weaponInHands' ? gunLine(value, this.profile) : null) ?? fillReadings(spec.text, this.reading)
       if (line) this.changeQueue.push({ line, topic: `change:${spec.key}:${value}`, at: now, confidence: v.confidence, evidence: `${spec.key} read as ${value} twice` })
     }
     // Said once, so it waits its turn rather than being lost to the pacing.

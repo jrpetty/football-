@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "dayz",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "DayZ",
   "depth": "pack",
   "game": {
@@ -61,7 +61,7 @@
   "signals": [],
   "events": [],
   "vision": {
-    "purpose": "DayZ. Read the survivor's status icons at the bottom right of the screen (health, blood, water, energy and temperature, each by its colour; the bleeding icon with its count; the broken bone, sickness, wet and stuffed stomach icons), and the text of any road or town sign plainly readable in the frame, letter for letter as written (Chernarus and Sakhal signs are in Cyrillic: copy the Cyrillic). Read the map name from a loading screen or server browser. Report phase 'match_end' on the 'You are dead' screen (visibleOutcome failure), 'menu' in menus, the inventory screen or loading screens, and 'round' in normal play. Report an unconscious event when the screen is black or fading in and out after a hit. Never report other players' positions or anything not visible in this frame.",
+    "purpose": "DayZ. Read the survivor's status icons at the bottom right of the screen (health, blood, water, energy and temperature, each by its colour; the bleeding icon with its count; the broken bone, sickness, wet and stuffed stomach icons), and the text of any road or town sign plainly readable in the frame, letter for letter as written (Chernarus and Sakhal signs are in Cyrillic: copy the Cyrillic). Read the name of the gun in the survivor's hands when the HUD shows it (the item-in-hands panel at the bottom right, or the inventory), exactly as the game writes it (e.g. KA-M, Mosin 91/30, BK-133). Read the map name from a loading screen or server browser. Report phase 'match_end' on the 'You are dead' screen (visibleOutcome failure), 'menu' in menus, the inventory screen or loading screens, and 'round' in normal play. Report an unconscious event when the screen is black or fading in and out after a hit. Never report other players' positions or anything not visible in this frame.",
     "sampleIntervalMs": 4000,
     "maxLatencyMs": 15000,
     "maxWidth": 1280,
@@ -178,6 +178,14 @@
         "description": "The place name on a road or town sign plainly readable in this frame, exactly as written (in Cyrillic on Chernarus and Sakhal, e.g. Турово). Only a sign you can read; omit otherwise."
       },
       {
+        "key": "weaponInHands",
+        "label": "Gun in hands",
+        "type": "string",
+        "maxLength": 40,
+        "ttlMs": 120000,
+        "description": "The name of the firearm the survivor is holding, as the game writes it on the HUD's item-in-hands panel or in the inventory (e.g. KA-M, SK 59/66, Mosin 91/30). Only when the name is readable; omit for melee items, tools or when no name shows."
+      },
+      {
         "key": "mapName",
         "label": "Map",
         "type": "string",
@@ -198,7 +206,8 @@
     "detail": {
       "keys": [
         "roadSign",
-        "mapName"
+        "mapName",
+        "weaponInHands"
       ]
     }
   },
@@ -411,11 +420,16 @@
     {
       "key": "roadSign",
       "text": "Sign: {roadSign}."
+    },
+    {
+      "key": "weaponInHands",
+      "text": "In hand: {weaponInHands}."
     }
   ],
   "contextKeys": [
     "mapName",
-    "roadSign"
+    "roadSign",
+    "weaponInHands"
   ],
   "knowledge": {
     "concepts": [
@@ -884,6 +898,26 @@
           {
             "name": "Loot and the Central Economy",
             "detail": "The server's Central Economy spawns loot by building type (military, police, medical, fire station, industrial, hunting, farm, town, village) and by area tier: inland and military areas carry better gear. Helicopter crashes, police cars and military convoys spawn at fixed possible spots; only a few are active at a time."
+          },
+          {
+            "name": "Weapon condition",
+            "detail": "Guns go pristine, worn, damaged, badly damaged, ruined. Condition affects accuracy, reliability and damage; a damaged or badly damaged gun jams or misfires more. A weapon cleaning kit repairs it; a ruined gun cannot be used."
+          },
+          {
+            "name": "Damage and range",
+            "detail": "A bullet's damage depends on its speed when it hits, so rounds lose punch with distance and after going through cover. Rifle rounds (5.45, 5.56, 7.62, .308) fly two to three times faster and drop far less than pistol rounds (.380, 9x19, .45) and 9x39."
+          },
+          {
+            "name": "Zeroing",
+            "detail": "Each sight is zeroed to a distance: the bullet meets the crosshair there and drops below it further out. Page Up and Page Down change the zero on sights that allow it; set it to the range of the target before a long shot."
+          },
+          {
+            "name": "Shared rounds",
+            "detail": "7.62x39: KA-M, SK 59/66, CR-527, BK-18. 5.56: M4-A1, M16-A2, KA-101, LE-MAS, AUR, Pioneer. 5.45: KA-74, KAS-74U, SSG 82. .308: LAR, SCR 17, DMR, M70 Tundra, CR-550, Blaze, Longhorn. 7.62x54R: Mosin, VSD, VS-89. 9x39: VSS, SVAL, Vikhr. 12ga: BK-133, BK-43, BK-12, Vaiga, R12."
+          },
+          {
+            "name": "Where guns spawn",
+            "detail": "Hunting rifles in hunting stands and lodges, shotguns and pistols in towns, villages and police stations, military rifles in military buildings in the higher loot tiers, and the rarest (M4-A1, LAR, DMR, SCR 17) at helicopter crashes, convoys and contaminated zones."
           }
         ]
       }
@@ -897,6 +931,14 @@
       {
         "url": "https://github.com/BohemiaInteractive/DayZ-Central-Economy",
         "title": "Bohemia Interactive: DayZ Central Economy"
+      },
+      {
+        "url": "https://dayz.fandom.com/wiki/Weapons",
+        "title": "DayZ Wiki: Weapons"
+      },
+      {
+        "url": "https://dayz.fandom.com/wiki/Weapons,_damage_and_armor",
+        "title": "DayZ Wiki: Weapons, damage and armor"
       }
     ]
   },
