@@ -1,0 +1,331 @@
+{
+ "map": "livonia",
+ "worldSize": 12800,
+ "signs": "latin",
+ "source": "DayZ Wiki (dayz.fandom.com), Locations and the location pages; CC BY-NC-SA 3.0. Positions checked against the game's building list.",
+ "licence": "CC BY-NC-SA 3.0 (https://creativecommons.org/licenses/by-nc-sa/3.0/): attribution, non-commercial, share alike.",
+ "notes": [
+  "Biela River: no position on the wiki; left out.",
+  "Biela Valley: no position on the wiki; left out.",
+  "DayZ Livonia: no position on the wiki; left out.",
+  "Gieraltów: no position on the wiki; left out.",
+  "Grabin: no position on the wiki; left out.",
+  "Livonia (Country): no position on the wiki; left out.",
+  "Livonian Defense Force: no position on the wiki; left out.",
+  "Military Base (Krsnik): no position on the wiki; left out.",
+  "Sitnik: the wiki gives exactly Nadbór's position; left out until checked.",
+  "Topolin: no buildings at the wiki's grid 067 127; left out."
+ ],
+ "places": [
+  {
+   "name": "Adamów",
+   "kind": "town",
+   "facilities": [],
+   "x": 3150,
+   "y": 6850,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Bielawa",
+   "kind": "town",
+   "facilities": [],
+   "x": 1450,
+   "y": 3250,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Borek",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "Guardhouse (x2)",
+    "Military Barracks (x6)",
+    "Cargo Containers (Military) (x5)",
+    "Guard Towers"
+   ],
+   "x": 9750,
+   "y": 8550,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Brena",
+   "kind": "town",
+   "facilities": [],
+   "x": 6450,
+   "y": 11250,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dambog",
+   "kind": "hill",
+   "facilities": [],
+   "x": 650,
+   "y": 11650,
+   "from": "grid"
+  },
+  {
+   "name": "Dolnik",
+   "kind": "town",
+   "facilities": [],
+   "x": 11450,
+   "y": 550,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Drewniki",
+   "kind": "town",
+   "facilities": [],
+   "x": 5950,
+   "y": 5150,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Gliniska",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "Medical Center",
+    "Water Pump (x2)",
+    "Pub|title=Gliniska|coord=049 028|contaminated=Yes (dynamic)"
+   ],
+   "x": 4950,
+   "y": 9950,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Huta",
+   "kind": "town",
+   "facilities": [],
+   "x": 5250,
+   "y": 5550,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Karlin",
+   "kind": "town",
+   "facilities": [],
+   "x": 10350,
+   "y": 6750,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kolembrody",
+   "kind": "town",
+   "facilities": [],
+   "x": 8450,
+   "y": 12050,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Konopki",
+   "kind": "town",
+   "tier": "3",
+   "facilities": [
+    "Piano House",
+    "Medical Center",
+    "General Store"
+   ],
+   "x": 11450,
+   "y": 9950,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kopa",
+   "kind": "hill",
+   "tier": "2",
+   "facilities": [
+    "Military Barracks",
+    "Prison Complex",
+    "Water Pump|image=File:Kopa_(2).jpg"
+   ],
+   "x": 5550,
+   "y": 4050,
+   "from": "grid"
+  },
+  {
+   "name": "Kulno",
+   "kind": "town",
+   "facilities": [],
+   "x": 11250,
+   "y": 2350,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Lembork",
+   "kind": "village",
+   "facilities": [],
+   "x": 8650,
+   "y": 6650,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Lipina",
+   "kind": "town",
+   "facilities": [],
+   "x": 5950,
+   "y": 6750,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Lukow",
+   "kind": "town",
+   "facilities": [],
+   "x": 3650,
+   "y": 11850,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Lukow Airfield",
+   "kind": "airfield",
+   "facilities": [],
+   "x": 4250,
+   "y": 10450,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Muratyn",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "Guardhouse (x2)",
+    "Military Barracks (x5)",
+    "Cargo Containers (Military) (x3)"
+   ],
+   "x": 4550,
+   "y": 6450,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Nadbór",
+   "kind": "town",
+   "facilities": [],
+   "x": 6150,
+   "y": 4150,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Nidek",
+   "kind": "town",
+   "facilities": [],
+   "x": 6050,
+   "y": 8050,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Olszanka",
+   "kind": "town",
+   "facilities": [],
+   "x": 4750,
+   "y": 7650,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Polana",
+   "kind": "town",
+   "facilities": [],
+   "x": 3350,
+   "y": 2050,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Potoki",
+   "kind": "town",
+   "tier": "3",
+   "facilities": [
+    "Camp House (x6)|image=File:Potoki_(1).jpg"
+   ],
+   "x": 11650,
+   "y": 10850,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Radacz",
+   "kind": "town",
+   "facilities": [],
+   "x": 4050,
+   "y": 7950,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Radunin",
+   "kind": "town",
+   "facilities": [],
+   "x": 7500,
+   "y": 6156,
+   "from": "Bohemia's contaminated-zone file names it"
+  },
+  {
+   "name": "Rodzanica",
+   "kind": "hill",
+   "tier": "3",
+   "facilities": [
+    "Radio Tower",
+    "Headquarters",
+    "Military Containers|image=File:Rodzanica_(4).jpg"
+   ],
+   "x": 8850,
+   "y": 10750,
+   "from": "grid"
+  },
+  {
+   "name": "Roztoka",
+   "kind": "town",
+   "facilities": [],
+   "x": 7650,
+   "y": 5350,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sarnówek",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "General Store",
+    "Pub"
+   ],
+   "x": 3250,
+   "y": 7750,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sobotka",
+   "kind": "village",
+   "facilities": [],
+   "x": 6250,
+   "y": 10250,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tarnow",
+   "kind": "town",
+   "facilities": [],
+   "x": 9550,
+   "y": 10350,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Wrzeszcz",
+   "kind": "town",
+   "facilities": [],
+   "x": 9050,
+   "y": 4450,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zalesie",
+   "kind": "village",
+   "facilities": [],
+   "x": 850,
+   "y": 5550,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zapadlisko",
+   "kind": "town",
+   "facilities": [],
+   "x": 8150,
+   "y": 8750,
+   "from": "grid, buildings there"
+  }
+ ]
+}

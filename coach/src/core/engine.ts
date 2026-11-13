@@ -16,6 +16,7 @@ import { FactorAnalyzer, type FactorResult } from './analyses/factors.ts'
 import { BenchmarkTracker, specFor, type BenchmarkResult } from './analyses/benchmarks.ts'
 import { ProductionTracker, type ProductionSummary } from './aoe4/production.ts'
 import { GoldForCastle, RESOURCES, WORKER_KEYS, type Workers } from './aoe4/workers.ts'
+import { signLine } from './dayz/ask.ts'
 import { BattleTracker, type BattleRecord } from './analyses/battles.ts'
 import { ReadingLogger } from './truth/readingLog.ts'
 import { SourceAgreement, type AgreementRow } from './truth/agreement.ts'
@@ -426,6 +427,11 @@ export class CoachEngine {
     return this.buildOrder?.steps.find((s) => s.kind === 'age' && s.key === 'castle')?.atSec ?? null
   }
 
+  /** The player's own context values that are text (e.g. the DayZ map they chose). */
+  private contextStrings(): Record<string, string> {
+    return Object.fromEntries(Object.entries(this.context).filter((e): e is [string, string] => typeof e[1] === 'string'))
+  }
+
   private playerFaction(): string | null {
     const key = this.profile.intel?.playerFactionContext
     const v = key ? this.context[key] : undefined
@@ -631,7 +637,8 @@ export class CoachEngine {
       benchmarks: this.benchmarksWithUsual(),
       battles: this.battles.battles(),
       // Between matches, the last match's (for the review and answers) until the next one is read.
-      context: Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) },
+      // The map the player chose (DayZ) under what the screen showed, which wins.
+      context: { ...(typeof this.context.map === 'string' && this.context.map ? { map: this.context.map } : {}), ...(Object.keys(this.gameContext).length ? { ...this.gameContext } : { ...(this.sessionMatches.at(-1)?.context ?? {}) }) },
       intel: this.intel?.report() ?? null,
       learned: this.profile.learning && this.learning().enabled ? learnedFrom(this.matchHistory, this.profile, this.reportFilter()) : null,
       map: this.mapReport(),
@@ -1088,9 +1095,10 @@ export class CoachEngine {
       }
       if (v.observedAt <= w.pendingAt) continue
       this.watched.set(spec.key, { value, pending: null, pendingAt: -Infinity })
-      // The first value of a match is where the player already is, not news.
-      if (w.value === null) continue
-      const line = fillReadings(spec.text, this.reading)
+      // The first value of a match is where the player already is, not news (a road sign always is).
+      if (w.value === null && spec.key !== 'roadSign') continue
+      // DayZ: a road sign becomes the place it names and what is next to it.
+      const line = (spec.key === 'roadSign' ? signLine(value, { ...this.gameContext, ...this.contextStrings() }) : null) ?? fillReadings(spec.text, this.reading)
       if (line) this.changeQueue.push({ line, topic: `change:${spec.key}:${value}`, at: now, confidence: v.confidence, evidence: `${spec.key} read as ${value} twice` })
     }
     // Said once, so it waits its turn rather than being lost to the pacing.

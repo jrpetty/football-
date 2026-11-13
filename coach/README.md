@@ -539,6 +539,35 @@ Then press **Choose the game window**, play, and listen.
   age-up times, fights, mistakes, the review's points to work on and your
   practice focus. Discord delivers it to your phone like any message. Only
   that text is sent, only to that webhook; the Test button sends a sample.
+- **DayZ: places and survival.** Ask the coach about any place on
+  Chernarus, Livonia or Sakhal (pick your map on the Coach screen):
+  - **"Where is Typobo?"** finds Turovo. Signs on Chernarus and Sakhal are
+    in Cyrillic, and the coach understands a sign typed as it looks (р is
+    r, у is u, в is v), its proper spelling, the Cyrillic itself, or a
+    nickname (Cherno, Elektro, NWAF). It answers with the region, the grid
+    reference, the nearest towns with distance and direction, what is in
+    the town (military, police, medical, industrial and other buildings,
+    loot tier), and the nearest water pump, medical building and fuel.
+  - **"How do I get from Cherno to NWAF?"**: distance, direction and the
+    towns on the way. **"Nearest water to Turovo"**, hospital, fuel,
+    police, military, helicopter crash spots, lighthouses, contaminated
+    zones. **"Where am I?"** from the last road sign read off your screen.
+  - Survival questions (cholera, salmonella, splints, blood types, gas
+    zones, bleeding, stamina) from the pack's own reference.
+  - With screen reading on, the coach reads the status icons (health,
+    blood, water, energy, temperature, bleeding, broken bones, sickness)
+    and road signs: offline, it tells you to bandage, drink, eat, get warm
+    or splint, and names each town as you pass its sign. On public servers
+    that waits for the end of the life or the session.
+
+  All answered on your PC, no cloud needed. Places: Chernarus 97,
+  Livonia 34, Sakhal 60, from the DayZ Wiki (CC BY-NC-SA), each checked
+  against the game's own buildings; a few with no position or a wrong one
+  on the wiki are left out (e.g. Gieraltów, Topolin and Sitnik on
+  Livonia). Water pumps, medical, police, fire stations, military,
+  lighthouses, crash and police-car spots, contaminated zones and spawns:
+  Bohemia Interactive's server files (ADPL-SA). Both licences are
+  non-commercial: see `src/profiles/dayz/README.md`.
 - **Your usual.** Once three of your matches have a reading at a
   checkpoint, the coach compares you with yourself as well as with the
   curve: "At 10:00 you had 31 villagers; one Town Center that never stops

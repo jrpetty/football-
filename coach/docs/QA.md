@@ -309,3 +309,12 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 22.1 | AoE IV with your AoE4World profile linked and a build in use: play a Ranked game where you research Wheelbarrow and a few Blacksmith upgrades. Progress → Build orders → Upgrade timings. | Each upgrade you got, at the time AoE4World shows for it, beside the build and their game. Note any Blacksmith upgrade missing from the table that you did research (its icon name was not matched). |
 | 22.2 | Call of Duty against bots (or any match) with screen reading on: die a few times. After the match, Decisions. | Key moments: one per death, the killcam or death screen, with cover, movement and range where read. Left and right arrows move between them. Nothing about them in the app's data folder. |
 | 22.3 | Play 10 minutes of AoE IV with screen reading on and Smart reading on. Settings → Screen reading. | "Smart reading: N of M looks also read by …" and how often the two agreed; the measured cost per hour. Compare with the same 10 minutes with Smart reading off. Note any reading that looked worse (numbers, fights, names). |
+
+## 23. DayZ
+
+| # | Steps | Expected |
+|---|---|---|
+| 23.1 | Pick DayZ and your map on the Coach screen. Ask: "where is Typobo?", "how do I get from Cherno to NWAF?", "nearest water to Turovo". | Turovo in the far north-east with grid 135 012; Vybor Air Base about 8.2 km north of Chernogorsk; a water pump about 100 m from Turovo. Compare one answer with an in-game map. |
+| 23.2 | Offline (Community Offline Mode), screen reading and commentary on: walk past a town sign. | Within a few seconds: the town's name (and Cyrillic), the nearest town and water pump. "Where am I?" then names it. Note any sign read wrong. |
+| 23.3 | Offline: get a bleeding wound; let water drop to red. | "You're bleeding. Bandage it now." while it bleeds; "Drink now. Thirst is critical." Note if an icon's colour is misread. |
+| 23.4 | Official server: the same. | Nothing said during play; the review after death or Stop lists the bleeding and thirst. |

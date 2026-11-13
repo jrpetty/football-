@@ -17,6 +17,8 @@ const MATCH_MINUTES: Readonly<Record<string, number>> = {
   'cod-mw4': 10,
   // A Premier or Competitive match: up to 24 rounds of about 1:45 each, with buy time and half-time.
   cs2: 40,
+  // One life, often an hour or more.
+  dayz: 60,
   'ea-fc': 15,
   'synthetic-arena': 10,
 }

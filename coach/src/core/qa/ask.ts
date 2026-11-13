@@ -14,6 +14,7 @@ import { formatDuration, humanize, mistakeLine, responseLabel } from '../languag
 import type { ArsenalItem, BenchmarkSpec, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
 import { expectedAt } from '../analyses/benchmarks.ts'
 import { productionLines } from '../aoe4/production.ts'
+import { answerMechanics, answerPlaceQuestion, isPlaceQuestion } from '../dayz/ask.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 import { ballisticsLines } from '../knowledge/ballistics.ts'
@@ -32,6 +33,8 @@ export type Intent =
   | { readonly kind: 'patterns' }
   | { readonly kind: 'stats' }
   | { readonly kind: 'open' }
+  | { readonly kind: 'place'; readonly question: string }
+  | { readonly kind: 'survival'; readonly question: string }
 
 const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
   [/\b(concede|conceding|conceded|goals? against|let (?:in|goals))\b/i, ['conceded']],
@@ -44,6 +47,9 @@ const NADE_WORDS = /\b(smokes?|flash(?:es|bangs?)?|pop ?flash\w*|molly|mollies|m
 
 export function classify(question: string, profile: GameProfile): Intent {
   const q = question.toLowerCase()
+  // DayZ: where a town is, the way between two, the nearest water or hospital, where am I.
+  if (profile.id === 'dayz' && isPlaceQuestion(question)) return { kind: 'place', question }
+  if (profile.id === 'dayz' && answerMechanics(question, profile)) return { kind: 'survival', question }
   // Grenade lineups on a map: which smokes, flashes or molotovs, from where, for which site; executes and retakes.
   if (profile.knowledge.maps?.some((m) => m.utility?.length) && NADE_WORDS.test(q) && !/\b(differen\w*|compare\w*|versus|vs)\b/.test(q)) {
     const named = mapNamedIn(q, profile)
@@ -82,6 +88,10 @@ export function classify(question: string, profile: GameProfile): Intent {
 /** A local answer from structured data, or null when the question needs the model. */
 export function answerLocally(intent: Intent, profile: GameProfile, report: SessionReport, history: readonly MatchRecord[]): string | null {
   switch (intent.kind) {
+    case 'place':
+      return answerPlaceQuestion(intent.question, report.context)
+    case 'survival':
+      return answerMechanics(intent.question, profile)
     case 'heatmap': {
       const h = report.heatmaps.find((x) => x.spec.id === intent.heatmapId)
       if (h) return heatmapAnswer(h)

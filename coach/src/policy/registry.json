@@ -406,6 +406,54 @@
       "reviewedAt": "2026-10-27",
       "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
       "notes": "Any multiplayer or competitive mode of an unlisted game resolves to needs_publisher_review."
+    },
+    {
+      "id": "dayz/offline",
+      "publisher": "Bohemia Interactive",
+      "game": "DayZ",
+      "gameIds": [
+        "dayz"
+      ],
+      "modes": [
+        "offline"
+      ],
+      "status": "noncompetitive_only",
+      "basis": "internal",
+      "sources": [],
+      "rationale": "Community Offline Mode, or a private server with no other players: no one else is affected. This is Sightline's internal judgement, not Bohemia Interactive approval.",
+      "reviewedAt": "2026-11-13",
+      "reviewer": "Sightline build (internal policy decision; requires product/legal sign-off)",
+      "notes": "If other players are on the server, choose Official or Community instead."
+    },
+    {
+      "id": "dayz/online",
+      "publisher": "Bohemia Interactive",
+      "game": "DayZ",
+      "gameIds": [
+        "dayz"
+      ],
+      "modes": [
+        "*"
+      ],
+      "status": "needs_publisher_review",
+      "basis": "publisher",
+      "sources": [
+        {
+          "url": "https://data.bistudio.com/dayz/Public_PC_DayZ_Server_Hosting_Rules_V11.pdf",
+          "title": "Public PC DayZ Server Hosting Rules (v11)",
+          "excerpt": "Rules for server hosts, including a ban on hosts installing third-party tools, mods or applications on official-listed servers (BEC excepted). Nothing about players' own coaching or map tools.",
+          "verification": "search-excerpt"
+        },
+        {
+          "url": "https://www.bistudio.com/community/game-content-usage-rules",
+          "title": "Bohemia Interactive: game content usage rules",
+          "excerpt": "Tools, plug-ins and utilities may be made for the games as original work that does not use Bohemia's IP and does not look like an official product. No statement on screen-reading coaching tools was found.",
+          "verification": "search-excerpt"
+        }
+      ],
+      "reviewedAt": "2026-11-13",
+      "reviewer": "Sightline build (automated web research; must be confirmed by a person)",
+      "notes": "Official and community public servers: review after each life or the session only. Community servers set their own rules on third-party tools; Bohemia's position on screen-only coaching was not found."
     }
   ]
 }

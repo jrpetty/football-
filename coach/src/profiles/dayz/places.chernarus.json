@@ -1,0 +1,1011 @@
+{
+ "map": "chernarus",
+ "worldSize": 15360,
+ "signs": "cyrillic",
+ "source": "DayZ Wiki (dayz.fandom.com), Locations and the location pages; CC BY-NC-SA 3.0. Positions checked against the game's building list.",
+ "licence": "CC BY-NC-SA 3.0 (https://creativecommons.org/licenses/by-nc-sa/3.0/): attribution, non-commercial, share alike.",
+ "notes": [
+  "ChernarusPlus: no position on the wiki; left out.",
+  "Chernarus Fire Service: no position on the wiki; left out.",
+  "Chernarus Police: no position on the wiki; left out.",
+  "Chernarussian Defence Forces: no position on the wiki; left out.",
+  "Chernarussian Movement of the Red Star: no position on the wiki; left out.",
+  "Kumyrna: the wiki's grid fits only when counted from the south edge; used that.",
+  "Locations: no position on the wiki; left out.",
+  "National Party: no position on the wiki; left out.",
+  "Power Sub-Stations: no position on the wiki; left out.",
+  "Republic of Chernarus: no position on the wiki; left out.",
+  "Russian Armed Forces: no position on the wiki; left out.",
+  "United Nations: no position on the wiki; left out.",
+  "United States Marine Corps: no position on the wiki; left out."
+ ],
+ "places": [
+  {
+   "name": "Balota",
+   "cyrillic": "Балота",
+   "kind": "village",
+   "facilities": [],
+   "x": 4550,
+   "y": 2410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Balota Airfield",
+   "kind": "airfield",
+   "tier": "1",
+   "facilities": [
+    "Civilian Airport Complex",
+    "Military Tents (x5)",
+    "Fortified Nest (x3)",
+    "Quonset hut"
+   ],
+   "x": 4950,
+   "y": 2410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Balota Swamp",
+   "kind": "local",
+   "facilities": [],
+   "x": 3950,
+   "y": 2310,
+   "from": "grid"
+  },
+  {
+   "name": "Belaya Polyana",
+   "cyrillic": "Белая Поляна",
+   "kind": "village",
+   "facilities": [],
+   "x": 14050,
+   "y": 15110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Berezhki",
+   "cyrillic": "Бережки",
+   "kind": "village",
+   "facilities": [],
+   "x": 15150,
+   "y": 13810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Berezino",
+   "cyrillic": "Березино",
+   "kind": "town",
+   "facilities": [],
+   "x": 12950,
+   "y": 10010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Bird Archipelago",
+   "kind": "local",
+   "facilities": [],
+   "x": 12050,
+   "y": 3210,
+   "from": "grid"
+  },
+  {
+   "name": "Bird's Lake",
+   "cyrillic": "Озеро Птичье",
+   "kind": "water",
+   "facilities": [],
+   "x": 4750,
+   "y": 13310,
+   "from": "grid"
+  },
+  {
+   "name": "Bogatyrka",
+   "cyrillic": "Богатырка",
+   "kind": "village",
+   "facilities": [],
+   "x": 1550,
+   "y": 9010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Bor",
+   "cyrillic": "Бор",
+   "kind": "village",
+   "facilities": [],
+   "x": 3350,
+   "y": 3910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Calm River",
+   "kind": "water",
+   "facilities": [],
+   "x": 1750,
+   "y": 14810,
+   "from": "grid"
+  },
+  {
+   "name": "Chernaya Polyana",
+   "cyrillic": "Черная Поляна",
+   "kind": "town",
+   "facilities": [],
+   "x": 12150,
+   "y": 13710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Chernogorsk",
+   "cyrillic": "Черногорск",
+   "kind": "city",
+   "tier": "3/2/1",
+   "facilities": [
+    "Chernogorsk Town Hall",
+    "Large Police Station",
+    "Hospital",
+    "Fire Station",
+    "Supermarket",
+    "Churches (x2)",
+    "Water Pump",
+    "Office",
+    "Train Station",
+    "Numerous apartment blocks, house blocks and houses",
+    "Military Camp",
+    "Suburbs of Vysotovo, Novoselki and Dubovo"
+   ],
+   "x": 6650,
+   "y": 2410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dobroye",
+   "cyrillic": "Доброе",
+   "kind": "village",
+   "facilities": [],
+   "x": 12950,
+   "y": 15010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dolina",
+   "cyrillic": "Долина",
+   "kind": "village",
+   "facilities": [],
+   "x": 11250,
+   "y": 6610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Drozhino",
+   "cyrillic": "Дрожино",
+   "kind": "village",
+   "facilities": [],
+   "x": 3350,
+   "y": 4910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dubovo",
+   "cyrillic": "Дубово",
+   "kind": "town",
+   "facilities": [],
+   "x": 6650,
+   "y": 3610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dubrovka",
+   "cyrillic": "Дубровка",
+   "kind": "village",
+   "facilities": [],
+   "x": 10450,
+   "y": 9810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Elektrozavodsk",
+   "cyrillic": "Электрозаводск",
+   "kind": "town",
+   "facilities": [],
+   "x": 10350,
+   "y": 2110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Gorka",
+   "cyrillic": "Горка",
+   "kind": "town",
+   "facilities": [],
+   "x": 9550,
+   "y": 8810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Green Mountain Military Base",
+   "kind": "military",
+   "tier": "3/2",
+   "facilities": [
+    "Military Prison",
+    "Military Barracks",
+    "Police Guardhouse",
+    "TC2 Radio Tower"
+   ],
+   "x": 3750,
+   "y": 6010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Grishino",
+   "cyrillic": "Гришино",
+   "kind": "village",
+   "facilities": [],
+   "x": 5950,
+   "y": 10310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Guba Bay",
+   "kind": "local",
+   "x": 14523,
+   "y": 13069,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Guglovo",
+   "cyrillic": "Гуглово",
+   "kind": "village",
+   "facilities": [],
+   "x": 8450,
+   "y": 6710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Gvozdno",
+   "cyrillic": "Гвоздно",
+   "kind": "village",
+   "facilities": [],
+   "x": 8550,
+   "y": 11910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kabanino",
+   "cyrillic": "Кабанино",
+   "kind": "village",
+   "facilities": [],
+   "x": 5350,
+   "y": 8610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kalinovka",
+   "cyrillic": "Калиновка",
+   "kind": "village",
+   "facilities": [],
+   "x": 7650,
+   "y": 13410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kamenka",
+   "cyrillic": "Каменка",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [
+    "Water Pump",
+    "Train Station",
+    "General Store",
+    "Red Brick Pub",
+    "Houses (x26)",
+    "Sheds (x15)"
+   ],
+   "x": 1950,
+   "y": 2210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kamensk",
+   "cyrillic": "Каменск",
+   "kind": "village",
+   "facilities": [],
+   "x": 6650,
+   "y": 14510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kamensk Military Base",
+   "kind": "military",
+   "tier": "3",
+   "facilities": [
+    "Regimental Barracks",
+    "Military Barracks (x3)",
+    "Large Garage (x2)",
+    "Fortified Nest",
+    "Military Tents (x8)",
+    "Military Watchtower (x23)",
+    "Military Cargo Container (x10)"
+   ],
+   "x": 7750,
+   "y": 14810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kamyshovo",
+   "cyrillic": "Камышово",
+   "kind": "village",
+   "facilities": [],
+   "x": 12150,
+   "y": 3510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Karmanovka",
+   "cyrillic": "Кармановка",
+   "kind": "village",
+   "facilities": [],
+   "x": 12550,
+   "y": 14610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Khelm",
+   "cyrillic": "Хелм",
+   "kind": "village",
+   "facilities": [],
+   "x": 12250,
+   "y": 10910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Khrebet",
+   "cyrillic": "Хребет",
+   "kind": "local",
+   "facilities": [],
+   "x": 13950,
+   "y": 13810,
+   "from": "grid"
+  },
+  {
+   "name": "Komarovo",
+   "cyrillic": "Комарово",
+   "kind": "village",
+   "facilities": [],
+   "x": 3650,
+   "y": 2510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kozlovka",
+   "cyrillic": "Козловка",
+   "kind": "village",
+   "facilities": [],
+   "x": 4450,
+   "y": 4610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Krasnostav",
+   "cyrillic": "Красностав",
+   "kind": "town",
+   "facilities": [],
+   "x": 11150,
+   "y": 12310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Krasnostav Airfield",
+   "kind": "airfield",
+   "x": 12143,
+   "y": 12611,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Krasnoye",
+   "cyrillic": "Красное",
+   "kind": "village",
+   "facilities": [],
+   "x": 6450,
+   "y": 15010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Kumyrna",
+   "cyrillic": "Кумырня",
+   "kind": "village",
+   "facilities": [],
+   "x": 8350,
+   "y": 9350,
+   "from": "grid read from the south edge (buildings there, none at the north reading)"
+  },
+  {
+   "name": "Lopatino",
+   "cyrillic": "Лопатино",
+   "kind": "village",
+   "facilities": [],
+   "x": 2750,
+   "y": 10010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Lysina",
+   "cyrillic": "Лысина",
+   "kind": "local",
+   "facilities": [],
+   "x": 950,
+   "y": 12610,
+   "from": "grid"
+  },
+  {
+   "name": "Mogilevka",
+   "cyrillic": "Могилевка",
+   "kind": "village",
+   "facilities": [],
+   "x": 7550,
+   "y": 5110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Msta",
+   "cyrillic": "Мста",
+   "kind": "village",
+   "facilities": [],
+   "x": 11250,
+   "y": 5510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Myshkino",
+   "cyrillic": "Мышкино",
+   "kind": "village",
+   "facilities": [],
+   "x": 2050,
+   "y": 7310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Nadezhdino",
+   "cyrillic": "Надеждино",
+   "kind": "village",
+   "facilities": [],
+   "x": 5850,
+   "y": 4710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Nagornoye",
+   "cyrillic": "Нагорное",
+   "kind": "village",
+   "facilities": [],
+   "x": 9250,
+   "y": 14610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "New Fields",
+   "kind": "local",
+   "facilities": [],
+   "x": 2250,
+   "y": 15110,
+   "from": "grid"
+  },
+  {
+   "name": "Nizhnee",
+   "cyrillic": "Нижное",
+   "kind": "village",
+   "facilities": [],
+   "x": 12950,
+   "y": 7910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Novaya Petrovka",
+   "cyrillic": "Новая Петровка",
+   "kind": "town",
+   "facilities": [],
+   "x": 3650,
+   "y": 13110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Novodmitrovsk",
+   "cyrillic": "Новодмитровск",
+   "kind": "city",
+   "tier": "2",
+   "facilities": [
+    "Novodmitrovsk Town Hall",
+    "Large Police Station",
+    "Hospital",
+    "Supermarket",
+    "Church",
+    "Water Pump (x2)",
+    "Office",
+    "Train Station",
+    "Tenements (x29)",
+    "Numerous house blocks and houses"
+   ],
+   "x": 11650,
+   "y": 14410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Novoselki",
+   "cyrillic": "Новоселки",
+   "kind": "town",
+   "facilities": [],
+   "x": 6150,
+   "y": 3210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Novy Sobor",
+   "cyrillic": "Новый Собор",
+   "kind": "village",
+   "facilities": [],
+   "x": 7050,
+   "y": 7710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Olsha",
+   "cyrillic": "Ольша",
+   "kind": "village",
+   "facilities": [],
+   "x": 13350,
+   "y": 12910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Orlovets",
+   "cyrillic": "Орловец",
+   "kind": "village",
+   "facilities": [],
+   "x": 12150,
+   "y": 7310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Paradise Rock",
+   "cyrillic": "Райские Скалы",
+   "kind": "local",
+   "facilities": [],
+   "x": 13750,
+   "y": 3710,
+   "from": "grid"
+  },
+  {
+   "name": "Pavlovo",
+   "cyrillic": "Павлово",
+   "kind": "village",
+   "facilities": [],
+   "x": 1650,
+   "y": 3810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Pavlovo Military Base",
+   "kind": "military",
+   "facilities": [
+    "Military Barracks (x4)",
+    "Guardhouse (Police) (x4)",
+    "Hospital",
+    "Offices",
+    "Military Watchtower (x17)",
+    "Military Cargo Container (x11)"
+   ],
+   "x": 2150,
+   "y": 3410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Pogorevka",
+   "cyrillic": "Погоревка",
+   "kind": "village",
+   "facilities": [],
+   "x": 4450,
+   "y": 6410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Polesovo",
+   "cyrillic": "Полесово",
+   "kind": "village",
+   "facilities": [],
+   "x": 5750,
+   "y": 13510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Polyana",
+   "cyrillic": "Поляна",
+   "kind": "town",
+   "facilities": [],
+   "x": 10650,
+   "y": 8010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Prigorodki",
+   "cyrillic": "Пригородки",
+   "kind": "village",
+   "facilities": [],
+   "x": 7950,
+   "y": 3210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Pulkovo",
+   "cyrillic": "Пулково",
+   "kind": "village",
+   "facilities": [],
+   "x": 4950,
+   "y": 5610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Pusta",
+   "cyrillic": "Пуста",
+   "kind": "village",
+   "facilities": [],
+   "x": 9150,
+   "y": 3810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Pustoshka",
+   "cyrillic": "Пустошка",
+   "kind": "village",
+   "facilities": [],
+   "x": 3050,
+   "y": 7910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Ratnoye",
+   "cyrillic": "Ратное",
+   "kind": "village",
+   "facilities": [],
+   "x": 6150,
+   "y": 12710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Rogovo",
+   "cyrillic": "Рогово",
+   "kind": "village",
+   "facilities": [],
+   "x": 4750,
+   "y": 6810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Severograd",
+   "cyrillic": "Североград",
+   "kind": "town",
+   "facilities": [],
+   "x": 7950,
+   "y": 12610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Shakovka",
+   "cyrillic": "Шаховка",
+   "kind": "village",
+   "facilities": [],
+   "x": 9650,
+   "y": 6610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sinystok",
+   "cyrillic": "Синисток",
+   "kind": "village",
+   "facilities": [],
+   "x": 1450,
+   "y": 11910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Skalisty",
+   "cyrillic": "Скалистый",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [
+    "Water Pump",
+    "Lighthouse",
+    "Pub *",
+    "Radio Tower *",
+    "Houses (x5)",
+    "Sheds (x5)",
+    "Small Boat (x11)"
+   ],
+   "x": 13550,
+   "y": 3110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Solnechny",
+   "cyrillic": "Солнечный",
+   "kind": "town",
+   "facilities": [],
+   "x": 13450,
+   "y": 6110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sosnovka",
+   "cyrillic": "Сосновка",
+   "kind": "village",
+   "facilities": [],
+   "x": 2550,
+   "y": 6310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Staroye",
+   "cyrillic": "Старое",
+   "kind": "village",
+   "facilities": [],
+   "x": 10150,
+   "y": 5410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Stary Sobor",
+   "cyrillic": "Старый Собор",
+   "kind": "town",
+   "facilities": [],
+   "x": 6150,
+   "y": 7710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Stary Yar",
+   "cyrillic": "Старый Яр",
+   "kind": "village",
+   "facilities": [],
+   "x": 4950,
+   "y": 15110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Svergino",
+   "cyrillic": "Свергино",
+   "kind": "village",
+   "facilities": [],
+   "x": 9550,
+   "y": 13810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Svetloyarsk",
+   "cyrillic": "Светлоярск",
+   "kind": "town",
+   "facilities": [],
+   "x": 13950,
+   "y": 13210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Three Rivers",
+   "cyrillic": "Три Ручья",
+   "kind": "water",
+   "facilities": [],
+   "x": 5950,
+   "y": 12210,
+   "from": "grid"
+  },
+  {
+   "name": "Tisy",
+   "cyrillic": "Тисы",
+   "kind": "village",
+   "facilities": [],
+   "x": 3450,
+   "y": 14810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tisy Military Base",
+   "kind": "military",
+   "tier": "4",
+   "facilities": [
+    "Military Headquarters",
+    "Radar Building",
+    "Radar Platform (x3)",
+    "Military Prison",
+    "Regimental Barracks",
+    "Barracks (x5)",
+    "Mess Hall",
+    "Tank Garage (x3)",
+    "Military Guardhouse",
+    "Quonset Hut (x3)",
+    "Fortified Nest (x3)",
+    "Military Tents (x16)",
+    "Guard Tower (x6)",
+    "Military Watchtower",
+    "Military Cargo Container (x15)"
+   ],
+   "x": 1350,
+   "y": 14210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Topolniki",
+   "cyrillic": "Тополники",
+   "kind": "village",
+   "facilities": [],
+   "x": 2750,
+   "y": 12310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tulga",
+   "cyrillic": "Тулга",
+   "kind": "village",
+   "facilities": [],
+   "x": 12850,
+   "y": 4410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Turovo",
+   "cyrillic": "Турово",
+   "kind": "village",
+   "facilities": [],
+   "x": 13550,
+   "y": 14110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vavilovo",
+   "cyrillic": "Вавилово",
+   "kind": "village",
+   "facilities": [],
+   "x": 2250,
+   "y": 11010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Veresnik Military Base",
+   "kind": "military",
+   "tier": "3",
+   "facilities": [
+    "Military Prison",
+    "Military Barracks (x6)",
+    "kPolice Guardhouse",
+    "Military Watchtower (x2)",
+    "Cargo Containers (Military) (x6)"
+   ],
+   "x": 4550,
+   "y": 8310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Verkhnaya Dubrovka",
+   "cyrillic": "Верхная Дубровка",
+   "kind": "village",
+   "facilities": [],
+   "x": 9950,
+   "y": 10410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vybor",
+   "cyrillic": "Выбор",
+   "kind": "town",
+   "facilities": [],
+   "x": 3850,
+   "y": 8910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vybor Air Base",
+   "cyrillic": "Выборская Авиабаза",
+   "kind": "airfield",
+   "tier": "3",
+   "facilities": [
+    "Military Headquarters",
+    "ATC Tower",
+    "Military Fire Station",
+    "Offices (x2)",
+    "Two-Storey Barracks (x3)",
+    "Barracks (x14)",
+    "Military Prison (x2)",
+    "Service Hangar",
+    "Aircraft Shelter (x19)",
+    "Quonset Hut",
+    "Military Guardhouse (x2)",
+    "Military Guardhouse (x3)",
+    "Mess Hall",
+    "Radar Tower",
+    "Tank Garage",
+    "C-130J Wreck"
+   ],
+   "x": 4550,
+   "y": 10310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vyshnoye",
+   "cyrillic": "Вышное",
+   "kind": "town",
+   "facilities": [],
+   "x": 6550,
+   "y": 6010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vysotovo",
+   "cyrillic": "Высотово",
+   "kind": "town",
+   "facilities": [],
+   "x": 5650,
+   "y": 2510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zabolotye",
+   "cyrillic": "Заболотье",
+   "kind": "village",
+   "facilities": [],
+   "x": 1150,
+   "y": 10010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zaprudnoye",
+   "cyrillic": "Запрудное",
+   "kind": "village",
+   "facilities": [],
+   "x": 4550,
+   "y": 13210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zelenogorsk",
+   "cyrillic": "Зеленогорск",
+   "kind": "town",
+   "facilities": [],
+   "x": 2750,
+   "y": 5410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zelenogorsk Military Base",
+   "kind": "military",
+   "tier": "3",
+   "facilities": [
+    "Military Prison",
+    "Military Barracks (x4)",
+    "Military Guardhouse",
+    "Quonset Hut",
+    "Military Watchtower (x11)",
+    "Military Containers (x16)"
+   ],
+   "x": 2550,
+   "y": 5110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zolotar",
+   "cyrillic": "Золотарь",
+   "kind": "ruin",
+   "tier": "2",
+   "facilities": [
+    "Castle Tower",
+    "Castle Gate",
+    "Castle Stairs",
+    "Large Hiking Trail Shelter"
+   ],
+   "x": 10250,
+   "y": 12010,
+   "from": "grid"
+  },
+  {
+   "name": "Zvir",
+   "cyrillic": "Звир",
+   "kind": "town",
+   "facilities": [],
+   "x": 450,
+   "y": 5210,
+   "from": "grid, buildings there"
+  }
+ ]
+}

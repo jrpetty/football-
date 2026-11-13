@@ -1,0 +1,914 @@
+{
+  "schemaVersion": 2,
+  "id": "dayz",
+  "version": "1.0.0",
+  "name": "DayZ",
+  "depth": "pack",
+  "game": {
+    "title": "DayZ",
+    "publisher": "Bohemia Interactive",
+    "patch": "map data checked 2026-11-13",
+    "languages": [
+      "en"
+    ]
+  },
+  "validation": {
+    "status": "unverified",
+    "notes": "Places and facilities come from Bohemia's own server files (buildings, water pumps, crash sites) and the DayZ Wiki (names and grid references, each checked against the buildings). Reading of the status icons and road signs is not yet checked against live captures."
+  },
+  "health": "experimental",
+  "capture": {
+    "aspectRatio": null,
+    "notes": "Keep the default HUD: the status icons at the bottom right appear when a stat changes. Road signs are read when one is on screen and close enough to read.",
+    "windowTitleHints": [
+      "DayZ"
+    ]
+  },
+  "modes": [
+    {
+      "id": "offline",
+      "label": "Offline (Community Offline Mode, or a private server on your own)",
+      "multiplayer": false,
+      "competitive": false
+    },
+    {
+      "id": "official",
+      "label": "Official public server",
+      "multiplayer": true,
+      "competitive": true
+    },
+    {
+      "id": "community",
+      "label": "Community server",
+      "multiplayer": true,
+      "competitive": true
+    }
+  ],
+  "playerContext": [
+    {
+      "id": "map",
+      "label": "Map",
+      "kind": "choice",
+      "options": [
+        "Chernarus",
+        "Livonia",
+        "Sakhal"
+      ],
+      "default": "Chernarus",
+      "help": "The map you play on, for place questions (where is a town, nearest water, the way between two towns). A map name read from the screen wins."
+    }
+  ],
+  "signals": [],
+  "events": [],
+  "vision": {
+    "purpose": "DayZ. Read the survivor's status icons at the bottom right of the screen (health, blood, water, energy and temperature, each by its colour; the bleeding icon with its count; the broken bone, sickness, wet and stuffed stomach icons), and the text of any road or town sign plainly readable in the frame, letter for letter as written (Chernarus and Sakhal signs are in Cyrillic: copy the Cyrillic). Read the map name from a loading screen or server browser. Report phase 'match_end' on the 'You are dead' screen (visibleOutcome failure), 'menu' in menus, the inventory screen or loading screens, and 'round' in normal play. Report an unconscious event when the screen is black or fading in and out after a hit. Never report other players' positions or anything not visible in this frame.",
+    "sampleIntervalMs": 4000,
+    "maxLatencyMs": 15000,
+    "maxWidth": 1280,
+    "state": [
+      {
+        "key": "health",
+        "label": "Health",
+        "type": "enum",
+        "options": [
+          "ok",
+          "low",
+          "very_low",
+          "critical"
+        ],
+        "ttlMs": 15000,
+        "description": "The health (heart) status icon at the bottom right: the icon's colour: white = ok, yellow = low, orange = very_low, red or flashing red = critical. Omit when the icon is not visible."
+      },
+      {
+        "key": "blood",
+        "label": "Blood",
+        "type": "enum",
+        "options": [
+          "ok",
+          "low",
+          "very_low",
+          "critical"
+        ],
+        "ttlMs": 15000,
+        "description": "The blood (drop) status icon at the bottom right: the icon's colour: white = ok, yellow = low, orange = very_low, red or flashing red = critical. Omit when the icon is not visible."
+      },
+      {
+        "key": "water",
+        "label": "Water",
+        "type": "enum",
+        "options": [
+          "ok",
+          "low",
+          "very_low",
+          "critical"
+        ],
+        "ttlMs": 15000,
+        "description": "The water (bottle) status icon at the bottom right: the icon's colour: white = ok, yellow = low, orange = very_low, red or flashing red = critical. Omit when the icon is not visible."
+      },
+      {
+        "key": "energy",
+        "label": "Energy",
+        "type": "enum",
+        "options": [
+          "ok",
+          "low",
+          "very_low",
+          "critical"
+        ],
+        "ttlMs": 15000,
+        "description": "The energy (food) status icon at the bottom right: the icon's colour: white = ok, yellow = low, orange = very_low, red or flashing red = critical. Omit when the icon is not visible."
+      },
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "type": "enum",
+        "options": [
+          "very_cold",
+          "cold",
+          "normal",
+          "hot",
+          "very_hot"
+        ],
+        "ttlMs": 15000,
+        "description": "The thermometer icon at the bottom right: dark or flashing blue = very_cold, light blue = cold, white = normal, orange = hot, red or flashing red = very_hot. Omit when not visible."
+      },
+      {
+        "key": "bleeding",
+        "label": "Bleeding wounds",
+        "type": "number",
+        "min": 0,
+        "max": 12,
+        "ttlMs": 10000,
+        "description": "The bleeding icon (a red drop with a number) at the bottom right: the number of bleeding wounds, 1 when it shows no number. 0 only when you can see the status area and there is no bleeding icon."
+      },
+      {
+        "key": "brokenBone",
+        "label": "Broken bone",
+        "type": "boolean",
+        "ttlMs": 20000,
+        "description": "True when the broken bone icon shows in the status area; false when the status area is visible without it."
+      },
+      {
+        "key": "sick",
+        "label": "Sick",
+        "type": "boolean",
+        "ttlMs": 30000,
+        "description": "True when the sickness (bacteria or virus) icon shows in the status area; false when the status area is visible without it."
+      },
+      {
+        "key": "wet",
+        "label": "Wet",
+        "type": "boolean",
+        "ttlMs": 30000,
+        "description": "True when the wet (water drops on the body) icon shows; false when the status area is visible without it."
+      },
+      {
+        "key": "stuffed",
+        "label": "Stuffed stomach",
+        "type": "boolean",
+        "ttlMs": 20000,
+        "description": "True when the stuffed stomach warning shows (the stomach is over half full; eating or drinking much more makes the survivor vomit)."
+      },
+      {
+        "key": "roadSign",
+        "label": "Road sign",
+        "type": "string",
+        "maxLength": 60,
+        "ttlMs": 120000,
+        "description": "The place name on a road or town sign plainly readable in this frame, exactly as written (in Cyrillic on Chernarus and Sakhal, e.g. Турово). Only a sign you can read; omit otherwise."
+      },
+      {
+        "key": "mapName",
+        "label": "Map",
+        "type": "string",
+        "maxLength": 40,
+        "ttlMs": 600000,
+        "description": "The map named on a loading screen or in the server browser: Chernarus, Livonia or Sakhal."
+      }
+    ],
+    "events": [
+      {
+        "type": "unconscious",
+        "label": "Knocked out",
+        "category": "outcome",
+        "description": "The screen goes black or fades in and out after the survivor was hit or lost a lot of blood.",
+        "dedupeMs": 60000
+      }
+    ],
+    "detail": {
+      "keys": [
+        "roadSign",
+        "mapName"
+      ]
+    }
+  },
+  "mistakes": [
+    {
+      "id": "bleeding",
+      "label": "Bleeding",
+      "when": [
+        {
+          "key": "bleeding",
+          "op": ">",
+          "value": 0
+        }
+      ],
+      "forMs": 8000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "You're bleeding. Bandage it now.",
+      "summary": "Bled for a while {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "health",
+        "blood"
+      ],
+      "playbook": "stop-bleeding"
+    },
+    {
+      "id": "blood-critical",
+      "label": "Blood critical",
+      "when": [
+        {
+          "key": "blood",
+          "op": "==",
+          "value": "critical"
+        }
+      ],
+      "forMs": 10000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Blood is critical. Eat, drink, rest.",
+      "summary": "Blood was critical {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "health",
+        "blood"
+      ],
+      "playbook": "stop-bleeding"
+    },
+    {
+      "id": "thirst-critical",
+      "label": "Thirst critical",
+      "when": [
+        {
+          "key": "water",
+          "op": "==",
+          "value": "critical"
+        }
+      ],
+      "forMs": 15000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Drink now. Thirst is critical.",
+      "summary": "Water was critical {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "survival",
+        "water"
+      ],
+      "playbook": "safe-water"
+    },
+    {
+      "id": "hunger-critical",
+      "label": "Hunger critical",
+      "when": [
+        {
+          "key": "energy",
+          "op": "==",
+          "value": "critical"
+        }
+      ],
+      "forMs": 15000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Eat now. Hunger is critical.",
+      "summary": "Energy was critical {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "survival",
+        "food"
+      ],
+      "playbook": "cook-your-food"
+    },
+    {
+      "id": "freezing",
+      "label": "Freezing",
+      "when": [
+        {
+          "key": "temperature",
+          "op": "==",
+          "value": "very_cold"
+        }
+      ],
+      "forMs": 30000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Freezing. Get dry, warm, out of wind.",
+      "summary": "Freezing {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "survival",
+        "temperature"
+      ],
+      "playbook": "stay-warm-and-dry"
+    },
+    {
+      "id": "overheating",
+      "label": "Overheating",
+      "when": [
+        {
+          "key": "temperature",
+          "op": "==",
+          "value": "very_hot"
+        }
+      ],
+      "forMs": 30000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Overheating. Move away from the heat.",
+      "summary": "Overheating {count} times, {total} in total.",
+      "severity": "medium",
+      "tags": [
+        "survival",
+        "temperature"
+      ],
+      "playbook": "stay-warm-and-dry"
+    },
+    {
+      "id": "broken-bone",
+      "label": "Broken bone not splinted",
+      "when": [
+        {
+          "key": "brokenBone",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "forMs": 20000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "Broken bone. Splint it before walking far.",
+      "summary": "Moved about with a broken bone {count} times, {total} in total.",
+      "severity": "high",
+      "tags": [
+        "health",
+        "injury"
+      ],
+      "playbook": "splint-fractures"
+    },
+    {
+      "id": "sick",
+      "label": "Sick",
+      "when": [
+        {
+          "key": "sick",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "forMs": 60000,
+      "phases": [
+        "round",
+        "combat"
+      ],
+      "liveTip": "You're sick. Work out the cause, treat it.",
+      "summary": "Sick for {total} ({count} times).",
+      "severity": "medium",
+      "tags": [
+        "health",
+        "disease"
+      ],
+      "playbook": "safe-water"
+    }
+  ],
+  "episodes": [],
+  "liveCues": [],
+  "liveFreshnessMs": 15000,
+  "commentary": {
+    "unconscious": "Knocked out",
+    "bleeding": "Bleeding",
+    "thirst-critical": "Thirst critical",
+    "hunger-critical": "Hunger critical",
+    "freezing": "Freezing",
+    "broken-bone": "Broken bone"
+  },
+  "commentaryChanges": [
+    {
+      "key": "roadSign",
+      "text": "Sign: {roadSign}."
+    }
+  ],
+  "contextKeys": [
+    "mapName",
+    "roadSign"
+  ],
+  "knowledge": {
+    "concepts": [
+      {
+        "id": "status-first",
+        "title": "Status before loot",
+        "summary": "Most deaths of fresh spawns are not other players: they are blood loss, thirst, hunger, cold and sickness. Bandage first, then drink and eat, then stay dry and warm, then loot.",
+        "good": [
+          "Bandage as soon as the bleeding icon shows",
+          "Drink at the first water pump you pass",
+          "Cook meat before eating it"
+        ],
+        "bad": [
+          "Looting while bleeding",
+          "Drinking from ponds without purifying",
+          "Running in the rain with no spare clothes"
+        ],
+        "tags": [
+          "survival"
+        ]
+      },
+      {
+        "id": "know-where-you-are",
+        "title": "Know where you are",
+        "summary": "DayZ has no minimap. Road and town signs (Cyrillic on Chernarus and Sakhal), the coast, rivers, railways and landmarks such as lighthouses and military bases tell you where you are. Ask the coach about any sign.",
+        "good": [
+          "Read the sign at every town entrance",
+          "Use the coast and railways as handrails",
+          "Agree meeting points at landmarks"
+        ],
+        "bad": [
+          "Running inland with no idea of direction",
+          "Ignoring signs written in Cyrillic"
+        ],
+        "tags": [
+          "navigation"
+        ]
+      }
+    ],
+    "prohibitedAdvice": [
+      "Other players' positions or anything not visible on the player's own screen",
+      "Exploits, duplication, glitches through walls, combat logging or ghosting",
+      "Cheats, third-party tools against the server's rules, or breaking a server's own rules"
+    ],
+    "terminology": {
+      "Cherno": "Chernogorsk, the largest city on Chernarus (south coast)",
+      "Elektro": "Elektrozavodsk (south coast)",
+      "NWAF": "North-West Airfield: Vybor Air Base",
+      "Tisy": "Tisy Military Base, far north-west of Chernarus",
+      "fresh spawn": "a new character with starting gear",
+      "KOS": "kill on sight",
+      "CE": "Central Economy: the server system that spawns and despawns loot",
+      "Cyrillic sign": "town names on Chernarus and Sakhal signs: р = r, у = u, в = v, н = n, с = s, х = kh"
+    },
+    "playbook": [
+      {
+        "id": "stop-bleeding",
+        "title": "Stop the bleeding first",
+        "principle": "Bleeding drains blood until it is bandaged; blood below about half (2,500 of 5,000) is fatal, and blood only grows back when you are fed and watered.",
+        "why": "Blood 0-5,000 (start 5,000); a stab or gunshot costs about 100 at once and every bleeding wound drains more each second. Regeneration needs both food and water icons out of red: at best about 18 mL a minute (about 55 minutes per litre). Shock under 25 knocks you out; you wake at 50.",
+        "good": [
+          "Bandage, rags or a sewing kit as soon as the drop icon shows",
+          "Disinfect bandages and rags first (disinfectant spray, alcohol tincture, iodine)",
+          "Eat and drink well afterwards so blood grows back"
+        ],
+        "bad": [
+          "Looting or running on while bleeding",
+          "Using dirty rags, which can infect the wound",
+          "Waiting for the wound to close by itself (about 5 minutes, and it often gets infected)"
+        ],
+        "signals": [
+          "The red drop icon with a number at the bottom right",
+          "Blood icon turning yellow, orange or red"
+        ],
+        "fix": "The moment the drop icon shows, stop and bandage every wound, with disinfected rags or bandages.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Bleeding",
+            "title": "DayZ Wiki: Bleeding",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Blood",
+            "title": "DayZ Wiki: Blood",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Shock",
+            "title": "DayZ Wiki: Shock",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Wound_Infection",
+            "title": "DayZ Wiki: Wound Infection",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "health",
+          "blood"
+        ]
+      },
+      {
+        "id": "safe-water",
+        "title": "Drink clean water",
+        "principle": "Ponds, lakes and streams can give you cholera; water pumps and wells give clean water.",
+        "why": "Cholera shows 8-28 minutes after drinking unclean water (or from a fresh plastic bottle or canteen, which has a 50% chance of carrying it). It is cured with tetracycline or multivitamin pills taken one after another as each wears off. Water pumps are listed for every town (ask 'nearest water to …').",
+        "good": [
+          "Drink at water pumps and wells",
+          "Purify or boil water from ponds and streams",
+          "Keep a full bottle or canteen"
+        ],
+        "bad": [
+          "Drinking straight from ponds and rivers",
+          "Drinking from a newly found bottle without cleaning it"
+        ],
+        "signals": [
+          "The water icon turning yellow, orange or red",
+          "The sickness icon after drinking from a pond"
+        ],
+        "fix": "Drink only from water pumps and wells, or purify and boil anything else first.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Cholera",
+            "title": "DayZ Wiki: Cholera",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Hydration",
+            "title": "DayZ Wiki: Hydration",
+            "kind": "guide"
+          },
+          {
+            "url": "https://github.com/BohemiaInteractive/DayZ-Central-Economy",
+            "title": "Bohemia Interactive: DayZ Central Economy (server files)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "survival",
+          "water",
+          "disease"
+        ]
+      },
+      {
+        "id": "cook-your-food",
+        "title": "Cook meat, never eat people",
+        "principle": "Raw or rotten meat gives salmonella; burnt or rotten food and raw fish poison you; human meat gives an incurable brain disease.",
+        "why": "Salmonella from raw or rotten meat, fat or guts (wolf and bear steak stay risky even cooked): cured by charcoal tablets or a multivitamin. Food poisoning from burnt or rotten food, raw fish, petrol or unknown cans: charcoal or wait it out. Brain prion disease from human steak, fat or guts, cooked or not, is incurable. The stomach holds 2 litres; past half full the stuffed icon shows, past 2 litres you vomit.",
+        "good": [
+          "Cook meat on a fire before eating",
+          "Wear gloves or wash bloody hands before eating",
+          "Eat a little at a time when the stuffed icon shows"
+        ],
+        "bad": [
+          "Eating raw meat",
+          "Eating with bloody hands",
+          "Eating anything from a dead survivor"
+        ],
+        "signals": [
+          "The energy icon turning yellow, orange or red",
+          "The stuffed stomach icon"
+        ],
+        "fix": "Cook every piece of meat before eating it, and eat with clean hands.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Salmonellosis",
+            "title": "DayZ Wiki: Salmonellosis",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Poisoning",
+            "title": "DayZ Wiki: Poisoning",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Brain_Prion_Disease",
+            "title": "DayZ Wiki: Brain Prion Disease",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Energy",
+            "title": "DayZ Wiki: Energy",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "survival",
+          "food",
+          "disease"
+        ]
+      },
+      {
+        "id": "stay-warm-and-dry",
+        "title": "Stay warm and dry",
+        "principle": "Wet clothes and wind chill you; a cold survivor catches a cold that turns into flu.",
+        "why": "Left untreated in the cold, a common cold becomes influenza in 13-23 minutes. Warming up (temperature icon back to white or better) and keeping warm for up to 40 minutes cures it; multivitamin or tetracycline pills stop the cold progressing. Too close to a fire for too long overheats you.",
+        "good": [
+          "Shelter from rain under trees or in buildings",
+          "Start a fire and dry or swap wet clothes",
+          "Wear layers in the north and on Sakhal"
+        ],
+        "bad": [
+          "Running in the rain without a spare layer",
+          "Swimming in clothes",
+          "Standing by a fire until the icon turns red"
+        ],
+        "signals": [
+          "The thermometer icon turning blue (cold) or red (hot)",
+          "The wet icon"
+        ],
+        "fix": "When the wet icon or a blue thermometer shows, get under cover and get dry and warm before doing anything else.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Influenza",
+            "title": "DayZ Wiki: Influenza",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Hypothermia",
+            "title": "DayZ Wiki: Hypothermia",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Hyperthermia",
+            "title": "DayZ Wiki: Hyperthermia",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Fireplace",
+            "title": "DayZ Wiki: Fireplace",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "survival",
+          "temperature"
+        ]
+      },
+      {
+        "id": "splint-fractures",
+        "title": "Splint a broken leg",
+        "principle": "Walking on an unsplinted fracture builds shock until you pass out; climbing or swimming with one can kill you.",
+        "why": "A splint is 4 rags, or 1 bandage, or 1 duct tape, with 2 short sticks; applying it takes about 10 seconds. With it you can jog but not sprint or jump. Codeine lets you take about 25% more steps before passing out, morphine about 50%; neither fixes the bone.",
+        "good": [
+          "Carry rags and two short sticks",
+          "Splint at once, then walk or jog carefully",
+          "Crouch-walk only as far as you must before splinting"
+        ],
+        "bad": [
+          "Running or climbing with the broken bone icon",
+          "Swimming with a fracture"
+        ],
+        "signals": [
+          "The broken bone icon in the status area"
+        ],
+        "fix": "As soon as the broken bone icon shows, make and apply a splint before moving on.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Fracture",
+            "title": "DayZ Wiki: Fracture",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Splint",
+            "title": "DayZ Wiki: Splint",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "health",
+          "injury"
+        ]
+      },
+      {
+        "id": "contaminated-zones",
+        "title": "Contaminated zones need full protection",
+        "principle": "The gas in contaminated zones poisons and kills within minutes; a gas mask and a full NBC suit are needed.",
+        "why": "Permanent zones are always gassed (e.g. the ship-wreck and Pavlovo on Chernarus, Radunin and Lukow airfield on Livonia); dynamic zones are shelled about every 15 minutes, 2-4 at a time, and spawn PO-X vials. A PO-X antidote cures gas poisoning.",
+        "good": [
+          "Wear a gas mask and every piece of the NBC suit before entering",
+          "Leave at once if you start coughing"
+        ],
+        "bad": [
+          "Entering with a mask only",
+          "Looting a zone in normal clothes"
+        ],
+        "signals": [
+          "Yellow-green gas and the coughing sound"
+        ],
+        "fix": "Never enter a contaminated zone without a gas mask and the full NBC suit.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Contaminated_Zone",
+            "title": "DayZ Wiki: Contaminated Zone",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Gas_Mask",
+            "title": "DayZ Wiki: Gas Mask",
+            "kind": "guide"
+          },
+          {
+            "url": "https://github.com/BohemiaInteractive/DayZ-Central-Economy",
+            "title": "Bohemia Interactive: DayZ Central Economy (server files)",
+            "kind": "official"
+          }
+        ],
+        "tags": [
+          "survival",
+          "danger"
+        ]
+      },
+      {
+        "id": "blood-types",
+        "title": "Know your blood type before a transfusion",
+        "principle": "A transfusion of the wrong type gives a hemolytic reaction that can kill.",
+        "why": "Every character has a random blood type (O+ 43%, A+ 23%, O- 10%, B+ 9%, A- 5%, B- 3%, AB+ 2%, AB- 2%). O- can give to anyone; AB+ can take from anyone; a negative type can give to its own type, negative or positive; a positive only to positive. A blood bag holds 500 mL. A blood test kit shows the type on the blood icon for good.",
+        "good": [
+          "Test your blood with a test kit when you find one",
+          "Use saline bags when you are not sure"
+        ],
+        "bad": [
+          "Transfusing a friend's blood without testing"
+        ],
+        "signals": [
+          "The blood icon shows the type once tested"
+        ],
+        "fix": "Test both survivors' blood types before any transfusion; use saline when unsure.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Blood",
+            "title": "DayZ Wiki: Blood",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/IV_Blood_Bag",
+            "title": "DayZ Wiki: IV Blood Bag",
+            "kind": "guide"
+          },
+          {
+            "url": "https://dayz.fandom.com/wiki/Saline_Bag",
+            "title": "DayZ Wiki: Saline Bag",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "health",
+          "blood"
+        ]
+      },
+      {
+        "id": "quiet-around-infected",
+        "title": "Move quietly around infected",
+        "principle": "Infected hear noise and see movement and bright lights at night; sprinting, gunshots and torches pull them in.",
+        "why": "Infected cannot climb ladders or open doors. Soldier and heavy police infected at military and police sites hit harder and take more damage; police in stab vests are weak to head hits.",
+        "good": [
+          "Walk or crouch through towns",
+          "Use melee on single infected",
+          "Close doors behind you"
+        ],
+        "bad": [
+          "Sprinting through town centres",
+          "Shooting at infected with loud guns"
+        ],
+        "signals": [
+          "Infected screaming and running at you"
+        ],
+        "fix": "Slow down in towns and deal with single infected quietly in melee.",
+        "sources": [
+          {
+            "url": "https://dayz.fandom.com/wiki/Infected",
+            "title": "DayZ Wiki: Infected",
+            "kind": "guide"
+          }
+        ],
+        "tags": [
+          "survival",
+          "infected"
+        ]
+      }
+    ],
+    "reference": [
+      {
+        "id": "overview",
+        "items": [
+          {
+            "name": "What DayZ is",
+            "detail": "Open-world survival game by Bohemia Interactive. Each life starts with little; you find food, water, medical supplies, clothing, weapons and vehicles, and survive the infected, the environment and other players. Death ends the character: you respawn as a fresh spawn on the coast (Chernarus) or a spawn area."
+          },
+          {
+            "name": "Maps",
+            "detail": "Chernarus (15.36 km square, coast to the south and east, Cyrillic signs), Livonia (12.8 km square, inland forest, Polish names), Sakhal (15.36 km square, snowy islands, Cyrillic signs). Coordinates are metres from the south-west corner; the 100 m grid players share counts east from the west edge and south from the north edge (e.g. 135 012)."
+          }
+        ]
+      },
+      {
+        "id": "hud",
+        "items": [
+          {
+            "name": "Status icons",
+            "detail": "Bottom right: water, energy (food), temperature, health and blood. They appear when a stat changes. Colour shows the level: white fine, yellow low, orange very low, red critical (flashing at the worst). Small arrows show the stat rising or falling (and digestion after eating or drinking)."
+          },
+          {
+            "name": "Conditions",
+            "detail": "Extra icons for bleeding (red drop with the number of wounds), broken bone, sickness, wet clothes and a stuffed stomach. The blood type shows on the blood icon once tested."
+          },
+          {
+            "name": "Road signs",
+            "detail": "Town signs at the edge of each settlement and road signs at junctions. On Chernarus and Sakhal they are in Cyrillic: р is r, у is u, в is v, н is n, с is s, х is kh, so Турово reads Turovo."
+          }
+        ]
+      },
+      {
+        "id": "screens",
+        "items": [
+          {
+            "name": "You are dead",
+            "detail": "The death screen ends the life; the next character starts fresh."
+          },
+          {
+            "name": "Inventory",
+            "detail": "Tab opens the inventory over the game: gear on the left, your containers in the middle, the ground and nearby containers on the right."
+          }
+        ]
+      },
+      {
+        "id": "mechanics",
+        "items": [
+          {
+            "name": "Health, blood and shock",
+            "detail": "Health 0-100 (death at 0), blood 0-5,000 (start 5,000; around 2,500 or below is death), shock 0-100 (under 25 you fall unconscious and wake when it climbs back to 50, about 1 a second while out). Health and blood only recover with food and water: blood at best about 18 mL a minute when both icons are healthy, none while either is red."
+          },
+          {
+            "name": "Food, water and stomach",
+            "detail": "Energy and water 0-5,000 each (start 600). The stomach holds 2 litres; over half the stuffed icon shows; over 2 litres you vomit everything undigested. Digestion takes about 3-10 minutes."
+          },
+          {
+            "name": "Stamina and weight",
+            "detail": "Stamina 0-100. Up to about 6 kg carried costs nothing; each kg above that takes about 1.75 off maximum stamina (at most 95)."
+          },
+          {
+            "name": "Bleeding and wounds",
+            "detail": "Bandages, rags, bandanas and sewing kits stop bleeding; disinfect them first or the wound may get infected. A wound left to close by itself (about 5 minutes) often gets infected. Stage-one wound infection is cured by disinfecting the wound (spray, alcohol tincture, iodine); stage two needs 2-4 tetracycline pills."
+          },
+          {
+            "name": "Diseases from food and water",
+            "detail": "Cholera (unclean water; tetracycline or multivitamins), salmonella (raw or rotten meat, bloody hands; charcoal or multivitamin), food poisoning (burnt or rotten food, raw fish, petrol; charcoal or wait), brain prion disease (human meat; no cure)."
+          },
+          {
+            "name": "Other illnesses",
+            "detail": "Common cold and influenza (cold and wet; get warm, multivitamin or tetracycline), wound infection (dirty bandages; disinfect, then tetracycline), gas poisoning (contaminated zones; PO-X antidote)."
+          },
+          {
+            "name": "Fractures",
+            "detail": "A broken bone builds shock as you walk; climbing or swimming with one can kill. Splint: 4 rags, or 1 bandage, or 1 duct tape, plus 2 short sticks; about 10 seconds to apply; then you can jog but not sprint or jump."
+          },
+          {
+            "name": "Blood types",
+            "detail": "Random per character. O- gives to anyone, AB+ takes from anyone. A blood bag holds 500 mL; the wrong type causes a hemolytic reaction. Saline bags restore blood without a type check."
+          },
+          {
+            "name": "Contaminated zones",
+            "detail": "Static zones are always gassed; dynamic zones are shelled about every 15 minutes (2-4 at a time). A gas mask and the full NBC suit protect; the PO-X antidote cures gas poisoning. Static zones have their own high-tier loot."
+          },
+          {
+            "name": "Loot and the Central Economy",
+            "detail": "The server's Central Economy spawns loot by building type (military, police, medical, fire station, industrial, hunting, farm, town, village) and by area tier: inland and military areas carry better gear. Helicopter crashes, police cars and military convoys spawn at fixed possible spots; only a few are active at a time."
+          }
+        ]
+      }
+    ],
+    "referenceCheckedAt": "2026-11-13",
+    "referenceSources": [
+      {
+        "url": "https://dayz.fandom.com/wiki/Character_Status",
+        "title": "DayZ Wiki: Character Status"
+      },
+      {
+        "url": "https://github.com/BohemiaInteractive/DayZ-Central-Economy",
+        "title": "Bohemia Interactive: DayZ Central Economy"
+      }
+    ]
+  },
+  "limitations": [
+    "There are no matches in DayZ: a 'match' here is one life (it ends on the death screen) or the time from Start to Stop.",
+    "Places come from the DayZ Wiki and are checked against the game's own building list; a few with no position or a wrong one on the wiki are left out (e.g. Gieraltów, Topolin and Sitnik on Livonia).",
+    "Status icons only show when a stat changes; a stat whose icon is hidden is unknown, not fine.",
+    "Signs are read only when close enough to read; the coach never guesses where you are without one.",
+    "Live tips only offline (Community Offline Mode or a private server on your own); on public servers everything waits for the end of the life or the session."
+  ],
+  "failClosed": [
+    "Status icons not visible: no bleeding, thirst, hunger or temperature tips.",
+    "No sign read: 'where am I' is not answered from guesswork."
+  ]
+}

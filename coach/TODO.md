@@ -402,6 +402,14 @@ Legend:
 - ☑ Upgrade timings (`src/core/aoe4/upgrades.ts`): Wheelbarrow, Textiles and the 12 Blacksmith upgrades from the AoE4World summary, against the build's steps and the whole game it came from (kept with new builds), biggest gaps written out. Build steps keep the Blacksmith tier. ◐ The summary's icon names for Blacksmith upgrades are matched by name or by line and tier (checked against the game's attribute names in aoe4world/data, e.g. upgrade_melee_damage_i); confirm on a real summary (QA 22.1).
 - ☑ Key moments (`src/core/autoMoments.ts`): each death (shooters) and fight lost (AoE IV) keeps the frame it was read from, downscaled, in memory only, with its tags; a viewer to flick through them on Decisions. ◐ Needs real play with screen reading on (the demo replays have no frames): QA 22.2.
 
+## v23 delivery
+
+- ☑ DayZ pack (`src/profiles/dayz.json`): modes (offline, official, community), policy (offline live; public servers after the life or session), status icons and road signs read off the screen, survival mistakes (bleeding, critical blood, thirst, hunger, freezing, overheating, broken bone, sickness) with live tips offline, a mechanics reference and eight playbook entries with sources.
+- ☑ Places (`src/core/dayz/places.ts`, `scripts/build-dayz-data.mjs`): Chernarus 97, Livonia 34, Sakhal 60 named places (DayZ Wiki, CC BY-NC-SA), each checked against the game's own buildings (Bohemia's server files, ADPL-SA), with water pumps, medical, fuel, police, fire, military, lighthouses, crash and police-car spots, contaminated zones and spawns. Found by name, Cyrillic, transliteration, the sign's look-alike spelling ("Typobo" → Turovo) or nickname. Where is, the way between two, the nearest of anything, where am I (last sign read), and survival questions, all answered on this computer. *Unit tests; the app answers "where is typobo" and "Cherno to NWAF" on the Ask screen.*
+- ◐ Not checked against live captures yet: reading the status icons' colours and road signs (QA 23). Places missing from the wiki or wrong there (Gieraltów, Topolin, Sitnik, Petropavlovsk-Sakhalskiy page) are left out.
+- ◐ The place and building data are under non-commercial licences (see `src/profiles/dayz/README.md`): replace or clear them before any commercial release.
+- ☐ Decide whether place look-ups (public map facts, like a map app) may be answered during online play; today they wait like every other answer.
+
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.
 - ☐ Native `GraphicsCapturePicker` module (the Windows OS picker).

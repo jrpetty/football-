@@ -1,0 +1,718 @@
+{
+ "map": "sakhal",
+ "worldSize": 15360,
+ "signs": "cyrillic",
+ "source": "DayZ Wiki (dayz.fandom.com), Locations and the location pages; CC BY-NC-SA 3.0. Positions checked against the game's building list.",
+ "licence": "CC BY-NC-SA 3.0 (https://creativecommons.org/licenses/by-nc-sa/3.0/): attribution, non-commercial, share alike.",
+ "notes": [
+  "Nogovo: the wiki gives exactly Dudino's position; left out until checked.",
+  "Nogovo Airfield: no position on the wiki; left out.",
+  "Petropavlovsk-Sakhalskiy: no position on the wiki; left out.",
+  "Pik Vostochny: no position on the wiki; left out.",
+  "Tupoy: no position on the wiki; left out."
+ ],
+ "places": [
+  {
+   "name": "Aniva",
+   "cyrillic": "Анива",
+   "kind": "town",
+   "tier": "1",
+   "facilities": [
+    "Fire Station",
+    "Guardhouse (Police)",
+    "Village Police Station",
+    "Medical Center",
+    "Biohazard Shower",
+    "Large Medical Tent",
+    "Guardhouse (Military)",
+    "Small Military Tent (x2)",
+    "Cargo Containers (Military) (x2)"
+   ],
+   "x": 12850,
+   "y": 7410,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Ayan",
+   "cyrillic": "Аян",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 1250,
+   "y": 3010,
+   "from": "grid"
+  },
+  {
+   "name": "Bolotnoye",
+   "cyrillic": "Болотное",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [
+    "Orthodox Chapel",
+    "Pub"
+   ],
+   "x": 5050,
+   "y": 8710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Burukan",
+   "cyrillic": "Бурукан",
+   "kind": "military",
+   "tier": "3-4",
+   "facilities": [
+    "Guardhouses",
+    "Military Barracks",
+    "Cargo Containers (Military)",
+    "Tank Garages",
+    "Pillboxes",
+    "Fire Station",
+    "Radio Tower",
+    "Cargo Containers (Civilian)|title=Burukan",
+    "Бурукан|coord=027 088"
+   ],
+   "x": 2750,
+   "y": 6510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Cerepacha",
+   "cyrillic": "Черепаха",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [
+    "Pillbox (x3)"
+   ],
+   "x": 850,
+   "y": 11310,
+   "from": "grid"
+  },
+  {
+   "name": "Chernyy Mys",
+   "kind": "local",
+   "x": 5234,
+   "y": 3588,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Dolinovka",
+   "cyrillic": "Долиновка",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [],
+   "x": 9850,
+   "y": 9810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Dudino",
+   "cyrillic": "Дудино",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [
+    "General Store",
+    "Orthodox Chapel",
+    "Pub (x2)"
+   ],
+   "x": 7850,
+   "y": 7910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Elizarovo",
+   "cyrillic": "Елизарово",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [
+    "Lighthouse|category=Sakhal Islands"
+   ],
+   "x": 13541,
+   "y": 5146,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Evai",
+   "cyrillic": "Эваи",
+   "kind": "village",
+   "tier": "1",
+   "facilities": [
+    "General Store"
+   ],
+   "x": 7950,
+   "y": 13510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Goriachevo",
+   "cyrillic": "Горячево",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [],
+   "x": 8850,
+   "y": 10010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Ice Ridge",
+   "cyrillic": "Ледяной гребень",
+   "kind": "hill",
+   "tier": "1-2",
+   "facilities": [],
+   "x": 10750,
+   "y": 8710,
+   "from": "grid"
+  },
+  {
+   "name": "Iturul",
+   "cyrillic": "Итурул",
+   "kind": "local",
+   "tier": "1",
+   "facilities": [],
+   "x": 10350,
+   "y": 10710,
+   "from": "grid"
+  },
+  {
+   "name": "Kekra",
+   "cyrillic": "Кекра",
+   "kind": "village",
+   "tier": "3",
+   "facilities": [],
+   "x": 7150,
+   "y": 4210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Ketoj",
+   "cyrillic": "Кетой",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [
+    "Lighthouse"
+   ],
+   "x": 5750,
+   "y": 2010,
+   "from": "grid"
+  },
+  {
+   "name": "Lesogorovka",
+   "cyrillic": "Лесогоровка",
+   "kind": "village",
+   "tier": "1",
+   "facilities": [
+    "General Store",
+    "Generic Houses",
+    "Orthodox Chapel",
+    "Sawmill"
+   ],
+   "x": 10950,
+   "y": 9710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Matrosovo",
+   "cyrillic": "Матросово",
+   "kind": "village",
+   "tier": "1",
+   "facilities": [
+    "Water Spring"
+   ],
+   "x": 14250,
+   "y": 11610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Military Base (Ice Ridge)",
+   "kind": "military",
+   "tier": "2",
+   "facilities": [
+    "Military Prison",
+    "Airfield Headquarters",
+    "L-Shaped Barracks (x2)",
+    "Single-Room Barracks",
+    "Narrow Barracks (x2)"
+   ],
+   "x": 10350,
+   "y": 8610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Military Base (Wolf's Peak)",
+   "kind": "military",
+   "tier": "2",
+   "facilities": [
+    "Officer's Barracks",
+    "Military Tents",
+    "L-Shaped Barracks",
+    "Single-Room Barracks",
+    "Narrow Barracks"
+   ],
+   "x": 8150,
+   "y": 12010,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Mrak",
+   "cyrillic": "Мрак",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [
+    "Pillbox (x4)"
+   ],
+   "x": 8450,
+   "y": 1310,
+   "from": "grid"
+  },
+  {
+   "name": "Neran",
+   "cyrillic": "Неран",
+   "kind": "village",
+   "tier": "3",
+   "facilities": [],
+   "x": 2650,
+   "y": 9310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Odinokiy Vulkan",
+   "cyrillic": "Одинокий вулкан",
+   "kind": "hill",
+   "tier": "1",
+   "facilities": [
+    "Mobile Laboratory (x4)",
+    "Military Tents (x2)",
+    "Large Medical Tent (x4)",
+    "Sandbag Nest (x3)"
+   ],
+   "x": 10050,
+   "y": 12110,
+   "from": "grid"
+  },
+  {
+   "name": "Orlovo",
+   "cyrillic": "Орлово",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 10393,
+   "y": 13397,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Ostryy",
+   "cyrillic": "Острый",
+   "kind": "hill",
+   "facilities": [],
+   "x": 11550,
+   "y": 11710,
+   "from": "grid"
+  },
+  {
+   "name": "Petropavlovsk-Sakhalinsk",
+   "kind": "city",
+   "x": 5484,
+   "y": 10674,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Pik Volchiy",
+   "cyrillic": "Пик Волчий",
+   "kind": "hill",
+   "tier": "2",
+   "facilities": [],
+   "x": 8250,
+   "y": 11710,
+   "from": "grid"
+  },
+  {
+   "name": "Pik Vostochnyy",
+   "kind": "hill",
+   "x": 12847,
+   "y": 9425,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Podgornoye",
+   "cyrillic": "Подгорное",
+   "kind": "town",
+   "tier": "1",
+   "facilities": [],
+   "x": 10950,
+   "y": 13210,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Rocket Bay",
+   "cyrillic": "Ракетная бухта",
+   "kind": "water",
+   "facilities": [],
+   "x": 4568,
+   "y": 7267,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Rudnogorsk",
+   "cyrillic": "Рудногорск",
+   "kind": "town",
+   "tier": "1",
+   "facilities": [
+    "Village Police Station",
+    "Fire Station",
+    "Biohazard Shower (x4)",
+    "Large Medical Tent (x2)",
+    "Large Military Tent (x2)",
+    "Cargo Containers (Military) (x12)",
+    "Numerous workshops and cargo containers on the waterfront"
+   ],
+   "x": 13550,
+   "y": 12110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Rybnoye",
+   "cyrillic": "Рыбное",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 12551,
+   "y": 12667,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Sakhalag",
+   "cyrillic": "Сахалаг",
+   "kind": "military",
+   "tier": "2",
+   "facilities": [
+    "Guard Box",
+    "Guard Tower (x4)",
+    "Civilian Barracks (x8)",
+    "Regimental Barracks"
+   ],
+   "x": 12150,
+   "y": 9710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sakhalskaj GeoES",
+   "cyrillic": "Сахалская ГеоЭС",
+   "kind": "military",
+   "tier": "2",
+   "facilities": [
+    "Biohazard Shower (x2)",
+    "Small Military Tent (x3)",
+    "Large Military Tent (x2)",
+    "Cargo Containers (Civilian) (x5)"
+   ],
+   "x": 8350,
+   "y": 10310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Severomorsk",
+   "cyrillic": "Североморск",
+   "kind": "city",
+   "tier": "1",
+   "facilities": [
+    "Supermarket",
+    "Medical Center",
+    "Police Station",
+    "Fire Station",
+    "Biohazard Shower (x2)",
+    "Large Medical Tent (x2)",
+    "Small Military Tent (x2)",
+    "Large Military Tent"
+   ],
+   "x": 9806,
+   "y": 13622,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Shantar",
+   "cyrillic": "Шантар",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [
+    "Lighthouse"
+   ],
+   "x": 2250,
+   "y": 3410,
+   "from": "grid"
+  },
+  {
+   "name": "Shumnoye",
+   "cyrillic": "Шумное",
+   "kind": "town",
+   "tier": "1",
+   "facilities": [
+    "Medical Center"
+   ],
+   "x": 14350,
+   "y": 8910,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Slomanyy",
+   "cyrillic": "Сломанный",
+   "kind": "island",
+   "tier": "2",
+   "facilities": [
+    "Pillbox (x2)"
+   ],
+   "x": 6350,
+   "y": 6410,
+   "from": "grid"
+  },
+  {
+   "name": "Solisko",
+   "cyrillic": "Солиско",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 12698,
+   "y": 2126,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Sovetskoye",
+   "cyrillic": "Советское",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "Medical Center",
+    "Biohazard Shower (x3)",
+    "Large Medical Tent (x2)",
+    "Small Military Tent (x3)",
+    "Large Military Tent",
+    "Cargo Containers (Military) (x2)"
+   ],
+   "x": 6450,
+   "y": 12810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Sputnik",
+   "cyrillic": "Спутник",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 7750,
+   "y": 14810,
+   "from": "grid"
+  },
+  {
+   "name": "Storozh",
+   "cyrillic": "Сторож",
+   "kind": "hill",
+   "tier": "1",
+   "facilities": [
+    "Aurora Radio Building",
+    "Medium Radio Tower",
+    "Thin Radio Tower"
+   ],
+   "x": 8750,
+   "y": 12810,
+   "from": "grid"
+  },
+  {
+   "name": "Taranay",
+   "cyrillic": "Таранай",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [],
+   "x": 9750,
+   "y": 6610,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tikhoye",
+   "cyrillic": "Тихое",
+   "kind": "village",
+   "tier": "2",
+   "facilities": [],
+   "x": 6250,
+   "y": 8710,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tochka",
+   "cyrillic": "Точка",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 3750,
+   "y": 14410,
+   "from": "grid"
+  },
+  {
+   "name": "Troika",
+   "cyrillic": "Тройка",
+   "kind": "hill",
+   "tier": "2",
+   "facilities": [],
+   "x": 9050,
+   "y": 9310,
+   "from": "grid"
+  },
+  {
+   "name": "Tugur",
+   "cyrillic": "Тугур",
+   "kind": "village",
+   "tier": "3",
+   "facilities": [],
+   "x": 1750,
+   "y": 6110,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Tumanovo",
+   "cyrillic": "Туманово",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 8587,
+   "y": 13632,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Tungar",
+   "cyrillic": "Тунгар",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 12650,
+   "y": 14110,
+   "from": "grid"
+  },
+  {
+   "name": "Urup",
+   "cyrillic": "Ур",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 1550,
+   "y": 910,
+   "from": "grid"
+  },
+  {
+   "name": "Ushki",
+   "cyrillic": "Ушки",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 10750,
+   "y": 14610,
+   "from": "grid"
+  },
+  {
+   "name": "Utes",
+   "cyrillic": "Утёс",
+   "kind": "island",
+   "tier": "1",
+   "facilities": [],
+   "x": 5450,
+   "y": 14510,
+   "from": "grid"
+  },
+  {
+   "name": "Utichiy",
+   "cyrillic": "Утичий",
+   "kind": "island",
+   "tier": "2",
+   "facilities": [
+    "Military Control Tower",
+    "Pillbox (x2)",
+    "Lighthouse"
+   ],
+   "x": 8650,
+   "y": 5110,
+   "from": "grid"
+  },
+  {
+   "name": "Vajkovo",
+   "cyrillic": "Вайково",
+   "kind": "village",
+   "tier": "1",
+   "facilities": [],
+   "x": 14550,
+   "y": 9810,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vostok",
+   "cyrillic": "Восток",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "Red Garage Rows",
+    "Piano House"
+   ],
+   "x": 13950,
+   "y": 8310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Vysokoe",
+   "cyrillic": "Высокое",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 11160,
+   "y": 8041,
+   "from": "the wiki's interactive map"
+  },
+  {
+   "name": "Yasnaya Polyana",
+   "cyrillic": "Ясная Поляна",
+   "kind": "local",
+   "tier": "2",
+   "facilities": [],
+   "x": 8150,
+   "y": 9210,
+   "from": "grid"
+  },
+  {
+   "name": "Yasnomorsk",
+   "cyrillic": "Ясноморск",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 6950,
+   "y": 13310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Yuzhnoye",
+   "cyrillic": "Южное",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [
+    "General Store"
+   ],
+   "x": 10950,
+   "y": 6310,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zhupanovo",
+   "cyrillic": "Жупаново",
+   "kind": "town",
+   "tier": "2",
+   "facilities": [],
+   "x": 5750,
+   "y": 12510,
+   "from": "grid, buildings there"
+  },
+  {
+   "name": "Zvezdnyy Nikel",
+   "kind": "local",
+   "x": 12069,
+   "y": 10359,
+   "facilities": [],
+   "from": "the wiki's interactive map"
+  }
+ ]
+}
