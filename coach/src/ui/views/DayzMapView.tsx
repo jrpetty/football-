@@ -12,6 +12,7 @@ import type { CoachSettings } from '../../core/settings.ts'
 import { DAYZ_MAPS, describePlace, findPlace, placesIn, routeLine, type DayzMapId } from '../../core/dayz/places.ts'
 import { mapById, parsePosition, pointInfo } from '../../core/dayz/mapView.ts'
 import { mapPreference } from '../../core/dayz/ask.ts'
+import { groundTime, TIME_NOTE } from '../../core/dayz/travel.ts'
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '../../core/dayz/lootRun.ts'
 import { lifeLine } from '../../core/dayz/trail.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
@@ -144,7 +145,7 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
     const r = follow(result.route)
     const missing = r.legs.filter((l) => !l).length
     const how = travel === 'car' ? 'By car' : 'On foot'
-    return `${how} over the ground: about ${(r.lengthM / 1000).toFixed(1)} km, ${Math.round(r.road * 100)}% on roads${missing ? `; ${missing === 1 ? 'one leg has' : `${missing} legs have`} no way by ${travel === 'car' ? 'car (water or forest)' : 'land'}, drawn straight` : ''}.`
+    return `${how} over the ground: about ${(r.lengthM / 1000).toFixed(1)} km, ${Math.round(r.road * 100)}% on roads, ${groundTime(r, r.travel)}${missing ? `; ${missing === 1 ? 'one leg has' : `${missing} legs have`} no way by ${travel === 'car' ? 'car (water or forest)' : 'land'}, drawn straight` : ''}.`
   }, [follow, result, travel])
 
   const hereLine = useMemo(() => (shown ? pointInfo(map, shown).line : null), [shown, map])
@@ -216,7 +217,8 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
         <p className="muted small" style={{ margin: 0 }}>
           {travel === 'straight'
             ? 'Routes are straight lines.'
-            : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest, water or gas zones' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes, the sea and gas zones'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}
+            : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest, water or gas zones' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes, the sea and gas zones'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}{' '}
+          {TIME_NOTE}
         </p>
       </section>
 

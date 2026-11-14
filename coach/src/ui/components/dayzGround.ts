@@ -39,7 +39,7 @@ export function useFollowGround(map: DayzMap, travel: Travel | 'straight'): Foll
     if (!terrain || travel === 'straight') return null
     return (points) => {
       const r = groundRoute(terrain, points, travel, gas)
-      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road }
+      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road, travel }
     }
   }, [terrain, travel, gas])
 }

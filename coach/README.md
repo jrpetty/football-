@@ -579,6 +579,14 @@ Then press **Choose the game window**, play, and listen.
     ("take me there", "how far is it", "show it on the map", "where does it
     spawn"). Earlier answers can be put back on the screen, and "Open on
     the big map" opens the full Map.
+    **How long it takes:** every going-somewhere answer ("take me to",
+    "how long to get to Berezino", "what now", routes, loot runs, the
+    nearest place for an item) says roughly how long the trip is, jogging
+    and (for longer trips) by car; on the screen and the Map the time is
+    worked out over the ground, on foot or by car. The speeds are
+    estimates (jogging about 16 km/h, which costs no stamina; a car about
+    65 km/h on roads, 30 off them): Bohemia's files give no metres per
+    second, so treat them as rough.
     Questions it knows are answered on your PC, free and instant. Anything
     else (with your Claude key) goes to Claude, which answers in plain
     conversation and can call the app's own tools: places, routes, nearest

@@ -5599,6 +5599,8 @@ td > .swatch {
 .comp-head h2 { margin: 2px 0 0; font-size: 22px; }
 .comp-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; }
 .comp-caption { margin: 0; color: var(--text-2); }
+.comp-time { margin: 0; }
+.comp-time b { font-weight: 600; }
 .comp-look { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--bg-sunken); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .comp-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px 14px; margin: 0; }
 .comp-facts > div { display: flex; flex-direction: column; padding: 6px 8px; background: var(--bg-sunken); border-radius: var(--radius-sm); }

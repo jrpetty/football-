@@ -31,3 +31,7 @@ Built by `scripts/build-dayz-items.mjs` from the Central Economy's `db/types.xml
 ## Before any commercial use
 
 Both licences are **non-commercial**. Replace this data, or get permission from the rights holders, before the app is sold or used commercially.
+
+## Travel times
+
+`src/core/dayz/travel.ts` gives rough trip times. They are estimates, not the game's numbers: Bohemia's scripts (`DayZ-Script-Diff`, `playerconstants.c`) give food, water and stamina use per second but no movement speeds, and the DayZ Wiki lists car top speeds only (for example the Sarka 120 at about 100 km/h on flat roads). Jogging is taken as about 16 km/h (it costs no stamina in 1.x), swimming about 5 km/h, a car about 65 km/h on roads and 30 km/h off them. Straight-line answers add a detour (×1.15 on foot, ×1.4 by car); the map uses the length over the ground.

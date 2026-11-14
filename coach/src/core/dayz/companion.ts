@@ -17,6 +17,7 @@ import { findItem, itemAnswer, buildingAnswer, kindAnswer, kindIn, placesFor, CH
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from './lootRun.ts'
 import { bearing, DAYZ_MAPS, describePlace, distance, featureLine, findPlace, gridRef, km, nearest, neighbours, placesIn, region, type DayzMapId, type PlaceMatch } from './places.ts'
 import { pointInfo } from './mapView.ts'
+import { tripShort, tripTime } from './travel.ts'
 
 // --- Cards ----------------------------------------------------------------------------------
 
@@ -127,7 +128,7 @@ export function itemCardFor(item: LootItem, spot: Spot | null): Card {
       ['Loot tiers', item.tiers.length ? item.tiers.join(', ') : 'any'],
       ...(item.deloot ? [['Also', 'helicopter crashes and convoys'] as [string, string]] : []),
     ],
-    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)}` : '', buildings: s.buildings, tier: s.tier })),
+    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)} · ${tripShort(s.m)}` : '', buildings: s.buildings, tier: s.tier })),
     map: 'chernarus',
     markers: spots.map((s) => pos(s.place, `${s.place.name} (${s.buildings})`)),
     from: spot ? pos(spot, spot.label) : null,
@@ -197,10 +198,10 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
     if (/\b(show|map|where is it|on the map)\b/.test(q) && !/\b(take|route|how far|get)\b/.test(q)) {
       return { text: `${topic.name} on the map.`, card: { type: 'map', map: topic.map, title: topic.name, focus: pos(p, topic.name) }, topic }
     }
-    if (/\b(take me|get me|route|how far|how do i get|way|go there|distance)\b/.test(q)) {
+    if (/\b(take me|get me|route|how far|how long|how do i get|way|go there|distance)\b/.test(q)) {
       if (!ctx.spot || topic.map !== 'chernarus') return { text: `Where are you? Say "I'm at" a town or grid, and I will show the way to ${topic.name}.`, card: null, topic }
       const m = distance(ctx.spot, p)
-      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}.`, card: { type: 'map', map: 'chernarus', title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
+      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}, ${tripTime(m)}.`, card: { type: 'map', map: 'chernarus', title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
     }
     if (/\b(what'?s|what is) (near|around)\b/.test(q)) {
       const m = findPlace(topic.name)
@@ -364,7 +365,7 @@ export function runTool(name: string, input: Record<string, unknown>, ctx: Compa
       const from = fromM ? pos(fromM.place, fromM.place.name) : spot && to.map.id === 'chernarus' ? pos(spot, spot.label) : null
       if (!from) return { text: 'No start: name one, or ask the player where they are.', card: null }
       const m = distance(from, to.place)
-      return { text: `${to.place.name} is ${km(m)} ${bearing(from, to.place)} of ${from.label} in a straight line; the map shows the way over the ground.`, card: { type: 'map', map: to.map.id, title: `${from.label} → ${to.place.name}`, route: [from, pos(to.place, to.place.name)] }, topic: { kind: 'place', name: to.place.name, map: to.map.id, x: to.place.x, y: to.place.y } }
+      return { text: `${to.place.name} is ${km(m)} ${bearing(from, to.place)} of ${from.label} in a straight line, ${tripTime(m)}; the map shows the way over the ground and its time.`, card: { type: 'map', map: to.map.id, title: `${from.label} → ${to.place.name}`, route: [from, pos(to.place, to.place.name)] }, topic: { kind: 'place', name: to.place.name, map: to.map.id, x: to.place.x, y: to.place.y } }
     }
     case 'nearest': {
       const kind = str('kind')
@@ -438,7 +439,7 @@ function localSpot(where: string): Spot | null {
 export const COMPANION_SYSTEM = [
   'You are the DayZ companion in the Sightline app: a friendly, sharp survival partner the player talks to while they play, mostly on Chernarus. You chat naturally and briefly (usually 1-4 sentences, at most about 120 words; your words may be read aloud, so no markdown headings or tables).',
   'You have tools that read the app\'s built-in data: places and roads (from the game files and the DayZ Wiki), Bohemia\'s loot table for Chernarus, the gun data, the survival reference, the player\'s spot and kit (which they told you). Use them for any fact about places, distances, loot, guns or mechanics instead of guessing, and quote their numbers. Tools also put a card or a map on the app\'s screen beside the chat, so call the one that shows what the player asked for (for "show me", always).',
-  'If you need where the player is and do not know, ask them (they can say "I\'m at" a town or grid) or call player_state. When they say where they are or what they found, call set_spot or update_kit.',
+  'If you need where the player is and do not know, ask them (they can say "I\'m at" a town or grid) or call player_state. When they say where they are or what they found, call set_spot or update_kit. Whenever the player asks where to go or how to get somewhere, say how far it is and roughly how long it takes (the route, nearest, plan and loot-run tools give rough times jogging and by car; call them rough).',
   'Rules: never claim to know where other players, loot or vehicles are right now; loot data says where things can spawn, not what is there. Do not give exploits, glitches, duping or anything against the game\'s rules. Do not say "because", "always", "definitely", "certainly" or "guarantee". Use British spelling. If the data cannot answer, say so and suggest what the player could check.',
 ].join('\n\n')
 

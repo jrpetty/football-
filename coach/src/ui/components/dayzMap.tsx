@@ -5,6 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from 'react'
 import { distance, type DayzMap } from '../../core/dayz/places.ts'
+import type { Travel } from '../../core/dayz/terrain.ts'
+import { groundTime, tripTime } from '../../core/dayz/travel.ts'
 import { clampView, focusOn, fullView, gridLines, labelled, pointAt, pointInfo, viewBox, zoomAt, type MapViewState } from '../../core/dayz/mapView.ts'
 import chernarusImg from '../assets/dayz/chernarus.jpg'
 import livoniaImg from '../assets/dayz/livonia.jpg'
@@ -50,7 +52,7 @@ interface Props {
 }
 
 /** A route over the ground, leg by leg (null where there is no way), its length and share on roads. */
-export type FollowGround = (points: readonly { x: number; y: number }[]) => { legs: (readonly { x: number; y: number }[] | null)[]; lengthM: number; road: number }
+export type FollowGround = (points: readonly { x: number; y: number }[]) => { legs: (readonly { x: number; y: number }[] | null)[]; lengthM: number; road: number; travel: Travel }
 
 /** One life's trail on the map. */
 export interface TrailLine {
@@ -379,7 +381,7 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
         {drawn.length ? (
           <span>
             Your route: {drawn.length} point{drawn.length === 1 ? '' : 's'}, {scaleText(drawn.slice(1).reduce((s, _, i) => s + legLength(drawnLegs, drawn, i), 0))} in all
-            {drawnLegs ? ` over the ground (${Math.round(drawnLegs.road * 100)}% on roads)` : ''}
+            {drawnLegs ? ` over the ground (${Math.round(drawnLegs.road * 100)}% on roads, ${groundTime(drawnLegs, drawnLegs.travel)})` : drawn.length > 1 ? `, ${tripTime(drawn.slice(1).reduce((s, _, i) => s + legLength(null, drawn, i), 0))}` : ''}
             {drawn.length > 1 ? `, last leg ${scaleText(legLength(drawnLegs, drawn, drawn.length - 2))}` : ''}. {drawing ? 'Click to add more; drag to move the map.' : ''}
           </span>
         ) : info && picked ? (

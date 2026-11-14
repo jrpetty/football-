@@ -3,12 +3,14 @@
 // with its bullet drop, an item's spawns, a step-by-step plan, advice, the
 // kit, a comparison or a list.
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Card } from '../../core/dayz/companion.ts'
 import { HELP_EXAMPLES } from '../../core/dayz/companion.ts'
 import { KIT } from '../../core/dayz/assistant.ts'
 import { DAYZ_MAPS, type DayzMapId } from '../../core/dayz/places.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
+import { distance } from '../../core/dayz/places.ts'
+import { groundTime, TIME_NOTE, tripTime } from '../../core/dayz/travel.ts'
 import { DayzMapCanvas, type Pos } from './dayzMap.tsx'
 import { useFollowGround } from './dayzGround.ts'
 import type { CoachSession, SessionState } from '../session.ts'
@@ -240,6 +242,17 @@ function ScreenMap(props: { mapId: DayzMapId; state: SessionState; session: Coac
   const [travel, setTravel] = useState<Travel | 'straight'>('foot')
   const follow = useFollowGround(map, travel)
   const here = props.state.spot?.map === props.mapId ? { ...props.state.spot, source: 'you' as const } : null
+  // How long the route takes: over the ground when it is followed, else from the straight line.
+  const timeLine = useMemo(() => {
+    const route = props.route
+    if (!route || route.length < 2) return null
+    if (follow) {
+      const r = follow(route)
+      return `${r.travel === 'car' ? 'By car' : 'On foot'}: ${(r.lengthM / 1000).toFixed(1)} km over the ground, ${groundTime(r, r.travel)}.`
+    }
+    const m = route.slice(1).reduce((s, p, i) => s + distance(route[i], p), 0)
+    return `${(m / 1000).toFixed(1)} km in a straight line: ${tripTime(m)}.`
+  }, [props.route, follow])
   return (
     <div className="comp-map">
       {props.route?.length ? (
@@ -267,6 +280,11 @@ function ScreenMap(props: { mapId: DayzMapId; state: SessionState; session: Coac
         follow={follow}
         onSetHere={(p) => props.session.setSpot({ ...p, map: props.mapId })}
       />
+      {timeLine ? (
+        <p className="small comp-time" title={TIME_NOTE}>
+          <b>{timeLine}</b> <span className="muted">Rough times.</span>
+        </p>
+      ) : null}
     </div>
   )
 }

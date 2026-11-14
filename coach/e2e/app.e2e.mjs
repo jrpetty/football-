@@ -334,13 +334,19 @@ await check('DayZ companion: chat on one side, its screen on the other: your spo
   const steps = await win.locator('.comp-steps li').count()
   assert(steps >= 4, `steps: ${steps}`)
   await win.waitForSelector('.comp-screen .dz-route polyline.ground', { timeout: 10_000 })
+  // How long it takes: over the ground, on foot.
+  const time = await win.locator('.comp-screen .comp-time b').textContent({ timeout: 5_000 })
+  assert(/^On foot: [\d.]+ km over the ground, about \d+ (min|h)/.test(time ?? ''), `time: ${time}`)
+  assert((await win.locator('.comp-steps li >> text=/on foot\)/').count()) >= 3, 'each step says how long')
+  await say('how long does it take to get to Berezino')
+  await win.waitForSelector('.comp-msg:has(.comp-you:text-is("how long does it take to get to Berezino")) .comp-bot >> text=/min jogging/', { timeout: 5_000 })
   // An older answer back on the screen.
   await win.click('.comp-msg:has(.comp-you:text-is("where do I find a canteen")) >> text=Show on screen')
   await win.waitForSelector('.comp-screen h2 >> text=Canteen', { timeout: 5_000 })
   await win.click('.comp-msg:has(.comp-you:text-is("what now?")) >> text=Show on screen')
   await win.waitForTimeout(500)
   await win.screenshot({ path: join(out, 'dayz-companion.png') })
-  return { steps }
+  return { steps, time }
 })
 
 await app.close()
