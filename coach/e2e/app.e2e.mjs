@@ -276,7 +276,24 @@ await check('DayZ map: Bohemia\'s map image, a town found by its sign, your spot
   await win.click('text=Show on map', { timeout: 10_000 })
   await win.waitForSelector('.dz-result >> text=Berezino', { timeout: 5_000 })
   await win.screenshot({ path: join(out, 'dayz-map.png') })
-  return { scale }
+  // A loot run drawn through numbered stops.
+  await win.fill('input[aria-label="Find a town, grid or route"]', 'Plan a route from Berezino hitting a hospital, a police station and military')
+  await win.press('input[aria-label="Find a town, grid or route"]', 'Enter')
+  await win.waitForSelector('.dz-result >> text=Loot run from Berezino', { timeout: 5_000 })
+  const stops = await win.locator('.dz-route .dz-stop').count()
+  assert(stops === 4, `start and three stops drawn: ${stops}`)
+  // Drawn over the ground (roads and fields), not as straight lines.
+  await win.waitForSelector('.dz-route polyline.ground', { timeout: 10_000 })
+  await win.waitForSelector('.dz-result >> text=On foot over the ground', { timeout: 5_000 })
+  await win.locator('.dz-map').scrollIntoViewIfNeeded()
+  await win.waitForTimeout(400)
+  await win.screenshot({ path: join(out, 'dayz-loot-run.png') })
+  // Your own route: click points on the map.
+  await win.click('text=Draw a route')
+  const box = await win.locator('.dz-map').boundingBox()
+  for (const [fx, fy] of [[0.3, 0.3], [0.5, 0.6], [0.7, 0.4]]) await win.mouse.click(box.x + box.width * fx, box.y + box.height * fy)
+  await win.waitForSelector('.dz-info >> text=Your route: 3 points', { timeout: 5_000 })
+  return { scale, stops }
 })
 
 await app.close()

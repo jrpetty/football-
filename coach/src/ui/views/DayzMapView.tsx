@@ -11,7 +11,18 @@ import type { CoachSettings } from '../../core/settings.ts'
 import { DAYZ_MAPS, describePlace, findPlace, placesIn, routeLine, type DayzMapId } from '../../core/dayz/places.ts'
 import { mapById, parsePosition, pointInfo } from '../../core/dayz/mapView.ts'
 import { mapPreference } from '../../core/dayz/ask.ts'
-import { DayzMapCanvas, type Pos } from '../components/dayzMap.tsx'
+import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '../../core/dayz/lootRun.ts'
+import { lifeLine } from '../../core/dayz/trail.ts'
+import { decodeTerrain, groundRoute, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
+import { DayzMapCanvas, type FollowGround, type Pos, type TrailLine } from '../components/dayzMap.tsx'
+
+/** The terrain grids (about 300 KB each), loaded when a map is first shown. */
+const TERRAIN: Readonly<Record<DayzMapId, () => Promise<{ default: TerrainData }>>> = {
+  chernarus: () => import('../../profiles/dayz/terrain.chernarus.json'),
+  livonia: () => import('../../profiles/dayz/terrain.livonia.json'),
+  sakhal: () => import('../../profiles/dayz/terrain.sakhal.json'),
+}
+const terrainCache = new Map<DayzMapId, Terrain>()
 import type { SessionState } from '../session.ts'
 
 export type MapHere = Pos & { readonly map: DayzMapId }
@@ -35,8 +46,34 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
   const [mapId, setMapId] = useState<DayzMapId>(chosen)
   const map = mapById(DAYZ_MAPS, mapId)
   const [query, setQuery] = useState('')
-  const [result, setResult] = useState<{ text: string; focus: (Pos & { nonce: number }) | null; route: readonly [Pos, Pos] | null } | null>(null)
+  const [result, setResult] = useState<{ text: string; focus: (Pos & { nonce: number }) | null; route: readonly Pos[] | null } | null>(null)
   const [hereText, setHereText] = useState('')
+  // Routes over the ground: on foot (roads, fields, round water), by car (roads), or straight lines.
+  const [travel, setTravel] = useState<Travel | 'straight'>('foot')
+  const [terrain, setTerrain] = useState<Terrain | null>(terrainCache.get(mapId) ?? null)
+  useEffect(() => {
+    let live = true
+    const cached = terrainCache.get(mapId)
+    if (cached) setTerrain(cached)
+    else {
+      setTerrain(null)
+      void TERRAIN[mapId]().then((m) => {
+        const t = decodeTerrain(m.default)
+        terrainCache.set(mapId, t)
+        if (live) setTerrain(t)
+      })
+    }
+    return () => {
+      live = false
+    }
+  }, [mapId])
+  const follow: FollowGround | null = useMemo(() => {
+    if (!terrain || travel === 'straight') return null
+    return (points) => {
+      const r = groundRoute(terrain, points, travel)
+      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road }
+    }
+  }, [terrain, travel])
   const [hereError, setHereError] = useState<string | null>(null)
 
   // The last road sign read: live where coaching is allowed, otherwise once play has stopped.
@@ -52,6 +89,19 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
     if (!t) return
     const map = mapById(DAYZ_MAPS, onMap)
     const nonce = Date.now()
+    // A loot run: the shortest way through one of each kind of place asked for, drawn through numbered stops.
+    if (isLootRun(t)) {
+      const here = signAllowed && signPlace && signPlace.map.id === onMap ? signPlace : null
+      const req = parseLootRun(t, onMap, here)
+      if (!req) {
+        setResult({ text: 'Where from? Start with a town: "loot run from Berezino hitting a hospital, police and military".', focus: null, route: null })
+        return
+      }
+      if (req.start.map.id !== onMap) setMapId(req.start.map.id)
+      const plan = planLootRun(req)
+      setResult({ text: lootRunLine(plan).replace(/ Open it on the Map to see the line\.$/, ''), focus: null, route: lootRunPath(plan) })
+      return
+    }
     // "Cherno to NWAF": the way between two.
     const two = placesIn(t, onMap).filter((p) => p.map.id === onMap)
     if (two.length >= 2 && /\b(to|from|->|and)\b|→/.test(t.toLowerCase())) {
@@ -73,10 +123,10 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
   // "Show on map" from the Ask screen: the map the place is on, then the place (or the way between two).
   useEffect(() => {
     if (!focus) return
-    // The places the question names: one is shown, two are the way between them.
+    // The places the question names: one is shown, two are the way between them; a loot run as asked.
     const named = placesIn(focus.text, mapId)
     const onMap = named[0]?.map.id ?? mapId
-    const text = named.length >= 2 ? `${named[0].place.name} to ${named[1].place.name}` : named[0]?.place.name ?? focus.text
+    const text = isLootRun(focus.text) ? focus.text : named.length >= 2 ? `${named[0].place.name} to ${named[1].place.name}` : named[0]?.place.name ?? focus.text
     setMapId(onMap)
     setQuery(text)
     search(text, onMap)
@@ -94,6 +144,26 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
     onHere({ ...p, map: mapId })
     setHereText('')
   }
+
+  // The trail: finished lives always; the current one live where coaching is allowed, or once play has stopped.
+  const all = state.trail.map((life, i) => ({ life, i })).filter(({ life }) => life.map === mapId)
+  const hiddenCurrent = all.some(({ life }) => !life.end) && !signAllowed
+  const lives = all.filter(({ life }) => life.end || signAllowed)
+  const trailLines: TrailLine[] = lives.map(({ life }) => ({
+    id: life.id,
+    points: life.stops.map((s) => ({ x: s.x, y: s.y, label: s.name })),
+    died: life.end?.died ? (life.stops.at(-1) ? { x: life.stops.at(-1)!.x, y: life.stops.at(-1)!.y, label: life.end.near ?? '' } : null) : null,
+    current: !life.end,
+  }))
+
+  // The route over the ground, in words.
+  const groundLine = useMemo(() => {
+    if (!follow || !result?.route || result.route.length < 2) return null
+    const r = follow(result.route)
+    const missing = r.legs.filter((l) => !l).length
+    const how = travel === 'car' ? 'By car' : 'On foot'
+    return `${how} over the ground: about ${(r.lengthM / 1000).toFixed(1)} km, ${Math.round(r.road * 100)}% on roads${missing ? `; ${missing === 1 ? 'one leg has' : `${missing} legs have`} no way by ${travel === 'car' ? 'car (water or forest)' : 'land'}, drawn straight` : ''}.`
+  }, [follow, result, travel])
 
   const hereLine = useMemo(() => (shown ? pointInfo(map, shown).line : null), [shown, map])
 
@@ -140,9 +210,52 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
             Find
           </button>
         </form>
-        {result ? <p className="dz-result small">{result.text}</p> : null}
+        <span className="segmented" role="radiogroup" aria-label="Routes">
+          {(
+            [
+              ['foot', 'On foot'],
+              ['car', 'By car'],
+              ['straight', 'Straight lines'],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" role="radio" aria-checked={travel === id} onClick={() => setTravel(id)}>
+              {label}
+            </button>
+          ))}
+        </span>
+        {result ? (
+          <p className="dz-result small">
+            {result.text}
+            {groundLine ? ` ${groundLine}` : ''}
+          </p>
+        ) : null}
 
-        <DayzMapCanvas map={map} here={shown} focus={result?.focus ?? null} route={result?.route ?? null} onSetHere={(p) => onHere({ ...p, map: mapId })} />
+        <DayzMapCanvas map={map} here={shown} focus={result?.focus ?? null} route={result?.route ?? null} trail={trailLines} follow={follow} onSetHere={(p) => onHere({ ...p, map: mapId })} />
+        <p className="muted small" style={{ margin: 0 }}>
+          {travel === 'straight'
+            ? 'Routes are straight lines.'
+            : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest or water' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes and the sea'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}
+        </p>
+      </section>
+
+      <section className="panel" aria-labelledby="dz-trail-h">
+        <div className="panel-head">
+          <h2 id="dz-trail-h">Where you have been</h2>
+          <span className="muted small">From road signs read off your screen</span>
+        </div>
+        {lives.length ? (
+          <ol className="dz-lives small">
+            {lives.map(({ life, i }) => (
+              <li key={life.id}>{lifeLine(life, i)}</li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted small">No signs read yet this session.</p>
+        )}
+        {hiddenCurrent ? <p className="muted small">On public servers this life's trail shows after it ends (or when you stop).</p> : null}
+        <p className="muted small">
+          Each life is a dotted line through the towns whose signs were read, with an ✕ where it ended in death (near the last sign read; DayZ shows no exact position). With screen reading set to look only when you ask, only signs from your questions are read, so the trail is sparse; a look every few seconds fills it in.
+        </p>
       </section>
 
       <section className="panel" aria-labelledby="dz-here-h">

@@ -14,6 +14,7 @@ import { validateVisionResponse } from '../core/vision/contract.ts'
 import { VisionSampler } from '../core/vision/sampler.ts'
 import { cleanScreen, dHash, ScreenMemory, type ScreenInfo } from '../core/vision/screens.ts'
 import { HudReader } from '../core/hud/reader.ts'
+import { IconReader } from '../core/hud/icons.ts'
 import type { FromWorker, ToWorker, VisionConfig, VisionStatus } from './protocol.ts'
 
 /** At most this many frames wait for analysis; older ones are dropped. */
@@ -66,6 +67,9 @@ export class PipelineHost {
   private lastFrame: Frame | null = null
   /** HUD numbers read on this computer (when the player marked them). */
   private hud: HudReader | null = null
+  /** Status icons read by colour here (free), and when they were last read. */
+  private icons: IconReader | null = null
+  private lastIconRead = -Infinity
   private hudSaves = false
   /** Looking at the screen half as often: every marked number is read here. */
   private saving = false
@@ -108,6 +112,8 @@ export class PipelineHost {
         })
         this.hud = msg.hud?.fields.length ? new HudReader(msg.hud.fields, msg.hud.book) : null
         this.hudSaves = msg.hud?.saves === true
+        this.icons = msg.icons?.length ? new IconReader(msg.icons) : null
+        this.lastIconRead = -Infinity
         this.saving = false
         this.lastHudRead = -Infinity
         this.lastBookPost = -Infinity
@@ -169,6 +175,7 @@ export class PipelineHost {
         this.postMosaic(engine, msg.now, true)
         this.postBook(true)
         this.hud = null
+        this.icons = null
         this.deps.post({ type: 'output', ...out, status: null, report: engine.report(), frameDone: false })
         this.deps.post({ type: 'stopped', snapshot: engine.snapshot(new Date()), insights: engine.insights(), report: engine.report() })
         return
@@ -214,6 +221,8 @@ export class PipelineHost {
     this.latencies = [...this.latencies.slice(-19), msg.arrivedAt - msg.frameAt]
     this.learnScreen(msg.frameAt, msg.arrivedAt, (msg.response as { screen?: unknown } | null)?.screen)
     const { observations, stats } = validateVisionResponse(msg.response, this.profile, msg.frameAt, msg.arrivedAt, `v${msg.frameAt}`)
+    // The model looked: compare its readings with the icon colours read here.
+    this.icons?.check(msg.frameAt, observations)
     if (this.hud) {
       // The same frame read here and by the model: compare, then learn the digits.
       this.hud.check(msg.frameAt, observations)
@@ -289,6 +298,7 @@ export class PipelineHost {
       this.postMosaic(this.engine, frame.timestamp, out.matches.length > 0)
       this.lastFrame = frame
       this.readHud(frame)
+      this.readIcons(frame)
       this.maybeSample(frame)
       this.timings = [...this.timings.slice(-19), this.deps.now() - started]
       this.emit(out, true, true)
@@ -358,6 +368,14 @@ export class PipelineHost {
     if (observations.length) this.emit(this.engine.ingestObservations(observations, frame.timestamp), false)
   }
 
+  /** The status icons' colours, read here about once a second (free: no cloud look), into the engine. */
+  private readIcons(frame: Frame): void {
+    if (!this.icons || !this.engine || !this.profile || frame.timestamp - this.lastIconRead < HUD_READ_MS) return
+    this.lastIconRead = frame.timestamp
+    const observations = this.icons.read(frame, this.profile.id)
+    if (observations.length) this.emit(this.engine.ingestObservations(observations, frame.timestamp), false)
+  }
+
   /** The learned digit shapes, for keeping between sessions (throttled; always at the end). */
   private postBook(force: boolean): void {
     const now = this.deps.now()
@@ -399,6 +417,7 @@ export class PipelineHost {
       screen: this.screen,
       knownScreens: this.screens?.catalog.screens.length ?? 0,
       hud: this.hud ? { ...this.hud.status(), saving: this.saving } : null,
+      icons: this.icons?.status() ?? null,
     }
   }
 }

@@ -13,7 +13,26 @@ import { Modal } from './common.tsx'
 
 type Boxes = Readonly<Record<string, MinimapBox>>
 
-export function HudAlign(props: { session: CoachSession; specs: readonly HudNumberSpec[]; initial: Boxes; onSave: (boxes: Boxes) => void; onClose: () => void }) {
+/** What a box holds, checked on the picture: ok, a short badge, and a line for the player. */
+export type BoxProbe = (frame: { width: number; height: number; data: Uint8ClampedArray; timestamp: number }, box: MinimapBox, key: string) => { ok: boolean; badge: string; line: string }
+
+/** The default check: characters found in the box (to check it holds the whole number and nothing else). */
+const digitsProbe: BoxProbe = (frame, box) => {
+  const n = segment(frame, box)?.length ?? 0
+  return { ok: n > 0, badge: n ? `${n} characters` : 'nothing found', line: n ? `${n} characters found in the box. If that is more or fewer than the number shows, redraw it tighter.` : 'no characters found in the box. Draw it around the number.' }
+}
+
+export function HudAlign(props: {
+  session: CoachSession
+  specs: readonly Pick<HudNumberSpec, 'key' | 'label'>[]
+  initial: Boxes
+  onSave: (boxes: Boxes) => void
+  onClose: () => void
+  title?: string
+  lede?: string
+  probe?: BoxProbe
+}) {
+  const probe = props.probe ?? digitsProbe
   const canvas = useRef<HTMLCanvasElement>(null)
   const pixels = useRef<ImageData | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'none'>('loading')
@@ -61,11 +80,11 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
     }
   }
 
-  /** Characters found in a box (to check it holds the whole number and nothing else). */
-  const found = (box: MinimapBox | undefined): number | null => {
+  /** What the box holds on the picture. */
+  const found = (box: MinimapBox | undefined, key: string) => {
     const img = pixels.current
-    if (!img || !box) return null
-    return segment({ width: img.width, height: img.height, data: img.data, timestamp: 0 }, box)?.length ?? 0
+    if (!img || !box || box.w <= 0 || box.h <= 0) return null
+    return probe({ width: img.width, height: img.height, data: img.data, timestamp: 0 }, box, key)
   }
 
   const at = (e: React.PointerEvent) => {
@@ -101,14 +120,16 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
   }
 
   const sel = props.specs.find((s) => s.key === selected)
-  const n = found(boxes[selected])
+  const n = found(boxes[selected], selected)
+  const title = props.title ?? 'Mark the numbers on your screen'
 
   return (
-    <Modal title="Mark the numbers on your screen" onClose={props.onClose}>
+    <Modal title={title} onClose={props.onClose}>
       <div>
-        <h1>Mark the numbers on your screen</h1>
+        <h1>{title}</h1>
         <p className="lede">
-          Pick a number from the list, then drag a box tightly around it on the picture (the whole number, nothing else). The coach then learns your HUD's digits from what the cloud model reads, and reads them on this PC once the two agree.
+          {props.lede ??
+            "Pick a number from the list, then drag a box tightly around it on the picture (the whole number, nothing else). The coach then learns your HUD's digits from what the cloud model reads, and reads them on this PC once the two agree."}
         </p>
       </div>
       <div className="hud-align">
@@ -135,14 +156,14 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
               })
             : null}
         </div>
-        <ol className="hud-fields" aria-label="Numbers to mark">
+        <ol className="hud-fields" aria-label="Items to mark">
           {props.specs.map((s) => {
-            const count = found(boxes[s.key])
+            const res = found(boxes[s.key], s.key)
             return (
               <li key={s.key}>
                 <button type="button" className={`hud-field${s.key === selected ? ' selected' : ''}`} aria-pressed={s.key === selected} onClick={() => setSelected(s.key)}>
                   <span>{s.label}</span>
-                  <span className={`badge ${boxes[s.key] ? (count ? 'ok' : 'warn') : 'neutral'}`}>{boxes[s.key] ? (count ? `${count} characters` : 'nothing found') : 'not marked'}</span>
+                  <span className={`badge ${boxes[s.key] ? (res?.ok ? 'ok' : 'warn') : 'neutral'}`}>{boxes[s.key] ? (res?.badge ?? 'marked') : 'not marked'}</span>
                 </button>
                 {boxes[s.key] ? (
                   <button
@@ -162,11 +183,7 @@ export function HudAlign(props: { session: CoachSession; specs: readonly HudNumb
           })}
         </ol>
       </div>
-      {sel && boxes[selected] ? (
-        <p className={`small ${n ? '' : 'warn-text'}`}>
-          {n ? `${sel.label}: ${n} characters found in the box. If that is more or fewer than the number shows, redraw it tighter.` : `${sel.label}: no characters found in the box. Draw it around the number.`}
-        </p>
-      ) : null}
+      {sel && boxes[selected] && n ? <p className={`small ${n.ok ? '' : 'warn-text'}`}>{`${sel.label}: ${n.line}`}</p> : null}
       <div className="btn-row" style={{ marginTop: 12 }}>
         <label className="btn ghost">
           Use a screenshot…

@@ -36,31 +36,58 @@ interface Props {
   readonly here: (Pos & { readonly source: 'you' | 'sign' }) | null
   /** Fly here when it changes (a search, "Show on map"). */
   readonly focus: (Pos & { readonly nonce: number }) | null
-  /** A straight line between two places. */
-  readonly route: readonly [Pos, Pos] | null
+  /** A route to draw: two places, or a loot run's start, numbered stops and finish. */
+  readonly route: readonly Pos[] | null
+  /** Where the player has been: towns from road signs read, life by life, and where each life ended. */
+  readonly trail?: readonly TrailLine[]
   readonly onSetHere: (p: Pos) => void
+  /** Plot routes over the ground (roads, fields, round water) instead of straight lines; null: straight. */
+  readonly follow?: FollowGround | null
 }
 
-export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
+/** A route over the ground, leg by leg (null where there is no way), its length and share on roads. */
+export type FollowGround = (points: readonly { x: number; y: number }[]) => { legs: (readonly { x: number; y: number }[] | null)[]; lengthM: number; road: number }
+
+/** One life's trail on the map. */
+export interface TrailLine {
+  readonly id: string
+  readonly points: readonly Pos[]
+  /** Where the life ended (the last place read), when it ended in death. */
+  readonly died: Pos | null
+  /** The current life (drawn brighter). */
+  readonly current: boolean
+}
+
+export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follow }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 800, height: 600 })
   const [view, setView] = useState<MapViewState>(() => fullView(map))
   const [layers, setLayers] = useState<ReadonlySet<LayerId>>(() => new Set(DEFAULT_LAYERS))
   const [picked, setPicked] = useState<Pos | null>(null)
   const drag = useRef<{ x: number; y: number; view: MapViewState; moved: boolean } | null>(null)
+  // Drawing your own route: each click adds a point.
+  const [drawing, setDrawing] = useState(false)
+  const [drawn, setDrawn] = useState<readonly Pos[]>([])
 
   // A new map: the whole of it.
   useEffect(() => {
     setView(fullView(map))
     setPicked(null)
+    setDrawn([])
   }, [map])
   useEffect(() => {
     if (focus) setView(focusOn(map, focus, focus.label.startsWith('grid') ? 800 : 2400))
   }, [focus, map])
   useEffect(() => {
-    if (!route) return
-    const [a, b] = route
-    setView(clampView(map, { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, span: Math.max(1500, distance(a, b) * 1.4) }))
+    if (!route?.length) return
+    // Fit the whole route.
+    const xs = route.map((p) => p.x)
+    const ys = route.map((p) => p.y)
+    const spanX = Math.max(...xs) - Math.min(...xs)
+    const spanY = Math.max(...ys) - Math.min(...ys)
+    setView(clampView(map, { cx: (Math.max(...xs) + Math.min(...xs)) / 2, cy: (Math.max(...ys) + Math.min(...ys)) / 2, span: Math.max(1200, spanY * 1.3, (spanX * 1.3 * size.height) / size.width) }))
+    // Bring the map into view, so the drawn route is seen.
+    box.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
   }, [route, map])
   useEffect(() => {
     const el = box.current
@@ -102,7 +129,8 @@ export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
     if (d && !d.moved) {
       const { px: x, py: y } = local(e)
       const at = pointAt(map, view, size, x, y)
-      setPicked({ ...at, label: pointInfo(map, at).grid })
+      if (drawing) setDrawn((ds) => [...ds, { ...at, label: pointInfo(map, at).grid }])
+      else setPicked({ ...at, label: pointInfo(map, at).grid })
     }
   }
   const onKey = (e: KeyboardEvent) => {
@@ -116,6 +144,14 @@ export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
   }
 
   const show = (id: LayerId) => layers.has(id)
+  // Routes over the ground (when on): each leg's path, else the straight line.
+  const routeLegs = useMemo(() => (route && route.length > 1 && follow ? follow(route) : null), [route, follow])
+  const drawnLegs = useMemo(() => (drawn.length > 1 && follow ? follow(drawn) : null), [drawn, follow])
+  const legLine = (legs: ReturnType<FollowGround> | null, pts: readonly Pos[], i: number) => legs?.legs[i] ?? [pts[i], pts[i + 1]]
+  const legLength = (legs: ReturnType<FollowGround> | null, pts: readonly Pos[], i: number) => {
+    const l = legs?.legs[i]
+    return l ? l.slice(1).reduce((s, p, k) => s + distance(l[k], p), 0) : distance(pts[i], pts[i + 1])
+  }
   const places = useMemo(() => [...map.places].sort((a, b) => rank(b.kind) - rank(a.kind)), [map])
   const info = picked ? pointInfo(map, picked) : null
 
@@ -135,6 +171,19 @@ export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
           <button type="button" className="btn sm primary" onClick={() => setView(focusOn(map, here, 1600))}>
             Zoom to me
           </button>
+        ) : null}
+        <button type="button" className={`btn sm${drawing ? ' primary' : ''}`} aria-pressed={drawing} onClick={() => setDrawing((d) => !d)}>
+          {drawing ? 'Drawing: click to add points' : 'Draw a route'}
+        </button>
+        {drawn.length ? (
+          <>
+            <button type="button" className="btn sm ghost" onClick={() => setDrawn((ds) => ds.slice(0, -1))}>
+              Undo
+            </button>
+            <button type="button" className="btn sm ghost" onClick={() => setDrawn([])}>
+              Clear drawing
+            </button>
+          </>
         ) : null}
         <span className="dz-scale muted small">{scaleText(view.span)} top to bottom</span>
         <span className="dz-layers">
@@ -209,11 +258,72 @@ export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
           {show('medical') && map.world.medical.map(([x, y], i) => <path key={`me${i}`} className="dz-medical" d={cross(x, sy(y), 5 * px, false)} strokeWidth={2.5 * px} />)}
           {show('water') && map.world.water.map(([x, y], i) => <circle key={`wa${i}`} className="dz-water" cx={x} cy={sy(y)} r={4 * px} strokeWidth={px} />)}
 
-          {route ? (
+          {trail?.map((t) => (
+            <g key={t.id} className={`dz-trail${t.current ? ' current' : ''}`}>
+              {t.points.length > 1 ? <polyline points={t.points.map((p) => `${p.x},${sy(p.y)}`).join(' ')} strokeWidth={2.5 * px} strokeDasharray={`${3 * px} ${4 * px}`} /> : null}
+              {t.points.map((p, i) => (
+                <circle key={i} cx={p.x} cy={sy(p.y)} r={3.5 * px} strokeWidth={px} />
+              ))}
+              {t.died ? (
+                <g className="dz-died">
+                  <path d={cross(t.died.x, sy(t.died.y), 7 * px, true)} strokeWidth={3 * px} />
+                  <text x={t.died.x + 9 * px} y={sy(t.died.y) - 6 * px} fontSize={11 * px} strokeWidth={3 * px}>
+                    died near {t.died.label}
+                  </text>
+                </g>
+              ) : null}
+            </g>
+          ))}
+
+          {route?.length ? (
             <g className="dz-route">
-              <line x1={route[0].x} y1={sy(route[0].y)} x2={route[1].x} y2={sy(route[1].y)} strokeWidth={3 * px} strokeDasharray={`${8 * px} ${5 * px}`} />
+              {route.slice(0, -1).map((_, i) => {
+                const line = legLine(routeLegs, route, i)
+                return <polyline key={`l${i}`} className={routeLegs?.legs[i] ? 'ground' : ''} points={line.map((p) => `${p.x},${sy(p.y)}`).join(' ')} strokeWidth={3 * px} strokeDasharray={routeLegs?.legs[i] ? undefined : `${8 * px} ${5 * px}`} />
+              })}
+              {route.slice(0, -1).map((_, i) => {
+                // The arrow sits halfway along the leg's own line.
+                const line = legLine(routeLegs, route, i)
+                const k = Math.max(0, Math.floor((line.length - 1) / 2))
+                const p = line[k]
+                const q = line[Math.min(line.length - 1, k + 1)]
+                const angle = (Math.atan2(sy(q.y) - sy(p.y), q.x - p.x) * 180) / Math.PI
+                return <path key={`a${i}`} className="dz-arrow" d={`M${-6 * px},${-5 * px}L${4 * px},0L${-6 * px},${5 * px}`} transform={`translate(${(p.x + q.x) / 2} ${(sy(p.y) + sy(q.y)) / 2}) rotate(${angle})`} strokeWidth={2.5 * px} />
+              })}
               {route.map((p, i) => (
-                <circle key={i} cx={p.x} cy={sy(p.y)} r={6 * px} strokeWidth={2 * px} />
+                <g key={i} className="dz-stop">
+                  <circle cx={p.x} cy={sy(p.y)} r={(i === 0 ? 7 : 9) * px} strokeWidth={2 * px} />
+                  {i > 0 && /^\d/.test(p.label) ? (
+                    <text x={p.x} y={sy(p.y) + 3.5 * px} fontSize={10 * px} textAnchor="middle" className="dz-stop-n">
+                      {p.label.split(' ')[0]}
+                    </text>
+                  ) : null}
+                  {p.label && !(show('towns') && map.places.some((pl) => pl.name === p.label)) ? (
+                    <text x={p.x + 11 * px} y={sy(p.y) - 8 * px} fontSize={12 * px} strokeWidth={3 * px} className="dz-stop-label">
+                      {p.label.replace(/^\d+ /, '')}
+                    </text>
+                  ) : null}
+                </g>
+              ))}
+            </g>
+          ) : null}
+
+          {drawn.length ? (
+            <g className="dz-drawn">
+              {drawn.slice(1).map((_, i) => (
+                <polyline key={`dl${i}`} points={legLine(drawnLegs, drawn, i).map((p) => `${p.x},${sy(p.y)}`).join(' ')} strokeWidth={3 * px} />
+              ))}
+              {drawn.slice(1).map((_, i) => {
+                const line = legLine(drawnLegs, drawn, i)
+                const mid = line[Math.floor(line.length / 2)]
+                return (
+                  <text key={`d${i}`} x={mid.x + 6 * px} y={sy(mid.y) - 6 * px} fontSize={11 * px} strokeWidth={3 * px}>
+                    {scaleText(legLength(drawnLegs, drawn, i))}
+                  </text>
+                )
+              })}
+              {drawn.map((p, i) => (
+                <circle key={i} cx={p.x} cy={sy(p.y)} r={5 * px} strokeWidth={2 * px} />
               ))}
             </g>
           ) : null}
@@ -243,7 +353,13 @@ export function DayzMapCanvas({ map, here, focus, route, onSetHere }: Props) {
       </div>
 
       <div className="dz-info small" aria-live="polite">
-        {info && picked ? (
+        {drawn.length ? (
+          <span>
+            Your route: {drawn.length} point{drawn.length === 1 ? '' : 's'}, {scaleText(drawn.slice(1).reduce((s, _, i) => s + legLength(drawnLegs, drawn, i), 0))} in all
+            {drawnLegs ? ` over the ground (${Math.round(drawnLegs.road * 100)}% on roads)` : ''}
+            {drawn.length > 1 ? `, last leg ${scaleText(legLength(drawnLegs, drawn, drawn.length - 2))}` : ''}. {drawing ? 'Click to add more; drag to move the map.' : ''}
+          </span>
+        ) : info && picked ? (
           <>
             <span>{info.line}</span>{' '}
             <button type="button" className="btn sm" onClick={() => onSetHere({ x: picked.x, y: picked.y, label: `grid ${info.grid}` })}>

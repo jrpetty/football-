@@ -4,6 +4,7 @@
 // process and nowhere else.
 
 import type { EngineStatus, InsightView, SessionReport } from '../core/engine.ts'
+import type { IconField, IconFieldStats } from '../core/hud/icons.ts'
 import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import type { PatternSnapshot } from '../core/patterns.ts'
 import type { ResolvedPolicy } from '../core/policy/registry.ts'
@@ -44,6 +45,8 @@ export type ToWorker =
       readonly mosaics?: readonly StoredMosaic[]
       /** HUD numbers marked by the player, and the digit shapes learned in earlier sessions. */
       readonly hud?: { readonly fields: readonly HudField[]; readonly book: GlyphBookData | null; readonly saves: boolean } | null
+      /** Status icons read by their colour on this PC (free; works without cloud vision). */
+      readonly icons?: readonly IconField[] | null
       /** The build order to call during play (the build trainer), and the practice focus to say at the start. */
       readonly training?: { readonly build: BuildOrder | null; readonly practice: string | null } | null
       readonly now: number
@@ -102,6 +105,8 @@ export interface VisionStatus {
   readonly knownScreens: number
   /** HUD numbers read on this computer, when the player marked any. */
   readonly hud: (HudStatus & { readonly saving: boolean }) | null
+  /** Status icons read by their colour on this computer, when the player marked any. */
+  readonly icons: readonly IconFieldStats[] | null
 }
 
 export interface WorkerStatus extends EngineStatus {

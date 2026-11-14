@@ -1,4 +1,5 @@
 import { isDiscordWebhook } from '../../core/notify.ts'
+import { colourWord, probeIcon } from '../../core/hud/icons.ts'
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { GsiServerStatus, PlatformInfo, SightlineBridge, VoiceModelStatus } from '../../../shared/bridge.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
@@ -54,6 +55,7 @@ export function SettingsView({ settings, onSettings, session, info, catalog, bri
       {profile.vision ? <ScreenReadingPanel settings={settings} onSettings={onSettings} bridge={bridge} cloud={cloud} onCloud={onCloud} profile={profile} usage={usage} /> : null}
       {profile.learning ? <LearningPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.hudNumbers?.length && profile.vision ? <HudPanel settings={settings} onSettings={onSettings} session={session} profile={profile} bridge={bridge} /> : null}
+      {profile.hudIcons?.length ? <IconsPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap ? <MinimapPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
       {profile.positioning?.minimap && profile.knowledge.maps?.length ? <OfficialMapsPanel session={session} profile={profile} info={info} /> : null}
       {profile.pitch ? <RadarPanel settings={settings} onSettings={onSettings} session={session} profile={profile} /> : null}
@@ -524,6 +526,77 @@ function HudPanel({ settings, onSettings, session, profile, bridge }: { settings
           session={session}
           specs={specs}
           initial={boxes}
+          onSave={(b) => onSettings({ hud: { ...settings.hud, [profile.id]: b } })}
+          onClose={() => setMarking(false)}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+/** Status icons read by their colour on this PC: where each is, what it reads, and how it agrees with the model when the model looks. */
+function IconsPanel({ settings, onSettings, session, profile }: { settings: CoachSettings; onSettings: (p: Partial<CoachSettings>) => void; session: CoachSession; profile: GameProfile }) {
+  const state = useSyncExternalStore(session.subscribe, session.getState)
+  const [marking, setMarking] = useState(false)
+  const specs = profile.hudIcons ?? []
+  const boxes = settings.hud[profile.id] ?? {}
+  const marked = specs.filter((s) => boxes[s.key])
+  const live = state.status?.vision.icons ?? null
+  const stat = (key: string) => live?.find((f) => f.key === key) ?? null
+  const kindOf = (key: string) => specs.find((s) => s.key === key)?.kind ?? 'level'
+  return (
+    <section className="panel" aria-labelledby="icons-h">
+      <div className="panel-head">
+        <h2 id="icons-h">Read status icons on this PC</h2>
+        <span className={`badge ${marked.length ? 'ok' : 'neutral'}`}>{marked.length ? `${marked.length} of ${specs.length} marked` : 'Not set up'}</span>
+      </div>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Free: once you mark where each status icon is, the coach reads its colour on this PC about once a second (white fine, yellow low, orange very low, red critical; blue cold), with no cloud look and no API key. So offline it can say “drink”, “bandage” or “get warm” even while screen reading looks only when you ask.
+        It reads only the steady part of each box (the icon, not the world behind it), says nothing when unsure, and stops using an icon if its colour disagrees with what the cloud model reads when it does look.
+        On public servers the tips wait for the end of the life, as always.
+      </p>
+      <button type="button" className="btn" onClick={() => setMarking(true)}>
+        {marked.length ? 'Change where the icons are' : 'Mark where the icons are'}
+      </button>
+      {marked.length ? (
+        <table className="hud-table small">
+          <thead>
+            <tr>
+              <th>Icon</th>
+              <th>Reads now</th>
+              <th>Agreed with the model</th>
+              <th>Used</th>
+            </tr>
+          </thead>
+          <tbody>
+            {marked.map((s) => {
+              const f = stat(s.key)
+              return (
+                <tr key={s.key}>
+                  <td>{s.label}</td>
+                  <td>{f?.last ? `${f.last.replace(/_/g, ' ')}${f.colour ? ` (${colourWord(f.colour)})` : ''}` : '—'}</td>
+                  <td>{f ? (f.checks ? `${f.agreed} of ${f.checks}` : 'no look yet') : '—'}</td>
+                  <td>{f ? (f.stopped ? 'stopped: disagreed with the model' : f.usable ? '✓ yes' : 'watching…') : '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      ) : null}
+      {marked.length && !live ? <p className="muted small">The table fills in while you capture DayZ.</p> : null}
+      {marking ? (
+        <HudAlign
+          session={session}
+          specs={specs}
+          initial={boxes}
+          title="Mark the status icons on your screen"
+          lede="Pick an icon from the list, then drag a box tightly around it on the picture (just the icon). Best on a still taken while the icons show their normal colours. The coach then reads each icon's colour on this PC."
+          probe={(frame, box, key) => {
+            const p = probeIcon(frame, box, kindOf(key))
+            if (!p.colour) return { ok: false, badge: 'no icon found', line: 'no icon colour found in the box. Draw it tightly around the icon.' }
+            const what = p.value ? `${colourWord(p.colour)}: ${p.value.replace(/_/g, ' ')}` : colourWord(p.colour)
+            return { ok: p.share >= 0.6, badge: what, line: `reads ${what} (${Math.round(p.share * 100)}% of its icon pixels). Check that matches the icon on your screen.` }
+          }}
           onSave={(b) => onSettings({ hud: { ...settings.hud, [profile.id]: b } })}
           onClose={() => setMarking(false)}
         />

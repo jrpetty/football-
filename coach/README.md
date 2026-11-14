@@ -566,6 +566,28 @@ Then press **Choose the game window**, play, and listen.
     how it knows). On public servers a spot you set shows any time, the
     one from signs after the life or the session. Place answers on the Ask
     screen have a "Show on map" button.
+  - **Loot runs:** "Plan a route from Berezino hitting a hospital, a
+    police station and military" picks one of each (the shortest order,
+    from the game's own building list), optionally "and back" or "ending
+    at" a town, and draws it on the map through numbered stops.
+  - **Routes over the ground**, not straight lines: on foot they take
+    roads where they help, cross fields, go through forest when it saves
+    enough and keep out of lakes and the sea; by car they keep to roads.
+    The ground is read from Bohemia's map picture (roads, open ground,
+    forest, water), so small paths and bridges can be missed, and
+    Sakhal's roads barely show. Applies to loot runs, "Cherno to NWAF"
+    and routes you **draw yourself** (Draw a route, then click points;
+    each leg's length is shown).
+  - **Where you have been:** each life as a dotted line through the towns
+    whose signs were read, with an ✕ where it ended in death; on public
+    servers a life's trail shows once it is over.
+  - **Free status tips:** mark where DayZ's status icons are (Settings →
+    Read status icons on this PC) and the coach reads their colours on
+    your PC every second, with no cloud look and no API key: offline it
+    says "drink", "bandage", "get warm" even while screen reading looks
+    only when you ask. It reads only the steady part of each box (the icon,
+    not the world behind it), says nothing when unsure, and stops using an
+    icon that disagrees with the cloud model when the model does look.
   - Survival questions (cholera, salmonella, splints, blood types, gas
     zones, bleeding, stamina) from the pack's own reference.
   - **Guns (60 of them).** "What does the KA-M look like?" (shape, stock,

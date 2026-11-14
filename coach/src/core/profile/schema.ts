@@ -396,6 +396,21 @@ export interface HudNumberSpec {
   readonly label: string
 }
 
+/**
+ * A status icon read by its colour on the player's computer (src/core/hud/icons.ts),
+ * once they mark where it is: free readings, no cloud look.
+ */
+export interface HudIconSpec {
+  /** The reading (a vision state key). */
+  readonly key: string
+  /** level: white ok → yellow low → orange very low → red critical; temperature: dark blue → light blue → white → orange → red; presence: a badge that shows or not. */
+  readonly kind: 'level' | 'temperature' | 'presence'
+  /** presence: the value while the badge shows (0 while it does not). */
+  readonly present?: number
+  /** What the player looks for on their screen, e.g. "Water (bottle icon)". */
+  readonly label: string
+}
+
 export interface CommentaryChangeSpec {
   /** The reading watched (an enum or string). */
   readonly key: string
@@ -923,6 +938,8 @@ export interface GameProfile {
   readonly commentaryChanges?: readonly CommentaryChangeSpec[]
   /** HUD numbers that can be read on the player's computer once they mark where each is (src/core/hud). */
   readonly hudNumbers?: readonly HudNumberSpec[]
+  /** Status icons read by their colour on the player's computer once they mark where each is (free, no cloud look). */
+  readonly hudIcons?: readonly HudIconSpec[]
   /** State keys that describe the game rather than the play (map, opponent's civilisation…), kept for the review and answers. */
   readonly contextKeys?: readonly string[]
   /**
@@ -1423,6 +1440,23 @@ export function validateProfile(input: unknown): ValidationResult {
     }
     if (!['number', 'fraction', 'clock'].includes(o.kind as string)) c.errors.push(`${path}.kind: must be number, fraction or clock`)
     if (o.kind === 'fraction' && typeof o.key2 !== 'string') c.errors.push(`${path}.key2: a fraction needs its second reading`)
+    c.str(o.label, `${path}.label`, { max: 60 })
+  })
+  const LEVEL_VALUES = ['ok', 'low', 'very_low', 'critical']
+  const TEMPERATURE_VALUES = ['very_cold', 'cold', 'normal', 'hot', 'very_hot']
+  c.arr(p.hudIcons, 'hudIcons', true).forEach((x, i) => {
+    const o = c.obj(x, `hudIcons[${i}]`)
+    if (!o) return
+    const path = `hudIcons[${i}]`
+    const key = c.str(o.key, `${path}.key`)
+    const spec = (p.vision as { state?: { key: string; type: string; options?: string[] }[] } | undefined)?.state?.find((s) => s.key === key)
+    if (key && !spec) c.errors.push(`${path}.key: unknown state key "${key}"`)
+    if (!['level', 'temperature', 'presence'].includes(o.kind as string)) c.errors.push(`${path}.kind: must be level, temperature or presence`)
+    // The colours stand for the reading's own values.
+    const needs = o.kind === 'level' ? LEVEL_VALUES : o.kind === 'temperature' ? TEMPERATURE_VALUES : null
+    if (spec && needs && (spec.type !== 'enum' || !needs.every((v) => spec.options?.includes(v)))) c.errors.push(`${path}: "${key}" must be an enum with ${needs.join(', ')}`)
+    if (spec && o.kind === 'presence' && spec.type !== 'number' && spec.type !== 'boolean') c.errors.push(`${path}: a presence icon needs a number or boolean reading`)
+    c.num(o.present, `${path}.present`, 0, 100, true)
     c.str(o.label, `${path}.label`, { max: 60 })
   })
   if (p.commentaryStatus !== undefined) {

@@ -5556,3 +5556,17 @@ td > .swatch {
 .dz-here .dz-here-dot { fill: #5ad1b8; stroke: none; }
 .dz-here .dz-here-area { fill: rgba(90, 209, 184, 0.15); stroke: rgba(90, 209, 184, 0.6); stroke-dasharray: 20 14; stroke-width: 6; }
 .dz-info { min-height: 28px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.dz-route polyline { stroke: #ffd166; fill: none; stroke-linejoin: round; }
+.dz-route .dz-arrow { stroke: #ffd166; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.dz-stop circle { fill: #ffd166; stroke: #3a2a00; }
+.dz-stop .dz-stop-n { fill: #1c1400; font-family: var(--font); font-weight: 800; }
+.dz-stop .dz-stop-label { fill: #fff3cf; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--font); font-weight: 700; }
+.dz-trail polyline { stroke: rgba(121, 168, 255, 0.75); fill: none; stroke-linecap: round; }
+.dz-trail circle { fill: #79a8ff; stroke: #0b1a33; }
+.dz-trail.current polyline { stroke: #b9d0ff; }
+.dz-died path { stroke: #ff5c5c; stroke-linecap: round; }
+.dz-died text { fill: #ffd0d0; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--font); font-weight: 700; }
+.dz-drawn polyline { stroke: #ff9ff3; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.dz-drawn circle { fill: #ff9ff3; stroke: #3a0033; }
+.dz-drawn text { fill: #ffe0fa; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--mono); }
+.dz-lives { margin: 0; padding-left: 20px; display: grid; gap: 4px; }

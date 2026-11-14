@@ -5,6 +5,8 @@
 // conversation. React reads one immutable state object (useSyncExternalStore).
 
 import type { OverheadInfo, PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
+import { trailStep, type TrailLife } from '../core/dayz/trail.ts'
+import { mapPreference } from '../core/dayz/ask.ts'
 import type { CloudStatus, ResearchBrief } from '../../shared/cloud.ts'
 import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
@@ -36,6 +38,7 @@ import { analyzeOverhead, decodeImage, encodePng, mapForFile, MIN_OVERHEAD_SCORE
 import { hasLayout, layoutPicture } from './layouts.ts'
 import { fromBase64 } from '../core/map/minimap.ts'
 import { liveModes, policyFor } from './policy.ts'
+import { iconFieldsFor } from '../core/hud/icons.ts'
 import { hudFieldsFor } from '../core/hud/reader.ts'
 import { compareWithPlayer, compareWithSummary, type TruthReport } from '../core/truth/aoe4world.ts'
 import { autoMomentFor, RecentFrames, type AutoMomentInfo } from '../core/autoMoments.ts'
@@ -147,6 +150,8 @@ export interface SessionState {
   readonly researching: boolean
   /** Maps stitched from the minimap, by map name (lower case). A demo's are synthetic and never saved. */
   readonly mosaics: Readonly<Record<string, ShownMosaic>>
+  /** DayZ: the towns of road signs read, life by life, and where each life ended (this session only). */
+  readonly trail: readonly TrailLife[]
   /** Official overhead map images kept for this game, by map id. */
   readonly overheads: Readonly<Record<string, OverheadInfo>>
   /** The map whose official image is being imported or downloaded. */
@@ -206,6 +211,7 @@ const INITIAL: SessionState = {
   research: null,
   researching: false,
   mosaics: {},
+  trail: [],
   overheads: {},
   overheadBusy: null,
   conversation: [],
@@ -772,6 +778,8 @@ export class CoachSession {
       // A demo stitches its own synthetic map from scratch; real play continues the maps learned before.
       mosaics: kind === 'screen' ? Object.values(this.state.mosaics).filter((m) => !m.synthetic) : [],
       hud: hudFields.length ? { fields: hudFields, book: hudBook, saves: settings.hudSaves } : null,
+      // Status icons by colour: free, so in any real capture, with or without cloud features.
+      icons: kind === 'screen' ? iconFieldsFor(profile.hudIcons, settings.hud[profile.id]) : [],
       // The build trainer's build for the player's civilisation, and the practice focus.
       training: { build: this.progress.activeBuild(), practice: this.progress.practiceLine() },
       now: 0,
@@ -939,7 +947,9 @@ export class CoachSession {
     worker.terminate()
     if (this.worker === worker) this.worker = null
     if (!stopped) return
-    this.set({ report: stopped.report })
+    // The session is over: so is the life it was in (not a death).
+    const open = this.state.trail.at(-1)
+    this.set({ report: stopped.report, ...(open && !open.end ? { trail: [...this.state.trail.slice(0, -1), { ...open, end: { died: false, near: open.stops.at(-1)?.name ?? null, at: Date.now() } }] } : {}) })
     let tendencies = false
     if (this.settings?.saveTendencies) {
       tendencies = await this.bridge.saveTendencies(stopped.snapshot).catch(() => false)
@@ -1441,6 +1451,15 @@ export class CoachSession {
     if (msg.frameDone) this.inFlight = Math.max(0, this.inFlight - 1)
 
     const patch: Mutable<SessionState> = {}
+    // DayZ: a road sign read adds its town to this life's trail; the end of a life closes it.
+    if (this.profile?.id === 'dayz' && (msg.report || msg.matches.length)) {
+      const context = msg.report?.context ?? this.state.report?.context ?? {}
+      const sign = typeof context.roadSign === 'string' ? context.roadSign : null
+      const ended = msg.matches.at(-1)
+      const prefer = mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context })
+      const trail = trailStep(this.state.trail, { sign, prefer, lifeEnded: ended ? { died: ended.result === 'loss' } : null, now: Date.now() })
+      if (trail !== this.state.trail) patch.trail = trail
+    }
     if (msg.status) patch.status = msg.status
     if (msg.report) patch.report = msg.report
     if (msg.report?.map?.minimap?.map) this.syncOfficial(msg.report.map.minimap.map)

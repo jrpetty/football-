@@ -20,6 +20,10 @@ Built by `scripts/build-dayz-weapons.mjs`. From the **DayZ Wiki** weapon pages a
 
 Built by `scripts/build-dayz-maps.py` from the top-down map images in Bohemia Interactive's Central Economy tool (`CETool/<Map>/map.png` in the same repository, ADPL-SA). Resized to 2048 (Chernarus, Sakhal) or 3072 pixels (Livonia, whose dark image is brightened); otherwise unchanged. North up; each covers the whole terrain.
 
+## terrain.<map>.json — the ground, for routes
+
+Built by `scripts/build-dayz-terrain.py` from the same map images: a 1024 × 1024 grid per map, each cell road, open ground, forest or water, read from the picture's colours and texture (no road network is published). An estimate: small paths and bridges can be missed; Sakhal's roads barely show. ADPL-SA like the images.
+
 ## Before any commercial use
 
 Both licences are **non-commercial**. Replace this data, or get permission from the rights holders, before the app is sold or used commercially.

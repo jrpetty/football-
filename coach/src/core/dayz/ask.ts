@@ -3,6 +3,7 @@
 // (from the last road sign read off the screen).
 
 import { DAYZ_MAPS, dayzMap, describePlace, featureLine, findPlace, km, neighbours, placesIn, region, routeLine, type DayzMapId, type FeatureKind } from './places.ts'
+import { isLootRun, lootRunLine, parseLootRun, planLootRun } from './lootRun.ts'
 
 const FEATURE_WORDS: readonly (readonly [RegExp, FeatureKind])[] = [
   [/\b(water|pump|well|drink)\b/, 'water'],
@@ -19,6 +20,7 @@ const FEATURE_WORDS: readonly (readonly [RegExp, FeatureKind])[] = [
 /** A question about places: where something is, the way between two, or the nearest of something. */
 export function isPlaceQuestion(question: string): boolean {
   const q = question.toLowerCase()
+  if (isLootRun(question)) return true
   if (/\b(where am i|where(?:'s| is| are)|how (?:do i |to )?get (?:to|from)|directions?|how far|which way|what(?:'s| is) (?:at|in|near)|tell me about|nearest|closest|sign (?:says|reads)|find)\b/.test(q)) return true
   // A bare place name, or what a sign looks like ("Typobo?").
   return q.trim().split(/\s+/).length <= 3 && findPlace(q.replace(/[?!.]/g, '')) !== null
@@ -61,6 +63,12 @@ function placeAnswerText(question: string, context: Readonly<Record<string, stri
   if (/\bwhere am i\b/.test(q)) {
     if (!here) return 'I have not read a road sign yet. Walk to the next town sign, or tell me the name on it (as it looks is fine, e.g. "Typobo").'
     return `The last sign I read was ${sign}: ${describePlace(here)}`
+  }
+  // A loot run: the shortest way through one of each kind of place asked for.
+  if (isLootRun(question)) {
+    const req = parseLootRun(question, prefer, here)
+    if (!req) return 'Where from? Name a town to start ("loot run from Berezino hitting a hospital and police"), or read me the sign.'
+    return lootRunLine(planLootRun(req))
   }
   // From A to B.
   if (named.length >= 2 && /\b(from|to|get|way|far|between|route|directions?)\b/.test(q)) return routeLine(named[0], named[1])

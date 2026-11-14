@@ -417,6 +417,39 @@
     "freezing": "Freezing",
     "broken-bone": "Broken bone"
   },
+  "hudIcons": [
+    {
+      "key": "water",
+      "kind": "level",
+      "label": "Water (bottle icon)"
+    },
+    {
+      "key": "energy",
+      "kind": "level",
+      "label": "Energy (food icon)"
+    },
+    {
+      "key": "health",
+      "kind": "level",
+      "label": "Health (heart icon)"
+    },
+    {
+      "key": "blood",
+      "kind": "level",
+      "label": "Blood (drop icon)"
+    },
+    {
+      "key": "temperature",
+      "kind": "temperature",
+      "label": "Temperature (thermometer)"
+    },
+    {
+      "key": "bleeding",
+      "kind": "presence",
+      "present": 1,
+      "label": "Bleeding badge (red drop, where it appears)"
+    }
+  ],
   "commentaryChanges": [
     {
       "key": "roadSign",
