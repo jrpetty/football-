@@ -5,7 +5,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { DAYZ_MAPS, describePlace, findPlace, gridRef, looksLike, placesIn, routeLine, transliterate } from '../src/core/dayz/places.ts'
-import { answerPlaceQuestion, isPlaceQuestion, signLine } from '../src/core/dayz/ask.ts'
+import { answerPlaceQuestion, isPlaceQuestion, placeAnswer, signLine } from '../src/core/dayz/ask.ts'
+import { validateRegistry } from '../src/core/policy/registry.ts'
 import { classify, answerLocally } from '../src/core/qa/ask.ts'
 import { validateProfile, BANNED_CLAIMS } from '../src/core/profile/schema.ts'
 import { Builder } from '../src/sim/visionReplay.ts'
@@ -123,4 +124,41 @@ test('survival questions are answered on this computer from the pack', () => {
   assert.match(ask('what blood type can I take'), /O- gives to anyone/)
   assert.match(ask('do I need a gas mask in the toxic zone'), /gas mask and the full NBC suit/)
   assert.doesNotMatch(ask('how do I treat cholera?'), BANNED_CLAIMS)
+})
+
+test('online: a place look-up from the built-in map is answered during play; anything from the screen still waits', () => {
+  const official = policyFor(dayz, 'official')
+  assert.ok(official.lookups.has('places') && !official.scope.has('live'))
+  assert.equal(policyFor(dayz, 'official', { tournament: true }).lookups.size, 0, 'tournament switch: nothing')
+  // Default mode (competitive-safe): coaching waits, the look-up is spoken.
+  const s = settings({ profileId: 'dayz', profileModeId: 'official' })
+  const engine = engineFor(dayz, s)
+  const b = new Builder('dayz', () => 0.5)
+  for (let i = 0; i < 4; i++) b.batch(i * 4000, { phase: 'round', water: 'ok', roadSign: 'Турово' })
+  let now = 0
+  for (const batch of b.batches) engine.ingestObservations(batch.observations, (now = Math.max(now, batch.arrivesAt)))
+  const decision = (o: ReturnType<typeof engine.answer>) => o.entries.flatMap((e) => (e.type === 'message' ? [e.decision] : []))[0]
+  const look = engine.answer('where is typobo', 'Turovo is a village in the far north-east of Chernarus.', 'template', now, 'places')
+  assert.equal(decision(look).decision, 'spoken')
+  assert.match(decision(look).reasons[0], /place look-up you asked for, from the built-in map data only/)
+  assert.equal(look.utterances.length, 1)
+  // An answer without the look-up mark (anything else, or one from the screen) is held as before.
+  assert.equal(decision(engine.answer('how am I doing', 'Fine.', 'template', now + 1)).decision, 'queued')
+  // Which place answers count as look-ups: not the ones built from the last road sign read.
+  const ctx = { map: 'Chernarus', roadSign: 'Турово' }
+  assert.equal(placeAnswer('where is typobo', ctx)!.fromScreen, false)
+  assert.equal(placeAnswer('how do I get from cherno to nwaf', ctx)!.fromScreen, false)
+  assert.equal(placeAnswer('nearest water to turovo', ctx)!.fromScreen, false)
+  assert.equal(placeAnswer('where am i', ctx)!.fromScreen, true)
+  assert.equal(placeAnswer('how far to berezino', ctx)!.fromScreen, true)
+  assert.equal(placeAnswer('nearest hospital', ctx)!.fromScreen, true)
+})
+
+test('the registry checks look-up allowances', () => {
+  const entry = { id: 'x/y', publisher: 'P', game: 'G', gameIds: ['x'], modes: ['*'], status: 'needs_publisher_review', basis: 'internal', sources: [], rationale: 'r', reviewedAt: '2026-11-01', reviewer: 'me', notes: '' }
+  const reg = (l: unknown, status = 'needs_publisher_review') => validateRegistry({ schemaVersion: 1, reviewMaxAgeDays: 90, note: '', entries: [{ ...entry, status, lookupsDuringPlay: l }] })
+  assert.ok(reg({ kinds: ['places'], rationale: 'map facts', decidedBy: 'the player', decidedAt: '2026-11-14' }).ok)
+  assert.ok(!reg({ kinds: ['screen'], rationale: 'r', decidedBy: 'p', decidedAt: '2026-11-14' }).ok)
+  assert.ok(!reg({ kinds: ['places'], rationale: '', decidedBy: 'p', decidedAt: '2026-11-14' }).ok)
+  assert.ok(!reg({ kinds: ['places'], rationale: 'r', decidedBy: 'p', decidedAt: '2026-11-14' }, 'disabled').ok)
 })

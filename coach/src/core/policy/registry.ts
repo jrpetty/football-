@@ -7,6 +7,23 @@ import type { PolicyStatus } from '../types.ts'
 
 export type PolicyScope = 'live' | 'round_break' | 'post_match'
 
+/**
+ * Look-ups the player may ask for during play even where coaching waits for
+ * the end: answers from the app's built-in reference only (public map facts,
+ * like a map app or the game's wiki), never from what the screen shows.
+ */
+export type LookupKind = 'places'
+const LOOKUP_KINDS: readonly LookupKind[] = ['places']
+
+export interface LookupAllowance {
+  readonly kinds: readonly LookupKind[]
+  /** Why this is allowed, and that it is a decision, not publisher approval. */
+  readonly rationale: string
+  /** Who made the decision and when. */
+  readonly decidedBy: string
+  readonly decidedAt: string
+}
+
 export interface PolicySource {
   readonly url: string
   readonly title: string
@@ -35,6 +52,8 @@ export interface PolicyEntry {
   readonly reviewedAt: string
   readonly reviewer: string
   readonly notes: string
+  /** Look-ups answered during play although coaching waits (see LookupAllowance). */
+  readonly lookupsDuringPlay?: LookupAllowance
 }
 
 export interface PolicyRegistry {
@@ -55,6 +74,8 @@ export interface ResolvedPolicy {
   /** The status actually applied after staleness, unknown-mode and tournament rules. */
   readonly status: PolicyStatus
   readonly scope: ReadonlySet<PolicyScope>
+  /** Look-ups the player may ask for during play outside the scope (empty when anything fails closed). */
+  readonly lookups: ReadonlySet<LookupKind>
   readonly entry: PolicyEntry | null
   /** Plain-language explanation, first item is the deciding reason. */
   readonly reasons: readonly string[]
@@ -100,6 +121,14 @@ export function validateRegistry(input: unknown): { ok: true; registry: PolicyRe
         errors.push(`${p}: live approval for a real game cannot be an internal decision`)
       }
     }
+    if (e.lookupsDuringPlay !== undefined) {
+      const l = e.lookupsDuringPlay
+      if (!Array.isArray(l.kinds) || l.kinds.length === 0 || l.kinds.some((k: LookupKind) => !LOOKUP_KINDS.includes(k))) errors.push(`${p}.lookupsDuringPlay.kinds: one or more of ${LOOKUP_KINDS.join(', ')}`)
+      if (!l.rationale) errors.push(`${p}.lookupsDuringPlay.rationale: required`)
+      if (!l.decidedBy) errors.push(`${p}.lookupsDuringPlay.decidedBy: required`)
+      if (Number.isNaN(Date.parse(l.decidedAt))) errors.push(`${p}.lookupsDuringPlay.decidedAt: expected a date`)
+      if (e.status === 'disabled') errors.push(`${p}.lookupsDuringPlay: not with a disabled entry`)
+    }
     for (const [j, s] of (e.sources ?? []).entries()) {
       if (!/^https:\/\//.test(s.url)) errors.push(`${p}.sources[${j}].url: expected an https URL`)
       if (!s.excerpt) errors.push(`${p}.sources[${j}].excerpt: required`)
@@ -111,6 +140,7 @@ export function validateRegistry(input: unknown): { ok: true; registry: PolicyRe
 const ALL: ReadonlySet<PolicyScope> = new Set(['live', 'round_break', 'post_match'])
 const POST_ONLY: ReadonlySet<PolicyScope> = new Set(['post_match'])
 const NONE: ReadonlySet<PolicyScope> = new Set()
+const NO_LOOKUPS: ReadonlySet<LookupKind> = new Set()
 
 export function isOfflineSinglePlayer(facts: ModeFacts | null): boolean {
   return !!facts && !facts.multiplayer && !facts.competitive
@@ -130,6 +160,7 @@ export function resolvePolicy(
       recordedStatus: null,
       status: 'disabled',
       scope: NONE,
+      lookups: NO_LOOKUPS,
       entry: null,
       reasons: [
         'Tournament / event play is switched on: all coaching output is off. Event rules can be stricter than publisher rules, and some forbid coaching software entirely.',
@@ -150,6 +181,7 @@ export function resolvePolicy(
       recordedStatus: null,
       status: 'needs_publisher_review',
       scope: POST_ONLY,
+      lookups: NO_LOOKUPS,
       entry: null,
       reasons: [
         q.gameId
@@ -165,6 +197,7 @@ export function resolvePolicy(
       recordedStatus: entry.status,
       status: 'needs_publisher_review',
       scope: POST_ONLY,
+      lookups: NO_LOOKUPS,
       entry,
       reasons: [
         `The policy record for ${entry.game} was last reviewed ${Math.floor(ageDays)} days ago (limit ${registry.reviewMaxAgeDays}). Until it is re-reviewed, live coaching is off.`,
@@ -172,16 +205,18 @@ export function resolvePolicy(
     }
   }
 
+  const lookups: ReadonlySet<LookupKind> = entry.status === 'disabled' ? NO_LOOKUPS : new Set(entry.lookupsDuringPlay?.kinds ?? [])
   const label = `${entry.game}: ${statusLabel(entry.status)}${entry.basis === 'internal' ? ' (internal policy, not publisher approval)' : ''}`
   switch (entry.status) {
     case 'approved_for_scope':
-      return { recordedStatus: entry.status, status: entry.status, scope: new Set(entry.scope ?? []), entry, reasons: [label] }
+      return { recordedStatus: entry.status, status: entry.status, scope: new Set(entry.scope ?? []), lookups, entry, reasons: [label] }
     case 'noncompetitive_only': {
       const offline = isOfflineSinglePlayer(q.modeFacts)
       return {
         recordedStatus: entry.status,
         status: entry.status,
         scope: offline ? ALL : POST_ONLY,
+        lookups,
         entry,
         reasons: offline
           ? [label]
@@ -190,9 +225,9 @@ export function resolvePolicy(
     }
     case 'post_match_only':
     case 'needs_publisher_review':
-      return { recordedStatus: entry.status, status: entry.status, scope: POST_ONLY, entry, reasons: [label] }
+      return { recordedStatus: entry.status, status: entry.status, scope: POST_ONLY, lookups, entry, reasons: [label] }
     case 'disabled':
-      return { recordedStatus: entry.status, status: entry.status, scope: NONE, entry, reasons: [label] }
+      return { recordedStatus: entry.status, status: entry.status, scope: NONE, lookups: NO_LOOKUPS, entry, reasons: [label] }
   }
 }
 

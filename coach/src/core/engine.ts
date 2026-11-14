@@ -575,9 +575,10 @@ export class CoachEngine {
   /**
    * Deliver an answer to the player's question. It goes through the governor
    * like any message: during restricted play it is held and delivered when
-   * the match ends.
+   * the match ends, unless it is a look-up from the built-in reference that
+   * the game's policy allows during play (DayZ place look-ups).
    */
-  answer(question: string, text: string, author: CoachingMessage['author'], now: number): EngineOutput {
+  answer(question: string, text: string, author: CoachingMessage['author'], now: number, lookup?: CoachingMessage['lookup']): EngineOutput {
     const out = emptyOutput()
     const msg: Omit<CoachingMessage, 'id'> = {
       category: 'descriptive',
@@ -591,6 +592,7 @@ export class CoachEngine {
       basedOnObservationAt: null,
       expiresAtMs: now + 60 * 60_000,
       requestedByPlayer: true,
+      ...(lookup ? { lookup } : {}),
       author,
     }
     const id = this.decide(msg, now, out)

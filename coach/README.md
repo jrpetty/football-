@@ -570,7 +570,11 @@ Then press **Choose the game window**, play, and listen.
     and road signs: offline, it tells you to bandage, drink, eat, get warm
     or splint, names each town as you pass its sign, and names the gun you
     pick up with its round, magazines and drop. On public servers
-    that waits for the end of the life or the session.
+    that waits for the end of the life or the session, except place
+    look-ups: "where is Typobo?", "Cherno to NWAF", "nearest water to
+    Turovo" are answered straight away, as they only use the built-in map
+    (like opening a map). "Where am I?" and "how far from here" use the
+    road sign read off your screen, so on public servers they still wait.
 
   All answered on your PC, no cloud needed. Places: Chernarus 97,
   Livonia 34, Sakhal 60, from the DayZ Wiki (CC BY-NC-SA), each checked

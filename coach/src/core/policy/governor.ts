@@ -144,6 +144,8 @@ export class CoachingGovernor {
     }
     if (msg.category === 'commentary') return this.decideCommentary(msg, now, window, reasons, result)
     if (msg.category === 'build') return this.decideBuild(msg, now, window, reasons, result)
+    // A look-up the player asked for, from the built-in reference only, where the policy allows it during play.
+    if (!this.policy.scope.has(scope) && msg.requestedByPlayer && msg.lookup && window === 'during_play' && this.policy.lookups.has(msg.lookup)) return this.decideLookup(msg, now, reasons, result)
     if (!this.policy.scope.has(scope)) {
       reasons.push(`${this.policy.reasons[0]} (${scopeText(scope)} is not allowed)`)
       if (live && !msg.requestedByPlayer) {
@@ -210,6 +212,25 @@ export class CoachingGovernor {
     const utterance = this.speak(msg, now)
     if (!live && window === 'round_break') this.pendingReflective.push({ id: msg.id, expiresAt: msg.expiresAtMs })
     return result('spoken', utterance)
+  }
+
+  /**
+   * A map look-up the player asked for during play where coaching otherwise
+   * waits: answered from the app's built-in map data, nothing read off the
+   * screen, like opening a map. Spoken (they asked, often out loud) unless
+   * the coach is silent or muted.
+   */
+  private decideLookup(msg: CoachingMessage, now: number, reasons: string[], result: (d: DeliveryDecision, u?: Utterance | null) => Decision): Decision {
+    reasons.push(`a ${msg.lookup === 'places' ? 'place' : 'reference'} look-up you asked for, from the built-in map data only: allowed during play here (${this.policy.entry?.lookupsDuringPlay?.decidedBy ?? 'policy'})`)
+    if (this.settings.mode === 'silent') {
+      reasons.push('silent tracker mode never speaks')
+      return result('text-only')
+    }
+    if (this.settings.muted) {
+      reasons.push('muted')
+      return result('text-only')
+    }
+    return result('spoken', this.speak(msg, now))
   }
 
   /**

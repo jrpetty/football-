@@ -410,7 +410,7 @@ Legend:
 - ◐ The ammunition numbers are the wiki's DayZ 1.12 table; later patches may have changed them. The drop uses the drag model of Bohemia's engines (acceleration = air friction × speed²); check a few holds in game (QA 23.5).
 - ◐ Not checked against live captures yet: reading the status icons' colours, road signs and the gun in hand (QA 23). Places missing from the wiki or wrong there (Gieraltów, Topolin, Sitnik, Petropavlovsk-Sakhalskiy page) are left out.
 - ◐ The place and building data are under non-commercial licences (see `src/profiles/dayz/README.md`): replace or clear them before any commercial release.
-- ☐ Decide whether place look-ups (public map facts, like a map app) may be answered during online play; today they wait like every other answer.
+- ☑ Place look-ups during online play (decided by the owner, 2026-11-14): `lookupsDuringPlay` in the registry (`dayz/online`), the governor's look-up path, and the app marking a place answer as a look-up only when it did not use the last road sign. Spoken unless silent or muted; shown on Policy & privacy. Tournament switch, stale review or a disabled entry remove it. *Tests: spoken during play on Official, other answers still held, which answers count, registry checks.*
 
 ## Later (P2+)
 - ☐ Run the manual QA guide (docs/QA.md) on Windows 11 hardware, covering HDR, exclusive fullscreen, capture-excluded windows and DPI.

@@ -34,6 +34,23 @@ export function mapPreference(context: Readonly<Record<string, string | number>>
 }
 
 export function answerPlaceQuestion(question: string, context: Readonly<Record<string, string | number>>): string | null {
+  return placeAnswer(question, context)?.text ?? null
+}
+
+/**
+ * The answer, and whether it rests on the screen (the last road sign read:
+ * "where am I", "how far from here"). One that does not is a plain map
+ * look-up from the built-in data.
+ */
+export function placeAnswer(question: string, context: Readonly<Record<string, string | number>>): { readonly text: string; readonly fromScreen: boolean } | null {
+  const text = placeAnswerText(question, context)
+  if (text === null) return null
+  // Answered the same without the sign: it did not use the screen.
+  const { roadSign: _sign, ...rest } = context
+  return { text, fromScreen: _sign !== undefined && placeAnswerText(question, rest) !== text }
+}
+
+function placeAnswerText(question: string, context: Readonly<Record<string, string | number>>): string | null {
   const q = question.toLowerCase()
   const prefer = mapPreference(context)
   const feature = FEATURE_WORDS.find(([re]) => re.test(q))?.[1] ?? null
