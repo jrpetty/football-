@@ -4,3 +4,4 @@ dist-electron
 release
 *.log
 e2e-output
+__pycache__/
