@@ -15,7 +15,7 @@ import { PolicyBadge } from './components/viz.tsx'
 import { policyFor } from './policy.ts'
 import { CoachSession, type SourceChoice } from './session.ts'
 import { AskView } from './views/AskView.tsx'
-import { DayzMapView, type MapFocus, type MapHere } from './views/DayzMapView.tsx'
+import { DayzMapView, type MapFocus } from './views/DayzMapView.tsx'
 import { CoachView } from './views/CoachView.tsx'
 import { HistoryView } from './views/HistoryView.tsx'
 import { ProgressView } from './views/ProgressView.tsx'
@@ -53,7 +53,6 @@ export function App() {
   const [catalog, setCatalog] = useState<ProfileCatalog>({ profiles: BUILT_IN_PROFILES, rejected: [] })
   const [tab, setTab] = useState<Tab>('coach')
   // DayZ map: the spot the player set, and a place asked to be shown (kept while the app is open).
-  const [mapHere, setMapHere] = useState<MapHere | null>(null)
   const [mapFocus, setMapFocus] = useState<MapFocus | null>(null)
   const [picking, setPicking] = useState(false)
   const [suggestion, setSuggestion] = useState<{ profile: GameProfile; window: string } | null>(null)
@@ -306,7 +305,7 @@ export function App() {
               ['insights', 'Insights', state.report?.insights.filter((i) => i.insight.grade !== 'insufficient').length || null],
               ['moments', 'Decisions', state.moments.length || null],
               ['ask', 'Ask the coach', state.conversation.length || null],
-              ...(profile.id === 'dayz' ? ([['map', 'Map', mapHere ? '◉' : null]] as const) : []),
+              ...(profile.id === 'dayz' ? ([['map', 'Map', state.spot ? '◉' : null]] as const) : []),
               ['progress', 'Progress', state.progress.practice && session.progress.currentFocus() ? '◆' : null],
               ['history', 'History', state.history.length || null],
               ['review', 'Session timeline', state.timeline.filter((e) => e.type === 'message').length || null],
@@ -411,7 +410,7 @@ export function App() {
               }
             />
           )}
-          {tab === 'map' && profile.id === 'dayz' && <DayzMapView state={state} settings={settings} policy={policy} capturing={capturing} here={mapHere} onHere={setMapHere} focus={mapFocus} />}
+          {tab === 'map' && profile.id === 'dayz' && <DayzMapView state={state} settings={settings} policy={policy} capturing={capturing} session={session} focus={mapFocus} />}
           {tab === 'progress' && <ProgressView session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'review' && <ReviewView state={state} />}

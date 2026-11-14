@@ -293,7 +293,24 @@ await check('DayZ map: Bohemia\'s map image, a town found by its sign, your spot
   const box = await win.locator('.dz-map').boundingBox()
   for (const [fx, fy] of [[0.3, 0.3], [0.5, 0.6], [0.7, 0.4]]) await win.mouse.click(box.x + box.width * fx, box.y + box.height * fy)
   await win.waitForSelector('.dz-info >> text=Your route: 3 points', { timeout: 5_000 })
-  return { scale, stops }
+  // The assistant: say where you are in Ask, then "What now?" on the map draws the plan from there.
+  await win.click('nav >> text=Ask the coach')
+  await win.fill('input[aria-label="Ask the coach"]', "I'm at Turovo")
+  await win.press('input[aria-label="Ask the coach"]', 'Enter')
+  await win.waitForSelector("text=Got it: you're at Turovo", { timeout: 5_000 })
+  await win.fill('input[aria-label="Ask the coach"]', 'where do I find a canteen')
+  await win.press('input[aria-label="Ask the coach"]', 'Enter')
+  await win.waitForSelector('text=Nearest from Turovo', { timeout: 5_000 })
+  await win.click('nav >> text=Map')
+  await win.click('#dz-asst-h >> xpath=../.. >> text=What now?')
+  await win.waitForSelector('.dz-result >> text=From Turovo: 1. Drink at the water pump', { timeout: 5_000 })
+  const planStops = await win.locator('.dz-route .dz-stop').count()
+  assert(planStops >= 4, `the plan drawn from your spot: ${planStops}`)
+  await win.check('.dz-kit label:has-text("Knife") input')
+  await win.locator('.dz-map').scrollIntoViewIfNeeded()
+  await win.waitForTimeout(400)
+  await win.screenshot({ path: join(out, 'dayz-assistant.png') })
+  return { scale, stops, planStops }
 })
 
 await app.close()

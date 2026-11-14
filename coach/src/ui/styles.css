@@ -5570,3 +5570,6 @@ td > .swatch {
 .dz-drawn circle { fill: #ff9ff3; stroke: #3a0033; }
 .dz-drawn text { fill: #ffe0fa; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--mono); }
 .dz-lives { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.dz-kit { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 12px; margin: 10px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; }
+.dz-kit legend { padding: 0 4px; color: var(--text-2); }
+.dz-kit label { display: flex; gap: 6px; align-items: center; }

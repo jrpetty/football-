@@ -17,6 +17,7 @@ import { productionLines } from '../aoe4/production.ts'
 import { answerMechanics, answerPlaceQuestion, isPlaceQuestion, placeAnswer } from '../dayz/ask.ts'
 import type { LookupKind } from '../policy/registry.ts'
 import { answerGunQuestion, isGunQuestion } from '../dayz/guns.ts'
+import { assistantAnswer, isAssistantQuestion, isItemQuestion } from '../dayz/assistant.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
 import { ballisticsLines } from '../knowledge/ballistics.ts'
@@ -38,6 +39,7 @@ export type Intent =
   | { readonly kind: 'place'; readonly question: string }
   | { readonly kind: 'survival'; readonly question: string }
   | { readonly kind: 'gun'; readonly question: string }
+  | { readonly kind: 'assistant'; readonly question: string }
 
 const HEATMAP_WORDS: readonly [RegExp, readonly string[]][] = [
   [/\b(concede|conceding|conceded|goals? against|let (?:in|goals))\b/i, ['conceded']],
@@ -53,6 +55,8 @@ export function classify(question: string, profile: GameProfile): Intent {
   // DayZ: where a town is, the way between two, the nearest water or hospital, where am I.
   // DayZ guns first ("where can I find an M4" is about the gun, not a place).
   if (profile.id === 'dayz' && isGunQuestion(question, profile)) return { kind: 'gun', question }
+  // DayZ on Chernarus: what now, take me to, where does an item spawn (from your spot and kit).
+  if (profile.id === 'dayz' && isAssistantQuestion(question)) return { kind: 'assistant', question }
   if (profile.id === 'dayz' && isPlaceQuestion(question)) return { kind: 'place', question }
   if (profile.id === 'dayz' && answerMechanics(question, profile)) return { kind: 'survival', question }
   // Grenade lineups on a map: which smokes, flashes or molotovs, from where, for which site; executes and retakes.
@@ -120,6 +124,9 @@ export function lookupKind(intent: Intent, profile: GameProfile, context: Readon
     }
     case 'survival':
       return answerMechanics(intent.question, profile) !== null ? 'survival' : null
+    // From the built-in data and what the player told it (their spot, their kit): never the screen.
+    case 'assistant':
+      return isItemQuestion(intent.question) ? 'items' : 'places'
     default:
       return null
   }
@@ -134,6 +141,8 @@ export function answerLocally(intent: Intent, profile: GameProfile, report: Sess
       return answerMechanics(intent.question, profile)
     case 'gun':
       return answerGunQuestion(intent.question, profile, report.context)
+    case 'assistant':
+      return assistantAnswer(intent.question, report.context)
     case 'heatmap': {
       const h = report.heatmaps.find((x) => x.spec.id === intent.heatmapId)
       if (h) return heatmapAnswer(h)

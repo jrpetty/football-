@@ -221,7 +221,14 @@ export class CoachingGovernor {
    * the coach is silent or muted.
    */
   private decideLookup(msg: CoachingMessage, now: number, reasons: string[], result: (d: DeliveryDecision, u?: Utterance | null) => Decision): Decision {
-    const what = msg.lookup === 'places' ? 'place look-up you asked for, from the built-in map data only' : msg.lookup === 'guns' ? 'gun look-up you asked for, from the built-in gun data only' : 'survival look-up you asked for, from the pack’s reference only'
+    const what =
+      msg.lookup === 'places'
+        ? 'place look-up you asked for, from the built-in map data only'
+        : msg.lookup === 'guns'
+          ? 'gun look-up you asked for, from the built-in gun data only'
+          : msg.lookup === 'items'
+            ? 'item look-up you asked for, from the built-in loot table only'
+            : 'survival look-up you asked for, from the pack’s reference only'
     reasons.push(`a ${what}: allowed during play here (${this.policy.entry?.lookupsDuringPlay?.decidedBy ?? 'policy'})`)
     if (this.settings.mode === 'silent') {
       reasons.push('silent tracker mode never speaks')

@@ -55,6 +55,25 @@ export function decodeTerrain(d: TerrainData): Terrain {
   return { worldSize: d.worldSize, size: d.size, cells }
 }
 
+/** Cells inside gas zones (1), for routes that keep out of them: on foot only as a last resort, by car never. */
+export function gasMask(t: Terrain, zones: readonly { readonly x: number; readonly y: number; readonly r: number }[]): Uint8Array {
+  const mask = new Uint8Array(t.size * t.size)
+  const cell = t.worldSize / t.size
+  for (const z of zones) {
+    const r = Math.max(z.r, cell)
+    const { cx, cy } = cellAt(t, z)
+    const rc = Math.ceil(r / cell)
+    for (let dy = -rc; dy <= rc; dy++)
+      for (let dx = -rc; dx <= rc; dx++) {
+        const x = cx + dx
+        const y = cy + dy
+        if (x < 0 || y < 0 || x >= t.size || y >= t.size || Math.hypot(dx, dy) * cell > r) continue
+        mask[y * t.size + x] = 1
+      }
+  }
+  return mask
+}
+
 /** The cell a world point falls in (x east, y north from the south-west corner). */
 export function cellAt(t: Terrain, p: { x: number; y: number }): { cx: number; cy: number } {
   const k = t.size / t.worldSize
@@ -100,8 +119,10 @@ function nearestPassable(t: Terrain, cx: number, cy: number, cost: readonly numb
  * The cheapest path between two points over the ground, or null when there is none (by car to an island).
  * Diagonal steps cost √2; each step costs the mean of the two cells it joins.
  */
-export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: number; y: number }, travel: Travel = 'foot'): GroundPath | null {
+export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: number; y: number }, travel: Travel = 'foot', gas: Uint8Array | null = null): GroundPath | null {
   const cost = COSTS[travel]
+  // Gas zones: eight times the time on foot (only when there is no sensible way round), closed by car.
+  const gasCost = travel === 'car' ? Infinity : 8
   const n = t.size
   const ca = cellAt(t, a)
   const cb = cellAt(t, b)
@@ -138,7 +159,7 @@ export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: numb
       if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue
       const j = yy * n + xx
       if (closed[j]) continue
-      const cj = cost[t.cells[j]]
+      const cj = cost[t.cells[j]] * (gas?.[j] ? gasCost : 1)
       if (!Number.isFinite(cj)) continue
       const step = (d < 4 ? 1 : Math.SQRT2) * (ci + cj) * 0.5
       const ng = g[i] + step
@@ -203,9 +224,9 @@ export function simplify(pts: readonly { x: number; y: number }[], eps: number):
 }
 
 /** A route through several points, leg by leg; null legs where there is no way. */
-export function groundRoute(t: Terrain, points: readonly { x: number; y: number }[], travel: Travel = 'foot'): { legs: (GroundPath | null)[]; lengthM: number; road: number } {
+export function groundRoute(t: Terrain, points: readonly { x: number; y: number }[], travel: Travel = 'foot', gas: Uint8Array | null = null): { legs: (GroundPath | null)[]; lengthM: number; road: number } {
   const legs: (GroundPath | null)[] = []
-  for (let i = 1; i < points.length; i++) legs.push(groundPath(t, points[i - 1], points[i], travel))
+  for (let i = 1; i < points.length; i++) legs.push(groundPath(t, points[i - 1], points[i], travel, gas))
   const ok = legs.filter((l): l is GroundPath => !!l)
   const lengthM = ok.reduce((s, l) => s + l.lengthM, 0)
   const road = lengthM ? ok.reduce((s, l) => s + l.road * l.lengthM, 0) / lengthM : 0

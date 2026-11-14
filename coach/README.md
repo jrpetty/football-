@@ -566,6 +566,25 @@ Then press **Choose the game window**, play, and listen.
     how it knows). On public servers a spot you set shows any time, the
     one from signs after the life or the session. Place answers on the Ask
     screen have a "Show on map" button.
+  - **Survival assistant (Chernarus).** Tell it where you are ("Coach,
+    I'm at Turovo", "I'm at 135 012", or click "I'm here" on the map) and
+    what you have ("Coach, I found a knife and some rags", or tick your
+    kit on the Map screen; it clears when you die). Then:
+    - **"What now?"**: your next steps for what you are missing, in the
+      order that keeps you alive (water, the houses of the nearest town for
+      tools, clothes, food and a bag, medical, a police station for a first
+      gun, military for rifles and ammo), drawn as one route from your spot.
+    - **"Take me to the nearest hospital / water / police / military"**, a
+      town, or "a place with morphine": distance and direction, drawn.
+    - **Where any item spawns**, from Bohemia's loot table for Chernarus
+      (600 items: building types, loot tiers, how many at a time) and the
+      tier of every spot on the map: "where do I find a canteen", "where
+      can I get 7.62x39 ammo", "where can I get a backpack", "what spawns
+      in police stations", with the nearest good place from your spot. It
+      says where things can spawn, not what is there now.
+    - Routes keep out of gas zones (on foot only as a last resort, by car
+      never). All from your PC; online these count as look-ups (map and
+      loot-table facts, from a spot you set), answered during play.
   - **Loot runs:** "Plan a route from Berezino hitting a hospital, a
     police station and military" picks one of each (the shortest order,
     from the game's own building list), optionally "and back" or "ending

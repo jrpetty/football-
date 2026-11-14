@@ -24,6 +24,10 @@ Built by `scripts/build-dayz-maps.py` from the top-down map images in Bohemia In
 
 Built by `scripts/build-dayz-terrain.py` from the same map images: a 1024 × 1024 grid per map, each cell road, open ground, forest or water, read from the picture's colours and texture (no road network is published). An estimate: small paths and bridges can be missed; Sakhal's roads barely show. ADPL-SA like the images.
 
+## items.chernarus.json — where things spawn on Chernarus
+
+Built by `scripts/build-dayz-items.mjs` from the Central Economy's `db/types.xml` (every item with a nominal count: its building types, loot tiers and count, colour variants grouped) and `areaflags.map` (the loot tier of every spot, as a 256 × 256 grid). Names are the class names made readable, with the in-game name where it differs. ADPL-SA.
+
 ## Before any commercial use
 
 Both licences are **non-commercial**. Replace this data, or get permission from the rights holders, before the app is sold or used commercially.

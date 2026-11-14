@@ -6,6 +6,7 @@
 // after the life or the session, like "where am I?").
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { assistantAnswer, assistantRoute, isAssistantQuestion, KIT } from '../../core/dayz/assistant.ts'
 import type { ResolvedPolicy } from '../../core/policy/registry.ts'
 import type { CoachSettings } from '../../core/settings.ts'
 import { DAYZ_MAPS, describePlace, findPlace, placesIn, routeLine, type DayzMapId } from '../../core/dayz/places.ts'
@@ -13,7 +14,7 @@ import { mapById, parsePosition, pointInfo } from '../../core/dayz/mapView.ts'
 import { mapPreference } from '../../core/dayz/ask.ts'
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '../../core/dayz/lootRun.ts'
 import { lifeLine } from '../../core/dayz/trail.ts'
-import { decodeTerrain, groundRoute, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
+import { decodeTerrain, gasMask, groundRoute, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
 import { DayzMapCanvas, type FollowGround, type Pos, type TrailLine } from '../components/dayzMap.tsx'
 
 /** The terrain grids (about 300 KB each), loaded when a map is first shown. */
@@ -23,7 +24,7 @@ const TERRAIN: Readonly<Record<DayzMapId, () => Promise<{ default: TerrainData }
   sakhal: () => import('../../profiles/dayz/terrain.sakhal.json'),
 }
 const terrainCache = new Map<DayzMapId, Terrain>()
-import type { SessionState } from '../session.ts'
+import type { CoachSession, SessionState } from '../session.ts'
 
 export type MapHere = Pos & { readonly map: DayzMapId }
 export type MapFocus = { readonly text: string; readonly nonce: number }
@@ -33,14 +34,15 @@ interface Props {
   settings: CoachSettings
   policy: ResolvedPolicy
   capturing: boolean
-  /** The spot the player set (kept while the app is open). */
-  here: MapHere | null
-  onHere: (h: MapHere | null) => void
+  /** The spot and kit live in the session (shared with Ask and voice). */
+  session: CoachSession
   /** A place or route asked for elsewhere ("Show on map" on the Ask screen). */
   focus: MapFocus | null
 }
 
-export function DayzMapView({ state, settings, policy, capturing, here, onHere, focus }: Props) {
+export function DayzMapView({ state, settings, policy, capturing, session, focus }: Props) {
+  const here = state.spot
+  const onHere = (h: MapHere | null) => session.setSpot(h)
   const context = state.report?.profileId === 'dayz' ? state.report.context : {}
   const chosen = mapPreference({ ...(settings.context.dayz ?? {}), ...context }) ?? 'chernarus'
   const [mapId, setMapId] = useState<DayzMapId>(chosen)
@@ -67,13 +69,15 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
       live = false
     }
   }, [mapId])
+  // Gas zones are kept out of (on foot as a last resort, by car never).
+  const gas = useMemo(() => (terrain ? gasMask(terrain, map.world.contaminated) : null), [terrain, map])
   const follow: FollowGround | null = useMemo(() => {
     if (!terrain || travel === 'straight') return null
     return (points) => {
-      const r = groundRoute(terrain, points, travel)
+      const r = groundRoute(terrain, points, travel, gas)
       return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road }
     }
-  }, [terrain, travel])
+  }, [terrain, travel, gas])
   const [hereError, setHereError] = useState<string | null>(null)
 
   // The last road sign read: live where coaching is allowed, otherwise once play has stopped.
@@ -89,6 +93,15 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
     if (!t) return
     const map = mapById(DAYZ_MAPS, onMap)
     const nonce = Date.now()
+    // The assistant (Chernarus): what now, take me to, where an item spawns, from your spot and kit.
+    if (isAssistantQuestion(t)) {
+      if (onMap !== 'chernarus') setMapId('chernarus')
+      const spotHere = here?.map === 'chernarus' ? here : null
+      const plan = assistantRoute(t, spotHere, new Set(state.kit))
+      const text = assistantAnswer(t, { ...(spotHere ? { spotX: spotHere.x, spotY: spotHere.y, spotLabel: spotHere.label } : {}), kit: state.kit.join(',') }) ?? ''
+      setResult({ text, focus: null, route: plan?.route.length ? plan.route : null })
+      return
+    }
     // A loot run: the shortest way through one of each kind of place asked for, drawn through numbered stops.
     if (isLootRun(t)) {
       const here = signAllowed && signPlace && signPlace.map.id === onMap ? signPlace : null
@@ -126,7 +139,7 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
     // The places the question names: one is shown, two are the way between them; a loot run as asked.
     const named = placesIn(focus.text, mapId)
     const onMap = named[0]?.map.id ?? mapId
-    const text = isLootRun(focus.text) ? focus.text : named.length >= 2 ? `${named[0].place.name} to ${named[1].place.name}` : named[0]?.place.name ?? focus.text
+    const text = isLootRun(focus.text) || isAssistantQuestion(focus.text) ? focus.text : named.length >= 2 ? `${named[0].place.name} to ${named[1].place.name}` : named[0]?.place.name ?? focus.text
     setMapId(onMap)
     setQuery(text)
     search(text, onMap)
@@ -234,9 +247,40 @@ export function DayzMapView({ state, settings, policy, capturing, here, onHere, 
         <p className="muted small" style={{ margin: 0 }}>
           {travel === 'straight'
             ? 'Routes are straight lines.'
-            : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest or water' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes and the sea'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}
+            : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest, water or gas zones' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes, the sea and gas zones'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}
         </p>
       </section>
+
+      {mapId === 'chernarus' ? (
+        <section className="panel" aria-labelledby="dz-asst-h">
+          <div className="panel-head">
+            <h2 id="dz-asst-h">Survival assistant</h2>
+            <span className="muted small">Chernarus · from your spot and your kit</span>
+          </div>
+          <div className="btn-row">
+            <button type="button" className="btn primary" onClick={() => search('what now?', 'chernarus')} disabled={!here || here.map !== 'chernarus'}>
+              What now?
+            </button>
+            {(['water', 'hospital', 'medical', 'police', 'military'] as const).map((k) => (
+              <button key={k} type="button" className="btn sm" onClick={() => search(`take me to the nearest ${k}`, 'chernarus')} disabled={!here || here.map !== 'chernarus'}>
+                Nearest {k}
+              </button>
+            ))}
+          </div>
+          {!here || here.map !== 'chernarus' ? <p className="muted small">Set where you are first (below, or say “Coach, I'm at Turovo”).</p> : null}
+          <fieldset className="dz-kit">
+            <legend className="small">Your kit (tick what you have, or say “Coach, I found a knife”; it clears when you die)</legend>
+            {KIT.map((k) => (
+              <label key={k.id} className="small">
+                <input type="checkbox" checked={state.kit.includes(k.id)} onChange={(e) => session.setKit(k.id, e.target.checked)} /> {k.label}
+              </label>
+            ))}
+          </fieldset>
+          <p className="muted small">
+            Ask anything about loot too: “where do I find a canteen”, “where can I get 7.62x39 ammo”, “what spawns in police stations”, “take me to a place with morphine”. From Bohemia's loot table for Chernarus (building types, loot tiers, how many at a time); it says where things can spawn, not what is there now.
+          </p>
+        </section>
+      ) : null}
 
       <section className="panel" aria-labelledby="dz-trail-h">
         <div className="panel-head">

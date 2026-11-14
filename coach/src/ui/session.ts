@@ -5,6 +5,9 @@
 // conversation. React reads one immutable state object (useSyncExternalStore).
 
 import type { OverheadInfo, PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
+import { CHERNARUS, KIT, kitFrom, kitLine, parseKitUpdate, parseSetSpot, type Spot } from '../core/dayz/assistant.ts'
+import { pointInfo } from '../core/dayz/mapView.ts'
+import type { DayzMapId } from '../core/dayz/places.ts'
 import { trailStep, type TrailLife } from '../core/dayz/trail.ts'
 import { mapPreference } from '../core/dayz/ask.ts'
 import type { CloudStatus, ResearchBrief } from '../../shared/cloud.ts'
@@ -152,6 +155,9 @@ export interface SessionState {
   readonly mosaics: Readonly<Record<string, ShownMosaic>>
   /** DayZ: the towns of road signs read, life by life, and where each life ended (this session only). */
   readonly trail: readonly TrailLife[]
+  /** DayZ: where the player says they are (a town or grid they set), and what they have (the kit checklist). */
+  readonly spot: (Spot & { readonly map: DayzMapId }) | null
+  readonly kit: readonly string[]
   /** Official overhead map images kept for this game, by map id. */
   readonly overheads: Readonly<Record<string, OverheadInfo>>
   /** The map whose official image is being imported or downloaded. */
@@ -212,6 +218,8 @@ const INITIAL: SessionState = {
   researching: false,
   mosaics: {},
   trail: [],
+  spot: null,
+  kit: [],
   overheads: {},
   overheadBusy: null,
   conversation: [],
@@ -1027,6 +1035,18 @@ export class CoachSession {
 
     let report = this.state.report?.profileId === profile.id ? this.state.report : emptyReport(profile)
     const history = settings.saveTendencies ? this.state.history : []
+    // DayZ: "I'm at Turovo" sets your spot; "I found a knife" ticks your kit. Answered at once, from what you said.
+    if (profile.id === 'dayz') {
+      const said = this.dayzSaid(q)
+      if (said) {
+        this.patchQa(id, { status: 'answered', answer: said, author: 'template', note: 'From what you told the coach.' })
+        if (via === 'voice' && !settings.muted && !settings.tournament && settings.mode !== 'silent') this.speech.enqueue({ id: `answer-${id}`, text: said, category: 'post_event', priority: 'normal', expiresAt: null })
+        return
+      }
+      // Your spot and kit go with the question, for "what now", "take me to" and the nearest place for an item.
+      const spot = this.state.spot?.map === 'chernarus' ? this.state.spot : null
+      report = { ...report, context: { ...report.context, ...(spot ? { spotX: spot.x, spotY: spot.y, spotLabel: spot.label } : {}), kit: this.state.kit.join(',') } }
+    }
     const intent = classify(q, profile)
     // Looking only when asked: a question about what is on screen right now takes one look first (the only spend).
     if (this.lookingOnlyWhenAsked() && needsScreen(q, profile)) {
@@ -1086,6 +1106,39 @@ export class CoachSession {
     const now = this.source.now()
     this.patchQa(id, { status: 'thinking', answer: text, author, note, costUsd, topic: `answer:${now}` })
     this.post({ type: 'answer', question: q, text, author, now, ...(lookup ? { lookup } : {}) })
+  }
+
+  /** DayZ: set where the player is (null to forget). */
+  setSpot(spot: (Spot & { readonly map: DayzMapId }) | null): void {
+    this.set({ spot })
+  }
+
+  /** DayZ: tick or untick a kit item. */
+  setKit(id: string, has: boolean): void {
+    const kit = new Set(this.state.kit)
+    if (has) kit.add(id)
+    else kit.delete(id)
+    this.set({ kit: [...kitFrom([...kit].join(','))] })
+  }
+
+  /** "I'm at …" or "I found …": the reply, after updating the spot or the kit; null for anything else. */
+  private dayzSaid(q: string): string | null {
+    const spot = parseSetSpot(q)
+    if (spot) {
+      this.set({ spot: { ...spot, map: 'chernarus' } })
+      const info = pointInfo(CHERNARUS, spot)
+      return `Got it: you're at ${spot.label}. ${info.line} Ask "what now?" or "take me to the nearest water".`
+    }
+    const kit = parseKitUpdate(q)
+    if (kit) {
+      const have = new Set(this.state.kit)
+      kit.have.forEach((k) => have.add(k))
+      kit.lost.forEach((k) => have.delete(k))
+      this.set({ kit: [...kitFrom([...have].join(','))] })
+      const names = [...kit.have, ...kit.lost].map((k) => KIT.find((x) => x.id === k)!.label.toLowerCase())
+      return `${kit.have.length ? 'Ticked' : 'Unticked'}: ${names.join(', ')}. ${kitLine(have)}`
+    }
+    return null
   }
 
   /** Screen reading is on and set to look only when asked. */
@@ -1459,6 +1512,11 @@ export class CoachSession {
       const prefer = mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context })
       const trail = trailStep(this.state.trail, { sign, prefer, lifeEnded: ended ? { died: ended.result === 'loss' } : null, now: Date.now() })
       if (trail !== this.state.trail) patch.trail = trail
+      // A death: the new character starts with nothing, and somewhere else.
+      if (ended?.result === 'loss') {
+        patch.kit = []
+        patch.spot = null
+      }
     }
     if (msg.status) patch.status = msg.status
     if (msg.report) patch.report = msg.report

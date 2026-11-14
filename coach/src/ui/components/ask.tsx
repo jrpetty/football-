@@ -4,6 +4,7 @@
 
 import { useState } from 'react'
 import { placesIn } from '../../core/dayz/places.ts'
+import { isAssistantQuestion } from '../../core/dayz/assistant.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
@@ -14,7 +15,7 @@ import type { CoachSession, QaEntry, SessionState } from '../session.ts'
 export function suggestedQuestions(profile: GameProfile): string[] {
   const out: string[] = []
   // DayZ: places and guns (a sign spelled the way it looks works too).
-  if (profile.id === 'dayz') out.push('Where is Typobo?', 'How do I get from Cherno to NWAF?', 'Where am I?', 'Mosin range', 'Where can I find an M4?')
+  if (profile.id === 'dayz') out.push("I'm at Turovo", 'What now?', 'Where do I find a canteen?', 'Take me to the nearest hospital', 'Where is Typobo?')
   const heatmaps = new Set((profile.heatmaps ?? []).map((h) => h.id))
   if (heatmaps.has('conceded')) out.push('Where do I concede the most?')
   if (heatmaps.has('turnovers')) out.push('Where are my passes failing?')
@@ -100,7 +101,7 @@ export function Conversation({ entries, limit, onShowOnMap }: { entries: readonl
           <div className={`a ${q.status}`}>
             <span className="who">Coach {STATUS_TEXT[q.status] ? <span className={`badge ${q.status === 'error' ? 'live' : q.status === 'held' ? 'warn' : 'neutral'}`}>{STATUS_TEXT[q.status]}</span> : null}</span>
             {q.status === 'answered' && q.answer ? <p>{q.answer}</p> : null}
-            {onShowOnMap && q.status === 'answered' && placesIn(q.question).length ? (
+            {onShowOnMap && q.status === 'answered' && (placesIn(q.question).length || isAssistantQuestion(q.question)) ? (
               <button type="button" className="btn sm" onClick={() => onShowOnMap(q.question)}>
                 Show on map
               </button>
