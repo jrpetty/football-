@@ -165,3 +165,12 @@ test('the main-process call: fixed tools, the companion instructions and the pac
   assert.ok(!(await off.companionChat(dayz, [{ role: 'user', content: 'hi' }], '')).ok)
   assert.equal(calls.length, 1)
 })
+
+test('a new place named is not a follow-up on the last one, even with "it" in the question', () => {
+  const place = reply('where is berezino')!
+  const r = reply('how long does it take to get to Zelenogorsk', place.topic)!
+  assert.match(r.text, /^Zelenogorsk: [\d.]+ km \S+ from Turovo, about \d+ (min|h)/)
+  assert.ok(r.card!.type === 'map' && r.card.title === 'Zelenogorsk')
+  // The same place again is still a follow-up.
+  assert.match(reply('how far is it to Berezino', place.topic)!.text, /^Berezino: .*min jogging/)
+})

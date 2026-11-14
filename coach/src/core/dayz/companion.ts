@@ -193,6 +193,8 @@ const FOLLOW = /\b(it|there|that place|that town|that one|this one|them)\b/
 /** Follow-ups about the last topic: "take me there", "how far is it", "show it on the map", "where does it spawn". */
 function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameProfile): Reply | null {
   if (!topic || !FOLLOW.test(q)) return null
+  // "How long does it take to get to Berezino": a new place named, so not about the last topic.
+  if (placesIn(q, ctx.map).some((m) => topic.kind !== 'place' || m.place.name !== topic.name)) return null
   if (topic.kind === 'place') {
     const p = { x: topic.x, y: topic.y }
     if (/\b(show|map|where is it|on the map)\b/.test(q) && !/\b(take|route|how far|get)\b/.test(q)) {
