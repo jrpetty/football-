@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { DAYZ_MAPS, describePlace, findPlace, gridRef, looksLike, placesIn, routeLine, transliterate } from '../src/core/dayz/places.ts'
 import { answerPlaceQuestion, isPlaceQuestion, placeAnswer, signLine } from '../src/core/dayz/ask.ts'
 import { validateRegistry } from '../src/core/policy/registry.ts'
-import { classify, answerLocally } from '../src/core/qa/ask.ts'
+import { classify, answerLocally, lookupKind } from '../src/core/qa/ask.ts'
 import { validateProfile, BANNED_CLAIMS } from '../src/core/profile/schema.ts'
 import { Builder } from '../src/sim/visionReplay.ts'
 import type { Utterance } from '../src/core/types.ts'
@@ -161,4 +161,31 @@ test('the registry checks look-up allowances', () => {
   assert.ok(!reg({ kinds: ['screen'], rationale: 'r', decidedBy: 'p', decidedAt: '2026-11-14' }).ok)
   assert.ok(!reg({ kinds: ['places'], rationale: '', decidedBy: 'p', decidedAt: '2026-11-14' }).ok)
   assert.ok(!reg({ kinds: ['places'], rationale: 'r', decidedBy: 'p', decidedAt: '2026-11-14' }, 'disabled').ok)
+})
+
+test('online: gun and survival facts are look-ups too; the gun in hand and the road sign are not', () => {
+  const official = policyFor(dayz, 'official')
+  for (const k of ['places', 'guns', 'survival'] as const) assert.ok(official.lookups.has(k), k)
+  const ctx = { map: 'Chernarus', roadSign: 'Турово', weaponInHands: 'KA-M' }
+  const kind = (q: string) => lookupKind(classify(q, dayz), dayz, ctx)
+  assert.equal(kind('mosin range'), 'guns')
+  assert.equal(kind('where can I find an M4'), 'guns')
+  assert.equal(kind('what does the KA-M look like'), 'guns')
+  assert.equal(kind('best sniper'), 'guns')
+  assert.equal(kind('what gun is this'), null, 'read off the screen')
+  assert.equal(kind('what ammo does my gun use'), null, 'the gun in hand')
+  assert.equal(kind('how do I treat cholera'), 'survival')
+  assert.equal(kind('how do I make a splint'), 'survival')
+  assert.equal(kind('where is typobo'), 'places')
+  assert.equal(kind('where am i'), null)
+  // Through the engine on Official: a gun look-up is spoken during play, its reason says so.
+  const engine = engineFor(dayz, settings({ profileId: 'dayz', profileModeId: 'official' }))
+  const b = new Builder('dayz', () => 0.5)
+  for (let i = 0; i < 4; i++) b.batch(i * 4000, { phase: 'round', water: 'ok' })
+  let now = 0
+  for (const batch of b.batches) engine.ingestObservations(batch.observations, (now = Math.max(now, batch.arrivesAt)))
+  const out = engine.answer('mosin range', 'Mosin 91/30: best at long range.', 'template', now, 'guns')
+  const d = out.entries.flatMap((e) => (e.type === 'message' ? [e.decision] : []))[0]
+  assert.equal(d.decision, 'spoken')
+  assert.match(d.reasons[0], /gun look-up you asked for, from the built-in gun data only/)
 })

@@ -410,6 +410,8 @@ Legend:
 - ◐ The ammunition numbers are the wiki's DayZ 1.12 table; later patches may have changed them. The drop uses the drag model of Bohemia's engines (acceleration = air friction × speed²); check a few holds in game (QA 23.5).
 - ◐ Not checked against live captures yet: reading the status icons' colours, road signs and the gun in hand (QA 23). Places missing from the wiki or wrong there (Gieraltów, Topolin, Sitnik, Petropavlovsk-Sakhalskiy page) are left out.
 - ◐ The place and building data are under non-commercial licences (see `src/profiles/dayz/README.md`): replace or clear them before any commercial release.
+- ☑ Gun and survival look-ups during online play too (owner, 2026-11-14): `lookupKind` in `src/core/qa/ask.ts` decides, and an answer that used the gun in hand or the road sign is not a look-up. *Tests.*
+- ☐ Still waiting online, the owner's call if wanted: "where am I?" and "how far from here" (the road sign read off the screen), "what gun is this?" (the gun in hand), and live survival tips from the status icons.
 - ☑ Place look-ups during online play (decided by the owner, 2026-11-14): `lookupsDuringPlay` in the registry (`dayz/online`), the governor's look-up path, and the app marking a place answer as a look-up only when it did not use the last road sign. Spoken unless silent or muted; shown on Policy & privacy. Tournament switch, stale review or a disabled entry remove it. *Tests: spoken during play on Official, other answers still held, which answers count, registry checks.*
 
 ## Later (P2+)

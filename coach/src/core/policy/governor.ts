@@ -215,13 +215,14 @@ export class CoachingGovernor {
   }
 
   /**
-   * A map look-up the player asked for during play where coaching otherwise
-   * waits: answered from the app's built-in map data, nothing read off the
-   * screen, like opening a map. Spoken (they asked, often out loud) unless
+   * A look-up the player asked for during play where coaching otherwise
+   * waits: answered from the app's built-in data (map, guns, survival
+   * reference), nothing read off the screen, like opening a map or a wiki. Spoken (they asked, often out loud) unless
    * the coach is silent or muted.
    */
   private decideLookup(msg: CoachingMessage, now: number, reasons: string[], result: (d: DeliveryDecision, u?: Utterance | null) => Decision): Decision {
-    reasons.push(`a ${msg.lookup === 'places' ? 'place' : 'reference'} look-up you asked for, from the built-in map data only: allowed during play here (${this.policy.entry?.lookupsDuringPlay?.decidedBy ?? 'policy'})`)
+    const what = msg.lookup === 'places' ? 'place look-up you asked for, from the built-in map data only' : msg.lookup === 'guns' ? 'gun look-up you asked for, from the built-in gun data only' : 'survival look-up you asked for, from the pack’s reference only'
+    reasons.push(`a ${what}: allowed during play here (${this.policy.entry?.lookupsDuringPlay?.decidedBy ?? 'policy'})`)
     if (this.settings.mode === 'silent') {
       reasons.push('silent tracker mode never speaks')
       return result('text-only')

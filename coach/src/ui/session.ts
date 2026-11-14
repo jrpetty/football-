@@ -10,8 +10,7 @@ import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
 import type { PatternSnapshot, PatternVerdict } from '../core/patterns.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
-import { answerLocally, buildDigest, classify } from '../core/qa/ask.ts'
-import { placeAnswer } from '../core/dayz/ask.ts'
+import { answerLocally, buildDigest, classify, lookupKind } from '../core/qa/ask.ts'
 import { statusLabel } from '../core/policy/registry.ts'
 import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, GameEvent, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
@@ -1017,9 +1016,9 @@ export class CoachSession {
     const history = settings.saveTendencies ? this.state.history : []
     const intent = classify(q, profile)
     const local = answerLocally(intent, profile, report, history)
-    // A DayZ place answer from the built-in map data alone (not the last road sign read) is a look-up,
-    // which the game's policy may allow during play like opening a map.
-    const lookup = local && intent.kind === 'place' && placeAnswer(intent.question, report.context)?.fromScreen === false ? ('places' as const) : undefined
+    // A DayZ place, gun or survival answer from the built-in data alone (nothing read off the screen) is a look-up,
+    // which the game's policy may allow during play like opening a map or a wiki.
+    const lookup = local ? (lookupKind(intent, profile, report.context) ?? undefined) : undefined
     let text: string
     let author: CoachingMessage['author'] = 'template'
     let costUsd = 0

@@ -76,7 +76,7 @@ export type ToWorker =
     }
   | { readonly type: 'capture-problem'; readonly reason: string | null; readonly now: number }
   /** An answer to the player's question, to be delivered under the same policy as any message. */
-  | { readonly type: 'answer'; readonly question: string; readonly text: string; readonly author: 'template' | 'ai'; readonly now: number; readonly lookup?: 'places' }
+  | { readonly type: 'answer'; readonly question: string; readonly text: string; readonly author: 'template' | 'ai'; readonly now: number; readonly lookup?: 'places' | 'guns' | 'survival' }
   | { readonly type: 'boundary'; readonly kind: 'round-end' | 'match-end'; readonly result: RoundResult; readonly now: number }
   | { readonly type: 'stop'; readonly now: number }
   /**

@@ -14,7 +14,8 @@ import { formatDuration, humanize, mistakeLine, responseLabel } from '../languag
 import type { ArsenalItem, BenchmarkSpec, GameMap, GameProfile, GrenadeType } from '../profile/schema.ts'
 import { expectedAt } from '../analyses/benchmarks.ts'
 import { productionLines } from '../aoe4/production.ts'
-import { answerMechanics, answerPlaceQuestion, isPlaceQuestion } from '../dayz/ask.ts'
+import { answerMechanics, answerPlaceQuestion, isPlaceQuestion, placeAnswer } from '../dayz/ask.ts'
+import type { LookupKind } from '../policy/registry.ts'
 import { answerGunQuestion, isGunQuestion } from '../dayz/guns.ts'
 import { adviceFor, factorFindings } from '../planner.ts'
 import { clock as clockText, learnedFrom, learnedLines, type Learned } from '../analyses/learning.ts'
@@ -87,6 +88,28 @@ export function classify(question: string, profile: GameProfile): Intent {
   if (/\b(patterns?|tendenc(?:y|ies)|habits?)\b/.test(q)) return { kind: 'patterns' }
   if (/\b(how (?:did|am|was) i|how'?s it going|summary|recap|how (?:did|do|does|was) (?:the|that|my) (?:match|game)(?: go)?)\b/.test(q)) return { kind: 'summary' }
   return { kind: 'open' }
+}
+
+/**
+ * Whether an answer is a look-up from the built-in reference alone (a DayZ
+ * place, gun or survival fact), which the game's policy may allow during
+ * play. Not when it used anything read off the screen: the last road sign
+ * ("where am I", "from here") or the gun in hand ("what gun is this").
+ */
+export function lookupKind(intent: Intent, profile: GameProfile, context: Readonly<Record<string, string | number>>): LookupKind | null {
+  switch (intent.kind) {
+    case 'place':
+      return placeAnswer(intent.question, context)?.fromScreen === false ? 'places' : null
+    case 'gun': {
+      const text = answerGunQuestion(intent.question, profile, context)
+      const { weaponInHands: _held, ...rest } = context
+      return text !== null && answerGunQuestion(intent.question, profile, rest) === text ? 'guns' : null
+    }
+    case 'survival':
+      return answerMechanics(intent.question, profile) !== null ? 'survival' : null
+    default:
+      return null
+  }
 }
 
 /** A local answer from structured data, or null when the question needs the model. */

@@ -456,10 +456,12 @@
       "notes": "Official and community public servers: review after each life or the session only. Community servers set their own rules on third-party tools; Bohemia's position on screen-only coaching was not found.",
       "lookupsDuringPlay": {
         "kinds": [
-          "places"
+          "places",
+          "guns",
+          "survival"
         ],
-        "rationale": "Questions about places (where a town is, the way between two, the nearest water, hospital or fuel to a named place) are answered from the app's built-in map data, the same public facts as the in-game map, the DayZ Wiki or a map website. Nothing read off the screen goes into them, and nothing is said unless the player asks. Answers that use the screen (\"where am I\", \"how far from here\") still wait. This is the player's decision, not Bohemia Interactive approval; community servers may set stricter rules.",
-        "decidedBy": "the player (owner decision, 2026-11-14)",
+        "rationale": "Questions about places (where a town is, the way between two, the nearest water, hospital or fuel to a named place), guns (what one looks like, its round, magazines, range and bullet drop, where it spawns, how two compare) and survival mechanics (treating diseases, splints, blood types, gas zones, jamming) are answered from the app's built-in data: the same public facts as the in-game map, the DayZ Wiki or a map website. Nothing read off the screen goes into them, and nothing is said unless the player asks. Answers that use the screen (\"where am I\", \"how far from here\", \"what gun is this\") and every tip about the survivor's state still wait. This is the player's decision, not Bohemia Interactive approval; community servers may set stricter rules.",
+        "decidedBy": "the player (owner decision: places 2026-11-14, guns and survival 2026-11-14)",
         "decidedAt": "2026-11-14"
       }
     }

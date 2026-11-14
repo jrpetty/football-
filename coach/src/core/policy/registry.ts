@@ -12,8 +12,10 @@ export type PolicyScope = 'live' | 'round_break' | 'post_match'
  * the end: answers from the app's built-in reference only (public map facts,
  * like a map app or the game's wiki), never from what the screen shows.
  */
-export type LookupKind = 'places'
-const LOOKUP_KINDS: readonly LookupKind[] = ['places']
+export type LookupKind = 'places' | 'guns' | 'survival'
+export const LOOKUP_KINDS: readonly LookupKind[] = ['places', 'guns', 'survival']
+/** How each look-up is named to the player. */
+export const LOOKUP_LABELS: Readonly<Record<LookupKind, string>> = { places: 'places', guns: 'guns', survival: 'survival mechanics' }
 
 export interface LookupAllowance {
   readonly kinds: readonly LookupKind[]

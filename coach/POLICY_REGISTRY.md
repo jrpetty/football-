@@ -49,11 +49,13 @@ on four further checks:
 
 6. **Look-ups during play (`lookupsDuringPlay`).** An entry may name kinds
    of look-up the player can ask for during play even where coaching waits.
-   Only `places` exists: DayZ questions about places answered from the
-   app's built-in map data (where a town is, the way between two, the
-   nearest water to a named place). Nothing read off the screen goes into
-   them; answers built from the last road sign read ("where am I", "how far
-   from here") still wait. Every allowance states its rationale, who decided
+   Kinds: `places` (where a town is, the way between two, the nearest
+   water to a named place), `guns` (look, round, magazines, range, where it
+   spawns, comparisons) and `survival` (the pack's mechanics reference),
+   all answered from the app's built-in data. Nothing read off the screen
+   goes into them; answers built from the last road sign read ("where am
+   I", "how far from here") or the gun in hand ("what gun is this") still
+   wait. Every allowance states its rationale, who decided
    and when, and is shown on Policy & privacy. The tournament switch, a stale
    review or a disabled entry remove it.
 
@@ -73,7 +75,7 @@ scope or the chosen mode.
 | `cs2/all-other-modes` (Premier, Competitive, Wingman, Rush, Casual, Deathmatch, Arms Race, Retakes, community servers, FACEIT) | `needs_publisher_review` | Publisher (absence) | VAC bans software that modifies or reads the game; the Steam Subscriber Agreement covers unauthorised third-party software; Valve added light in-game map guides to Competitive in March 2026 but not to Premier. Game State Integration is Valve's own feature and sends only the player's own state while playing. Tournament rules forbid outside help during matches. **Search excerpts.** | Valve's position. Until then, post-match only. |
 | `aoe2-de/offline-vs-ai` (campaign, skirmish vs AI) | `noncompetitive_only` | **Internal** | No Microsoft/World's Edge statement found. Sightline's judgement. | Product/legal sign-off. |
 | `dayz/offline` (Community Offline Mode, private server on your own) | `noncompetitive_only` | **Internal** | No Bohemia statement found. Sightline's judgement: no other players are affected. | Product/legal sign-off. |
-| `dayz/online` (official and community public servers) | `needs_publisher_review` | Publisher (absence) | Bohemia's server hosting rules bar hosts from adding third-party tools; its content usage rules allow original tools that do not use its IP. No statement on player-side coaching or map tools was found. **Search excerpts.** | Bohemia's position. Until then, review after each life or the session. Community servers set their own rules. **Place look-ups** from the built-in map data are answered during play when asked (the player's decision, 2026-11-14; not Bohemia approval). |
+| `dayz/online` (official and community public servers) | `needs_publisher_review` | Publisher (absence) | Bohemia's server hosting rules bar hosts from adding third-party tools; its content usage rules allow original tools that do not use its IP. No statement on player-side coaching or map tools was found. **Search excerpts.** | Bohemia's position. Until then, review after each life or the session. Community servers set their own rules. **Look-ups** from the built-in data (places, guns, survival) are answered during play when asked (the player's decision, 2026-11-14; not Bohemia approval). |
 | `aoe2-de/all-other-modes` (ranked 1v1, ranked team, unranked lobbies) | `needs_publisher_review` | Publisher (absence) | World's Edge works with Capture Age, a spectator tool. No statement on player-side coaching tools was found. **Search excerpt.** | World's Edge's position. Until then, post-match only. |
 | `cod-mw4/offline` (Campaign; private match vs bots only) | `noncompetitive_only` | **Internal** | No Activision statement found. Sightline's judgement: tips in the campaign or against bots alone cannot disadvantage another player. | Product/legal sign-off. |
 | `cod-mw4/online` (Multiplayer, Ranked Play, DMZ, Warzone) | `needs_publisher_review` | Publisher (absence) | Activision's Security and Enforcement Policy targets attempts to manipulate the game, to "reveal information that should not be known", or to automate actions. An older title policy also bans "unauthorized third-party software to gain an unfair advantage". **Search excerpts; the full current text was not retrieved.** | Activision's position on screen-only coaching. Until then, post-match only. |

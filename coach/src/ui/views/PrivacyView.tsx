@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { PlatformInfo } from '../../../shared/bridge.ts'
-import { resolvePolicy, statusLabel, type ResolvedPolicy } from '../../core/policy/registry.ts'
+import { LOOKUP_LABELS, resolvePolicy, statusLabel, type ResolvedPolicy } from '../../core/policy/registry.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import { PolicyBadge, ScopeChips } from '../components/viz.tsx'
 import { REGISTRY, gameIdFor } from '../policy.ts'
@@ -114,14 +114,14 @@ export function PrivacyView({ profile, policy, info }: { profile: GameProfile; p
                 <span className="muted small">{e.modes.includes('*') ? 'all modes' : e.modeClass ? 'offline single-player modes' : e.modes.join(', ')}</span>
                 <span className={`badge ${e.status === 'disabled' ? 'live' : e.status === 'needs_publisher_review' ? 'warn' : e.status === 'post_match_only' ? 'info' : 'ok'}`}>{statusLabel(e.status)}</span>
                 {e.basis === 'internal' ? <span className="badge neutral">Sightline rule</span> : <span className="badge info">Publisher source</span>}
-                {e.lookupsDuringPlay ? <span className="badge neutral">Place look-ups during play</span> : null}
+                {e.lookupsDuringPlay ? <span className="badge neutral">Look-ups during play</span> : null}
               </summary>
               <div className="reg-body small">
                 {e.rationale ? <p>{e.rationale}</p> : null}
                 <p className="muted">{e.notes}</p>
                 {e.lookupsDuringPlay ? (
                   <p>
-                    <strong>Answered during play when you ask ({e.lookupsDuringPlay.kinds.join(', ')}):</strong> {e.lookupsDuringPlay.rationale} Decided by {e.lookupsDuringPlay.decidedBy}.
+                    <strong>Answered during play when you ask ({e.lookupsDuringPlay.kinds.map((k) => LOOKUP_LABELS[k]).join(', ')}):</strong> {e.lookupsDuringPlay.rationale} Decided by {e.lookupsDuringPlay.decidedBy}.
                   </p>
                 ) : null}
                 {e.sources.map((s) => (

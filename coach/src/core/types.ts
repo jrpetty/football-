@@ -232,7 +232,7 @@ export interface CoachingMessage {
   /** True for answers to the player's own questions. */
   readonly requestedByPlayer?: boolean
   /** An answer from the built-in reference only (no screen data): may pass during play where the policy allows that look-up. */
-  readonly lookup?: 'places'
+  readonly lookup?: 'places' | 'guns' | 'survival'
   /** "template" text is built from counts; "ai" text was phrased by a language model from the evidence. */
   readonly author: 'template' | 'ai'
 }
