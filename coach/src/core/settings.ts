@@ -100,6 +100,8 @@ export interface VisionPrefs {
   readonly maxWidth?: number
   /** Looks allowed at once, so a short interval is kept even when a reply takes longer than it. */
   readonly maxInFlight?: number
+  /** Look only when asked: no cloud looks (no cost) until a question needs the screen. */
+  readonly onDemand?: boolean
 }
 
 export const VISION_LIMITS = { intervalMs: { min: 1000, max: 20_000 }, maxInFlight: { min: 1, max: 4 }, widths: [768, 1024, 1280, 1600] } as const
@@ -109,15 +111,15 @@ const TYPICAL_REPLY_MS = 3000
 
 /** The screen-reading settings in effect for a pack: the player's choices over the pack's defaults. */
 export function visionPrefsFor(
-  pack: { readonly id: string; readonly vision?: { readonly sampleIntervalMs: number; readonly maxWidth: number; readonly maxInFlight?: number } },
+  pack: { readonly id: string; readonly vision?: { readonly sampleIntervalMs: number; readonly maxWidth: number; readonly maxInFlight?: number; readonly lookWhenAsked?: boolean } },
   settings: Pick<CoachSettings, 'vision'>,
-): { intervalMs: number; maxWidth: number; maxInFlight: number; custom: boolean } {
+): { intervalMs: number; maxWidth: number; maxInFlight: number; onDemand: boolean; custom: boolean } {
   const own = settings.vision[pack.id] ?? {}
   const intervalMs = own.intervalMs ?? pack.vision?.sampleIntervalMs ?? 3000
   const maxWidth = own.maxWidth ?? pack.vision?.maxWidth ?? 1280
   // Unless the player chose, allow enough looks at once to keep the interval while replies are out.
   const auto = Math.max(pack.vision?.maxInFlight ?? 1, Math.min(VISION_LIMITS.maxInFlight.max, Math.ceil(TYPICAL_REPLY_MS / intervalMs)))
-  return { intervalMs, maxWidth, maxInFlight: own.maxInFlight ?? auto, custom: Object.keys(own).length > 0 }
+  return { intervalMs, maxWidth, maxInFlight: own.maxInFlight ?? auto, onDemand: own.onDemand ?? pack.vision?.lookWhenAsked ?? false, custom: Object.keys(own).length > 0 }
 }
 
 export interface Hotkeys {
@@ -315,7 +317,8 @@ function sanitizeVision(v: unknown, base: CoachSettings['vision']): CoachSetting
   for (const [pack, raw] of Object.entries(v).slice(0, 50)) {
     if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(pack) || typeof raw !== 'object' || raw === null) continue
     const o = raw as Record<string, unknown>
-    const prefs: { intervalMs?: number; maxWidth?: number; maxInFlight?: number } = {}
+    const prefs: { intervalMs?: number; maxWidth?: number; maxInFlight?: number; onDemand?: boolean } = {}
+    if (typeof o.onDemand === 'boolean') prefs.onDemand = o.onDemand
     const L = VISION_LIMITS
     if (typeof o.intervalMs === 'number' && Number.isFinite(o.intervalMs)) prefs.intervalMs = Math.round(Math.min(L.intervalMs.max, Math.max(L.intervalMs.min, o.intervalMs)) / 100) * 100
     if (typeof o.maxWidth === 'number' && (L.widths as readonly number[]).includes(o.maxWidth)) prefs.maxWidth = o.maxWidth

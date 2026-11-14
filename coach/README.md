@@ -803,6 +803,19 @@ included. Only the numbers are kept, on this computer, for 400 days.
 Taxes, credits and discounts are not included. The Console's bill is the
 final word.
 
+**Only when I ask: nothing spent while you don't ask.** Pick "Only when
+I ask" in "Look every" (Coach screen) or Settings → Screen reading, the
+default for DayZ. Capture keeps running and always-listening voice keeps
+working, both on your PC at no cost, but no look goes to the cloud until
+you ask something about your screen ("Coach, where am I?", "what gun is
+this?"). Then it takes one look (about half a cent with Haiku for the
+look; the app shows the figure) and answers. Questions it can answer from
+what it knows (places, routes, guns, survival, your stats) cost nothing,
+and open questions go to Claude only when you ask them. The trade-off:
+live tips and commentary that need a steady view (bleeding, road signs as
+you pass them, fights) stop while it is on; pick a look every few seconds
+offline if you want those.
+
 **Smart reading (on by default) cuts screen reading by about 75–85%.** Every
 look is read by Haiku 5.5 (the fastest, cheapest model, no thinking). The
 model you chose reads the same frame only when it needs its care:

@@ -24,6 +24,8 @@ export interface VisionConfig {
   readonly maxInFlight?: number
   /** Width sampled frames are scaled down to (the pack's value when absent). */
   readonly maxWidth?: number
+  /** Look only when asked (a look-now message): nothing is sent otherwise. */
+  readonly onDemand?: boolean
 }
 
 export type ToWorker =
@@ -67,6 +69,8 @@ export type ToWorker =
       readonly fatal?: boolean
     }
   | { readonly type: 'vision-config'; readonly vision: VisionConfig; readonly now: number }
+  /** Look-when-asked: send the next frame to the recogniser now (the player asked something that needs the screen). */
+  | { readonly type: 'look-now'; readonly requestId: number }
   | {
       readonly type: 'settings'
       readonly settings: CoachSettings
@@ -120,6 +124,8 @@ export type FromWorker =
       /** True once a frame has been fully processed: the renderer may send another. */
       readonly frameDone: boolean
     }
+  /** A look asked for with look-now came back (its readings are in the output just before) or could not be made. */
+  | { readonly type: 'look-done'; readonly requestId: number; readonly ok: boolean }
   /** A sampled frame for the vision recogniser (cloud vision on). */
   | { readonly type: 'vision-frame'; readonly frameAt: number; readonly jpeg: ArrayBuffer }
   /** The screen catalog changed (a new menu was learned): the renderer saves it. */

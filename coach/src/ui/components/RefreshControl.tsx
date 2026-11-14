@@ -36,11 +36,15 @@ export function RefreshControl({
   const packDefault = profile.vision.sampleIntervalMs
   const steps = [...new Set([...STEPS, v.intervalMs, packDefault])].sort((a, b) => a - b)
   const own = settings.vision[profile.id] ?? {}
+  const askDefault = profile.vision.lookWhenAsked ?? false
+  /** 0: look only when asked; otherwise every so many milliseconds. */
   const choose = (ms: number) => {
     const next = { ...settings.vision }
-    const { intervalMs: _old, ...rest } = own
-    if (ms === packDefault && !Object.keys(rest).length) delete next[profile.id]
-    else next[profile.id] = ms === packDefault ? rest : { ...rest, intervalMs: ms }
+    const { intervalMs: _old, onDemand: _was, ...rest } = own
+    const onDemand = ms === 0
+    const prefs = { ...rest, ...(onDemand !== askDefault ? { onDemand } : {}), ...(!onDemand && ms !== packDefault ? { intervalMs: ms } : {}) }
+    if (!Object.keys(prefs).length) delete next[profile.id]
+    else next[profile.id] = prefs
     onSettings({ vision: next })
   }
   const est = playEstimate(profile, settings, cloud.settings, usage)!
@@ -50,17 +54,20 @@ export function RefreshControl({
     <div className={`refresh-control${compact ? ' compact' : ''}`}>
       <label>
         <span className="label">Look every</span>
-        <select aria-label="Refresh time" value={v.intervalMs} onChange={(e) => choose(Number(e.target.value))}>
+        <select aria-label="Refresh time" value={v.onDemand ? 0 : v.intervalMs} onChange={(e) => choose(Number(e.target.value))}>
+          <option value={0}>Only when I ask{askDefault ? ' (game default)' : ''}</option>
           {steps.map((ms) => (
             <option key={ms} value={ms}>
-              {(ms / 1000).toFixed(ms % 1000 ? 1 : 0)} s{ms === packDefault ? ' (game default)' : ''}
+              {(ms / 1000).toFixed(ms % 1000 ? 1 : 0)} s{ms === packDefault && !askDefault ? ' (game default)' : ''}
             </option>
           ))}
         </select>
       </label>
       {!compact ? (
         <span className="muted small">
-          {v.maxInFlight > 1 ? `${v.maxInFlight} looks at once · ` : ''}≈ {usdRange(est.perHour.low, est.perHour.high)}/hour {est.measured ? '(measured)' : '(estimate)'}
+          {v.onDemand
+            ? `Nothing spent while you don't ask; about ${usdRange(perLook(est, v.intervalMs).low, perLook(est, v.intervalMs).high)} a look when you do`
+            : `${v.maxInFlight > 1 ? `${v.maxInFlight} looks at once · ` : ''}≈ ${usdRange(est.perHour.low, est.perHour.high)}/hour ${est.measured ? '(measured)' : '(estimate)'}`}
         </span>
       ) : null}
       {vision?.enabled && vision.latencyMs > 0 ? (
@@ -70,4 +77,10 @@ export function RefreshControl({
       ) : null}
     </div>
   )
+}
+
+/** The cost of one look, from the hourly estimate at this interval. */
+export function perLook(est: { readonly perHour: { readonly low: number; readonly high: number } }, intervalMs: number): { low: number; high: number } {
+  const looks = 3_600_000 / intervalMs
+  return { low: est.perHour.low / looks, high: est.perHour.high / looks }
 }

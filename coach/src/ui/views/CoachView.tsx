@@ -240,11 +240,13 @@ function SetupView({ state, session, settings, onSettings, catalog, profile, pol
             cloudReady(cloud) ? (
               <>
                 <p className="small">
-                  <span className="badge ok">Cloud vision on</span> Every {formatMs(visionPrefsFor(profile, settings).intervalMs)}, one{' '}
-                  {profile.vision!.crops?.length ? 'set of HUD crops' : 'downscaled frame'} goes to {modelPrice(cloud.settings.visionModel).label.split(' (')[0]} with your key.
+                  <span className="badge ok">Cloud vision on</span>{' '}
+                  {visionPrefsFor(profile, settings).onDemand
+                    ? `Only when you ask something about your screen ("Coach, where am I?"), one ${profile.vision!.crops?.length ? 'set of HUD crops' : 'downscaled frame'} goes to ${modelPrice(cloud.settings.visionModel).label.split(' (')[0]} with your key. Nothing is spent while you don't ask.`
+                    : `Every ${formatMs(visionPrefsFor(profile, settings).intervalMs)}, one ${profile.vision!.crops?.length ? 'set of HUD crops' : 'downscaled frame'} goes to ${modelPrice(cloud.settings.visionModel).label.split(' (')[0]} with your key.`}
                 </p>
                 <RefreshControl profile={profile} settings={settings} onSettings={onSettings} cloud={cloud} usage={usage} />
-                {est ? (
+                {est && !visionPrefsFor(profile, settings).onDemand ? (
                   <p className="muted small">
                     About {usdRange(est.perHour.low, est.perHour.high)} per hour of play and {usdRange(est.perMatch.low, est.perMatch.high)} for a typical {est.matchMinutes}-minute match
                     {est.measured ? `, measured from your ${est.measured.looks.toLocaleString()} looks` : ' (estimate from list prices)'}. Session cap {usd(cloud.settings.sessionCapUsd)}.

@@ -10,7 +10,7 @@ import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
 import type { PatternSnapshot, PatternVerdict } from '../core/patterns.ts'
 import type { GameProfile } from '../core/profile/schema.ts'
-import { answerLocally, buildDigest, classify, lookupKind } from '../core/qa/ask.ts'
+import { answerLocally, buildDigest, classify, lookupKind, needsScreen } from '../core/qa/ask.ts'
 import { statusLabel } from '../core/policy/registry.ts'
 import { visionPrefsFor, type CoachSettings } from '../core/settings.ts'
 import type { CoachingMessage, DecisionRecord, GameEvent, MessageCategory, RoundResult, TimelineEntry } from '../core/types.ts'
@@ -241,6 +241,9 @@ export class CoachSession {
   /** The latest cloud status, for questions heard while always listening. */
   private cloud: CloudStatus | null = null
   private snapshotSeq = 0
+  /** Look-when-asked: looks asked for and their answers. */
+  private lookSeq = 0
+  private readonly looks = new Map<number, (ok: boolean) => void>()
   private readonly snapshots = new Map<number, (s: { jpeg: ArrayBuffer; frameAt: number } | null) => void>()
   /** Screenshots of marked moments, by moment id (memory only). */
   private readonly momentImages = new Map<string, ArrayBuffer>()
@@ -964,7 +967,7 @@ export class CoachSession {
   /** Screen reading for this pack: the player's refresh time, looks at once and detail over the pack's defaults. */
   private visionConfig(profile: GameProfile, settings: CoachSettings): VisionConfig {
     const v = visionPrefsFor(profile, settings)
-    return { enabled: this.visionEnabled, intervalMs: v.intervalMs, maxInFlight: v.maxInFlight, maxWidth: v.maxWidth }
+    return { enabled: this.visionEnabled, intervalMs: v.intervalMs, maxInFlight: v.maxInFlight, maxWidth: v.maxWidth, onDemand: v.onDemand }
   }
 
   markBoundary(kind: 'round-end' | 'match-end', result: RoundResult): void {
@@ -1012,9 +1015,16 @@ export class CoachSession {
     const id = uid('qa')
     this.pushQa({ id, question: q, via, askedAt: new Date().toISOString(), status: 'thinking', answer: null, author: null, note: null, costUsd: 0, topic: null })
 
-    const report = this.state.report?.profileId === profile.id ? this.state.report : emptyReport(profile)
+    let report = this.state.report?.profileId === profile.id ? this.state.report : emptyReport(profile)
     const history = settings.saveTendencies ? this.state.history : []
     const intent = classify(q, profile)
+    // Looking only when asked: a question about what is on screen right now takes one look first (the only spend).
+    if (this.lookingOnlyWhenAsked() && needsScreen(q, profile)) {
+      this.patchQa(id, { note: 'Looking at your screen…' })
+      const seen = await this.lookNow()
+      this.patchQa(id, { note: null })
+      if (seen) report = this.state.report?.profileId === profile.id ? this.state.report : report
+    }
     const local = answerLocally(intent, profile, report, history)
     // A DayZ place, gun or survival answer from the built-in data alone (nothing read off the screen) is a look-up,
     // which the game's policy may allow during play like opening a map or a wiki.
@@ -1066,6 +1076,28 @@ export class CoachSession {
     const now = this.source.now()
     this.patchQa(id, { status: 'thinking', answer: text, author, note, costUsd, topic: `answer:${now}` })
     this.post({ type: 'answer', question: q, text, author, now, ...(lookup ? { lookup } : {}) })
+  }
+
+  /** Screen reading is on and set to look only when asked. */
+  lookingOnlyWhenAsked(): boolean {
+    return !!this.worker && !!this.profile && !!this.settings && this.visionEnabled && visionPrefsFor(this.profile, this.settings).onDemand
+  }
+
+  /** Look-when-asked: one look at the screen now. Resolves true once its readings are in, false if it could not be made in time. */
+  lookNow(timeoutMs = 15_000): Promise<boolean> {
+    if (!this.worker) return Promise.resolve(false)
+    const requestId = ++this.lookSeq
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.looks.delete(requestId)
+        resolve(false)
+      }, timeoutMs)
+      this.looks.set(requestId, (ok) => {
+        clearTimeout(timer)
+        resolve(ok)
+      })
+      this.post({ type: 'look-now', requestId })
+    })
   }
 
   /** The latest cloud status (questions heard while always listening are asked with it). */
@@ -1393,6 +1425,12 @@ export class CoachSession {
         const resolve = this.snapshots.get(msg.requestId)
         this.snapshots.delete(msg.requestId)
         resolve?.(msg.jpeg ? { jpeg: msg.jpeg, frameAt: msg.frameAt } : null)
+        return
+      }
+      case 'look-done': {
+        const resolve = this.looks.get(msg.requestId)
+        this.looks.delete(msg.requestId)
+        resolve?.(msg.ok)
         return
       }
       case 'stopped':

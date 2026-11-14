@@ -160,3 +160,39 @@ test('a menu learned once is recognised locally afterwards: no request, phase fr
   assert.equal(snap.requestId, 7)
   assert.ok(snap.jpeg && snap.width === 96)
 })
+
+// --- Look only when asked -----------------------------------------------------------------------
+
+test('looking only when asked: nothing is sent while the player does not ask; one look per question, answered once its readings are in', async () => {
+  const { builtInProfile } = await import('../src/profiles/index.ts')
+  const dayz = builtInProfile('dayz')
+  const posted: FromWorker[] = []
+  const host = new PipelineHost({ post: (m) => posted.push(m), schedule: (fn) => fn(), now: () => 0, encodeJpeg: async () => new ArrayBuffer(16), decode: () => { throw new Error('unused') } })
+  host.handle({ ...start(), profile: dayz, settings: settings({ profileId: 'dayz', profileModeId: 'offline' }), policy: policyFor(dayz, 'offline'), vision: { enabled: true, intervalMs: 4000, onDemand: true } })
+  const frame = (ts: number) => ({ width: 64, height: 36, data: new Uint8ClampedArray(64 * 36 * 4).fill((ts / 100) % 250), timestamp: ts })
+  const sent = () => posted.filter((m): m is Extract<FromWorker, { type: 'vision-frame' }> => m.type === 'vision-frame')
+  // Ten minutes of changing frames: not one look.
+  for (let t = 0; t <= 600_000; t += 1000) host.handle({ type: 'pixels', frame: frame(t) })
+  await new Promise((r) => setTimeout(r, 0))
+  assert.equal(sent().length, 0, 'nothing spent while the player does not ask')
+  // "Coach, where am I?": the next frame is looked at, once.
+  host.handle({ type: 'look-now', requestId: 7 })
+  for (let t = 601_000; t <= 610_000; t += 1000) host.handle({ type: 'pixels', frame: frame(t) })
+  await new Promise((r) => setTimeout(r, 0))
+  assert.equal(sent().length, 1, 'one look for the question')
+  const look = sent()[0]
+  assert.ok(!posted.some((m) => m.type === 'look-done'), 'not answered before the reading is back')
+  host.handle({
+    type: 'vision-result', frameAt: look.frameAt, arrivedAt: look.frameAt + 1200, error: null,
+    response: { phase: 'round', phaseConfidence: 0.9, visibleOutcome: null, visibleHealth: null, unreadable: '', state: [{ key: 'roadSign', value: 'Турово', confidence: 0.9 }], events: [] },
+  })
+  const doneAt = posted.findIndex((m) => m.type === 'look-done')
+  const lastOutput = posted.slice(0, doneAt).map((m) => m.type).lastIndexOf('output')
+  assert.deepEqual(posted[doneAt], { type: 'look-done', requestId: 7, ok: true })
+  const out = posted[lastOutput] as Extract<FromWorker, { type: 'output' }>
+  assert.equal(out.status!.visible.values.roadSign.value, 'Турово', 'the reading is in before the answer')
+  // Without cloud vision there is nothing to look with: answered at once, not left waiting.
+  host.handle({ type: 'vision-config', vision: { enabled: false, intervalMs: 4000, onDemand: true }, now: 0 })
+  host.handle({ type: 'look-now', requestId: 8 })
+  assert.deepEqual(posted.at(-1), { type: 'look-done', requestId: 8, ok: false })
+})

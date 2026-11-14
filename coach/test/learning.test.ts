@@ -210,9 +210,9 @@ test('a learning spec must point at what the pack reads', () => {
 test('refresh time, detail and looks at once: the player’s choice per game, within limits, over the pack’s defaults', () => {
   const s = sanitizeSettings({ vision: { 'cod-mw4': { intervalMs: 250, maxWidth: 1600, maxInFlight: 9 }, aoe4: { maxWidth: 999 }, 'BAD ID': { intervalMs: 2000 } } })
   assert.deepEqual(s.vision, { 'cod-mw4': { intervalMs: 1000, maxWidth: 1600, maxInFlight: 4 } })
-  assert.deepEqual(visionPrefsFor(mw4, s), { intervalMs: 1000, maxWidth: 1600, maxInFlight: 4, custom: true })
+  assert.deepEqual(visionPrefsFor(mw4, s), { intervalMs: 1000, maxWidth: 1600, maxInFlight: 4, onDemand: false, custom: true })
   // Defaults: the pack's, with enough looks at once for its interval.
-  assert.deepEqual(visionPrefsFor(aoe4, s), { intervalMs: 3000, maxWidth: 1280, maxInFlight: 2, custom: false })
+  assert.deepEqual(visionPrefsFor(aoe4, s), { intervalMs: 3000, maxWidth: 1280, maxInFlight: 2, onDemand: false, custom: false })
   assert.equal(visionPrefsFor(mw4, sanitizeSettings({ vision: { 'cod-mw4': { intervalMs: 1000 } } })).maxInFlight, 3, 'auto: about one reply time')
 
   // A new refresh time applies from the next frame.

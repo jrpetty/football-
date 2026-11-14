@@ -48,6 +48,9 @@ export class PipelineHost {
   private draining = false
   private timings: number[] = []
   private sampler: VisionSampler | null = null
+  /** Look-when-asked: looks asked for and not yet sent, and the frames sent for them. */
+  private lookRequests: number[] = []
+  private readonly lookFrames = new Map<number, number[]>()
   private vision: VisionConfig = { enabled: false, intervalMs: 3000 }
   private visionLastError: string | null = null
   private visionAccepted = 0
@@ -130,6 +133,11 @@ export class PipelineHost {
         return this.visionResult(msg)
       case 'snapshot':
         return this.snapshot(msg.requestId, msg.maxWidth)
+      case 'look-now':
+        // Without cloud vision there is nothing to look with: say so at once.
+        if (!this.vision.enabled || !this.profile?.vision) this.deps.post({ type: 'look-done', requestId: msg.requestId, ok: false })
+        else this.lookRequests.push(msg.requestId)
+        return
       case 'vision-config':
         this.configureVision(msg.vision)
         if (this.engine) this.emit({ entries: [], utterances: [], cancel: [], matches: [] }, true)
@@ -173,6 +181,7 @@ export class PipelineHost {
     const usable = cfg.enabled && !!this.profile?.vision
     if (!usable) {
       this.sampler?.setPaused(true)
+      for (const id of this.lookRequests.splice(0)) this.deps.post({ type: 'look-done', requestId: id, ok: false })
       return
     }
     // Every marked HUD number read here: the model is still needed for everything else, but less often.
@@ -186,12 +195,19 @@ export class PipelineHost {
     if (!this.engine || !this.profile) return
     const ok = msg.error === null
     this.sampler?.done(msg.arrivedAt, ok, msg.retryAfterMs)
+    // A look the player asked for: answered once its readings are in the output below.
+    const asked = this.lookFrames.get(msg.frameAt) ?? []
+    this.lookFrames.delete(msg.frameAt)
+    const doneAsked = (good: boolean) => {
+      for (const id of asked) this.deps.post({ type: 'look-done', requestId: id, ok: good })
+    }
     const notices: TimelineEntry[] = []
     if (!ok) {
       if (msg.error !== this.visionLastError) notices.push({ type: 'notice', at: msg.arrivedAt, level: 'warning', text: `Cloud vision: ${msg.error}` })
       this.visionLastError = msg.error
       if (msg.fatal) this.sampler?.setPaused(true)
       this.emit({ entries: notices, utterances: [], cancel: [], matches: [] }, false)
+      doneAsked(false)
       return
     }
     this.visionLastError = null
@@ -211,6 +227,7 @@ export class PipelineHost {
     this.visionAccepted += stats.accepted
     this.visionDropped += stats.dropped.length
     this.emit(this.engine.ingestObservations(observations, msg.arrivedAt), true)
+    doneAsked(true)
   }
 
   /** Remember what the model said this frame's screen was (menus etc.; gameplay is never cached). */
@@ -282,6 +299,17 @@ export class PipelineHost {
   private maybeSample(frame: Frame): void {
     if (!this.sampler || !this.profile?.vision || !this.vision.enabled) return
     const grid = sampleGrid(frame)
+    // Look-when-asked: nothing goes out (nothing is spent) until the player asks; then this frame does.
+    if (this.vision.onDemand) {
+      if (!this.lookRequests.length) return
+      const ids = this.lookRequests.splice(0)
+      this.lookFrames.set(frame.timestamp, ids)
+      this.send(frame, grid, dHash(frame), () => {
+        this.lookFrames.delete(frame.timestamp)
+        for (const id of ids) this.deps.post({ type: 'look-done', requestId: id, ok: false })
+      })
+      return
+    }
     if (!this.sampler.shouldSample(frame.timestamp, grid)) return
     // A menu or loading screen seen before is recognised here, for free — re-checked by the model once a minute.
     const hash = dHash(frame)
@@ -302,6 +330,12 @@ export class PipelineHost {
       }
       return
     }
+    this.send(frame, grid, hash)
+  }
+
+  /** Encode a frame and hand it to the renderer for the recogniser. */
+  private send(frame: Frame, grid: Float32Array, hash: ReturnType<typeof dHash>, failed?: () => void): void {
+    if (!this.sampler || !this.profile) return
     this.hud?.remember(frame)
     this.sentHashes.set(frame.timestamp, hash)
     if (this.sentHashes.size > 8) this.sentHashes.delete(this.sentHashes.keys().next().value!)
@@ -312,6 +346,7 @@ export class PipelineHost {
       .catch((err: unknown) => {
         this.sampler?.done(frame.timestamp, false)
         this.visionLastError = err instanceof Error ? err.message : String(err)
+        failed?.()
       })
   }
 

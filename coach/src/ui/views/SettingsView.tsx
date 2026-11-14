@@ -225,7 +225,7 @@ function CloudPanel({ bridge, cloud, onCloud, profile, settings, usage, onUsage 
               </select>
               {est ? (
                 <span className="muted small">
-                  {profile.game.title}: one look every {(est.intervalMs / 1000).toFixed(1)} s ≈ {usdRange(est.perHour.low, est.perHour.high)}/hour
+                  {profile.game.title}: {visionPrefsFor(profile, settings).onDemand ? `looks only when you ask (nothing spent otherwise); all the time it would be one look every ${(est.intervalMs / 1000).toFixed(1)} s ≈ ` : `one look every ${(est.intervalMs / 1000).toFixed(1)} s ≈ `}{usdRange(est.perHour.low, est.perHour.high)}/hour
                   {est.measured ? ` (measured from your ${est.measured.looks.toLocaleString()} looks)` : ' (estimate)'}. With each model:{' '}
                   {MODELS.map((m) => {
                     const e = playEstimate(profile, settings, cloud.settings, usage, m.id)!
@@ -307,9 +307,22 @@ function ScreenReadingPanel({ settings, onSettings, bridge, cloud, onCloud, prof
         How often the coach looks at your screen for this game, and how sharp each look is. Faster looks catch more (gunfights, quick scouting
         passes) and cost more. Each game keeps its own settings; changes apply from the next look, even during capture.
       </p>
+      <Switch
+        checked={v.onDemand}
+        onChange={(onDemand) => {
+          const { onDemand: _was, ...rest } = own
+          const next = { ...settings.vision }
+          const prefs = onDemand === (pack.lookWhenAsked ?? false) ? rest : { ...rest, onDemand }
+          if (Object.keys(prefs).length) next[profile.id] = prefs
+          else delete next[profile.id]
+          onSettings({ vision: next })
+        }}
+        label={<b>Only when I ask</b>}
+        hint={`Capture keeps running and voice still listens on this computer, but nothing goes to the cloud until you ask something about your screen ("Coach, where am I?", "what gun is this?"); then one look. Nothing is spent while you don't ask.${pack.lookWhenAsked ? ' The default for this game.' : ' Live tips that need a steady view (fights, economy) stop while this is on.'}`}
+      />
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="vision-interval">Look every {(v.intervalMs / 1000).toFixed(1)} s</label>
+          <label htmlFor="vision-interval">{v.onDemand ? 'When looking all the time: every' : 'Look every'} {(v.intervalMs / 1000).toFixed(1)} s</label>
           <input
             id="vision-interval"
             type="range"

@@ -91,6 +91,19 @@ export function classify(question: string, profile: GameProfile): Intent {
 }
 
 /**
+ * A question about what is on the screen right now, which a look must
+ * answer: where am I (the road sign), the gun in hand, the survivor's state.
+ * Asked while the coach looks only when asked, it takes one look first.
+ */
+export function needsScreen(question: string, profile: GameProfile): boolean {
+  const q = question.toLowerCase()
+  if (profile.id === 'dayz') {
+    return /\bwhere am i\b|\bfrom here\b|\bwhat (?:gun|weapon) (?:is this|am i (?:holding|using))\b|\b(?:this|my) (?:gun|weapon|rifle|pistol)\b|\bin my hands?\b|\bwhat(?:'s| is) (?:my|the) (?:sign|road sign)\b|\bwhat does (?:the|this) sign say\b/.test(q)
+  }
+  return false
+}
+
+/**
  * Whether an answer is a look-up from the built-in reference alone (a DayZ
  * place, gun or survival fact), which the game's policy may allow during
  * play. Not when it used anything read off the screen: the last road sign

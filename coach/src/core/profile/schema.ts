@@ -184,6 +184,12 @@ export interface VisionSpec {
   /** What the recogniser should pay attention to, in one paragraph. */
   readonly purpose: string
   readonly sampleIntervalMs: number
+  /**
+   * Look only when the player asks something that needs the screen (no cloud
+   * looks, so no cost, while they do not ask). The default for the pack; the
+   * player can change it. For games whose live help is answers rather than tips.
+   */
+  readonly lookWhenAsked?: boolean
   /** Vision requests allowed at once (1–3, default 1): with 2, a frame is looked at every interval even when answers take longer. */
   readonly maxInFlight?: number
   /** Longest acceptable recognition latency; older observations are not used for live coaching. */
@@ -1268,6 +1274,7 @@ export function validateProfile(input: unknown): ValidationResult {
     if (v) {
       c.str(v.purpose, 'vision.purpose', { max: 2000 })
       c.num(v.sampleIntervalMs, 'vision.sampleIntervalMs', 1000, 60_000)
+      if (v.lookWhenAsked !== undefined && typeof v.lookWhenAsked !== 'boolean') c.errors.push('vision.lookWhenAsked: must be a boolean')
       c.num(v.maxInFlight, 'vision.maxInFlight', 1, 3, true)
       c.num(v.maxLatencyMs, 'vision.maxLatencyMs', 1000, 60_000)
       c.num(v.maxWidth, 'vision.maxWidth', 320, 1920)

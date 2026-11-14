@@ -189,3 +189,13 @@ test('online: gun and survival facts are look-ups too; the gun in hand and the r
   assert.equal(d.decision, 'spoken')
   assert.match(d.reasons[0], /gun look-up you asked for, from the built-in gun data only/)
 })
+
+test('DayZ looks only when asked by default; questions about the screen take a look, the rest do not', async () => {
+  const { visionPrefsFor } = await import('../src/core/settings.ts')
+  const { needsScreen } = await import('../src/core/qa/ask.ts')
+  assert.equal(visionPrefsFor(dayz, settings({})).onDemand, true)
+  assert.equal(visionPrefsFor(dayz, settings({ vision: { dayz: { onDemand: false } } })).onDemand, false)
+  assert.equal(visionPrefsFor(builtInProfile('aoe4'), settings({})).onDemand, false, 'games with live tips keep looking')
+  for (const q of ['coach where am i', 'what gun is this', 'what ammo does my gun use', 'what does the sign say']) assert.ok(needsScreen(q, dayz), q)
+  for (const q of ['where is typobo', 'mosin range', 'how do I treat cholera', 'cherno to nwaf']) assert.ok(!needsScreen(q, dayz), q)
+})
