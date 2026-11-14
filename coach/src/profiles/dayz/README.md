@@ -16,6 +16,10 @@ From **Bohemia Interactive's DayZ Central Economy** files (https://github.com/Bo
 
 Built by `scripts/build-dayz-weapons.mjs`. From the **DayZ Wiki** weapon pages and its "Weapons, damage and armor" ammunition table (CC BY-NC-SA 3.0, read 2026-11-13; the table gives DayZ 1.12 values): descriptions, fire modes, rate of fire, recoil, noise, sights and zeroing, damage, shock, muzzle speed and air friction. From the **Central Economy** files (ADPL-SA): where each gun spawns, its loot tiers and count, and the magazines and attachments it spawns with. The bullet drop is worked out from the speed and air friction. The look of each gun is written for this pack; no images are bundled.
 
+## Map images (src/ui/assets/dayz/*.jpg)
+
+Built by `scripts/build-dayz-maps.py` from the top-down map images in Bohemia Interactive's Central Economy tool (`CETool/<Map>/map.png` in the same repository, ADPL-SA). Resized to 2048 (Chernarus, Sakhal) or 3072 pixels (Livonia, whose dark image is brightened); otherwise unchanged. North up; each covers the whole terrain.
+
 ## Before any commercial use
 
 Both licences are **non-commercial**. Replace this data, or get permission from the rights holders, before the app is sold or used commercially.

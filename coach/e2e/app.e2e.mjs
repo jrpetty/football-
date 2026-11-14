@@ -254,6 +254,31 @@ await check('CS2 demo review: a demo picked in the file dialog is read in the ma
   return { stats, rows, marks }
 })
 
+await check('DayZ map: Bohemia\'s map image, a town found by its sign, your spot, zoom to it, and Show on map from Ask', async () => {
+  await settings({ profileId: 'dayz', profileModeId: 'official', context: { dayz: { map: 'Chernarus' } } })
+  await win.click('nav >> text=Map')
+  await win.waitForFunction(() => {
+    const i = document.querySelector('.dz-map svg image')
+    return !!i && i.getBBox().width > 0
+  }, null, { timeout: 10_000 })
+  await win.fill('input[aria-label="Find a town, grid or route"]', 'Typobo')
+  await win.press('input[aria-label="Find a town, grid or route"]', 'Enter')
+  await win.waitForSelector('.dz-result >> text=Turovo', { timeout: 5_000 })
+  await win.fill('input[aria-label="Set where you are"]', '135 012')
+  await win.press('input[aria-label="Set where you are"]', 'Enter')
+  await win.click('text=Zoom to me')
+  await win.waitForSelector('.dz-here', { timeout: 5_000 })
+  const scale = await win.textContent('.dz-scale')
+  assert(/^1\.6 km/.test(scale), `zoomed to the spot: ${scale}`)
+  await win.click('nav >> text=Ask the coach')
+  await win.fill('input[aria-label="Ask the coach"]', 'where is berezino')
+  await win.press('input[aria-label="Ask the coach"]', 'Enter')
+  await win.click('text=Show on map', { timeout: 10_000 })
+  await win.waitForSelector('.dz-result >> text=Berezino', { timeout: 5_000 })
+  await win.screenshot({ path: join(out, 'dayz-map.png') })
+  return { scale }
+})
+
 await app.close()
 rmSync(userData, { recursive: true, force: true })
 writeFileSync(join(out, 'results.json'), JSON.stringify({ results, logs: logs.slice(-80), main: mainLog.slice(-80) }, null, 1))

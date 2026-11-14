@@ -15,6 +15,7 @@ import { PolicyBadge } from './components/viz.tsx'
 import { policyFor } from './policy.ts'
 import { CoachSession, type SourceChoice } from './session.ts'
 import { AskView } from './views/AskView.tsx'
+import { DayzMapView, type MapFocus, type MapHere } from './views/DayzMapView.tsx'
 import { CoachView } from './views/CoachView.tsx'
 import { HistoryView } from './views/HistoryView.tsx'
 import { ProgressView } from './views/ProgressView.tsx'
@@ -26,7 +27,7 @@ import { SettingsView } from './views/SettingsView.tsx'
 import { UsageView } from './views/UsageView.tsx'
 import { usd } from './format.ts'
 
-export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'progress' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
+export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'map' | 'progress' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
 
 export interface ProfileCatalog {
   readonly profiles: readonly GameProfile[]
@@ -51,6 +52,9 @@ export function App() {
   const [usage, setUsage] = useState<UsageSummary | null>(null)
   const [catalog, setCatalog] = useState<ProfileCatalog>({ profiles: BUILT_IN_PROFILES, rejected: [] })
   const [tab, setTab] = useState<Tab>('coach')
+  // DayZ map: the spot the player set, and a place asked to be shown (kept while the app is open).
+  const [mapHere, setMapHere] = useState<MapHere | null>(null)
+  const [mapFocus, setMapFocus] = useState<MapFocus | null>(null)
   const [picking, setPicking] = useState(false)
   const [suggestion, setSuggestion] = useState<{ profile: GameProfile; window: string } | null>(null)
   const [setupOpen, setSetupOpen] = useState(() => !new URLSearchParams(location.search).has('nosetup'))
@@ -115,6 +119,10 @@ export function App() {
   const alerts = spendAlerts(cloud.spend, cloud.settings)
 
   const profile = catalog.profiles.find((p) => p.id === settings.profileId) ?? catalog.profiles[0]
+  // The map tab exists for DayZ only.
+  useEffect(() => {
+    if (tab === 'map' && profile.id !== 'dayz') setTab('coach')
+  }, [tab, profile.id])
   const policy = useMemo(() => policyFor(profile, settings), [profile, settings])
   const effective = effectiveMode(settings.mode, policy)
 
@@ -298,6 +306,7 @@ export function App() {
               ['insights', 'Insights', state.report?.insights.filter((i) => i.insight.grade !== 'insufficient').length || null],
               ['moments', 'Decisions', state.moments.length || null],
               ['ask', 'Ask the coach', state.conversation.length || null],
+              ...(profile.id === 'dayz' ? ([['map', 'Map', mapHere ? '◉' : null]] as const) : []),
               ['progress', 'Progress', state.progress.practice && session.progress.currentFocus() ? '◆' : null],
               ['history', 'History', state.history.length || null],
               ['review', 'Session timeline', state.timeline.filter((e) => e.type === 'message').length || null],
@@ -383,7 +392,26 @@ export function App() {
           )}
           {tab === 'insights' && <InsightsView state={state} session={session} profile={profile} settings={settings} cloud={cloud} />}
           {tab === 'moments' && <MomentsView state={state} session={session} settings={settings} cloud={cloud} info={info} onTab={setTab} />}
-          {tab === 'ask' && <AskView state={state} session={session} profile={profile} settings={settings} cloud={cloud} bridge={bridge} onTab={setTab} />}
+          {tab === 'ask' && (
+            <AskView
+              state={state}
+              session={session}
+              profile={profile}
+              settings={settings}
+              cloud={cloud}
+              bridge={bridge}
+              onTab={setTab}
+              onShowOnMap={
+                profile.id === 'dayz'
+                  ? (text) => {
+                      setMapFocus({ text, nonce: Date.now() })
+                      setTab('map')
+                    }
+                  : undefined
+              }
+            />
+          )}
+          {tab === 'map' && profile.id === 'dayz' && <DayzMapView state={state} settings={settings} policy={policy} capturing={capturing} here={mapHere} onHere={setMapHere} focus={mapFocus} />}
           {tab === 'progress' && <ProgressView session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'history' && <HistoryView state={state} session={session} profile={profile} settings={settings} onSettings={updateSettings} bridge={bridge} onTab={setTab} />}
           {tab === 'review' && <ReviewView state={state} />}

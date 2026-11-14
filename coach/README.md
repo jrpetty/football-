@@ -552,6 +552,20 @@ Then press **Choose the game window**, play, and listen.
     towns on the way. **"Nearest water to Turovo"**, hospital, fuel,
     police, military, helicopter crash spots, lighthouses, contaminated
     zones. **"Where am I?"** from the last road sign read off your screen.
+  - **The map** (Map, in the side bar when DayZ is picked): Bohemia
+    Interactive's own top-down map of Chernarus, Livonia or Sakhal, with
+    town names (and their Cyrillic signs), a 1 km grid numbered the way
+    players share grids, water pumps, medical, military, police, fuel,
+    helicopter crash spots and gas zones, each layer on or off. Drag to
+    move, scroll or + / − to zoom, click a spot for its grid, the nearest
+    town and water. Find a town by any spelling ("Typobo") or a grid
+    ("135 012"), or a route ("Cherno to NWAF") to draw the line between.
+    **Where you are:** click "I'm here", or type a town or grid; "Zoom to
+    me" flies there. Offline the coach also puts you at the last road sign
+    it read (DayZ shows no position on its own map, so a sign or you is
+    how it knows). On public servers a spot you set shows any time, the
+    one from signs after the life or the session. Place answers on the Ask
+    screen have a "Show on map" button.
   - Survival questions (cholera, salmonella, splints, blood types, gas
     zones, bleeding, stamina) from the pack's own reference.
   - **Guns (60 of them).** "What does the KA-M look like?" (shape, stock,

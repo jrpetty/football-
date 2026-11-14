@@ -19,11 +19,13 @@ interface Props {
   cloud: CloudStatus
   bridge: SightlineBridge
   onTab: (t: Tab) => void
+  /** DayZ: show the places a question names on the map. */
+  onShowOnMap?: (text: string) => void
 }
 
 const cloudReady = (c: CloudStatus) => c.available && c.settings.enabled && c.key.set
 
-export function AskView({ state, session, profile, settings, cloud, bridge, onTab }: Props) {
+export function AskView({ state, session, profile, settings, cloud, bridge, onTab, onShowOnMap }: Props) {
   return (
     <div className="page">
       <div>
@@ -57,7 +59,7 @@ export function AskView({ state, session, profile, settings, cloud, bridge, onTa
           {state.conversation.length === 0 ? (
             <div className="empty small">Try one of the suggestions below{settings.voiceInput ? ', or press the microphone and ask out loud' : ''}.</div>
           ) : (
-            <Conversation entries={state.conversation} />
+            <Conversation entries={state.conversation} onShowOnMap={onShowOnMap} />
           )}
           <AskBox state={state} session={session} profile={profile} settings={settings} cloud={cloud} />
         </section>

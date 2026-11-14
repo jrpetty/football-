@@ -5511,3 +5511,48 @@ td > .swatch {
   display: block;
   border-radius: 4px 4px 0 0;
 }
+
+/* --- DayZ map ------------------------------------------------------------------------------- */
+.dz-panel { display: flex; flex-direction: column; gap: 10px; }
+.dz-search { display: flex; gap: 8px; }
+.dz-search input { flex: 1; min-width: 0; }
+.dz-result { margin: 0; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.dz-map-wrap { display: flex; flex-direction: column; gap: 8px; }
+.dz-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dz-scale { margin: 0 8px; }
+.dz-layers { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; font-size: 12px; color: var(--text-2); }
+.dz-layer { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.dz-swatch { width: 10px; height: 10px; display: inline-block; border: 1.5px solid currentColor; }
+.dz-layer-towns .dz-swatch { color: #fff; border-radius: 50%; }
+.dz-layer-grid .dz-swatch { color: rgba(255, 255, 255, 0.5); }
+.dz-layer-water .dz-swatch { color: #4fb3ff; border-radius: 50%; background: #4fb3ff; }
+.dz-layer-medical .dz-swatch { color: #ff6b6b; border: 0; background: linear-gradient(#ff6b6b, #ff6b6b) center/100% 3px no-repeat, linear-gradient(#ff6b6b, #ff6b6b) center/3px 100% no-repeat; }
+.dz-layer-military .dz-swatch { color: #e8c547; }
+.dz-layer-police .dz-swatch { color: #8ea7ff; transform: rotate(45deg) scale(0.8); }
+.dz-layer-fuel .dz-swatch { color: #ff9f43; border: 0; background: #ff9f43; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.dz-layer-heliCrash .dz-swatch { color: #f5f5f5; border: 0; background: linear-gradient(45deg, transparent 42%, #f5f5f5 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, #f5f5f5 42% 58%, transparent 58%); }
+.dz-layer-contaminated .dz-swatch { color: #b7f34a; border-radius: 50%; background: rgba(183, 243, 74, 0.3); }
+.dz-map { position: relative; height: min(70vh, 720px); min-height: 360px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; background: #0d1a20; cursor: grab; touch-action: none; user-select: none; }
+.dz-map:active { cursor: grabbing; }
+.dz-map:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dz-map svg { display: block; }
+.dz-sea { fill: #0d1a20; }
+.dz-grid line { stroke: rgba(255, 255, 255, 0.22); }
+.dz-grid text { fill: rgba(255, 255, 255, 0.75); font-family: var(--mono); }
+.dz-water { fill: #4fb3ff; stroke: #06243a; }
+.dz-medical { stroke: #ff6b6b; stroke-linecap: square; fill: none; }
+.dz-military { fill: rgba(232, 197, 71, 0.25); stroke: #e8c547; }
+.dz-police { fill: rgba(142, 167, 255, 0.25); stroke: #8ea7ff; }
+.dz-fuel { fill: #ff9f43; stroke: #3a1c00; }
+.dz-heli { stroke: #f5f5f5; stroke-linecap: round; fill: none; }
+.dz-gas { fill: rgba(183, 243, 74, 0.18); stroke: #b7f34a; }
+.dz-route line { stroke: #ffd166; fill: none; }
+.dz-route circle { fill: #ffd166; stroke: #3a2a00; }
+.dz-place circle { fill: #fff; stroke: #000; }
+.dz-place text { fill: #fff; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--font); font-weight: 600; }
+.dz-place-village text, .dz-place-local text, .dz-place-hill text, .dz-place-camp text { font-weight: 500; fill: #e2e8f0; }
+.dz-picked { stroke: #ffd166; stroke-linecap: round; }
+.dz-here circle { fill: none; stroke: #5ad1b8; }
+.dz-here .dz-here-dot { fill: #5ad1b8; stroke: none; }
+.dz-here .dz-here-area { fill: rgba(90, 209, 184, 0.15); stroke: rgba(90, 209, 184, 0.6); stroke-dasharray: 20 14; stroke-width: 6; }
+.dz-info { min-height: 28px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }

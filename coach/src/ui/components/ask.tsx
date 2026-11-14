@@ -3,6 +3,7 @@
 // language model phrasing recorded data) and whether policy is holding them.
 
 import { useState } from 'react'
+import { placesIn } from '../../core/dayz/places.ts'
 import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
@@ -85,7 +86,7 @@ const STATUS_TEXT: Record<QaEntry['status'], string> = {
   error: 'Could not answer',
 }
 
-export function Conversation({ entries, limit }: { entries: readonly QaEntry[]; limit?: number }) {
+export function Conversation({ entries, limit, onShowOnMap }: { entries: readonly QaEntry[]; limit?: number; onShowOnMap?: (text: string) => void }) {
   const shown = limit ? entries.slice(-limit) : entries
   if (!shown.length) return null
   return (
@@ -99,6 +100,11 @@ export function Conversation({ entries, limit }: { entries: readonly QaEntry[]; 
           <div className={`a ${q.status}`}>
             <span className="who">Coach {STATUS_TEXT[q.status] ? <span className={`badge ${q.status === 'error' ? 'live' : q.status === 'held' ? 'warn' : 'neutral'}`}>{STATUS_TEXT[q.status]}</span> : null}</span>
             {q.status === 'answered' && q.answer ? <p>{q.answer}</p> : null}
+            {onShowOnMap && q.status === 'answered' && placesIn(q.question).length ? (
+              <button type="button" className="btn sm" onClick={() => onShowOnMap(q.question)}>
+                Show on map
+              </button>
+            ) : null}
             {q.status === 'thinking' ? <span className="typing" aria-label="Thinking"><span /><span /><span /></span> : null}
             {q.note ? (
               <div className="muted small">
