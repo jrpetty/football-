@@ -5,6 +5,8 @@
 // conversation. React reads one immutable state object (useSyncExternalStore).
 
 import type { OverheadInfo, PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
+import { companionTurn, HELP_EXAMPLES, localReply, type Card, type CompanionContext, type ToolEffects, type Topic } from '../core/dayz/companion.ts'
+import type { CompanionMessage } from '../../shared/cloud.ts'
 import { CHERNARUS, KIT, kitFrom, kitLine, parseKitUpdate, parseSetSpot, type Spot } from '../core/dayz/assistant.ts'
 import { pointInfo } from '../core/dayz/mapView.ts'
 import type { DayzMapId } from '../core/dayz/places.ts'
@@ -108,6 +110,8 @@ export interface QaEntry {
   readonly costUsd: number
   /** The engine topic, to match a held answer when it is released. */
   readonly topic: string | null
+  /** DayZ companion: what the answer puts on the companion's screen (a map, a place, a gun, an item, a plan…). */
+  readonly card?: Card | null
 }
 
 /** A moment the player marked during play, to ask about after the match. Kept in memory only. */
@@ -257,6 +261,8 @@ export class CoachSession {
   private snapshotSeq = 0
   /** Look-when-asked: looks asked for and their answers. */
   private lookSeq = 0
+  /** DayZ companion: the last thing talked about, for follow-ups. */
+  private topic: Topic = null
   private readonly looks = new Map<number, (ok: boolean) => void>()
   private readonly snapshots = new Map<number, (s: { jpeg: ArrayBuffer; frameAt: number } | null) => void>()
   /** Screenshots of marked moments, by moment id (memory only). */
@@ -1037,9 +1043,10 @@ export class CoachSession {
     const history = settings.saveTendencies ? this.state.history : []
     // DayZ: "I'm at Turovo" sets your spot; "I found a knife" ticks your kit. Answered at once, from what you said.
     if (profile.id === 'dayz') {
-      const said = this.dayzSaid(q)
-      if (said) {
-        this.patchQa(id, { status: 'answered', answer: said, author: 'template', note: 'From what you told the coach.' })
+      const saidReply = this.dayzSaid(q)
+      if (saidReply) {
+        const said = saidReply.text
+        this.patchQa(id, { status: 'answered', answer: said, author: 'template', note: 'From what you told the coach.', card: saidReply.card })
         if (via === 'voice' && !settings.muted && !settings.tournament && settings.mode !== 'silent') this.speech.enqueue({ id: `answer-${id}`, text: said, category: 'post_event', priority: 'normal', expiresAt: null })
         return
       }
@@ -1056,15 +1063,33 @@ export class CoachSession {
       if (seen) report = this.state.report?.profileId === profile.id ? this.state.report : report
     }
     const local = answerLocally(intent, profile, report, history)
+    // DayZ companion: its own reply (follow-ups, help, kit, the map) or the local answer, with a card for its screen.
+    const companion = profile.id === 'dayz' ? localReply(q, this.companionContext(), profile, this.topic, local) : null
+    if (companion) {
+      this.topic = companion.topic
+      this.patchQa(id, { card: companion.card })
+    }
     // A DayZ place, gun or survival answer from the built-in data alone (nothing read off the screen) is a look-up,
     // which the game's policy may allow during play like opening a map or a wiki.
-    const lookup = local ? (lookupKind(intent, profile, report.context) ?? undefined) : undefined
+    const lookup = local ? (lookupKind(intent, profile, report.context) ?? undefined) : companion ? 'places' : undefined
     let text: string
     let author: CoachingMessage['author'] = 'template'
     let costUsd = 0
     let note: string | null = 'Answered on this computer from what the coach recorded.'
-    if (local) text = local
-    else if (cloud.available && cloud.settings.enabled && cloud.key.set) {
+    if (companion) text = companion.text
+    else if (local) text = local
+    else if (profile.id === 'dayz' && cloud.available && cloud.settings.enabled && cloud.key.set) {
+      // An open question: Claude, with the companion's tools (the app's own data), and its cards on the screen.
+      const r = await this.companionTurn(id, q, profile)
+      if (!r.ok) {
+        this.patchQa(id, { status: 'error', note: r.error })
+        return
+      }
+      text = r.text
+      author = 'ai'
+      costUsd = r.costUsd
+      note = `Answered by ${cloud.settings.answerModel}${r.tools.length ? `, using ${[...new Set(r.tools)].map((t) => t.replace(/_/g, ' ')).join(', ')}` : ''} (the app's own data; no screen).`
+    } else if (cloud.available && cloud.settings.enabled && cloud.key.set) {
       const policy = policyFor(profile, settings)
       const mode = profile.modes.find((m) => m.id === settings.profileModeId)
       const digest = buildDigest({
@@ -1089,6 +1114,10 @@ export class CoachSession {
       author = 'ai'
       costUsd = r.costUsd
       note = `Answered by ${cloud.settings.answerModel} from ${shot ? 'your screen and ' : ''}this session's recorded data${history.length ? ' and your match history' : ''}.`
+    } else if (profile.id === 'dayz') {
+      text = 'I did not catch that one. On this computer I know places, routes, loot, guns, survival and your kit: try "where do I find a canteen", "take me to the nearest water" or "what now?". For open chat about anything, add your Claude API key in Settings.'
+      this.patchQa(id, { card: { type: 'help', examples: HELP_EXAMPLES } })
+      note = null
     } else {
       text =
         'Without Claude I can answer from what I recorded: where things happen, how your fights go, your mistakes, patterns, statistics and how a match went. ' +
@@ -1121,13 +1150,45 @@ export class CoachSession {
     this.set({ kit: [...kitFrom([...kit].join(','))] })
   }
 
-  /** "I'm at …" or "I found …": the reply, after updating the spot or the kit; null for anything else. */
-  private dayzSaid(q: string): string | null {
+  /** What the companion knows of the player: their spot, kit and map. */
+  private companionContext(): CompanionContext {
+    const spot = this.state.spot?.map === 'chernarus' ? this.state.spot : null
+    const context = this.state.report?.profileId === 'dayz' ? this.state.report.context : {}
+    return { spot, kit: this.state.kit, map: mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus' }
+  }
+
+  /** One open question to Claude with the companion's tools (src/core/dayz/companion.ts runs the loop). */
+  private async companionTurn(id: string, q: string, profile: GameProfile): Promise<{ ok: true; text: string; costUsd: number; tools: string[] } | { ok: false; error: string }> {
+    const effects: ToolEffects = {
+      setSpot: (s) => this.set({ spot: { ...s, map: 'chernarus' } }),
+      setKit: (have, lost) => {
+        const kit = new Set(this.state.kit)
+        have.forEach((k) => kit.add(k))
+        lost.forEach((k) => kit.delete(k))
+        this.set({ kit: [...kitFrom([...kit].join(','))] })
+      },
+    }
+    const r = await companionTurn({
+      question: q,
+      history: this.state.conversation.filter((e) => e.id !== id && e.status === 'answered' && e.answer).map((e) => ({ question: e.question, answer: e.answer! })),
+      ctx: this.companionContext(),
+      topic: this.topic,
+      profile,
+      effects,
+      chat: (messages) => this.bridge.companionChat({ profileId: profile.id, messages: messages as readonly CompanionMessage[] }).catch((err: unknown) => ({ ok: false as const, error: String(err) })),
+      onCard: (card) => this.patchQa(id, { card }),
+    })
+    if (r.ok) this.topic = r.topic
+    return r
+  }
+
+  /** "I'm at …" or "I found …": the reply (and its card), after updating the spot or the kit; null for anything else. */
+  private dayzSaid(q: string): { text: string; card: Card } | null {
     const spot = parseSetSpot(q)
     if (spot) {
       this.set({ spot: { ...spot, map: 'chernarus' } })
       const info = pointInfo(CHERNARUS, spot)
-      return `Got it: you're at ${spot.label}. ${info.line} Ask "what now?" or "take me to the nearest water".`
+      return { text: `Got it: you're at ${spot.label}. ${info.line} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: 'chernarus', title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }
     }
     const kit = parseKitUpdate(q)
     if (kit) {
@@ -1136,7 +1197,7 @@ export class CoachSession {
       kit.lost.forEach((k) => have.delete(k))
       this.set({ kit: [...kitFrom([...have].join(','))] })
       const names = [...kit.have, ...kit.lost].map((k) => KIT.find((x) => x.id === k)!.label.toLowerCase())
-      return `${kit.have.length ? 'Ticked' : 'Unticked'}: ${names.join(', ')}. ${kitLine(have)}`
+      return { text: `${kit.have.length ? 'Ticked' : 'Unticked'}: ${names.join(', ')}. ${kitLine(have)}`, card: { type: 'kit', have: KIT.filter((k) => have.has(k.id)).map((k) => k.label), missing: KIT.filter((k) => !have.has(k.id)).map((k) => k.label) } }
     }
     return null
   }

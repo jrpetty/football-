@@ -43,6 +43,10 @@ interface Props {
   readonly onSetHere: (p: Pos) => void
   /** Plot routes over the ground (roads, fields, round water) instead of straight lines; null: straight. */
   readonly follow?: FollowGround | null
+  /** Pins to show (places where an item spawns, results), fitted into view. */
+  readonly markers?: readonly Pos[]
+  /** A smaller map with fewer controls (the companion's screen). */
+  readonly compact?: boolean
 }
 
 /** A route over the ground, leg by leg (null where there is no way), its length and share on roads. */
@@ -58,7 +62,7 @@ export interface TrailLine {
   readonly current: boolean
 }
 
-export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follow }: Props) {
+export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follow, markers, compact }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 800, height: 600 })
   const [view, setView] = useState<MapViewState>(() => fullView(map))
@@ -89,6 +93,16 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
     // Bring the map into view, so the drawn route is seen.
     box.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
   }, [route, map])
+  // Pins: all of them in view (with the player's spot when there is one).
+  useEffect(() => {
+    if (!markers?.length) return
+    const pts = [...markers, ...(here ? [here] : [])]
+    const xs = pts.map((p) => p.x)
+    const ys = pts.map((p) => p.y)
+    const spanX = Math.max(...xs) - Math.min(...xs)
+    const spanY = Math.max(...ys) - Math.min(...ys)
+    setView(clampView(map, { cx: (Math.max(...xs) + Math.min(...xs)) / 2, cy: (Math.max(...ys) + Math.min(...ys)) / 2, span: Math.max(1500, spanY * 1.35, (spanX * 1.35 * size.height) / size.width) }))
+  }, [markers, map])
   useEffect(() => {
     const el = box.current
     if (!el) return
@@ -156,7 +170,7 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
   const info = picked ? pointInfo(map, picked) : null
 
   return (
-    <div className="dz-map-wrap">
+    <div className={`dz-map-wrap${compact ? ' compact' : ''}`}>
       <div className="dz-toolbar" role="toolbar" aria-label="Map controls">
         <button type="button" className="btn sm" onClick={() => setView(zoomAt(map, view, 1.6))} aria-label="Zoom in">
           +
@@ -340,6 +354,15 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
                   </text>
                 </g>
               ))}
+
+          {markers?.map((m, i) => (
+            <g key={`pin${i}`} className="dz-pin">
+              <path d={`M${m.x},${sy(m.y)} l${-5 * px},${-12 * px} a${5.5 * px},${5.5 * px} 0 1 1 ${10 * px},0 z`} strokeWidth={1.5 * px} />
+              <text x={m.x + 8 * px} y={sy(m.y) - 10 * px} fontSize={11 * px} strokeWidth={3 * px}>
+                {m.label}
+              </text>
+            </g>
+          ))}
 
           {picked ? <path className="dz-picked" d={cross(picked.x, sy(picked.y), 7 * px, true)} strokeWidth={2.5 * px} /> : null}
           {here ? (

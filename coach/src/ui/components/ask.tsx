@@ -27,7 +27,7 @@ export function suggestedQuestions(profile: GameProfile): string[] {
   return out.slice(0, 5)
 }
 
-export function AskBox(props: { state: SessionState; session: CoachSession; profile: GameProfile; settings: CoachSettings; cloud: CloudStatus; compact?: boolean }) {
+export function AskBox(props: { state: SessionState; session: CoachSession; profile: GameProfile; settings: CoachSettings; cloud: CloudStatus; compact?: boolean; placeholder?: string }) {
   const [text, setText] = useState('')
   const busy = props.state.conversation.some((q) => q.status === 'thinking' && q.topic === null)
   const send = (q: string) => {
@@ -47,7 +47,7 @@ export function AskBox(props: { state: SessionState; session: CoachSession; prof
       >
         <input
           aria-label="Ask the coach"
-          placeholder="Ask about your games…"
+          placeholder={props.placeholder ?? 'Ask about your games…'}
           value={text}
           maxLength={500}
           onChange={(e) => setText(e.target.value)}

@@ -313,6 +313,36 @@ await check('DayZ map: Bohemia\'s map image, a town found by its sign, your spot
   return { scale, stops, planStops }
 })
 
+await check('DayZ companion: chat on one side, its screen on the other: your spot on a map, an item, a plan, a gun', async () => {
+  await settings({ profileId: 'dayz', profileModeId: 'offline', context: { dayz: { map: 'Chernarus' } } })
+  await win.click('nav >> text=Companion')
+  await win.waitForSelector('.comp-welcome', { timeout: 5_000 })
+  const say = async (q) => {
+    await win.fill('.comp-chat input[aria-label="Ask the coach"]', q)
+    await win.press('.comp-chat input[aria-label="Ask the coach"]', 'Enter')
+  }
+  await say("I'm at Turovo")
+  await win.waitForSelector('.comp-screen .comp-kicker >> text=Map', { timeout: 5_000 })
+  await say('where do I find a canteen')
+  await win.waitForSelector('.comp-screen h2 >> text=Canteen', { timeout: 5_000 })
+  assert((await win.locator('.comp-screen .dz-pin').count()) > 0, 'pins where it spawns')
+  await say('mosin range')
+  await win.waitForSelector('.comp-screen h2 >> text=Mosin 91/30', { timeout: 5_000 })
+  assert((await win.locator('.comp-screen caption >> text=Where to aim').count()) === 1, 'the drop table')
+  await say('what now?')
+  await win.waitForSelector('.comp-screen .comp-kicker >> text=Your next steps', { timeout: 5_000 })
+  const steps = await win.locator('.comp-steps li').count()
+  assert(steps >= 4, `steps: ${steps}`)
+  await win.waitForSelector('.comp-screen .dz-route polyline.ground', { timeout: 10_000 })
+  // An older answer back on the screen.
+  await win.click('.comp-msg:has(.comp-you:text-is("where do I find a canteen")) >> text=Show on screen')
+  await win.waitForSelector('.comp-screen h2 >> text=Canteen', { timeout: 5_000 })
+  await win.click('.comp-msg:has(.comp-you:text-is("what now?")) >> text=Show on screen')
+  await win.waitForTimeout(500)
+  await win.screenshot({ path: join(out, 'dayz-companion.png') })
+  return { steps }
+})
+
 await app.close()
 rmSync(userData, { recursive: true, force: true })
 writeFileSync(join(out, 'results.json'), JSON.stringify({ results, logs: logs.slice(-80), main: mainLog.slice(-80) }, null, 1))

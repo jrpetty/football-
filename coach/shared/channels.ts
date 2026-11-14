@@ -74,6 +74,7 @@ export const CHANNELS = {
   deleteKnowledge: 'sightline:delete-knowledge',
   testCloud: 'sightline:test-cloud',
   reviewMatch: 'sightline:review-match',
+  companionChat: 'sightline:companion-chat',
   gsiStatus: 'sightline:gsi-status',
   gsiConfigure: 'sightline:gsi-configure',
   gsiCfg: 'sightline:gsi-cfg',

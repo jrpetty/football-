@@ -126,6 +126,18 @@ const MECHANICS: readonly (readonly [RegExp, string, string])[] = [
   [/\bzero(?:ing|ed)?\b|\bpage ?(?:up|down)\b/, '', 'Zeroing'],
 ]
 
+/** The pack's reference item and playbook entry a survival question is about, or null. */
+export function mechanicsFor(question: string, profile: { readonly knowledge: { readonly playbook?: readonly { readonly id: string; readonly fix: string; readonly why?: string; readonly principle: string; readonly title?: string; readonly sources?: readonly { readonly url: string; readonly title: string }[] }[]; readonly reference?: readonly { readonly items: readonly { readonly name: string; readonly detail: string }[] }[] } }) {
+  const q = question.toLowerCase()
+  const hit = MECHANICS.find(([re]) => re.test(q))
+  if (!hit) return null
+  const [, playbookId, refName] = hit
+  return {
+    item: profile.knowledge.reference?.flatMap((s) => s.items).find((i) => i.name === refName) ?? null,
+    entry: profile.knowledge.playbook?.find((e) => e.id === playbookId) ?? null,
+  }
+}
+
 /** A survival question answered from the pack (what it is, the fix, the numbers), or null. */
 export function answerMechanics(question: string, profile: { readonly knowledge: { readonly playbook?: readonly { readonly id: string; readonly fix: string; readonly why?: string; readonly principle: string }[]; readonly reference?: readonly { readonly items: readonly { readonly name: string; readonly detail: string }[] }[] } }): string | null {
   const q = question.toLowerCase()

@@ -184,6 +184,9 @@ export const browserBridge: SightlineBridge = {
   async reviewMatch() {
     return desktopOnly
   },
+  async companionChat() {
+    return desktopOnly
+  },
   async research() {
     return desktopOnly
   },

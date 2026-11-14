@@ -566,6 +566,27 @@ Then press **Choose the game window**, play, and listen.
     how it knows). On public servers a spot you set shows any time, the
     one from signs after the life or the session. Place answers on the Ask
     screen have a "Show on map" button.
+  - **Companion** (in the side bar when DayZ is picked): a chat you talk
+    to openly, typed or out loud (talk key, or always listening with
+    "Coach…"), beside its own screen. Whatever you ask comes up there at
+    once: a map with your spot, a route over roads and fields, or pins
+    where an item spawns; a place card (grid, Cyrillic sign, nearest water,
+    hospital, police, military); a gun card (look, stats, where to aim at
+    each range, where it spawns); an item card (building types, tiers,
+    nearest towns with those buildings); your next steps as a numbered
+    plan on the map; survival advice with the fix; your kit to tick; side-
+    by-side comparisons. It remembers what you were just talking about
+    ("take me there", "how far is it", "show it on the map", "where does it
+    spawn"). Earlier answers can be put back on the screen, and "Open on
+    the big map" opens the full Map.
+    Questions it knows are answered on your PC, free and instant. Anything
+    else (with your Claude key) goes to Claude, which answers in plain
+    conversation and can call the app's own tools: places, routes, nearest
+    of anything, item spawns, guns, comparisons, survival advice, your
+    plan, loot runs, your spot and kit; its tools put their cards on the
+    screen. No screenshots are sent for this. On public servers, Claude's
+    replies wait for the end of the life like any other answer; the cards
+    from the app's own data show at once.
   - **Survival assistant (Chernarus).** Tell it where you are ("Coach,
     I'm at Turovo", "I'm at 135 012", or click "I'm here" on the map) and
     what you have ("Coach, I found a knife and some rags", or tick your

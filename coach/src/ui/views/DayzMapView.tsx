@@ -14,16 +14,10 @@ import { mapById, parsePosition, pointInfo } from '../../core/dayz/mapView.ts'
 import { mapPreference } from '../../core/dayz/ask.ts'
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '../../core/dayz/lootRun.ts'
 import { lifeLine } from '../../core/dayz/trail.ts'
-import { decodeTerrain, gasMask, groundRoute, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
-import { DayzMapCanvas, type FollowGround, type Pos, type TrailLine } from '../components/dayzMap.tsx'
+import type { Travel } from '../../core/dayz/terrain.ts'
+import { useFollowGround } from '../components/dayzGround.ts'
+import { DayzMapCanvas, type Pos, type TrailLine } from '../components/dayzMap.tsx'
 
-/** The terrain grids (about 300 KB each), loaded when a map is first shown. */
-const TERRAIN: Readonly<Record<DayzMapId, () => Promise<{ default: TerrainData }>>> = {
-  chernarus: () => import('../../profiles/dayz/terrain.chernarus.json'),
-  livonia: () => import('../../profiles/dayz/terrain.livonia.json'),
-  sakhal: () => import('../../profiles/dayz/terrain.sakhal.json'),
-}
-const terrainCache = new Map<DayzMapId, Terrain>()
 import type { CoachSession, SessionState } from '../session.ts'
 
 export type MapHere = Pos & { readonly map: DayzMapId }
@@ -52,32 +46,7 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
   const [hereText, setHereText] = useState('')
   // Routes over the ground: on foot (roads, fields, round water), by car (roads), or straight lines.
   const [travel, setTravel] = useState<Travel | 'straight'>('foot')
-  const [terrain, setTerrain] = useState<Terrain | null>(terrainCache.get(mapId) ?? null)
-  useEffect(() => {
-    let live = true
-    const cached = terrainCache.get(mapId)
-    if (cached) setTerrain(cached)
-    else {
-      setTerrain(null)
-      void TERRAIN[mapId]().then((m) => {
-        const t = decodeTerrain(m.default)
-        terrainCache.set(mapId, t)
-        if (live) setTerrain(t)
-      })
-    }
-    return () => {
-      live = false
-    }
-  }, [mapId])
-  // Gas zones are kept out of (on foot as a last resort, by car never).
-  const gas = useMemo(() => (terrain ? gasMask(terrain, map.world.contaminated) : null), [terrain, map])
-  const follow: FollowGround | null = useMemo(() => {
-    if (!terrain || travel === 'straight') return null
-    return (points) => {
-      const r = groundRoute(terrain, points, travel, gas)
-      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road }
-    }
-  }, [terrain, travel, gas])
+  const follow = useFollowGround(map, travel)
   const [hereError, setHereError] = useState<string | null>(null)
 
   // The last road sign read: live where coaching is allowed, otherwise once play has stopped.

@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url'
 import { basename, dirname, join } from 'node:path'
 import { CHANNELS } from '../shared/channels.ts'
 import type { CaptureSource, PlatformInfo } from '../shared/bridge.ts'
-import { DEFAULT_CLOUD, type CloudSettings, type CloudStatus } from '../shared/cloud.ts'
+import { DEFAULT_CLOUD, type CloudSettings, type CloudStatus, type CompanionBlock, type CompanionMessage } from '../shared/cloud.ts'
 import { emptyLedger, recordCall, summarizeUsage, type UsageLedger } from '../src/core/usage.ts'
 import { validateProfile, type GameProfile } from '../src/core/profile/schema.ts'
 import { validateReview } from '../src/core/review.ts'
@@ -519,6 +519,14 @@ function registerIpc(): void {
     return cloud.ask(profile, q, digest, { image, review: r.review === true, knowledge: await answerKnowledge(profile) })
   })
 
+  handle(CHANNELS.companionChat, async (req) => {
+    const r = req as { profileId?: unknown; messages?: unknown } | null
+    const profile = await resolveProfile(r?.profileId)
+    if (!profile || profile.id !== 'dayz') return { ok: false, error: 'The companion is for DayZ.', fatal: true }
+    const messages = sanitizeCompanion(r?.messages)
+    if (!messages) return { ok: false, error: 'Invalid conversation.', fatal: true }
+    return cloud.companionChat(profile, messages, await answerKnowledge(profile))
+  })
   handle(CHANNELS.reviewMatch, async (req) => {
     const r = req as { profileId?: unknown; digest?: unknown } | null
     const profile = await resolveProfile(r?.profileId)
@@ -780,4 +788,31 @@ if (!app.requestSingleInstanceLock()) {
     tts?.close()
   })
   app.on('window-all-closed', () => app.quit())
+}
+
+/** The companion conversation from the renderer: only text, tool calls and tool results, bounded in size. */
+function sanitizeCompanion(raw: unknown): CompanionMessage[] | null {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > 40) return null
+  const out: CompanionMessage[] = []
+  for (const m of raw) {
+    if (!m || typeof m !== 'object') return null
+    const { role, content } = m as { role?: unknown; content?: unknown }
+    if (role !== 'user' && role !== 'assistant') return null
+    if (typeof content === 'string') {
+      if (!content.trim() || content.length > 4000) return null
+      out.push({ role, content })
+      continue
+    }
+    if (!Array.isArray(content) || content.length === 0 || content.length > 24) return null
+    const blocks: CompanionBlock[] = []
+    for (const b of content) {
+      const o = b as Record<string, unknown>
+      if (o?.type === 'text' && typeof o.text === 'string' && o.text.length <= 4000) blocks.push({ type: 'text', text: o.text })
+      else if (o?.type === 'tool_use' && typeof o.id === 'string' && typeof o.name === 'string' && o.input && typeof o.input === 'object' && JSON.stringify(o.input).length <= 2000) blocks.push({ type: 'tool_use', id: o.id.slice(0, 100), name: o.name.slice(0, 64), input: o.input as Record<string, unknown> })
+      else if (o?.type === 'tool_result' && typeof o.tool_use_id === 'string' && typeof o.content === 'string' && o.content.length <= 8000) blocks.push({ type: 'tool_result', tool_use_id: o.tool_use_id.slice(0, 100), content: o.content })
+      else return null
+    }
+    out.push({ role, content: blocks })
+  }
+  return out
 }

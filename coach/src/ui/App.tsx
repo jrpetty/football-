@@ -16,6 +16,7 @@ import { policyFor } from './policy.ts'
 import { CoachSession, type SourceChoice } from './session.ts'
 import { AskView } from './views/AskView.tsx'
 import { DayzMapView, type MapFocus } from './views/DayzMapView.tsx'
+import { CompanionView } from './views/CompanionView.tsx'
 import { CoachView } from './views/CoachView.tsx'
 import { HistoryView } from './views/HistoryView.tsx'
 import { ProgressView } from './views/ProgressView.tsx'
@@ -27,7 +28,7 @@ import { SettingsView } from './views/SettingsView.tsx'
 import { UsageView } from './views/UsageView.tsx'
 import { usd } from './format.ts'
 
-export type Tab = 'coach' | 'insights' | 'moments' | 'ask' | 'map' | 'progress' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
+export type Tab = 'coach' | 'companion' | 'insights' | 'moments' | 'ask' | 'map' | 'progress' | 'history' | 'review' | 'usage' | 'settings' | 'privacy'
 
 export interface ProfileCatalog {
   readonly profiles: readonly GameProfile[]
@@ -120,7 +121,7 @@ export function App() {
   const profile = catalog.profiles.find((p) => p.id === settings.profileId) ?? catalog.profiles[0]
   // The map tab exists for DayZ only.
   useEffect(() => {
-    if (tab === 'map' && profile.id !== 'dayz') setTab('coach')
+    if ((tab === 'map' || tab === 'companion') && profile.id !== 'dayz') setTab('coach')
   }, [tab, profile.id])
   const policy = useMemo(() => policyFor(profile, settings), [profile, settings])
   const effective = effectiveMode(settings.mode, policy)
@@ -302,6 +303,7 @@ export function App() {
           {(
             [
               ['coach', 'Coach', capturing ? '●' : null],
+              ...(profile.id === 'dayz' ? ([['companion', 'Companion', state.conversation.filter((e) => e.card).length || null]] as const) : []),
               ['insights', 'Insights', state.report?.insights.filter((i) => i.insight.grade !== 'insufficient').length || null],
               ['moments', 'Decisions', state.moments.length || null],
               ['ask', 'Ask the coach', state.conversation.length || null],
@@ -408,6 +410,19 @@ export function App() {
                     }
                   : undefined
               }
+            />
+          )}
+          {tab === 'companion' && profile.id === 'dayz' && (
+            <CompanionView
+              state={state}
+              session={session}
+              profile={profile}
+              settings={settings}
+              cloud={cloud}
+              onOpenMap={(text) => {
+                setMapFocus({ text, nonce: Date.now() })
+                setTab('map')
+              }}
             />
           )}
           {tab === 'map' && profile.id === 'dayz' && <DayzMapView state={state} settings={settings} policy={policy} capturing={capturing} session={session} focus={mapFocus} />}

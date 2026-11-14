@@ -46,6 +46,7 @@ const bridge: SightlineBridge = {
   analyzeFrame: (req) => invoke('sightline:analyze-frame', req),
   ask: (req) => invoke('sightline:ask', req),
   reviewMatch: (req) => invoke('sightline:review-match', req),
+  companionChat: (req) => invoke('sightline:companion-chat', req),
   research: (req) => invoke('sightline:research', req),
   loadResearch: (id) => invoke('sightline:load-research', id),
   deleteResearch: (id) => invoke('sightline:delete-research', id),

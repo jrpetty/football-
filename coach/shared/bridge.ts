@@ -10,7 +10,7 @@ import type { PatternSnapshot, PatternVerdict } from '../src/core/patterns.ts'
 import type { CoachSettings } from '../src/core/settings.ts'
 import type { VisionResponse } from '../src/core/vision/contract.ts'
 import type { MatchReview } from '../src/core/review.ts'
-import type { CloudResult, CloudSettings, CloudStatus, ResearchBrief } from './cloud.ts'
+import type { CloudResult, CloudSettings, CloudStatus, CompanionBlock, CompanionMessage, ResearchBrief } from './cloud.ts'
 import type { UsageSummary } from '../src/core/usage.ts'
 import type { SynthResult, TtsModelKey, TtsStatus } from './voices.ts'
 import type { ScreenCatalog } from '../src/core/vision/screens.ts'
@@ -167,6 +167,8 @@ export interface SightlineBridge {
   ask(req: { profileId: string; question: string; digest: string; image?: ArrayBuffer; review?: boolean }): Promise<CloudResult<{ text: string }>>
   /** A coach's review of the session (Claude), validated in the main process. */
   reviewMatch(req: { profileId: string; digest: string }): Promise<CloudResult<{ review: MatchReview }>>
+  /** DayZ companion: one turn of the conversation with Claude (tools fixed in the main process, run by the renderer). */
+  companionChat(req: { profileId: string; messages: readonly CompanionMessage[] }): Promise<CloudResult<{ content: readonly CompanionBlock[]; stop: string | null }>>
   research(req: { profileId: string; gameTitle: string; focus: string }): Promise<CloudResult<{ brief: ResearchBrief }>>
   loadResearch(profileId: string): Promise<ResearchBrief | null>
   deleteResearch(profileId: string): Promise<void>

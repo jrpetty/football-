@@ -96,3 +96,15 @@ export interface CloudStatus {
   readonly key: KeyStatus
   readonly spend: CloudSpend
 }
+
+
+/** The DayZ companion's conversation with Claude, one call at a time (the renderer runs the tools). */
+export type CompanionBlock =
+  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'tool_use'; readonly id: string; readonly name: string; readonly input: Record<string, unknown> }
+  | { readonly type: 'tool_result'; readonly tool_use_id: string; readonly content: string }
+
+export interface CompanionMessage {
+  readonly role: 'user' | 'assistant'
+  readonly content: string | readonly CompanionBlock[]
+}

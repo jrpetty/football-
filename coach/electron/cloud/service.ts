@@ -26,7 +26,8 @@ import { cleanKnowledge, KNOWLEDGE_SECTIONS, playbookText, type KnowledgeBase, t
 /** Prompt budget for the pack's coaching playbook in answers and reviews. */
 const PLAYBOOK_CHARS = 32_000
 import type { GameProfile } from '../../src/core/profile/schema.ts'
-import type { CloudResult, CloudSettings, CloudSpend, ResearchBrief, VisionThinking, VisionUsage } from '../../shared/cloud.ts'
+import type { CloudResult, CloudSettings, CloudSpend, CompanionBlock, CompanionMessage, ResearchBrief, VisionThinking, VisionUsage } from '../../shared/cloud.ts'
+import { COMPANION_SYSTEM, COMPANION_TOOLS } from '../../src/core/dayz/companion.ts'
 
 export { DEFAULT_CLOUD } from '../../shared/cloud.ts'
 export type { CloudResult, CloudSettings, ResearchBrief }
@@ -225,6 +226,44 @@ export class CloudService {
       if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to answer that question.' }
       const text = msg.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join(' ').trim()
       return text ? { ok: true, costUsd, text } : { ok: false, error: 'Empty answer.' }
+    } catch (err) {
+      return describeError(err)
+    }
+  }
+
+  /**
+   * The DayZ companion: one turn of an open conversation. Claude may answer or call the companion's
+   * tools (fixed here; the renderer runs them on its own data and sends the results back).
+   */
+  async companionChat(profile: GameProfile, messages: readonly CompanionMessage[], knowledge: string): Promise<CloudResult<{ content: CompanionBlock[]; stop: string | null }>> {
+    const ready = this.ready()
+    if (!ready.ok) return ready
+    const model = this.getSettings().answerModel
+    const system = [
+      COMPANION_SYSTEM,
+      profile.knowledge.prohibitedAdvice.length ? `Never give: ${profile.knowledge.prohibitedAdvice.join('; ')}.` : '',
+      profile.knowledge.playbook?.length ? `Survival playbook (general knowledge, not observations):\n${playbookText(profile.knowledge.playbook, 12_000)}` : '',
+      knowledge ? `Game reference (background, may be out of date):\n${knowledge.slice(0, 20_000)}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+    const tools = COMPANION_TOOLS.map((t, i) => ({ ...t, input_schema: t.input_schema as Anthropic.Beta.BetaTool.InputSchema, ...(i === COMPANION_TOOLS.length - 1 ? { cache_control: ANSWER_CACHE } : {}) }))
+    try {
+      const msg = await ready.client.beta.messages.create({
+        model,
+        max_tokens: 4000,
+        ...fallbackParams(model),
+        output_config: { effort: 'low' },
+        system: [{ type: 'text', text: system, cache_control: ANSWER_CACHE }],
+        tools,
+        messages: messages.map((m) => ({ role: m.role, content: typeof m.content === 'string' ? m.content : (m.content as Anthropic.Beta.BetaContentBlockParam[]) })),
+      })
+      const costUsd = this.charge('answer', model, msg, profile.id)
+      if (msg.stop_reason === 'refusal') return { ok: false, error: 'The model declined to answer that.' }
+      const content: CompanionBlock[] = msg.content.flatMap((b): CompanionBlock[] =>
+        b.type === 'text' ? [{ type: 'text', text: b.text }] : b.type === 'tool_use' ? [{ type: 'tool_use', id: b.id, name: b.name, input: (b.input ?? {}) as Record<string, unknown> }] : [],
+      )
+      return { ok: true, costUsd, content, stop: msg.stop_reason ?? null }
     } catch (err) {
       return describeError(err)
     }
