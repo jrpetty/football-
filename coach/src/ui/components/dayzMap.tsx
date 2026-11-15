@@ -385,7 +385,7 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
                 <text x={m.x} y={sy(m.y) + 3.8 * px} fontSize={10 * px} textAnchor="middle" className="dz-mark-glyph">
                   {MARK_INFO[m.kind].glyph}
                 </text>
-                {view.span <= (compact ? 9000 : 7000) ? (
+                {view.span <= (compact ? 9000 : 7000) && !route?.some((p) => Math.abs(p.x - m.x) < 30 && Math.abs(p.y - m.y) < 30) ? (
                   <text x={m.x + 11 * px} y={sy(m.y) + 4 * px} fontSize={11 * px} strokeWidth={3 * px} className="dz-mark-label">
                     {m.label}
                   </text>
