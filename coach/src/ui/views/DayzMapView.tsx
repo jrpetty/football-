@@ -86,13 +86,14 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
       else setResult({ text: `${markLine(m, nonce, spotHere)}.`, focus: { x: m.x, y: m.y, label: m.label, nonce }, route: null })
       return
     }
-    // The assistant (Chernarus): what now, take me to, where an item spawns, from your spot and kit.
+    // The assistant: what now, take me to, where an item spawns, from your spot (on its map) and kit.
     if (isAssistantQuestion(t)) {
-      if (onMap !== 'chernarus') setMapId('chernarus')
-      const spotHere = here?.map === 'chernarus' ? here : null
+      const on = here?.map ?? onMap
+      if (onMap !== on) setMapId(on)
+      const spotHere = here?.map === on ? here : null
       const plan = assistantRoute(t, spotHere, new Set(state.kit))
-      const text = assistantAnswer(t, { ...(spotHere ? { spotX: spotHere.x, spotY: spotHere.y, spotLabel: spotHere.label } : {}), kit: state.kit.join(',') }) ?? ''
-      showRoute('chernarus', { text, focus: null, route: plan?.route.length ? plan.route : null })
+      const text = assistantAnswer(t, { ...(spotHere ? { spotX: spotHere.x, spotY: spotHere.y, spotLabel: spotHere.label, spotMap: on } : {}), map: on, kit: state.kit.join(',') }) ?? ''
+      showRoute(on, { text, focus: null, route: plan?.route.length ? plan.route : null })
       return
     }
     // A loot run: the shortest way through one of each kind of place asked for, drawn through numbered stops.
@@ -263,7 +264,7 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
         mapId={mapId}
         onShow={(m) => setResult({ text: `${markLine(m, Date.now(), mine && mine.map === mapId ? mine : null)}.`, focus: { x: m.x, y: m.y, label: m.label, nonce: Date.now() }, route: null })}
         onGo={
-          mine && mapId === 'chernarus'
+          mine
             ? (m) => {
                 const route = [{ x: mine.x, y: mine.y, label: mine.label }, { x: m.x, y: m.y, label: m.label }]
                 const warn = warningLine(liveMarks(state.marks, Date.now()).filter((o) => o.id !== m.id), route, mapId, Date.now())
@@ -273,23 +274,22 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
         }
       />
 
-      {mapId === 'chernarus' ? (
         <section className="panel" aria-labelledby="dz-asst-h">
           <div className="panel-head">
             <h2 id="dz-asst-h">Survival assistant</h2>
-            <span className="muted small">Chernarus · from your spot and your kit</span>
+            <span className="muted small">{map.name} · from your spot and your kit</span>
           </div>
           <div className="btn-row">
-            <button type="button" className="btn primary" onClick={() => search('what now?', 'chernarus')} disabled={!here || here.map !== 'chernarus'}>
+            <button type="button" className="btn primary" onClick={() => search('what now?', mapId)} disabled={!here || here.map !== mapId}>
               What now?
             </button>
             {(['water', 'hospital', 'medical', 'police', 'military'] as const).map((k) => (
-              <button key={k} type="button" className="btn sm" onClick={() => search(`take me to the nearest ${k}`, 'chernarus')} disabled={!here || here.map !== 'chernarus'}>
+              <button key={k} type="button" className="btn sm" onClick={() => search(`take me to the nearest ${k}`, mapId)} disabled={!here || here.map !== mapId}>
                 Nearest {k}
               </button>
             ))}
           </div>
-          {!here || here.map !== 'chernarus' ? <p className="muted small">Set where you are first (below, or say “Coach, I'm at Turovo”).</p> : null}
+          {!here || here.map !== mapId ? <p className="muted small">Set where you are on {map.name} first (below, or say “Coach, I'm at …”).</p> : null}
           <fieldset className="dz-kit">
             <legend className="small">Your kit (tick what you have, or say “Coach, I found a knife”; it clears when you die)</legend>
             {KIT.map((k) => (
@@ -302,7 +302,6 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
             Ask anything about loot too: “where do I find a canteen”, “where can I get 7.62x39 ammo”, “what spawns in police stations”, “take me to a place with morphine”. From Bohemia's loot table for Chernarus (building types, loot tiers, how many at a time); it says where things can spawn, not what is there now.
           </p>
         </section>
-      ) : null}
 
       <section className="panel" aria-labelledby="dz-trail-h">
         <div className="panel-head">

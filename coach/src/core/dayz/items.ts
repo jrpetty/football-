@@ -1,11 +1,13 @@
-// Where things spawn on Chernarus, from Bohemia's own loot table (built by
+// Where things spawn on Chernarus, Livonia and Sakhal, from Bohemia's own loot tables (built by
 // scripts/build-dayz-items.mjs): every item's building types, loot tiers and
 // how many the server keeps on the map, and the loot tier of every spot. So
 // "where do I find a canteen?" gets the kind of building, the tiers, and the
 // nearest settlement with those buildings in the right tier.
 
-import data from '../../profiles/dayz/items.chernarus.json' with { type: 'json' }
-import { bearing, distance, DAYZ_MAPS, km, type DayzMap, type DayzPlace } from './places.ts'
+import chernarusData from '../../profiles/dayz/items.chernarus.json' with { type: 'json' }
+import livoniaData from '../../profiles/dayz/items.livonia.json' with { type: 'json' }
+import sakhalData from '../../profiles/dayz/items.sakhal.json' with { type: 'json' }
+import { bearing, distance, DAYZ_MAPS, km, type DayzMap, type DayzMapId, type DayzPlace } from './places.ts'
 
 export interface LootItem {
   readonly id: string
@@ -18,28 +20,44 @@ export interface LootItem {
   readonly deloot?: boolean
 }
 
-export const CHERNARUS_ITEMS: readonly LootItem[] = data.items as LootItem[]
-const CHERNARUS: DayzMap = DAYZ_MAPS.find((m) => m.id === 'chernarus')!
+interface LootData {
+  readonly worldSize: number
+  readonly tiers: { readonly size: number; readonly rle: string }
+  readonly items: readonly unknown[]
+}
+const DATA: Readonly<Record<DayzMapId, LootData>> = { chernarus: chernarusData, livonia: livoniaData, sakhal: sakhalData }
 
-let tierGrid: Uint8Array | null = null
-function grid(): Uint8Array {
-  if (tierGrid) return tierGrid
-  const raw = typeof atob === 'function' ? Uint8Array.from(atob(data.tiers.rle), (c) => c.charCodeAt(0)) : new Uint8Array(Buffer.from(data.tiers.rle, 'base64'))
-  const g = new Uint8Array(data.tiers.size * data.tiers.size)
+/** Every item that spawns on a map. */
+export function itemsOn(map: DayzMapId): readonly LootItem[] {
+  return DATA[map].items as LootItem[]
+}
+
+export const CHERNARUS_ITEMS: readonly LootItem[] = itemsOn('chernarus')
+const mapOf = (id: DayzMapId): DayzMap => DAYZ_MAPS.find((m) => m.id === id)!
+
+const tierGrids = new Map<DayzMapId, Uint8Array>()
+function grid(map: DayzMapId): Uint8Array {
+  const kept = tierGrids.get(map)
+  if (kept) return kept
+  const d = DATA[map]
+  const raw = typeof atob === 'function' ? Uint8Array.from(atob(d.tiers.rle), (c) => c.charCodeAt(0)) : new Uint8Array(Buffer.from(d.tiers.rle, 'base64'))
+  const g = new Uint8Array(d.tiers.size * d.tiers.size)
   let k = 0
   for (let i = 0; i + 1 < raw.length; i += 2) {
     g.fill(raw[i], k, k + raw[i + 1])
     k += raw[i + 1]
   }
-  return (tierGrid = g)
+  tierGrids.set(map, g)
+  return g
 }
 
-/** The loot tier (1 coast … 4 north-west military, 0 none) at a spot on Chernarus. */
-export function tierAt(x: number, y: number): number {
-  const n = data.tiers.size
-  const gx = Math.min(n - 1, Math.max(0, Math.floor((x / data.worldSize) * n)))
-  const gy = Math.min(n - 1, Math.max(0, Math.floor((1 - y / data.worldSize) * n)))
-  return grid()[gy * n + gx]
+/** The loot tier (1 … 4, 0 none) at a spot (on Chernarus: 1 coast … 4 north-west military). */
+export function tierAt(x: number, y: number, map: DayzMapId = 'chernarus'): number {
+  const d = DATA[map]
+  const n = d.tiers.size
+  const gx = Math.min(n - 1, Math.max(0, Math.floor((x / d.worldSize) * n)))
+  const gy = Math.min(n - 1, Math.max(0, Math.floor((1 - y / d.worldSize) * n)))
+  return grid(map)[gy * n + gx]
 }
 
 const USAGE_WORDS: Readonly<Record<string, string>> = {
@@ -73,16 +91,17 @@ const CALIBRES: readonly (readonly [RegExp, string])[] = [
 ]
 
 /** The item named in the text (longest name or nickname that appears as words); ammo by its calibre. */
-export function findItem(text: string): LootItem | null {
+export function findItem(text: string, map: DayzMapId = 'chernarus'): LootItem | null {
+  const ITEMS = itemsOn(map)
   const lower = text.toLowerCase()
   if (/\b(ammo|rounds|bullets|shells)\b/.test(lower)) {
     const cal = CALIBRES.find(([re]) => re.test(lower))
     // The box: more rounds per find, and the same places as loose rounds.
-    if (cal) return CHERNARUS_ITEMS.find((i) => i.name.startsWith(`${cal[1]}, box`)) ?? CHERNARUS_ITEMS.find((i) => i.name === cal[1]) ?? null
+    if (cal) return ITEMS.find((i) => i.name.startsWith(`${cal[1]}, box`)) ?? ITEMS.find((i) => i.name === cal[1]) ?? null
   }
   const q = ` ${norm(text)} `
   let best: { item: LootItem; len: number } | null = null
-  for (const item of CHERNARUS_ITEMS) {
+  for (const item of ITEMS) {
     for (const n of [item.name, ...item.aka]) {
       const k = norm(n)
       if (k.length < 3 || (best && k.length <= best.len)) continue
@@ -105,27 +124,30 @@ export function kindIn(text: string): string | null {
   return KINDS.find(([re]) => re.test(q))?.[1] ?? null
 }
 
-function where(item: LootItem): string {
+function where(item: LootItem, map: DayzMapId = 'chernarus'): string {
   const places = item.usage.map((u) => USAGE_WORDS[u] ?? u.toLowerCase())
   const list = places.length > 1 ? `${places.slice(0, -1).join(', ')} and ${places.at(-1)}` : places[0] ?? 'nowhere listed'
-  const tiers = item.tiers.length && item.tiers.length < 4 ? ` ${item.tiers.map((t) => TIER_WORDS[t]).join(' and ')} (loot tier${item.tiers.length > 1 ? `s ${item.tiers[0]}-${item.tiers.at(-1)}` : ` ${item.tiers[0]}`})` : ''
+  const tierN = `loot tier${item.tiers.length > 1 ? `s ${item.tiers[0]}-${item.tiers.at(-1)}` : ` ${item.tiers[0]}`}`
+  // Where the tiers are is known for Chernarus; elsewhere only their numbers.
+  const tiers = item.tiers.length && item.tiers.length < 4 ? (map === 'chernarus' ? ` ${item.tiers.map((t) => TIER_WORDS[t]).join(' and ')} (${tierN})` : ` (${tierN})`) : ''
   return `${list}${tiers}`
 }
 
 /** The settlements whose buildings can hold the item, in its tiers, nearest first. */
-export function placesFor(item: LootItem, from: { x: number; y: number } | null): { place: DayzPlace; buildings: number; tier: number; m: number }[] {
-  const near = (CHERNARUS.world as unknown as { near: Record<string, Record<string, number>> }).near
-  return CHERNARUS.places
+export function placesFor(item: LootItem, from: { x: number; y: number } | null, mapId: DayzMapId = 'chernarus'): { place: DayzPlace; buildings: number; tier: number; m: number }[] {
+  const map = mapOf(mapId)
+  const near = (map.world as unknown as { near: Record<string, Record<string, number>> }).near
+  return map.places
     .filter((p) => ['city', 'town', 'village', 'military', 'airfield', 'local'].includes(p.kind))
-    .map((p) => ({ place: p, buildings: item.usage.reduce((s, u) => s + (near[p.name]?.[u] ?? 0), 0), tier: tierAt(p.x, p.y), m: from ? distance(from, p) : 0 }))
+    .map((p) => ({ place: p, buildings: item.usage.reduce((s, u) => s + (near[p.name]?.[u] ?? 0), 0), tier: tierAt(p.x, p.y, mapId), m: from ? distance(from, p) : 0 }))
     .filter((c) => c.buildings > 0 && (!item.tiers.length || item.tiers.includes(c.tier)))
     .sort((a, b) => (from ? a.m - b.m : b.buildings - a.buildings))
 }
 
 /** Where an item spawns, how many there are, and the nearest good place to look. */
-export function itemAnswer(item: LootItem, from: { x: number; y: number; label: string } | null): string {
-  const parts = [`${item.name}: spawns in ${where(item)}, about ${item.nominal} on Chernarus at a time${item.deloot ? ', and at helicopter crashes and convoys' : ''}.`]
-  const spots = placesFor(item, from)
+export function itemAnswer(item: LootItem, from: { x: number; y: number; label: string } | null, map: DayzMapId = 'chernarus'): string {
+  const parts = [`${item.name}: spawns in ${where(item, map)}, about ${item.nominal} on ${mapOf(map).name} at a time${item.deloot ? ', and at helicopter crashes and convoys' : ''}.`]
+  const spots = placesFor(item, from, map)
   if (from && spots.length) {
     const [a, b] = [spots[0], spots.find((s) => s.buildings >= Math.max(3, spots[0].buildings * 2) && s !== spots[0])]
     const here = a.m < 400 ? `right here in ${a.place.name}` : `${a.place.name}, ${km(a.m)} ${bearing(from, a.place)}`
@@ -138,18 +160,19 @@ export function itemAnswer(item: LootItem, from: { x: number; y: number; label: 
 }
 
 /** The kinds people ask about: the most common few, with where they spawn. */
-export function kindAnswer(kind: string, from: { x: number; y: number; label: string } | null): string {
-  const list = CHERNARUS_ITEMS.filter((i) => i.kind === kind && i.nominal > 0).sort((a, b) => b.nominal - a.nominal).slice(0, 5)
-  if (!list.length) return `No ${kind} in Chernarus's loot table.`
+export function kindAnswer(kind: string, from: { x: number; y: number; label: string } | null, map: DayzMapId = 'chernarus'): string {
+  const name = mapOf(map).name
+  const list = itemsOn(map).filter((i) => i.kind === kind && i.nominal > 0).sort((a, b) => b.nominal - a.nominal).slice(0, 5)
+  if (!list.length) return `No ${kind} in ${name}'s loot table.`
   const first = list[0]
-  const nearest = from ? placesFor(first, from)[0] : null
-  return `${kind.charAt(0).toUpperCase() + kind.slice(1)}s on Chernarus, most common first: ${list.map((i) => `${i.name} (${where(i)}, about ${i.nominal})`).join('; ')}.${nearest && from ? ` Nearest place for a ${first.name.toLowerCase()} from ${from.label}: ${nearest.place.name}, ${km(nearest.m)} ${bearing(from, nearest.place)}.` : ''}`
+  const nearest = from ? placesFor(first, from, map)[0] : null
+  return `${kind.charAt(0).toUpperCase() + kind.slice(1)}s on ${name}, most common first: ${list.map((i) => `${i.name} (${where(i, map)}, about ${i.nominal})`).join('; ')}.${nearest && from ? ` Nearest place for a ${first.name.toLowerCase()} from ${from.label}: ${nearest.place.name}, ${km(nearest.m)} ${bearing(from, nearest.place)}.` : ''}`
 }
 
 /** "What spawns in police stations?": the most common items of a building type. */
-export function buildingAnswer(usage: string): string {
-  const list = CHERNARUS_ITEMS.filter((i) => i.usage.includes(usage) && !/^(Ammo|Mag)/.test(i.id)).sort((a, b) => b.nominal - a.nominal).slice(0, 14)
-  return `Most common in ${USAGE_WORDS[usage] ?? usage} on Chernarus: ${list.map((i) => i.name).join(', ')}.`
+export function buildingAnswer(usage: string, map: DayzMapId = 'chernarus'): string {
+  const list = itemsOn(map).filter((i) => i.usage.includes(usage) && !/^(Ammo|Mag)/.test(i.id)).sort((a, b) => b.nominal - a.nominal).slice(0, 14)
+  return `Most common in ${USAGE_WORDS[usage] ?? usage} on ${mapOf(map).name}: ${list.map((i) => i.name).join(', ')}.`
 }
 
 export const USAGES = USAGE_WORDS

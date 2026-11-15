@@ -11,19 +11,21 @@
 // Item names are the class names made readable, with the in-game name or
 // the name players use where it differs (BandageDressing → Bandage).
 //
-//   node scripts/build-dayz-items.mjs <central-economy-repo>
+//   node scripts/build-dayz-items.mjs <central-economy-repo> [chernarus|livonia|sakhal]
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const [ceDir] = process.argv.slice(2)
-if (!ceDir) {
-  console.error('usage: node scripts/build-dayz-items.mjs <central-economy-repo>')
+const [ceDir, mapArg = 'chernarus'] = process.argv.slice(2)
+const FOLDERS = { chernarus: ['dayzOffline.chernarusplus', 'Chernarus'], livonia: ['dayzOffline.enoch', 'Livonia'], sakhal: ['dayzOffline.sakhal', 'Sakhal'] }
+if (!ceDir || !FOLDERS[mapArg]) {
+  console.error('usage: node scripts/build-dayz-items.mjs <central-economy-repo> [chernarus|livonia|sakhal]')
   process.exit(1)
 }
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'profiles', 'dayz', 'items.chernarus.json')
-const CE = join(ceDir, 'dayzOffline.chernarusplus')
+const [FOLDER, MAP_NAME] = FOLDERS[mapArg]
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'profiles', 'dayz', `items.${mapArg}.json`)
+const CE = join(ceDir, FOLDER)
 
 // --- Loot tiers -------------------------------------------------------------------------------
 
@@ -272,7 +274,7 @@ const items = [...groups.values()]
 writeFileSync(
   OUT,
   `${JSON.stringify({
-    source: "Bohemia Interactive DayZ Central Economy, Chernarus (db/types.xml and areaflags.map), ADPL-SA. Names made readable from the class names.",
+    source: `Bohemia Interactive DayZ Central Economy, ${MAP_NAME} (db/types.xml and areaflags.map), ADPL-SA. Names made readable from the class names.`,
     licence: 'ADPL-SA: non-commercial, DayZ/Arma only, share alike.',
     worldSize: worldW,
     tiers: { size: G, rle: rle(tiers) },
@@ -281,5 +283,5 @@ writeFileSync(
 )
 console.log(items.length, 'items →', OUT, `(${W}×${H} flags)`)
 const t = (x0, y0) => tiers[Math.floor((1 - y0 / worldW) * G) * G + Math.floor((x0 / worldW) * G)]
-console.log('tiers: Cherno', t(6750, 2500), 'Elektro', t(10300, 2200), 'NWAF', t(4600, 10300), 'Tisy', t(1700, 14000))
+if (mapArg === 'chernarus') console.log('tiers: Cherno', t(6750, 2500), 'Elektro', t(10300, 2200), 'NWAF', t(4600, 10300), 'Tisy', t(1700, 14000))
 for (const n of ['Bandage', 'Canteen', 'Morphine', 'Taloon backpack', 'Compass', 'Map of Chernarus', 'Gas mask']) console.log(JSON.stringify(items.find((i) => i.name === n)))

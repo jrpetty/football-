@@ -7,7 +7,7 @@
 import type { OverheadInfo, PlayerNotes, SightlineBridge } from '../../shared/bridge.ts'
 import { companionTurn, HELP_EXAMPLES, localReply, type Card, type CompanionContext, type ToolEffects, type Topic } from '../core/dayz/companion.ts'
 import type { CompanionMessage } from '../../shared/cloud.ts'
-import { CHERNARUS, KIT, kitFrom, kitLine, parseKitUpdate, parseSetSpot, type Spot } from '../core/dayz/assistant.ts'
+import { KIT, kitFrom, kitLine, mapOf, parseKitUpdate, parseSetSpot, type Spot } from '../core/dayz/assistant.ts'
 import { pointInfo } from '../core/dayz/mapView.ts'
 import type { DayzMapId } from '../core/dayz/places.ts'
 import { trailStep, type TrailLife } from '../core/dayz/trail.ts'
@@ -1060,8 +1060,8 @@ export class CoachSession {
         return
       }
       // Your spot and kit go with the question, for "what now", "take me to" and the nearest place for an item.
-      const spot = this.state.spot?.map === 'chernarus' ? this.state.spot : null
-      report = { ...report, context: { ...report.context, ...(spot ? { spotX: spot.x, spotY: spot.y, spotLabel: spot.label } : {}), kit: this.state.kit.join(',') } }
+      const spot = this.companionContext().spot
+      report = { ...report, context: { ...report.context, ...(spot ? { spotX: spot.x, spotY: spot.y, spotLabel: spot.label, spotMap: mapOf(spot).id } : {}), kit: this.state.kit.join(',') } }
     }
     const intent = classify(q, profile)
     // Looking only when asked: a question about what is on screen right now takes one look first (the only spend).
@@ -1161,10 +1161,11 @@ export class CoachSession {
 
   /** What the companion knows of the player: their spot, kit, map and marks. */
   private companionContext(): CompanionContext {
-    const spot = this.state.spot?.map === 'chernarus' ? this.state.spot : null
     const context = this.state.report?.profileId === 'dayz' ? this.state.report.context : {}
     const now = Date.now()
-    return { spot, kit: this.state.kit, map: mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus', marks: liveMarks(this.state.marks, now), now }
+    // The map: the one the spot is on, else the one chosen or read.
+    const map = this.state.spot?.map ?? mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus'
+    return { spot: this.state.spot, kit: this.state.kit, map, marks: liveMarks(this.state.marks, now), now }
   }
 
   // --- DayZ map marks ------------------------------------------------------------------------
@@ -1231,7 +1232,7 @@ export class CoachSession {
   /** One open question to Claude with the companion's tools (src/core/dayz/companion.ts runs the loop). */
   private async companionTurn(id: string, q: string, profile: GameProfile): Promise<{ ok: true; text: string; costUsd: number; tools: string[] } | { ok: false; error: string }> {
     const effects: ToolEffects = {
-      setSpot: (s) => this.set({ spot: { ...s, map: 'chernarus' } }),
+      setSpot: (s) => this.set({ spot: { ...s, map: mapOf(s).id } }),
       setKit: (have, lost) => {
         const kit = new Set(this.state.kit)
         have.forEach((k) => kit.add(k))
@@ -1257,12 +1258,13 @@ export class CoachSession {
 
   /** "I'm at …" or "I found …": the reply (and its card), after updating the spot or the kit; null for anything else. */
   private dayzSaid(q: string): { text: string; card: Card | null } | null {
-    const spot = parseSetSpot(q)
+    const spot = parseSetSpot(q, this.companionContext().map)
     if (spot) {
-      this.set({ spot: { ...spot, map: 'chernarus' } })
-      const info = pointInfo(CHERNARUS, spot)
-      const heads = aroundLine(liveMarks(this.state.marks, Date.now()), spot, 'chernarus', Date.now())
-      return { text: `Got it: you're at ${spot.label}. ${info.line}${heads ? ` ${heads}` : ''} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: 'chernarus', title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }
+      const map = mapOf(spot)
+      this.set({ spot: { ...spot, map: map.id } })
+      const info = pointInfo(map, spot)
+      const heads = aroundLine(liveMarks(this.state.marks, Date.now()), spot, map.id, Date.now())
+      return { text: `Got it: you're at ${spot.label}${map.id !== 'chernarus' ? ` on ${map.name}` : ''}. ${info.line}${heads ? ` ${heads}` : ''} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: map.id, title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }
     }
     const kit = parseKitUpdate(q)
     if (kit) {

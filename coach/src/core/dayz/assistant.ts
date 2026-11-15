@@ -5,7 +5,7 @@
 // spawns. Everything from the built-in data and what you told it; nothing read
 // off the screen, nothing guessed about other players.
 
-import { bearing, DAYZ_MAPS, distance, km, neighbours, placesIn, type DayzMap, type DayzPlace, type PlaceMatch } from './places.ts'
+import { bearing, DAYZ_MAPS, dayzMap, distance, findPlace, km, neighbours, placesIn, type DayzMap, type DayzMapId, type DayzPlace, type PlaceMatch } from './places.ts'
 import { parsePosition } from './mapView.ts'
 import { pointsOf, type StopKind, STOP_LABELS } from './lootRun.ts'
 import { footTime, straightSeconds } from './travel.ts'
@@ -18,21 +18,30 @@ export interface Spot {
   readonly x: number
   readonly y: number
   readonly label: string
+  /** The map the spot is on (Chernarus when not given). */
+  readonly map?: DayzMapId
 }
+
+/** The map a spot is on. */
+export const mapOf = (s: { readonly map?: DayzMapId } | null | undefined): DayzMap => DAYZ_MAPS.find((m) => m.id === (s?.map ?? 'chernarus'))!
 
 /** A spot as a place, for the planners that start from a place. */
 export function spotPlace(s: Spot): PlaceMatch {
   const place: DayzPlace = { name: s.label, kind: 'local', facilities: [], x: s.x, y: s.y }
-  return { place, map: CHERNARUS, via: 'name' }
+  return { place, map: mapOf(s), via: 'name' }
 }
 
 /** "I'm at Turovo", "I am near 135 012", "set my spot to Berezino": the spot, or null. */
-export function parseSetSpot(question: string): Spot | null {
+export function parseSetSpot(question: string, prefer: DayzMapId = 'chernarus'): Spot | null {
   const q = question.trim().replace(/^coach[,\s]+/i, '')
   const m = q.match(/^(?:i'?m|i am|im)\s+(?:at|in|near|by|around)\s+(?:grid\s+)?(.+?)[.!?]*$/i) ?? q.match(/^(?:set|mark|put|change)\s+(?:my\s+)?(?:spot|position|location)\s+(?:to|at|as|in)?\s*(?:grid\s+)?(.+?)[.!?]*$/i)
   if (!m) return null
-  const p = parsePosition(CHERNARUS, m[1])
-  return p ? { x: p.x, y: p.y, label: p.label } : null
+  // A grid or a place on the map being played; else a place on another map (the spot moves there).
+  const home = DAYZ_MAPS.find((d) => d.id === prefer)!
+  const p = parsePosition(home, m[1])
+  if (p) return { x: p.x, y: p.y, label: p.label, map: prefer }
+  const other = findPlace(m[1])
+  return other ? { x: other.place.x, y: other.place.y, label: other.place.name, map: other.map.id } : null
 }
 
 // --- The kit -------------------------------------------------------------------------------
@@ -95,26 +104,26 @@ export interface Plan {
 }
 
 /** Settlements with houses to search: towns and villages, nearest first. */
-function houses(from: { x: number; y: number }): { place: DayzPlace; n: number; m: number }[] {
-  const near = (CHERNARUS.world as unknown as { near: Record<string, Record<string, number>> }).near
-  return CHERNARUS.places
+function houses(from: { x: number; y: number }, map: DayzMap): { place: DayzPlace; n: number; m: number }[] {
+  const near = (map.world as unknown as { near: Record<string, Record<string, number>> }).near
+  return map.places
     .filter((p) => p.kind === 'town' || p.kind === 'village' || p.kind === 'city')
     .map((p) => ({ place: p, n: (near[p.name]?.Village ?? 0) + (near[p.name]?.Town ?? 0), m: distance(from, p) }))
     .filter((h) => h.n >= 8)
     .sort((a, b) => a.m - b.m)
 }
 
-function nearestOf(kind: StopKind, from: { x: number; y: number }): { x: number; y: number; m: number } | null {
+function nearestOf(kind: StopKind, from: { x: number; y: number }, map: DayzMap): { x: number; y: number; m: number } | null {
   let best: { x: number; y: number; m: number } | null = null
-  for (const p of pointsOf(CHERNARUS, kind)) {
+  for (const p of pointsOf(map, kind)) {
     const m = distance(from, p)
     if (!best || m < best.m) best = { ...p, m }
   }
   return best
 }
 
-const by = (p: { x: number; y: number }) => {
-  const nb = neighbours(CHERNARUS, p, 1)[0]
+const by = (p: { x: number; y: number }, map: DayzMap) => {
+  const nb = neighbours(map, p, 1)[0]
   return nb ? (nb.m < 400 ? `in ${nb.place.name}` : `by ${nb.place.name}`) : ''
 }
 
@@ -124,45 +133,51 @@ const by = (p: { x: number; y: number }) => {
  * for better). Each step is the nearest of its kind to the one before.
  */
 export function whatNow(spot: Spot, have: Set<string>, opts: { thirsty?: boolean } = {}): Plan {
+  const map = mapOf(spot)
   const missing = KIT.filter((k) => !have.has(k.id))
   const steps: Step[] = []
   let at: { x: number; y: number } = spot
   let jog = 0
   let sprint = 0
   const add = (kind: Step['kind'], p: { x: number; y: number }, title: string, line: string) => {
-    steps.push({ kind, x: Math.round(p.x), y: Math.round(p.y), title, line: `${line}, ${km(distance(at, p))} ${bearing(at, p)} (${tripShortBetween(CHERNARUS.id, at, p)})` })
-    const h = lineHills(CHERNARUS.id, at, p)
+    steps.push({ kind, x: Math.round(p.x), y: Math.round(p.y), title, line: `${line}, ${km(distance(at, p))} ${bearing(at, p)} (${tripShortBetween(map.id, at, p)})` })
+    const h = lineHills(map.id, at, p)
     jog += straightSeconds(distance(at, p), 'foot', false, h)
     sprint += straightSeconds(distance(at, p), 'foot', true, h)
     at = p
   }
+  let note = ''
   if (!have.has('water') || opts.thirsty) {
-    const w = nearestOf('water', at)
-    if (w) add('water', w, 'Water pump', `Drink at the water pump ${by(w)}`.trim())
+    const w = nearestOf('water', at, map)
+    if (w) add('water', w, 'Water pump', `Drink at the water pump ${by(w, map)}`.trim())
+    else note = `${NO_PUMPS} `
   }
   const fromHouses = missing.filter((k) => k.from === 'houses')
   if (fromHouses.length) {
-    const h = houses(at)[0]
+    const h = houses(at, map)[0]
     if (h) add('houses', h.place, h.place.name, `Search the houses of ${h.place.name} for ${fromHouses.map((k) => k.label.toLowerCase()).slice(0, 4).join(', ')}`)
   }
   if (missing.some((k) => k.from === 'medical')) {
-    const md = nearestOf('medical', at)
-    if (md) add('medical', md, 'Medical', `Medical building ${by(md)} for bandages, disinfectant and tetracycline`.replace(/ {2}/g, ' '))
+    const md = nearestOf('medical', at, map)
+    if (md) add('medical', md, 'Medical', `Medical building ${by(md, map)} for bandages, disinfectant and tetracycline`.replace(/ {2}/g, ' '))
   }
   if (!have.has('gun')) {
-    const po = nearestOf('police', at)
-    if (po) add('police', po, 'Police station', `Police station ${by(po)} for a first gun (pistols, shotguns)`.replace(/ {2}/g, ' '))
+    const po = nearestOf('police', at, map)
+    if (po) add('police', po, 'Police station', `Police station ${by(po, map)} for a first gun (pistols, shotguns)`.replace(/ {2}/g, ' '))
   }
   if (!have.has('gun') || !have.has('ammo')) {
-    const mil = nearestOf('military', at)
-    if (mil && distance(spot, mil) < 6000) add('military', mil, 'Military', `Military ${by(mil)} for rifles and ammo: more players go there, so go ready`.replace(/ {2}/g, ' '))
+    const mil = nearestOf('military', at, map)
+    if (mil && distance(spot, mil) < 6000) add('military', mil, 'Military', `Military ${by(mil, map)} for rifles and ammo: more players go there, so go ready`.replace(/ {2}/g, ' '))
   }
   if (!steps.length) {
     return { text: `From ${spot.label}: you have the essentials. Keep water and food up, and tell me what you want next ("where do I find a gas mask", "take me to the nearest military").`, route: [], steps }
   }
-  const text = `From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${footTime(jog, sprint)}, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
+  const text = `${note}From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${footTime(jog, sprint)}, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
   return { text, route: [spot, ...steps.map((s) => ({ x: s.x, y: s.y, label: `${steps.indexOf(s) + 1} ${s.title}` }))], steps }
 }
+
+/** Where the map has no water pumps (Sakhal). */
+const NO_PUMPS = 'No water pumps in the game files here: fill a bottle at open water or with snow and melt it over a fire, then boil it or use purification tablets.'
 
 // --- Take me to ------------------------------------------------------------------------------
 
@@ -183,30 +198,32 @@ export function isTakeMe(q: string): boolean {
 
 /** "Take me to the nearest hospital / to Berezino / to a place with morphine": from your spot, one leg. */
 export function takeMeTo(question: string, spot: Spot): Plan | null {
+  const map = mapOf(spot)
   const q = question.toLowerCase()
   if (!isTakeMe(q)) return null
-  const item = /\b(with|for|to find|where i can find|that has)\b/.test(q) ? findItem(q) : null
+  const item = /\b(with|for|to find|where i can find|that has)\b/.test(q) ? findItem(q, map.id) : null
   if (item) return toItem(item, spot)
   const kind = TARGETS.find(([re]) => re.test(q))?.[1]
   if (kind) {
-    const p = nearestOf(kind, spot)
-    if (!p) return null
+    const p = nearestOf(kind, spot, map)
+    if (!p) return { text: kind === 'water' ? `${map.name}: ${NO_PUMPS.charAt(0).toLowerCase()}${NO_PUMPS.slice(1)}` : `${map.name} has no ${STOP_LABELS[kind].toLowerCase()}s in the game's files.`, route: [], steps: [] }
     const title = STOP_LABELS[kind]
-    const line = `${title} ${by(p)}, ${km(p.m)} ${bearing(spot, p)} from ${spot.label}`.replace(/ {2}/g, ' ')
-    return { text: `${line}: ${tripBetween(CHERNARUS.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: title }], steps: [{ kind, x: p.x, y: p.y, title, line }] }
+    const line = `${title} ${by(p, map)}, ${km(p.m)} ${bearing(spot, p)} from ${spot.label}`.replace(/ {2}/g, ' ')
+    return { text: `${line}: ${tripBetween(map.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: title }], steps: [{ kind, x: p.x, y: p.y, title, line }] }
   }
-  const place = placesIn(question, 'chernarus').find((m) => m.map.id === 'chernarus')
+  const place = placesIn(question, map.id).find((m) => m.map.id === map.id)
   if (place) {
     const p = place.place
-    return { text: `${p.name}: ${km(distance(spot, p))} ${bearing(spot, p)} from ${spot.label}, ${tripBetween(CHERNARUS.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: p.name }], steps: [] }
+    return { text: `${p.name}: ${km(distance(spot, p))} ${bearing(spot, p)} from ${spot.label}, ${tripBetween(map.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: p.name }], steps: [] }
   }
   return null
 }
 
 function toItem(item: LootItem, spot: Spot): Plan | null {
-  const best = placesFor(item, spot)[0]
-  if (!best) return { text: itemAnswer(item, spot), route: [], steps: [] }
-  return { text: `${itemAnswer(item, spot)}${best.m >= 400 ? ` Getting to ${best.place.name}: ${tripBetween(CHERNARUS.id, spot, best.place)}.` : ''}`, route: [spot, { x: best.place.x, y: best.place.y, label: best.place.name }], steps: [] }
+  const map = mapOf(spot).id
+  const best = placesFor(item, spot, map)[0]
+  if (!best) return { text: itemAnswer(item, spot, map), route: [], steps: [] }
+  return { text: `${itemAnswer(item, spot, map)}${best.m >= 400 ? ` Getting to ${best.place.name}: ${tripBetween(map, spot, best.place)}.` : ''}`, route: [spot, { x: best.place.x, y: best.place.y, label: best.place.name }], steps: [] }
 }
 
 // --- Questions -----------------------------------------------------------------------------
@@ -216,12 +233,12 @@ export function isWhatNow(q: string): boolean {
 }
 
 /** "Where do I find / can I get / does X spawn": an item named, a kind (backpacks), or a building type. */
-export function isItemQuestion(q: string): boolean {
+export function isItemQuestion(q: string, map: DayzMapId = 'chernarus'): boolean {
   const s = q.toLowerCase()
   // "Do I need a gas mask …" asks how the game works, not where to find one.
   if (/\b(?:do|should|would) i need\b/.test(s)) return false
   if (!/\b(where (?:do|can|could|would|should) i (?:find|get|loot|look for)|where (?:does|do|is|are) .+ spawn|where to find|find (?:a|an|some|me)|looking for|i need (?:a|an|some)|spawns? (?:in|at)|what spawns|what can i find|what loot)\b/.test(s)) return false
-  return !!findItem(s) || !!kindIn(s) || !!buildingIn(s)
+  return !!findItem(s, map) || !!kindIn(s) || !!buildingIn(s)
 }
 
 function buildingIn(q: string): string | null {
@@ -237,33 +254,37 @@ function buildingIn(q: string): string | null {
   return null
 }
 
-export function itemQuestionAnswer(question: string, spot: Spot | null): string | null {
+export function itemQuestionAnswer(question: string, spot: Spot | null, map: DayzMapId = spot?.map ?? 'chernarus'): string | null {
   const q = question.toLowerCase()
+  const from = spot && mapOf(spot).id === map ? spot : null
   const b = buildingIn(q)
-  if (b) return buildingAnswer(b)
-  const item = findItem(q)
-  if (item) return itemAnswer(item, spot)
+  if (b) return buildingAnswer(b, map)
+  const item = findItem(q, map)
+  if (item) return itemAnswer(item, from, map)
   const kind = kindIn(q)
-  return kind ? kindAnswer(kind, spot) : null
+  return kind ? kindAnswer(kind, from, map) : null
 }
 
 /** The spot from the answer context (set by the player), if any. */
 export function spotFrom(context: Readonly<Record<string, string | number>>): Spot | null {
   const x = Number(context.spotX)
   const y = Number(context.spotY)
-  return Number.isFinite(x) && Number.isFinite(y) && context.spotX !== undefined ? { x, y, label: String(context.spotLabel ?? 'your spot') } : null
+  const map = DAYZ_MAPS.find((m) => m.id === context.spotMap)?.id ?? 'chernarus'
+  return Number.isFinite(x) && Number.isFinite(y) && context.spotX !== undefined ? { x, y, label: String(context.spotLabel ?? 'your spot'), map } : null
 }
 
 /** The assistant's answer to a question, or null when it is not one of its questions. */
 export function assistantAnswer(question: string, context: Readonly<Record<string, string | number>>): string | null {
   const spot = spotFrom(context)
+  // The map being played (the spot's, or the one chosen), for item questions without a spot.
+  const playing = spot?.map ?? dayzMap(typeof context.mapName === 'string' ? context.mapName : typeof context.map === 'string' ? context.map : null)?.id ?? 'chernarus'
   const have = kitFrom(context.kit)
   if (isWhatNow(question)) return spot ? whatNow(spot, have).text : `Tell me where you are first: "Coach, I'm at Turovo" or "I'm at 135 012". ${kitLine(have)}`
   if (isTakeMe(question)) {
     if (!spot) return 'Where are you? Say "Coach, I\'m at" and a town or grid first, then ask again.'
     return takeMeTo(question, spot)?.text ?? null
   }
-  if (isItemQuestion(question)) return itemQuestionAnswer(question, spot)
+  if (isItemQuestion(question, playing)) return itemQuestionAnswer(question, spot, playing)
   return null
 }
 
@@ -276,8 +297,8 @@ export function assistantRoute(question: string, spot: Spot | null, have: Set<st
   if (!spot) return null
   if (isWhatNow(question)) return whatNow(spot, have)
   if (isTakeMe(question)) return takeMeTo(question, spot)
-  if (isItemQuestion(question)) {
-    const item = findItem(question)
+  if (isItemQuestion(question, mapOf(spot).id)) {
+    const item = findItem(question, mapOf(spot).id)
     return item ? toItem(item, spot) : null
   }
   return null

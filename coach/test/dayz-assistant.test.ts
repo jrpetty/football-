@@ -17,9 +17,9 @@ const turovo = parseSetSpot("Coach, I'm at Turovo")!
 const ctx = { spotX: turovo.x, spotY: turovo.y, spotLabel: turovo.label, kit: '' }
 
 test('your spot: a town in any spelling or a grid, said the way players say it', () => {
-  assert.deepEqual(turovo, { x: 13550, y: 14110, label: 'Turovo' })
+  assert.deepEqual(turovo, { x: 13550, y: 14110, label: 'Turovo', map: 'chernarus' })
   assert.equal(parseSetSpot('im at typobo')?.label, 'Turovo')
-  assert.deepEqual(parseSetSpot('I am near grid 135 012'), { x: 13550, y: 14110, label: 'grid 135 012' })
+  assert.deepEqual(parseSetSpot('I am near grid 135 012'), { x: 13550, y: 14110, label: 'grid 135 012', map: 'chernarus' })
   assert.equal(parseSetSpot('set my spot to Berezino')?.label, 'Berezino')
   assert.equal(parseSetSpot("I'm fine"), null)
   assert.equal(parseSetSpot('where is typobo'), null)
@@ -107,4 +107,18 @@ test('routes keep out of gas zones: round them on foot, never through by car', (
   assert.ok(plain.points.length >= 2)
   assert.ok(!safe.points.some(inside), 'the safe path does not cross the zone')
   assert.ok(safe.lengthM >= plain.lengthM)
+})
+
+test('Livonia and Sakhal: your spot moves to the map the town is on; plans, take me to and item spawns from that map', async () => {
+  const { whatNow, takeMeTo, assistantAnswer } = await import('../src/core/dayz/assistant.ts')
+  const brena = parseSetSpot("I'm at Brena")!
+  assert.equal(brena.map, 'livonia')
+  assert.match(whatNow(brena, new Set()).text, /^From Brena: 1\. Drink at the water pump/)
+  assert.match(takeMeTo('take me to the nearest hospital', brena)!.text, /^Hospital .* from Brena: about/)
+  assert.match(assistantAnswer('where do I find a canteen', { spotX: brena.x, spotY: brena.y, spotLabel: 'Brena', spotMap: 'livonia' })!, /about \d+ on Livonia at a time/)
+  // Sakhal has no water pumps in the game files: say what to do instead.
+  const k = parseSetSpot("I'm at 050 050", 'sakhal')!
+  assert.equal(k.map, 'sakhal')
+  assert.match(takeMeTo('take me to the nearest water', k)!.text, /^Sakhal: no water pumps .* melt it over a fire/)
+  assert.match(whatNow(k, new Set()).text, /^No water pumps in the game files here/)
 })

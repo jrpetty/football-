@@ -11,9 +11,9 @@
 
 import type { ArsenalItem, GameProfile } from '../profile/schema.ts'
 import { answerMechanics, answerPlaceQuestion, mechanicsFor } from './ask.ts'
-import { assistantRoute, CHERNARUS, KIT, kitLine, takeMeTo, whatNow, type Spot } from './assistant.ts'
+import { assistantRoute, KIT, kitLine, mapOf, takeMeTo, whatNow, type Spot } from './assistant.ts'
 import { bestLine, compareLine, findGun, guns, gunsIn } from './guns.ts'
-import { findItem, itemAnswer, buildingAnswer, kindAnswer, kindIn, placesFor, CHERNARUS_ITEMS, USAGES, type LootItem } from './items.ts'
+import { findItem, itemAnswer, buildingAnswer, itemsOn, kindAnswer, kindIn, placesFor, USAGES, type LootItem } from './items.ts'
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from './lootRun.ts'
 import { bearing, DAYZ_MAPS, describePlace, distance, featureLine, findPlace, gridRef, km, nearest, neighbours, placesIn, region, type DayzMapId, type PlaceMatch } from './places.ts'
 import { pointInfo } from './mapView.ts'
@@ -42,7 +42,7 @@ export type Card =
   /** Click the map to place a mark the player told about without saying where. */
   | { readonly type: 'pick'; readonly map: DayzMapId; readonly title: string; readonly kind: MarkKind; readonly label: string }
 
-/** What the player has: their spot (Chernarus), kit, and the map they are on. */
+/** What the player has: their spot (on the map they are on), kit, and that map. */
 export interface CompanionContext {
   readonly spot: Spot | null
   readonly kit: readonly string[]
@@ -122,20 +122,21 @@ export function gunCardFor(i: ArsenalItem): Card {
   }
 }
 
-export function itemCardFor(item: LootItem, spot: Spot | null): Card {
-  const spots = placesFor(item, spot).slice(0, 6)
+export function itemCardFor(item: LootItem, spot: Spot | null, map: DayzMapId = spot?.map ?? 'chernarus'): Card {
+  const spots = placesFor(item, spot, map).slice(0, 6)
+  const mapName = DAYZ_MAPS.find((m) => m.id === map)!.name
   const usages = item.usage.map((u) => USAGES[u] ?? u).join(', ') || 'no building type'
   return {
     type: 'item',
     title: item.name,
-    subtitle: `${item.kind} · about ${item.nominal} on Chernarus at a time`,
+    subtitle: `${item.kind} · about ${item.nominal} on ${mapName} at a time`,
     facts: [
       ['Spawns in', usages],
       ['Loot tiers', item.tiers.length ? item.tiers.join(', ') : 'any'],
       ...(item.deloot ? [['Also', 'helicopter crashes and convoys'] as [string, string]] : []),
     ],
-    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)} · ${tripShortBetween(CHERNARUS.id, spot, s.place)}` : '', buildings: s.buildings, tier: s.tier })),
-    map: 'chernarus',
+    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)} · ${tripShortBetween(map, spot, s.place)}` : '', buildings: s.buildings, tier: s.tier })),
+    map,
     markers: spots.map((s) => pos(s.place, `${s.place.name} (${s.buildings})`)),
     from: spot ? pos(spot, spot.label) : null,
   }
@@ -145,7 +146,7 @@ function planCard(spot: Spot, have: Set<string>): Card {
   const plan = whatNow(spot, have)
   return {
     type: 'plan',
-    map: 'chernarus',
+    map: mapOf(spot).id,
     title: `From ${spot.label}`,
     steps: plan.steps.map((s, i) => ({ n: i + 1, title: s.title, line: s.line })),
     route: plan.route.map((r) => pos(r, r.label)),
@@ -210,9 +211,9 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
       return { text: `${topic.name} on the map.`, card: { type: 'map', map: topic.map, title: topic.name, focus: pos(p, topic.name) }, topic }
     }
     if (/\b(take me|get me|route|how far|how long|how do i get|way|go there|distance)\b/.test(q)) {
-      if (!ctx.spot || topic.map !== 'chernarus') return { text: `Where are you? Say "I'm at" a town or grid, and I will show the way to ${topic.name}.`, card: null, topic }
+      if (!ctx.spot || topic.map !== ctx.map) return { text: `Where are you? Say "I'm at" a town or grid, and I will show the way to ${topic.name}.`, card: null, topic }
       const m = distance(ctx.spot, p)
-      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}, ${tripBetween(CHERNARUS.id, ctx.spot, p)}.`, card: { type: 'map', map: 'chernarus', title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
+      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}, ${tripBetween(ctx.map, ctx.spot, p)}.`, card: { type: 'map', map: ctx.map, title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
     }
     if (/\b(what'?s|what is) (near|around)\b/.test(q)) {
       const m = findPlace(topic.name)
@@ -220,8 +221,8 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
     }
   }
   if (topic.kind === 'item') {
-    const item = CHERNARUS_ITEMS.find((i) => i.id === topic.id)
-    if (item && /\b(where|spawn|find|nearest|show|map|take me)\b/.test(q)) return { text: itemAnswer(item, ctx.spot), card: itemCardFor(item, ctx.spot), topic }
+    const item = itemsOn(ctx.map).find((i) => i.id === topic.id)
+    if (item && /\b(where|spawn|find|nearest|show|map|take me)\b/.test(q)) return { text: itemAnswer(item, ctx.spot, ctx.map), card: itemCardFor(item, ctx.spot, ctx.map), topic }
   }
   if (topic.kind === 'gun') {
     const g = guns(profile).find((x) => x.id === topic.id)
@@ -254,7 +255,7 @@ function marksReply(question: string, ctx: CompanionContext, topic: Topic): Repl
   const now = ctx.now ?? Date.now()
   const marks = liveMarks(ctx.marks ?? [], now)
   const spot = ctx.spot
-  const here = spot && ctx.map === 'chernarus' ? spot : null
+  const here = spot
   if (ask.type === 'go' || ask.type === 'where') {
     const m = newest(marks, ask.kind, ctx.map) ?? newest(marks, ask.kind)
     const name = MARK_INFO[ask.kind].label.toLowerCase()
@@ -263,7 +264,7 @@ function marksReply(question: string, ctx: CompanionContext, topic: Topic): Repl
       return { text, card: { type: 'pick', map: ctx.map, title: `Mark your ${name}`, kind: ask.kind, label: MARK_INFO[ask.kind].label }, topic }
     }
     const t: Topic = { kind: 'place', name: m.label, map: m.map, x: m.x, y: m.y }
-    if (ask.type === 'go' && here && m.map === 'chernarus') {
+    if (ask.type === 'go' && here && m.map === ctx.map) {
       return { text: goLine(m, here, now), card: { type: 'map', map: m.map, title: `To ${m.label.charAt(0).toLowerCase() + m.label.slice(1)}`, route: [pos(here, here.label), pos(m, m.label)] }, topic: t }
     }
     return { text: `${markLine(m, now, here)}.${ask.type === 'go' && !here ? ' Say where you are ("I\'m at …") for the way there and how long it takes.' : ''}`, card: { type: 'map', map: m.map, title: m.label, focus: pos(m, m.label) }, topic: t }
@@ -283,7 +284,7 @@ function localReplyInner(question: string, ctx: CompanionContext, profile: GameP
   const follow = followUp(q, topic, ctx, profile)
   if (follow) return follow
   if (/^(help|what can you do|what do you know|commands)\b/.test(q)) {
-    return { text: 'Ask me about places, routes, loot, guns and staying alive on Chernarus. Tell me where you are and what you have, and I can plan your next steps and show them on the map.', card: { type: 'help', examples: HELP_EXAMPLES }, topic }
+    return { text: 'Ask me about places, routes, loot, guns and staying alive on Chernarus, Livonia and Sakhal. Tell me where you are and what you have, and I can plan your next steps and show them on the map.', card: { type: 'help', examples: HELP_EXAMPLES }, topic }
   }
   if (/\b(what do i have|my kit|what am i missing|what do i need)\b/.test(q)) {
     const have = new Set(ctx.kit)
@@ -291,10 +292,10 @@ function localReplyInner(question: string, ctx: CompanionContext, profile: GameP
   }
   if (/\b(show|open|pull up)\b.*\bmap\b/.test(q) && !placesIn(q, ctx.map).length) {
     const map = DAYZ_MAPS.find((m) => q.includes(m.id)) ?? DAYZ_MAPS.find((m) => m.id === ctx.map)!
-    return { text: `${map.name}.`, card: { type: 'map', map: map.id, title: map.name, ...(ctx.spot && map.id === 'chernarus' ? { focus: pos(ctx.spot, ctx.spot.label) } : {}) }, topic }
+    return { text: `${map.name}.`, card: { type: 'map', map: map.id, title: map.name, ...(ctx.spot && map.id === ctx.map ? { focus: pos(ctx.spot, ctx.spot.label) } : {}) }, topic }
   }
   if (/\bwhere am i\b/.test(q) && ctx.spot) {
-    return { text: `You set your spot at ${ctx.spot.label}. ${pointInfo(CHERNARUS, ctx.spot).line}`, card: { type: 'map', map: 'chernarus', title: 'You', focus: pos(ctx.spot, ctx.spot.label) }, topic }
+    return { text: `You set your spot at ${ctx.spot.label}. ${pointInfo(mapOf({ map: ctx.map }), ctx.spot).line}`, card: { type: 'map', map: ctx.map, title: 'You', focus: pos(ctx.spot, ctx.spot.label) }, topic }
   }
   if (!answered) return null
   // A local answer exists: give it its card.
@@ -308,23 +309,24 @@ export function cardFor(question: string, ctx: CompanionContext, profile: GamePr
   // The assistant: plans, take me to, item spawns.
   const route = assistantRoute(question, spot, new Set(ctx.kit))
   if (/\b(what now|what next|what should i do|next step|plan my|just spawned|fresh spawn)\b/.test(q) && spot) return { card: planCard(spot, new Set(ctx.kit)), topic }
-  const item = findItem(q)
-  if (item && /\b(find|get|spawn|loot|looking for|need|place with|where)\b/.test(q)) return { card: itemCardFor(item, spot), topic: { kind: 'item', id: item.id } }
+  const item = findItem(q, ctx.map)
+  if (item && /\b(find|get|spawn|loot|looking for|need|place with|where)\b/.test(q)) return { card: itemCardFor(item, spot, ctx.map), topic: { kind: 'item', id: item.id } }
   const kind = kindIn(q)
   if (kind && /\b(find|get|where)\b/.test(q)) {
-    const list = CHERNARUS_ITEMS.filter((i) => i.kind === kind).sort((a, b) => b.nominal - a.nominal).slice(0, 8)
-    return { card: { type: 'list', title: `${kind.charAt(0).toUpperCase() + kind.slice(1)}s on Chernarus`, rows: list.map((i) => [i.name, `about ${i.nominal} · ${i.usage.map((u) => USAGES[u] ?? u).join(', ')}`]) }, topic }
+    const list = itemsOn(ctx.map).filter((i) => i.kind === kind).sort((a, b) => b.nominal - a.nominal).slice(0, 8)
+    return { card: { type: 'list', title: `${kind.charAt(0).toUpperCase() + kind.slice(1)}s on ${mapOf({ map: ctx.map }).name}`, rows: list.map((i) => [i.name, `about ${i.nominal} · ${i.usage.map((u) => USAGES[u] ?? u).join(', ')}`]) }, topic }
   }
   if (/\bwhat spawns|what can i find|what loot\b/.test(q)) {
     const b = Object.keys(USAGES).find((u) => q.includes((USAGES[u] ?? '').split(' ')[0].toLowerCase()))
     if (b) {
-      const list = CHERNARUS_ITEMS.filter((i) => i.usage.includes(b) && !/^(Ammo|Mag)/.test(i.id)).sort((a, c) => c.nominal - a.nominal).slice(0, 12)
+      const list = itemsOn(ctx.map).filter((i) => i.usage.includes(b) && !/^(Ammo|Mag)/.test(i.id)).sort((a, c) => c.nominal - a.nominal).slice(0, 12)
       return { card: { type: 'list', title: `In ${USAGES[b]}`, rows: list.map((i) => [i.name, `about ${i.nominal}`]) }, topic }
     }
   }
   if (route && route.route.length) {
     const target = route.route.at(-1)!
-    return { card: { type: 'map', map: 'chernarus', title: target.label, route: route.route.map((r) => pos(r, r.label)) }, topic: { kind: 'place', name: target.label, map: 'chernarus', x: target.x, y: target.y } }
+    const on = mapOf(spot).id
+    return { card: { type: 'map', map: on, title: target.label, route: route.route.map((r) => pos(r, r.label)) }, topic: { kind: 'place', name: target.label, map: on, x: target.x, y: target.y } }
   }
   // Guns.
   const named = gunsIn(q, profile)
@@ -336,7 +338,7 @@ export function cardFor(question: string, ctx: CompanionContext, profile: GamePr
   }
   // Places: a loot run, a route, a place.
   if (isLootRun(question)) {
-    const req = parseLootRun(question, ctx.map, spot ? { place: { name: spot.label, kind: 'local', facilities: [], x: spot.x, y: spot.y }, map: CHERNARUS, via: 'name' } : null)
+    const req = parseLootRun(question, ctx.map, spot ? { place: { name: spot.label, kind: 'local', facilities: [], x: spot.x, y: spot.y }, map: mapOf(spot), via: 'name' } : null)
     if (req) {
       const plan = planLootRun(req)
       return { card: { type: 'map', map: req.start.map.id, title: `Loot run from ${plan.start.name}`, caption: lootRunLine(plan).replace(/ Open it on the Map to see the line\.$/, ''), route: lootRunPath(plan).map((p) => pos(p, p.label)) }, topic }
@@ -366,12 +368,12 @@ export interface ToolDef {
 
 export const COMPANION_TOOLS: readonly ToolDef[] = [
   { name: 'player_state', description: "The player's spot (set by them), their kit checklist and the map they play. Call this before planning from where they are.", input_schema: { type: 'object', properties: {} } },
-  { name: 'set_spot', description: 'Set where the player says they are on Chernarus: a town (any spelling) or a 100 m grid like "135 012".', input_schema: { type: 'object', properties: { where: { type: 'string' } }, required: ['where'] } },
+  { name: 'set_spot', description: 'Set where the player says they are on the map they play: a town (any spelling) or a 100 m grid like "135 012".', input_schema: { type: 'object', properties: { where: { type: 'string' } }, required: ['where'] } },
   { name: 'update_kit', description: 'Tick or untick kit items the player says they have found or lost.', input_schema: { type: 'object', properties: { have: { type: 'array', items: { type: 'string', enum: KIT.map((k) => k.id) } }, lost: { type: 'array', items: { type: 'string', enum: KIT.map((k) => k.id) } } } } },
   { name: 'find_place', description: 'Where a town, village, base or landmark is (any spelling, Cyrillic or the way a sign looks), what is in it and near it. Shows it on the screen.', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'route', description: 'The way between two places, or from the player\'s spot to a place ("from" omitted). Shows the route on the map, following roads and fields.', input_schema: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } }, required: ['to'] } },
   { name: 'nearest', description: "The nearest of a kind of place from the player's spot or a named place, shown on the map.", input_schema: { type: 'object', properties: { kind: { type: 'string', enum: ['water', 'hospital', 'medical', 'police', 'military', 'fire', 'fuel', 'heliCrash'] }, from: { type: 'string' } }, required: ['kind'] } },
-  { name: 'item_spawns', description: "Where an item spawns on Chernarus (building types, loot tiers, how many at a time) and the nearest places with those buildings. Items include tools, food, clothes, bags, medical, ammo (by calibre), magazines and attachments. Shows it on the screen.", input_schema: { type: 'object', properties: { item: { type: 'string' } }, required: ['item'] } },
+  { name: 'item_spawns', description: "Where an item spawns on the map being played (building types, loot tiers, how many at a time) and the nearest places with those buildings. Items include tools, food, clothes, bags, medical, ammo (by calibre), magazines and attachments. Shows it on the screen.", input_schema: { type: 'object', properties: { item: { type: 'string' } }, required: ['item'] } },
   { name: 'what_spawns_in', description: 'The most common items in a building type.', input_schema: { type: 'object', properties: { building: { type: 'string', enum: ['Military', 'Police', 'Medic', 'Firefighter', 'Industrial', 'Farm', 'Town', 'Village', 'Hunting', 'Office', 'School'] } }, required: ['building'] } },
   { name: 'gun_info', description: 'A gun: what it looks like, calibre, magazines, fire modes, recoil, range and bullet drop, where it spawns. Shows its card.', input_schema: { type: 'object', properties: { gun: { type: 'string' } }, required: ['gun'] } },
   { name: 'compare_guns', description: 'Two guns side by side.', input_schema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, required: ['a', 'b'] } },
@@ -405,7 +407,7 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
     case 'player_state': {
       const now = ctx.now ?? Date.now()
       const marks = liveMarks(ctx.marks ?? [], now).map((m) => markLine(m, now, spot))
-      return { text: JSON.stringify({ spot: spot ? { label: spot.label, grid: gridRef(CHERNARUS, spot.x, spot.y), area: pointInfo(CHERNARUS, spot).line } : null, kit: { have: ctx.kit, missing: KIT.filter((k) => !ctx.kit.includes(k.id)).map((k) => k.id) }, map: ctx.map, marks }), card: null }
+      return { text: JSON.stringify({ spot: spot ? { label: spot.label, grid: gridRef(mapOf({ map: ctx.map }), spot.x, spot.y), area: pointInfo(mapOf({ map: ctx.map }), spot).line } : null, kit: { have: ctx.kit, missing: KIT.filter((k) => !ctx.kit.includes(k.id)).map((k) => k.id) }, map: ctx.map, marks }), card: null }
     }
     case 'add_mark': {
       const kind = MARK_KINDS.includes(str('kind') as MarkKind) ? (str('kind') as MarkKind) : 'note'
@@ -430,10 +432,10 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
       return { text: listLine(marks, now, spot), card: { type: 'map', map: ctx.map, title: 'Your marks' } }
     }
     case 'set_spot': {
-      const r = localSpot(str('where'))
-      if (!r) return { text: `No town or grid "${str('where')}" on Chernarus.`, card: null }
+      const r = localSpot(str('where'), ctx.map)
+      if (!r) return { text: `No town or grid "${str('where')}" on ${mapOf({ map: ctx.map }).name}.`, card: null }
       effects.setSpot(r)
-      return { text: `Spot set: ${r.label}. ${pointInfo(CHERNARUS, r).line}`, card: { type: 'map', map: 'chernarus', title: 'You', focus: pos(r, r.label) }, ctx: { ...ctx, spot: r } }
+      return { text: `Spot set: ${r.label}. ${pointInfo(mapOf(r), r).line}`, card: { type: 'map', map: mapOf(r).id, title: 'You', focus: pos(r, r.label) }, ctx: { ...ctx, spot: r } }
     }
     case 'update_kit': {
       const have = Array.isArray(input.have) ? (input.have as unknown[]).filter((x): x is string => typeof x === 'string') : []
@@ -452,31 +454,32 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
       const to = findPlace(str('to'), ctx.map)
       if (!to) return { text: `No place called "${str('to')}".`, card: null }
       const fromM = str('from') ? findPlace(str('from'), to.map.id) : null
-      const from = fromM ? pos(fromM.place, fromM.place.name) : spot && to.map.id === 'chernarus' ? pos(spot, spot.label) : null
+      const from = fromM ? pos(fromM.place, fromM.place.name) : spot && to.map.id === ctx.map ? pos(spot, spot.label) : null
       if (!from) return { text: 'No start: name one, or ask the player where they are.', card: null }
       const m = distance(from, to.place)
       return { text: `${to.place.name} is ${km(m)} ${bearing(from, to.place)} of ${from.label} in a straight line, ${tripBetween(to.map.id, from, to.place)}; the map shows the way over the ground and its time.`, card: { type: 'map', map: to.map.id, title: `${from.label} → ${to.place.name}`, route: [from, pos(to.place, to.place.name)] }, topic: { kind: 'place', name: to.place.name, map: to.map.id, x: to.place.x, y: to.place.y } }
     }
     case 'nearest': {
       const kind = str('kind')
-      const fromM = str('from') ? findPlace(str('from'), 'chernarus') : null
-      const from = fromM ? { x: fromM.place.x, y: fromM.place.y, label: fromM.place.name } : spot
+      const fromM = str('from') ? findPlace(str('from'), ctx.map) : null
+      const from = fromM ? { x: fromM.place.x, y: fromM.place.y, label: fromM.place.name, map: fromM.map.id } : spot
       if (!from) return { text: 'No start: name a place, or ask the player where they are.', card: null }
       const plan = takeMeTo(`take me to the nearest ${kind}`, from)
       if (!plan?.route.length) return { text: `No ${kind} found.`, card: null }
       const t = plan.route.at(-1)!
-      return { text: plan.text, card: { type: 'map', map: 'chernarus', title: t.label, route: plan.route.map((r) => pos(r, r.label)) }, topic: { kind: 'place', name: t.label, map: 'chernarus', x: t.x, y: t.y } }
+      const on = mapOf(from).id
+      return { text: plan.text, card: { type: 'map', map: on, title: t.label, route: plan.route.map((r) => pos(r, r.label)) }, topic: { kind: 'place', name: t.label, map: on, x: t.x, y: t.y } }
     }
     case 'item_spawns': {
-      const item = findItem(str('item')) ?? findItem(`where do I find ${str('item')}`)
+      const item = findItem(str('item'), ctx.map) ?? findItem(`where do I find ${str('item')}`, ctx.map)
       if (!item) {
         const kind = kindIn(str('item'))
-        return kind ? { text: kindAnswer(kind, spot), card: null } : { text: `"${str('item')}" is not in Chernarus's loot table.`, card: null }
+        return kind ? { text: kindAnswer(kind, spot, ctx.map), card: null } : { text: `"${str('item')}" is not in ${mapOf({ map: ctx.map }).name}'s loot table.`, card: null }
       }
-      return { text: itemAnswer(item, spot), card: itemCardFor(item, spot), topic: { kind: 'item', id: item.id } }
+      return { text: itemAnswer(item, spot, ctx.map), card: itemCardFor(item, spot, ctx.map), topic: { kind: 'item', id: item.id } }
     }
     case 'what_spawns_in':
-      return { text: buildingAnswer(str('building')), card: null }
+      return { text: buildingAnswer(str('building'), ctx.map), card: null }
     case 'gun_info': {
       const g = findGun(str('gun'), profile)
       return g ? { text: `${g.name}: ${g.summary} Look: ${g.look ?? ''}`, card: gunCardFor(g), topic: { kind: 'gun', id: g.id } } : { text: `No gun called "${str('gun')}".`, card: null }
@@ -499,7 +502,7 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
       if (!spot) return { text: 'The player has not said where they are: ask them.', card: null }
       return { text: whatNow(spot, new Set(ctx.kit)).text, card: planCard(spot, new Set(ctx.kit)) }
     case 'loot_run': {
-      const req = parseLootRun(`plan a loot run ${str('request')}`, ctx.map, spot ? { place: { name: spot.label, kind: 'local', facilities: [], x: spot.x, y: spot.y }, map: CHERNARUS, via: 'name' } : null)
+      const req = parseLootRun(`plan a loot run ${str('request')}`, ctx.map, spot ? { place: { name: spot.label, kind: 'local', facilities: [], x: spot.x, y: spot.y }, map: mapOf(spot), via: 'name' } : null)
       if (!req) return { text: 'Name a town to start from and the kinds of place.', card: null }
       const plan = planLootRun(req)
       return { text: lootRunLine(plan), card: { type: 'map', map: req.start.map.id, title: `Loot run from ${plan.start.name}`, route: lootRunPath(plan).map((p) => pos(p, p.label)) } }
@@ -514,21 +517,22 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
   }
 }
 
-function localSpot(where: string): Spot | null {
+function localSpot(where: string, mapId: DayzMapId): Spot | null {
+  const map = mapOf({ map: mapId })
   const g = where.match(/(\d{3})\s*(\d{3})/)
   if (g) {
     const x = +g[1] * 100 + 50
-    const y = CHERNARUS.worldSize - (+g[2] * 100 + 50)
-    return { x, y, label: `grid ${gridRef(CHERNARUS, x, y)}` }
+    const y = map.worldSize - (+g[2] * 100 + 50)
+    return { x, y, label: `grid ${gridRef(map, x, y)}`, map: mapId }
   }
-  const m = findPlace(where, 'chernarus')
-  return m && m.map.id === 'chernarus' ? { x: m.place.x, y: m.place.y, label: m.place.name } : null
+  const m = findPlace(where, mapId)
+  return m ? { x: m.place.x, y: m.place.y, label: m.place.name, map: m.map.id } : null
 }
 
 /** The companion's instructions to Claude (the main process adds the pack's knowledge). */
 export const COMPANION_SYSTEM = [
-  'You are the DayZ companion in the Sightline app: a friendly, sharp survival partner the player talks to while they play, mostly on Chernarus. You chat naturally and briefly (usually 1-4 sentences, at most about 120 words; your words may be read aloud, so no markdown headings or tables).',
-  'You have tools that read the app\'s built-in data: places and roads (from the game files and the DayZ Wiki), Bohemia\'s loot table for Chernarus, the gun data, the survival reference, the player\'s spot and kit (which they told you). Use them for any fact about places, distances, loot, guns or mechanics instead of guessing, and quote their numbers. Tools also put a card or a map on the app\'s screen beside the chat, so call the one that shows what the player asked for (for "show me", always).',
+  'You are the DayZ companion in the Sightline app: a friendly, sharp survival partner the player talks to while they play on Chernarus, Livonia or Sakhal. You chat naturally and briefly (usually 1-4 sentences, at most about 120 words; your words may be read aloud, so no markdown headings or tables).',
+  'You have tools that read the app\'s built-in data: places and roads (from the game files and the DayZ Wiki), Bohemia\'s loot tables for each map, the gun data, the survival reference, the player\'s spot and kit (which they told you). Use them for any fact about places, distances, loot, guns or mechanics instead of guessing, and quote their numbers. Tools also put a card or a map on the app\'s screen beside the chat, so call the one that shows what the player asked for (for "show me", always).',
   'If you need where the player is and do not know, ask them (they can say "I\'m at" a town or grid) or call player_state. When they say where they are or what they found, call set_spot or update_kit. When the player tells you they saw or heard someone, or where their base, stash or car is, call add_mark; their marks come back with player_state and list_marks (sightings say how long ago, and are only what they saw then, never where anyone is now). Whenever the player asks where to go or how to get somewhere, say how far it is and roughly how long it takes (the route, nearest, plan and loot-run tools give rough times jogging and by car; call them rough).',
   'Rules: never claim to know where other players, loot or vehicles are right now; loot data says where things can spawn, not what is there. Do not give exploits, glitches, duping or anything against the game\'s rules. Do not say "because", "always", "definitely", "certainly" or "guarantee". Use British spelling. If the data cannot answer, say so and suggest what the player could check.',
 ].join('\n\n')
@@ -537,7 +541,7 @@ export const COMPANION_SYSTEM = [
 export function topicLine(t: Topic): string | null {
   if (!t) return null
   if (t.kind === 'place') return `Last place talked about: ${t.name} (${t.map}).`
-  if (t.kind === 'item') return `Last item talked about: ${CHERNARUS_ITEMS.find((i) => i.id === t.id)?.name ?? t.id}.`
+  if (t.kind === 'item') return `Last item talked about: ${itemsOn('chernarus').find((i) => i.id === t.id)?.name ?? t.id}.`
   return `Last gun talked about: ${t.id}.`
 }
 

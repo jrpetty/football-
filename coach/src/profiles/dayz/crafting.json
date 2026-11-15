@@ -1,0 +1,8904 @@
+{
+ "source": "Bohemia Interactive's DayZ game scripts (DayZ-Script-Diff): the recipes pluginrecipesmanagerbase.c registers (scripts/4_world/classes/recipes) and the vehicle scripts (carscript.c, motorbikescript.c, boatscript.c, inherited classes). Vehicle names, fuel tanks and radiator capacity from the DayZ Wiki (dayz.fandom.com), read 2026-11-15. Ruined ingredients cannot be used unless a recipe says so. takes is in the item's own quantity units (ml for liquids); qty null means the script leaves the amount to the item's default or to chance.",
+ "licence": "DayZ Public License (DPL): attribution, non-commercial, DayZ only. Vehicle fluid capacities from the DayZ Wiki (CC BY-NC-SA) where noted.",
+ "recipes": [
+  {
+   "id": "CraftTorch",
+   "name": "Torch",
+   "results": [
+    {
+     "item": "Torch",
+     "class": "Torch",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rags"
+     ],
+     "classes": [
+      "Rag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": null,
+   "notes": "The whole stack of rags goes onto the torch as fuel."
+  },
+  {
+   "id": "CraftFireplace",
+   "name": "Fireplace",
+   "results": [
+    {
+     "item": "Fireplace",
+     "class": "Fireplace",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick",
+      "Firewood",
+      "Rags",
+      "Bandage",
+      "Paper",
+      "Book",
+      "Light bark",
+      "Oak bark",
+      "Palm bark",
+      "Morse code leaflet (blood)",
+      "Morse code leaflet (fire)",
+      "Morse code leaflet (coffee)"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Firewood",
+      "Rag",
+      "BandageDressing",
+      "Paper",
+      "ItemBook",
+      "Bark_Birch",
+      "Bark_Oak",
+      "Bark_Palm",
+      "MorsecodeLeaflet_blood",
+      "MorsecodeLeaflet_fire",
+      "MorsecodeLeaflet_coffee"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Short stick",
+      "Firewood",
+      "Rags",
+      "Bandage",
+      "Paper",
+      "Gift wrap paper",
+      "Book",
+      "Light bark",
+      "Oak bark",
+      "Palm bark",
+      "Sleeping mask",
+      "Morse code leaflet (blood)",
+      "Morse code leaflet (fire)",
+      "Morse code leaflet (coffee)"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Firewood",
+      "Rag",
+      "BandageDressing",
+      "Paper",
+      "GiftWrapPaper",
+      "ItemBook",
+      "Bark_Birch",
+      "Bark_Oak",
+      "Bark_Palm",
+      "EyeMask_ColorBase",
+      "MorsecodeLeaflet_blood",
+      "MorsecodeLeaflet_fire",
+      "MorsecodeLeaflet_coffee"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": "The two items must be different kinds of kindling or fuel",
+   "notes": "One of each (or the whole item if it has no quantity) goes into the fireplace."
+  },
+  {
+   "id": "CraftLongTorch",
+   "name": "Long torch",
+   "results": [
+    {
+     "item": "Long torch",
+     "class": "LongTorch",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rags"
+     ],
+     "classes": [
+      "Rag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": null,
+   "notes": "The whole stack of rags goes onto the torch as fuel."
+  },
+  {
+   "id": "SharpenBroom",
+   "name": "Sharpen broom",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 3
+    },
+    {
+     "item": "Sharpened stick",
+     "class": "SharpWoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Broom"
+     ],
+     "classes": [
+      "Broom"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The broom must not be burning",
+   "notes": null
+  },
+  {
+   "id": "SharpenLongStick",
+   "name": "Sharpen long stick",
+   "results": [
+    {
+     "item": "Sharpened stick",
+     "class": "SharpWoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Long stick"
+     ],
+     "classes": [
+      "LongWoodenStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "PokeHolesBarrel",
+   "name": "Fire barrel (poke holes in a barrel)",
+   "results": [
+    {
+     "item": "Fire barrel (colour of the oil barrel)",
+     "class": "BarrelHoles_",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Oil barrel"
+     ],
+     "classes": [
+      "Barrel_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Ice axe",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "Iceaxe",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The barrel must be empty",
+   "notes": "Heavy wear on the tool."
+  },
+  {
+   "id": "CraftBaseBallBatNailed",
+   "name": "Nailed baseball bat",
+   "results": [
+    {
+     "item": "Nailed baseball bat",
+     "class": "NailedBaseballBat",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Nails"
+     ],
+     "classes": [
+      "Nail"
+     ],
+     "minQty": 12,
+     "use": "quantity",
+     "takes": 12
+    },
+    {
+     "items": [
+      "Baseball bat"
+     ],
+     "classes": [
+      "BaseballBat"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftBaseBallBatBarbed",
+   "name": "Barbed baseball bat",
+   "results": [
+    {
+     "item": "Barbed baseball bat",
+     "class": "BarbedBaseballBat",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Barbed wire"
+     ],
+     "classes": [
+      "BarbedWire"
+     ],
+     "minQty": 12,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Baseball bat"
+     ],
+     "classes": [
+      "BaseballBat"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Neither item may have anything attached",
+   "notes": "Without gloves there is a 1 in 10 chance to cut a forearm and bleed."
+  },
+  {
+   "id": "CraftChristmasLightsHeadband",
+   "name": "Christmas lights headband",
+   "results": [
+    {
+     "item": "Christmas lights headband (same style as the headband)",
+     "class": "ChristmasHeadband",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Christmas headband (trees)",
+      "Christmas headband (antlers)",
+      "Christmas headband (gingerbread)"
+     ],
+     "classes": [
+      "ChristmasHeadband_Trees",
+      "ChristmasHeadband_Antlers",
+      "ChristmasHeadband_Gingerbread"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Christmas lights"
+     ],
+     "classes": [
+      "XmasLights"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The Christmas lights must have nothing attached",
+   "notes": null
+  },
+  {
+   "id": "CraftGhillieHood",
+   "name": "Ghillie hood (tan)",
+   "results": [
+    {
+     "item": "Ghillie hood (tan)",
+     "class": "GhillieHood_Tan",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Burlap strips"
+     ],
+     "classes": [
+      "BurlapStrip"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftGhillieHood",
+   "name": "Break down ghillie hood",
+   "results": [
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 1
+    },
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Ghillie hood"
+     ],
+     "classes": [
+      "GhillieHood_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftGhillieAttachment",
+   "name": "Ghillie wrap (tan)",
+   "results": [
+    {
+     "item": "Ghillie wrap (tan)",
+     "class": "GhillieAtt_Tan",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Burlap strips"
+     ],
+     "classes": [
+      "BurlapStrip"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftGhillieAttachment",
+   "name": "Break down ghillie wrap",
+   "results": [
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 1
+    },
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Ghillie wrap"
+     ],
+     "classes": [
+      "GhillieAtt_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftGhillieBushrag",
+   "name": "Ghillie shrug (tan)",
+   "results": [
+    {
+     "item": "Ghillie shrug (tan)",
+     "class": "GhillieBushrag_Tan",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Burlap strips"
+     ],
+     "classes": [
+      "BurlapStrip"
+     ],
+     "minQty": 4,
+     "use": "quantity",
+     "takes": 4
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftGhillieBushrag",
+   "name": "Break down ghillie shrug",
+   "results": [
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 2
+    },
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Ghillie shrug"
+     ],
+     "classes": [
+      "GhillieBushrag_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftGhillieTop",
+   "name": "Ghillie cloak (tan)",
+   "results": [
+    {
+     "item": "Ghillie cloak (tan)",
+     "class": "GhillieTop_Tan",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": 3,
+     "use": "quantity",
+     "takes": 3
+    },
+    {
+     "items": [
+      "Burlap strips"
+     ],
+     "classes": [
+      "BurlapStrip"
+     ],
+     "minQty": 6,
+     "use": "quantity",
+     "takes": 6
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftGhillieTop",
+   "name": "Break down ghillie cloak",
+   "results": [
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 3
+    },
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": 3
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Ghillie cloak"
+     ],
+     "classes": [
+      "GhillieTop_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftGhillieSuit",
+   "name": "Ghillie suit (tan)",
+   "results": [
+    {
+     "item": "Ghillie suit (tan)",
+     "class": "GhillieSuit_Tan",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": 4,
+     "use": "quantity",
+     "takes": 4
+    },
+    {
+     "items": [
+      "Burlap strips"
+     ],
+     "classes": [
+      "BurlapStrip"
+     ],
+     "minQty": 10,
+     "use": "quantity",
+     "takes": 10
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftGhillieSuit",
+   "name": "Break down ghillie suit",
+   "results": [
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 4
+    },
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": 5
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Ghillie suit"
+     ],
+     "classes": [
+      "GhillieSuit_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftStoneKnife",
+   "name": "Stone knife",
+   "results": [
+    {
+     "item": "Stone knife",
+     "class": "StoneKnife",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Small stone"
+     ],
+     "classes": [
+      "SmallStone"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Small stone",
+      "Large stone"
+     ],
+     "classes": [
+      "SmallStone",
+      "Stone"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftRagRope",
+   "name": "Rope (from rags)",
+   "results": [
+    {
+     "item": "Rope",
+     "class": "Rope",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rags"
+     ],
+     "classes": [
+      "Rag"
+     ],
+     "minQty": 6,
+     "use": "quantity",
+     "takes": 6
+    },
+    {
+     "items": [
+      "Rags"
+     ],
+     "classes": [
+      "Rag"
+     ],
+     "minQty": 6,
+     "use": "quantity",
+     "takes": 6
+    }
+   ],
+   "conditions": null,
+   "notes": "Combine two stacks of at least 6 rags each."
+  },
+  {
+   "id": "CraftSuppressor",
+   "name": "Plastic bottle suppressor",
+   "results": [
+    {
+     "item": "Plastic bottle suppressor",
+     "class": "ImprovisedSuppressor",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Water bottle"
+     ],
+     "classes": [
+      "WaterBottle"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Duct tape"
+     ],
+     "classes": [
+      "DuctTape"
+     ],
+     "minQty": 25,
+     "use": "quantity",
+     "takes": 25
+    }
+   ],
+   "conditions": "The bottle must be empty and not frozen",
+   "notes": null
+  },
+  {
+   "id": "CleanWeapon",
+   "name": "Clean weapon",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Weapon cleaning kit"
+     ],
+     "classes": [
+      "WeaponCleaningKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Firearm, magazine or suppressor"
+     ],
+     "classes": [
+      "DefaultWeapon",
+      "DefaultMagazine",
+      "ItemSuppressor"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with the kit",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "RepairWithTape",
+   "name": "Repair with duct tape",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Duct tape"
+     ],
+     "classes": [
+      "DuctTape"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Item to repair",
+      "Firearm",
+      "Magazine"
+     ],
+     "classes": [
+      "Inventory_Base",
+      "DefaultWeapon",
+      "DefaultMagazine"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with tape",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "CraftBoneKnife",
+   "name": "Bone knife",
+   "results": [
+    {
+     "item": "Bone knife",
+     "class": "BoneKnife",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Bones"
+     ],
+     "classes": [
+      "Bone"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Large stone",
+      "Small stone"
+     ],
+     "classes": [
+      "Stone",
+      "SmallStone"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftBoneHook",
+   "name": "Bone fishing hook",
+   "results": [
+    {
+     "item": "Bone fishing hook",
+     "class": "BoneHook",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Bones"
+     ],
+     "classes": [
+      "Bone"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftWoodenHook",
+   "name": "Wooden fishing hooks",
+   "results": [
+    {
+     "item": "Wooden fishing hook",
+     "class": "WoodenHook",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftBurlapStrips",
+   "name": "Burlap strips",
+   "results": [
+    {
+     "item": "Burlap strips",
+     "class": "BurlapStrip",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Burlap sack"
+     ],
+     "classes": [
+      "BurlapSack"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftLeatherCourierBag",
+   "name": "Fur courier bag",
+   "results": [
+    {
+     "item": "Fur courier bag",
+     "class": "FurCourierBag",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Boar pelt"
+     ],
+     "classes": [
+      "WildboarPelt"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftCourierBag",
+   "name": "Burlap courier bag",
+   "results": [
+    {
+     "item": "Burlap courier bag",
+     "class": "CourierBag",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Burlap sack"
+     ],
+     "classes": [
+      "BurlapSack"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftImprovisedBag",
+   "name": "Burlap backpack",
+   "results": [
+    {
+     "item": "Burlap backpack",
+     "class": "ImprovisedBag",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": 3,
+     "use": "quantity",
+     "takes": 3
+    },
+    {
+     "items": [
+      "Burlap courier bag"
+     ],
+     "classes": [
+      "CourierBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The courier bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "CraftImprovisedLeatherBag",
+   "name": "Fur backpack",
+   "results": [
+    {
+     "item": "Fur backpack",
+     "class": "FurImprovisedBag",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": 3,
+     "use": "quantity",
+     "takes": 3
+    },
+    {
+     "items": [
+      "Fur courier bag"
+     ],
+     "classes": [
+      "FurCourierBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The courier bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "CraftImprovisedExplosive",
+   "name": "Improvised explosive",
+   "results": [
+    {
+     "item": "Improvised explosive",
+     "class": "ImprovisedExplosive",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Protector case"
+     ],
+     "classes": [
+      "SmallProtectorCase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Electronic repair kit"
+     ],
+     "classes": [
+      "ElectronicRepairKit"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The protector case must be empty",
+   "notes": null
+  },
+  {
+   "id": "CraftLeatherSack",
+   "name": "Leather backpack",
+   "results": [
+    {
+     "item": "Leather backpack",
+     "class": "LeatherSack_Brown",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Tanned leather"
+     ],
+     "classes": [
+      "TannedLeather"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 10
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftLeatherBelt",
+   "name": "Lizard leather belt",
+   "results": [
+    {
+     "item": "Lizard leather belt",
+     "class": "LeatherBelt_Lizard",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Lizard pelt"
+     ],
+     "classes": [
+      "LizardPelt"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 25
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftLeatherSheath",
+   "name": "Lizard leather knife sheath",
+   "results": [
+    {
+     "item": "Lizard leather knife sheath",
+     "class": "LizardKnifeSheath",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Lizard pelt"
+     ],
+     "classes": [
+      "LizardPelt"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 25
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftLeatherHippack",
+   "name": "Lizard leather hip pack",
+   "results": [
+    {
+     "item": "Lizard leather hip pack",
+     "class": "LeatherHippack_Lizard",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Lizard pelt"
+     ],
+     "classes": [
+      "LizardPelt"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 25
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftFoxHeaddress",
+   "name": "Fox headdress",
+   "results": [
+    {
+     "item": "Fox headdress",
+     "class": "Headdress_Fox",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Fox pelt"
+     ],
+     "classes": [
+      "FoxPelt"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 10
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftLeatherCourierBag",
+   "name": "Break down fur courier bag",
+   "results": [
+    {
+     "item": "Boar pelt",
+     "class": "WildboarPelt",
+     "qty": 1
+    },
+    {
+     "item": "Rope",
+     "class": "Rope",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Fur courier bag"
+     ],
+     "classes": [
+      "FurCourierBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Bone knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "BoneKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "DeCraftCourierBag",
+   "name": "Break down burlap courier bag",
+   "results": [
+    {
+     "item": "Burlap sack",
+     "class": "BurlapSack",
+     "qty": 1
+    },
+    {
+     "item": "Rope",
+     "class": "Rope",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Burlap courier bag"
+     ],
+     "classes": [
+      "CourierBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "DeCraftImprovisedBag",
+   "name": "Break down burlap backpack",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 3
+    },
+    {
+     "item": "Burlap sack",
+     "class": "BurlapSack",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Burlap backpack"
+     ],
+     "classes": [
+      "ImprovisedBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "DeCraftImprovisedLeatherBag",
+   "name": "Break down fur backpack",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 1
+    },
+    {
+     "item": "Boar pelt",
+     "class": "WildboarPelt",
+     "qty": 3
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Fur backpack"
+     ],
+     "classes": [
+      "FurImprovisedBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "DeCraftLeatherSack",
+   "name": "Break down leather backpack",
+   "results": [
+    {
+     "item": "Tanned leather",
+     "class": "TannedLeather",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Leather backpack"
+     ],
+     "classes": [
+      "LeatherSack_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The backpack must be empty",
+   "notes": null
+  },
+  {
+   "id": "SplitLongWoodenStick",
+   "name": "Split long stick",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 3
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the stick",
+   "notes": "The script lists the jambiya as \"Jambiya;\" (a typo), so a jambiya does not work for this."
+  },
+  {
+   "id": "SplitBroom",
+   "name": "Split broom",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 3
+    },
+    {
+     "item": "Long stick",
+     "class": "LongWoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Broom",
+      "Birch broom"
+     ],
+     "classes": [
+      "Broom",
+      "Broom_Birch"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The broom must not be burning and must have nothing attached",
+   "notes": null
+  },
+  {
+   "id": "SplitFirewood",
+   "name": "Split firewood",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 3
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Firewood"
+     ],
+     "classes": [
+      "Firewood"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Hacksaw",
+      "Hand saw",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe"
+     ],
+     "classes": [
+      "Hacksaw",
+      "HandSaw",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftSplint",
+   "name": "Splint",
+   "results": [
+    {
+     "item": "Splint",
+     "class": "Splint",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Bandage",
+      "Rags",
+      "Duct tape",
+      "Shemag"
+     ],
+     "classes": [
+      "BandageDressing",
+      "Rag",
+      "DuctTape",
+      "Shemag_ColorBase"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    }
+   ],
+   "conditions": "A full bandage, at least 4 rags, at least half a roll of duct tape, or a shemag",
+   "notes": "Uses the whole bandage, 4 rags, half a roll of duct tape or the shemag."
+  },
+  {
+   "id": "DeCraftSplint",
+   "name": "Break down splint",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Splint"
+     ],
+     "classes": [
+      "Splint"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftHandDrillKit",
+   "name": "Hand drill kit",
+   "results": [
+    {
+     "item": "Hand drill kit",
+     "class": "HandDrillKit",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Oak bark"
+     ],
+     "classes": [
+      "Bark_Oak"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftHandDrillKitBirch",
+   "name": "Hand drill kit (birch)",
+   "results": [
+    {
+     "item": "Hand drill kit (birch)",
+     "class": "HandDrillKitBirch",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Light bark"
+     ],
+     "classes": [
+      "Bark_Birch"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftHandDrillKitPalm",
+   "name": "Hand drill kit (palm)",
+   "results": [
+    {
+     "item": "Hand drill kit (palm)",
+     "class": "HandDrillKitPalm",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Palm bark"
+     ],
+     "classes": [
+      "Bark_Palm"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftSpearBone",
+   "name": "Bone spear",
+   "results": [
+    {
+     "item": "Bone spear",
+     "class": "SpearBone",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Bone knife"
+     ],
+     "classes": [
+      "BoneKnife"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the stick",
+   "notes": null
+  },
+  {
+   "id": "CraftSpearStone",
+   "name": "Stone spear",
+   "results": [
+    {
+     "item": "Stone spear",
+     "class": "SpearStone",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Stone knife"
+     ],
+     "classes": [
+      "StoneKnife"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the stick",
+   "notes": null
+  },
+  {
+   "id": "DeCraftHandDrillKit",
+   "name": "Break down hand drill kit",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Hand drill kit"
+     ],
+     "classes": [
+      "HandDrillKit"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftHandDrillKitBirch",
+   "name": "Break down hand drill kit (birch)",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Hand drill kit (birch)"
+     ],
+     "classes": [
+      "HandDrillKitBirch"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftHandDrillKitPalm",
+   "name": "Break down hand drill kit (palm)",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Hand drill kit (palm)"
+     ],
+     "classes": [
+      "HandDrillKitPalm"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftSpear",
+   "name": "Break down improvised spear",
+   "results": [
+    {
+     "item": "Long stick",
+     "class": "LongWoodenStick",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Improvised spear"
+     ],
+     "classes": [
+      "Spear"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CutOutZucchiniSeeds",
+   "name": "Cut out zucchini seeds",
+   "results": [
+    {
+     "item": "Zucchini seeds",
+     "class": "ZucchiniSeeds",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Zucchini"
+     ],
+     "classes": [
+      "Zucchini"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "Up to 8 seeds: fewer when partly eaten, half when dried or rotten, none when cooked, burnt or under 30% left."
+  },
+  {
+   "id": "CutOutPepperSeeds",
+   "name": "Cut out pepper seeds",
+   "results": [
+    {
+     "item": "Pepper seeds",
+     "class": "PepperSeeds",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Green bell pepper"
+     ],
+     "classes": [
+      "GreenBellPepper"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "Up to 12 seeds: fewer when partly eaten, half when dried or rotten, none when cooked, burnt or under 30% left."
+  },
+  {
+   "id": "CutOutPumpkinSeeds",
+   "name": "Cut up pumpkin",
+   "results": [
+    {
+     "item": "Pumpkin seeds",
+     "class": "PumpkinSeeds",
+     "qty": null
+    },
+    {
+     "item": "Sliced pumpkin",
+     "class": "SlicedPumpkin",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Pumpkin"
+     ],
+     "classes": [
+      "Pumpkin"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Farming hoe",
+      "Shovel",
+      "Crowbar",
+      "Hammer",
+      "Mace",
+      "Wrench",
+      "Lug wrench",
+      "Screwdriver",
+      "Sledge hammer",
+      "Baseball bat",
+      "Pickaxe",
+      "Sword",
+      "Wood axe",
+      "Firefighter axe",
+      "Hatchet",
+      "Hand saw",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "FarmingHoe",
+      "Shovel",
+      "Crowbar",
+      "Hammer",
+      "Mace",
+      "Wrench",
+      "LugWrench",
+      "Screwdriver",
+      "SledgeHammer",
+      "BaseballBat",
+      "Pickaxe",
+      "Sword",
+      "WoodAxe",
+      "FirefighterAxe",
+      "Hatchet",
+      "HandSaw",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "Up to 12 seeds (fewer when partly eaten, dried, rotten or cooked); the slices keep the pumpkin's condition and amount."
+  },
+  {
+   "id": "CutOutTomatoSeeds",
+   "name": "Cut out tomato seeds",
+   "results": [
+    {
+     "item": "Tomato seeds",
+     "class": "TomatoSeeds",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Tomato"
+     ],
+     "classes": [
+      "Tomato"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "Up to 8 seeds: fewer when partly eaten, half when dried or rotten, none when cooked, burnt or under 30% left."
+  },
+  {
+   "id": "PeelPotato",
+   "name": "Peel seed potato",
+   "results": [
+    {
+     "item": "Potato",
+     "class": "Potato",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Potato seed"
+     ],
+     "classes": [
+      "PotatoSeed"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Sword",
+      "Screwdriver",
+      "Hatchet",
+      "Hand saw",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "Sword",
+      "Screwdriver",
+      "Hatchet",
+      "HandSaw",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "PrepareCarp",
+   "name": "Gut carp",
+   "results": [
+    {
+     "item": "Carp fillet",
+     "class": "CarpFilletMeat",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Carp"
+     ],
+     "classes": [
+      "Carp"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": null
+  },
+  {
+   "id": "PrepareCatfish",
+   "name": "Gut catfish",
+   "results": [
+    {
+     "item": "Catfish fillet",
+     "class": "CatfishFilletMeat",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Catfish"
+     ],
+     "classes": [
+      "Catfish"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": null
+  },
+  {
+   "id": "PrepareMackerel",
+   "name": "Gut mackerel",
+   "results": [
+    {
+     "item": "Mackerel fillet",
+     "class": "MackerelFilletMeat",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Mackerel"
+     ],
+     "classes": [
+      "Mackerel"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": null
+  },
+  {
+   "id": "PrepareWalleyePollock",
+   "name": "Gut walleye pollock",
+   "results": [
+    {
+     "item": "Walleye pollock fillet",
+     "class": "WalleyePollockFilletMeat",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Walleye pollock"
+     ],
+     "classes": [
+      "WalleyePollock"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": null
+  },
+  {
+   "id": "PrepareSteelheadTrout",
+   "name": "Gut steelhead trout",
+   "results": [
+    {
+     "item": "Steelhead trout fillet",
+     "class": "SteelheadTroutFilletMeat",
+     "qty": 2
+    },
+    {
+     "item": "Red caviar",
+     "class": "RedCaviar",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Steelhead trout"
+     ],
+     "classes": [
+      "SteelheadTrout"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": null
+  },
+  {
+   "id": "OpenCan",
+   "name": "Open can",
+   "results": [
+    {
+     "item": "Opened can",
+     "class": "<can>_Opened",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Baked beans",
+      "Peaches",
+      "Tactical bacon",
+      "Spaghetti",
+      "Sardines",
+      "Unknown food can"
+     ],
+     "classes": [
+      "BakedBeansCan",
+      "PeachesCan",
+      "TacticalBaconCan",
+      "SpaghettiCan",
+      "SardinesCan",
+      "UnknownFoodCan"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Can opener",
+      "Farming hoe",
+      "Shovel",
+      "Field shovel",
+      "Crowbar",
+      "Hammer",
+      "Mace",
+      "Wrench",
+      "Lug wrench",
+      "Screwdriver",
+      "Sledge hammer",
+      "Baseball bat",
+      "Nailed baseball bat",
+      "Barbed baseball bat",
+      "Christmas baseball bat",
+      "Pipe wrench",
+      "Pickaxe",
+      "Wood axe",
+      "Firefighter axe",
+      "Hatchet",
+      "Hand saw",
+      "Pliers",
+      "Improvised spear",
+      "Pitchfork",
+      "Bone knife",
+      "Meat tenderizer",
+      "Cleaver",
+      "Sword",
+      "Ice axe",
+      "Brick trowel",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "CanOpener",
+      "FarmingHoe",
+      "Shovel",
+      "FieldShovel",
+      "Crowbar",
+      "Hammer",
+      "Mace",
+      "Wrench",
+      "LugWrench",
+      "Screwdriver",
+      "SledgeHammer",
+      "BaseballBat",
+      "NailedBaseballBat",
+      "BarbedBaseballBat",
+      "XmasBaseballBat",
+      "PipeWrench",
+      "Pickaxe",
+      "WoodAxe",
+      "FirefighterAxe",
+      "Hatchet",
+      "HandSaw",
+      "Pliers",
+      "Spear",
+      "Pitchfork",
+      "BoneKnife",
+      "MeatTenderizer",
+      "Cleaver",
+      "Sword",
+      "Iceaxe",
+      "BrickTrowel",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The can must not be frozen",
+   "notes": "The can becomes the opened can; some food spills, how much depends on the tool."
+  },
+  {
+   "id": "CraftSalineBagIV",
+   "name": "Saline bag IV",
+   "results": [
+    {
+     "item": "Saline bag IV",
+     "class": "SalineBagIV",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "IV start kit"
+     ],
+     "classes": [
+      "StartKitIV"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Saline bag"
+     ],
+     "classes": [
+      "SalineBag"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "PurifyWater",
+   "name": "Purify water",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Water purification tablets"
+     ],
+     "classes": [
+      "PurificationTablets"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Cooking pot",
+      "Jerry can",
+      "Alcohol tincture",
+      "Canteen",
+      "Water bottle",
+      "Filtering bottle",
+      "Glass bottle",
+      "Wine bottle",
+      "Water pouch",
+      "Oil barrel",
+      "Cauldron",
+      "Ayran bottle"
+     ],
+     "classes": [
+      "Pot",
+      "CanisterGasoline",
+      "DisinfectantAlcohol",
+      "Canteen",
+      "WaterBottle",
+      "FilteringBottle",
+      "GlassBottle",
+      "WineBottle",
+      "WaterPouch_ColorBase",
+      "Barrel_ColorBase",
+      "Cauldron",
+      "AyranBottle"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The container must hold liquid that is not frozen",
+   "notes": "Kills every disease agent in the liquid except heavy metals."
+  },
+  {
+   "id": "ChelateWater",
+   "name": "Chelate water",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Chelating tablets"
+     ],
+     "classes": [
+      "ChelatingTablets"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Cooking pot",
+      "Jerry can",
+      "Alcohol tincture",
+      "Canteen",
+      "Water bottle",
+      "Filtering bottle",
+      "Glass bottle",
+      "Wine bottle",
+      "Water pouch",
+      "Oil barrel",
+      "Cauldron",
+      "Ayran bottle"
+     ],
+     "classes": [
+      "Pot",
+      "CanisterGasoline",
+      "DisinfectantAlcohol",
+      "Canteen",
+      "WaterBottle",
+      "FilteringBottle",
+      "GlassBottle",
+      "WineBottle",
+      "WaterPouch_ColorBase",
+      "Barrel_ColorBase",
+      "Cauldron",
+      "AyranBottle"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The container must hold liquid that is not frozen",
+   "notes": "Removes every agent from the liquid, heavy metals included."
+  },
+  {
+   "id": "CraftBloodBagIV",
+   "name": "IV blood bag",
+   "results": [
+    {
+     "item": "IV blood bag",
+     "class": "BloodBagIV",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "IV start kit"
+     ],
+     "classes": [
+      "StartKitIV"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Blood bag (full)"
+     ],
+     "classes": [
+      "BloodBagFull"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftCamoNetShelter",
+   "name": "Break down camo net shelter",
+   "results": [
+    {
+     "item": "Long stick",
+     "class": "LongWoodenStick",
+     "qty": 1
+    },
+    {
+     "item": "Camo net",
+     "class": "CamoNet",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Camo net shelter"
+     ],
+     "classes": [
+      "CamoNetShelter"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "FuelChainsaw",
+   "name": "Fuel chainsaw",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Chainsaw"
+     ],
+     "classes": [
+      "Chainsaw"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Cooking pot",
+      "Jerry can",
+      "Alcohol tincture",
+      "Canteen",
+      "Water bottle",
+      "Filtering bottle",
+      "Glass bottle",
+      "Wine bottle",
+      "Water pouch",
+      "Oil barrel",
+      "Ayran bottle"
+     ],
+     "classes": [
+      "Pot",
+      "CanisterGasoline",
+      "DisinfectantAlcohol",
+      "Canteen",
+      "WaterBottle",
+      "FilteringBottle",
+      "GlassBottle",
+      "WineBottle",
+      "WaterPouch_ColorBase",
+      "Barrel_ColorBase",
+      "AyranBottle"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    }
+   ],
+   "conditions": "The container must hold gasoline that is not frozen",
+   "notes": "Fills the chainsaw; the container loses the same amount."
+  },
+  {
+   "id": "CraftTripWire",
+   "name": "Tripwire",
+   "results": [
+    {
+     "item": "Tripwire",
+     "class": "TripwireTrap",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Metal wire"
+     ],
+     "classes": [
+      "MetalWire"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftRabbitSnare",
+   "name": "Snare trap",
+   "results": [
+    {
+     "item": "Snare trap",
+     "class": "RabbitSnareTrap",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Metal wire"
+     ],
+     "classes": [
+      "MetalWire"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftSnareTrap",
+   "name": "Break down snare trap",
+   "results": [
+    {
+     "item": "Metal wire",
+     "class": "MetalWire",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Snare trap"
+     ],
+     "classes": [
+      "RabbitSnareTrap"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the trap",
+   "notes": null
+  },
+  {
+   "id": "DeCraftTripWire",
+   "name": "Break down tripwire",
+   "results": [
+    {
+     "item": "Metal wire",
+     "class": "MetalWire",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Tripwire"
+     ],
+     "classes": [
+      "TripwireTrap"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the tripwire",
+   "notes": null
+  },
+  {
+   "id": "DisinfectItem",
+   "name": "Disinfect item",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Disinfectant spray",
+      "Alcohol tincture",
+      "Iodine tincture"
+     ],
+     "classes": [
+      "DisinfectantSpray",
+      "DisinfectantAlcohol",
+      "IodineTincture"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Item to disinfect"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The item must be one that can be disinfected, and there must be enough disinfectant",
+   "notes": "Cleans the item and removes its agents except brain disease, salmonella and cholera."
+  },
+  {
+   "id": "FillSyringe",
+   "name": "Fill syringe",
+   "results": [
+    {
+     "item": "Syringe",
+     "class": "ClearSyringe",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Injection vial"
+     ],
+     "classes": [
+      "InjectionVial"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Syringe"
+     ],
+     "classes": [
+      "Syringe"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "BloodTest",
+   "name": "Test blood type",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Blood test kit"
+     ],
+     "classes": [
+      "BloodTestKit"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Syringe of blood",
+      "Blood bag (full)",
+      "IV blood bag"
+     ],
+     "classes": [
+      "BloodSyringe",
+      "BloodBagFull",
+      "BloodBagIV"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "Shows the blood type of the syringe or bag."
+  },
+  {
+   "id": "SharpenMelee",
+   "name": "Sharpen blade",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Whetstone"
+     ],
+     "classes": [
+      "Whetstone"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Blade to sharpen"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Blade must be worn or worse and sharpenable with a whetstone",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "RepairEpoxy",
+   "name": "Repair with epoxy putty",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Epoxy putty"
+     ],
+     "classes": [
+      "EpoxyPutty"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Item to repair",
+      "Firearm"
+     ],
+     "classes": [
+      "Inventory_Base",
+      "DefaultWeapon"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with epoxy",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "RepairWithPliers",
+   "name": "Repair chainmail with pliers",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Pliers"
+     ],
+     "classes": [
+      "Pliers"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    },
+    {
+     "items": [
+      "Chainmail",
+      "Chainmail coif",
+      "Chainmail leggings",
+      "Witch hood"
+     ],
+     "classes": [
+      "Chainmail",
+      "Chainmail_Coif",
+      "Chainmail_Leggings",
+      "WitchHoodCoif_ColorBase"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The chainmail must be damaged or worse",
+   "notes": "The chainmail gains 20% of its health; the pliers lose 20%."
+  },
+  {
+   "id": "CraftArmbandRaincoat",
+   "name": "Armbands (from a raincoat)",
+   "results": [
+    {
+     "item": "Armband (colour of the raincoat)",
+     "class": "Armband_",
+     "qty": 5
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Raincoat"
+     ],
+     "classes": [
+      "Raincoat_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The raincoat must be empty",
+   "notes": null
+  },
+  {
+   "id": "RepairElectric",
+   "name": "Repair with electronic repair kit",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Electronic repair kit"
+     ],
+     "classes": [
+      "ElectronicRepairKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Electrical item to repair"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with the kit",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "ExtinguishTorch",
+   "name": "Put out torch",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Torch",
+      "Broom"
+     ],
+     "classes": [
+      "Torch",
+      "Broom"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Cooking pot",
+      "Jerry can",
+      "Alcohol tincture",
+      "Canteen",
+      "Water bottle",
+      "Filtering bottle",
+      "Glass bottle",
+      "Wine bottle",
+      "Water pouch",
+      "Oil barrel",
+      "Ayran bottle"
+     ],
+     "classes": [
+      "Pot",
+      "CanisterGasoline",
+      "DisinfectantAlcohol",
+      "Canteen",
+      "WaterBottle",
+      "FilteringBottle",
+      "GlassBottle",
+      "WineBottle",
+      "WaterPouch_ColorBase",
+      "Barrel_ColorBase",
+      "AyranBottle"
+     ],
+     "minQty": 100,
+     "use": "quantity",
+     "takes": 100
+    }
+   ],
+   "conditions": "Must be burning; the container must hold water, beer or blood, not frozen",
+   "notes": "Also soaks it."
+  },
+  {
+   "id": "AttachHolsterPouch",
+   "name": "Plate carrier: add holster",
+   "results": [
+    {
+     "item": "Plate carrier (with holster and pouches)",
+     "class": "PlateCarrierComplete",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Plate carrier with pouches"
+     ],
+     "classes": [
+      "PlateCarrierPouches"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Holster (plate carrier)"
+     ],
+     "classes": [
+      "CarrierHolsterSolo"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Both must be empty",
+   "notes": null
+  },
+  {
+   "id": "AttachPouchesHolster",
+   "name": "Plate carrier: add pouches",
+   "results": [
+    {
+     "item": "Plate carrier (with holster and pouches)",
+     "class": "PlateCarrierComplete",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Plate carrier with holster"
+     ],
+     "classes": [
+      "PlateCarrierHolster"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Pouches (plate carrier)"
+     ],
+     "classes": [
+      "CarrierPouches"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Both must be empty",
+   "notes": null
+  },
+  {
+   "id": "SawoffShotgunIzh43",
+   "name": "Saw off BK-43",
+   "results": [
+    {
+     "item": "Sawed-off BK-43",
+     "class": "SawedoffIzh43Shotgun",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "BK-43"
+     ],
+     "classes": [
+      "Izh43Shotgun"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The BK-43 becomes the sawed-off BK-43, keeping its condition and attachments."
+  },
+  {
+   "id": "SawoffMosin",
+   "name": "Saw off Mosin 91/30",
+   "results": [
+    {
+     "item": "Sawed-off Mosin 91/30",
+     "class": "SawedoffMosin9130",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Mosin 91/30"
+     ],
+     "classes": [
+      "Mosin9130"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The Mosin 91/30 becomes the sawed-off Mosin 91/30, keeping its condition and attachments."
+  },
+  {
+   "id": "SawOffIzh18",
+   "name": "Saw off BK-18",
+   "results": [
+    {
+     "item": "Sawed-off BK-18",
+     "class": "SawedoffIzh18",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "BK-18"
+     ],
+     "classes": [
+      "Izh18"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The BK-18 becomes the sawed-off BK-18, keeping its condition and attachments."
+  },
+  {
+   "id": "SawOffIzh18Shotgun",
+   "name": "Saw off BK-12",
+   "results": [
+    {
+     "item": "Sawed-off BK-12",
+     "class": "SawedoffIzh18Shotgun",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "BK-12"
+     ],
+     "classes": [
+      "Izh18Shotgun"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The BK-12 becomes the sawed-off BK-12, keeping its condition and attachments."
+  },
+  {
+   "id": "SawoffFAMAS",
+   "name": "Saw off LE-MAS",
+   "results": [
+    {
+     "item": "Sawed-off LE-MAS",
+     "class": "SawedOffFAMAS",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "LE-MAS"
+     ],
+     "classes": [
+      "FAMAS"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The LE-MAS becomes the sawed-off LE-MAS, keeping its condition and attachments."
+  },
+  {
+   "id": "SawOffMagnum",
+   "name": "Saw off revolver",
+   "results": [
+    {
+     "item": "Sawed-off Revolver",
+     "class": "SawedoffMagnum",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Revolver",
+      "Golden revolver"
+     ],
+     "classes": [
+      "Magnum",
+      "Magnum_Gold"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "A golden revolver becomes a sawed-off golden revolver."
+  },
+  {
+   "id": "SawOFFB95",
+   "name": "Saw off Blaze",
+   "results": [
+    {
+     "item": "Sawed-off Blaze",
+     "class": "SawedoffB95",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Blaze"
+     ],
+     "classes": [
+      "B95"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Hacksaw"
+     ],
+     "classes": [
+      "Hacksaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The Blaze becomes the sawed-off Blaze, keeping its condition and attachments."
+  },
+  {
+   "id": "CraftArmbandRag",
+   "name": "Armband (from rags)",
+   "results": [
+    {
+     "item": "Armband (white)",
+     "class": "Armband_White",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rags"
+     ],
+     "classes": [
+      "Rag"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Sewing kit"
+     ],
+     "classes": [
+      "SewingKit"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftRag",
+   "name": "Cut into rags",
+   "results": [
+    {
+     "item": "Rags",
+     "class": "Rag",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Sickle",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Kukri knife",
+      "Fange knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Farming hoe",
+      "Shovel",
+      "Field shovel",
+      "Bone knife",
+      "Ice axe",
+      "Brick trowel",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "KukriKnife",
+      "FangeKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "FarmingHoe",
+      "Shovel",
+      "FieldShovel",
+      "BoneKnife",
+      "Iceaxe",
+      "BrickTrowel",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    },
+    {
+     "items": [
+      "Clothing that tears into rags"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Must be an item that gives rags, in your inventory or on the ground (not attached to anything else)",
+   "notes": "How many rags depends on the item; anything inside it is dropped."
+  },
+  {
+   "id": "CraftFeathers",
+   "name": "Chicken feathers",
+   "results": [
+    {
+     "item": "Chicken feathers",
+     "class": "ChickenFeather",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Sickle",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Kukri knife",
+      "Fange knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Farming hoe",
+      "Shovel",
+      "Field shovel",
+      "Bone knife",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel"
+     ],
+     "classes": [
+      "Sickle",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "KukriKnife",
+      "FangeKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "FarmingHoe",
+      "Shovel",
+      "FieldShovel",
+      "BoneKnife",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    },
+    {
+     "items": [
+      "Item that gives feathers"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Must be an item that gives feathers, and it must be empty",
+   "notes": "How many feathers depends on the item."
+  },
+  {
+   "id": "CraftGutsRope",
+   "name": "Rope (from guts)",
+   "results": [
+    {
+     "item": "Rope",
+     "class": "Rope",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Guts"
+     ],
+     "classes": [
+      "Guts"
+     ],
+     "minQty": 250,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "Leaves you with bloody hands."
+  },
+  {
+   "id": "SplitStones",
+   "name": "Split large stone",
+   "results": [
+    {
+     "item": "Small stone",
+     "class": "SmallStone",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Large stone"
+     ],
+     "classes": [
+      "Stone"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Pickaxe",
+      "Sledge hammer",
+      "Hammer",
+      "Mace"
+     ],
+     "classes": [
+      "Pickaxe",
+      "SledgeHammer",
+      "Hammer",
+      "Mace"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "Small stone: 3 piles."
+  },
+  {
+   "id": "UpgradeTorchWithLard",
+   "name": "Coat torch with lard",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Lard"
+     ],
+     "classes": [
+      "Lard"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Torch",
+      "Long torch"
+     ],
+     "classes": [
+      "Torch",
+      "LongTorch"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The torch must have rags and accept an upgrade; ruined items work too",
+   "notes": "Up to doubles the burn time, using as much lard as that needs; the rags are ruined and locked on."
+  },
+  {
+   "id": "UpgradeTorchWithLiquidFuel",
+   "name": "Soak torch in fuel",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Bottle or container of fuel",
+      "Oil barrel"
+     ],
+     "classes": [
+      "Bottle_Base",
+      "Barrel_ColorBase"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Torch",
+      "Long torch"
+     ],
+     "classes": [
+      "Torch",
+      "LongTorch"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The container must hold gasoline or diesel; the torch must have rags and accept an upgrade; ruined items work too",
+   "notes": "Up to doubles the burn time, using as much fuel as that needs; the rags are ruined and locked on."
+  },
+  {
+   "id": "CraftFenceKit",
+   "name": "Fence kit",
+   "results": [
+    {
+     "item": "Fence kit",
+     "class": "FenceKit",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    }
+   ],
+   "conditions": "Neither item may be attached to anything",
+   "notes": null
+  },
+  {
+   "id": "CraftWatchtowerKit",
+   "name": "Watchtower kit",
+   "results": [
+    {
+     "item": "Watchtower kit",
+     "class": "WatchtowerKit",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": 4,
+     "use": "quantity",
+     "takes": 4
+    }
+   ],
+   "conditions": "Neither item may be attached to anything",
+   "notes": null
+  },
+  {
+   "id": "CraftWoodenPlank",
+   "name": "Planks (saw a log)",
+   "results": [
+    {
+     "item": "Plank",
+     "class": "WoodenPlank",
+     "qty": 4
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Wooden log"
+     ],
+     "classes": [
+      "WoodenLog"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Hacksaw",
+      "Hand saw"
+     ],
+     "classes": [
+      "Hacksaw",
+      "HandSaw"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "SawWoodenLog",
+   "name": "Firewood (cut up a log)",
+   "results": [
+    {
+     "item": "Firewood",
+     "class": "Firewood",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Hacksaw",
+      "Hand saw",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe"
+     ],
+     "classes": [
+      "Hacksaw",
+      "HandSaw",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    },
+    {
+     "items": [
+      "Wooden log"
+     ],
+     "classes": [
+      "WoodenLog"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "Firewood: 3 piles."
+  },
+  {
+   "id": "CraftWoodenCrate",
+   "name": "Wooden crate",
+   "results": [
+    {
+     "item": "Wooden crate",
+     "class": "WoodenCrate",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Plank"
+     ],
+     "classes": [
+      "WoodenPlank"
+     ],
+     "minQty": 8,
+     "use": "quantity",
+     "takes": 8
+    },
+    {
+     "items": [
+      "Nails"
+     ],
+     "classes": [
+      "Nail"
+     ],
+     "minQty": 16,
+     "use": "quantity",
+     "takes": 16
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftFishingRod",
+   "name": "Simple fishing rod",
+   "results": [
+    {
+     "item": "Simple fishing rod",
+     "class": "ImprovisedFishingRod",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the stick",
+   "notes": null
+  },
+  {
+   "id": "DeCraftFishingRod",
+   "name": "Break down simple fishing rod",
+   "results": [
+    {
+     "item": "Long stick",
+     "class": "LongWoodenStick",
+     "qty": 1
+    },
+    {
+     "item": "Rope",
+     "class": "Rope",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Simple fishing rod"
+     ],
+     "classes": [
+      "ImprovisedFishingRod"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the rod",
+   "notes": null
+  },
+  {
+   "id": "DeCraftWoodenCrate",
+   "name": "Break down wooden crate",
+   "results": [
+    {
+     "item": "Plank",
+     "class": "WoodenPlank",
+     "qty": null
+    },
+    {
+     "item": "Nails",
+     "class": "Nail",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Wooden crate"
+     ],
+     "classes": [
+      "WoodenCrate"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Crowbar",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe"
+     ],
+     "classes": [
+      "Crowbar",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The crate must be empty",
+   "notes": "Pristine: 6–8 planks and 12–16 nails; worn 5–7 and 9–13; damaged 4–6 and 6–10; badly damaged 3–5 and 3–7; ruined 1–2 and 1–4."
+  },
+  {
+   "id": "CraftTerritoryFlagKit",
+   "name": "Territory flag kit",
+   "results": [
+    {
+     "item": "Territory flag kit",
+     "class": "TerritoryFlagKit",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": 3,
+     "use": "quantity",
+     "takes": 3
+    }
+   ],
+   "conditions": "Neither item may be attached to anything",
+   "notes": null
+  },
+  {
+   "id": "CraftTannedLeather",
+   "name": "Tanned leather",
+   "results": [
+    {
+     "item": "Tanned leather",
+     "class": "TannedLeather",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Animal pelt"
+     ],
+     "classes": [
+      "Pelt_Base"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Garden lime"
+     ],
+     "classes": [
+      "GardenLime"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    }
+   ],
+   "conditions": "Enough garden lime for the leather it yields",
+   "notes": "Each leather uses 5% of a full garden lime; how much leather depends on the pelt and its condition."
+  },
+  {
+   "id": "CraftShelterKit",
+   "name": "Shelter kit",
+   "results": [
+    {
+     "item": "Shelter kit",
+     "class": "ShelterKit",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Short stick",
+      "Sharp stick"
+     ],
+     "classes": [
+      "WoodenStick",
+      "Ammo_SharpStick"
+     ],
+     "minQty": 4,
+     "use": "quantity",
+     "takes": 4
+    }
+   ],
+   "conditions": "Neither item may be attached to anything",
+   "notes": null
+  },
+  {
+   "id": "CraftTruck01DoubleWheel",
+   "name": "M3S Dual Wheel",
+   "results": [
+    {
+     "item": "M3S Dual Wheel",
+     "class": "Truck_01_WheelDouble",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "M3S Wheel"
+     ],
+     "classes": [
+      "Truck_01_Wheel"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "M3S Wheel"
+     ],
+     "classes": [
+      "Truck_01_Wheel"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Both wheels must be on the ground or in your inventory, not on the truck",
+   "notes": null
+  },
+  {
+   "id": "DeCraftTruck01DoubleWheel",
+   "name": "Break down M3S Dual Wheel",
+   "results": [
+    {
+     "item": "M3S Wheel",
+     "class": "Truck_01_Wheel",
+     "qty": 2
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "M3S Dual Wheel"
+     ],
+     "classes": [
+      "Truck_01_WheelDouble"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Crowbar",
+      "Lug wrench"
+     ],
+     "classes": [
+      "Crowbar",
+      "LugWrench"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The dual wheel must be on the ground, not on the truck",
+   "notes": null
+  },
+  {
+   "id": "CraftFishNetTrap",
+   "name": "Fish net trap",
+   "results": [
+    {
+     "item": "Fish net trap",
+     "class": "FishNetTrap",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Netting"
+     ],
+     "classes": [
+      "Netting"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1
+    },
+    {
+     "items": [
+      "Metal wire"
+     ],
+     "classes": [
+      "MetalWire"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftFishNetTrap",
+   "name": "Break down fish net trap",
+   "results": [
+    {
+     "item": "Metal wire",
+     "class": "MetalWire",
+     "qty": 1
+    },
+    {
+     "item": "Netting",
+     "class": "Netting",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Fish net trap"
+     ],
+     "classes": [
+      "FishNetTrap"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the trap",
+   "notes": null
+  },
+  {
+   "id": "PrepareChicken",
+   "name": "Skin chicken",
+   "results": [
+    {
+     "item": "Chicken steak",
+     "class": "ChickenBreastMeat",
+     "qty": null
+    },
+    {
+     "item": "Chicken feathers",
+     "class": "ChickenFeather",
+     "qty": null
+    },
+    {
+     "item": "Bones",
+     "class": "Bone",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Dead chicken"
+     ],
+     "classes": [
+      "DeadChicken_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "2–4 chicken steaks, 5–15 feathers and 2–5 bones. Leaves you with bloody hands."
+  },
+  {
+   "id": "PrepareRabbit",
+   "name": "Skin hare",
+   "results": [
+    {
+     "item": "Hare leg",
+     "class": "RabbitLegMeat",
+     "qty": null
+    },
+    {
+     "item": "Hare pelt",
+     "class": "RabbitPelt",
+     "qty": 1
+    },
+    {
+     "item": "Bones",
+     "class": "Bone",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Dead hare"
+     ],
+     "classes": [
+      "DeadRabbit"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "2–4 hare legs, a pelt and 2–5 bones. Leaves you with bloody hands."
+  },
+  {
+   "id": "PrepareFox",
+   "name": "Skin fox",
+   "results": [
+    {
+     "item": "Fox steak",
+     "class": "FoxSteakMeat",
+     "qty": null
+    },
+    {
+     "item": "Fox pelt",
+     "class": "FoxPelt",
+     "qty": 1
+    },
+    {
+     "item": "Bones",
+     "class": "Bone",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Dead fox"
+     ],
+     "classes": [
+      "DeadFox"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "2–4 fox steaks, a pelt and 2–5 bones. Leaves you with bloody hands."
+  },
+  {
+   "id": "PrepareLizard",
+   "name": "Skin lizard",
+   "results": [
+    {
+     "item": "Lizard meat",
+     "class": "LizardMeat",
+     "qty": 1
+    },
+    {
+     "item": "Lizard pelt",
+     "class": "LizardPelt",
+     "qty": 1
+    },
+    {
+     "item": "Bones",
+     "class": "Bone",
+     "qty": null
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Dead lizard"
+     ],
+     "classes": [
+      "DeadLizard"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Screwdriver",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Screwdriver",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "Must not be frozen",
+   "notes": "One piece of lizard meat, a pelt and 2–5 bones. Leaves you with bloody hands."
+  },
+  {
+   "id": "CraftSmallFishTrap",
+   "name": "Small fish trap",
+   "results": [
+    {
+     "item": "Small fish trap",
+     "class": "SmallFishTrap",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Water bottle"
+     ],
+     "classes": [
+      "WaterBottle"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Ice axe",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Iceaxe",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The bottle must be empty and not frozen",
+   "notes": null
+  },
+  {
+   "id": "CraftMetalWire",
+   "name": "Metal wire (from barbed wire)",
+   "results": [
+    {
+     "item": "Metal wire",
+     "class": "MetalWire",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Barbed wire"
+     ],
+     "classes": [
+      "BarbedWire"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Pliers"
+     ],
+     "classes": [
+      "Pliers"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The barbed wire must not be attached to anything",
+   "notes": null
+  },
+  {
+   "id": "CraftGasMask_Filter_Improvised",
+   "name": "Improvised gas mask filter",
+   "results": [
+    {
+     "item": "Improvised gas mask filter",
+     "class": "GasMask_Filter_Improvised",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Water bottle"
+     ],
+     "classes": [
+      "WaterBottle"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "NIOSH face mask"
+     ],
+     "classes": [
+      "NioshFaceMask"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The bottle must be empty and not frozen",
+   "notes": "The filter starts empty: fill it with charcoal tablets."
+  },
+  {
+   "id": "FillGasMask_Filter",
+   "name": "Fill gas mask filter",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Charcoal tablets"
+     ],
+     "classes": [
+      "CharcoalTablets"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Gas mask filter",
+      "Improvised gas mask filter"
+     ],
+     "classes": [
+      "GasMask_Filter",
+      "GasMask_Filter_Improvised"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The filter must not be full or fitted to a GP-5 or airborne mask",
+   "notes": "Each charcoal tablet fills 10 units of the filter; only what fits is used."
+  },
+  {
+   "id": "CraftCookingStand",
+   "name": "Cooking stand",
+   "results": [
+    {
+     "item": "Cooking stand",
+     "class": "CookingStand",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Short stick"
+     ],
+     "classes": [
+      "WoodenStick"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Long stick",
+      "Sharpened stick"
+     ],
+     "classes": [
+      "LongWoodenStick",
+      "SharpWoodenStick"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "Nothing may be attached to the long stick; ruined items work too",
+   "notes": null
+  },
+  {
+   "id": "DeCraftCookingStand",
+   "name": "Break down cooking stand",
+   "results": [
+    {
+     "item": "Short stick",
+     "class": "WoodenStick",
+     "qty": 5
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Cooking stand"
+     ],
+     "classes": [
+      "CookingStand"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "CraftArmbandFlag",
+   "name": "Armbands (from a flag)",
+   "results": [
+    {
+     "item": "Armband (colour of the flag)",
+     "class": "Armband_",
+     "qty": 3
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Flag"
+     ],
+     "classes": [
+      "Flag_Base"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The flag must not be on a flagpole",
+   "notes": null
+  },
+  {
+   "id": "DeCraftDetonator",
+   "name": "Break down remote detonator",
+   "results": [
+    {
+     "item": "9V battery",
+     "class": "Battery9V",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Remote detonator"
+     ],
+     "classes": [
+      "RemoteDetonator"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Screwdriver"
+     ],
+     "classes": [
+      "Screwdriver"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": null,
+   "notes": "The 9V battery comes out 25–100% charged."
+  },
+  {
+   "id": "RepairPlanks",
+   "name": "Repair crate or chest with planks",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Plank"
+     ],
+     "classes": [
+      "WoodenPlank"
+     ],
+     "minQty": 2,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Wooden crate",
+      "Sea chest"
+     ],
+     "classes": [
+      "WoodenCrate",
+      "SeaChest"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "The crate or chest must be damaged or worse and have nothing attached",
+   "notes": null
+  },
+  {
+   "id": "CraftWitchHoodCoif",
+   "name": "Armoured witch hood (colour of the witch hood)",
+   "results": [
+    {
+     "item": "Armoured witch hood (colour of the witch hood)",
+     "class": "WitchHoodCoif_",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Witch hood"
+     ],
+     "classes": [
+      "WitchHood_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Chainmail coif"
+     ],
+     "classes": [
+      "Chainmail_Coif"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The witch hood must be empty",
+   "notes": null
+  },
+  {
+   "id": "CraftDrysackBag",
+   "name": "Drysack bag (colour of the waterproof bag)",
+   "results": [
+    {
+     "item": "Drysack bag (colour of the waterproof bag)",
+     "class": "DrysackBag_",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Waterproof bag"
+     ],
+     "classes": [
+      "WaterproofBag_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Rope"
+     ],
+     "classes": [
+      "Rope"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    }
+   ],
+   "conditions": "The waterproof bag must be empty",
+   "notes": null
+  },
+  {
+   "id": "OpenScientificBriefcase",
+   "name": "Unlock scientific briefcase",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Scientific briefcase"
+     ],
+     "classes": [
+      "ScientificBriefcase"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Scientific briefcase key"
+     ],
+     "classes": [
+      "ScientificBriefcaseKeys"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The briefcase must be locked",
+   "notes": null
+  },
+  {
+   "id": "CloseScientificBriefcase",
+   "name": "Lock scientific briefcase",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Scientific briefcase"
+     ],
+     "classes": [
+      "ScientificBriefcase"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Scientific briefcase key"
+     ],
+     "classes": [
+      "ScientificBriefcaseKeys"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The briefcase must be open",
+   "notes": null
+  },
+  {
+   "id": "OpenGunCase",
+   "name": "Unlock gun case",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Gun case"
+     ],
+     "classes": [
+      "GunCase_ColorBase"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Gun case key"
+     ],
+     "classes": [
+      "GunCaseKeys_Colorbase"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The key must match the case, and the case must be locked",
+   "notes": null
+  },
+  {
+   "id": "CloseGunCase",
+   "name": "Lock gun case",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Gun case"
+     ],
+     "classes": [
+      "GunCase_ColorBase"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    },
+    {
+     "items": [
+      "Gun case key"
+     ],
+     "classes": [
+      "GunCaseKeys_Colorbase"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The key must match the case, and the case must be open",
+   "notes": null
+  },
+  {
+   "id": "RepairWithTireKit",
+   "name": "Repair with tyre repair kit",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Tyre repair kit"
+     ],
+     "classes": [
+      "TireRepairKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Wheel to repair"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with the kit",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "RepairWithSewingKit",
+   "name": "Repair with sewing kit",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Sewing kit"
+     ],
+     "classes": [
+      "SewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Clothing to repair"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with the kit",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "RepairWithLeatherSewingKit",
+   "name": "Repair with leather sewing kit",
+   "results": [],
+   "ingredients": [
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": null
+    },
+    {
+     "items": [
+      "Leather item to repair"
+     ],
+     "classes": [
+      "Inventory_Base"
+     ],
+     "minQty": null,
+     "use": "kept",
+     "takes": null
+    }
+   ],
+   "conditions": "Item must be worn or worse and repairable with the kit",
+   "notes": "Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit."
+  },
+  {
+   "id": "CraftMortarMix",
+   "name": "Mix mortar",
+   "results": [
+    {
+     "item": "Mortar mix (opened)",
+     "class": "MortarMix_Opened",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Mortar mix"
+     ],
+     "classes": [
+      "MortarMix"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Cooking pot",
+      "Jerry can",
+      "Canteen",
+      "Water bottle",
+      "Filtering bottle",
+      "Glass bottle",
+      "Wine bottle",
+      "Water pouch",
+      "Oil barrel",
+      "Ayran bottle"
+     ],
+     "classes": [
+      "Pot",
+      "CanisterGasoline",
+      "Canteen",
+      "WaterBottle",
+      "FilteringBottle",
+      "GlassBottle",
+      "WineBottle",
+      "WaterPouch_ColorBase",
+      "Barrel_ColorBase",
+      "AyranBottle"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 1000
+    }
+   ],
+   "conditions": "The container must hold at least 1 litre of water, not frozen",
+   "notes": null
+  },
+  {
+   "id": "CraftWaterskin",
+   "name": "Waterskin",
+   "results": [
+    {
+     "item": "Waterskin",
+     "class": "Waterskin_Natural",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Tanned leather"
+     ],
+     "classes": [
+      "TannedLeather"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 2
+    },
+    {
+     "items": [
+      "Leather sewing kit"
+     ],
+     "classes": [
+      "LeatherSewingKit"
+     ],
+     "minQty": null,
+     "use": "quantity",
+     "takes": 10
+    }
+   ],
+   "conditions": null,
+   "notes": null
+  },
+  {
+   "id": "DeCraftWaterskin",
+   "name": "Break down waterskin",
+   "results": [
+    {
+     "item": "Tanned leather",
+     "class": "TannedLeather",
+     "qty": 1
+    }
+   ],
+   "ingredients": [
+    {
+     "items": [
+      "Waterskin"
+     ],
+     "classes": [
+      "Waterskin_ColorBase"
+     ],
+     "minQty": null,
+     "use": "consumed",
+     "takes": null
+    },
+    {
+     "items": [
+      "Sickle",
+      "Kukri knife",
+      "Fange knife",
+      "Hacksaw",
+      "Hand saw",
+      "Kitchen knife",
+      "Steak knife",
+      "Hay hook",
+      "Stone knife",
+      "Cleaver",
+      "Combat knife",
+      "Jambiya",
+      "Hunting knife",
+      "Machete",
+      "Crude machete",
+      "Oriental machete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "Wood axe",
+      "Hatchet",
+      "Firefighter axe",
+      "Sword",
+      "KA bayonet",
+      "M9a1 bayonet",
+      "Mosin bayonet",
+      "Sk 59/66 bayonet",
+      "Bone knife",
+      "Scimitar",
+      "Doner knife",
+      "Brick trowel",
+      "Akinaka"
+     ],
+     "classes": [
+      "Sickle",
+      "KukriKnife",
+      "FangeKnife",
+      "Hacksaw",
+      "HandSaw",
+      "KitchenKnife",
+      "SteakKnife",
+      "HayHook",
+      "StoneKnife",
+      "Cleaver",
+      "CombatKnife",
+      "Jambiya",
+      "HuntingKnife",
+      "Machete",
+      "CrudeMachete",
+      "OrientalMachete",
+      "Screwdriver",
+      "Crowbar",
+      "Pickaxe",
+      "WoodAxe",
+      "Hatchet",
+      "FirefighterAxe",
+      "Sword",
+      "AK_Bayonet",
+      "M9A1_Bayonet",
+      "Mosin_Bayonet",
+      "SKS_Bayonet",
+      "BoneKnife",
+      "Scimitar",
+      "DonerKnife",
+      "BrickTrowel",
+      "Akinaka"
+     ],
+     "minQty": null,
+     "use": "damaged",
+     "takes": null
+    }
+   ],
+   "conditions": "The waterskin must be empty",
+   "notes": null
+  }
+ ],
+ "vehicles": [
+  {
+   "class": "CivilianSedan",
+   "name": "Olga 24",
+   "kind": "car",
+   "start": [
+    "Car Battery",
+    "Spark Plug",
+    "Radiator",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "Olga 24 Wheel",
+    "count": 4,
+    "spare": true
+   },
+   "battery": "Car Battery",
+   "plug": "Spark Plug",
+   "radiator": true,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "Olga 24 Front Left Door",
+    "Olga 24 Front Right Door",
+    "Olga 24 Rear Left Door",
+    "Olga 24 Rear Right Door",
+    "Olga 24 Hood",
+    "Olga 24 Trunk Lid"
+   ],
+   "fuelL": 55,
+   "coolantL": 5.85,
+   "notes": "The car battery must hold enough charge to crank the engine. Fill the radiator with water: below half coolant the engine takes damage while running, and taking the radiator out drains it. 2 headlight bulbs."
+  },
+  {
+   "class": "OffroadHatchback",
+   "name": "Ada 4x4",
+   "kind": "car",
+   "start": [
+    "Car Battery",
+    "Spark Plug",
+    "Radiator",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "Ada 4x4 Wheel",
+    "count": 4,
+    "spare": true
+   },
+   "battery": "Car Battery",
+   "plug": "Spark Plug",
+   "radiator": true,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "Ada 4x4 Left Door",
+    "Ada 4x4 Right Door",
+    "Ada 4x4 Hood",
+    "Ada 4x4 Rear Door"
+   ],
+   "fuelL": 42,
+   "coolantL": 5.85,
+   "notes": "The car battery must hold enough charge to crank the engine. Fill the radiator with water: below half coolant the engine takes damage while running, and taking the radiator out drains it. 2 headlight bulbs."
+  },
+  {
+   "class": "Hatchback_02",
+   "name": "Gunter 2",
+   "kind": "car",
+   "start": [
+    "Car Battery",
+    "Spark Plug",
+    "Radiator",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "Gunter 2 Wheel",
+    "count": 4,
+    "spare": true
+   },
+   "battery": "Car Battery",
+   "plug": "Spark Plug",
+   "radiator": true,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "Gunter 2 Front Left Door",
+    "Gunter 2 Rear Left Door",
+    "Gunter 2 Front Right Door",
+    "Gunter 2 Rear Right Door",
+    "Gunter 2 Hood",
+    "Gunter 2 Trunk Door"
+   ],
+   "fuelL": null,
+   "coolantL": 5.85,
+   "notes": "The car battery must hold enough charge to crank the engine. Fill the radiator with water: below half coolant the engine takes damage while running, and taking the radiator out drains it. 2 headlight bulbs."
+  },
+  {
+   "class": "Sedan_02",
+   "name": "Sarka 120",
+   "kind": "car",
+   "start": [
+    "Car Battery",
+    "Spark Plug",
+    "Radiator",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "Sarka 120 Wheel",
+    "count": 4,
+    "spare": true
+   },
+   "battery": "Car Battery",
+   "plug": "Spark Plug",
+   "radiator": true,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "Sarka 120 Front Left Door",
+    "Sarka 120 Rear Left Door",
+    "Sarka 120 Front Right Door",
+    "Sarka 120 Rear Right Door",
+    "Sarka 120 Hood",
+    "Sarka 120 Trunk Door"
+   ],
+   "fuelL": 38,
+   "coolantL": 5.85,
+   "notes": "The car battery must hold enough charge to crank the engine. Fill the radiator with water: below half coolant the engine takes damage while running, and taking the radiator out drains it. 2 headlight bulbs."
+  },
+  {
+   "class": "Offroad_02",
+   "name": "M1025 Humvee",
+   "kind": "car",
+   "start": [
+    "Car Battery",
+    "Glow Plug",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "M1025 Wheel",
+    "count": 4,
+    "spare": true
+   },
+   "battery": "Car Battery",
+   "plug": "Glow Plug",
+   "radiator": false,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "M1025 Front Left Door",
+    "M1025 Rear Left Door",
+    "M1025 Front Right Door",
+    "M1025 Rear Right Door",
+    "M1025 Hood",
+    "M1025 Trunk Door"
+   ],
+   "fuelL": 115,
+   "coolantL": null,
+   "notes": "The car battery must hold enough charge to crank the engine. Glow plug instead of a spark plug; no radiator to fill. 2 headlight bulbs. Automatic gearbox (wiki)."
+  },
+  {
+   "class": "Truck_01_Covered",
+   "name": "M3S",
+   "kind": "truck",
+   "start": [
+    "Truck Battery",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "2× M3S Wheel + 4× M3S Dual Wheel",
+    "count": 6,
+    "spare": true
+   },
+   "battery": "Truck Battery",
+   "plug": null,
+   "radiator": false,
+   "lights": "Headlight Bulb",
+   "doors": [
+    "M3S Left Door",
+    "M3S Right Door",
+    "M3S Hood"
+   ],
+   "fuelL": 120,
+   "coolantL": null,
+   "notes": "The truck battery must hold enough charge to crank the engine. No spark plug or radiator needed. Two spare M3S wheels fit behind the cab (open the side plate first). 2 headlight bulbs. The wiki says it drives on 2 of the 4 dual wheels, 4 recommended."
+  },
+  {
+   "class": "Motorbike_01",
+   "name": "Enduro Bike",
+   "kind": "bike",
+   "start": [
+    "Spark Plug",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "1× Motorbike 01 Wheel 1 + 1× Motorbike 01 Wheel 2",
+    "count": 2,
+    "spare": false
+   },
+   "battery": null,
+   "plug": "Spark Plug",
+   "radiator": false,
+   "lights": "Headlight Bulb",
+   "doors": [],
+   "fuelL": null,
+   "coolantL": null,
+   "notes": "No battery needed. 1 headlight bulb. Name from the wiki's Enduro Bike page (same colours); not confirmed."
+  },
+  {
+   "class": "Motorbike_02",
+   "name": "Motorbike 02",
+   "kind": "bike",
+   "start": [
+    "Spark Plug",
+    "fuel"
+   ],
+   "wheels": {
+    "item": "1× Motorbike 02 Wheel 1 + 1× Motorbike 02 Wheel 2",
+    "count": 2,
+    "spare": false
+   },
+   "battery": null,
+   "plug": "Spark Plug",
+   "radiator": false,
+   "lights": "Headlight Bulb",
+   "doors": [],
+   "fuelL": null,
+   "coolantL": null,
+   "notes": "No battery needed. 1 headlight bulb. No wiki page: the in-game name is not confirmed. Takes front, left and right shields."
+  },
+  {
+   "class": "Boat_01",
+   "name": "Rubber Boat",
+   "kind": "boat",
+   "start": [
+    "Spark Plug",
+    "fuel"
+   ],
+   "wheels": null,
+   "battery": null,
+   "plug": "Spark Plug",
+   "radiator": false,
+   "lights": null,
+   "doors": [],
+   "fuelL": 40,
+   "coolantL": null,
+   "notes": "The spark plug sits in the outboard motor and cannot be taken out while the engine runs. No battery needed."
+  }
+ ]
+}

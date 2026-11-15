@@ -1,0 +1,914 @@
+{
+ "source": "Bohemia Interactive DayZ-Script-Diff (scripts build 1.30.164289, rev 127855): base building, locks, raiding actions, flag timing, kit recipes. DayZ Wiki (dayz.fandom.com): material counts per stage, which the scripts do not hold (they sit in the game config). Bohemia DayZ Central Economy (types.xml, globals.xml, Oct 2026): lifetimes and flag refresh defaults.",
+ "licence": "Scripts: DayZ Public License (DPL). Wiki: CC BY-NC-SA; read 2026-11-15. Central Economy files: ADPL-SA. Non-commercial use only.",
+ "readAt": "2026-11-15",
+ "builds": [
+  {
+   "id": "fence",
+   "name": "Fence",
+   "kit": {
+    "name": "Fence Kit",
+    "craft": "Rope + 2 Short Sticks (sharpened sticks also work); no tool needed"
+   },
+   "placement": "Craft the kit, take it in hands and place the hologram on fairly flat open ground. The side with the platform and stairs is the inside; barbed wire and camo net go on the outside. Fence, watchtower and flag kits cannot be placed in underground areas by default.",
+   "stages": [
+    {
+     "name": "Base",
+     "needs": [
+      [
+       "Wooden Log",
+       2
+      ]
+     ],
+     "tools": [
+      "Shovel",
+      "Field Shovel",
+      "Pickaxe",
+      "Farming Hoe"
+     ],
+     "notes": "Attach the logs to the placed kit first. The kit drops back on the ground once the base is built, so it can be reused."
+    },
+    {
+     "name": "Lower frame",
+     "needs": [
+      [
+       "Wooden Plank",
+       4
+      ],
+      [
+       "Nails",
+       8
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet",
+      "Meat Tenderizer"
+     ],
+     "notes": "Needs the base."
+    },
+    {
+     "name": "Upper frame",
+     "needs": [
+      [
+       "Wooden Plank",
+       4
+      ],
+      [
+       "Nails",
+       8
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet",
+      "Meat Tenderizer"
+     ],
+     "notes": "Needs the base."
+    },
+    {
+     "name": "Wood panel (lower or upper)",
+     "needs": [
+      [
+       "Wooden Plank",
+       5
+      ],
+      [
+       "Nails",
+       10
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per panel; needs that frame. Each panel is wood or metal, and the two can differ."
+    },
+    {
+     "name": "Metal panel (lower or upper)",
+     "needs": [
+      [
+       "Sheet Metal",
+       3
+      ],
+      [
+       "Nails",
+       12
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per panel; needs that frame."
+    },
+    {
+     "name": "Platform (optional)",
+     "needs": [
+      [
+       "Wooden Plank",
+       5
+      ],
+      [
+       "Nails",
+       15
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Needs only the base. A fence with a platform cannot become a gate, and the other way round."
+    },
+    {
+     "name": "Stairs (optional, left and/or right)",
+     "needs": [
+      [
+       "Wooden Plank",
+       4
+      ],
+      [
+       "Nails",
+       8
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per set; needs the platform."
+    },
+    {
+     "name": "Gate (optional)",
+     "needs": [
+      [
+       "Metal Wire",
+       1
+      ]
+     ],
+     "tools": [
+      "Pliers"
+     ],
+     "notes": "See the Gate entry."
+    },
+    {
+     "name": "Barbed wire (optional, up to 2)",
+     "needs": [
+      [
+       "Barbed Wire",
+       1
+      ]
+     ],
+     "tools": [
+      "Pliers"
+     ],
+     "notes": "Attach the reel, then mount it with pliers. It cuts anyone who touches it."
+    },
+    {
+     "name": "Camo net (optional)",
+     "needs": [
+      [
+       "Camo Net",
+       1
+      ]
+     ],
+     "tools": [],
+     "notes": "Just attach it."
+    }
+   ],
+   "notes": "Minimum full wooden fence: 2 logs, 18 planks, 36 nails (wiki). One log saws into 4 planks with a hand saw or hacksaw. Each build step takes about 7.5 seconds with a tool (scripts). Counts are from the wiki, not the scripts."
+  },
+  {
+   "id": "gate",
+   "name": "Gate (on a fence)",
+   "kit": {
+    "name": "Fence Kit",
+    "craft": "Rope + 2 Short Sticks"
+   },
+   "placement": "Build a fence base and at least one frame, then turn it into a gate. Do not build a platform on it.",
+   "stages": [
+    {
+     "name": "Fence base",
+     "needs": [
+      [
+       "Wooden Log",
+       2
+      ]
+     ],
+     "tools": [
+      "Shovel",
+      "Field Shovel",
+      "Pickaxe",
+      "Farming Hoe"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Frames",
+     "needs": [
+      [
+       "Wooden Plank",
+       8
+      ],
+      [
+       "Nails",
+       16
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "4 planks + 8 nails per frame (wiki). The scripts allow the gate once either frame is up, but a lock fits only when the gate is fully built."
+    },
+    {
+     "name": "Gate hinges",
+     "needs": [
+      [
+       "Metal Wire",
+       1
+      ]
+     ],
+     "tools": [
+      "Pliers"
+     ],
+     "notes": "Turns the fence into an opening gate."
+    },
+    {
+     "name": "Panels",
+     "needs": [
+      [
+       "Wooden Plank",
+       10
+      ],
+      [
+       "Nails",
+       20
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Two wood panels (5 planks + 10 nails each), or 3 sheet metal + 12 nails per metal panel."
+    },
+    {
+     "name": "Lock (optional)",
+     "needs": [
+      [
+       "Combination Lock or Code Lock",
+       1
+      ]
+     ],
+     "tools": [],
+     "notes": "Only on a fully built, closed gate, and only one lock at a time (scripts)."
+    }
+   ],
+   "notes": "A gate cannot be dismantled while it is open (scripts). If the gate or a wall frame is dismantled or destroyed, any lock on it drops to the ground unlocked (scripts)."
+  },
+  {
+   "id": "watchtower",
+   "name": "Watchtower",
+   "kit": {
+    "name": "Watchtower Kit",
+    "craft": "Rope + 4 Short Sticks (sharpened sticks also work); no tool needed"
+   },
+   "placement": "Place the kit on open, fairly flat ground away from roofs; the scripts check for buildings overhead when you build each level base and the top roof. Up to 3 levels, each with 3 walls.",
+   "stages": [
+    {
+     "name": "Level 1 base",
+     "needs": [
+      [
+       "Wooden Log",
+       4
+      ]
+     ],
+     "tools": [
+      "Shovel",
+      "Field Shovel",
+      "Pickaxe",
+      "Farming Hoe"
+     ],
+     "notes": "The kit drops back once this is built."
+    },
+    {
+     "name": "Wall frame (any level)",
+     "needs": [
+      [
+       "Wooden Plank",
+       4
+      ],
+      [
+       "Nails",
+       8
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per frame. The wiki page also shows 2 planks + 5 nails in a picture box; the text says 4 + 8."
+    },
+    {
+     "name": "Wood panel (any level)",
+     "needs": [
+      [
+       "Wooden Plank",
+       5
+      ],
+      [
+       "Nails",
+       5
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per panel, wiki text. Web guides seen in a search say 10 nails, as on the fence; check the in-game prompt."
+    },
+    {
+     "name": "Metal panel (any level)",
+     "needs": [
+      [
+       "Sheet Metal",
+       3
+      ],
+      [
+       "Nails",
+       5
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Per panel, wiki text. The fence uses 12 nails for the same panel; check the in-game prompt."
+    },
+    {
+     "name": "Level 1 stairs",
+     "needs": [
+      [
+       "Wooden Plank",
+       6
+      ],
+      [
+       "Nails",
+       18
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Not needed for the next level, but you cannot climb up without them."
+    },
+    {
+     "name": "Level 1 roof (floor of level 2)",
+     "needs": [
+      [
+       "Wooden Plank",
+       10
+      ],
+      [
+       "Nails",
+       20
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Level 2 base",
+     "needs": [
+      [
+       "Wooden Log",
+       4
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Needs the level 1 roof. Attach the logs while standing on level 2."
+    },
+    {
+     "name": "Level 2 stairs",
+     "needs": [
+      [
+       "Wooden Plank",
+       6
+      ],
+      [
+       "Nails",
+       18
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Level 2 roof (floor of level 3)",
+     "needs": [
+      [
+       "Wooden Plank",
+       10
+      ],
+      [
+       "Nails",
+       20
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Level 3 base",
+     "needs": [
+      [
+       "Wooden Log",
+       4
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Needs the level 2 roof."
+    },
+    {
+     "name": "Level 3 roof (top)",
+     "needs": [
+      [
+       "Sheet Metal",
+       6
+      ],
+      [
+       "Wooden Plank",
+       6
+      ],
+      [
+       "Nails",
+       20
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "Wiki (noted as 1.02); web guides seen in a search say 5 planks; check the in-game prompt."
+    },
+    {
+     "name": "Barbed wire (level 1 walls, up to 2)",
+     "needs": [
+      [
+       "Barbed Wire",
+       1
+      ]
+     ],
+     "tools": [
+      "Pliers"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Camo net (one per wall)",
+     "needs": [
+      [
+       "Camo Net",
+       1
+      ]
+     ],
+     "tools": [],
+     "notes": null
+    }
+   ],
+   "notes": "Materials for a level can only be attached while you stand on that level (scripts). The wiki lists Hammer or Hatchet for every part except the level 1 base; the tool for the upper level bases is not stated clearly. The watchtower has no gate or lock. Counts are from the wiki, whose watchtower page is inconsistent in places."
+  },
+  {
+   "id": "flagpole",
+   "name": "Flag Pole (territory flag)",
+   "kit": {
+    "name": "Flag Pole Kit",
+    "craft": "Rope + 3 Short Sticks (sharpened sticks also work)"
+   },
+   "placement": "Place it inside or next to the base; it protects storage within 60 m once a flag is raised.",
+   "stages": [
+    {
+     "name": "Base",
+     "needs": [
+      [
+       "Wooden Log",
+       1
+      ]
+     ],
+     "tools": [
+      "Sledgehammer"
+     ],
+     "notes": "The sledgehammer is also needed to dismantle the base. The kit drops back once built."
+    },
+    {
+     "name": "Support",
+     "needs": [
+      [
+       "Large Stone",
+       32
+      ],
+      [
+       "Wooden Log",
+       6
+      ]
+     ],
+     "tools": [
+      "Shovel",
+      "Pickaxe"
+     ],
+     "notes": null
+    },
+    {
+     "name": "Pole",
+     "needs": [
+      [
+       "Wooden Log",
+       3
+      ],
+      [
+       "Nails",
+       60
+      ],
+      [
+       "Metal Wire",
+       1
+      ],
+      [
+       "Rope",
+       1
+      ]
+     ],
+     "tools": [
+      "Hammer",
+      "Hatchet"
+     ],
+     "notes": "The kit's rope can be taken back out and used here."
+    },
+    {
+     "name": "Flag",
+     "needs": [
+      [
+       "Any Flag",
+       1
+      ]
+     ],
+     "tools": [],
+     "notes": "Attach a flag, then raise it in five steps."
+    }
+   ],
+   "notes": "No part can be dismantled while a flag is attached, and the flag can only be taken off when fully lowered (scripts). See the territory section for timing."
+  },
+  {
+   "id": "shelter",
+   "name": "Shelter (improvised, leather or tarp)",
+   "kit": {
+    "name": "Shelter Kit",
+    "craft": "Rope + 4 Short Sticks (sharpened sticks also work)"
+   },
+   "placement": "Place the kit on even ground and build it from outside the site (scripts); built with bare hands.",
+   "stages": [
+    {
+     "name": "Improvised shelter",
+     "needs": [
+      [
+       "Long Wooden Stick",
+       4
+      ],
+      [
+       "Short Stick",
+       50
+      ]
+     ],
+     "tools": [],
+     "notes": "Hands only."
+    },
+    {
+     "name": "Leather shelter",
+     "needs": [
+      [
+       "Long Wooden Stick",
+       4
+      ],
+      [
+       "Tanned Leather",
+       8
+      ]
+     ],
+     "tools": [],
+     "notes": "Hands only."
+    },
+    {
+     "name": "Tarp shelter",
+     "needs": [
+      [
+       "Long Wooden Stick",
+       4
+      ],
+      [
+       "Tarp",
+       4
+      ]
+     ],
+     "tools": [],
+     "notes": "Hands only."
+    }
+   ],
+   "notes": "10x10 storage. Lifetime 7 days (Central Economy). Packing it up returns the kit and some of the materials. It cannot be locked."
+  },
+  {
+   "id": "tents",
+   "name": "Tents (medium, large, car, canopy)",
+   "kit": null,
+   "placement": "Found as loot, not crafted. Place with the hologram on flat ground; pack up again when empty.",
+   "stages": [],
+   "notes": "Medium tent 10x20, large tent 10x40, car tent 10x50 (a car fits inside), canopy tent about 150 slots (wiki). Lifetime 45 days (Central Economy; the wiki's 100 days for the medium tent looks out of date). Camo net attaches. Tents cannot be locked; repair with sewing kit or duct tape."
+  },
+  {
+   "id": "wooden_crate",
+   "name": "Wooden Crate",
+   "kit": {
+    "name": "None",
+    "craft": "8 Wooden Planks + 16 Nails, combined in hands; no tool needed"
+   },
+   "placement": "Drops on the ground; can be buried as an underground stash.",
+   "stages": [],
+   "notes": "10x5 storage, lifetime 45 days (Central Economy). Break it down with a crowbar, hatchet or axe for some planks and nails back, fewer if damaged (scripts)."
+  },
+  {
+   "id": "barrel",
+   "name": "Oil Barrel",
+   "kit": null,
+   "placement": "Found in farms and industrial areas; carried in hands only when empty.",
+   "stages": [],
+   "notes": "10x15 storage plus up to 200 L of liquid; items get wet if both are inside. Cannot be buried or locked. Lifetime 45 days. A knife, screwdriver, crowbar or axe turns it into a fire barrel."
+  },
+  {
+   "id": "underground_stash",
+   "name": "Underground Stash",
+   "kit": null,
+   "placement": "Put a buryable container (wooden crate or sea chest) on diggable, fairly flat ground and use Bury with a shovel, field shovel, pickaxe or farming hoe.",
+   "stages": [
+    {
+     "name": "Bury",
+     "needs": [
+      [
+       "Wooden Crate or Sea Chest",
+       1
+      ]
+     ],
+     "tools": [
+      "Shovel",
+      "Field Shovel",
+      "Pickaxe",
+      "Farming Hoe"
+     ],
+     "notes": "About 10 seconds. Not within 2 m of another stash, not on steep slopes or hard ground (scripts)."
+    }
+   ],
+   "notes": "Lifetime 14 days while buried (Central Economy). Dig it up with the same tools. Anyone who finds the spot can dig it up."
+  }
+ ],
+ "locks": [
+  {
+   "name": "Combination Lock",
+   "dials": 3,
+   "where": "Gate on a fence (fully built, closed)",
+   "notes": "Set the dials to your code, then attach it to the closed gate: it locks on that code and scrambles the dials. Dial the code (0.5 s per number) to open, then 'Detach combination lock' to take it off. 1,000 possible codes. Forgotten code: no reset; try codes, or break or dismantle the gate. Hacksaws cannot cut it since 1.08 (wiki); the old cut action is marked deprecated in the scripts."
+  },
+  {
+   "name": "Combination Lock (4-dial)",
+   "dials": 4,
+   "where": "Gate on a fence (fully built, closed)",
+   "notes": "Works like the 3-dial lock with 10,000 codes (red cable, wiki). The current scripts give the lock a dial on each side of the gate."
+  },
+  {
+   "name": "Code Lock (digital)",
+   "dials": null,
+   "where": "Gate on a fence; also doors of rebuildable buildings in the 1.30 scripts",
+   "notes": "Needs a 9V battery. Set a 4 to 6 digit code on the keypad side, then lock. From the keypad side you enter the code; from the back you can unlock without it. Code reset only when unlocked, from the keypad side. 3 wrong codes block input for 30 s, then each further wrong code blocks again; the count clears after an hour (server can change these). If the battery runs flat the lock unlocks. The battery and the lock cannot be removed while locked, and the lock comes off only from the back. Spawns in industrial and farm loot on Chernarus and Livonia, not on Sakhal (Central Economy). Not on the wiki yet; from scripts. Battery life is in config: unknown."
+  },
+  {
+   "name": "Lock Pick",
+   "dials": null,
+   "where": "Doors of map buildings, not base parts",
+   "notes": "Locks or unlocks existing doors. Locked doors can be shot open at the handle or punched open (wiki)."
+  }
+ ],
+ "raiding": [
+  "Dismantling gives materials back but works only from the inside: standing, not prone, no broken legs (scripts).",
+  "Dismantle tools in the scripts: hatchet, splitting axe, firefighter axe, crowbar, sledgehammer, pliers, hand saw, hacksaw, shovel, field shovel, pickaxe, farming hoe. Which tool fits which part is in the config.",
+  "Each dismantle takes about 7.5 seconds with a tool. Top parts come off first: anything resting on a part must go before it (scripts).",
+  "A pristine part returns about 80% of its materials; each damage level loses another 20% (scripts).",
+  "From outside there is no tool 'Destroy' action in vanilla now; the scripts give it only to a chainsaw that does not spawn. The wiki's sledgehammer and axe 'Destroy' entries look out of date.",
+  "The wiki says explosives, weapons and tools can damage fence parts. A part whose health reaches ruined is destroyed with no materials back, and parts resting on it go too (scripts).",
+  "Explosives (scripts): plastic explosive goes off with a remote detonator. The improvised explosive holds two charges (grenades or plastic explosive) and an alarm clock, kitchen timer or remote trigger. The claymore is remote-fired.",
+  "How much damage explosives do to walls is in the game config, not the scripts. Reports of the 1.18 patch notes say Bohemia raised base resistance to explosives.",
+  "Breaking or dismantling a gate or wall frame drops its lock on the ground, unlocked (scripts).",
+  "Combination locks cannot be cut since 1.08 (wiki). Code locks block guessing after 3 wrong codes and open if their battery dies (scripts).",
+  "Servers can switch base damage off ('disableBaseDamage'), leaving only dismantling from inside (scripts).",
+  "Watchtower parts are dismantled from inside the tower, standing on that level (scripts)."
+ ],
+ "territory": [
+  "A fully built flag pole with a raised flag resets the lifetime of items within 60 m (scripts).",
+  "By default it refreshes every 5 days and a fully raised flag keeps it running for 40 days, with one last refresh when time runs out (scripts and Central Economy defaults; servers can change both).",
+  "Each of the five raise steps adds a fifth of the time, about 8 days at default; lowering takes time off (scripts).",
+  "The flag drops slowly as its time runs down, so its height shows roughly when someone last raised it (scripts, wiki).",
+  "Fences, watchtowers, tents, crates and barrels last 45 days untouched; shelters 7 days; buried stashes 14 days (Central Economy).",
+  "With the flag kept up, a base can outlast those times; the wiki puts it at up to about 90 days untouched.",
+  "The flag pole itself has a 7-day lifetime in the Central Economy; it sits inside its own radius, so a raised flag should keep it refreshed."
+ ],
+ "tips": [
+  "Carry a hand saw or hacksaw: you cannot get planks without one. One log gives 4 planks.",
+  "Nails go fast: a full wooden fence takes 36. A box holds 70.",
+  "Face the platform side inwards: you can only dismantle from the inside.",
+  "Use a gate with a 4-dial or code lock; keep a spare 9V battery for a code lock.",
+  "Set the combination before attaching the lock, and write it down.",
+  "Build the flag pole early and raise it fully; bring a sledgehammer for its base.",
+  "On a watchtower, attach materials while standing on the level you are building.",
+  "Keep the kit: it drops back when the base is built and can be reused.",
+  "Bury a crate or sea chest as a backup stash away from the base.",
+  "Barbed wire and a camo net make a fence harder to rush and to spot."
+ ],
+ "sources": [
+  {
+   "title": "Bohemia Interactive DayZ-Script-Diff, build 1.30.164289 (basebuilding, fence.c, watchtower.c, totem.c, sheltersite.c, combinationlock.c, codelock.c, codelockcomponent.c, actionbuildpart.c, actiondismantlepart.c, actiondestroypart.c, explosives, recipes)",
+   "url": "https://github.com/BohemiaInteractive/DayZ-Script-Diff"
+  },
+  {
+   "title": "Bohemia Interactive DayZ Central Economy (types.xml, globals.xml)",
+   "url": "https://github.com/BohemiaInteractive/DayZ-Central-Economy"
+  },
+  {
+   "title": "DayZ Wiki: Base Building",
+   "url": "https://dayz.fandom.com/wiki/Base_Building"
+  },
+  {
+   "title": "DayZ Wiki: Fence",
+   "url": "https://dayz.fandom.com/wiki/Fence"
+  },
+  {
+   "title": "DayZ Wiki: Gate",
+   "url": "https://dayz.fandom.com/wiki/Gate"
+  },
+  {
+   "title": "DayZ Wiki: Watchtower",
+   "url": "https://dayz.fandom.com/wiki/Watchtower"
+  },
+  {
+   "title": "DayZ Wiki: Fence Kit",
+   "url": "https://dayz.fandom.com/wiki/Fence_Kit"
+  },
+  {
+   "title": "DayZ Wiki: Watchtower Kit",
+   "url": "https://dayz.fandom.com/wiki/Watchtower_Kit"
+  },
+  {
+   "title": "DayZ Wiki: Flag Pole",
+   "url": "https://dayz.fandom.com/wiki/Flag_Pole"
+  },
+  {
+   "title": "DayZ Wiki: Flag Pole Kit",
+   "url": "https://dayz.fandom.com/wiki/Flag_Pole_Kit"
+  },
+  {
+   "title": "DayZ Wiki: Shelter Kit",
+   "url": "https://dayz.fandom.com/wiki/Shelter_Kit"
+  },
+  {
+   "title": "DayZ Wiki: Improvised Shelter",
+   "url": "https://dayz.fandom.com/wiki/Improvised_Shelter"
+  },
+  {
+   "title": "DayZ Wiki: Leather Shelter",
+   "url": "https://dayz.fandom.com/wiki/Leather_Shelter"
+  },
+  {
+   "title": "DayZ Wiki: Tarp Shelter",
+   "url": "https://dayz.fandom.com/wiki/Tarp_Shelter"
+  },
+  {
+   "title": "DayZ Wiki: Combination Lock",
+   "url": "https://dayz.fandom.com/wiki/Combination_Lock"
+  },
+  {
+   "title": "DayZ Wiki: Lock Pick",
+   "url": "https://dayz.fandom.com/wiki/Lock_Pick"
+  },
+  {
+   "title": "DayZ Wiki: Plastic Explosive",
+   "url": "https://dayz.fandom.com/wiki/Plastic_Explosive"
+  },
+  {
+   "title": "DayZ Wiki: Improvised Explosive",
+   "url": "https://dayz.fandom.com/wiki/Improvised_Explosive"
+  },
+  {
+   "title": "DayZ Wiki: Claymore",
+   "url": "https://dayz.fandom.com/wiki/Claymore"
+  },
+  {
+   "title": "DayZ Wiki: Remote Detonation Unit",
+   "url": "https://dayz.fandom.com/wiki/Remote_Detonation_Unit"
+  },
+  {
+   "title": "DayZ Wiki: Sledgehammer",
+   "url": "https://dayz.fandom.com/wiki/Sledgehammer"
+  },
+  {
+   "title": "DayZ Wiki: Hacksaw",
+   "url": "https://dayz.fandom.com/wiki/Hacksaw"
+  },
+  {
+   "title": "DayZ Wiki: Hand Saw",
+   "url": "https://dayz.fandom.com/wiki/Hand_Saw"
+  },
+  {
+   "title": "DayZ Wiki: Plank",
+   "url": "https://dayz.fandom.com/wiki/Plank"
+  },
+  {
+   "title": "DayZ Wiki: Nails",
+   "url": "https://dayz.fandom.com/wiki/Nails"
+  },
+  {
+   "title": "DayZ Wiki: Sheet Metal",
+   "url": "https://dayz.fandom.com/wiki/Sheet_Metal"
+  },
+  {
+   "title": "DayZ Wiki: Wooden log",
+   "url": "https://dayz.fandom.com/wiki/Wooden_log"
+  },
+  {
+   "title": "DayZ Wiki: Metal Wire",
+   "url": "https://dayz.fandom.com/wiki/Metal_Wire"
+  },
+  {
+   "title": "DayZ Wiki: Barbed Wire",
+   "url": "https://dayz.fandom.com/wiki/Barbed_Wire"
+  },
+  {
+   "title": "DayZ Wiki: Camo Net",
+   "url": "https://dayz.fandom.com/wiki/Camo_Net"
+  },
+  {
+   "title": "DayZ Wiki: Wooden Crate",
+   "url": "https://dayz.fandom.com/wiki/Wooden_Crate"
+  },
+  {
+   "title": "DayZ Wiki: Sea Chest",
+   "url": "https://dayz.fandom.com/wiki/Sea_Chest"
+  },
+  {
+   "title": "DayZ Wiki: Oil Barrel",
+   "url": "https://dayz.fandom.com/wiki/Oil_Barrel"
+  },
+  {
+   "title": "DayZ Wiki: Fire Barrel",
+   "url": "https://dayz.fandom.com/wiki/Fire_Barrel"
+  },
+  {
+   "title": "DayZ Wiki: Medium Tent",
+   "url": "https://dayz.fandom.com/wiki/Medium_Tent"
+  },
+  {
+   "title": "DayZ Wiki: Large Tent",
+   "url": "https://dayz.fandom.com/wiki/Large_Tent"
+  },
+  {
+   "title": "DayZ Wiki: Car Tent",
+   "url": "https://dayz.fandom.com/wiki/Car_Tent"
+  },
+  {
+   "title": "DayZ Wiki: Canopy Tent",
+   "url": "https://dayz.fandom.com/wiki/Canopy_Tent"
+  },
+  {
+   "title": "DayZ Wiki: 9V Battery",
+   "url": "https://dayz.fandom.com/wiki/9V_Battery"
+  },
+  {
+   "title": "DayZ Wiki: List of Item Cleanup times",
+   "url": "https://dayz.fandom.com/wiki/List_of_Item_Cleanup_times"
+  },
+  {
+   "title": "DayZ 1.18 Update 2 notes, third-party report seen in search results (page not opened): base resistance to explosives",
+   "url": "https://mp1st.com/?p=188662"
+  }
+ ]
+}
