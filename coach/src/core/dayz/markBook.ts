@@ -4,7 +4,7 @@
 
 import type { DayzMapId } from './places.ts'
 
-export const MARK_KIND_IDS = ['player', 'shots', 'danger', 'base', 'stash', 'vehicle', 'loot', 'rally', 'body', 'note'] as const
+export const MARK_KIND_IDS = ['player', 'shots', 'danger', 'base', 'stash', 'vehicle', 'loot', 'rally', 'body', 'note', 'trader', 'poi'] as const
 const MAP_IDS: readonly DayzMapId[] = ['chernarus', 'livonia', 'sakhal']
 
 export type MarkKind = (typeof MARK_KIND_IDS)[number]
@@ -31,6 +31,8 @@ export interface Mark {
 export interface MarkBook {
   readonly version: 1
   readonly marks: readonly Mark[]
+  /** The player's pace on foot against the estimate, one number per timed trip (newest last). */
+  readonly pace?: readonly number[]
 }
 
 export const EMPTY_MARKS: MarkBook = { version: 1, marks: [] }
@@ -38,8 +40,9 @@ export const EMPTY_MARKS: MarkBook = { version: 1, marks: [] }
 /** A book read from disk: kept only if it is well formed. */
 export function isMarkBook(v: unknown): v is MarkBook {
   if (!v || typeof v !== 'object') return false
-  const b = v as { version?: unknown; marks?: unknown }
+  const b = v as { version?: unknown; marks?: unknown; pace?: unknown }
   if (b.version !== 1 || !Array.isArray(b.marks) || b.marks.length > 2000) return false
+  if (b.pace !== undefined && (!Array.isArray(b.pace) || b.pace.length > 50 || !b.pace.every((x) => typeof x === 'number' && Number.isFinite(x) && x > 0 && x < 5))) return false
   return b.marks.every(isMark)
 }
 

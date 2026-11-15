@@ -12,7 +12,11 @@ import { pointInfo } from '../core/dayz/mapView.ts'
 import type { DayzMapId } from '../core/dayz/places.ts'
 import { trailStep, type TrailLife } from '../core/dayz/trail.ts'
 import { mapPreference } from '../core/dayz/ask.ts'
-import { aroundLine, isMarkBook, liveMarks, makeMark, MARK_INFO, markSaid, readShareCode, shareCode, type Mark, type MarkDraft, type MarkKind } from '../core/dayz/marks.ts'
+import { dueWarning, parseRestarts, warningText } from '../core/dayz/server.ts'
+import { lineHills } from '../core/dayz/heights.ts'
+import { getFootPace, setFootPace, straightSeconds } from '../core/dayz/travel.ts'
+import { distance } from '../core/dayz/places.ts'
+import { aroundLine, isMarkBook, learnedPace, liveMarks, makeMark, MARK_INFO, markSaid, paceSample, parsePlaceList, readShareCode, shareCode, type Mark, type MarkDraft, type MarkKind } from '../core/dayz/marks.ts'
 import type { CloudStatus, ResearchBrief } from '../../shared/cloud.ts'
 import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
@@ -167,6 +171,10 @@ export interface SessionState {
   readonly marks: readonly Mark[]
   /** DayZ: a mark told about without where: the next click on a map places it. */
   readonly pendingMark: (MarkDraft & { readonly map: DayzMapId }) | null
+  /** DayZ: the last server restart warning (for the screen). */
+  readonly restartNotice: { readonly text: string; readonly at: number } | null
+  /** DayZ: the player's pace on foot against the estimate, one number per timed trip between spots. */
+  readonly pace: readonly number[]
   /** Official overhead map images kept for this game, by map id. */
   readonly overheads: Readonly<Record<string, OverheadInfo>>
   /** The map whose official image is being imported or downloaded. */
@@ -231,6 +239,8 @@ const INITIAL: SessionState = {
   kit: [],
   marks: [],
   pendingMark: null,
+  pace: [],
+  restartNotice: null,
   overheads: {},
   overheadBusy: null,
   conversation: [],
@@ -367,7 +377,11 @@ export class CoachSession {
     ])
     const book = id === 'dayz' ? await this.bridge.loadDoc('marks', id).catch(() => null) : null
     if (this.profile?.id !== id) return
-    if (id === 'dayz') this.set({ marks: isMarkBook(book) ? liveMarks(book.marks, Date.now()) : [] })
+    if (id === 'dayz') {
+      const pace = isMarkBook(book) ? [...(book.pace ?? [])] : []
+      setFootPace(learnedPace(pace) ?? 1)
+      this.set({ marks: isMarkBook(book) ? liveMarks(book.marks, Date.now()) : [], pace })
+    }
     const mosaics = Object.fromEntries(stitched.map((m) => [m.map.toLowerCase(), m]))
     const overheads = Object.fromEntries(kept.map((o) => [o.mapId, o]))
     this.set({ profileId: id, history, snapshot, notes, research, mosaics, overheads, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
@@ -981,7 +995,32 @@ export class CoachSession {
     this.set({ saved: { tendencies, matches: this.state.saved?.matches ?? 0 } })
   }
 
+  // Server restart warnings: checked every 20 seconds while DayZ is the pack and restart times are set.
+  private restartTimer: ReturnType<typeof setInterval> | null = null
+  private restartCheckedAt = new Date()
+
+  private checkRestart(): void {
+    const prev = this.restartCheckedAt
+    const now = new Date()
+    this.restartCheckedAt = now
+    const settings = this.settings
+    if (!settings || this.profile?.id !== 'dayz') return
+    const restarts = parseRestarts(String(settings.context.dayz?.restarts ?? ''))
+    const due = dueWarning(restarts, prev, now)
+    if (due === null) return
+    const at = new Date(now.getTime() + due * 60_000)
+    const text = warningText(due, new Date(Math.round(at.getTime() / 60_000) * 60_000))
+    this.set({ restartNotice: { text, at: now.getTime() } })
+    // A clock the player set, not anything read from the game: said unless muted or in a tournament.
+    if (!settings.muted && !settings.tournament) this.speech.enqueue({ id: uid('restart'), text, category: 'post_event', priority: 'high', expiresAt: null })
+  }
+
   updateSettings(settings: CoachSettings): void {
+    if (!this.restartTimer && typeof setInterval === 'function') {
+      this.restartTimer = setInterval(() => this.checkRestart(), 20_000)
+      // In Node (tests) the timer must not keep the process alive.
+      ;(this.restartTimer as { unref?: () => void }).unref?.()
+    }
     const mutedNow = settings.muted && !this.settings?.muted
     const relink = settings.aoe4world.profileId !== this.settings?.aoe4world.profileId || settings.saveTendencies !== this.settings?.saveTendencies
     this.settings = settings
@@ -1148,7 +1187,36 @@ export class CoachSession {
 
   /** DayZ: set where the player is (null to forget). */
   setSpot(spot: (Spot & { readonly map: DayzMapId }) | null): void {
+    this.placeSpot(spot)
+  }
+
+  // Your pace: the last spot you set and when, to time the trip to the next one.
+  private lastSpot: { x: number; y: number; map: DayzMapId; at: number } | null = null
+
+  /** Set the spot, and learn the player's pace from the time since the last one (a fair trip only). */
+  private placeSpot(spot: (Spot & { readonly map: DayzMapId }) | null): void {
     this.set({ spot })
+    if (!spot) return
+    const now = Date.now()
+    const last = this.lastSpot
+    this.lastSpot = { x: spot.x, y: spot.y, map: spot.map, at: now }
+    if (!last || last.map !== spot.map) return
+    const d = distance(last, spot)
+    // The estimate at the default pace (times are divided by the learned pace).
+    const expected = straightSeconds(d, 'foot', false, lineHills(spot.map, last, spot)) * getFootPace()
+    const k = paceSample(expected, (now - last.at) / 1000, d)
+    if (k === null) return
+    const pace = [...this.state.pace, k].slice(-20)
+    setFootPace(learnedPace(pace) ?? 1)
+    this.set({ pace })
+    void this.saveMarks(this.state.marks)
+  }
+
+  /** Forget the learned pace (back to the estimate). */
+  resetPace(): void {
+    setFootPace(1)
+    this.set({ pace: [] })
+    void this.saveMarks(this.state.marks)
   }
 
   /** DayZ: tick or untick a kit item. */
@@ -1165,14 +1233,15 @@ export class CoachSession {
     const now = Date.now()
     // The map: the one the spot is on, else the one chosen or read.
     const map = this.state.spot?.map ?? mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus'
-    return { spot: this.state.spot, kit: this.state.kit, map, marks: liveMarks(this.state.marks, now), now }
+    const prefs = this.settings?.context.dayz ?? {}
+    return { spot: this.state.spot, kit: this.state.kit, map, marks: liveMarks(this.state.marks, now), now, beginner: prefs.level === 'New to DayZ', restarts: parseRestarts(String(prefs.restarts ?? '')) }
   }
 
   // --- DayZ map marks ------------------------------------------------------------------------
 
   private async saveMarks(marks: readonly Mark[]): Promise<void> {
     if (this.profile?.id !== 'dayz') return
-    await this.bridge.saveDoc('marks', 'dayz', { version: 1, marks: liveMarks(marks, Date.now()) }).catch(() => false)
+    await this.bridge.saveDoc('marks', 'dayz', { version: 1, marks: liveMarks(marks, Date.now()), ...(this.state.pace.length ? { pace: this.state.pace } : {}) }).catch(() => false)
   }
 
   /** Add one of the player's marks (and keep it). */
@@ -1211,6 +1280,18 @@ export class CoachSession {
     return m
   }
 
+  /** Traders and places pasted as a list (one per line: "Name: grid or town"); what was added and what was skipped. */
+  importPlaces(text: string, map: DayzMapId): { added: number; skipped: readonly string[] } {
+    const { marks: got, skipped } = parsePlaceList(text, mapOf({ map }), Date.now())
+    const fresh = got.filter((g) => !this.state.marks.some((m) => m.label.toLowerCase() === g.label.toLowerCase() && m.map === g.map))
+    if (fresh.length) {
+      const marks = [...this.state.marks, ...fresh]
+      this.set({ marks })
+      void this.saveMarks(marks)
+    }
+    return { added: fresh.length, skipped }
+  }
+
   /** A code for friends with the marks chosen (all when none given). */
   marksCode(ids?: readonly string[]): string {
     return shareCode(ids ? this.state.marks.filter((m) => ids.includes(m.id)) : this.state.marks)
@@ -1232,7 +1313,7 @@ export class CoachSession {
   /** One open question to Claude with the companion's tools (src/core/dayz/companion.ts runs the loop). */
   private async companionTurn(id: string, q: string, profile: GameProfile): Promise<{ ok: true; text: string; costUsd: number; tools: string[] } | { ok: false; error: string }> {
     const effects: ToolEffects = {
-      setSpot: (s) => this.set({ spot: { ...s, map: mapOf(s).id } }),
+      setSpot: (s) => this.placeSpot({ ...s, map: mapOf(s).id }),
       setKit: (have, lost) => {
         const kit = new Set(this.state.kit)
         have.forEach((k) => kit.add(k))
@@ -1261,7 +1342,7 @@ export class CoachSession {
     const spot = parseSetSpot(q, this.companionContext().map)
     if (spot) {
       const map = mapOf(spot)
-      this.set({ spot: { ...spot, map: map.id } })
+      this.placeSpot({ ...spot, map: map.id })
       const info = pointInfo(map, spot)
       const heads = aroundLine(liveMarks(this.state.marks, Date.now()), spot, map.id, Date.now())
       return { text: `Got it: you're at ${spot.label}${map.id !== 'chernarus' ? ` on ${map.name}` : ''}. ${info.line}${heads ? ` ${heads}` : ''} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: map.id, title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }

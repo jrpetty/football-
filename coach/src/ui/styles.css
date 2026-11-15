@@ -5645,3 +5645,8 @@ td > .swatch {
 .comp-map { display: flex; flex-direction: column; gap: 6px; }
 .segmented.sm button { padding: 3px 9px; font-size: 12px; }
 .comp-welcome h2 { margin: 0; }
+
+/* DayZ: the traders/places list. */
+.dz-place-list { margin-top: 10px; }
+.dz-place-list summary { cursor: pointer; }
+.dz-place-text { width: 100%; box-sizing: border-box; font: inherit; margin: 6px 0; }

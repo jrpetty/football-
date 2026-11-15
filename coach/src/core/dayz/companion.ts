@@ -18,7 +18,9 @@ import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '
 import { bearing, DAYZ_MAPS, describePlace, distance, featureLine, findPlace, gridRef, km, nearest, neighbours, placesIn, region, type DayzMapId, type PlaceMatch } from './places.ts'
 import { pointInfo } from './mapView.ts'
 import { tripBetween, tripShortBetween } from './heights.ts'
-import { goLine, listLine, liveMarks, makeMark, MARK_INFO, MARK_KINDS, markAsk, markLine, markSaid, newest, seenLine, warningLine, whereIn, type Mark, type MarkKind } from './marks.ts'
+import { BEGINNER_NOTE, FIRST_HOUR, firstHourText, glossaryAnswer, isFirstHourQuestion, plainer } from './beginner.ts'
+import { isRestartQuestion, restartLine } from './server.ts'
+import { goLine, listLine, namedMark, liveMarks, makeMark, MARK_INFO, MARK_KINDS, markAsk, markLine, markSaid, newest, seenLine, warningLine, whereIn, type Mark, type MarkKind } from './marks.ts'
 
 // --- Cards ----------------------------------------------------------------------------------
 
@@ -39,6 +41,8 @@ export type Card =
   | { readonly type: 'list'; readonly title: string; readonly rows: readonly (readonly [string, string])[] }
   | { readonly type: 'compare'; readonly title: string; readonly columns: readonly [string, string]; readonly rows: readonly (readonly [string, string, string])[] }
   | { readonly type: 'help'; readonly examples: readonly string[] }
+  /** Step-by-step guidance (the first hour for new players). */
+  | { readonly type: 'guide'; readonly title: string; readonly steps: readonly { readonly title: string; readonly line: string }[] }
   /** Click the map to place a mark the player told about without saying where. */
   | { readonly type: 'pick'; readonly map: DayzMapId; readonly title: string; readonly kind: MarkKind; readonly label: string }
 
@@ -50,6 +54,10 @@ export interface CompanionContext {
   /** Their own marks (what they saw, their base, stash, car…), and the time now. */
   readonly marks?: readonly Mark[]
   readonly now?: number
+  /** Beginner mode: plainer answers, jargon explained. */
+  readonly beginner?: boolean
+  /** The server's restart times (minutes past midnight, local), as the player set them. */
+  readonly restarts?: readonly number[]
 }
 
 /** The last thing talked about, for follow-ups ("take me there", "show it on the map"). */
@@ -192,6 +200,9 @@ export const HELP_EXAMPLES = [
   'My base is 500 m north of Gorka',
   'Take me to my base',
   'How do I treat cholera?',
+  "I'm new, where do I start?",
+  'What does KOS mean?',
+  'When is the next restart?',
   'What do I have?',
   'Show me the map',
 ]
@@ -237,7 +248,9 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
  */
 export function localReply(question: string, ctx: CompanionContext, profile: GameProfile, topic: Topic, answered: string | null): Reply | null {
   const r = localReplyInner(question, ctx, profile, topic, answered)
-  return r ? withWarnings(r, ctx) : null
+  if (!r) return null
+  const warned = withWarnings(r, ctx)
+  return ctx.beginner ? { ...warned, text: plainer(warned.text) } : warned
 }
 
 /** A route answer with a heads-up when it passes near a recent sighting or danger the player marked. */
@@ -250,6 +263,16 @@ function withWarnings<T extends { text: string; card: Card | null }>(r: T, ctx: 
 
 /** Questions about the player's marks: take me to my base, where is my car, what have I seen near Gorka, my marks. */
 function marksReply(question: string, ctx: CompanionContext, topic: Topic): Reply | null {
+  // Your own places by name: "take me to the Green Mountain trader".
+  if (/\b(take me|get me|guide me|lead me|route|way to|how (?:far|long)|where(?:'s| is))\b/i.test(question)) {
+    const named = namedMark(question, liveMarks(ctx.marks ?? [], ctx.now ?? Date.now()))
+    if (named) {
+      const now = ctx.now ?? Date.now()
+      const t: Topic = { kind: 'place', name: named.label, map: named.map, x: named.x, y: named.y }
+      if (ctx.spot && named.map === ctx.map && !/\bwhere(?:'s| is)\b/i.test(question)) return { text: goLine(named, ctx.spot, now), card: { type: 'map', map: named.map, title: `To ${named.label}`, route: [pos(ctx.spot, ctx.spot.label), pos(named, named.label)] }, topic: t }
+      return { text: `${markLine(named, now, ctx.spot)}.`, card: { type: 'map', map: named.map, title: named.label, focus: pos(named, named.label) }, topic: t }
+    }
+  }
   const ask = markAsk(question)
   if (!ask || ask.type === 'remove') return null
   const now = ctx.now ?? Date.now()
@@ -279,6 +302,11 @@ function marksReply(question: string, ctx: CompanionContext, topic: Topic): Repl
 
 function localReplyInner(question: string, ctx: CompanionContext, profile: GameProfile, topic: Topic, answered: string | null): Reply | null {
   const q = question.toLowerCase().trim()
+  // New players: the first hour, and what words mean.
+  if (isFirstHourQuestion(q)) return { text: firstHourText(), card: { type: 'guide', title: 'Your first hour in DayZ', steps: FIRST_HOUR }, topic }
+  const word = glossaryAnswer(q)
+  if (word && !/\b(where is|where's|how far|take me)\b/.test(q)) return { text: word, card: null, topic }
+  if (isRestartQuestion(q)) return { text: restartLine(ctx.restarts ?? [], new Date(ctx.now ?? Date.now())), card: null, topic }
   const mine = marksReply(question, ctx, topic)
   if (mine) return mine
   const follow = followUp(q, topic, ctx, profile)
@@ -580,7 +608,7 @@ export async function companionTurn(opts: {
     { role: 'user' as const, content: e.question.slice(0, 1000) },
     { role: 'assistant' as const, content: e.answer.slice(0, 2000) },
   ])
-  const facts = [topicLine(topic), ctx.spot ? `The player said they are at ${ctx.spot.label}.` : 'The player has not said where they are.', `Map: ${ctx.map}.`].filter(Boolean).join(' ')
+  const facts = [topicLine(topic), ctx.spot ? `The player said they are at ${ctx.spot.label}.` : 'The player has not said where they are.', `Map: ${ctx.map}.`, ctx.beginner ? BEGINNER_NOTE : null].filter(Boolean).join(' ')
   messages.push({ role: 'user', content: `${opts.question.slice(0, 1000)}\n\n(App: ${facts})` })
   let costUsd = 0
   const tools: string[] = []

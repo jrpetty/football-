@@ -9,6 +9,7 @@ import type { CloudStatus } from '../../../shared/cloud.ts'
 import type { GameProfile } from '../../core/profile/schema.ts'
 import type { CoachSettings } from '../../core/settings.ts'
 import { KIT } from '../../core/dayz/assistant.ts'
+import { nextRestart, parseRestarts } from '../../core/dayz/server.ts'
 import { AskBox } from '../components/ask.tsx'
 import { CompanionScreen } from '../components/companionScreen.tsx'
 import { usd } from '../format.ts'
@@ -40,6 +41,16 @@ export function CompanionView({ state, session, profile, settings, cloud, onOpen
     list.current?.scrollTo({ top: list.current.scrollHeight, behavior: 'smooth' })
   }, [state.conversation.length, state.conversation.at(-1)?.status])
   const claude = cloud.available && cloud.settings.enabled && cloud.key.set
+  const prefs = settings.context.dayz ?? {}
+  const beginner = prefs.level === 'New to DayZ'
+  // The next server restart, refreshed every half minute.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 30_000)
+    return () => clearInterval(t)
+  }, [])
+  const restart = nextRestart(parseRestarts(String(prefs.restarts ?? '')), new Date())
+  const notice = state.restartNotice && Date.now() - state.restartNotice.at < 5 * 60_000 ? state.restartNotice.text : null
 
   return (
     <div className="page companion">
@@ -56,10 +67,17 @@ export function CompanionView({ state, session, profile, settings, cloud, onOpen
           <span className={`badge ${claude ? 'info' : 'neutral'}`} title={claude ? 'Open questions go to Claude (with the app’s own data as tools).' : 'Without Claude it answers what it knows on this computer.'}>
             {claude ? 'Open chat: Claude' : 'Answers on this PC'}
           </span>
+          {beginner ? <span className="badge info">Beginner mode</span> : null}
+          {restart ? <span className={`badge ${restart.inMin <= 15 ? 'warn' : 'neutral'}`}>Restart in {restart.inMin >= 60 ? `${Math.floor(restart.inMin / 60)} h ${Math.round(restart.inMin % 60)} min` : `${Math.max(1, Math.round(restart.inMin))} min`}</span> : null}
           {settings.voiceInput ? <span className="badge neutral">{settings.listen === 'always' ? 'Listening: say “Coach…”' : 'Talk key to speak'}</span> : null}
         </div>
       </div>
 
+      {notice ? (
+        <p className="notice warning small" role="alert">
+          {notice}
+        </p>
+      ) : null}
       <div className="comp-layout">
         <section className="panel comp-chat" aria-label="Conversation">
           <ol className="comp-messages" ref={list}>

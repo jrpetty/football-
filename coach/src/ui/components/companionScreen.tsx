@@ -201,6 +201,26 @@ export function CompanionScreen({ card, state, session, onAsk, onOpenMap, questi
       )
     case 'help':
       return <Welcome onAsk={onAsk} />
+    case 'guide':
+      return (
+        <Frame title={card.title} kicker="Step by step">
+          <ol className="comp-steps">
+            {card.steps.map((s) => (
+              <li key={s.title}>
+                <b>{s.title}</b>
+                <span className="small">{s.line}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="suggestions">
+            {['What does KOS mean?', 'Where do I find a knife?', 'How do I stop bleeding?', 'What now?'].map((q) => (
+              <button key={q} type="button" className="chip" onClick={() => onAsk(q)}>
+                {q}
+              </button>
+            ))}
+          </div>
+        </Frame>
+      )
     case 'pick':
       return (
         <Frame title={card.title} kicker="Mark it on the map">

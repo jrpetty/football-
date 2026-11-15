@@ -56,6 +56,24 @@
       ],
       "default": "Chernarus",
       "help": "The map you play on, for place questions (where is a town, nearest water, the way between two towns). A map name read from the screen wins."
+    },
+    {
+      "id": "level",
+      "label": "Your DayZ experience",
+      "kind": "choice",
+      "options": [
+        "Experienced",
+        "New to DayZ"
+      ],
+      "default": "Experienced",
+      "help": "New to DayZ: plainer answers with game words explained, and \"I'm new, where do I start?\" walks you through your first hour. Switch back any time."
+    },
+    {
+      "id": "restarts",
+      "label": "Server restart times",
+      "kind": "text",
+      "default": "",
+      "help": "Your server's restart times on your clock, e.g. \"00:00 06:00 12:00 18:00\" or \"every 4 hours from 02:00\". The coach warns 15, 5 and 1 minutes before. Leave empty for none."
     }
   ],
   "signals": [],

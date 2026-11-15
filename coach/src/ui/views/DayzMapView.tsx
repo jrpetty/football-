@@ -20,7 +20,7 @@ import type { Travel } from '../../core/dayz/terrain.ts'
 import { useFollowGround } from '../components/dayzGround.ts'
 import { DayzMapCanvas, type Pos, type TrailLine } from '../components/dayzMap.tsx'
 import { MarksPanel } from '../components/marksPanel.tsx'
-import { goLine, liveMarks, MARK_INFO, markAsk, markLine, newest, warningLine } from '../../core/dayz/marks.ts'
+import { goLine, liveMarks, MARK_INFO, markAsk, markLine, newest, paceWords, warningLine } from '../../core/dayz/marks.ts'
 
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -255,6 +255,17 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
             ? 'Routes are straight lines.'
             : `Routes follow the ground: ${travel === 'car' ? 'roads first, open ground if needed, never forest, water or gas zones' : 'roads where they help, across fields freely, through forest when it saves enough, round lakes, the sea and gas zones'}. Read from Bohemia's map picture, so small paths and bridges can be missed${mapId === 'sakhal' ? "; Sakhal's roads barely show in its picture, so there routes mostly keep out of the sea and forest" : ''}.`}{' '}
           {TIME_NOTE}
+          {paceWords(state.pace) ? (
+            <>
+              {' '}
+              Your pace on foot, from the time between spots you set: {paceWords(state.pace)}.{' '}
+              <button type="button" className="link-btn" onClick={() => session.resetPace()}>
+                Reset
+              </button>
+            </>
+          ) : (
+            ' Set your spot as you travel and times learn your own pace.'
+          )}
         </p>
       </section>
 

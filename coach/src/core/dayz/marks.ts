@@ -38,6 +38,8 @@ export const MARK_INFO: Readonly<Record<MarkKind, MarkInfo>> = {
   rally: { label: 'Meeting point', glyph: 'R', sighting: false },
   body: { label: 'Where you died', glyph: '✝', sighting: false },
   note: { label: 'Note', glyph: 'N', sighting: false },
+  trader: { label: 'Trader', glyph: 'T', sighting: false },
+  poi: { label: 'Place', glyph: '★', sighting: false },
 }
 
 export const MARK_KINDS = Object.keys(MARK_INFO) as MarkKind[]
@@ -168,6 +170,12 @@ export function draftIn(question: string): MarkDraft | null {
     const what = (car[2] ?? car[4])!
     return { kind: 'vehicle', label: /^(car|vehicle|ride)$/.test(what) ? 'Car' : what === 'boat' ? 'Boat' : `Car (${what.charAt(0).toUpperCase() + what.slice(1)})` }
   }
+  const trader = q.match(/\b(trader|traders|black market|market|shop|safe ?zone|safezone|trader (?:city|camp|outpost))\b/)
+  if (trader && /^(mark|save|add|set|there'?s|there is|the|a|our|my)\b/.test(q) || (trader && /\b(is|are)\s+(?:at|in|near|by|on)\b/.test(q))) {
+    const name = q.replace(/^(mark|save|add|set|there'?s|there is)\s+(the\s+|a\s+|our\s+|my\s+)?/, '').replace(/\s+(?:is|are)\b.*$|\s+(?:at|in|near|by|on|around)\b.*$/, '').trim()
+    const label = name ? name.charAt(0).toUpperCase() + name.slice(1, 60) : 'Trader'
+    return { kind: /safe ?zone/.test(trader[1]) && !/trader/.test(q) ? 'poi' : 'trader', label }
+  }
   if (/\b(meet|meeting point|rally(?: point)?|regroup)\b/.test(q)) return { kind: 'rally', label: 'Meeting point' }
   if (/\b(good|great|lots of|decent)\s+loot\b|\bloot (?:spot|here)\b|\bfound (?:a |good )?loot\b/.test(q)) return { kind: 'loot', label: 'Good loot' }
   const note = q.match(/^(?:mark|note|remember|save)\s+(?:that\s+|this\s+)?(.+)$/)
@@ -209,6 +217,8 @@ const OWN: readonly (readonly [RegExp, MarkKind])[] = [
   [/\b(car|truck|van|vehicle|ride|boat)\b/, 'vehicle'],
   [/\b(body|corpse|where i died|my gear|my stuff|my loot back)\b/, 'body'],
   [/\b(meeting point|rally(?: point)?|meet(?:ing)? (?:up )?spot|where we meet)\b/, 'rally'],
+  [/\b(trader|black market|market|shop)\b/, 'trader'],
+  [/\bsafe ?zone\b/, 'poi'],
   [/\bloot (?:spot|mark)\b/, 'loot'],
 ]
 
@@ -420,4 +430,74 @@ export function whereWords(map: DayzMap, at: { x: number; y: number }): string {
   const nb = neighbours(map, at, 1)[0]
   if (!nb) return grid
   return nb.m < 300 ? `in ${nb.place.name} (${grid})` : `${km(nb.m)} ${bearing(nb.place, at)} of ${nb.place.name} (${grid})`
+}
+
+// --- Your own places: traders, safe zones and other points of a community server ---------------
+
+/** A trader or place of yours named in the question ("take me to the Green Mountain trader"), best match first. */
+export function namedMark(question: string, marks: readonly Mark[]): Mark | null {
+  const q = ` ${question.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ')} `
+  let best: { m: Mark; n: number } | null = null
+  for (const m of marks) {
+    if (m.kind !== 'trader' && m.kind !== 'poi' && m.kind !== 'note') continue
+    const words = m.label.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !['the', 'and', 'trader', 'zone', 'safe'].includes(w))
+    const n = words.filter((w) => q.includes(` ${w} `)).length
+    if (n && (!best || n > best.n)) best = { m, n }
+  }
+  return best?.m ?? null
+}
+
+/**
+ * A list of places pasted in, one per line: "Green Mountain Trader: 037 050", "Black market, Kumyrna",
+ * "Safe zone - 500 m north of Stary Sobor". Traders when the name says trader, market or shop; else places.
+ */
+export function parsePlaceList(text: string, map: DayzMap, now: number): { marks: Mark[]; skipped: string[] } {
+  const marks: Mark[] = []
+  const skipped: string[] = []
+  text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 200)
+    .forEach((line, i) => {
+      const m = line.match(/^(.+?)\s*(?::|,|\s-\s|\t|=)\s*(.+)$/)
+      const name = (m?.[1] ?? '').trim().slice(0, 80)
+      const w = m ? whereIn(m[2], map, null) : null
+      if (!name || !w) {
+        skipped.push(line.slice(0, 80))
+        return
+      }
+      const kind: MarkKind = /\b(trader|market|shop|store|vendor)\b/i.test(name) ? 'trader' : 'poi'
+      marks.push(makeMark({ kind, label: name }, w, map.id, now, `place-${now.toString(36)}-${i}`))
+    })
+  return { marks, skipped }
+}
+
+// --- Your pace on foot ----------------------------------------------------------------------------
+
+/**
+ * One timed trip between two spots you set: how much faster (> 1) or slower than the estimate you were,
+ * or null when it is not a fair sample (too short, too long, a stop on the way, or a drive).
+ */
+export function paceSample(expectedS: number, tookS: number, metres: number): number | null {
+  if (metres < 400 || metres > 6000 || tookS < 60 || tookS > 45 * 60) return null
+  const k = expectedS / tookS
+  return k >= 0.6 && k <= 1.6 ? Math.round(k * 100) / 100 : null
+}
+
+/** Your pace from your trips: the median of the last eight, once there are three. */
+export function learnedPace(samples: readonly number[]): number | null {
+  const last = samples.slice(-8)
+  if (last.length < 3) return null
+  const s = [...last].sort((a, b) => a - b)
+  return s[Math.floor(s.length / 2)]
+}
+
+/** "8 % faster than the estimate (5 trips)". */
+export function paceWords(samples: readonly number[]): string | null {
+  const k = learnedPace(samples)
+  if (k === null) return null
+  const pct = Math.round(Math.abs(k - 1) * 100)
+  const n = Math.min(samples.length, 8)
+  return pct < 3 ? `about the estimate (${n} trips)` : `${pct}% ${k > 1 ? 'faster' : 'slower'} than the estimate (${n} trips)`
 }

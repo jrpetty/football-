@@ -33,6 +33,7 @@
 // the script prints them.
 //
 //   node scripts/build-dayz-crafting.mjs <DayZ-Script-Diff repo>
+//   (add --dump to print what was read from each recipe instead of writing the file)
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -134,7 +135,7 @@ const NAMES = {
   Armband_: 'Armband', Armband_White: 'Armband (white)', Headdress_Fox: 'Fox headdress', LeatherBelt_Lizard: 'Lizard leather belt', LeatherHippack_Lizard: 'Lizard leather hip pack', LizardKnifeSheath: 'Lizard leather knife sheath',
   GasMask_Filter_Improvised: 'Improvised gas mask filter', SalineBagIV: 'Saline bag IV', BloodBagIV: 'IV blood bag', BloodBagFull: 'Blood bag (full)', BloodSyringe: 'Syringe of blood', ClearSyringe: 'Syringe', InjectionVial: 'Injection vial',
   ChristmasHeadband: 'Christmas lights headband', ChristmasHeadband_Antlers: 'Christmas headband (antlers)', ChristmasHeadband_Gingerbread: 'Christmas headband (gingerbread)', ChristmasHeadband_Trees: 'Christmas headband (trees)',
-  WitchHoodCoif_ColorBase: 'Witch hood', PumpkinSeeds: 'Pumpkin seeds', PepperSeeds: 'Pepper seeds', TomatoSeeds: 'Tomato seeds', ZucchiniSeeds: 'Zucchini seeds', SlicedPumpkin: 'Sliced pumpkin',
+  WitchHoodCoif_ColorBase: 'Armoured witch hood', WitchHood_ColorBase: 'Witch hood', PumpkinSeeds: 'Pumpkin seeds', PepperSeeds: 'Pepper seeds', TomatoSeeds: 'Tomato seeds', ZucchiniSeeds: 'Zucchini seeds', SlicedPumpkin: 'Sliced pumpkin',
   DeadChicken_ColorBase: 'Dead chicken', DeadRabbit: 'Dead hare', DeadFox: 'Dead fox', DeadLizard: 'Dead lizard', RabbitPelt: 'Hare pelt', FoxPelt: 'Fox pelt', WildboarPelt: 'Boar pelt', LizardPelt: 'Lizard pelt', Pelt_Base: 'Animal pelt',
   ChickenBreastMeat: 'Chicken steak', RabbitLegMeat: 'Hare leg', FoxSteakMeat: 'Fox steak', LizardMeat: 'Lizard meat', CarpFilletMeat: 'Carp fillet', CatfishFilletMeat: 'Catfish fillet', MackerelFilletMeat: 'Mackerel fillet',
   SteelheadTroutFilletMeat: 'Steelhead trout fillet', WalleyePollockFilletMeat: 'Walleye pollock fillet', RedCaviar: 'Red caviar', WalleyePollock: 'Walleye pollock', SteelheadTrout: 'Steelhead trout',
@@ -145,6 +146,7 @@ const NAMES = {
   GunCase_ColorBase: 'Gun case', GunCaseKeys_Colorbase: 'Gun case key', ScientificBriefcase: 'Scientific briefcase', ScientificBriefcaseKeys: 'Scientific briefcase key',
   PlateCarrierComplete: 'Plate carrier (with holster and pouches)', CarrierHolsterSolo: 'Holster (plate carrier)', CarrierPouches: 'Pouches (plate carrier)',
   HayHook: 'Hay hook', Iceaxe: 'Ice axe', BrickTrowel: 'Brick trowel', DonerKnife: 'Doner knife', Akinaka: 'Akinaka', Scimitar: 'Scimitar', Jambiya: 'Jambiya',
+  AK_Bayonet: 'KA bayonet', M9A1_Bayonet: 'M9A1 bayonet', Mosin_Bayonet: 'Mosin bayonet', SKS_Bayonet: 'SK 59/66 bayonet',
   Ammo_SharpStick: 'Sharp stick', XmasLights: 'Christmas lights', Broom_Birch: 'Birch broom', NioshFaceMask: 'NIOSH face mask', WitchHoodCoif_: 'Armoured witch hood', DrysackBag_: 'Drysack bag',
   WaterproofBag_ColorBase: 'Waterproof bag', PlateCarrierHolster: 'Plate carrier with holster', PlateCarrierPouches: 'Plate carrier with pouches',
   DefaultMagazine: 'Magazine', DefaultWeapon: 'Firearm', Inventory_Base: 'Clothing that tears into rags', Magnum_Gold: 'Golden revolver', SawedoffMagnum_Gold: 'Sawed-off golden revolver',
@@ -272,6 +274,7 @@ if (debug === '--dump') {
 // names, use/takes: what Do() really takes, drop: classes left out); `results` replaces the
 // results. Every registered recipe whose CanDo() does more than `return true;` must have a
 // `cond` here (the build stops otherwise), so nothing in the scripts is silently skipped.
+const FILLETS = 'The fillets are as fresh and as big as what is left of the fish.'
 const REPAIR = 'Repairs the item one health level (only to worn, unless the item allows pristine); uses some of the kit.'
 const R = {
   CraftTorch: { ing: [{ use: 'consumed' }], notes: 'The whole stack of rags goes onto the torch as fuel.' },
@@ -323,11 +326,11 @@ const R = {
   CutOutPepperSeeds: { cond: 'Must not be frozen', results: 'seeds', notes: 'Up to 12 seeds: fewer when partly eaten, half when dried or rotten, none when cooked, burnt or under 30% left.' },
   CutOutPumpkinSeeds: { name: 'Cut up pumpkin', cond: 'Must not be frozen', results: 'seeds', notes: 'Up to 12 seeds (fewer when partly eaten, dried, rotten or cooked); the slices keep the pumpkin\'s condition and amount.' },
   PeelPotato: { name: 'Peel seed potato' },
-  PrepareCarp: { name: 'Gut carp', cond: 'Must not be frozen' },
-  PrepareCatfish: { name: 'Gut catfish', cond: 'Must not be frozen' },
-  PrepareMackerel: { name: 'Gut mackerel', cond: 'Must not be frozen' },
-  PrepareWalleyePollock: { name: 'Gut walleye pollock', cond: 'Must not be frozen' },
-  PrepareSteelheadTrout: { name: 'Gut steelhead trout', cond: 'Must not be frozen' },
+  PrepareCarp: { name: 'Gut carp', cond: 'Must not be frozen', notes: FILLETS },
+  PrepareCatfish: { name: 'Gut catfish', cond: 'Must not be frozen', notes: FILLETS },
+  PrepareMackerel: { name: 'Gut mackerel', cond: 'Must not be frozen', notes: FILLETS },
+  PrepareWalleyePollock: { name: 'Gut walleye pollock', cond: 'Must not be frozen', notes: FILLETS },
+  PrepareSteelheadTrout: { name: 'Gut steelhead trout', cond: 'Must not be frozen', notes: FILLETS },
   PrepareChicken: { name: 'Skin chicken', cond: 'Must not be frozen', results: [{ cls: 'ChickenBreastMeat', qty: null }, { cls: 'ChickenFeather', qty: null }, { cls: 'Bone', qty: null }], notes: '2–4 chicken steaks, 5–15 feathers and 2–5 bones. Leaves you with bloody hands.' },
   PrepareRabbit: { name: 'Skin hare', cond: 'Must not be frozen', results: [{ cls: 'RabbitLegMeat', qty: null }, { cls: 'RabbitPelt', qty: 1 }, { cls: 'Bone', qty: null }], notes: '2–4 hare legs, a pelt and 2–5 bones. Leaves you with bloody hands.' },
   PrepareFox: { name: 'Skin fox', cond: 'Must not be frozen', results: [{ cls: 'FoxSteakMeat', qty: null }, { cls: 'FoxPelt', qty: 1 }, { cls: 'Bone', qty: null }], notes: '2–4 fox steaks, a pelt and 2–5 bones. Leaves you with bloody hands.' },
@@ -396,8 +399,8 @@ const R = {
     notes: 'Each charcoal tablet fills 10 units of the filter; only what fits is used.',
   },
   DeCraftDetonator: { notes: 'The 9V battery comes out 25–100% charged.' },
-  CraftWitchHoodCoif: { cond: 'The witch hood must be empty' },
-  CraftDrysackBag: { cond: 'The waterproof bag must be empty' },
+  CraftWitchHoodCoif: { name: 'Armoured witch hood', cond: 'The witch hood must be empty' },
+  CraftDrysackBag: { name: 'Drysack bag', cond: 'The waterproof bag must be empty' },
   OpenScientificBriefcase: { name: 'Unlock scientific briefcase', cond: 'The briefcase must be locked' },
   CloseScientificBriefcase: { name: 'Lock scientific briefcase', cond: 'The briefcase must be open' },
   OpenGunCase: { name: 'Unlock gun case', cond: 'The key must match the case, and the case must be locked' },
@@ -576,13 +579,15 @@ const vehicles = VEHICLES.map(([cls, kind]) => {
   const firstPanel = spawn.findIndex((c) => /Door|Hood|Trunk/.test(c))
   const fitted = firstPanel < 0 ? spawn : spawn.slice(0, firstPanel)
   const wheelSpawn = fitted.filter((c) => /Wheel/.test(c))
-  const doors = spawn.filter((c) => /Door|Hood|Trunk/.test(c)).map((c) => NAMES[c] ?? nameOf(c))
+  const PANEL_ORDER = ['Front Left', 'Front Right', 'Rear Left', 'Rear Right', 'Left Door', 'Right Door', 'Hood', 'Trunk', 'Rear Door']
+  const rank = (n) => PANEL_ORDER.findIndex((k) => n.includes(k))
+  const doors = spawn.filter((c) => /Door|Hood|Trunk/.test(c)).map((c) => NAMES[c] ?? nameOf(c)).sort((a, b) => rank(a) - rank(b))
   const spare = chain(cls).some((c) => /CanManipulateSpareWheel\s*\(\s*string/.test(c.body) && c !== VCLASSES.CarScript)
   let wheels = null
   if (wheelSpawn.length) {
     const count = kind === 'car' ? Math.min(4, wheelSpawn.length) : wheelSpawn.length
     const kinds = [...new Set(wheelSpawn)]
-    const item = kinds.length === 1 ? NAMES[kinds[0]] : kinds.map((k) => `${wheelSpawn.filter((w) => w === k).length}× ${NAMES[k]}`).join(' + ')
+    const item = kinds.length === 1 ? NAMES[kinds[0]] : kinds.map((k) => { const n = wheelSpawn.filter((w) => w === k).length; return n > 1 ? `${n}× ${NAMES[k]}` : NAMES[k] }).join(' + ')
     wheels = { item, count, spare: kind === 'bike' ? false : spare }
   }
 
@@ -600,7 +605,7 @@ const vehicles = VEHICLES.map(([cls, kind]) => {
   if (cls === 'Motorbike_02_ColorBase') notes.push('Takes front, left and right shields.')
 
   return {
-    class: cls.replace(/_ColorBase$/, ''),
+    class: cls,
     name: WIKI[cls].name,
     kind,
     start,

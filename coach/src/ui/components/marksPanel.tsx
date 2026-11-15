@@ -23,6 +23,8 @@ export function MarksPanel({ state, session, mapId, onShow, onGo }: Props) {
   const owned = mine.filter((m) => !MARK_INFO[m.kind].sighting).sort((a, b) => a.kind.localeCompare(b.kind))
   const seen = mine.filter((m) => MARK_INFO[m.kind].sighting).sort((a, b) => b.at - a.at)
   const [code, setCode] = useState('')
+  const [list, setList] = useState('')
+  const [listOpen, setListOpen] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const pending = state.pendingMark?.map === mapId ? state.pendingMark : null
 
@@ -116,6 +118,23 @@ export function MarksPanel({ state, session, mapId, onShow, onGo }: Props) {
         </button>
       </div>
       {note ? <p className="small muted">{note}</p> : null}
+      <details className="dz-place-list" open={listOpen} onToggle={(e) => setListOpen((e.target as HTMLDetailsElement).open)}>
+        <summary className="small">Traders and places of a community server: paste a list</summary>
+        <p className="small muted">One per line, a name then where it is: “Green Mountain Trader: 037 050”, “Black market, Kumyrna”, “Safe zone - 500 m north of Stary Sobor”. Then ask “take me to the Green Mountain trader”.</p>
+        <textarea className="dz-place-text" rows={4} value={list} onChange={(e) => setList(e.target.value)} aria-label="Places, one per line" placeholder={'Green Mountain Trader: 037 050\nBlack market, Kumyrna'} />
+        <button
+          type="button"
+          className="btn sm"
+          disabled={!list.trim()}
+          onClick={() => {
+            const r = session.importPlaces(list, mapId)
+            setNote(`Added ${r.added} place${r.added === 1 ? '' : 's'}.${r.skipped.length ? ` Not understood: ${r.skipped.slice(0, 3).join('; ')}${r.skipped.length > 3 ? '…' : ''}` : ''}`)
+            if (!r.skipped.length) setList('')
+          }}
+        >
+          Add places
+        </button>
+      </details>
     </section>
   )
 }
