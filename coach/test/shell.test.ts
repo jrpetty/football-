@@ -210,12 +210,15 @@ test('a corrupted voice archive is refused before anything is written', async ()
   assert.equal(await isInstalled(root, TTS_MODELS.kokoro), false)
 })
 
-test('global keys: only safe accelerators, one job per key', async () => {
-  const { isValidHotkey, DEFAULT_HOTKEYS } = await import('../src/core/settings.ts')
-  for (const ok of ['F8', 'F24', 'Alt+Q', 'Ctrl+Shift+F11', 'CommandOrControl+Shift+F12', 'numadd']) assert.ok(isValidHotkey(ok), ok)
-  // A bare letter would fire while typing in game chat; unknown modifiers and keys are refused.
-  for (const bad of ['A', 'Space', 'Meta+A', 'Ctrl+Ctrl+A', 'F25', '', 'Alt+Q; rm -rf', 42]) assert.ok(!isValidHotkey(bad), String(bad))
+test('global keys: any key the system can register, alone or with modifiers; one job per key', async () => {
+  const { isValidHotkey, isBusyKey, DEFAULT_HOTKEYS } = await import('../src/core/settings.ts')
+  for (const ok of ['F8', 'F24', 'Alt+Q', 'Ctrl+Shift+F11', 'CommandOrControl+Shift+F12', 'numadd', 'A', 'Space', 'Capslock', 'MediaPlayPause', 'Shift+Tab', '\\']) assert.ok(isValidHotkey(ok), ok)
+  // Unknown modifiers and keys, Escape (it cancels) and mouse buttons are refused.
+  for (const bad of ['Escape', 'Meta+A', 'Ctrl+Ctrl+A', 'F25', '', 'Alt+Q; rm -rf', 42, 'Mouse4']) assert.ok(!isValidHotkey(bad), String(bad))
   assert.deepEqual(sanitizeSettings({ hotkeys: { talk: 'F9', mark: 'F9', stop: 'F10' } }).hotkeys, DEFAULT_HOTKEYS, 'duplicates are refused')
   assert.deepEqual(sanitizeSettings({ hotkeys: { talk: 'Alt+T', mark: 'F7', stop: 'F12' } }).hotkeys, { talk: 'Alt+T', mark: 'F7', stop: 'F12' })
+  assert.deepEqual(sanitizeSettings({ hotkeys: { talk: 'V', mark: 'F7', stop: 'F12' } }).hotkeys.talk, 'V')
+  // A lone letter is allowed, with a heads-up that the game will not get it; F-keys and media keys are quiet.
+  assert.ok(isBusyKey('V') && isBusyKey('Space') && !isBusyKey('F8') && !isBusyKey('Alt+V') && !isBusyKey('MediaPlayPause'))
   assert.equal(DEFAULT_SETTINGS.onboarded, false)
 })

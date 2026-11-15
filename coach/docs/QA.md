@@ -119,7 +119,7 @@ Use a fresh user profile for steps 1–3. The data folder is
 | 9.4 | Voice step → **Download** (Jenny), then **Hear it**. | Progress reaches 100% and a natural British voice speaks. Settings → Coach voice shows "Fast on this PC" after a few phrases. |
 | 9.5 | Settings → Coach voice → download Kokoro → pick Emma, George and so on. | Each voice previews on click. If the PC is slow, a warning suggests Jenny. |
 | 9.6 | Settings → Keyboard → click the talk key and press **F7**. | The keycap shows F7. With a game focused, F7 starts and stops talking. A key already used by another program shows a warning. |
-| 9.7 | Try to bind a bare letter (e.g. **A**). | Refused, with an explanation (it would trigger while typing in chat). |
+| 9.7 | Bind the talk key to a bare letter (e.g. **V**), then Caps Lock, a media key and Alt+V; press a mouse side button while choosing. | Each key is taken; a lone letter shows that the game will not get it while Sightline runs; the mouse button explains mapping it to a spare key (F13) in the mouse software. In game, the chosen key starts and stops talking. |
 | 9.8 | With voice input on and the model installed, restart the app and press the talk key at once. | The first question is transcribed without a long pause (the model is pre-loaded). |
 
 ## 10. Screen understanding, questions and decisions (key required)

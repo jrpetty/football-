@@ -129,12 +129,15 @@ export interface Hotkeys {
 }
 
 /**
- * Accelerators accepted for global keys: optional modifiers plus one key.
- * Letters, digits and other everyday keys need a modifier so typing in a game
- * chat cannot trigger them; F-keys and a few rarely used keys may stand alone.
+ * Accelerators accepted for global keys: optional modifiers plus any one key
+ * the system can register (letters, digits, F1–F24, punctuation, arrows, the
+ * numpad, Caps Lock, media and volume keys…). The player chooses: a lone
+ * everyday key works, but the game stops receiving it while Sightline runs
+ * (the settings say so). Escape stays free for cancelling.
  */
-const SOLO_KEYS = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scrolllock|Insert|Home|End|PageUp|PageDown|num[0-9]|numadd|numsub|nummult|numdiv|numdec)$/
-const MOD_KEYS = /^([A-Z0-9]|Space|Tab|Backspace|Delete|Up|Down|Left|Right|Plus|-|=|\[|\]|;|'|,|\.|\/|`)$/
+const KEYS = /^([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Space|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|Enter|Capslock|Numlock|Scrolllock|Pause|PrintScreen|Plus|-|=|\[|\]|\\|;|'|,|\.|\/|`|num[0-9]|numadd|numsub|nummult|numdiv|numdec|VolumeUp|VolumeDown|VolumeMute|MediaNextTrack|MediaPreviousTrack|MediaStop|MediaPlayPause)$/
+/** Keys that stand alone without getting in the way of typing or the game. */
+const QUIET_KEYS = /^(F([1-9]|1[0-9]|2[0-4])|Pause|Scrolllock|Insert|Home|End|PageUp|PageDown|num[0-9]|numadd|numsub|nummult|numdiv|numdec|VolumeUp|VolumeDown|VolumeMute|Media\w+)$/
 export function isValidHotkey(accel: unknown): accel is string {
   if (typeof accel !== 'string' || accel.length > 40) return false
   const parts = accel.split('+')
@@ -142,7 +145,13 @@ export function isValidHotkey(accel: unknown): accel is string {
   const mods = parts
   const allowed = ['CommandOrControl', 'Ctrl', 'Alt', 'Shift']
   if (new Set(mods).size !== mods.length || !mods.every((m) => allowed.includes(m))) return false
-  return SOLO_KEYS.test(key) || (mods.length > 0 && MOD_KEYS.test(key))
+  return KEYS.test(key)
+}
+
+/** A key on its own that players also type or play with (a letter, Space, Tab…): fine, but the game will not get it. */
+export function isBusyKey(accel: string): boolean {
+  const parts = accel.split('+')
+  return parts.length === 1 && !QUIET_KEYS.test(parts[0])
 }
 
 export const DEFAULT_HOTKEYS: Hotkeys = { talk: 'F8', mark: 'F9', stop: 'CommandOrControl+Shift+F12' }

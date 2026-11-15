@@ -854,7 +854,13 @@ Then press **Choose the game window**, play, and listen.
     ways (Settings → Voice input):
     - **Talk key** (F8 by default): hold it while you ask and let go, or tap
       it, ask, and tap it again. A rising tone means it is listening, a
-      falling tone that it is thinking.
+      falling tone that it is thinking. Bind it to any key in Settings →
+      Keyboard: an F-key, a letter, Caps Lock, a numpad or media key, alone
+      or with Ctrl, Alt or Shift. A key on its own that the game also uses
+      stops reaching the game while Sightline runs (the setting says so).
+      Mouse buttons need a low-level input hook that anti-cheat can flag,
+      so map a side button to a spare key (F13–F24) in your mouse software
+      and bind that.
     - **Always listening**: the microphone stays open and it hears you
       whenever you speak. By default only speech that starts with "Coach"
       is a question ("Coach, what beats knights?"; just "Coach" and it waits
