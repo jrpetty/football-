@@ -5650,3 +5650,10 @@ td > .swatch {
 .dz-place-list { margin-top: 10px; }
 .dz-place-list summary { cursor: pointer; }
 .dz-place-text { width: 100%; box-sizing: border-box; font: inherit; margin: 6px 0; }
+/* Companion: recipe, vehicle cards. */
+.comp-recipe { padding: 6px 0; border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08)); }
+.comp-recipe-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.comp-ingredient { padding: 2px 8px; border-radius: 999px; background: var(--surface-2, rgba(255, 255, 255, 0.06)); }
+.comp-ingredient + .comp-ingredient::before { content: '+'; margin: 0 6px 0 -12px; opacity: 0.6; }
+.comp-result { font-weight: 700; }
+.comp-start { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }

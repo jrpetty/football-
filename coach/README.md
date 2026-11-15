@@ -608,6 +608,38 @@ Then press **Choose the game window**, play, and listen.
     gear. Marks are kept on your PC; **Share with squad** copies a code
     your friends paste in. Marks are only what you told it or clicked:
     nothing is read off the screen and nobody's position is guessed.
+    **Hills:** routes and times weigh slopes (slower uphill on foot, a
+    car slows on steep climbs) and answers say the climb ("mostly
+    uphill, about 450 m of climbing"). The heights come from the heights
+    of about 230,000 buildings, trees and objects in Bohemia's files.
+    **Your pace:** set your spot as you travel and the coach times the
+    trips between spots; once it has three fair ones (no long stops, no
+    drives) every time follows your own pace (shown on the Map; Reset
+    there).
+    **All three maps:** your spot, "what now", "take me to" and where
+    items spawn work on Livonia and Sakhal too ("I'm at Brena" moves you
+    to Livonia). Sakhal has no water pumps in the game files, so water
+    answers say to melt snow or boil open water.
+    **Crafting, cars and bases:** "how do I make a splint", "what can I
+    make with rags" (from the 143 recipes the game's scripts register),
+    "what does the Olga need to run" (battery, plug, radiator, wheels,
+    fuel tank), "what do I need to build a fence / watchtower / gate /
+    flag pole" (each stage's materials and tools), "how do code locks
+    work", "how does raiding work", "how does the flag pole work". Each
+    comes up as a card.
+    **Beginner mode** (Coach settings, "Your DayZ experience: New to
+    DayZ"): plainer answers with game words explained, "I'm new, where do
+    I start?" (a first-hour walkthrough), and "what does KOS mean" for
+    any word players use.
+    **Server restarts:** type your server's restart times in Coach
+    settings ("00:00 06:00 12:00 18:00" or "every 4 hours from 02:00");
+    the coach warns 15, 5 and 1 minutes before (out loud unless muted),
+    shows a countdown on the Companion and answers "when is the next
+    restart".
+    **Traders and places** of a community server: "mark the trader at
+    Green Mountain", or paste a list under Your marks ("Green Mountain
+    Trader: 037 050", one per line); then "take me to the Green Mountain
+    trader".
     Questions it knows are answered on your PC, free and instant. Anything
     else (with your Claude key) goes to Claude, which answers in plain
     conversation and can call the app's own tools: places, routes, nearest

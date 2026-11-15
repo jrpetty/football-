@@ -340,6 +340,14 @@ await check('DayZ companion: chat on one side, its screen on the other: your spo
   assert((await win.locator('.comp-steps li', { hasText: 'on foot)' }).count()) >= 3, 'each step says how long')
   await say('how long does it take to get to Berezino')
   await win.waitForSelector('.comp-msg:has(.comp-you:text-is("how long does it take to get to Berezino")) .comp-bot >> text=/min jogging/', { timeout: 5_000 })
+  // Crafting, base building, beginners.
+  await say('how do I make a splint')
+  await win.waitForSelector('.comp-screen .comp-kicker >> text=Crafting', { timeout: 5_000 })
+  await say('what do I need to build a fence')
+  await win.waitForSelector('.comp-screen .comp-kicker >> text=Base building', { timeout: 5_000 })
+  assert((await win.locator('.comp-screen .comp-table tbody tr').count()) >= 4, 'fence stages')
+  await say("I'm new, where do I start?")
+  await win.waitForSelector('.comp-screen h2 >> text=Your first hour in DayZ', { timeout: 5_000 })
   // Marks: a sighting where it was said; one with no place is clicked on the map; then the Marks panel.
   await say('I saw two players heading north near Gorka')
   await win.waitForSelector('.comp-msg:has(.comp-you:text-is("I saw two players heading north near Gorka")) .comp-bot >> text=/^Marked: 2 players heading north, Gorka/', { timeout: 5_000 })

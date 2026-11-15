@@ -20,6 +20,7 @@ import { pointInfo } from './mapView.ts'
 import { tripBetween, tripShortBetween } from './heights.ts'
 import { BEGINNER_NOTE, FIRST_HOUR, firstHourText, glossaryAnswer, isFirstHourQuestion, plainer } from './beginner.ts'
 import { isRestartQuestion, restartLine } from './server.ts'
+import { BUILD_SOURCES, BUILD_TIPS, buildAnswer, buildIn, buildTopic, craftAnswer, isCraftQuestion, isVehicleQuestion, LOCKS, RAIDING, recipesFor, recipesUsing, TERRITORY, vehicleAnswer, vehicleIn, type Build, type Recipe, type Vehicle } from './crafting.ts'
 import { goLine, listLine, namedMark, liveMarks, makeMark, MARK_INFO, MARK_KINDS, markAsk, markLine, markSaid, newest, seenLine, warningLine, whereIn, type Mark, type MarkKind } from './marks.ts'
 
 // --- Cards ----------------------------------------------------------------------------------
@@ -41,6 +42,12 @@ export type Card =
   | { readonly type: 'list'; readonly title: string; readonly rows: readonly (readonly [string, string])[] }
   | { readonly type: 'compare'; readonly title: string; readonly columns: readonly [string, string]; readonly rows: readonly (readonly [string, string, string])[] }
   | { readonly type: 'help'; readonly examples: readonly string[] }
+  /** A crafting recipe (or a few). */
+  | { readonly type: 'recipe'; readonly title: string; readonly recipes: readonly { readonly name: string; readonly ingredients: readonly string[]; readonly result: string; readonly conditions: string | null; readonly notes: string | null }[] }
+  /** What a vehicle needs to run. */
+  | { readonly type: 'vehicle'; readonly title: string; readonly start: readonly string[]; readonly facts: readonly (readonly [string, string])[]; readonly notes: string | null }
+  /** What a base part needs, stage by stage. */
+  | { readonly type: 'build'; readonly title: string; readonly kit: string | null; readonly stages: readonly { readonly name: string; readonly needs: string; readonly tools: string; readonly notes: string | null }[]; readonly notes: string | null; readonly sources: readonly { readonly title: string; readonly url: string }[] }
   /** Step-by-step guidance (the first hour for new players). */
   | { readonly type: 'guide'; readonly title: string; readonly steps: readonly { readonly title: string; readonly line: string }[] }
   /** Click the map to place a mark the player told about without saying where. */
@@ -203,6 +210,10 @@ export const HELP_EXAMPLES = [
   "I'm new, where do I start?",
   'What does KOS mean?',
   'When is the next restart?',
+  'How do I make a splint?',
+  'What does the Olga need to run?',
+  'What do I need to build a fence?',
+  'How does raiding work?',
   'What do I have?',
   'Show me the map',
 ]
@@ -300,6 +311,84 @@ function marksReply(question: string, ctx: CompanionContext, topic: Topic): Repl
   return { text: listLine(marks.filter((m) => m.map === ctx.map), now, here), card: { type: 'map', map: ctx.map, title: 'Your marks' }, topic }
 }
 
+function recipeCard(title: string, rs: readonly Recipe[]): Card {
+  return {
+    type: 'recipe',
+    title,
+    recipes: rs.map((r) => ({
+      name: r.name,
+      ingredients: r.ingredients.map((i) => `${i.use === 'quantity' && i.takes ? `${i.takes}× ` : i.minQty && i.minQty > 1 ? `${i.minQty}× ` : ''}${i.items.length > 5 ? `${i.items.slice(0, 5).join(', ')}…` : i.items.join(' or ')}${i.use === 'kept' ? ' (kept)' : i.use === 'damaged' ? ' (wears)' : ''}`),
+      result: r.results.map((x) => `${x.qty && x.qty > 1 ? `${x.qty}× ` : ''}${x.item}`).join(', '),
+      conditions: r.conditions,
+      notes: r.notes,
+    })),
+  }
+}
+
+function vehicleCard(v: Vehicle): Card {
+  return {
+    type: 'vehicle',
+    title: v.name,
+    start: v.start.map((s) => (s === 'fuel' ? 'Fuel' : s)),
+    facts: [
+      ...(v.wheels ? [['Wheels', `${v.wheels.count}: ${v.wheels.item}${v.wheels.spare ? ' (+ spare slot)' : ''}`] as [string, string]] : []),
+      ...(v.battery ? [['Battery', v.battery] as [string, string]] : []),
+      ...(v.plug ? [['Plug', v.plug] as [string, string]] : []),
+      ['Radiator', v.radiator ? `Yes${v.coolantL ? ` (about ${v.coolantL} L of water)` : ''}` : 'No'],
+      ...(v.fuelL ? [['Fuel tank', `about ${v.fuelL} L`] as [string, string]] : []),
+      ...(v.lights ? [['Headlights', v.lights] as [string, string]] : []),
+      ...(v.doors.length ? [['Doors and panels', v.doors.join(', ')] as [string, string]] : []),
+    ],
+    notes: v.notes,
+  }
+}
+
+function buildCard(b: Build): Card {
+  return {
+    type: 'build',
+    title: b.name,
+    kit: b.kit ? `${b.kit.name}: ${b.kit.craft}` : null,
+    stages: b.stages.map((st) => ({ name: st.name, needs: st.needs.map(([n, q]) => `${q ?? ''}${q ? '× ' : ''}${n}`).join(', ') || '—', tools: st.tools.join(', ') || '—', notes: st.notes ?? null })),
+    notes: b.notes ?? null,
+    sources: BUILD_SOURCES.slice(0, 4),
+  }
+}
+
+/** Crafting, cars and base building: the answer and its card, or null. */
+function makeReply(question: string, topic: Topic): Reply | null {
+  const t = buildTopic(question)
+  if (t) {
+    const text = buildAnswer(question)
+    if (!text) return null
+    const steps = (lines: readonly string[]) => lines.map((line) => ({ title: '', line }))
+    const b = buildIn(question)
+    const card: Card =
+      t === 'build' && b
+        ? buildCard(b)
+        : t === 'raiding'
+          ? { type: 'guide', title: 'How raiding works', steps: steps(RAIDING) }
+          : t === 'locks'
+            ? { type: 'guide', title: 'Locks', steps: LOCKS.map((l) => ({ title: l.name, line: l.notes })) }
+            : t === 'territory'
+              ? { type: 'guide', title: 'Flag pole and territory', steps: steps(TERRITORY) }
+              : { type: 'guide', title: 'Base building tips', steps: steps(BUILD_TIPS) }
+    return { text, card, topic }
+  }
+  if (isVehicleQuestion(question) || (vehicleIn(question) && /\b(need|parts|start|fix|repair)\b/i.test(question))) {
+    const text = vehicleAnswer(question)
+    const v = vehicleIn(question)
+    if (text) return { text, card: v ? vehicleCard(v) : null, topic }
+  }
+  if (isCraftQuestion(question)) {
+    const text = craftAnswer(question)
+    if (!text) return null
+    const using = /\bwhat can i (?:make|craft)\b/i.test(question) ? recipesUsing(question) : []
+    const rs = using.length ? using.slice(0, 6) : recipesFor(question)
+    return { text, card: rs.length ? recipeCard(using.length ? 'What you can make' : rs[0].name, rs) : null, topic }
+  }
+  return null
+}
+
 function localReplyInner(question: string, ctx: CompanionContext, profile: GameProfile, topic: Topic, answered: string | null): Reply | null {
   const q = question.toLowerCase().trim()
   // New players: the first hour, and what words mean.
@@ -309,6 +398,8 @@ function localReplyInner(question: string, ctx: CompanionContext, profile: GameP
   if (isRestartQuestion(q)) return { text: restartLine(ctx.restarts ?? [], new Date(ctx.now ?? Date.now())), card: null, topic }
   const mine = marksReply(question, ctx, topic)
   if (mine) return mine
+  const made = makeReply(question, topic)
+  if (made) return made
   const follow = followUp(q, topic, ctx, profile)
   if (follow) return follow
   if (/^(help|what can you do|what do you know|commands)\b/.test(q)) {
@@ -412,6 +503,9 @@ export const COMPANION_TOOLS: readonly ToolDef[] = [
   { name: 'add_mark', description: "Put a mark on the player's map for something they tell you: players they saw (kind player; count and heading if said), shots heard, danger (a sniper, campers), their base, a stash, their vehicle, good loot, a meeting point, or a note. Only what the player says; never invent sightings.", input_schema: { type: 'object', properties: { kind: { type: 'string', enum: [...MARK_KINDS.filter((k) => k !== 'body')] }, where: { type: 'string', description: 'A town, a grid ("135 012"), "here" (their spot), or "500 m north of Gorka".' }, label: { type: 'string', description: 'Short, e.g. "2 players heading north", "Our base".' }, count: { type: 'integer' }, heading: { type: 'string' }, note: { type: 'string' } }, required: ['kind', 'where'] } },
   { name: 'remove_marks', description: 'Remove marks the player asks to remove.', input_schema: { type: 'object', properties: { what: { type: 'string', enum: ['last', 'sightings', 'all', ...MARK_KINDS] } }, required: ['what'] } },
   { name: 'list_marks', description: "The player's marks (base, stash, vehicle, meeting point, notes) and recent sightings with how long ago, shown on the map.", input_schema: { type: 'object', properties: {} } },
+  { name: 'craft', description: 'How to craft something in DayZ (from the game scripts: the two ingredients, how much of each, tools kept or worn, conditions), or what can be made with an item ("with rags").', input_schema: { type: 'object', properties: { item: { type: 'string', description: 'What to make, or "with rags" for what an item makes.' } }, required: ['item'] } },
+  { name: 'vehicle_parts', description: 'What a vehicle needs to start and run: battery, spark or glow plug, radiator, wheels, fuel tank, doors (Olga 24, Ada 4x4, Gunter 2, Sarka 120, M1025 Humvee, M3S truck, motorbikes, rubber boat).', input_schema: { type: 'object', properties: { vehicle: { type: 'string' } }, required: ['vehicle'] } },
+  { name: 'base_building', description: 'Base building: materials and tools for each stage of a fence, gate, watchtower, flag pole, shelter, crate, barrel, tent or stash; how locks work; how raiding works; flag pole and territory; tips.', input_schema: { type: 'object', properties: { question: { type: 'string', description: 'E.g. "what do I need for a watchtower", "how does raiding work", "how do code locks work".' } }, required: ['question'] } },
   { name: 'show_map', description: 'Put the map on the screen, optionally centred on a place.', input_schema: { type: 'object', properties: { map: { type: 'string', enum: ['chernarus', 'livonia', 'sakhal'] }, place: { type: 'string' } } } },
 ]
 
@@ -453,6 +547,19 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
       if (!said || said.type !== 'remove') return { text: 'Nothing removed.', card: null }
       effects.removeMarks?.(said.ids)
       return { text: said.text, card: null, ctx: { ...ctx, marks: (ctx.marks ?? []).filter((m) => !said.ids.includes(m.id)) } }
+    }
+    case 'craft': {
+      const q = /^with\b/i.test(str('item')) ? `what can I make ${str('item')}` : `how do I make ${str('item')}`
+      const r = makeReply(q, null)
+      return r ? { text: r.text, card: r.card } : { text: `No recipe for "${str('item')}" in the game's scripts (it may be found, not crafted).`, card: null }
+    }
+    case 'vehicle_parts': {
+      const v = vehicleIn(str('vehicle'))
+      return v ? { text: vehicleAnswer(str('vehicle')) ?? '', card: vehicleCard(v) } : { text: vehicleAnswer('how do I fix a car') ?? '', card: null }
+    }
+    case 'base_building': {
+      const r = makeReply(str('question'), null)
+      return r ? { text: r.text, card: r.card } : { text: `Base building: ${BUILD_TIPS.slice(0, 4).join(' ')}`, card: { type: 'guide', title: 'Base building tips', steps: BUILD_TIPS.map((line) => ({ title: '', line })) } }
     }
     case 'list_marks': {
       const now = ctx.now ?? Date.now()

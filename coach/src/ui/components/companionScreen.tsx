@@ -206,8 +206,8 @@ export function CompanionScreen({ card, state, session, onAsk, onOpenMap, questi
         <Frame title={card.title} kicker="Step by step">
           <ol className="comp-steps">
             {card.steps.map((s) => (
-              <li key={s.title}>
-                <b>{s.title}</b>
+              <li key={`${s.title}${s.line.slice(0, 24)}`}>
+                {s.title ? <b>{s.title}</b> : null}
                 <span className="small">{s.line}</span>
               </li>
             ))}
@@ -219,6 +219,68 @@ export function CompanionScreen({ card, state, session, onAsk, onOpenMap, questi
               </button>
             ))}
           </div>
+        </Frame>
+      )
+    case 'recipe':
+      return (
+        <Frame title={card.title} kicker="Crafting">
+          {card.recipes.map((r) => (
+            <div key={r.name} className="comp-recipe">
+              <b className="small">{r.name}</b>
+              <div className="comp-recipe-row small">
+                {r.ingredients.map((i, n) => (
+                  <span key={n} className="comp-ingredient">
+                    {i}
+                  </span>
+                ))}
+                {r.result ? <span className="comp-result">→ {r.result}</span> : null}
+              </div>
+              {r.conditions ? <p className="small muted">{r.conditions}</p> : null}
+              {r.notes ? <p className="small muted">{r.notes}</p> : null}
+            </div>
+          ))}
+          <p className="small muted">From Bohemia's game scripts. Drag one item onto the other, or hold both and use the craft action.</p>
+        </Frame>
+      )
+    case 'vehicle':
+      return (
+        <Frame title={card.title} kicker="Getting it running">
+          <div className="comp-start small">
+            <b>To start:</b>
+            {card.start.map((s) => (
+              <span key={s} className="chip">
+                {s}
+              </span>
+            ))}
+          </div>
+          <Facts rows={card.facts} />
+          {card.notes ? <p className="small muted">{card.notes}</p> : null}
+        </Frame>
+      )
+    case 'build':
+      return (
+        <Frame title={card.title} kicker="Base building">
+          {card.kit ? <p className="small comp-caption">{card.kit}</p> : null}
+          <table className="comp-table small">
+            <thead>
+              <tr>
+                <th>Stage</th>
+                <th>Needs</th>
+                <th>Tools</th>
+              </tr>
+            </thead>
+            <tbody>
+              {card.stages.map((s) => (
+                <tr key={s.name} title={s.notes ?? undefined}>
+                  <td>{s.name}</td>
+                  <td>{s.needs}</td>
+                  <td>{s.tools}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {card.notes ? <p className="small muted">{card.notes}</p> : null}
+          <p className="small muted">Counts from the DayZ Wiki; the in-game prompt has the final word. {card.sources.length ? `Sources: ${card.sources.map((s) => s.title).join('; ')}.` : ''}</p>
         </Frame>
       )
     case 'pick':

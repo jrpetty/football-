@@ -39,3 +39,15 @@ Both licences are **non-commercial**. Replace this data, or get permission from 
 ## Map marks
 
 `src/core/dayz/marks.ts` keeps the player's own marks: what they saw (players, shots, danger) and what is theirs (base, stash, vehicle, loot, meeting point, notes), plus their last spot when a life ends in death. Every mark comes from what the player said or clicked; nothing is read off the screen for it and no other player's position is inferred. Sightings carry the time they were marked, fade after 30 minutes and are dropped after six hours (danger and shots after a day). Marks are stored on the player's PC as the `marks` document (kept whenever made, deleted by "Forget my data", included in the export) and can be shared as an `SLMARKS1:` code.
+
+## Heights
+
+`scripts/build-dayz-heights.mjs` builds `heights.<map>.json` from the heights of every building in `mapgrouppos.xml` and every object in `mapgroupcluster*.xml` of the Central Economy (ADPL-SA): about 230,000 points on Chernarus and Livonia, 75,000 on Sakhal, averaged into 128 × 128 squares, empty squares filled from the nearest, the open sea at 0 m. Checked on one point in twenty left out of the build: median error 3.2 m (Chernarus), 2.2 m (Livonia), 3.4 m (Sakhal); far from any building or tree it is rougher.
+
+## Crafting and vehicles
+
+`scripts/build-dayz-crafting.mjs` builds `crafting.json` from Bohemia's game scripts (DayZ-Script-Diff, DayZ Public License: attribution, non-commercial, DayZ only): the 143 recipes `pluginrecipesmanagerbase.c` registers (ingredients, quantities, what is kept or worn, conditions) and what each vehicle needs to start. Fuel tank sizes and the radiator's 5.85 L are from the DayZ Wiki (CC BY-NC-SA, read 2026-11-15); the Gunter 2 and motorbike tanks are unknown. Recipe names are written for this pack (the scripts' names are string-table keys).
+
+## Base building
+
+`building.json` (written 2026-11-15 for game version 1.30): kit recipes, lock rules, dismantling and flag-pole timings from the scripts; lifetimes from the Central Economy; per-stage material counts from the DayZ Wiki. The wiki's watchtower page contradicts itself on panel and roof counts; answers say to check the in-game prompt. Explosive damage to walls is in the game config, so no numbers are given for it.
