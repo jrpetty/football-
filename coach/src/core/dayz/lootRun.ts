@@ -5,6 +5,7 @@
 // map as a line through numbered stops.
 
 import { tripTime } from './travel.ts'
+import { climbAlong, climbWords, heightsFor } from './heights.ts'
 import { bearing, distance, findPlace, km, neighbours, placesIn, type DayzMap, type DayzMapId, type PlaceMatch } from './places.ts'
 
 export type StopKind = 'hospital' | 'medical' | 'police' | 'military' | 'fire' | 'fuel' | 'water' | 'heliCrash' | 'lighthouse' | 'prison'
@@ -219,7 +220,11 @@ export function lootRunLine(plan: LootPlan): string {
   const parts = plan.stops.map((s, i) => `${i + 1}. ${s.label} ${s.near ? (s.nearM < 400 ? `in ${s.near}` : `by ${s.near}`) : ''}, ${km(s.legM)} ${s.dir}`.replace(/ ,/, ','))
   const tail = plan.finish ? ` Then ${plan.finish.name === plan.start.name ? 'back to' : 'on to'} ${plan.finish.name}, ${km(plan.finish.legM)} ${plan.finish.dir}.` : ''
   const missing = plan.missing.length ? ` ${plan.map.name} has no ${plan.missing.map((k) => STOP_LABELS[k].toLowerCase()).join(' or ')} in the game's files.` : ''
-  return `Loot run from ${plan.start.name}, ${km(plan.totalM)} in all (straight lines; ${tripTime(plan.totalM)}, not counting looting): ${parts.join('; ')}.${tail}${missing} Open it on the Map to see the line.`
+  const path = lootRunPath(plan)
+  const H = heightsFor(plan.map.id)
+  const climb = climbAlong(H, path, 'foot')
+  const hilly = climbWords(climb)
+  return `Loot run from ${plan.start.name}, ${km(plan.totalM)} in all (straight lines; ${tripTime(plan.totalM, { foot: climb.factor, car: climbAlong(H, path, 'car').factor })}${hilly ? `, ${hilly}` : ''}, not counting looting): ${parts.join('; ')}.${tail}${missing} Open it on the Map to see the line.`
 }
 
 /** The run as points for the map: start, stops, finish. */

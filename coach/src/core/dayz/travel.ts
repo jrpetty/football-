@@ -47,24 +47,43 @@ export interface Ground {
   readonly road: number
   /** Share in water (0 to 1), swum on foot. */
   readonly water?: number
+  /** Time against flat ground from hills (1 = flat; 1.3 = 30 % longer). */
+  readonly hill?: number
 }
+
+/** Hill factors for a straight line, on foot and by car (see heights.ts). */
+export interface Hills {
+  readonly foot: number
+  readonly car: number
+}
+
+// Your own pace on foot, learned from the time between spots you set (1 = the estimate).
+let footPace = 1
+
+/** Set how much faster (> 1) or slower (< 1) the player moves on foot than the estimate. */
+export function setFootPace(k: number): void {
+  footPace = Number.isFinite(k) && k > 0 ? Math.min(2, Math.max(0.5, k)) : 1
+}
+
+export const getFootPace = () => footPace
 
 /** Seconds for a way over the ground, on foot (jogging, or with sprints) or by car. */
 export function seconds(way: Ground, travel: Travel, sprints = false): number {
   const L = Math.max(0, way.lengthM)
+  const hill = Number.isFinite(way.hill) && way.hill! > 0 ? Math.min(3, way.hill!) : 1
   if (travel === 'car') {
     const road = clamp(way.road)
-    return (L * road) / SPEED.carRoad + (L * (1 - road)) / SPEED.carOff
+    return ((L * road) / SPEED.carRoad + (L * (1 - road)) / SPEED.carOff) * hill
   }
   const water = clamp(way.water ?? 0)
-  return (L * (1 - water)) / (sprints ? SPEED.mixed : SPEED.jog) + (L * water) / SPEED.swim
+  return ((L * (1 - water) * hill) / (sprints ? SPEED.mixed : SPEED.jog) + (L * water) / SPEED.swim) / footPace
 }
 
 /** Seconds for a straight line, with the detour added. */
-export function straightSeconds(m: number, travel: Travel, sprints = false): number {
+export function straightSeconds(m: number, travel: Travel, sprints = false, hills?: Hills | null): number {
   const lengthM = m * DETOUR[travel]
   // By car most of a trip of a few km is on roads; the start and end are not.
-  return seconds({ lengthM, road: travel === 'car' ? 0.75 : 0 }, travel, sprints)
+  return seconds({ lengthM, road: travel === 'car' ? 0.75 : 0, hill: hills?.[travel] ?? 1 }, travel, sprints)
 }
 
 /** "about 23 min jogging (19 with sprints)": the sprint time only when it saves a minute or more. */
@@ -92,15 +111,15 @@ const bare = (s: number) => duration(s).replace(/^about /, '')
  * for longer trips, "about 2 min by car". Rough: the way over the ground is
  * longer than a straight line.
  */
-export function tripTime(m: number): string {
-  const foot = footTime(straightSeconds(m, 'foot'), straightSeconds(m, 'foot', true))
+export function tripTime(m: number, hills?: Hills | null): string {
+  const foot = footTime(straightSeconds(m, 'foot', false, hills), straightSeconds(m, 'foot', true, hills))
   if (m < CAR_FROM_M) return foot
-  return `${foot}, ${bare(straightSeconds(m, 'car'))} by car`
+  return `${foot}, ${bare(straightSeconds(m, 'car', false, hills))} by car`
 }
 
 /** The short form for a list row: "6 min on foot". */
-export function tripShort(m: number): string {
-  return `${bare(straightSeconds(m, 'foot'))} on foot`
+export function tripShort(m: number, hills?: Hills | null): string {
+  return `${bare(straightSeconds(m, 'foot', false, hills))} on foot`
 }
 
 /** The time for a way over the ground, in words: "about 9 min jogging (7 with sprints)" or "about 4 min by car". */
@@ -110,7 +129,7 @@ export function groundTime(way: Ground, travel: Travel): string {
 }
 
 /** One line on how the times are worked out, for answers and the map. */
-export const TIME_NOTE = 'Times are rough: jogging about 16 km/h (no stamina cost); with sprints whenever stamina lets you, about 19 km/h (less when heavily loaded); a car about 65 km/h on roads.'
+export const TIME_NOTE = 'Times are rough: jogging about 16 km/h on the flat (no stamina cost), slower uphill; with sprints whenever stamina lets you, about 19 km/h (less when heavily loaded); a car about 65 km/h on roads. Hills from the heights in Bohemia\'s files.'
 
 function clamp(x: number): number {
   return Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0

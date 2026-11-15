@@ -8,7 +8,8 @@
 import { bearing, DAYZ_MAPS, distance, km, neighbours, placesIn, type DayzMap, type DayzPlace, type PlaceMatch } from './places.ts'
 import { parsePosition } from './mapView.ts'
 import { pointsOf, type StopKind, STOP_LABELS } from './lootRun.ts'
-import { footTime, straightSeconds, tripShort, tripTime } from './travel.ts'
+import { footTime, straightSeconds } from './travel.ts'
+import { lineHills, tripBetween, tripShortBetween } from './heights.ts'
 import { findItem, itemAnswer, kindAnswer, kindIn, placesFor, buildingAnswer, type LootItem } from './items.ts'
 
 export const CHERNARUS: DayzMap = DAYZ_MAPS.find((m) => m.id === 'chernarus')!
@@ -126,10 +127,13 @@ export function whatNow(spot: Spot, have: Set<string>, opts: { thirsty?: boolean
   const missing = KIT.filter((k) => !have.has(k.id))
   const steps: Step[] = []
   let at: { x: number; y: number } = spot
-  let total = 0
+  let jog = 0
+  let sprint = 0
   const add = (kind: Step['kind'], p: { x: number; y: number }, title: string, line: string) => {
-    steps.push({ kind, x: Math.round(p.x), y: Math.round(p.y), title, line: `${line}, ${km(distance(at, p))} ${bearing(at, p)} (${tripShort(distance(at, p))})` })
-    total += distance(at, p)
+    steps.push({ kind, x: Math.round(p.x), y: Math.round(p.y), title, line: `${line}, ${km(distance(at, p))} ${bearing(at, p)} (${tripShortBetween(CHERNARUS.id, at, p)})` })
+    const h = lineHills(CHERNARUS.id, at, p)
+    jog += straightSeconds(distance(at, p), 'foot', false, h)
+    sprint += straightSeconds(distance(at, p), 'foot', true, h)
     at = p
   }
   if (!have.has('water') || opts.thirsty) {
@@ -156,7 +160,7 @@ export function whatNow(spot: Spot, have: Set<string>, opts: { thirsty?: boolean
   if (!steps.length) {
     return { text: `From ${spot.label}: you have the essentials. Keep water and food up, and tell me what you want next ("where do I find a gas mask", "take me to the nearest military").`, route: [], steps }
   }
-  const text = `From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${footTime(straightSeconds(total, 'foot'), straightSeconds(total, 'foot', true))}, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
+  const text = `From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${footTime(jog, sprint)}, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
   return { text, route: [spot, ...steps.map((s) => ({ x: s.x, y: s.y, label: `${steps.indexOf(s) + 1} ${s.title}` }))], steps }
 }
 
@@ -189,12 +193,12 @@ export function takeMeTo(question: string, spot: Spot): Plan | null {
     if (!p) return null
     const title = STOP_LABELS[kind]
     const line = `${title} ${by(p)}, ${km(p.m)} ${bearing(spot, p)} from ${spot.label}`.replace(/ {2}/g, ' ')
-    return { text: `${line}: ${tripTime(p.m)}.`, route: [spot, { x: p.x, y: p.y, label: title }], steps: [{ kind, x: p.x, y: p.y, title, line }] }
+    return { text: `${line}: ${tripBetween(CHERNARUS.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: title }], steps: [{ kind, x: p.x, y: p.y, title, line }] }
   }
   const place = placesIn(question, 'chernarus').find((m) => m.map.id === 'chernarus')
   if (place) {
     const p = place.place
-    return { text: `${p.name}: ${km(distance(spot, p))} ${bearing(spot, p)} from ${spot.label}, ${tripTime(distance(spot, p))}.`, route: [spot, { x: p.x, y: p.y, label: p.name }], steps: [] }
+    return { text: `${p.name}: ${km(distance(spot, p))} ${bearing(spot, p)} from ${spot.label}, ${tripBetween(CHERNARUS.id, spot, p)}.`, route: [spot, { x: p.x, y: p.y, label: p.name }], steps: [] }
   }
   return null
 }
@@ -202,7 +206,7 @@ export function takeMeTo(question: string, spot: Spot): Plan | null {
 function toItem(item: LootItem, spot: Spot): Plan | null {
   const best = placesFor(item, spot)[0]
   if (!best) return { text: itemAnswer(item, spot), route: [], steps: [] }
-  return { text: `${itemAnswer(item, spot)}${best.m >= 400 ? ` Getting to ${best.place.name}: ${tripTime(best.m)}.` : ''}`, route: [spot, { x: best.place.x, y: best.place.y, label: best.place.name }], steps: [] }
+  return { text: `${itemAnswer(item, spot)}${best.m >= 400 ? ` Getting to ${best.place.name}: ${tripBetween(CHERNARUS.id, spot, best.place)}.` : ''}`, route: [spot, { x: best.place.x, y: best.place.y, label: best.place.name }], steps: [] }
 }
 
 // --- Questions -----------------------------------------------------------------------------

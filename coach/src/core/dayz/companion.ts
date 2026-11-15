@@ -17,7 +17,7 @@ import { findItem, itemAnswer, buildingAnswer, kindAnswer, kindIn, placesFor, CH
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from './lootRun.ts'
 import { bearing, DAYZ_MAPS, describePlace, distance, featureLine, findPlace, gridRef, km, nearest, neighbours, placesIn, region, type DayzMapId, type PlaceMatch } from './places.ts'
 import { pointInfo } from './mapView.ts'
-import { tripShort, tripTime } from './travel.ts'
+import { tripBetween, tripShortBetween } from './heights.ts'
 import { goLine, listLine, liveMarks, makeMark, MARK_INFO, MARK_KINDS, markAsk, markLine, markSaid, newest, seenLine, warningLine, whereIn, type Mark, type MarkKind } from './marks.ts'
 
 // --- Cards ----------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ export function itemCardFor(item: LootItem, spot: Spot | null): Card {
       ['Loot tiers', item.tiers.length ? item.tiers.join(', ') : 'any'],
       ...(item.deloot ? [['Also', 'helicopter crashes and convoys'] as [string, string]] : []),
     ],
-    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)} · ${tripShort(s.m)}` : '', buildings: s.buildings, tier: s.tier })),
+    nearest: spots.map((s) => ({ name: s.place.name, where: spot ? `${km(s.m)} ${bearing(spot, s.place)} · ${tripShortBetween(CHERNARUS.id, spot, s.place)}` : '', buildings: s.buildings, tier: s.tier })),
     map: 'chernarus',
     markers: spots.map((s) => pos(s.place, `${s.place.name} (${s.buildings})`)),
     from: spot ? pos(spot, spot.label) : null,
@@ -212,7 +212,7 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
     if (/\b(take me|get me|route|how far|how long|how do i get|way|go there|distance)\b/.test(q)) {
       if (!ctx.spot || topic.map !== 'chernarus') return { text: `Where are you? Say "I'm at" a town or grid, and I will show the way to ${topic.name}.`, card: null, topic }
       const m = distance(ctx.spot, p)
-      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}, ${tripTime(m)}.`, card: { type: 'map', map: 'chernarus', title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
+      return { text: `${topic.name}: ${km(m)} ${bearing(ctx.spot, p)} from ${ctx.spot.label}, ${tripBetween(CHERNARUS.id, ctx.spot, p)}.`, card: { type: 'map', map: 'chernarus', title: `To ${topic.name}`, route: [pos(ctx.spot, ctx.spot.label), pos(p, topic.name)] }, topic }
     }
     if (/\b(what'?s|what is) (near|around)\b/.test(q)) {
       const m = findPlace(topic.name)
@@ -455,7 +455,7 @@ function runToolInner(name: string, input: Record<string, unknown>, ctx: Compani
       const from = fromM ? pos(fromM.place, fromM.place.name) : spot && to.map.id === 'chernarus' ? pos(spot, spot.label) : null
       if (!from) return { text: 'No start: name one, or ask the player where they are.', card: null }
       const m = distance(from, to.place)
-      return { text: `${to.place.name} is ${km(m)} ${bearing(from, to.place)} of ${from.label} in a straight line, ${tripTime(m)}; the map shows the way over the ground and its time.`, card: { type: 'map', map: to.map.id, title: `${from.label} → ${to.place.name}`, route: [from, pos(to.place, to.place.name)] }, topic: { kind: 'place', name: to.place.name, map: to.map.id, x: to.place.x, y: to.place.y } }
+      return { text: `${to.place.name} is ${km(m)} ${bearing(from, to.place)} of ${from.label} in a straight line, ${tripBetween(to.map.id, from, to.place)}; the map shows the way over the ground and its time.`, card: { type: 'map', map: to.map.id, title: `${from.label} → ${to.place.name}`, route: [from, pos(to.place, to.place.name)] }, topic: { kind: 'place', name: to.place.name, map: to.map.id, x: to.place.x, y: to.place.y } }
     }
     case 'nearest': {
       const kind = str('kind')

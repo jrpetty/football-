@@ -55,7 +55,7 @@ test('every kind of answer brings its card: place, gun, comparison, item, plan, 
 test('follow-ups on the last topic: take me there, show it on the map, where does it spawn', () => {
   const place = reply('where is berezino')!
   const there = reply('take me there', place.topic)!
-  assert.match(there.text, /^Berezino: 4\.\d km south from Turovo, about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car\.$/)
+  assert.match(there.text, /^Berezino: 4\.\d km south from Turovo, about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car(?:; [^.]+)?\.$/)
   assert.ok(there.card!.type === 'map' && there.card.route!.length === 2)
   const shown = reply('show it on the map', place.topic)!
   assert.ok(shown.card!.type === 'map' && shown.card.focus?.label === 'Berezino')

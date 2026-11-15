@@ -35,7 +35,7 @@ test('every going-somewhere answer says how long it takes', () => {
   const plan = whatNow({ x: 7000, y: 3000, label: 'Chernogorsk' }, new Set())
   assert.ok(plan.steps.every((s) => /\(\d+ min on foot\)|under a minute/.test(s.line) || /min on foot/.test(s.line)))
   assert.match(plan.text, /All of it: about \d+ (min|h)/)
-  assert.match(routeLine(findPlace('Chernogorsk')!, findPlace('Elektrozavodsk')!), /; about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car\.$/)
+  assert.match(routeLine(findPlace('Chernogorsk')!, findPlace('Elektrozavodsk')!), /; about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car(?:; [^.]+)?\.$/)
 })
 
 test('"how long to get to" and "how far to" count as asking the way', () => {
@@ -54,4 +54,30 @@ test('sprints are generalised: faster than jogging, shown only when they save a 
   assert.match(groundTime({ lengthM: 3000, road: 0.5 }, 'foot'), /^about \d+ min jogging \(\d+ with sprints\)$/)
   // Water is swum either way.
   assert.equal(Math.round(seconds({ lengthM: 1000, road: 0, water: 1 }, 'foot', true)), Math.round(1000 / SPEED.swim))
+})
+
+test('hills: heights from Bohemia’s files, slower uphill, climbs said, routes weigh them', async () => {
+  const { heightsFor, heightAt, climbAlong, climbWords, slopeFactor, tripBetween } = await import('../src/core/dayz/heights.ts')
+  const { findPlace } = await import('../src/core/dayz/places.ts')
+  const H = heightsFor('chernarus')
+  const cherno = findPlace('Chernogorsk', 'chernarus')!.place
+  const nwaf = findPlace('NWAF', 'chernarus')!.place
+  assert.ok(heightAt(H, cherno.x, cherno.y) < 40, 'Cherno is on the coast')
+  assert.ok(heightAt(H, nwaf.x, nwaf.y) > 250, 'NWAF is high up')
+  assert.ok(slopeFactor(0.15, 'foot') > 1.5 && slopeFactor(-0.05, 'foot') < 1 && slopeFactor(0, 'car') === 1)
+  const up = climbAlong(H, [cherno, nwaf], 'foot')
+  const down = climbAlong(H, [nwaf, cherno], 'foot')
+  assert.ok(up.upM > 250 && up.factor > down.factor)
+  assert.match(climbWords(up)!, /^mostly uphill, about \d+ m of climbing$/)
+  assert.match(tripBetween('chernarus', cherno, nwaf), /jogging .* by car; mostly uphill/)
+  // A route over a terrain with a hill in the middle goes round it when that is cheaper.
+  const { withHeights, groundPath } = await import('../src/core/dayz/terrain.ts')
+  const n = 64
+  const flat = { worldSize: 6400, size: n, cells: new Uint8Array(n * n).fill(2) }
+  const hill = withHeights(flat, (x, y) => Math.max(0, 300 - Math.hypot(x - 3200, y - 3200) / 3))
+  const straight = groundPath(flat, { x: 400, y: 3200 }, { x: 6000, y: 3200 })!
+  const round = groundPath(hill, { x: 400, y: 3200 }, { x: 6000, y: 3200 })!
+  assert.equal(straight.upM, 0)
+  assert.ok(round.upM < 250, `climbed ${round.upM} m`)
+  assert.ok(round.hill >= 1)
 })

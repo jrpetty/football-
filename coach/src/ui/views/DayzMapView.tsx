@@ -13,6 +13,7 @@ import { DAYZ_MAPS, describePlace, findPlace, placesIn, routeLine, type DayzMapI
 import { mapById, parsePosition, pointInfo } from '../../core/dayz/mapView.ts'
 import { mapPreference } from '../../core/dayz/ask.ts'
 import { groundTime, TIME_NOTE } from '../../core/dayz/travel.ts'
+import { climbWords } from '../../core/dayz/heights.ts'
 import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '../../core/dayz/lootRun.ts'
 import { lifeLine } from '../../core/dayz/trail.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
@@ -167,7 +168,7 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
     const r = follow(result.route)
     const missing = r.legs.filter((l) => !l).length
     const how = travel === 'car' ? 'By car' : 'On foot'
-    return `${how} over the ground: about ${(r.lengthM / 1000).toFixed(1)} km, ${Math.round(r.road * 100)}% on roads, ${groundTime(r, r.travel)}${missing ? `; ${missing === 1 ? 'one leg has' : `${missing} legs have`} no way by ${travel === 'car' ? 'car (water or forest)' : 'land'}, drawn straight` : ''}.`
+    return `${how} over the ground: about ${(r.lengthM / 1000).toFixed(1)} km, ${Math.round(r.road * 100)}% on roads, ${groundTime(r, r.travel)}${climbWords(r) ? `; ${climbWords(r)}` : ''}${missing ? `; ${missing === 1 ? 'one leg has' : `${missing} legs have`} no way by ${travel === 'car' ? 'car (water or forest)' : 'land'}, drawn straight` : ''}.`
   }, [follow, result, travel])
 
   const hereLine = useMemo(() => (shown ? pointInfo(map, shown).line : null), [shown, map])

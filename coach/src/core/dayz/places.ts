@@ -15,7 +15,7 @@ import sakhalPlaces from '../../profiles/dayz/places.sakhal.json' with { type: '
 import chernarusWorld from '../../profiles/dayz/world.chernarus.json' with { type: 'json' }
 import livoniaWorld from '../../profiles/dayz/world.livonia.json' with { type: 'json' }
 import sakhalWorld from '../../profiles/dayz/world.sakhal.json' with { type: 'json' }
-import { tripTime } from './travel.ts'
+import { tripBetween } from './heights.ts'
 
 export type DayzMapId = 'chernarus' | 'livonia' | 'sakhal'
 
@@ -352,5 +352,5 @@ export function routeLine(a: PlaceMatch, b: PlaceMatch): string {
     .filter((x) => x.t > 0.1 && x.t < 0.9 && x.off < Math.max(600, m * 0.08))
     .sort((x, y) => x.t - y.t)
     .slice(0, 3)
-  return `${b.place.name} is ${km(m)} ${bearing(a.place, b.place)} of ${a.place.name} in a straight line${onTheWay.length ? `, past ${onTheWay.map((x) => x.p.name).join(', ')}` : ''}; ${tripTime(m)}.`
+  return `${b.place.name} is ${km(m)} ${bearing(a.place, b.place)} of ${a.place.name} in a straight line${onTheWay.length ? `, past ${onTheWay.map((x) => x.p.name).join(', ')}` : ''}; ${tripBetween(map.id, a.place, b.place)}.`
 }

@@ -14,7 +14,7 @@
 
 import { bearing, DAYZ_MAPS, distance, km, neighbours, placesIn, type DayzMap, type DayzMapId } from './places.ts'
 import { parsePosition } from './mapView.ts'
-import { tripTime } from './travel.ts'
+import { tripBetween } from './heights.ts'
 
 export { EMPTY_MARKS, isMark, isMarkBook, type Mark, type MarkBook, type MarkKind } from './markBook.ts'
 import { isMark, type Mark, type MarkKind } from './markBook.ts'
@@ -281,7 +281,7 @@ export function listLine(marks: readonly Mark[], now: number, from: { x: number;
 /** "Your base: 2.1 km north-east, about 9 min jogging." */
 export function goLine(m: Mark, from: { x: number; y: number; label: string }, now: number): string {
   const d = distance(from, m)
-  return `${MARK_INFO[m.kind].label === 'Where you died' ? 'Where you died (your last spot before)' : m.label}: ${m.where}, ${km(d)} ${bearing(from, m)} from ${from.label}, ${tripTime(d)}.${m.kind === 'body' ? ` Marked ${ago(m.at, now)}; bodies do not stay for ever, so go soon and go careful.` : ''}`
+  return `${MARK_INFO[m.kind].label === 'Where you died' ? 'Where you died (your last spot before)' : m.label}: ${m.where}, ${km(d)} ${bearing(from, m)} from ${from.label}, ${tripBetween(m.map, from, m)}.${m.kind === 'body' ? ` Marked ${ago(m.at, now)}; bodies do not stay for ever, so go soon and go careful.` : ''}`
 }
 
 // --- Warnings on a route ----------------------------------------------------------------------

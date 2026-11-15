@@ -4,7 +4,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { DayzMap, DayzMapId } from '../../core/dayz/places.ts'
-import { decodeTerrain, gasMask, groundRoute, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
+import { decodeTerrain, gasMask, groundRoute, withHeights, type Terrain, type TerrainData, type Travel } from '../../core/dayz/terrain.ts'
+import { heightAt, heightsFor } from '../../core/dayz/heights.ts'
 import type { FollowGround } from './dayzMap.tsx'
 
 const TERRAIN: Readonly<Record<DayzMapId, () => Promise<{ default: TerrainData }>>> = {
@@ -24,7 +25,9 @@ export function useFollowGround(map: DayzMap, travel: Travel | 'straight'): Foll
     else {
       setTerrain(null)
       void TERRAIN[map.id]().then((m) => {
-        const t = decodeTerrain(m.default)
+        // With the height of every cell, so routes weigh hills.
+        const H = heightsFor(map.id)
+        const t = withHeights(decodeTerrain(m.default), (x, y) => heightAt(H, x, y))
         cache.set(map.id, t)
         if (live) setTerrain(t)
       })
@@ -39,7 +42,7 @@ export function useFollowGround(map: DayzMap, travel: Travel | 'straight'): Foll
     if (!terrain || travel === 'straight') return null
     return (points) => {
       const r = groundRoute(terrain, points, travel, gas)
-      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road, travel }
+      return { legs: r.legs.map((l) => l?.points ?? null), lengthM: r.lengthM, road: r.road, water: r.water, upM: r.upM, downM: r.downM, hill: r.hill, travel }
     }
   }, [terrain, travel, gas])
 }

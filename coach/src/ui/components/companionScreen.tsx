@@ -11,6 +11,7 @@ import { DAYZ_MAPS, type DayzMapId } from '../../core/dayz/places.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
 import { distance } from '../../core/dayz/places.ts'
 import { groundTime, TIME_NOTE, tripTime } from '../../core/dayz/travel.ts'
+import { climbWords } from '../../core/dayz/heights.ts'
 import { DayzMapCanvas, type Pos } from './dayzMap.tsx'
 import { useFollowGround } from './dayzGround.ts'
 import type { CoachSession, SessionState } from '../session.ts'
@@ -260,7 +261,8 @@ function ScreenMap(props: { mapId: DayzMapId; state: SessionState; session: Coac
     if (!route || route.length < 2) return null
     if (follow) {
       const r = follow(route)
-      return `${r.travel === 'car' ? 'By car' : 'On foot'}: ${(r.lengthM / 1000).toFixed(1)} km over the ground, ${groundTime(r, r.travel)}.`
+      const hills = climbWords(r)
+      return `${r.travel === 'car' ? 'By car' : 'On foot'}: ${(r.lengthM / 1000).toFixed(1)} km over the ground, ${groundTime(r, r.travel)}${hills ? `; ${hills}` : ''}.`
     }
     const m = route.slice(1).reduce((s, p, i) => s + distance(route[i], p), 0)
     return `${(m / 1000).toFixed(1)} km in a straight line: ${tripTime(m)}.`

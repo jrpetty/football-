@@ -66,9 +66,9 @@ test('what now: water first, then houses, medical, a weapon; less as the kit fil
 
 test('take me to: the nearest of a kind, a town, or a place where an item spawns; nothing without a spot', () => {
   const h = takeMeTo('take me to the nearest hospital', turovo)!
-  assert.match(h.text, /^Hospital in Novodmitrovsk, 2\.\d km west from Turovo: about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car\.$/)
+  assert.match(h.text, /^Hospital in Novodmitrovsk, 2\.\d km west from Turovo: about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car(?:; [^.]+)?\.$/)
   assert.equal(h.route.length, 2)
-  assert.match(takeMeTo('take me to Berezino', turovo)!.text, /^Berezino: 4\.\d km south from Turovo, about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car\.$/)
+  assert.match(takeMeTo('take me to Berezino', turovo)!.text, /^Berezino: 4\.\d km south from Turovo, about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car(?:; [^.]+)?\.$/)
   assert.match(takeMeTo('take me to a place with morphine', turovo)!.text, /^Morphine: spawns in medical buildings/)
   assert.match(assistantAnswer('take me to the nearest water', {})!, /^Where are you\?/)
   assert.match(assistantAnswer('what now?', {})!, /^Tell me where you are first/)

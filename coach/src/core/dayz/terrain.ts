@@ -31,6 +31,30 @@ export interface Terrain {
   readonly size: number
   /** Cell classes, row by row from the north edge. */
   readonly cells: Uint8Array
+  /** Height of each cell in metres (when known): routes then weigh hills. */
+  readonly elev?: Float32Array
+}
+
+/**
+ * Time over flat ground for the same distance, at a slope (rise over run): on foot Tobler's rule
+ * (fastest a little downhill, much slower up steep slopes), by car slower uphill only.
+ */
+export function slopeFactor(s: number, travel: Travel): number {
+  if (!Number.isFinite(s)) return 1
+  if (travel === 'car') return Math.min(3, 1 + 4 * Math.max(0, s))
+  return Math.min(3, Math.max(0.84, Math.exp(3.5 * (Math.abs(s + 0.05) - 0.05))))
+}
+
+/** The fastest a slope can make a step (for route search estimates). */
+export const MIN_SLOPE_FACTOR = 0.84
+
+/** The terrain with the height of every cell, from a height function (metres at a world point). */
+export function withHeights(t: Terrain, heightAt: (x: number, y: number) => number): Terrain {
+  const n = t.size
+  const cell = t.worldSize / n
+  const elev = new Float32Array(n * n)
+  for (let cy = 0; cy < n; cy++) for (let cx = 0; cx < n; cx++) elev[cy * n + cx] = heightAt((cx + 0.5) * cell, t.worldSize - (cy + 0.5) * cell)
+  return { ...t, elev }
 }
 
 function fromBase64(b64: string): Uint8Array {
@@ -97,6 +121,10 @@ export interface GroundPath {
   readonly open: number
   readonly forest: number
   readonly water: number
+  /** Metres climbed and descended (when heights are known), and the time against flat ground (1 = flat). */
+  readonly upM: number
+  readonly downM: number
+  readonly hill: number
 }
 
 /** The nearest cell that can be crossed (a point in the sea, or a car start in a forest): searched outwards. */
@@ -135,7 +163,9 @@ export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: numb
   const from = new Int32Array(n * n).fill(-1)
   const closed = new Uint8Array(n * n)
   const heap = new MinHeap()
-  const minCost = Math.min(...cost.filter(Number.isFinite))
+  const elev = t.elev
+  const cellM = t.worldSize / n
+  const minCost = Math.min(...cost.filter(Number.isFinite)) * (elev ? MIN_SLOPE_FACTOR : 1)
   const h = (i: number) => {
     const dx = Math.abs((i % n) - gx)
     const dy = Math.abs(((i / n) | 0) - gy)
@@ -161,7 +191,8 @@ export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: numb
       if (closed[j]) continue
       const cj = cost[t.cells[j]] * (gas?.[j] ? gasCost : 1)
       if (!Number.isFinite(cj)) continue
-      const step = (d < 4 ? 1 : Math.SQRT2) * (ci + cj) * 0.5
+      const run = d < 4 ? 1 : Math.SQRT2
+      const step = run * (ci + cj) * 0.5 * (elev ? slopeFactor((elev[j] - elev[i]) / (run * cellM), travel) : 1)
       const ng = g[i] + step
       if (ng < g[j]) {
         g[j] = ng
@@ -179,6 +210,9 @@ export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: numb
   const centre = (i: number) => ({ x: ((i % n) + 0.5) * cell, y: t.worldSize - (((i / n) | 0) + 0.5) * cell })
   const by = [0, 0, 0, 0, 0]
   let length = 0
+  let up = 0
+  let down = 0
+  let timed = 0
   for (let k = 1; k < cells.length; k++) {
     const a1 = cells[k - 1]
     const b1 = cells[k]
@@ -186,10 +220,14 @@ export function groundPath(t: Terrain, a: { x: number; y: number }, b: { x: numb
     const m = (diag ? Math.SQRT2 : 1) * cell
     length += m
     by[t.cells[b1]] += m
+    const dz = elev ? elev[b1] - elev[a1] : 0
+    if (dz > 0) up += dz
+    else down -= dz
+    timed += m * (elev ? slopeFactor(dz / m, travel) : 1)
   }
   const raw = [a, ...cells.map(centre), b]
   const total = Math.max(1, length)
-  return { points: simplify(raw, cell * 0.75), lengthM: length + Math.hypot(raw[1].x - a.x, raw[1].y - a.y) + Math.hypot(b.x - raw[raw.length - 2].x, b.y - raw[raw.length - 2].y), road: by[ROAD] / total, open: by[OPEN] / total, forest: by[FOREST] / total, water: by[WATER] / total }
+  return { points: simplify(raw, cell * 0.75), lengthM: length + Math.hypot(raw[1].x - a.x, raw[1].y - a.y) + Math.hypot(b.x - raw[raw.length - 2].x, b.y - raw[raw.length - 2].y), road: by[ROAD] / total, open: by[OPEN] / total, forest: by[FOREST] / total, water: by[WATER] / total, upM: Math.round(up), downM: Math.round(down), hill: length ? timed / length : 1 }
 }
 
 /** Ramer–Douglas–Peucker: fewer points, the same line to within eps metres. */
@@ -224,13 +262,13 @@ export function simplify(pts: readonly { x: number; y: number }[], eps: number):
 }
 
 /** A route through several points, leg by leg; null legs where there is no way. */
-export function groundRoute(t: Terrain, points: readonly { x: number; y: number }[], travel: Travel = 'foot', gas: Uint8Array | null = null): { legs: (GroundPath | null)[]; lengthM: number; road: number } {
+export function groundRoute(t: Terrain, points: readonly { x: number; y: number }[], travel: Travel = 'foot', gas: Uint8Array | null = null): { legs: (GroundPath | null)[]; lengthM: number; road: number; water: number; upM: number; downM: number; hill: number } {
   const legs: (GroundPath | null)[] = []
   for (let i = 1; i < points.length; i++) legs.push(groundPath(t, points[i - 1], points[i], travel, gas))
   const ok = legs.filter((l): l is GroundPath => !!l)
   const lengthM = ok.reduce((s, l) => s + l.lengthM, 0)
-  const road = lengthM ? ok.reduce((s, l) => s + l.road * l.lengthM, 0) / lengthM : 0
-  return { legs, lengthM, road }
+  const avg = (f: (l: GroundPath) => number, none: number) => (lengthM ? ok.reduce((s, l) => s + f(l) * l.lengthM, 0) / lengthM : none)
+  return { legs, lengthM, road: avg((l) => l.road, 0), water: avg((l) => l.water, 0), upM: ok.reduce((s, l) => s + l.upM, 0), downM: ok.reduce((s, l) => s + l.downM, 0), hill: avg((l) => l.hill, 1) }
 }
 
 /** A binary min-heap of cell indexes by priority. */
