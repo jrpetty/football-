@@ -581,10 +581,13 @@ Then press **Choose the game window**, play, and listen.
     the big map" opens the full Map.
     **How long it takes:** every going-somewhere answer ("take me to",
     "how long to get to Berezino", "what now", routes, loot runs, the
-    nearest place for an item) says roughly how long the trip is, jogging
-    and (for longer trips) by car; on the screen and the Map the time is
+    nearest place for an item) says roughly how long the trip is, jogging,
+    with sprints, and (for longer trips) by car ("about 18 min jogging (15
+    with sprints), 7 min by car"); on the screen and the Map the time is
     worked out over the ground, on foot or by car. The speeds are
-    estimates (jogging about 16 km/h, which costs no stamina; a car about
+    estimates (jogging about 16 km/h, which costs no stamina; with sprints
+    whenever stamina lets you, about 19 km/h on average, less when heavily
+    loaded, since how long you can sprint depends on stamina and weight; a car about
     65 km/h on roads, 30 off them): Bohemia's files give no metres per
     second, so treat them as rough.
     Questions it knows are answered on your PC, free and instant. Anything

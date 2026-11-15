@@ -8,6 +8,10 @@
 // about 100 km/h on flat roads), averaged well below top speed for bends,
 // towns and hills, and slower off the road.
 //
+// Sprinting is generalised: how long you can sprint depends on stamina and
+// what you carry, so "with sprints" assumes you sprint whenever stamina lets
+// you and jog between, about 19 km/h on average. Heavy loads sprint less.
+//
 // A straight line is shorter than the way you walk or drive, so answers from
 // a straight line add a detour (more by car, which keeps to the roads). On the
 // map the length over the ground is used instead.
@@ -20,6 +24,8 @@ export const SPEED = {
   jog: 16 / 3.6,
   /** Sprinting: about 22 km/h, while stamina lasts. */
   sprint: 22 / 3.6,
+  /** Sprinting whenever stamina lets you, jogging between: about 19 km/h on average (less when heavily loaded). */
+  mixed: 19 / 3.6,
   /** Swimming: about 5 km/h. */
   swim: 5 / 3.6,
   /** A car on the road, on average (bends, towns, hills): about 65 km/h. */
@@ -43,22 +49,29 @@ export interface Ground {
   readonly water?: number
 }
 
-/** Seconds for a way over the ground, on foot (jogging) or by car. */
-export function seconds(way: Ground, travel: Travel): number {
+/** Seconds for a way over the ground, on foot (jogging, or with sprints) or by car. */
+export function seconds(way: Ground, travel: Travel, sprints = false): number {
   const L = Math.max(0, way.lengthM)
   if (travel === 'car') {
     const road = clamp(way.road)
     return (L * road) / SPEED.carRoad + (L * (1 - road)) / SPEED.carOff
   }
   const water = clamp(way.water ?? 0)
-  return (L * (1 - water)) / SPEED.jog + (L * water) / SPEED.swim
+  return (L * (1 - water)) / (sprints ? SPEED.mixed : SPEED.jog) + (L * water) / SPEED.swim
 }
 
 /** Seconds for a straight line, with the detour added. */
-export function straightSeconds(m: number, travel: Travel): number {
+export function straightSeconds(m: number, travel: Travel, sprints = false): number {
   const lengthM = m * DETOUR[travel]
   // By car most of a trip of a few km is on roads; the start and end are not.
-  return seconds({ lengthM, road: travel === 'car' ? 0.75 : 0 }, travel)
+  return seconds({ lengthM, road: travel === 'car' ? 0.75 : 0 }, travel, sprints)
+}
+
+/** "about 23 min jogging (19 with sprints)": the sprint time only when it saves a minute or more. */
+export function footTime(jog: number, sprint: number): string {
+  const a = duration(jog)
+  const b = bare(sprint)
+  return b !== bare(jog) && jog - sprint >= 45 ? `${a} jogging (${/h/.test(b) ? b : b.replace(/ min$/, '')} with sprints)` : `${a} jogging`
 }
 
 /** "under a minute", "about 6 min", "about 1 h 20 min". */
@@ -80,9 +93,9 @@ const bare = (s: number) => duration(s).replace(/^about /, '')
  * longer than a straight line.
  */
 export function tripTime(m: number): string {
-  const foot = straightSeconds(m, 'foot')
-  if (m < CAR_FROM_M) return `${duration(foot)} jogging`
-  return `${duration(foot)} jogging, ${bare(straightSeconds(m, 'car'))} by car`
+  const foot = footTime(straightSeconds(m, 'foot'), straightSeconds(m, 'foot', true))
+  if (m < CAR_FROM_M) return foot
+  return `${foot}, ${bare(straightSeconds(m, 'car'))} by car`
 }
 
 /** The short form for a list row: "6 min on foot". */
@@ -90,14 +103,14 @@ export function tripShort(m: number): string {
   return `${bare(straightSeconds(m, 'foot'))} on foot`
 }
 
-/** The time for a way over the ground, in words: "about 9 min jogging (about 7 sprinting while stamina lasts)" or "about 4 min by car". */
+/** The time for a way over the ground, in words: "about 9 min jogging (7 with sprints)" or "about 4 min by car". */
 export function groundTime(way: Ground, travel: Travel): string {
   if (travel === 'car') return `${duration(seconds(way, 'car'))} by car`
-  return `${duration(seconds(way, 'foot'))} jogging`
+  return footTime(seconds(way, 'foot'), seconds(way, 'foot', true))
 }
 
 /** One line on how the times are worked out, for answers and the map. */
-export const TIME_NOTE = 'Times are rough: jogging about 16 km/h (no stamina cost), a car about 65 km/h on roads.'
+export const TIME_NOTE = 'Times are rough: jogging about 16 km/h (no stamina cost); with sprints whenever stamina lets you, about 19 km/h (less when heavily loaded); a car about 65 km/h on roads.'
 
 function clamp(x: number): number {
   return Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0

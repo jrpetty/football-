@@ -40,7 +40,7 @@ test('the plan: one of each kind, the shortest order over the candidates, real p
   assert.ok(perms(pts).every((o) => len(o) >= len(pts) - 1))
   assert.ok(Math.abs(plan.totalM - len(pts)) < 2)
   const line = lootRunLine(plan)
-  assert.match(line, /^Loot run from Chernogorsk, [\d.]+ k?m in all \(straight lines; about \d+ min jogging(?:, \d+ min by car)?, not counting looting\): 1\. /)
+  assert.match(line, /^Loot run from Chernogorsk, [\d.]+ k?m in all \(straight lines; about \d+ min jogging(?: \(\d+ with sprints\))?(?:, \d+ min by car)?, not counting looting\): 1\. /)
   assert.match(line, /Then back to Chernogorsk/)
   assert.doesNotMatch(line, BANNED_CLAIMS)
   const path = lootRunPath(plan)

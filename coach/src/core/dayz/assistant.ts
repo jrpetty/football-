@@ -8,7 +8,7 @@
 import { bearing, DAYZ_MAPS, distance, km, neighbours, placesIn, type DayzMap, type DayzPlace, type PlaceMatch } from './places.ts'
 import { parsePosition } from './mapView.ts'
 import { pointsOf, type StopKind, STOP_LABELS } from './lootRun.ts'
-import { duration, straightSeconds, tripShort, tripTime } from './travel.ts'
+import { footTime, straightSeconds, tripShort, tripTime } from './travel.ts'
 import { findItem, itemAnswer, kindAnswer, kindIn, placesFor, buildingAnswer, type LootItem } from './items.ts'
 
 export const CHERNARUS: DayzMap = DAYZ_MAPS.find((m) => m.id === 'chernarus')!
@@ -156,7 +156,7 @@ export function whatNow(spot: Spot, have: Set<string>, opts: { thirsty?: boolean
   if (!steps.length) {
     return { text: `From ${spot.label}: you have the essentials. Keep water and food up, and tell me what you want next ("where do I find a gas mask", "take me to the nearest military").`, route: [], steps }
   }
-  const text = `From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${duration(straightSeconds(total, 'foot'))} jogging, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
+  const text = `From ${spot.label}: ${steps.map((s, i) => `${i + 1}. ${s.line}`).join('; ')}. ${steps.length > 1 ? `All of it: ${footTime(straightSeconds(total, 'foot'), straightSeconds(total, 'foot', true))}, not counting looting. ` : ''}${kitLine(have)} Tell me what you find ("Coach, I found a knife").`
   return { text, route: [spot, ...steps.map((s) => ({ x: s.x, y: s.y, label: `${steps.indexOf(s) + 1} ${s.title}` }))], steps }
 }
 

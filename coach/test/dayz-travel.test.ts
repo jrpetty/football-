@@ -22,8 +22,8 @@ test('on foot is jogging pace, water is swum, a car is faster on roads than off 
 test('a straight line adds a detour; short trips do not mention a car', () => {
   assert.ok(straightSeconds(1000, 'foot') > 1000 / SPEED.jog)
   assert.equal(tripTime(800), `${duration(straightSeconds(800, 'foot'))} jogging`)
-  assert.match(tripTime(4000), /^about \d+ min jogging, \d+ min by car$/)
-  assert.match(tripTime(30000), /^about 2 h( \d+ min)? jogging, \d+ min by car$/)
+  assert.match(tripTime(4000), /^about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car$/)
+  assert.match(tripTime(30000), /^about 2 h( \d+ min)? jogging \(1 h \d+ min with sprints\), \d+ min by car$/)
   assert.match(tripShort(2000), /^\d+ min on foot$/)
   assert.match(groundTime({ lengthM: 9000, road: 0.8 }, 'car'), /^about \d+ min by car$/)
 })
@@ -35,7 +35,7 @@ test('every going-somewhere answer says how long it takes', () => {
   const plan = whatNow({ x: 7000, y: 3000, label: 'Chernogorsk' }, new Set())
   assert.ok(plan.steps.every((s) => /\(\d+ min on foot\)|under a minute/.test(s.line) || /min on foot/.test(s.line)))
   assert.match(plan.text, /All of it: about \d+ (min|h)/)
-  assert.match(routeLine(findPlace('Chernogorsk')!, findPlace('Elektrozavodsk')!), /; about \d+ min jogging, \d+ min by car\.$/)
+  assert.match(routeLine(findPlace('Chernogorsk')!, findPlace('Elektrozavodsk')!), /; about \d+ min jogging(?: \(\d+ with sprints\))?, \d+ min by car\.$/)
 })
 
 test('"how long to get to" and "how far to" count as asking the way', () => {
@@ -43,4 +43,15 @@ test('"how long to get to" and "how far to" count as asking the way', () => {
   assert.ok(isTakeMe('how long to walk to the nearest hospital'))
   assert.ok(isTakeMe('how far to Zelenogorsk'))
   assert.ok(!isTakeMe('how far does the mosin shoot'))
+})
+
+test('sprints are generalised: faster than jogging, shown only when they save a minute', () => {
+  assert.ok(seconds({ lengthM: 3000, road: 0 }, 'foot', true) < seconds({ lengthM: 3000, road: 0 }, 'foot'))
+  assert.match(tripTime(4000), /^about (\d+) min jogging \((\d+) with sprints\)/)
+  const [, jog, sprint] = tripTime(4000).match(/^about (\d+) min jogging \((\d+) with sprints\)/)!
+  assert.ok(Number(sprint) < Number(jog))
+  assert.doesNotMatch(tripTime(300), /sprints/)
+  assert.match(groundTime({ lengthM: 3000, road: 0.5 }, 'foot'), /^about \d+ min jogging \(\d+ with sprints\)$/)
+  // Water is swum either way.
+  assert.equal(Math.round(seconds({ lengthM: 1000, road: 0, water: 1 }, 'foot', true)), Math.round(1000 / SPEED.swim))
 })
