@@ -590,6 +590,24 @@ Then press **Choose the game window**, play, and listen.
     loaded, since how long you can sprint depends on stamina and weight; a car about
     65 km/h on roads, 30 off them): Bohemia's files give no metres per
     second, so treat them as rough.
+    **Marks:** tell it what you saw or what is yours and it goes on the
+    map where you said ("Coach, I saw two players heading north near
+    Gorka", "heard shots east of Elektro", "sniper on the hill north of
+    Cherno", "my base is 500 m north of Gorka", "I buried a barrel here",
+    "parked the Olga at Berezino", "meet at Green Mountain", "remember the
+    tower at 040 100 has a camper"). A town, a grid, "here" (your spot) or
+    "500 m north of" a town all work; with no place in it, you click the
+    spot on the map. Or pick a kind under **Your marks** on the Map and
+    click, or click any spot and choose "Mark as…". Then: "take me to my
+    base / car / stash / meeting point" (way and time), "where is my
+    car", "what have I seen near Gorka", "show my marks", "clear
+    sightings", "undo last mark". Sightings show how long ago, fade after
+    half an hour and go after a few hours (danger and shots after a day);
+    routes and "I'm at …" mention recent ones close by. When a life ends
+    in death, where you were last is marked so you can go back for your
+    gear. Marks are kept on your PC; **Share with squad** copies a code
+    your friends paste in. Marks are only what you told it or clicked:
+    nothing is read off the screen and nobody's position is guessed.
     Questions it knows are answered on your PC, free and instant. Anything
     else (with your Claude key) goes to Claude, which answers in plain
     conversation and can call the app's own tools: places, routes, nearest

@@ -35,3 +35,7 @@ Both licences are **non-commercial**. Replace this data, or get permission from 
 ## Travel times
 
 `src/core/dayz/travel.ts` gives rough trip times. They are estimates, not the game's numbers: Bohemia's scripts (`DayZ-Script-Diff`, `playerconstants.c`) give food, water and stamina use per second but no movement speeds, and the DayZ Wiki lists car top speeds only (for example the Sarka 120 at about 100 km/h on flat roads). Jogging is taken as about 16 km/h (it costs no stamina in 1.x); "with sprints" generalises sprinting whenever stamina lets you and jogging between, about 19 km/h on average (how long you can sprint depends on stamina and what you carry, so heavy loads do worse); swimming about 5 km/h, a car about 65 km/h on roads and 30 km/h off them. Straight-line answers add a detour (×1.15 on foot, ×1.4 by car); the map uses the length over the ground.
+
+## Map marks
+
+`src/core/dayz/marks.ts` keeps the player's own marks: what they saw (players, shots, danger) and what is theirs (base, stash, vehicle, loot, meeting point, notes), plus their last spot when a life ends in death. Every mark comes from what the player said or clicked; nothing is read off the screen for it and no other player's position is inferred. Sightings carry the time they were marked, fade after 30 minutes and are dropped after six hours (danger and shots after a day). Marks are stored on the player's PC as the `marks` document (kept whenever made, deleted by "Forget my data", included in the export) and can be shared as an `SLMARKS1:` code.

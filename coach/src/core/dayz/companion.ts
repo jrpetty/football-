@@ -18,6 +18,7 @@ import { isLootRun, lootRunLine, lootRunPath, parseLootRun, planLootRun } from '
 import { bearing, DAYZ_MAPS, describePlace, distance, featureLine, findPlace, gridRef, km, nearest, neighbours, placesIn, region, type DayzMapId, type PlaceMatch } from './places.ts'
 import { pointInfo } from './mapView.ts'
 import { tripShort, tripTime } from './travel.ts'
+import { goLine, listLine, liveMarks, makeMark, MARK_INFO, MARK_KINDS, markAsk, markLine, markSaid, newest, seenLine, warningLine, whereIn, type Mark, type MarkKind } from './marks.ts'
 
 // --- Cards ----------------------------------------------------------------------------------
 
@@ -38,12 +39,17 @@ export type Card =
   | { readonly type: 'list'; readonly title: string; readonly rows: readonly (readonly [string, string])[] }
   | { readonly type: 'compare'; readonly title: string; readonly columns: readonly [string, string]; readonly rows: readonly (readonly [string, string, string])[] }
   | { readonly type: 'help'; readonly examples: readonly string[] }
+  /** Click the map to place a mark the player told about without saying where. */
+  | { readonly type: 'pick'; readonly map: DayzMapId; readonly title: string; readonly kind: MarkKind; readonly label: string }
 
 /** What the player has: their spot (Chernarus), kit, and the map they are on. */
 export interface CompanionContext {
   readonly spot: Spot | null
   readonly kit: readonly string[]
   readonly map: DayzMapId
+  /** Their own marks (what they saw, their base, stash, car…), and the time now. */
+  readonly marks?: readonly Mark[]
+  readonly now?: number
 }
 
 /** The last thing talked about, for follow-ups ("take me there", "show it on the map"). */
@@ -181,6 +187,9 @@ export const HELP_EXAMPLES = [
   'Mosin range',
   'Mosin vs SVD',
   'Loot run from Berezino hitting police and military',
+  'I saw two players heading north near Gorka',
+  'My base is 500 m north of Gorka',
+  'Take me to my base',
   'How do I treat cholera?',
   'What do I have?',
   'Show me the map',
@@ -226,7 +235,51 @@ function followUp(q: string, topic: Topic, ctx: CompanionContext, profile: GameP
  * Null when the question needs Claude (or is not a DayZ question it can answer).
  */
 export function localReply(question: string, ctx: CompanionContext, profile: GameProfile, topic: Topic, answered: string | null): Reply | null {
+  const r = localReplyInner(question, ctx, profile, topic, answered)
+  return r ? withWarnings(r, ctx) : null
+}
+
+/** A route answer with a heads-up when it passes near a recent sighting or danger the player marked. */
+function withWarnings<T extends { text: string; card: Card | null }>(r: T, ctx: CompanionContext): T {
+  const card = r.card
+  if (!card || (card.type !== 'map' && card.type !== 'plan') || !card.route || card.route.length < 2 || !ctx.marks?.length) return r
+  const warn = warningLine(liveMarks(ctx.marks, ctx.now ?? Date.now()), card.route, card.map, ctx.now ?? Date.now())
+  return warn ? { ...r, text: `${r.text} ${warn}` } : r
+}
+
+/** Questions about the player's marks: take me to my base, where is my car, what have I seen near Gorka, my marks. */
+function marksReply(question: string, ctx: CompanionContext, topic: Topic): Reply | null {
+  const ask = markAsk(question)
+  if (!ask || ask.type === 'remove') return null
+  const now = ctx.now ?? Date.now()
+  const marks = liveMarks(ctx.marks ?? [], now)
+  const spot = ctx.spot
+  const here = spot && ctx.map === 'chernarus' ? spot : null
+  if (ask.type === 'go' || ask.type === 'where') {
+    const m = newest(marks, ask.kind, ctx.map) ?? newest(marks, ask.kind)
+    const name = MARK_INFO[ask.kind].label.toLowerCase()
+    if (!m) {
+      const text = ask.kind === 'body' ? 'I have nothing for where you died: I mark it from your spot when a life ends, so set your spot as you go ("I\'m at …").' : `No ${name} marked yet. Say "my ${ask.kind === 'vehicle' ? 'car is at' : ask.kind === 'rally' ? 'meeting point is' : `${ask.kind} is`} …" (a town, a grid, "here" or "500 m north of" a town), or click Mark on the map.`
+      return { text, card: { type: 'pick', map: ctx.map, title: `Mark your ${name}`, kind: ask.kind, label: MARK_INFO[ask.kind].label }, topic }
+    }
+    const t: Topic = { kind: 'place', name: m.label, map: m.map, x: m.x, y: m.y }
+    if (ask.type === 'go' && here && m.map === 'chernarus') {
+      return { text: goLine(m, here, now), card: { type: 'map', map: m.map, title: `To ${m.label.charAt(0).toLowerCase() + m.label.slice(1)}`, route: [pos(here, here.label), pos(m, m.label)] }, topic: t }
+    }
+    return { text: `${markLine(m, now, here)}.${ask.type === 'go' && !here ? ' Say where you are ("I\'m at …") for the way there and how long it takes.' : ''}`, card: { type: 'map', map: m.map, title: m.label, focus: pos(m, m.label) }, topic: t }
+  }
+  if (ask.type === 'seen') {
+    const near = ask.near ? findPlace(ask.near, ctx.map) : null
+    const at = near ? { x: near.place.x, y: near.place.y, name: near.place.name } : null
+    return { text: seenLine(marks.filter((m) => m.map === ctx.map), now, at, here), card: { type: 'map', map: ctx.map, title: at ? `Seen near ${at.name}` : 'What you have seen', ...(at ? { focus: pos(at, at.name) } : here ? { focus: pos(here, here.label) } : {}) }, topic }
+  }
+  return { text: listLine(marks.filter((m) => m.map === ctx.map), now, here), card: { type: 'map', map: ctx.map, title: 'Your marks' }, topic }
+}
+
+function localReplyInner(question: string, ctx: CompanionContext, profile: GameProfile, topic: Topic, answered: string | null): Reply | null {
   const q = question.toLowerCase().trim()
+  const mine = marksReply(question, ctx, topic)
+  if (mine) return mine
   const follow = followUp(q, topic, ctx, profile)
   if (follow) return follow
   if (/^(help|what can you do|what do you know|commands)\b/.test(q)) {
@@ -326,21 +379,56 @@ export const COMPANION_TOOLS: readonly ToolDef[] = [
   { name: 'survival_advice', description: 'How the game works on a survival topic (diseases, bleeding, fractures, blood types, gas zones, temperature, stamina, food and water, jamming, zeroing), with the fix.', input_schema: { type: 'object', properties: { topic: { type: 'string' } }, required: ['topic'] } },
   { name: 'plan_next_steps', description: "The player's next steps from their spot for what their kit is missing (water, houses, medical, police, military), drawn as a route.", input_schema: { type: 'object', properties: {} } },
   { name: 'loot_run', description: 'The shortest run from a town through one of each kind of place (hospital, medical, police, military, fire station, fuel, water, heli crash), optionally back.', input_schema: { type: 'object', properties: { request: { type: 'string', description: 'In words, e.g. "from Berezino hitting a hospital, police and military and back".' } }, required: ['request'] } },
+  { name: 'add_mark', description: "Put a mark on the player's map for something they tell you: players they saw (kind player; count and heading if said), shots heard, danger (a sniper, campers), their base, a stash, their vehicle, good loot, a meeting point, or a note. Only what the player says; never invent sightings.", input_schema: { type: 'object', properties: { kind: { type: 'string', enum: [...MARK_KINDS.filter((k) => k !== 'body')] }, where: { type: 'string', description: 'A town, a grid ("135 012"), "here" (their spot), or "500 m north of Gorka".' }, label: { type: 'string', description: 'Short, e.g. "2 players heading north", "Our base".' }, count: { type: 'integer' }, heading: { type: 'string' }, note: { type: 'string' } }, required: ['kind', 'where'] } },
+  { name: 'remove_marks', description: 'Remove marks the player asks to remove.', input_schema: { type: 'object', properties: { what: { type: 'string', enum: ['last', 'sightings', 'all', ...MARK_KINDS] } }, required: ['what'] } },
+  { name: 'list_marks', description: "The player's marks (base, stash, vehicle, meeting point, notes) and recent sightings with how long ago, shown on the map.", input_schema: { type: 'object', properties: {} } },
   { name: 'show_map', description: 'Put the map on the screen, optionally centred on a place.', input_schema: { type: 'object', properties: { map: { type: 'string', enum: ['chernarus', 'livonia', 'sakhal'] }, place: { type: 'string' } } } },
 ]
 
 export interface ToolEffects {
   readonly setSpot: (s: Spot) => void
   readonly setKit: (have: readonly string[], lost: readonly string[]) => void
+  /** Add a mark, or remove marks by id (the player's own map marks). */
+  readonly addMark?: (m: Mark) => void
+  readonly removeMarks?: (ids: readonly string[]) => void
 }
 
 /** Run one tool: the text for Claude, a card for the screen, and the topic it leaves. */
 export function runTool(name: string, input: Record<string, unknown>, ctx: CompanionContext, profile: GameProfile, effects: ToolEffects): { text: string; card: Card | null; topic?: Topic; ctx?: CompanionContext } {
+  return withWarnings(runToolInner(name, input, ctx, profile, effects), ctx)
+}
+
+function runToolInner(name: string, input: Record<string, unknown>, ctx: CompanionContext, profile: GameProfile, effects: ToolEffects): { text: string; card: Card | null; topic?: Topic; ctx?: CompanionContext } {
   const str = (k: string) => (typeof input[k] === 'string' ? (input[k] as string).slice(0, 200) : '')
   const spot = ctx.spot
   switch (name) {
-    case 'player_state':
-      return { text: JSON.stringify({ spot: spot ? { label: spot.label, grid: gridRef(CHERNARUS, spot.x, spot.y), area: pointInfo(CHERNARUS, spot).line } : null, kit: { have: ctx.kit, missing: KIT.filter((k) => !ctx.kit.includes(k.id)).map((k) => k.id) }, map: ctx.map }), card: null }
+    case 'player_state': {
+      const now = ctx.now ?? Date.now()
+      const marks = liveMarks(ctx.marks ?? [], now).map((m) => markLine(m, now, spot))
+      return { text: JSON.stringify({ spot: spot ? { label: spot.label, grid: gridRef(CHERNARUS, spot.x, spot.y), area: pointInfo(CHERNARUS, spot).line } : null, kit: { have: ctx.kit, missing: KIT.filter((k) => !ctx.kit.includes(k.id)).map((k) => k.id) }, map: ctx.map, marks }), card: null }
+    }
+    case 'add_mark': {
+      const kind = MARK_KINDS.includes(str('kind') as MarkKind) ? (str('kind') as MarkKind) : 'note'
+      const map = DAYZ_MAPS.find((m) => m.id === ctx.map)!
+      const w = whereIn(str('where'), map, spot)
+      const label = str('label') || MARK_INFO[kind].label
+      if (!w) return { text: `No place "${str('where')}" found: ask the player to click it on the map (the screen shows the map to click).`, card: { type: 'pick', map: ctx.map, title: `Mark: ${label}`, kind, label } }
+      const count = typeof input.count === 'number' && Number.isInteger(input.count) ? Math.max(1, Math.min(50, input.count)) : undefined
+      const mark = makeMark({ kind, label: label.slice(0, 80), ...(count ? { count } : {}), ...(str('heading') ? { heading: str('heading') } : {}), ...(str('note') ? { note: str('note') } : {}) }, w, ctx.map, ctx.now ?? Date.now())
+      effects.addMark?.(mark)
+      return { text: `Marked: ${markLine(mark, mark.at, spot)}.`, card: { type: 'map', map: ctx.map, title: mark.label, focus: pos(mark, mark.label) }, ctx: { ...ctx, marks: [...(ctx.marks ?? []), mark] } }
+    }
+    case 'remove_marks': {
+      const said = markSaid(str('what') === 'last' ? 'undo last mark' : str('what') === 'sightings' ? 'clear sightings' : str('what') === 'all' ? 'remove all marks' : `remove my ${str('what')}`, { spot, map: ctx.map, marks: ctx.marks ?? [], now: ctx.now ?? Date.now() })
+      if (!said || said.type !== 'remove') return { text: 'Nothing removed.', card: null }
+      effects.removeMarks?.(said.ids)
+      return { text: said.text, card: null, ctx: { ...ctx, marks: (ctx.marks ?? []).filter((m) => !said.ids.includes(m.id)) } }
+    }
+    case 'list_marks': {
+      const now = ctx.now ?? Date.now()
+      const marks = liveMarks(ctx.marks ?? [], now).filter((m) => m.map === ctx.map)
+      return { text: listLine(marks, now, spot), card: { type: 'map', map: ctx.map, title: 'Your marks' } }
+    }
     case 'set_spot': {
       const r = localSpot(str('where'))
       if (!r) return { text: `No town or grid "${str('where')}" on Chernarus.`, card: null }
@@ -441,7 +529,7 @@ function localSpot(where: string): Spot | null {
 export const COMPANION_SYSTEM = [
   'You are the DayZ companion in the Sightline app: a friendly, sharp survival partner the player talks to while they play, mostly on Chernarus. You chat naturally and briefly (usually 1-4 sentences, at most about 120 words; your words may be read aloud, so no markdown headings or tables).',
   'You have tools that read the app\'s built-in data: places and roads (from the game files and the DayZ Wiki), Bohemia\'s loot table for Chernarus, the gun data, the survival reference, the player\'s spot and kit (which they told you). Use them for any fact about places, distances, loot, guns or mechanics instead of guessing, and quote their numbers. Tools also put a card or a map on the app\'s screen beside the chat, so call the one that shows what the player asked for (for "show me", always).',
-  'If you need where the player is and do not know, ask them (they can say "I\'m at" a town or grid) or call player_state. When they say where they are or what they found, call set_spot or update_kit. Whenever the player asks where to go or how to get somewhere, say how far it is and roughly how long it takes (the route, nearest, plan and loot-run tools give rough times jogging and by car; call them rough).',
+  'If you need where the player is and do not know, ask them (they can say "I\'m at" a town or grid) or call player_state. When they say where they are or what they found, call set_spot or update_kit. When the player tells you they saw or heard someone, or where their base, stash or car is, call add_mark; their marks come back with player_state and list_marks (sightings say how long ago, and are only what they saw then, never where anyone is now). Whenever the player asks where to go or how to get somewhere, say how far it is and roughly how long it takes (the route, nearest, plan and loot-run tools give rough times jogging and by car; call them rough).',
   'Rules: never claim to know where other players, loot or vehicles are right now; loot data says where things can spawn, not what is there. Do not give exploits, glitches, duping or anything against the game\'s rules. Do not say "because", "always", "definitely", "certainly" or "guarantee". Use British spelling. If the data cannot answer, say so and suggest what the player could check.',
 ].join('\n\n')
 

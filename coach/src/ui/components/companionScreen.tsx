@@ -200,6 +200,18 @@ export function CompanionScreen({ card, state, session, onAsk, onOpenMap, questi
       )
     case 'help':
       return <Welcome onAsk={onAsk} />
+    case 'pick':
+      return (
+        <Frame title={card.title} kicker="Mark it on the map">
+          <p className="small comp-caption">{state.pendingMark ? 'Click the spot on the map below. Drag to move, scroll to zoom.' : 'Marked. Ask "show my marks" or "take me to my base" any time.'}</p>
+          <ScreenMap mapId={card.map} state={state} session={session} />
+          {state.pendingMark ? (
+            <button type="button" className="btn sm ghost" onClick={() => session.startMark(null)}>
+              Cancel
+            </button>
+          ) : null}
+        </Frame>
+      )
   }
 }
 
@@ -279,6 +291,10 @@ function ScreenMap(props: { mapId: DayzMapId; state: SessionState; session: Coac
         markers={props.markers}
         follow={follow}
         onSetHere={(p) => props.session.setSpot({ ...p, map: props.mapId })}
+        marks={props.state.marks}
+        placing={props.state.pendingMark?.map === props.mapId ? props.state.pendingMark.label : null}
+        onPlace={(p) => props.session.placePendingMark(p, props.mapId)}
+        onMarkAt={(p, kind) => props.session.markAt(p, kind, props.mapId)}
       />
       {timeLine ? (
         <p className="small comp-time" title={TIME_NOTE}>

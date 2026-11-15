@@ -31,7 +31,7 @@ export interface GamePlayerBuild {
 }
 
 /** Player documents kept per game pack: the AoE4World history, the practice plan, saved build orders. */
-export type DocKind = 'aoe4world' | 'practice' | 'builds'
+export type DocKind = 'aoe4world' | 'practice' | 'builds' | 'marks'
 
 /** An official overhead map image kept for a map. */
 export interface OverheadInfo {

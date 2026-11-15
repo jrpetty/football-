@@ -18,6 +18,8 @@ import { lifeLine } from '../../core/dayz/trail.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
 import { useFollowGround } from '../components/dayzGround.ts'
 import { DayzMapCanvas, type Pos, type TrailLine } from '../components/dayzMap.tsx'
+import { MarksPanel } from '../components/marksPanel.tsx'
+import { goLine, liveMarks, MARK_INFO, markAsk, markLine, newest, warningLine } from '../../core/dayz/marks.ts'
 
 import type { CoachSession, SessionState } from '../session.ts'
 
@@ -58,18 +60,38 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
   const mine = here && here.map === mapId ? { ...here, source: 'you' as const } : null
   const shown = mine ?? (signAllowed ? fromSign : null)
 
+  // A route with a heads-up when it passes near a recent sighting or danger you marked.
+  const showRoute = (on: DayzMapId, r: { text: string; focus: null; route: readonly Pos[] | null }) => {
+    const warn = r.route && r.route.length > 1 ? warningLine(liveMarks(state.marks, Date.now()), r.route, on, Date.now()) : null
+    setResult(warn ? { ...r, text: `${r.text} ${warn}` } : r)
+  }
+
   const search = (text: string, onMap: DayzMapId = mapId) => {
     const t = text.trim()
     if (!t) return
     const map = mapById(DAYZ_MAPS, onMap)
     const nonce = Date.now()
+    // Your marks: "take me to my base", "where is my car".
+    const ask = markAsk(t)
+    if (ask && (ask.type === 'go' || ask.type === 'where')) {
+      const m = newest(liveMarks(state.marks, nonce), ask.kind, onMap) ?? newest(liveMarks(state.marks, nonce), ask.kind)
+      if (!m) {
+        setResult({ text: `No ${MARK_INFO[ask.kind].label.toLowerCase()} marked yet: pick it under Your marks and click the map, or tell the coach.`, focus: null, route: null })
+        return
+      }
+      if (m.map !== onMap) setMapId(m.map)
+      const spotHere = here?.map === m.map ? here : null
+      if (ask.type === 'go' && spotHere) showRoute(m.map, { text: goLine(m, spotHere, nonce), focus: null, route: [{ x: spotHere.x, y: spotHere.y, label: spotHere.label }, { x: m.x, y: m.y, label: m.label }] })
+      else setResult({ text: `${markLine(m, nonce, spotHere)}.`, focus: { x: m.x, y: m.y, label: m.label, nonce }, route: null })
+      return
+    }
     // The assistant (Chernarus): what now, take me to, where an item spawns, from your spot and kit.
     if (isAssistantQuestion(t)) {
       if (onMap !== 'chernarus') setMapId('chernarus')
       const spotHere = here?.map === 'chernarus' ? here : null
       const plan = assistantRoute(t, spotHere, new Set(state.kit))
       const text = assistantAnswer(t, { ...(spotHere ? { spotX: spotHere.x, spotY: spotHere.y, spotLabel: spotHere.label } : {}), kit: state.kit.join(',') }) ?? ''
-      setResult({ text, focus: null, route: plan?.route.length ? plan.route : null })
+      showRoute('chernarus', { text, focus: null, route: plan?.route.length ? plan.route : null })
       return
     }
     // A loot run: the shortest way through one of each kind of place asked for, drawn through numbered stops.
@@ -82,14 +104,14 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
       }
       if (req.start.map.id !== onMap) setMapId(req.start.map.id)
       const plan = planLootRun(req)
-      setResult({ text: lootRunLine(plan).replace(/ Open it on the Map to see the line\.$/, ''), focus: null, route: lootRunPath(plan) })
+      showRoute(req.start.map.id, { text: lootRunLine(plan).replace(/ Open it on the Map to see the line\.$/, ''), focus: null, route: lootRunPath(plan) })
       return
     }
     // "Cherno to NWAF": the way between two.
     const two = placesIn(t, onMap).filter((p) => p.map.id === onMap)
     if (two.length >= 2 && /\b(to|from|->|and)\b|→/.test(t.toLowerCase())) {
       const [a, b] = two
-      setResult({ text: routeLine(a, b), focus: null, route: [pos(a.place), pos(b.place)] })
+      showRoute(onMap, { text: routeLine(a, b), focus: null, route: [pos(a.place), pos(b.place)] })
       return
     }
     const p = parsePosition(map, t)
@@ -213,7 +235,19 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
           </p>
         ) : null}
 
-        <DayzMapCanvas map={map} here={shown} focus={result?.focus ?? null} route={result?.route ?? null} trail={trailLines} follow={follow} onSetHere={(p) => onHere({ ...p, map: mapId })} />
+        <DayzMapCanvas
+          map={map}
+          here={shown}
+          focus={result?.focus ?? null}
+          route={result?.route ?? null}
+          trail={trailLines}
+          follow={follow}
+          onSetHere={(p) => onHere({ ...p, map: mapId })}
+          marks={state.marks}
+          placing={state.pendingMark?.map === mapId ? state.pendingMark.label : null}
+          onPlace={(p) => session.placePendingMark(p, mapId)}
+          onMarkAt={(p, kind) => session.markAt(p, kind, mapId)}
+        />
         <p className="muted small" style={{ margin: 0 }}>
           {travel === 'straight'
             ? 'Routes are straight lines.'
@@ -221,6 +255,22 @@ export function DayzMapView({ state, settings, policy, capturing, session, focus
           {TIME_NOTE}
         </p>
       </section>
+
+      <MarksPanel
+        state={state}
+        session={session}
+        mapId={mapId}
+        onShow={(m) => setResult({ text: `${markLine(m, Date.now(), mine && mine.map === mapId ? mine : null)}.`, focus: { x: m.x, y: m.y, label: m.label, nonce: Date.now() }, route: null })}
+        onGo={
+          mine && mapId === 'chernarus'
+            ? (m) => {
+                const route = [{ x: mine.x, y: mine.y, label: mine.label }, { x: m.x, y: m.y, label: m.label }]
+                const warn = warningLine(liveMarks(state.marks, Date.now()).filter((o) => o.id !== m.id), route, mapId, Date.now())
+                setResult({ text: `${goLine(m, mine, Date.now())}${warn ? ` ${warn}` : ''}`, focus: null, route })
+              }
+            : null
+        }
+      />
 
       {mapId === 'chernarus' ? (
         <section className="panel" aria-labelledby="dz-asst-h">

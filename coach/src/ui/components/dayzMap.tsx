@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { distance, type DayzMap } from '../../core/dayz/places.ts'
 import type { Travel } from '../../core/dayz/terrain.ts'
 import { groundTime, tripTime } from '../../core/dayz/travel.ts'
+import { isFaded, MARK_INFO, MARK_KINDS, markLine, whereWords, type Mark, type MarkKind } from '../../core/dayz/marks.ts'
 import { clampView, focusOn, fullView, gridLines, labelled, pointAt, pointInfo, viewBox, zoomAt, type MapViewState } from '../../core/dayz/mapView.ts'
 import chernarusImg from '../assets/dayz/chernarus.jpg'
 import livoniaImg from '../assets/dayz/livonia.jpg'
@@ -49,6 +50,13 @@ interface Props {
   readonly markers?: readonly Pos[]
   /** A smaller map with fewer controls (the companion's screen). */
   readonly compact?: boolean
+  /** The player's own marks (sightings, base, stash, car…) on this map. */
+  readonly marks?: readonly Mark[]
+  /** Placing a mark: the next click puts it there (label says what). */
+  readonly placing?: string | null
+  readonly onPlace?: (p: Pos) => void
+  /** Mark a picked spot as one of the kinds. */
+  readonly onMarkAt?: (p: Pos, kind: MarkKind) => void
 }
 
 /** A route over the ground, leg by leg (null where there is no way), its length and share on roads. */
@@ -64,7 +72,8 @@ export interface TrailLine {
   readonly current: boolean
 }
 
-export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follow, markers, compact }: Props) {
+export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follow, markers, compact, marks, placing, onPlace, onMarkAt }: Props) {
+  const now = Date.now()
   const box = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 800, height: 600 })
   const [view, setView] = useState<MapViewState>(() => fullView(map))
@@ -145,7 +154,8 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
     if (d && !d.moved) {
       const { px: x, py: y } = local(e)
       const at = pointAt(map, view, size, x, y)
-      if (drawing) setDrawn((ds) => [...ds, { ...at, label: pointInfo(map, at).grid }])
+      if (placing && onPlace) onPlace({ ...at, label: whereWords(map, at) })
+      else if (drawing) setDrawn((ds) => [...ds, { ...at, label: pointInfo(map, at).grid }])
       else setPicked({ ...at, label: pointInfo(map, at).grid })
     }
   }
@@ -366,6 +376,23 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
             </g>
           ))}
 
+          {marks
+            ?.filter((m) => m.map === map.id)
+            .map((m) => (
+              <g key={m.id} className={`dz-mark dz-mark-${m.kind}${isFaded(m, now) ? ' faded' : ''}`} data-kind={m.kind}>
+                <title>{markLine(m, now)}</title>
+                <circle cx={m.x} cy={sy(m.y)} r={8 * px} strokeWidth={2 * px} />
+                <text x={m.x} y={sy(m.y) + 3.8 * px} fontSize={10 * px} textAnchor="middle" className="dz-mark-glyph">
+                  {MARK_INFO[m.kind].glyph}
+                </text>
+                {view.span <= (compact ? 9000 : 7000) ? (
+                  <text x={m.x + 11 * px} y={sy(m.y) + 4 * px} fontSize={11 * px} strokeWidth={3 * px} className="dz-mark-label">
+                    {m.label}
+                  </text>
+                ) : null}
+              </g>
+            ))}
+
           {picked ? <path className="dz-picked" d={cross(picked.x, sy(picked.y), 7 * px, true)} strokeWidth={2.5 * px} /> : null}
           {here ? (
             <g className={`dz-here dz-here-${here.source}`}>
@@ -378,7 +405,11 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
       </div>
 
       <div className="dz-info small" aria-live="polite">
-        {drawn.length ? (
+        {placing ? (
+          <span className="dz-placing">
+            <b>Click the map to mark: {placing}.</b> Drag to move; scroll to zoom.
+          </span>
+        ) : drawn.length ? (
           <span>
             Your route: {drawn.length} point{drawn.length === 1 ? '' : 's'}, {scaleText(drawn.slice(1).reduce((s, _, i) => s + legLength(drawnLegs, drawn, i), 0))} in all
             {drawnLegs ? ` over the ground (${Math.round(drawnLegs.road * 100)}% on roads, ${groundTime(drawnLegs, drawnLegs.travel)})` : drawn.length > 1 ? `, ${tripTime(drawn.slice(1).reduce((s, _, i) => s + legLength(null, drawn, i), 0))}` : ''}
@@ -390,6 +421,24 @@ export function DayzMapCanvas({ map, here, focus, route, trail, onSetHere, follo
             <button type="button" className="btn sm" onClick={() => onSetHere({ x: picked.x, y: picked.y, label: `grid ${info.grid}` })}>
               I’m here
             </button>{' '}
+            {onMarkAt ? (
+              <select
+                className="sm"
+                aria-label="Mark this spot"
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onMarkAt({ x: picked.x, y: picked.y, label: whereWords(map, picked) }, e.target.value as MarkKind)
+                  setPicked(null)
+                }}
+              >
+                <option value="">Mark as…</option>
+                {MARK_KINDS.filter((k) => k !== 'body').map((k) => (
+                  <option key={k} value={k}>
+                    {MARK_INFO[k].label}
+                  </option>
+                ))}
+              </select>
+            ) : null}{' '}
             <button type="button" className="btn sm ghost" onClick={() => setPicked(null)}>
               Clear
             </button>

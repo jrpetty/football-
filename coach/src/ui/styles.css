@@ -5575,6 +5575,29 @@ td > .swatch {
 .dz-kit label { display: flex; gap: 6px; align-items: center; }
 .dz-pin path { fill: #ff7a59; stroke: #3a1200; }
 .dz-pin text { fill: #ffe3da; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--font); font-weight: 700; }
+/* Your marks: what you saw (warm colours) and what is yours (cool). */
+.dz-mark circle { fill: var(--mk, #8ab4ff); stroke: rgba(0, 0, 0, 0.8); }
+.dz-mark .dz-mark-glyph { fill: #0b0d10; font-family: var(--font); font-weight: 800; pointer-events: none; }
+.dz-mark .dz-mark-label { fill: #f2f4f7; stroke: rgba(0, 0, 0, 0.85); paint-order: stroke; font-family: var(--font); font-weight: 700; pointer-events: none; }
+.dz-mark.faded { opacity: 0.45; }
+.dz-mark-player, .dz-mark-chip.dz-mark-player { --mk: #ff5d5d; }
+.dz-mark-shots, .dz-mark-chip.dz-mark-shots { --mk: #ffb02e; }
+.dz-mark-danger, .dz-mark-chip.dz-mark-danger { --mk: #ff2e7a; }
+.dz-mark-base, .dz-mark-chip.dz-mark-base { --mk: #4fd18b; }
+.dz-mark-stash, .dz-mark-chip.dz-mark-stash { --mk: #b38bff; }
+.dz-mark-vehicle, .dz-mark-chip.dz-mark-vehicle { --mk: #4cc3ff; }
+.dz-mark-loot, .dz-mark-chip.dz-mark-loot { --mk: #f5e04f; }
+.dz-mark-rally, .dz-mark-chip.dz-mark-rally { --mk: #7cf0e0; }
+.dz-mark-body, .dz-mark-chip.dz-mark-body { --mk: #d0d4da; }
+.dz-mark-note, .dz-mark-chip.dz-mark-note { --mk: #9aa4b2; }
+.dz-mark-chip { display: inline-grid; place-items: center; width: 1.35em; height: 1.35em; border-radius: 50%; background: var(--mk); color: #0b0d10; font-weight: 800; font-size: 0.8em; flex: none; }
+.dz-mark-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.dz-mark-list li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; background: var(--surface-2, rgba(255, 255, 255, 0.03)); }
+.dz-mark-list li.faded { opacity: 0.6; }
+.dz-mark-text { flex: 1; min-width: 0; }
+.dz-mark-actions { display: flex; gap: 8px; flex: none; }
+.dz-mark-kinds .btn { display: inline-flex; align-items: center; gap: 4px; }
+.dz-placing { color: var(--accent, #ffb02e); }
 .dz-map-wrap.compact .dz-map { height: 340px; min-height: 260px; }
 .dz-map-wrap.compact .dz-layers, .dz-map-wrap.compact .dz-scale { display: none; }
 

@@ -12,6 +12,7 @@ import { pointInfo } from '../core/dayz/mapView.ts'
 import type { DayzMapId } from '../core/dayz/places.ts'
 import { trailStep, type TrailLife } from '../core/dayz/trail.ts'
 import { mapPreference } from '../core/dayz/ask.ts'
+import { aroundLine, isMarkBook, liveMarks, makeMark, MARK_INFO, markSaid, readShareCode, shareCode, type Mark, type MarkDraft, type MarkKind } from '../core/dayz/marks.ts'
 import type { CloudStatus, ResearchBrief } from '../../shared/cloud.ts'
 import type { MatchRecord } from '../core/analyses/matchRecorder.ts'
 import { defaultContext, type SessionReport } from '../core/engine.ts'
@@ -162,6 +163,10 @@ export interface SessionState {
   /** DayZ: where the player says they are (a town or grid they set), and what they have (the kit checklist). */
   readonly spot: (Spot & { readonly map: DayzMapId }) | null
   readonly kit: readonly string[]
+  /** DayZ: the player's own map marks (sightings, base, stash, car…), kept on disk. */
+  readonly marks: readonly Mark[]
+  /** DayZ: a mark told about without where: the next click on a map places it. */
+  readonly pendingMark: (MarkDraft & { readonly map: DayzMapId }) | null
   /** Official overhead map images kept for this game, by map id. */
   readonly overheads: Readonly<Record<string, OverheadInfo>>
   /** The map whose official image is being imported or downloaded. */
@@ -224,6 +229,8 @@ const INITIAL: SessionState = {
   trail: [],
   spot: null,
   kit: [],
+  marks: [],
+  pendingMark: null,
   overheads: {},
   overheadBusy: null,
   conversation: [],
@@ -358,7 +365,9 @@ export class CoachSession {
       profile.positioning?.minimap ? this.bridge.loadMosaics(id).catch(() => []) : Promise.resolve([]),
       profile.knowledge.maps?.length ? this.bridge.listOverheads(id).catch(() => []) : Promise.resolve([]),
     ])
+    const book = id === 'dayz' ? await this.bridge.loadDoc('marks', id).catch(() => null) : null
     if (this.profile?.id !== id) return
+    if (id === 'dayz') this.set({ marks: isMarkBook(book) ? liveMarks(book.marks, Date.now()) : [] })
     const mosaics = Object.fromEntries(stitched.map((m) => [m.map.toLowerCase(), m]))
     const overheads = Object.fromEntries(kept.map((o) => [o.mapId, o]))
     this.set({ profileId: id, history, snapshot, notes, research, mosaics, overheads, ...(this.state.report?.profileId !== id ? { report: null, review: NO_REVIEW } : {}) })
@@ -1150,11 +1159,73 @@ export class CoachSession {
     this.set({ kit: [...kitFrom([...kit].join(','))] })
   }
 
-  /** What the companion knows of the player: their spot, kit and map. */
+  /** What the companion knows of the player: their spot, kit, map and marks. */
   private companionContext(): CompanionContext {
     const spot = this.state.spot?.map === 'chernarus' ? this.state.spot : null
     const context = this.state.report?.profileId === 'dayz' ? this.state.report.context : {}
-    return { spot, kit: this.state.kit, map: mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus' }
+    const now = Date.now()
+    return { spot, kit: this.state.kit, map: mapPreference({ ...(this.settings?.context.dayz ?? {}), ...context }) ?? 'chernarus', marks: liveMarks(this.state.marks, now), now }
+  }
+
+  // --- DayZ map marks ------------------------------------------------------------------------
+
+  private async saveMarks(marks: readonly Mark[]): Promise<void> {
+    if (this.profile?.id !== 'dayz') return
+    await this.bridge.saveDoc('marks', 'dayz', { version: 1, marks: liveMarks(marks, Date.now()) }).catch(() => false)
+  }
+
+  /** Add one of the player's marks (and keep it). */
+  addMark(m: Mark): void {
+    const marks = [...liveMarks(this.state.marks, Date.now()), m]
+    this.set({ marks, pendingMark: null })
+    void this.saveMarks(marks)
+  }
+
+  /** Remove marks by id. */
+  removeMarks(ids: readonly string[]): void {
+    if (!ids.length) return
+    const marks = this.state.marks.filter((m) => !ids.includes(m.id))
+    this.set({ marks })
+    void this.saveMarks(marks)
+  }
+
+  /** Start placing a mark: the next click on a map puts it there. Null cancels. */
+  startMark(kind: MarkKind | null, label?: string, map: DayzMapId = 'chernarus'): void {
+    this.set({ pendingMark: kind ? { kind, label: label?.trim() || MARK_INFO[kind].label, map } : null })
+  }
+
+  /** Mark a spot on the map as one of the kinds (from the map's "Mark as…"). */
+  markAt(p: { x: number; y: number; label: string }, kind: MarkKind, map: DayzMapId): Mark {
+    const m = makeMark({ kind, label: MARK_INFO[kind].label }, { x: p.x, y: p.y, where: p.label }, map, Date.now())
+    this.addMark(m)
+    return m
+  }
+
+  /** The click that places the waiting mark. */
+  placePendingMark(p: { x: number; y: number; label: string }, map: DayzMapId): Mark | null {
+    const d = this.state.pendingMark
+    if (!d) return null
+    const m = makeMark(d, { x: p.x, y: p.y, where: p.label }, map, Date.now())
+    this.addMark(m)
+    return m
+  }
+
+  /** A code for friends with the marks chosen (all when none given). */
+  marksCode(ids?: readonly string[]): string {
+    return shareCode(ids ? this.state.marks.filter((m) => ids.includes(m.id)) : this.state.marks)
+  }
+
+  /** Add a friend's marks from their code: how many, or null when it is not a code. */
+  importMarks(code: string): number | null {
+    const got = readShareCode(code, Date.now())
+    if (!got) return null
+    const fresh = got.filter((g) => !this.state.marks.some((m) => m.kind === g.kind && m.x === g.x && m.y === g.y && m.label === g.label))
+    if (fresh.length) {
+      const marks = [...this.state.marks, ...fresh]
+      this.set({ marks })
+      void this.saveMarks(marks)
+    }
+    return fresh.length
   }
 
   /** One open question to Claude with the companion's tools (src/core/dayz/companion.ts runs the loop). */
@@ -1167,6 +1238,8 @@ export class CoachSession {
         lost.forEach((k) => kit.delete(k))
         this.set({ kit: [...kitFrom([...kit].join(','))] })
       },
+      addMark: (m) => this.addMark(m),
+      removeMarks: (ids) => this.removeMarks(ids),
     }
     const r = await companionTurn({
       question: q,
@@ -1183,12 +1256,13 @@ export class CoachSession {
   }
 
   /** "I'm at …" or "I found …": the reply (and its card), after updating the spot or the kit; null for anything else. */
-  private dayzSaid(q: string): { text: string; card: Card } | null {
+  private dayzSaid(q: string): { text: string; card: Card | null } | null {
     const spot = parseSetSpot(q)
     if (spot) {
       this.set({ spot: { ...spot, map: 'chernarus' } })
       const info = pointInfo(CHERNARUS, spot)
-      return { text: `Got it: you're at ${spot.label}. ${info.line} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: 'chernarus', title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }
+      const heads = aroundLine(liveMarks(this.state.marks, Date.now()), spot, 'chernarus', Date.now())
+      return { text: `Got it: you're at ${spot.label}. ${info.line}${heads ? ` ${heads}` : ''} Ask "what now?" or "take me to the nearest water".`, card: { type: 'map', map: 'chernarus', title: 'You', focus: { x: spot.x, y: spot.y, label: spot.label } } }
     }
     const kit = parseKitUpdate(q)
     if (kit) {
@@ -1198,6 +1272,21 @@ export class CoachSession {
       this.set({ kit: [...kitFrom([...have].join(','))] })
       const names = [...kit.have, ...kit.lost].map((k) => KIT.find((x) => x.id === k)!.label.toLowerCase())
       return { text: `${kit.have.length ? 'Ticked' : 'Unticked'}: ${names.join(', ')}. ${kitLine(have)}`, card: { type: 'kit', have: KIT.filter((k) => have.has(k.id)).map((k) => k.label), missing: KIT.filter((k) => !have.has(k.id)).map((k) => k.label) } }
+    }
+    // Marks: "I saw two players near Gorka", "my base is …", "parked the car here", "clear sightings".
+    const ctx = this.companionContext()
+    const said = markSaid(q, { spot: ctx.spot, map: ctx.map, marks: this.state.marks, now: Date.now() })
+    if (said?.type === 'add') {
+      this.addMark(said.mark)
+      return { text: said.text, card: { type: 'map', map: said.mark.map, title: said.mark.label, focus: { x: said.mark.x, y: said.mark.y, label: said.mark.label } } }
+    }
+    if (said?.type === 'pick') {
+      this.set({ pendingMark: { ...said.draft, map: ctx.map } })
+      return { text: said.text, card: { type: 'pick', map: ctx.map, title: `Mark: ${said.draft.label}`, kind: said.draft.kind, label: said.draft.label } }
+    }
+    if (said?.type === 'remove') {
+      this.removeMarks(said.ids)
+      return { text: said.text, card: null }
     }
     return null
   }
@@ -1575,6 +1664,19 @@ export class CoachSession {
       if (trail !== this.state.trail) patch.trail = trail
       // A death: the new character starts with nothing, and somewhere else.
       if (ended?.result === 'loss') {
+        // Where you died, as near as the coach knows: your last spot (or the last sign read), to go back for your gear.
+        const last = this.state.spot ?? (() => {
+          const life = (patch.trail ?? this.state.trail).at(-1)
+          const stop = life?.stops.at(-1)
+          return life && stop ? { x: stop.x, y: stop.y, label: stop.name, map: life.map } : null
+        })()
+        if (last) {
+          const now = Date.now()
+          const body = makeMark({ kind: 'body', label: 'Where you died' }, { x: last.x, y: last.y, where: `${last.label} (your last spot)` }, last.map, now)
+          const marks = [...this.state.marks.filter((m) => m.kind !== 'body'), body]
+          patch.marks = marks
+          void this.saveMarks(marks)
+        }
         patch.kit = []
         patch.spot = null
       }

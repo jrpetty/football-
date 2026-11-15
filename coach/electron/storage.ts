@@ -38,6 +38,7 @@ import { isGlyphBookData, type GlyphBookData } from '../src/core/hud/glyphs.ts'
 import { isAoe4History } from '../src/core/aoe4/history.ts'
 import { isBuildLibrary } from '../src/core/aoe4/buildOrder.ts'
 import { isPracticePlan } from '../src/core/analyses/practice.ts'
+import { isMarkBook } from '../src/core/dayz/markBook.ts'
 import { cleanMosaic, type StoredMosaic } from '../src/core/map/minimap.ts'
 import { isKnowledgeBase, type KnowledgeBase } from '../src/core/knowledge/base.ts'
 import { gunzipSync, gzipSync } from 'node:zlib'
@@ -64,11 +65,11 @@ export interface PlayerNotes {
 }
 
 /** Folders of player data: deleted with "Forget", included in the export. */
-const PLAYER_DIRS = ['tendencies', 'history', 'notes', 'aoe4world', 'practice', 'builds'] as const
+const PLAYER_DIRS = ['tendencies', 'history', 'notes', 'aoe4world', 'practice', 'builds', 'marks'] as const
 
-type DocKind = 'aoe4world' | 'practice' | 'builds'
-const DOC_CHECK: Record<DocKind, (v: unknown) => boolean> = { aoe4world: isAoe4History, practice: isPracticePlan, builds: isBuildLibrary }
-const isDocKind = (v: unknown): v is DocKind => v === 'aoe4world' || v === 'practice' || v === 'builds'
+type DocKind = 'aoe4world' | 'practice' | 'builds' | 'marks'
+const DOC_CHECK: Record<DocKind, (v: unknown) => boolean> = { aoe4world: isAoe4History, practice: isPracticePlan, builds: isBuildLibrary, marks: isMarkBook }
+const isDocKind = (v: unknown): v is DocKind => v === 'aoe4world' || v === 'practice' || v === 'builds' || v === 'marks'
 
 export class Storage {
   readonly root: string
@@ -201,10 +202,11 @@ export class Storage {
     return DOC_CHECK[kind](v) ? v : null
   }
 
-  /** The AoE4World history and the practice plan are kept only with "Remember my games" on; build orders always (the player saved them). */
+  /** The AoE4World history and the practice plan are kept only with "Remember my games" on; build orders and DayZ map marks always (the player made them). */
   async saveDoc(kind: unknown, profileId: unknown, doc: unknown): Promise<boolean> {
     if (!isDocKind(kind) || !isProfileId(profileId) || !DOC_CHECK[kind](doc)) return false
-    if (kind !== 'builds' && !(await this.optedIn())) return false
+    // Build orders and map marks are kept whenever the player saves them.
+    if (kind !== 'builds' && kind !== 'marks' && !(await this.optedIn())) return false
     if (JSON.stringify(doc).length > 4_000_000) return false
     await mkdir(join(this.root, kind), { recursive: true })
     await this.writePrivate(this.path(kind, profileId), doc)
