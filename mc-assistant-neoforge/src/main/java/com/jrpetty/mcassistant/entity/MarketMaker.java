@@ -225,7 +225,7 @@ public final class MarketMaker {
 
     /**
      * [econ-1c] What a glut does to the bid: one while the market holds no more than it can sell (sixty-four, or two weeks of
-     * what the town took); held over that, what it can sell over what it holds (twice what it can sell, half the bid; ten
+     * what the town took: at its counters, or of the market for its works, homes and businesses); held over that, what it can sell over what it holds (twice what it can sell, half the bid; ten
      * times, a tenth), a twentieth at the least: a market maker with a cellar full of carrots does not pay for more as if
      * the town were short of them. Without it a town whose fields came good sold the market twelve hundred things a day and
      * the town wrote IOUs for them by the hundred coins.
@@ -237,7 +237,7 @@ public final class MarketMaker {
         double[] c = GLUT.get(k);
         if (c != null && now - c[0] < 200 && now >= c[0]) return c[1];
         int held = Market.stock(level, village, Stockroom.matcher(key));
-        long can = Math.max(GLUT_LEAST, 2L * Stockroom.week7(level, village, key)[0]);
+        long can = Math.max(GLUT_LEAST, 2L * Math.max(Stockroom.week7(level, village, key)[0], sold7(village, key)));
         double f = held <= can ? 1.0 : Math.max(GLUT_LEAST_FACTOR, can / (double) held);
         if (GLUT.size() > 4096) GLUT.clear();
         GLUT.put(k, new double[]{ now, f });
@@ -344,12 +344,42 @@ public final class MarketMaker {
                 week.add(new net.minecraft.nbt.LongArrayTag(new long[]{ m.getLong("day"), was.getLong("bought"), was.getLong("sold"),
                     was.getLong("staff"), was.getLong("exports") }));
                 while (week.size() > 7) week.remove(0);
+                rollSold7(m, was);                                     // [econ-1c] what it sold of each, the week back
             }
             m.putLong("day", day);
             m.put("today", new CompoundTag());
             Accounts.dirty();
         }
         return m.getCompound("today");
+    }
+
+    /** [econ-1c] Yesterday's sales of each ware into the week's (seven days, the newest first). */
+    static void rollSold7(CompoundTag m, CompoundTag was) {
+        CompoundTag s7 = Accounts.sub(m, "sold7");
+        CompoundTag goods = was.getCompound("goods");
+        java.util.Set<String> keys = new java.util.HashSet<>(s7.getAllKeys());
+        keys.addAll(goods.getAllKeys());
+        for (String key : keys) {
+            long[] a = java.util.Arrays.copyOf(s7.getLongArray(key), 7);
+            System.arraycopy(a, 0, a, 1, 6);
+            long[] g = goods.getLongArray(key);
+            a[0] = g.length > 2 ? g[2] : 0;
+            boolean any = false;
+            for (long x : a) any |= x > 0;
+            if (any) s7.putLongArray(key, a); else s7.remove(key);
+        }
+    }
+
+    /** [econ-1c] What the market sold of a ware over the week (to the town's works, its households, its businesses), today's in. */
+    static long sold7(UUID village, String key) {
+        CompoundTag m = market(village);
+        long n = 0;
+        for (long x : Accounts.sub(m, "sold7").getLongArray(key)) n += x;
+        if (m.getLong("day") == Accounts.dayNow()) {
+            long[] g = m.getCompound("today").getCompound("goods").getLongArray(key);
+            if (g.length > 2) n += g[2];
+        }
+        return n;
     }
 
     /** The last seven days' totals (yesterday back), with today's so far: {bought, sold, staff, exports}. */
