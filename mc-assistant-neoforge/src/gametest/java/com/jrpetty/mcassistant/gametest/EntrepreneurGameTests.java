@@ -486,6 +486,18 @@ public class EntrepreneurGameTests {
         MarketMaker.morningForTests(level, v);
         Kit.log("ent09 IOUs " + ious + " -> " + Accounts.debts(id) + ", market cash " + cash + " -> " + MarketMaker.cash(id) + "; " + TownBudget.line(id));
         ok.that(Accounts.debts(id) < ious, "the IOUs set against what the market holds over its float: " + ious + " -> " + Accounts.debts(id));
+        // The mint: three bars bought at the mint's price (eight coins), twenty-seven coins struck: three to the good.
+        Villages.ageForTests(id, Villages.Age.IRON);
+        stores(level, id, x, new ItemStack(Items.GOLD_INGOT, 3));
+        long drain = Businesses.treasuryPence(id) - 3000;
+        if (drain > 0) Businesses.fromTreasuryForTests(id, drain);
+        long debts0 = Accounts.debts(id), tre0 = Businesses.treasuryPence(id);
+        double goldAsk = MarketMaker.ask(level, id, new ItemStack(Items.GOLD_INGOT));
+        int struck;
+        try (Accounts.Scope m = Accounts.as(Accounts.Dept.MINT, Accounts.Purpose.WORK)) { struck = com.jrpetty.mcassistant.entity.Market.mint(level, v); }
+        Kit.log("ent09 mint: struck " + struck + ", treasury " + tre0 + " -> " + Businesses.treasuryPence(id) + ", IOUs " + debts0 + " -> " + Accounts.debts(id) + ", gold ask " + goldAsk);
+        ok.that(struck == 27 && Businesses.treasuryPence(id) == tre0 + 300 && Accounts.debts(id) == debts0,
+            "the town's mint strikes 27 of 3 bars bought at 8 each: the treasury 3 coins to the good, no IOU: " + tre0 + " -> " + Businesses.treasuryPence(id));
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }

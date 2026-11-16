@@ -469,7 +469,8 @@ public final class Businesses {
         long needP = due * 100L;
         // [econ-1b] A sole owner working its own business is paid out of what its business has taken, not out of its own
         // savings put in to pay itself (a coin round the circle, the wage tax off it each time) nor the town's credit.
-        boolean ownHand = b.owners.size() == 1 && f.getUUID().equals(b.owners.get(0).who());
+        // (Where the market is open: a plain town keeps its old ways.)
+        boolean ownHand = MarketMaker.live(v.id()) && b.owners.size() == 1 && f.getUUID().equals(b.owners.get(0).who());
         if (b.till < needP && !ownHand) raise(level, v.id(), b, needP - b.till, day);
         int paid = (int) Math.min(due, b.till / 100);
         b.till -= paid * 100L;
