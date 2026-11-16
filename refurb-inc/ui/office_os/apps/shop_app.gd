@@ -128,17 +128,20 @@ func _licence_row(s: Dictionary) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
 	c.add_child(h)
-	h.add_child(pill(" 🌙 ", Color(0.2, 0.22, 0.45), Color.WHITE, 22))
+	h.add_child(pill(" %s " % str(s.get("icon", "🌙")), Color(0.2, 0.22, 0.45), Color.WHITE, 22))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
 	v.add_child(l(str(s.name), 20))
 	v.add_child(para(str(s.get("desc", "")), 15, SUB, 700))
-	h.add_child(l("Owned ✔" if owned else "One-off", 17, GREEN if owned else SUB))
+	var need_rep := float(s.get("min_rep", 0))
+	var locked := not owned and Game.state.reputation < need_rep
+	h.add_child(l("Owned ✔" if owned else ("Needs reputation %d" % int(need_rep) if locked else "One-off"), 17, GREEN if owned else (RED if locked else SUB)))
 	h.add_child(l(GameState.format_money(int(s.price)), 22))
 	var price := int(s.price)
-	h.add_child(button("Licensed" if owned else "Buy licence", func(): Game.request("shop_buy", {"id": str(s.id)}), GREEN,
-		owned or Game.state.cash - price < int(Content.econ("overdraft_warning", -500))))
+	h.add_child(button(("Licensed" if s.get("licence", "") != "website" else "Live") if owned else ("Buy licence" if s.get("licence", "") != "website" else "Build it"),
+		func(): Game.request("shop_buy", {"id": str(s.id)}), GREEN,
+		owned or locked or Game.state.cash - price < int(Content.econ("overdraft_warning", -500))))
 	_list.add_child(c)
 
 

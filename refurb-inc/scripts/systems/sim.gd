@@ -1482,6 +1482,47 @@ func flogit_hourly() -> void:
 						break
 
 
+static func website_name(st: GameState) -> String:
+	var n := st.company_name.to_lower().replace(".", "").replace("&", "and").replace(" ltd", "").replace(" ", "")
+	var clean := ""
+	for ch in n:
+		if (ch >= "a" and ch <= "z") or (ch >= "0" and ch <= "9"):
+			clean += ch
+	return (clean if clean != "" else "refurbinc") + ".co.uk"
+
+
+static func website_chance_per_hour(st: GameState, u: UnitData) -> float:
+	## Your own website (bought once reputation allows): a second stream of buyers for every listing, growing with
+	## reputation. Spares/repairs units don't go on the website.
+	if not st.has_licence("website") or u.grade == "S":
+		return 0.0
+	var p := sale_chance_per_hour(st, u) * float(Content.econ("website_rate_mult", 0.45))
+	p *= 1.0 + maxf(st.reputation - 30.0, 0.0) * float(Content.econ("website_rep_rate_bonus", 0.02))
+	return clampf(p, 0.0, 0.6)
+
+
+func website_hourly() -> void:
+	if not state.has_licence("website"):
+		if state.reputation >= float(Content.shop_items.get("website_build", {}).get("min_rep", 30)) and not state.totals.get("website_offer", false):
+			state.totals["website_offer"] = true
+			send_mail("Dev at Pixel & Pint Web Design", "Your own website?",
+				"Hi there,\n\nI've been watching your Flogit shop — great reviews! A business like yours should have its own website.\n\nI can build %s for a one-off £%d (Shop → Your own website). Everything you list goes on it automatically. Buyers who come direct pay a 2%% card fee instead of Flogit's 10%%, and the better your reputation, the more of them there are.\n\nHosting is £%d a week.\n\nCheers,\nDev" % [website_name(state), int(Content.shop_items.get("website_build", {}).get("price", 1500)), int(Content.econ("website_weekly", 15))])
+			state.say("New mail: an offer to build your own website (reputation 30 reached).", "info")
+		return
+	for it: Item in state.units_in_stock():
+		if it.unit.listed and it.unit.order_id == 0 and state.rng.randf() < website_chance_per_hour(state, it.unit):
+			_create_order(it, "website")
+
+
+static func channel_name(channel: String, st: GameState = null) -> String:
+	match channel:
+		"website":
+			return "your website" if st == null else website_name(st)
+		"business":
+			return "business order"
+	return "Flogit"
+
+
 func _create_order(it: Item, channel: String) -> Dictionary:
 	var u := it.unit
 	var deadline_h := float(Content.econ("dispatch_deadline_hours", 24))
@@ -1495,11 +1536,14 @@ func _create_order(it: Item, channel: String) -> Dictionary:
 	u.listed = false
 	u.order_id = order.id
 	BusinessStats.on_order(state, u)
-	u.log_event(state.minute, "Sold on Flogit to %s for £%d" % [order.buyer, order.price])
+	var where := channel_name(channel, state)
+	u.log_event(state.minute, "Sold on %s to %s for £%d" % [where, order.buyer, order.price])
 	state.bump_stat("sold")
+	if channel == "website":
+		state.bump_stat("website_sales")
 	state.mark("order", order.id)
 	state.mark("item", it.id)
-	state.say("Flogit sale! %s (%s) — £%d to %s. Pack it before %s." % [order.model, UnitData.grade_label(order.grade), order.price, order.buyer, GameState.format_minute(order.due)], "good")
+	state.say("%s sale! %s (%s) — £%d to %s. Pack it before %s." % ["Website" if channel == "website" else "Flogit", order.model, UnitData.grade_label(order.grade), order.price, order.buyer, GameState.format_minute(order.due)], "good")
 	return order
 
 
@@ -1610,10 +1654,11 @@ func _ship_package(pkg: Item) -> void:
 		_ship_business(order, pkg, unit_it)
 	elif not order.is_empty():
 		var price := int(order.price)
-		var fee := int(round(price * float(Content.econ("flogit_fee_pct", 0.1))))
+		var web: bool = order.get("channel", "flogit") == "website"
+		var fee := int(round(price * float(Content.econ("website_fee_pct" if web else "flogit_fee_pct", 0.02 if web else 0.1))))
 		var post := int(Content.econ("flogit_postage_large" if pkg.data.get("large", false) else "flogit_postage", 9))
-		state.add_money(price, "sales", "Flogit order #%d — %s" % [oid, order.model])
-		state.add_money(-fee, "fees", "Flogit fee #%d" % oid)
+		state.add_money(price, "sales", "%s order #%d — %s" % ["Website" if web else "Flogit", oid, order.model])
+		state.add_money(-fee, "fees", "%s #%d" % ["Card fee" if web else "Flogit fee", oid])
 		state.add_money(-post, "postage", "Courier #%d" % oid)
 		var on_time := state.minute <= float(order.due)
 		order.status = "shipped" if on_time else "shipped_late"
@@ -2401,6 +2446,8 @@ func _buy_licence(peer: int, s: Dictionary) -> Dictionary:
 	var lic := str(s.get("licence", s.id))
 	if state.has_licence(lic):
 		return _fail("You already have the %s." % str(s.name).to_lower())
+	if state.reputation < float(s.get("min_rep", 0)):
+		return _fail("%s needs reputation %d." % [str(s.name), int(s.min_rep)])
 	var price := int(s.price)
 	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
 		return _fail("The %s costs %s." % [str(s.name).to_lower(), GameState.format_money(price)])
@@ -2412,6 +2459,8 @@ func _buy_licence(peer: int, s: Dictionary) -> Dictionary:
 	BusinessStats.event(state, "equipment", "Bought the %s (%s)" % [str(s.name).to_lower(), GameState.format_money(price)])
 	if lic == "night_shift":
 		state.say("Night shift licence granted and the yard floodlights are up. At 17:00 you can keep going into overtime.", "good")
+	elif lic == "website":
+		state.say("%s is live! Your listings are on your own website too — more buyers, lower fees." % website_name(state), "good")
 	else:
 		state.say("%s bought." % s.name, "good", peer)
 	return _ok()
@@ -2738,6 +2787,7 @@ func _process_minute_events() -> void:
 	if hour != state.last_flogit_hour:
 		state.last_flogit_hour = hour
 		flogit_hourly()
+		website_hourly()
 		business_hourly()
 	_process_jobs()
 	_process_machines()
@@ -2821,6 +2871,10 @@ func end_day() -> void:
 		var util := int(b.get("utilities_weekly", 25))
 		state.add_money(-rent, "rent", "Weekly rent — %s" % b.get("name", "premises"))
 		state.add_money(-util, "utilities", "Water, broadband & standing charges")
+		if state.has_licence("website"):
+			var host := int(Content.econ("website_weekly", 15))
+			state.add_money(-host, "utilities", "Website hosting — %s" % website_name(state))
+			util += host
 		summary["rent_paid"] = rent + util
 		var wages := weekly_wages()
 		if wages > 0:

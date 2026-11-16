@@ -161,8 +161,9 @@ func _reviews(rs: Dictionary) -> void:
 
 
 func _orders() -> void:
-	var orders := Game.state.orders.values().filter(func(o): return o.get("channel", "flogit") == "flogit")
+	var orders := Game.state.orders.values().filter(func(o): return o.get("channel", "flogit") in ["flogit", "website"])
 	orders.sort_custom(func(a, b): return float(a.placed) > float(b.placed))
+	_list.add_child(_website_line())
 	if orders.is_empty():
 		_list.add_child(para("No orders yet. List some stock!", 19))
 	for o in orders.slice(0, 40):
@@ -172,7 +173,12 @@ func _orders() -> void:
 		var v := VBoxContainer.new()
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(v)
-		v.add_child(l("#%d  %s (%s) — £%d" % [int(o.id), o.model, UnitData.grade_label(o.grade), int(o.price)], 19))
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		v.add_child(head)
+		head.add_child(l("#%d  %s (%s) — £%d" % [int(o.id), o.model, UnitData.grade_label(o.grade), int(o.price)], 19))
+		if o.get("channel", "") == "website":
+			head.add_child(pill(" 🌐 Website ", BLUE, Color.WHITE, 13))
 		var msg: String = o.get("message", "")
 		v.add_child(l("Buyer: %s%s" % [o.buyer, ("  ·  “%s”" % msg) if msg != "" else ""], 15, SUB))
 		var status: String = o.status
@@ -200,3 +206,15 @@ func _orders() -> void:
 			txt += "  ·  review pending"
 		h.add_child(l(txt, 17, col))
 		_list.add_child(c)
+
+
+func _website_line() -> Control:
+	## Your own website: how it's doing, or how to get one.
+	var st := Game.state
+	if st.has_licence("website"):
+		var n := int(st.totals.get("lifetime", {}).get("website_sales", 0))
+		return l("🌐 %s is live — %d sale%s so far, 2%% card fee. Every listing here is on it too." % [Sim.website_name(st), n, "" if n == 1 else "s"], 15, BLUE)
+	var need := int(Content.shop_items.get("website_build", {}).get("min_rep", 30))
+	if st.reputation >= need:
+		return l("🌐 You can now have your own website (Shop → Your own website): more buyers and lower fees.", 15, GREEN)
+	return l("🌐 Your own website unlocks at reputation %d (you have %d)." % [need, int(st.reputation)], 15, SUB)

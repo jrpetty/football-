@@ -10,6 +10,7 @@
     {"id": "boxes_large", "name": "Large server/tower boxes + foam (x5)", "kind": "consumable", "consumable": "big_boxes", "qty": 5, "price": 32, "desc": "Triple-wall cartons with corner blocks for towers and rack servers."},
     {"id": "labels",       "name": "Thermal shipping labels (×250)",     "kind": "consumable", "consumable": "labels", "qty": 250, "price": 9, "desc": "For the label printer."},
     {"id": "tape",         "name": "Packing tape (×6 rolls)",            "kind": "consumable", "consumable": "tape", "qty": 60, "price": 8, "desc": "Each roll seals about ten boxes."},
+    {"id": "website_build", "name": "Your own website", "kind": "licence", "licence": "website", "icon": "🌐", "price": 1500, "min_rep": 30, "desc": "A web designer builds your company's shop. Every listing also goes on your website: more buyers, and only a 2% card fee instead of Flogit's 10%. Traffic grows with reputation. Hosting £15 a week. Needs reputation 30."},
     {"id": "night_shift_licence", "name": "Night shift licence", "kind": "licence", "licence": "night_shift", "price": 7000, "desc": "Council licence, insurance and yard floodlights for working late. At 17:00 the host can keep going until 20:00, 22:00 or right through to 06:00. Staff get time-and-a-half; the meter keeps running. One-off."}
   ],
   "start_consumables": {"boxes": 12, "big_boxes": 3, "labels": 250, "tape": 30}
