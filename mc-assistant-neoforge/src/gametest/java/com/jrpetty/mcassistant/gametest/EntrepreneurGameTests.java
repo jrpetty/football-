@@ -1133,6 +1133,7 @@ public class EntrepreneurGameTests {
                         int farms = 0, selling = 0;
                         for (Business b : Businesses.all(id)) {
                             if (b.type.size != Business.Size.YARD || !b.open || b.town()) continue;
+                            if (level.getDayTime() / 24000L - b.opened < 3) continue;   // [econ-1e] a farm of the last days has no harvest in yet
                             VillageFolkEntity hand = handOf(id, b);
                             if (hand == null || hand.stationTask() != StationTask.FARM) continue;
                             farms++;
