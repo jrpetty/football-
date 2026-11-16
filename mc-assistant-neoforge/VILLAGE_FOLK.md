@@ -12966,6 +12966,9 @@ carry once the harvests were real, and firms that struggled where they should ha
   out again and again with a good share of its market puts its markup up a twentieth (every third day at most), as a busy
   shop would; one passed by still cuts it. A new firm's shelf is given its first week to sell before what it holds over
   five days' sales goes to the market at the bid.
+- **A batch at a time.** A firm's hand makes its wares a batch at a turn of its bench (up to four, as its shelf is short;
+  a piece at a time where the stores run only to that): a bakery with the town's call for fifty loaves a week and one pair
+  of hands had been making five a day.
 - **A founder's money.** What a founder can put in is its purse and its savings and now what its own homestead (a farm, a
   mine, a boat it owns alone) holds over its till's float: the profits it has made and not yet drawn, drawn out into the
   new firm. A farmer whose harvest money sat in its farm's till had "no means" to open the bakery the town was short of.
