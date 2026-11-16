@@ -239,9 +239,24 @@ public final class TownBudget {
     }
 
     /** [econ-1e] Its builders wait for tomorrow's money for this project: short, the day's money for the works spent, and not a
-     *  home, food or its age's building. */
+     *  home, food or its age's building; or the town at its borrowing's end (halted), whatever it is. */
     public static boolean worksWait(@javax.annotation.Nullable UUID village, String project) {
-        return !core(project) && worksWait(village);
+        if (halted(village)) return true;
+        return worksWait(village) && !core(project);
+    }
+
+    /** [econ-1e] Past this many times what it can carry, a town starts nothing new on its works till its revenue brings the IOUs down. */
+    static final double HALT = 2.0;
+
+    /**
+     * [econ-1e] At its borrowing's end: owing its market more than twice what it can carry. A town borrows to house
+     * its folk, within reason: past that its builders start nothing (its homes too) and its storeys and lecterns wait, till
+     * its rents and taxes and its market's surplus bring the IOUs back down; what is half built is finished as the stores
+     * allow. A ten-day town that built every house as fast as its hands could ran its IOUs to three times what it could carry.
+     */
+    public static boolean halted(@javax.annotation.Nullable UUID village) {
+        if (village == null || !MarketMaker.live(village)) return false;
+        return Accounts.debts(village) > HALT * limit(village);
     }
 
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */

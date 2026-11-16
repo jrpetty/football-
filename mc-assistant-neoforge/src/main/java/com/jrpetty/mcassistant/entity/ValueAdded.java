@@ -19,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * bakery had nineteen in twenty of its town's bread trade and lost fifty-five coins on it). In a real market a made thing's
  * price settles where its makers make a living: its makings, the labour and time it takes, and a normal return on the
  * work, or nobody would make it. So a made thing's going price is never under that (PriceIndex.each): its makings at the
- * town's own going prices today (wheat dear, bread dear with it), its maker's time at the going wage over what one pair of
+ * town's own going prices today, each as its own market prices it (wheat dear, bread dear with it; one step back, so a
+ * lectern is its bookshelves at their price, not a chain of floors on floors), its maker's time at the going wage over what one pair of
  * hands makes of it in a day (a baker some thirty loaves, a toolsmith a dozen tools, a clothier eight coats: the firms'
  * own day's work, BusinessTypes; the cost book's for the rest), the fuel, and a margin of fifteen in the hundred. Scarce,
  * it goes above that by the town's supply and demand as before; a glut can still push it a fifth under, as a crowded
@@ -36,7 +37,7 @@ public final class ValueAdded {
     static final double MARGIN = 0.15;
     /** Into a glut a made thing's price may go this far under its makings, time and margin, and no further. */
     static final double GLUT_LEAST = 0.8;
-    /** How many steps back a made thing's makings are themselves priced as made (a pick's sticks of planks of logs). */
+    /** How deep a worth may be asked for while one is being worked out (the going wage's reckoning asks the prices again). */
     static final int DEPTH = 4;
     /** How long a worked-out worth is kept, ticks. */
     static final long FRESH = 1200;
@@ -80,7 +81,7 @@ public final class ValueAdded {
             for (CostBook.Part p : b.parts()) {
                 Item part = CostBook.itemOf(p.id());
                 if (part == null || part == Items.AIR) { makings += p.total(); continue; }
-                makings += p.n() * PriceIndex.each(null, village, new ItemStack(part));
+                makings += p.n() * PriceIndex.indexed(village, new ItemStack(part));
             }
             w = (Math.max(0, makings) + b.fuel() + labour(village, b, one)) * (1 + MARGIN);
         } finally {

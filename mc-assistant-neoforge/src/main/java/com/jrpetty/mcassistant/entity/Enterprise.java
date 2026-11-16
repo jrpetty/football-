@@ -361,6 +361,17 @@ public final class Enterprise {
         return t != null && !t.resells() && t.wares().contains(key);
     }
 
+    /**
+     * [econ-1e] Does this firm's trade bring its wares in (a fish stall's catch), rather than make them at a bench? A maker
+     * firm's own wares are booked as its bench makes them (Businesses.made); what its hand brings to the stores from a turn
+     * at the town's work (a bakery's cook's ladders and lanterns, the café's bread) is the town's, and had gone on the
+     * bakery's shelf at the cost book's price.
+     */
+    static boolean catches(UUID village, Business b) {
+        BusinessType t = kindOf(village, b);
+        return t != null && Privatisation.producer(t.work());
+    }
+
     /** What the firm holds of a ware. */
     static long held(Business b, String key) {
         Lot l = b.stock.get(key);
@@ -515,7 +526,7 @@ public final class Enterprise {
     @Nullable
     static Opportunity weigh(ServerLevel level, Villages.Village v, BusinessType t, Map<String, Integer> lists) {
         UUID id = v.id();
-        double demand = 0, supply = 0, priceSum = 0, costSum = 0, inputSum = 0, weightSum = 0;
+        double demand = 0, supply = 0, priceSum = 0, costSum = 0, inputSum = 0, weightSum = 0, undercut = 0;
         String best = null;
         double bestGap = -1;
         long day = Businesses.today(level);
@@ -545,11 +556,20 @@ public final class Enterprise {
             inputSum += inputs * weight;
             weightSum += weight;
             double gap = want - 0.9 * have;
+            // [econ-1e] The town's own counter selling a ware in a firm's week's worth (half what its hands can make), at what
+            // it costs to make and its maker's time and two fifths over: a trader with its own bench can undercut it and take a
+            // share of a market already served (a quarter, say), as a private café takes the baked potatoes from a town counter
+            // selling them at three times their potato. The want not met was all a firm looked at, and a town's fattest trades
+            // were never anybody's business.
+            if (!t.resells() && w[0] >= t.perDay() * 3.5 && cost > 0 && price >= 1.4 * cost && firmSold < w[0] / 2) {
+                undercut += 0.25 * w[0];
+                if (best == null || 0.25 * w[0] > bestGap) { bestGap = Math.max(bestGap, 0.25 * w[0]); best = key; }
+            }
             if (gap > bestGap) { bestGap = gap; best = key; }
         }
         if (weightSum <= 0 || best == null) return null;
         double price = priceSum / weightSum, cost = costSum / weightSum, inputs = inputSum / weightSum;
-        double gap = Math.max(0, demand - 0.9 * supply);
+        double gap = Math.max(0, demand - 0.9 * supply) + undercut;      // [econ-1e] (and the share it can take by undercutting)
         int firms = 0;
         for (Business b : open(id)) {
             BusinessType k = kindOf(id, b);

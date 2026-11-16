@@ -477,6 +477,7 @@ public final class Grow {
         if (!started.contains(b.anchor().asLong()) && !Ledger.raising(id, b.anchor())) {
             // The makings for all of it, out of the stores, before the roof comes off: and the storey goes
             // up in what the stores could pay for (Masonry.buildIn), not in what the palette would like.
+            if (!free && TownBudget.halted(id)) return 0;                   // [econ-1e] the town at its borrowing's end: the storey waits
             if (!free && !payForStorey(level, v, b, was, will, pal)) return 0;
             started.add(b.anchor().asLong());
             Villages.tell(id, level.getDayTime() / 24000L, "the builders began a second storey on " + named(from) + " at "

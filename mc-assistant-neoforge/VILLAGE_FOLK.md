@@ -13096,12 +13096,26 @@ debt that had stopped building houses. Measured again (EntrepreneurGameTests ent
   three wheat in it at the market's ask, and the town's only bakery, with nineteen in twenty of its town's bread trade, lost
   fifty-five coins on it. Once a town's market is open, a made thing's going price is never under its makings at the
   town's going prices today, its maker's time at the town's going wage over what one pair of hands makes of it in a day (a
-  baker thirty-two loaves, a toolsmith a dozen tools, a clothier eight coats, a glassworks forty panes' worth), the fuel,
+  baker thirty-two loaves, a toolsmith a dozen tools, a clothier eight coats, a glassworks forty blocks of glass), the fuel,
   and a normal margin of fifteen in the hundred (ValueAdded). Scarce, it goes above that by the town's supply and demand as
   before; a glut can still push it a fifth under, as a crowded market does to its makers. Wheat dear makes bread dear.
 - **What a firm weighs is what it will pay.** The look at the town's wants costed a ware's makings at a hamlet's hands'
   wages (wheat at two hundredths of a coin where the market asked a fifth): a bakery looked six times as good as it was. A
-  firm's makings are costed at the market's ask now (CostBook.atMarket), on its sign, in its books and in the scan.
+  firm's makings are costed at the market's ask now (CostBook.atMarket), on its sign, in its books and in the scan. And the
+  market sells to a business at its ask, not at what its cellar's lots cost it (what it paid is sunk): a bakery had paid
+  the book cost of wheat bought at the staple floor in a glut, half again over the ask everybody else paid.
+- **A maker makes its wares; it does not buy them in.** A firm's morning orders bought its own wares of the market whenever
+  its hands had made none that week (short of wheat a day or two), at the market's ask, to sell on at its own price: the
+  twenty-day town's bakery's cost of goods was nine tenths of its takings, its "bread" the town cook's. A maker firm now
+  never orders its own wares. What its hand brings the stores from a turn at the town's work (a cook's ladders, lanterns
+  and the café's loaves) is the town's, not its firm's stock.
+- **A firm prices for the trade it is set up for.** A firm's price is its cost a piece and its markup: its makings as it
+  bought them, and its week's wages, rent and running costs shared over what it sold, or over half what its hands can make
+  in a week if it sold less (as a real firm costs at its normal output). Spread over the handful a new bakery sold, its
+  overheads came to three times its makings: its loaves went past the going price, nobody bought one, and they went stale.
+  Where that still comes over the going price, it sells at the going price so long as that pays its makings and its markup,
+  as before. On market day a folk buying a treat (its favourite loaf) goes to the best seller too, firms among them: the
+  town's market had sold a firm's loaves off its shelf as its own.
 - **What a household will pay.** A folk expected a hamlet's prices in a town whose wages and counters were at the town's
   price level, and left two hundred loaves a week on the shelf as too dear. Once the market is open, what it expects is at
   the town's price level, a made thing at its makings and time, and food by the basket's taste (a loaf, a cooked joint, more
@@ -13116,9 +13130,17 @@ debt that had stopped building houses. Measured again (EntrepreneurGameTests ent
   not dearer; one with its wares sold out and a good share of its market still puts its price up, as a busy shop would.
 - **A town in debt still builds its homes.** With every building held to three fifths of a day's revenue once the town
   owed more than it could carry, a ten-day town grew to twenty-six folk where it had grown to forty-three. Its homes, its
-  stores and well, what feeds it and the buildings its age asks for go up at the pace of its hands whatever it owes; its
-  walls, watch and the rest wait for the day's money when it is short, and its luxuries and grand works are put off as
-  before. Its buildings still go up plain while it is careful.
+  stores and well, what feeds it and the buildings its age asks for go up at the pace of its hands while it is short; its
+  walls, watch and the rest wait for the day's money, and its luxuries and grand works are put off as before. A town borrows
+  to house its folk, within reason: owing its market more than twice what it can carry, it is at its borrowing's end and
+  its builders start nothing new, its homes neither, and its second storeys wait, till its rents, taxes and market surplus
+  bring the IOUs back down (what is half built is finished as the stores allow). Its buildings still go up plain while it
+  is careful, and a careful town's gazette goes by word of mouth rather than buy its lectern.
+- **A dear town counter invites a trader to undercut it.** The look at the town's wants saw only the want not met. A ware
+  the town's own counter sells in a firm's week's worth, at two fifths and more over what it costs to make with its maker's
+  time, is an opening too now: a trader with its own bench can price under the counter and take a quarter of that trade (a
+  private café taking the baked potatoes a town counter sells at three times their potato). A market served at a fair price
+  is still no opening.
 - **The founders pay their rent once the commons are over.** A founders' household lived rent-free till it had a week's
   rent and a dozen coins a head in hand, which a household buying its food at the market's prices never had: eight houses in
   ten in a ten-day town paid nothing, and the town's biggest landlord built on paper. From Market Opening Day a founders'
