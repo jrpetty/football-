@@ -841,6 +841,13 @@ public final class Purchases {
     }
 
     /** Tests: a folk's account at the counter made fresh. */
+    /** [econ-1d] Tests: which of these food a folk would buy now, and remembered as bought. */
+    public static ItemStack chooseFoodForTests(ServerLevel level, VillageFolkEntity f, List<ItemStack> offer) {
+        ItemStack pick = choose(level, f.ownerId(), f, f, offer, Need.FOOD);
+        FoodBasket.bought(f.getUUID(), pick);
+        return pick;
+    }
+
     public static void forgetForTests(VillageFolkEntity f) {
         UUID village = f.ownerId();
         if (village != null) accounts(village).remove(f.getUUID());

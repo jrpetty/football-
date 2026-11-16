@@ -12904,3 +12904,59 @@ at nought drift every morning, the IOUs bounded; the farms, ranch and woodlot se
 which the tests' server turns off); ent13 a bankruptcy heard by the council and its stall sold at the auction for its
 creditors. The ten-day tests now give the crops the game's usual random tick speed (three): the tests' server has it at
 nought, which is why a test town's farms sold nothing.
+
+## A town that pays its way, and firms that can thrive (economy batch 1D)
+
+Batch 1C left two things a real economy would not have: a treasury whose IOUs to its market ran to twice what it could
+carry once the harvests were real, and firms that struggled where they should have done well. Ten- and twenty-day towns
+(EntrepreneurGameTests ent10, ent12, ent15) were measured with every IOU written down, and this is what was found and done.
+
+- **Where the town's debt came from (the IOU book).** Every IOU the town writes its market is now in a day book: who wrote
+  it (the works, the watch, the relief, the town's own business), for what (the ware), and how each was cleared (the
+  taxes, the profits tax, the business rates, the house rents, the treasury's spare coin, the market's holdings, its
+  weekly surplus, the treasury's float). Nine tenths and more of it was the works: the builders' bricks, stone bricks,
+  stairs, beds and lanterns for the town's houses, three to five hundred pennies a day, on paper because the treasury had
+  put most of its coin up as the market's float on its opening day. The "jump" of four hundred and sixty coins in a day on
+  a hundred and forty-six spent was one such day of building, seen against a spending figure two days old: the budget took
+  the departments' spending from a look at their books each morning (a day behind), and the ten-day test read it before
+  the morning (another day). The town's spending is booked as it is spent now. The Market page and `/village market` show
+  the IOUs' week: written by whom, cleared how.
+- **Living within its means.** How tight the town's money is decides what it does, the moment it tightens, not the next
+  morning. Owing its market over half what it can carry (half a week's revenue, ten coins at least), or having spent today
+  more than a day's share of its revenue and what it may still borrow, it is **careful**: the works that can wait (the
+  café, the fountain, the park, the theatre) are put off, and its buildings go up plain (no lanterns, carpets, flowers,
+  bookshelves or bells bought for them; a torch for a lantern; its rooms left unfurnished for now). Owing more than it can
+  carry, it is **short**: besides, one building crew at a time, and once its works have spent a day's share of its revenue
+  (twenty-five coins at the least) its builders fetch no more until the morning. Its essentials (its stores, homes and
+  beds, food, water, walls, the age's buildings) still go up every day, at the pace its money allows: nothing waits for
+  ever, and no town deadlocks. The budget line on the Market page says which it is.
+- **Paying it down.** Each morning what the treasury holds over two days of its own wage bill goes to pay its IOUs, oldest
+  first; every tax as it comes in pays them first, as before; and the households' rents for the town's houses (the town's
+  biggest income, which was only ever counted as coin) are money in to its budget and pay its IOUs too.
+- **Taxes the council raises when it must.** The profits tax is paid on account as it is earned, each morning out of
+  what a business's till can spare, and settled at its week's end (a farm's harvest money sat a week untaxed in its till
+  while the town wrote IOUs); a week that ends in a loss has its overpayment handed back. **Business rates**, a fifth lever
+  on the Taxes page: a coin a week from every business for its premises, profit or none (twice for larger premises), from
+  Market Opening Day. A town that owes its market more than it can carry three mornings running has its council called
+  together on its debts that evening, without waiting for its day; and the profits tax may go to its top rate (three
+  tenths) for a town in debt. Owners vote against the rates as against the profits tax.
+- **What a household buys.** A folk choosing its food weighed only how filling a thing was against its price, so a town
+  whose fields came good lived on glut carrots and walked past the baker. A household's basket now has taste (a made meal,
+  bread, a cooked joint or fish, a baked potato, a stew or a pie, worth more to a body than the raw stuff of it; raw meat
+  least) and variety (the same thing among its last eight buys palls a little each time), and each thing is priced at the
+  seller it would go to (the firm's price where a firm would sell it).
+- **Makings for a paying firm.** The stores keep things back from anybody making to sell. A private firm pays the
+  market's ask for its makings, so for a firm at its own bench the town's working stock (the builders' timber and stone,
+  the smith's bars, the seed corn) is kept at half, and what the age asks for (all of it, while short) may still be bought
+  by the firms of the town, an eighth of the pile (four at least) a day: the age waits a little, the firm works.
+- **Prices for real demand.** A firm sold out again and again with a good share of its market puts its markup up a
+  twentieth (every third day at most), as a busy shop would; one passed by still cuts it.
+- **A bankrupt's kit sold.** A failed firm's tools are taken back from its hands (a hand's own sword and armour are its
+  own) and sold to the market at its bid, a worn tool for as much less as it is worn, the proceeds to its creditors with
+  the rest of its till; a firm wound up by its owner sells its kit the same way. What the kit fetched under what its books
+  carried it at is a loss.
+
+Tests (EntrepreneurGameTests): ent14 a bankrupt's kit sold to the market for its creditors, the census at nought drift;
+ent15 twenty days of a town nobody seeded (at least one firm founded and one thriving, the census at nought drift every
+morning, the IOUs bounded). The ten- and twenty-day tests log the IOU book every day and through the day, the town's
+revenue against its spending, and the IOUs' trend.

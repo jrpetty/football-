@@ -410,6 +410,41 @@ public class EntrepreneurGameTests {
         helper.succeed();
     }
 
+    // ============================================================ ent16 a household's basket
+
+    /**
+     * [econ-1d] What a household buys follows its needs and tastes, not only the cheapest bellyful: a poor folk with glut
+     * carrots at a few pennies and bread at the going price on the shelf buys bread as well as carrots over a week of
+     * buying (a made meal is worth more to a body, and the same thing day after day palls); a comfortable folk, minding the
+     * price less, has bread more often than not.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "ent16_basket")
+    public static void ent16_basket(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1602000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 1, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        VillageFolkEntity poor = folk.get(0), comfy = folk.get(1);
+        UUID id = poor.ownerId();
+        comfy.earn(200);
+        stores(level, id, x, new ItemStack(Items.CARROT, 64), new ItemStack(Items.CARROT, 64), new ItemStack(Items.BREAD, 32));
+        List<ItemStack> offer = List.of(new ItemStack(Items.CARROT), new ItemStack(Items.BREAD));
+        int poorBread = 0, comfyBread = 0;
+        StringBuilder picks = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            ItemStack a = Purchases.chooseFoodForTests(level, poor, offer), b = Purchases.chooseFoodForTests(level, comfy, offer);
+            if (a.is(Items.BREAD)) poorBread++;
+            if (b.is(Items.BREAD)) comfyBread++;
+            picks.append(a.is(Items.BREAD) ? 'B' : 'c').append(b.is(Items.BREAD) ? 'B' : 'c').append(' ');
+        }
+        Kit.log("ent16 picks (poor, comfortable): " + picks + "| carrot " + Purchases.priceEach(level, id, new ItemStack(Items.CARROT), poor)
+            + "c, bread " + Purchases.priceEach(level, id, new ItemStack(Items.BREAD), poor) + "c; " + Wealth.tier(poor) + " / " + Wealth.tier(comfy));
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(poorBread >= 1, "bread bought at least once by the poor folk: " + poorBread);
+        ok.that(comfyBread >= poorBread, "the comfortable folk has bread at least as often: " + comfyBread + " against " + poorBread);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
     // ============================================================ ent06 expansion
 
     /** A thriving toolshop takes on a hand, then larger premises (its rent up), then opens a second branch of the same owner. */
