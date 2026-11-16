@@ -129,6 +129,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
         UUID village = ownerId();
         BlockPos centre = villageCentre;
+        if (!reason.shouldDestroy() && !level().isClientSide) CoinCensus.away(village, getUUID(), purse());   // [econ-1e] out of the world, its purse still counted
         super.remove(reason);
         if (!reason.shouldDestroy() || village == null || centre == null) return;
         Villages.recordDeath(village);      // unloading is not dying
@@ -5588,6 +5589,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */
     @Override
     protected boolean craftWork() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel s && Enterprise.benchFirst(this)) return Crafts.work(this, s);   // [econ-1e] its firm's shelf first
         return level() instanceof net.minecraft.server.level.ServerLevel server
             && (StoreStaff.work(this, server) || Hospitality.work(this, server)   // [dining] the tables, the bar, the sink
                 || Crafts.work(this, server));   // [econ-store] the counter, the stock book
@@ -7371,7 +7373,7 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         UUID village = ownerId();
         if (heart == null || village == null) return false;
-        if (TownBudget.worksWait(village)) {                             // [econ-1d] the day's money for the works spent: tomorrow
+        if (TownBudget.worksWait(village, project)) {                    // [econ-1d] the day's money for the works spent: tomorrow; [econ-1e] not a home's
             buildNote("build: the town has spent what it can on its works today");
             return false;
         }
@@ -7498,7 +7500,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
             // [econ-1d] A town careful of its money builds of the cheapest stone and timber the market has, not its bricks.
-            final double dear = TownBudget.frugal(village) && level() instanceof net.minecraft.server.level.ServerLevel sl ? TownBudget.dearBlock(sl, village) : Double.MAX_VALUE;
+            final double dear = level() instanceof net.minecraft.server.level.ServerLevel sl && MarketMaker.live(village)
+                ? (TownBudget.frugal(village) ? TownBudget.dearBlock(sl, village) : TownBudget.dearestBlock(sl, village)) : Double.MAX_VALUE;   // [econ-1e] (at ease too)
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
                 got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost

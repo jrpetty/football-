@@ -148,7 +148,20 @@ public final class TownBudget {
     /** What the town may owe its market before it puts off its works: half a week's revenue; ten coins at least, [econ-1d] and
      *  two coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
     public static long limit(UUID village) {
-        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(revenue7(village) * WEEK_SHARE));
+        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(week(village) * WEEK_SHARE));
+    }
+
+    /**
+     * [econ-1e] The town's week's revenue: the last seven days', or, its market open fewer days than that, what those days
+     * brought in at a week's rate. The day after its Market Opening Day a town's "week" was one day's taxes, and it could
+     * carry a seventh of what it would a week on: it put off its houses on the strength of a week it had not had yet.
+     */
+    static long week(UUID village) {
+        long in = revenue7(village);
+        long opened = MarketMaker.openedDay(village);
+        if (opened < 0) return in;
+        long days = Math.max(1, Math.min(7, Accounts.dayNow() - opened + 1));
+        return days >= 7 ? in : in * 7 / days;
     }
 
     /** [econ-1d] The town's grown folk. */
@@ -209,6 +222,15 @@ public final class TownBudget {
     }
 
     /**
+     * [econ-1e] The dearest building block a town at ease buys for its walls, coin each: ten times its cobblestone or planks. A
+     * builder loading up for a house at ease took four hundred coins of bricks in one go, the clay scarce and the brick dear,
+     * for walls as good of stone at a fortieth of the price: no town, however easy, builds so.
+     */
+    public static double dearestBlock(ServerLevel level, UUID village) {
+        return dearBlock(level, village) * 10.0 / 3.0;
+    }
+
+    /**
      * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
      * them (three fifths of a day's share of its week's revenue, the rest to pay its debts down; ten coins at the least): its
      * builders fetch no more for the day.
@@ -218,6 +240,45 @@ public final class TownBudget {
         if (village == null || pressure(village) < 2) return false;
         long today = Accounts.deptBook(village, Accounts.Dept.WORKS)[0];
         return today > Math.max(WORKS_FLOOR, Math.round(revenue7(village) / 7.0 * SHORT_SHARE));
+    }
+
+    /**
+     * [econ-1e] What a town builds at the pace of its hands whatever it owes: the next house (and the flats), its stores and
+     * well, what feeds it (the fields, the barns, the granary, the mills), and the buildings its age asks for before the next.
+     * A town in debt defers its luxuries and its grand works, not the roof over the next family: with every building held to
+     * three fifths of a day's revenue, a ten-day town grew to twenty-six folk where it had grown to forty-three, a house
+     * every third day. Its walls, watch and the rest of its essentials still wait for the day's money when it is short.
+     */
+    static final Set<String> CORE = Set.of(
+        "storage", "storehouse", "shelter", "house", "house2", "flats", "well", "granary", "farm", "allotments", "orchard", "windmill",
+        "watermill", "fortify", "smeltery", "hall", "workshop", "watchtower", "market", "lighthouse", "chapel", "gateway");
+
+    /** [econ-1e] Is this project one a short town still builds every day at its hands' pace (homes, food, its age's)? */
+    public static boolean core(String project) {
+        if (project == null) return true;
+        String p = project.toLowerCase(Locale.ROOT);
+        return CORE.contains(p) || p.startsWith("house") || p.contains("farm") || p.contains("barn");
+    }
+
+    /** [econ-1e] Its builders wait for tomorrow's money for this project: short, the day's money for the works spent, and not a
+     *  home, food or its age's building; or the town at its borrowing's end (halted), whatever it is. */
+    public static boolean worksWait(@javax.annotation.Nullable UUID village, String project) {
+        if (halted(village)) return true;
+        return worksWait(village) && !core(project);
+    }
+
+    /** [econ-1e] Past this many times what it can carry, a town starts nothing new on its works till its revenue brings the IOUs down. */
+    static final double HALT = 2.0;
+
+    /**
+     * [econ-1e] At its borrowing's end: owing its market more than twice what it can carry. A town borrows to house
+     * its folk, within reason: past that its builders start nothing (its homes too) and its storeys and lecterns wait, till
+     * its rents and taxes and its market's surplus bring the IOUs back down; what is half built is finished as the stores
+     * allow. A ten-day town that built every house as fast as its hands could ran its IOUs to three times what it could carry.
+     */
+    public static boolean halted(@javax.annotation.Nullable UUID village) {
+        if (village == null || !MarketMaker.live(village)) return false;
+        return Accounts.debts(village) > HALT * limit(village);
     }
 
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */

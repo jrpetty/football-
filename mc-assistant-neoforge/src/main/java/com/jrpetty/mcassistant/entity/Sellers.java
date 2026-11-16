@@ -28,6 +28,8 @@ public final class Sellers {
     static final double WALK = 0.02;
     /** A reputation of one is worth this much of the going price to a buyer. */
     static final double NAME_WORTH = 0.15;
+    /** [econ-1e] A firm whose cost and markup come over the going price asks this of it, to win its trade off the town's counter. */
+    static final double UNDERCUT = 0.92;
     /** A firm never asks under this of the going price (its own cost-plus would undersell everybody at first). */
     static final double LEAST_OF_GOING = 0.4;
 
@@ -36,9 +38,11 @@ public final class Sellers {
 
     /** What a firm asks for one of this today, coin. */
     public static double priceOf(ServerLevel level, UUID village, Business b, ItemStack one) {
-        double going = Market.askEach(level, village, one);
+        // [econ-1e] The going price as the town's own counter asks it of a buyer today: a slow ware of its own it marks down,
+        // and a firm that set its price by the market's ask alone was dearer than the counter however it priced.
+        double going = Math.min(Market.askEach(level, village, one), Purchases.priceEach(level, village, one, null));
         long day = Businesses.today(level);
-        double cost = Businesses.fullCost(level, village, b, one, day);
+        double cost = normalCost(level, village, b, one, day);              // [econ-1e] at its normal trade, not its first week's
         if (cost <= 0.0001) cost = CostBook.of(one).total() * MarketMaker.priceLevel(village);
         double p = cost * (1 + b.markup);
         // [econ-1d] What the market will bear: a firm whose full cost a piece (its week's wages and rent spread over a few
@@ -47,12 +51,35 @@ public final class Sellers {
         // and sold to nobody but the well-to-do.
         if (p > going) {
             Business.Lot lot = b.stock.get(Stockroom.key(one));
-            double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.of(one).materials() + CostBook.of(one).fuel();
-            p = Math.max(going, makings * (1 + b.markup));
+            double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);   // [econ-1e] (at the market's ask)
+            // [econ-1e] Priced to compete: a little under the town's own counter (which has the better name and the shorter walk,
+            // and won every tie: a firm at the going price sold nothing), so long as that pays its makings and a tenth. A firm
+            // whose makings cost it more than that (it bought dear) cannot, and sells dear.
+            p = Math.max(going * UNDERCUT, makings * (1 + Math.min(b.markup, Businesses.LEAST_MARKUP)));
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
         return Math.max(0.01, p);
+    }
+
+    /**
+     * [econ-1e] A firm's cost a piece at its normal trade: what the piece cost it to make (its makings, as bought), and its
+     * week's wages, rent and running costs shared over what it sold, or over half what its hands can make in a week if it
+     * sold less (a firm prices for the trade it is set up for, as a real one costs at its normal output). Spread over the
+     * handful a new bakery sold, its overheads came to three times its makings; its loaves went up past the going price, it
+     * sold none, and they went stale on its shelf.
+     */
+    static double normalCost(ServerLevel level, UUID village, Business b, ItemStack one, long day) {
+        BusinessTypes.BusinessType t = Enterprise.kindOf(village, b);
+        if (t == null) return Businesses.fullCost(level, village, b, one, day);
+        Business.Lot lot = b.stock.get(Stockroom.key(one));
+        double each = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);
+        Business.Day w = b.last(day - 1, 7);
+        long units = 0;
+        for (Business.Line l : w.lines.values()) units += l.units;
+        double overheads = (w.wages + w.rent + w.other + w.interest) / 100.0;
+        double normal = Math.max(units, t.perDay() * 3.5);
+        return each + (normal <= 0 ? 0 : overheads / normal);
     }
 
     /** A seller's reputation, nought to one (the town's own counter: a half). */

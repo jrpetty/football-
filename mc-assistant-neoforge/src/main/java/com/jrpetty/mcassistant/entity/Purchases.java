@@ -250,6 +250,11 @@ public final class Purchases {
      *  last time (a price that has crept up for a month is the price it is used to). */
     public static double expects(VillageFolkEntity f, ItemStack one) {
         double e = PriceIndex.usual(one);
+        // [econ-1e] Once its market is open, at the town's price level (its wages are, and every counter asks at it: a folk in a
+        // town expected a hamlet's price for its bread, and left two hundred loaves a week on the shelf as too dear), and a
+        // made thing at its makings and its maker's time (ValueAdded): nobody expects bread for the price of its wheat.
+        UUID village = f.ownerId();
+        if (village != null && MarketMaker.live(village)) e = Math.max(e, ValueAdded.worth(village, one)) * MarketMaker.priceLevel(village);
         Map<String, Double> last = LAST.get(f.getUUID());
         Double paid = last == null ? null : last.get(PriceIndex.keyOf(one));
         if (paid != null && paid > 0) e = 0.6 * e + 0.4 * paid;
@@ -266,7 +271,11 @@ public final class Purchases {
             case WELL_OFF -> 1.2;
             case WEALTHY -> 1.4;
         };
-        return expects(f, one) * means * nature(f) * (need == Need.TREAT ? 1.25 : 1.15);
+        double taste = 1.0;
+        // [econ-1e] Food by the basket's taste (FoodBasket): a loaf or a cooked joint is worth more to a body than its weight in raw
+        // stuff, and a household will pay for it, as it chooses it.
+        if (one.get(net.minecraft.core.component.DataComponents.FOOD) != null && f.ownerId() != null && MarketMaker.live(f.ownerId())) taste = FoodBasket.taste(one);
+        return expects(f, one) * means * nature(f) * (need == Need.TREAT ? 1.25 : 1.15) * taste;
     }
 
     /** How free with its coin its nature makes it: thrifty and Merchants less, the generous and the Free Spirits more. */

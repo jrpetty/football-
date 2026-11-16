@@ -1169,11 +1169,20 @@ public final class Market {
             // against what it expects to pay: too dear and it goes on to the next treat (the refusal in the town's
             // prices); cheap, and it has two.
             double each = Purchases.priceEach(level, v.id(), one, f);
+            // [econ-1e] A firm of the town's folk with it on its shelf (a bakery's loaves on market day): the best of them, as at
+            // any counter (Sellers); the sale its own. The town's market sold the firm's loaves as its own before.
+            Sellers.Offer seller = Sellers.best(level, v, one, f, each, 1);
+            if (seller.firm() != null) each = seller.price();
             int n = Math.min(have, Purchases.decide(level, f, one, each, Purchases.Need.TREAT, 1));
             if (n <= 0 || !Purchases.canPay(f, each * n)) continue;
+            if (seller.firm() != null && Enterprise.held(seller.firm(), Stockroom.key(one)) < n) n = 1;
             if (!TownWork.take(level, v, s -> s.is(it), n)) continue;
             int paid = Purchases.charge(level, f, v.id(), each * n, false, one, n);
-            Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, one, n, Math.max(0, paid));
+            if (seller.firm() != null && Enterprise.held(seller.firm(), Stockroom.key(one)) >= n) {
+                Sellers.sold(level, v.id(), seller.firm(), one, n, Math.round(each * n * 100));   // [econ-1e] the firm's sale, into its till
+            } else {
+                Stockroom.sold(level, v.id(), Stockroom.Seller.MARKET, one, n, Math.max(0, paid));
+            }
             PriceIndex.bought(v.id(), one, n);
             ItemStack bought = new ItemStack(it, n);
             ItemStack left = f.insertItem(bought);

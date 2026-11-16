@@ -164,6 +164,7 @@ public final class Gazette {
 
     /** A lectern out of the stores, or made of three books and eight planks from them, as the school's is. All or nothing. */
     private static boolean payForLectern(ServerLevel level, Villages.Village v) {
+        if (TownBudget.frugal(v.id())) return false;                       // [econ-1e] a town careful of its money: the news by word of mouth for now
         if (Crafts.take(level, v, s -> s.is(Items.LECTERN), 1)) return true;
         if (Crafts.stock(level, v, s -> s.is(Items.BOOK)) < 3 || !Crafts.take(level, v, s -> s.is(Items.BOOK), 3)) return false;
         if (Crafts.usePlanks(level, v, 8)) return true;

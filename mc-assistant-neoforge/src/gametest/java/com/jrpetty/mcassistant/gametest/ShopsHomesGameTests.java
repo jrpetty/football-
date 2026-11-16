@@ -14,6 +14,7 @@ import com.jrpetty.mcassistant.entity.Crafts;
 import com.jrpetty.mcassistant.entity.Goods;
 import com.jrpetty.mcassistant.entity.HomeStores;
 import com.jrpetty.mcassistant.entity.Homes;
+import com.jrpetty.mcassistant.entity.CoinCensus;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Meals;
 import com.jrpetty.mcassistant.entity.Needs;
@@ -272,15 +273,23 @@ public class ShopsHomesGameTests {
             CompoundTag screen = ServicePoints.screenForTests(pl);
             helper.assertTrue(screen != null, "the screen is open");
             int total = screen.getCompound("body").getCompound("quote").getInt("total");
+            // [econ-1e] Where the coin goes: the shop is its keeper's own business ("opened by ... on the stores' trade credit"), so
+            // the takings go into its till and the treasury has what the shop paid the stores for the loaves, to the penny. The
+            // treasury's whole coins alone came to two or three of the three paid by the odd pennies already in it (whether the
+            // keeper had bought its planks of the stores before the test looked): the town's coin, every holder, is the measure.
+            long town0 = CoinCensus.count(t.id()), flows0 = CoinCensus.netFlowPence(t.id());
             int coins0 = Market.coinsHeld(pl), treasury0 = Ledger.coins(t.id()), shop0 = ShopStock.held(level, t.id(), bread), had0 = carried(pl, bread);
             press(pl, ServiceRole.SHOP, "buy", new CompoundTag());
             int coins1 = Market.coinsHeld(pl), treasury1 = Ledger.coins(t.id()), shop1 = ShopStock.held(level, t.id(), bread), had1 = carried(pl, bread);
+            long town1 = CoinCensus.count(t.id()), flows1 = CoinCensus.netFlowPence(t.id());
             Kit.log("sk02 basket of 5 bread priced " + total + "; coins " + coins0 + " -> " + coins1 + ", treasury " + treasury0 + " -> " + treasury1
-                + ", shop " + shop0 + " -> " + shop1 + ", pack " + had0 + " -> " + had1 + "; said: " + ServicePoints.messageForTests(pl));
+                + ", the town's coin " + town0 + " -> " + town1 + "p, booked " + (flows1 - flows0) + "p, shop " + shop0 + " -> " + shop1 + ", pack "
+                + had0 + " -> " + had1 + "; said: " + ServicePoints.messageForTests(pl));
             Kit.noLeftoverPlayers(level);
             helper.assertTrue(total > 0, "the basket is priced by the server: " + total);
-            helper.assertTrue(coins0 - coins1 == total && treasury1 - treasury0 == total, "the coin moved exactly: " + (coins0 - coins1) + " paid, "
-                + (treasury1 - treasury0) + " in, " + total + " asked");
+            helper.assertTrue(coins0 - coins1 == total && town1 - town0 == total * 100L && flows1 - flows0 == total * 100L, "the coin moved exactly: "
+                + (coins0 - coins1) + " paid, " + (town1 - town0) + "p into the town's coin (its treasury and the shop's till), " + (flows1 - flows0)
+                + "p booked as a player's, " + total + " asked");
             helper.assertTrue(shop0 - shop1 == 5 && had1 - had0 == 5, "five loaves out of the shop's stock into the pack");
             helper.succeed();
         });

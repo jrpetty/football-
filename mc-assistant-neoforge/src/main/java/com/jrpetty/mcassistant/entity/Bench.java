@@ -214,6 +214,9 @@ public final class Bench {
                 int pile = 0;
                 for (Item it : in) pile += held.get(it);
                 left = FirmSupply.keep(v.id(), in.get(0), pile, left, left == Integer.MAX_VALUE);
+                // [econ-1e] Wheat is sown from its seeds, not itself: the seed keep's wheat held back from a paying bakery had it buy
+                // hay bales of the market and break them for the wheat (a quarter dearer, and the bales left on its shelf).
+                if (in.size() == 1 && in.get(0) == Items.WHEAT && "seed for the fields".equals(k.why())) left = 0;
             }
             for (Item it : in) {
                 why.put(it, k.why());

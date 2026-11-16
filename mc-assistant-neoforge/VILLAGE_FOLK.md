@@ -13086,3 +13086,90 @@ tests log the IOU book every day and through the day, the town's revenue against
 they no longer give the town free bread every morning once its market is open (it undersold any baker in the town, and the
 town feeds itself by its own trade by then; the building stuff is still given, as the long growth tests do). They have the
 council sitting on the taxes, as in real play (the tests' server is otherwise neutral, and no council ever sat in them).
+
+## Prices that pay their makers, and a town that builds in debt (economy batch 1E)
+
+Batch 1D's twenty-day town had firms but none that thrived, its coin census two coins off on two mornings, and a town in
+debt that had stopped building houses. Measured again (EntrepreneurGameTests ent10, ent12, ent15), this is what was found.
+
+- **A made thing's price is its makings, its maker's time and a margin.** The town's prices were reckoned ware by ware,
+  each by what is short and what is plenty, the made thing apart from what it is made of: bread came out barely over the
+  three wheat in it at the market's ask, and the town's only bakery, with nineteen in twenty of its town's bread trade, lost
+  fifty-five coins on it. Once a town's market is open, a made thing's going price is never under its makings at the
+  town's going prices today, its maker's time at the town's going wage over what one pair of hands makes of it in a day (a
+  baker thirty-two loaves, a toolsmith a dozen tools, a clothier eight coats, a glassworks forty blocks of glass), the fuel,
+  and a normal margin of fifteen in the hundred (ValueAdded). Scarce, it goes above that by the town's supply and demand as
+  before; a glut can still push it a fifth under, as a crowded market does to its makers. Wheat dear makes bread dear.
+- **What a firm weighs is what it will pay.** The look at the town's wants costed a ware's makings at a hamlet's hands'
+  wages (wheat at two hundredths of a coin where the market asked a fifth): a bakery looked six times as good as it was. A
+  firm's makings are costed at the market's ask now (CostBook.atMarket), on its sign, in its books and in the scan. And the
+  market sells to a business at its ask, not at what its cellar's lots cost it (what it paid is sunk): a bakery had paid
+  the book cost of wheat bought at the staple floor in a glut, half again over the ask everybody else paid.
+- **A maker makes its wares; it does not buy them in.** A firm's morning orders bought its own wares of the market whenever
+  its hands had made none that week (short of wheat a day or two), at the market's ask, to sell on at its own price: the
+  twenty-day town's bakery's cost of goods was nine tenths of its takings, its "bread" the town cook's. A maker firm now
+  never orders its own wares. What its hand brings the stores from a turn at the town's work (a cook's ladders, lanterns
+  and the café's loaves) is the town's, not its firm's stock.
+- **A firm prices for the trade it is set up for.** A firm's price is its cost a piece and its markup: its makings as it
+  bought them, and its week's wages, rent and running costs shared over what it sold, or over half what its hands can make
+  in a week if it sold less (as a real firm costs at its normal output). Spread over the handful a new bakery sold, its
+  overheads came to three times its makings: its loaves went past the going price, nobody bought one, and they went stale.
+  Where that still comes over the going price, it asks a little under the town's own counter (eight in the hundred), so
+  long as that pays its makings and a tenth: at the going price it lost every sale to the counter, which has the better
+  name and the shorter walk, and a firm that sold nothing raised its prices. A firm whose makings cost it more than that
+  (it bought dear) cannot, and sells dear. On market day a folk buying a treat (its favourite loaf) goes to the best seller too, firms among them: the
+  town's market had sold a firm's loaves off its shelf as its own.
+- **What a household will pay.** A folk expected a hamlet's prices in a town whose wages and counters were at the town's
+  price level, and left two hundred loaves a week on the shelf as too dear. Once the market is open, what it expects is at
+  the town's price level, a made thing at its makings and time, and food by the basket's taste (a loaf, a cooked joint, more
+  than raw stuff).
+- **A firm's hands at their firm's bench first.** A bakery's baker is a cook, and the town's dining rooms and ovens claimed a
+  cook's time first: a bakery with the call for two hundred loaves a week made eight a day. A hand whose firm's shelf is
+  short works its firm's bench before the town's tables; with its shelf full it serves the town as before. A paying bakery
+  is not held back by the seed keep's wheat (wheat is sown from its seeds): it bought hay bales to break for the wheat, a
+  quarter dearer.
+- **A firm dearer than the market.** A firm losing money put its markup up a tenth every third day of it, even when it was
+  already dearer than the stores, and sold less for it. A firm over the going price for its main ware looks to selling more,
+  not dearer; one with its wares sold out and a good share of its market still puts its price up, as a busy shop would.
+- **A town in debt still builds its homes.** With every building held to three fifths of a day's revenue once the town
+  owed more than it could carry, a ten-day town grew to twenty-six folk where it had grown to forty-three. Its homes, its
+  stores and well, what feeds it and the buildings its age asks for go up at the pace of its hands while it is short; its
+  walls, watch and the rest wait for the day's money, and its luxuries and grand works are put off as before. A town borrows
+  to house its folk, within reason: owing its market more than twice what it can carry, it is at its borrowing's end and
+  its builders start nothing new, its homes neither, and its second storeys wait, till its rents, taxes and market surplus
+  bring the IOUs back down (what is half built is finished as the stores allow). Its buildings still go up plain while it
+  is careful, and a careful town's gazette goes by word of mouth rather than buy its lectern. What it can carry is half its
+  week's revenue at the rate of the days its market has been open: the day after its Market Opening Day its "week" had been
+  one day's taxes, and it could carry a seventh of what it would a week on.
+- **A dear town counter invites a trader to undercut it.** The look at the town's wants saw only the want not met. A ware
+  the town's own counter sells in a firm's week's worth, at two fifths and more over what it costs to make with its maker's
+  time, is an opening too now: a trader with its own bench can price under the counter and take a quarter of that trade (a
+  private café taking the baked potatoes a town counter sells at three times their potato). A market served at a fair price
+  is still no opening.
+- **The founders pay their rent once the commons are over.** A founders' household lived rent-free till it had a week's
+  rent and a dozen coins a head in hand, which a household buying its food at the market's prices never had: eight houses in
+  ten in a ten-day town paid nothing, and the town's biggest landlord built on paper. From Market Opening Day a founders'
+  household with an earner pays its rent out of its wages, like everybody else, and the town's revenue grows with its houses.
+- **Folk out of the loaded world in the census.** The coin census counted the purses of the folk it could see: the cave
+  team walking out past the loaded ground with three coins between them was three coins short in the morning's count, and
+  three over the morning it walked back in. A folk out of the world (its chunk let go, another dimension) is counted by its
+  purse as it left until it is back. A player's coin at the shop desk is booked as a player's now.
+- **The shop's till.** A player's three coins at the shop desk went into the shop's own till (it is its keeper's business),
+  the treasury having what the shop paid the stores for the loaves; the test that counted the treasury's whole coins came to
+  two or three by the odd pennies already in it. It counts the town's coin now.
+
+- **Measured.** Twenty days of a town nobody seeded (ent15): a hundred folk and forty-six buildings (batch 1D's: eighty-four
+  and twenty-two), the census at nought drift every morning, the IOUs at most 926 coins against the 2,811 it could carry
+  at the end; two bakeries opened, one closed by its creditors on its twelfth day ("it owed more than it was worth", its
+  stall sold at auction), the other struggling. Ten days (ent12): forty-two folk and twenty-three buildings (batch 1D's
+  twenty-nine and seven; the old forty-three to fifty-one), the IOUs at most 692 against 1,058. No firm thrives in a young
+  town yet: a loaf is three wheat, and in a town whose wheat is all eaten or thatched (none held, its price twice the
+  usual) bread costs its baker more than the baked potato it competes with on the table, and the folk eat the potato;
+  the bakeries the town's shopping lists tempt its folk to open lose. A firm run well in a trade it can make a living in
+  thrives (ent18).
+
+Tests (EntrepreneurGameTests): ent17 a folk out of the world and back, the town's coin the same; ent18 two bakeries in one
+trade, the well-run one thriving and the dear one closed by its creditors; ent19 every kind of maker's wares fetching their
+makings and their maker's time at the going price, the bread dearer with the wheat. The long tests log every firm each day
+(its turns at the bench, what it made and sold, its price against the going price, its makings at the market, its hands)
+and the staples' prices; a farm opened in the last three days is not yet counted among the farms that should be selling.

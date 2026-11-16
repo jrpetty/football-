@@ -766,6 +766,10 @@ public final class MarketMaker {
         }
         if (n <= 0) return;
         Business firm = Businesses.employer(village, f);
+        if (firm != null && Enterprise.isFirm(firm) && !Enterprise.catches(village, firm)) {
+            if (Enterprise.makesItself(village, firm, key)) return;                  // [econ-1e] its bench's own wares: booked as made
+            firm = null;                                                              // [econ-1e] a maker firm's hand's work for the town: the town's
+        }
         if (firm != null && Businesses.sellsToStores(firm.type)) return;              // its business's making, booked there
         if (firm != null && Enterprise.output(level, village, firm, s.copyWithCount((int) n))) return;   // [econ-1b] a firm keeps its catch to sell
         Account seller = firm != null && !firm.mirror() && !firm.id.equals("storehouse") ? Account.firm(firm) : Account.dept(Dept.WORKS);
