@@ -1368,6 +1368,7 @@ public final class Homes {
         if (paid > 0) {
             Ledger.addCoins(id, paid);
             Economy.rent(id, paid);
+            TownBudget.houseRent(id, paid);                // [econ-1d] the town's houses' rents: its budget, its IOUs paid first
         }
         h.owed = due - paid;
         if (h.owed > 0 && (hard || generous(id))) {

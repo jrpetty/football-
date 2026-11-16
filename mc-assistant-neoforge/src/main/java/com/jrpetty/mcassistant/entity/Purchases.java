@@ -129,6 +129,7 @@ public final class Purchases {
 
     public static void resetForTests() {
         ACCOUNTS.clear();
+        FoodBasket.resetForTests();                                    // [econ-1d]
         LAST.clear();
         SAID.clear();
         POOR_BOX.clear();
@@ -437,6 +438,7 @@ public final class Purchases {
             Stockroom.sold(level, village, Stockroom.Seller.SHOP, pick, got, coins);
         }
         PriceIndex.bought(village, pick, got);
+        if (need == Need.FOOD) FoodBasket.bought(f.getUUID(), pick);         // [econ-1d] remembered, for variety
         lastGot = pick.copyWithCount(got);
         return got;
     }
@@ -513,9 +515,12 @@ public final class Purchases {
                     ResourceLocation.withDefaultNamespace(f.persona().food())) : Items.AIR;
                 ItemStack best = offer.get(0);
                 double bestScore = -1;
+                Villages.Village vv = Villages.get(village);
                 for (ItemStack s : offer) {
                     double q = AssistantEntity.foodQuality(s) * (s.is(fav) ? 1.2 : 1.0);
+                    q *= FoodBasket.appeal(f.getUUID(), s);                // [econ-1d] a basket: a made meal valued, a change from yesterday
                     double p = priceEach(level, village, s, buyer);
+                    if (vv != null) p = Math.min(p, Sellers.best(level, vv, s, buyer, p, 1, true).price());   // [econ-1d] at the seller it would go to
                     double score = q / Math.pow(Math.max(0.05, p), Math.max(0.1, care));
                     if (score > bestScore) { bestScore = score; best = s; }
                 }

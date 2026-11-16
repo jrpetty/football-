@@ -120,6 +120,8 @@ public final class MarketMaker {
         OUTPUT_NOW.clear();
         PRICE_FOR_TESTS.clear();
         GLUT.clear();                                     // [econ-1c]
+        IouBook.traceForTests(false);                     // [econ-1d]
+        TownBudget.resetForTests();                       // [econ-1d]
     }
 
     // ------------------------------------------------------------------ prices
@@ -884,7 +886,7 @@ public final class MarketMaker {
         // The treasury's float lent to the market and the town's IOUs to it, set against each other (both the town's).
         long adv = advanced(id);
         if (adv > 0) {
-            long netted = Accounts.netDebts(id, adv);
+            long netted = Accounts.netDebts(id, adv, "the treasury's float");   // [econ-1d] (how)
             if (netted > 0) market(id).putLong("advanced", adv - netted);
         }
         payCredit(level, id);
@@ -1032,7 +1034,7 @@ public final class MarketMaker {
         if (house == null) return;
         // The town owes its market on its IOUs, and the market owes the town its surplus: the one set against the other
         // first (both are the town's), and only what is over paid in coin.
-        long netted = Accounts.netDebts(village, over);
+        long netted = Accounts.netDebts(village, over, "the market's weekly surplus");   // [econ-1d] (how)
         if (netted > 0) {
             Villages.tell(village, day, "the market set " + Businesses.pence(netted) + " of its surplus against what the town owed it on its IOUs");
             over -= netted;

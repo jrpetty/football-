@@ -226,6 +226,8 @@ public final class TaxBook {
         // The council's sitting, quietly in the hall, if the evening's meeting did not take the taxes up.
         if (Math.floorMod(day, 7L) == COUNCIL_DAY && t >= 13400 && tag.getLong("sat") != day + 1 && CivicLand.grown(id).size() >= 2) {
             sit(level, v, day, "the council, sitting in the hall after dark,");
+        } else if (t >= 13400 && tag.getLong("sat") != day + 1 && CivicLand.grown(id).size() >= 2 && TownBudget.callsCouncil(id, day, tag.getLong("sat"))) {
+            sit(level, v, day, "the council, called together on the town's debts,");   // [econ-1d] it cannot wait for its day
         }
     }
 
@@ -715,7 +717,8 @@ public final class TaxBook {
         Lever[] up = MarketMaker.live(id) ? new Lever[]{ Lever.PROFITS, Lever.HEAD, Lever.TOLL, Lever.WAGE } : new Lever[]{ Lever.HEAD, Lever.TOLL, Lever.WAGE };
         for (Lever l : up) {
             int r = rate(id, l);
-            if (r < 2 && movable(id, l)) return new Motion(l, 1, r + 1, why);
+            int most = owing && l == Lever.PROFITS ? 3 : 2;                    // [econ-1d] a town in debt taxes profits to the top rate
+            if (r < most && movable(id, l)) return new Motion(l, 1, r + 1, why);
         }
         return null;
     }

@@ -155,6 +155,7 @@ public final class Enterprise {
 
     public static void resetForTests() {
         STAFF.clear();
+        FirmSupply.resetForTests();                       // [econ-1d]
         INDEXED.clear();
         REFUSED_NOW.clear();
     }
@@ -325,13 +326,14 @@ public final class Enterprise {
         for (String key : order) {
             ItemStack one = Stockroom.sampleOf(key);
             if (one.isEmpty()) continue;
-            Bench.Plan plan = Bench.plan(level, v, one.getItem(), 1, hand);
+            Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));   // [econ-1d] a paying firm: the keeps eased
             if (!plan.ok()) {
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
                 continue;
             }
             ItemStack out = Bench.make(level, v, plan, f, hand);
             if (out.isEmpty()) continue;
+            FirmSupply.drew(v.id(), plan.takes);                              // [econ-1d] off the day's ration of the age's reserve
             r.remove("short");
             Accounts.add(r, "madeHere", out.getCount());
             Accounts.dirty();
@@ -506,7 +508,7 @@ public final class Enterprise {
         Bench.Hand any = new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy());
         for (String key : t.wares()) {
             ItemStack one = Stockroom.sampleOf(key);
-            if (!one.isEmpty() && Bench.plan(level, v, one.getItem(), 1, any).ok()) return true;
+            if (!one.isEmpty() && FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, any)).ok()) return true;   // [econ-1d] as a paying firm
         }
         return false;
     }
@@ -1275,6 +1277,7 @@ public final class Enterprise {
         r.remove("petition");
         // The stock, to the market at its bid (or the stores at cost where the market is not open).
         long fromStock = liquidate(level, village, b, day);
+        long fromKit = FirmKit.sell(level, village, b, day);              // [econ-1d] its kit sold to the market, not written off
         // The stall: at the town's auction on market day, or (a town with no auction) to the folk with the means now.
         boolean toAuction = r.getLong("fixtures") > 0 && Auctions.holds(village);
         long fromStall = toAuction ? 0 : auctionStall(level, village, b, r, day);
@@ -1308,7 +1311,7 @@ public final class Enterprise {
         }
         close(level, village, b, r, day, "bankrupt");
         String court = heardBy == null ? "" : " (heard " + heardBy + ")";
-        b.note(day, "bankrupt" + court + " (" + cause + "): stock " + Businesses.pence(fromStock) + ", stall " + (toAuction ? "to the auction on market day"
+        b.note(day, "bankrupt" + court + " (" + cause + "): stock " + Businesses.pence(fromStock) + (fromKit > 0 ? ", kit " + Businesses.pence(fromKit) : "") + ", stall " + (toAuction ? "to the auction on market day"
             : Businesses.pence(fromStall)) + (fromPurse > 0 ? ", " + Businesses.pence(fromPurse) + " of its owner's purse" : "") + "; paid "
             + (paid.isEmpty() ? "nobody" : String.join(", ", paid)) + (unpaid.isEmpty() ? "" : toAuction ? "; still owed: " + String.join(", ", unpaid)
             : "; written off: " + String.join(", ", unpaid)));
@@ -1548,6 +1551,7 @@ public final class Enterprise {
         CompoundTag r = rec(village, b.id);
         if (r == null) return;
         liquidate(level, village, b, day);
+        FirmKit.sell(level, village, b, day);                             // [econ-1d] its kit sold, not left with its hands
         auctionStall(level, village, b, r, day);
         if (b.account < 0) {
             long pay = Math.min(-b.account, b.till);
@@ -1898,8 +1902,8 @@ public final class Enterprise {
         StringBuilder sb = new StringBuilder("hand " + hand + ":");
         for (String key : t.wares()) {
             ItemStack one = Stockroom.sampleOf(key);
-            if (!one.isEmpty()) sb.append(' ').append(key).append(" short of ").append(Bench.plan(level, v, one.getItem(), 1,
-                new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy())).shortOf).append(';');
+            if (!one.isEmpty()) sb.append(' ').append(key).append(" short of ").append(FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1,
+                new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy()))).shortOf).append(';');
         }
         return sb.toString();
     }

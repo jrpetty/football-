@@ -70,6 +70,11 @@ public final class Sellers {
      * holds them. The town's counter wins a tie.
      */
     public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n) {
+        return best(level, v, one, buyer, townEach, n, false);
+    }
+
+    /** [econ-1d] The same; {@code looking}: only weighing what to buy (no stock-out marked against a firm that has none). */
+    public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n, boolean looking) {
         UUID id = v.id();
         double going = Market.askEach(level, id, one);
         BlockPos from = buyer != null ? buyer.blockPosition() : v.centre();
@@ -82,7 +87,7 @@ public final class Sellers {
             if (t == null || !t.wares().contains(key)) continue;
             Business.Lot lot = b.stock.get(key);
             if (lot == null || lot.qty < n) {
-                if (lot != null || b.allTime.lines.containsKey(key)) Enterprise.stockOut(id, b);
+                if (!looking && (lot != null || b.allTime.lines.containsKey(key))) Enterprise.stockOut(id, b);   // [econ-1d] (looking)
                 continue;
             }
             if (b.ownedBy(buyer == null ? null : buyer.getUUID()) && buyer != null) continue;   // not of itself

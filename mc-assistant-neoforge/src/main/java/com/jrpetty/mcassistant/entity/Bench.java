@@ -210,6 +210,11 @@ public final class Bench {
             if (in.isEmpty()) continue;
             in.sort((a, b) -> Integer.compare(held.get(b), held.get(a)));
             int left = k.keep();
+            if (FirmSupply.paying()) {                                   // [econ-1d] a paying firm: the town's own need first, the rest at the ask
+                int pile = 0;
+                for (Item it : in) pile += held.get(it);
+                left = FirmSupply.keep(v.id(), in.get(0), pile, left, left == Integer.MAX_VALUE);
+            }
             for (Item it : in) {
                 why.put(it, k.why());
                 if (left <= 0) continue;

@@ -7416,6 +7416,7 @@ public class VillageFolkEntity extends AssistantEntity {
             // with none in the stores, made) the four bookshelves it already had, out of the books its teacher wanted.
             if (still != null) want = Math.min(want, still.getOrDefault(deco, 0));
             if (want == 0) continue;
+            if (!TownBudget.plainNeed(deco.name()) && TownBudget.frugal(village)) continue;   // [econ-1d] a town careful of its money builds plain
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
             if (have < want) have += drawFrom(heart, item, want - have, buildStoresRadius());

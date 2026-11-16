@@ -83,4 +83,9 @@ public final class Capital {
     public static long boughtAll(UUID village, Business b) {
         return Accounts.sub(book(village), "all").getLong(b.id);
     }
+
+    /** [econ-1d] Tests: so much put into a business's kit. */
+    public static void boughtForTests(UUID village, Business b, long pence) {
+        bought(village, b, pence);
+    }
 }

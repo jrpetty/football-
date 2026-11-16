@@ -589,6 +589,7 @@ public final class Accounts {
         add(b, "spent", spent);
         add(b, "in", in);
         dirty();
+        TownBudget.spent(village, d, spent, in);                             // [econ-1d] the town's spending booked as it goes
     }
 
     /** A department's spending today and all told, and its receipts: {spentToday, inToday, spent, in}. */
@@ -685,6 +686,7 @@ public final class Accounts {
         t.putLong("day", day);
         t.putString("what", what);
         l.add(t);
+        IouBook.written(village, who, what, p);                              // [econ-1d] the IOU book: who wrote it, for what
         while (l.size() > 200) {
             // Very many small ones: the oldest folded into the next.
             CompoundTag a = l.getCompound(0), b = l.getCompound(1);
@@ -723,11 +725,16 @@ public final class Accounts {
     public static long taxIn(UUID village, long pence) {
         if (pence <= 0) return 0;
         TownBudget.in(village, "taxes", pence);                                    // [econ-1b] the town's budget
-        return payIous(village, pence);
+        return payIous(village, pence, "taxes");
     }
 
     /** [econ-1b] The IOUs paid, oldest first, out of so much coin that has just come into the treasury. */
     static long payIous(UUID village, long pence) {
+        return payIous(village, pence, "the treasury");
+    }
+
+    /** [econ-1d] The same, the IOU book told how ("taxes", "the profits tax"). */
+    static long payIous(UUID village, long pence, String how) {
         if (pence <= 0) return 0;
         ListTag l = list(town(village), "debts");
         long paid = 0;
@@ -744,6 +751,7 @@ public final class Accounts {
         }
         if (paid > 0) {
             add(sub(town(village), "debtsPaid"), "pence", paid);
+            IouBook.cleared(village, how, paid);                             // [econ-1d]
             dirty();
         }
         return paid;
@@ -752,6 +760,11 @@ public final class Accounts {
     /** The IOUs set against the market's surplus (no coin moves: the town's own enterprise and the town): up to so much,
      *  oldest first. Returns the pennies set off. */
     static long netDebts(UUID village, long upTo) {
+        return netDebts(village, upTo, "the market's holdings");
+    }
+
+    /** [econ-1d] The same, the IOU book told how. */
+    static long netDebts(UUID village, long upTo, String how) {
         ListTag l = list(town(village), "debts");
         long done = 0;
         while (!l.isEmpty() && done < upTo) {
@@ -761,7 +774,10 @@ public final class Accounts {
             done += k;
             if (k >= owed) l.remove(0); else t.putLong("p", owed - k);
         }
-        if (done > 0) dirty();
+        if (done > 0) {
+            IouBook.cleared(village, how, done);                             // [econ-1d]
+            dirty();
+        }
         return done;
     }
 
