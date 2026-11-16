@@ -894,6 +894,15 @@ public final class Referendums {
     /** Tests: a great work put to the town now, the vote on the day given; returns the question's number, or -1. */
     public static int callForTests(ServerLevel level, Villages.Village v, BigWorks.Work kind, long voteDay) {
         long day = level.getDayTime() / 24000L;
+        // [health] One works question at a time (consider): the town may have put this very work itself in the test's first
+        // ticks; that question is the one, its vote moved to the test's day (two of them, one left open, kept the town
+        // from ever putting it again, and its later count set the season's wait afresh).
+        for (CompoundTag q : open(v.id())) {
+            if (!WORKS.equals(q.getString("kind")) || !kind.name().equals(q.getString("subject"))) continue;
+            q.putLong("vote", voteDay);
+            CivicRecord.changed();
+            return q.getInt("id");
+        }
         for (BigWorks.Proposal p : BigWorks.proposals(level, v)) {
             if (p.kind() != kind) continue;
             return callWorks(level, v, p, day, voteDay).getInt("id");

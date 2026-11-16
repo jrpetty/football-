@@ -270,12 +270,16 @@ public class VisitorsGameTests {
             helper.assertTrue(sights.contains("museum") && sights.contains("monument"), "the museum and the monument to see: " + sights);
             Visitors.arriveForTests(level, t);
             helper.assertTrue(chronicled(id, "a visitor from afar, came to see"), "the chronicle has it come");
-            int treasury0 = Ledger.coins(id);
+            // [health] Into the town's coin: the counter's takings go to whoever keeps it (the storehouse's market till till the
+            // café opens, the café's own till after), not always the treasury (econ-1a): the town's census counts them all,
+            // and the visitor's purse is not on it.
+            long town0 = com.jrpetty.mcassistant.entity.CoinCensus.count(id);
             int spent = Tourists.roundForTests(level, t);
-            int treasury1 = Ledger.coins(id);
-            Kit.log("vp02 spent " + spent + " (purse " + purse + " -> " + t.purse() + "), the treasury " + treasury0 + " -> " + treasury1);
+            long town1 = com.jrpetty.mcassistant.entity.CoinCensus.count(id);
+            Kit.log("vp02 spent " + spent + " (purse " + purse + " -> " + t.purse() + "), the town's coin " + town0 + " -> " + town1
+                + "; " + com.jrpetty.mcassistant.entity.CoinCensus.page(id).replace('\n', ' '));
             helper.assertTrue(spent > 0 && t.purse() == purse - spent, "it spent at the café out of its own purse: " + spent);
-            helper.assertTrue(treasury1 > treasury0 && treasury1 - treasury0 <= spent, "into the treasury: " + treasury0 + " -> " + treasury1);
+            helper.assertTrue(town1 - town0 == spent * 100L, "into the town's coin, every penny: " + town0 + " -> " + town1);
             level.setDayTime(day * 24000L + 11600L);
             boolean go = Visitors.stayForTests(level, t);
             helper.assertTrue(go && "out".equals(Visitors.stageForTests(t)), "no inn: home at dusk");

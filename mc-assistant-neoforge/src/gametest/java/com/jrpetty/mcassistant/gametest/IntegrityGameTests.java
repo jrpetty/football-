@@ -80,7 +80,7 @@ public class IntegrityGameTests {
             } catch (RuntimeException ex) {
                 over[0] = true;
                 server.tickRateManager().setTickRate(20.0F);
-                throw ex;
+                g.end("the run threw " + ex);                // [health] through the test's own tick, not out of the listener
             }
         };
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(each);
@@ -113,7 +113,7 @@ public class IntegrityGameTests {
                 Villages.Village v = Villages.nearest(level, heart, 64);
                 if (v == null) {
                     level.getServer().tickRateManager().setTickRate(20.0F);
-                    helper.fail("no village at " + heart);
+                    end("no village at " + heart);
                     return true;
                 }
                 id = v.id();
@@ -127,7 +127,7 @@ public class IntegrityGameTests {
             Villages.Village v = Villages.get(id);
             if (v == null) {
                 level.getServer().tickRateManager().setTickRate(20.0F);
-                helper.fail("the village is gone");
+                end("the village is gone");
                 return true;
             }
             if (ran % 4000 == 0) baseline(v);
@@ -212,9 +212,20 @@ public class IntegrityGameTests {
                 expect.that(r.count(TownAudit.FOREIGN) == 0, "nothing foreign in a doorway, a way in or a stair (" + r.count(TownAudit.FOREIGN) + ")");
                 expect.that(r.measure("blocks_on_roads") == 0, "nothing on the roads (" + r.measure("blocks_on_roads") + ")");
                 expect.that(r.count(TownAudit.HALF_BUILT) == 0, "nothing half built (" + r.count(TownAudit.HALF_BUILT) + ")");
-                if (!expect.clean()) { helper.fail(expect.summary()); return; }
+                if (!expect.clean()) { end(expect.summary()); return; }
             }
-            helper.succeed();
+            end(null);
+        }
+
+        /**
+         * [health] The verdict, given in the test's own tick a tick on. This runs in a server tick listener, outside the
+         * test's tick: a test marked done there is never reported to the runner (GameTestInfo.tick hears only an end it
+         * saw happen), so the batch never closed and the shard ran on to its time limit with the town ticking.
+         */
+        void end(@javax.annotation.Nullable String why) {
+            helper.runAfterDelay(1, () -> {
+                if (why == null) helper.succeed(); else helper.fail(why);
+            });
         }
     }
 
@@ -354,6 +365,11 @@ public class IntegrityGameTests {
         give(level, t, net.minecraft.world.item.Items.OAK_PLANKS, 64);
         give(level, t, net.minecraft.world.item.Items.OAK_STAIRS, 16);
         give(level, t, net.minecraft.world.item.Items.OAK_DOOR, 2);
+        // [health] The town fits the shop's counter in place of its cask out of these planks (ServicePoints, once a day, so
+        // on CI's timing it did mid-test): a fitted counter serves the drawing's cask, not a wrong block to mend.
+        com.jrpetty.mcassistant.entity.ServicePoints.fitOutForTests(level, t.v());
+        Kit.log("ti03 the counter fitted: " + com.jrpetty.mcassistant.entity.ServicePoints.nearest(level, t.id(),
+            com.jrpetty.mcassistant.entity.ServiceRole.SHOP, t.shop().anchor()));
         Restore.standDownForTests(false);
         final BlockPos dirt = dirtAt;
         helper.onEachTick(() -> {

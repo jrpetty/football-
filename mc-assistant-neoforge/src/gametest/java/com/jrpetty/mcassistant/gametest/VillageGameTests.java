@@ -1269,7 +1269,8 @@ public class VillageGameTests {
                 w[2 * i + 1] = b.onShift();
             }
             Kit.log("t27 watches: " + a.displayNameCap() + " " + w[0] + "/" + w[2] + ", "
-                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + w[4] + "/" + w[5]);
+                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + w[4] + "/" + w[5]
+                + "; " + t27why(a) + "; " + t27why(b));                 // [health] what holds a guard off its watch
             helper.assertTrue(w[0] != w[1] && w[2] != w[3] && w[0] != w[2],
                 "two guards keep the night in two watches, and each sleeps half of it");
             helper.assertTrue(w[4] && w[5], "and both are on duty by day");
@@ -1308,6 +1309,17 @@ public class VillageGameTests {
                 "one camp bed is carried in for the house, and not the one somebody sleeps in");
             helper.succeed();
         });
+    }
+
+    /** [health] What may hold a folk off its shift, for t27's log. */
+    private static String t27why(VillageFolkEntity f) {
+        String bell;
+        try { bell = String.valueOf(com.jrpetty.mcassistant.entity.TownBell.shift(f)); } catch (RuntimeException e) { bell = "?"; }
+        return f.displayNameCap() + " " + f.stationTask() + "/" + f.shift() + " laidUp " + com.jrpetty.mcassistant.entity.Health.laidUp(f)
+            + " assembly " + com.jrpetty.mcassistant.entity.Assemblies.attending(f) + " townJobs " + com.jrpetty.mcassistant.entity.TownJobs.busy(f)
+            + " school " + com.jrpetty.mcassistant.entity.School.teaching(f) + " strike " + com.jrpetty.mcassistant.entity.TaxUnrest.striking(f)
+            + " calendar " + com.jrpetty.mcassistant.entity.TownCalendar.busy(f) + " bell " + bell
+            + " stables " + com.jrpetty.mcassistant.entity.Stables.busy(f) + " firstWatch " + f.firstWatch();
     }
 
     // ============================================================ the stores

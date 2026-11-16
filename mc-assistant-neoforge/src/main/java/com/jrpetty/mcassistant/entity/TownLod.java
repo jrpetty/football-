@@ -747,8 +747,10 @@ public final class TownLod {
             if (p.length > 7) readCounts(p[7], t.aside);       // [scale] older notes have none
             String parked = Ledger.note(village, PARKED_NOTE);
             for (String s : parked == null || parked.isEmpty() ? new String[0] : parked.split(",")) {
-                int at = s.indexOf('@');
-                t.parked.add(new Parked(UUID.fromString(s.substring(0, at)), Long.parseLong(s.substring(at + 1))));
+                // [health] "owner@chunk@chunk..." (each owner once); older saves wrote "owner@chunk" for every chunk
+                String[] q = s.split("@");
+                UUID owner = UUID.fromString(q[0]);
+                for (int i = 1; i < q.length; i++) t.parked.add(new Parked(owner, Long.parseLong(q[i])));
             }
         } catch (RuntimeException e) {
             LOG.warn("[MCA-LOD] {}: its sleeping state could not be read ({}); it starts awake", village, e.toString());
@@ -780,10 +782,15 @@ public final class TownLod {
 
     /** The chunks a sleeping town let go (when it sleeps, and when a request is kept for it). */
     private static void saveParked(UUID village, Town t) {
+        // [health] Each owner written once with all its chunks (a town of forty folk parked some two thousand requests, and
+        // the note, an owner's id before every chunk, ran past what one saved string holds: Ledger now keeps long notes in
+        // pieces, and this one is a third of the size).
+        Map<UUID, StringBuilder> by = new java.util.LinkedHashMap<>();
+        for (Parked p : t.parked) by.computeIfAbsent(p.owner(), k -> new StringBuilder(k.toString())).append('@').append(p.chunk());
         StringBuilder parked = new StringBuilder();
-        for (Parked p : t.parked) {
+        for (StringBuilder one : by.values()) {
             if (!parked.isEmpty()) parked.append(',');
-            parked.append(p.owner()).append('@').append(p.chunk());
+            parked.append(one);
         }
         Ledger.note(village, PARKED_NOTE, parked.toString());
     }

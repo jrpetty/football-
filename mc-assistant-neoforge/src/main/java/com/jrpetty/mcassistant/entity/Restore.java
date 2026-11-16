@@ -279,7 +279,8 @@ public final class Restore {
             case OBSIDIAN -> st.is(Blocks.OBSIDIAN) || st.is(Blocks.CRYING_OBSIDIAN);
             case WATER -> st.getFluidState().is(FluidTags.WATER);
             case HAY -> st.is(Blocks.HAY_BLOCK);
-            case BARREL -> b instanceof net.minecraft.world.level.block.BarrelBlock;
+            case BARREL -> b instanceof net.minecraft.world.level.block.BarrelBlock
+                || b instanceof com.jrpetty.mcassistant.block.ServiceCounterBlock;   // [health] a counter fitted in the cask's place (ServicePoints.fit)
             case FLOWER -> st.is(BlockTags.SMALL_FLOWERS) || st.is(BlockTags.FLOWER_POTS) || st.is(BlockTags.FLOWERS);
             case CARPET -> b instanceof net.minecraft.world.level.block.CarpetBlock
                 || com.jrpetty.mcassistant.block.PlaceSettingBlock.laidCloth(st);   // [dining] a table laid on its cloth

@@ -381,6 +381,23 @@ public final class Ledger extends SavedData {
         if (m != null && m.remove(key) != null) l.setDirty();
     }
 
+    /**
+     * [health] Tests: this village's notes as they come back from a save: the register written to bytes as the game
+     * writes it to disk (NbtIo, where a string over 65,535 bytes is lost), read back and loaded afresh.
+     */
+    public static Map<String, String> notesAfterSaveForTests(UUID village, @Nullable HolderLookup.Provider registries) {
+        Ledger l = of();
+        if (l == null) return Map.of();
+        try {
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            net.minecraft.nbt.NbtIo.write(l.save(new CompoundTag(), registries), new java.io.DataOutputStream(bytes));
+            CompoundTag back = net.minecraft.nbt.NbtIo.read(new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray())));
+            return load(back, registries).notes.getOrDefault(village, Map.of());
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
     public static int grownCount(UUID village) {
         Ledger l = of();
         return l == null ? 0 : l.grown.getOrDefault(village, java.util.Set.of()).size();
@@ -420,7 +437,7 @@ public final class Ledger extends SavedData {
                 if (c.hasUUID("Id")) l.offences.computeIfAbsent(id, k -> new HashMap<>()).put(c.getUUID("Id"), java.util.Arrays.copyOf(c.getIntArray("R"), 3));
             }
             CompoundTag kept = v.getCompound("Notes");
-            for (String k : kept.getAllKeys()) l.notes.computeIfAbsent(id, x -> new HashMap<>()).put(k, kept.getString(k));
+            for (String k : kept.getAllKeys()) l.notes.computeIfAbsent(id, x -> new HashMap<>()).put(k, BigText.get(kept, k));   // [health] long notes in pieces
             long[] raisingAt = v.getLongArray("Raising");
             if (raisingAt.length > 0) {
                 java.util.Set<Long> set = new java.util.HashSet<>();
@@ -514,7 +531,7 @@ public final class Ledger extends SavedData {
             Map<String, String> kept = notes.getOrDefault(id, Map.of());
             if (!kept.isEmpty()) {
                 CompoundTag n = new CompoundTag();
-                for (Map.Entry<String, String> e : kept.entrySet()) n.putString(e.getKey(), e.getValue());
+                for (Map.Entry<String, String> e : kept.entrySet()) BigText.put(n, e.getKey(), e.getValue());   // [health] none lost past 64K
                 v.put("Notes", n);
             }
             java.util.Set<Long> going = raising.getOrDefault(id, java.util.Set.of());
