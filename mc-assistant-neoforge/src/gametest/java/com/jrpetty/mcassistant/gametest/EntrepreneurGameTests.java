@@ -556,6 +556,7 @@ public class EntrepreneurGameTests {
                 if (dayNo != start[2]) {
                     start[2] = dayNo;
                     Kit.stockForGrowth(level, Villages.get(id));
+                    if (dayNo == 1) wouldBe(level, id, tag);
                     long drift = CoinCensus.lastDrift(id);
                     worstDrift[0] = Math.max(worstDrift[0], Math.abs(drift));
                     mostIous[0] = Math.max(mostIous[0], Accounts.debts(id));
@@ -612,6 +613,27 @@ public class EntrepreneurGameTests {
     }
 
     /**
+     * The town given one would-be entrepreneur on its first morning, as the long tests stock its stores: a farmer made a
+     * tailor of long practice and a Merchant at heart, with forty coins of the treasury's in its purse (coin moved, not
+     * made). Whether it opens a business, and what becomes of it, is the town's own doing.
+     */
+    static void wouldBe(ServerLevel level, UUID id, String tag) {
+        for (AssistantEntity e : Villages.folkOf(id)) {
+            if (!(e instanceof VillageFolkEntity f) || f.isBaby() || f.stationTask() != StationTask.FARM) continue;
+            f.setJob(StationTask.TAILOR);
+            f.tradeXpForTests(StationTask.TAILOR, 20000);
+            Values.setForTests(f, Values.Value.TRADITION, 0);
+            Values.setForTests(f, Values.Value.SAFETY, 0);
+            Values.setForTests(f, Values.Value.WEALTH, 100);
+            int coins = Ledger.takeCoins(id, Math.min(40, Ledger.coins(id)));
+            f.earn(coins);
+            Kit.log(tag + " the would-be entrepreneur: " + f.displayNameCap() + ", a tailor at level " + f.tradeLevel(StationTask.TAILOR) + ", bold "
+                + Enterprise.boldness(f) + ", purse " + f.purse());
+            return;
+        }
+    }
+
+    /**
      * The producers against the other trades: each producer business's takings, its costs other than its hand's wage, and
      * its surplus a day since it opened (what its hand lives on: its wage and its drawings come out of it), beside the
      * average wage of the other trades and the producer's own going wage.
@@ -619,8 +641,8 @@ public class EntrepreneurGameTests {
     static List<String> producerLines(ServerLevel level, UUID id) {
         List<String> out = new ArrayList<>();
         long day = level.getDayTime() / 24000L;
-        double surplusSum = 0;
-        int producers = 0;
+        double surplusSum = 0, bringing = 0, wages = 0;
+        int producers = 0, bringers = 0;
         for (Business b : Businesses.all(id)) {
             if (b.type.size != Business.Size.YARD || !b.open) continue;
             long days = Math.max(1, day - b.opened);
@@ -636,6 +658,11 @@ public class EntrepreneurGameTests {
             if (!b.town()) {
                 surplusSum += surplus / (double) days;
                 producers++;
+            }
+            if (!b.town() && a.revenue > 0) {
+                bringing += surplus / (double) days;
+                wages += wage;
+                bringers++;
             }
             if (a.other > 500) {
                 StringBuilder bought = new StringBuilder();
@@ -671,8 +698,9 @@ public class EntrepreneurGameTests {
             n++;
             trades.append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(' ').append(w).append(", ");
         }
-        out.add(String.format(Locale.ROOT, "  PRODUCERS %d private, surplus %.2fc a day each on average; OTHER TRADES %d, wage %.2f a day on average (%s)",
-            producers, producers == 0 ? 0 : surplusSum / producers / 100.0, n, n == 0 ? 0 : others / n, trades));
+        out.add(String.format(Locale.ROOT, "  PRODUCERS %d private, surplus %.2fc a day each on average; %d of them bringing goods in, %.2fc a day each against their own wage %.2f; OTHER TRADES %d, wage %.2f a day on average (%s)",
+            producers, producers == 0 ? 0 : surplusSum / producers / 100.0, bringers, bringers == 0 ? 0 : bringing / bringers / 100.0,
+            bringers == 0 ? 0 : wages / bringers, n, n == 0 ? 0 : others / n, trades));
         return out;
     }
 
