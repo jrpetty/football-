@@ -267,8 +267,12 @@ public final class Accounts {
         Business b = Businesses.employer(village, f);
         // [econ-1d] A firm's hand's own making is on its firm's books by a scope of its own (Crafts.now, Enterprise.make); what
         // else it takes about the town (a turn at the watch's arrows, a barn's hay, the tools the town's work wants) is the
-        // town's works', not the firm's: a bakery was buying iron ingots, arrows and a sword out of its till.
-        if (Enterprise.isFirm(b)) return new Resolved(Account.dept(Dept.WORKS), Purpose.WORK);
+        // town's works', not the firm's: a bakery was buying iron ingots, arrows and a sword out of its till. The tools of its
+        // work (anything that wears, but a sword or armour) are its firm's kit still (Capital).
+        if (Enterprise.isFirm(b) && !(Capital.durable(what) && !(what.getItem() instanceof net.minecraft.world.item.SwordItem)
+                && !(what.getItem() instanceof net.minecraft.world.item.ArmorItem))) {
+            return new Resolved(Account.dept(Dept.WORKS), Purpose.WORK);
+        }
         if (b != null && !b.mirror()) return new Resolved(Account.firm(b), Purpose.WORK);
         Dept d = switch (t) {
             case NONE -> null;
