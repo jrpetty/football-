@@ -98,10 +98,20 @@ public final class Crafts {
         // bought at the market's ask, its work sold to the market), so nothing is charged again at the stores; a maker of
         // the town's own (no business yet) works on the town's works account, its makings bought and its work sold there.
         Business craftFirm = Businesses.makerFor(v.id(), f.stationTask());
-        Accounts.Scope craftScope = craftFirm != null ? Accounts.free("made at its own business's bench")
+        Business ownFirm = Enterprise.employerOf(v.id(), f);           // [econ-1c] a firm's hand: its firm buys its makings
+        Accounts.Scope offDutyScope = null;                           // [econ-1c]
+        Accounts.Scope craftScope = craftFirm != null || ownFirm != null ? Accounts.free("made at its own business's bench")
             : Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK);
         try {
-            made = CraftScale.tend(level, v, f);                      // [roles-b] another bench as the town grows; the table to the tower
+            made = ownFirm != null ? Enterprise.make(level, v, f, ownFirm) : null;   // [econ-1c] the firm's wares first
+            // [econ-1c] Its firm's shelf full (or nothing to make it of): a turn at the town's wants, on the town's works
+            // account and into the town's books, not the firm's (a bakery's hand cooking the café's fish and treats had them
+            // put on the bakery's shelf at the bakery's cost, and sold them over to the market at a loss).
+            if (made == null && ownFirm != null) {
+                Enterprise.offDuty(true);
+                offDutyScope = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK);
+            }
+            if (made == null) made = CraftScale.tend(level, v, f);    // [roles-b] another bench as the town grows; the table to the tower
             if (made == null) made = Luxuries.craft(level, v, f, true);   // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
@@ -123,9 +133,11 @@ public final class Crafts {
             };
             if (made == null) made = Luxuries.craft(level, v, f, false);   // its own work done: the houses' wants
         } finally {
+            if (offDutyScope != null) offDutyScope.close();            // [econ-1c]
             craftScope.close();                                        // [econ-1a]
             WorkStock.end();
             Economy.closeCraft();
+            Enterprise.offDuty(false);                                 // [econ-1c]
         }
         if (made == null) return false;
         f.swing(InteractionHand.MAIN_HAND);

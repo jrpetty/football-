@@ -160,7 +160,14 @@ public final class Links {
         java.util.List<Cow> cows = level.getEntitiesOfClass(Cow.class, f.getBoundingBox().inflate(12), c -> c.isAlive() && !c.isBaby());
         if (cows.isEmpty()) return null;
         if (f.countCarried(s -> s.is(Items.BUCKET)) < 1) {
-            if (!Crafts.take(level, v, s -> s.is(Items.BUCKET), 1)) return null;
+            // [econ-1c] The market's pail, lent: it comes back to the stores full, and the market buys the milk in it at
+            // the milk's price (a milk bucket is costed as the milk). Charged at a bucket's price, a ranch paid nine coins
+            // for every pail of milk it was paid half a coin for.
+            boolean took;
+            try (Accounts.Scope pail = Accounts.free("the market's pail, lent for the milking")) {
+                took = Crafts.take(level, v, s -> s.is(Items.BUCKET), 1);
+            }
+            if (!took) return null;
             ItemStack back = f.insertItem(new ItemStack(Items.BUCKET));
             if (!back.isEmpty()) { Crafts.store(level, v, back); return null; }   // a full pack: back it goes
         }

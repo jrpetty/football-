@@ -1110,6 +1110,7 @@ public final class Businesses {
             if (b.town() || b.mirror()) continue;
             if (!b.open) continue;
             overheads(level, id, b, day);
+            Capital.wear(id, b, day);                                       // [econ-1c] its tools' wear, a share of its kit
             interest(level, id, b, day);
             spoil(level, id, b, day);
             repay(level, id, b, day);
@@ -1329,7 +1330,10 @@ public final class Businesses {
             b.shortTime.clear();
             b.note(day, "back on full time: trade picked up");
         }
-        if (b.lossDays >= 14 && b.account <= -creditLimit(b, day) && b.till < 100) windUp(level, village, b, day, "a fortnight at a loss, its credit gone");
+        if (b.lossDays >= 14 && b.account <= -creditLimit(b, day) && b.till < 100) {
+            if (Enterprise.isFirm(b)) Enterprise.petitionFor(level, village, b, day, "a fortnight at a loss, its credit gone");   // [econ-1c] to the court
+            else windUp(level, village, b, day, "a fortnight at a loss, its credit gone");
+        }
     }
 
     static String pct(double x) {

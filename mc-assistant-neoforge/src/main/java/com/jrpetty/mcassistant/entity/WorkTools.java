@@ -401,7 +401,12 @@ public final class WorkTools {
         StationTask t = f.stationTask();
         if ((t == StationTask.WOOD || t == StationTask.FARM) && f.tickCount - BENCH_LOOKED.getOrDefault(f.getUUID(), -100000) >= BENCH_EVERY) {
             BENCH_LOOKED.put(f.getUUID(), f.tickCount);
-            String made = craftNow(level, v, f);                   // (its bench is looked at every forty seconds already)
+            // [econ-1c] Made for the town (the mine's props, the couriers' crates, the roofs' thatch): its makings on the town's
+            // works account, not the woodlot's or the farm's (a woodlot ran twenty coins short making the town's props).
+            String made;
+            try (Accounts.Scope works = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) {
+                made = craftNow(level, v, f);                      // (its bench is looked at every forty seconds already)
+            }
             if (made != null) {
                 f.swing(InteractionHand.MAIN_HAND);
                 f.note(AssistantEntity.Deed.THINGS_MADE, 1);
