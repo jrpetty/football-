@@ -12922,12 +12922,14 @@ carry once the harvests were real, and firms that struggled where they should ha
   the morning (another day). The town's spending is booked as it is spent now. The Market page and `/village market` show
   the IOUs' week: written by whom, cleared how.
 - **Living within its means.** How tight the town's money is decides what it does, the moment it tightens, not the next
-  morning. Owing its market over half what it can carry (half a week's revenue, ten coins at least), or having spent today
-  more than a day's share of its revenue and what it may still borrow, it is **careful**: the works that can wait (the
-  café, the fountain, the park, the theatre) are put off, and its buildings go up plain (no lanterns, carpets, flowers,
-  bookshelves or bells bought for them; a torch for a lantern; its rooms left unfurnished for now). Owing more than it can
-  carry, it is **short**: besides, one building crew at a time, and once its works have spent a day's share of its revenue
-  (twenty-five coins at the least) its builders fetch no more until the morning. Its essentials (its stores, homes and
+  morning. Owing its market over half what it can carry (half a week's revenue; three coins a grown folk and ten coins at
+  the least, so a young town whose revenue is still to come can build its first houses), or having spent today more than a
+  day's share of its revenue and what it may still borrow, it is **careful**: the works that can wait (the café, the
+  fountain, the park, the theatre) are put off, and its buildings go up plain (no lanterns, carpets, flowers, bookshelves
+  or bells bought for them; a torch for a lantern; its rooms left unfurnished for now; its walls of the cheapest stone and
+  timber the market has, never at over three times the price of its cobblestone or planks, so no bricks). Owing more than
+  it can carry, it is **short**: besides, one building crew at a time, and once its works have spent a day's share of its
+  revenue (fifteen coins at the least) its builders fetch no more until the morning. Its essentials (its stores, homes and
   beds, food, water, walls, the age's buildings) still go up every day, at the pace its money allows: nothing waits for
   ever, and no town deadlocks. The budget line on the Market page says which it is.
 - **Paying it down.** Each morning what the treasury holds over two days of its own wage bill goes to pay its IOUs, oldest
@@ -12940,6 +12942,13 @@ carry once the harvests were real, and firms that struggled where they should ha
   Market Opening Day. A town that owes its market more than it can carry three mornings running has its council called
   together on its debts that evening, without waiting for its day; and the profits tax may go to its top rate (three
   tenths) for a town in debt. Owners vote against the rates as against the profits tax.
+- **A glut marked down.** The market's ask falls into a glut as its bid does (by the square root of what it can sell over
+  what it holds, never under half): a town drowning in wheat sold it to its baker and its works at a lean year's price
+  while it paid its farmers a twentieth of it.
+- **A firm's hand at the town's work.** What a firm's hand takes about the town outside its firm's own making (a turn at
+  the watch's arrows, a barn's hay, a child's toy) is the town's works', and what it makes that is none of its firm's
+  wares goes into the town's books: a bakery was buying iron ingots, arrows and a sword out of its till, and holding hay
+  and toys on its shelf. The tools of its work are its firm's kit still.
 - **What a household buys.** A folk choosing its food weighed only how filling a thing was against its price, so a town
   whose fields came good lived on glut carrots and walked past the baker. A household's basket now has taste (a made meal,
   bread, a cooked joint or fish, a baked potato, a stew or a pie, worth more to a body than the raw stuff of it; raw meat
@@ -12969,4 +12978,5 @@ ent15 twenty days of a town nobody seeded (at least one firm founded and one thr
 morning, the IOUs bounded); ent16 a household's basket (bread bought as well as cheap carrots). The ten- and twenty-day
 tests log the IOU book every day and through the day, the town's revenue against its spending, and the IOUs' trend; and
 they no longer give the town free bread every morning once its market is open (it undersold any baker in the town, and the
-town feeds itself by its own trade by then; the building stuff is still given, as the long growth tests do).
+town feeds itself by its own trade by then; the building stuff is still given, as the long growth tests do). They have the
+council sitting on the taxes, as in real play (the tests' server is otherwise neutral, and no council ever sat in them).

@@ -142,9 +142,20 @@ public final class TownBudget {
         if (spent > 0) check(village);
     }
 
-    /** What the town may owe its market before it puts off its works: half a week's revenue, ten coins at least. */
+    /** [econ-1d] What a town may owe its market whatever its revenue, a head of its grown folk, pennies (a few days' wages). */
+    static final long LEAST_A_HEAD = 300;
+
+    /** What the town may owe its market before it puts off its works: half a week's revenue; ten coins at least, [econ-1d] and
+     *  three coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
     public static long limit(UUID village) {
-        return Math.max(LEAST_LIMIT, Math.round(revenue7(village) * WEEK_SHARE));
+        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(revenue7(village) * WEEK_SHARE));
+    }
+
+    /** [econ-1d] The town's grown folk. */
+    static int grown(UUID village) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && !f.isBaby()) n++;
+        return n;
     }
 
     /** Does the town owe its market more than it can carry (and its market is open)? */
