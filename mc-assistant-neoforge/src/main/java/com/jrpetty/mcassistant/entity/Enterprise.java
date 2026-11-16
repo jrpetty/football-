@@ -117,6 +117,14 @@ public final class Enterprise {
         return b != null && b.type == Business.Type.ENTERPRISE;
     }
 
+    /** [econ-1d] Is any of these (stock keys) among the firm's wares? (A firm of no known kind: yes, as before.) */
+    static boolean sellsAny(UUID village, Business b, java.util.Collection<String> keys) {
+        BusinessType t = kindOf(village, b);
+        if (t == null) return true;
+        for (String k : keys) if (t.wares().contains(k)) return true;
+        return false;
+    }
+
     /** The kind of business a firm is. */
     @Nullable
     public static BusinessType kindOf(UUID village, Business b) {

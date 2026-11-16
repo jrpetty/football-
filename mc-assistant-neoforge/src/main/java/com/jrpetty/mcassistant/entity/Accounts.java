@@ -265,6 +265,10 @@ public final class Accounts {
         }
         if (Armies.fighter(f.getUUID()) != null) return new Resolved(Account.dept(Dept.ARMY), Purpose.WORK);
         Business b = Businesses.employer(village, f);
+        // [econ-1d] A firm's hand's own making is on its firm's books by a scope of its own (Crafts.now, Enterprise.make); what
+        // else it takes about the town (a turn at the watch's arrows, a barn's hay, the tools the town's work wants) is the
+        // town's works', not the firm's: a bakery was buying iron ingots, arrows and a sword out of its till.
+        if (Enterprise.isFirm(b)) return new Resolved(Account.dept(Dept.WORKS), Purpose.WORK);
         if (b != null && !b.mirror()) return new Resolved(Account.firm(b), Purpose.WORK);
         Dept d = switch (t) {
             case NONE -> null;

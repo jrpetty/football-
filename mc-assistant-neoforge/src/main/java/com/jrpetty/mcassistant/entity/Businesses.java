@@ -918,6 +918,12 @@ public final class Businesses {
             if (e.getValue() < 0) used.merge(key, (long) -e.getValue(), Long::sum);
             else made.merge(key, (long) e.getValue(), Long::sum);
         }
+        // [econ-1d] A firm's hand at something that is none of its firm's wares (arrows for the watch, hay for a barn, a toy
+        // for a child): the town's making, not the firm's (a bakery's shelf held hay, toys, arrows and a sword, bought at its cost).
+        if (firm != null && !Enterprise.sellsAny(village, firm, made.keySet())) {
+            b = makerFor(village, trade);
+            if (b == null) return;
+        }
         if (made.isEmpty() || used.isEmpty() && !sellsToStores(b.type)) return;
         made(level, village, b, used, made, samples);
     }
@@ -925,6 +931,7 @@ public final class Businesses {
     /** A batch made at a business's bench (Bakery): its plan's makings and fuel, less what went back, into what it made. */
     public static void benchMade(ServerLevel level, UUID village, Type type, Bench.Plan plan, ItemStack made) {
         Business firm = Enterprise.atWork(village);                         // [econ-1b] a firm's hand's batch is its firm's
+        if (firm != null && !Enterprise.sellsAny(village, firm, java.util.Set.of(Stockroom.key(made)))) firm = null;   // [econ-1d] not one of its wares
         Business b = firm != null ? firm : of(village, type.id());
         if (b == null || b.town() || made.isEmpty()) return;
         Map<String, Long> used = new LinkedHashMap<>();

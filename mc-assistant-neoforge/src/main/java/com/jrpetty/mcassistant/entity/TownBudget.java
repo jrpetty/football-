@@ -161,11 +161,19 @@ public final class TownBudget {
      */
     public static int pressure(UUID village) {
         if (village == null || !MarketMaker.live(village)) return 0;
+        // Looked at as the town spends (every take on its works): reckoned at most once a second a town.
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        long now = server == null ? -1 : server.overworld().getGameTime();
+        long[] c = PRESSURE.get(village);
+        if (c != null && now >= 0 && now >= c[0] && now - c[0] < 20) return (int) c[1];
         long owed = Accounts.debts(village), lim = limit(village);
-        if (owed > lim) return 2;
-        if (owed * 2 > lim || spentToday(village) > allowance(village)) return 1;
-        return 0;
+        int p = owed > lim ? 2 : owed * 2 > lim || spentToday(village) > allowance(village) ? 1 : 0;
+        if (PRESSURE.size() > 1024) PRESSURE.clear();
+        PRESSURE.put(village, new long[]{ now, p });
+        return p;
     }
+
+    private static final java.util.Map<UUID, long[]> PRESSURE = new java.util.concurrent.ConcurrentHashMap<>();
 
     /** [econ-1d] What the works may spend in a day: a day's share of the week's revenue, and of what it may still borrow. */
     public static long allowance(UUID village) {
@@ -240,6 +248,7 @@ public final class TownBudget {
 
     public static void resetForTests() {
         LAST.clear();
+        PRESSURE.clear();
     }
 
     /**
@@ -377,6 +386,7 @@ public final class TownBudget {
         today(id).putLong("spent", Math.max(0, all - was));
         b.putLong("spentAll", all);
         payDown(level, v, day);                                              // [econ-1d] what the treasury can spare, off the IOUs
+        PRESSURE.remove(id);
         LAST.put(id, pressure(id));
         boolean short_ = pressure(id) >= 1;                                  // [econ-1d] careful, not only short
         List<String> put = short_ ? putOff(id) : new ArrayList<>();
