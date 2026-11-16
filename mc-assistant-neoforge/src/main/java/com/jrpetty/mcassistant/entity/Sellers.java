@@ -38,7 +38,9 @@ public final class Sellers {
 
     /** What a firm asks for one of this today, coin. */
     public static double priceOf(ServerLevel level, UUID village, Business b, ItemStack one) {
-        double going = Market.askEach(level, village, one);
+        // [econ-1e] The going price as the town's own counter asks it of a buyer today: a slow ware of its own it marks down,
+        // and a firm that set its price by the market's ask alone was dearer than the counter however it priced.
+        double going = Math.min(Market.askEach(level, village, one), Purchases.priceEach(level, village, one, null));
         long day = Businesses.today(level);
         double cost = normalCost(level, village, b, one, day);              // [econ-1e] at its normal trade, not its first week's
         if (cost <= 0.0001) cost = CostBook.of(one).total() * MarketMaker.priceLevel(village);
