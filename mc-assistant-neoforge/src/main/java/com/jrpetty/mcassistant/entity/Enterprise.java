@@ -481,12 +481,26 @@ public final class Enterprise {
         }
         double margin = cost <= 0 ? 0 : price / cost;
         double score = gap * price * (margin - 1) / (1 + firms);
+        // [econ-1c] Nothing to make it of: a maker whose wares the market holds no makings for (no leather in the town for a
+        // clothier) would open to stand idle. Only where the want is worth having is it looked into.
+        if (score > 0 && !t.resells() && !makeable(level, v, t)) score = 0;
         // What a new firm might make in a week: half the score (a new entrant's capture), less its rent and the wages of any
         // hands beside the founder (the founder lives on what it makes).
         double rent7 = (t.stall() ? 30 : 60) * Wealth.standing(id) / 10.0 * 7 / 100.0;
         double profit7 = score * 0.5 - rent7 - t.startStaff() * wageOf(t.work(), id) * 7;
         double startup = startup(id, t, inputs, null, gap * 0.5 / 7) / 100.0;
         return new Opportunity(t, best, demand, supply, price, cost, inputs, gap, score, profit7, startup, firms);
+    }
+
+    /** [econ-1c] Can one of its wares be made out of the stores now (by a stand-in hand at its trade's bench)? */
+    static boolean makeable(ServerLevel level, Villages.Village v, BusinessType t) {
+        Bench.Hand hand = Bench.handOf(level, v, null, VillageFolkEntity.buildingFor(t.work()));
+        Bench.Hand any = new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy());
+        for (String key : t.wares()) {
+            ItemStack one = Stockroom.sampleOf(key);
+            if (!one.isEmpty() && Bench.plan(level, v, one.getItem(), 1, any).ok()) return true;
+        }
+        return false;
     }
 
     /** One of a ware's makings at the market's ask (a seller's: its buying price, a twentieth off in bulk). */
@@ -1736,10 +1750,12 @@ public final class Enterprise {
         BusinessType t = kindOf(village, b);
         long day = Businesses.today(level);
         Business.Day w = b.last(day, 7);
-        return String.format(Locale.ROOT, "%s (%s, %s): %s; week's profit %s on takings %s; %d hands; %s of its market; markup %s; till %s%s",
+        return String.format(Locale.ROOT, "%s (%s, %s): %s; week's profit %s on takings %s; %d hands; %s of its market; markup %s; till %s; kit %s; made %d%s%s",
             b.name, t == null ? "?" : t.title(), b.ownersWords(), r == null ? "?" : r.getString("status"), Businesses.pence(w.net()),
             Businesses.pence(w.revenue), b.open ? hands(village, b).size() : 0, Businesses.pct(r == null ? 0 : r.getDouble("share")),
-            Businesses.pct(b.markup), Businesses.pence(b.till), r != null && r.contains("closedWhy") ? " — " + r.getString("closedWhy") : "");
+            Businesses.pct(b.markup), Businesses.pence(b.till), Businesses.pence(Capital.value(village, b)), r == null ? 0 : r.getLong("madeHere"),   // [econ-1c]
+            r != null && r.contains("short") ? " (" + r.getString("short") + ")" : "",
+            r != null && r.contains("closedWhy") ? " — " + r.getString("closedWhy") : "");
     }
 
     /** The town's firms in words (/village firms). */

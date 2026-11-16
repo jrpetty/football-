@@ -139,6 +139,8 @@ public class EntrepreneurGameTests {
         Villages.Village v = Villages.get(id);
         missed(level, id, Items.STONE_PICKAXE, 25);
         missed(level, id, Items.STONE_AXE, 15);
+        // [econ-1c] The makings of picks in the stores (a toolshop with nothing to make its tools of is no opportunity).
+        stores(level, id, x, new ItemStack(Items.COBBLESTONE, 32), new ItemStack(Items.OAK_PLANKS, 16), new ItemStack(Items.CRAFTING_TABLE, 1));
         Kit.Expect ok = new Kit.Expect();
         Enterprise.Opportunity o = Enterprise.weighForTests(level, v, "toolsmith");
         Kit.log("ent01 " + (o == null ? "no opportunity" : o.words()));

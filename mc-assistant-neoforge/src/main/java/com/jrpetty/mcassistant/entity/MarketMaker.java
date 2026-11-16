@@ -197,16 +197,20 @@ public final class MarketMaker {
     /** What the market pays for one of this, in coin: never a staple under seven tenths of its usual worth while it has coin. */
     public static double bid(ServerLevel level, UUID village, ItemStack one) {
         double b = mid(level, village, one) * (1 - spread(village) / 2) * cashFactor(village);
+        double glut = PRICE_FOR_TESTS.containsKey(Stockroom.key(one)) ? 1.0 : glut(level, village, one);   // [econ-1c]
         if ((staple(one) || rawProduce(one)) && !PRICE_FOR_TESTS.containsKey(Stockroom.key(one))
-                && !glutted(level, village, one)) {   // [econ-1b] the raw produce too, coin or credit; [econ-1c] not into a glut
+                && glut >= 1.0) {   // [econ-1b] the raw produce too, coin or credit; [econ-1c] not into a glut
             b = Math.max(b, STAPLE_FLOOR * PriceIndex.usual(one.copyWithCount(1)) * priceLevel(village));
         }
+        b *= glut;                                                          // [econ-1c] a glut's bid falls with what it holds
         return Math.min(b, ask(level, village, one));
     }
 
     /** [econ-1c] Held over this many of a thing and twice the town's week of it, the market is glutted with it. */
     static final int GLUT_LEAST = 64;
-    private static final Map<String, long[]> GLUT = new HashMap<>();
+    /** [econ-1c] Into a glut the bid never falls under this of what it would be. */
+    static final double GLUT_LEAST_FACTOR = 0.05;
+    private static final Map<String, double[]> GLUT = new HashMap<>();
 
     /**
      * [econ-1c] Is the market glutted with this: it holds more than sixty-four and more than two weeks of what the town took
@@ -216,17 +220,28 @@ public final class MarketMaker {
      * bid falls with the price, as a real market's would. Looked at once every ten seconds a thing.
      */
     static boolean glutted(ServerLevel level, UUID village, ItemStack one) {
+        return glut(level, village, one) < 1.0;
+    }
+
+    /**
+     * [econ-1c] What a glut does to the bid: one while the market holds no more than it can sell (sixty-four, or two weeks of
+     * what the town took); held over that, what it can sell over what it holds (twice what it can sell, half the bid; ten
+     * times, a tenth), a twentieth at the least: a market maker with a cellar full of carrots does not pay for more as if
+     * the town were short of them. Without it a town whose fields came good sold the market twelve hundred things a day and
+     * the town wrote IOUs for them by the hundred coins.
+     */
+    static double glut(ServerLevel level, UUID village, ItemStack one) {
         String key = Stockroom.key(one);
         String k = village + "|" + key;
         long now = level.getGameTime();
-        long[] c = GLUT.get(k);
-        if (c != null && now - c[0] < 200 && now >= c[0]) return c[1] != 0;
+        double[] c = GLUT.get(k);
+        if (c != null && now - c[0] < 200 && now >= c[0]) return c[1];
         int held = Market.stock(level, village, Stockroom.matcher(key));
-        int week = Stockroom.week7(level, village, key)[0];
-        boolean glut = held > Math.max(GLUT_LEAST, 2L * week);
+        long can = Math.max(GLUT_LEAST, 2L * Stockroom.week7(level, village, key)[0]);
+        double f = held <= can ? 1.0 : Math.max(GLUT_LEAST_FACTOR, can / (double) held);
         if (GLUT.size() > 4096) GLUT.clear();
-        GLUT.put(k, new long[]{ now, glut ? 1 : 0 });
-        return glut;
+        GLUT.put(k, new double[]{ now, f });
+        return f;
     }
 
     /** [econ-1b] A producer's raw output beside the staples: ore, coal and metal, wool, hides, eggs and feathers. */
