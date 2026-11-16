@@ -113,6 +113,7 @@ public final class MarketMaker {
         // A world opening or closing runs the tests' resets too (SessionReset): there the market stays at work.
         plain = !com.jrpetty.mcassistant.SessionReset.opening();
         liveForTests = false;
+        TownClock.resetForTests();                        // [econ-1c]
         RECENT.clear();
         PENDING.clear();
         PAID_NOW.clear();
@@ -834,6 +835,12 @@ public final class MarketMaker {
         if (!m.contains("first")) {
             long f = FoundingDay.founded(village);
             m.putLong("first", f >= 0 && f <= day ? f : day);
+            Accounts.dirty();
+        }
+        // [econ-1c] A day ahead of today: the world's clock was set back before the towns kept their days (TownClock). The
+        // town counts from today, not from a day it will not see again for weeks.
+        if (m.getLong("first") > day) {
+            m.putLong("first", day);
             Accounts.dirty();
         }
         return m.getLong("first");

@@ -418,6 +418,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TownLod.class);     // [scale] towns' level of detail
         NeoForge.EVENT_BUS.register(StallWatch.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Market.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TownClock.class);    // [econ-1c] the towns' days kept by the world's time
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Roads.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Caravans.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Wagons.class);     // [wagons] quiet wagons moved on, the wheelwright

@@ -517,7 +517,8 @@ public final class Market {
         if (!Ledger.hasTreasury(id)) openTreasury(id, Villages.headcount(id));
         long time = level.getDayTime();
         long day = time / 24000L, t = time % 24000L;
-        if (t < 500 || t > 6000) return;
+        // [econ-1c] Held late, whatever the hour, when the day was counted on by the world's time with the clock held (TownClock).
+        if ((t < 500 || t > 6000) && !TownClock.lateMorning(level, day, Ledger.paidOn(id))) return;
         if (Ledger.paidOn(id) >= day) return;
         Ledger.paid(id, day);
         Homeland.survey(level, v);                       // a village from before: its land, looked over now
