@@ -141,7 +141,7 @@ public final class AnimStage {
             VillageFolkEntity f = one(level, dx + Math.cos(ang) * 1.8, y, dz + Math.sin(ang) * 1.8, StationTask.NONE, Act.DANCE, i);
             if (f != null) turn(f, (float) Math.toDegrees(ang) + 90.0F);
         }
-        out.add("VIEW life-dance " + dx + " " + (y + 2) + " " + (dz + 7) + " " + dx + " " + (y + 1) + " " + dz + " dance");
+        out.add("VIEW life-dance " + dx + " " + (y + 1) + " " + (dz + 5) + " " + dx + " " + (y + 1) + " " + dz + " dance");
         // A ladder up a wall, and a folk on it.
         int lx = x + 12, lz = z + 9;
         for (int h = 0; h < 5; h++) {
@@ -157,7 +157,7 @@ public final class AnimStage {
         level.setBlock(new BlockPos(gx, y + 1, gz - 1), Blocks.POPPY.defaultBlockState(), 2);
         VillageFolkEntity mourner = one(level, gx + 0.5, y, gz + 1.2, StationTask.NONE, Act.MOURN, 4);
         if (mourner != null) turn(mourner, 180.0F);
-        out.add("VIEW life-ladder " + (lx + 3) + " " + (y + 2) + " " + (lz + 6) + " " + lx + " " + (y + 2) + " " + lz + " climb,mourn");
+        out.add("VIEW life-ladder " + (lx + 2) + " " + (y + 1) + " " + (lz + 7) + " " + (lx + 2) + " " + (y + 1) + " " + lz + " climb,mourn");
         return out;
     }
 
