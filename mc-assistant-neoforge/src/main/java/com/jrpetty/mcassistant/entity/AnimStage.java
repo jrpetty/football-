@@ -1,0 +1,232 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.McAssistantMod;
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.FolkAction.Act;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LadderBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * [anim] The smoke's stage for the folk's animations (/village anim stage): every act there is, a folk doing each, in
+ * rows of eight on a stone floor in clear air, each at the block its work is done at (the smith at an anvil, the cook at
+ * a smoker, the tailor at a loom, the miner at a rock face), the rancher with a cow and a sheep; then the life of the
+ * town: a pair shaking hands and a pair talking face to face, a table of folk eating, a bench of folk sat down, a ring of
+ * dancers, a folk climbing a ladder, a mourner at a grave. Each stood-up folk is a showcase (it lives no life; it goes with
+ * /kill @e[tag=folk_lineup]) told to keep at its act. Answers VIEW lines for the smoke's camera, a row a picture.
+ */
+public final class AnimStage {
+
+    private AnimStage() {}
+
+    /** Each act with the trade that does it and the block it does it at (null: none). */
+    private record Part(Act act, StationTask trade, @Nullable Block block) {}
+
+    private static final Part[] WORK = {
+        new Part(Act.HAMMER, StationTask.SMITH, Blocks.ANVIL), new Part(Act.CHOP, StationTask.WOOD, Blocks.OAK_LOG),
+        new Part(Act.PICK, StationTask.MINE, Blocks.STONE), new Part(Act.DIG, StationTask.MINE, Blocks.DIRT),
+        new Part(Act.HOE, StationTask.FARM, Blocks.FARMLAND), new Part(Act.PLANT, StationTask.FARM, Blocks.FARMLAND),
+        new Part(Act.HARVEST, StationTask.FARM, Blocks.WHEAT), new Part(Act.FISH, StationTask.FISH, Blocks.WATER),
+        new Part(Act.STIR_POT, StationTask.COOK, Blocks.SMOKER), new Part(Act.KNEAD, StationTask.COOK, Blocks.CRAFTING_TABLE),
+        new Part(Act.BREW, StationTask.BREW, Blocks.WATER_CAULDRON), new Part(Act.SEW, StationTask.TAILOR, Blocks.LOOM),
+        new Part(Act.SAW, StationTask.SHOP, Blocks.CRAFTING_TABLE), new Part(Act.CHISEL, StationTask.SHOP, Blocks.STONECUTTER),
+        new Part(Act.BUILD, StationTask.HAUL, Blocks.BRICKS), new Part(Act.SWEEP, StationTask.HAUL, null),
+        new Part(Act.CARRY, StationTask.HAUL, null), new Part(Act.SACK, StationTask.HAUL, null),
+        new Part(Act.HAND_OVER, StationTask.SHOP, Blocks.SPRUCE_PLANKS), new Part(Act.COUNT_COINS, StationTask.BANK, Blocks.SPRUCE_PLANKS),
+        new Part(Act.WRITE, StationTask.CARTOGRAPHER, Blocks.LECTERN), new Part(Act.TEACH, StationTask.ENCHANT, null),
+        new Part(Act.TEND, StationTask.HEAL, Blocks.WHITE_BED), new Part(Act.PREACH, StationTask.NONE, null),
+        new Part(Act.WATCH, StationTask.GUARD, null), new Part(Act.MILK, StationTask.RANCH, null),
+        new Part(Act.SHEAR, StationTask.RANCH, null), new Part(Act.LEAD, StationTask.RANCH, null),
+        new Part(Act.FEED, StationTask.RANCH, null), new Part(Act.SMOKE_HIVE, StationTask.BEEKEEP, Blocks.BEEHIVE),
+        new Part(Act.FLETCH, StationTask.FLETCHER, Blocks.FLETCHING_TABLE), new Part(Act.ENCHANT, StationTask.ENCHANT, Blocks.ENCHANTING_TABLE),
+        new Part(Act.STOKE, StationTask.SMELT, Blocks.FURNACE), new Part(Act.SPYGLASS, StationTask.SCOUT, null),
+        new Part(Act.POUR, StationTask.COOK, Blocks.SPRUCE_PLANKS), new Part(Act.SERVE, StationTask.COOK, null),
+        new Part(Act.MAP, StationTask.CARTOGRAPHER, Blocks.CARTOGRAPHY_TABLE), new Part(Act.TINKER, StationTask.REDSTONE, Blocks.REPEATER),
+        new Part(Act.FUSE, StationTask.FIREWORKS, null), new Part(Act.STOCK, StationTask.STORE, Blocks.BARREL),
+        new Part(Act.WATER, StationTask.FARM, Blocks.FARMLAND), new Part(Act.REPAIR, StationTask.GOLEMS, null),
+        new Part(Act.WIPE, StationTask.COOK, Blocks.SPRUCE_PLANKS),
+    };
+
+    /** The rows: so many to a picture. */
+    private static final int PER_ROW = 8;
+    private static final double GAP = 2.2;
+
+    /** The stage where {@code at} is (its floor's top): VIEW lines, a row a picture, and what was stood up. */
+    public static List<String> stage(ServerLevel level, BlockPos at) {
+        List<Part> all = new ArrayList<>(List.of(WORK));
+        for (Act a : Act.values()) {
+            if (a == Act.NONE || a.work()) continue;
+            all.add(new Part(a, a == Act.BLOCK || a == Act.THRUST || a == Act.SALUTE ? StationTask.GUARD
+                : a == Act.ROW ? StationTask.FERRY : StationTask.NONE, null));
+        }
+        int rows = (all.size() + PER_ROW - 1) / PER_ROW;
+        int x0 = at.getX(), y = at.getY(), z0 = at.getZ();
+        int width = (int) Math.ceil(PER_ROW * GAP) + 4, depth = rows * 6 + 18;
+        for (int dx = -3; dx <= width; dx++) {
+            for (int dz = -3; dz <= depth; dz++) {
+                level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
+                for (int dy = 0; dy <= 6; dy++) level.setBlock(new BlockPos(x0 + dx, y + dy, z0 + dz), Blocks.AIR.defaultBlockState(), 2);
+            }
+        }
+        List<String> out = new ArrayList<>();
+        int stood = 0;
+        for (int i = 0; i < all.size(); i++) {
+            Part p = all.get(i);
+            int row = i / PER_ROW, col = i % PER_ROW;
+            double fx = x0 + 1.5 + col * GAP, fz = z0 + 1.5 + row * 6;
+            VillageFolkEntity f = standUp(level, fx, y, fz, p, i);
+            if (f != null) stood++;
+        }
+        for (int r = 0; r < rows; r++) {
+            double mid = x0 + 1.5 + (PER_ROW - 1) * GAP / 2.0, fz = z0 + 1.5 + r * 6;
+            StringBuilder names = new StringBuilder();
+            for (int i = r * PER_ROW; i < Math.min(all.size(), (r + 1) * PER_ROW); i++) names.append(i > r * PER_ROW ? "," : "").append(all.get(i).act().word());
+            out.add(String.format(java.util.Locale.ROOT, "VIEW row%d %.1f %d %.1f %.1f %d %.1f %s", r, mid, y + 1, fz + 8.5, mid, y + 1, fz, names));
+            out.add(String.format(java.util.Locale.ROOT, "VIEW row%dclose %.1f %d %.1f %.1f %d %.1f %s", r, mid - 4.4, y, fz + 4.2, mid - 4.4, y + 1, fz,
+                names.toString().split(",").length > 2 ? String.join(",", java.util.Arrays.copyOf(names.toString().split(","), 4)) : names));
+        }
+        int lz = z0 + 1 + rows * 6 + 4;
+        out.addAll(life(level, x0 + 2, y, lz));
+        out.add(0, "STAGE anim " + x0 + " " + y + " " + z0 + ": " + stood + " folk, " + rows + " rows of " + PER_ROW);
+        return out;
+    }
+
+    /** The life of the town, staged: a handshake, a talk, a meal, a bench, a dance, a ladder, a grave. */
+    private static List<String> life(ServerLevel level, int x, int y, int z) {
+        List<String> out = new ArrayList<>();
+        // A handshake and a talk, two pairs face to face.
+        pair(level, x, y, z, Act.HANDSHAKE);
+        pair(level, x + 4, y, z, Act.TALK);
+        // A table and its diners.
+        level.setBlock(new BlockPos(x + 9, y, z), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(x + 9, y + 1, z), Blocks.OAK_PRESSURE_PLATE.defaultBlockState(), 3);
+        sitter(level, x + 8, y, z, 270.0F, Act.EAT);
+        sitter(level, x + 10, y, z, 90.0F, Act.DRINK);
+        // A bench of three, sat down.
+        for (int i = 0; i < 3; i++) {
+            BlockPos seat = new BlockPos(x + 13 + i, y, z);
+            level.setBlock(seat, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.NORTH), 3);
+            VillageFolkEntity f = sitter(level, x + 13 + i, y, z, 0.0F, i == 1 ? Act.TALK : Act.SIT);
+            if (f != null && i == 2) f.setChild(true);
+        }
+        out.add("VIEW life-pairs " + (x + 4) + " " + (y + 1) + " " + (z + 7) + " " + (x + 4) + " " + (y + 1) + " " + z + " handshake,talk");
+        out.add("VIEW life-sit " + (x + 12) + " " + (y + 1) + " " + (z + 6) + " " + (x + 12) + " " + (y + 1) + " " + z + " eat,drink,sit");
+        // A ring of dancers.
+        int dx = x + 4, dz = z + 8;
+        for (int i = 0; i < 5; i++) {
+            double ang = i * Math.PI * 2 / 5;
+            VillageFolkEntity f = one(level, dx + Math.cos(ang) * 1.8, y, dz + Math.sin(ang) * 1.8, StationTask.NONE, Act.DANCE, i);
+            if (f != null) turn(f, (float) Math.toDegrees(ang) + 90.0F);
+        }
+        out.add("VIEW life-dance " + dx + " " + (y + 2) + " " + (dz + 7) + " " + dx + " " + (y + 1) + " " + dz + " dance");
+        // A ladder up a wall, and a folk on it.
+        int lx = x + 12, lz = z + 9;
+        for (int h = 0; h < 5; h++) {
+            level.setBlock(new BlockPos(lx, y + h, lz - 1), Blocks.SPRUCE_PLANKS.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(lx, y + h, lz), Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.SOUTH), 3);
+        }
+        VillageFolkEntity climber = one(level, lx + 0.5, y + 1.6, lz + 0.62, StationTask.HAUL, Act.CLIMB, 3);
+        if (climber != null) { turn(climber, 180.0F); climber.setNoGravity(true); }
+        // A grave, and its mourner.
+        int gx = x + 17, gz = z + 9;
+        level.setBlock(new BlockPos(gx, y - 1, gz), Blocks.COARSE_DIRT.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(gx, y, gz - 1), Blocks.CHISELED_STONE_BRICKS.defaultBlockState(), 3);
+        level.setBlock(new BlockPos(gx, y + 1, gz - 1), Blocks.POPPY.defaultBlockState(), 2);
+        VillageFolkEntity mourner = one(level, gx + 0.5, y, gz + 1.2, StationTask.NONE, Act.MOURN, 4);
+        if (mourner != null) turn(mourner, 180.0F);
+        out.add("VIEW life-ladder " + (lx + 3) + " " + (y + 2) + " " + (lz + 6) + " " + lx + " " + (y + 2) + " " + lz + " climb,mourn");
+        return out;
+    }
+
+    private static void pair(ServerLevel level, int x, int y, int z, Act act) {
+        VillageFolkEntity a = one(level, x + 0.5, y, z + 0.5, StationTask.SHOP, act, 1);
+        VillageFolkEntity b = one(level, x + 1.6, y, z + 0.5, StationTask.FARM, act, 2);
+        if (a != null) turn(a, 270.0F);
+        if (b != null) turn(b, 90.0F);
+    }
+
+    @Nullable
+    private static VillageFolkEntity sitter(ServerLevel level, int x, int y, int z, float yaw, Act act) {
+        VillageFolkEntity f = one(level, x + 0.5, y + 0.5, z + 0.5, StationTask.NONE, act, x + z);
+        if (f == null) return null;
+        turn(f, yaw);
+        f.setPose(Pose.SITTING);
+        return f;
+    }
+
+    private static void turn(VillageFolkEntity f, float yaw) {
+        f.setYRot(yaw);
+        f.setYHeadRot(yaw);
+        f.setYBodyRot(yaw);
+    }
+
+    @Nullable
+    private static VillageFolkEntity standUp(ServerLevel level, double x, int y, double z, Part p, int i) {
+        // The block its work is at, a step in front of it (it faces the camera, south).
+        BlockPos front = BlockPos.containing(x, y, z + 1.0);
+        if (p.block() != null) {
+            BlockState st = p.block().defaultBlockState();
+            if (p.block() == Blocks.FARMLAND || p.block() == Blocks.WATER) {
+                level.setBlock(front.below(), st, 2);
+            } else if (p.block() == Blocks.WHEAT) {
+                level.setBlock(front.below(), Blocks.FARMLAND.defaultBlockState(), 2);
+                level.setBlock(front, ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7), 2);
+            } else if (p.block() == Blocks.WHITE_BED) {
+                level.setBlock(front, Blocks.WHITE_CARPET.defaultBlockState(), 2);
+            } else {
+                level.setBlock(front, st, 2);
+            }
+        }
+        VillageFolkEntity f = one(level, x, y, z, p.trade(), p.act(), i);
+        if (f == null) return null;
+        turn(f, 0.0F);
+        if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -0.2 : 0.0), y, z + (p.act() == Act.LEAD ? -1.6 : 1.3));
+        if (p.act() == Act.SHEAR || p.act() == Act.FEED) animal(level, p.act() == Act.SHEAR ? EntityType.SHEEP : EntityType.CHICKEN, x, y, z + 1.3);
+        if (p.act() == Act.REPAIR) animal(level, EntityType.IRON_GOLEM, x, y, z + 1.6);
+        return f;
+    }
+
+    private static void animal(ServerLevel level, EntityType<? extends Mob> type, double x, int y, double z) {
+        Mob m = type.create(level);
+        if (m == null) return;
+        m.moveTo(x, y, z, 90.0F, 0.0F);
+        m.setNoAi(true);
+        m.setInvulnerable(true);
+        m.addTag("folk_lineup");
+        level.addFreshEntity(m);
+    }
+
+    /** One folk, stood up, told to keep at its act. */
+    @Nullable
+    static VillageFolkEntity one(ServerLevel level, double x, double y, double z, StationTask trade, Act act, int seed) {
+        VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
+        if (f == null) return null;
+        f.moveTo(x, y, z, 0.0F, 0.0F);
+        f.makeShowcase(trade);
+        f.rename(act.word());                                     // its act over its head, for whoever reads the pictures
+        f.addTag("folk_lineup");
+        f.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);   // its hands left to the act's own tools (client/FolkActionLayer)
+        f.setItemSlot(EquipmentSlot.OFFHAND, act == Act.BLOCK ? new ItemStack(Items.SHIELD) : ItemStack.EMPTY);
+        if (act == Act.THRUST || act == Act.BLOCK || act == Act.WATCH) f.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        if (!level.addFreshEntity(f)) return null;
+        Individual.ensure(f);
+        Individual.refreshLook(f);
+        FolkAction.play(f, act, Integer.MAX_VALUE / 4);
+        return f;
+    }
+}

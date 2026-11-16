@@ -1,0 +1,145 @@
+package com.jrpetty.mcassistant;
+
+import com.jrpetty.mcassistant.entity.AnimStage;
+import com.jrpetty.mcassistant.entity.FolkAction;
+import com.jrpetty.mcassistant.entity.FolkAction.Act;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * [anim] /village anim — the folk's animations, for a look at them (screenshots, testing). Ops and creative players.
+ *
+ * <pre>
+ *   /village anim                     what the nearest folk is doing just now (its act, as the server names it)
+ *   /village anim list                every act there is
+ *   /village anim play ACT [TICKS]    the nearest folk does it (for TICKS, ten seconds if not said; a loop goes on)
+ *   /village anim all ACT [TICKS]     every folk within 16 blocks does it
+ *   /village anim mark MARK           the picture over the nearest folk's head (idea, coin, question, heart...)
+ *   /village anim stop                the nearest folk back to what it was doing
+ *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
+ * </pre>
+ */
+public final class AnimCommands {
+
+    private AnimCommands() {}
+
+    private static final SuggestionProvider<CommandSourceStack> ACTS = (ctx, b) ->
+        SharedSuggestionProvider.suggest(Arrays.stream(Act.values()).map(Act::word), b);
+    private static final SuggestionProvider<CommandSourceStack> MARKS = (ctx, b) ->
+        SharedSuggestionProvider.suggest(Arrays.stream(FolkAction.Mark.values()).map(m -> m.name().toLowerCase(java.util.Locale.ROOT)), b);
+
+    @SubscribeEvent
+    public static void onRegisterCommands(RegisterCommandsEvent event) {
+        event.getDispatcher().register(Commands.literal("village")
+            .then(Commands.literal("anim").requires(AnimCommands::allowed).executes(AnimCommands::now)
+                .then(Commands.literal("list").executes(AnimCommands::list))
+                .then(Commands.literal("play").then(Commands.argument("act", StringArgumentType.word()).suggests(ACTS)
+                    .executes(ctx -> play(ctx, 200, false))
+                    .then(Commands.argument("ticks", IntegerArgumentType.integer(1, 72000))
+                        .executes(ctx -> play(ctx, IntegerArgumentType.getInteger(ctx, "ticks"), false)))))
+                .then(Commands.literal("all").then(Commands.argument("act", StringArgumentType.word()).suggests(ACTS)
+                    .executes(ctx -> play(ctx, 200, true))
+                    .then(Commands.argument("ticks", IntegerArgumentType.integer(1, 72000))
+                        .executes(ctx -> play(ctx, IntegerArgumentType.getInteger(ctx, "ticks"), true)))))
+                .then(Commands.literal("mark").then(Commands.argument("mark", StringArgumentType.word()).suggests(MARKS)
+                    .executes(AnimCommands::mark)))
+                .then(Commands.literal("stop").executes(AnimCommands::stop))
+                .then(Commands.literal("stage").executes(AnimCommands::stage))));
+    }
+
+    /** An op, or a player in creative. */
+    static boolean allowed(CommandSourceStack src) {
+        return src.hasPermission(2) || src.getEntity() instanceof net.minecraft.world.entity.player.Player p && p.isCreative();
+    }
+
+    @Nullable
+    private static VillageFolkEntity nearest(CommandContext<CommandSourceStack> ctx) {
+        Vec3 at = ctx.getSource().getPosition();
+        VillageFolkEntity best = null;
+        double d = 16.0 * 16.0;
+        for (VillageFolkEntity f : ctx.getSource().getLevel().getEntitiesOfClass(VillageFolkEntity.class,
+                new net.minecraft.world.phys.AABB(at, at).inflate(16.0))) {
+            double e = f.distanceToSqr(at);
+            if (e < d) { d = e; best = f; }
+        }
+        if (best == null) ctx.getSource().sendFailure(Component.literal("No folk within sixteen blocks."));
+        return best;
+    }
+
+    private static int now(CommandContext<CommandSourceStack> ctx) {
+        VillageFolkEntity f = nearest(ctx);
+        if (f == null) return 0;
+        String line = f.displayNameCap() + ": " + FolkAction.now(f).word() + " (sent " + FolkAction.sendsForTests(f) + " times)";
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        return 1;
+    }
+
+    private static int list(CommandContext<CommandSourceStack> ctx) {
+        List<String> work = new ArrayList<>(), life = new ArrayList<>();
+        for (Act a : Act.values()) if (a != Act.NONE) (a.work() ? work : life).add(a.word());
+        ctx.getSource().sendSuccess(() -> Component.literal("Work: " + String.join(", ", work) + "\nLife: " + String.join(", ", life)), false);
+        return work.size() + life.size();
+    }
+
+    private static int play(CommandContext<CommandSourceStack> ctx, int ticks, boolean all) {
+        Act a = Act.named(StringArgumentType.getString(ctx, "act"));
+        if (a == null) {
+            ctx.getSource().sendFailure(Component.literal("No such act. /village anim list"));
+            return 0;
+        }
+        List<VillageFolkEntity> who = new ArrayList<>();
+        if (all) {
+            Vec3 at = ctx.getSource().getPosition();
+            who.addAll(ctx.getSource().getLevel().getEntitiesOfClass(VillageFolkEntity.class, new net.minecraft.world.phys.AABB(at, at).inflate(16.0)));
+        } else {
+            VillageFolkEntity f = nearest(ctx);
+            if (f != null) who.add(f);
+        }
+        for (VillageFolkEntity f : who) FolkAction.play(f, a, ticks);
+        int n = who.size();
+        ctx.getSource().sendSuccess(() -> Component.literal(n + " folk: " + a.word() + " for " + ticks + " ticks"), false);
+        return n;
+    }
+
+    private static int mark(CommandContext<CommandSourceStack> ctx) {
+        FolkAction.Mark m = FolkAction.Mark.named(StringArgumentType.getString(ctx, "mark"));
+        VillageFolkEntity f = m == null ? null : nearest(ctx);
+        if (f == null) {
+            if (m == null) ctx.getSource().sendFailure(Component.literal("No such mark."));
+            return 0;
+        }
+        FolkAction.mark(f, m);
+        ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + ": " + m.name().toLowerCase(java.util.Locale.ROOT)), false);
+        return 1;
+    }
+
+    private static int stop(CommandContext<CommandSourceStack> ctx) {
+        VillageFolkEntity f = nearest(ctx);
+        if (f == null) return 0;
+        FolkAction.stop(f);
+        ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is back to " + FolkAction.now(f).word()), false);
+        return 1;
+    }
+
+    private static int stage(CommandContext<CommandSourceStack> ctx) {
+        List<String> lines = AnimStage.stage(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()));
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", lines)), false);
+        return lines.size();
+    }
+}

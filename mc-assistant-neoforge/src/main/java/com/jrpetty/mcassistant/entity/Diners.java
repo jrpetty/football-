@@ -388,6 +388,7 @@ public final class Diners {
     static void eat(ServerLevel level, VillageFolkEntity f, PlaceSettingBlock.Bite b) {
         if (b.nutrition() > 0) f.heal(b.nutrition() * 0.5F);
         f.meals().ate(level.getGameTime(), b.of().getHoverName().getString().toLowerCase(java.util.Locale.ROOT));
+        FolkAction.ate(f, b.of(), b.drink());                        // [anim] the fork to the mouth, the cup lifted
         if (b.last()) {
             for (MobEffectInstance e : PlaceSettingBlock.effectsOf(b.of())) f.addEffect(new MobEffectInstance(e));
             if (!b.drink()) Cuisine.ate(f, b.of());

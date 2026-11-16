@@ -299,6 +299,7 @@ public final class Assemblies {
                 if (speaker != null && !text.isEmpty()) {
                     FolkTalk.speak(speaker, text);
                     speaker.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                    if (!speaker.getUUID().equals(a.host)) FolkAction.play(speaker, FolkAction.Act.TALK, 60);   // [anim] a word from the floor
                 }
                 react(level, a, l.react(), speaker);
                 a.nextLineAt = now + Math.max(60, 40 + text.length() * 2);
@@ -349,6 +350,7 @@ public final class Assemblies {
             switch (how) {
                 case '!' -> {
                     f.swing(r.nextBoolean() ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND);
+                    FolkAction.play(f, r.nextInt(3) == 0 ? FolkAction.Act.CLAP : FolkAction.Act.CHEER, 30 + r.nextInt(20));   // [anim]
                     if (r.nextInt(3) == 0 && f.onGround()) f.getJumpControl().jump();
                     if (voices < 3 && r.nextInt(3) == 0) {
                         FolkTalk.speak(f, FolkTalk.pick(r, "Hooray!", "Hear, hear!", "Well said!", "Huzzah!", "Yes!"));
@@ -421,6 +423,31 @@ public final class Assemblies {
             return until != null && f.level().getGameTime() < until;
         }
         return invited(a, f);
+    }
+
+    /**
+     * [anim] What its body does at what it is at (FolkAction): the host speaking with its arms up, the crowd listening
+     * through the speeches, the hush of a vigil and a wedding's vows, the clapping and dancing once the speeches end.
+     * NONE when it is at nothing, or not yet in its place.
+     */
+    public static FolkAction.Act animOf(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        Assembly a = village == null ? null : NOW.get(village);
+        if (a == null || !a.seated.containsKey(f.getUUID()) && !f.getUUID().equals(a.host)) return FolkAction.Act.NONE;
+        if (!f.getNavigation().isDone()) return FolkAction.Act.NONE;
+        boolean host = f.getUUID().equals(a.host);
+        int pick = (int) ((f.getId() + f.level().getGameTime() / 160L) & 3);
+        return switch (a.phase) {
+            case SPEECH -> host ? FolkAction.Act.PREACH
+                : a.kind == Kind.VIGIL ? FolkAction.Act.MOURN
+                : a.kind == Kind.WEDDING || a.kind == Kind.COMING_OF_AGE || a.kind == Kind.KNIGHTING ? FolkAction.Act.LISTEN
+                : a.kind == Kind.PROTEST ? FolkAction.Act.PROTEST : FolkAction.Act.LISTEN;
+            case MINGLE -> a.kind == Kind.FEAST || a.kind == Kind.FESTIVAL || a.kind == Kind.FOUNDING
+                ? (pick == 0 ? FolkAction.Act.CLAP : FolkAction.Act.DANCE)
+                : pick == 0 ? FolkAction.Act.CHEER : pick == 1 ? FolkAction.Act.DANCE : FolkAction.Act.CLAP;
+            case CLOSE -> a.kind == Kind.VIGIL ? FolkAction.Act.PRAY : a.kind == Kind.WEDDING ? FolkAction.Act.CLAP : FolkAction.Act.NONE;
+            default -> FolkAction.Act.NONE;
+        };
     }
 
     static boolean invited(Assembly a, VillageFolkEntity f) {

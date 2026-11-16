@@ -413,6 +413,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(BattleCommands.class);            // [war] /village war battle, /village war join
         NeoForge.EVENT_BUS.register(DefenceCommands.class);           // [defence] /village wall, /village muster
         NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
+        NeoForge.EVENT_BUS.register(AnimCommands.class);              // [anim] /village anim
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TownLod.class);     // [scale] towns' level of detail

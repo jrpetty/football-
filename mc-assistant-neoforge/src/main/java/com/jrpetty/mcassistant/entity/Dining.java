@@ -1245,6 +1245,7 @@ public final class Dining {
             FoodProperties fp = food.get(net.minecraft.core.component.DataComponents.FOOD);
             if (fp != null) f.heal(fp.nutrition() * 0.5F);
             f.meals().ate(level.getGameTime(), food.getHoverName().getString().toLowerCase(java.util.Locale.ROOT));
+            FolkAction.ate(f, food, false);                          // [anim]
             Meals.ateOut(f, level);
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Staff supper at last.", "That's the last table. Sit down, everyone, and eat."));
         }

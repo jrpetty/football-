@@ -609,6 +609,7 @@ public final class FolkTalk {
         text = Health.cough(f, text);                        // [batchA] a cough in it, with a cold
         text = TownSpeech.local(f, text);                    // [culture2] its town's own words for the stores, the board, the coin
         Manner.blip(f);                                      // [individual] the sound of its own voice
+        FolkAction.spoke(f);                                 // [anim] its hands as it speaks
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));

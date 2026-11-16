@@ -247,6 +247,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private final boolean[] look;
     /** What individualParts does with each part, by its name, worked out once (one of the KIND_ numbers). */
     private final byte[] kind;
+    /** [anim] Its six parts, for the keyframe clips (FolkAnimations). */
+    private final FolkAnimations.Rig rig;
     private static final byte KIND_OTHER = 0, KIND_UNDER_HAT = 1, KIND_UNDER_HOOD = 2, KIND_PIPE = 3, KIND_CANE_LEFT = 4,
         KIND_CANE_RIGHT = 5;
 
@@ -258,6 +260,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         this.leftArm = root.getChild("left_arm");
         this.rightLeg = root.getChild("right_leg");
         this.leftLeg = root.getChild("left_leg");
+        this.rig = new FolkAnimations.Rig(head, body, rightArm, leftArm, rightLeg, leftLeg);   // [anim]
         this.worn = new ModelPart[WEARERS.length];
         this.wornBy = new String[WEARERS.length];
         this.onHead = new boolean[WEARERS.length];
@@ -608,6 +611,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         swingTool(folk, rightMain ? HumanoidArm.RIGHT : HumanoidArm.LEFT);
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
+        FolkAnimations.apply(rig, folk, ageInTicks, rightMain, young, attackTime);    // [anim] what it is doing: its work, its life
         missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
     }
 

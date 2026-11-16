@@ -345,6 +345,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void aiStep() {
         super.aiStep();
         if (level().isClientSide) return;
+        FolkAction.tick(this);                                 // [anim] what its body is doing, for the client
         if (showcase) return;
         if (laterLine != null && tickCount >= laterAt) {
             FolkTalk.speak(this, laterLine);
@@ -1794,6 +1795,38 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_MARKS, 0);
         builder.define(DATA_MANNER, 0);
         builder.define(DATA_POST, 0);                   // [roles-c]
+        builder.define(DATA_ACTION, 0);                 // [anim]
+    }
+
+    // ------------------------------ [anim] what its body is doing (FolkAction), for the client to animate ------------
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_ACTION =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    /** [anim] The server's account of its act (never saved). */
+    private final FolkAction.State animState = new FolkAction.State();
+    /** [anim] The client's: when the act it is shown doing began, and the one before it, for the blend. */
+    private final FolkAction.Seen animSeen = new FolkAction.Seen();
+
+    public FolkAction.State animState() { return animState; }
+
+    public FolkAction.Seen animSeen() { return animSeen; }
+
+    /** [anim] Its act, the act's count, its mark and the mark's count (FolkAction.pack). */
+    public int clientAction() { return this.entityData.get(DATA_ACTION); }
+
+    /** [anim] Sent only when it changes: true if it did. */
+    public boolean showAction(int packed) {
+        if (this.entityData.get(DATA_ACTION) == packed) return false;
+        this.entityData.set(DATA_ACTION, packed);
+        return true;
+    }
+
+    /** [anim] Every swing of its arm at something is its hands at work (FolkAction.work). */
+    @Override
+    public void swing(net.minecraft.world.InteractionHand hand, boolean updateSelf) {
+        super.swing(hand, updateSelf);
+        FolkAction.swung(this);
     }
 
     /** [roles-c] The clothes of its post within its trade (an outfit's number, OutfitIndex.ofPost: the baker's whites,
@@ -1928,6 +1961,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void onSyncedDataUpdated(net.minecraft.network.syncher.EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
         if (DATA_CHILD.equals(key) || DATA_LOOK.equals(key)) refreshDimensions();   // [individual] its height
+        if (DATA_ACTION.equals(key) && level().isClientSide) animSeen.heard(this.entityData.get(DATA_ACTION), tickCount);   // [anim]
     }
 
     /** The village's colours, for the client: a guard's tabard and shield are dyed in them. */
@@ -1957,6 +1991,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void ateFood(net.minecraft.world.item.ItemStack meal) {
         meals.ate(level().getGameTime(), meal.getHoverName().getString());
+        FolkAction.ate(this, meal);                                 // [anim] a bite to the mouth, and crumbs
         Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
     }
 
