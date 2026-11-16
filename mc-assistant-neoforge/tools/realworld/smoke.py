@@ -1130,6 +1130,50 @@ def prices_stage(r, look, cx, cz):
     say("alive after the prices: %s" % client_alive())
 
 
+def anim_stage(r, look, cx, cz):
+    """[anim] The folk's own animations (entity/FolkAction, client/FolkAnimations): a stage in clear air past the village
+    (/village anim stage) with a folk doing every act there is, in rows of six, each at the block its work is done at (the
+    smith hammering at the anvil, the woodcutter at the log, the miner at the rock face, the cook stirring at the smoker,
+    the tailor at the loom...), side on so the swing of each reads; three to a picture, close. Then the life of the town:
+    a handshake and a talk, a table of folk eating and drinking, a bench sat on, a ring of dancers, a ladder climbed, a
+    mourner at a grave. Then the player's own emotes, the camera turned round to watch them (AnimConfig.emoteCamera):
+    a wave, a bow, a cheer and a dance in front of a folk that likes the player, which answers in kind; and the emote
+    wheel open."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sy, sz = cx - 120, 150, cz + 120
+    r.cmd("tp %s %d %d %d" % (USER, sx + 10, sy + 4, sz + 8))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village anim stage" % (sx, sy, sz))
+    say("anim stage: " + out[:300])
+    views = re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (\S+)", out)
+    for name, x, y, z, ax, ay, az, acts in views:
+        x, y, z, ax, ay, az = float(x), float(y), float(z), float(ax), float(ay), float(az)
+        if re.match(r"row\d+$", name):
+            continue                                   # the close pictures, three at a time, read better than the rows
+        look("anim-%s-%s" % (name, acts.replace(",", "-")[:60]), x, y + 0.3, z, ax, ay, az, wait=5)
+    say("alive after the folk's animations: %s" % client_alive())
+    # The player's emotes: in front of a folk it has made friends with, the camera turned round to watch.
+    r.cmd("gamemode creative %s" % USER)
+    fx, fz = sx + 30, sz + 4
+    r.cmd("fill %d %d %d %d %d %d minecraft:smooth_stone" % (fx - 4, sy - 1, fz - 4, fx + 4, sy - 1, fz + 6))
+    r.cmd("tp %s %.1f %d %.1f 180 0" % (USER, fx + 0.5, sy, fz + 3.5))
+    time.sleep(2)
+    say("a friend: " + r.cmd("execute as %s at @s run village anim friend" % USER))   # stood up in front, glad to see you
+    time.sleep(3)
+    for emote in ("wave", "bow", "cheer", "dance", "handshake", "salute", "think", "kneel"):
+        say("emote %s: %s" % (emote, r.cmd("execute as %s at @s run village emote %s" % (USER, emote))))
+        time.sleep(1.2)
+        r.cmd("title %s clear" % USER)
+        shot("anim-emote-%s" % emote)
+        time.sleep(1.5)
+    say("alive after the emotes: %s" % client_alive())
+    r.cmd("kill @e[tag=folk_lineup]")
+    r.cmd("gamemode spectator %s" % USER)
+
+
 def ageing_stage(r, look, cx, cz):
     """Growing old slowly (entity/VillageFolkEntity.ageYears, Lifespans): grown folk age a year every
     three days and the founders come eighteen to forty-five. What /village lifespans says of the town
@@ -5158,6 +5202,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("talk ui stage failed: %s" % e)
     say("alive after talking: %s" % client_alive())
+    try:
+        anim_stage(r, look, cx, cz)                   # [anim] early, so a long run never cuts it off
+    except Exception as e:  # noqa: BLE001
+        say("anim stage failed: %s" % e)
     # The town's books (the analytics screen the village board opens): eight mornings
     # first, so there are days in them, with an hour or so of the village's work in each
     # (four times the speed for fifteen seconds), then a picture of each page.

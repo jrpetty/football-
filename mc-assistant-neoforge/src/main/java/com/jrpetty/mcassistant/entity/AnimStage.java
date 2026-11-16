@@ -207,6 +207,7 @@ public final class AnimStage {
         turn(f, -90.0F);
         if (p.act() == Act.SIT) f.setPose(Pose.SITTING);
         if (p.act() == Act.SLEEP) {
+            f.setChild(true);                                         // a child, put to bed whatever the hour (a grown folk is up for work)
             BlockPos head = BlockPos.containing(x, y, z), foot = head.east();
             BlockState bed = Blocks.BLUE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST);
             level.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2);
@@ -239,6 +240,20 @@ public final class AnimStage {
         level.addFreshEntity(m);
     }
 
+    /** A folk stood up facing the player, glad to see it (the player's emotes answered, for the pictures). */
+    @Nullable
+    public static VillageFolkEntity friend(ServerLevel level, double x, double y, double z, net.minecraft.world.entity.player.Player p) {
+        VillageFolkEntity f = one(level, x, y, z, StationTask.SHOP, Act.NONE, 7);
+        if (f == null) return null;
+        FolkAction.stop(f);
+        f.rename("friend");
+        f.ensurePersona();
+        f.persona().feelFor(p.getUUID(), p.getName().getString(), 70);
+        double dx = p.getX() - x, dz = p.getZ() - z;
+        turn(f, (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0F);
+        return f;
+    }
+
     /** One folk, stood up, told to keep at its act. */
     @Nullable
     static VillageFolkEntity one(ServerLevel level, double x, double y, double z, StationTask trade, Act act, int seed) {
@@ -254,7 +269,7 @@ public final class AnimStage {
         if (!level.addFreshEntity(f)) return null;
         Individual.ensure(f);
         Individual.refreshLook(f);
-        FolkAction.play(f, act, Integer.MAX_VALUE / 4);
+        if (act != Act.NONE) FolkAction.play(f, act, Integer.MAX_VALUE / 4);
         return f;
     }
 }

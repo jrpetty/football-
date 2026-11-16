@@ -32,6 +32,8 @@ import java.util.List;
  *   /village anim all ACT [TICKS]     every folk within 16 blocks does it
  *   /village anim mark MARK           the picture over the nearest folk's head (idea, coin, question, heart...)
  *   /village anim stop                the nearest folk back to what it was doing
+ *   /village anim befriend            (a player) the nearest folk thinks well of you (to see your emotes answered)
+ *   /village anim friend              (a player) a folk stood up three blocks in front of you that thinks well of you
  *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
  * </pre>
  */
@@ -60,6 +62,8 @@ public final class AnimCommands {
                 .then(Commands.literal("mark").then(Commands.argument("mark", StringArgumentType.word()).suggests(MARKS)
                     .executes(AnimCommands::mark)))
                 .then(Commands.literal("stop").executes(AnimCommands::stop))
+                .then(Commands.literal("befriend").executes(AnimCommands::befriend))
+                .then(Commands.literal("friend").executes(AnimCommands::friend))
                 .then(Commands.literal("stage").executes(AnimCommands::stage))));
         // The player's own emotes, typed (the wheel and the talk screen send the same): anybody, at the same pace.
         event.getDispatcher().register(Commands.literal("village")
@@ -153,6 +157,26 @@ public final class AnimCommands {
             return 0;
         }
         ctx.getSource().sendSuccess(() -> Component.literal("emote: " + a.word()), false);
+        return 1;
+    }
+
+    private static int befriend(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
+        VillageFolkEntity f = nearest(ctx);
+        if (f == null) return 0;
+        f.ensurePersona();
+        f.persona().feelFor(p.getUUID(), p.getName().getString(), 70);
+        ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " thinks well of you: " + f.persona().affinity(p.getUUID())), false);
+        return 1;
+    }
+
+    private static int friend(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
+        Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
+        Vec3 at = p.position().add(look.scale(3.0));
+        VillageFolkEntity f = AnimStage.friend(ctx.getSource().getLevel(), at.x, p.getY(), at.z, p);
+        if (f == null) return 0;
+        ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is glad to see you"), false);
         return 1;
     }
 

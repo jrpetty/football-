@@ -118,8 +118,9 @@ public final class PlayerEmotesClient {
                     continue;
                 }
                 if (pl.seen.act != 0) {
+                    // Walked off, crouched, or falling (a creative player hovering may emote where it hangs).
                     boolean moved = p.walkAnimation.speed() > 0.25F || p.isShiftKeyDown() && pl.seen.act != Act.KNEEL.ordinal()
-                        || !p.onGround() && !p.isPassenger();
+                        || p.getDeltaMovement().y < -0.35 && !p.isPassenger();
                     if (p.tickCount >= pl.until || moved && p.tickCount - pl.seen.start > 4) pl.seen.begin(0, p.tickCount);
                 } else if (p.tickCount - pl.seen.changed > 10) {
                     it.remove();

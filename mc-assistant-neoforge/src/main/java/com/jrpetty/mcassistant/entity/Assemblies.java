@@ -381,6 +381,11 @@ public final class Assemblies {
         RandomSource r = level.getRandom();
         long day = level.getDayTime() / 24000L;
         String what = describe(a);
+        if (a.kind == Kind.HONOUR || a.kind == Kind.KNIGHTING || a.kind == Kind.COMING_OF_AGE || a.kind == Kind.WEDDING) {
+            for (UUID u : a.principals) {                                       // [anim] a star over the one honoured, the wed
+                if (level.getEntity(u) instanceof VillageFolkEntity pf) FolkAction.mark(pf, a.kind == Kind.WEDDING ? FolkAction.Mark.HEART : FolkAction.Mark.STAR);
+            }
+        }
         for (UUID u : a.seated.keySet()) {
             if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
             if (a.kind != Kind.MORNING) f.persona().remember(day, "I was at " + what, a.kind == Kind.WEDDING || a.kind == Kind.VIGIL ? 4 : 2);

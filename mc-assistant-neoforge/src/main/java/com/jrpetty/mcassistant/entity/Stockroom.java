@@ -410,6 +410,13 @@ public final class Stockroom {
     public static void sold(ServerLevel level, UUID village, Seller s, ItemStack what, int count, int coin) {
         if (what.isEmpty() || count <= 0) return;
         Businesses.sold(level, village, s, what, count, coin);          // [business-books] the seller's books, and its till
+        if (coin > 0) {                                                  // [anim] a coin over the keeper's head, the goods handed over
+            VillageFolkEntity k = keeperOf(village, s);
+            if (k != null && k.level() == level) {
+                FolkAction.mark(k, FolkAction.Mark.COIN);
+                if (!k.isSleeping() && k.getNavigation().isDone()) FolkAction.play(k, FolkAction.Act.HAND_OVER, 40);
+            }
+        }
         MarketMaker.paidAtCounter(level, village, what, count);          // [econ-1a] paid at the counter: not charged again at the stores
         if (s == Seller.SHOP) ShopBusiness.took(village, level.getDayTime() / 24000L, coin);   // [shops-homes] into its till
         Book b = book(level, village, s);

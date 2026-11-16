@@ -2123,6 +2123,10 @@ public class VillageFolkEntity extends AssistantEntity {
             other.quarrelDay = day;
             getLookControl().setLookAt(other, 30.0F, 30.0F);
             other.getLookControl().setLookAt(this, 30.0F, 30.0F);
+            FolkAction.play(this, FolkAction.Act.QUARREL, 100);          // [anim] a finger jabbed, a hand on the hip, a temper
+            FolkAction.play(other, FolkAction.Act.QUARREL, 100);
+            FolkAction.mark(this, FolkAction.Mark.ANGER);
+            FolkAction.mark(other, FolkAction.Mark.ANGER);
             net.minecraft.util.RandomSource r = getRandom();
             String[][] rows = {
                 { "You took my spot at the well again!", "It's not YOUR spot!" },

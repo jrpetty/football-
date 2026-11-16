@@ -185,6 +185,10 @@ public final class Manner {
             o.getLookControl().setLookAt(f, 30.0F, 30.0F);
             NOW.put(f.getUUID(), new Moment(WAVE, f.tickCount + 40));
             NOW.put(o.getUUID(), new Moment(WAVE, o.tickCount + 40));
+            if (id.equals(f.life().partner())) {                       // [anim] sweethearts: a heart over each
+                FolkAction.mark(f, FolkAction.Mark.HEART);
+                FolkAction.mark(o, FolkAction.Mark.HEART);
+            }
             send(o);
             return;
         }

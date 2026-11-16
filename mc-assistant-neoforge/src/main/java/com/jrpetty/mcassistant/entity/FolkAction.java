@@ -291,6 +291,16 @@ public final class FolkAction {
     private static void set(VillageFolkEntity f, State s, Act act, boolean restart) {
         int id = act.ordinal();
         if (id == s.act && !restart) return;
+        if (act == Act.LOST) { s.mark = Mark.QUESTION.ordinal(); s.markSeq = (s.markSeq + 1) & 0xFF; }    // lost: a question mark
+        else if (act == Act.MOURN) { s.mark = Mark.TEAR.ordinal(); s.markSeq = (s.markSeq + 1) & 0xFF; }  // at the grave: a tear
+        else if (act == Act.LUTE || act == Act.DRUM) { s.mark = Mark.NOTE.ordinal(); s.markSeq = (s.markSeq + 1) & 0xFF; }
+        else if ((act == Act.THRUST || act == Act.BLOCK) && s.act != Act.THRUST.ordinal() && s.act != Act.BLOCK.ordinal()) {
+            s.mark = Mark.EXCLAIM.ordinal();                           // a foe seen: a shout
+            s.markSeq = (s.markSeq + 1) & 0xFF;
+        } else if (act.work() && !restart && Manner.gaitOf(f.clientManner()) == Manner.TIRED && f.getRandom().nextInt(3) == 0) {
+            s.mark = Mark.SWEAT.ordinal();                             // tired at its work: a bead of sweat
+            s.markSeq = (s.markSeq + 1) & 0xFF;
+        }
         s.act = id;
         s.seq = (s.seq + 1) & 0xFF;
         send(f, s);
@@ -480,7 +490,8 @@ public final class FolkAction {
             case BREW -> byBlock != Act.NONE ? byBlock : swinging ? Act.BREW : Act.NONE;
             case ENCHANT -> byBlock != Act.NONE ? byBlock : swinging ? Act.ENCHANT : Act.NONE;
             case COOK -> cook(f, byBlock, swinging);
-            case SHOP -> Workshop.isHand(f) ? (byBlock != Act.NONE ? byBlock : swinging ? Act.SAW : Act.NONE)
+            case SHOP -> (byBlock == Act.CHISEL || byBlock == Act.SAW || byBlock == Act.HAMMER) && (swinging || Workshop.isHand(f)) ? byBlock
+                : Workshop.isHand(f) ? (swinging ? Act.SAW : Act.NONE)
                 : swinging ? Act.HAND_OVER : atCounter(f) ? ((f.tickCount / 160 + f.getId()) % 3 == 0 ? Act.HAND_OVER : Act.COUNT_COINS) : Act.NONE;
             case SCOUT, HUNT -> swinging ? Act.NONE : (f.tickCount / 200 + f.getId()) % 4 == 0 ? Act.SPYGLASS : Act.NONE;
             case BANK -> atCounter(f) || swinging ? ((f.tickCount / 200 + f.getId()) % 2 == 0 ? Act.COUNT_COINS : Act.WRITE) : Act.NONE;

@@ -88,7 +88,7 @@ public final class PlayerEmotes {
         try {
             PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, new PlayerEmotePayload(p.getId(), a.ordinal(), EmoteRules.ticks(a)));
         } catch (RuntimeException e) {
-            com.mojang.logging.LogUtils.getLogger().debug("[anim] an emote not sent: {}", e.toString());   // a client without the mod
+            com.mojang.logging.LogUtils.getLogger().warn("[anim] an emote not sent: {}", e.toString());   // a client without the mod
         }
     }
 
@@ -121,7 +121,8 @@ public final class PlayerEmotes {
     private static void answer(ServerLevel level, ServerPlayer p, Act a, int targetId) {
         VillageFolkEntity target = target(level, p, targetId);
         List<VillageFolkEntity> near = level.getEntitiesOfClass(VillageFolkEntity.class, p.getBoundingBox().inflate(SEEN),
-            f -> f.isAlive() && !f.isSleeping() && !f.isShowcase() && f.getTarget() == null && f.hasLineOfSight(p));
+            f -> f.isAlive() && !f.isSleeping() && !(f.isShowcase() && FolkAction.now(f) != Act.NONE) && f.getTarget() == null
+                && f.hasLineOfSight(p));
         near.sort(Comparator.comparingDouble(f -> f.distanceToSqr(p)));
         int answered = 0;
         for (VillageFolkEntity f : near) {

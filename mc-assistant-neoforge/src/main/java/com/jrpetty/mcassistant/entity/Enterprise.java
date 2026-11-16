@@ -972,6 +972,7 @@ public final class Enterprise {
         Villages.tell(id, day, (founder != null ? founder.displayNameCap() : first) + " opened " + b.name + (t.stall() ? " on the square" : "")
             + ", a " + t.noun() + " of " + (founder != null ? "their" : "its") + " own");
         Accounts.add(d, "founded", 1);
+        if (founder != null) FolkAction.mark(founder, FolkAction.Mark.IDEA);   // [anim] the bright idea over its head
         signs(level, v, b, r);
         return b;
     }
