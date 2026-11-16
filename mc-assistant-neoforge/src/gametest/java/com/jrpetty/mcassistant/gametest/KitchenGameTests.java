@@ -675,10 +675,18 @@ public class KitchenGameTests {
             healer.setJob(StationTask.FARM);
             cook.setJob(StationTask.COOK);
             Health.catchForTests(founder, "worn out at its work");
+            // [health] And the old healer too: the patient may be over its cold by now (the berries the healer gave it in place of
+            // a second cup ease the last of a short one: Kitchen.tendForTests), so two colds in town want two cups whatever
+            // became of the first, against the one cup in the stores.
+            Health.catchForTests(healer, "out in the rain");
             stock(level, id, new ItemStack(Items.POPPY));                // a flower this time, for the leaf
             String cafe = Kitchen.craftForTests(level, cook);
-            Kit.log("kt07 the café's cook: " + cafe);
-            helper.assertTrue(cafe != null && cafe.contains("herbal tea") && stores(level, id, tea) == 2, "the café makes it with no healer: " + cafe);
+            String why = "wanted " + Kitchen.wantedForTests(level, id) + ", ill " + founder.health().ill() + "/" + patient.health().ill()
+                + ", trades " + List.of(founder.stationTask(), healer.stationTask(), patient.stationTask(), cook.stationTask()) + ", tea "
+                + stores(level, id, tea) + ", berries " + stores(level, id, Items.SWEET_BERRIES) + ", sugar " + stores(level, id, Items.SUGAR)
+                + ", bottles " + stores(level, id, Items.GLASS_BOTTLE) + ", poppy " + stores(level, id, Items.POPPY) + "; " + cook.debugLine();
+            Kit.log("kt07 the café's cook: " + cafe + " (" + why + ")");
+            helper.assertTrue(cafe != null && cafe.contains("herbal tea") && stores(level, id, tea) == 2, "the café makes it with no healer: " + cafe + " (" + why + ")");
             // A player drinks a cup.
             ServerPlayer p = survivor(helper);
             ItemStack back = KitchenItems.HERBAL_TEA.get().finishUsingItem(new ItemStack(tea), level, p);

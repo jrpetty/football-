@@ -47,6 +47,21 @@ public final class Makers {
         UNMADE.put(name, why);
     }
 
+    // [health] Made, but by no recipe of the game's (the coin, struck only at the mint), and why.
+    private static final Map<String, String> UNCRAFTED = new LinkedHashMap<>();
+
+    /** [health] One of the mod's things somebody makes, but by no recipe anybody could follow at a bench or a fire, and why. */
+    public static synchronized void uncrafted(String name, String why) {
+        UNCRAFTED.put(name, why);
+    }
+
+    /** [health] Why this thing has no recipe though somebody makes it, or null. */
+    @Nullable
+    public static synchronized String uncrafted(Item item) {
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+        return McAssistantMod.MODID.equals(id.getNamespace()) ? UNCRAFTED.get(id.getPath()) : null;
+    }
+
     /** Who makes this thing, or an empty list if nobody is said to. */
     public static synchronized List<Maker> of(Item item) {
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
@@ -207,8 +222,13 @@ public final class Makers {
         declare("storehouse_unit", "the builders", "as the storehouse goes up: twenty-seven to a store", "VillageFolkEntity.madeFromStores");
         declare("village_board", "the town's hands", "whenever the town's board has been taken down (the founders bring the first)",
             "VillageBoards.keep");
-        declare("village_coin", "the mint", "from the Iron Age, while the treasury runs low: nine coins to a bar of the stores' gold",
-            "Market.mint");
+        declare("village_coin", "the mint", "from the Iron Age, while the treasury runs low: nine coins to a bar of gold it buys of "
+            + "the market", "Market.mint");
+        // [health] And anybody's gold, brought to a market stall's counter from the Stone Age: eight coins to the ingot.
+        declare("village_coin", "the mint, for whoever brings gold", "gold ingots brought to a market stall's counter, from the "
+            + "Stone Age: eight coins to the ingot, the mint keeping the ninth", "MarketMaker.mintForPlayer");
+        uncrafted("village_coin", "coin is struck only at the town's mint (since the market there is no furnace recipe): money "
+            + "anybody could fire for themselves would be worth nothing");
         // The player's own tools: the shop's workshop makes them to a player's order, out of the stores.
         for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker")) {
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");

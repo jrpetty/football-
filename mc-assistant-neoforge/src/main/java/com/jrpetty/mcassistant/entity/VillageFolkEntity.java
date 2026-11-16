@@ -597,6 +597,11 @@ public class VillageFolkEntity extends AssistantEntity {
         // [individual] Its own life: home before dark, off at the sight of a monster; its habits at their hours (Individual).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel own
                 && (tickCount % 2 == 0 ? Individual.hold(this, own) : Individual.busy(this))) return;
+        // [health] A shopping trip under way is seen through, whatever the clock says: begun in its own time, it has the
+        // folk's legs until it is home with what it bought (its trade, a chore or the plot calling it back used to take
+        // the legs every tick, and the trip ran out of time halfway with nothing bought). Only its own time starts one.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel shopping
+                && ShoppingTrips.underWay(this) && ShoppingTrips.errand(this, shopping)) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -8245,7 +8250,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WorkTools.busy(this)                              // [workitems] on a rope, or hanging or watering a window box
             || Interviews.busy(this)                             // [interviews] at an interview, or on the road to one
             || FireworksMaker.fetching(this) || FireworkShows.crewing(this)   // [fireworks] a creeper's powder, a display's rack
-            || Divers.busy(this);                                // [diver] on a dive, or being pulled out of the water
+            || Divers.busy(this)                                 // [diver] on a dive, or being pulled out of the water
+            || ShoppingTrips.underWay(this);                     // [health] to the shop and home with it: the trip has its legs
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

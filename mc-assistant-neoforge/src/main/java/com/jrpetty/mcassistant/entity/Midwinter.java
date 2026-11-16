@@ -99,7 +99,9 @@ public final class Midwinter {
         Direction right = along.getClockWise();
         BlockPos c = v.centre();
         List<BlockPos> out = new ArrayList<>();
-        for (int k = 0; out.size() < LANTERNS * 2 && k < 10; k++) {
+        // [health] Every pair of the avenue's first ten, not just its first six: where a cross street or the plaza's ring
+        // road takes a pair (the town's gate keeps lanterns off a road), the lanterns go on down the avenue to make it up.
+        for (int k = 0; k < 10; k++) {
             int out_ = TownPlan.PLAZA + 2 + APART * k;
             for (int side : new int[]{ -1, 1 }) {
                 // The road's edge if it will take one, else just off it (hang takes the first that will).

@@ -5835,7 +5835,9 @@ has none, a larder for a home without one, candles for the evenings, a wardrobe 
 something warm in winter, a cake for a birthday in the house, books for a reader, a toy for the household's child,
 the pet's treats, a lute for the musical. The poor buy only what keeps them fed and at work; the better off, more.
 Once a day in its own time a folk takes the top of its list it can pay for (three things at most) to the shop while it
-is open, queues, buys, and carries it home (`entity/ShoppingTrips`). The shop keeps what the lists ask for in its range
+is open, queues, buys, and carries it home (`entity/ShoppingTrips`). A trip once begun is seen through: if its break
+ends or its plot calls it back on the way, it finishes the errand first (only its own time starts one). A hand of the
+shop buying for itself needs no queue, but walks up to the counter like anybody. The shop keeps what the lists ask for in its range
 (the stock keeper orders it from the storehouse or the crafters by the game's recipes, as the age allows). Its card
 says what it wants and what it last bought.
 
@@ -5875,7 +5877,8 @@ what it is short of, what is new, and the till.
 pick and axe; the tailor's the wool, string, leather and dyes; the café's the wheat, sugar, eggs and cocoa; the
 fletcher's the sticks, flint and feathers; the brewery's the bottles, wart and blaze powder; the library's the lapis,
 books and paper. Each minute the town looks; a making under half of what the chest keeps is sent for from the stores
-(never more than half of what they hold), carried over by a courier, or by the maker itself if no courier comes. A
+(never more than half of what they hold, and never a lot under a quarter of what the chest keeps: nobody walks out to a
+far plot with a seed or two), carried over by a courier, or by the maker itself if no courier comes. A
 maker at work takes out of its own chest first. Out on the plots, a producer's work chest keeps its kit (a miner's
 torches and spare pick, a farmer's seed and spare hoe, a woodcutter's spare axe, a fisher's spare rod): the couriers
 leave it when they empty the chest.
@@ -8776,7 +8779,7 @@ and its dye, for a garment), rounded. The ages are the ones the makers keep to (
 | Ferry Bell | two planks, a stick, a copper ingot | Stone | ~0.7 | the ferry's builders, at each landing | rung by folk waiting at a landing | ring it to call the ferry |
 | Storehouse Unit | four planks and four sticks | Wood | ~0.7 | the builders, twenty-seven to a storehouse | the town's store | build your own store |
 | Village Board | five signs, two planks and a book | Stone | ~3.7 | the founders; then the town's hands, whenever it has been taken down | says what the town is doing; the books | put one up anywhere; read it |
-| Village Coin | a gold ingot fired in a furnace makes nine | Iron | 1 | the mint, from the Iron Age, nine to a bar of the stores' gold | wages, purses, stalls, rents | buy and sell in town |
+| Village Coin | none: struck only at the mint, eight to a gold ingot brought to a market stall's counter (the mint keeps the ninth) | Iron | 1 | the mint: from the Iron Age, nine to a bar it buys of the market; and anybody's gold at a stall's counter, from the Stone Age | wages, purses, stalls, rents | buy and sell in town |
 | Village Charter | paper, bread, a gold ingot, seeds and a chest | Iron | ~12 | the shop's workshop, on your order | founds a town of its own | found a town |
 | Village Folk Spawner | eight bread round a gold ingot | Iron | ~13 | the shop's workshop, on your order | founds a town, or adds a settler | as it says |
 | Job Board | eight oak planks round a book | Stone | ~3 | the shop's workshop, on your order | the crew's board: roster and preset | right-click it |
@@ -8788,10 +8791,13 @@ and its dye, for a garment), rounded. The ages are the ones the makers keep to (
 **Where it is said.** `entity/Makers` names every thing's maker and when it is made, and the game test ia01 fails, by
 name, for a thing that has no recipe, no age, no worth, no maker, or makings the stores cannot run to. The game tests
 `ItemAuditGameTests` (ia01 to ia11) check that:
-* every item of the mod's has a recipe, its age, a worth and a maker, and the stores of a grown town run to every one of
-  them at the bench, the whole way from logs, wool and ore; and the pets' things are on the market's board;
-* a gold ingot struck at the mint makes nine coins, a coin is worth one, and an Iron Age town mints three bars of its stores' gold
-  into twenty-seven coin; and the memory core has no recipe, the reason given, and no worth;
+* every item of the mod's has a recipe (or the reason it has none: the coin, struck only at the mint), its age, a worth and
+  a maker, and the stores of a grown town run to every one of them at the bench, the whole way from logs, wool and ore; and
+  the pets' things are on the market's board;
+* no furnace strikes coin; a coin is worth one; an Iron Age town, its market open and its treasury low, buys three bars of the
+  stores' gold of its market and strikes twenty-seven coin, new money; a player's two ingots at a stall's counter come back as
+  sixteen coins, the mint keeping two for the town and the ingots going to the market; no mint in a Wood Age town; and the
+  memory core has no recipe, the reason given, and no worth;
 * the tailor knots a net of five of the stores' string for each of the fleet's two boats and no third, a net hauls two
   to four fish to a line's one or two, and a player's cast over a pond brings fish up and wears the net (and nothing
   off dry land);

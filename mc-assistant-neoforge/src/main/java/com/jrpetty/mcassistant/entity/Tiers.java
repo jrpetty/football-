@@ -72,6 +72,8 @@ public final class Tiers {
         if (set != null) return set;
         Villages.Age fixed = com.jrpetty.mcassistant.item.FieldItems.ageOf(it);    // [fields] the satchel's and the barrel's own age
         if (fixed != null) return fixed;
+        // [health] The coin has no recipe (struck only at the mint), so the rule cannot read it off one: it is gold, the Iron Age's.
+        if (it == com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get()) return Villages.Age.IRON;
         ItemStack s = new ItemStack(it);
         String path = BuiltInRegistries.ITEM.getKey(it).getPath().toLowerCase(Locale.ROOT);
         List<String> words = List.of(path.split("_"));

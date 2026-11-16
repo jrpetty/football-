@@ -1327,7 +1327,9 @@ public final class Weave {
         String r = role(f);
         double s = switch (r) {
             case "steward" -> 1.5;
-            case "elder" -> 1.5;                                        // [roles-a] the leader's look is the town's
+            // [health] The leader is counted already, and well (Fashion.setters: "the leader", the most of any office); a
+            // second helping for the same office here put the leader over the town's wealthiest, best liked and its partner.
+            case "elder" -> 0.0;                                        // [roles-a] the leader's look is the town's
             case "auctioneer" -> 1.0;
             case "teacher", "curator", "healer", "sexton" -> 0.5;       // [roles-a]
             case "planner" -> 0.5;                                      // [roles-e] the plans for the town's look
