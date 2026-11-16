@@ -1253,6 +1253,7 @@ public final class Businesses {
     static void draw(ServerLevel level, UUID village, Business b, long day) {
         Day week = b.last(day - 1, 7);
         long net = week.net();
+        net -= TownBudget.rates(level, village, b, day);                     // [econ-1d] the business rates, profit or none
         long tax = TownBudget.profitsTax(level, village, b, net, day);      // [econ-1b] the profits tax, before the owners draw
         net -= tax;
         long spare = b.till - floatOf(b, day);

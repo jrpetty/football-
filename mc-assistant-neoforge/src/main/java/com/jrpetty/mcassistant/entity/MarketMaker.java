@@ -955,6 +955,8 @@ public final class MarketMaker {
         else Privatisation.begin(level, v, day);
         // [econ-1b] The town's money is made in its businesses now: the council taxes their profits, a tenth to start.
         if (TaxBook.rate(id, TaxBook.Lever.PROFITS) == 0) TaxBook.set(level, v, TaxBook.Lever.PROFITS, 1, "the council, on Market Opening Day");
+        // [econ-1d] And a coin a week from every business for its premises: the business rates, profit or none.
+        if (TaxBook.rate(id, TaxBook.Lever.RATES) == 0) TaxBook.set(level, v, TaxBook.Lever.RATES, 1, "the council, on Market Opening Day");
     }
 
     /** Store credit paid out of the market's cash over a day's float, oldest owed first. */

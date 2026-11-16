@@ -257,6 +257,32 @@ public final class TownBudget {
     }
 
     /**
+     * [econ-1d] The business rates on a business's week (Businesses.draw, before the profits tax): so many coins a week for
+     * its premises (twice for a firm in larger premises), profit or none, out of its till into the treasury (owed to the
+     * town, as its rent, if the till is short); in its books as a tax, in the council's books and the town's budget, the
+     * town's IOUs paid first out of it. Returns the pennies charged.
+     */
+    static long rates(ServerLevel level, UUID village, Business b, long day) {
+        if (b.town() || b.mirror() || !MarketMaker.live(village) || "storehouse".equals(b.id)) return 0;
+        int coins = TaxBook.ratesCoins(village);
+        if (coins <= 0) return 0;
+        CompoundTag r = Enterprise.rec(village, b.id);
+        if (r != null && r.getInt("premises") > 0) coins *= 2;
+        long due = coins * 100L;
+        long paid = Businesses.payOut(level, village, b, due, day);
+        Businesses.toTreasury(village, paid);
+        Business.Day d = b.today(day);
+        d.taxes += due;
+        b.allTime.taxes += due;
+        b.note(day, "paid " + Businesses.pence(due) + " in business rates");
+        TaxBook.book(village, day, "rates", (int) (paid / 100));
+        in(village, "business rates", paid);
+        Accounts.payIous(village, paid, "the business rates");
+        Businesses.dirty();
+        return due;
+    }
+
+    /**
      * [econ-1d] A household's rent for one of the town's houses, so many coins into the treasury (Homes.tenants): money in to
      * the town like any other, in its budget, and its IOUs to the market paid first out of it (it was only counted as the
      * treasury's coin before, so the town's biggest landlord's income never showed in its week nor paid what it owed).
