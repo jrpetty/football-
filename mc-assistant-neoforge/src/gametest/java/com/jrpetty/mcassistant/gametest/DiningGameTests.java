@@ -330,6 +330,17 @@ public class DiningGameTests {
             .thenSucceed();
     }
 
+    /** [health] A player's order not come: where it and the kitchen and the floor were (a CI failure with nothing to go on). */
+    private static String stalled(String what, Town t, ServerPlayer p) {
+        Dining.Order o = Dining.orderOf(p.getUUID());
+        StringBuilder why = new StringBuilder(what).append(": order ");
+        if (o == null) why.append("gone");
+        else for (Dining.Line l : o.lines) why.append(l.dish).append('=').append(l.step).append(' ');
+        why.append("(").append(roles(t)).append(")");
+        for (VillageFolkEntity f : t.folk()) why.append(" | ").append(Dining.doing(f)).append(" — ").append(f.debugLine());
+        return why.toString();
+    }
+
     private static String roles(Town t) {
         StringBuilder sb = new StringBuilder();
         for (VillageFolkEntity f : t.folk()) sb.append(f.displayNameCap()).append('=').append(f.stationTask()).append('/')
@@ -465,8 +476,11 @@ public class DiningGameTests {
                 helper.assertTrue(Dining.orderOf(pl[0].getUUID()) != null, "ordered to take away: " + ServicePoints.messageForTests(pl[0]));
                 helper.assertTrue(Market.coinsHeld(pl[0]) < 20, "paid upfront");
             })
-            .thenWaitUntil(() -> helper.assertTrue(carried(pl[0], s -> ItemStack.isSameItemSameComponents(s, cider)) == 1, "handed over"))
+            .thenWaitUntil(() -> {
+                if (carried(pl[0], s -> ItemStack.isSameItemSameComponents(s, cider)) != 1) helper.fail(stalled("handed over", t, pl[0]));
+            })
             .thenExecute(() -> {
+                Kit.log("dn05 handed over by tick " + helper.getTick());
                 helper.assertTrue(Ledger.coins(t.id()) - till[0] == 20 - Market.coinsHeld(pl[0]), "the coin into the till");
                 Kit.noLeftoverPlayers(level);
             })
@@ -494,7 +508,9 @@ public class DiningGameTests {
                 BlockPos away = Kit.surface(level, t.heart().getX(), t.heart().getZ() + 14);
                 pl[0].teleportTo(away.getX() + 0.5, away.getY(), away.getZ() + 0.5);
             })
-            .thenWaitUntil(() -> helper.assertTrue(carried(pl[0], s -> ItemStack.isSameItemSameComponents(s, cider)) == 1, "brought out to the player"))
+            .thenWaitUntil(() -> {
+                if (carried(pl[0], s -> ItemStack.isSameItemSameComponents(s, cider)) != 1) helper.fail(stalled("brought out to the player", t, pl[0]));
+            })
             .thenExecute(() -> {
                 double nearest = Double.MAX_VALUE;
                 for (VillageFolkEntity f : Hospitality.in(t.id(), Hospitality.Role.WAITER)) nearest = Math.min(nearest, f.distanceTo(pl[0]));

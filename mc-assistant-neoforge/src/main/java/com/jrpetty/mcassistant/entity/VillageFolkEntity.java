@@ -571,6 +571,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
                 && TownCalendar.hold(this, calendar)) return;
+        // [health] The crier between its steps (Crier.hold, one tick in four): kept on the square, nothing else of its day
+        // run in between (the rest of its tick walked it eight blocks off the square in the middle of the news on CI).
+        if (!withAPlayer && Crier.busy(this)) return;
         // [batchB] The year's festivals (Festivals): a midwinter present bought and taken round, a snowman built by the playground.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel festive
                 && Festivals.hold(this, festive)) return;
@@ -2927,7 +2930,6 @@ public class VillageFolkEntity extends AssistantEntity {
         if (id != null && RestDay.now(id, level().getDayTime()) != null) return "the day of rest";
         Boolean bell = TownBell.shift(this);
         if (bell != null && !bell) return "the town bell";
-        if (TownCalendar.busy(this)) return "about the town's calendar";     // [health] the news cried, a birthday present
         if (!onShift()) return "off shift";
         return onBreak() ? "on a break" : "";
     }
@@ -2958,10 +2960,6 @@ public class VillageFolkEntity extends AssistantEntity {
         if (serving != null) return serving;
         // The day of rest: nobody works but the watch.
         if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
-        // [health] The calendar's business first (the noon news cried, the bell rung, a birthday present taken round), in a
-        // town that keeps no bell too: the crier of a town with no bell was on its shift, its walk to the plot taking it
-        // off the square between its lines (TownBell.shift asks only in a town whose bell keeps the day).
-        if (TownCalendar.busy(this)) return false;
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
         Boolean bell = TownBell.shift(this);
         if (bell != null) return bell;
@@ -6934,6 +6932,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - tradeCheckTick < 6000) return false;      // once every five minutes
         tradeCheckTick = tickCount;
         if (Enterprise.keepsTrade(this)) return false;            // [econ-1b] a firm's hand stays at its firm's work
+        if (Hospitality.keepsTrade(this)) return false;           // [health] the dining room's posts, and a dish in hand
         // Only on a full view. The shape is judged from who is LOADED, and in
         // a big village that is whoever is near the player: stand by the
         // farms and the miners are all asleep in unloaded chunks, so "miners:

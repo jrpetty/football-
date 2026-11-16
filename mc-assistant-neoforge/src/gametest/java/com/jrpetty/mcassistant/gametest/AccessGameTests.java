@@ -263,24 +263,24 @@ public class AccessGameTests {
         List<BlockPos> by = besideBed(level, up.get(0));
         helper.assertTrue(!by.isEmpty(), "somewhere to stand by the bed");
         w.moveTo(rung.getX() + 0.5, rung.getY() + 0.2, rung.getZ() + 0.5, 0.0F, 0.0F);
+        w.setOnGround(false);                                   // in the rungs, off the ground (as it is once it has ticked there)
         w.getNavigation().stop();
-        BlockPos held = rung;
-        helper.runAtTickTime(2, () -> {
-            helper.assertTrue(w.onClimbable() && !w.onGround(), "holding the ladder, off the ground: at " + w.position() + ", ground " + w.onGround());
-            PathNavigation nav = w.getNavigation();
-            Path p = null;
-            for (BlockPos s : by) {
-                Path q = nav.createPath(s, 0);
-                if (q != null && q.canReach()) { p = q; break; }
-            }
-            Kit.log("ac04 on the rung at " + held.toShortString() + " (" + w.position() + "): a way to the bed upstairs "
-                + (p == null ? "none" : p.getNodeCount() + " places from " + p.getNode(0).asBlockPos().toShortString()));
-            helper.assertTrue(p != null, "a way planned from the rung it holds to the bed upstairs");
-            List<Stop> route = List.of(new Stop(by, "the bed upstairs at " + up.get(0).toShortString()), new Stop(List.of(street(b)), "the street"));
-            walk(helper, level, List.of(w), List.of(route), 900, new int[]{ 0 }, () -> {
-                Kit.log("ac04 from the rung up to the bed and down to the street by tick " + helper.getTick());
-                helper.succeed();
-            });
+        helper.assertTrue(w.onClimbable(), "holding the ladder at " + w.position());
+        PathNavigation nav = w.getNavigation();
+        Path p = null;
+        for (BlockPos s : by) {
+            Path q = nav.createPath(s, 0);
+            if (q != null && q.canReach()) { p = q; break; }
+        }
+        Kit.log("ac04 on the rung at " + rung.toShortString() + ": a way to the bed upstairs "
+            + (p == null ? "none" : p.getNodeCount() + " places from " + p.getNode(0).asBlockPos().toShortString()));
+        helper.assertTrue(p != null, "a way planned from the rung it holds to the bed upstairs");
+        helper.assertTrue(p.getNode(0).asBlockPos().equals(rung), "from the rung itself, not the foot of the shaft: " + p.getNode(0).asBlockPos().toShortString());
+        nav.stop();
+        List<Stop> route = List.of(new Stop(by, "the bed upstairs at " + up.get(0).toShortString()), new Stop(List.of(street(b)), "the street"));
+        walk(helper, level, List.of(w), List.of(route), 900, new int[]{ 0 }, () -> {
+            Kit.log("ac04 from the rung up to the bed and down to the street by tick " + helper.getTick());
+            helper.succeed();
         });
     }
 

@@ -331,6 +331,19 @@ public final class Hospitality {
         appoint(level, v, f, role);
     }
 
+    /**
+     * [health] Does this hand keep its trade when the town's hands are shared out again (VillageFolkEntity.changedTrade)?
+     * A dish or a plate in hand (Dining), or a post of the trade's (the head cook, a waiter, the barkeep...) at a place
+     * the town has: a town of four with three cooks sent its head cook down the mine in the middle of an order, and the
+     * order waited on a hand that had gone. A plain line cook goes where it is wanted, as ever.
+     */
+    public static boolean keepsTrade(VillageFolkEntity f) {
+        if (Dining.busy(f)) return true;
+        Role r = role(f);
+        UUID village = f.ownerId();
+        return r != Role.NONE && r != Role.LINE_COOK && village != null && placeFor(village, r) != null;
+    }
+
     /** Where a job is done: the tavern's bar, the bakery, the inn, the grandest dining room for the floor and the
      *  kitchen. Null if the town has none of them. */
     @Nullable
