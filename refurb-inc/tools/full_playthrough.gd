@@ -35,7 +35,10 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT)
 	for f in DirAccess.get_files_at(OUT):
 		DirAccess.remove_absolute(OUT + f)
-	get_window().size = Vector2i(1600, 900)
+	var big := "--hd" in OS.get_cmdline_user_args()
+	get_window().size = Vector2i(1600, 900) if big else Vector2i(1024, 576)
+	if not big:
+		Settings.values["graphics_preset"] = "low"      # software-rendered test boxes; pass -- --hd for full quality
 	_backup_saves(true)        # this run saves and continues; keep the developer's own saves safe
 	await _title_and_new_game()
 	await _movement()
