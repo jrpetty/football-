@@ -89,7 +89,9 @@ public final class AfterWarStage {
             }
             out.add("ruin: " + Ruins.ruinNow(level, dying));
             out.add("decay: " + Ruins.decayNow(level, dying.id(), 5) + " blocks");
-            out.add("VIEW ruin " + (rx + 9) + " " + (ry + 7) + " " + (rz + 12) + " " + rx + " " + (ry + 2) + " " + (rz - 2));
+            // From inside the cleared ground, not its edge: the ground staged for the ruin is cut down into the hillside, and a
+            // camera at the edge stood in the rock and was lifted over it, looking straight down on the roof.
+            out.add("VIEW ruin " + (rx + 5) + " " + (ry + 4) + " " + (rz + 9) + " " + rx + " " + (ry + 2) + " " + (rz - 2));
         } else {
             out.add("ruin: no town of its own stood up at " + rx + " " + rz);
         }
