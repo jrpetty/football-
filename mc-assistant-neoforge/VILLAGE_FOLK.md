@@ -12809,6 +12809,10 @@ the producers' pay and the town's budget.
   business is paid out of what the business took, not out of its own savings put in to pay itself (which only paid the
   wage tax on its own coin). The counters' prices are at the town's price level, as the market's are (a village's hands
   earn half as much again, and pay it).
+- **The mint.** The town's mint bought its gold at the market's ask (nine coins and more a bar) and struck nine coins of
+  it, so every bar it minted lost money. Gold now goes at the mint's price, eight coins a bar at any town's price level
+  (the mint will always buy at it: a gold standard); the town's mint pays that for its bars and strikes nine, its
+  seigniorage a coin a bar to the treasury, as a player's bar at the counter comes back as eight coins.
 - **The town's budget.** The council taxes the businesses' profits (the **profits tax**, a fifth lever on the Taxes page:
   a tenth from Market Opening Day, up to three tenths), taken at each business's weekly reckoning before its owners draw.
   The market is the town's own enterprise: each morning the IOUs the town wrote it are set against what it holds over its
