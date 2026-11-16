@@ -818,6 +818,19 @@ public final class FolkAnimations {
     public static void apply(Rig rig, VillageFolkEntity folk, float age, boolean rightHanded, boolean young, float attackTime) {
         FolkAction.Seen s = folk.animSeen();
         if (s.act == 0 && (s.prev == 0 || age - s.changed >= BLEND)) return;
+        Style st = style(folk, rightHanded, young);
+        Act act = Act.of(s.act);
+        st.keepMain = attackTime > 0.0F && (act == Act.THRUST || act == Act.BLOCK || act == Act.WATCH);
+        play(rig, s, age, st);
+    }
+
+    /** Where in its clip a folk is at a tick (for the effects: the moment the hammer lands). */
+    public static float secondsFor(VillageFolkEntity folk, Clip c, float age) {
+        Style st = style(folk, true, folk.isBaby());
+        return seconds(c, age - folk.animSeen().start, st);
+    }
+
+    private static Style style(VillageFolkEntity folk, boolean rightHanded, boolean young) {
         int manner = folk.clientManner();
         int gait = Manner.gaitOf(manner);
         int h = folk.getUUID().hashCode();
@@ -831,9 +844,8 @@ public final class FolkAnimations {
         else if (gait == Manner.OLD) { st.speed *= 0.78F; st.lean = 1.15F; }
         else if (gait == Manner.PROUD) { st.lean = 0.65F; }
         if (young || gait == Manner.SKIP) { st.speed *= 1.15F; st.bounce = 1.35F; }
-        Act act = Act.of(s.act);
-        st.keepMain = attackTime > 0.0F && (act == Act.THRUST || act == Act.BLOCK || act == Act.WATCH);
-        play(rig, s, age, st);
+        st.keepMain = false;
+        return st;
     }
 
     /**

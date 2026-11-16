@@ -36,6 +36,17 @@ public class CompanionGoal extends Goal {
     public void tick() {
         Player p = folk.companionPlayer();
         if (p == null) return;
+        // [anim] Sent to a spot its employer pointed at: there it goes, and waits, till it is beckoned or half a minute passes.
+        if (folk.pointedTo != null && folk.tickCount < folk.pointedUntil && folk.distanceToSqr(p) < 24.0 * 24.0) {
+            net.minecraft.core.BlockPos to = folk.pointedTo;
+            if (folk.blockPosition().distSqr(to) > 2 && --repath <= 0) {
+                repath = 10;
+                folk.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0D);
+            }
+            if (folk.blockPosition().distSqr(to) <= 2) folk.getLookControl().setLookAt(p, 20.0F, 20.0F);
+            return;
+        }
+        folk.pointedTo = null;
         folk.getLookControl().setLookAt(p, 20.0F, 20.0F);
         double d = folk.distanceToSqr(p);
         if (d < 3.0 * 3.0) {

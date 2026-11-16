@@ -102,6 +102,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Outfit(this));
         this.addLayer(new Colours(this));
         this.addLayer(new Finery(this));
+        this.addLayer(new FolkFaceLayer(this, context.bakeLayer(FolkFaceLayer.LAYER)));   // [anim] a blink, a smile, words on its lips
         this.addLayer(new FashionLayer(this, new FashionModel(context.bakeLayer(FashionModel.LAYER))));   // [fashion] its own clothes
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
@@ -113,6 +114,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new ArmyLayer(this, context.getModelSet(), new WatchModel(context.bakeLayer(WatchModel.LAYER)), context.getItemInHandRenderer()));   // [war] the army's surcoat, cloak, sash
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new FolkActionLayer(this, context.getItemInHandRenderer()));   // [anim] the act's tools in empty hands
         this.addLayer(new WagonClient.CrateLayer(this, context.getBlockRenderDispatcher()));   // [wagons] a crate to the wagon
     }
 
@@ -321,6 +323,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
+        FolkEffects.tick(folk, far);                                    // [anim] sparks, chips, steam, notes: once a tick, in sight only
+        FolkMarks.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick, far, packedLight);   // [anim] an idea, a coin, Zzz
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;
         if (far > 48 * 48 || folk.isNoAi()) return;     // a folk stood up to be looked at says nothing
         ItemStack icon = jobIcon(folk, far);

@@ -1071,6 +1071,10 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public boolean isHired() { return hiredBy != null; }
 
+    /** [anim] Where its employer pointed it to go and wait (PlayerEmotes), and till when; null when it is at its heels. */
+    @Nullable public net.minecraft.core.BlockPos pointedTo;
+    public int pointedUntil;
+
     @Nullable public UUID hiredBy() { return hiredBy; }
 
     /** Out with somebody who hired it: it fights what threatens them, like the watch does. */

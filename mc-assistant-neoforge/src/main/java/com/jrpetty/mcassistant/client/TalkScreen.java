@@ -611,6 +611,10 @@ public class TalkScreen extends Screen {
                 : (page == Page.PROFILE ? Page.TALK : Page.PROFILE);
             case RECORD -> openWork();
             case PACK -> openPack();
+            case EMOTE -> {                                                        // [anim] the gesture, offered to this folk
+                com.jrpetty.mcassistant.entity.FolkAction.Act a = com.jrpetty.mcassistant.entity.FolkAction.Act.named(e.text());
+                if (a != null) PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.EmotePayload(a.ordinal(), last.entityId()));
+            }
             case BOARD -> PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(1));
             default -> {
                 if (e.topic() == TalkTopic.GUIDE) {

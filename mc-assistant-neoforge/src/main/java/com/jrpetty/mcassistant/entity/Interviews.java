@@ -1674,8 +1674,13 @@ public final class Interviews {
                 chair.getLookControl().setLookAt(w, 30.0F, 30.0F);
             }
             level.playSound(null, w.blockPosition(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.NEUTRAL, 1.0F, 1.2F);
+            FolkAction.play(w, FolkAction.Act.HANDSHAKE, 40);                       // [anim] across the table, hand in hand
+            FolkAction.mark(w, FolkAction.Mark.HANDSHAKE);
         }
-        if (chair != null) chair.swing(InteractionHand.MAIN_HAND);
+        if (chair != null) {
+            chair.swing(InteractionHand.MAIN_HAND);
+            FolkAction.play(chair, FolkAction.Act.HANDSHAKE, 40);                   // [anim]
+        }
         if (iv.master != null) {
             VillageFolkEntity m = Civics.find(level, iv.master);
             if (m != null) level.sendParticles(ParticleTypes.HAPPY_VILLAGER, m.getX(), m.getY() + 2.1, m.getZ(), 3, 0.2, 0.1, 0.2, 0.0);

@@ -369,6 +369,10 @@ public final class Wardens {
         b.sayLater(FolkTalk.pick(b.getRandom(), "Sorry too. Truce?", "Fair enough. Shake."), 80);
         a.life().feel(b.getUUID(), b.displayNameCap(), 15);
         b.life().feel(a.getUUID(), a.displayNameCap(), 15);
+        a.getLookControl().setLookAt(b, 30.0F, 30.0F);                                // [anim] and they shake on it
+        b.getLookControl().setLookAt(a, 30.0F, 30.0F);
+        FolkAction.play(a, FolkAction.Act.HANDSHAKE, 40);
+        FolkAction.play(b, FolkAction.Act.HANDSHAKE, 40);
         a.life().feel(w.getUUID(), w.displayNameCap(), 4);
         b.life().feel(w.getUUID(), w.displayNameCap(), 4);
         a.persona().remember(day, w.displayNameCap() + " the warden made peace between " + b.displayNameCap() + " and me", 3);

@@ -63,8 +63,9 @@ public final class AnimStage {
     };
 
     /** The rows: so many to a picture. */
-    private static final int PER_ROW = 8;
-    private static final double GAP = 2.2;
+    private static final int PER_ROW = 6;
+    private static final double GAP = 3.0;
+    private static final int ROW = 8;
 
     /** The stage where {@code at} is (its floor's top): VIEW lines, a row a picture, and what was stood up. */
     public static List<String> stage(ServerLevel level, BlockPos at) {
@@ -76,7 +77,7 @@ public final class AnimStage {
         }
         int rows = (all.size() + PER_ROW - 1) / PER_ROW;
         int x0 = at.getX(), y = at.getY(), z0 = at.getZ();
-        int width = (int) Math.ceil(PER_ROW * GAP) + 4, depth = rows * 6 + 18;
+        int width = (int) Math.ceil(PER_ROW * GAP) + 4, depth = rows * ROW + 18;
         for (int dx = -3; dx <= width; dx++) {
             for (int dz = -3; dz <= depth; dz++) {
                 level.setBlock(new BlockPos(x0 + dx, y - 1, z0 + dz), Blocks.SMOOTH_STONE.defaultBlockState(), 2);
@@ -88,19 +89,23 @@ public final class AnimStage {
         for (int i = 0; i < all.size(); i++) {
             Part p = all.get(i);
             int row = i / PER_ROW, col = i % PER_ROW;
-            double fx = x0 + 1.5 + col * GAP, fz = z0 + 1.5 + row * 6;
+            double fx = x0 + 1.5 + col * GAP, fz = z0 + 1.5 + row * ROW;
             VillageFolkEntity f = standUp(level, fx, y, fz, p, i);
             if (f != null) stood++;
         }
         for (int r = 0; r < rows; r++) {
-            double mid = x0 + 1.5 + (PER_ROW - 1) * GAP / 2.0, fz = z0 + 1.5 + r * 6;
+            double mid = x0 + 2.0 + (PER_ROW - 1) * GAP / 2.0, fz = z0 + 1.5 + r * ROW;
             StringBuilder names = new StringBuilder();
             for (int i = r * PER_ROW; i < Math.min(all.size(), (r + 1) * PER_ROW); i++) names.append(i > r * PER_ROW ? "," : "").append(all.get(i).act().word());
-            out.add(String.format(java.util.Locale.ROOT, "VIEW row%d %.1f %d %.1f %.1f %d %.1f %s", r, mid, y + 1, fz + 8.5, mid, y + 1, fz, names));
-            out.add(String.format(java.util.Locale.ROOT, "VIEW row%dclose %.1f %d %.1f %.1f %d %.1f %s", r, mid - 4.4, y, fz + 4.2, mid - 4.4, y + 1, fz,
-                names.toString().split(",").length > 2 ? String.join(",", java.util.Arrays.copyOf(names.toString().split(","), 4)) : names));
+            out.add(String.format(java.util.Locale.ROOT, "VIEW row%d %.1f %d %.1f %.1f %d %.1f %s", r, mid, y, fz + 7.0, mid, y + 1, fz, names));
+            String[] each = names.toString().split(",");
+            for (int h = 0; h < 2; h++) {
+                double cx = x0 + 2.0 + (h * 3 + 1) * GAP;
+                String some = String.join(",", java.util.Arrays.copyOfRange(each, Math.min(each.length, h * 3), Math.min(each.length, h * 3 + 3)));
+                if (!some.isEmpty()) out.add(String.format(java.util.Locale.ROOT, "VIEW row%d%s %.1f %d %.1f %.1f %d %.1f %s", r, h == 0 ? "a" : "b", cx, y, fz + 4.4, cx, y + 1, fz, some));
+            }
         }
-        int lz = z0 + 1 + rows * 6 + 4;
+        int lz = z0 + 1 + rows * ROW + 4;
         out.addAll(life(level, x0 + 2, y, lz));
         out.add(0, "STAGE anim " + x0 + " " + y + " " + z0 + ": " + stood + " folk, " + rows + " rows of " + PER_ROW);
         return out;
@@ -177,8 +182,8 @@ public final class AnimStage {
 
     @Nullable
     private static VillageFolkEntity standUp(ServerLevel level, double x, int y, double z, Part p, int i) {
-        // The block its work is at, a step in front of it (it faces the camera, south).
-        BlockPos front = BlockPos.containing(x, y, z + 1.0);
+        // The block its work is at, a step in front of it (it faces east: the camera, to the south, sees it side on).
+        BlockPos front = BlockPos.containing(x + 1.0, y, z);
         if (p.block() != null) {
             BlockState st = p.block().defaultBlockState();
             if (p.block() == Blocks.FARMLAND || p.block() == Blocks.WATER) {
@@ -194,10 +199,10 @@ public final class AnimStage {
         }
         VillageFolkEntity f = one(level, x, y, z, p.trade(), p.act(), i);
         if (f == null) return null;
-        turn(f, 0.0F);
-        if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -0.2 : 0.0), y, z + (p.act() == Act.LEAD ? -1.6 : 1.3));
-        if (p.act() == Act.SHEAR || p.act() == Act.FEED) animal(level, p.act() == Act.SHEAR ? EntityType.SHEEP : EntityType.CHICKEN, x, y, z + 1.3);
-        if (p.act() == Act.REPAIR) animal(level, EntityType.IRON_GOLEM, x, y, z + 1.6);
+        turn(f, -90.0F);
+        if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -1.8 : 1.3), y, z - 0.4);
+        if (p.act() == Act.SHEAR || p.act() == Act.FEED) animal(level, p.act() == Act.SHEAR ? EntityType.SHEEP : EntityType.CHICKEN, x + 1.3, y, z);
+        if (p.act() == Act.REPAIR) animal(level, EntityType.IRON_GOLEM, x + 1.7, y, z);
         return f;
     }
 

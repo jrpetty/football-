@@ -45,7 +45,9 @@ public final class TalkMenu {
         /** Its work record (RecordScreen). */
         RECORD,
         /** Its pack. */
-        PACK
+        PACK,
+        /** [anim] A gesture of the player's own to it (its text the act's name: PlayerEmotes), a wave, a handshake. */
+        EMOTE
     }
 
     /** A page that takes the place of the conversation. */
@@ -201,6 +203,11 @@ public final class TalkMenu {
         return new Entry(id, icon, Kind.GROUP, TalkTopic.OPEN, "", ALWAYS, List.of(children), null, null);
     }
 
+    /** [anim] A gesture: the player's emote, offered to this folk. */
+    private static Entry emote(String id, Item icon, String act) {
+        return new Entry(id, icon, Kind.EMOTE, TalkTopic.OPEN, act, ALWAYS, List.of(), null, null);
+    }
+
     private static Entry special(String id, Item icon, Kind kind) {
         return new Entry(id, icon, kind, TalkTopic.OPEN, "", ALWAYS, List.of(), null, null);
     }
@@ -299,7 +306,10 @@ public final class TalkMenu {
                 ask("fashion", Items.LEATHER_CHESTPLATE, TalkTopic.FASHION),
                 MEAL,
                 ask("dice", Items.RABBIT_FOOT, TalkTopic.DICE),
-                SORRY)),
+                SORRY,
+                emote("emote_wave", Items.FEATHER, "wave"),                 // [anim] a gesture of the player's own
+                emote("emote_handshake", Items.EMERALD, "handshake"),
+                emote("emote_bow", Items.GOLDEN_HELMET, "bow"))),
         // About: its life.
         List.of(
             ask("about", Items.NAME_TAG, TalkTopic.ABOUT),

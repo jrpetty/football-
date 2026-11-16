@@ -61,6 +61,11 @@ public final class AnimCommands {
                     .executes(AnimCommands::mark)))
                 .then(Commands.literal("stop").executes(AnimCommands::stop))
                 .then(Commands.literal("stage").executes(AnimCommands::stage))));
+        // The player's own emotes, typed (the wheel and the talk screen send the same): anybody, at the same pace.
+        event.getDispatcher().register(Commands.literal("village")
+            .then(Commands.literal("emote").then(Commands.argument("emote", StringArgumentType.word())
+                .suggests((ctx, b) -> SharedSuggestionProvider.suggest(Arrays.stream(com.jrpetty.mcassistant.entity.EmoteRules.EMOTES).map(Act::word), b))
+                .executes(AnimCommands::emote))));
     }
 
     /** An op, or a player in creative. */
@@ -134,6 +139,20 @@ public final class AnimCommands {
         if (f == null) return 0;
         FolkAction.stop(f);
         ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is back to " + FolkAction.now(f).word()), false);
+        return 1;
+    }
+
+    private static int emote(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
+        Act a = Act.named(StringArgumentType.getString(ctx, "emote"));
+        com.jrpetty.mcassistant.entity.PlayerEmotes.Result r = a == null ? com.jrpetty.mcassistant.entity.PlayerEmotes.Result.NOT_AN_EMOTE
+            : com.jrpetty.mcassistant.entity.PlayerEmotes.emote(p, a.ordinal(), -1);
+        if (r != com.jrpetty.mcassistant.entity.PlayerEmotes.Result.OK) {
+            ctx.getSource().sendFailure(Component.literal(r == com.jrpetty.mcassistant.entity.PlayerEmotes.Result.TOO_SOON ? "Not so fast."
+                : r == com.jrpetty.mcassistant.entity.PlayerEmotes.Result.NOT_NOW ? "Not now." : "No such emote."));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("emote: " + a.word()), false);
         return 1;
     }
 

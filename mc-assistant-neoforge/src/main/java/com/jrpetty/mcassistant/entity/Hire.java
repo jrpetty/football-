@@ -40,11 +40,11 @@ public final class Hire {
         if (f.isHired() && !p.getUUID().equals(f.hiredBy())) return "I'm spoken for already — I'm off adventuring with " + f.hiredName + ".";
         if (village != null && (Laws.banished(village, p.getUUID(), day)
                 || Standing.of(village, p.getUUID(), level.getGameTime()).title() == Standing.Title.OUTCAST)) {
-            return "Go anywhere with you? Not for all the coin in the world.";
+            return FolkAction.shrug(f, "Go anywhere with you? Not for all the coin in the world.");
         }
-        if (f.persona().affinity(p.getUUID()) < 10) return "Hire me? I hardly know you. Talk to me a while first.";
-        if (Raids.underAlarm(village)) return "Not with the bell ringing! Ask me when it's quiet.";
-        if (!f.isHired() && f.persona().mood() < 25) return "I'm not up to it. Ask me another day.";
+        if (f.persona().affinity(p.getUUID()) < 10) return FolkAction.shrug(f, "Hire me? I hardly know you. Talk to me a while first.");
+        if (Raids.underAlarm(village)) return FolkAction.shrug(f, "Not with the bell ringing! Ask me when it's quiet.");
+        if (!f.isHired() && f.persona().mood() < 25) return FolkAction.shrug(f, "I'm not up to it. Ask me another day.");
         int coins = Market.coinsHeld(p);
         if (coins < PRICE) {
             return "I'll go with you for " + PRICE + " coins a day — I'll fight, I'll carry, and I'll want a story out of it. You've "
@@ -65,6 +65,7 @@ public final class Hire {
         }
         f.hire(p, until);
         f.persona().remember(day, you + " hired me for an adventure", 4);
+        if (p instanceof net.minecraft.server.level.ServerPlayer sp) PlayerEmotes.shake(sp, f);   // [anim] shaken on
         Social.Life life = f.life();
         if (life.has(Social.Trait.CURIOUS)) return "An adventure? I've been waiting all my life for somebody to ask! Lead the way.";
         if (life.has(Social.Trait.GRUMPY)) return "Fine. Four coins a day, and I'm not carrying anything heavy. Well — not much.";

@@ -148,8 +148,21 @@ public final class FolkAction {
         public int start, prevStart, changed = -1000;
         public int mark, markAt = -1000;
         private int seq = -1, markSeq = -1;
+        /** The effects' own (client/FolkEffects): the tick they last ran, where in its clip it was, and for which act. */
+        public int fxTick = -1, fxAct;
+        public float fxSec = -1.0F;
         /** The game's own clock for a keyframe animation, started at each new act (as the warden's and the camel's are). */
         public final net.minecraft.world.entity.AnimationState state = new net.minecraft.world.entity.AnimationState();
+
+        /** A player's emote begun (or 0: over), on its own clock (client/PlayerEmotesClient). */
+        public void begin(int a, int tick) {
+            prev = act;
+            prevStart = start;
+            changed = tick;
+            act = a;
+            start = tick;
+            state.start(tick);
+        }
 
         public void heard(int packed, int tick) {
             int a = actOf(packed), q = seqOf(packed);
@@ -220,6 +233,12 @@ public final class FolkAction {
         State s = f.animState();
         s.until = f.tickCount + Math.max(1, ticks);
         set(f, s, act, true);
+    }
+
+    /** A request turned down: a shrug, and the words it says (for a return line: {@code return FolkAction.shrug(f, "...")}). */
+    public static String shrug(VillageFolkEntity f, String words) {
+        play(f, Act.SHRUG, 30);
+        return words;
     }
 
     /** A played act over now: back to what it is doing. */
