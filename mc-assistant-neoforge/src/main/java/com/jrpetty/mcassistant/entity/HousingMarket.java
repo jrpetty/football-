@@ -1468,6 +1468,7 @@ public final class HousingMarket {
         }
         Map<BlockPos, BlockState> lay = new HashMap<>();
         List<Integer> done = new ArrayList<>();
+        if (!things && c.foreclosed && TownBudget.halted(id)) return "waits: the town is at its borrowing's end";   // [econ-1e] on the works' account
         if (!things) {
             // By kind of block: what the stores can pay for goes in; what they cannot, waits.
             Map<Block, List<Integer>> byBlock = new LinkedHashMap<>();
