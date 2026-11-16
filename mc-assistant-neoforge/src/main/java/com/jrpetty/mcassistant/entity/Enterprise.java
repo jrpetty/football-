@@ -193,8 +193,16 @@ public final class Enterprise {
     /** The firm whose hand is at work in this tick (a craft turn, a bench's batch), if one is. */
     @Nullable
     static Business atWork(UUID village) {
+        if (offDuty) return null;                                       // [econ-1c] at the town's wants, not the firm's
         VillageFolkEntity f = Accounts.actor();
         return f == null ? null : employerOf(village, f);
+    }
+
+    /** [econ-1c] A firm's hand at a turn of the town's own work (Crafts.now, its firm's shelf full): not the firm's making. */
+    private static boolean offDuty;
+
+    static void offDuty(boolean on) {
+        offDuty = on;
     }
 
     /** A firm's hands and its owner stay at its work: the town's own sums do not move them to another trade. */
