@@ -145,6 +145,16 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
     /** [access-3] A lit campfire was among the blocks round the place being weighed. */
     private boolean hearthBeside;
 
+    /**
+     * [health] Where a search starts: for a folk holding a ladder, the rung its feet are in (the game's own start drops
+     * down the shaft to whatever floor is under it, as for one in mid-air); otherwise the game's own.
+     */
+    @Override
+    public net.minecraft.world.level.pathfinder.Node getStart() {
+        if (this.mob != null && this.currentContext != null && FolkWays.onLadder(this.mob)) return getStartNode(this.mob.blockPosition());
+        return super.getStart();
+    }
+
     /** [access-3] The search's neighbours, with a ladder's ways up and down it (FolkWays). */
     @Override
     public int getNeighbors(net.minecraft.world.level.pathfinder.Node[] out, net.minecraft.world.level.pathfinder.Node node) {

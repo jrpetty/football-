@@ -409,6 +409,7 @@ public final class TownSpeech {
      */
     public static String flavour(VillageFolkEntity f, String said, boolean answering) {
         if (!answering || said.isEmpty() || f.isBaby() || f.getRandom().nextInt(6) != 0) return said;
+        if (f.ownerId() != null) for (Saying k : sayings(f.ownerId())) if (said.contains("\"" + k.text() + "\"")) return said;   // [health] telling one already
         String s = saying(f.ownerId(), f.getRandom());
         if (s == null) return said;
         return said + " " + FolkTalk.pick(f.getRandom(), "As we say in " + Villages.name(f.ownerId()) + ": " + s + ".",
@@ -466,8 +467,9 @@ public final class TownSpeech {
         }
         Saying s = mine.get(r.nextInt(mine.size()));
         String from = s.from().contains(": ") ? s.from().substring(s.from().indexOf(": ") + 2) : s.from();
+        // [health] One saying and its story at a time: the others are for another asking.
         return "We say \"" + s.text() + "\" here. It comes from day " + (s.day() + 1) + ", when " + from + "."
-            + (mine.size() > 1 ? " And \"" + mine.get((mine.indexOf(s) + 1) % mine.size()).text() + "\", but that's another story." : "");
+            + (mine.size() > 1 ? " There's more, but that's another story." : "");
     }
 
     // ------------------------------------------------------------------ nicknames

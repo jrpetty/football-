@@ -1331,7 +1331,8 @@ blocks come out of the stores, and what is dug goes into them.
 
 **Every room reached.** The folk go up a ladder as readily as a stair: to the beds under a cottage's
 second roof, a manor's upper floor, a loft, a gallery. Going down, they let themselves down the rungs
-and step off at the foot. They open a fence gate on their way and shut it behind them, so the
+and step off at the foot. One called somewhere else halfway up a ladder works out its way from the rung
+it holds. They open a fence gate on their way and shut it behind them, so the
 allotments, the apiary and the stable's yard are for walking into; a prisoner of war never opens the
 stockade's gate (only, under the watch, on its way out to a stint in the fields). They walk past a
 campfire, though they never step onto one or anywhere near real fire. A building taken up again after
@@ -4992,7 +4993,7 @@ why it is not doing more.
   bubbles over its head: what happened yesterday and this morning (who was born, who died, what
   went up), the elder's order, when market day is and what the town is short of. The crier is the
   elder's pick, a sociable one by preference, never the elder itself or the bell-ringer; its dinner
-  waits till it is done. Stand on the square at noon to hear it.
+  and its work wait till it is done, and it stays on the square for every line. Stand on the square at noon to hear it.
 * **The gazette.** A town with a meeting hall keeps its paper there: a written book open on a
   lectern beside the elder's chair, written up afresh every morning with yesterday's births,
   deaths and new buildings, the elder's order and the market's prices (what the stores sell their

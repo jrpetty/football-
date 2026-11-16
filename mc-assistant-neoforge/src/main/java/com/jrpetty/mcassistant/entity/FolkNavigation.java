@@ -301,11 +301,28 @@ public class FolkNavigation extends GroundPathNavigation {
     protected Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy) {
         if (this.level.isClientSide || !mayPlan(targets)) return null;
         long t0 = System.nanoTime();
+        planning = true;
         try {
             return plan(targets, regionOffset, offsetUpward, accuracy);
         } finally {
+            planning = false;
             spentNanos += System.nanoTime() - t0;
         }
+    }
+
+    /** [health] A way being planned just now (createPath), for canUpdatePath. */
+    private boolean planning;
+
+    /**
+     * [health] The game plans a walker's way only with its feet on the ground (or in water, or riding): one holding a
+     * ladder, off the ground, could plan nothing, so a folk asked to go somewhere else halfway up a ladder (a walk
+     * planned afresh, a new errand) stood there asking. On a ladder its way is planned from the rung it holds
+     * (FolkNodeEvaluator.getStart). Only the planning: how a walk is followed up or down the rungs is the game's own
+     * and FolkWays'.
+     */
+    @Override
+    protected boolean canUpdatePath() {
+        return super.canUpdatePath() || planning && FolkWays.onLadder(this.mob);
     }
 
     @Nullable

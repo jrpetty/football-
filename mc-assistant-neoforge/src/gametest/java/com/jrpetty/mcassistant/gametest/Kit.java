@@ -79,6 +79,10 @@ final class Kit {
         com.jrpetty.mcassistant.entity.Police.standDownForTests(true);
         com.jrpetty.mcassistant.entity.CastleWall.standDownForTests(true); com.jrpetty.mcassistant.entity.CastleWall.resetForTests();   // [defence] the town wall, for the defence tests only
         com.jrpetty.mcassistant.entity.Borders.switchForTests(false);      // [borders-map] the lands, disputes and markers: BordersMapGameTests only
+        // [health] No test's own size of town for the auction or the fleet left over (FleetAuctionGameTests set both to
+        // nought): with them a town of eleven held an auction (ent05's stall waited for market day) and fitted out boats.
+        com.jrpetty.mcassistant.entity.Auctions.resetForTests();
+        com.jrpetty.mcassistant.entity.Fleet.resetForTests();
     }
 
     /**

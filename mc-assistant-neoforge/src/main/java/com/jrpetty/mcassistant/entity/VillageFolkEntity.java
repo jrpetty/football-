@@ -571,6 +571,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
                 && TownCalendar.hold(this, calendar)) return;
+        // [health] The crier between its steps (Crier.hold, one tick in four): kept on the square, nothing else of its day
+        // run in between (the rest of its tick walked it eight blocks off the square in the middle of the news on CI).
+        if (!withAPlayer && Crier.busy(this)) return;
         // [batchB] The year's festivals (Festivals): a midwinter present bought and taken round, a snowman built by the playground.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel festive
                 && Festivals.hold(this, festive)) return;
@@ -6929,6 +6932,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tickCount - tradeCheckTick < 6000) return false;      // once every five minutes
         tradeCheckTick = tickCount;
         if (Enterprise.keepsTrade(this)) return false;            // [econ-1b] a firm's hand stays at its firm's work
+        if (Hospitality.keepsTrade(this)) return false;           // [health] the dining room's posts, and a dish in hand
         // Only on a full view. The shape is judged from who is LOADED, and in
         // a big village that is whoever is near the player: stand by the
         // farms and the miners are all asleep in unloaded chunks, so "miners:

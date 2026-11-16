@@ -36,6 +36,11 @@ public final class FolkWays {
         return level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.LADDER);
     }
 
+    /** [health] Holding a ladder, off the ground: its feet in the rungs. */
+    static boolean onLadder(Mob mob) {
+        return !mob.onGround() && mob.onClimbable() && climbable(mob.level(), mob.blockPosition());
+    }
+
     /** Room for the mob's body with its feet at the bottom of this place (a rung holds it; nothing else need be under it). */
     private static boolean room(CollisionGetter level, Mob mob, BlockPos p) {
         double r = mob.getBbWidth() / 2.0;

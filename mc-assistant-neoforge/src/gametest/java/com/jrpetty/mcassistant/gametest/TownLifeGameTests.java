@@ -151,6 +151,8 @@ public class TownLifeGameTests {
         Villages.tell(village, day - 1, "Ada and Bert had a child, Cora");
         Kit.log("tl01 a town of " + folk.size() + " at " + heart.toShortString() + ", day " + day + ", " + level.getDayTime() % 24000L);
         boolean[] seen = { false };
+        double[] worst = { 0 };
+        boolean[] card = { false };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             UUID crier = Crier.crier(village);
@@ -165,24 +167,28 @@ public class TownLifeGameTests {
                 seen[0] = true;
                 Kit.log("tl01 the crier is chosen at tick " + t + "; it will read: " + Crier.linesForTests(village));
             }
-            if (read.size() < 3) {
+            // [health] On the square for every line it reads, not only the first few: a crier on its shift between lines
+            // walked off towards its plot (a town that keeps no bell asked nobody whether it was busy).
+            List<String> lines = Crier.linesForTests(village);
+            BlockPos stand = Crier.standForTests(village);
+            VillageFolkEntity f = null;
+            for (VillageFolkEntity o : folk) if (o.getUUID().equals(crier)) f = o;
+            if (!read.isEmpty()) worst[0] = Math.max(worst[0], f == null || stand == null ? 99 : flatDistance(f, stand));
+            if (!read.isEmpty() && f != null && "crying the news on the square".equals(f.hobbyNow())) card[0] = true;
+            if (read.size() < 3 || read.size() < lines.size()) {
                 if (t > 2400) helper.fail("tl01 no news cried by tick " + t + ": crier " + crier + ", read " + read);
                 return;
             }
-            VillageFolkEntity f = null;
-            for (VillageFolkEntity o : folk) if (o.getUUID().equals(crier)) f = o;
-            List<String> lines = Crier.linesForTests(village);
-            BlockPos stand = Crier.standForTests(village);
-            double far = f == null || stand == null ? 99 : flatDistance(f, stand);
+            double far = worst[0];
             Kit.log("tl01 read so far at tick " + t + ": " + read + "; the crier " + (f == null ? "?" : f.displayNameCap())
-                + " stands " + String.format("%.1f", far) + " from " + stand);
+                + " stood at most " + String.format("%.1f", far) + " from " + stand);
             helper.assertTrue(f != null && !f.isBaby(), "the crier is a grown folk of the town");
             helper.assertFalse(f.isElder(), "the leader does not cry the news itself");
-            helper.assertTrue(far <= 6.5, "the crier reads on the square: " + String.format("%.1f", far) + " blocks from it");
+            helper.assertTrue(far <= 6.5, "the crier reads on the square: at most " + String.format("%.1f", far) + " blocks from it");
             helper.assertTrue(read.equals(lines.subList(0, read.size())), "the lines are read in order: " + read + " of " + lines);
             helper.assertTrue(read.get(0).contains(Villages.name(village)), "it opens with the call and the town's name: " + read.get(0));
             helper.assertTrue(lines.stream().anyMatch(l -> l.contains("Cora")), "yesterday's birth is in the news: " + lines);
-            helper.assertTrue("crying the news on the square".equals(f.hobbyNow()), "its card says it is crying the news: " + f.hobbyNow());
+            helper.assertTrue(card[0], "its card said it was crying the news: " + f.hobbyNow());
             helper.succeed();
         });
     }

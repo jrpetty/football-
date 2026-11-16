@@ -41,7 +41,7 @@ import java.util.UUID;
  * ac02: the allotments, fenced, a gate at the front: a folk walks in through the gate to the cask of tools at the end of
  * the cross path and out again, and the gate is shut behind it; the hunter's lodge, its drying fire by the door: a folk
  * walks past the fire, in, to the chest and out, and is not burnt. ac03: the stockade: a free folk's way-finding goes in
- * and out through its gate; a prisoner of war's never does.
+ * and out through its gate; a prisoner of war's never does. ac04: a way planned from halfway up a ladder.
  *
  * <p>On ground of its own: x 2600000 to 2699999, z 70000.
  */
@@ -232,6 +232,54 @@ public class AccessGameTests {
         walk(helper, level, walkers, routes, 900, climbs, () -> {
             Kit.log("ac01 all three walked at tick " + helper.getTick() + "; ways planned up or down a ladder: " + climbs[0]);
             helper.assertTrue(climbs[0] >= 6, "the ways went up and down the ladders: " + climbs[0]);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * [health] Asked to go somewhere halfway up a ladder: a folk holding the manor's ladder, off the ground, plans its way
+     * from the rung it holds (the game plans a walker's way only from the ground, so one asked anew on a ladder found no
+     * way at all: ac01's walker, its walk planned afresh at the top of the manor's ladder, stood there on CI), and walks
+     * it to a bed upstairs and down again to the street.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "ac04_planned_on_the_ladder")
+    public static void ac04_planned_on_the_ladder(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 2660000;
+        int y = Math.max(70, Kit.surface(level, x, Z).getY());
+        VillageFolkEntity w = town(helper, level, x, x + 60, y);
+        UUID id = w.ownerId();
+        Ledger.Building b = put(level, id, "manor", new BlockPos(x + 35, y, Z), Direction.EAST);
+        // The ladder's shaft: its lowest rung, and a rung two over it.
+        BlockPos foot = null;
+        for (BuildGoal.Placement p : BuildGoal.plan(b.structure(), b.anchor(), b.facing(), 13)) {
+            if (level.getBlockState(p.pos()).is(net.minecraft.world.level.block.Blocks.LADDER) && level.getBlockState(p.pos().above(2))
+                    .is(net.minecraft.world.level.block.Blocks.LADDER) && (foot == null || p.pos().getY() < foot.getY())) foot = p.pos();
+        }
+        helper.assertTrue(foot != null, "the manor's ladder");
+        BlockPos rung = foot.above(2);
+        List<BlockPos> up = beds(level, b, 3);
+        helper.assertTrue(!up.isEmpty(), "beds up the ladder");
+        List<BlockPos> by = besideBed(level, up.get(0));
+        helper.assertTrue(!by.isEmpty(), "somewhere to stand by the bed");
+        w.moveTo(rung.getX() + 0.5, rung.getY() + 0.2, rung.getZ() + 0.5, 0.0F, 0.0F);
+        w.setOnGround(false);                                   // in the rungs, off the ground (as it is once it has ticked there)
+        w.getNavigation().stop();
+        helper.assertTrue(w.onClimbable(), "holding the ladder at " + w.position());
+        PathNavigation nav = w.getNavigation();
+        Path p = null;
+        for (BlockPos s : by) {
+            Path q = nav.createPath(s, 0);
+            if (q != null && q.canReach()) { p = q; break; }
+        }
+        Kit.log("ac04 on the rung at " + rung.toShortString() + ": a way to the bed upstairs "
+            + (p == null ? "none" : p.getNodeCount() + " places from " + p.getNode(0).asBlockPos().toShortString()));
+        helper.assertTrue(p != null, "a way planned from the rung it holds to the bed upstairs");
+        helper.assertTrue(p.getNode(0).asBlockPos().equals(rung), "from the rung itself, not the foot of the shaft: " + p.getNode(0).asBlockPos().toShortString());
+        nav.stop();
+        List<Stop> route = List.of(new Stop(by, "the bed upstairs at " + up.get(0).toShortString()), new Stop(List.of(street(b)), "the street"));
+        walk(helper, level, List.of(w), List.of(route), 900, new int[]{ 0 }, () -> {
+            Kit.log("ac04 from the rung up to the bed and down to the street by tick " + helper.getTick());
             helper.succeed();
         });
     }

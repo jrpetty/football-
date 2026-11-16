@@ -122,6 +122,7 @@ public class StableGameTests {
             boolean ok = true;
             for (long k = t; k <= t + span && ok; k += 200) {
                 level.setDayTime(k);
+                level.updateSkyBrightness();                 // [health] or isNight() reads the sky as last ticked
                 ok = !f.offWorkNow();
             }
             if (ok) {
