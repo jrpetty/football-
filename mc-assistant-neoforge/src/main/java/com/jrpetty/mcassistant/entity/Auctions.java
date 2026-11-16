@@ -103,7 +103,7 @@ public final class Auctions {
     /** A merchant's curio, brought in for the auction (Merchants). */
     static final String CURIO = "mca_curio";
 
-    public enum Owner { TOWN, PLAYER, MERCHANT }
+    public enum Owner { TOWN, PLAYER, MERCHANT, FIRM }   // [econ-1c] FIRM: a bankrupt firm's stall, sold by its receiver
 
     /** A bid: who, and how much. */
     record Bid(UUID by, String name, boolean player, int coins) {}
@@ -379,6 +379,34 @@ public final class Auctions {
         }
     }
 
+    /** [econ-1c] The firm a stall's lot is of (its token's tag). */
+    static final String STALL = "mca_stall";
+
+    /**
+     * [econ-1c] The stalls of the town's bankrupt firms, in their receiver's hands (Enterprise.stallLots): each a lot (a
+     * sign with the firm's name stands for it: the stall and its fixtures go to the winner, not the sign), from a reserve of
+     * a quarter of what it cost, for its creditors.
+     */
+    static List<Lot> stallLots(ServerLevel level, Villages.Village v) {
+        List<Lot> out = new ArrayList<>();
+        for (Enterprise.StallLot st : Enterprise.stallLots(v.id())) {
+            ItemStack token = new ItemStack(Items.OAK_SIGN);
+            token.set(DataComponents.CUSTOM_NAME, Component.literal("the stall of " + st.name()));
+            CompoundTag tag = new CompoundTag();
+            tag.putString(STALL, st.firm());
+            token.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+            out.add(new Lot(token, Owner.FIRM, null, st.name(), "of the bankrupt " + st.name() + ", sold for its creditors",
+                Math.max(1, st.worth() / 4), st.worth()));
+        }
+        return out;
+    }
+
+    /** [econ-1c] The firm a stall's lot is of, or "". */
+    static String stallOf(Lot lot) {
+        CustomData d = lot.item.get(DataComponents.CUSTOM_DATA);
+        return d == null ? "" : d.copyTag().getString(STALL);
+    }
+
     /** The players' lots waiting for the next auction. */
     static List<Lot> playerLots(ServerLevel level, Villages.Village v) {
         List<Lot> out = new ArrayList<>();
@@ -613,6 +641,7 @@ public final class Auctions {
         s.lots.addAll(townLots(level, v));
         s.lots.addAll(merchantLots(level, v));
         s.lots.addAll(playerLots(level, v));
+        s.lots.addAll(stallLots(level, v));                          // [econ-1c] a bankrupt firm's stall, for its creditors
         SALES.put(v.id(), s);
         if (s.lots.isEmpty()) {
             s.phase = Phase.DONE;
@@ -820,6 +849,7 @@ public final class Auctions {
     static int most(VillageFolkEntity f, Lot lot, double mood) {
         if (f.isBaby() || Visitors.is(f)) return 0;
         if (lot.owner == Owner.MERCHANT && f.getUUID().equals(lot.ownerId)) return 0;
+        if (lot.owner == Owner.FIRM && Enterprise.ownedStall(f, stallOf(lot))) return 0;   // [econ-1c] not its own bankrupt's
         int spare = f.purse() - 3 - Purchases.slate(f);
         if (spare <= 0) return 0;
         double means = switch (Wealth.tier(f)) {
@@ -1039,6 +1069,7 @@ public final class Auctions {
      *  merchant's goes home with it. */
     private static void unsold(ServerLevel level, Villages.Village v, Sale s, Lot lot) {
         lot.result = "unsold";
+        if (lot.owner == Owner.FIRM) Enterprise.stallUnsold(level, v.id(), stallOf(lot));   // [econ-1c] next market day, or back to the town
         if (lot.owner == Owner.PLAYER && lot.ownerId != null) {
             unhold(level, v.id(), lot);
             give(level, v.id(), lot.ownerId, 0, lot.item, "your " + lot.name() + " back: nobody would go to " + lot.reserve);
@@ -1114,10 +1145,21 @@ public final class Auctions {
             case MERCHANT -> {
                 if (lot.ownerId != null && level.getEntity(lot.ownerId) instanceof VillageFolkEntity m) m.earn(price - TaxBook.toll(v.id(), price));   // [civic-land]
             }
+            case FIRM -> {                                                  // [econ-1c] to the receiver, for its creditors
+                if (won.player()) {
+                    Enterprise.stallSoldToPlayer(level, v.id(), stallOf(lot), price, won.by(), won.name());
+                } else {
+                    Enterprise.stallSold(level, v.id(), stallOf(lot), price, folk, folk.displayNameCap());
+                }
+            }
         }
         // The thing to the winner.
         String who;
-        if (won.player()) {
+        if (lot.owner == Owner.FIRM) {
+            // [econ-1c] Not the sign: the stall itself, the winner's to set up on (Enterprise's stalls).
+            who = won.player() ? won.name() : whoWords(level, folk);
+            if (!won.player()) folk.persona().remember(s.day, "I bought " + lot.name() + " at the auction for " + price + coinWord(price), 3);
+        } else if (won.player()) {
             give(level, v.id(), won.by(), 0, item, "you won the " + lot.name() + " at auction for " + price);
             who = won.name();
         } else {
@@ -1153,6 +1195,9 @@ public final class Auctions {
      *  pack. Empty if it is gone. */
     static ItemStack takeLot(ServerLevel level, Villages.Village v, Lot lot) {
         switch (lot.owner) {
+            case FIRM -> {
+                return lot.item.copy();                                     // [econ-1c] the stall stands for itself
+            }
             case TOWN -> {
                 ItemStack one = lot.item.copyWithCount(1);
                 Predicate<ItemStack> same = s -> ItemStack.isSameItemSameComponents(s, one);

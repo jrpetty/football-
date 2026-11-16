@@ -5853,6 +5853,11 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A bow from the stores, or one of its own made of three string and three sticks (a log will do). */
     private void bowFromTheStores() {
         if (hasBow() || villageCentre == null || tickCount - bowTick < 1200) return;
+        // [econ-1c] A bow it carries is its bow, drawn or not: hasBow() asks whether it has the rank to draw one, and a hunter
+        // short of it fetched another from the stores every minute, its business paying for each (six bows a day, sixty
+        // coins). And a bow it has not the rank to draw is no use to it: it hunts with what it has till it has.
+        if (countCarried(st -> st.is(net.minecraft.world.item.Items.BOW)) > 0
+            || !mayShoot(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW))) return;
         bowTick = tickCount;
         int r = buildStoresRadius();
         if (drawFrom(villageCentre, st -> st.is(net.minecraft.world.item.Items.BOW), 1, r) > 0) {

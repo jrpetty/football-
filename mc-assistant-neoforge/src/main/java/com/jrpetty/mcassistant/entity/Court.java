@@ -82,6 +82,7 @@ public final class Court {
             m[1] = level.getGameTime();
             f.getNavigation().stop();
             f.persona().remember(day, "I held court in the leader's hall", 2);
+            Enterprise.hearings(level, village, f);                        // [econ-1c] the bankruptcies before the court
         }
         if (level.getGameTime() - m[1] > SITTING) {
             m[1] = -2;

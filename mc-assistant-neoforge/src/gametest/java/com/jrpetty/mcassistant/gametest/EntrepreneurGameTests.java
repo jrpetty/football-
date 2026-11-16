@@ -41,6 +41,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -76,6 +77,8 @@ public class EntrepreneurGameTests {
             f.spend(f.purse());
             f.earn(purse);
             Values.setForTests(f, Values.Value.TRADITION, 100);         // nobody bold unless a test makes it so
+            Values.setForTests(f, Values.Value.WEALTH, 0);              // [econ-1c] (nor bold for a sure thing: wages and trade
+            Values.setForTests(f, Values.Value.PROGRESS, 0);            //  and progress at nothing)
             folk.add(f);
         }
         UUID id = folk.get(0).ownerId();
@@ -503,6 +506,158 @@ public class EntrepreneurGameTests {
         helper.succeed();
     }
 
+    // ============================================================ ent11 the clock set back, the clock held  [econ-1c]
+
+    /**
+     * The towns count their days by the world's time (TownClock). A town of four, its market not open, the clock kept as in a
+     * world being played. The player sets the time back to the first morning ("time set", absolute) on the town's third
+     * day: the day count is kept, the hour as set. Then the clock is held: set back to the same hour of the same day over
+     * and over while a whole day of the world's time goes by, eleven times: each is a day gone by, and the town holds its
+     * morning late (an hour outside the morning's) each time: its wages, its books, and on its tenth day its Market
+     * Opening Day. The coin census at nought drift.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "ent11_clock")
+    public static void ent11_clock(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        MinecraftServer server = level.getServer();
+        int x = 1502000;
+        Kit.reset(level);
+        MarketMaker.liveForTests(true);
+        Enterprise.resetForTests();
+        Kit.hold(level, x, Z, 48);
+        Kit.prepare(level, x, Z, 48);
+        long d0 = 2;
+        level.setDayTime(d0 * 24000L + 1000L);
+        com.jrpetty.mcassistant.entity.TownClock.liveForTests(true);
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        StationTask[] trades = { StationTask.FARM, StationTask.MINE, StationTask.WOOD, StationTask.FISH };
+        for (int i = 0; i < trades.length; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 4 + i * 2, Z), 0.0F);
+            helper.assertTrue(f != null, "folk " + i + " raised");
+            f.ensurePersona();
+            f.setJob(trades[i]);
+            folk.add(f);
+        }
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        Kit.Expect ok = new Kit.Expect();
+        net.minecraft.world.level.storage.ServerLevelData data = (net.minecraft.world.level.storage.ServerLevelData) level.getLevelData();
+        com.jrpetty.mcassistant.entity.TownClock.tickForTests(server);
+        com.jrpetty.mcassistant.entity.Market.tick(level, v);
+        long paid0 = Ledger.paidOn(id);
+        ok.that(paid0 == d0, "the town's morning on its first day: " + paid0);
+        // The morning after, as the world turns.
+        level.setDayTime((d0 + 1) * 24000L + 1000L);
+        com.jrpetty.mcassistant.entity.TownClock.tickForTests(server);
+        com.jrpetty.mcassistant.entity.Market.tick(level, v);
+        ok.that(Ledger.paidOn(id) == d0 + 1, "and its second: " + Ledger.paidOn(id));
+        // "time set 1000": the first morning of the world; the day count kept, the hour as set.
+        level.setDayTime(1000L);
+        com.jrpetty.mcassistant.entity.TownClock.tickForTests(server);
+        ok.that(level.getDayTime() == (d0 + 1) * 24000L + 1000L, "the clock set back: the day kept, the hour as set: " + level.getDayTime());
+        // The clock held: set back to seven in the morning over and over, a whole day of the world's time each time.
+        int held = 11;
+        for (int i = 0; i < held; i++) {
+            long dayBefore = level.getDayTime() / 24000L;
+            level.setDayTime(7000L);                                              // "time set 7000" (the first day's)
+            com.jrpetty.mcassistant.entity.TownClock.tickForTests(server);       // kept at its day
+            data.setGameTime(data.getGameTime() + 25300L);                      // a day of the world's time
+            level.setDayTime(dayBefore * 24000L + 7000L);
+            com.jrpetty.mcassistant.entity.TownClock.tickForTests(server);       // a day gone by
+            com.jrpetty.mcassistant.entity.Market.tick(level, v);
+        }
+        long paid = Ledger.paidOn(id);
+        int[] counts = com.jrpetty.mcassistant.entity.TownClock.countsForTests();
+        Kit.log("ent11 day " + (level.getDayTime() / 24000L) + " hour " + (level.getDayTime() % 24000L) + ", last morning " + paid + ", kept back "
+            + counts[0] + ", counted " + counts[1] + ", market " + (MarketMaker.live(id) ? "open since day " + MarketMaker.openedDay(id) : "not open")
+            + ", drift " + CoinCensus.lastDrift(id) + " | " + CoinCensus.line(id));
+        ok.that(counts[1] >= held, "each day held a day gone by: " + counts[1]);
+        ok.that(level.getDayTime() % 24000L == 7000L, "the hour where the player put it: " + level.getDayTime() % 24000L);
+        ok.that(paid == d0 + 1 + held, "a morning each day, held late: the last on day " + paid + " (of " + (d0 + 1 + held) + ")");
+        ok.that(MarketMaker.live(id), "its Market Opening Day came by its tenth day, the clock held or not");
+        ok.that(CoinCensus.lastDrift(id) == 0, "the census at nought drift: " + CoinCensus.lastDrift(id));
+        com.jrpetty.mcassistant.entity.TownClock.liveForTests(false);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    // ============================================================ ent13 the court and the auction  [econ-1c]
+
+    /**
+     * A toolshop that cannot pay its way: its creditors take it to the court. It trades no more; the town has no hall, so
+     * the next morning the council hears it on the square and declares it bankrupt: its stock to the market, its till to
+     * its creditors in their order, the rest of what it owes kept by the receiver against its stall, which goes under the
+     * hammer at the town's auction (a town of thirteen in the Stone Age holds one) with the town's other lots. A folk with
+     * the means buys it; what it brings pays the creditors still owed, in order; the winner owns a stall to set up on. The
+     * chronicle has it all, and the coin census stays at nought drift.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "ent13_court")
+    public static void ent13_court(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1506000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 40, StationTask.SMITH, StationTask.SMITH, StationTask.FARM, StationTask.FARM, StationTask.FARM,
+            StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        Enterprise.autoForTests(false);
+        com.jrpetty.mcassistant.entity.Auctions.manualForTests(true);
+        VillageFolkEntity owner = folk.get(0), hand = folk.get(1);
+        UUID id = owner.ownerId();
+        Villages.Village v = Villages.get(id);
+        bold(owner, StationTask.SMITH);
+        Business b = Enterprise.foundForTests(level, v, "toolsmith", owner);
+        helper.assertTrue(b != null, "a toolshop");
+        Enterprise.staffForTests(id, b, hand);
+        stores(level, id, x, new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1));
+        Enterprise.stockForTests(b, new ItemStack(Items.STONE_PICKAXE), 2, 50);
+        owner.spend(owner.purse());
+        owner.earn(8);
+        CoinCensus.morning(level, v, day(level));
+        nextDay(level);
+        long till = b.till;
+        Businesses.fundForTests(id, b, 300 - till);
+        Enterprise.debtsForTests(id, b, hand, 300, 400, 3000, 0);
+        Kit.Expect ok = new Kit.Expect();
+        CompoundTag r = Enterprise.recordForTests(id, b);
+        Enterprise.petitionForTests(level, id, b, "its cash and its credit gone");
+        ok.that(b.open && "before the court".equals(r.getString("status")), "taken to the court, not yet heard: " + r.getString("status"));
+        nextDay(level);
+        Enterprise.morningForTests(level, v, false);
+        Kit.log("ent13 heard: " + Enterprise.line(level, id, b) + " | " + r.getString("creditors") + " | notes " + String.join(" | ", b.notes));
+        ok.that(!b.open && r.getBoolean("closed"), "declared bankrupt");
+        ok.that(r.getString("heard").contains("council"), "heard by the council on the square (no hall): " + r.getString("heard"));
+        ok.that(r.contains("receiver"), "its stall in the receiver's hands, for the auction");
+        ok.that(r.getString("creditors").contains("till its stall is sold"), "creditors still owed till the stall is sold: " + r.getString("creditors"));
+        long mkt0 = MarketMaker.cash(id);
+        List<String> lots = com.jrpetty.mcassistant.entity.Auctions.openForTests(level, v);
+        Kit.log("ent13 lots: " + lots);
+        boolean stallLot = false;
+        for (String l : lots) stallLot |= l.contains("stall of") && l.contains("FIRM");
+        ok.that(stallLot, "the stall up for auction: " + lots);
+        Map<UUID, Integer> purse0 = new java.util.HashMap<>();
+        for (VillageFolkEntity f : folk) purse0.put(f.getUUID(), f.purse());
+        int crowd = com.jrpetty.mcassistant.entity.Auctions.startForTests(level, v);
+        for (int i = 0; i < 300 && !com.jrpetty.mcassistant.entity.Auctions.doneForTests(id); i++) com.jrpetty.mcassistant.entity.Auctions.roundForTests(level, v);
+        List<String> results = com.jrpetty.mcassistant.entity.Auctions.resultsForTests(id);
+        Kit.log("ent13 a crowd of " + crowd + "; results " + results + " | " + r.getString("creditors"));
+        VillageFolkEntity winner = null;
+        for (VillageFolkEntity f : folk) for (String res : results) if (res.contains("stall of") && res.contains("sold to " + f.displayNameCap() + " for")) winner = f;
+        ok.that(winner != null, "a folk bought the stall: " + results);
+        if (winner != null) {
+            int price = purse0.get(winner.getUUID()) - winner.purse();
+            ok.that(price > 0 && Enterprise.stallsForTests(id, winner) == 1, "it paid " + price + " and owns the stall");
+            ok.that(MarketMaker.cash(id) > mkt0 || r.getString("creditors").contains("wages"), "what it brought to the creditors still owed: " + r.getString("creditors"));
+        }
+        ok.that(!r.contains("receiver") && r.getString("creditors").contains("sold at auction"), "the receiver done: " + r.getString("creditors"));
+        boolean told = false;
+        for (Villages.News n : Villages.news(id)) told |= n.text().contains("stall was sold at auction");
+        ok.that(told, "the chronicle has the sale");
+        nextDay(level);
+        CoinCensus.morning(level, v, day(level));
+        ok.that(CoinCensus.lastDrift(id) == 0, "the census at nought drift: " + CoinCensus.line(id));
+        com.jrpetty.mcassistant.entity.Auctions.manualForTests(false);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
     // ============================================================ ent10 ten days of a town under the market
 
     /**
@@ -514,12 +669,29 @@ public class EntrepreneurGameTests {
      */
     @GameTest(template = EMPTY, timeoutTicks = 900000, required = false, batch = "ent10_ten_days")
     public static void ent10_ten_days(GameTestHelper helper) {
+        tenDays(helper, 1418000, "ent10", true);
+    }
+
+    /**
+     * [econ-1c] Ten days of a town under the market, nobody seeded: the same town as ent10 with no would-be entrepreneur
+     * given it. At least one firm opened by its own folk all the same; its farms, ranch and woodlot selling to the market;
+     * and the same checks as ent10. Logged as it goes: what each producer does, its fields' crops, its tools bought.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 900000, required = false, batch = "ent12_unseeded")
+    public static void ent12_unseeded(GameTestHelper helper) {
+        tenDays(helper, 1504000, "ent12", false);
+    }
+
+    static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
-        int cx = 1418000;
         Kit.reset(level);
         MarketMaker.liveForTests(true);
-        String tag = "ent10";
+        // [econ-1c] The game's own crop growth (a random tick speed of three, as in any world): the tests' server has it at
+        // nought, and a town's fields never ripened in ten days, so its farms had nothing to sell. Put back at the end.
+        var ticking = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
+        final int tickingWas = ticking.get();
+        ticking.set(3, server);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(server);
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
         int outer = com.jrpetty.mcassistant.village.FoundingPlan.coreRadius(16) + com.jrpetty.mcassistant.village.FoundingPlan.BAND_MAX;
@@ -553,6 +725,7 @@ public class EntrepreneurGameTests {
                     if (v == null) {
                         over[0] = true;
                         server.tickRateManager().setTickRate(20.0F);
+                        ticking.set(tickingWas, server);
                         verdict[0] = "no village founded";
                         return;
                     }
@@ -566,10 +739,11 @@ public class EntrepreneurGameTests {
                 long ran = t - began[0];
                 UUID id = town[0];
                 int dayNo = (int) (ran / 24000L);
+                if (!seeded && ran % 3000L == 0) for (String l : fieldLines(level, id)) Kit.log(tag + " t" + ran + " " + l);
                 if (dayNo != start[2]) {
                     start[2] = dayNo;
                     Kit.stockForGrowth(level, Villages.get(id));
-                    if (dayNo == 1) wouldBe(level, id, tag);
+                    if (dayNo == 1 && seeded) wouldBe(level, id, tag);
                     long drift = CoinCensus.lastDrift(id);
                     worstDrift[0] = Math.max(worstDrift[0], Math.abs(drift));
                     mostIous[0] = Math.max(mostIous[0], Accounts.debts(id));
@@ -587,6 +761,7 @@ public class EntrepreneurGameTests {
                 if (ran >= 10 * 24000L) {
                     over[0] = true;
                     server.tickRateManager().setTickRate(20.0F);
+                    ticking.set(tickingWas, server);
                     Kit.Expect ok = new Kit.Expect();
                     int folkNow = Villages.headcount(id), built = Ledger.buildings(id).size();
                     int food = Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id));
@@ -618,6 +793,7 @@ public class EntrepreneurGameTests {
             } catch (RuntimeException ex) {
                 over[0] = true;
                 server.tickRateManager().setTickRate(20.0F);
+                ticking.set(tickingWas, server);
                 verdict[0] = "the run threw " + ex;
                 Kit.log(tag + " threw " + ex);
                 ex.printStackTrace();
@@ -715,6 +891,37 @@ public class EntrepreneurGameTests {
         out.add(String.format(Locale.ROOT, "  PRODUCERS %d private, surplus %.2fc a day each on average; %d of them bringing goods in, %.2fc a day each against their own wage %.2f; OTHER TRADES %d, wage %.2f a day on average (%s)",
             producers, producers == 0 ? 0 : surplusSum / producers / 100.0, bringers, bringers == 0 ? 0 : bringing / bringers / 100.0,
             bringers == 0 ? 0 : wages / bringers, n, n == 0 ? 0 : others / n, trades));
+        return out;
+    }
+
+    /** [econ-1c] Each farmer, rancher and woodcutter now: where it is against its plot, what it is doing, what its plot
+     *  holds (crops ripe and growing, farmland), what it carries. */
+    static List<String> fieldLines(ServerLevel level, UUID id) {
+        List<String> out = new ArrayList<>();
+        for (AssistantEntity e : Villages.folkOf(id)) {
+            if (!(e instanceof VillageFolkEntity f) || f.isBaby()) continue;
+            StationTask st = f.stationTask();
+            if (st != StationTask.FARM && st != StationTask.RANCH && st != StationTask.WOOD && st != StationTask.HUNT) continue;
+            com.jrpetty.mcassistant.entity.WorkZone z = f.workZone();
+            int ripe = 0, growing = 0, farmland = 0, logs = 0, saplings = 0;
+            if (z != null) {
+                BlockPos c = z.center();
+                for (int dx = z.min().getX(); dx <= z.max().getX(); dx++) for (int dz = z.min().getZ(); dz <= z.max().getZ(); dz++) for (int dy = -4; dy <= 8; dy++) {
+                    BlockPos p = new BlockPos(dx, c.getY() + dy, dz);
+                    net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(p);
+                    if (bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop) { if (crop.isMaxAge(bs)) ripe++; else growing++; }
+                    else if (bs.is(Blocks.FARMLAND)) farmland++;
+                    else if (bs.is(net.minecraft.tags.BlockTags.LOGS)) logs++;
+                    else if (bs.is(net.minecraft.tags.BlockTags.SAPLINGS)) saplings++;
+                }
+            }
+            StringBuilder pack = new StringBuilder();
+            for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty()) pack.append(s.getCount()).append(' ').append(Stockroom.key(s).replace("minecraft:", "")).append(',');
+            out.add(String.format(Locale.ROOT, "%s %s at %s plot %s (%s, in it %s) ripe %d growing %d farmland %d logs %d saplings %d; hand %s; %s | %s",
+                f.displayNameCap(), st.name().toLowerCase(Locale.ROOT), f.blockPosition().toShortString(), z == null ? "-" : z.center().toShortString(),
+                z == null ? "-" : z.describe(), z != null && z.containsColumn(f.blockPosition()), ripe, growing, farmland, logs, saplings,
+                f.getMainHandItem().isEmpty() ? "-" : Stockroom.key(f.getMainHandItem()).replace("minecraft:", ""), f.brainNoteForBooks(), pack));
+        }
         return out;
     }
 
