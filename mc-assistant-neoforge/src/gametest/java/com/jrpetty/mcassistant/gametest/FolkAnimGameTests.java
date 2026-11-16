@@ -95,11 +95,14 @@ public class FolkAnimGameTests {
         return f;
     }
 
-    /** A working morning for this folk: the first day of the week that is not its town's day of rest. */
+    /** A working hour for this folk: not its town's day of rest, nor its own break. */
     private static void workday(ServerLevel level, VillageFolkEntity f) {
+        long[] hours = {3500L, 4600L, 2600L, 6200L, 7400L, 5300L};    // its break falls at an hour of its own
         for (int d = 1; d <= 8; d++) {
-            level.setDayTime(24000L * d + 3500L);
-            if (!f.offWorkNow()) return;
+            for (long h : hours) {
+                level.setDayTime(24000L * d + h);
+                if (!f.offWorkNow()) return;
+            }
         }
     }
 
