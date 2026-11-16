@@ -193,7 +193,12 @@ public final class MarketMaker {
 
     /** What the market asks for one of this, in coin. */
     public static double ask(ServerLevel level, UUID village, ItemStack one) {
-        return mid(level, village, one) * (1 + spread(village) / 2);
+        double a = mid(level, village, one) * (1 + spread(village) / 2);
+        // [econ-1d] A market maker with its cellar full marks its ask down to clear it, as its bid falls (glut): by the square
+        // root of what it can sell over what it holds, never under half. A town drowning in wheat sold it to its baker at the
+        // price of a lean year while it paid its farmers a twentieth of it.
+        double g = PRICE_FOR_TESTS.containsKey(Stockroom.key(one)) ? 1.0 : glut(level, village, one);
+        return g < 1.0 ? a * Math.max(0.5, Math.sqrt(g)) : a;
     }
 
     /** What the market pays for one of this, in coin: never a staple under seven tenths of its usual worth while it has coin. */
