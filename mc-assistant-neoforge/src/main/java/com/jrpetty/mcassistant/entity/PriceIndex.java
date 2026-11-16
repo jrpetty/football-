@@ -145,14 +145,6 @@ public final class PriceIndex {
         return ValueAdded.floor(usual(one) * f, ValueAdded.worth(village, one), f);   // [econ-1e] a made thing: its makings, time and margin
     }
 
-    /** [econ-1e] One of this thing by the town's supply and demand alone (its usual worth and today's factor), before a made
-     *  thing's floor of its makings, time and margin (ValueAdded prices a thing's makings at this: one step back). */
-    public static double indexed(UUID village, ItemStack what) {
-        if (what.isEmpty()) return 0.0;
-        ItemStack one = what.copyWithCount(1);
-        return usual(one) * factor(village, one);
-    }
-
     /** One of this item, in coin, in this town today. */
     public static double each(ServerLevel level, UUID village, Item item) {
         return each(level, village, new ItemStack(item));

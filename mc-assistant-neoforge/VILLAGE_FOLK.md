@@ -13113,8 +13113,10 @@ debt that had stopped building houses. Measured again (EntrepreneurGameTests ent
   bought them, and its week's wages, rent and running costs shared over what it sold, or over half what its hands can make
   in a week if it sold less (as a real firm costs at its normal output). Spread over the handful a new bakery sold, its
   overheads came to three times its makings: its loaves went past the going price, nobody bought one, and they went stale.
-  Where that still comes over the going price, it sells at the going price so long as that pays its makings and its markup,
-  as before. On market day a folk buying a treat (its favourite loaf) goes to the best seller too, firms among them: the
+  Where that still comes over the going price, it asks a little under the town's own counter (eight in the hundred), so
+  long as that pays its makings and a tenth: at the going price it lost every sale to the counter, which has the better
+  name and the shorter walk, and a firm that sold nothing raised its prices. A firm whose makings cost it more than that
+  (it bought dear) cannot, and sells dear. On market day a folk buying a treat (its favourite loaf) goes to the best seller too, firms among them: the
   town's market had sold a firm's loaves off its shelf as its own.
 - **What a household will pay.** A folk expected a hamlet's prices in a town whose wages and counters were at the town's
   price level, and left two hundred loaves a week on the shelf as too dear. Once the market is open, what it expects is at
@@ -13135,7 +13137,9 @@ debt that had stopped building houses. Measured again (EntrepreneurGameTests ent
   to house its folk, within reason: owing its market more than twice what it can carry, it is at its borrowing's end and
   its builders start nothing new, its homes neither, and its second storeys wait, till its rents, taxes and market surplus
   bring the IOUs back down (what is half built is finished as the stores allow). Its buildings still go up plain while it
-  is careful, and a careful town's gazette goes by word of mouth rather than buy its lectern.
+  is careful, and a careful town's gazette goes by word of mouth rather than buy its lectern. What it can carry is half its
+  week's revenue at the rate of the days its market has been open: the day after its Market Opening Day its "week" had been
+  one day's taxes, and it could carry a seventh of what it would a week on.
 - **A dear town counter invites a trader to undercut it.** The look at the town's wants saw only the want not met. A ware
   the town's own counter sells in a firm's week's worth, at two fifths and more over what it costs to make with its maker's
   time, is an opening too now: a trader with its own bench can price under the counter and take a quarter of that trade (a
