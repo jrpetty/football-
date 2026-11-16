@@ -1356,7 +1356,7 @@ public final class Homes {
         h.price = price(id, h);
         boolean hard = earners(household) == 0;
         boolean free = rentFree(household);
-        if (free && affords(household, h)) {
+        if (free && (affords(household, h) || payingWay(id, household))) {   // [econ-1e] (or the commons over, an earner in it)
             startPaying(level, v, h, household, day);
             free = false;
         }
@@ -1411,12 +1411,24 @@ public final class Homes {
         return purses(household) + h.saved >= AFFORD_DAYS * Math.max(1, h.rent) + LIVE_ON * grown(household).size();
     }
 
+    /**
+     * [econ-1e] The founders' commons are over (the town's Market Opening Day, when the stores became the market and every
+     * founder had the title to its homestead): a founders' household with an earner in it pays its rent out of its wages
+     * from then, like everybody else. Living rent-free till it had a week's rent and a dozen coins a head in hand, which a
+     * household buying its food at the market's prices never had, eight houses in ten in a ten-day town paid nothing, and
+     * the town's biggest landlord built on paper.
+     */
+    static boolean payingWay(UUID village, List<VillageFolkEntity> household) {
+        return MarketMaker.live(village) && earners(household) > 0;
+    }
+
     /** A household of founders can afford its rent now: it pays from today, like everybody else, for good. */
     static void startPaying(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
         UUID id = v.id();
         for (VillageFolkEntity f : household) f.rentFree(false);
-        Villages.tell(id, day, names(household) + " can afford their rent now: from today they pay " + h.rent + coins(h.rent)
-            + " a day for " + address(id, v, h));
+        boolean commons = !affords(household, h);                          // [econ-1e] the founders' commons over, not saved up for
+        Villages.tell(id, day, names(household) + (commons ? " pay their rent from today, out of their wages, as everybody does now the founders' commons are over: "
+            : " can afford their rent now: from today they pay ") + h.rent + coins(h.rent) + " a day for " + address(id, v, h));
         for (VillageFolkEntity f : grown(household)) {
             f.persona().remember(day, "we started paying rent on day " + day + ": we can afford it now", 4);
         }

@@ -132,6 +132,7 @@ public final class PriceIndex {
 
     public static void resetForTests() {
         TOWNS.clear();
+        ValueAdded.resetForTests();                                       // [econ-1e]
     }
 
     // ------------------------------------------------------------------ asking
@@ -140,7 +141,8 @@ public final class PriceIndex {
     public static double each(ServerLevel level, UUID village, ItemStack what) {
         if (what.isEmpty()) return 0.0;
         ItemStack one = what.copyWithCount(1);
-        return usual(one) * factor(village, one);
+        double f = factor(village, one);
+        return ValueAdded.floor(usual(one) * f, ValueAdded.worth(village, one), f);   // [econ-1e] a made thing: its makings, time and margin
     }
 
     /** One of this item, in coin, in this town today. */

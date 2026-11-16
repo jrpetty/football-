@@ -83,6 +83,25 @@ public final class CostBook {
         }
     }
 
+    /**
+     * [econ-1e] One of this thing's makings at what a maker in this town pays for them today: each part at the stores' price (the
+     * market's ask once it is open), the fuel at the town's price level. The standard cost above prices the parts at a
+     * hamlet's hands' wages (wheat at two hundredths of a coin, where the town's market asked a fifth), and a firm weighing
+     * a bakery saw bread cost a quarter of a coin to make where it cost its baker nine tenths. What a firm will pay.
+     */
+    public static double atMarket(net.minecraft.server.level.ServerLevel level, java.util.UUID village, ItemStack one) {
+        Basis b = of(one.getItem());
+        double level_ = MarketMaker.live(village) ? MarketMaker.priceLevel(village) : 1.0;
+        if (!ValueAdded.made(b)) return (b.materials() + b.fuel()) * level_;
+        double m = 0;
+        for (Part p : b.parts()) {
+            Item it = itemOf(p.id());
+            if (it == null || it == Items.AIR) { m += p.total() * level_; continue; }
+            m += p.n() * Businesses.storesEach(level, village, new ItemStack(it));
+        }
+        return Math.max(0, m) + b.fuel() * level_;
+    }
+
     /** The maker's batches a day, by the way it is made (a furnace minds itself; a smithing table is slow work). */
     static final double CRAFTS_A_DAY = 96, SMELTS_A_DAY = 160, CUTS_A_DAY = 256, SMITHS_A_DAY = 48, BREWS_A_DAY = 24;
     /** The workshop's share of its overheads, on the maker's time; the yard's, barn's or boat's on a gatherer's. */

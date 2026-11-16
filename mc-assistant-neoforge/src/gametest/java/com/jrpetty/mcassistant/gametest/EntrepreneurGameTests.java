@@ -24,6 +24,7 @@ import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Business;
 import com.jrpetty.mcassistant.entity.Businesses;
 import com.jrpetty.mcassistant.entity.CoinCensus;
+import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.MarketMaker;
 import com.jrpetty.mcassistant.entity.Privatisation;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
@@ -495,6 +496,134 @@ public class EntrepreneurGameTests {
         });
     }
 
+    // ============================================================ [econ-1e] ent18 some fail, some thrive
+
+    /**
+     * [econ-1e] Two bakeries in one town's bread trade, the town's own counter selling bread besides: one run well (a fair
+     * markup, its loaves under the going price), one badly (three fifths over the going price, a hand to pay, a thin till).
+     * Up to twenty mornings, the town's folk buying their bread where it is best for them: the well-run bakery takes the
+     * trade and thrives; the dear one sells next to nothing, its till goes on its rent and its hand's wages, it ends owing
+     * more than it is worth, its creditors take it to the court and it closes, the chronicle saying why. The census at
+     * nought drift every morning.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "ent18_fail_thrive")
+    public static void ent18_fail_thrive(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1704000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 40, StationTask.COOK, StationTask.COOK, StationTask.COOK, StationTask.FARM, StationTask.FARM,
+            StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        bold(folk.get(0), StationTask.COOK);
+        bold(folk.get(1), StationTask.COOK);
+        Business well = Enterprise.foundForTests(level, v, "baker", folk.get(0));
+        Business dear = Enterprise.foundForTests(level, v, "baker", folk.get(1));
+        helper.assertTrue(well != null && dear != null, "two bakeries");
+        Enterprise.staffForTests(id, dear, folk.get(2));                         // a hand to pay
+        folk.get(0).setJob(StationTask.FARM);                                    // the well-run one's owner at its farm: its loaves bought in
+        ItemStack bread = new ItemStack(Items.BREAD);
+        List<ItemStack> shelf = new ArrayList<>();
+        for (int i = 0; i < 9; i++) shelf.add(new ItemStack(Items.BREAD, 64));
+        stores(level, id, x, shelf.toArray(new ItemStack[0]));
+        Enterprise.stockForTests(well, bread, 30, 40);                           // its loaves at what they cost it, 0.40c each
+        Enterprise.stockForTests(dear, bread, 12, 55);
+        well.markup = 0.3;
+        dear.markup = 1.2;
+        if (dear.till > 300) Businesses.unfundForTests(id, dear, dear.till - 300);   // a thin till: three coins
+        else Businesses.fundForTests(id, dear, 300 - dear.till);
+        Purchases.openForTests(id, true);
+        Kit.Expect ok = new Kit.Expect();
+        boolean thrived = false;
+        long worst = 0;
+        StringBuilder days = new StringBuilder();
+        CoinCensus.morning(level, v, day(level));
+        for (int d = 0; d < 20 && (dear.open || !thrived); d++) {
+            nextDay(level);
+            Enterprise.stockForTests(well, bread, 24, 40);                       // the day's baking (its owner buys its loaves in)
+            for (int i = 3; i < folk.size(); i++) {
+                VillageFolkEntity buyer = folk.get(i);
+                int pay = buyer.purse() < 4 ? 4 : 0;                            // (their wages, as a day's work pays them: booked)
+                if (pay > 0) {
+                    buyer.earn(pay);
+                    CoinCensus.flow(id, CoinCensus.Flow.OUTPUT, pay);
+                }
+                Purchases.get(level, buyer, s -> s.is(Items.BREAD), 2, Purchases.Need.FOOD);
+            }
+            Market.payWages(level, v);
+            Businesses.morningForTests(level, v);
+            worst = Math.max(worst, Math.abs(CoinCensus.lastDrift(id)));
+            CompoundTag rw = Enterprise.recordForTests(id, well), rd = Enterprise.recordForTests(id, dear);
+            thrived |= rw != null && "thriving".equals(rw.getString("status"));
+            Business.Day wk = well.last(day(level) - 1, 7);
+            days.append("d").append(d + 1).append(String.format(Locale.ROOT, " [week in %.2f cogs %.2f wages %.2f rent %.2f other %.2f taxes %.2f losses %.2f] ",
+                wk.revenue / 100.0, wk.cogs / 100.0, wk.wages / 100.0, wk.rent / 100.0, wk.other / 100.0, wk.taxes / 100.0, wk.losses / 100.0))
+                .append(rw == null ? "-" : rw.getString("status")).append('/').append(rd == null ? "-" : rd.getString("status"))
+                .append(dear.open ? "" : " (closed)").append(' ').append(Businesses.pence(well.till)).append('/').append(Businesses.pence(dear.till)).append("; ");
+        }
+        CompoundTag rd = Enterprise.recordForTests(id, dear);
+        Kit.log("ent18 " + days + "| well " + Enterprise.debugLineForTests(level, id, well) + " | dear " + Enterprise.line(level, id, dear) + " | "
+            + (rd == null ? "-" : rd.getString("creditors")) + " | notes " + String.join(" | ", dear.notes));
+        Purchases.openForTests(id, null);
+        boolean told = false;
+        for (Villages.News n : Villages.news(id)) told |= n.text().startsWith(dear.name + " closed");
+        ok.that(thrived, "the well-run bakery thrived at some morning: " + days);
+        ok.that(!dear.open && told, "the dear bakery failed and closed, the chronicle saying why: " + (dear.open ? "still open" : "closed"));
+        ok.that(well.open, "the well-run bakery is still trading");
+        ok.that(worst == 0, "the census at nought drift every morning (worst " + worst + ")");
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    // ============================================================ [econ-1e] ent19 every maker makes a living at the going price
+
+    /**
+     * [econ-1e] In a town with its market open, every kind of maker's wares fetch at the going price what goes into them at
+     * the market's ask and its hand's time at the town's going wage over what one pair of hands makes in a day, with a margin
+     * over: bread of wheat, a stone and an iron pick, a candle, glass of sand, a leather coat, a chest, a flower pot, a
+     * cooked joint, a book. (Bread's going price had been barely over its three wheat at the market's ask: a bakery lost on
+     * every loaf it sold.) The wheat dear, the bread dearer with it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ent19_makers_living")
+    public static void ent19_makers_living(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1706000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 20, StationTask.COOK, StationTask.SMITH, StationTask.TAILOR, StationTask.BEEKEEP, StationTask.SMELT,
+            StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        UUID id = folk.get(0).ownerId();
+        Villages.ageForTests(id, Villages.Age.IRON);
+        String[][] kinds = {
+            { "baker", "minecraft:bread" }, { "toolsmith", "minecraft:stone_pickaxe" }, { "toolsmith", "minecraft:iron_pickaxe" },
+            { "chandler", "minecraft:candle" }, { "glassworks", "minecraft:glass" }, { "clothier", "minecraft:leather_chestplate" },
+            { "carpenter", "minecraft:chest" }, { "potter", "minecraft:flower_pot" }, { "butcher", "minecraft:cooked_beef" }, { "stationer", "minecraft:book" } };
+        Kit.Expect ok = new Kit.Expect();
+        StringBuilder table = new StringBuilder();
+        java.util.function.Consumer<String> check = label -> {
+            table.append(label).append(": ");
+            for (String[] k : kinds) {
+                BusinessTypes.BusinessType t = BusinessTypes.of(k[0]);
+                Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(k[1]));
+                ItemStack one = new ItemStack(it);
+                double going = com.jrpetty.mcassistant.entity.Market.askEach(level, id, one);
+                double makings = com.jrpetty.mcassistant.entity.CostBook.atMarket(level, id, one);
+                double labour = Math.max(1, com.jrpetty.mcassistant.entity.JobWorth.rate(t.work(), id)) / t.perDay();
+                table.append(String.format(Locale.ROOT, "%s %.2fc (makings %.2fc, time %.2fc); ", it.toString().replace("minecraft:", ""), going, makings, labour));
+                ok.that(going >= (makings + labour) * 1.05, label + ": " + k[1] + " at the going price " + String.format(Locale.ROOT, "%.2fc", going)
+                    + " pays its makings " + String.format(Locale.ROOT, "%.2fc", makings) + " and its maker's time " + String.format(Locale.ROOT, "%.2fc", labour));
+            }
+            table.append("| ");
+        };
+        check.accept("as the town's prices stand");
+        double breadWas = com.jrpetty.mcassistant.entity.Market.askEach(level, id, new ItemStack(Items.BREAD));
+        com.jrpetty.mcassistant.entity.PriceIndex.setForTests(id, new ItemStack(Items.WHEAT), 2.5);   // a bad harvest: wheat at two and a half times its usual
+        com.jrpetty.mcassistant.entity.ValueAdded.resetForTests();
+        double breadNow = com.jrpetty.mcassistant.entity.Market.askEach(level, id, new ItemStack(Items.BREAD));
+        check.accept("wheat dear");
+        Kit.log("ent19 " + table + " bread " + String.format(Locale.ROOT, "%.2fc -> %.2fc", breadWas, breadNow) + " with the wheat dear");
+        ok.that(breadNow > breadWas * 1.5, "the bread dearer with the wheat: " + String.format(Locale.ROOT, "%.2fc -> %.2fc", breadWas, breadNow));
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
     // ============================================================ ent06 expansion
 
     /** A thriving toolshop takes on a hand, then larger premises (its rent up), then opens a second branch of the same owner. */
@@ -935,6 +1064,19 @@ public class EntrepreneurGameTests {
                         + " float " + Businesses.pence(MarketMaker.advanced(id)) : "commons") + ", drift " + drift + " | " + CoinCensus.line(id));
                     for (String l : producerLines(level, id)) Kit.log(tag + " day " + dayNo + " " + l);
                     Kit.log(tag + " day " + dayNo + " firms: " + Enterprise.words(level, id).replace('\n', '|'));
+                    for (Business fb : Enterprise.open(id)) Kit.log(tag + " day " + dayNo + " FIRM " + Enterprise.debugLineForTests(level, id, fb));   // [econ-1e]
+                    if (MarketMaker.live(id)) {                                       // [econ-1e] the staples' prices
+                        StringBuilder pr = new StringBuilder();
+                        for (Item it : new Item[]{ Items.WHEAT, Items.CARROT, Items.POTATO, Items.BREAD, Items.BAKED_POTATO, Items.HAY_BLOCK, Items.COBBLESTONE,
+                            Items.OAK_PLANKS, Items.OAK_STAIRS, Items.IRON_INGOT, Items.LEATHER, Items.CANDLE }) {
+                            ItemStack one = new ItemStack(it);
+                            pr.append(String.format(Locale.ROOT, "%s ask %.2f going %.2f (x%.2f, worth %.2f, held %d); ", it.toString().replace("minecraft:", ""),
+                                MarketMaker.ask(level, id, one), com.jrpetty.mcassistant.entity.Market.askEach(level, id, one),
+                                com.jrpetty.mcassistant.entity.PriceIndex.factor(id, one), com.jrpetty.mcassistant.entity.ValueAdded.worth(id, one) * MarketMaker.priceLevel(id),
+                                com.jrpetty.mcassistant.entity.Market.stock(level, id, s2 -> s2.is(it))));
+                        }
+                        Kit.log(tag + " day " + dayNo + " PRICES level " + String.format(Locale.ROOT, "%.2f", MarketMaker.priceLevel(id)) + ": " + pr);
+                    }
                     Kit.log(tag + " day " + dayNo + " budget: " + TownBudget.line(id));
                     long today = level.getDayTime() / 24000L;
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]

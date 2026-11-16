@@ -309,6 +309,58 @@ public final class Enterprise {
         Accounts.dirty();
     }
 
+    /**
+     * [econ-1e] Is this folk a hand of a firm whose shelf is short of what it makes, so its turns go to its firm's bench before
+     * the town's tables, counters and sinks? A bakery's baker is a cook, and the town's dining rooms and its café's ovens
+     * claimed a cook's time first: a bakery with the town's call for two hundred loaves a week made eight a day. A hand
+     * whose firm's shelf is full serves the town as before.
+     */
+    public static boolean benchFirst(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null) return false;
+        Business b = employerOf(village, f);
+        if (b == null || !b.open) return false;
+        BusinessType t = kindOf(village, b);
+        CompoundTag r = rec(village, b.id);
+        if (t == null || r == null || t.resells() || t.work() != f.stationTask()) return false;
+        CompoundTag tg = r.getCompound("targets");
+        if (r.contains("short") && tg.size() <= 1) return false;        // nothing to make it of: the town's work meanwhile
+        for (String key : tg.getAllKeys()) if (held(b, key) < tg.getInt(key)) return true;
+        return false;
+    }
+
+    /**
+     * [econ-1e] Does this firm already ask more than the going price for its main ware (what it sold most of this week, else
+     * its first)? A firm losing money raised its markup a tenth every third day of it; one already dearer than the stores
+     * only sold less for it (a bakery at three fifths over the going price, its trade gone to the cheap carrots): a firm
+     * over what the market bears looks to selling more, not dearer. (A firm of the town's own kinds only.)
+     */
+    static boolean overGoing(ServerLevel level, UUID village, Business b) {
+        if (!isFirm(b)) return false;
+        BusinessType t = kindOf(village, b);
+        if (t == null || t.wares().isEmpty()) return false;
+        String main = null;
+        long most = -1;
+        for (Map.Entry<String, Business.Line> e : b.last(Businesses.today(level) - 1, 7).lines.entrySet()) {
+            if (t.wares().contains(e.getKey()) && e.getValue().units > most) { most = e.getValue().units; main = e.getKey(); }
+        }
+        if (main == null) main = t.wares().get(0);
+        ItemStack one = Stockroom.sampleOf(main);
+        if (one.isEmpty()) return false;
+        return Sellers.priceOf(level, village, b, one) > Market.askEach(level, village, one) * 1.001;
+    }
+
+    /**
+     * [econ-1e] Is this one of the wares a maker firm makes itself (a bakery's bread)? Its morning's orders bought them of the
+     * market at its ask whenever its hands had made none that week (short of wheat a day or two), and sold them on at its
+     * own price: a bakery's cost of goods came to nine tenths of its takings, its "bread" bought in from the town's cook.
+     */
+    static boolean makesItself(UUID village, Business b, String key) {
+        if (!isFirm(b)) return false;
+        BusinessType t = kindOf(village, b);
+        return t != null && !t.resells() && t.wares().contains(key);
+    }
+
     /** What the firm holds of a ware. */
     static long held(Business b, String key) {
         Lot l = b.stock.get(key);
@@ -326,6 +378,7 @@ public final class Enterprise {
         CompoundTag r = rec(v.id(), b.id);
         if (t == null || r == null || t.resells()) return null;
         CompoundTag tg = r.getCompound("targets");
+        Accounts.add(r, "turns", 1);                                      // [econ-1e] its hands' turns at its bench (the books, the tests)
         List<String> order = new ArrayList<>();
         for (String key : tg.getAllKeys()) if (held(b, key) < tg.getInt(key)) order.add(key);
         if (order.isEmpty()) return null;
@@ -529,9 +582,7 @@ public final class Enterprise {
     /** One of a ware's makings at the market's ask (a seller's: its buying price, a twentieth off in bulk). */
     static double makings(ServerLevel level, UUID village, BusinessType t, ItemStack one) {
         if (t.resells()) return Businesses.storesEach(level, village, one) * 0.95;
-        CostBook.Basis b = CostBook.of(one);
-        double list = b.materials() + b.fuel();
-        return list * MarketMaker.priceLevel(village) * (MarketMaker.live(village) ? 1 + MarketMaker.spread(village) / 2 : 1.0);
+        return CostBook.atMarket(level, village, one);                     // [econ-1e] its makings at what the town's market asks today
     }
 
     /** The households' shopping lists, ware by ware (Needs). */
@@ -1943,6 +1994,35 @@ public final class Enterprise {
     public static boolean fortunesForTests(ServerLevel level, Villages.Village v, Business b) {
         CompoundTag r = rec(v.id(), b.id);
         return r != null && fortunes(level, v, b, r, Businesses.today(level));
+    }
+
+    /** [econ-1e] Tests: a firm in a line for the long tests' logs: its turns at the bench, what it made, its main ware's price
+     *  against the going price, its makings at the market and its worth (makings, time and margin), its hands. */
+    public static String debugLineForTests(ServerLevel level, UUID village, Business b) {
+        CompoundTag r = rec(village, b.id);
+        BusinessType t = kindOf(village, b);
+        if (r == null || t == null) return b.name + ": no record";
+        StringBuilder sb = new StringBuilder(b.name).append(" [").append(t.key()).append("] ").append(r.getString("status"))
+            .append(": turns ").append(r.getLong("turns")).append(", made ").append(r.getLong("madeHere")).append(", sales ").append(r.getLong("sales"))
+            .append(", markup ").append(Businesses.pct(b.markup)).append(", till ").append(Businesses.pence(b.till)).append(", capital ")
+            .append(Businesses.pence(r.getLong("capital"))).append(", week net ").append(Businesses.pence(b.last(Businesses.today(level) - 1, 7).net()))
+            .append(r.contains("short") ? ", short: " + r.getString("short") : "").append("; targets ").append(r.getCompound("targets"));
+        for (String key : t.wares()) {
+            ItemStack one = Stockroom.sampleOf(key);
+            if (one.isEmpty()) continue;
+            Lot l = b.stock.get(key);
+            if ((l == null || l.qty <= 0) && !b.allTime.lines.containsKey(key)) continue;
+            sb.append(String.format(Locale.ROOT, "; %s held %d, its price %.2fc, going %.2fc, makings at the market %.2fc, worth %.2fc, lot each %.2fc, sold all time %d",
+                key.replace("minecraft:", ""), l == null ? 0 : l.qty, Sellers.priceOf(level, village, b, one), Market.askEach(level, village, one),
+                CostBook.atMarket(level, village, one), ValueAdded.worth(village, one) * MarketMaker.priceLevel(village), l == null || l.qty <= 0 ? 0 : l.each() / 100.0,
+                b.allTime.lines.containsKey(key) ? b.allTime.lines.get(key).units : 0));
+        }
+        for (VillageFolkEntity f : hands(village, b)) {
+            sb.append("; hand ").append(f.displayNameCap()).append(' ').append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(" lv")
+                .append(f.tradeLevel(f.stationTask())).append(benchFirst(f) ? " bench-first" : "").append(f.stationTask() == StationTask.COOK ? " role " + Hospitality.role(f) : "")
+                .append(": ").append(f.brainNoteForBooks());
+        }
+        return sb.toString();
     }
 
     /** Tests: a hand taken on now. */

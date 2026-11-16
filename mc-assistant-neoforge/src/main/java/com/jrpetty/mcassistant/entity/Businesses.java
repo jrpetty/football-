@@ -730,8 +730,11 @@ public final class Businesses {
         Double forced = PRICE_FOR_TESTS.get(key);
         if (forced != null) return forced;
         double each = MarketMaker.live(village) ? MarketMaker.ask(level, village, one) : PriceIndex.each(level, village, one.copyWithCount(1));   // [econ-1a]
+        // [econ-1e] Once the market is open it sells at its ask, whatever its cellar's lots cost it (what it paid is sunk): a
+        // bakery paid the market's book cost of its wheat, bought at the staple floor in a glut, half again over the ask the
+        // market sold everybody else at, and its bread came out dearer than the going price.
         Lot l = town(village).stores.get(key);
-        if (l != null && l.qty > 0) each = Math.max(each, l.each() / 100.0);
+        if (l != null && l.qty > 0 && !MarketMaker.live(village)) each = Math.max(each, l.each() / 100.0);
         return Math.max(0.01, each);
     }
 
@@ -1084,7 +1087,7 @@ public final class Businesses {
     static double fullCost(ServerLevel level, UUID village, Business b, ItemStack one, long day) {
         String key = Stockroom.key(one);
         Lot lot = b.stock.get(key);
-        double each = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.of(one).materials() + CostBook.of(one).fuel();
+        double each = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);   // [econ-1e] (at the market's ask)
         Day w = b.last(day - 1, 7);
         long units = 0;
         for (Business.Line l : w.lines.values()) units += l.units;
@@ -1300,7 +1303,7 @@ public final class Businesses {
         long net = week.net();
         if (net < 0) b.lossDays++;
         else b.lossDays = Math.max(0, b.lossDays - 2);
-        if (net < 0 && b.lossDays % 3 == 0 && b.markup < MOST_MARKUP) {
+        if (net < 0 && b.lossDays % 3 == 0 && b.markup < MOST_MARKUP && !Enterprise.overGoing(level, village, b)) {   // [econ-1e] (not over what the market bears)
             double was = b.markup;
             b.markup = Math.min(MOST_MARKUP, b.markup + 0.10);
             b.note(day, "prices up: markup " + pct(was) + " -> " + pct(b.markup) + ", the week lost " + pence(-net)
@@ -1700,6 +1703,7 @@ public final class Businesses {
             if (one.isEmpty()) continue;
             // What it makes itself it does not buy: its own bread is baked, not ordered.
             if (l.made > 0 && l.used == 0) continue;
+            if (Enterprise.makesItself(village, b, key)) continue;          // [econ-1e] a maker's wares, whatever it made this week
             double cover = perishable(one) ? 2 : 7;
             int trend = PriceIndex.trend(village, one);
             if (trend < 0) cover *= 1.5;
@@ -1922,6 +1926,15 @@ public final class Businesses {
         long got = fromTreasury(village, p);
         b.till += got;
         b.allTime.capital += got;
+        dirty();
+    }
+
+    /** [econ-1e] Tests: so many pennies out of a business's till back into the treasury (a thin till). */
+    public static void unfundForTests(UUID village, Business b, long p) {
+        long back = Math.max(0, Math.min(p, b.till));
+        b.till -= back;
+        b.allTime.capital -= back;
+        toTreasury(village, back);
         dirty();
     }
 

@@ -220,6 +220,30 @@ public final class TownBudget {
         return today > Math.max(WORKS_FLOOR, Math.round(revenue7(village) / 7.0 * SHORT_SHARE));
     }
 
+    /**
+     * [econ-1e] What a town builds at the pace of its hands whatever it owes: the next house (and the flats), its stores and
+     * well, what feeds it (the fields, the barns, the granary, the mills), and the buildings its age asks for before the next.
+     * A town in debt defers its luxuries and its grand works, not the roof over the next family: with every building held to
+     * three fifths of a day's revenue, a ten-day town grew to twenty-six folk where it had grown to forty-three, a house
+     * every third day. Its walls, watch and the rest of its essentials still wait for the day's money when it is short.
+     */
+    static final Set<String> CORE = Set.of(
+        "storage", "storehouse", "shelter", "house", "house2", "flats", "well", "granary", "farm", "allotments", "orchard", "windmill",
+        "watermill", "fortify", "smeltery", "hall", "workshop", "watchtower", "market", "lighthouse", "chapel", "gateway");
+
+    /** [econ-1e] Is this project one a short town still builds every day at its hands' pace (homes, food, its age's)? */
+    public static boolean core(String project) {
+        if (project == null) return true;
+        String p = project.toLowerCase(Locale.ROOT);
+        return CORE.contains(p) || p.startsWith("house") || p.contains("farm") || p.contains("barn");
+    }
+
+    /** [econ-1e] Its builders wait for tomorrow's money for this project: short, the day's money for the works spent, and not a
+     *  home, food or its age's building. */
+    public static boolean worksWait(@javax.annotation.Nullable UUID village, String project) {
+        return !core(project) && worksWait(village);
+    }
+
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */
     public static boolean frugal(@javax.annotation.Nullable UUID village) {
         return pressure(village) >= 1;

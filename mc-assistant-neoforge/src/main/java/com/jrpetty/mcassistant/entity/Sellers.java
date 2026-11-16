@@ -38,7 +38,7 @@ public final class Sellers {
     public static double priceOf(ServerLevel level, UUID village, Business b, ItemStack one) {
         double going = Market.askEach(level, village, one);
         long day = Businesses.today(level);
-        double cost = Businesses.fullCost(level, village, b, one, day);
+        double cost = normalCost(level, village, b, one, day);              // [econ-1e] at its normal trade, not its first week's
         if (cost <= 0.0001) cost = CostBook.of(one).total() * MarketMaker.priceLevel(village);
         double p = cost * (1 + b.markup);
         // [econ-1d] What the market will bear: a firm whose full cost a piece (its week's wages and rent spread over a few
@@ -47,12 +47,32 @@ public final class Sellers {
         // and sold to nobody but the well-to-do.
         if (p > going) {
             Business.Lot lot = b.stock.get(Stockroom.key(one));
-            double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.of(one).materials() + CostBook.of(one).fuel();
+            double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);   // [econ-1e] (at the market's ask)
             p = Math.max(going, makings * (1 + b.markup));
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
         return Math.max(0.01, p);
+    }
+
+    /**
+     * [econ-1e] A firm's cost a piece at its normal trade: what the piece cost it to make (its makings, as bought), and its
+     * week's wages, rent and running costs shared over what it sold, or over half what its hands can make in a week if it
+     * sold less (a firm prices for the trade it is set up for, as a real one costs at its normal output). Spread over the
+     * handful a new bakery sold, its overheads came to three times its makings; its loaves went up past the going price, it
+     * sold none, and they went stale on its shelf.
+     */
+    static double normalCost(ServerLevel level, UUID village, Business b, ItemStack one, long day) {
+        BusinessTypes.BusinessType t = Enterprise.kindOf(village, b);
+        if (t == null) return Businesses.fullCost(level, village, b, one, day);
+        Business.Lot lot = b.stock.get(Stockroom.key(one));
+        double each = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);
+        Business.Day w = b.last(day - 1, 7);
+        long units = 0;
+        for (Business.Line l : w.lines.values()) units += l.units;
+        double overheads = (w.wages + w.rent + w.other + w.interest) / 100.0;
+        double normal = Math.max(units, t.perDay() * 3.5);
+        return each + (normal <= 0 ? 0 : overheads / normal);
     }
 
     /** A seller's reputation, nought to one (the town's own counter: a half). */

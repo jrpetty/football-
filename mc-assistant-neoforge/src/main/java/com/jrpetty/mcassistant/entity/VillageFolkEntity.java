@@ -5586,6 +5586,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */
     @Override
     protected boolean craftWork() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel s && Enterprise.benchFirst(this)) return Crafts.work(this, s);   // [econ-1e] its firm's shelf first
         return level() instanceof net.minecraft.server.level.ServerLevel server
             && (StoreStaff.work(this, server) || Hospitality.work(this, server)   // [dining] the tables, the bar, the sink
                 || Crafts.work(this, server));   // [econ-store] the counter, the stock book
@@ -7368,7 +7369,7 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         UUID village = ownerId();
         if (heart == null || village == null) return false;
-        if (TownBudget.worksWait(village)) {                             // [econ-1d] the day's money for the works spent: tomorrow
+        if (TownBudget.worksWait(village, project)) {                    // [econ-1d] the day's money for the works spent: tomorrow; [econ-1e] not a home's
             buildNote("build: the town has spent what it can on its works today");
             return false;
         }
