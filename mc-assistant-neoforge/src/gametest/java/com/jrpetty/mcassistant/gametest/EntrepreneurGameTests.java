@@ -499,8 +499,9 @@ public class EntrepreneurGameTests {
     // ============================================================ [econ-1e] ent18 some fail, some thrive
 
     /**
-     * [econ-1e] Two bakeries in one town's bread trade, the town's own counter selling bread besides: one run well (a fair
-     * markup, its loaves under the going price), one badly (three fifths over the going price, a hand to pay, a thin till).
+     * [econ-1e] Two bakeries in one town's bread trade, the town's own counter selling bread besides: one run well (its loaves
+     * made cheap, a fair markup, under the going price), one badly (its loaves bought dear, over the going price before any
+     * markup, its markup at the top, a hand to pay, a thin till).
      * Up to twenty mornings, the town's folk buying their bread where it is best for them: the well-run bakery takes the
      * trade and thrives; the dear one sells next to nothing, its till goes on its rent and its hand's wages, it ends owing
      * more than it is worth, its creditors take it to the court and it closes, the chronicle saying why. The census at
@@ -526,7 +527,7 @@ public class EntrepreneurGameTests {
         for (int i = 0; i < 9; i++) shelf.add(new ItemStack(Items.BREAD, 64));
         stores(level, id, x, shelf.toArray(new ItemStack[0]));
         Enterprise.stockForTests(well, bread, 30, 40);                           // its loaves at what they cost it, 0.40c each
-        Enterprise.stockForTests(dear, bread, 12, 55);
+        Enterprise.stockForTests(dear, bread, 12, 85);                           // its loaves bought dear: 0.85c each, over the going price
         well.markup = 0.3;
         dear.markup = 1.2;
         if (dear.till > 300) Businesses.unfundForTests(id, dear, dear.till - 300);   // a thin till: three coins

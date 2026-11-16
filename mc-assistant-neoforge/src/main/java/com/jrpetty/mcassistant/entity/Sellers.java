@@ -28,6 +28,8 @@ public final class Sellers {
     static final double WALK = 0.02;
     /** A reputation of one is worth this much of the going price to a buyer. */
     static final double NAME_WORTH = 0.15;
+    /** [econ-1e] A firm whose cost and markup come over the going price asks this of it, to win its trade off the town's counter. */
+    static final double UNDERCUT = 0.92;
     /** A firm never asks under this of the going price (its own cost-plus would undersell everybody at first). */
     static final double LEAST_OF_GOING = 0.4;
 
@@ -48,7 +50,10 @@ public final class Sellers {
         if (p > going) {
             Business.Lot lot = b.stock.get(Stockroom.key(one));
             double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.atMarket(level, village, one);   // [econ-1e] (at the market's ask)
-            p = Math.max(going, makings * (1 + b.markup));
+            // [econ-1e] Priced to compete: a little under the town's own counter (which has the better name and the shorter walk,
+            // and won every tie: a firm at the going price sold nothing), so long as that pays its makings and a tenth. A firm
+            // whose makings cost it more than that (it bought dear) cannot, and sells dear.
+            p = Math.max(going * UNDERCUT, makings * (1 + Math.min(b.markup, Businesses.LEAST_MARKUP)));
         }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
