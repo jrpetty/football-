@@ -7401,6 +7401,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 BuildGoal.Part.NOTE_BLOCK,
                 BuildGoal.Part.CARTOGRAPHY)) {                           // [cartographer] the map room's table
             int want = need.getOrDefault(deco, 0);
+            // [access-3] Only what its empty cells still want, as for the fixtures: a school taken up again fetched (and,
+            // with none in the stores, made) the four bookshelves it already had, out of the books its teacher wanted.
+            if (still != null) want = Math.min(want, still.getOrDefault(deco, 0));
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
@@ -7451,6 +7454,14 @@ public class VillageFolkEntity extends AssistantEntity {
         // the pack holds, and the next load picks up where that one ran out (blocksToLay).
         boolean fullLoad = packFull() && countCarried(BuildGoal::isBuildingBlock) >= FULL_LOAD;
         if (blocksNow < least && !fullLoad) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
+        // [access-3] A building taken up again with a kind of block in its empty cells it has nothing for (BuildShort).
+        if ((blocksNow >= least || fullLoad) && level() instanceof net.minecraft.server.level.ServerLevel server) {
+            String none = BuildShort.nothingFor(server, village, project, site, getInventoryItems());
+            if (none != null) {
+                buildNote("build: nothing to lay its " + none + " with");
+                return false;
+            }
+        }
         return blocksNow >= least || fullLoad;
     }
 

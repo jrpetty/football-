@@ -2,7 +2,6 @@ package com.jrpetty.mcassistant.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.CollisionGetter;
@@ -32,9 +31,9 @@ public final class FolkWays {
 
     private FolkWays() {}
 
-    /** The rungs of a ladder (or a vine, a scaffold: anything climbable). */
+    /** The rungs of a ladder (a ladder only: a folk does not plan its way up a vine on a cliff or a tree, nor a scaffold). */
     static boolean climbable(CollisionGetter level, BlockPos p) {
-        return level.getBlockState(p).is(BlockTags.CLIMBABLE);
+        return level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.LADDER);
     }
 
     /** Room for the mob's body with its feet at the bottom of this place (a rung holds it; nothing else need be under it). */
@@ -94,30 +93,36 @@ public final class FolkWays {
      * is not taken this tick).
      */
     static boolean goingDown(Mob mob, Path path) {
-        if (path == null || path.isDone() || !mob.onClimbable()) return false;
+        if (path == null || path.isDone() || !mob.onClimbable() || mob.onGround()) return false;
         int x = Mth.floor(mob.getX()), z = Mth.floor(mob.getZ());
         int i = path.getNextNodeIndex();
-        Node next = path.getNode(i);
-        if (next.x != x || next.z != z || next.y > mob.getY() - 0.2) return false;
-        int j = i;
-        while (j + 1 < path.getNodeCount()) {
-            Node o = path.getNode(j + 1);
-            if (o.x != x || o.z != z || o.y >= path.getNode(j).y) break;
-            j++;
-        }
-        Node foot = path.getNode(j);
-        if (mob.onGround() || mob.getY() <= foot.y + 0.1) {
-            path.setNextNodeIndex(j + 1);
+        // The run of the walk's places in this shaft, round the next one (the game's own step of a walk off the ground
+        // passes over every place under the folk in its column, so the next may already be the one after the run).
+        int c = inColumn(path, i, x, z) ? i : inColumn(path, i - 1, x, z) ? i - 1 : -1;
+        if (c < 0) return false;
+        int a = c, b = c;
+        while (inColumn(path, a - 1, x, z)) a--;
+        while (inColumn(path, b + 1, x, z)) b++;
+        if (b == a || path.getNode(b).y >= path.getNode(a).y) return false;      // up the ladder, or not along it
+        Node foot = path.getNode(b);
+        if (mob.getY() <= foot.y + 0.1) {
+            if (i <= b) path.setNextNodeIndex(b + 1);
             return false;
         }
-        path.setNextNodeIndex(j);
+        path.setNextNodeIndex(b);
         Vec3 v = mob.getDeltaMovement();
         double dx = x + 0.5 - mob.getX(), dz = z + 0.5 - mob.getZ();
         mob.setDeltaMovement(dx * 0.2, v.y, dz * 0.2);
         mob.setZza(0.0F);
         mob.setXxa(0.0F);
-        if (mob instanceof AssistantEntity a) a.holdOffJumping();
+        if (mob instanceof AssistantEntity ae) ae.holdOffJumping();
         return true;
+    }
+
+    private static boolean inColumn(Path path, int i, int x, int z) {
+        if (i < 0 || i >= path.getNodeCount()) return false;
+        Node n = path.getNode(i);
+        return n.x == x && n.z == z;
     }
 
     /**
