@@ -13157,6 +13157,18 @@ debt that had stopped building houses. Measured again (EntrepreneurGameTests ent
   the treasury having what the shop paid the stores for the loaves; the test that counted the treasury's whole coins came to
   two or three by the odd pennies already in it. It counts the town's coin now.
 
+- **Measured.** Twenty days of a town nobody seeded (ent15): a hundred folk and forty-six buildings (batch 1D's: eighty-four
+  and twenty-two), the census at nought drift every morning, the IOUs at most 926 coins against the 2,811 it could carry
+  at the end; two bakeries opened, one closed by its creditors on its twelfth day ("it owed more than it was worth", its
+  stall sold at auction), the other struggling. Ten days (ent12): forty-two folk and twenty-three buildings (batch 1D's
+  twenty-nine and seven; the old forty-three to fifty-one), the IOUs at most 692 against 1,058. No firm thrives in a young
+  town yet: a loaf is three wheat, and in a town whose wheat is all eaten or thatched (none held, its price twice the
+  usual) bread costs its baker more than the baked potato it competes with on the table, and the folk eat the potato;
+  the bakeries the town's shopping lists tempt its folk to open lose. A firm run well in a trade it can make a living in
+  thrives (ent18).
+
 Tests (EntrepreneurGameTests): ent17 a folk out of the world and back, the town's coin the same; ent18 two bakeries in one
 trade, the well-run one thriving and the dear one closed by its creditors; ent19 every kind of maker's wares fetching their
-makings and their maker's time at the going price, the bread dearer with the wheat.
+makings and their maker's time at the going price, the bread dearer with the wheat. The long tests log every firm each day
+(its turns at the bench, what it made and sold, its price against the going price, its makings at the market, its hands)
+and the staples' prices; a farm opened in the last three days is not yet counted among the farms that should be selling.
