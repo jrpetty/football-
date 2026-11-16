@@ -172,6 +172,22 @@ public class EntrepreneurGameTests {
                 producers++;
             }
         }
+        // Yesterday's output by trade, and what each producer has in its pack now.
+        java.util.Map<StationTask, StringBuilder> made = new java.util.EnumMap<>(StationTask.class);
+        for (java.util.Map.Entry<String, java.util.Map<StationTask, Integer>> e : com.jrpetty.mcassistant.entity.Economy.yesterdayMakersForTests(id).entrySet()) {
+            for (java.util.Map.Entry<StationTask, Integer> m : e.getValue().entrySet()) {
+                made.computeIfAbsent(m.getKey(), k -> new StringBuilder()).append(e.getKey()).append(' ').append(m.getValue()).append(", ");
+            }
+        }
+        for (java.util.Map.Entry<StationTask, StringBuilder> e : made.entrySet()) out.add("  made yesterday by " + e.getKey().name().toLowerCase(Locale.ROOT) + ": " + e.getValue());
+        StringBuilder packs = new StringBuilder();
+        for (AssistantEntity e : Villages.folkOf(id)) {
+            if (!(e instanceof VillageFolkEntity f) || f.isBaby() || !Privatisation.producer(f.stationTask())) continue;
+            int carried = 0;
+            for (net.minecraft.world.item.ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && !s.isDamageableItem()) carried += s.getCount();
+            packs.append(f.displayNameCap()).append(" (").append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(") carries ").append(carried).append("; ");
+        }
+        out.add("  packs: " + packs);
         double others = 0;
         int n = 0;
         StringBuilder trades = new StringBuilder();

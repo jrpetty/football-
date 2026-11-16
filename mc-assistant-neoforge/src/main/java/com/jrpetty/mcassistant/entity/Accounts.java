@@ -716,6 +716,13 @@ public final class Accounts {
      */
     public static long taxIn(UUID village, long pence) {
         if (pence <= 0) return 0;
+        TownBudget.in(village, "taxes", pence);                                    // [econ-1b] the town's budget
+        return payIous(village, pence);
+    }
+
+    /** [econ-1b] The IOUs paid, oldest first, out of so much coin that has just come into the treasury. */
+    static long payIous(UUID village, long pence) {
+        if (pence <= 0) return 0;
         ListTag l = list(town(village), "debts");
         long paid = 0;
         while (!l.isEmpty() && paid < pence) {

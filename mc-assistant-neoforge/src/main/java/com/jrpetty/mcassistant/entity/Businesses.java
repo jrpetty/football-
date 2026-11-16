@@ -1117,6 +1117,7 @@ public final class Businesses {
         Day d = b.today(day);
         long rent = rent(village, b);
         payTown(level, village, b, rent, day);
+        TownBudget.in(village, "rents", rent);                              // [econ-1b] the town's budget
         d.rent += rent;
         b.allTime.rent += rent;
         long other = 0;
@@ -1239,6 +1240,8 @@ public final class Businesses {
     static void draw(ServerLevel level, UUID village, Business b, long day) {
         Day week = b.last(day - 1, 7);
         long net = week.net();
+        long tax = TownBudget.profitsTax(level, village, b, net, day);      // [econ-1b] the profits tax, before the owners draw
+        net -= tax;
         long spare = b.till - floatOf(b, day);
         long draw = Math.min(net, spare);
         if (draw < 100 || b.account < 0) return;

@@ -777,8 +777,10 @@ public final class MarketMaker {
         }
         payCredit(level, id);
         for (Business b : Businesses.all(id)) Accounts.settleFirm(level, id, b);
+        settleIous(level, id, day);                     // [econ-1b] the IOUs set against what the market holds over its float
         long opened = openedDay(id);
         if (day > opened && (day - opened) % 7 == 0) surplus(level, id, day);
+        TownBudget.morning(level, v, day);              // [econ-1b] the town's budget: its works within its means
         Privatisation.morning(level, v, day);
     }
 
@@ -831,6 +833,8 @@ public final class MarketMaker {
             + " things taken free since the founding, is the market's now" : ""));
         if (young <= OPENS_BY) Privatisation.homesteads(level, v, day);
         else Privatisation.begin(level, v, day);
+        // [econ-1b] The town's money is made in its businesses now: the council taxes their profits, a tenth to start.
+        if (TaxBook.rate(id, TaxBook.Lever.PROFITS) == 0) TaxBook.set(level, v, TaxBook.Lever.PROFITS, 1, "the council, on Market Opening Day");
     }
 
     /** Store credit paid out of the market's cash over a day's float, oldest owed first. */
@@ -873,14 +877,38 @@ public final class MarketMaker {
         }
     }
 
+    /** The float the market keeps: three days' buying (ten coins at least) and the store credit it owes. */
+    static long keep(UUID village) {
+        long[] w = week(village);
+        return Math.max(1000, w[0] * 3 / 7) + storeCredit(village);
+    }
+
+    /**
+     * [econ-1b] Each morning: the market is the town's own enterprise, so the town's IOUs to it are only a holding of its
+     * own, like its cash. What it holds over its float, its cash and the IOUs together, is the town's: as much of the IOUs
+     * as that runs to are set off (no coin moves), and it keeps its float, in cash as far as it has it. What a town buys of
+     * its market at a profit to the market costs it nothing in the end; what the market paid its producers for is a debt
+     * the taxes must pay.
+     */
+    static void settleIous(ServerLevel level, UUID village, long day) {
+        long debts = Accounts.debts(village);
+        if (debts <= 0) return;
+        long over = cash(village) + debts - keep(village);
+        if (over <= 0) return;
+        long netted = Accounts.netDebts(village, Math.min(debts, over));
+        if (netted <= 0) return;
+        Accounts.add(Accounts.sub(market(village), "all"), "netted", netted);
+        TownBudget.in(village, "market", netted);
+        Accounts.dirty();
+        if (netted >= 500) Villages.tell(village, day, "the market set " + Businesses.pence(netted) + " of its takings against what the town owed it on its IOUs");
+    }
+
     /**
      * The week's surplus: what the market holds over its float (three days' buying, the store credit it owes and the
      * treasury's float it was lent first repaid) goes to the treasury, a public enterprise's profit.
      */
     static void surplus(ServerLevel level, UUID village, long day) {
-        long[] w = week(village);
-        long keep = Math.max(1000, w[0] * 3 / 7) + storeCredit(village);
-        long over = cash(village) - keep;
+        long over = cash(village) - keep(village);                       // [econ-1b] (keep)
         if (over <= 0) return;
         Business house = house(village);
         if (house == null) return;
@@ -895,6 +923,7 @@ public final class MarketMaker {
         if (over <= 0) return;
         house.till -= over;
         Businesses.toTreasury(village, over);
+        TownBudget.in(village, "market", over);                            // [econ-1b] the town's budget
         CompoundTag m = market(village);
         long adv = m.getLong("advanced");
         m.putLong("advanced", Math.max(0, adv - over));
@@ -1097,6 +1126,7 @@ public final class MarketMaker {
         for (String line : Accounts.debtLines(village)) ious.add(net.minecraft.nbt.StringTag.valueOf(line));
         out.put("ious", ious);
         out.putString("census", CoinCensus.line(village));
+        out.putString("budget", TownBudget.line(village));                        // [econ-1b] the town's budget
         return out;
     }
 
@@ -1132,6 +1162,8 @@ public final class MarketMaker {
                 Market.stock(level, village, Stockroom.matcher(key)), g[0], g[2]));
         }
         sb.append("Today's takes: ").append(tallies(village)).append("\n");
+        String budget = TownBudget.line(village);                                  // [econ-1b] the town's budget
+        if (!budget.isEmpty()) sb.append(budget).append("\n");
         for (String l : Privatisation.lines(level, village)) sb.append(l).append("\n");
         return sb.toString();
     }

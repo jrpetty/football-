@@ -352,6 +352,11 @@ public final class Economy {
     }
 
     /** Yesterday, item by item, the trades that made it. */
+    /** [econ-1b] Tests: yesterday's output, item by item, by the trade that made it. */
+    public static Map<String, Map<StationTask, Integer>> yesterdayMakersForTests(UUID village) {
+        return yesterdayMakers(village);
+    }
+
     static Map<String, Map<StationTask, Integer>> yesterdayMakers(UUID village) {
         Day d = YESTERDAY.get(village);
         return d == null ? Map.of() : d.by;
