@@ -946,6 +946,12 @@ public final class FolkAnimations {
             body.y += lower;
             ra.y += lower;
             la.y += lower;
+            // Down on a knee or on the ground (six pixels and more): the hips come down with it, the legs from them. A bob
+            // of the dance or bent knees at the work leave the feet where they stand.
+            if (lower >= 6.0F) {
+                parts[RL].y += lower;
+                parts[LL].y += lower;
+            }
         }
     }
 }

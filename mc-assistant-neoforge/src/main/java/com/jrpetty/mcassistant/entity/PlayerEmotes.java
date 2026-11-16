@@ -212,7 +212,7 @@ public final class PlayerEmotes {
                 if (!(w.level().getEntity(w.folk()) instanceof VillageFolkEntity f) || !f.isAlive()) continue;
                 net.minecraft.world.entity.player.Player p = w.level().getPlayerByUUID(w.player());
                 if (p instanceof ServerPlayer sp) face(f, sp);
-                FolkAction.play(f, w.act(), EmoteRules.ticks(w.act()));
+                FolkAction.play(f, w.act(), Math.min(120, EmoteRules.ticks(w.act())));   // an answer, not the rest of its day
             }
         }
     }

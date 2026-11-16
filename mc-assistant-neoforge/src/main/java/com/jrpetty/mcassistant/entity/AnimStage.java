@@ -212,7 +212,7 @@ public final class AnimStage {
             BlockState bed = Blocks.BLUE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST);
             level.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2);
             level.setBlock(head, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2);
-            f.moveTo(head.getX() + 0.5, head.getY() + 0.6875, head.getZ() + 0.5, 90.0F, 0.0F);
+            f.moveTo(head.getX() + 1.6, head.getY() + 0.6875, head.getZ() + 0.5, 90.0F, 0.0F);   // the body laid back from its feet to the pillow
             turn(f, 90.0F);                                           // lying along the bed, its head on the pillow
             f.setPose(Pose.SLEEPING);
         }
