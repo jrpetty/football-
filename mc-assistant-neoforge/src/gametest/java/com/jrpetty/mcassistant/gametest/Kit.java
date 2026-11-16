@@ -390,6 +390,11 @@ final class Kit {
      * lays out, not of how it fells and quarries): wood, stone, glass, the fittings, each up to so much. [integrity] [paths]
      */
     static void stockForGrowth(ServerLevel level, Villages.Village v) {
+        stockForGrowth(level, v, true);
+    }
+
+    /** [econ-1d] The same; without the bread when {@code bread} is false (a town under its market feeds itself by its trade). */
+    static void stockForGrowth(ServerLevel level, Villages.Village v, boolean bread) {
         Object[][] want = {
             { net.minecraft.world.item.Items.OAK_LOG, 256 }, { net.minecraft.world.item.Items.OAK_PLANKS, 384 },
             { net.minecraft.world.item.Items.COBBLESTONE, 512 }, { net.minecraft.world.item.Items.STONE_BRICKS, 192 },
@@ -409,6 +414,7 @@ final class Kit {
         };
         for (Object[] w : want) {
             net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
+            if (!bread && it == net.minecraft.world.item.Items.BREAD) continue;
             int have = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), s -> s.is(it));
             int need = (Integer) w[1] - have;
             while (need > 0) {

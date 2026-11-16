@@ -862,7 +862,9 @@ public class EntrepreneurGameTests {
                 }
                 if (dayNo != start[2]) {
                     start[2] = dayNo;
-                    Kit.stockForGrowth(level, Villages.get(id));
+                    // [econ-1d] Bread given free every morning undersold any baker in the town: once its market is open, a
+                    // town feeds itself by its own trade (the building stuff is still given, as the long growth tests do).
+                    Kit.stockForGrowth(level, Villages.get(id), !MarketMaker.live(id));
                     if (dayNo == 1 && seeded) wouldBe(level, id, tag);
                     long drift = CoinCensus.lastDrift(id);
                     worstDrift[0] = Math.max(worstDrift[0], Math.abs(drift));
