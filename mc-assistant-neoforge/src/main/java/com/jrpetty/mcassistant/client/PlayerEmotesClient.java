@@ -154,6 +154,9 @@ public final class PlayerEmotesClient {
                     continue;
                 }
                 if (pl.seen.act != 0) {
+                    // Squared up to where it looks: the body turned to the head (a standing player's lags behind it).
+                    p.yBodyRot = p.yHeadRot;
+                    p.yBodyRotO = p.yHeadRotO;
                     // Walked off, crouched, or falling (a creative player hovering may emote where it hangs).
                     boolean moved = p.walkAnimation.speed() > 0.25F || p.isShiftKeyDown() && pl.seen.act != Act.KNEEL.ordinal()
                         || p.getDeltaMovement().y < -0.35 && !p.isPassenger();

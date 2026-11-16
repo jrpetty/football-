@@ -184,7 +184,7 @@ public final class AnimCommands {
         Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
         Vec3 side = new Vec3(-look.z, 0, look.x);
         // Beside it (the turned camera sees both), or face to face at arm's length (for a handshake, side on).
-        Vec3 at = front ? p.position().add(look.scale(1.45)) : p.position().add(look.scale(1.2)).add(side.scale(2.0));
+        Vec3 at = front ? p.position().add(look.scale(1.45)) : p.position().add(look.scale(0.2)).add(side.scale(1.9));
         VillageFolkEntity f = AnimStage.friend(ctx.getSource().getLevel(), at.x, p.getY(), at.z, p);
         if (f == null) return 0;
         ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is glad to see you"), false);
