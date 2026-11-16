@@ -110,6 +110,11 @@ public class StorehouseGameTests {
      * fixed hour would have caught one folk in three on its break, and its work waits for that.
      */
     private static boolean atWorkFor(ServerLevel level, VillageFolkEntity f, long span) {
+        return atWorkFor(level, f, span, false);
+    }
+
+    /** [health] As above; {@code clear} also well clear of its break (st04: its whole test is standing about at work). */
+    private static boolean atWorkFor(ServerLevel level, VillageFolkEntity f, long span, boolean clear) {
         // Looked for with its pack set aside: a carrier with a load in hand puts its break off till the
         // load is in (VillageFolkEntity.breakNow), so a time found while it carried its starter kit's
         // bread turned into its break the moment the bread was in the stores.
@@ -124,7 +129,11 @@ public class StorehouseGameTests {
             for (long k = t; k <= t + span && ok; k += 200) {
                 level.setDayTime(k);
                 level.updateSkyBrightness();                 // [health] isNight() reads the sky as last ticked: the test before's night
-                ok = !f.offWorkNow();
+                // [health] Clear of its break with room to spare: the break runs longer once the town's leader is known
+                // (Leader.restScale reads the elder's nature, worked out after the town's first look): st04 found an
+                // hour, then took its break in it.
+                long from = f.breakStart(), day = k % 24000L;
+                ok = !f.offWorkNow() && !(clear && day >= from && day < from + 2 * f.breakLength());
             }
             if (ok) {
                 level.setDayTime(t);
@@ -371,7 +380,7 @@ public class StorehouseGameTests {
         courier.moveTo(start.getX() + 0.5, start.getY(), start.getZ() + 0.5, 0.0F, 0.0F);
         BlockPos spot = Storehouses.standingSpot(level, village);
         helper.assertTrue(spot != null && Couriers.employed(courier), "a storehouse to work out of: " + spot);
-        helper.assertTrue(atWorkFor(level, courier, 1600), "a time of day the courier is at work");
+        helper.assertTrue(atWorkFor(level, courier, 1600, true), "a time of day the courier is at work");
         helper.onEachTick(() -> {
             long t = helper.getTick();
             Villages.noteAttempt(village, level.getGameTime());
