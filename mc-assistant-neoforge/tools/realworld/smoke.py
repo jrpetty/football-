@@ -1155,20 +1155,40 @@ def anim_stage(r, look, cx, cz):
             continue                                   # the close pictures, three at a time, read better than the rows
         look("anim-%s-%s" % (name, acts.replace(",", "-")[:60]), x, y + 0.3, z, ax, ay, az, wait=5)
     say("alive after the folk's animations: %s" % client_alive())
-    # The player's emotes: in front of a folk it has made friends with, the camera turned round to watch.
-    r.cmd("gamemode creative %s" % USER)
+    # The player's emotes, all fourteen, each from the front (a three-quarter) and side on, the camera turned round to
+    # watch (/village emote EMOTE ANGLE); beside a folk it has made friends with, which answers in kind. The handshake
+    # face to face with the friend at arm's length, side on, the hands meeting.
+    r.cmd("gamemode survival %s" % USER)              # on its feet on the stage, not hovering
     fx, fz = sx + 30, sz + 4
-    r.cmd("fill %d %d %d %d %d %d minecraft:smooth_stone" % (fx - 4, sy - 1, fz - 4, fx + 4, sy - 1, fz + 6))
-    r.cmd("tp %s %.1f %d %.1f 180 0" % (USER, fx + 0.5, sy, fz + 3.5))
-    time.sleep(2)
-    say("a friend: " + r.cmd("execute as %s at @s run village anim friend" % USER))   # stood up in front, glad to see you
-    time.sleep(3)
-    for emote in ("wave", "bow", "cheer", "dance", "handshake", "salute", "think", "kneel"):
-        say("emote %s: %s" % (emote, r.cmd("execute as %s at @s run village emote %s" % (USER, emote))))
-        time.sleep(1.2)
-        r.cmd("title %s clear" % USER)
-        shot("anim-emote-%s" % emote)
+    r.cmd("fill %d %d %d %d %d %d minecraft:smooth_stone" % (fx - 5, sy - 1, fz - 5, fx + 5, sy - 1, fz + 6))
+    r.cmd("fill %d %d %d %d %d %d minecraft:air" % (fx - 5, sy, fz - 5, fx + 5, sy + 5, fz + 6))
+
+    def stand():
+        r.cmd("tp %s %.1f %d %.1f 180 0" % (USER, fx + 0.5, sy, fz + 3.5))
         time.sleep(1.5)
+
+    stand()
+    say("a friend: " + r.cmd("execute as %s at @s run village anim friend" % USER))   # stood up beside, glad to see you
+    time.sleep(2)
+    emotes = ("wave", "bow", "cheer", "clap", "point", "beckon", "shrug", "salute", "dance", "sit_ground", "kneel", "pray", "think")
+    for emote in emotes:
+        for view, angle in (("front", 25), ("side", 90)):
+            stand()
+            say("emote %s %s: %s" % (emote, view, r.cmd("execute as %s at @s run village emote %s %d" % (USER, emote, angle))))
+            time.sleep(1.3)
+            r.cmd("title %s clear" % USER)
+            shot("anim-emote-%s-%s" % (emote, view))
+            time.sleep(1.4)
+    r.cmd("kill @e[tag=folk_lineup]")
+    stand()
+    say("a friend face to face: " + r.cmd("execute as %s at @s run village anim friend front" % USER))
+    time.sleep(2)
+    for view, angle in (("side", 90), ("front", 35)):
+        say("emote handshake %s: %s" % (view, r.cmd("execute as %s at @s run village emote handshake %d" % (USER, angle))))
+        time.sleep(0.9)
+        r.cmd("title %s clear" % USER)
+        shot("anim-emote-handshake-%s" % view)
+        time.sleep(2.5)
     say("wheel: " + r.cmd("execute as %s at @s run village emote wheel" % USER))
     time.sleep(2)
     park_mouse()

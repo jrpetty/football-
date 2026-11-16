@@ -69,6 +69,11 @@ public final class PlayerEmotes {
 
     /** From the client (or /village emote): an emote, checked, shown to everybody near, and answered by the folk. */
     public static Result emote(ServerPlayer p, int actId, int target) {
+        return emote(p, actId, target, PlayerEmotePayload.ANY_ANGLE);
+    }
+
+    /** As above, the player's own turned camera at this angle round from its front (/village emote EMOTE ANGLE). */
+    public static Result emote(ServerPlayer p, int actId, int target, int camera) {
         Act a = Act.of(actId);
         if (!EmoteRules.isEmote(a)) return Result.NOT_AN_EMOTE;
         if (!p.isAlive() || p.isSpectator() || p.isSleeping() || !(p.level() instanceof ServerLevel level)) return Result.NOT_NOW;
@@ -77,16 +82,20 @@ public final class PlayerEmotes {
         while (!recent.isEmpty() && now - recent.peekFirst() > EmoteRules.BURST_WINDOW) recent.pollFirst();
         if (!recent.isEmpty() && now - recent.peekLast() < EmoteRules.GAP || recent.size() >= EmoteRules.BURST) return Result.TOO_SOON;
         recent.addLast(now);
-        show(p, a);
+        show(p, a, camera);
         answer(level, p, a, target);
         return Result.OK;
     }
 
     /** The player's model posed for it, on every client that can see the player and its own. */
     static void show(ServerPlayer p, Act a) {
+        show(p, a, PlayerEmotePayload.ANY_ANGLE);
+    }
+
+    static void show(ServerPlayer p, Act a, int camera) {
         NOW.put(p.getUUID(), new long[]{a.ordinal(), p.level().getGameTime()});
         try {
-            PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, new PlayerEmotePayload(p.getId(), a.ordinal(), EmoteRules.ticks(a)));
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, new PlayerEmotePayload(p.getId(), a.ordinal(), EmoteRules.ticks(a), camera));
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().warn("[anim] an emote not sent: {}", e.toString());   // a client without the mod
         }

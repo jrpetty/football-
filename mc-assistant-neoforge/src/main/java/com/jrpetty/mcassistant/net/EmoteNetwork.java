@@ -31,6 +31,6 @@ public final class EmoteNetwork {
 
     /** Clientbound: the class behind this call only loads on the client. */
     private static void handlePlayerEmote(PlayerEmotePayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> com.jrpetty.mcassistant.client.PlayerEmotesClient.heard(payload.player(), payload.act(), payload.ticks()));
+        context.enqueueWork(() -> com.jrpetty.mcassistant.client.PlayerEmotesClient.heard(payload.player(), payload.act(), payload.ticks(), payload.camera()));
     }
 }

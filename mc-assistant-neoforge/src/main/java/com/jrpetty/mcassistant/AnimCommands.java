@@ -33,9 +33,10 @@ import java.util.List;
  *   /village anim mark MARK           the picture over the nearest folk's head (idea, coin, question, heart...)
  *   /village anim stop                the nearest folk back to what it was doing
  *   /village anim befriend            (a player) the nearest folk thinks well of you (to see your emotes answered)
- *   /village anim friend              (a player) a folk stood up three blocks in front of you that thinks well of you
+ *   /village anim friend [front]      (a player) a folk stood up beside you that thinks well of you (front: face to face)
  *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
- *   /village emote EMOTE              (anybody) the player's own emote, as the wheel sends it; "wheel" opens the wheel
+ *   /village emote EMOTE [ANGLE]      (anybody) the player's own emote, as the wheel sends it, its turned camera at ANGLE
+ *                                    degrees round from its front (90: side on) if asked; "wheel" opens the wheel
  * </pre>
  */
 public final class AnimCommands {
@@ -64,13 +65,16 @@ public final class AnimCommands {
                     .executes(AnimCommands::mark)))
                 .then(Commands.literal("stop").executes(AnimCommands::stop))
                 .then(Commands.literal("befriend").executes(AnimCommands::befriend))
-                .then(Commands.literal("friend").executes(AnimCommands::friend))
+                .then(Commands.literal("friend").executes(ctx -> friend(ctx, false))
+                    .then(Commands.literal("front").executes(ctx -> friend(ctx, true))))
                 .then(Commands.literal("stage").executes(AnimCommands::stage))));
         // The player's own emotes, typed (the wheel and the talk screen send the same): anybody, at the same pace.
         event.getDispatcher().register(Commands.literal("village")
             .then(Commands.literal("emote").then(Commands.argument("emote", StringArgumentType.word())
                 .suggests((ctx, b) -> SharedSuggestionProvider.suggest(Arrays.stream(com.jrpetty.mcassistant.entity.EmoteRules.EMOTES).map(Act::word), b))
-                .executes(AnimCommands::emote))));
+                .executes(ctx -> emote(ctx, com.jrpetty.mcassistant.net.PlayerEmotePayload.ANY_ANGLE))
+                .then(Commands.argument("angle", IntegerArgumentType.integer(-180, 180))
+                    .executes(ctx -> emote(ctx, IntegerArgumentType.getInteger(ctx, "angle")))))));
     }
 
     /** An op, or a player in creative. */
@@ -147,7 +151,7 @@ public final class AnimCommands {
         return 1;
     }
 
-    private static int emote(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int emote(CommandContext<CommandSourceStack> ctx, int angle) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
         if ("wheel".equals(StringArgumentType.getString(ctx, "emote"))) {          // the wheel opened on the player's screen
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.PlayerEmotePayload(p.getId(), -1, 0));
@@ -155,7 +159,7 @@ public final class AnimCommands {
         }
         Act a = Act.named(StringArgumentType.getString(ctx, "emote"));
         com.jrpetty.mcassistant.entity.PlayerEmotes.Result r = a == null ? com.jrpetty.mcassistant.entity.PlayerEmotes.Result.NOT_AN_EMOTE
-            : com.jrpetty.mcassistant.entity.PlayerEmotes.emote(p, a.ordinal(), -1);
+            : com.jrpetty.mcassistant.entity.PlayerEmotes.emote(p, a.ordinal(), -1, angle);
         if (r != com.jrpetty.mcassistant.entity.PlayerEmotes.Result.OK) {
             ctx.getSource().sendFailure(Component.literal(r == com.jrpetty.mcassistant.entity.PlayerEmotes.Result.TOO_SOON ? "Not so fast."
                 : r == com.jrpetty.mcassistant.entity.PlayerEmotes.Result.NOT_NOW ? "Not now." : "No such emote."));
@@ -175,11 +179,12 @@ public final class AnimCommands {
         return 1;
     }
 
-    private static int friend(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int friend(CommandContext<CommandSourceStack> ctx, boolean front) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
         Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
         Vec3 side = new Vec3(-look.z, 0, look.x);
-        Vec3 at = p.position().add(look.scale(1.2)).add(side.scale(2.0));     // beside it: the turned camera sees both
+        // Beside it (the turned camera sees both), or face to face at arm's length (for a handshake, side on).
+        Vec3 at = front ? p.position().add(look.scale(1.45)) : p.position().add(look.scale(1.2)).add(side.scale(2.0));
         VillageFolkEntity f = AnimStage.friend(ctx.getSource().getLevel(), at.x, p.getY(), at.z, p);
         if (f == null) return 0;
         ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is glad to see you"), false);

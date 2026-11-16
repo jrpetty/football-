@@ -54,9 +54,16 @@ public final class PlayerEmotesClient {
     private static final FolkAnimations.Style STYLE = new FolkAnimations.Style();
     /** The camera as it was before an emote turned it round, or null. */
     private static CameraType before;
+    /** The turned camera's angle round from the player's front (degrees), or NaN for its own slow sway; and its start. */
+    private static float camAngle = Float.NaN;
+    private static int camFrom;
 
     /** From the server: a player's emote began (act 0: it stopped). */
     public static void heard(int playerId, int act, int ticks) {
+        heard(playerId, act, ticks, com.jrpetty.mcassistant.net.PlayerEmotePayload.ANY_ANGLE);
+    }
+
+    public static void heard(int playerId, int act, int ticks, int camera) {
         Minecraft mc = Minecraft.getInstance();
         if (act < 0) {                                                  // the server's word to open the wheel, or shut it (/village emote wheel)
             if (mc.screen instanceof EmoteWheelScreen open) open.onClose();
@@ -67,9 +74,15 @@ public final class PlayerEmotesClient {
         Playing pl = PLAYING.computeIfAbsent(playerId, k -> new Playing());
         pl.seen.begin(act, p.tickCount);
         pl.until = p.tickCount + ticks;
-        if (p == mc.player && act != 0 && mc.screen == null && AnimConfig.emoteCamera() && mc.options.getCameraType() == CameraType.FIRST_PERSON) {
-            before = CameraType.FIRST_PERSON;
-            mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+        if (p == mc.player && act != 0) {
+            camAngle = camera == com.jrpetty.mcassistant.net.PlayerEmotePayload.ANY_ANGLE ? Float.NaN : camera;
+            camFrom = p.tickCount;
+            if (before == null && mc.screen == null && AnimConfig.emoteCamera() && mc.options.getCameraType() == CameraType.FIRST_PERSON) {
+                // Detached behind, then swung round to the front (onCameraAngles): the game's own third-person camera,
+                // kept out of walls the game's way.
+                before = CameraType.FIRST_PERSON;
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            }
         }
     }
 
@@ -102,6 +115,24 @@ public final class PlayerEmotesClient {
     @EventBusSubscriber(modid = McAssistantMod.MODID, value = Dist.CLIENT)
     public static final class Ticks {
         private Ticks() {}
+
+        /**
+         * The turned camera: while the player's own emote plays and the emote turned the camera out of first person, it
+         * looks back at the player from in front, a little to one side and a little above, swaying slowly from one front
+         * three-quarter to the other (or held at the angle the server asked for: /village emote EMOTE ANGLE).
+         */
+        @SubscribeEvent
+        public static void onCameraAngles(net.neoforged.neoforge.client.event.ViewportEvent.ComputeCameraAngles event) {
+            Minecraft mc = Minecraft.getInstance();
+            if (before == null || mc.player == null || event.getCamera().getEntity() != mc.player
+                    || mc.options.getCameraType() != CameraType.THIRD_PERSON_BACK) return;
+            float pt = (float) event.getPartialTick();
+            float t = (mc.player.tickCount - camFrom + pt) / 20.0F;
+            float a = Float.isNaN(camAngle) ? 28.0F * net.minecraft.util.Mth.sin(t * 0.55F) + 8.0F : camAngle;
+            float body = net.minecraft.util.Mth.rotLerp(pt, mc.player.yBodyRotO, mc.player.yBodyRot);
+            event.setYaw(body + 180.0F - a);
+            event.setPitch(14.0F);
+        }
 
         @SubscribeEvent
         public static void onClientTick(ClientTickEvent.Post event) {
