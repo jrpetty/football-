@@ -129,6 +129,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
         UUID village = ownerId();
         BlockPos centre = villageCentre;
+        if (!reason.shouldDestroy() && !level().isClientSide) CoinCensus.away(village, getUUID(), purse());   // [econ-1e] out of the world, its purse still counted
         super.remove(reason);
         if (!reason.shouldDestroy() || village == null || centre == null) return;
         Villages.recordDeath(village);      // unloading is not dying

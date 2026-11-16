@@ -445,6 +445,56 @@ public class EntrepreneurGameTests {
         helper.succeed();
     }
 
+    // ============================================================ [econ-1e] ent17 folk out of the loaded world
+
+    /**
+     * [econ-1e] The census counts the purse of a folk out of the loaded world (a cave team on its trip, a wagon's crew out of
+     * sight: its chunk let go and the folk saved with it) as it left, and its purse again once it is back in the world: the
+     * town's coin is the same all the while. (A team of three out past the loaded ground with three coins between them was
+     * three coins short in the morning's count, and three coins over the morning it walked back in.)
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ent17_census_away")
+    public static void ent17_census_away(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1702000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 5, StationTask.FARM, StationTask.CAVE, StationTask.CAVE, StationTask.FARM);
+        UUID id = folk.get(0).ownerId();
+        long[] at = { 0, 0, 0 };                                               // the count before, its flows then, the count away
+        List<CompoundTag> saved = new ArrayList<>();
+        // (After the town's first morning has been and gone: the count from then on moves only by booked flows.)
+        helper.runAtTickTime(4, () -> {
+            at[0] = CoinCensus.count(id);
+            at[1] = CoinCensus.netFlowPence(id);
+            for (VillageFolkEntity f : List.of(folk.get(1), folk.get(2))) {
+                CompoundTag tag = new CompoundTag();
+                f.save(tag);                                                   // as the chunk saves it when it is let go
+                saved.add(tag);
+                f.remove(net.minecraft.world.entity.Entity.RemovalReason.UNLOADED_TO_CHUNK);
+            }
+            at[2] = CoinCensus.count(id) - (CoinCensus.netFlowPence(id) - at[1]);
+        });
+        long[] back = { -1 };
+        helper.runAtTickTime(8, () -> {
+            for (CompoundTag tag : saved) {
+                net.minecraft.world.entity.Entity e = net.minecraft.world.entity.EntityType.loadEntityRecursive(tag, level, en -> en);
+                helper.assertTrue(e != null && level.addFreshEntity(e), "the folk back in the world");
+            }
+        });
+        helper.runAtTickTime(20, () -> {
+            back[0] = CoinCensus.count(id) - (CoinCensus.netFlowPence(id) - at[1]);   // (what came or went by a booked way since, set aside)
+            int here = 0;
+            for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity) here++;
+            long before = at[0], away = at[2];
+            Kit.log("ent17 the town's coin: " + Businesses.pence(before) + " with all at home, " + Businesses.pence(away) + " with two out of the world, "
+                 + Businesses.pence(back[0]) + " with them back, less the booked flows since (" + here + " folk in the world) | " + CoinCensus.page(id).replace('\n', '|'));
+            Kit.Expect ok = new Kit.Expect();
+            ok.that(away == before, "two out of the world, their purses counted as they left: " + Businesses.pence(away) + " against " + Businesses.pence(before));
+            ok.that(back[0] == before && here == 4, "back in the world, counted once: " + Businesses.pence(back[0]) + " with " + here + " folk");
+            helper.assertTrue(ok.clean(), ok.summary());
+            helper.succeed();
+        });
+    }
+
     // ============================================================ ent06 expansion
 
     /** A thriving toolshop takes on a hand, then larger premises (its rent up), then opens a second branch of the same owner. */

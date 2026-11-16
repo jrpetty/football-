@@ -4085,6 +4085,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             .put(assistantName.toLowerCase(), this);
         registeredOwner = ownerId;
         registeredName = assistantName;
+        if (!level().isClientSide) CoinCensus.back(getUUID());               // [econ-1e] back in the world: its purse counted as it is
     }
 
     public void setOwner(@Nullable Player player) {

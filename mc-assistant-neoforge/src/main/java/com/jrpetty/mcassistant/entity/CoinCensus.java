@@ -151,6 +151,69 @@ public final class CoinCensus {
         FLOWS.clear();
         LAST.clear();
         DRIFT.clear();
+        AWAY.clear();                                                   // [econ-1e]
+    }
+
+    // ------------------------------------------------------------------ [econ-1e] folk out of the loaded world
+
+    /**
+     * [econ-1e] Each town's folk out of the loaded world, and their purses as they went: a cave team out on its trip, a
+     * wagon's crew out of sight on the road, a hand at a far field whose ground was let go, a whole town while nobody is
+     * near it. The count took the purses of the folk it could see, so a team of three walking out past the loaded ground
+     * with three coins between them was three coins short in the morning's count, and three coins over the morning they
+     * walked back in: drift that was nobody's. Their purses are counted as they left them until they are back in the world.
+     * Kept in the town's notes, so a restart with folk out of the world counts them still.
+     */
+    private static final Map<UUID, Map<UUID, Integer>> AWAY = new ConcurrentHashMap<>();
+
+    /** [econ-1e] A folk of this town went out of the loaded world (its chunk let go, another dimension) with so many coins. */
+    public static void away(@Nullable UUID village, UUID folk, int coins) {
+        if (village == null || folk == null) return;
+        Map<UUID, Integer> m = awayOf(village);
+        Integer was = m.put(folk, Math.max(0, coins));
+        if (was == null || was != Math.max(0, coins)) saveAway(village, m);
+    }
+
+    /** [econ-1e] A folk back in the world (filed on its town's register again): counted by its purse, not as it left. */
+    public static void back(UUID folk) {
+        if (folk == null || AWAY.isEmpty()) return;
+        for (Map.Entry<UUID, Map<UUID, Integer>> e : AWAY.entrySet()) {
+            if (e.getValue().remove(folk) != null) saveAway(e.getKey(), e.getValue());
+        }
+    }
+
+    /** [econ-1e] The purses of this town's folk out of the world, pennies (any of them in the world now counted there). */
+    static long awayPence(UUID village, java.util.Set<UUID> here) {
+        Map<UUID, Integer> m = awayOf(village);
+        long n = 0;
+        for (Map.Entry<UUID, Integer> e : m.entrySet()) if (!here.contains(e.getKey())) n += e.getValue() * 100L;
+        return n;
+    }
+
+    private static Map<UUID, Integer> awayOf(UUID village) {
+        return AWAY.computeIfAbsent(village, k -> {
+            Map<UUID, Integer> m = new ConcurrentHashMap<>();
+            String note = Ledger.note(k, "census.away");
+            if (note != null && !note.isEmpty()) {
+                for (String part : note.split(";")) {
+                    int eq = part.indexOf('=');
+                    if (eq <= 0) continue;
+                    try {
+                        m.put(UUID.fromString(part.substring(0, eq)), Integer.parseInt(part.substring(eq + 1)));
+                    } catch (IllegalArgumentException ignored) { }
+                }
+            }
+            return m;
+        });
+    }
+
+    private static void saveAway(UUID village, Map<UUID, Integer> m) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<UUID, Integer> e : m.entrySet()) {
+            if (sb.length() > 0) sb.append(';');
+            sb.append(e.getKey()).append('=').append(e.getValue());
+        }
+        Ledger.note(village, "census.away", sb.toString());
     }
 
     /** So many coins came into the town (or went out of it) this way. */
@@ -172,8 +235,13 @@ public final class CoinCensus {
         Map<String, Long> out = new LinkedHashMap<>();
         out.put("treasury", Ledger.coins(village) * 100L + Businesses.townPence(village));
         long purses = 0;
-        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) purses += f.purse() * 100L;
+        java.util.Set<UUID> here = new java.util.HashSet<>();                       // [econ-1e]
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) {
+            purses += f.purse() * 100L;
+            here.add(f.getUUID());
+        }
         out.put("purses", purses);
+        out.put("purses of folk out of the loaded world", awayPence(village, here));   // [econ-1e] a cave team away, a wagon's crew
         out.put("put by for houses", Homes.savedTotal(village) * 100L);
         out.put("the bank's vault", Bank.cash(village) * 100L);
         long tills = 0, due = 0;
