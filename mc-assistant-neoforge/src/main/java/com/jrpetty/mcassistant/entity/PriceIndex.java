@@ -261,6 +261,7 @@ public final class PriceIndex {
     /** Refused as too dear (or more than it would pay): wanted, but not at that price. */
     static void refused(UUID village, ItemStack what, int n) {
         tally(village, what, n, REFUSED);
+        Enterprise.refused(village, what, n);                               // [econ-1b] a want the entrepreneurs hear of
     }
 
     /** Bought more of than it came for, for being cheap. */

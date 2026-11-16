@@ -63,7 +63,9 @@ public final class Business {
         FISHERY("Fishery", Size.YARD, Keeping.OWN),
         RANCH("Ranch", Size.YARD, Keeping.OWN),
         HUNTING("Hunting", Size.YARD, Keeping.OWN),
-        FOUNDRY("Foundry", Size.YARD, Keeping.OWN);
+        FOUNDRY("Foundry", Size.YARD, Keeping.OWN),
+        // [econ-1b] A business a folk opened of its own (Enterprise): its kind (BusinessTypes) in the firm's record.
+        ENTERPRISE("Firm", Size.SMALL, Keeping.OWN);
 
         public final String title;
         public final Size size;

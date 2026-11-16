@@ -6873,6 +6873,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null) return false;
         if (tickCount - tradeCheckTick < 6000) return false;      // once every five minutes
         tradeCheckTick = tickCount;
+        if (Enterprise.keepsTrade(this)) return false;            // [econ-1b] a firm's hand stays at its firm's work
         // Only on a full view. The shape is judged from who is LOADED, and in
         // a big village that is whoever is near the player: stand by the
         // farms and the miners are all asleep in unloaded chunks, so "miners:

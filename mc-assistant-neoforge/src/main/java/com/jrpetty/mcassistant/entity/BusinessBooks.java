@@ -62,6 +62,7 @@ public final class BusinessBooks {
             r.putLong("revAll", b.allTime.revenue);
             r.putLong("netAll", b.allTime.net());
             r.putLong("till", b.town() ? Businesses.treasuryPence(village) : b.till);
+            if (Enterprise.isFirm(b)) Enterprise.pageRow(level, village, b, r);   // [econ-1b] its trade, how it stands, its share
             rows.add(r);
         }
         out.put("rows", rows);

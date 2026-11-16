@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * moved by what is short and what is plenty) less half its spread to buy, plus half to sell. The spread pays its staff
  * (the storekeepers and the couriers, who carry the producers' loads in: its wages are theirs), and narrows as its trade
  * grows: its staff's week over its week's trade, and two in the hundred, never under four nor over fifteen. Short of coin
- * it bids less (down to half, when its cash is under two days' buying), it never turns a producer away: what its cash will
+ * it bids less (down to eighty-five in the hundred, when its cash is under two days' buying: [econ-1b]), it never turns a producer away: what its cash will
  * not run to the treasury lends it (the market's lender of last resort), and what the treasury cannot it owes the producer
  * as store credit, paid first when coin comes in. Staple food, timber and stone it never buys under seven tenths of their
  * usual worth while it has coin. Its glut the passing traders buy (Market.trade, sellSurplus): the town's exports.
@@ -65,6 +65,9 @@ public final class MarketMaker {
     static final double LEAST_SPREAD = 0.04, MOST_SPREAD = 0.15, SPREAD_OVER = 0.02;
     /** The least a staple fetches while the market has coin, of its usual worth. */
     static final double STAPLE_FLOOR = 0.7;
+    /** [econ-1b] The least the market bids, short of coin, of its fair bid (it was a half: producers paid half for its
+     *  want of a float; what it cannot pay now it owes them as store credit, paid first when coin comes in). */
+    static final double LEAST_CASH_FACTOR = 0.85;
     /** The days before a town's market can open, and the day it opens with or without its storehouse. */
     static final long OPENS_FROM = 4, OPENS_BY = 10;
     /** A hand-back within this long is refunded at what was paid (no spread lost). */
@@ -135,8 +138,31 @@ public final class MarketMaker {
     public static double mid(ServerLevel level, UUID village, ItemStack one) {
         Double forced = PRICE_FOR_TESTS.get(Stockroom.key(one));
         if (forced != null) return forced;
-        return Math.max(0.0001, PriceIndex.each(level, village, one.copyWithCount(1)) * priceLevel(village));
+        double m = Math.max(0.0001, PriceIndex.each(level, village, one.copyWithCount(1)) * priceLevel(village));
+        return Math.max(m, makingsFloor(level, village, one));                    // [econ-1b] never under what its makings fetch
     }
+
+    /**
+     * [econ-1b] What a smelted or cooked thing is never priced under: its makings at the market's going price, and a tenth
+     * for the furnace's time and fuel. The prices are reckoned ware by ware (by what is short and what is plenty), and an
+     * ingot cheaper than the raw iron it is smelted of (1.77c against 3.42c, in a ten-day town) had every smelter in the
+     * town losing on every ingot it brought in. Nothing is made that is worth less than its makings.
+     */
+    static double makingsFloor(ServerLevel level, UUID village, ItemStack one) {
+        net.minecraft.world.item.Item from = MAKINGS.get(one.getItem());
+        if (from == null) return 0;
+        double raw = Math.max(0.0001, PriceIndex.each(level, village, new ItemStack(from)) * priceLevel(village));
+        return raw * 1.1;
+    }
+
+    /** What each smelted or cooked thing is made of, one for one. */
+    static final Map<net.minecraft.world.item.Item, net.minecraft.world.item.Item> MAKINGS = Map.ofEntries(
+        Map.entry(Items.IRON_INGOT, Items.RAW_IRON), Map.entry(Items.GOLD_INGOT, Items.RAW_GOLD), Map.entry(Items.COPPER_INGOT, Items.RAW_COPPER),
+        Map.entry(Items.GLASS, Items.SAND), Map.entry(Items.STONE, Items.COBBLESTONE), Map.entry(Items.SMOOTH_STONE, Items.STONE),
+        Map.entry(Items.BRICK, Items.CLAY_BALL), Map.entry(Items.CHARCOAL, Items.OAK_LOG), Map.entry(Items.COOKED_BEEF, Items.BEEF),
+        Map.entry(Items.COOKED_PORKCHOP, Items.PORKCHOP), Map.entry(Items.COOKED_CHICKEN, Items.CHICKEN), Map.entry(Items.COOKED_MUTTON, Items.MUTTON),
+        Map.entry(Items.COOKED_COD, Items.COD), Map.entry(Items.COOKED_SALMON, Items.SALMON), Map.entry(Items.BAKED_POTATO, Items.POTATO),
+        Map.entry(Items.DRIED_KELP, Items.KELP), Map.entry(Items.TERRACOTTA, Items.CLAY));
 
     /** The town's price level: its standing over a hamlet's. */
     public static double priceLevel(UUID village) {
@@ -157,7 +183,7 @@ public final class MarketMaker {
         long[] w = week(village);
         double perDay = w[0] / 7.0;
         if (perDay <= 0) return 1.0;
-        return Math.max(0.5, Math.min(1.0, cash(village) / (2 * perDay)));
+        return Math.max(LEAST_CASH_FACTOR, Math.min(1.0, cash(village) / (2 * perDay)));
     }
 
     /** What the market asks for one of this, in coin. */
@@ -168,10 +194,16 @@ public final class MarketMaker {
     /** What the market pays for one of this, in coin: never a staple under seven tenths of its usual worth while it has coin. */
     public static double bid(ServerLevel level, UUID village, ItemStack one) {
         double b = mid(level, village, one) * (1 - spread(village) / 2) * cashFactor(village);
-        if (staple(one) && cash(village) > 0 && !PRICE_FOR_TESTS.containsKey(Stockroom.key(one))) {
+        if ((staple(one) || rawProduce(one)) && !PRICE_FOR_TESTS.containsKey(Stockroom.key(one))) {   // [econ-1b] the raw produce too, coin or credit
             b = Math.max(b, STAPLE_FLOOR * PriceIndex.usual(one.copyWithCount(1)) * priceLevel(village));
         }
         return Math.min(b, ask(level, village, one));
+    }
+
+    /** [econ-1b] A producer's raw output beside the staples: ore, coal and metal, wool, hides, eggs and feathers. */
+    static boolean rawProduce(ItemStack one) {
+        Economy.Kind k = Economy.kindOf(one);
+        return k == Economy.Kind.ORE || k == Economy.Kind.ANIMAL;
     }
 
     /** Food, timber and stone: what the town lives and builds on. */
@@ -649,6 +681,7 @@ public final class MarketMaker {
         if (n <= 0) return;
         Business firm = Businesses.employer(village, f);
         if (firm != null && Businesses.sellsToStores(firm.type)) return;              // its business's making, booked there
+        if (firm != null && Enterprise.output(level, village, firm, s.copyWithCount((int) n))) return;   // [econ-1b] a firm keeps its catch to sell
         Account seller = firm != null && !firm.mirror() && !firm.id.equals("storehouse") ? Account.firm(firm) : Account.dept(Dept.WORKS);
         buy(level, village, seller, s, n, "brought in");
         OUTPUT_NOW.merge(village + "|" + key, n, Long::sum);

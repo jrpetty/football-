@@ -395,6 +395,9 @@ public final class Purchases {
         if (offer.isEmpty()) return 0;
         ItemStack pick = choose(level, village, payer == null ? f : payer, f, offer, need);
         double each = priceEach(level, village, pick, payer);
+        // [econ-1b] Where a firm of the town's own folk has it too, the buyer goes to the best: price, the walk, its name.
+        Sellers.Offer seller = Sellers.best(level, v, pick, payer == null ? f : payer, each, n);
+        if (seller.firm() != null) each = seller.price();
         int k = payer == null ? n : decide(level, payer, pick, each, need, n);
         if (k <= 0) return 0;
         boolean earner = payer != null && !payer.isBaby() && payer.stationTask() != StationTask.NONE;
@@ -428,7 +431,11 @@ public final class Purchases {
                     "On the slate, please — I'm a bit short till the wages.", "I'll pay you back out of my wages, I promise."));
             }
         }
-        Stockroom.sold(level, village, Stockroom.Seller.SHOP, pick, got, coins);
+        if (seller.firm() != null && seller.firm().stock.containsKey(Stockroom.key(pick)) && seller.firm().stock.get(Stockroom.key(pick)).qty >= got) {
+            Sellers.sold(level, village, seller.firm(), pick, got, Math.round(each * got * 100));   // [econ-1b] the firm's sale, into its till
+        } else {
+            Stockroom.sold(level, village, Stockroom.Seller.SHOP, pick, got, coins);
+        }
         PriceIndex.bought(village, pick, got);
         lastGot = pick.copyWithCount(got);
         return got;

@@ -607,6 +607,12 @@ public final class Accounts {
         dirty();
     }
 
+    /** [econ-1b] What an account owed the market written off (a bankrupt's, once its creditors are paid what can be). */
+    static void forgive(UUID village, Account a) {
+        sub(town(village), "owed").remove(a.id());
+        dirty();
+    }
+
     public static long owed(UUID village, Account a) {
         return sub(town(village), "owed").getLong(a.id());
     }
