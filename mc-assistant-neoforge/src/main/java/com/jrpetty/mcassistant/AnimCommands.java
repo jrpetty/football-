@@ -179,7 +179,7 @@ public final class AnimCommands {
         net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
         Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
         Vec3 side = new Vec3(-look.z, 0, look.x);
-        Vec3 at = p.position().add(look.scale(2.5)).add(side.scale(2.2));     // off to one side: the turned camera sees both
+        Vec3 at = p.position().add(look.scale(1.2)).add(side.scale(2.0));     // beside it: the turned camera sees both
         VillageFolkEntity f = AnimStage.friend(ctx.getSource().getLevel(), at.x, p.getY(), at.z, p);
         if (f == null) return 0;
         ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is glad to see you"), false);

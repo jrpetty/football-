@@ -78,6 +78,9 @@ public final class Greetings {
         f.getLookControl().setLookAt(p, 30.0F, 30.0F);
         f.swing(InteractionHand.MAIN_HAND);
         Manner.idle(f, Manner.WAVE, 40);                            // [individual] a proper wave
+        UUID town = f.ownerId();                                    // [anim] its leader is bowed to, a friend waved to
+        boolean leader = town != null && PlayerLeader.leads(town, p.getUUID());
+        FolkAction.play(f, leader ? FolkAction.Act.BOW : FolkAction.Act.WAVE, leader ? 44 : 40);
         FolkTalk.speak(f, TownSpeech.hello(f, p, hello(f, p, aff)));   // [culture2] its town's own hello, most of the time
         if (f.isBaby() && aff >= LIKES && !f.isSleeping()) {
             TAGS.put(f.getUUID(), new Tag(p, f.tickCount + FOLLOW));

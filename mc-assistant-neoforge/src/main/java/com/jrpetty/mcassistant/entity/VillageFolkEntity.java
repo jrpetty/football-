@@ -1162,6 +1162,8 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (life.has(Social.Trait.SHY) && aff < 30 && getRandom().nextBoolean()) return;
         getLookControl().setLookAt(p, 30.0F, 30.0F);
+        if (village != null && PlayerLeader.leads(village, p.getUUID()) && !isBaby()) FolkAction.play(this, FolkAction.Act.BOW, 44);   // [anim]
+        else if (aff >= 40) FolkAction.play(this, FolkAction.Act.WAVE, 40);                                                         // [anim]
         if (aff >= 55 && !isBaby() && present(p)) return;
         FolkTalk.speak(this, FolkTalk.passing(this, p));
         if (aff <= -50 && level() instanceof net.minecraft.server.level.ServerLevel server) {

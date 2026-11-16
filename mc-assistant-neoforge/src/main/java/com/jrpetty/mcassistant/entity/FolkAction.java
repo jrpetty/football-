@@ -369,6 +369,10 @@ public final class FolkAction {
         if (t - s.spoke < 50 && still) return Act.TALK;
         // Mourning at a grave: the grief of the last day, knelt where the dead lie.
         if (still && level.getDayTime() / 24000L - f.griefDay <= 1 && nearGrave(f, level)) return Act.MOURN;
+        // An instrument in its hands (the buskers' lute, a note block for a drum): played.
+        Item held = f.getMainHandItem().getItem();
+        if (still && held == com.jrpetty.mcassistant.item.LeisureItems.LUTE.get()) return Act.LUTE;
+        if (still && held == Items.NOTE_BLOCK && f.offWorkNow()) return Act.DRUM;
         // Its own time: what it does for itself (hobbyNow's words).
         Act hob = hobby(f, s);
         if (hob != Act.NONE && (still || hob == Act.TAG || hob == Act.SACK || hob == Act.CARRY || hob == Act.DANCE)) return hob;
