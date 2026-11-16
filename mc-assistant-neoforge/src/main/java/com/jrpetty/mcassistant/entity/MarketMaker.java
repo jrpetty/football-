@@ -138,6 +138,7 @@ public final class MarketMaker {
     public static double mid(ServerLevel level, UUID village, ItemStack one) {
         Double forced = PRICE_FOR_TESTS.get(Stockroom.key(one));
         if (forced != null) return forced;
+        if (one.is(Items.GOLD_INGOT)) return MINT_PRICE;                           // [econ-1b] gold at the mint's price: a gold standard
         double m = Math.max(0.0001, PriceIndex.each(level, village, one.copyWithCount(1)) * priceLevel(village));
         return Math.max(m, makingsFloor(level, village, one));                    // [econ-1b] never under what its makings fetch
     }
@@ -203,7 +204,7 @@ public final class MarketMaker {
     /** [econ-1b] A producer's raw output beside the staples: ore, coal and metal, wool, hides, eggs and feathers. */
     static boolean rawProduce(ItemStack one) {
         Economy.Kind k = Economy.kindOf(one);
-        return k == Economy.Kind.ORE || k == Economy.Kind.ANIMAL;
+        return (k == Economy.Kind.ORE || k == Economy.Kind.ANIMAL) && !one.is(Items.GOLD_INGOT);   // (gold goes at the mint's price)
     }
 
     /** Food, timber and stone: what the town lives and builds on. */
@@ -1021,7 +1022,9 @@ public final class MarketMaker {
     public static long mintBuys(ServerLevel level, UUID village, int bars) {
         if (bars <= 0 || !live(village)) return 0;
         ItemStack gold = new ItemStack(Items.GOLD_INGOT);
-        long p = Math.round(ask(level, village, gold) * 100 * bars);
+        // [econ-1b] At the mint's price, never more: it strikes nine coins of a bar and paid the market's ask for it (nine
+        // coins and more), so every bar the town minted lost it money and a short treasury owed the market the rest.
+        long p = Math.round(Math.min(ask(level, village, gold), MINT_PRICE) * 100 * bars);
         long got = Accounts.debit(level, village, Account.dept(Dept.MINT), p, Purpose.WORK, bars + " gold ingot" + (bars == 1 ? "" : "s"));
         cashIn(village, got);
         book(village, Stockroom.key(gold), bars, p, false);
@@ -1030,6 +1033,13 @@ public final class MarketMaker {
 
     /** What the mint gives for a gold ingot brought to it, and keeps: nine coins struck, one the mint's (seigniorage). */
     public static final int STRUCK = Market.COINS_PER_GOLD, SEIGNIORAGE = 1;
+    /**
+     * [econ-1b] The mint's price for a gold ingot, coins: what it strikes of it less what it keeps (eight). The mint will
+     * always buy gold at it, so gold fetches it, no more and no less, at any town's price level: the market buys it of the
+     * miners about it and sells it to the mint and the smiths about it. Each bar the town mints brings the treasury its
+     * seigniorage (nine coins struck for eight paid), as each a player brings to the counter does.
+     */
+    public static final double MINT_PRICE = STRUCK - SEIGNIORAGE;
 
     /**
      * Free coinage: anybody (a player at the town's counter) brings gold and has it struck into coin, nine to the ingot,
