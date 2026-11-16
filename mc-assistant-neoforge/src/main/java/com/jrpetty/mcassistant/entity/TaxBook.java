@@ -61,7 +61,9 @@ public final class TaxBook {
         HEAD("the head tax", "every grown hand at work pays it each tax day"),
         WAGE("the share of wages", "kept back from every wage on payday: the law's tithe"),
         TOLL("the market toll", "a share of what folk and players take for their own goods"),
-        LEVY("the war levy", "every grown hand pays it each tax day, while the town is at war");
+        LEVY("the war levy", "every grown hand pays it each tax day, while the town is at war"),
+        // [econ-1b] A share of what every private business makes over its costs in the week, taken at its weekly reckoning.
+        PROFITS("the profits tax", "a share of every business's week's profit, taken before its owners draw");
 
         public final String words, does;
 
@@ -78,12 +80,15 @@ public final class TaxBook {
             if (t.equals("WAGES") || t.equals("TITHE")) return WAGE;
             if (t.equals("MARKET")) return TOLL;
             if (t.equals("WAR")) return LEVY;
+            if (t.equals("PROFIT") || t.equals("BUSINESS")) return PROFITS;     // [econ-1b]
             try { return valueOf(t); } catch (IllegalArgumentException e) { return null; }
         }
     }
 
     /** The head tax, the market toll and the war levy at each of their four rates. */
     static final int[] HEAD_COINS = { 0, 1, 2, 3 }, TOLL_PERCENT = { 0, 5, 10, 15 }, LEVY_COINS = { 0, 1, 2, 4 };
+    /** [econ-1b] The profits tax at its four rates, in the hundred of a week's profit. */
+    static final int[] PROFITS_PERCENT = { 0, 10, 20, 30 };
     /** A knight's fee each tax day (Knights). */
     public static final int KNIGHT_FEE = 2;
     /** When tax day's round starts, and when whoever was not found pays at the hall. */
@@ -128,6 +133,11 @@ public final class TaxBook {
         return TOLL_PERCENT[rate(village, Lever.TOLL)];
     }
 
+    /** [econ-1b] The profits tax, in the hundred of a business's week's profit. */
+    public static int profitsPercent(UUID village) {
+        return PROFITS_PERCENT[rate(village, Lever.PROFITS)];
+    }
+
     /** A lever at a rate, in words: "two coins a head each tax day". */
     public static String words(Lever l, int r) {
         r = Math.max(0, Math.min(3, r));
@@ -136,6 +146,7 @@ public final class TaxBook {
             case WAGE -> (new int[]{ 5, 10, 15, 20 })[r] + " in a hundred of every wage";
             case TOLL -> r == 0 ? "none" : TOLL_PERCENT[r] + " in a hundred of takings";
             case LEVY -> r == 0 ? "none" : coins(LEVY_COINS[r]) + " a head each tax day at war";
+            case PROFITS -> r == 0 ? "none" : PROFITS_PERCENT[r] + " in a hundred of a business's profit";
         };
     }
 
@@ -237,6 +248,8 @@ public final class TaxBook {
         CompoundTag e = entry(village, day);
         e.putInt(key, e.getInt(key) + coins);
         CivicLand.changed();
+        // [econ-1b] Into the town's budget, and the town's IOUs to its market paid first out of it, as out of the wages' share.
+        if (!key.equals("profits")) Accounts.taxIn(village, coins * 100L);
     }
 
     // ------------------------------------------------------------------ tax day: the round
@@ -678,7 +691,7 @@ public final class TaxBook {
         boolean down = protest || unrest >= TaxUnrest.PROTEST || days >= 14 && !war && share >= 100;
         if (!war && rate(id, Lever.LEVY) > 0 && !down) return new Motion(Lever.LEVY, -1, 0, "the war is over, and the levy with it");
         if (down) {
-            for (Lever l : new Lever[]{ Lever.HEAD, Lever.LEVY, Lever.TOLL, Lever.WAGE }) {
+            for (Lever l : new Lever[]{ Lever.HEAD, Lever.LEVY, Lever.TOLL, Lever.WAGE, Lever.PROFITS }) {
                 if (l == Lever.LEVY && war && !protest) continue;
                 int r = rate(id, l);
                 if (r > 0 && movable(id, l)) {
@@ -690,13 +703,17 @@ public final class TaxBook {
         }
         // Up: wages paid short, a thin purse, a war, coin wanted for something to buy.
         boolean thin = share >= 0 && share < 100 || days < 3;
+        boolean owing = TownBudget.owesTooMuch(id);                           // [econ-1b] the town's IOUs to its market past what it can carry
         boolean plans = Market.saved(id, level.getGameTime()) > Ledger.coins(id) || wonderPlanned(id);
         if (war && rate(id, Lever.LEVY) < 2) return new Motion(Lever.LEVY, 1, rate(id, Lever.LEVY) + 1, "the war must be paid for");
-        if (!thin && !plans) return null;
+        if (!thin && !plans && !owing) return null;
         if (unrest >= TaxUnrest.GRUMBLE + 10) return null;                    // not with the town grumbling already
-        String why = share >= 0 && share < 100 ? "the wages were paid short" : days < 3 ? "the treasury is all but empty"
+        String why = share >= 0 && share < 100 ? "the wages were paid short" : owing ? "the town owes its market more than it can carry"
+            : days < 3 ? "the treasury is all but empty"
             : wonderPlanned(id) ? "the town has a wonder of the world to raise" : "the town is saving for what it means to buy";
-        for (Lever l : new Lever[]{ Lever.HEAD, Lever.TOLL, Lever.WAGE }) {
+        // [econ-1b] Where the market is open the businesses' profits are taxed first: they are where the town's money is made now.
+        Lever[] up = MarketMaker.live(id) ? new Lever[]{ Lever.PROFITS, Lever.HEAD, Lever.TOLL, Lever.WAGE } : new Lever[]{ Lever.HEAD, Lever.TOLL, Lever.WAGE };
+        for (Lever l : up) {
             int r = rate(id, l);
             if (r < 2 && movable(id, l)) return new Motion(l, 1, r + 1, why);
         }
@@ -774,6 +791,9 @@ public final class TaxBook {
         if (Ledger.coins(id) >= 14 * bill) { s -= 15; no = "the treasury's full enough"; }
         if (m.lever() == Lever.LEVY && war) { s += 15 + 0.2 * safety; yes = "the war must be paid for"; }
         if (m.lever() == Lever.LEVY && !war) { s -= 30; no = "there's no war to pay for"; }
+        // [econ-1b] An owner weighs a profits tax by its own books; and a town in debt to its market wants it paid.
+        if (m.lever() == Lever.PROFITS && Enterprise.ownsAny(id, f.getUUID())) { s -= 12; no = "a coin taxed off a business is a hand it can't take on"; }
+        if (TownBudget.owesTooMuch(id)) { s += 12; if (m.dir() > 0) yes = "the town must pay what it owes the market"; }
         int unrest = TaxUnrest.level(id);
         s -= 0.6 * Math.max(0, unrest - 20);
         if (unrest >= TaxUnrest.PROTEST) no = "the town won't stand for more";
@@ -1006,7 +1026,7 @@ public final class TaxBook {
         for (Tag x : CivicLand.list(tag, "hist")) {
             CompoundTag e = ((CompoundTag) x).copy();
             e.putLong("d", e.getLong("d") - 1);
-            int all = e.getInt("head") + e.getInt("levy") + e.getInt("toll") + e.getInt("wage") + e.getInt("players");
+            int all = e.getInt("head") + e.getInt("levy") + e.getInt("toll") + e.getInt("wage") + e.getInt("players") + e.getInt("profits");   // [econ-1b] the profits tax
             e.putInt("all", all);
             if (day - e.getLong("d") < 7) week += all;
             days.add(e);

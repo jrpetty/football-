@@ -607,6 +607,12 @@ public final class Accounts {
         dirty();
     }
 
+    /** [econ-1b] What an account owed the market written off (a bankrupt's, once its creditors are paid what can be). */
+    static void forgive(UUID village, Account a) {
+        sub(town(village), "owed").remove(a.id());
+        dirty();
+    }
+
     public static long owed(UUID village, Account a) {
         return sub(town(village), "owed").getLong(a.id());
     }
@@ -715,6 +721,13 @@ public final class Accounts {
      * just come in, from the treasury into the market. Returns the pennies paid on them.
      */
     public static long taxIn(UUID village, long pence) {
+        if (pence <= 0) return 0;
+        TownBudget.in(village, "taxes", pence);                                    // [econ-1b] the town's budget
+        return payIous(village, pence);
+    }
+
+    /** [econ-1b] The IOUs paid, oldest first, out of so much coin that has just come into the treasury. */
+    static long payIous(UUID village, long pence) {
         if (pence <= 0) return 0;
         ListTag l = list(town(village), "debts");
         long paid = 0;

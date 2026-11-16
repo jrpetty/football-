@@ -378,6 +378,9 @@ public final class StoreFloor {
         }
         if (one.isEmpty()) one = StockKeeper.sampleFor(what);
         int price = one.isEmpty() ? n : ShopStock.lotPrice(level, id, one, n);      // [market] the same price as a player's
+        // [econ-1b] A firm of the town's own folk with it in stock, if the buyer would sooner go there.
+        Sellers.Offer seller = one.isEmpty() ? new Sellers.Offer(null, 0, 0) : Sellers.best(level, v, one, buyer, price / (double) Math.max(1, n), n);
+        if (seller.firm() != null) price = Math.max(1, (int) Math.ceil(seller.price() * n));
         price = FolkSkills.thrifty(buyer, price);
         if (buyer.purse() < price) return new Sale(false, null, post.counter(), price, ItemStack.EMPTY, "purse");
         List<ItemStack> got = ShopStock.takeStacks(level, v, what, n, buyer);
@@ -385,7 +388,8 @@ public final class StoreFloor {
         buyer.spend(price);
         Ledger.addCoins(id, price);
         Economy.spentInTown(id, price);
-        Stockroom.sold(level, id, Stockroom.Seller.SHOP, got.get(0), n, price);
+        if (seller.firm() != null) Sellers.sold(level, id, seller.firm(), got.get(0), n, price * 100L);   // [econ-1b] the firm's sale
+        else Stockroom.sold(level, id, Stockroom.Seller.SHOP, got.get(0), n, price);
         for (ItemStack s : got) {
             ItemStack left = buyer.insertGiven(s.copy());
             if (!left.isEmpty()) Crafts.store(level, v, left);

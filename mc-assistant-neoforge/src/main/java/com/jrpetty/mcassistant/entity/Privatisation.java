@@ -130,6 +130,12 @@ public final class Privatisation {
         }
     }
 
+    /** [econ-1b] Tests: the hand a producer business is worked by. */
+    @Nullable
+    public static VillageFolkEntity handForTests(UUID village, Business b) {
+        return handOf(village, b);
+    }
+
     static boolean producerType(Type t) {
         return t.size == Business.Size.YARD;
     }

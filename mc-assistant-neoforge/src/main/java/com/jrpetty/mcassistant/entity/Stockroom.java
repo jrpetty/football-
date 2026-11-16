@@ -434,6 +434,18 @@ public final class Stockroom {
         return l == null ? 0 : l.missed[0];
     }
 
+    /** [econ-1b] A ware's week at every counter in the town: {sold, asked for and not there}. */
+    public static int[] week7(ServerLevel level, UUID village, String key) {
+        int[] out = new int[2];
+        for (Seller s : Seller.values()) {
+            Line l = book(level, village, s).lines.get(key);
+            if (l == null) continue;
+            out[0] += Line.week(l.sold);
+            out[1] += Line.week(l.missed);
+        }
+        return out;
+    }
+
     /** Made: so many, and what one cost. */
     static void made(Book b, Line l, int n, double each) {
         l.made[0] += n;

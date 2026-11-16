@@ -66,8 +66,9 @@ public final class MarketPage {
             TaxesPage.small(g, font, Long.toString(r.getLong("sq")), x + 2 + cols[5], cy, Ui.MUTED);
             cy += 9;
         }
-        int fy = y + h - 38;
+        int fy = y + h - 46;
         List<String> foot = new ArrayList<>(strings(t, "programme"));
+        if (!t.getString("budget").isEmpty()) foot.add(0, t.getString("budget"));          // [econ-1b] the town's budget
         foot.add("The town's coin: " + t.getString("census"));
         for (String s : foot) {
             if (fy > y + h - 8) break;

@@ -12761,3 +12761,82 @@ bid; acc03 meals, a child's, the poor's relief; acc04 the commons and Market Ope
 acc06 a whole day of a town of twenty with no straggler; acc07 every producing trade pays its wage at the market's prices;
 acc08 the coin census at nought drift; acc09 the town's works pay for their stone; acc10 an IOU in an emergency, paid
 first out of the tax; acc11 ten days of a new town under the market).
+
+## Entrepreneurs and competition (economy batch 1B)
+
+The town's folk now open businesses of their own where they see a want, and those businesses compete, thrive or fail. The
+market's first weeks were measured over ten days of a new town (EntrepreneurGameTests ent10) and two weaknesses put right:
+the producers' pay and the town's budget.
+
+- **Seeing a want.** Each morning, once the day's prices are reckoned, the town's wants are looked over kind by kind: the
+  toolsmith and the armourer (at the anvil), the carpenter (the shop's bench: chests, barrels, beds, tables), the clothier
+  and the weaver (the tailor's), the chandler (candles from the hives), the potter and the glassworks (the furnace), the
+  baker, the butcher, the café and the inn (the cook's fire), the fishmonger (a stall of its own catch), the tavern and the
+  apothecary (the brewer's), the greengrocer and the general store (who buy in at the market and sell on) and the
+  stationer. Each kind wants an age and a size of town. For each: what its wares were wanted over the week (sold, asked
+  for and not there, refused as too dear, at every counter, and what the households have on their shopping lists) against
+  what is already supplied (sold, on the town's shelves, held by firms of the kind); what one costs to make (its makings at
+  the market's ask, its maker's time at the going wage) against what it fetches. A new firm can hope for half the want
+  not met; less its rent and its hands' wages, that is the week's profit it might make.
+- **Who opens one.** A grown folk who is not the elder and owns no business but its own homestead, with the skill (level
+  five at the trade, or a knack for it) and the nerve: a Merchant at heart is bold, a Visionary less so, a Haggler a little,
+  one who cares for good wages and trade too; a Homebody or one who puts safety first is not. It must put up half the
+  start-up (its premises, three days' makings, a week's wages for any hands) out of its purse and savings, keeping twelve
+  coins by; the bank may lend the rest. It opens when the profit it might make is over three twentieths of the start-up.
+  One new business a town every three days at most, and no more than one for every four grown folk.
+- **Opening.** The founder says so the day before ("I've a mind to open a toolshop: there's no stone picks to be had"); the
+  next morning, if the sums still add up, it opens. The founder works it at its trade (the town's own sums no longer move a
+  firm's hands to other work), a sign goes up by its stall with its name, its trade, its price and its owner, the chronicle
+  has it ("Wren opened Wren's Tools on the square"), and any hands it wants are taken on from the trade or from the hands
+  the town can spare. Its premises are a stall on the square (eight coins, its own) or a room let from the town. Its books
+  are a business's like any other: what its hands make or catch is its stock, at what it cost; it sells at its own price.
+- **Competition.** Where a firm has a ware and the town's own counter has it too (or another firm), a buyer goes to the
+  best: the price, a little dearer for the walk (two in the hundred every sixteen blocks), against the seller's name for
+  good work (its hands' skill, its age, how often it ran out), worth up to fifteen in the hundred of the going price. A
+  firm's price is its full cost a piece and its markup, never more than three fifths over the going price nor under four
+  tenths of it. Its sale goes into its own till. A firm the folk pass by, under a tenth of its market for a week, cuts its
+  markup. What it holds over five days' sales it sells to the market at the bid: a firm does not sit on its stock.
+- **Thriving.** Over a quarter of its capital in profit a week for a fortnight, with the want still unmet: it takes on a
+  hand; then larger premises; then a second branch of the same owner.
+- **Failing.** Its cash gone for a week with no credit left, or worth less than it owes for three days, or the books' own
+  winding up: it is bankrupt. Its stock is sold to the market at the bid, its stall at auction to the folk with the means,
+  and its creditors are paid in order: the wages owed its hands, its rent and taxes, the market's trade credit, the bank.
+  A sole trader answers with its purse down to six coins. Its hands are laid off, its premises given back, its sign taken
+  down, and the chronicle says why: "Wren's Tools closed: it sold too dear and too little", "there was no call for its
+  wares", "its costs ran ahead of its takings".
+- **Giving up.** A firm returning less than money earns at the bank for four weeks is wound up by its owner: its stock
+  sold, its debts paid, what is left its own.
+- **The producers' pay.** The ten-day measure showed producers living on far less than the other trades: their surplus
+  under a coin a day against three or four. Three causes, three fixes. A smelted or cooked thing was priced ware by ware
+  and could fall under its makings (an ingot at 1.77c against raw iron at 3.42c, so every smelter lost on every ingot):
+  nothing made is now priced under its makings and a tenth. The market short of coin bid as little as half: now never
+  under eighty-five in the hundred, the rest owed as store credit and paid first. And the floor that kept staples at seven
+  tenths of their worth now holds for ore, coal, wool, hides and eggs too, coin or credit. A sole owner working its own
+  business is paid out of what the business took, not out of its own savings put in to pay itself (which only paid the
+  wage tax on its own coin). The counters' prices are at the town's price level, as the market's are (a village's hands
+  earn half as much again, and pay it).
+- **The mint.** The town's mint bought its gold at the market's ask (nine coins and more a bar) and struck nine coins of
+  it, so every bar it minted lost money. Gold now goes at the mint's price, eight coins a bar at any town's price level
+  (the mint will always buy at it: a gold standard); the town's mint pays that for its bars and strikes nine, its
+  seigniorage a coin a bar to the treasury, as a player's bar at the counter comes back as eight coins.
+- **The town's budget.** The council taxes the businesses' profits (the **profits tax**, a fifth lever on the Taxes page:
+  a tenth from Market Opening Day, up to three tenths), taken at each business's weekly reckoning before its owners draw.
+  The market is the town's own enterprise: each morning the IOUs the town wrote it are set against what it holds over its
+  float, and once a week its spare cash goes to the treasury. A town that owes its market more than it can carry (half a
+  week's revenue, ten coins at least) puts off the works that can wait (the café, the fountain, the park, the theatre) for
+  the day, and the council is moved to raise a tax, the profits tax first; its stores, homes, food, well, walls and the
+  buildings its age asks for always go ahead. The Market page shows the town's week: what came in (taxes, profits tax,
+  rents, the market, fees), what was spent, the IOUs against what the town can carry.
+- **You.** A citizen or friend of the town can take out a charter at the hall (`/village firms charter <kind>`, ten coins to
+  the treasury) for a firm of its own, fund it (`/village business invest`), take on a hand (`/village firms hire <id>`),
+  set its prices (`/village firms markup <id> <percent>`) and order its makings at the market (`/village business order`).
+- **Where you see it.** The **Businesses** page lists every firm with its owner, trade, week, hands and till, and how it
+  stands (new, trading, thriving, struggling, bankrupt, closed) with its share of its market on hover; each firm's books
+  open from there. A folk's card says what it owns and where it works. The firm's sign shows its price. `/village firms`
+  lists the firms and the morning's look at the town's wants (`/village firms wants` for every kind); operators have
+  `found-now <kind> [folk]`, `bankrupt-now <id>` and `morning`.
+
+Smoke: `econ_firms_stage` in tools/realworld/smoke.py, right after the market stage. Tests: EntrepreneurGameTests (ent01 a
+founding; ent02 none when the market is served or nobody is bold; ent03 buyers go to the cheaper seller; ent04 a firm
+passed by cuts its markup; ent05 a bankruptcy pays its creditors in order, the census at nought drift; ent06 expansion;
+ent07 a player's charter; ent08 kept with the world; ent09 the town's budget; ent10 ten days of a town under the market).

@@ -422,6 +422,8 @@ public final class Businesses {
     @Nullable
     public static Business employer(@Nullable UUID village, VillageFolkEntity f) {
         if (village == null || f.isBaby()) return null;
+        Business firm = Enterprise.employerOf(village, f);                 // [econ-1b] a hand of a firm its own folk opened
+        if (firm != null) return firm;
         Town t = town(village);
         Hospitality.Role role = Hospitality.role(f);
         Type type = switch (role) {
@@ -465,7 +467,11 @@ public final class Businesses {
         int due = b.shortTime.contains(f.getUUID()) ? (wage + 1) / 2 : wage;
         int tax = Market.taxOn(f, due);
         long needP = due * 100L;
-        if (b.till < needP) raise(level, v.id(), b, needP - b.till, day);
+        // [econ-1b] A sole owner working its own business is paid out of what its business has taken, not out of its own
+        // savings put in to pay itself (a coin round the circle, the wage tax off it each time) nor the town's credit.
+        // (Where the market is open: a plain town keeps its old ways.)
+        boolean ownHand = MarketMaker.live(v.id()) && b.owners.size() == 1 && f.getUUID().equals(b.owners.get(0).who());
+        if (b.till < needP && !ownHand) raise(level, v.id(), b, needP - b.till, day);
         int paid = (int) Math.min(due, b.till / 100);
         b.till -= paid * 100L;
         int taxed = Math.min(tax, paid);
@@ -480,7 +486,8 @@ public final class Businesses {
         b.allTime.wages += paid * 100L;
         d.staffNames.put(f.getUUID(), f.displayNameCap());
         d.staffPay.merge(f.getUUID(), paid * 100L, Long::sum);
-        if (paid < due) b.note(day, f.displayNameCap() + " paid " + paid + " of " + due + ": the till was empty and the credit gone");
+        if (paid < due && !ownHand) b.note(day, f.displayNameCap() + " paid " + paid + " of " + due + ": the till was empty and the credit gone");
+        if (paid < due && !ownHand) Enterprise.wageOwed(v.id(), b, f, (due - paid) * 100L);   // [econ-1b] owed it, first in a bankruptcy
         dirty();
         return net;
     }
@@ -897,7 +904,8 @@ public final class Businesses {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerLevel level = server.overworld();
-        Business b = makerFor(village, trade);
+        Business firm = Enterprise.atWork(village);                         // [econ-1b] a firm's hand's making is its firm's
+        Business b = firm != null ? firm : makerFor(village, trade);
         if (b == null) return;
         Map<String, Long> used = new LinkedHashMap<>();
         Map<String, Long> made = new LinkedHashMap<>();
@@ -916,7 +924,8 @@ public final class Businesses {
 
     /** A batch made at a business's bench (Bakery): its plan's makings and fuel, less what went back, into what it made. */
     public static void benchMade(ServerLevel level, UUID village, Type type, Bench.Plan plan, ItemStack made) {
-        Business b = of(village, type.id());
+        Business firm = Enterprise.atWork(village);                         // [econ-1b] a firm's hand's batch is its firm's
+        Business b = firm != null ? firm : of(village, type.id());
         if (b == null || b.town() || made.isEmpty()) return;
         Map<String, Long> used = new LinkedHashMap<>();
         Map<String, ItemStack> samples = new HashMap<>();
@@ -972,7 +981,8 @@ public final class Businesses {
             b.cards.put(e.getKey(), e.getValue() + " made" + (parts.isEmpty() ? " by its hands' work alone" : " of " + String.join(", ", parts))
                 + (fuelCost > 0 ? " (fuel " + pence(fuelCost) + ")" : "") + ": " + pence(share) + ", " + coins(share / 100.0 / e.getValue()) + " each, day " + (day + 1));
         }
-        if (sellsToStores(b.type)) for (Map.Entry<String, Long> e : made.entrySet()) toStores(level, village, b, e.getKey(), samples.get(e.getKey()), e.getValue(), day);
+        if (sellsToStores(b.type) && !Enterprise.isFirm(b))                 // [econ-1b] a firm keeps what it makes, to sell at its own price
+            for (Map.Entry<String, Long> e : made.entrySet()) toStores(level, village, b, e.getKey(), samples.get(e.getKey()), e.getValue(), day);
         dirty();
         return total;
     }
@@ -1105,9 +1115,10 @@ public final class Businesses {
             repay(level, id, b, day);
             if ((day - b.opened) % 7 == 6) draw(level, id, b, day);
             review(level, id, b, day);
-            reorder(level, id, b, day);
+            if (b.open) reorder(level, id, b, day);
             b.today(day).cashEnd = b.till;
         }
+        Enterprise.morning(level, v, day);                                  // [econ-1b] the entrepreneurs' firms, and the town's wants
         owners(level, v, day);
         dirty();
     }
@@ -1117,6 +1128,7 @@ public final class Businesses {
         Day d = b.today(day);
         long rent = rent(village, b);
         payTown(level, village, b, rent, day);
+        TownBudget.in(village, "rents", rent);                              // [econ-1b] the town's budget
         d.rent += rent;
         b.allTime.rent += rent;
         long other = 0;
@@ -1145,6 +1157,7 @@ public final class Businesses {
 
     /** A day's rent, in pennies: its size, at what the place is (a village half as much again as a hamlet...). */
     static long rent(UUID village, Business b) {
+        if (Enterprise.isFirm(b)) return Enterprise.rentPence(village, b);  // [econ-1b] a stall, a room, larger premises
         return (long) b.type.size.rentPence * Wealth.standing(village) / 10;
     }
 
@@ -1239,6 +1252,8 @@ public final class Businesses {
     static void draw(ServerLevel level, UUID village, Business b, long day) {
         Day week = b.last(day - 1, 7);
         long net = week.net();
+        long tax = TownBudget.profitsTax(level, village, b, net, day);      // [econ-1b] the profits tax, before the owners draw
+        net -= tax;
         long spare = b.till - floatOf(b, day);
         long draw = Math.min(net, spare);
         if (draw < 100 || b.account < 0) return;
@@ -1326,6 +1341,10 @@ public final class Businesses {
      * the owners bearing what is left over or short; the premises the town's, to sell to the next to take it on.
      */
     static void windUp(ServerLevel level, UUID village, Business b, long day, String why) {
+        if (Enterprise.isFirm(b)) {                                         // [econ-1b] a firm goes bankrupt, its creditors paid in order
+            Enterprise.bankrupt(level, village, b, day, why);
+            return;
+        }
         long stock = 0;
         for (Map.Entry<String, Lot> e : b.stock.entrySet()) {
             if (e.getValue().qty <= 0) continue;
@@ -1388,7 +1407,7 @@ public final class Businesses {
     static void owners(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         for (Business b : all(id)) {
-            if (b.type.keeping != Business.Keeping.OWN) continue;
+            if (b.type.keeping != Business.Keeping.OWN || Enterprise.isFirm(b)) continue;   // [econ-1b] a firm closed stays closed
             if (b.town() && day - b.closedDay >= 2 && day % 3 == 0) {
                 VillageFolkEntity f = proprietorFor(level, id, b, null);
                 if (f != null && f.purse() >= Math.max(4, worth(level, id, b) / 300)) {

@@ -385,7 +385,8 @@ public final class Market {
         if (one.isEmpty()) return 0;
         ItemStack single = one.copyWithCount(1);
         return PriceIndex.each(level, village, single) * margin(village, single)
-            * (marketDay(village, level.getDayTime() / 24000L) ? Worth.MARKET_DAY_ASK : 1.0);
+            * (marketDay(village, level.getDayTime() / 24000L) ? Worth.MARKET_DAY_ASK : 1.0)
+            * (MarketMaker.live(village) ? MarketMaker.priceLevel(village) : 1.0);   // [econ-1b] at the town's price level, as its market buys and sells
     }
 
     /** What the town asks for so many of this today, in whole coins (Worth.askLot). */

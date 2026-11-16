@@ -167,7 +167,7 @@ public final class TaxesPage {
         for (int i = 0; i < n; i++) {
             CompoundTag d = days.getCompound(i);
             int bx = x + 3 + i * slot, bw = Math.max(2, slot - 2), top = base;
-            int[][] parts = { { d.getInt("head") + d.getInt("levy"), HEAD }, { d.getInt("wage"), WAGE }, { d.getInt("toll"), TOLL }, { d.getInt("players"), PLAYERS } };
+            int[][] parts = { { d.getInt("head") + d.getInt("levy"), HEAD }, { d.getInt("wage"), WAGE }, { d.getInt("toll") + d.getInt("profits"), TOLL }, { d.getInt("players"), PLAYERS } };   // [econ-1b] the profits tax with the toll
             for (int[] part : parts) {
                 int ph = room * part[0] / most;
                 if (ph <= 0) continue;
@@ -177,7 +177,7 @@ public final class TaxesPage {
             if (mx >= bx && mx < bx + slot && my >= y && my < y + h) {
                 g.renderOutline(bx - 1, y + 1, bw + 2, h - 2, Ui.EDGE);
                 tip = List.of(Component.literal("Day " + d.getLong("d") + ": " + d.getInt("all") + " coins"),
-                    Component.literal("Head tax " + d.getInt("head") + ", war levy " + d.getInt("levy") + ", toll " + d.getInt("toll")),
+                    Component.literal("Head tax " + d.getInt("head") + ", war levy " + d.getInt("levy") + ", toll " + d.getInt("toll") + ", profits tax " + d.getInt("profits")),
                     Component.literal("Share of wages " + d.getInt("wage") + " (of " + d.getInt("wages") + " paid), citizens " + d.getInt("players")));
             }
         }
