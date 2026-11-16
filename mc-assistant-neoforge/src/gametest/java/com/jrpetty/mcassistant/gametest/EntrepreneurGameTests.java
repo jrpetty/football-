@@ -784,6 +784,16 @@ public class EntrepreneurGameTests {
                     ok.that(worstDrift[0] == 0, "the census at nought drift every morning (worst " + worstDrift[0] + ")");
                     Kit.log(tag + " most IOUs " + Businesses.pence(mostIous[0]));
                     Kit.log(tag + " FINAL firms: " + Enterprise.words(level, id).replace('\n', '|'));
+                    for (Business fb : Enterprise.all(id)) {                       // [econ-1c] each firm's books in brief
+                        CompoundTag fr = Enterprise.recordForTests(id, fb);
+                        StringBuilder st = new StringBuilder();
+                        for (java.util.Map.Entry<String, Business.Lot> e2 : fb.stock.entrySet()) st.append(e2.getValue().qty).append(' ').append(e2.getKey().replace("minecraft:", "")).append(", ");
+                        Business.Day aw = fb.allTime;
+                        Kit.log(String.format(Locale.ROOT, "%s FINAL firm %s: revenue %s, cogs %s, wages %s, rent %s, other %s, net %s; stock %s; targets %s; record %s; notes %s",
+                            tag, fb.name, Businesses.pence(aw.revenue), Businesses.pence(aw.cogs), Businesses.pence(aw.wages), Businesses.pence(aw.rent), Businesses.pence(aw.other),
+                            Businesses.pence(aw.net()), st, fr == null ? "-" : fr.getCompound("targets"), fr == null ? "-" : fr.getString("creditors") + " " + fr.getString("heard"),
+                            String.join(" | ", fb.notes.subList(Math.max(0, fb.notes.size() - 8), fb.notes.size()))));
+                    }
                     StringBuilder who = new StringBuilder();
                     for (AssistantEntity e2 : Villages.folkOf(id)) {
                         if (!(e2 instanceof VillageFolkEntity f2) || f2.isBaby()) continue;
