@@ -123,6 +123,7 @@ public class StorehouseGameTests {
             boolean ok = true;
             for (long k = t; k <= t + span && ok; k += 200) {
                 level.setDayTime(k);
+                level.updateSkyBrightness();                 // [health] isNight() reads the sky as last ticked: the test before's night
                 ok = !f.offWorkNow();
             }
             if (ok) {

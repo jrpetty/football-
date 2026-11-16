@@ -270,11 +270,16 @@ public final class KnightManors {
         if (b == null) return false;
         BlockPos door = TownLife.fittings(b).door();
         if (door == null) return false;
+        if (k.getBoolean("hung")) return true;                         // [health] up already (the daily look hung it)
         Direction out = b.facing().getOpposite();
         Direction along = out.getClockWise();
-        for (int side : new int[]{ 1, -1 }) {
-            BlockPos at = door.relative(along, side * 2).above(1).relative(out, 1);
-            if (!level.getBlockState(at).isAir() || !level.getBlockState(at.relative(out.getOpposite())).isSolid()) continue;
+        // [health] On the wall beside the door, nearest the old spot first: the drawings differ (the manor's porch posts stand
+        // two off the door, a window beside it), so any spot whose wall holds a banner, with room under it to hang.
+        BlockState hangs = net.minecraft.world.level.block.Blocks.WHITE_WALL_BANNER.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, out);
+        for (int[] spot : new int[][]{ { 2, 1 }, { -2, 1 }, { 1, 1 }, { -1, 1 }, { 3, 1 }, { -3, 1 }, { 2, 2 }, { -2, 2 }, { 1, 2 }, { -1, 2 } }) {
+            BlockPos at = door.relative(along, spot[0]).above(spot[1]).relative(out, 1);
+            if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).isAir() || !hangs.canSurvive(level, at)) continue;
             ItemStack banner = Knights.make(level, v, knight, k.getString("name"), true);
             if (banner.isEmpty()) return false;
             if (Decor.hangBanner(level, at, out, banner)) {

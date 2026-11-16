@@ -687,8 +687,11 @@ public class TownWaysGameTests {
                 asked = FolkTalk.answer(fa, me, TalkTopic.SAY, "Any sayings?");
                 answers.add(asked);
                 String a0 = asked;
-                helper.assertTrue(asked.startsWith("We say \"") && asked.contains("It comes from day ")
+                // [health] (its manner may come first: a shy folk's "Oh — um."); one saying named, not a run of them.
+                helper.assertTrue(asked.contains("We say \"") && asked.contains("It comes from day ")
                     && TownSpeech.coined(x).stream().anyMatch(sg -> a0.contains("\"" + sg.text() + "\"")), "one of the town's own, and where it came from: " + asked);
+                helper.assertTrue(TownSpeech.sayings(x).stream().filter(sg -> a0.toLowerCase().contains(sg.text().toLowerCase())).count() == 1,
+                    "one saying at a time: " + asked);
             }
             Kit.log("cw04 \"Any sayings?\" " + asked + " (asked " + answers.size() + " times)");
             helper.assertTrue(asked.contains(dry) && asked.contains("drought"), "the harbour folk tells its own, and where it came from: " + answers);

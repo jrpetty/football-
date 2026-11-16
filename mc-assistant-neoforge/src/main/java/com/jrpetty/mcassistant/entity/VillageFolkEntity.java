@@ -2927,6 +2927,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (id != null && RestDay.now(id, level().getDayTime()) != null) return "the day of rest";
         Boolean bell = TownBell.shift(this);
         if (bell != null && !bell) return "the town bell";
+        if (TownCalendar.busy(this)) return "about the town's calendar";     // [health] the news cried, a birthday present
         if (!onShift()) return "off shift";
         return onBreak() ? "on a break" : "";
     }
@@ -2957,6 +2958,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (serving != null) return serving;
         // The day of rest: nobody works but the watch.
         if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
+        // [health] The calendar's business first (the noon news cried, the bell rung, a birthday present taken round), in a
+        // town that keeps no bell too: the crier of a town with no bell was on its shift, its walk to the plot taking it
+        // off the square between its lines (TownBell.shift asks only in a town whose bell keeps the day).
+        if (TownCalendar.busy(this)) return false;
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
         Boolean bell = TownBell.shift(this);
         if (bell != null) return bell;
