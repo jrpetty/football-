@@ -148,7 +148,20 @@ public final class TownBudget {
     /** What the town may owe its market before it puts off its works: half a week's revenue; ten coins at least, [econ-1d] and
      *  two coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
     public static long limit(UUID village) {
-        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(revenue7(village) * WEEK_SHARE));
+        return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(week(village) * WEEK_SHARE));
+    }
+
+    /**
+     * [econ-1e] The town's week's revenue: the last seven days', or, its market open fewer days than that, what those days
+     * brought in at a week's rate. The day after its Market Opening Day a town's "week" was one day's taxes, and it could
+     * carry a seventh of what it would a week on: it put off its houses on the strength of a week it had not had yet.
+     */
+    static long week(UUID village) {
+        long in = revenue7(village);
+        long opened = MarketMaker.openedDay(village);
+        if (opened < 0) return in;
+        long days = Math.max(1, Math.min(7, Accounts.dayNow() - opened + 1));
+        return days >= 7 ? in : in * 7 / days;
     }
 
     /** [econ-1d] The town's grown folk. */
