@@ -12922,14 +12922,15 @@ carry once the harvests were real, and firms that struggled where they should ha
   the morning (another day). The town's spending is booked as it is spent now. The Market page and `/village market` show
   the IOUs' week: written by whom, cleared how.
 - **Living within its means.** How tight the town's money is decides what it does, the moment it tightens, not the next
-  morning. Owing its market over half what it can carry (half a week's revenue; three coins a grown folk and ten coins at
+  morning. Owing its market over half what it can carry (half a week's revenue; two coins a grown folk and ten coins at
   the least, so a young town whose revenue is still to come can build its first houses), or having spent today more than a
   day's share of its revenue and what it may still borrow, it is **careful**: the works that can wait (the café, the
   fountain, the park, the theatre) are put off, and its buildings go up plain (no lanterns, carpets, flowers, bookshelves
   or bells bought for them; a torch for a lantern; its rooms left unfurnished for now; its walls of the cheapest stone and
   timber the market has, never at over three times the price of its cobblestone or planks, so no bricks). Owing more than
-  it can carry, it is **short**: besides, one building crew at a time, and once its works have spent a day's share of its
-  revenue (fifteen coins at the least) its builders fetch no more until the morning. Its essentials (its stores, homes and
+  it can carry, it is **short**: besides, one building crew at a time, and once its works have spent three fifths of a day's
+  share of its revenue (the rest goes to pay its debts down; ten coins at the least) its builders fetch no more until the
+  morning. Its essentials (its stores, homes and
   beds, food, water, walls, the age's buildings) still go up every day, at the pace its money allows: nothing waits for
   ever, and no town deadlocks. The budget line on the Market page says which it is.
 - **Paying it down.** Each morning what the treasury holds over two days of its own wage bill goes to pay its IOUs, oldest

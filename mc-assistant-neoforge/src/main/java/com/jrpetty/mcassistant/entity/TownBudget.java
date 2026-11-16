@@ -143,10 +143,10 @@ public final class TownBudget {
     }
 
     /** [econ-1d] What a town may owe its market whatever its revenue, a head of its grown folk, pennies (a few days' wages). */
-    static final long LEAST_A_HEAD = 300;
+    static final long LEAST_A_HEAD = 200;
 
     /** What the town may owe its market before it puts off its works: half a week's revenue; ten coins at least, [econ-1d] and
-     *  three coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
+     *  two coins a grown folk (a young town of twenty, its revenue still to come in, put its houses off at ten coins owed). */
     public static long limit(UUID village) {
         return Math.max(Math.max(LEAST_LIMIT, LEAST_A_HEAD * grown(village)), Math.round(revenue7(village) * WEEK_SHARE));
     }
@@ -193,7 +193,9 @@ public final class TownBudget {
     }
 
     /** [econ-1d] What the works may always spend in a day, whatever the town owes, pennies: its essentials go ahead, at a pace. */
-    static final long WORKS_FLOOR = 1500;
+    static final long WORKS_FLOOR = 1000;
+    /** [econ-1d] The share of a day's revenue a short town lets its works spend: the rest pays its debts down. */
+    static final double SHORT_SHARE = 0.6;
 
     /**
      * [econ-1d] The dearest building block a careful town buys for its walls, coin each: three times the market's cobblestone
@@ -208,13 +210,14 @@ public final class TownBudget {
 
     /**
      * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
-     * them (a day's share of its week's revenue, and fifteen coins at the least): its builders fetch no more for the day.
+     * them (three fifths of a day's share of its week's revenue, the rest to pay its debts down; ten coins at the least): its
+     * builders fetch no more for the day.
      * Its essential buildings still go up every day, at the pace its money allows; nothing waits for ever.
      */
     public static boolean worksWait(@javax.annotation.Nullable UUID village) {
         if (village == null || pressure(village) < 2) return false;
         long today = Accounts.deptBook(village, Accounts.Dept.WORKS)[0];
-        return today > Math.max(WORKS_FLOOR, revenue7(village) / 7);
+        return today > Math.max(WORKS_FLOOR, Math.round(revenue7(village) / 7.0 * SHORT_SHARE));
     }
 
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */
