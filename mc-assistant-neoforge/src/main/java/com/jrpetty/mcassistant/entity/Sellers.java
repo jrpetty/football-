@@ -29,7 +29,7 @@ public final class Sellers {
     /** A reputation of one is worth this much of the going price to a buyer. */
     static final double NAME_WORTH = 0.15;
     /** A firm never asks under this of the going price (its own cost-plus would undersell everybody at first). */
-    static final double LEAST_OF_GOING = 0.6;
+    static final double LEAST_OF_GOING = 0.4;
 
     /** The seller chosen: a firm (null for the town's own counter), its price each, and the buyer's reckoning of it. */
     public record Offer(@Nullable Business firm, double price, double utility) {}

@@ -181,6 +181,12 @@ public class EntrepreneurGameTests {
         UUID id = smith.ownerId();
         Villages.Village v = Villages.get(id);
         for (int i = 0; i < 20; i++) Stockroom.sold(level, id, Stockroom.Seller.SHOP, new ItemStack(Items.STONE_PICKAXE), 1, 2);
+        // The town's counter well stocked with every tool the folk might want.
+        List<ItemStack> shelf = new ArrayList<>();
+        for (Item it : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_SHOVEL, Items.STONE_HOE, Items.IRON_PICKAXE, Items.IRON_AXE,
+            Items.IRON_SHOVEL, Items.IRON_HOE, Items.SHEARS, Items.BUCKET }) for (int i = 0; i < 2; i++) shelf.add(new ItemStack(it, 1));
+        for (int i = 0; i < 6; i++) shelf.add(new ItemStack(Items.STONE_HOE, 1));
+        stores(level, id, x, shelf.toArray(new ItemStack[0]));
         Kit.Expect ok = new Kit.Expect();
         Enterprise.Opportunity o = Enterprise.weighForTests(level, v, "toolsmith");
         Kit.log("ent02 served: " + (o == null ? "-" : o.words()));
@@ -224,8 +230,8 @@ public class EntrepreneurGameTests {
         ItemStack pick = new ItemStack(Items.STONE_PICKAXE);
         stores(level, id, x, new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1),
             new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1));
-        Enterprise.stockForTests(a, pick, 3, 60);
-        Enterprise.stockForTests(b, pick, 3, 60);
+        Enterprise.stockForTests(a, pick, 3, 20);
+        Enterprise.stockForTests(b, pick, 3, 20);
         a.markup = 0.2;
         b.markup = 1.2;
         VillageFolkEntity buyer = folk.get(5);
@@ -308,14 +314,14 @@ public class EntrepreneurGameTests {
         Enterprise.staffForTests(id, b, hand);
         stores(level, id, x, new ItemStack(Items.STONE_PICKAXE, 1), new ItemStack(Items.STONE_PICKAXE, 1));
         Enterprise.stockForTests(b, new ItemStack(Items.STONE_PICKAXE), 2, 50);
+        owner.spend(owner.purse());
+        owner.earn(14);
         CoinCensus.morning(level, v, day(level));
         nextDay(level);
         // Its till, and its debts: wages 3c, the town 4c, the market 30c, the bank 20c (the bank's loan was coin it had).
         long till = b.till;
         Businesses.fundForTests(id, b, 900 - till);
         Enterprise.debtsForTests(id, b, hand, 300, 400, 3000, 2000);
-        owner.spend(owner.purse());
-        owner.earn(14);
         int handPurse = hand.purse();
         long tre = Businesses.treasuryPence(id), mkt = MarketMaker.cash(id);
         Enterprise.bankrupt(level, id, b, day(level), "tests");

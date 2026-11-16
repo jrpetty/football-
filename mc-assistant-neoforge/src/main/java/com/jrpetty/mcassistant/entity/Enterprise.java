@@ -364,8 +364,10 @@ public final class Enterprise {
                 Lot l = b.stock.get(key);
                 if (l != null) firmStock += l.qty;
             }
+            // What the town's own counter has on its shelves meets the shopping lists as well as anybody's.
+            long onShelf = Math.min(Market.stock(level, id, Stockroom.matcher(key)) + Businesses.inShop(level, id, key), 4L * Math.max(1, lists.getOrDefault(key, 0)));
             double want = w[0] + w[1] + refused7(id, key) + lists.getOrDefault(key, 0) + firmSold;
-            double have = w[0] + firmSold + firmStock;
+            double have = w[0] + firmSold + firmStock + onShelf;
             double price = Market.askEach(level, id, one);
             double inputs = makings(level, id, t, one);
             double labour = wageOf(t.work(), id) / Math.max(1.0, t.perDay());
