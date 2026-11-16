@@ -123,10 +123,11 @@ func _preview() -> Control:
 	key.light_energy = 1.4
 	vp.add_child(key)
 	var cam := Camera3D.new()
-	cam.position = Vector3(0, 1.15, 2.6)
 	cam.fov = 38
+	# Aimed by transform, not look_at(): the panel is built before it's in the scene tree.
+	var cam_pos := Vector3(0, 1.15, 2.6)
+	cam.transform = Transform3D(Basis.looking_at(Vector3(0, 1.0, 0) - cam_pos, Vector3.UP), cam_pos)
 	vp.add_child(cam)
-	cam.look_at(Vector3(0, 1.0, 0))
 	_pivot = Node3D.new()
 	vp.add_child(_pivot)
 	_rig = CharacterRig.new()
