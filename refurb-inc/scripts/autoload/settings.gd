@@ -41,7 +41,7 @@ var values := {
 	"music_volume": 0.5,
 	"ambience_volume": 0.8,
 	"graphics_preset": "high",   # low | medium | high | ultra
-	"fullscreen": false,
+	"fullscreen": true,       # Steam norm (and the Deck); windowed is fitted to the screen
 	"vsync": true,
 	"show_fps": true,
 	"settings_version": 2,
@@ -121,8 +121,24 @@ func apply() -> void:
 	_set_bus("Ambience", float(values.ambience_volume))
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if values.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+		if not values.fullscreen:
+			_fit_window()
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if values.vsync else DisplayServer.VSYNC_DISABLED)
 	settings_changed.emit()
+
+
+func _fit_window() -> void:
+	## A 1920x1080 window on a smaller screen (laptops, 1280x800 handhelds) would hang off the edge: shrink it to
+	## fit the usable area and centre it. The UI scales with the window (canvas_items stretch).
+	var scr := DisplayServer.window_get_current_screen()
+	var area := DisplayServer.screen_get_usable_rect(scr)
+	var size := DisplayServer.window_get_size()
+	if area.size.x <= 0 or (size.x <= area.size.x and size.y <= area.size.y):
+		return
+	var k := minf(float(area.size.x) * 0.92 / size.x, float(area.size.y) * 0.92 / size.y)
+	var fit := Vector2i(int(size.x * k), int(size.y * k))
+	DisplayServer.window_set_size(fit)
+	DisplayServer.window_set_position(area.position + (area.size - fit) / 2)
 
 
 func _set_bus(bus_name: String, linear: float) -> void:

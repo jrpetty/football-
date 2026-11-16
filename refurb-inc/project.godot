@@ -12,6 +12,10 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
+[steam]
+
+app_id=480
+
 [autoload]
 
 Content="*res://scripts/autoload/content.gd"

@@ -503,7 +503,7 @@
     },
     {
       "id": "board_dock_wd",
-      "name": "Dock WD-22 controller board",
+      "name": "Dock CD-2 controller board",
       "category": "board",
       "price": 30,
       "repair_level": 2,
@@ -559,7 +559,7 @@
     },
     {
       "id": "cpu_vortex_x3_2234",
-      "name": "Vortex X3-2234 CPU (4C/8T, 3.6 GHz)",
+      "name": "Vortex X3-0408 CPU (4C/8T, 3.6 GHz)",
       "category": "cpu",
       "cpu": "vortex_x3_2234",
       "price": 45,
@@ -568,7 +568,7 @@
     },
     {
       "id": "cpu_vortex_x7_4214",
-      "name": "Vortex X7-4214 CPU (12C/24T, 2.2 GHz)",
+      "name": "Vortex X7-1224 CPU (12C/24T, 2.2 GHz)",
       "category": "cpu",
       "cpu": "vortex_x7_4214",
       "price": 38,
@@ -577,7 +577,7 @@
     },
     {
       "id": "cpu_vortex_x9_6248",
-      "name": "Vortex X9-6248 CPU (20C/40T, 2.5 GHz)",
+      "name": "Vortex X9-2040 CPU (20C/40T, 2.5 GHz)",
       "category": "cpu",
       "cpu": "vortex_x9_6248",
       "price": 85,
@@ -586,7 +586,7 @@
     },
     {
       "id": "cpu_vortex_x9_6338",
-      "name": "Vortex X9-6338 CPU (32C/64T, 2.0 GHz)",
+      "name": "Vortex X9-3264 CPU (32C/64T, 2.0 GHz)",
       "category": "cpu",
       "cpu": "vortex_x9_6338",
       "price": 190,
@@ -595,7 +595,7 @@
     },
     {
       "id": "cpu_arcturo_titan_7302",
-      "name": "Arcturo Titan 7302 CPU (16C/32T, 3.0 GHz)",
+      "name": "Arcturo Titan 16 CPU (16C/32T, 3.0 GHz)",
       "category": "cpu",
       "cpu": "arcturo_a9_titan_7302",
       "price": 70,
@@ -604,7 +604,7 @@
     },
     {
       "id": "cpu_arcturo_titan_7543",
-      "name": "Arcturo Titan 7543 CPU (32C/64T, 2.8 GHz)",
+      "name": "Arcturo Titan 32 CPU (32C/64T, 2.8 GHz)",
       "category": "cpu",
       "cpu": "arcturo_a9_titan_7543",
       "price": 240,

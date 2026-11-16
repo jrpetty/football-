@@ -33,10 +33,10 @@
 - **Leaderboards:** the host posts each milestone's time in working days to `DAYS_<ID>`. These boards are ascending, so fewer days is better.
 
 ## App id
-`SteamBridge.APP_ID` is **480**, Valve's public test app "Spacewar". Lobbies, P2P and invites all work with it, so co-op can be tested now. While testing, Steam shows you as "playing Spacewar".
+The app id lives in one place: **Project Settings → steam/app_id** (`project.godot`, `[steam] app_id=480`). 480 is Valve's public test app "Spacewar". Lobbies, P2P and invites all work with it, so co-op can be tested now. While testing, Steam shows you as "playing Spacewar".
 
 When Refurb Inc. has its own Steamworks app:
-1. Set `APP_ID` to the real id.
+1. Set `steam/app_id` in `project.godot` to the real id (Project → Project Settings → Advanced → steam/app_id). Release builds started outside Steam then relaunch through Steam; debug builds don't.
 2. Bump `LOBBY_VERSION` whenever the network protocol changes.
 3. Create the achievements and leaderboards below in Steamworks (App Admin → Stats & Achievements / Leaderboards) and publish them.
    - With app 480, achievements and leaderboards quietly do nothing.

@@ -179,3 +179,31 @@ func test_rng_state_survives_a_save() -> void:
 	var s2 := GameState.new()
 	s2.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
 	eq(s2.rng.state, want, "64-bit RNG state round-trips through JSON")
+
+
+func test_product_names_do_not_copy_real_model_numbers() -> void:
+	# Brands are fictional; model and CPU numbers must not mirror real products either (trademark caution).
+	var real_cpu := RegEx.create_from_string("\\d{4,5}(U|G\\d|H|HS|P|T)?$")
+	for c: Dictionary in Content.cpus.values():
+		check(real_cpu.search(str(c.name)) == null or str(c.name).begins_with("Vortex X") or str(c.name).begins_with("Arcturo Titan"),
+			"CPU name looks like a real part number: %s" % c.name)
+	var real_models := ["5420", "7390", "3510", "840 G", "650 G", "T14", "X13", "E15", "WD-22"]
+	for m: Dictionary in Content.models.values():
+		for bad: String in real_models:
+			check(not bad in str(m.name), "model name mirrors a real product: %s" % m.name)
+
+
+func test_a_delivered_pallet_never_lands_on_the_pallet_truck() -> void:
+	var sim := fresh_sim(34)
+	var s := sim.state
+	s.cash = 1000000
+	var drop := Vector3(0, 0, 5)
+	var truck := s.new_item(Item.KIND_PALLET_TRUCK)
+	s.set_loc(truck, {"t": "loose", "p": [drop.x, 0.0, drop.z], "r": [0, 0, 0, 1]})
+	var lot := sim.lots.create_lot(Content.sellers.values()[0])
+	sim.c_buy_lot(P, {"lot": lot.id})
+	var drops: Array = sim.deliver_lot(lot.id, drop)
+	check(not drops.is_empty(), "the lot arrived")
+	for d: Item in drops:
+		var p: Array = d.loc.p
+		check(Vector2(float(p[0]) - drop.x, float(p[2]) - drop.z).length() > 1.2, "pallet clear of the parked truck")

@@ -273,7 +273,7 @@ func test_build_from_a_barebones_chassis() -> void:
 		_cmd(sim, "build", {"station": "build_1", "act": "step"})
 	eq(steps, 17, "2 CPUs + 4 DIMMs + 8 drives + RAID + 2 PSUs")
 	check(ServerBuild.complete(u, c.spec), "all green")
-	eq(u.spec_line(), "2× Vortex X9-6248 · 256GB RAM · 8× 1.2TB SAS")
+	eq(u.spec_line(), "2× Vortex X9-2040 · 256GB RAM · 8× 1.2TB SAS")
 	check(s.parts.is_empty() or s.parts.keys().all(func(k): return int(s.parts[k]) > 0), "bins tidy")
 	for pid in ["chassis_rampart_2200", "cpu_vortex_x9_6248", "ram_rdimm_64", "hdd_sas_1200", "psu_server_750", "raid_card_12g"]:
 		eq(int(s.parts.get(pid, 0)), 0, "%s used up" % pid)

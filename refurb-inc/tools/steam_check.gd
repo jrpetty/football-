@@ -15,7 +15,7 @@ func _check(cond: bool, msg: String) -> void:
 
 func _ready() -> void:
 	var ok := Net.start_steam()
-	_check(ok, "Steam started (%s)" % ("app %d" % SteamBridge.APP_ID if ok else Net.steam.status_text))
+	_check(ok, "Steam started (%s)" % ("app %d" % SteamBridge.app_id() if ok else Net.steam.status_text))
 	if not ok:
 		_finish()
 		return

@@ -6,9 +6,10 @@ extends Node
 ## GodotSteam is reached only through Engine.get_singleton("Steam") / ClassDB, never the bare `Steam` identifier,
 ## so the game still parses and runs (LAN + solo) in a build without the plug-in, and in tests/tools.
 ##
-## App id: 480 is Valve's public test app ("Spacewar") — lobbies, P2P and invites all work with it, so co-op can
-## be built and tested before Refurb Inc. has its own Steamworks app. Swap APP_ID for the real id when it exists
-## (and add the achievements/leaderboards in Steamworks; see docs/STEAM.md).
+## App id: one place — Project Settings → steam/app_id (project.godot). 480 is Valve's public test app ("Spacewar"):
+## lobbies, P2P and invites all work with it, so co-op can be built and tested before Refurb Inc. has its own
+## Steamworks app. Set the real id there when it exists (and add the achievements/leaderboards in Steamworks; see
+## docs/STEAM.md). A release build launched outside Steam is relaunched through Steam once the real id is set.
 
 signal lobby_created(lobby_id: int)
 signal lobby_joined(lobby_id: int, is_owner: bool)
@@ -19,7 +20,7 @@ signal member_left(steam_id: int)
 signal started                                   # Steam initialised (achievements earned offline sync then)
 signal avatar_ready(steam_id: int, image: Image)
 
-const APP_ID := 480
+const TEST_APP_ID := 480                       # Valve's Spacewar, used until steam/app_id holds the real id
 const GAME_KEY := "refurb_inc"                 # lobby data tag, so lobby searches only find Refurb Inc. games
 const LOBBY_VERSION := 1                       # bump when the network protocol changes
 
@@ -35,6 +36,10 @@ var _descending := {}                          # boards where higher is better (
 var _avatars := {}                             # steam id -> Image
 
 
+static func app_id() -> int:
+	return int(ProjectSettings.get_setting("steam/app_id", TEST_APP_ID))
+
+
 func start() -> bool:
 	## Initialise Steam (once). False when the plug-in or the Steam client isn't there; LAN and solo still work.
 	if available or steam != null:
@@ -43,7 +48,12 @@ func start() -> bool:
 		status_text = "This build has no Steam support."
 		return false
 	steam = Engine.get_singleton("Steam")
-	var r: Dictionary = steam.steamInitEx(APP_ID, true)       # embed_callbacks: GodotSteam pumps callbacks itself
+	var app := app_id()
+	if app != TEST_APP_ID and not OS.is_debug_build() and steam.has_method("restartAppIfNecessary") \
+			and steam.restartAppIfNecessary(app):
+		get_tree().quit()                          # Steam relaunches the game itself (owned copy, overlay)
+		return false
+	var r: Dictionary = steam.steamInitEx(app, true)       # embed_callbacks: GodotSteam pumps callbacks itself
 	if int(r.get("status", -1)) != int(_const("STEAM_API_INIT_RESULT_OK", 0)):
 		status_text = "Steam isn't running (%s)." % str(r.get("verbal", "init failed"))
 		return false

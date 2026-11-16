@@ -5,7 +5,7 @@
       "id": "corvex_prospect_5420",
       "type": "laptop",
       "maker": "corvex",
-      "name": "Prospect 5420",
+      "name": "Prospect 54R",
       "release_year": 2022,
       "screen_in": 14.0,
       "cpu_options": [
@@ -50,7 +50,7 @@
       "id": "corvex_prospect_7390",
       "type": "laptop",
       "maker": "corvex",
-      "name": "Prospect 7390",
+      "name": "Prospect 73S",
       "release_year": 2019,
       "screen_in": 13.3,
       "cpu_options": [
@@ -94,7 +94,7 @@
       "id": "corvex_vantage_3510",
       "type": "laptop",
       "maker": "corvex",
-      "name": "Vantage 3510",
+      "name": "Vantage 35E",
       "release_year": 2021,
       "screen_in": 15.6,
       "cpu_options": [
@@ -138,7 +138,7 @@
       "id": "halden_folio_840",
       "type": "laptop",
       "maker": "halden",
-      "name": "Folio 840 G7",
+      "name": "Folio 84 Mk7",
       "release_year": 2020,
       "screen_in": 14.0,
       "cpu_options": [
@@ -181,7 +181,7 @@
       "id": "halden_folio_650",
       "type": "laptop",
       "maker": "halden",
-      "name": "Folio 650 G5",
+      "name": "Folio 65 Mk5",
       "release_year": 2019,
       "screen_in": 15.6,
       "cpu_options": [
@@ -224,7 +224,7 @@
       "id": "northstar_meridian_t14",
       "type": "laptop",
       "maker": "northstar",
-      "name": "Meridian T14",
+      "name": "Meridian M14",
       "release_year": 2021,
       "screen_in": 14.0,
       "cpu_options": [
@@ -269,7 +269,7 @@
       "id": "northstar_meridian_x13",
       "type": "laptop",
       "maker": "northstar",
-      "name": "Meridian X13",
+      "name": "Meridian Air 13",
       "release_year": 2022,
       "screen_in": 13.3,
       "cpu_options": [
@@ -313,7 +313,7 @@
       "id": "northstar_edge_e15",
       "type": "laptop",
       "maker": "northstar",
-      "name": "Edge E15",
+      "name": "Edge 15",
       "release_year": 2020,
       "screen_in": 15.6,
       "cpu_options": [
@@ -1057,7 +1057,7 @@
       "id": "corvex_dock_wd22",
       "type": "dock",
       "maker": "corvex",
-      "name": "Dock WD-22",
+      "name": "Dock CD-2",
       "release_year": 2021,
       "size": "small",
       "carry": 1,

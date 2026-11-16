@@ -2250,16 +2250,20 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO, step: Vector3 = 
 func _free_pallet_spot(drop: Vector3, step: Vector3, exclude_id: int) -> Vector3:
 	## The first spot along the drop line not already taken by a pallet, so a new delivery never lands inside one
 	## that's still sitting there from last time.
-	var taken: Array = []
+	## Parked pallet trucks and forklifts count too, so a pallet never lands on top of one.
+	var taken: Array = []           # [Vector2 centre, clearance]
 	for it: Item in state.items.values():
-		if it.kind == Item.KIND_PALLET and it.id != exclude_id and it.loc.get("t") == "loose":
+		if it.id == exclude_id or it.loc.get("t") != "loose":
+			continue
+		var clear: float = {Item.KIND_PALLET: 1.1, Item.KIND_PALLET_TRUCK: 1.3, Item.KIND_FORKLIFT: 2.3}.get(it.kind, 0.0)
+		if clear > 0.0:
 			var p: Array = it.loc.get("p", [0, 0, 0])
-			taken.append(Vector2(float(p[0]), float(p[2])))
+			taken.append([Vector2(float(p[0]), float(p[2])), clear])
 	var side := Vector3(-step.z, 0, step.x).normalized() * 0.95
 	for row in 4:
 		for k in 8:
 			var c := drop + step * k - side * row
-			if taken.all(func(t): return t.distance_to(Vector2(c.x, c.z)) > 1.1):
+			if taken.all(func(t): return (t[0] as Vector2).distance_to(Vector2(c.x, c.z)) > float(t[1])):
 				return c
 	return drop + step * taken.size()
 

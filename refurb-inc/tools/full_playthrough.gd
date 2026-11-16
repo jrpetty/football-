@@ -251,6 +251,23 @@ func _title_and_new_game() -> void:
 
 # ================================================================= 2. movement
 
+func _top_speed(sprint: bool) -> float:
+	_player._yaw = PI if sprint else 0.0      # turn round so we don't walk into the same wall
+	_player._apply_look()
+	if sprint:
+		Input.action_press("sprint")
+	Input.action_press("move_forward")
+	var top := 0.0
+	for i in 40:
+		await get_tree().physics_frame
+		top = maxf(top, Vector2(_player.velocity.x, _player.velocity.z).length())
+	Input.action_release("move_forward")
+	Input.action_release("sprint")
+	for i in 20:
+		await get_tree().physics_frame
+	return top
+
+
 func _movement() -> void:
 	print("\n== Movement")
 	var start := _player.global_position
@@ -262,12 +279,10 @@ func _movement() -> void:
 	_ok(d > 0.4, "move", "W moves the player (%.2f m)" % d)
 	await _act("move_back", 0.8)
 	await _wait(0.3)
-	var p0 := _player.global_position
-	Input.action_press("sprint")
-	await _act("move_forward", 0.8)
-	Input.action_release("sprint")
-	var ds := p0.distance_to(_player.global_position)
-	_ok(ds > d * 1.15, "move", "Shift sprints (%.2f m vs %.2f m walking)" % [ds, d])
+	# Compare top speeds over a fixed number of physics frames (real seconds mean little at 1–2 fps software GL).
+	var walk_v := await _top_speed(false)
+	var sprint_v := await _top_speed(true)
+	_ok(sprint_v > walk_v * 1.15, "move", "Shift sprints (%.2f m/s vs %.2f m/s walking)" % [sprint_v, walk_v])
 	await _wait(0.4)
 	var y0 := _player.global_position.y
 	var peak := y0
@@ -372,9 +387,24 @@ func _laptop_loop() -> void:
 	var units: Array = s.items.values().filter(func(i): return i.kind == Item.KIND_UNIT and String(i.loc.get("slot", "")).begins_with("i%d:" % pallet.id))
 	if not _ok(not units.is_empty(), "loop", "units to work on"):
 		return
-	# Stand by the pallet (on the garage side) and pick up three, one press each.
+	# Stand by the pallet on the side away from the hand pallet truck (its handle would be in the way) and pick
+	# up three, one press each.
+	if _player.my_truck():
+		await _act("drop", 0.12)
+	var truck_p := Vector3(1e6, 0, 1e6)
+	for t: Item in s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET_TRUCK):
+		var tv := _view(t)
+		if tv and tv.global_position.distance_to(pv.global_position) < truck_p.distance_to(pv.global_position):
+			truck_p = tv.global_position
 	var towards := Vector3(-pv.global_position.x, 0, -pv.global_position.z).normalized()
-	_player.global_position = pv.global_position + towards * 1.4 + Vector3(0, 0.05, 0)
+	var best := -1.0
+	for k in 4:
+		var d := towards.rotated(Vector3.UP, k * PI / 2)
+		var spot := pv.global_position + d * 1.3
+		var score := spot.distance_to(truck_p) - (0.0 if k == 0 else 0.4)     # prefer the garage side
+		if score > best:
+			best = score
+			_player.global_position = spot + Vector3(0, 0.05, 0)
 	for i in 6:
 		await get_tree().physics_frame
 	var picked := 0

@@ -357,8 +357,8 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - 13 AI models (5 laptops, 3 desktops, 5 servers) went through `tools/model_pipeline/` (see `docs/MODEL_CONTRACT.md` → AI-generated models).
   - Output is `assets/models/{laptops,desktops,servers}/<name>/` at 40–75k tris LOD0 with Godot LODs and 2K JPEG PBR textures, 41 MB in total. The raw files were 700 MB.
   - Raw sources are NOT in git. They live in Jon's `Desktop/Refurb INC/assets` folder.
-- Laptop tiers → data: rugged = Kestrel Swift 14; office = Prospect 5420/7390, Folio 840, Meridian T14; ultralight = Meridian X13, Aura 13; mainstream = Vantage 3510, Folio 650, Edge E15.
-  - Gaming = Northstar Vanguard G17 (2022, 17.3in, Vortex V7-12700H / Arcturo A9, 16–32GB, 512GB–1TB NVMe, Arcturo Prism P70M GPU).
+- Laptop tiers → data: rugged = Kestrel Swift 14; office = Prospect 54R/73S, Folio 84, Meridian M14; ultralight = Meridian Air 13, Aura 13; mainstream = Vantage 35E, Folio 65, Edge 15.
+  - Gaming = Northstar Vanguard G17 (2022, 17.3in, Vortex V7-1290MX / Arcturo A9, 16–32GB, 512GB–1TB NVMe, Arcturo Prism P70M GPU).
     - A-grade £640; sold by the new seller Pixelmoor Studios (games developer, min rep 10).
     - It brought new parts: a 90Wh battery, a 1TB NVMe drive and a 17.3in 144Hz panel.
     - Models may set an optional `gpu`, which is shown in the spec line.
@@ -411,7 +411,7 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - [~] Co-op designed in: shared goals (campaign milestones), any number of players at the office PC, staff work
       beside players. Still to do: a sales & purchasing office with several desks/PCs in the bigger buildings.
 - [x] New stock types: monitors (24in, 27in, 34in ultrawide), Linkwell LS-24P switch + Air AX3000 Wi-Fi AP, Corvex
-      WD-22 dock, Brightline Slate 11 tablet, Kestrel Pulse 6 + Northstar Nova 13 phones. Own diagnostics stages,
+      CD-2 dock, Brightline Slate 11 tablet, Kestrel Pulse 6 + Northstar Nova 13 phones. Own diagnostics stages,
       inventory screens, faults, parts, scrap values and sellers. Monitors/docks hold no data (test → grade);
       phones/tablets get a secure wipe + factory reset, switches/APs a config wipe + firmware flash; mobile kit has
       battery health (caps grade A) and activation locks (unfixable → D Spares/Repairs). Test: `test_new_stock.gd`.
@@ -538,9 +538,8 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
   - `export_presets.cfg` includes data/*.json and the skeleton.json and leaves out tools/tests/docs.
 - **Still open before release (needs Jon or bigger work):**
   - **Steam:**
-    - a real app id (APP_ID 480 in `steam_bridge.gd`) and the achievements and leaderboards registered;
+    - a real app id (`steam/app_id` in `project.godot`, 480 for now) and the achievements and leaderboards registered;
     - a two-account co-op test, a kick/ban option and a lobby screen.
-  - **Product names:** model numbers and CPU numbers mirror real products (Prospect 5420, Folio 840 G7, Meridian T14, V5-1145G7, A7 Pro 5850U, X9-6248…). Brands are fictional, but rename before release to be safe.
   - **Gameplay gaps against the brief:**
     - no mess or cleaners, random events, rival bidders or website channel;
     - no strip-down station;
