@@ -34,7 +34,7 @@ public final class FolkMarks {
         if (far > 32 * 32 || folk.isInvisible() || !AnimConfig.marks()) return;
         FolkAction.Seen s = folk.animSeen();
         float age = folk.tickCount + partial;
-        if (folk.isSleeping()) {
+        if (folk.isSleeping() || folk.getPose() == net.minecraft.world.entity.Pose.SLEEPING) {
             zzz(folk, pose, buffer, font, camera, age);
             return;
         }

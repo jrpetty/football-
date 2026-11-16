@@ -13,7 +13,8 @@ import net.minecraft.util.Mth;
  */
 public final class EmoteWheelScreen extends Screen {
 
-    private static final int RING = 84, BOX_W = 70, BOX_H = 16;
+    /** The ring is an ellipse, wider than tall, so fourteen boxes sit round it without touching. */
+    private static final int RING_X = 150, RING_Y = 96, BOX_W = 66, BOX_H = 16;
     private static final int PANEL = 0xC0101018, LIT = 0xF0E8B84A, RIM = 0xFF3A3440, INK = 0xFFF4EEDC, DARK_INK = 0xFF201810;
     private int hovered = -1;
 
@@ -35,7 +36,7 @@ public final class EmoteWheelScreen extends Screen {
         double dx = mx - width / 2.0, dy = my - height / 2.0;
         if (dx * dx + dy * dy < 22 * 22) return -1;
         int n = emotes().length;
-        double ang = Math.atan2(dx, -dy);
+        double ang = Math.atan2(dx / RING_X, -dy / RING_Y);           // round the ellipse, as the boxes are
         if (ang < 0) ang += Math.PI * 2;
         return (int) Math.round(ang / (Math.PI * 2 / n)) % n;
     }
@@ -48,7 +49,7 @@ public final class EmoteWheelScreen extends Screen {
         Act[] e = emotes();
         for (int i = 0; i < e.length; i++) {
             double ang = i * Math.PI * 2 / e.length;
-            int x = cx + (int) Math.round(Mth.sin((float) ang) * RING), y = cy - (int) Math.round(Mth.cos((float) ang) * RING);
+            int x = cx + (int) Math.round(Mth.sin((float) ang) * RING_X), y = cy - (int) Math.round(Mth.cos((float) ang) * RING_Y);
             boolean lit = i == hovered;
             int x0 = x - BOX_W / 2, y0 = y - BOX_H / 2;
             g.fill(x0 - 1, y0 - 1, x0 + BOX_W + 1, y0 + BOX_H + 1, RIM);
@@ -61,7 +62,7 @@ public final class EmoteWheelScreen extends Screen {
         g.fill(cx - w / 2 - 1, cy - 11, cx + w / 2 + 1, cy + 11, RIM);
         g.fill(cx - w / 2, cy - 10, cx + w / 2, cy + 10, PANEL);
         g.drawCenteredString(font, mid, cx, cy - 4, hovered >= 0 ? LIT : INK);
-        g.drawCenteredString(font, "Point and click, or let go of the key. Esc: none.", cx, cy + RING + 18, 0xC0F4EEDC);
+        g.drawCenteredString(font, "Point and click, or let go of the key. Esc: none.", cx, cy + RING_Y + 18, 0xC0F4EEDC);
     }
 
     @Override

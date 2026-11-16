@@ -207,12 +207,13 @@ public final class AnimStage {
         turn(f, -90.0F);
         if (p.act() == Act.SIT) f.setPose(Pose.SITTING);
         if (p.act() == Act.SLEEP) {
-            f.setChild(true);                                         // a child, put to bed whatever the hour (a grown folk is up for work)
+            // Laid down in it (the pose the game lays a sleeper in), not put to bed: a folk put to bed by day gets up for work.
             BlockPos head = BlockPos.containing(x, y, z), foot = head.east();
             BlockState bed = Blocks.BLUE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST);
             level.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2);
             level.setBlock(head, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2);
-            f.startSleeping(head);
+            f.moveTo(head.getX() + 0.5, head.getY() + 0.6875, head.getZ() + 0.5, -90.0F, 0.0F);
+            f.setPose(Pose.SLEEPING);
         }
         if (p.act() == Act.RIDE || p.act() == Act.ROW) {
             net.minecraft.world.entity.Entity mount = p.act() == Act.RIDE ? EntityType.HORSE.create(level) : EntityType.BOAT.create(level);
