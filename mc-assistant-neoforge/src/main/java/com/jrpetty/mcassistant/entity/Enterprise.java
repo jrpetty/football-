@@ -334,7 +334,12 @@ public final class Enterprise {
         for (String key : order) {
             ItemStack one = Stockroom.sampleOf(key);
             if (one.isEmpty()) continue;
-            Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));   // [econ-1d] a paying firm: the keeps eased
+            // [econ-1d] A batch, not a piece: a baker bakes a tray of loaves at a time (up to four, as far as its shelf is
+            // short), and a firm with a town's worth of call for its wares and one pair of hands made five loaves a day of
+            // the fifty wanted. A batch it cannot make is tried a piece at a time.
+            int batch = (int) Math.max(1, Math.min(BATCH, tg.getInt(key) - held(b, key)));
+            Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), batch, hand));   // [econ-1d] a paying firm: the keeps eased
+            if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
                 continue;
@@ -668,6 +673,9 @@ public final class Enterprise {
         Businesses.dirty();
         return got;
     }
+
+    /** [econ-1d] The most a firm's hand makes of a ware at a turn of its bench. */
+    static final int BATCH = 4;
 
     /** [econ-1c] Partners at most, and what a founder must put up itself whatever its partners do, coins. */
     static final int MOST_PARTNERS = 2, OWN_LEAST = 2;
