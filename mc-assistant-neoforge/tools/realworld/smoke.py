@@ -4949,6 +4949,62 @@ def econ_market_stage(r, look, cx, cz):
     say("alive after the market: %s" % client_alive())
 
 
+def econ_firms_stage(r, look, cx, cz):
+    """[econ-1b] Entrepreneurs and competition (entity/Enterprise, BusinessTypes, Sellers, TownBudget). As an operator,
+    /village firms found-now <kind> opens a firm of the town's own folk now (the boldest able founder, or the first grown
+    folk): a toolshop, else a bakery, a joinery, a fish stall or a greengrocer's, whichever finds ground for its work; its
+    sign goes up by its stall with its name and its price. /village firms lists the firms and the morning's look at the
+    town's wants; the town's books open at the Businesses page (every firm with how it stands) and at the firm's own books.
+    Pictures:
+      1. 72-firms-1-sign: the new firm's sign (its name, its trade, its price, its owner);
+      2. 72-firms-2-businesses-page: the town's books at the Businesses page, the firm among them;
+      3. 72-firms-3-books: the firm's own books.
+    Wired into main() right after the market stage."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(6)
+    opened = None
+    for kind in ("toolsmith", "baker", "carpenter", "fishmonger", "greengrocer"):
+        out = r.cmd("execute as %s at @s run village firms found-now %s" % (USER, kind))
+        say("found %s: %s" % (kind, out[:500]))
+        m = re.search(r"OPENED (ent-\d+)(?: SIGN (-?\d+) (-?\d+) (-?\d+))?", out)
+        if m:
+            opened = m
+            break
+    say("firms: " + r.cmd("execute as %s at @s run village firms" % USER)[:1500])
+    say("wants: " + r.cmd("execute as %s at @s run village firms wants" % USER)[:1500])
+    if not opened:
+        say("no firm could be opened; nothing to photograph")
+        r.cmd("gamemode spectator %s" % USER)
+        return
+    fid = opened.group(1)
+    if opened.group(2):
+        sx, sy, sz = int(opened.group(2)), int(opened.group(3)), int(opened.group(4))
+        r.cmd("gamemode spectator %s" % USER)
+        look("72-firms-1-sign", sx + 0.5, sy + 0.4, sz - 2.6, sx + 0.5, sy + 0.5, sz + 0.5)
+        r.cmd("gamemode creative %s" % USER)
+    else:
+        say("the firm's sign found no ground; no picture of it")
+    say("page: " + r.cmd("execute as %s at @s run village business page" % USER))
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("72-firms-2-businesses-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("books: " + r.cmd("execute as %s at @s run village business books %s" % (USER, fid)))
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("72-firms-3-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("firm text: " + r.cmd("execute as %s at @s run village business text %s" % (USER, fid))[:1200])
+    say("market: " + r.cmd("execute as %s at @s run village market" % USER)[:1500])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the firms: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -5437,7 +5493,7 @@ def main():
         flats_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("flats failed: %s" % e)
-    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
+    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("firms", econ_firms_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
         try:
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001

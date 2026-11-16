@@ -146,7 +146,11 @@ public final class FirmCommands {
         }
         if (f == null) return say(c, "Nobody to open it.");
         Business b = Enterprise.found(level, v, t, f, null, Businesses.today(level), null);
-        return say(c, b == null ? f.displayNameCap() + " could not open a " + t.noun() + " (no ground for its work)." : "OPENED " + b.id + ": " + Enterprise.line(level, v.id(), b));
+        if (b == null) return say(c, f.displayNameCap() + " could not open a " + t.noun() + " (no ground for its work).");
+        net.minecraft.nbt.CompoundTag r = Enterprise.recordForTests(v.id(), b);
+        String sign = r != null && r.contains("sign") ? " SIGN " + BlockPos.of(r.getLong("sign")).getX() + " " + BlockPos.of(r.getLong("sign")).getY() + " "
+            + BlockPos.of(r.getLong("sign")).getZ() : "";
+        return say(c, "OPENED " + b.id + sign + ": " + Enterprise.line(level, v.id(), b));
     }
 
     private static int bankruptNow(CommandContext<CommandSourceStack> c) {
