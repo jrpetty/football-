@@ -12949,8 +12949,16 @@ carry once the harvests were real, and firms that struggled where they should ha
   market's ask for its makings, so for a firm at its own bench the town's working stock (the builders' timber and stone,
   the smith's bars, the seed corn) is kept at half, and what the age asks for (all of it, while short) may still be bought
   by the firms of the town, an eighth of the pile (four at least) a day: the age waits a little, the firm works.
-- **Prices for real demand.** A firm sold out again and again with a good share of its market puts its markup up a
-  twentieth (every third day at most), as a busy shop would; one passed by still cuts it.
+- **Prices for real costs and demand.** A firm prices each piece at its full cost (its makings and its share of the week's
+  wages and rent) and its markup; but where a new firm's overheads spread over a few sales would put it over the going
+  price, it sells at the going price, so long as that pays its makings and its markup, and lets its trade grow to carry
+  them (a new bakery priced its bread three fifths over the going price and sold to nobody but the well-to-do). A firm sold
+  out again and again with a good share of its market puts its markup up a twentieth (every third day at most), as a busy
+  shop would; one passed by still cuts it. A new firm's shelf is given its first week to sell before what it holds over
+  five days' sales goes to the market at the bid.
+- **A founder's money.** What a founder can put in is its purse and its savings and now what its own homestead (a farm, a
+  mine, a boat it owns alone) holds over its till's float: the profits it has made and not yet drawn, drawn out into the
+  new firm. A farmer whose harvest money sat in its farm's till had "no means" to open the bakery the town was short of.
 - **A bankrupt's kit sold.** A failed firm's tools are taken back from its hands (a hand's own sword and armour are its
   own) and sold to the market at its bid, a worn tool for as much less as it is worn, the proceeds to its creditors with
   the rest of its till; a firm wound up by its owner sells its kit the same way. What the kit fetched under what its books
@@ -12958,5 +12966,7 @@ carry once the harvests were real, and firms that struggled where they should ha
 
 Tests (EntrepreneurGameTests): ent14 a bankrupt's kit sold to the market for its creditors, the census at nought drift;
 ent15 twenty days of a town nobody seeded (at least one firm founded and one thriving, the census at nought drift every
-morning, the IOUs bounded). The ten- and twenty-day tests log the IOU book every day and through the day, the town's
-revenue against its spending, and the IOUs' trend.
+morning, the IOUs bounded); ent16 a household's basket (bread bought as well as cheap carrots). The ten- and twenty-day
+tests log the IOU book every day and through the day, the town's revenue against its spending, and the IOUs' trend; and
+they no longer give the town free bread every morning once its market is open (it undersold any baker in the town, and the
+town feeds itself by its own trade by then; the building stuff is still given, as the long growth tests do).
