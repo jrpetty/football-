@@ -918,6 +918,12 @@ public final class Businesses {
             if (e.getValue() < 0) used.merge(key, (long) -e.getValue(), Long::sum);
             else made.merge(key, (long) e.getValue(), Long::sum);
         }
+        // [econ-1d] A firm's hand at something that is none of its firm's wares (arrows for the watch, hay for a barn, a toy
+        // for a child): the town's making, not the firm's (a bakery's shelf held hay, toys, arrows and a sword, bought at its cost).
+        if (firm != null && !Enterprise.sellsAny(village, firm, made.keySet())) {
+            b = makerFor(village, trade);
+            if (b == null) return;
+        }
         if (made.isEmpty() || used.isEmpty() && !sellsToStores(b.type)) return;
         made(level, village, b, used, made, samples);
     }
@@ -925,6 +931,7 @@ public final class Businesses {
     /** A batch made at a business's bench (Bakery): its plan's makings and fuel, less what went back, into what it made. */
     public static void benchMade(ServerLevel level, UUID village, Type type, Bench.Plan plan, ItemStack made) {
         Business firm = Enterprise.atWork(village);                         // [econ-1b] a firm's hand's batch is its firm's
+        if (firm != null && !Enterprise.sellsAny(village, firm, java.util.Set.of(Stockroom.key(made)))) firm = null;   // [econ-1d] not one of its wares
         Business b = firm != null ? firm : of(village, type.id());
         if (b == null || b.town() || made.isEmpty()) return;
         Map<String, Long> used = new LinkedHashMap<>();
@@ -1115,6 +1122,7 @@ public final class Businesses {
             spoil(level, id, b, day);
             repay(level, id, b, day);
             if ((day - b.opened) % 7 == 6) draw(level, id, b, day);
+            else TownBudget.instalment(level, id, b, day);                  // [econ-1d] the profits tax as it is earned, settled at the week's end
             review(level, id, b, day);
             if (b.open) reorder(level, id, b, day);
             b.today(day).cashEnd = b.till;
@@ -1253,6 +1261,7 @@ public final class Businesses {
     static void draw(ServerLevel level, UUID village, Business b, long day) {
         Day week = b.last(day - 1, 7);
         long net = week.net();
+        net -= TownBudget.rates(level, village, b, day);                     // [econ-1d] the business rates, profit or none
         long tax = TownBudget.profitsTax(level, village, b, net, day);      // [econ-1b] the profits tax, before the owners draw
         net -= tax;
         long spare = b.till - floatOf(b, day);

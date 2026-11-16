@@ -1594,6 +1594,7 @@ public final class Villages {
     /** How many buildings a town may have going up at once: one; two in a thriving town of twelve or more;
      *  three in a thriving town of forty or more. Each crew raises a different building. */
     public static int crewsAllowed(UUID villageId) {
+        if (TownBudget.oneCrew(villageId)) return 1;                     // [econ-1d] a town short of money: one building at a time
         int folk = headcount(villageId);
         if (folk < 12 || !thriving(villageId)) return 1;
         return folk >= 40 ? 3 : 2;

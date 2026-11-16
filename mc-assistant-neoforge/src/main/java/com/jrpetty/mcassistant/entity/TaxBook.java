@@ -63,7 +63,9 @@ public final class TaxBook {
         TOLL("the market toll", "a share of what folk and players take for their own goods"),
         LEVY("the war levy", "every grown hand pays it each tax day, while the town is at war"),
         // [econ-1b] A share of what every private business makes over its costs in the week, taken at its weekly reckoning.
-        PROFITS("the profits tax", "a share of every business's week's profit, taken before its owners draw");
+        PROFITS("the profits tax", "a share of every business's week's profit, taken before its owners draw"),
+        // [econ-1d] So much a week from every private business for its premises, profit or none, taken at its weekly reckoning.
+        RATES("the business rates", "so much a week from every business for its premises, taken at its weekly reckoning");
 
         public final String words, does;
 
@@ -81,6 +83,7 @@ public final class TaxBook {
             if (t.equals("MARKET")) return TOLL;
             if (t.equals("WAR")) return LEVY;
             if (t.equals("PROFIT") || t.equals("BUSINESS")) return PROFITS;     // [econ-1b]
+            if (t.equals("RATE") || t.equals("BUSINESSRATES")) return RATES;     // [econ-1d]
             try { return valueOf(t); } catch (IllegalArgumentException e) { return null; }
         }
     }
@@ -89,6 +92,8 @@ public final class TaxBook {
     static final int[] HEAD_COINS = { 0, 1, 2, 3 }, TOLL_PERCENT = { 0, 5, 10, 15 }, LEVY_COINS = { 0, 1, 2, 4 };
     /** [econ-1b] The profits tax at its four rates, in the hundred of a week's profit. */
     static final int[] PROFITS_PERCENT = { 0, 10, 20, 30 };
+    /** [econ-1d] The business rates at their four rates, coins a week from every private business (twice for larger premises). */
+    static final int[] RATES_COINS = { 0, 1, 2, 3 };
     /** A knight's fee each tax day (Knights). */
     public static final int KNIGHT_FEE = 2;
     /** When tax day's round starts, and when whoever was not found pays at the hall. */
@@ -138,6 +143,11 @@ public final class TaxBook {
         return PROFITS_PERCENT[rate(village, Lever.PROFITS)];
     }
 
+    /** [econ-1d] The business rates, coins a week from a business on ordinary premises. */
+    public static int ratesCoins(UUID village) {
+        return RATES_COINS[rate(village, Lever.RATES)];
+    }
+
     /** A lever at a rate, in words: "two coins a head each tax day". */
     public static String words(Lever l, int r) {
         r = Math.max(0, Math.min(3, r));
@@ -147,6 +157,7 @@ public final class TaxBook {
             case TOLL -> r == 0 ? "none" : TOLL_PERCENT[r] + " in a hundred of takings";
             case LEVY -> r == 0 ? "none" : coins(LEVY_COINS[r]) + " a head each tax day at war";
             case PROFITS -> r == 0 ? "none" : PROFITS_PERCENT[r] + " in a hundred of a business's profit";
+            case RATES -> r == 0 ? "none" : coins(RATES_COINS[r]) + " a week from every business";   // [econ-1d]
         };
     }
 
@@ -226,6 +237,8 @@ public final class TaxBook {
         // The council's sitting, quietly in the hall, if the evening's meeting did not take the taxes up.
         if (Math.floorMod(day, 7L) == COUNCIL_DAY && t >= 13400 && tag.getLong("sat") != day + 1 && CivicLand.grown(id).size() >= 2) {
             sit(level, v, day, "the council, sitting in the hall after dark,");
+        } else if (t >= 13400 && tag.getLong("sat") != day + 1 && CivicLand.grown(id).size() >= 2 && TownBudget.callsCouncil(id, day, tag.getLong("sat"))) {
+            sit(level, v, day, "the council, called together on the town's debts,");   // [econ-1d] it cannot wait for its day
         }
     }
 
@@ -249,7 +262,7 @@ public final class TaxBook {
         e.putInt(key, e.getInt(key) + coins);
         CivicLand.changed();
         // [econ-1b] Into the town's budget, and the town's IOUs to its market paid first out of it, as out of the wages' share.
-        if (!key.equals("profits")) Accounts.taxIn(village, coins * 100L);
+        if (!key.equals("profits") && !key.equals("rates")) Accounts.taxIn(village, coins * 100L);   // [econ-1d] (the rates booked by TownBudget)
     }
 
     // ------------------------------------------------------------------ tax day: the round
@@ -691,7 +704,7 @@ public final class TaxBook {
         boolean down = protest || unrest >= TaxUnrest.PROTEST || days >= 14 && !war && share >= 100;
         if (!war && rate(id, Lever.LEVY) > 0 && !down) return new Motion(Lever.LEVY, -1, 0, "the war is over, and the levy with it");
         if (down) {
-            for (Lever l : new Lever[]{ Lever.HEAD, Lever.LEVY, Lever.TOLL, Lever.WAGE, Lever.PROFITS }) {
+            for (Lever l : new Lever[]{ Lever.HEAD, Lever.LEVY, Lever.TOLL, Lever.WAGE, Lever.RATES, Lever.PROFITS }) {   // [econ-1d] (rates)
                 if (l == Lever.LEVY && war && !protest) continue;
                 int r = rate(id, l);
                 if (r > 0 && movable(id, l)) {
@@ -712,10 +725,11 @@ public final class TaxBook {
             : days < 3 ? "the treasury is all but empty"
             : wonderPlanned(id) ? "the town has a wonder of the world to raise" : "the town is saving for what it means to buy";
         // [econ-1b] Where the market is open the businesses' profits are taxed first: they are where the town's money is made now.
-        Lever[] up = MarketMaker.live(id) ? new Lever[]{ Lever.PROFITS, Lever.HEAD, Lever.TOLL, Lever.WAGE } : new Lever[]{ Lever.HEAD, Lever.TOLL, Lever.WAGE };
+        Lever[] up = MarketMaker.live(id) ? new Lever[]{ Lever.PROFITS, Lever.RATES, Lever.HEAD, Lever.TOLL, Lever.WAGE } : new Lever[]{ Lever.HEAD, Lever.TOLL, Lever.WAGE };
         for (Lever l : up) {
             int r = rate(id, l);
-            if (r < 2 && movable(id, l)) return new Motion(l, 1, r + 1, why);
+            int most = owing && l == Lever.PROFITS ? 3 : 2;                    // [econ-1d] a town in debt taxes profits to the top rate
+            if (r < most && movable(id, l)) return new Motion(l, 1, r + 1, why);
         }
         return null;
     }
@@ -792,7 +806,8 @@ public final class TaxBook {
         if (m.lever() == Lever.LEVY && war) { s += 15 + 0.2 * safety; yes = "the war must be paid for"; }
         if (m.lever() == Lever.LEVY && !war) { s -= 30; no = "there's no war to pay for"; }
         // [econ-1b] An owner weighs a profits tax by its own books; and a town in debt to its market wants it paid.
-        if (m.lever() == Lever.PROFITS && Enterprise.ownsAny(id, f.getUUID())) { s -= 12; no = "a coin taxed off a business is a hand it can't take on"; }
+        // [econ-1d] (the rates too)
+        if ((m.lever() == Lever.PROFITS || m.lever() == Lever.RATES) && Enterprise.ownsAny(id, f.getUUID())) { s -= 12; no = "a coin taxed off a business is a hand it can't take on"; }
         if (TownBudget.owesTooMuch(id)) { s += 12; if (m.dir() > 0) yes = "the town must pay what it owes the market"; }
         int unrest = TaxUnrest.level(id);
         s -= 0.6 * Math.max(0, unrest - 20);
@@ -1026,7 +1041,7 @@ public final class TaxBook {
         for (Tag x : CivicLand.list(tag, "hist")) {
             CompoundTag e = ((CompoundTag) x).copy();
             e.putLong("d", e.getLong("d") - 1);
-            int all = e.getInt("head") + e.getInt("levy") + e.getInt("toll") + e.getInt("wage") + e.getInt("players") + e.getInt("profits");   // [econ-1b] the profits tax
+            int all = e.getInt("head") + e.getInt("levy") + e.getInt("toll") + e.getInt("wage") + e.getInt("players") + e.getInt("profits") + e.getInt("rates");   // [econ-1d] (rates)   // [econ-1b] the profits tax
             e.putInt("all", all);
             if (day - e.getLong("d") < 7) week += all;
             days.add(e);

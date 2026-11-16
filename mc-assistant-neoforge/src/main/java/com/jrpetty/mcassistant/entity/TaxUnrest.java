@@ -409,6 +409,7 @@ public final class TaxUnrest {
             case TOLL -> new String[]{ "Free markets for free folk!", "No toll on honest trade!", "Let us sell in peace!" };
             case WAGE -> new String[]{ "Hands off our wages!", "A full wage for a full day!", "Not a penny more!" };
             case PROFITS -> new String[]{ "Let honest trade keep its gains!", "No tax on a day's enterprise!", "Leave the shops be!" };   // [econ-1b]
+            case RATES -> new String[]{ "No rates on an empty till!", "Let the stalls be!", "A shop's no milch cow!" };   // [econ-1d]
         };
         for (int i = 0; i < Math.min(3, crowd.size()); i++) s.add(new Assemblies.Line(crowd.get(i), chants[i % chants.length], '!', null));
         List<String> why = CivicLand.read(CivicLand.list(CivicLand.town(id), "why"));

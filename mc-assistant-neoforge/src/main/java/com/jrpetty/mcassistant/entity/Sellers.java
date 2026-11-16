@@ -41,6 +41,15 @@ public final class Sellers {
         double cost = Businesses.fullCost(level, village, b, one, day);
         if (cost <= 0.0001) cost = CostBook.of(one).total() * MarketMaker.priceLevel(village);
         double p = cost * (1 + b.markup);
+        // [econ-1d] What the market will bear: a firm whose full cost a piece (its week's wages and rent spread over a few
+        // sales) would put it over the going price sells at the going price, so long as that pays its makings and its markup,
+        // and lets its trade grow to carry its overheads: a new bakery priced its bread at three fifths over the going price
+        // and sold to nobody but the well-to-do.
+        if (p > going) {
+            Business.Lot lot = b.stock.get(Stockroom.key(one));
+            double makings = lot != null && lot.qty > 0 ? lot.each() / 100.0 : CostBook.of(one).materials() + CostBook.of(one).fuel();
+            p = Math.max(going, makings * (1 + b.markup));
+        }
         p = Math.max(p, going * LEAST_OF_GOING);
         p = Math.min(p, going * Businesses.MOST_OVER_GOING);
         return Math.max(0.01, p);
@@ -70,6 +79,11 @@ public final class Sellers {
      * holds them. The town's counter wins a tie.
      */
     public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n) {
+        return best(level, v, one, buyer, townEach, n, false);
+    }
+
+    /** [econ-1d] The same; {@code looking}: only weighing what to buy (no stock-out marked against a firm that has none). */
+    public static Offer best(ServerLevel level, Villages.Village v, ItemStack one, @Nullable VillageFolkEntity buyer, double townEach, int n, boolean looking) {
         UUID id = v.id();
         double going = Market.askEach(level, id, one);
         BlockPos from = buyer != null ? buyer.blockPosition() : v.centre();
@@ -82,7 +96,7 @@ public final class Sellers {
             if (t == null || !t.wares().contains(key)) continue;
             Business.Lot lot = b.stock.get(key);
             if (lot == null || lot.qty < n) {
-                if (lot != null || b.allTime.lines.containsKey(key)) Enterprise.stockOut(id, b);
+                if (!looking && (lot != null || b.allTime.lines.containsKey(key))) Enterprise.stockOut(id, b);   // [econ-1d] (looking)
                 continue;
             }
             if (b.ownedBy(buyer == null ? null : buyer.getUUID()) && buyer != null) continue;   // not of itself

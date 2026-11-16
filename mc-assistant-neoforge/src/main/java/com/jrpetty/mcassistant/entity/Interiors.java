@@ -118,6 +118,7 @@ public final class Interiors {
     /** The block for this piece, paid for out of the stores; or null if the stores cannot pay for it. */
     @Nullable
     private static BlockState take(ServerLevel level, Villages.Village v, Piece p, BlockState now) {
+        if (TownBudget.frugal(v.id())) return null;                    // [econ-1d] a town careful of its money leaves its rooms plain for now
         return switch (p.kind()) {
             case RUG -> carpet(level, v, false, now);
             case BORDER -> carpet(level, v, true, now);

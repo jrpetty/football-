@@ -356,6 +356,95 @@ public class EntrepreneurGameTests {
         helper.succeed();
     }
 
+    // ============================================================ ent14 a bankrupt's kit sold
+
+    /**
+     * [econ-1d] A bankrupt firm's kit sold, not written off: its hand carries the bucket and the shears the firm bought (its
+     * kit on its books at eight coins); at the bankruptcy the receiver takes them back, sells them to the market at its bid
+     * (the worn shears for less), and what they fetch goes to its creditors with the rest of its till. The tools are in the
+     * stores afterwards, not in the hand's pack; the kit is off the firm's books; the census at nought drift.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "ent14_kit")
+    public static void ent14_kit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1600000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 40, StationTask.SMITH, StationTask.SMITH, StationTask.FARM, StationTask.FARM, StationTask.FARM,
+            StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        VillageFolkEntity owner = folk.get(0), hand = folk.get(1);
+        UUID id = owner.ownerId();
+        Villages.Village v = Villages.get(id);
+        bold(owner, StationTask.SMITH);
+        Business b = Enterprise.foundForTests(level, v, "toolsmith", owner);
+        helper.assertTrue(b != null, "a toolshop");
+        Enterprise.staffForTests(id, b, hand);
+        stores(level, id, x, new ItemStack(Items.COBBLESTONE, 8));
+        ItemStack shears = new ItemStack(Items.SHEARS);
+        shears.setDamageValue(shears.getMaxDamage() / 2);
+        hand.insertGiven(new ItemStack(Items.BUCKET));
+        hand.insertGiven(shears);
+        com.jrpetty.mcassistant.entity.Capital.boughtForTests(id, b, 800);
+        CoinCensus.morning(level, v, day(level));
+        nextDay(level);
+        long till = b.till;
+        Businesses.fundForTests(id, b, 100 - till);
+        Enterprise.debtsForTests(id, b, hand, 0, 0, 3000, 0);           // owes the market 30c
+        long mkt = MarketMaker.cash(id);
+        int bucketsBefore = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(Items.BUCKET));
+        Enterprise.bankrupt(level, id, b, day(level), "tests");
+        CompoundTag r = Enterprise.recordForTests(id, b);
+        Kit.log("ent14 " + r.getString("creditors") + " | notes " + String.join(" | ", b.notes));
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(!b.open && r.getBoolean("closed"), "it closed");
+        ok.that(hand.countCarried(s -> s.is(Items.BUCKET) || s.is(Items.SHEARS)) == 0, "the kit taken out of its hand's pack");
+        ok.that(com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(Items.BUCKET)) == bucketsBefore + 1, "the bucket in the stores");
+        boolean noted = false;
+        for (String n : b.notes) noted |= n.contains("its kit sold to the market");
+        ok.that(noted, "its books say the kit was sold");
+        ok.that(r.getString("creditors").contains("the market"), "the market paid out of it: " + r.getString("creditors"));
+        ok.that(com.jrpetty.mcassistant.entity.Capital.value(id, b) == 0, "the kit off its books");
+        ok.that(MarketMaker.cash(id) > mkt - 3000, "the market paid for the kit and was paid back as a creditor: " + mkt + " -> " + MarketMaker.cash(id));
+        nextDay(level);
+        CoinCensus.morning(level, v, day(level));
+        ok.that(CoinCensus.lastDrift(id) == 0, "the census at nought drift: " + CoinCensus.line(id));
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
+    // ============================================================ ent16 a household's basket
+
+    /**
+     * [econ-1d] What a household buys follows its needs and tastes, not only the cheapest bellyful: a poor folk with glut
+     * carrots at a few pennies and bread at the going price on the shelf buys bread as well as carrots over a week of
+     * buying (a made meal is worth more to a body, and the same thing day after day palls); a comfortable folk, minding the
+     * price less, has bread more often than not.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "ent16_basket")
+    public static void ent16_basket(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1602000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 1, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        VillageFolkEntity poor = folk.get(0), comfy = folk.get(1);
+        UUID id = poor.ownerId();
+        comfy.earn(200);
+        stores(level, id, x, new ItemStack(Items.CARROT, 64), new ItemStack(Items.CARROT, 64), new ItemStack(Items.BREAD, 32));
+        List<ItemStack> offer = List.of(new ItemStack(Items.CARROT), new ItemStack(Items.BREAD));
+        int poorBread = 0, comfyBread = 0;
+        StringBuilder picks = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            ItemStack a = Purchases.chooseFoodForTests(level, poor, offer), b = Purchases.chooseFoodForTests(level, comfy, offer);
+            if (a.is(Items.BREAD)) poorBread++;
+            if (b.is(Items.BREAD)) comfyBread++;
+            picks.append(a.is(Items.BREAD) ? 'B' : 'c').append(b.is(Items.BREAD) ? 'B' : 'c').append(' ');
+        }
+        Kit.log("ent16 picks (poor, comfortable): " + picks + "| carrot " + Purchases.priceEach(level, id, new ItemStack(Items.CARROT), poor)
+            + "c, bread " + Purchases.priceEach(level, id, new ItemStack(Items.BREAD), poor) + "c; " + Wealth.tier(poor) + " / " + Wealth.tier(comfy));
+        Kit.Expect ok = new Kit.Expect();
+        ok.that(poorBread >= 1, "bread bought at least once by the poor folk: " + poorBread);
+        ok.that(comfyBread >= poorBread, "the comfortable folk has bread at least as often: " + comfyBread + " against " + poorBread);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
+
     // ============================================================ ent06 expansion
 
     /** A thriving toolshop takes on a hand, then larger premises (its rent up), then opens a second branch of the same owner. */
@@ -689,11 +778,27 @@ public class EntrepreneurGameTests {
         tenDays(helper, 1504000, "ent12", false);
     }
 
+    /**
+     * [econ-1d] Twenty days of a town nobody seeded, the market at work: the same as ent12, ten days longer, long enough for
+     * a firm with real call for its wares and the makings to make them to thrive. At least one firm founded by its own folk
+     * and at least one thriving at some morning; the census at nought drift every morning; the IOUs bounded.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1900000, required = false, batch = "ent15_twenty_days")
+    public static void ent15_twenty_days(GameTestHelper helper) {
+        tenDays(helper, 1604000, "ent15", false, 20);
+    }
+
     static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded) {
+        tenDays(helper, cx, tag, seeded, 10);
+    }
+
+    static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded, int days) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
         Kit.reset(level);
         MarketMaker.liveForTests(true);
+        com.jrpetty.mcassistant.entity.IouBook.traceForTests(true);              // [econ-1d] each IOU's place in the code
+        com.jrpetty.mcassistant.entity.CivicLand.liveForTests(true);             // [econ-1d] the council sits on the taxes, as in real play
         // [econ-1c] The game's own crop growth (a random tick speed of three, as in any world): the tests' server has it at
         // nought, and a town's fields never ripened in ten days, so its farms had nothing to sell. Put back at the end.
         var ticking = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
@@ -715,6 +820,9 @@ public class EntrepreneurGameTests {
         final String[] verdict = { null };
         final long[] worstDrift = { 0 };
         final long[] mostIous = { 0 };
+        final long[] iouTrend = { 0, -1, 0 };                                    // [econ-1d] the peak's day, the last, IOUs then
+        final java.util.Set<String> thrived = new java.util.TreeSet<>();          // [econ-1d] firms seen thriving
+        final java.util.Map<String, long[]> money = new java.util.TreeMap<>();    // [econ-1d] the town's revenue and spending, by day
         final Runnable[] look = { null };
         look[0] = () -> {
             if (verdict[0] == null) helper.runAfterDelay(100, () -> look[0].run());
@@ -747,13 +855,29 @@ public class EntrepreneurGameTests {
                 UUID id = town[0];
                 int dayNo = (int) (ran / 24000L);
                 if (!seeded && ran % 3000L == 0) for (String l : fieldLines(level, id)) Kit.log(tag + " t" + ran + " " + l);
+                if (ran % 2000L == 0 && MarketMaker.live(id)) {                  // [econ-1d] the IOUs through the day
+                    Kit.log(tag + " t" + ran + " (" + (level.getDayTime() % 24000L) + ") IOUs " + Businesses.pence(Accounts.debts(id)) + ", market cash "
+                        + Businesses.pence(MarketMaker.cash(id)) + " credit " + Businesses.pence(MarketMaker.storeCredit(id)) + " float "
+                        + Businesses.pence(MarketMaker.advanced(id)) + ", treasury " + Businesses.pence(Businesses.treasuryPence(id)) + " | today "
+                        + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, level.getDayTime() / 24000L));
+                }
                 if (dayNo != start[2]) {
                     start[2] = dayNo;
-                    Kit.stockForGrowth(level, Villages.get(id));
+                    // [econ-1d] Bread given free every morning undersold any baker in the town: once its market is open, a
+                    // town feeds itself by its own trade (the building stuff is still given, as the long growth tests do).
+                    Kit.stockForGrowth(level, Villages.get(id), !MarketMaker.live(id));
                     if (dayNo == 1 && seeded) wouldBe(level, id, tag);
                     long drift = CoinCensus.lastDrift(id);
                     worstDrift[0] = Math.max(worstDrift[0], Math.abs(drift));
+                    if (Accounts.debts(id) > mostIous[0]) iouTrend[0] = dayNo;
                     mostIous[0] = Math.max(mostIous[0], Accounts.debts(id));
+                    iouTrend[1] = dayNo;
+                    iouTrend[2] = Accounts.debts(id);
+                    for (Business fb : Enterprise.all(id)) {                      // [econ-1d] a firm seen thriving
+                        CompoundTag fr = Enterprise.recordForTests(id, fb);
+                        if (fr != null && "thriving".equals(fr.getString("status"))) thrived.add(fb.name);
+                    }
+                    if (MarketMaker.live(id)) money.put(String.format(Locale.ROOT, "%02d", dayNo), new long[]{ TownBudget.revenue7(id), TownBudget.spent7(id), Accounts.debts(id), TownBudget.limit(id) });
                     Kit.log(tag + " day " + dayNo + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings, food "
                         + Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id)) + ", treasury "
                         + Businesses.pence(Businesses.treasuryPence(id)) + ", IOUs " + Businesses.pence(Accounts.debts(id)) + ", market "
@@ -763,12 +887,14 @@ public class EntrepreneurGameTests {
                     Kit.log(tag + " day " + dayNo + " firms: " + Enterprise.words(level, id).replace('\n', '|'));
                     Kit.log(tag + " day " + dayNo + " budget: " + TownBudget.line(id));
                     long today = level.getDayTime() / 24000L;
+                    Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
                 }
-                if (ran >= 10 * 24000L) {
+                if (ran >= days * 24000L) {
                     over[0] = true;
                     server.tickRateManager().setTickRate(20.0F);
                     ticking.set(tickingWas, server);
+                    com.jrpetty.mcassistant.entity.CivicLand.liveForTests(false);
                     Kit.Expect ok = new Kit.Expect();
                     int folkNow = Villages.headcount(id), built = Ledger.buildings(id).size();
                     int food = Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id));
@@ -783,6 +909,14 @@ public class EntrepreneurGameTests {
                     ok.that(food > 0, "it fed itself: food in the stores " + food);
                     ok.that(worstDrift[0] == 0, "the census at nought drift every morning (worst " + worstDrift[0] + ")");
                     Kit.log(tag + " most IOUs " + Businesses.pence(mostIous[0]));
+                    Kit.log(tag + " IOU TREND: peak " + Businesses.pence(mostIous[0]) + " on day " + iouTrend[0] + ", " + Businesses.pence(iouTrend[2])
+                        + " on day " + iouTrend[1] + ", now " + Businesses.pence(Accounts.debts(id)) + " against the bound " + Businesses.pence(Math.max(TownBudget.limit(id) * 2, 20000)));
+                    StringBuilder mb = new StringBuilder();
+                    for (java.util.Map.Entry<String, long[]> e2 : money.entrySet()) mb.append("d").append(e2.getKey()).append(" in7 ").append(Businesses.pence(e2.getValue()[0]))
+                        .append(" spent7 ").append(Businesses.pence(e2.getValue()[1])).append(" ious ").append(Businesses.pence(e2.getValue()[2])).append(" limit ")
+                        .append(Businesses.pence(e2.getValue()[3])).append("; ");
+                    Kit.log(tag + " MONEY by day: " + mb);
+                    Kit.log(tag + " THRIVED: " + thrived);
                     Kit.log(tag + " FINAL firms: " + Enterprise.words(level, id).replace('\n', '|'));
                     for (Business fb : Enterprise.all(id)) {                       // [econ-1c] each firm's books in brief
                         CompoundTag fr = Enterprise.recordForTests(id, fb);
@@ -815,6 +949,7 @@ public class EntrepreneurGameTests {
                     }
                     int[] counts = Enterprise.countsForTests(id);
                     ok.that(counts[0] >= 1, "at least one firm opened by its own folk: " + counts[0] + " opened, " + counts[1] + " bankrupt, " + counts[2] + " wound up");
+                    if (days >= 20) ok.that(!thrived.isEmpty(), "at least one firm thriving: " + thrived);   // [econ-1d]
                     ok.that(mostIous[0] <= Math.max(TownBudget.limit(id) * 2, 20000), "the town's IOUs bounded: at most " + Businesses.pence(mostIous[0])
                         + " against what it can carry, " + Businesses.pence(TownBudget.limit(id)));
                     verdict[0] = ok.clean() ? "" : ok.summary();

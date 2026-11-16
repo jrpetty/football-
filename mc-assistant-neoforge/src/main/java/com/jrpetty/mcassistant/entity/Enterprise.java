@@ -117,6 +117,14 @@ public final class Enterprise {
         return b != null && b.type == Business.Type.ENTERPRISE;
     }
 
+    /** [econ-1d] Is any of these (stock keys) among the firm's wares? (A firm of no known kind: yes, as before.) */
+    static boolean sellsAny(UUID village, Business b, java.util.Collection<String> keys) {
+        BusinessType t = kindOf(village, b);
+        if (t == null) return true;
+        for (String k : keys) if (t.wares().contains(k)) return true;
+        return false;
+    }
+
     /** The kind of business a firm is. */
     @Nullable
     public static BusinessType kindOf(UUID village, Business b) {
@@ -155,6 +163,7 @@ public final class Enterprise {
 
     public static void resetForTests() {
         STAFF.clear();
+        FirmSupply.resetForTests();                       // [econ-1d]
         INDEXED.clear();
         REFUSED_NOW.clear();
     }
@@ -325,13 +334,19 @@ public final class Enterprise {
         for (String key : order) {
             ItemStack one = Stockroom.sampleOf(key);
             if (one.isEmpty()) continue;
-            Bench.Plan plan = Bench.plan(level, v, one.getItem(), 1, hand);
+            // [econ-1d] A batch, not a piece: a baker bakes a tray of loaves at a time (up to four, as far as its shelf is
+            // short), and a firm with a town's worth of call for its wares and one pair of hands made five loaves a day of
+            // the fifty wanted. A batch it cannot make is tried a piece at a time.
+            int batch = (int) Math.max(1, Math.min(BATCH, tg.getInt(key) - held(b, key)));
+            Bench.Plan plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), batch, hand));   // [econ-1d] a paying firm: the keeps eased
+            if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
                 continue;
             }
             ItemStack out = Bench.make(level, v, plan, f, hand);
             if (out.isEmpty()) continue;
+            FirmSupply.drew(v.id(), plan.takes);                              // [econ-1d] off the day's ration of the age's reserve
             r.remove("short");
             Accounts.add(r, "madeHere", out.getCount());
             Accounts.dirty();
@@ -506,7 +521,7 @@ public final class Enterprise {
         Bench.Hand any = new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy());
         for (String key : t.wares()) {
             ItemStack one = Stockroom.sampleOf(key);
-            if (!one.isEmpty() && Bench.plan(level, v, one.getItem(), 1, any).ok()) return true;
+            if (!one.isEmpty() && FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, any)).ok()) return true;   // [econ-1d] as a paying firm
         }
         return false;
     }
@@ -621,6 +636,47 @@ public final class Enterprise {
         return Math.max(0, f.purse() + Bank.balance(f) - keep);
     }
 
+    /**
+     * [econ-1d] What a founder could put in, coins: its purse and savings as means has it, and what its own homestead (a
+     * farm, a mine, a boat it owns alone) holds over the float its till keeps, the profits it has made and not yet drawn. A
+     * farmer whose harvest money sat in its farm's till had no means to open a bakery with, however rich its farm.
+     */
+    static int founderMeans(UUID village, VillageFolkEntity f) {
+        return means(f) + (int) (homesteadSpare(village, f) / 100);
+    }
+
+    /** [econ-1d] What the businesses this folk owns alone (its homestead) hold over their tills' floats, pennies. */
+    static long homesteadSpare(UUID village, VillageFolkEntity f) {
+        long n = 0, day = Accounts.dayNow();
+        for (Business b : Businesses.all(village)) {
+            if (!b.open || b.town() || b.mirror() || b.type.size != Business.Size.YARD || b.owners.size() != 1 || !b.ownedBy(f.getUUID())) continue;
+            n += Math.max(0, b.till - Businesses.floatOf(b, day));
+        }
+        return n;
+    }
+
+    /** [econ-1d] So many pennies drawn out of this folk's homestead tills over their floats into a new firm (its drawings). */
+    static long drawFromHomestead(UUID village, VillageFolkEntity f, long want, long day) {
+        long got = 0;
+        for (Business b : Businesses.all(village)) {
+            if (got >= want) break;
+            if (!b.open || b.town() || b.mirror() || b.type.size != Business.Size.YARD || b.owners.size() != 1 || !b.ownedBy(f.getUUID())) continue;
+            long take = Math.min(want - got, Math.max(0, b.till - Businesses.floatOf(b, day)));
+            if (take <= 0) continue;
+            b.till -= take;
+            Business.Day d = b.today(day);
+            d.drawings += take;
+            b.allTime.drawings += take;
+            b.note(day, "its owner drew " + Businesses.pence(take) + " to put into a business of its own");
+            got += take;
+        }
+        Businesses.dirty();
+        return got;
+    }
+
+    /** [econ-1d] The most a firm's hand makes of a ware at a turn of its bench. */
+    static final int BATCH = 4;
+
     /** [econ-1c] Partners at most, and what a founder must put up itself whatever its partners do, coins. */
     static final int MOST_PARTNERS = 2, OWN_LEAST = 2;
 
@@ -647,7 +703,7 @@ public final class Enterprise {
 
     /** What a founder could raise, coins: its own and its partners'. */
     static int raisable(UUID village, VillageFolkEntity f, @Nullable VillageFolkEntity hand) {
-        int n = means(f);
+        int n = founderMeans(village, f);                                  // [econ-1d] its homestead's spare too
         for (VillageFolkEntity p : partnersFor(village, f, hand)) n += partnerMoney(p);
         return n;
     }
@@ -699,8 +755,8 @@ public final class Enterprise {
             boolean own = skilled(village, f, t.work());
             long need = startupPence + (own ? 0 : handStake(village, t));
             // [econ-1c] Its own coin and its partners': a founder short of the money finds folk to go in with it.
-            if (means(f) < OWN_LEAST || raisable(village, f, own ? null : skilledHand(village, t, f)) * 100L < share * need) continue;
-            double s = bold * 10 + f.tradeLevel(t.work()) + Math.min(10, means(f) / 5.0) + (f.stationTask() == t.work() ? 5 : 0) + (own ? 5 : 0);
+            if (founderMeans(village, f) < OWN_LEAST || raisable(village, f, own ? null : skilledHand(village, t, f)) * 100L < share * need) continue;   // [econ-1d] (founderMeans)
+            double s = bold * 10 + f.tradeLevel(t.work()) + Math.min(10, founderMeans(village, f) / 5.0) + (f.stationTask() == t.work() ? 5 : 0) + (own ? 5 : 0);
             if (s > bestScore || s == bestScore && best != null && f.getUUID().compareTo(best.getUUID()) < 0) {
                 best = f;
                 bestScore = s;
@@ -790,7 +846,7 @@ public final class Enterprise {
             bold++;
             boolean own = skilled(village, f, o.type().work());
             long need = Math.round(o.startup() * 100) + (own ? 0 : handStake(village, o.type()));
-            if (means(f) >= OWN_LEAST && raisable(village, f, own ? null : skilledHand(village, o.type(), f)) * 100L >= shareFor(o.profit7(), o.startup()) * need) means++;
+            if (founderMeans(village, f) >= OWN_LEAST && raisable(village, f, own ? null : skilledHand(village, o.type(), f)) * 100L >= shareFor(o.profit7(), o.startup()) * need) means++;   // [econ-1d]
         }
         return "nobody to open it (" + skilled + " free with the skill, " + bold + " of them bold enough, " + means + " with the means)";
     }
@@ -882,7 +938,7 @@ public final class Enterprise {
         // The capital: the founder's own (its purse, then its savings), the bank the rest it is short of.
         long raised = 0;
         if (founder != null) {
-            long want = Math.min(startup, means(founder) * 100L);
+            long want = Math.min(startup, founderMeans(id, founder) * 100L);   // [econ-1d] (its homestead's spare too)
             int keep = Math.max(4, Math.min(RESERVE, 2 * Wealth.wage(founder)));   // [econ-1c] what it keeps by (means)
             int coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep), (want + 99) / 100);
             if (coins < (want + 99) / 100 && Bank.open(id)) {
@@ -891,6 +947,7 @@ public final class Enterprise {
                 coins = (int) Math.min(founder.purse() - Math.min(founder.purse(), keep / 2), (want + 99) / 100);
             }
             if (coins > 0 && founder.spend(coins)) raised = coins * 100L;
+            if (raised < want) raised += drawFromHomestead(id, founder, want - raised, day);   // [econ-1d] the rest out of its homestead's till
             // [econ-1c] Short of the start-up: partners put in for a share (the founder keeps the most of it, at least half
             // and one part, for the idea and the work).
             List<Stake> partners = new ArrayList<>();
@@ -1098,6 +1155,15 @@ public final class Enterprise {
         r.putDouble("rep", Math.max(0, Math.min(1, rep)));
         r.putInt("outs", Math.max(0, outs - 1));
         if (day - b.opened < 2) return;
+        // [econ-1d] Sold out again and again, with a good share of its market: more call for its wares than it can make, and its
+        // price goes up a little (a twentieth on its markup, every third day at most), as a busy shop's would.
+        if (outs >= 3 && s >= 3 * LOW_SHARE && b.markup < Businesses.MOST_MARKUP && day - r.getLong("raised") >= 3) {
+            double was = b.markup;
+            b.markup = Math.min(Businesses.MOST_MARKUP, b.markup + 0.05);
+            r.putLong("raised", day);
+            b.note(day, "prices up: markup " + Businesses.pct(was) + " -> " + Businesses.pct(b.markup) + ", sold out " + outs
+                + " times with " + Businesses.pct(s) + " of its market: more wanted than it can make");
+        }
         if (s < LOW_SHARE) r.putInt("lowShare", r.getInt("lowShare") + 1);
         else r.putInt("lowShare", 0);
         if (r.getInt("lowShare") >= LOW_SHARE_DAYS && b.markup > Businesses.LEAST_MARKUP) {
@@ -1120,6 +1186,7 @@ public final class Enterprise {
     /** What it holds over five days' sales (and a few) sold to the market at the bid: a firm does not sit on its stock. */
     static void sellOver(ServerLevel level, UUID village, Business b, long day) {
         if (!MarketMaker.live(village)) return;
+        if (day - b.opened < 7) return;                                    // [econ-1d] a new firm's shelf given its first week to sell
         Business.Day w = b.last(day - 1, 7);
         for (Map.Entry<String, Lot> e : new ArrayList<>(b.stock.entrySet())) {
             Lot lot = e.getValue();
@@ -1276,6 +1343,7 @@ public final class Enterprise {
         r.remove("petition");
         // The stock, to the market at its bid (or the stores at cost where the market is not open).
         long fromStock = liquidate(level, village, b, day);
+        long fromKit = FirmKit.sell(level, village, b, day);              // [econ-1d] its kit sold to the market, not written off
         // The stall: at the town's auction on market day, or (a town with no auction) to the folk with the means now.
         boolean toAuction = r.getLong("fixtures") > 0 && Auctions.holds(village);
         long fromStall = toAuction ? 0 : auctionStall(level, village, b, r, day);
@@ -1309,7 +1377,7 @@ public final class Enterprise {
         }
         close(level, village, b, r, day, "bankrupt");
         String court = heardBy == null ? "" : " (heard " + heardBy + ")";
-        b.note(day, "bankrupt" + court + " (" + cause + "): stock " + Businesses.pence(fromStock) + ", stall " + (toAuction ? "to the auction on market day"
+        b.note(day, "bankrupt" + court + " (" + cause + "): stock " + Businesses.pence(fromStock) + (fromKit > 0 ? ", kit " + Businesses.pence(fromKit) : "") + ", stall " + (toAuction ? "to the auction on market day"
             : Businesses.pence(fromStall)) + (fromPurse > 0 ? ", " + Businesses.pence(fromPurse) + " of its owner's purse" : "") + "; paid "
             + (paid.isEmpty() ? "nobody" : String.join(", ", paid)) + (unpaid.isEmpty() ? "" : toAuction ? "; still owed: " + String.join(", ", unpaid)
             : "; written off: " + String.join(", ", unpaid)));
@@ -1549,6 +1617,7 @@ public final class Enterprise {
         CompoundTag r = rec(village, b.id);
         if (r == null) return;
         liquidate(level, village, b, day);
+        FirmKit.sell(level, village, b, day);                             // [econ-1d] its kit sold, not left with its hands
         auctionStall(level, village, b, r, day);
         if (b.account < 0) {
             long pay = Math.min(-b.account, b.till);
@@ -1899,8 +1968,8 @@ public final class Enterprise {
         StringBuilder sb = new StringBuilder("hand " + hand + ":");
         for (String key : t.wares()) {
             ItemStack one = Stockroom.sampleOf(key);
-            if (!one.isEmpty()) sb.append(' ').append(key).append(" short of ").append(Bench.plan(level, v, one.getItem(), 1,
-                new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy())).shortOf).append(';');
+            if (!one.isEmpty()) sb.append(' ').append(key).append(" short of ").append(FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1,
+                new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy()))).shortOf).append(';');
         }
         return sb.toString();
     }

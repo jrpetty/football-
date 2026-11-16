@@ -69,6 +69,7 @@ public final class MarketPage {
         int fy = y + h - 46;
         List<String> foot = new ArrayList<>(strings(t, "programme"));
         if (!t.getString("budget").isEmpty()) foot.add(0, t.getString("budget"));          // [econ-1b] the town's budget
+        if (!t.getString("iouWeek").isEmpty()) foot.add(Math.min(1, foot.size()), t.getString("iouWeek"));   // [econ-1d] the IOUs' week
         foot.add("The town's coin: " + t.getString("census"));
         for (String s : foot) {
             if (fy > y + h - 8) break;

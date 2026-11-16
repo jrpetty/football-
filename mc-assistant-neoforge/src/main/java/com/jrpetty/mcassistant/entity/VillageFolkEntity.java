@@ -7367,6 +7367,10 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         UUID village = ownerId();
         if (heart == null || village == null) return false;
+        if (TownBudget.worksWait(village)) {                             // [econ-1d] the day's money for the works spent: tomorrow
+            buildNote("build: the town has spent what it can on its works today");
+            return false;
+        }
         long now = level().getGameTime();
         java.util.Map<BuildGoal.Part, Integer> need =
             BuildGoal.partCounts(project, site.radius());
@@ -7461,6 +7465,7 @@ public class VillageFolkEntity extends AssistantEntity {
             // with none in the stores, made) the four bookshelves it already had, out of the books its teacher wanted.
             if (still != null) want = Math.min(want, still.getOrDefault(deco, 0));
             if (want == 0) continue;
+            if (!TownBudget.plainNeed(deco.name()) && TownBudget.frugal(village)) continue;   // [econ-1d] a town careful of its money builds plain
             var item = BuildGoal.itemForPart(deco);
             int have = countCarried(item);
             if (have < want) have += drawFrom(heart, item, want - have, buildStoresRadius());
@@ -7488,9 +7493,12 @@ public class VillageFolkEntity extends AssistantEntity {
         if (carriedNow < blocks) {
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
+            // [econ-1d] A town careful of its money builds of the cheapest stone and timber the market has, not its bricks.
+            final double dear = TownBudget.frugal(village) && level() instanceof net.minecraft.server.level.ServerLevel sl ? TownBudget.dearBlock(sl, village) : Double.MAX_VALUE;
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
                 got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost
+                        && (dear == Double.MAX_VALUE || MarketMaker.ask((net.minecraft.server.level.ServerLevel) level(), village, st) <= dear)
                         && !Restore.earthyItem(st)                                     // [integrity] no wall of earth
                         && !st.is(net.minecraft.tags.ItemTags.WOOL),                   // [access-3] nor of the tailor's wool (the school's blackboard)
                     blocks - carriedNow - got, buildStoresRadius());

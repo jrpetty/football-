@@ -120,6 +120,8 @@ public final class MarketMaker {
         OUTPUT_NOW.clear();
         PRICE_FOR_TESTS.clear();
         GLUT.clear();                                     // [econ-1c]
+        IouBook.traceForTests(false);                     // [econ-1d]
+        TownBudget.resetForTests();                       // [econ-1d]
     }
 
     // ------------------------------------------------------------------ prices
@@ -191,7 +193,12 @@ public final class MarketMaker {
 
     /** What the market asks for one of this, in coin. */
     public static double ask(ServerLevel level, UUID village, ItemStack one) {
-        return mid(level, village, one) * (1 + spread(village) / 2);
+        double a = mid(level, village, one) * (1 + spread(village) / 2);
+        // [econ-1d] A market maker with its cellar full marks its ask down to clear it, as its bid falls (glut): by the square
+        // root of what it can sell over what it holds, never under half. A town drowning in wheat sold it to its baker at the
+        // price of a lean year while it paid its farmers a twentieth of it.
+        double g = PRICE_FOR_TESTS.containsKey(Stockroom.key(one)) ? 1.0 : glut(level, village, one);
+        return g < 1.0 ? a * Math.max(0.5, Math.sqrt(g)) : a;
     }
 
     /** What the market pays for one of this, in coin: never a staple under seven tenths of its usual worth while it has coin. */
@@ -884,7 +891,7 @@ public final class MarketMaker {
         // The treasury's float lent to the market and the town's IOUs to it, set against each other (both the town's).
         long adv = advanced(id);
         if (adv > 0) {
-            long netted = Accounts.netDebts(id, adv);
+            long netted = Accounts.netDebts(id, adv, "the treasury's float");   // [econ-1d] (how)
             if (netted > 0) market(id).putLong("advanced", adv - netted);
         }
         payCredit(level, id);
@@ -953,6 +960,8 @@ public final class MarketMaker {
         else Privatisation.begin(level, v, day);
         // [econ-1b] The town's money is made in its businesses now: the council taxes their profits, a tenth to start.
         if (TaxBook.rate(id, TaxBook.Lever.PROFITS) == 0) TaxBook.set(level, v, TaxBook.Lever.PROFITS, 1, "the council, on Market Opening Day");
+        // [econ-1d] And a coin a week from every business for its premises: the business rates, profit or none.
+        if (TaxBook.rate(id, TaxBook.Lever.RATES) == 0) TaxBook.set(level, v, TaxBook.Lever.RATES, 1, "the council, on Market Opening Day");
     }
 
     /** Store credit paid out of the market's cash over a day's float, oldest owed first. */
@@ -1032,7 +1041,7 @@ public final class MarketMaker {
         if (house == null) return;
         // The town owes its market on its IOUs, and the market owes the town its surplus: the one set against the other
         // first (both are the town's), and only what is over paid in coin.
-        long netted = Accounts.netDebts(village, over);
+        long netted = Accounts.netDebts(village, over, "the market's weekly surplus");   // [econ-1d] (how)
         if (netted > 0) {
             Villages.tell(village, day, "the market set " + Businesses.pence(netted) + " of its surplus against what the town owed it on its IOUs");
             over -= netted;
@@ -1254,6 +1263,7 @@ public final class MarketMaker {
         out.put("ious", ious);
         out.putString("census", CoinCensus.line(village));
         out.putString("budget", TownBudget.line(village));                        // [econ-1b] the town's budget
+        out.putString("iouWeek", IouBook.weekLine(village));                       // [econ-1d] the IOUs' week: who wrote them, how cleared
         return out;
     }
 
@@ -1291,6 +1301,8 @@ public final class MarketMaker {
         sb.append("Today's takes: ").append(tallies(village)).append("\n");
         String budget = TownBudget.line(village);                                  // [econ-1b] the town's budget
         if (!budget.isEmpty()) sb.append(budget).append("\n");
+        String ious = IouBook.weekLine(village);                                    // [econ-1d] the IOUs' week
+        if (!ious.isEmpty()) sb.append(ious).append("\n");
         for (String l : Privatisation.lines(level, village)) sb.append(l).append("\n");
         return sb.toString();
     }
