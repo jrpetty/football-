@@ -1278,6 +1278,7 @@ public final class Enterprise {
             rc.putLong("day", day);
             r.put("receiver", rc);
             r.putLong("fixtures", 0);
+            if (b.till > 0) returnToOwners(village, b);                   // (odd pennies the wages could not take)
         } else {
             returnToOwners(village, b);                                   // what is left (if anything), to its owners
         }

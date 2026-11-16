@@ -119,6 +119,7 @@ public final class MarketMaker {
         PAID_NOW.clear();
         OUTPUT_NOW.clear();
         PRICE_FOR_TESTS.clear();
+        GLUT.clear();                                     // [econ-1c]
     }
 
     // ------------------------------------------------------------------ prices
@@ -196,10 +197,36 @@ public final class MarketMaker {
     /** What the market pays for one of this, in coin: never a staple under seven tenths of its usual worth while it has coin. */
     public static double bid(ServerLevel level, UUID village, ItemStack one) {
         double b = mid(level, village, one) * (1 - spread(village) / 2) * cashFactor(village);
-        if ((staple(one) || rawProduce(one)) && !PRICE_FOR_TESTS.containsKey(Stockroom.key(one))) {   // [econ-1b] the raw produce too, coin or credit
+        if ((staple(one) || rawProduce(one)) && !PRICE_FOR_TESTS.containsKey(Stockroom.key(one))
+                && !glutted(level, village, one)) {   // [econ-1b] the raw produce too, coin or credit; [econ-1c] not into a glut
             b = Math.max(b, STAPLE_FLOOR * PriceIndex.usual(one.copyWithCount(1)) * priceLevel(village));
         }
         return Math.min(b, ask(level, village, one));
+    }
+
+    /** [econ-1c] Held over this many of a thing and twice the town's week of it, the market is glutted with it. */
+    static final int GLUT_LEAST = 64;
+    private static final Map<String, long[]> GLUT = new HashMap<>();
+
+    /**
+     * [econ-1c] Is the market glutted with this: it holds more than sixty-four and more than two weeks of what the town took
+     * of it (sold at every counter). The floor under the staples' bid is the town's promise to take the next harvest at a
+     * living price, not every harvest whatever it holds: a town whose fields came good bought two hundred carrots a day it
+     * could not sell at seven tenths of their worth, and ran up five hundred coins of IOUs paying for them. Into a glut the
+     * bid falls with the price, as a real market's would. Looked at once every ten seconds a thing.
+     */
+    static boolean glutted(ServerLevel level, UUID village, ItemStack one) {
+        String key = Stockroom.key(one);
+        String k = village + "|" + key;
+        long now = level.getGameTime();
+        long[] c = GLUT.get(k);
+        if (c != null && now - c[0] < 200 && now >= c[0]) return c[1] != 0;
+        int held = Market.stock(level, village, Stockroom.matcher(key));
+        int week = Stockroom.week7(level, village, key)[0];
+        boolean glut = held > Math.max(GLUT_LEAST, 2L * week);
+        if (GLUT.size() > 4096) GLUT.clear();
+        GLUT.put(k, new long[]{ now, glut ? 1 : 0 });
+        return glut;
     }
 
     /** [econ-1b] A producer's raw output beside the staples: ore, coal and metal, wool, hides, eggs and feathers. */
@@ -423,7 +450,7 @@ public final class MarketMaker {
                 long got = cashOut(village, p);
                 Accounts.credit(level, village, t.account, got, what);
                 if (got < p) owe(village, t.account, p - got);
-                refundBooks(level, village, t.account, p);
+                refundBooks(level, village, t.account, p, key.substring(key.lastIndexOf('|') + 1));
                 refunded += p;
             }
             if (t.qty <= 0) it.remove();
@@ -436,10 +463,12 @@ public final class MarketMaker {
     }
 
     /** A refund in a business's books: its purchase undone. */
-    private static void refundBooks(ServerLevel level, UUID village, Account a, long p) {
+    private static void refundBooks(ServerLevel level, UUID village, Account a, long p, String key) {
         if (a.kind() != Kind.FIRM) return;
         Business b = Businesses.of(village, a.key());
         if (b == null) return;
+        if (Capital.durable(key)) p -= Capital.refunded(village, b, p);   // [econ-1c] a tool handed back: off its kit
+        if (p <= 0) return;
         Business.Day d = b.today(Businesses.today(level));
         d.other -= p;
         b.allTime.other -= p;
@@ -541,8 +570,11 @@ public final class MarketMaker {
         if (b == null) return;
         long day = Businesses.today(level);
         Business.Day d = b.today(day);
-        d.other += p;
-        b.allTime.other += p;
+        if (Capital.durable(key)) Capital.bought(village, b, p);   // [econ-1c] a tool is its capital, worn off day by day
+        else {
+            d.other += p;
+            b.allTime.other += p;
+        }
         // (Not in its lines' use: that is what its own reordering of bonded stock goes by, and this was bought and used.)
         // One line an order: the same ware the same day folded into it, so the book shows the day's buying, not every pick.
         Business.Order last = b.orders.isEmpty() ? null : b.orders.get(b.orders.size() - 1);
@@ -580,7 +612,7 @@ public final class MarketMaker {
                 long got = cashOut(village, p);
                 Accounts.credit(level, village, t.account, got, "a counter's sale");
                 if (got < p) owe(village, t.account, p - got);
-                refundBooks(level, village, t.account, p);
+                refundBooks(level, village, t.account, p, Stockroom.key(what));
                 if (t.account.kind() == Kind.UNATTRIBUTED) Accounts.unstraggle(level, village);
                 book(village, Stockroom.key(what), -k, -p, false);
                 tally(village, "free: paid at a counter", k);

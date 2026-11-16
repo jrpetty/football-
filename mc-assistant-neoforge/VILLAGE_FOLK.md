@@ -12840,3 +12840,56 @@ Smoke: `econ_firms_stage` in tools/realworld/smoke.py, right after the market st
 founding; ent02 none when the market is served or nobody is bold; ent03 buyers go to the cheaper seller; ent04 a firm
 passed by cuts its markup; ent05 a bankruptcy pays its creditors in order, the census at nought drift; ent06 expansion;
 ent07 a player's charter; ent08 kept with the world; ent09 the town's budget; ent10 ten days of a town under the market).
+
+## The economy in real play (economy batch 1C)
+
+Batch 1B's entrepreneurs only ever appeared in tests that seeded one. Ten days of a town left to itself
+(EntrepreneurGameTests ent12, nobody seeded) found why, and what else kept the market from working as a real one would.
+
+- **The towns count their days by the world's time.** Every town's morning (the census, the wages, the market, the books,
+  the leases, the budget, the firms) comes once a day by the world's day number. The game's `/time set` is absolute:
+  "time set day" on the fifth day put the world back to its first, and every town waited five days for a morning it had
+  already had; a world with the daylight cycle off, or the clock set back to the same hour again and again, never came to
+  another morning, and a young town never reached its Market Opening Day. Now the clock set back past the start of the day
+  keeps the hour as you set it and the day count as it was; and a whole day of the world's time gone by with the clock
+  held at one day counts as a day gone by (the hour where you left it), the towns holding that morning late. A night slept
+  through, or time moved on, is the game's own. (Not on the game tests' server, unless a test asks.)
+- **Who founds a firm.** Skill as the town reckons it: a master's (level five, or a knack), or nobody in the town better
+  at the trade. A young town has no masters; its best hand at a trade is the one folk go to, and where nobody has done the
+  work, whoever takes it up learns it on the job. A founder without the skill takes on a hand who has it, and puts up its
+  first three days' wages. The nerve: three as before, two for a sure thing (a week's profit over half the start-up). What
+  it keeps by is two days' keep at its own wage (four to twelve coins), not twelve coins, a fortnight's pay to a labourer.
+  It puts up half the start-up, a third for a sure thing; short of it, up to two **partners** go in with it: grown folk
+  with savings who are not timid, each putting in up to half what it could spare, for a share (the founder keeps over
+  half). The rest is the town's trade credit, or the bank.
+- **A firm makes what it sells.** Each morning a firm sets what its shelf should hold of each of its wares (three days of
+  the week's want of it, and one over; two of its first ware while nothing is wanted). Its hands, at their bench, make the
+  ware the shelf is shortest of first, out of the stores at the market's price (the firm buys the makings), and the piece
+  goes on its shelf in the stores to sell at the firm's own price; only with the shelf full do they turn to the town's
+  wants. A shop that buys in to sell on (the greengrocer, the general store) buys its shelf's stock at the market each
+  morning, on its credit if its till is short.
+- **Tools are capital.** What a business buys that lasts (anything that wears with use, a bucket, a lead, a saddle) goes
+  into its kit at what it cost, and a fourteenth of the kit is written off each morning as it wears; its worth carries the
+  kit. Three things had been buying tools over and over: the hunter's check for a bow asked whether it had the rank to
+  draw one, so a hunter short of it fetched another from the stores every minute, six bows a day; the rancher took a
+  bucket at a bucket's price to fill with milk the market bought at the milk's (now the market's pail is lent); and the
+  woodcutter's and farmer's turns at the bench making the mine's props, the couriers' crates and the roofs' thatch for the
+  town were charged to the woodlot and the farm (now to the town's works).
+- **The market and a glut.** The floor under the staples' bid (seven tenths of their worth) is the town's promise to take
+  the next harvest at a living price, not every harvest whatever it holds. Once the market holds more than sixty-four of a
+  thing and two weeks of what the town takes of it, the bid falls with the price, as a real market's would.
+- **Bankruptcy at the court and the auction.** A firm that cannot pay its way is taken to the court by its creditors; it
+  trades no more. The leader hears it at the hall when it sits in the morning; where there is no hall, or it did not sit,
+  the council hears it on the square the next morning. Declared bankrupt, its stock goes to the market at the bid, its till
+  to its creditors in their order; where the town holds an auction on market day (twelve folk, the Stone Age), its stall
+  goes under the hammer there with the town's other lots, and what it brings pays the creditors still owed, in the same
+  order, the rest to its owners; the winner owns a stall to set up a business of its own on. No bid at two auctions, and
+  the stall goes back to the town. A town too small for an auction sells it there and then to the folk with the means.
+  The chronicle has each step: the petition, the hearing, the sale.
+
+Tests (EntrepreneurGameTests): ent11 the clock set back and held (a morning each day, the market opening by its tenth day,
+the census at nought drift); ent12 ten days of a town nobody seeded (at least one firm founded by its own folk, the census
+at nought drift every morning, the IOUs bounded; the farms, ranch and woodlot selling; with the game's own crop growth,
+which the tests' server turns off); ent13 a bankruptcy heard by the council and its stall sold at the auction for its
+creditors. The ten-day tests now give the crops the game's usual random tick speed (three): the tests' server has it at
+nought, which is why a test town's farms sold nothing.
