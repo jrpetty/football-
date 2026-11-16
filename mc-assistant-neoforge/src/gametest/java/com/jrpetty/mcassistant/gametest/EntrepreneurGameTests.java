@@ -587,6 +587,13 @@ public class EntrepreneurGameTests {
                     ok.that(worstDrift[0] == 0, "the census at nought drift every morning (worst " + worstDrift[0] + ")");
                     Kit.log(tag + " most IOUs " + Businesses.pence(mostIous[0]));
                     Kit.log(tag + " FINAL firms: " + Enterprise.words(level, id).replace('\n', '|'));
+                    StringBuilder who = new StringBuilder();
+                    for (AssistantEntity e2 : Villages.folkOf(id)) {
+                        if (!(e2 instanceof VillageFolkEntity f2) || f2.isBaby()) continue;
+                        who.append(f2.displayNameCap()).append(' ').append(f2.stationTask().name().toLowerCase(Locale.ROOT)).append(" lv").append(f2.tradeLevel(f2.stationTask()))
+                            .append(" bold ").append(Enterprise.boldness(f2)).append(" purse ").append(f2.purse()).append("; ");
+                    }
+                    Kit.log(tag + " FINAL founders? " + who);
                     int[] counts = Enterprise.countsForTests(id);
                     ok.that(counts[0] >= 1, "at least one firm opened by its own folk: " + counts[0] + " opened, " + counts[1] + " bankrupt, " + counts[2] + " wound up");
                     ok.that(mostIous[0] <= Math.max(TownBudget.limit(id) * 2, 20000), "the town's IOUs bounded: at most " + Businesses.pence(mostIous[0])
@@ -629,6 +636,11 @@ public class EntrepreneurGameTests {
             if (!b.town()) {
                 surplusSum += surplus / (double) days;
                 producers++;
+            }
+            if (a.other > 500) {
+                StringBuilder bought = new StringBuilder();
+                for (Business.Order o : b.orders) bought.append(o.qty()).append(' ').append(o.item()).append(' ').append(Businesses.pence(o.total())).append(" from ").append(o.supplier()).append(", ");
+                out.add("    " + b.name + " bought: " + bought);
             }
         }
         // Yesterday's output by trade, and what each producer has in its pack now.
