@@ -798,6 +798,7 @@ public class EntrepreneurGameTests {
         Kit.reset(level);
         MarketMaker.liveForTests(true);
         com.jrpetty.mcassistant.entity.IouBook.traceForTests(true);              // [econ-1d] each IOU's place in the code
+        com.jrpetty.mcassistant.entity.CivicLand.liveForTests(true);             // [econ-1d] the council sits on the taxes, as in real play
         // [econ-1c] The game's own crop growth (a random tick speed of three, as in any world): the tests' server has it at
         // nought, and a town's fields never ripened in ten days, so its farms had nothing to sell. Put back at the end.
         var ticking = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
@@ -893,6 +894,7 @@ public class EntrepreneurGameTests {
                     over[0] = true;
                     server.tickRateManager().setTickRate(20.0F);
                     ticking.set(tickingWas, server);
+                    com.jrpetty.mcassistant.entity.CivicLand.liveForTests(false);
                     Kit.Expect ok = new Kit.Expect();
                     int folkNow = Villages.headcount(id), built = Ledger.buildings(id).size();
                     int food = Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id));

@@ -182,11 +182,22 @@ public final class TownBudget {
     }
 
     /** [econ-1d] What the works may always spend in a day, whatever the town owes, pennies: its essentials go ahead, at a pace. */
-    static final long WORKS_FLOOR = 2500;
+    static final long WORKS_FLOOR = 1500;
+
+    /**
+     * [econ-1d] The dearest building block a careful town buys for its walls, coin each: three times the market's cobblestone
+     * or planks, whichever is dearer (no bricks or stone bricks at four times the price: a careful town's houses go up of
+     * cobblestone and planks, a wall of plain stone as good to sleep behind).
+     */
+    public static double dearBlock(ServerLevel level, UUID village) {
+        double cobble = MarketMaker.ask(level, village, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE));
+        double planks = MarketMaker.ask(level, village, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS));
+        return 3 * Math.max(cobble, planks);
+    }
 
     /**
      * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
-     * them (a day's share of its week's revenue, and twenty-five coins at the least): its builders fetch no more for the day.
+     * them (a day's share of its week's revenue, and fifteen coins at the least): its builders fetch no more for the day.
      * Its essential buildings still go up every day, at the pace its money allows; nothing waits for ever.
      */
     public static boolean worksWait(@javax.annotation.Nullable UUID village) {
