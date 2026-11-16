@@ -70,10 +70,13 @@ public final class AnimStage {
     /** The stage where {@code at} is (its floor's top): VIEW lines, a row a picture, and what was stood up. */
     public static List<String> stage(ServerLevel level, BlockPos at) {
         List<Part> all = new ArrayList<>(List.of(WORK));
+        StationTask[] faces = {StationTask.FARM, StationTask.SHOP, StationTask.TAILOR, StationTask.COOK, StationTask.STORE,
+            StationTask.BREW, StationTask.SMITH, StationTask.FISH};
+        int k = 0;
         for (Act a : Act.values()) {
             if (a == Act.NONE || a.work()) continue;
             all.add(new Part(a, a == Act.BLOCK || a == Act.THRUST || a == Act.SALUTE ? StationTask.GUARD
-                : a == Act.ROW ? StationTask.FERRY : StationTask.NONE, null));
+                : a == Act.ROW ? StationTask.FERRY : faces[k++ % faces.length], null));
         }
         int rows = (all.size() + PER_ROW - 1) / PER_ROW;
         int x0 = at.getX(), y = at.getY(), z0 = at.getZ();
@@ -197,9 +200,29 @@ public final class AnimStage {
                 level.setBlock(front, st, 2);
             }
         }
-        VillageFolkEntity f = one(level, x, y, z, p.trade(), p.act(), i);
+        if (p.act() == Act.SIT) level.setBlock(BlockPos.containing(x, y, z), Blocks.SPRUCE_STAIRS.defaultBlockState()
+            .setValue(StairBlock.FACING, Direction.WEST), 2);
+        VillageFolkEntity f = one(level, x, p.act() == Act.SIT ? y + 0.5 : y, z, p.trade(), p.act(), i);
         if (f == null) return null;
         turn(f, -90.0F);
+        if (p.act() == Act.SIT) f.setPose(Pose.SITTING);
+        if (p.act() == Act.SLEEP) {
+            BlockPos head = BlockPos.containing(x, y, z), foot = head.east();
+            BlockState bed = Blocks.BLUE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST);
+            level.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2);
+            level.setBlock(head, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2);
+            f.startSleeping(head);
+        }
+        if (p.act() == Act.RIDE || p.act() == Act.ROW) {
+            net.minecraft.world.entity.Entity mount = p.act() == Act.RIDE ? EntityType.HORSE.create(level) : EntityType.BOAT.create(level);
+            if (mount != null) {
+                mount.moveTo(x, y, z, -90.0F, 0.0F);
+                mount.addTag("folk_lineup");
+                if (mount instanceof Mob m) { m.setNoAi(true); m.setInvulnerable(true); }
+                level.addFreshEntity(mount);
+                f.startRiding(mount, true);
+            }
+        }
         if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -1.8 : 1.3), y, z - 0.4);
         if (p.act() == Act.SHEAR || p.act() == Act.FEED) animal(level, p.act() == Act.SHEAR ? EntityType.SHEEP : EntityType.CHICKEN, x + 1.3, y, z);
         if (p.act() == Act.REPAIR) animal(level, EntityType.IRON_GOLEM, x + 1.7, y, z);

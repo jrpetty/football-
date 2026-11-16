@@ -315,6 +315,7 @@ public final class FolkAction {
     public static Act deriveForTests(VillageFolkEntity f) {
         State s = f.animState();
         s.until = 0;
+        s.scannedAt = Long.MIN_VALUE;                          // the blocks round it looked at afresh
         Act a = f.level() instanceof ServerLevel level ? derive(f, level, s) : Act.NONE;
         set(f, s, a, false);
         return a;

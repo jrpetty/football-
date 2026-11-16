@@ -85,7 +85,11 @@ public final class PlayerEmotes {
     /** The player's model posed for it, on every client that can see the player and its own. */
     static void show(ServerPlayer p, Act a) {
         NOW.put(p.getUUID(), new long[]{a.ordinal(), p.level().getGameTime()});
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, new PlayerEmotePayload(p.getId(), a.ordinal(), EmoteRules.ticks(a)));
+        try {
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(p, new PlayerEmotePayload(p.getId(), a.ordinal(), EmoteRules.ticks(a)));
+        } catch (RuntimeException e) {
+            com.mojang.logging.LogUtils.getLogger().debug("[anim] an emote not sent: {}", e.toString());   // a client without the mod
+        }
     }
 
     /** A handshake on a bargain struck (a folk hired, a deal closed): the player and the folk play it together. */

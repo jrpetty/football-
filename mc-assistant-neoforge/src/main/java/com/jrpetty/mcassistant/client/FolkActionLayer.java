@@ -51,12 +51,12 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         kit(Act.STIR_POT, () -> Items.STICK, null);
         kit(Act.BREW, () -> Items.BLAZE_ROD, null);
         kit(Act.SEW, () -> Items.STRING, () -> Items.WHITE_CARPET);
-        kit(Act.SAW, () -> com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get(), null);
+        kit(Act.SAW, () -> com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get(), null, 0.7F);
         kit(Act.CHISEL, () -> Items.MACE, () -> Items.FLINT, 0.55F);
         kit(Act.BUILD, () -> Items.BRICKS, null, 0.8F);
         kit(Act.SWEEP, () -> Items.BRUSH, null, 1.5F);
         load(Act.CARRY, () -> com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE_ITEM.get());
-        kit(Act.SACK, () -> com.jrpetty.mcassistant.item.WorkItems.ORE_SACK.get(), null, 1.5F);
+        load(Act.SACK, () -> com.jrpetty.mcassistant.item.WorkItems.ORE_SACK.get());
         kit(Act.HAND_OVER, () -> Items.BREAD, null);
         kit(Act.COUNT_COINS, () -> Items.GOLD_NUGGET, () -> Items.GOLD_NUGGET);
         kit(Act.WRITE, () -> Items.FEATHER, () -> Items.PAPER);
@@ -127,7 +127,8 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         boolean right = folk.getMainArm() == HumanoidArm.RIGHT;
         HumanoidArm mainArm = right ? HumanoidArm.RIGHT : HumanoidArm.LEFT;
         if (!m[2].isEmpty()) {
-            if (folk.getMainHandItem().isEmpty() && folk.getOffhandItem().isEmpty()) load(pose, buffer, light, folk, m[2], mainArm, act == Act.STOCK);
+            if (act == Act.SACK) sack(pose, buffer, light, folk, m[2], right);
+            else if (folk.getMainHandItem().isEmpty() && folk.getOffhandItem().isEmpty()) load(pose, buffer, light, act == Act.STOCK, mainArm);
             return;
         }
         if (!m[0].isEmpty() && folk.getMainHandItem().isEmpty()) hand(pose, buffer, light, folk, m[0], mainArm, k.size());
@@ -147,15 +148,39 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         pose.popPose();
     }
 
-    /** A load held in both arms, between the hands: a crate carried against the chest, a barrel lifted to a shelf. */
-    private void load(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk, ItemStack s, HumanoidArm arm, boolean high) {
+    /**
+     * A load held in both arms: a crate against the chest (where the wagons' carriers hold theirs: WagonClient.CrateLayer),
+     * a barrel lifted between the hands to a shelf. Drawn as the block itself, not its item.
+     */
+    private void load(PoseStack pose, MultiBufferSource buffer, int light, boolean high, HumanoidArm arm) {
+        net.minecraft.world.level.block.state.BlockState st = high ? net.minecraft.world.level.block.Blocks.BARREL.defaultBlockState()
+            : com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE.get().defaultBlockState();
         pose.pushPose();
-        getParentModel().translateToHand(arm, pose);
-        boolean left = arm == HumanoidArm.LEFT;
-        // From the hand toward the other hand (the arms reach in toward each other), and out past the fingers.
-        pose.translate((left ? -4.5F : 4.5F) / 16.0F, 10.5F / 16.0F, -2.5F / 16.0F);
-        pose.mulPose(Axis.XP.rotationDegrees(high ? 0.0F : 90.0F));
-        pose.scale(0.62F, 0.62F, 0.62F);
+        if (high) {
+            getParentModel().translateToHand(arm, pose);
+            boolean left = arm == HumanoidArm.LEFT;
+            pose.translate((left ? -5.0F : 5.0F) / 16.0F, 10.0F / 16.0F, 0.0F);
+            pose.scale(-1.0F, -1.0F, 1.0F);
+            pose.scale(0.45F, 0.45F, 0.45F);
+            pose.translate(-0.5F, -0.5F, -0.5F);
+        } else {
+            // The model's space is upside down (y down, face to -z): the crate at the hands, out in front of the chest.
+            pose.scale(-1.0F, -1.0F, 1.0F);
+            pose.translate(-0.25F, -0.95F, -0.74F);
+            pose.scale(0.5F, 0.5F, 0.5F);
+        }
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(st, pose, buffer, light,
+            net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
+        pose.popPose();
+    }
+
+    /** A sack over the shoulder of the hand that holds its neck, hanging down the back. */
+    private void sack(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk, ItemStack s, boolean right) {
+        pose.pushPose();
+        getParentModel().body().translateAndRotate(pose);
+        pose.translate((right ? -2.5F : 2.5F) / 16.0F, 2.0F / 16.0F, 4.2F / 16.0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(180.0F + (right ? -18.0F : 18.0F)));
+        pose.scale(0.9F, 0.9F, 0.9F);
         net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(s, ItemDisplayContext.FIXED, light,
             net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
         pose.popPose();

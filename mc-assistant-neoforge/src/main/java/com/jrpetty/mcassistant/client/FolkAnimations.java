@@ -178,7 +178,7 @@ public final class FolkAnimations {
             .r(RA, 0, -45, -22, 0, 0.42F, -158, 18, 28, 0.52F, -162, 18, 28, 0.68F, -82, -28, 0, 0.8F, -72, -34, 0, 1.3F, -45, -22, 0)
             .r(LA, 0, -48, 26, 0, 0.42F, -140, 38, 0, 0.52F, -144, 38, 0, 0.68F, -80, 26, 0, 0.8F, -70, 30, 0, 1.3F, -48, 26, 0)
             .r(HEAD, 0, 8, 0, 0, 0.45F, -4, 18, 0, 0.7F, 14, -6, 0, 1.3F, 8, 0, 0)
-            .twist(0, 0, 0.45F, 24, 0.68F, -16, 0.85F, -10, 1.3F, 0)
+            .twist(0, 0, 0.45F, 15, 0.68F, -12, 0.85F, -8, 1.3F, 0)
             .lean(0, 4, 0.45F, -4, 0.7F, 12, 1.3F, 4)
             .r(RL, 0, 0, 0, 0, 0.45F, 6, 0, 0, 0.7F, -8, 0, 0, 1.3F, 0, 0, 0)
             .r(LL, 0, 0, 0, 0, 0.45F, -6, 0, 0, 0.7F, 8, 0, 0, 1.3F, 0, 0, 0)
@@ -310,7 +310,7 @@ public final class FolkAnimations {
             .done());
         // A sack over the shoulder, held by its neck, bowed a little under it.
         put(Act.SACK, loop(1.0F)
-            .r(RA, 0, -168, -18, 12, 0.5F, -164, -18, 12, 1.0F, -168, -18, 12)
+            .r(RA, 0, -156, -24, 6, 0.5F, -152, -24, 6, 1.0F, -156, -24, 6)
             .r(HEAD, 0, 6, -6, -4, 1.0F, 6, -6, -4)
             .twist(0, 4, 1.0F, 4)
             .lean(0, 8, 0.5F, 9, 1.0F, 8)
@@ -360,10 +360,10 @@ public final class FolkAnimations {
             .r(HEAD, 0, 0, 0, 0, 0.6F, -18, 0, 0, 1.3F, -14, 0, 0, 2.0F, 0, 0, 0, 2.5F, 6, -8, 0, 3.2F, 0, 0, 0)
             .lean(0, 0, 0.6F, -6, 1.3F, -5, 2.0F, 2, 3.2F, 0)
             .done());
-        // The guard on watch: its hand on the hilt at its hip, its thumb in its belt, its eyes going slowly round.
+        // The guard on watch: both hands on the pommel of the blade stood point down before it, its eyes going slowly round.
         put(Act.WATCH, loop(6.0F)
-            .r(RA, 0, -22, 0, -26, 3.0F, -24, 0, -26, 6.0F, -22, 0, -26)
-            .r(LA, 0, -8, 0, -12, 3.0F, -6, 0, -12, 6.0F, -8, 0, -12)
+            .r(RA, 0, -74, -16, 0, 3.0F, -76, -16, 0, 6.0F, -74, -16, 0)
+            .r(LA, 0, -70, 30, 0, 3.0F, -72, 30, 0, 6.0F, -70, 30, 0)
             .r(HEAD, 0, -2, -30, 0, 1.5F, -2, -30, 0, 3.0F, -2, 30, 0, 4.5F, -2, 30, 0, 6.0F, -2, -30, 0)
             .twist(0, -3, 3.0F, 3, 6.0F, -3)
             .r(RL, 0, 0, 0, 4, 6.0F, 0, 0, 4)
@@ -882,7 +882,9 @@ public final class FolkAnimations {
             float t = (ticks * 50.0F * st.speed + st.phase) / 1000.0F;
             return t % c.length;
         }
-        return Math.min(c.length, ticks / 20.0F);
+        // Played once; if the act is held longer than the clip (a staged folk, /village anim play), again after a breath.
+        float t = ticks / 20.0F;
+        return t <= c.length ? t : Math.min(c.length, (t - c.length) % (c.length + 0.6F));
     }
 
     private static void eval(Clip c, float sec, float scale, Rig rig, Style st) {
