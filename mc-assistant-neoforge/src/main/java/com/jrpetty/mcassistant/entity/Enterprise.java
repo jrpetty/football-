@@ -955,6 +955,8 @@ public final class Enterprise {
             b.note(day, skilledHand.displayNameCap() + " taken on for its skill at " + t.work().label + " (level " + skilledHand.tradeLevel(t.work()) + ")");
         }
         for (int i = 0; i < t.startStaff(); i++) hire(level, v, b, r, t);
+        targets(level, id, b, r, lists(level, id));                         // [econ-1c] its shelf from its first day
+        restock(level, id, b, r);
         String how = founder != null ? Businesses.pence(raised) + " of " + founder.displayNameCap() + "'s own" + (lent > 0 ? " and " + Businesses.pence(lent) + " from the bank" : "")
             : "a player's charter";
         b.note(day, "opened by " + b.ownersWords() + " as a " + t.noun() + ", with " + how + (o == null ? "" : String.format(Locale.ROOT,
@@ -1877,6 +1879,21 @@ public final class Enterprise {
     public static void staffForTests(UUID village, Business b, VillageFolkEntity f) {
         CompoundTag r = rec(village, b.id);
         if (r != null) addStaff(village, b, r, f);
+    }
+
+    /** [econ-1c] Tests: can one of a kind's wares be made out of the stores now, and why not ("" if it can). */
+    public static String makeableForTests(ServerLevel level, Villages.Village v, String type) {
+        BusinessType t = BusinessTypes.of(type);
+        if (t == null) return "no such kind";
+        if (makeable(level, v, t)) return "";
+        Bench.Hand hand = Bench.handOf(level, v, null, VillageFolkEntity.buildingFor(t.work()));
+        StringBuilder sb = new StringBuilder("hand " + hand + ":");
+        for (String key : t.wares()) {
+            ItemStack one = Stockroom.sampleOf(key);
+            if (!one.isEmpty()) sb.append(' ').append(key).append(" short of ").append(Bench.plan(level, v, one.getItem(), 1,
+                new Bench.Hand(Math.max(hand.skill(), 10), hand.maker(), hand.table(), hand.furnace(), hand.smoker(), hand.campfire(), hand.smithy())).shortOf).append(';');
+        }
+        return sb.toString();
     }
 
     /** [econ-1c] Tests: the firm's creditors take it to the court now. */

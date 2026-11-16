@@ -140,7 +140,10 @@ public class EntrepreneurGameTests {
         missed(level, id, Items.STONE_PICKAXE, 25);
         missed(level, id, Items.STONE_AXE, 15);
         // [econ-1c] The makings of picks in the stores (a toolshop with nothing to make its tools of is no opportunity).
-        stores(level, id, x, new ItemStack(Items.COBBLESTONE, 32), new ItemStack(Items.OAK_PLANKS, 16), new ItemStack(Items.CRAFTING_TABLE, 1));
+        stores(level, id, x, new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 64),
+            new ItemStack(Items.CRAFTING_TABLE, 1));
+        Kit.log("ent01 makeable " + Enterprise.makeableForTests(level, v, "toolsmith"));
         Kit.Expect ok = new Kit.Expect();
         Enterprise.Opportunity o = Enterprise.weighForTests(level, v, "toolsmith");
         Kit.log("ent01 " + (o == null ? "no opportunity" : o.words()));
@@ -321,6 +324,8 @@ public class EntrepreneurGameTests {
         Enterprise.stockForTests(b, new ItemStack(Items.STONE_PICKAXE), 2, 50);
         owner.spend(owner.purse());
         owner.earn(14);
+        hand.spend(hand.purse());                       // [econ-1c] the hand not the one to buy the stall (its wages are what is checked)
+        hand.earn(4);
         CoinCensus.morning(level, v, day(level));
         nextDay(level);
         // Its till, and its debts: wages 3c, the town 4c, the market 30c, the bank 20c (the bank's loan was coin it had).
@@ -786,6 +791,18 @@ public class EntrepreneurGameTests {
                             .append(" bold ").append(Enterprise.boldness(f2)).append(" purse ").append(f2.purse()).append("; ");
                     }
                     Kit.log(tag + " FINAL founders? " + who);
+                    if (!seeded) {
+                        // [econ-1c] The farms sell their harvest to the market and earn by it.
+                        int farms = 0, selling = 0;
+                        for (Business b : Businesses.all(id)) {
+                            if (b.type.size != Business.Size.YARD || !b.open || b.town()) continue;
+                            VillageFolkEntity hand = handOf(id, b);
+                            if (hand == null || hand.stationTask() != StationTask.FARM) continue;
+                            farms++;
+                            if (b.allTime.revenue > 0) selling++;
+                        }
+                        ok.that(farms > 0 && selling * 2 >= farms, "the farms sell their harvest: " + selling + " of " + farms + " took something");
+                    }
                     int[] counts = Enterprise.countsForTests(id);
                     ok.that(counts[0] >= 1, "at least one firm opened by its own folk: " + counts[0] + " opened, " + counts[1] + " bankrupt, " + counts[2] + " wound up");
                     ok.that(mostIous[0] <= Math.max(TownBudget.limit(id) * 2, 20000), "the town's IOUs bounded: at most " + Businesses.pence(mostIous[0])
@@ -833,8 +850,8 @@ public class EntrepreneurGameTests {
     static List<String> producerLines(ServerLevel level, UUID id) {
         List<String> out = new ArrayList<>();
         long day = level.getDayTime() / 24000L;
-        double surplusSum = 0, bringing = 0, wages = 0;
-        int producers = 0, bringers = 0;
+        double surplusSum = 0, bringing = 0, wages = 0, farmSum = 0;
+        int producers = 0, bringers = 0, farms = 0, farmsSelling = 0;
         for (Business b : Businesses.all(id)) {
             if (b.type.size != Business.Size.YARD || !b.open) continue;
             long days = Math.max(1, day - b.opened);
@@ -855,6 +872,11 @@ public class EntrepreneurGameTests {
                 bringing += surplus / (double) days;
                 wages += wage;
                 bringers++;
+            }
+            if (!b.town() && hand != null && hand.stationTask() == StationTask.FARM) {   // [econ-1c] the farmers apart
+                farmSum += surplus / (double) days;
+                farms++;
+                if (a.revenue > 0) farmsSelling++;
             }
             if (a.other > 500) {
                 StringBuilder bought = new StringBuilder();
@@ -890,6 +912,8 @@ public class EntrepreneurGameTests {
             n++;
             trades.append(f.stationTask().name().toLowerCase(Locale.ROOT)).append(' ').append(w).append(", ");
         }
+        out.add(String.format(Locale.ROOT, "  FARMS %d private, %d of them selling, surplus %.2fc a day each on average", farms, farmsSelling,
+            farms == 0 ? 0 : farmSum / farms / 100.0));
         out.add(String.format(Locale.ROOT, "  PRODUCERS %d private, surplus %.2fc a day each on average; %d of them bringing goods in, %.2fc a day each against their own wage %.2f; OTHER TRADES %d, wage %.2f a day on average (%s)",
             producers, producers == 0 ? 0 : surplusSum / producers / 100.0, bringers, bringers == 0 ? 0 : bringing / bringers / 100.0,
             bringers == 0 ? 0 : wages / bringers, n, n == 0 ? 0 : others / n, trades));
