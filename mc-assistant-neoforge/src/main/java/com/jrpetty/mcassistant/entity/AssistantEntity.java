@@ -1349,6 +1349,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             level().setBlock(through, gs.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN, true), 10);
             level().playSound(null, through, net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
             openedGate = through.immutable();
+            if (this instanceof VillageFolkEntity vf) FolkAction.play(vf, FolkAction.Act.OPEN_GATE, 20);   // [anim] a shove of the gate
             return;
         }
         BlockPos goal = path.getTarget();
@@ -1366,6 +1367,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN,
                 net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
             openedGate = p.immutable();
+            if (this instanceof VillageFolkEntity vf) FolkAction.play(vf, FolkAction.Act.OPEN_GATE, 20);   // [anim]
             return;
         }
     }

@@ -1169,6 +1169,11 @@ def anim_stage(r, look, cx, cz):
         r.cmd("title %s clear" % USER)
         shot("anim-emote-%s" % emote)
         time.sleep(1.5)
+    say("wheel: " + r.cmd("execute as %s at @s run village emote wheel" % USER))
+    time.sleep(2)
+    park_mouse()
+    shot("anim-emote-wheel")
+    r.cmd("execute as %s at @s run village emote wheel" % USER)    # and shut again
     say("alive after the emotes: %s" % client_alive())
     r.cmd("kill @e[tag=folk_lineup]")
     r.cmd("gamemode spectator %s" % USER)

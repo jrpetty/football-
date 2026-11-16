@@ -58,6 +58,11 @@ public final class PlayerEmotesClient {
     /** From the server: a player's emote began (act 0: it stopped). */
     public static void heard(int playerId, int act, int ticks) {
         Minecraft mc = Minecraft.getInstance();
+        if (act < 0) {                                                  // the server's word to open the wheel, or shut it (/village emote wheel)
+            if (mc.screen instanceof EmoteWheelScreen open) open.onClose();
+            else if (mc.player != null) mc.setScreen(new EmoteWheelScreen());
+            return;
+        }
         if (mc.level == null || !(mc.level.getEntity(playerId) instanceof Player p)) return;
         Playing pl = PLAYING.computeIfAbsent(playerId, k -> new Playing());
         pl.seen.begin(act, p.tickCount);

@@ -155,6 +155,7 @@ public final class Drover {
         long now = level.getGameTime();
         if (!open && passing(f, p, g)) {
             level.setBlock(g, st.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 10);
+            FolkAction.play(f, FolkAction.Act.OPEN_GATE, 20);                  // [anim]
             level.playSound(null, g, net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 0.8F, 1.0F);
             OPENED.put(g.asLong(), now);
             return;

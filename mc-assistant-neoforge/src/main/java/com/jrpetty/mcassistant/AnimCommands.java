@@ -35,6 +35,7 @@ import java.util.List;
  *   /village anim befriend            (a player) the nearest folk thinks well of you (to see your emotes answered)
  *   /village anim friend              (a player) a folk stood up three blocks in front of you that thinks well of you
  *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
+ *   /village emote EMOTE              (anybody) the player's own emote, as the wheel sends it; "wheel" opens the wheel
  * </pre>
  */
 public final class AnimCommands {
@@ -148,6 +149,10 @@ public final class AnimCommands {
 
     private static int emote(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         net.minecraft.server.level.ServerPlayer p = ctx.getSource().getPlayerOrException();
+        if ("wheel".equals(StringArgumentType.getString(ctx, "emote"))) {          // the wheel opened on the player's screen
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.PlayerEmotePayload(p.getId(), -1, 0));
+            return 1;
+        }
         Act a = Act.named(StringArgumentType.getString(ctx, "emote"));
         com.jrpetty.mcassistant.entity.PlayerEmotes.Result r = a == null ? com.jrpetty.mcassistant.entity.PlayerEmotes.Result.NOT_AN_EMOTE
             : com.jrpetty.mcassistant.entity.PlayerEmotes.emote(p, a.ordinal(), -1);

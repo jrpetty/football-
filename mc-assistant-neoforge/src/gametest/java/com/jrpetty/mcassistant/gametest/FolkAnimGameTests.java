@@ -128,6 +128,8 @@ public class FolkAnimGameTests {
             workday(level, f);
             helper.assertTrue(!f.offWorkNow(), "a working morning: on its shift, not " + f.offWorkWhy());
             List<String> seen = new ArrayList<>();
+            // Not swinging, out in the open: standing about, not at work.
+            helper.assertTrue(at(level, f, StationTask.FARM, new ItemStack(Items.IRON_HOE), null, false) != Act.HOE, "a hoe held still is not hoeing");
             Object[][] blocks = {
                 {StationTask.SMITH, Blocks.ANVIL, Act.HAMMER}, {StationTask.TAILOR, Blocks.LOOM, Act.SEW},
                 {StationTask.BREW, Blocks.BREWING_STAND, Act.BREW}, {StationTask.ENCHANT, Blocks.ENCHANTING_TABLE, Act.ENCHANT},
@@ -159,8 +161,6 @@ public class FolkAnimGameTests {
                 seen.add(t[0] + "+" + ((ItemStack) t[1]).getItem() + "=" + a);
                 helper.assertTrue(a == t[2], "the " + t[0] + " swinging " + t[1] + " is " + t[2] + ", not " + a);
             }
-            // Not swinging, out in the open: standing about, not at work.
-            helper.assertTrue(at(level, f, StationTask.FARM, new ItemStack(Items.IRON_HOE), null, false) != Act.HOE, "a hoe held still is not hoeing");
             // Every trade has an act of its own at its work.
             Set<StationTask> none = EnumSet.of(StationTask.NONE, StationTask.GUARD, StationTask.FERRY, StationTask.SCOUT, StationTask.HUNT);
             for (StationTask t : StationTask.values()) {
