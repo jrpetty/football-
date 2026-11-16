@@ -51,20 +51,39 @@ func refresh() -> void:
 	for p: Dictionary in Content.parts.values():
 		var c: String = p.category
 		var lvl := int(p.get("repair_level", 1))
-		var ok := false
-		match cat:
-			"battery": ok = c == "battery"
-			"ramstorage": ok = c in ["ram", "storage"]
-			"small": ok = c in ["keys", "fan"]
-			"l2": ok = lvl == 2
-			"l3": ok = lvl == 3
-			"build": ok = c in ["cpu", "raid", "chassis"] or str(p.get("fits_ram_type", "")) == "ddr4_rdimm" 				or str(p.get("fits_storage_type", "")) in ["sas_caddy", "sata_hdd"] or String(p.id).begins_with("psu_server")
-		if not ok:
+		if not cat in part_tabs(p):
 			continue
 		if _filter != "" and not _filter in String(p.name).to_lower() and not _fits_filter(p):
 			continue
 		var desc := ("For custom builds · %s" % _fits_text(p)) if c in ["cpu", "raid", "chassis"] else "Repair level %d · %s" % [lvl, _fits_text(p)]
 		_row(p.id, p.name, int(p.price), desc, "%d in bins" % int(Game.state.parts.get(p.id, 0)))
+
+
+static func part_tabs(p: Dictionary) -> Array:
+	## The PartsHub tabs a part shows in. Every part lands in at least one, so nothing a repair needs is unbuyable
+	## (level-1 parts with no tab of their own go under small parts).
+	var c: String = p.get("category", "")
+	var lvl := int(p.get("repair_level", 1))
+	var out: Array = []
+	if c in ["cpu", "raid", "chassis"] or str(p.get("fits_ram_type", "")) == "ddr4_rdimm" \
+			or str(p.get("fits_storage_type", "")) in ["sas_caddy", "sata_hdd"] or String(p.get("id", "")).begins_with("psu_server"):
+		out.append("build")
+	if c == "battery":
+		out.append("battery")
+	if c in ["ram", "storage"]:
+		out.append("ramstorage")
+	if lvl == 2:
+		out.append("l2")
+	if lvl >= 3:
+		out.append("l3")
+	if c in ["keys", "fan"] or (out.is_empty() and lvl <= 1):
+		out.append("small")
+	return out
+
+
+static func part_tab(p: Dictionary) -> String:
+	var tabs := part_tabs(p)
+	return tabs[0] if not tabs.is_empty() else ""
 
 
 func _fits_filter(p: Dictionary) -> bool:

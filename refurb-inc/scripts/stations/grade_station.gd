@@ -21,7 +21,7 @@ func hold_action(player: Node, it: Item) -> Dictionary:
 		return {}
 	if not u.tested:
 		return {"blocked": "Test it first."}
-	if u.has_open_faults():
+	if u.has_blocking_faults():
 		return {"label": "Grade as D — Spares/Repairs", "secs": _secs(player), "action": "grade",
 			"sub": "Unrepaired faults: sells cheap, but sells."}
 	if not u.imaged:

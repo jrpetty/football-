@@ -273,6 +273,16 @@ func has_open_faults() -> bool:
 	return not open_faults().is_empty()
 
 
+func blocking_faults() -> Array:
+	## Open faults that stop a unit being wiped and sold working. Faults flagged "sellable_as_is" in faults.json
+	## (a worn battery) don't: the unit can be imaged and sold at a lower grade, or repaired first for a better one.
+	return open_faults().filter(func(f): return not Content.fault(f.id).get("sellable_as_is", false))
+
+
+func has_blocking_faults() -> bool:
+	return not blocking_faults().is_empty()
+
+
 func cosmetic_score() -> int:
 	var score := 100
 	for c in cosmetic:
@@ -301,7 +311,7 @@ func stage() -> String:
 		return STAGE_GRADED
 	if not tested:
 		return STAGE_UNTESTED
-	if has_open_faults():
+	if has_blocking_faults():
 		return STAGE_FAULTY
 	if not imaged:
 		return STAGE_TO_IMAGE

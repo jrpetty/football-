@@ -31,6 +31,21 @@ var _hint_t := 14.0
 var _last_cash := 0
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("toggle_hud"):
+		visible = not visible                 # F1: a clean screen for screenshots and trailers
+	elif event.is_action_pressed("screenshot"):
+		_take_screenshot()                    # F12
+
+
+func _take_screenshot() -> void:
+	await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute("user://screenshots")
+	var path := "user://screenshots/refurb_%s.png" % Time.get_datetime_string_from_system().replace(":", "-")
+	get_viewport().get_texture().get_image().save_png(path)
+	Game.toast.emit("Screenshot saved: %s" % ProjectSettings.globalize_path(path), "info")
+
+
 func _ready() -> void:
 	layer = 10
 	var root := Control.new()

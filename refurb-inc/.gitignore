@@ -2,7 +2,8 @@
 *.translation
 export_presets.cfg.bak
 /build/
-/tools/out/
+/tools/out/*
+!/tools/out/.gdignore
 *.tmp
 
 # Unfinished browser downloads and stray files from other projects dropped into assets/

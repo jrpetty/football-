@@ -52,6 +52,7 @@ var slot_defs: Dictionary = {}       # slot_id -> { "accepts": Array[String], "s
 var stations: Dictionary = {}        # station_id -> { "type": String, "job": Dictionary, "msg": String }
 var lots: Dictionary = {}            # id -> lot Dictionary (see LotGenerator)
 var orders: Dictionary = {}          # id -> order Dictionary
+var in_transit: Array = []           # lorries/vans on their way: left the schedule, not yet delivered (saved)
 var schedule: Array = []             # [{ "at": minute, "type": String, "data": Dictionary }]
 var seller_state: Dictionary = {}    # seller_id -> { "next_refresh_day": int }
 var contracts: Dictionary = {}       # id -> business contract: an offer, a bulk order or a custom build (see Business)
@@ -277,8 +278,12 @@ func add_money(amount: int, category: String, desc: String) -> void:
 	mark("company")
 
 
-func add_reputation(delta: float) -> void:
-	reputation = clampf(reputation + delta, 0.0, float(Content.econ("rep_max", 100)))
+func add_reputation(delta: float, taper := false) -> void:
+	## taper: everyday gains (an on-time order) shrink near the top, so reputation is quick to build and slow to max.
+	var top := float(Content.econ("rep_max", 100))
+	if taper and delta > 0.0:
+		delta *= clampf(1.0 - reputation / top, 0.15, 1.0)
+	reputation = clampf(reputation + delta, 0.0, top)
 	mark("company")
 
 
@@ -368,7 +373,7 @@ func to_dict() -> Dictionary:
 		"company_name": company_name, "cash": cash, "reputation": reputation, "ledger": ledger.duplicate(true),
 		"parts": parts.duplicate(), "consumables": consumables.duplicate(), "players": players.duplicate(true),
 		"items": it_out, "stations": stations.duplicate(true), "building_id": building_id, "fixtures": fixtures.duplicate(true), "lots": _int_keyed_out(lots),
-		"orders": _int_keyed_out(orders), "schedule": schedule.duplicate(true),
+		"orders": _int_keyed_out(orders), "schedule": schedule.duplicate(true), "in_transit": in_transit.duplicate(true),
 		"seller_state": seller_state.duplicate(true), "day_stats": day_stats.duplicate(true), "totals": totals.duplicate(true),
 		"stats": stats.duplicate(true),
 		"staff": _int_keyed_out(staff), "candidates": candidates.duplicate(true),
@@ -409,6 +414,7 @@ func load_dict(d: Dictionary) -> void:
 	orders = _int_keyed_in(d.get("orders", {}))
 	contracts = _int_keyed_in(d.get("contracts", {}))
 	schedule = d.get("schedule", []).duplicate(true)
+	in_transit = d.get("in_transit", []).duplicate(true)
 	seller_state = d.get("seller_state", {}).duplicate(true)
 	day_stats = d.get("day_stats", {}).duplicate(true)
 	totals = d.get("totals", {}).duplicate(true)

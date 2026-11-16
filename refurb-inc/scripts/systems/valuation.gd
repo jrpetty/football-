@@ -59,7 +59,7 @@ static func trade_value(u: UnitData) -> float:
 
 static func grade_for(u: UnitData) -> String:
 	## Grade from external condition + spec health. Units with open faults are Spares/Repairs.
-	if u.has_open_faults() or not u.tested:
+	if u.has_blocking_faults() or not u.tested:
 		return "S"
 	var score := u.cosmetic_score()
 	var th := Content.grade_thresholds
@@ -69,6 +69,9 @@ static func grade_for(u: UnitData) -> String:
 	elif score >= int(th.get("B", 74)):
 		g = "B"
 	elif score >= int(th.get("C", 50)):
+		g = "C"
+	# Sold with a fault still in it (a worn battery): honest grading caps it at C.
+	if u.has_open_faults() and g in ["A", "B"]:
 		g = "C"
 	# A worn battery caps the grade — honest grading protects reputation.
 	if u.has_battery() and u.battery_pct < 80 and g == "A":

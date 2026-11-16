@@ -101,15 +101,22 @@ func _start(mode: String, arg: String) -> void:
 		"new":
 			Net.go_offline()
 			_clear_menu()
+			SaveManager.archive_current()
 			Game.new_game()
 			_name_company(arg)
 			_enter_level()
 		"continue":
 			Net.go_offline()
-			var slot := "manual" if SaveManager.has_save("manual") else "autosave"
+			var slot := SaveManager.newest_slot()
+			var d := SaveManager.read_save(slot)
+			if d.is_empty():
+				d = SaveManager.read_save("autosave" if slot == "manual" else "manual")
+			if d.is_empty():
+				if _menu:
+					_menu.set_status("That save couldn't be read. It's been kept — start a new game or try again.")
+				return
 			_clear_menu()
-			if not SaveManager.load_game(slot):
-				Game.new_game()
+			Game.load_from_dict(d)
 			_enter_level()
 		"host":
 			if Net.host_enet() != OK:
@@ -117,6 +124,7 @@ func _start(mode: String, arg: String) -> void:
 					_menu.set_status("Couldn't open port %d." % Net.DEFAULT_PORT)
 				return
 			_clear_menu()
+			SaveManager.archive_current()
 			Game.new_game()
 			_name_company(arg)
 			_enter_level()
@@ -161,6 +169,7 @@ func _start(mode: String, arg: String) -> void:
 			if _menu:
 				_menu.set_status("")
 			_clear_menu()
+			SaveManager.archive_current()
 			Game.new_game()
 			_name_company(arg)
 			_enter_level()

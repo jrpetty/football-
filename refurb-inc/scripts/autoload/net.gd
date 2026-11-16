@@ -39,10 +39,9 @@ func _ready() -> void:
 
 
 func _default_name() -> String:
-	var n := OS.get_environment("USERNAME")
-	if n == "":
-		n = OS.get_environment("USER")
-	return n.capitalize() if n != "" else "Player"
+	# Never the OS account name: it would be shown to other players and written into saves.
+	var n := str(Settings.get_value("player_name")) if Settings.values.has("player_name") else ""
+	return n if n.strip_edges() != "" else "Player"
 
 
 func _peer_active() -> bool:

@@ -922,7 +922,7 @@ func try_start_machine(sid: String, bay: String) -> void:
 				job = "test"
 				dur = machine_minutes(sid, float(Content.econ("test_minutes", 30)), u)
 		"rack_image":
-			if u and u.tested and not u.has_open_faults() and not u.imaged:
+			if u and u.tested and not u.has_blocking_faults() and not u.imaged:
 				job = "image"
 				dur = machine_minutes(sid, float(Content.econ("image_minutes", 45)), u)
 		"robot_repair":
@@ -1111,7 +1111,7 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 			st.msg = "Untested unit — run DiagnostiKit first."
 			state.mark("station", station_id)
 			return
-		if u.has_open_faults():
+		if u.has_blocking_faults():
 			st.msg = "Faults outstanding — repair before imaging."
 			state.mark("station", station_id)
 			return
@@ -1159,7 +1159,7 @@ func _process_jobs() -> void:
 		if kind == "test":
 			_complete_test(it, by)
 			st.msg = "PASS" if not it.unit.has_open_faults() else "FAULTS FOUND"
-			if by != 0 and not it.unit.has_open_faults() and not it.unit.imaged and state.has_perk(player_key(by), "auto_chain"):
+			if by != 0 and not it.unit.has_blocking_faults() and not it.unit.imaged and state.has_perk(player_key(by), "auto_chain"):
 				_auto_chain(sid, by)
 		elif kind == "image":
 			it.unit.imaged = true
@@ -1332,7 +1332,7 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Reserved for a business order — no grading needed. Test, image and pack it.")
 	if not u.tested:
 		return _fail("Test it before grading.")
-	if not u.has_open_faults() and not u.imaged:
+	if not u.has_blocking_faults() and not u.imaged:
 		return _fail("Wipe & image it first.")
 	var gkey := player_key(peer)
 	if state.has_perk(gkey, "touch_up"):
@@ -1615,7 +1615,7 @@ func _ship_package(pkg: Item) -> void:
 		var packer := int(pkg.data.get("packer", 0))
 		if on_time and packer != 0 and state.has_perk(player_key(packer), "careful_packer"):
 			rep_gain *= 1.5
-		state.add_reputation(rep_gain)
+		state.add_reputation(rep_gain, true)
 		if packer != 0:
 			state.add_xp(player_key(packer), "sales", int(Content.econ("xp", {}).get("ship", 5)))
 		state.mark("order", oid)
@@ -2137,6 +2137,8 @@ func c_buy_lot(peer: int, a: Dictionary) -> Dictionary:
 	var lot: Dictionary = state.lots.get(int(a.get("lot", 0)), {})
 	if lot.is_empty() or lot.status != "open":
 		return _fail("That lot is no longer available.")
+	if state.minute > float(lot.get("expires_min", INF)):
+		return _fail("Bidding on that lot has closed.")
 	var discount := purchase_discount(peer, lot)
 	var total := int(round(int(lot.total_price) * (1.0 - discount)))
 	if state.cash - total < int(Content.econ("overdraft_warning", -500)):
@@ -2195,6 +2197,7 @@ func _next_lorry_slot() -> float:
 func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO, step: Vector3 = Vector3(1.35, 0, 0)) -> Array:
 	## Spawns pallet(s) holding the lot's units. Called when the lorry tail-lift drops (or instantly in tests).
 	var lot: Dictionary = state.lots.get(lot_id, {})
+	state.in_transit = state.in_transit.filter(func(e): return not (e.type == "lorry" and int(e.data.get("lot", 0)) == lot_id))
 	if lot.is_empty():
 		return []
 	var pallets: Array = []
@@ -2218,8 +2221,8 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO, step: Vector3 = 
 			batch.append(units[idx + batch.size()])
 		var pallet := state.new_item(Item.KIND_PALLET)
 		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name, "cell": [first.cell[0], cell_h, first.cell[2]], "grid": first.grid}
-		var off := step * pallets.size()
-		state.set_loc(pallet, {"t": "loose", "p": [drop_pos.x + off.x, drop_pos.y, drop_pos.z + off.z], "r": [0, 0, 0, 1]})
+		var spot := _free_pallet_spot(drop_pos, step, pallet.id)
+		state.set_loc(pallet, {"t": "loose", "p": [spot.x, spot.y, spot.z], "r": [0, 0, 0, 1]})
 		for k in batch.size():
 			var it := state.new_item(Item.KIND_UNIT)
 			it.unit = UnitData.from_dict(units[idx])
@@ -2235,6 +2238,23 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO, step: Vector3 = 
 	state.mark("lot", lot_id)
 	state.say("Delivery from %s on the drive — %d units." % [lot.seller_name, units.size()], "info")
 	return pallets
+
+
+func _free_pallet_spot(drop: Vector3, step: Vector3, exclude_id: int) -> Vector3:
+	## The first spot along the drop line not already taken by a pallet, so a new delivery never lands inside one
+	## that's still sitting there from last time.
+	var taken: Array = []
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_PALLET and it.id != exclude_id and it.loc.get("t") == "loose":
+			var p: Array = it.loc.get("p", [0, 0, 0])
+			taken.append(Vector2(float(p[0]), float(p[2])))
+	var side := Vector3(-step.z, 0, step.x).normalized() * 0.95
+	for row in 4:
+		for k in 8:
+			var c := drop + step * k - side * row
+			if taken.all(func(t): return t.distance_to(Vector2(c.x, c.z)) > 1.1):
+				return c
+	return drop + step * taken.size()
 
 
 static func _unit_volume(model_id: String) -> float:
@@ -2325,9 +2345,11 @@ func c_shop_buy(peer: int, a: Dictionary) -> Dictionary:
 	var price := shop_price(id) * qty
 	if price <= 0:
 		return _fail("Unknown product.")
-	if Content.shop_items.get(id, {}).get("kind", "") == "consumable" and state.has_perk(player_key(peer), "bulk_supplies"):
+	var essential: bool = Content.shop_items.get(id, {}).get("kind", "") == "consumable"
+	if essential and state.has_perk(player_key(peer), "bulk_supplies"):
 		price = int(round(price * 0.75))
-	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
+	# Packing supplies are always allowed, so being overdrawn can never stop you shipping what you've sold.
+	if state.cash - price < int(Content.econ("overdraft_warning", -500)) and not essential:
 		return _fail("Not enough funds.")
 	var parcel_contents := {"parts": {}, "items": [], "consumables": {}}
 	var name := id
@@ -2407,6 +2429,10 @@ func _next_courier_after(t: float) -> float:
 
 
 func deliver_parcel(contents: Dictionary, pos: Vector3 = Vector3.ZERO) -> Item:
+	for i in state.in_transit.size():
+		if state.in_transit[i].type == "parcel" and state.in_transit[i].data == contents:
+			state.in_transit.remove_at(i)
+			break
 	# Pallets and pallet trucks don't come in a box: the courier leaves them by the parcel.
 	var items: Array = contents.get("items", []).duplicate()
 	var bulky := items.filter(func(k): return k in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK, Item.KIND_FORKLIFT])
@@ -2675,10 +2701,14 @@ func _process_minute_events() -> void:
 		state.mark("schedule")
 		match ev.type:
 			"lorry":
+				if visual_vehicles:
+					state.in_transit.append(ev)          # kept (and saved) until the lorry actually drops it
 				state.vehicle.emit("lorry", ev.data)     # visual layer calls deliver_lot at the drop moment
 				if not visual_vehicles:
 					deliver_lot(int(ev.data.lot))
 			"parcel":
+				if visual_vehicles:
+					state.in_transit.append(ev)
 				state.vehicle.emit("parcel", ev.data)
 				if not visual_vehicles:
 					deliver_parcel(ev.data)
@@ -2906,6 +2936,8 @@ func c_store_fixture(peer: int, a: Dictionary) -> Dictionary:
 	var st: Dictionary = state.stations.get(id, {})
 	if not st.get("job", {}).is_empty():
 		return _fail("A job is running on it.")
+	if state.fixtures[id].type == "office_desk" and state.fixtures.values().filter(func(x): return x.type == "office_desk" and x.placed).size() <= 1:
+		return _fail("That's your only office PC — you'd have no way to run the business.")
 	state.fixtures[id].placed = false
 	state.mark("fixture", id)
 	state.say("%s packed away into storage." % state.fixtures[id].label, "info", peer)
@@ -2924,7 +2956,7 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 	if to == state.building_id:
 		return _fail("You're already here.")
 	var cost := move_cost(to)
-	if state.cash - cost < int(Content.econ("overdraft_warning", -500)):
+	if cost > 0 and state.cash - cost < int(Content.econ("overdraft_warning", -500)):
 		return _fail("Moving to %s costs %s (removals + deposit)." % [b.name, GameState.format_money(cost)])
 	if cost > 0:
 		state.add_money(-cost, "premises", "Move to %s (removals + deposit)" % b.name)
@@ -2947,6 +2979,7 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 		elif it.loc.get("t") == "loose":
 			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
 	state.mark("building")
+	requeue_in_transit(10.0)     # anything on the road follows us to the new address
 	BusinessStats.on_moved(state, b)
 	state.say("Moving day! Welcome to %s, %s." % [b.name, b.get("address", "")], "good")
 	return _ok()
@@ -3050,7 +3083,18 @@ func employee_of_the_month() -> void:
 	state.say("Employee of the Month: %s — %d jobs done last week!%s" % [top.name, int(top.score), "" if streak < 2 else " That's %d weeks running." % streak], "good")
 
 
+func requeue_in_transit(delay: float = 5.0) -> void:
+	## Deliveries that were on the road when the game was saved, or when we moved premises, set off again.
+	for ev in state.in_transit:
+		ev.at = state.minute + delay
+		state.schedule.append(ev)
+	if not state.in_transit.is_empty():
+		state.mark("schedule")
+	state.in_transit.clear()
+
+
 func migrate_save() -> void:
+	requeue_in_transit()
 	if not state.totals.has("run_id"):
 		state.totals["run_id"] = "%d-save" % state.seed_value
 		state.totals["days_worked"] = int(state.day_index() * 5 / 7)
