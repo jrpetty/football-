@@ -142,7 +142,7 @@ public class EntrepreneurGameTests {
         // [econ-1c] The makings of picks in the stores (a toolshop with nothing to make its tools of is no opportunity).
         stores(level, id, x, new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
             new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 64),
-            new ItemStack(Items.CRAFTING_TABLE, 1));
+            new ItemStack(Items.IRON_INGOT, 64), new ItemStack(Items.CRAFTING_TABLE, 1));   // (a town short of stone keeps it all for its buildings)
         Kit.log("ent01 makeable " + Enterprise.makeableForTests(level, v, "toolsmith"));
         Kit.Expect ok = new Kit.Expect();
         Enterprise.Opportunity o = Enterprise.weighForTests(level, v, "toolsmith");
