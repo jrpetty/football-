@@ -1172,7 +1172,7 @@ def anim_stage(r, look, cx, cz):
     time.sleep(2)
     emotes = ("wave", "bow", "cheer", "clap", "point", "beckon", "shrug", "salute", "dance", "sit_ground", "kneel", "pray", "think")
     for emote in emotes:
-        for view, angle in (("front", 35), ("side", -90)):          # from its left: the friend at its right, clear
+        for view, angle in (("front", 35), ("side", 90)):           # from its left: the friend at its right, clear
             stand()
             say("emote %s %s: %s" % (emote, view, r.cmd("execute as %s at @s run village emote %s %d" % (USER, emote, angle))))
             time.sleep(1.3)
@@ -1183,7 +1183,7 @@ def anim_stage(r, look, cx, cz):
     stand()
     say("a friend face to face: " + r.cmd("execute as %s at @s run village anim friend front" % USER))
     time.sleep(2)
-    for view, angle in (("side", -90), ("behind", 140)):
+    for view, angle in (("side", 90), ("behind", 140)):
         say("emote handshake %s: %s" % (view, r.cmd("execute as %s at @s run village emote handshake %d" % (USER, angle))))
         time.sleep(0.9)
         r.cmd("title %s clear" % USER)
