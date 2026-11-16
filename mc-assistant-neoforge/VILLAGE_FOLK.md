@@ -12978,10 +12978,14 @@ faces within it too; the tools past thirty-two blocks are not drawn. The client'
 to see: wave, bow, cheer, clap, point, "follow me" (beckon), shrug, salute, shake hands, dance, sit, kneel, pray and think.
 The emote wheel opens on V (free in the game and in this mod; B is the plot book): point at an emote and click, or let go
 of the key, or press its number. The talk screen's Chat options have Wave, Shake hands and Bow, offered to the folk you
-are talking to. In first person the camera turns round to watch your emote and back after (emoteCamera). An emote that
+are talking to. In first person the camera turns round to watch your emote and back after (emoteCamera): the game's own
+third-person camera swung round to your front, a little to one side and above, swaying slowly from one front
+three-quarter to the other (kept out of walls the game's way); your body squares up to where you look while you emote. An emote that
 goes on (dance, sit, kneel, pray) ends when you walk off. The server checks each (an emote, a living player, one a second
 and five in ten seconds at most) and sends it to everybody who can see the player; the model is the game's own player
-model with the emote's clip put on after its own pose (the same clips as the folk's).
+model with the emote's clip put on after its own pose (the same clips as the folk's), started each frame from the parts'
+rest (the game's pose does not set every number of every part, and a lean left uncleared drifted the chest off its hips),
+the hat, jacket, sleeves and trousers put back over their limbs, the cape hung from the leaning shoulders, armour following.
 
 The folk answer in kind, by what they think of the player: a wave back from those who like you (an angry look from one that
 cannot stand you), a bow back to their leader or a knight of their town or a friend who means the world to them, a cheer
@@ -12992,9 +12996,11 @@ once a day; one that cannot stand you shrugs it off. Hiring a folk for an advent
 
 Commands (ops and creative players): `/village anim` (what the nearest folk is doing), `/village anim list`,
 `/village anim play ACT [TICKS]`, `/village anim all ACT [TICKS]`, `/village anim mark MARK`, `/village anim stop`,
-`/village anim befriend`, `/village anim friend`, `/village anim stage` (a folk doing every act, in rows, for pictures);
-anyone: `/village emote EMOTE`. The smoke's `anim_stage` photographs the stage three folk at a time, the life of the town,
-and the player's emotes answered by a friend.
+`/village anim befriend`, `/village anim friend [front]` (a folk beside you, or face to face at arm's length, that likes
+you), `/village anim stage` (a folk doing every act, in rows, for pictures); anyone: `/village emote EMOTE [ANGLE]` (the
+turned camera held ANGLE degrees round from your front: 90 side on) and `/village emote wheel`. The smoke's `anim_stage` photographs the stage three folk at a time, the life of the town,
+and all fourteen player emotes from the front three-quarter and side on beside a friend that answers, the handshake face
+to face side on, and the wheel.
 
 Tests: FolkAnimGameTests (fan01 every trade's work by its block and its tool, and the folk turned to its block; fan02 sleep,
 sit, eat, drink, talk, listen, the words of its own time, a fall; fan03 sent only on a change; fan04 saved and loaded none
