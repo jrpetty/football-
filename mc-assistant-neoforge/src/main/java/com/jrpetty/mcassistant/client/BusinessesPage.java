@@ -41,11 +41,15 @@ public final class BusinessesPage {
             boolean over = mx >= x && mx < x + w && my >= cy - 1 && my < cy + 9;
             if (over) {
                 g.fill(x, cy - 1, x + w, cy + 8, UiStyle.TILE_HOVER);
-                tip = List.of(Component.literal(r.getString("name") + ": " + r.getString("type")),
-                    Component.literal("Since it opened: took " + p(r.getLong("revAll")) + ", net " + p(r.getLong("netAll"))),
-                    Component.literal("Click for its books"));
+                List<Component> lines = new java.util.ArrayList<>(List.of(Component.literal(r.getString("name") + ": " + r.getString("type")),
+                    Component.literal("Since it opened: took " + p(r.getLong("revAll")) + ", net " + p(r.getLong("netAll")))));
+                // [econ-1b] A firm its own folk opened: how it stands, its share of its market, why it closed.
+                if (r.contains("status")) lines.add(Component.literal(cap(r.getString("status")) + String.format(java.util.Locale.ROOT, ", %.0f%% of its market", r.getDouble("share") * 100)));
+                if (!r.getString("why").isEmpty()) lines.add(Component.literal("Closed: " + r.getString("why")));
+                lines.add(Component.literal("Click for its books"));
+                tip = lines;
             }
-            TaxesPage.small(g, font, Ui.clip(font, r.getString("name") + (r.getBoolean("open") ? "" : " (closed)"), (int) ((cols[1] - 4) / 0.75F)), x + 2, cy, Ui.INK);
+            TaxesPage.small(g, font, Ui.clip(font, r.getString("name") + (r.getBoolean("open") ? (r.contains("status") ? " (" + r.getString("status") + ")" : "") : " (" + (r.contains("status") ? r.getString("status") : "closed") + ")"), (int) ((cols[1] - 4) / 0.75F)), x + 2, cy, Ui.INK);
             TaxesPage.small(g, font, Ui.clip(font, r.getBoolean("town") ? "the town" : r.getString("owner"), (int) ((cols[2] - cols[1] - 4) / 0.75F)), x + 2 + cols[1], cy,
                 r.getBoolean("town") ? UiStyle.INFO : Ui.MUTED);
             TaxesPage.small(g, font, Integer.toString(r.getInt("staff")), x + 2 + cols[2], cy, Ui.MUTED);
@@ -68,5 +72,9 @@ public final class BusinessesPage {
 
     private static String p(long pence) {
         return String.format(Locale.ROOT, "%,.2fc", pence / 100.0);
+    }
+
+    private static String cap(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }
