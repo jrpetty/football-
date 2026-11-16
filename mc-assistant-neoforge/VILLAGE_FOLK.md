@@ -12904,3 +12904,99 @@ at nought drift every morning, the IOUs bounded; the farms, ranch and woodlot se
 which the tests' server turns off); ent13 a bankruptcy heard by the council and its stall sold at the auction for its
 creditors. The ten-day tests now give the crops the game's usual random tick speed (three): the tests' server has it at
 nought, which is why a test town's farms sold nothing.
+
+## How the folk move (animations)
+
+Every folk shows with its body what it is doing. The server knows what that is: its trade, the block it stands at, the
+tool in its hand, the gathering it is at, the player talking to it, its bed, its boat, its ladder. Four times a second it
+puts a name to it (an *act*: HAMMER, CHOP, STIR_POT, EAT, DANCE, MOURN...) and sends the folk's act to the players near
+as one number, only when the act changes (entity/FolkAction). The client plays the act's own keyframe animation on the
+folk's model (client/FolkAnimations): eighty acts, each a clip in the game's own animation format (the warden's and
+the camel's), blended in and out over a third of a second so nothing snaps, on top of the folk's walk, its manner's gait
+and its idle moments, its held item and armour, and a child's smaller body.
+
+**Work, by trade.** The smith lifts the hammer over its shoulder, holds it a beat, brings it down on the anvil and the jar
+of it comes back up the arm, sparks off the iron and the ring of it; the woodcutter winds the axe back over its shoulder
+and swings through to the log, chips flying; the miner swings the pick into the rock face (stone dust), or sets a shovel
+with its foot and throws the spoil aside; the farmer chops the hoe into the row and draws it back, kneels to poke in seed,
+bends to the crop with the sickle and gathers the stalks, waters the beds; the fisher draws the rod back, casts (a splash
+out on the water), waits with the tip twitching, strikes and reels in; the cook stirs the pot with steam coming off it,
+the baker kneads the dough (flour dust), the brewer stirs the cauldron with a long rod (bubbles, a witch's sparkle), the
+tailor draws the needle out the length of the thread, the carpenter saws, the mason taps a chisel into the stone, the
+builder sets a block up in its place and beds it with two taps, the sweeper sweeps side to side, the courier carries a
+crate against its chest or a sack over its shoulder, the shopkeeper hands goods over the counter and counts coins one at
+a time, the banker counts and writes, the clerk and the innkeeper write at the desk, the teacher turns to point at the
+board, the healer bends over the bed winding a bandage, the elder preaches with its arms up, the guard stands with its
+blade before it watching round, the rancher milks (sat low), shears and feeds and leads, the beekeeper puffs smoke into
+the hive, the fletcher binds feathers to a shaft, the enchanter spreads its hands over the book (glyphs drift in), the
+smelter shovels coal into the furnace, the scout sweeps the horizon with a spyglass, the barkeep pours and wipes the
+counter, the waiter carries a tray, the cartographer draws along the ruler, the engineer turns a spanner at the works, the
+fireworks maker tamps powder into a rocket, the storekeeper lifts a barrel up to the shelf, the golem keeper hammers iron
+onto its golem. Every trade has its act; the act is chosen from the trade, the block within reach (the anvil makes any
+folk a smith for the moment, the stonecutter a mason) and the tool in its hand as it swings, and the folk is turned to the
+block so its hands meet it.
+
+**Life.** Eating (the bite to the mouth, crumbs, a chew) and drinking (the cup tipped back), sat at a table or standing;
+sat down on a bench or a chair with its hands in its lap; asleep in bed (Zzz drifting up); talking with its hands, and
+listening with its hands clasped and a nod (its head turned to whoever talks to it); a handshake (the winner and the chair
+at an interview, two quarrellers the warden makes peace between, a player and the folk it hires); cheering and clapping at
+a speech; the dance at a feast, a festival, a wedding; kneeling at a grave (a tear); praying at a vigil's close; the lute
+(notes) and the drum; tag and hopscotch for the children; a ladder climbed hand over hand; a gate pushed open; rowing a
+boat; riding; treading water; the watch's stance behind the shield and the thrust of the blade (a drawn bow is the game's
+own pose); a hard fall, sat down hard and up again, dusting itself off; a wave, a bow, a shrug when it turns down a
+request, a salute, a point, "come on", a think with its hand to its chin, a quarrel (a finger jabbed, a hand on the hip),
+a protest, reading, sitting on the ground, lost and looking about.
+
+**Feeling alive.** Each folk keeps time its own way: a phase of its own through every loop and a speed a few in a hundred
+off the beat, so two smiths are never in step; the tired and the old work slower and stoop into it, the proud stand taller,
+children are bouncier. Every clip has its anticipation and follow-through (the hammer lifts, pauses, strikes, recoils), its
+eased curves, and the hips, knees, trunk and head in it (a lean from the hips that carries the head and shoulders with the
+chest, a twist of the trunk that swings the arms round, the knees bending). A left-handed folk plays every clip mirrored.
+
+**Faces.** A folk blinks, each at its own pace (now and then twice); its eyes shut asleep, at prayer, at a graveside and
+when it laughs; its mouth moves as it talks and opens to cheer, sing, laugh and yawn; it smiles when happy and frowns when
+miserable; its brows knit in a quarrel and lift in grief; it blushes by its sweetheart. The lids are tinted to its skin and
+matched to the shape of its eyes (tools/anim_art.py paints them from folk_looks' eyes).
+
+**Over its head.** A little picture in a thought bubble when something happens: an idea when it founds a business, a coin
+at a sale at its counter, a question when it is lost, a shout when it sees a foe, a heart for its sweetheart and at its
+wedding, a note as it plays, a temper in a quarrel, a tear at a grave, a star for the honoured, a bead of sweat tired at
+heavy work, a handshake on a deal. It pops up, floats a touch and fades.
+
+**Tools in hand.** An empty hand is given its act's tool, drawn by the client only: the hammer, the ladle, the quill and
+paper, the broom, the smoker, the saw, the sickle and sheaf, the lute, the cup, the bandage, the spyglass; a crate held in
+both arms, a barrel lifted to the shelf, a sack over the shoulder. A hand that holds something keeps it.
+
+**Cheap.** One int per folk on the wire (the act, a restart count, the mark and its count), sent only when it changes; the
+server looks at a folk's state once in five ticks, staggered, and the block scan round it only when it has moved. On the
+client the clips are read once into flat arrays and played with one kept vector: nothing is made a frame. The effects run
+once a tick for a folk the renderer is drawing anyway (a folk out of sight costs nothing), within the effects range only;
+faces within it too; the tools past thirty-two blocks are not drawn. The client's config (mc_assistant-client.toml) has
+`effects` (ALL, SOME: a third of them and half the range, NONE), `effectsRange` (24), `marks`, `faces` and `emoteCamera`.
+
+**For the player: emotes.** The player has fourteen emotes of its own, played on its own model for everybody on the server
+to see: wave, bow, cheer, clap, point, "follow me" (beckon), shrug, salute, shake hands, dance, sit, kneel, pray and think.
+The emote wheel opens on V (free in the game and in this mod; B is the plot book): point at an emote and click, or let go
+of the key, or press its number. The talk screen's Chat options have Wave, Shake hands and Bow, offered to the folk you
+are talking to. In first person the camera turns round to watch your emote and back after (emoteCamera). An emote that
+goes on (dance, sit, kneel, pray) ends when you walk off. The server checks each (an emote, a living player, one a second
+and five in ten seconds at most) and sends it to everybody who can see the player; the model is the game's own player
+model with the emote's clip put on after its own pose (the same clips as the folk's).
+
+The folk answer in kind, by what they think of the player: a wave back from those who like you (an angry look from one that
+cannot stand you), a bow back to their leader or a knight of their town or a friend who means the world to them, a cheer
+along at a gathering, the dance joined at a feast, a salute from the watch. A beckon is followed by your hired folk and
+close friends; your hired folk walk to the spot you point at and wait there half a minute (beckon them back). A handshake
+goes to the folk you are looking at: it takes your hand (both play it together) and thinks a little better of you for it,
+once a day; one that cannot stand you shrugs it off. Hiring a folk for an adventure is shaken on.
+
+Commands (ops and creative players): `/village anim` (what the nearest folk is doing), `/village anim list`,
+`/village anim play ACT [TICKS]`, `/village anim all ACT [TICKS]`, `/village anim mark MARK`, `/village anim stop`,
+`/village anim befriend`, `/village anim friend`, `/village anim stage` (a folk doing every act, in rows, for pictures);
+anyone: `/village emote EMOTE`. The smoke's `anim_stage` photographs the stage three folk at a time, the life of the town,
+and the player's emotes answered by a friend.
+
+Tests: FolkAnimGameTests (fan01 every trade's work by its block and its tool, and the folk turned to its block; fan02 sleep,
+sit, eat, drink, talk, listen, the words of its own time, a fall; fan03 sent only on a change; fan04 saved and loaded none
+the worse; fan05 the player's emotes taken, kept to a pace, answered by opinion, a handshake remembered, a beckon followed;
+fan06 the stage); EmoteRulesTest (the answers, case by case).
