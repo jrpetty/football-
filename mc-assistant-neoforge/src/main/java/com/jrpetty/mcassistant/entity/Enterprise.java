@@ -392,12 +392,10 @@ public final class Enterprise {
         }
         double margin = cost <= 0 ? 0 : price / cost;
         double score = gap * price * (margin - 1) / (1 + firms);
-        // What a new firm might make in a week: half the gap (no more than its hands can make), at its price less its
-        // makings, less its rent and the wages of any hands beside the founder (the founder lives on what it makes).
-        double capacity = (1 + t.startStaff()) * t.perDay() * 7 * 0.5;
-        double sells = Math.min(gap * 0.5, capacity);
+        // What a new firm might make in a week: half the score (a new entrant's capture), less its rent and the wages of any
+        // hands beside the founder (the founder lives on what it makes).
         double rent7 = (t.stall() ? 30 : 60) * Wealth.standing(id) / 10.0 * 7 / 100.0;
-        double profit7 = sells * (price - inputs) - rent7 - t.startStaff() * wageOf(t.work(), id) * 7;
+        double profit7 = score * 0.5 - rent7 - t.startStaff() * wageOf(t.work(), id) * 7;
         double startup = startup(id, t, inputs, null) / 100.0;
         return new Opportunity(t, best, demand, supply, price, cost, inputs, gap, score, profit7, startup, firms);
     }
@@ -549,13 +547,29 @@ public final class Enterprise {
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) grown++;
         if (open(id).size() + 1 > grown / FOLK_A_FIRM) return null;
         List<Opportunity> all = scan(level, v);
-        d.put("scan", scanTag(all));
+        ListTag tag = scanTag(all);
+        Opportunity pick = null;
         for (Opportunity o : all) {
             if (o.profit7() <= 0.15 * o.startup() || o.profit7() <= 0) break;
             VillageFolkEntity f = founderFor(id, o.type(), Math.round(o.startup() * 100));
-            if (f != null) return o;
+            tag.add(StringTag.valueOf("  " + o.type().key() + " is worth opening: " + (f != null ? f.displayNameCap() + " means to" : founders(id, o))));
+            if (f != null) { pick = o; break; }
         }
-        return null;
+        d.put("scan", tag);
+        return pick;
+    }
+
+    /** Why nobody opens a business worth opening: how many have the skill, the nerve, the means. */
+    static String founders(UUID village, Opportunity o) {
+        int skilled = 0, bold = 0, means = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f) || barred(village, f, o.type()) != null) continue;
+            skilled++;
+            if (boldness(f) < 3) continue;
+            bold++;
+            if (means(f) * 100L * 2 >= Math.round(o.startup() * 100)) means++;
+        }
+        return "nobody to open it (" + skilled + " free with the skill, " + bold + " of them bold enough, " + means + " with the means)";
     }
 
     static ListTag scanTag(List<Opportunity> all) {
