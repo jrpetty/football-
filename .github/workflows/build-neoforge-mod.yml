@@ -93,14 +93,14 @@ jobs:
   # -------------------------------------------------------------------------
   gametest:
     runs-on: ubuntu-latest
-    # Some 850 game tests: one server ran out of 2h30m (0.302.0), so four servers each run a quarter, the classes
+    # Some 850 game tests: one server ran out of 2h30m (0.302.0), so (0.313.0: shard 2 ran out of 2h too) six servers each run a sixth, the classes
     # dealt out by weight (tools/ci/shard_gametests.py).
     timeout-minutes: 120
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
 
@@ -114,14 +114,15 @@ jobs:
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
-          python3 tools/ci/shard_gametests.py ${{ matrix.shard }} 4
+          python3 tools/ci/shard_gametests.py ${{ matrix.shard }} 6
           set +e
           ./gradlew --no-daemon -Pgametest=true runGameTestServer 2>&1 | tee gametest.log
           echo "gradle exit: ${PIPESTATUS[0]}"
           set -e
           # The part worth reading: our own reporting, the framework's verdicts,
           # and any crash — without the thousands of lines of engine start-up.
-          grep -aE "\[VT\]|GAME TEST|Game Test|game test|required|FAILED|Exception|Caused by|^\s+at com\.jrpetty|Crash|crash report|ERROR|Test '|test '|batch|Batch" gametest.log > vt-report-${{ matrix.shard }}.txt || true
+          echo "commit ${{ github.sha }} shard ${{ matrix.shard }} of 6" > vt-report-${{ matrix.shard }}.txt
+          grep -aE "\[VT\]|GAME TEST|Game Test|game test|required|FAILED|Exception|Caused by|^\s+at com\.jrpetty|Crash|crash report|ERROR|Test '|test '|batch|Batch" gametest.log >> vt-report-${{ matrix.shard }}.txt || true
           mv gametest.log gametest-${{ matrix.shard }}.log
           wc -l gametest-${{ matrix.shard }}.log vt-report-${{ matrix.shard }}.txt
           gzip -k -f gametest-${{ matrix.shard }}.log
