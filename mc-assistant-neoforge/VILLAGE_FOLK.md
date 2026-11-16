@@ -1329,6 +1329,16 @@ bank or built up out of the hollow, a block at a time, until the way meets the g
 ground the world made is dug. Nothing built is touched, nor anything under a porch roof. The
 blocks come out of the stores, and what is dug goes into them.
 
+**Every room reached.** The folk go up a ladder as readily as a stair: to the beds under a cottage's
+second roof, a manor's upper floor, a loft, a gallery. Going down, they let themselves down the rungs
+and step off at the foot. They open a fence gate on their way and shut it behind them, so the
+allotments, the apiary and the stable's yard are for walking into; a prisoner of war never opens the
+stockade's gate (only, under the watch, on its way out to a stint in the fields). They walk past a
+campfire, though they never step onto one or anywhere near real fire. A building taken up again after
+its builder ran short is only set off for when the builder has something to lay in every kind of
+cell still empty: short of stone for the parapet, it says so, rather than walk out and back for ever
+with a pack full of roof slabs.
+
 Every building is drawn. Each drawing is a text file in
 `data/mc_assistant/blueprints/`, and `tools/blueprints.py` renders them.
 

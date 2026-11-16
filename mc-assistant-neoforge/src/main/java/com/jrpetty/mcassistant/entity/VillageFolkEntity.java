@@ -7372,7 +7372,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // The right things for a drawn building next: stone for its footing, planks for its
         // walls, logs for its frame, and the stairs and slabs of its roof cut from the planks.
-        int shaped = stockStyles(project, heart);
+        int shaped = stockStyles(project, heart, site);
         if (shaped > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
 
         // Decorations are taken if the stores have them, never waited for.
@@ -7435,7 +7435,8 @@ public class VillageFolkEntity extends AssistantEntity {
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
                 got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost
-                        && !Restore.earthyItem(st),                                    // [integrity] no wall of earth
+                        && !Restore.earthyItem(st)                                     // [integrity] no wall of earth
+                        && !st.is(net.minecraft.tags.ItemTags.WOOL),                   // [access-3] nor of the tailor's wool (the school's blackboard)
                     blocks - carriedNow - got, buildStoresRadius());
             }
             if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
@@ -7526,8 +7527,12 @@ public class VillageFolkEntity extends AssistantEntity {
      * makes do with plain blocks. Returns how many stairs and slabs it now carries, which
      * are not building blocks but stand in for them.
      */
-    private int stockStyles(String project, BlockPos heart) {
-        java.util.Map<com.jrpetty.mcassistant.entity.goal.Blueprints.Style, Integer> want = BuildGoal.styleCounts(project);
+    private int stockStyles(String project, BlockPos heart, @Nullable Villages.Site site) {
+        // [access-3] A building already begun: only what its empty cells still want (BuildShort). Counted from the whole
+        // drawing, every load cut the whole roof's stairs and slabs again out of the stores' planks.
+        java.util.Map<com.jrpetty.mcassistant.entity.goal.Blueprints.Style, Integer> still =
+            site != null && level() instanceof net.minecraft.server.level.ServerLevel sl ? BuildShort.stillStyles(sl, project, site) : null;
+        java.util.Map<com.jrpetty.mcassistant.entity.goal.Blueprints.Style, Integer> want = still != null ? still : BuildGoal.styleCounts(project);
         if (want.isEmpty()) return 0;
         int r = buildStoresRadius();
         java.util.function.ToIntFunction<com.jrpetty.mcassistant.entity.goal.Blueprints.Style[]> sum = styles -> {
