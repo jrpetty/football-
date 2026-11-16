@@ -68,7 +68,11 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
         }
         search = m.search;
         memo = m;
+        gates = FolkWays.opensGates(mob);   // [access-3]
     }
+
+    /** [access-3] Does the mob this search is for open fence gates (FolkWays)? */
+    private boolean gates;
 
     @Override
     public void done() {
@@ -106,6 +110,8 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
     /** WalkNodeEvaluator.getPathTypeStatic, step for step, its look round the place memoised. */
     private PathType pathTypeStatic(PathfindingContext context, Memo m, int x, int y, int z) {
         PathType here = context.getPathTypeFromState(x, y, z);
+        // [access-3] A shut gate, to one who opens gates, is a way through as a shut door is (FolkWays).
+        if (here == PathType.FENCE && gates && FolkWays.shutGate(context.level().getBlockState(at.set(x, y, z)))) return PathType.WALKABLE_DOOR;
         if (here != PathType.OPEN || y < context.level().getMinBuildHeight() + 1) return here;
         return switch (context.getPathTypeFromState(x, y - 1, z)) {
             case OPEN, WATER, LAVA, WALKABLE -> PathType.OPEN;
@@ -120,8 +126,10 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
     }
 
     /** WalkNodeEvaluator.checkNeighbourBlocks (with WALKABLE): the first block round the place, in the game's own order,
-     *  that makes something of it. */
+     *  that makes something of it. [access-3] A lit campfire beside it makes it ground to walk round, not barred, unless
+     *  something else round it bars it (FolkWays). */
     private PathType neighbours(PathfindingContext context, Memo m, int x, int y, int z) {
+        hearthBeside = false;
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -131,7 +139,37 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
                 }
             }
         }
-        return PathType.WALKABLE;
+        return hearthBeside ? PathType.DAMAGE_CAUTIOUS : PathType.WALKABLE;
+    }
+
+    /** [access-3] A lit campfire was among the blocks round the place being weighed. */
+    private boolean hearthBeside;
+
+    /** [access-3] The search's neighbours, with a ladder's ways up and down it (FolkWays). */
+    @Override
+    public int getNeighbors(net.minecraft.world.level.pathfinder.Node[] out, net.minecraft.world.level.pathfinder.Node node) {
+        int n = super.getNeighbors(out, node);
+        return this.currentContext == null ? n : FolkWays.neighbours(this, out, n, node);
+    }
+
+    /** [access-3] The level being searched, and the mob it is for (FolkWays). */
+    @Nullable CollisionGetter level() {
+        return this.currentContext == null ? null : this.currentContext.level();
+    }
+
+    @Nullable net.minecraft.world.entity.Mob mob() {
+        return this.mob;
+    }
+
+    /** [access-3] The search's node for a rung of a ladder, of the kind of ground it is; null where the mob would not go. */
+    @Nullable net.minecraft.world.level.pathfinder.Node ladderNode(int x, int y, int z) {
+        PathType t = getCachedPathType(x, y, z);
+        float malus = this.mob.getPathfindingMalus(t);
+        if (malus < 0.0F) return null;
+        net.minecraft.world.level.pathfinder.Node node = getNode(x, y, z);
+        node.type = t;
+        node.costMalus = Math.max(node.costMalus, malus);
+        return node;
     }
 
     /** One turn of checkNeighbourBlocks' loop: what this block makes of the place beside it, or null for nothing. */
@@ -154,6 +192,11 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
             m.keys[slot] = key;
             m.searches[slot] = search;
             m.answers[slot] = ((type.ordinal() + 1) << 16) | own;
+        }
+        // [access-3] A lit campfire (its own say is "danger: fire", as for any fire): ground to walk round, not barred.
+        if (type == PathType.DAMAGE_FIRE && FolkWays.hearth(context.level().getBlockState(at.set(x, y, z)))) {
+            hearthBeside = true;
+            return null;
         }
         if (own != 0) return TYPES[own - 1];
         if (type == PathType.DAMAGE_OTHER) return PathType.DANGER_OTHER;
