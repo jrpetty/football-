@@ -222,6 +222,15 @@ public final class TownBudget {
     }
 
     /**
+     * [econ-1e] The dearest building block a town at ease buys for its walls, coin each: ten times its cobblestone or planks. A
+     * builder loading up for a house at ease took four hundred coins of bricks in one go, the clay scarce and the brick dear,
+     * for walls as good of stone at a fortieth of the price: no town, however easy, builds so.
+     */
+    public static double dearestBlock(ServerLevel level, UUID village) {
+        return dearBlock(level, village) * 10.0 / 3.0;
+    }
+
+    /**
      * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
      * them (three fifths of a day's share of its week's revenue, the rest to pay its debts down; ten coins at the least): its
      * builders fetch no more for the day.

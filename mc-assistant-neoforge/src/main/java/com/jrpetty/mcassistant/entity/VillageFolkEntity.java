@@ -7496,7 +7496,8 @@ public class VillageFolkEntity extends AssistantEntity {
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
             // [econ-1d] A town careful of its money builds of the cheapest stone and timber the market has, not its bricks.
-            final double dear = TownBudget.frugal(village) && level() instanceof net.minecraft.server.level.ServerLevel sl ? TownBudget.dearBlock(sl, village) : Double.MAX_VALUE;
+            final double dear = level() instanceof net.minecraft.server.level.ServerLevel sl && MarketMaker.live(village)
+                ? (TownBudget.frugal(village) ? TownBudget.dearBlock(sl, village) : TownBudget.dearestBlock(sl, village)) : Double.MAX_VALUE;   // [econ-1e] (at ease too)
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
                 got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost
