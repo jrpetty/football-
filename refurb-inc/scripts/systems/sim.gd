@@ -870,6 +870,11 @@ func _station_accepts(station_id: String, slot_id: String, it: Item) -> Dictiona
 		"grade":
 			if not u.tested:
 				return _fail("Test it before grading.")
+		"strip":
+			if not u.tested:
+				return _fail("Test it first, so you know which parts are worth keeping.")
+			if u.order_id != 0 or u.contract != 0:
+				return _fail("That one's sold — don't strip it!")
 	return _ok()
 
 
@@ -1321,6 +1326,56 @@ func c_repair(peer: int, a: Dictionary) -> Dictionary:
 			_check_build_ready(it)
 			return _ok()
 	return _fail("Nothing to repair.")
+
+
+# ================================================================= strip-down
+
+func strip_preview(peer: int, it: Item) -> Dictionary:
+	if it == null or it.unit == null:
+		return {"can": false, "why": ""}
+	var u := it.unit
+	if not u.tested:
+		return {"can": false, "why": "Test it first, so you know which parts are worth keeping."}
+	if u.order_id != 0 or u.contract != 0:
+		return {"can": false, "why": "That one's sold — don't strip it!"}
+	var parts := StripDown.donor_parts(u)
+	return {"can": true, "parts": parts, "secs": StripDown.strip_secs(u) / _skill_speed(peer, "repair"),
+		"text": StripDown.summary(parts) if not parts.is_empty() else "nothing worth saving — just the scrap shell"}
+
+
+func c_strip(peer: int, a: Dictionary) -> Dictionary:
+	var sid: String = a.get("station", "")
+	if state.stations.get(sid, {}).get("type") != "strip":
+		return _fail("")
+	var it := state.station_slot_item(sid, "unit")
+	var pv := strip_preview(peer, it)
+	if not pv.get("can", false):
+		return _fail(pv.get("why", ""))
+	var u := it.unit
+	var keep := StripDown.keep_chance(state.skill_level(player_key(peer), "repair"))
+	var got: Array = []
+	var lost := 0
+	for pid in pv.parts:
+		if state.rng.randf() < keep:
+			got.append(pid)
+			state.parts[pid] = int(state.parts.get(pid, 0)) + 1
+		else:
+			lost += 1
+	var name := it.display_name()
+	var scrap := int(round(float(Content.econ("scrap_value", {}).get(u.hw_type(), 5)) * 0.5))
+	u.log_event(state.minute, "Stripped for parts")
+	state.set_loc(it, {"t": "gone"})
+	if scrap > 0:
+		state.add_money(scrap, "scrap", "Stripped shell: %s" % name)
+	state.add_xp(player_key(peer), "repair", int(Content.econ("xp", {}).get("repair_l1", 12)))
+	state.bump_stat("stripped")
+	state.bump_stat("donor_parts", got.size())
+	state.mark("company")
+	if got.is_empty():
+		state.say("Stripped %s — nothing worth keeping. £%d scrap for the shell." % [name, scrap], "info", peer)
+	else:
+		state.say("Stripped %s → parts bins: %s.%s" % [name, StripDown.summary(got), (" (%d broke coming out)" % lost) if lost > 0 else ""], "good", peer)
+	return _ok()
 
 
 # ================================================================= grading

@@ -34,6 +34,19 @@
       "idle_frac": 0.2
     },
     {
+      "id": "strip_bench",
+      "name": "Strip-down bench",
+      "scene": "res://scenes/stations/strip_bench.tscn",
+      "footprint": [1.65, 0.8],
+      "height": 1.9,
+      "price": 420,
+      "power_kw": 0.15,
+      "desc": "Take tested units apart: working RAM, drives, batteries, screens, PSUs and boards go into the parts bins as donor parts; the shell goes for scrap.",
+      "back": 0.4,
+      "front": 1.1,
+      "idle_frac": 0.1
+    },
+    {
       "id": "repair_bench",
       "name": "Repair bench",
       "scene": "res://scenes/stations/repair_bench.tscn",
