@@ -121,3 +121,61 @@ func test_reputation_gains_taper_near_the_top() -> void:
 	s.reputation = 10.0
 	s.add_reputation(1.0, true)
 	check(s.reputation - 10.0 > 0.85, "early on it's nearly the full point")
+
+
+func test_company_decisions_are_the_hosts() -> void:
+	var sim := fresh_sim(30)
+	var s := sim.state
+	s.cash = 5000000
+	check(not sim.execute(7, "move_building", {"building": "lockup"}).ok, "a guest can't move the company")
+	check(not sim.execute(7, "rename_company", {"name": "Griefers Ltd"}).ok, "a guest can't rename it")
+	eq(s.building_id, "garage")
+	check(sim.execute(1, "move_building", {"building": "lockup"}).ok, "the host can")
+
+
+func test_old_orders_are_pruned_but_reviews_still_count() -> void:
+	var sim := fresh_sim(31)
+	var s := sim.state
+	for i in 200:
+		var oid := s.make_id()
+		s.orders[oid] = {"id": oid, "status": "shipped", "shipped": float(i), "price": 100, "model": "x",
+			"review": {"stars": 5 if i % 2 == 0 else 3, "at": float(i), "buyer": "b", "text": ""}}
+	var before := Reviews.summary(s)
+	s.minute = 30.0 * GameState.MIN_PER_DAY + 9 * 60
+	sim._tidy_records()
+	check(s.orders.size() <= 150, "old shipped orders pruned (%d left)" % s.orders.size())
+	var after := Reviews.summary(s)
+	eq(int(after.count), int(before.count), "review count unchanged")
+	check(absf(float(after.avg) - float(before.avg)) < 0.001, "review average unchanged")
+
+
+func test_gone_items_are_purged_at_day_end() -> void:
+	var sim := fresh_sim(32)
+	var s := sim.state
+	var it := s.new_item(Item.KIND_UNIT)
+	it.unit = sim.lots.roll_unit("kestrel_swift_14", 0.5)
+	s.set_loc(it, {"t": "gone"})
+	sim.end_day()
+	check(not s.items.has(it.id), "recycled/gone items don't stay in the save")
+
+
+func test_a_departed_guests_items_are_put_down_on_load() -> void:
+	var sim := fresh_sim(33)
+	var s := sim.state
+	var it := s.new_item(Item.KIND_UNIT)
+	it.unit = sim.lots.roll_unit("kestrel_swift_14", 0.5)
+	s.set_loc(it, {"t": "held", "peer": 123456, "i": 0})
+	var s2 := GameState.new()
+	s2.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	Sim.new(s2).migrate_save()
+	eq(String(s2.items[it.id].loc.t), "loose", "no longer held by a guest who isn't here")
+
+
+func test_rng_state_survives_a_save() -> void:
+	var s := GameState.new()
+	s.rng.seed = 987654321987654321
+	s.rng.randf()
+	var want := s.rng.state
+	var s2 := GameState.new()
+	s2.load_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	eq(s2.rng.state, want, "64-bit RNG state round-trips through JSON")

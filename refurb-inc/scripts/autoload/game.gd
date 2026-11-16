@@ -39,6 +39,15 @@ func _ready() -> void:
 		achievement_unlocked.emit(def)
 		Net.steam.unlock_achievement(Achievements.steam_name(str(def.id))))   # no-op without Steam
 	day_summary.connect(_on_day_summary_achievements)     # fires on the host and on every guest
+	Net.steam.started.connect(_sync_achievements_to_steam)
+	if Net.steam.available:
+		_sync_achievements_to_steam.call_deferred()
+
+
+func _sync_achievements_to_steam() -> void:
+	## Unlocks earned while Steam wasn't running (or before the game had its own app id) reach Steam now.
+	for id in achievements.profile.get("unlocked", {}):
+		Net.steam.unlock_achievement(Achievements.steam_name(str(id)))
 
 
 func _exit_tree() -> void:

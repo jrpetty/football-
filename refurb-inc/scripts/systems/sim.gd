@@ -66,10 +66,17 @@ func _blank_day_stats() -> Dictionary:
 
 # ================================================================= command dispatch
 
+const HOST_ONLY := ["move_building", "fire", "rename_company"]   # company decisions; guests can't make them
+
+
 func execute(peer: int, cmd: String, args: Dictionary) -> Dictionary:
 	var method := "c_" + cmd
 	if not has_method(method):
 		return _fail("Unknown command: " + cmd)
+	if cmd in HOST_ONLY and peer != 1:
+		var refused := _fail("Only the host can do that.")
+		state.say(refused.msg, "warn", peer)
+		return refused
 	var res: Dictionary = call(method, peer, args)
 	if not res.get("ok", false) and res.get("msg", "") != "":
 		state.say(res.msg, "warn", peer)
@@ -2735,9 +2742,39 @@ func _process_minute_events() -> void:
 	_process_reviews()
 
 
+func _tidy_records() -> void:
+	## Keeps saves and join snapshots from growing for ever: shipped orders older than ten working days (keeping
+	## the newest 150) are dropped, their reviews folded into totals.review_archive; items marked "gone"
+	## (recycled units, washed-up mugs) are removed.
+	var old_before := state.minute - 10.0 * GameState.MIN_PER_DAY
+	var shipped: Array = []
+	for oid in state.orders:
+		var o: Dictionary = state.orders[oid]
+		if str(o.get("status", "")) in ["shipped", "shipped_late"] and not o.has("review_due"):
+			shipped.append(oid)
+	shipped.sort_custom(func(a, b): return float(state.orders[a].get("shipped", 0)) > float(state.orders[b].get("shipped", 0)))
+	var archive: Dictionary = state.totals.get("review_archive", {"count": 0, "total": 0, "dist": [0, 0, 0, 0, 0]})
+	for i in range(150, shipped.size()):
+		var o: Dictionary = state.orders[shipped[i]]
+		if float(o.get("shipped", state.minute)) > old_before:
+			continue
+		var r: Dictionary = o.get("review", {})
+		if not r.is_empty():
+			archive.count = int(archive.count) + 1
+			archive.total = int(archive.total) + int(r.stars)
+			archive.dist[clampi(int(r.stars), 1, 5) - 1] = int(archive.dist[clampi(int(r.stars), 1, 5) - 1]) + 1
+		state.orders.erase(shipped[i])
+		state.mark("order", shipped[i])
+	state.totals["review_archive"] = archive
+	for id in state.items.keys():
+		if state.items[id].loc.get("t") == "gone":
+			state.remove_item(id)
+
+
 func end_day() -> void:
 	if not state.day_running:
 		return
+	_tidy_records()
 	state.day_running = false
 	# Overtime past midnight: the calendar has moved on, but this is still that day's shift (rent on Friday's).
 	var day := state.shift_day()
@@ -3095,6 +3132,10 @@ func requeue_in_transit(delay: float = 5.0) -> void:
 
 func migrate_save() -> void:
 	requeue_in_transit()
+	# Whoever carried these is gone (guest peer ids change every session): put them down in goods-in.
+	for it: Item in state.items.values():
+		if it.loc.get("t") == "held" and int(it.loc.get("peer", 0)) != 1:
+			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
 	if not state.totals.has("run_id"):
 		state.totals["run_id"] = "%d-save" % state.seed_value
 		state.totals["days_worked"] = int(state.day_index() * 5 / 7)

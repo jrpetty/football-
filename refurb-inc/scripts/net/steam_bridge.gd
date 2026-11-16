@@ -16,6 +16,7 @@ signal lobby_failed(reason: String)
 signal lobbies_found(lobbies: Array)          # [{id, name, host, members, max, day}]
 signal invite_received(lobby_id: int, from_name: String)
 signal member_left(steam_id: int)
+signal started                                   # Steam initialised (achievements earned offline sync then)
 signal avatar_ready(steam_id: int, image: Image)
 
 const APP_ID := 480
@@ -48,6 +49,7 @@ func start() -> bool:
 		return false
 	available = true
 	status_text = ""
+	started.emit.call_deferred()
 	my_id = int(steam.getSteamID())
 	steam.lobby_created.connect(_on_lobby_created)
 	steam.lobby_joined.connect(_on_lobby_joined)

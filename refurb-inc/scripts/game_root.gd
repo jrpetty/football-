@@ -115,6 +115,10 @@ func _start(mode: String, arg: String) -> void:
 				if _menu:
 					_menu.set_status("That save couldn't be read. It's been kept — start a new game or try again.")
 				return
+			if int(d.get("version", 1)) > GameState.SAVE_VERSION:
+				if _menu:
+					_menu.set_status("That save was made by a newer version of Refurb Inc. — update the game to continue it.")
+				return
 			_clear_menu()
 			Game.load_from_dict(d)
 			_enter_level()

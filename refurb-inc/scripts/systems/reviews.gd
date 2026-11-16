@@ -121,9 +121,10 @@ static func rep_for(stars: int) -> float:
 
 static func summary(st: GameState) -> Dictionary:
 	## Average stars + count over every reviewed Flogit order (replicated, so guests see the same badge).
-	var n := 0
-	var total := 0
-	var dist := [0, 0, 0, 0, 0]
+	var archive: Dictionary = st.totals.get("review_archive", {})
+	var n := int(archive.get("count", 0))
+	var total := int(archive.get("total", 0))
+	var dist: Array = archive.get("dist", [0, 0, 0, 0, 0]).duplicate()
 	for o: Dictionary in st.orders.values():
 		var r: Dictionary = o.get("review", {})
 		if r.is_empty():

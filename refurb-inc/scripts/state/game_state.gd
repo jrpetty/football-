@@ -1,5 +1,7 @@
 class_name GameState
 extends RefCounted
+
+const SAVE_VERSION := 1             # bump when the save format changes incompatibly
 ## The whole company + world as plain data. The host owns the authoritative copy and mutates it through Sim;
 ## clients hold a replica that is overwritten by deltas from the host. Views listen to `changed`.
 
@@ -367,7 +369,7 @@ func to_dict() -> Dictionary:
 	for id in items:
 		it_out[str(id)] = items[id].to_dict()
 	return {
-		"version": 1, "seed": seed_value, "rng_state": rng.state, "next_id": next_id,
+		"version": SAVE_VERSION, "seed": str(seed_value), "rng_state": str(rng.state), "next_id": next_id,
 		"minute": minute, "day_running": day_running, "last_flogit_hour": last_flogit_hour, "belt_clock": belt_clock,
 		"shift": shift.duplicate(true),
 		"company_name": company_name, "cash": cash, "reputation": reputation, "ledger": ledger.duplicate(true),
@@ -383,10 +385,10 @@ func to_dict() -> Dictionary:
 
 
 func load_dict(d: Dictionary) -> void:
-	seed_value = int(d.get("seed", 0))
+	seed_value = int(str(d.get("seed", 0)))      # saved as text: JSON numbers can't hold 64 bits
 	rng.seed = seed_value
 	if d.has("rng_state"):
-		rng.state = int(d["rng_state"])
+		rng.state = int(str(d["rng_state"]))
 	next_id = int(d.get("next_id", 1))
 	minute = float(d.get("minute", 0.0))
 	belt_clock = float(d.get("belt_clock", 0.0))
