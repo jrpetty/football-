@@ -337,11 +337,16 @@ public final class Enterprise {
         return base * Wealth.standing(village) / 10;
     }
 
-    /** The start-up a kind wants here, pennies: its premises, three days' makings, a week's wages for its hands. */
+    /** The start-up a kind wants here, pennies: its premises, three days' makings (for the trade it expects: half the want
+     *  not met, no more than its hands can make), a week's wages for its hands. */
     static long startup(UUID village, BusinessType t, double inputCost, @Nullable UUID founder) {
+        return startup(village, t, inputCost, founder, Math.min(t.perDay(), 16));
+    }
+
+    static long startup(UUID village, BusinessType t, double inputCost, @Nullable UUID founder, double perDay) {
         long premises = t.stall() ? Math.round(STALL_PENCE * MarketMaker.priceLevel(village)) : 0;
         if (founder != null && Accounts.sub(data(village), "stalls").getInt(founder.toString()) > 0 && t.stall()) premises = 0;
-        long makings = Math.round(inputCost * 100 * Math.min(t.perDay(), 16) * 3);
+        long makings = Math.round(inputCost * 100 * Math.max(1, Math.min(perDay, Math.min(t.perDay(), 16))) * 3);
         long wages = (long) t.startStaff() * wageOf(t.work(), village) * 100L * 7;
         return premises + makings + wages;
     }
@@ -396,7 +401,7 @@ public final class Enterprise {
         // hands beside the founder (the founder lives on what it makes).
         double rent7 = (t.stall() ? 30 : 60) * Wealth.standing(id) / 10.0 * 7 / 100.0;
         double profit7 = score * 0.5 - rent7 - t.startStaff() * wageOf(t.work(), id) * 7;
-        double startup = startup(id, t, inputs, null) / 100.0;
+        double startup = startup(id, t, inputs, null, gap * 0.5 / 7) / 100.0;
         return new Opportunity(t, best, demand, supply, price, cost, inputs, gap, score, profit7, startup, firms);
     }
 
@@ -626,7 +631,7 @@ public final class Enterprise {
                                  @Nullable net.minecraft.server.level.ServerPlayer player, long day, @Nullable Opportunity o) {
         UUID id = v.id();
         double inputs = o != null ? o.inputCost() : makings(level, id, t, Stockroom.sampleOf(t.wares().get(0)));
-        long startup = startup(id, t, inputs, founder == null ? null : founder.getUUID());
+        long startup = startup(id, t, inputs, founder == null ? null : founder.getUUID(), o != null ? o.gap() * 0.5 / 7 : 1);
         // The founder to its work: already at it, or taken up (ground for the trade found), or not at all.
         if (founder != null && founder.stationTask() != t.work() && !founder.takeUpTrade(t.work())) {
             founder.brain("could find no ground for a " + t.noun() + ", and let the idea go");

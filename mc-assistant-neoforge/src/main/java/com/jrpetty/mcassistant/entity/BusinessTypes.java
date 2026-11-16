@@ -69,18 +69,18 @@ public final class BusinessTypes {
     /** Every kind, the makers first. */
     public static final List<BusinessType> ALL = List.of(
         // ---------------------------------------------------------------- the makers
-        new BusinessType("toolsmith", "Toolsmith", "%s Tools", "toolshop", StationTask.SMITH, null, "stall", Villages.Age.STONE, 10,
+        new BusinessType("toolsmith", "Toolsmith", "%s Tools", "toolshop", StationTask.SMITH, null, "stall", Villages.Age.WOOD, 10,
             keys(Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_SHOVEL, Items.STONE_HOE, Items.IRON_PICKAXE, Items.IRON_AXE, Items.IRON_SHOVEL,
                 Items.IRON_HOE, Items.SHEARS, Items.BUCKET), 0, false, CostBook.SMITHS_A_DAY / 4),
         new BusinessType("armourer", "Armourer", "%s Armoury", "armoury", StationTask.SMITH, null, "room", Villages.Age.IRON, 18,
             keys(Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS, Items.SHIELD, Items.IRON_SWORD, Items.STONE_SWORD),
             0, false, CostBook.SMITHS_A_DAY / 8),
-        new BusinessType("carpenter", "Carpenter", "%s Joinery", "joinery", StationTask.SHOP, ShopRoles.Role.CRAFTER, "stall", Villages.Age.STONE, 10,
+        new BusinessType("carpenter", "Carpenter", "%s Joinery", "joinery", StationTask.SHOP, ShopRoles.Role.CRAFTER, "stall", Villages.Age.WOOD, 10,
             List.of(k(Items.CHEST), k(Items.BARREL), "bed", k(Items.CRAFTING_TABLE), k(Items.ITEM_FRAME), k(Items.PAINTING), k(Items.LADDER)),
             0, false, CostBook.CRAFTS_A_DAY / 8),
-        new BusinessType("clothier", "Clothier", "%s Clothes", "clothes shop", StationTask.TAILOR, null, "stall", Villages.Age.STONE, 12,
+        new BusinessType("clothier", "Clothier", "%s Clothes", "clothes shop", StationTask.TAILOR, null, "stall", Villages.Age.WOOD, 12,
             keys(Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS, Items.LEATHER_BOOTS), 0, false, CostBook.CRAFTS_A_DAY / 12),
-        new BusinessType("weaver", "Weaver", "%s Looms", "weaving shed", StationTask.TAILOR, null, "stall", Villages.Age.STONE, 12,
+        new BusinessType("weaver", "Weaver", "%s Looms", "weaving shed", StationTask.TAILOR, null, "stall", Villages.Age.WOOD, 12,
             List.of("wool", "rug", "banner"), 0, false, CostBook.CRAFTS_A_DAY / 4),
         new BusinessType("chandler", "Chandler", "%s Candles", "chandlery", StationTask.BEEKEEP, null, "stall", Villages.Age.STONE, 12,
             List.of("candle", k(Items.HONEY_BOTTLE), k(Items.HONEYCOMB)), 0, false, CostBook.CRAFTS_A_DAY / 8),

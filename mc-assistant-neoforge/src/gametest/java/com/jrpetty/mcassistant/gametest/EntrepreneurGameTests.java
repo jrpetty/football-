@@ -626,7 +626,7 @@ public class EntrepreneurGameTests {
 
     /**
      * The town given one would-be entrepreneur on its first morning, as the long tests stock its stores: a farmer made a
-     * tailor of long practice and a Merchant at heart, with forty coins of the treasury's in its purse (coin moved, not
+     * tailor of long practice and a Merchant at heart, with thirty coins of the treasury's in its purse (coin moved, not
      * made). Whether it opens a business, and what becomes of it, is the town's own doing.
      */
     static void wouldBe(ServerLevel level, UUID id, String tag) {
@@ -637,7 +637,7 @@ public class EntrepreneurGameTests {
             Values.setForTests(f, Values.Value.TRADITION, 0);
             Values.setForTests(f, Values.Value.SAFETY, 0);
             Values.setForTests(f, Values.Value.WEALTH, 100);
-            int coins = Ledger.takeCoins(id, Math.min(40, Ledger.coins(id)));
+            int coins = Ledger.takeCoins(id, Math.min(30, Ledger.coins(id)));
             f.earn(coins);
             Kit.log(tag + " the would-be entrepreneur: " + f.displayNameCap() + ", a tailor at level " + f.tradeLevel(StationTask.TAILOR) + ", bold "
                 + Enterprise.boldness(f) + ", purse " + f.purse());
