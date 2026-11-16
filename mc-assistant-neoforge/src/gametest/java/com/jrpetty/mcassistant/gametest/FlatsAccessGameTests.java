@@ -399,36 +399,10 @@ public class FlatsAccessGameTests {
      * which are right now: "fa22 fixed"); anything not here fails it.
      */
     static final Set<String> KNOWN = Set.of(
-        // The storeys up a ladder: the folk's way-finding (the game's ground path finder, FolkNavigation) never climbs one
-        // (build-audit-drawings.md, "flats-access: the way in", 1).
-        "barn ROOM 0,4,0", "cathedral ROOM -1,12,-8", "cathedral ROOM 0,12,-9", "chapel BARREL -1,9,-6",
-        "chapel ROOM -1,9,-8", "clockworkgate ROOM -4,6,0", "grandlibrary LECTERN -4,4,-4", "grandlibrary LECTERN 4,4,-5",
-        "grandlibrary ROOM -4,4,3", "grandlibrary ROOM 4,4,2", "grandlibrary ROOM 4,4,3", "house2 BED -2,4,1",
-        "house2 BED 2,4,1", "house2 CHEST -1,4,-2", "house2 CHEST 2,4,-1", "house2 ROOM 0,4,0", "knighthall BARREL 3,5,-3",
-        "knighthall BED -4,5,3", "knighthall BED 4,5,3", "knighthall CHEST -3,5,4", "knighthall CHEST 3,5,4",
-        "knighthall ROOM 0,5,0", "knightmanor BARREL 3,5,-3", "knightmanor BED -3,5,2", "knightmanor BED 3,5,2",
-        "knightmanor CHEST -2,5,3", "knightmanor CHEST 2,5,3", "knightmanor ROOM 0,5,0", "library_tall ROOM 0,5,0",
-        "lighthouse CAULDRON 0,16,0", "manor BARREL 3,5,-3", "manor BED -3,5,-3", "manor BED -3,5,3", "manor BED -4,5,-3",
-        "manor BED -4,5,3", "manor BED 3,5,3", "manor BED 4,5,3", "manor CHEST -2,5,-4", "manor CHEST -2,5,4",
-        "manor CHEST 2,5,4", "manor ROOM 0,5,0", "observatory BARREL 2,5,1", "observatory BREWING_STAND -2,5,-1",
-        "observatory BREWING_STAND 2,5,-1", "observatory CHEST -2,5,1", "observatory LECTERN -1,13,1",
-        "observatory LECTERN 0,5,-2", "observatory LECTERN 0,9,-2", "observatory ROOM 0,13,-1", "observatory ROOM 0,5,0",
-        "observatory ROOM 0,9,0", "tavern_tall ROOM 0,5,0", "townhall BARREL -1,13,-8", "townhall BARREL -1,9,-8",
-        "townhall BARREL 4,5,3", "townhall BED -1,5,7", "townhall BED -3,5,3", "townhall BED -4,5,3", "townhall BED 0,5,7",
-        "townhall CHEST -4,5,0", "townhall CHEST -4,5,8", "townhall CHEST 1,5,7", "townhall CRAFTING_TABLE 4,5,2",
-        "townhall LECTERN 0,5,-8", "townhall ROOM 0,13,-7", "townhall ROOM 0,5,-4", "townhall ROOM 0,5,5",
-        "townhall ROOM 0,9,-7", "villa BED -2,4,2", "villa BED -3,4,0", "villa BED -3,4,2", "villa BED 2,4,2",
-        "villa BED 3,4,0", "villa BED 3,4,2", "villa CHEST -1,4,-1", "villa CHEST -1,4,3", "villa CHEST 1,4,3",
-        "villa CHEST 2,4,-1", "villa ROOM 0,4,1", "workshop ROOM 0,4,0", "workshop_tall ROOM 0,4,0",
-        "workshop_tall ROOM 0,7,0",
-        // Behind a fence gate: the folk open doors, not gates (only the pen's and the stable's own, for the beasts) (the same, 2).
-        "apiary CHEST 2,0,4", "apiary CRAFTING_TABLE -2,0,4", "apiary ROOM 0,0,4", "stable CAULDRON 2,0,-3",
-        "stable ROOM 0,0,0", "stockade BED -1,0,1", "stockade BED 1,0,1",
-        // The diver's shed: its drying fire makes the little room round it a place no folk will walk (the same, 3).
-        "divershed BARREL 1,0,1", "divershed CRAFTING_TABLE 0,0,1", "divershed ROOM 0,0,-1", "divershed ROOM 0,0,0",
-        "divershed SMOKER -1,0,1",
-        // The storage shed: the aisle behind the storehouse's shelves, shut in by them (the same, 4).
-        "storage ROOM 0,0,2"
+        // [access-3] None left. The 95 once here are put right: the storeys up a ladder (the folk climb ladders now:
+        // FolkWays), the places behind a fence gate (the folk open and shut gates; a prisoner never), the diver's shed and
+        // the hunter's lodge (a folk walks past a campfire, never onto it), the storage shed's aisle (its units against
+        // the back wall), and the cathedral's and the chapel's lofts.
     );
 
     /**

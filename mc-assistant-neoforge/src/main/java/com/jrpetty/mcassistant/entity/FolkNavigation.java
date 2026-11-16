@@ -238,6 +238,7 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         if (!this.level.isClientSide && FolkLod.scaling(this.level)) travelTheRest();
         if (travelling()) return;
+        if (!this.level.isClientSide && FolkWays.goingDown(this.mob, this.path)) return;   // [access-3] down a ladder
         super.tick();
     }
 

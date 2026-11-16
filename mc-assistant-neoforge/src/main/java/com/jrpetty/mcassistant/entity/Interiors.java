@@ -242,6 +242,7 @@ public final class Interiors {
         Map<BlockPos, BuildGoal.Placement> at = new HashMap<>();
         for (BuildGoal.Placement p : placements) if (p.part() != BuildGoal.Part.CLEAR) at.put(p.pos(), p);
         Set<BlockPos> keepClear = new HashSet<>();
+        Set<BlockPos> doorsteps = new HashSet<>();                      // [access-3] the cells round a door: bare boards
         Set<BlockPos> heads = new HashSet<>();
         Set<BlockPos> bedHeads = new HashSet<>();                       // [build-world] every bed's head, for the way into each
         for (BuildGoal.Placement p : placements) {
@@ -254,7 +255,10 @@ public final class Interiors {
             switch (p.part()) {
                 case DOOR -> {
                     if (door == null || p.pos().getY() < door.getY()) door = p.pos();
-                    for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) keepClear.add(p.pos().offset(dx, 0, dz));
+                    for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+                        keepClear.add(p.pos().offset(dx, 0, dz));
+                        doorsteps.add(p.pos().offset(dx, 0, dz));
+                    }
                 }
                 // A bed's head lies a cell beyond its foot (the drawing has the foot): that cell is the bed's.
                 // [build-world] And a cell of floor kept clear to get into it by (at its foot, else beside it): a barrel
@@ -293,9 +297,17 @@ public final class Interiors {
         int[] half = BuildGoal.footprint(drawing);
         int r = Math.max(half[0], half[1]);
         List<BlockPos> floor = new ArrayList<>();
+        // [access-3] The cells kept clear of furniture to walk by (the way in past the doorstep, the way into a bed, the
+        // floor before a chest, a ladder or a stove's mouth) may still have the rug down: a rug is walked on, and the
+        // middle of a cottage is all ways to somewhere. Never the doorstep, nor under a bed's head.
+        Set<BlockPos> walkway = new HashSet<>();
         for (BuildGoal.Placement p : placements) {
             BlockPos cell = p.pos().above();
-            if (at.containsKey(cell) || at.containsKey(cell.above()) || keepClear.contains(cell)) continue;
+            if (at.containsKey(cell) || at.containsKey(cell.above())) continue;
+            if (keepClear.contains(cell)) {
+                if (doorsteps.contains(cell) || heads.contains(cell) || bedHeads.contains(cell)) continue;
+                walkway.add(cell);
+            }
             // On a floor (boards, stone, the dais), not on the furniture or a bench.
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             switch (p.style()) {
@@ -329,6 +341,7 @@ public final class Interiors {
                 BuildGoal.Placement n = at.get(c.relative(d));
                 if (n != null && (n.part() == BuildGoal.Part.BLOCK || n.part() == BuildGoal.Part.WINDOW)) { byWall = true; break; }
             }
+            if (walkway.contains(c) && byWall) continue;              // [access-3] a way by the wall: bare, and no furniture
             STATS.merge(b.anchor().asLong() + (byWall ? ":walls" : ":open"), 1, Integer::sum);
             (byWall ? walls : open).computeIfAbsent(c.getY(), k -> new ArrayList<>()).add(c);
         }

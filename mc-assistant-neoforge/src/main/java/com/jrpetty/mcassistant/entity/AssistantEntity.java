@@ -1342,6 +1342,15 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // this bot and where it is trying to get to.
         net.minecraft.world.level.pathfinder.Path path = getNavigation().getPath();
         if (path == null || path.isDone()) return;
+        // [access-3] A gate the walk goes through (folk find their way through gates now: FolkWays), opened as it comes to it.
+        BlockPos through = FolkWays.gateAhead(this, path);
+        if (through != null) {
+            BlockState gs = level().getBlockState(through);
+            level().setBlock(through, gs.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN, true), 10);
+            level().playSound(null, through, net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
+            openedGate = through.immutable();
+            return;
+        }
         BlockPos goal = path.getTarget();
         BlockPos me = blockPosition();
         double mine = me.distSqr(goal);
@@ -3680,6 +3689,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *
      * @return true if it actually jumped
      */
+    /** [access-3] The tick it was last letting itself down a ladder (no jumping that tick: FolkWays). */
+    private int ladderDownTick = -1;
+
+    /** [access-3] Letting itself down a ladder this tick: whatever else would have it jump, it does not. */
+    public void holdOffJumping() {
+        ladderDownTick = tickCount;
+    }
+
     public boolean tryHop() {
         if (!onGround() || tickCount - lastJumpTick < 40) return false;
         getJumpControl().jump();
@@ -3710,6 +3727,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public void setJumping(boolean jumping) {
         // [diver] A diver going down, or at work on the bed, does not float up: its stroke is its own (DiverSwim).
         if (jumping && !level().isClientSide && underwaterWork()) {
+            super.setJumping(false);
+            return;
+        }
+        // [access-3] On a ladder: no climbing while it lets itself down, or at the foot when its way goes off (FolkWays).
+        if (jumping && !level().isClientSide && onClimbable()
+                && (ladderDownTick == tickCount || !FolkWays.mayClimb(this, getNavigation().getPath()))) {
             super.setJumping(false);
             return;
         }
@@ -9474,7 +9497,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // that is currently going the long way round on purpose.
         roadTick();
         if (tickCount % 20 == 0) noteTraffic();
-        if (tickCount % 5 == 0) tendGates();
+        if (tickCount % 5 == 0 || openedGate == null && FolkWays.gateAhead(this, getNavigation().getPath()) != null) tendGates();   // [access-3] a gate ahead: at once
         // Running only while there is somewhere to run to.
         if (isSprinting() && tickCount % 10 == 0 && (getNavigation().isDone() || isInWater() || !fitToRun())) setSprinting(false);
         // Running the way a player runs: now and then a jump in its stride, on open, level ground.

@@ -195,6 +195,11 @@ public final class Prisoners {
         return of(who) != null;
     }
 
+    /** [access-3] Out on its stint of work in the fields (walked out of the stockade's gate under the watch)? */
+    static boolean onStint(UUID who) {
+        return STINT.containsKey(who);
+    }
+
     /** Held for ransom after the peace (not to be let go at the peace with the spies). */
     static boolean heldForRansom(UUID who) {
         Pow p = of(who);

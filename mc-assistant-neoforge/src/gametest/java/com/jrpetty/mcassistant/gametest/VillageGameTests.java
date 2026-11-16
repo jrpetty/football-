@@ -273,8 +273,9 @@ public class VillageGameTests {
         var granary = BuildGoal.partCounts("granary", 13);
         helper.assertTrue(granary.getOrDefault(BuildGoal.Part.CHEST, 0) == 3, "the granary holds three chests, wants " + granary);
         var barracks = BuildGoal.partCounts("barracks", 13);
-        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 6 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 2,
-            "the barracks have six bunks and two chests, wants " + barracks);
+        // [access-3] A chest by every bunk (the drawings' audit gave each of the watch a footlocker of its own), six in all.
+        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 6 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 6,
+            "the barracks have six bunks and a chest by each, wants " + barracks);
         var monument = BuildGoal.partCounts("monument", 13);
         helper.assertTrue(monument.getOrDefault(BuildGoal.Part.BLOCK, 0) >= 17 && monument.getOrDefault(BuildGoal.Part.LANTERN, 0) >= 1,
             "the monument is a plinth, a step, a pillar and a light, wants " + monument);

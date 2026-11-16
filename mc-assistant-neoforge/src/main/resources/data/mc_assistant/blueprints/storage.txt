@@ -3,6 +3,8 @@
 # units ($) stacked three by three by three, which join into one store the size
 # of twenty-seven chests, its door facing the shed's door. Barrels by the door (none behind the
 # units, where nobody could get at them).
+# [access-3] The units stacked against the back wall (an aisle behind them, shut in by them, was a room nobody could
+# get into), the floor before them two deep, and a lantern hung over it from the boards.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name storage
 layer -1
@@ -18,30 +20,30 @@ layer -1
 layer 0
 .......
 .LwwwL.
-.w.t.w.
+.w$$$w.
 .w$$$w.
 .L$$$L.
-.w$$$w.
+.w...w.
 .wQ.Qw.
 .LwDwL.
 .......
 layer 1
 .......
 .LWGWL.
-.W...W.
+.W$$$W.
 .W$$$W.
 .L$$$L.
-.G$$$G.
+.G...G.
 .W...W.
 .LW.WL.
 .......
 layer 2
 .......
 .LWWWL.
-.W...W.
+.W$$$W.
 .W$$$W.
 .L$$$L.
-.W$$$W.
+.W.j.W.
 .W...W.
 .LWWWL.
 ...j...
