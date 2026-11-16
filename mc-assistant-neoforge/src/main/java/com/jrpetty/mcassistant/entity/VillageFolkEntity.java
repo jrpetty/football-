@@ -7322,6 +7322,10 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         UUID village = ownerId();
         if (heart == null || village == null) return false;
+        if (TownBudget.worksWait(village)) {                             // [econ-1d] the day's money for the works spent: tomorrow
+            buildNote("build: the town has spent what it can on its works today");
+            return false;
+        }
         long now = level().getGameTime();
         java.util.Map<BuildGoal.Part, Integer> need =
             BuildGoal.partCounts(project, site.radius());

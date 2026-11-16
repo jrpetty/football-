@@ -595,7 +595,8 @@ public final class Accounts {
     /** A department's spending today and all told, and its receipts: {spentToday, inToday, spent, in}. */
     public static long[] deptBook(UUID village, Dept d) {
         CompoundTag b = sub(sub(town(village), "depts"), d.name());
-        return new long[]{ b.getLong("spentToday"), b.getLong("inToday"), b.getLong("spent"), b.getLong("in") };
+        boolean today = b.getLong("day") == dayNow();                       // [econ-1d] yesterday's day is not today's
+        return new long[]{ today ? b.getLong("spentToday") : 0, today ? b.getLong("inToday") : 0, b.getLong("spent"), b.getLong("in") };
     }
 
     // ------------------------------------------------------------------ owed, change and IOUs

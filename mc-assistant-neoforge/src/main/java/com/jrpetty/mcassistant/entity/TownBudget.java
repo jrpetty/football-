@@ -173,6 +173,20 @@ public final class TownBudget {
         return Math.max(LEAST_LIMIT / 2, revenue7(village) / 7 + room / 4);
     }
 
+    /** [econ-1d] What the works may always spend in a day, whatever the town owes, pennies: its essentials go ahead, at a pace. */
+    static final long WORKS_FLOOR = 2500;
+
+    /**
+     * [econ-1d] Short (it owes its market more than it can carry) and the works have spent today what the town can find for
+     * them (a day's share of its week's revenue, and twenty-five coins at the least): its builders fetch no more for the day.
+     * Its essential buildings still go up every day, at the pace its money allows; nothing waits for ever.
+     */
+    public static boolean worksWait(@javax.annotation.Nullable UUID village) {
+        if (village == null || pressure(village) < 2) return false;
+        long today = Accounts.deptBook(village, Accounts.Dept.WORKS)[0];
+        return today > Math.max(WORKS_FLOOR, revenue7(village) / 7);
+    }
+
     /** [econ-1d] Careful with its money: the buildings go up plain (Villages' decorations not bought). */
     public static boolean frugal(@javax.annotation.Nullable UUID village) {
         return pressure(village) >= 1;
@@ -234,11 +248,23 @@ public final class TownBudget {
      * council's books and the town's budget; the town's IOUs to its market paid first out of it. Returns the pennies taxed.
      */
     static long profitsTax(ServerLevel level, UUID village, Business b, long weekNet, long day) {
-        if (weekNet <= 0 || b.town() || b.mirror() || !MarketMaker.live(village)) return 0;
+        if (b.town() || b.mirror() || !MarketMaker.live(village)) return 0;
         int pct = TaxBook.profitsPercent(village);
-        if (pct <= 0) return 0;
-        long tax = weekNet * pct / 100;
-        if (tax <= 0) return 0;
+        long already = instalments(village).getLong(b.id);                  // [econ-1d] what it paid on account this week
+        instalments(village).remove(b.id);
+        long owed = Math.max(0, weekNet) * Math.max(0, pct) / 100;
+        if (already > owed) {
+            // [econ-1d] Paid more on account than the week came to (it lost at the end): the rest handed back.
+            long back = Businesses.fromTreasury(village, already - owed);
+            b.till += back;
+            b.today(day).taxes -= back;
+            b.allTime.taxes -= back;
+            Businesses.dirty();
+            return already - back;
+        }
+        if (weekNet <= 0 || pct <= 0) return already;
+        long tax = owed - already;
+        if (tax <= 0) return already;
         long paid = Businesses.payOut(level, village, b, tax, day);
         Businesses.toTreasury(village, paid);
         Business.Day d = b.today(day);
@@ -253,7 +279,46 @@ public final class TownBudget {
         in(village, "profits", paid);
         Accounts.payIous(village, paid, "the profits tax");             // [econ-1d] (how)
         Businesses.dirty();
-        return tax;
+        return tax + already;                                                 // [econ-1d] the week's whole tax
+    }
+
+    /** [econ-1d] Each business's profits tax paid on account this week, pennies. */
+    static CompoundTag instalments(UUID village) {
+        return Accounts.sub(books(village), "instalments");
+    }
+
+    /**
+     * [econ-1d] The profits tax as it is earned (Businesses' morning, the days between its weekly reckonings): its share of
+     * the week's profit so far, less what it has paid on account this week, out of its till while the till has it (never
+     * on its credit). Settled at the week's end (profitsTax): a town lives on its revenue day by day, and a farm's
+     * harvest money sat a week in its till untaxed while the town wrote IOUs. Returns the pennies paid.
+     */
+    static long instalment(ServerLevel level, UUID village, Business b, long day) {
+        if (b.town() || b.mirror() || !MarketMaker.live(village) || "storehouse".equals(b.id)) return 0;
+        int pct = TaxBook.profitsPercent(village);
+        if (pct <= 0) return 0;
+        int days = (int) Math.floorMod(day - b.opened - 6, 7L);
+        if (days <= 0 || day - b.opened < 2) return 0;
+        long net = b.last(day - 1, days).net();
+        long paid = instalments(village).getLong(b.id);
+        long due = net * pct / 100 - paid;
+        long pay = Math.min(due, b.till - 200);                              // what its till can spare (two coins kept for change)
+        if (pay < 10) return 0;
+        b.till -= pay;
+        Businesses.toTreasury(village, pay);
+        instalments(village).putLong(b.id, paid + pay);
+        Business.Day d = b.today(day);
+        d.taxes += pay;
+        b.allTime.taxes += pay;
+        CompoundTag bk = books(village);
+        long carry = bk.getLong("profitsCarry") + pay;
+        int coins = (int) (carry / 100);
+        bk.putLong("profitsCarry", carry - coins * 100L);
+        TaxBook.book(village, day, "profits", coins);
+        in(village, "profits", pay);
+        Accounts.payIous(village, pay, "the profits tax");
+        Businesses.dirty();
+        return pay;
     }
 
     /**

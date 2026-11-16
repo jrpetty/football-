@@ -1115,6 +1115,7 @@ public final class Businesses {
             spoil(level, id, b, day);
             repay(level, id, b, day);
             if ((day - b.opened) % 7 == 6) draw(level, id, b, day);
+            else TownBudget.instalment(level, id, b, day);                  // [econ-1d] the profits tax as it is earned, settled at the week's end
             review(level, id, b, day);
             if (b.open) reorder(level, id, b, day);
             b.today(day).cashEnd = b.till;
