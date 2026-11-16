@@ -449,6 +449,16 @@ public final class Business {
         return b;
     }
 
+    /** [econ-1b] Tests: its books saved, and loaded back. */
+    public CompoundTag saveForTests() {
+        return save();
+    }
+
+    @Nullable
+    public static Business loadForTests(CompoundTag t) {
+        return load(t);
+    }
+
     /** Which trade staffs it, by the trade its hands are stationed at (Businesses.employer reads the posts first). */
     @Nullable
     static Type forTrade(StationTask t) {

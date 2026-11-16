@@ -82,30 +82,10 @@ public final class FirmCommands {
         return say(c, sb.toString());
     }
 
-    /** A player's charter: at the hall (or within reach of the town's heart without one), ten coins to the treasury. */
     private static int charter(CommandContext<CommandSourceStack> c) {
         Villages.Village v = near(c);
         if (v == null || !(c.getSource().getEntity() instanceof ServerPlayer p)) return 0;
-        BusinessTypes.BusinessType t = BusinessTypes.of(StringArgumentType.getString(c, "kind"));
-        if (t == null) return say(c, "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".");
-        UUID id = v.id();
-        BlockPos hall = Villages.builtAt(id, "hall");
-        BlockPos at = hall != null ? hall : v.centre();
-        if (!p.blockPosition().closerThan(at, hall != null ? 24 : 48)) return say(c, "Charters are granted at " + (hall != null ? "the hall" : "the town's heart") + ": go there first.");
-        if (!Citizens.is(id, p.getUUID()) && !Standing.of(id, p.getUUID(), c.getSource().getLevel().getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
-            return say(c, "Only a citizen or a friend of " + Villages.name(id) + " may open a business here.");
-        }
-        if (Market.coinsHeld(p) < Enterprise.CHARTER_FEE) return say(c, "The charter costs " + Enterprise.CHARTER_FEE + " coins; you have " + Market.coinsHeld(p) + ".");
-        ServerLevel level = c.getSource().getLevel();
-        Market.payOut(p, Enterprise.CHARTER_FEE);
-        Ledger.addCoins(id, Enterprise.CHARTER_FEE);
-        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, Enterprise.CHARTER_FEE);
-        TownBudget.in(id, "fees", Enterprise.CHARTER_FEE * 100L);
-        Business b = Enterprise.found(level, v, t, null, p, Businesses.today(level), null);
-        if (b == null) return say(c, "The charter could not be drawn up.");
-        return say(c, "Your charter is granted: " + b.name + " (" + b.id + "), a " + t.noun() + ". Fund it with /village business invest " + b.id
-            + " <coins>, take on a hand with /village firms hire " + b.id + ", order its makings with /village business order " + b.id
-            + " <item> <qty>, and set its prices with /village firms markup " + b.id + " <percent>.");
+        return say(c, Enterprise.charter(c.getSource().getLevel(), v, p, StringArgumentType.getString(c, "kind")));
     }
 
     @Nullable

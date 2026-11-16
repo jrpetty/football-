@@ -696,6 +696,32 @@ public final class Enterprise {
         return b;
     }
 
+    /**
+     * A player's charter: at the hall (or the town's heart, without one), a citizen or a friend of the town, ten coins to the
+     * treasury; the firm is the player's, opened on a stall with nothing in its till, for the player to fund, staff and stock.
+     */
+    public static String charter(ServerLevel level, Villages.Village v, net.minecraft.server.level.ServerPlayer p, String kind) {
+        BusinessType t = BusinessTypes.of(kind);
+        if (t == null) return "No such kind of business. The kinds: " + String.join(", ", BusinessTypes.keys()) + ".";
+        UUID id = v.id();
+        BlockPos hall = Villages.builtAt(id, "hall");
+        BlockPos at = hall != null ? hall : v.centre();
+        if (!p.blockPosition().closerThan(at, hall != null ? 24 : 48)) return "Charters are granted at " + (hall != null ? "the hall" : "the town's heart") + ": go there first.";
+        if (!Citizens.is(id, p.getUUID()) && !Standing.of(id, p.getUUID(), level.getGameTime()).title().atLeast(Standing.Title.FRIEND)) {
+            return "Only a citizen or a friend of " + Villages.name(id) + " may open a business here.";
+        }
+        if (Market.coinsHeld(p) < CHARTER_FEE) return "The charter costs " + CHARTER_FEE + " coins; you have " + Market.coinsHeld(p) + ".";
+        Market.payOut(p, CHARTER_FEE);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, CHARTER_FEE);
+        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, CHARTER_FEE);
+        TownBudget.in(id, "fees", CHARTER_FEE * 100L);
+        Business b = found(level, v, t, null, p, Businesses.today(level), null);
+        if (b == null) return "The charter could not be drawn up.";
+        return "Your charter is granted: " + b.name + " (" + b.id + "), a " + t.noun() + ". Fund it with /village business invest " + b.id
+            + " <coins>, take on a hand with /village firms hire " + b.id + ", order its makings with /village business order " + b.id
+            + " <item> <qty>, and set its prices with /village firms markup " + b.id + " <percent>.";
+    }
+
     static String firstName(String n) {
         int sp = n.indexOf(' ');
         return sp > 0 ? n.substring(0, sp) : n;
@@ -1387,5 +1413,21 @@ public final class Enterprise {
         CompoundTag r = rec(v.id(), b.id);
         BusinessType t = kindOf(v.id(), b);
         if (r != null && t != null) expand(level, v, b, r, t, Businesses.today(level));
+    }
+
+    /** Tests: debts run up: wages owed a hand, the town (rent and taxes), the market's trade credit, the bank's loan. */
+    public static void debtsForTests(UUID village, Business b, @Nullable VillageFolkEntity hand, long wages, long town, long market, long bank) {
+        if (hand != null) wageOwed(village, b, hand, wages);
+        b.account -= town;
+        Accounts.owe(village, Accounts.Account.firm(b), market, "tests");
+        b.loan += bank;
+        if (bank > 0) b.lender = "bank";
+        Businesses.dirty();
+    }
+
+    /** Tests: so many of a ware in the firm's stock, at so many pennies each (the goods themselves the caller's to put in the stores). */
+    public static void stockForTests(Business b, ItemStack one, long n, long each) {
+        b.stock.computeIfAbsent(Stockroom.key(one), k -> new Lot()).add(n, n * each);
+        Businesses.dirty();
     }
 }

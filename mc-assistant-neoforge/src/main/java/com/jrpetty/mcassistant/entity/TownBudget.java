@@ -224,6 +224,11 @@ public final class TownBudget {
             + "; profits tax " + TaxBook.profitsPercent(village) + "%";
     }
 
+    /** Tests: the profits tax on a business's week's profit, now. */
+    public static long profitsTaxForTests(ServerLevel level, UUID village, Business b, long weekNet) {
+        return profitsTax(level, village, b, weekNet, level.getDayTime() / 24000L);
+    }
+
     /** Tests: is the town short (owing more than it can carry) now. */
     public static boolean shortForTests(UUID village) {
         return owesTooMuch(village);
