@@ -3230,6 +3230,8 @@ public class VillageGameTests {
         final Kit.Expect ex = new Kit.Expect();
         final long[] nextDash = {0};
         final boolean[] done = new boolean[6];
+        final long[] letGo = { -1 };                                    // [health] when the founders' first assembly let them go
+        final boolean[] grounded = { false };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (t >= nextDash[0]) {
@@ -3255,6 +3257,16 @@ public class VillageGameTests {
                 ex.that(by.getOrDefault(StationTask.FARM, 0) >= 3, "at least three farmers");
                 ex.that(by.getOrDefault(StationTask.WOOD, 0) >= 1, "at least one woodcutter");
                 ex.that(by.getOrDefault(StationTask.MINE, 0) >= 1, "at least one miner");
+            }
+            // [health] Ground is looked for once the founders' first morning assembly has let them go: it holds them about an
+            // hour (they take up their trades in it, t10b; only the search for ground waits), and its news runs it on to
+            // tick 1500 or so. A minute after it, or by the next checkpoint at the latest, nine have claimed ground.
+            if (v != null && letGo[0] < 0 && t >= 300 && com.jrpetty.mcassistant.entity.Assemblies.now(v.id()) == null) letGo[0] = t;
+            if (!grounded[0] && (letGo[0] >= 0 && t >= letGo[0] + 1200 || t >= 4400)) {
+                grounded[0] = true;
+                int zoned = 0;
+                for (AssistantEntity a : crew) if (a.workZone() != null) zoned++;
+                Kit.log("---- checkpoint ground at " + t + " (the first assembly over at " + letGo[0] + "): " + zoned + " with ground");
                 ex.that(zoned >= 9, "at least nine have claimed ground (" + zoned + ")");
             }
             if (!done[1] && t >= 4500) {

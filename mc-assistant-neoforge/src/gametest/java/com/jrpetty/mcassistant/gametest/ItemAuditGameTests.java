@@ -7,6 +7,7 @@ import com.jrpetty.mcassistant.block.VillageBoardBlock;
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.Accounts;
 import com.jrpetty.mcassistant.entity.Arms;
 import com.jrpetty.mcassistant.entity.Bench;
 import com.jrpetty.mcassistant.entity.BigWorks;
@@ -21,6 +22,7 @@ import com.jrpetty.mcassistant.entity.Homeland;
 import com.jrpetty.mcassistant.entity.Leader;
 import com.jrpetty.mcassistant.entity.Makers;
 import com.jrpetty.mcassistant.entity.Market;
+import com.jrpetty.mcassistant.entity.MarketMaker;
 import com.jrpetty.mcassistant.entity.Meals;
 import com.jrpetty.mcassistant.entity.PlayerCivic;
 import com.jrpetty.mcassistant.entity.Prices;
@@ -87,9 +89,10 @@ import java.util.function.Predicate;
  *     documented reason it has none), its age (the ages the audit settled checked by name), a worth on the price list,
  *     a maker named in Makers, and the stores' makings run to it at the bench; and the pets' things on the market's
  *     board.</li>
- * <li><b>ia02</b>: the coin, minted honestly: a gold ingot fired makes nine (the mint's own rate), a coin is worth a
- *     coin, the Iron Age town's mint turns the stores' gold into its treasury's coin; and the memory core, made by
- *     nobody and sold to nobody.</li>
+ * <li><b>ia02</b>: the coin, minted honestly and only at the mint: no furnace makes it (the reason given), a coin is
+ *     worth a coin, the Iron Age town's mint buys the stores' gold of its market and strikes it nine to the bar into its
+ *     treasury, a player's gold at a market stall's counter is struck eight to the ingot (the mint keeps the ninth, the
+ *     ingot the market's), and no mint in a Wood Age town; and the memory core, made by nobody and sold to nobody.</li>
  * <li><b>ia03</b>: the fishing net: the tailor knots one of five of the stores' string for each of the fleet's boats,
  *     a net's haul is two to four fish to a line's one or two, and a player's cast over open water brings fish up and
  *     wears the net.</li>
@@ -310,12 +313,14 @@ public class ItemAuditGameTests {
             String id = key.getPath();
             List<RecipeBook.Way> ways = RecipeBook.waysFor(level, item);
             String unmade = Makers.unmade(item);
+            String uncrafted = Makers.uncrafted(item);   // [health] made, but by no recipe (the coin, struck at the mint)
             List<Makers.Maker> makers = Makers.of(item);
             Villages.Age age = Tiers.of(level, item);
             double worth = Prices.each(item);
             boolean known = Prices.known(item);
             String plan = "";
-            if (ways.isEmpty() && unmade == null) wanting.add(id + ": no recipe");
+            if (ways.isEmpty() && unmade == null && uncrafted == null) wanting.add(id + ": no recipe");
+            if (uncrafted != null && !ways.isEmpty()) wanting.add(id + ": said to have no recipe, and has " + ways.size());   // [health]
             Villages.Age want = AGES.get(id);
             if (want != null && age != want) wanting.add(id + ": " + age.label + ", not " + want.label);
             if (!known) wanting.add(id + ": no worth on the price list (only guessed at " + worth + ")");
@@ -351,10 +356,13 @@ public class ItemAuditGameTests {
     // ============================================================ ia02: the coin, and the memory core
 
     /**
-     * The coin, honestly made: a gold ingot fired in a furnace comes out as nine coins (the game's own recipe), the
-     * mint's rate (Market.COINS_PER_GOLD); a coin is worth a coin; an Iron Age town short of coin mints the stores'
-     * gold into its treasury, the gold gone from the stores and the coin in, bar for bar. The memory core: no recipe,
-     * the reason given, worth nothing to anybody.
+     * The coin, honestly made, and only at the mint (since the market): a gold ingot fired in a furnace is a gold ingot
+     * still, the coin has no recipe and the reason is given, its maker the mint; it is gold, the Iron Age's; a coin is
+     * worth a coin. The town's mint, its market open and its treasury low, buys three bars of the stores' gold of the
+     * market at its ask (out of the treasury) and strikes them nine to the bar into the treasury. A player's two ingots
+     * at a market stall's counter come back as sixteen coins, the mint keeping two for the town and the ingots going
+     * into the stores, the market's; a Wood Age town has no mint. The memory core: no recipe, the reason given, worth
+     * nothing to anybody.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ia02_the_coin")
     public static void ia02_the_coin(GameTestHelper helper) {
@@ -365,23 +373,69 @@ public class ItemAuditGameTests {
         ItemStack fired = level.getRecipeManager().getRecipeFor(RecipeType.SMELTING, bar, level)
             .map(h -> h.value().assemble(bar, level.registryAccess())).orElse(ItemStack.EMPTY);
         List<RecipeBook.Way> ways = RecipeBook.waysFor(level, coin);
-        Kit.log("ia02 a gold ingot in the furnace: " + fired + "; the coin's ways: " + ways.size() + (ways.isEmpty() ? "" : " (" + ways.get(0).fire()
-            + ", " + ways.get(0).yield() + " a firing)") + "; the " + Tiers.of(level, coin).label + "; worth " + Prices.each(coin));
-        helper.assertTrue(fired.is(coin) && fired.getCount() == Market.COINS_PER_GOLD, "a bar of gold fired makes nine coins: " + fired);
-        helper.assertTrue(ways.size() == 1 && ways.get(0).fire() == RecipeBook.Fire.FURNACE && ways.get(0).yield() == Market.COINS_PER_GOLD,
-            "the town's makers know it as the furnace's: " + ways.size());
-        helper.assertTrue(Tiers.of(level, coin) == Villages.Age.IRON, "minted from the Iron Age's gold");
+        String struck = Makers.uncrafted(coin);
+        Kit.log("ia02 a gold ingot in the furnace: " + fired + "; the coin's ways: " + ways.size() + "; made by " + Makers.words(coin)
+            + " (" + struck + "); the " + Tiers.of(level, coin).label + "; worth " + Prices.each(coin));
+        helper.assertTrue(!fired.is(coin), "no furnace strikes coin: a bar fired makes " + fired);
+        helper.assertTrue(ways.isEmpty() && struck != null && struck.contains("mint"), "no recipe for the coin, and why: " + ways.size() + ", " + struck);
+        helper.assertTrue(Makers.of(coin).stream().allMatch(m -> m.who().startsWith("the mint")) && Makers.of(coin).size() == 2,
+            "the coin's maker is the mint: " + Makers.words(coin));
+        helper.assertTrue(Tiers.of(level, coin) == Villages.Age.IRON, "struck of gold, the Iron Age's: " + Tiers.of(level, coin).label);
         helper.assertTrue(Math.abs(Prices.each(coin) - 1.0) < 1e-9 && Prices.known(coin), "a coin is worth a coin: " + Prices.each(coin));
-        // The mint: the treasury empty, three bars in the stores.
         UUID id = t.village();
-        Ledger.takeCoins(id, Ledger.coins(id));
-        stock(t, new ItemStack(Items.GOLD_INGOT, 3));
-        int coins0 = Ledger.coins(id), gold0 = stores(level, t, Items.GOLD_INGOT);
-        int minted = Market.mint(level, t.v());
-        int coins1 = Ledger.coins(id), gold1 = stores(level, t, Items.GOLD_INGOT);
-        Kit.log("ia02 the mint: " + minted + " coin; treasury " + coins0 + " -> " + coins1 + ", the stores' gold " + gold0 + " -> " + gold1);
-        helper.assertTrue(minted == 3 * Market.COINS_PER_GOLD && coins1 - coins0 == minted && gold0 - gold1 == 3,
-            "three bars of the stores' gold minted into twenty-seven coin: " + minted);
+        ItemStack gold = new ItemStack(Items.GOLD_INGOT);
+        MarketMaker.liveForTests(true);
+        try {
+            MarketMaker.openForTests(level, t.v());
+            // The town's mint: the treasury low (ten coin for three folk), three bars in the stores, bought of the market.
+            Ledger.takeCoins(id, Ledger.coins(id));
+            Ledger.addCoins(id, 10);
+            stock(t, new ItemStack(Items.GOLD_INGOT, 3));
+            double ask = MarketMaker.ask(level, id, gold);
+            long cash0 = MarketMaker.cash(id);
+            int coins0 = Ledger.coins(id), gold0 = stores(level, t, Items.GOLD_INGOT);
+            int minted;
+            try (Accounts.Scope m = Accounts.as(Accounts.Dept.MINT, Accounts.Purpose.WORK)) { minted = Market.mint(level, t.v()); }
+            int coins1 = Ledger.coins(id), gold1 = stores(level, t, Items.GOLD_INGOT);
+            long cash1 = MarketMaker.cash(id);
+            Kit.log("ia02 the mint: " + minted + " coin struck of " + (gold0 - gold1) + " bars bought at " + String.format(Locale.ROOT, "%.2f", ask)
+                + " each; treasury " + coins0 + " -> " + coins1 + ", the market's cash " + cash0 + " -> " + cash1 + "p");
+            helper.assertTrue(minted == 3 * Market.COINS_PER_GOLD && gold0 - gold1 == 3,
+                "three bars of the stores' gold struck into twenty-seven coin: " + minted + ", " + (gold0 - gold1) + " bars");
+            // The gold is paid for out of the treasury (what it cannot pay it owes the market), into the market's cash: the
+            // treasury and the market together are richer by the coin struck, and by no more.
+            helper.assertTrue(cash1 > cash0, "the market was paid for its gold: " + (cash1 - cash0) + "p");
+            helper.assertTrue(Math.abs((coins1 - coins0) + (cash1 - cash0) / 100.0 - minted) <= 1.0,
+                "the coin struck is new money, the town's: treasury " + (coins1 - coins0) + ", the market " + (cash1 - cash0) + "p, for " + minted);
+            // A player's gold at a market stall's counter: eight to the ingot for it, the ninth the mint's, the ingots the market's.
+            Player you = helper.makeMockServerPlayerInLevel();
+            you.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT, 2));
+            int treasury0 = Ledger.coins(id), stock0 = stores(level, t, Items.GOLD_INGOT);
+            long market0 = MarketMaker.cash(id);
+            String said = Market.deal(level, t.v(), you, ItemStack.EMPTY);
+            int got = you.getInventory().countItem(coin), treasury1 = Ledger.coins(id), stock1 = stores(level, t, Items.GOLD_INGOT);
+            long market1 = MarketMaker.cash(id);
+            Kit.log("ia02 a player's two bars at the counter: \"" + said + "\"; " + got + " coins; treasury " + treasury0 + " -> " + treasury1
+                + "; the stores' gold " + stock0 + " -> " + stock1 + "; the market's cash " + market0 + " -> " + market1 + "p");
+            helper.assertTrue(got == 2 * (Market.COINS_PER_GOLD - 1) && you.getInventory().countItem(Items.GOLD_INGOT) == 0,
+                "two bars struck into sixteen coins: " + got + " (" + said + ")");
+            // The ninth coin of each bar is the town's (the mint's), and the bars its bullion, sold on to the market at its bid:
+            // the treasury the richer by both, the market's cash the poorer by the bullion, the town by the two coins kept.
+            helper.assertTrue(stock1 - stock0 == 2 && treasury1 - treasury0 >= 2
+                && Math.abs((treasury1 - treasury0) + (market1 - market0) / 100.0 - 2) <= 1.0,
+                "the mint keeps a coin a bar, and the bars go into the stores: treasury " + (treasury1 - treasury0) + ", the market "
+                + (market1 - market0) + "p, the stores' gold " + (stock1 - stock0));
+            // No mint before the Stone Age.
+            Villages.ageForTests(id, Villages.Age.WOOD);
+            you.getInventory().clearContent();
+            you.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT, 1));
+            String wood = Market.deal(level, t.v(), you, ItemStack.EMPTY);
+            helper.assertTrue(wood.contains("no mint") && you.getMainHandItem().is(Items.GOLD_INGOT) && you.getInventory().countItem(coin) == 0,
+                "a Wood Age town has no mint: " + wood);
+            you.discard();
+        } finally {
+            MarketMaker.liveForTests(false);
+        }
         // The memory core.
         Item core = McAssistantMod.MEMORY_CORE.get();
         String why = Makers.unmade(core);

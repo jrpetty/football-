@@ -212,7 +212,10 @@ public final class WorkStock {
             // and the builders' sticks are not all carried off to one workshop.
             int spare = Market.stock(level, v.id(), k.is()) / 2;
             int n = Math.min(k.keep() - have - coming, spare);
-            if (n <= 0) continue;
+            // [health] And not a courier's walk out to a far plot and back for a seed or two: a lot worth the walk (a quarter
+            // of what the chest keeps), else it waits till the stores have more. Three seeds, then one, then one again, kept
+            // the courier on the road for a whole morning while the harvest in that same chest waited to be fetched.
+            if (n <= 0 || n < Math.max(1, k.keep() / 4)) continue;
             StoreDeliveries.queueTo(level, v.id(), key, k.is(), new ItemStack(k.sample()), n, chest, destName);
         }
     }

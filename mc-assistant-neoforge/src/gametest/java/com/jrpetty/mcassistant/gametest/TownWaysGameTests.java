@@ -678,9 +678,20 @@ public class TownWaysGameTests {
 
             // Asked, and in passing.
             Player me = player(helper, sea.heart(), 0);
-            String asked = FolkTalk.answer(fa, me, TalkTopic.SAY, "Any sayings?");
-            Kit.log("cw04 \"Any sayings?\" " + asked);
-            helper.assertTrue(asked.contains(dry) && asked.contains("drought"), "the harbour folk tells its own, and where it came from: " + asked);
+            // [health] It tells one of the town's own at a time, chosen as it comes to mind: where the town's mine (opened on
+            // its first day) coined one too, the drought's story may wait for another asking. Every answer is one of the
+            // town's own with where it came from, and asked a few times over it tells the drought's.
+            String asked = "";
+            List<String> answers = new ArrayList<>();
+            for (int k = 0; k < 24 && !(asked.contains(dry) && asked.contains("drought")); k++) {
+                asked = FolkTalk.answer(fa, me, TalkTopic.SAY, "Any sayings?");
+                answers.add(asked);
+                String a0 = asked;
+                helper.assertTrue(asked.startsWith("We say \"") && asked.contains("It comes from day ")
+                    && TownSpeech.coined(x).stream().anyMatch(sg -> a0.contains("\"" + sg.text() + "\"")), "one of the town's own, and where it came from: " + asked);
+            }
+            Kit.log("cw04 \"Any sayings?\" " + asked + " (asked " + answers.size() + " times)");
+            helper.assertTrue(asked.contains(dry) && asked.contains("drought"), "the harbour folk tells its own, and where it came from: " + answers);
             List<String[]> chat = TownSpeech.talk(fa, sea.folk().get(3), level, level.getRandom());
             Kit.log("cw04 in passing: " + (chat.isEmpty() ? "nothing" : String.join(" / ", chat.get(0))));
             helper.assertTrue(!chat.isEmpty(), "two folk pass the time with it");

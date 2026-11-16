@@ -617,6 +617,15 @@ public class SportGameTests {
         Ledger.built(id, Archery.STRUCTURE, at, Direction.NORTH);
         Ledger.Building range = Archery.of(id);
         chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.ARROW, 24), new ItemStack(Items.BOW, 1), new ItemStack(Items.REDSTONE, 8));
+        // [health] No string in the stores (the founders' chest brings some): with the one bow out on loan the smith would
+        // fletch the watch another (a bow in the stores for each guard, Crafts.fletch), and the count below is of the one lent.
+        Villages.forgetStores(id);
+        for (BlockPos p : Villages.storeChests(level, id)) {
+            if (!(level.getBlockEntity(p) instanceof Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(Items.STRING)) c.setItem(i, ItemStack.EMPTY);
+            c.setChanged();
+        }
+        Villages.forgetStock();
         List<String> did = new ArrayList<>();
         String done;
         while (did.size() < 10 && (done = Archery.tendOne(level, v, range)) != null) did.add(done);
@@ -652,7 +661,7 @@ public class SportGameTests {
                     + "; arrows " + arrows0 + " -> " + arrowsNow + "; xp " + xp0 + " -> " + xp);
                 helper.assertTrue(last[0] == Archery.ARROWS, "six arrows shot: " + last[0]);
                 helper.assertTrue(arrowsNow == arrows0 - Archery.ARROWS + last[3] && last[3] >= 4, "the arrows pulled and back in the stores: " + last[3]);
-                helper.assertTrue(stock(level, id, Items.BOW) == 1, "the borrowed bow back");
+                helper.assertTrue(stock(level, id, Items.BOW) == 1, "the borrowed bow back: " + stock(level, id, Items.BOW) + " in the stores; " + g1.displayNameCap() + " holds " + g1.getMainHandItem() + ", carries " + g1.countCarried(s -> s.is(Items.BOW)) + " bows; " + g2.displayNameCap() + " " + g2.getMainHandItem() + ", " + g2.countCarried(s -> s.is(Items.BOW)));
                 helper.assertTrue(xp > xp0, "the better at its trade for the morning: " + xp0 + " -> " + xp);
                 arrows[0] = arrowsNow;
                 // How the watch stands when the contest is called (the leader's escort, a fight, asleep, away).

@@ -93,6 +93,14 @@ public final class ServiceQueue {
         }
         if (st.keeper() == f || role == ServiceRole.SHOP && ShopRoles.role(f) != ShopRoles.Role.NONE) {
             leave(f.getUUID());                                                    // its own counter: served over it, no line
+            // [health] But at it: a hand of the shop sent its own way from across the room was "served" ten blocks off,
+            // the counter (StoreFloor.folkBuys) would not reach it, and its trip came home with nothing.
+            BlockPos front = point.queueSpot(level, 0);
+            if (f.distanceToSqr(point.pos().getX() + 0.5, point.pos().getY(), point.pos().getZ() + 0.5) > 3.0 * 3.0
+                    && f.distanceToSqr(front.getX() + 0.5, front.getY(), front.getZ() + 0.5) > 1.3 * 1.3) {
+                if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.walkTo(front, 0.8D);
+                return Turn.BUSY;
+            }
             return Turn.GO;
         }
         List<Place> line = LINES.computeIfAbsent(key, k -> new java.util.concurrent.CopyOnWriteArrayList<>());
