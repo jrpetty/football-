@@ -12866,7 +12866,8 @@ Batch 1B's entrepreneurs only ever appeared in tests that seeded one. Ten days o
   the week's want of it, and one over; two of its first ware while nothing is wanted). Its hands, at their bench, make the
   ware the shelf is shortest of first, out of the stores at the market's price (the firm buys the makings), and the piece
   goes on its shelf in the stores to sell at the firm's own price; only with the shelf full do they turn to the town's
-  wants. A shop that buys in to sell on (the greengrocer, the general store) buys its shelf's stock at the market each
+  wants, and then on the town's account and into the town's books, not the firm's. A maker's opportunity is only one
+  where its wares can be made out of what the stores hold (no clothier where the town has no leather). A shop that buys in to sell on (the greengrocer, the general store) buys its shelf's stock at the market each
   morning, on its credit if its till is short.
 - **Tools are capital.** What a business buys that lasts (anything that wears with use, a bucket, a lead, a saddle) goes
   into its kit at what it cost, and a fourteenth of the kit is written off each morning as it wears; its worth carries the
