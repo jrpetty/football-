@@ -513,6 +513,43 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
       (no hint yet); the new co-op bits (seated driver, overtime card) not yet seen with two real players.
 - [ ] Add own features; test everything (unit tests, playtests, renders of every process from arrival to dispatch).
 
+## Release audit (2026-11-16)
+- **Method:**
+  - code audit by a read-only helper;
+  - `tools/full_playthrough.tscn`, which plays from the title screen with real key presses and app-button clicks (name, PC apps, same-day lorry, the whole refurb loop by hand, selling, packing, courier, parcels, kitchen, roller door, moving equipment, desktops and servers, save/quit/continue, every premises), with screenshots in `tools/out/full/`;
+  - the full suite (`run_all_checks.sh`).
+- **Fixed (regression tests in `tests/unit/test_release_fixes.gd`):**
+  - every part a fault can need is in a PartsHub tab (the charge port, monitor stand, dock PSU and console cable weren't);
+  - saves are written safely (temp + .bak), Continue loads the newest, New game and hosting archive old saves, unreadable or newer-version saves show a message, closing the window saves;
+  - deliveries on the road survive save/quit/move (`GameState.in_transit`);
+  - new pallets land in a free spot;
+  - packing supplies are always buyable and a free move is always allowed (no debt dead-end);
+  - you can't store the only office PC;
+  - worn batteries (`sellable_as_is`) don't block imaging and cap the grade at C;
+  - closed lots can't be bought;
+  - reputation gains taper near the top;
+  - the default player name is "Player";
+  - F1 hides the HUD and F12 takes a screenshot;
+  - moving premises, sacking staff and renaming are host-only (`Sim.HOST_ONLY`);
+  - old shipped orders and "gone" items are pruned at day end (reviews kept in `totals.review_archive`);
+  - a departed guest's carried items are put down on load;
+  - the 64-bit seed and RNG state are saved as text;
+  - offline achievements sync once Steam starts;
+  - `export_presets.cfg` includes data/*.json and the skeleton.json and leaves out tools/tests/docs.
+- **Still open before release (needs Jon or bigger work):**
+  - **Steam:**
+    - a real app id (APP_ID 480 in `steam_bridge.gd`) and the achievements and leaderboards registered;
+    - a two-account co-op test, a kick/ban option and a lobby screen.
+  - **Product names:** model numbers and CPU numbers mirror real products (Prospect 5420, Folio 840 G7, Meridian T14, V5-1145G7, A7 Pro 5850U, X9-6248…). Brands are fictional, but rename before release to be safe.
+  - **Gameplay gaps against the brief:**
+    - no mess or cleaners, random events, rival bidders or website channel;
+    - no strip-down station;
+    - power capacity isn't enforced;
+    - spares units are never wiped.
+  - **Player basics:** no gamepad or Steam Deck support, no key rebinding screen, no tutorial beyond mail and hints, no credits or licences screen, no music.
+  - **Not yet verified:** a test export (templates aren't installed in the cloud box), and late-game balance of rent vs income on the big premises.
+  - **Release text:** the title screen says "early development build" and shows the build stamp. Remove both at release.
+
 ## Next up
 1. Lighting pass with real assets: bake LightmapGI in the editor, HDRI sky, decals (oil stains, scuffs), more clutter.
 2. Juice: item outline highlight, pick-up/put-down animation curves, particles (dust in the door light, cardboard bits), screen glow light on benches, footstep surfaces, music.

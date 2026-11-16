@@ -196,6 +196,7 @@ Or run individually in the editor:
 - `tools/forklift_test.tscn` (F6) — the real player drives the real forklift with simulated keys: forks under a pallet, lift, into the racking at level 2, set down, reverse out, walls stop it.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
 - `tools/check_scripts.tscn` — compiles every script.
+- `tools/full_playthrough.tscn` — the release playthrough. It plays from the title screen with real key presses and app-button clicks: naming the business, every PC app, the same-day lorry, the whole refurb loop by hand, selling, packing, courier, parcels, the kitchen, the roller door, moving equipment, desktops and servers, save/quit/continue, then every premises. Screenshots go to `tools/out/full/` and a ✔/✖ list is printed. Needs a display or xvfb; takes 45–60 min on a slow machine. Your saves are set aside and put back.
 - `tools/economy_sim.tscn -- --days 20 --seed 3` — a bot runs the business through the real commands for N days and prints the headline numbers and the auto-insights (good for balancing).
 - `tools/screenshot.tscn` — renders QA shots into `tools/out/` (args: `--setup` for a busy scene, `--ui` for HUD/PC shots).
 
