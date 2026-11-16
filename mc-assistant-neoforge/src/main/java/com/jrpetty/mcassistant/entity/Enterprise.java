@@ -1099,6 +1099,15 @@ public final class Enterprise {
         r.putDouble("rep", Math.max(0, Math.min(1, rep)));
         r.putInt("outs", Math.max(0, outs - 1));
         if (day - b.opened < 2) return;
+        // [econ-1d] Sold out again and again, with a good share of its market: more call for its wares than it can make, and its
+        // price goes up a little (a twentieth on its markup, every third day at most), as a busy shop's would.
+        if (outs >= 3 && s >= 3 * LOW_SHARE && b.markup < Businesses.MOST_MARKUP && day - r.getLong("raised") >= 3) {
+            double was = b.markup;
+            b.markup = Math.min(Businesses.MOST_MARKUP, b.markup + 0.05);
+            r.putLong("raised", day);
+            b.note(day, "prices up: markup " + Businesses.pct(was) + " -> " + Businesses.pct(b.markup) + ", sold out " + outs
+                + " times with " + Businesses.pct(s) + " of its market: more wanted than it can make");
+        }
         if (s < LOW_SHARE) r.putInt("lowShare", r.getInt("lowShare") + 1);
         else r.putInt("lowShare", 0);
         if (r.getInt("lowShare") >= LOW_SHARE_DAYS && b.markup > Businesses.LEAST_MARKUP) {

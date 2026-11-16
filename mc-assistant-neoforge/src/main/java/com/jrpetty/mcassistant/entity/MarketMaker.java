@@ -1256,6 +1256,7 @@ public final class MarketMaker {
         out.put("ious", ious);
         out.putString("census", CoinCensus.line(village));
         out.putString("budget", TownBudget.line(village));                        // [econ-1b] the town's budget
+        out.putString("iouWeek", IouBook.weekLine(village));                       // [econ-1d] the IOUs' week: who wrote them, how cleared
         return out;
     }
 
@@ -1293,6 +1294,8 @@ public final class MarketMaker {
         sb.append("Today's takes: ").append(tallies(village)).append("\n");
         String budget = TownBudget.line(village);                                  // [econ-1b] the town's budget
         if (!budget.isEmpty()) sb.append(budget).append("\n");
+        String ious = IouBook.weekLine(village);                                    // [econ-1d] the IOUs' week
+        if (!ious.isEmpty()) sb.append(ious).append("\n");
         for (String l : Privatisation.lines(level, village)) sb.append(l).append("\n");
         return sb.toString();
     }

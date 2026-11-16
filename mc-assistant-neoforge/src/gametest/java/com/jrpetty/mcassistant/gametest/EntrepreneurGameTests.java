@@ -743,7 +743,21 @@ public class EntrepreneurGameTests {
         tenDays(helper, 1504000, "ent12", false);
     }
 
+    /**
+     * [econ-1d] Twenty days of a town nobody seeded, the market at work: the same as ent12, ten days longer, long enough for
+     * a firm with real call for its wares and the makings to make them to thrive. At least one firm founded by its own folk
+     * and at least one thriving at some morning; the census at nought drift every morning; the IOUs bounded.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1900000, required = false, batch = "ent15_twenty_days")
+    public static void ent15_twenty_days(GameTestHelper helper) {
+        tenDays(helper, 1604000, "ent15", false, 20);
+    }
+
     static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded) {
+        tenDays(helper, cx, tag, seeded, 10);
+    }
+
+    static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded, int days) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
         Kit.reset(level);
@@ -770,6 +784,9 @@ public class EntrepreneurGameTests {
         final String[] verdict = { null };
         final long[] worstDrift = { 0 };
         final long[] mostIous = { 0 };
+        final long[] iouTrend = { 0, -1, 0 };                                    // [econ-1d] the peak's day, the last, IOUs then
+        final java.util.Set<String> thrived = new java.util.TreeSet<>();          // [econ-1d] firms seen thriving
+        final java.util.Map<String, long[]> money = new java.util.TreeMap<>();    // [econ-1d] the town's revenue and spending, by day
         final Runnable[] look = { null };
         look[0] = () -> {
             if (verdict[0] == null) helper.runAfterDelay(100, () -> look[0].run());
@@ -814,7 +831,15 @@ public class EntrepreneurGameTests {
                     if (dayNo == 1 && seeded) wouldBe(level, id, tag);
                     long drift = CoinCensus.lastDrift(id);
                     worstDrift[0] = Math.max(worstDrift[0], Math.abs(drift));
+                    if (Accounts.debts(id) > mostIous[0]) iouTrend[0] = dayNo;
                     mostIous[0] = Math.max(mostIous[0], Accounts.debts(id));
+                    iouTrend[1] = dayNo;
+                    iouTrend[2] = Accounts.debts(id);
+                    for (Business fb : Enterprise.all(id)) {                      // [econ-1d] a firm seen thriving
+                        CompoundTag fr = Enterprise.recordForTests(id, fb);
+                        if (fr != null && "thriving".equals(fr.getString("status"))) thrived.add(fb.name);
+                    }
+                    if (MarketMaker.live(id)) money.put(String.format(Locale.ROOT, "%02d", dayNo), new long[]{ TownBudget.revenue7(id), TownBudget.spent7(id), Accounts.debts(id), TownBudget.limit(id) });
                     Kit.log(tag + " day " + dayNo + ": " + Villages.headcount(id) + " folk, " + Ledger.buildings(id).size() + " buildings, food "
                         + Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id)) + ", treasury "
                         + Businesses.pence(Businesses.treasuryPence(id)) + ", IOUs " + Businesses.pence(Accounts.debts(id)) + ", market "
@@ -827,7 +852,7 @@ public class EntrepreneurGameTests {
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
                 }
-                if (ran >= 10 * 24000L) {
+                if (ran >= days * 24000L) {
                     over[0] = true;
                     server.tickRateManager().setTickRate(20.0F);
                     ticking.set(tickingWas, server);
@@ -845,6 +870,14 @@ public class EntrepreneurGameTests {
                     ok.that(food > 0, "it fed itself: food in the stores " + food);
                     ok.that(worstDrift[0] == 0, "the census at nought drift every morning (worst " + worstDrift[0] + ")");
                     Kit.log(tag + " most IOUs " + Businesses.pence(mostIous[0]));
+                    Kit.log(tag + " IOU TREND: peak " + Businesses.pence(mostIous[0]) + " on day " + iouTrend[0] + ", " + Businesses.pence(iouTrend[2])
+                        + " on day " + iouTrend[1] + ", now " + Businesses.pence(Accounts.debts(id)) + " against the bound " + Businesses.pence(Math.max(TownBudget.limit(id) * 2, 20000)));
+                    StringBuilder mb = new StringBuilder();
+                    for (java.util.Map.Entry<String, long[]> e2 : money.entrySet()) mb.append("d").append(e2.getKey()).append(" in7 ").append(Businesses.pence(e2.getValue()[0]))
+                        .append(" spent7 ").append(Businesses.pence(e2.getValue()[1])).append(" ious ").append(Businesses.pence(e2.getValue()[2])).append(" limit ")
+                        .append(Businesses.pence(e2.getValue()[3])).append("; ");
+                    Kit.log(tag + " MONEY by day: " + mb);
+                    Kit.log(tag + " THRIVED: " + thrived);
                     Kit.log(tag + " FINAL firms: " + Enterprise.words(level, id).replace('\n', '|'));
                     for (Business fb : Enterprise.all(id)) {                       // [econ-1c] each firm's books in brief
                         CompoundTag fr = Enterprise.recordForTests(id, fb);
@@ -877,6 +910,7 @@ public class EntrepreneurGameTests {
                     }
                     int[] counts = Enterprise.countsForTests(id);
                     ok.that(counts[0] >= 1, "at least one firm opened by its own folk: " + counts[0] + " opened, " + counts[1] + " bankrupt, " + counts[2] + " wound up");
+                    if (days >= 20) ok.that(!thrived.isEmpty(), "at least one firm thriving: " + thrived);   // [econ-1d]
                     ok.that(mostIous[0] <= Math.max(TownBudget.limit(id) * 2, 20000), "the town's IOUs bounded: at most " + Businesses.pence(mostIous[0])
                         + " against what it can carry, " + Businesses.pence(TownBudget.limit(id)));
                     verdict[0] = ok.clean() ? "" : ok.summary();

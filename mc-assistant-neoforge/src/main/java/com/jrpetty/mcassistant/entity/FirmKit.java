@@ -31,7 +31,10 @@ public final class FirmKit {
         long book = Capital.value(village, b);
         Villages.Village v = Villages.get(village);
         if (book <= 0 || v == null) return 0;
-        Set<VillageFolkEntity> who = new LinkedHashSet<>(Enterprise.hands(village, b));
+        // Its hired hands' packs first, then an owner's who worked it (a partner who never did keeps its own tools).
+        Set<VillageFolkEntity> who = new LinkedHashSet<>();
+        for (VillageFolkEntity f : Enterprise.hands(village, b)) if (!b.ownedBy(f.getUUID())) who.add(f);
+        who.addAll(Enterprise.hands(village, b));
         VillageFolkEntity sole = Enterprise.soleTrader(village, b);
         if (sole != null) who.add(sole);
         boolean live = MarketMaker.live(village);
@@ -43,6 +46,8 @@ public final class FirmKit {
             for (int i = 0; i < inv.size() && worth < book; i++) {
                 ItemStack s = inv.get(i);
                 if (s.isEmpty() || !Capital.durable(s) || s.isEnchanted() || s.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) continue;
+                // A folk's own sword and armour are its own, not the firm's working kit.
+                if (s.getItem() instanceof net.minecraft.world.item.SwordItem || s.getItem() instanceof net.minecraft.world.item.ArmorItem) continue;
                 ItemStack one = s.copyWithCount(1);
                 double left = s.isDamageableItem() && s.getMaxDamage() > 0 ? 1.0 - s.getDamageValue() / (double) s.getMaxDamage() : 1.0;
                 double ask = live ? MarketMaker.ask(level, village, one) : Prices.each(one.getItem());
