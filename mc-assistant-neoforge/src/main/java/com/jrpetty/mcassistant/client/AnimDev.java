@@ -29,6 +29,8 @@ import java.util.Locale;
  *   grip SAW main 0 0 0 0 0 0 1     the act's tool in the main (or off) hand: moved (pixels), turned (degrees), sized
  *   effects NONE               the effects as if the client's config said so (ALL, SOME, NONE)
  *   perf                       the folk's cost each frame, logged every five seconds (client/AnimPerf)
+ *   cape                       a test cape on every player (EmoteCape)
+ *   swim AT MID / sack X Y Z TILT SIZE    the swimmer's lie in the water, the sack's hang from the hand
  * </pre>
  *
  * A clip or a grip taken out of the file goes back to its own.
@@ -47,6 +49,7 @@ public final class AnimDev {
     static final float[][][] GRIP = new float[Act.values().length][][];
     @Nullable
     static AnimConfig.Effects effects;
+    private static boolean capeByFile;
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -66,7 +69,7 @@ public final class AnimDev {
         FolkAnimations.restoreAll();
         for (int i = 0; i < GRIP.length; i++) GRIP[i] = null;
         effects = null;
-        boolean perf = false;
+        boolean perf = false, cape = false;
         for (int i = 0; i < lines.size(); i++) {
             String[] w = lines.get(i).trim().split("\\s+");
             if (w.length == 0 || w[0].isEmpty() || w[0].startsWith("#")) continue;
@@ -87,10 +90,15 @@ public final class AnimDev {
                 }
                 case "effects" -> effects = AnimConfig.Effects.valueOf(w[1].toUpperCase(Locale.ROOT));
                 case "perf" -> perf = true;
+                case "cape" -> cape = true;
+                case "sack" -> { for (int k = 0; k < 5; k++) FolkActionLayer.SACK[k] = Float.parseFloat(w[1 + k]); }
+                case "swim" -> { FolkRenderer.SWIM_AT = Float.parseFloat(w[1]); FolkRenderer.SWIM_MID = Float.parseFloat(w[2]); }
                 default -> { }
             }
         }
         AnimPerf.on = perf;
+        if (cape || capeByFile) EmoteCape.set(cape);
+        capeByFile = cape;
         com.mojang.logging.LogUtils.getLogger().info("[anim] animdev: read {} lines", lines.size());
     }
 }

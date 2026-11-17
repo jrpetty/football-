@@ -35,6 +35,7 @@ import java.util.List;
  *   /village anim befriend            (a player) the nearest folk thinks well of you (to see your emotes answered)
  *   /village anim friend [front]      (a player) a folk stood up beside you that thinks well of you (front: face to face)
  *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
+ *   /village anim perf                (ops) time the folk's acts being worked out; again: the cost a folk a tick
  *   /village emote EMOTE [ANGLE]      (anybody) the player's own emote, as the wheel sends it, its turned camera at ANGLE
  *                                    degrees round from its front (90: side on) if asked; "wheel" opens the wheel
  * </pre>
@@ -67,7 +68,8 @@ public final class AnimCommands {
                 .then(Commands.literal("befriend").executes(AnimCommands::befriend))
                 .then(Commands.literal("friend").executes(ctx -> friend(ctx, false))
                     .then(Commands.literal("front").executes(ctx -> friend(ctx, true))))
-                .then(Commands.literal("stage").executes(AnimCommands::stage))));
+                .then(Commands.literal("stage").executes(AnimCommands::stage))
+                .then(Commands.literal("perf").requires(src -> src.hasPermission(2)).executes(AnimCommands::perf))));
         // The player's own emotes, typed (the wheel and the talk screen send the same): anybody, at the same pace.
         event.getDispatcher().register(Commands.literal("village")
             .then(Commands.literal("emote").then(Commands.argument("emote", StringArgumentType.word())
@@ -189,6 +191,23 @@ public final class AnimCommands {
         if (f == null) return 0;
         ctx.getSource().sendSuccess(() -> Component.literal(f.displayNameCap() + " is glad to see you"), false);
         return 1;
+    }
+
+    /** On: the work-out timed from now. Again: what it cost since, per folk per tick, and off. */
+    private static int perf(CommandContext<CommandSourceStack> ctx) {
+        if (!FolkAction.measuring) {
+            FolkAction.measuredNs = FolkAction.measuredTicks = FolkAction.measuredDerives = FolkAction.measuredMax = 0L;
+            FolkAction.measuring = true;
+            ctx.getSource().sendSuccess(() -> Component.literal("Timing the folk's acts; /village anim perf again for the cost."), false);
+            return 1;
+        }
+        FolkAction.measuring = false;
+        long n = Math.max(1L, FolkAction.measuredTicks), d = Math.max(1L, FolkAction.measuredDerives);
+        String line = String.format(java.util.Locale.ROOT, "ANIM-PERF folk-ticks %d work-outs %d: %.0f ns a folk a tick, %.0f ns a work-out, longest %.1f us, %.3f ms in all",
+            FolkAction.measuredTicks, FolkAction.measuredDerives, FolkAction.measuredNs / (double) n, FolkAction.measuredNs / (double) d,
+            FolkAction.measuredMax / 1e3, FolkAction.measuredNs / 1e6);
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        return (int) Math.min(Integer.MAX_VALUE, FolkAction.measuredTicks);
     }
 
     private static int stage(CommandContext<CommandSourceStack> ctx) {

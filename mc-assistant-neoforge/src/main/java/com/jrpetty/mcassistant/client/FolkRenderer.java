@@ -144,6 +144,24 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         pose.scale(s * wide, s, s * wide);
     }
 
+    /**
+     * [anim] A swimmer laid flat in the water, face down and head up, as a player swims: the whole body turned forward
+     * about the middle of its back, at the water's top (where a folk treading water has its chest), blended in and out
+     * with the clip.
+     */
+    @Override
+    protected void setupRotations(VillageFolkEntity folk, PoseStack pose, float bob, float yBodyRot, float partialTick, float scale) {
+        super.setupRotations(folk, pose, bob, yBodyRot, partialTick, scale);
+        float swim = FolkAnimations.weight(folk.animSeen(), com.jrpetty.mcassistant.entity.FolkAction.Act.SWIM.ordinal(), folk.tickCount + partialTick);
+        if (swim <= 0.0F) return;
+        pose.translate(0.0F, SWIM_AT * swim, 0.0F);
+        pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0F * swim));
+        pose.translate(0.0F, -SWIM_MID * swim, 0.0F);
+    }
+
+    /** The swimmer's back at this height over its feet' place, and turned about this far up its body (blocks). */
+    static float SWIM_AT = 1.15F, SWIM_MID = 0.95F;
+
     private static int trade(AssistantEntity folk) {
         return FolkModel.outfit(folk);                     // [caves] the cave dweller in its own (FolkModel.CAVE_OUTFIT)
     }

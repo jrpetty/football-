@@ -230,15 +230,31 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         pose.popPose();
     }
 
-    /** A sack over the shoulder of the hand that holds its neck, hanging down the back. */
+    /**
+     * A sack over the shoulder, held by its neck in the hand reached up over that shoulder, its weight down the back: hung
+     * from the hand (it goes where the hand goes), upright whatever the arm's angle, drawn as two pictures crossed so it
+     * has its bulk from the side as well as from behind.
+     */
     private void sack(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk, ItemStack s, boolean right) {
+        net.minecraft.client.model.geom.ModelPart arm = right ? getParentModel().rightArm() : getParentModel().leftArm();
+        float m = right ? 1.0F : -1.0F;
         pose.pushPose();
-        getParentModel().body().translateAndRotate(pose);
-        pose.translate((right ? -2.5F : 2.5F) / 16.0F, 2.0F / 16.0F, 4.2F / 16.0F);
-        pose.mulPose(Axis.ZP.rotationDegrees(180.0F + (right ? -18.0F : 18.0F)));
-        pose.scale(0.9F, 0.9F, 0.9F);
-        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(s, ItemDisplayContext.FIXED, light,
-            net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
+        arm.translateAndRotate(pose);
+        pose.translate(-m / 16.0F, 10.0F / 16.0F, 0.0F);              // the hand
+        pose.mulPose(Axis.XP.rotation(-arm.xRot));                    // and upright again, in the body's frame
+        pose.mulPose(Axis.YP.rotation(-arm.yRot));
+        pose.mulPose(Axis.ZP.rotation(-arm.zRot));
+        pose.translate(m * SACK[0] / 16.0F, SACK[1] / 16.0F, SACK[2] / 16.0F);
+        pose.mulPose(Axis.ZP.rotationDegrees(180.0F - m * SACK[3]));
+        pose.scale(SACK[4], SACK[4], SACK[4]);
+        net.minecraft.client.renderer.entity.ItemRenderer items = net.minecraft.client.Minecraft.getInstance().getItemRenderer();
+        items.renderStatic(s, ItemDisplayContext.FIXED, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
+        pose.mulPose(Axis.YP.rotationDegrees(90.0F));
+        pose.scale(0.8F, 1.0F, 0.8F);
+        items.renderStatic(s, ItemDisplayContext.FIXED, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
         pose.popPose();
     }
+
+    /** Where the sack hangs from the hand: across, down, back (pixels), its tilt (degrees) and its size. */
+    static final float[] SACK = {0.5F, 7.5F, 3.5F, 8.0F, 1.1F};
 }

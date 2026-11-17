@@ -309,9 +309,10 @@ public final class FolkAnimations {
             .r(HEAD, 0, -6, 0, 0, 1.0F, -6, 0, 0)
             .lean(0, -6, 0.5F, -5, 1.0F, -6)
             .done());
-        // A sack over the shoulder, held by its neck, bowed a little under it.
+        // A sack over the shoulder: the hand reached up and back over it, holding the sack by its neck, the weight of it
+        // down the back (FolkActionLayer hangs it from the hand), bowed a little under it, the head turned from it.
         put(Act.SACK, loop(1.0F)
-            .r(RA, 0, -156, -24, 6, 0.5F, -152, -24, 6, 1.0F, -156, -24, 6)
+            .r(RA, 0, 160, -10, -10, 0.5F, 156, -10, -10, 1.0F, 160, -10, -10)
             .r(HEAD, 0, 6, -6, -4, 1.0F, 6, -6, -4)
             .twist(0, 4, 1.0F, 4)
             .lean(0, 8, 0.5F, 9, 1.0F, 8)
@@ -648,13 +649,15 @@ public final class FolkAnimations {
             .low(0, 0, 0.35F, -0.8F, 0.7F, 0)
             .lean(0, 6, 0.7F, 6)
             .done());
-        // Treading water: the arms sculling out in front and to the sides, the legs kicking.
-        put(Act.SWIM, loop(1.2F)
-            .r(RA, 0, -60, 0, 30, 0.6F, -40, 0, 60, 1.2F, -60, 0, 30)
-            .r(LA, 0, -60, 0, -30, 0.6F, -40, 0, -60, 1.2F, -60, 0, -30)
-            .r(RL, 0, 20, 0, 0, 0.3F, -20, 0, 0, 0.6F, 20, 0, 0, 0.9F, -20, 0, 0, 1.2F, 20, 0, 0)
-            .r(LL, 0, -20, 0, 0, 0.3F, 20, 0, 0, 0.6F, -20, 0, 0, 0.9F, 20, 0, 0, 1.2F, -20, 0, 0)
-            .r(HEAD, 0, -20, 0, 0, 1.2F, -20, 0, 0)
+        // Swimming: laid flat in the water (FolkRenderer turns the body face down), the head up out of it; a breaststroke,
+        // the arms gliding out ahead, swept out and round and drawn in under the chest, then shot forward again, the legs
+        // drawn up and kicked out and together.
+        put(Act.SWIM, loop(1.4F)
+            .r(RA, 0, -175, 0, 0, 0.35F, -150, 0, 50, 0.6F, -105, 0, 25, 0.8F, -150, 0, 5, 1.4F, -175, 0, 0)
+            .r(LA, 0, -175, 0, 0, 0.35F, -150, 0, -50, 0.6F, -105, 0, -25, 0.8F, -150, 0, -5, 1.4F, -175, 0, 0)
+            .r(RL, 0, 0, 0, 0, 0.5F, 25, 0, 0, 0.75F, 10, 0, 25, 0.95F, 0, 0, 0, 1.4F, 0, 0, 0)
+            .r(LL, 0, 0, 0, 0, 0.5F, 25, 0, 0, 0.75F, 10, 0, -25, 0.95F, 0, 0, 0, 1.4F, 0, 0, 0)
+            .r(HEAD, 0, -65, 0, 0, 0.6F, -78, 0, 0, 1.0F, -60, 0, 0, 1.4F, -65, 0, 0)
             .done());
         // On guard behind the shield: the shield up before the chest, the blade held back and low, the feet apart.
         put(Act.BLOCK, loop(2.0F)
@@ -859,6 +862,14 @@ public final class FolkAnimations {
         st.keepMain = attackTime > 0.0F && (act == Act.THRUST || act == Act.BLOCK || act == Act.WATCH);
         play(rig, s, age, st);
         if (AnimPerf.on) { AnimPerf.clipNs += System.nanoTime() - t0; AnimPerf.clipped++; }
+    }
+
+    /** How far an act is on a folk's body just now (0 to 1, eased as the clips blend): the swimmer laid flat (FolkRenderer). */
+    public static float weight(FolkAction.Seen s, int act, float age) {
+        if (s.act != act && s.prev != act) return 0.0F;
+        float w = Mth.clamp((age - s.changed) / BLEND, 0.0F, 1.0F);
+        w = w * w * (3.0F - 2.0F * w);
+        return (s.act == act ? w : 0.0F) + (s.prev == act ? 1.0F - w : 0.0F);   // begun again: whole throughout
     }
 
     /** Where in its clip a folk is at a tick (for the effects: the moment the hammer lands). */
