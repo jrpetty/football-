@@ -252,9 +252,9 @@ public final class Couriers {
             // the edge of its field while the stores held none): the storehouse sends for it first.
             boolean wanted = false;
             for (java.util.Map.Entry<net.minecraft.world.item.Item, Integer> e : lots.entrySet()) {
-                if (e.getValue() < 8) continue;
+                if (e.getValue() < 8 || InputWants.wanted(village, e.getKey()) <= 0 && !Bonded.firmsBuy(village, e.getKey())) continue;
                 int inStores = outOf.computeIfAbsent(e.getKey(), it -> Market.stock(level, village, s2 -> s2.is(it)));
-                if (inStores < 8 && (InputWants.wanted(village, e.getKey()) > 0 || Bonded.firmsBuy(village, e.getKey()))) { wanted = true; break; }
+                if (inStores < 8) { wanted = true; break; }
             }
             if (held < CHEST_WORTH && !feed && (room || held == 0)) { o.since.remove(key); continue; }
             Run r = new Run(o.nextId++, Kind.CHEST, key);
