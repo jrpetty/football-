@@ -133,7 +133,7 @@ public final class Retinue {
             if (f == null || !f.isAlive()) { stayed.add("one out of reach"); i++; continue; }
             if (f.isHired() && p.getUUID().equals(f.hiredBy())) { came.add(f.displayNameCap()); i++; continue; }
             if (f.isHired()) { stayed.add(f.displayNameCap() + " (hired out)"); i++; continue; }
-            if (!pay(level, town, p, i < TOWN_PAID)) {
+            if (!pay(level, town, p, i < TOWN_PAID, f)) {
                 stayed.add(f.displayNameCap() + " (unpaid)");
                 i++;
                 continue;
@@ -156,14 +156,18 @@ public final class Retinue {
     }
 
     /** A day's pay for one man: out of the treasury for the town's own two, else out of the knight's coin. */
-    static boolean pay(ServerLevel level, UUID town, Player p, boolean townPays) {
+    static boolean pay(ServerLevel level, UUID town, Player p, boolean townPays, VillageFolkEntity man) {
+        // [health] The wage into the man's own purse (it used to go to nobody: the treasury's coin gone by no booked way).
         if (townPays) {
             if (Ledger.takeCoins(town, WAGE) < WAGE) return false;
             Economy.spent(town, WAGE);
+            man.earn(WAGE);
             return true;
         }
         if (Market.coinsHeld(p) < WAGE) return false;
         Market.payOut(p, WAGE);
+        man.earn(WAGE);
+        CoinCensus.playerIn(CoinCensus.purseTown(man), WAGE);        // [health]
         return true;
     }
 
@@ -278,7 +282,7 @@ public final class Retinue {
                         VillageFolkEntity f = CivicLand.find(level, u);
                         boolean townPays = i++ < TOWN_PAID;
                         if (f == null || !knight.equals(f.hiredBy())) continue;
-                        if (pay(level, id, p, townPays)) {
+                        if (pay(level, id, p, townPays, f)) {
                             f.hire(p, level.getGameTime() + 24000L + 600L);
                         } else {
                             home(f, level, p, townPays ? "The treasury can't pay me, " + Knights.style(knight).word + ". I'm for home."

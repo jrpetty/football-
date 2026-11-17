@@ -82,6 +82,7 @@ public final class Earnings {
         if (paid <= 0) return 0;
         Economy.spent(village, paid);
         giveCoins(p, paid);
+        CoinCensus.playerOut(village, paid);                         // [health] out of the counted treasury
         record(p, village, src, paid, from, what);
         return paid;
     }

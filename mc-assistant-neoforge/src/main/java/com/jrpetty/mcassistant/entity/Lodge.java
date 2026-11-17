@@ -541,6 +541,7 @@ public final class Lodge {
         if (!payForSheet(level, v)) return "I'd copy it gladly, but there's not paper enough in the stores. Nine sheets a map.";
         Market.payOut(p, MAP_PRICE);
         f.earn(MAP_PRICE);
+        CoinCensus.playerIn(CoinCensus.purseTown(f), MAP_PRICE);      // [health]
         long day = level.getDayTime() / 24000L;
         byte scale = scaleFor(village, 1);
         ItemStack map = sheet(level, v, v.centre().getX(), v.centre().getZ(), scale, "The caves of " + Villages.name(village),

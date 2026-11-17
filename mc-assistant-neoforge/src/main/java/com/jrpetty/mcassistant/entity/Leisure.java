@@ -352,12 +352,16 @@ final class Leisure {
      *  null if it has none. The one it takes is the one that goes in the ground. */
     @Nullable
     private static Block flowerToHand(VillageFolkEntity f, ServerLevel server, BlockPos at) {
+        // [health] Never a keepsake (a present, a posy given it), nor a flower it is carrying to somebody (a housewarming's
+        // present: a gardener planted it in the grass on the way, and arrived empty-handed with its thanks all the same).
+        boolean carrying = Neighbourly.hasErrand(f);
         for (ItemStack s : f.getInventoryItems()) {
-            if (s.isEmpty() || !s.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS)) continue;
+            if (carrying) break;
+            if (s.isEmpty() || !s.is(net.minecraft.tags.ItemTags.SMALL_FLOWERS) || Homes.isKeepsake(s)) continue;
             Item mine = s.getItem();
             Block b = Block.byItem(mine);
             if (b == Blocks.AIR || !b.defaultBlockState().canSurvive(server, at)) continue;
-            if (f.removeMatching(st -> st.is(mine), 1) == 1) return b;
+            if (f.removeMatching(st -> st.is(mine) && !Homes.isKeepsake(st), 1) == 1) return b;
         }
         Villages.Village v = Villages.get(f.ownerId());
         if (v == null) return null;

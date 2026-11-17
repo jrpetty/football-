@@ -419,6 +419,9 @@ public class DiningGameTests {
     public static void dn04_struck_mid_service(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Town t = town(helper, 1883700, 0, new ItemStack(Items.BEEF, 1));
+        // [health] A seasoned cook: a green hand burns a roast now and then (Dining.cook) and makes it again from fresh makings,
+        // and with the one beef gone to a burnt roast both were struck; the test is of the makings running out, not of a burn.
+        t.cook().awardXp(com.jrpetty.mcassistant.entity.AssistantEntity.xpForLevel(5));
         ServerPlayer[] pl = new ServerPlayer[1];
         Dining.Order[] ord = new Dining.Order[1];
         int[] till = { 0 };

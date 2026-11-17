@@ -129,7 +129,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void remove(net.minecraft.world.entity.Entity.RemovalReason reason) {
         UUID village = ownerId();
         BlockPos centre = villageCentre;
-        if (!reason.shouldDestroy() && !level().isClientSide) CoinCensus.away(village, getUUID(), purse());   // [econ-1e] out of the world, its purse still counted
+        if (!reason.shouldDestroy() && !level().isClientSide) CoinCensus.away(village, getUUID(), purse() + (trip != null ? Math.max(0, trip.purse) : 0));   // [health] and its trip's purse   // [econ-1e] out of the world, its purse still counted
         super.remove(reason);
         if (!reason.shouldDestroy() || village == null || centre == null) return;
         Villages.recordDeath(village);      // unloading is not dying
@@ -7304,6 +7304,10 @@ public class VillageFolkEntity extends AssistantEntity {
         int drawn = still != null && !project.equals("fortify")
             ? still.getOrDefault(BuildGoal.Part.BLOCK, 0)
             : BuildGoal.partCounts(project, site.radius()).getOrDefault(BuildGoal.Part.BLOCK, 0);
+        // [health] Taken up again with every block of it laid: what is left is its windows, doors, lamps and flowers, and no
+        // stone or timber is wanted for them, nor the ground under a building already standing (the flats waited for ever,
+        // "stores hold 0, need 96", for the ground's ninety-six, with only their panes and lanterns to put in).
+        if (still != null && !project.equals("fortify") && drawn == 0) return 0;
         int blocks = drawn + drawn / 10 + 2;                    // a margin for the cells that are lost
         if (!project.equals("fortify")) {                       // and the ground to build up
             int[] g = BuildGoal.footprint(project);

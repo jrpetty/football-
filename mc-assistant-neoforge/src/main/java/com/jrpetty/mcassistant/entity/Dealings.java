@@ -146,12 +146,14 @@ public final class Dealings {
         if (yours > mine) {
             f.spend(stake);
             giveCoins(p, stake);
+            CoinCensus.playerOut(CoinCensus.purseTown(f), stake);    // [health] out of a counted purse
             return "You rolled " + yours + ", I rolled " + mine + ". " + FolkTalk.pick(f.getRandom(), "Curses! Here's your " + stake + ".",
                 "Beginner's luck. Again tomorrow?", "Well played. " + coins(stake) + " to you.");
         }
         if (mine > yours) {
             Market.payOut(p, stake);
             f.earn(stake);
+            CoinCensus.playerIn(CoinCensus.purseTown(f), stake);     // [health]
             return "You rolled " + yours + ", I rolled " + mine + ". " + FolkTalk.pick(f.getRandom(), "Ha! " + coins(stake) + " to me.",
                 "The dice love me today.", "Better luck next time!");
         }
@@ -445,6 +447,7 @@ public final class Dealings {
         }
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                         // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         ORDERS.put(p.getUUID(), new Order(village, want, d + 1, f.displayNameCap(), skill));
@@ -504,6 +507,7 @@ public final class Dealings {
         if (Market.coinsHeld(p) < cost) return "A feast for the whole village would be " + coins(cost) + ". You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, cost);
         Ledger.addCoins(village, cost);
+        CoinCensus.playerIn(village, cost);                          // [health]
         String name = p.getName().getString();
         Gatherings.sponsor(village, name, d);
         for (AssistantEntity a : Villages.folkOf(village)) {

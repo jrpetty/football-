@@ -249,6 +249,9 @@ public final class Hospitality {
      *  suited first); then each wanted job filled out of the trade's line cooks, the best suited first. */
     static void lookOver(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
+        // [health] The trade as it is now, not as it was read earlier this tick (the dining pass keeps it a tick): a hand
+        // that took up the cook's trade this tick was not among the line cooks to give the bar to (dn07: no barkeep).
+        TRADE.remove(id);
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (a instanceof VillageFolkEntity f && f.stationTask() != StationTask.COOK) untag(f);
         }

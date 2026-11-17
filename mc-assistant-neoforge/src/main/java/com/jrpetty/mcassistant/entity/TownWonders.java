@@ -1273,6 +1273,7 @@ public final class TownWonders extends SavedData {
         if (n <= 0) return "You've no village coins to give.";
         if (!Civics.takeCoins(p, n)) return "You've only " + have + " coins.";
         give(w, p.getName().getString(), n);
+        CoinCensus.playerIn(v.id(), n);                              // [health] the wonder fund is counted
         for (VillageFolkEntity folk : Civics.grown(v.id())) folk.persona().feelFor(p.getUUID(), p.getName().getString(), Math.min(3, 1 + n / 10));
         plaque(level, v, w, true);
         return "You gave " + n + (n == 1 ? " coin" : " coins") + " to " + w.getString("title") + ": the fund holds " + w.getInt("fund")

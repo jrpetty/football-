@@ -296,6 +296,7 @@ public final class Dining {
         int phase;
         long legFrom, until;
         @Nullable BlockPos target;
+        boolean fresh;                     // [health] a cook's dish made at the stove now (not poured, nor taken ready): it can burn
 
         Task(Job job, Ledger.Building place, int order, int line, int table, long now) {
             this.job = job;
@@ -576,6 +577,7 @@ public final class Dining {
                 return true;
             }
             l.got = made;
+            t.fresh = lastFresh && !l.drink();                       // [health]
             l.cook = f.displayNameCap();
             l.at = station.immutable();
             t.phase = 1;
@@ -590,7 +592,9 @@ public final class Dining {
         atTheStove(level, station, d.station(), now);
         if (now < t.until) return false;
         int level0 = f.veteranLevel();
-        if (level0 < GREEN && Math.floorMod(o.id * 31 + t.line * 7 + (int) (now / 20), BURNS_ONE_IN) == 0) {
+        // [health] Only what was cooked can burn: a cider poured, a loaf or a pie taken ready off the shelf, never (a burnt cider
+        // threw out the house's only other bottle, and the order was struck for want of it).
+        if (t.fresh && level0 < GREEN && Math.floorMod(o.id * 31 + t.line * 7 + (int) (now / 20), BURNS_ONE_IN) == 0) {
             // Burnt: thrown out, and made again from fresh makings.
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Ach, burnt it! Again, from the start.", "That one's ruined. Sorry, another's coming."));
             level.sendParticles(ParticleTypes.LARGE_SMOKE, station.getX() + 0.5, station.getY() + 1.1, station.getZ() + 0.5, 8, 0.2, 0.2, 0.2, 0.01);
@@ -651,7 +655,11 @@ public final class Dining {
         }
     }
 
+    /** [health] Whether the last dish produced was made at the stove just now (not cut, poured or taken ready). */
+    static boolean lastFresh;
+
     private static ItemStack producing(ServerLevel level, Villages.Village v, Place p, Dish d, @Nullable VillageFolkEntity cook) {
+        lastFresh = false;
         String cut = DiningMenu.cutKey(p, d);
         int left = DiningMenu.CUT.getOrDefault(cut, 0);
         if (d.portions() > 1 && left > 0) {
@@ -659,8 +667,8 @@ public final class Dining {
             return d.one();
         }
         ItemStack got = switch (d.got()) {
-            case MADE -> { ItemStack m = make(level, v, p, d, cook); yield m.isEmpty() ? ready(level, v, p, d) : m; }
-            case READY_FIRST -> { ItemStack r = ready(level, v, p, d); yield r.isEmpty() ? make(level, v, p, d, cook) : r; }
+            case MADE -> { ItemStack m = make(level, v, p, d, cook); lastFresh = !m.isEmpty(); yield m.isEmpty() ? ready(level, v, p, d) : m; }
+            case READY_FIRST -> { ItemStack r = ready(level, v, p, d); if (!r.isEmpty()) yield r; ItemStack m = make(level, v, p, d, cook); lastFresh = !m.isEmpty(); yield m; }
             case SHELF -> ready(level, v, p, d);
         };
         DiningMenu.stale(p);
@@ -727,10 +735,11 @@ public final class Dining {
     private static void refund(ServerPlayer sp, Order o, int coins) {
         int back = Math.min(coins, o.paidCoins);
         if (back <= 0) return;
-        Ledger.takeCoins(o.village, back);
+        back = Ledger.takeCoins(o.village, back);                    // [health] what the treasury has of it
         o.paidCoins -= back;
         ItemStack c = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), back);
-        if (!sp.getInventory().add(c)) sp.drop(c, false);
+        if (back > 0 && !sp.getInventory().add(c)) sp.drop(c, false);
+        CoinCensus.playerOut(o.village, back);                       // [health]
     }
 
     /** The waiter: to the pass, the plate taken up (in hand), to the table, set down; or handed over at the counter. */
@@ -1118,7 +1127,9 @@ public final class Dining {
             o.paidCoins += due;
         }
         o.paid = true;
+        int tipped = o.tip;                                          // [health]
         if (tip > 0) tipTheWaiter(level, o, tip, () -> Market.payOut(p, tip));
+        if (o.tip > tipped) CoinCensus.playerIn(o.village, o.tip - tipped);   // [health] into the waiter's purse
         if (o.mode != Mode.TABLE || o.finished()) o.done = true;
         save(level);
         return null;
@@ -1127,6 +1138,7 @@ public final class Dining {
     /** The takings of a sale into the till, booked. */
     static void takings(ServerLevel level, Order o, int coins) {
         Ledger.addCoins(o.village, coins);
+        CoinCensus.playerIn(o.village, coins);                       // [health] a player's bill (the folk pay theirs at Diners)
         Economy.sold(o.village, coins);
         Place p = placeOf(level, o);
         Stockroom.Seller seller = p != null && p.kind == DiningPlaces.Kind.TAVERN ? Stockroom.Seller.TAVERN : Stockroom.Seller.CAFE;

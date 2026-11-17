@@ -157,6 +157,7 @@ final class BankCounter {
         if (!TownWork.take(level, visit.village(), s -> s.is(it), n)) return ServicePoints.Result.no("The stores ran short.");
         Market.payOut(p, coins);
         Ledger.addCoins(id, coins);
+        CoinCensus.playerIn(id, coins);                              // [health]
         Economy.sold(id, coins);
         ItemStack got = one.copyWithCount(n);
         if (!p.getInventory().add(got)) p.drop(got, false);
@@ -171,6 +172,7 @@ final class BankCounter {
         if (due <= 0) return ServicePoints.Result.no("No rent waiting for you here.");
         Ledger.note(id, "rentdue/" + p.getUUID(), "0");
         Earnings.giveCoins(p, due);
+        CoinCensus.playerOut(id, due);                               // [health] the rent waiting is counted (CoinCensus.holders)
         Earnings.record(p, id, Earnings.Source.PROPERTY, due, "your tenants in " + Villages.name(id), "in rent");
         return ServicePoints.Result.done("Your rent: " + due + "c.");
     }

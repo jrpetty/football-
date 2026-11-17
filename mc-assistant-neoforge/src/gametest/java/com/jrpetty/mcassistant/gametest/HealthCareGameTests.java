@@ -168,7 +168,9 @@ public class HealthCareGameTests {
     private static int carried(VillageFolkEntity f, Predicate<ItemStack> what) {
         int n = 0;
         for (ItemStack s : f.getInventoryItems()) if (!s.isEmpty() && what.test(s)) n += s.getCount();
-        for (ItemStack s : List.of(f.getMainHandItem(), f.getOffhandItem())) if (!s.isEmpty() && what.test(s)) n += s.getCount();
+        // [health] Not a pastime's prop (a gardener's poppy held for show of an evening: Leisure), which is nobody's to give.
+        for (ItemStack s : List.of(f.getMainHandItem(), f.getOffhandItem())) if (!s.isEmpty() && what.test(s) && !s.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+            net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getBoolean("mca_prop")) n += s.getCount();
         return n;
     }
 

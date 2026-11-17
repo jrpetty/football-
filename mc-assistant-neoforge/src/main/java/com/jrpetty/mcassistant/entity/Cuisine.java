@@ -662,6 +662,7 @@ public final class Cuisine {
         if (s.isEmpty()) return "No " + d.words + " left tonight.";
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
+        CoinCensus.playerIn(id, price);                               // [health]
         Economy.sold(id, price);
         Stockroom.sold(level, id, Stockroom.Seller.TAVERN, s, 1, price);
         if (!p.getInventory().add(s)) p.drop(s, false);

@@ -228,6 +228,9 @@ public final class Archery {
             if (s == null) return false;
         }
         if (!s.dim.equals(level.dimension())) return false;
+        // [health] A target already dead or gone (a monster seen off, despawned) calls nobody away: it is forgotten, and the
+        // turn goes on (a guard was stopped two arrows short of its ten by a zombie that was no longer there).
+        if (f.getTarget() != null && (!f.getTarget().isAlive() || f.getTarget().isRemoved())) f.setTarget(null);
         if (f.getTarget() != null || Raids.underAlarm(s.village) || f.isSleeping()) {
             stop(level, s, "called away (" + (f.getTarget() != null ? "at " + f.getTarget().getType().getDescription().getString()
                 : f.isSleeping() ? "asleep" : "the bell") + ")");

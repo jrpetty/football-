@@ -1337,6 +1337,7 @@ public final class Bank {
             if (n <= 0) return moved + "You've no coin on you to put in.";
             Market.payOut(p, n);
             s.cash += n;
+            CoinCensus.playerIn(id, n);                              // [health] into the counted vault
             Account a = s.accounts.computeIfAbsent(p.getUUID(), k -> new Account(k, true, name, day));
             a.balance += n;
             s.week.deposited += n;
@@ -1355,6 +1356,7 @@ public final class Bank {
             s.cash -= k;
             s.week.withdrawn += k;
             Dealings.giveCoins(p, k);
+            CoinCensus.playerOut(id, k);                             // [health]
             save(id, a);
             saveHead(id, s);
             return moved + "Out of the vault: " + k + Homes.coins(k) + (k < n ? " (all it holds just now)" : "") + ". " + accountLine(id, p.getUUID());
@@ -1366,6 +1368,7 @@ public final class Bank {
             if (n <= 0) return moved + "You've no coin on you to pay it with.";
             Market.payOut(p, n);
             s.cash += n;
+            CoinCensus.playerIn(id, n);                              // [health]
             book(s, l, n);
             l.arrears = Math.max(0, l.arrears - n);
             l.missed = l.arrears <= 0 || l.weekly <= 0 ? 0 : (l.arrears + l.weekly - 1) / l.weekly;
@@ -1476,6 +1479,7 @@ public final class Bank {
             save(id, a);
         }
         if (down - fromAccount > 0) Market.payOut(p, down - fromAccount);
+        CoinCensus.playerIn(id, down - fromAccount);                 // [health] the rest of the price moves between the vault and the treasury
         s.cash -= lent;
         Ledger.addCoins(id, price);
         Economy.houseSold(id, price);

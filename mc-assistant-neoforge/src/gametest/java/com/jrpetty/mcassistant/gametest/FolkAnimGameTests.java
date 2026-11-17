@@ -100,8 +100,12 @@ public class FolkAnimGameTests {
         long[] hours = {3500L, 4600L, 2600L, 6200L, 7400L, 5300L};    // its break falls at an hour of its own
         for (int d = 1; d <= 8; d++) {
             for (long h : hours) {
+                // [health] At work now and for the length of a test: an hour just before its break (or a meal) let the act
+                // change mid-test (fan03 saw a second send), and a loaded copy with a new id has a break hour of its own (fan04).
+                level.setDayTime(24000L * d + h + 300L);
+                boolean later = f.offWorkNow();
                 level.setDayTime(24000L * d + h);
-                if (!f.offWorkNow()) return;
+                if (!f.offWorkNow() && !later) return;
             }
         }
     }
@@ -297,6 +301,7 @@ public class FolkAnimGameTests {
             f.discard();
             helper.runAtTickTime(30, () -> {
                 g.setNoAi(true);
+                workday(level, g);                               // [health] the copy's own working hour (its break falls by its id)
                 Act a = FolkAction.deriveForTests(g);
                 helper.assertTrue(a == Act.SEW, "it works out it is at its loom again: " + a + " (" + g.offWorkWhy() + ")");
                 helper.assertTrue(g.stationTask() == StationTask.TAILOR, "its trade kept");

@@ -281,6 +281,7 @@ public final class PlayerLaw {
         if (paid > 0) {
             Market.payOut(p, paid);
             Ledger.addCoins(village, paid);
+            CoinCensus.playerIn(village, paid);                      // [health]
         }
         return paid;
     }
@@ -607,6 +608,7 @@ public final class PlayerLaw {
         if (have < fee) return "Your fine is " + fee + " coins, and you've " + have + " on you. Come back when you have it.";
         Market.payOut(p, fee);
         Ledger.addCoins(village, fee);
+        CoinCensus.playerIn(village, fee);                           // [health]
         book[1] = 0;
         Ledger.record(village, p.getUUID(), book);
         r.putBoolean("barred", false);
@@ -935,13 +937,22 @@ public final class PlayerLaw {
     static void caseClosed(ServerLevel level, Villages.Village v, int caseId, List<UUID> helpers) {
         for (UUID u : helpers) {
             if (!sworn(v.id(), u)) continue;
-            int paid = Ledger.takeCoins(v.id(), WAGE);
             CompoundTag c = constable(v.id(), u);
+            Player p = level.getPlayerByUUID(u);
+            // [health] A constable away is owed its wage, and the coin stays in the treasury till it is paid (it used to be
+            // taken out and kept nowhere: gone from the town by no booked way, and never paid); paid with the next case's.
+            int owed = c.getInt("owed");
+            int paid = p == null ? Math.min(WAGE, Ledger.coins(v.id())) : Ledger.takeCoins(v.id(), WAGE + owed);
+            if (p != null) {
+                c.putInt("owed", Math.max(0, owed - Math.max(0, paid - WAGE)));
+                paid = Math.min(paid, WAGE);
+            }
+            int back = p == null ? 0 : Math.max(0, owed - c.getInt("owed"));
             c.putInt("cases", c.getInt("cases") + 1);
             c.putInt("paid", c.getInt("paid") + paid);
-            Player p = level.getPlayerByUUID(u);
-            if (p != null && paid > 0) {
-                giveCoins(p, paid);
+            if (p != null && paid + back > 0) {
+                giveCoins(p, paid + back);
+                CoinCensus.playerOut(v.id(), paid + back);           // [health]
                 p.sendSystemMessage(Component.literal("The watch of " + Villages.name(v.id()) + " pays you " + paid + " coins for the case closed, constable.")
                     .withStyle(ChatFormatting.GOLD));
             } else if (paid > 0) {
