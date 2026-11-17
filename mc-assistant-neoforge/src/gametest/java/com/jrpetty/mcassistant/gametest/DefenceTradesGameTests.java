@@ -645,7 +645,12 @@ public class DefenceTradesGameTests {
                 + "; spread g1 " + Fletchers.spread(g1, 6.0F) + "; card: " + Fletchers.aimLine(g1));
             int practised = (a1[0] > aim0[0][0] ? 1 : 0) + (a2[0] > aim0[1][0] ? 1 : 0);
             helper.assertTrue(!results.isEmpty() && practised >= 1, "the watch took its turns at the butts: " + results.keySet());
-            VillageFolkEntity shot = a1[0] > aim0[0][0] ? g1 : g2;
+            // [health] The one that shot its whole turn: a guard called away from the butts mid-turn (a live monster at the edge
+            // of the range, as a guard should be) shot fewer, and its card has that; why each stopped, if it did, in the log.
+            Kit.log("fd06 stopped: " + g1.displayNameCap() + " " + com.jrpetty.mcassistant.entity.Archery.stoppedForTests(g1.getUUID()) + ", "
+                + g2.displayNameCap() + " " + com.jrpetty.mcassistant.entity.Archery.stoppedForTests(g2.getUUID()));
+            boolean full1 = a1[0] > aim0[0][0] && a1[2] == Fletchers.PRACTICE_ARROWS, full2 = a2[0] > aim0[1][0] && a2[2] == Fletchers.PRACTICE_ARROWS;
+            VillageFolkEntity shot = full1 ? g1 : full2 ? g2 : a1[0] > aim0[0][0] ? g1 : g2;
             int[] after = shot == g1 ? a1 : a2, was = shot == g1 ? aim0[0] : aim0[1];
             helper.assertTrue(after[2] == Fletchers.PRACTICE_ARROWS, "ten arrows each at the fletcher's practice: " + after[2]);
             helper.assertTrue(after[3] > was[3], "its aim the steadier for it: " + was[3] + " -> " + after[3]);
