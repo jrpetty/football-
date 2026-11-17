@@ -1364,6 +1364,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = HomeLife.mood(this, day, m, why);           // [home-making] a home set up by its own hands, a cold house, no water
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
+        m = LabourMarket.mood(this, day, m, why);        // [labour] a new place, a rise, an apprenticeship done; laid off, out of work
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         m = Dining.mood(this, day, m, why);             // [dining] a dinner out tonight; a waiter's tip
         m = TownWays.mood(this, day, m, why);           // [culture2] its town's dish, its own festival, a rite's blessing
@@ -4087,6 +4088,12 @@ public class VillageFolkEntity extends AssistantEntity {
      * needs water and a miner needs stone — what you are decides where you go.
      */
     private void takeUpATrade() {
+        // [labour] Out of work where the town has a labour market: it looks for work (the openings, the day's round) for half
+        // a day before the town places it where it is shortest of hands.
+        if (stationTask() == StationTask.NONE && LabourMarket.lookingForWork(this)) {
+            if (!idleHands()) roam();
+            return;
+        }
         // Claim the trade BEFORE going to look for ground. The village works
         // out what it is short of from what its folk ARE, so a folk that has
         // decided but not yet settled used to be invisible — and every folk
@@ -6948,7 +6955,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // storehouse — takes up whatever the village is shortest of meanwhile.
         if (!Villages.craftReady(village, mine) && (vacancy == null || vacancy == mine)) vacancy = Villages.needed(village);
         boolean ordered = false;
-        if (vacancy == null || vacancy == mine || !Villages.overStaffed(village, mine)) {
+        // [labour] Where the labour market moves the hands (wages, openings, applications), only the elder's order does here.
+        if (LabourMarket.movesHands(village) || vacancy == null || vacancy == mine || !Villages.overStaffed(village, mine)) {
             // Or the elder's order: a pair of hands this trade can spare, to the trade it wants.
             vacancy = Orders.move(village, this, level().getDayTime() / 24000L);
             if (vacancy == null || vacancy == mine) return false;

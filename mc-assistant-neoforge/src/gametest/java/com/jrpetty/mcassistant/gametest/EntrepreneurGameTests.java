@@ -973,6 +973,13 @@ public class EntrepreneurGameTests {
     }
 
     static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded, int days) {
+        tenDays(helper, cx, tag, seeded, days, null, null);
+    }
+
+    /** [labour] The same, with a look of the caller's own each morning ({@code daily}) and checks of its own at the end ({@code more}). */
+    static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded, int days,
+                        @javax.annotation.Nullable java.util.function.BiConsumer<UUID, Integer> daily,
+                        @javax.annotation.Nullable java.util.function.BiConsumer<UUID, Kit.Expect> more) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
         Kit.reset(level);
@@ -1079,6 +1086,8 @@ public class EntrepreneurGameTests {
                         Kit.log(tag + " day " + dayNo + " PRICES level " + String.format(Locale.ROOT, "%.2f", MarketMaker.priceLevel(id)) + ": " + pr);
                     }
                     Kit.log(tag + " day " + dayNo + " budget: " + TownBudget.line(id));
+                    Kit.log(tag + " day " + dayNo + " LABOUR " + com.jrpetty.mcassistant.entity.LabourMarket.line(id));   // [labour]
+                    if (daily != null) daily.accept(id, dayNo);
                     long today = level.getDayTime() / 24000L;
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
@@ -1146,6 +1155,7 @@ public class EntrepreneurGameTests {
                     if (days >= 20) ok.that(!thrived.isEmpty(), "at least one firm thriving: " + thrived);   // [econ-1d]
                     ok.that(mostIous[0] <= Math.max(TownBudget.limit(id) * 2, 20000), "the town's IOUs bounded: at most " + Businesses.pence(mostIous[0])
                         + " against what it can carry, " + Businesses.pence(TownBudget.limit(id)));
+                    if (more != null) more.accept(id, ok);                            // [labour] the caller's own checks
                     verdict[0] = ok.clean() ? "" : ok.summary();
                 }
             } catch (RuntimeException ex) {

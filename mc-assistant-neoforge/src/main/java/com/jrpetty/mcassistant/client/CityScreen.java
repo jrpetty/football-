@@ -89,6 +89,8 @@ public class CityScreen extends Screen {
     private String shopSeller;
     /** The Jobs page at its other view: the job market between towns (JobMarketPage). */
     private boolean jobsMarket;
+    /** [labour] The Jobs page at its third view: the town's labour market (LabourPage). */
+    private boolean jobsLabour;
     private int prodSort = 7;
     private boolean prodDown = true;
     /** The Buildings page shows the map of the town's quarters, not the list (DistrictMap). */
@@ -128,8 +130,10 @@ public class CityScreen extends Screen {
             next.selectedTrade = open.selectedTrade;
             next.shopSeller = open.shopSeller;
             next.jobsMarket = open.jobsMarket;
+            next.jobsLabour = open.jobsLabour;                                // [labour]
         }
         if (data.getBoolean("jobmarket_view")) next.jobsMarket = true;       // /village jobs books
+        if (data.getBoolean("labour_view")) { next.jobsLabour = true; next.jobsMarket = false; }   // [labour] /village labour books
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
         // A page asked for by its name (/village school page), whatever its number.
         if (data.contains("page") && pageNumber(data.getString("page")) >= 0) next.tab = pageNumber(data.getString("page"));
@@ -1607,22 +1611,28 @@ public class CityScreen extends Screen {
     private void jobs(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         // Two views of the page, a switch at the top: the trades, and the job market between towns (JobMarketPage).
         CompoundTag market = data.getCompound("jobmarket");
-        String[] views = { "The trades", JobMarketPage.label(market) };
+        CompoundTag labour = data.getCompound("labour");                   // [labour] and the town's labour market (LabourPage)
+        String[] views = { "The trades", JobMarketPage.label(market), LabourPage.label(labour) };
         int vx = x;
-        for (int i = 0; i < 2; i++) {
-            boolean on = (i == 1) == jobsMarket;
+        for (int i = 0; i < 3; i++) {
+            boolean on = i == 0 ? !jobsMarket && !jobsLabour : i == 1 ? jobsMarket : jobsLabour;
             int bw = (int) (font.width(views[i]) * 0.75F) + 8;
             g.fill(vx, y - 1, vx + bw, y + 8, on ? Ui.ROW_PICK : Ui.ROW);
             g.renderOutline(vx, y - 1, bw, 9, Ui.EDGE_SOFT);
             small(g, views[i], vx + 4, y + 1, on ? Ui.GOOD : Ui.MUTED);
-            final boolean market_ = i == 1;
-            zones.add(new Zone(vx, y - 1, vx + bw, y + 8, () -> { jobsMarket = market_; scroll = 0; }));
+            final boolean market_ = i == 1, labour_ = i == 2;
+            zones.add(new Zone(vx, y - 1, vx + bw, y + 8, () -> { jobsMarket = market_; jobsLabour = labour_; scroll = 0; }));
             vx += bw + 3;
         }
         y += 12;
         ch -= 12;
         if (jobsMarket) {
             List<Component> tip = JobMarketPage.draw(g, font, market, x, y, cw, ch, scroll, mx, my);
+            if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+            return;
+        }
+        if (jobsLabour) {                                                   // [labour]
+            List<Component> tip = LabourPage.draw(g, font, labour, x, y, cw, ch, scroll, mx, my);
             if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
             return;
         }
@@ -3924,7 +3934,7 @@ public class CityScreen extends Screen {
             if (in(mx, my, b[0], b[1], b[2], SUB_H)) { openPage(b[3]); return true; }
         }
         int x = pageX(), y = pageTop(), cw = pageW();
-        if (page().equals("Jobs") && !jobsMarket) {
+        if (page().equals("Jobs") && !jobsMarket && !jobsLabour) {      // [labour] not on the labour market's view either
             y += 12;                                       // under the switch between the trades and the job market
             // A trade picked from the table: its own history below.
             List<CompoundTag> jobs = compounds("jobs");

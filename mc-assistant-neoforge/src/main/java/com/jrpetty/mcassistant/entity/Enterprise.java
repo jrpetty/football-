@@ -692,6 +692,7 @@ public final class Enterprise {
             if (Orders.elderOf(village) == f || !skilled(village, f, t.work())) continue;
             if (best == null || f.tradeLevel(t.work()) > best.tradeLevel(t.work())) best = f;
         }
+        if (best == null) best = LabourMarket.outbid(village, t.work(), founder);   // [labour] none free: outbid another employer for one
         return best;
     }
 
@@ -1164,6 +1165,7 @@ public final class Enterprise {
             s += f.tradeLevel(t.work());
             if (s > bestScore) { bestScore = s; best = f; }
         }
+        if (best == null) LabourMarket.firmShort(id, b);                    // [labour] nobody to be had: an opening posted on the Jobs page
         return best == null ? null : hireThis(level, v, b, r, t, best);
     }
 
@@ -1172,7 +1174,9 @@ public final class Enterprise {
     static VillageFolkEntity hireThis(ServerLevel level, Villages.Village v, Business b, CompoundTag r, BusinessType t, VillageFolkEntity best) {
         UUID id = v.id();
         if (best.stationTask() != t.work() && !best.takeUpTrade(t.work())) return null;
+        LabourMarket.beforeTakenOn(id, b, best);                            // [labour] off another firm's books first
         addStaff(id, b, r, best);
+        LabourMarket.takenOn(level, v, b, best);                            // [labour] its terms: the firm's offer, or outbidding its employer
         long day = Businesses.today(level);
         b.note(day, best.displayNameCap() + " taken on as a hand");
         best.brain("taken on at " + b.name);

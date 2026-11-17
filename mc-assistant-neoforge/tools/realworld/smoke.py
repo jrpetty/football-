@@ -5074,6 +5074,100 @@ def econ_firms_stage(r, look, cx, cz):
     say("alive after the firms: %s" % client_alive())
 
 
+def labour_stage(r, look, cx, cz):
+    """[labour] The labour market (entity/LabourMarket, LabourBook, client/LabourPage). As an operator: the town's
+    labour market run now (/village labour morning), a firm (the first open one, or one opened now with /village firms
+    found-now) posting an opening at a good wage (/village labour post <firm> <wage>), the folk applying; the town's books
+    open at the Jobs page's labour market view (the openings, the wage offered, who applied and who was taken, the wage
+    index, the days, the employers, the latest hirings, notices and lay-offs, who is out of work); then the firm's place
+    put to an interview at the hall (/village interviews stage job:<n>) and begun, the bench and the first candidate across
+    the table photographed. Pictures:
+      1. 73-labour-1-jobs-page: the Jobs page at its labour market view;
+      2. 73-labour-2-bench: the interview for the firm's place, the candidates on the bench;
+      3. 73-labour-3-across: the first candidate across the table.
+    Wired into main() right after the firms stage."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(4)
+    say("labour: " + r.cmd("execute as %s at @s run village labour morning" % USER)[:1500])
+    firms = r.cmd("execute as %s at @s run village firms" % USER)
+    m = re.search(r"\b(ent-\d+)\b", firms)
+    fid = m.group(1) if m else None
+    if not fid:
+        for kind in ("toolsmith", "baker", "carpenter", "fishmonger", "greengrocer"):
+            out = r.cmd("execute as %s at @s run village firms found-now %s" % (USER, kind))
+            mm = re.search(r"OPENED (ent-\d+)", out)
+            if mm:
+                fid = mm.group(1)
+                break
+    vid = None
+    if fid:
+        out = r.cmd("execute as %s at @s run village labour post %s 12" % (USER, fid))
+        say("labour post: " + out[:600])
+        mm = re.search(r"\(#(\d+)\)", out)
+        vid = mm.group(1) if mm else None
+    else:
+        say("labour: no firm to post an opening; the page shows the town's own")
+    say("labour: " + r.cmd("execute as %s at @s run village labour" % USER)[:2000])
+    say("labour books: " + r.cmd("execute as %s at @s run village labour books" % USER)[:200])
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("73-labour-1-jobs-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    if not vid:
+        r.cmd("gamemode spectator %s" % USER)
+        return
+    # The firm's place at interview: staged now at the hall (or a table by the board), and begun.
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 12, cz))
+    at = "execute positioned %d %d %d run village interviews" % (cx, hy + 1, cz)
+    r.cmd(at + " hurry off")
+    out = r.cmd(at + " stage job:%s" % vid)
+    say("labour interview stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("labour: no interview staged; nothing more to photograph")
+        return
+    x, y, z, ax, ay, az = views.get("iv-table", list(views.values())[0])
+    r.cmd("tp %s %.1f %.1f %.1f" % (USER, x + 0.5, y, z + 0.5))
+    out = r.cmd(at + " now")
+    say("labour interview now: " + out[:300])
+    if "begin now" not in out and "on already" not in out:
+        say("labour: the interview did not begin")
+        return
+
+    def shoot(name, picture, wait):
+        if name in views:
+            vx, vy, vz, wx, wy, wz = views[name]
+            look("73-labour-" + picture, vx + 0.5, vy, vz + 0.5, wx + 0.5, wy + 0.5, wz + 0.5, wait=wait)
+
+    taken = set()
+    end = time.time() + 300
+    while time.time() < end and len(taken) < 2:
+        s = r.cmd(at)
+        if " sitting:" in s and "bench" not in taken:
+            taken.add("bench")
+            shoot("iv-bench", "2-bench", 2)
+            continue
+        if "across the table" in s and "across" not in taken:
+            taken.add("across")
+            time.sleep(7)
+            shoot("iv-table", "3-across", 1)
+            continue
+        time.sleep(1.5)
+    say("labour: interview pictures %s" % sorted(taken))
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the labour market: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -5566,7 +5660,7 @@ def main():
         flats_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("flats failed: %s" % e)
-    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("firms", econ_firms_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
+    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage), ("business books", business_books_stage), ("the market", econ_market_stage), ("firms", econ_firms_stage), ("labour market", labour_stage), ("civic posts", roles_a_stage), ("crafts", roles_b_stage), ("outdoor trades", roles_d_stage), ("hospitality", roles_c_stage), ("roads and ranks", roles_e_stage)):
         try:
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001

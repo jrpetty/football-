@@ -543,6 +543,8 @@ public final class Market {
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after Identity.morning");   // [econ-1a] the drift hunt (tests)
         JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
         if (CoinCensus.probing()) CoinCensus.probe("the morning, after JobWorth.morning");   // [econ-1a] the drift hunt (tests)
+        LabourMarket.morning(level, v, day);             // [labour] the labour market: openings, offers, applications, hirings, lay-offs, relief
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after LabourMarket.morning");   // [labour] the drift hunt (tests)
         // [econ-1a] Each of the morning's jobs on the account of the department it is: the mint's gold, the market's trade
         // and its wool, the town's works for the rest of the morning.
         try (Accounts.Scope mint = Accounts.as(Accounts.Dept.MINT, Accounts.Purpose.WORK)) { mint(level, v); }
