@@ -94,7 +94,8 @@ jobs:
   gametest:
     runs-on: ubuntu-latest
     # Some 850 game tests: one server ran out of 2h30m (0.302.0), so (0.313.0: shard 2 ran out of 2h too) six servers each run a sixth, the classes
-    # dealt out by weight (tools/ci/shard_gametests.py).
+    # dealt out by weight (tools/ci/shard_gametests.py). Since 0.314.0 a long soak weighs its days (the economy's ten- and
+    # twenty-day towns had weighed as a two-minute test: one shard took 68 minutes): the heaviest shard some 50 minutes.
     timeout-minutes: 120
     continue-on-error: true
     strategy:

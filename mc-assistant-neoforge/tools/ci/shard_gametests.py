@@ -5,9 +5,15 @@
 
 The game-test classes are dealt out to the shards by their weight (the sum of their tests' timeoutTicks, 100 for a
 test that names none), heaviest first, each to the lightest shard so far: so every shard runs about as long, and a
-class stays whole on one shard (its batches and its shared set-up together). A test's timeout is only its ceiling,
-so each counts at most CAP ticks, plus a fixed cost for its set-up: a long soak can't fill a shard on its own. A test outside the shard keeps its
-method; only its @GameTest annotation goes, its lines kept so stack traces still point at the right line.
+class stays whole on one shard (its batches and its shared set-up together). A short test's timeout is only its
+ceiling, so up to CAP ticks it counts in full, plus a fixed cost for its set-up. A long soak (an economy's ten or twenty
+days, a town grown for a week) runs at a raised tick rate and does run its days: every tick of its timeout past CAP
+counts LONG_RATE of one. (Capped at CAP, as these were till 0.314.0, the soaks weighed as much as a two-minute test:
+ent10, ent12 and ent15 went on one shard with lod02 and took 68 minutes, and the next shard ran to its two-hour limit.)
+The rate is as measured on CI for 0.314.0: a short test about 550 weight a second, the soaks 0.0006 to 0.0012 seconds a
+tick of their timeout (ent15 24 minutes of 1,900,000, lod02 19 of 1,200,000, ent10 10 of 900,000, tdy10 8 of 400,000).
+A test outside the shard keeps its method; only its @GameTest annotation goes, its lines kept so stack traces still
+point at the right line.
 """
 import os
 import re
@@ -16,6 +22,8 @@ import sys
 ANNOTATION = re.compile(r"@GameTest\b(?!\w)")
 TIMEOUT = re.compile(r"timeoutTicks\s*=\s*([0-9_]+)")
 CAP, SETUP = 6000, 200
+# A long test's ticks past CAP, each, of a short test's tick; and weight a second (for the estimate printed).
+LONG_RATE, PER_SECOND = 0.45, 550
 
 
 def annotations(text):
@@ -51,8 +59,9 @@ def weight(text, spans):
     total = 0
     for s, e in spans:
         t = TIMEOUT.search(text[s:e])
-        total += SETUP + min(CAP, int(t.group(1).replace("_", "")) if t else 100)
-    return total
+        ticks = int(t.group(1).replace("_", "")) if t else 100
+        total += SETUP + min(CAP, ticks) + LONG_RATE * max(0, ticks - CAP)
+    return int(total)
 
 
 def main():
@@ -86,8 +95,9 @@ def main():
             at = e
         out.append(text[at:])
         open(p, "w", encoding="utf-8").write("".join(out))
-    print("shard %d of %d: %d classes, %d tests, weight %d (shards: %s)"
-          % (shard, shards, len(mine), kept, load[shard], ", ".join(map(str, load))))
+    print("shard %d of %d: %d classes, %d tests, weight %d, some %d minutes (shards: %s)"
+          % (shard, shards, len(mine), kept, load[shard], load[shard] / PER_SECOND / 60,
+             ", ".join("%d (%dm)" % (w, w / PER_SECOND / 60) for w in load)))
     print("  " + ", ".join(sorted(os.path.basename(p)[:-5] for p in mine)))
 
 
