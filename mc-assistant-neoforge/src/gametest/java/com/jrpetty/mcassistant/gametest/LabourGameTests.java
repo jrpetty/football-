@@ -180,7 +180,7 @@ public class LabourGameTests {
         UUID id = bram.ownerId();
         Villages.Village v = Villages.get(id);
         Kit.Expect ok = new Kit.Expect();
-        LabourMarket.morningNow(level, v);
+        // (No morning first: the watch's spare guards would take the first places going, as they should.)
         Business b = Enterprise.foundForTests(level, v, "toolsmith", bram);
         ok.that(b != null, "the toolshop opened");
         if (b == null) { helper.fail(ok.summary()); return; }
