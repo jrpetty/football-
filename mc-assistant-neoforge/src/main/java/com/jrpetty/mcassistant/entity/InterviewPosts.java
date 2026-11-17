@@ -50,7 +50,8 @@ final class InterviewPosts {
         RUNNER,                                                                // [nether] a place on the Nether runners
         ENGINEER,                                                              // [redstone] the redstone engineer's post
         HEALER, SEXTON, CURATOR, FIREWORKS,                                    // [roles-a] the infirmary, the chapel, the museum, the powder hut
-        WHEELWRIGHT, CARTER, PLANNER }                                         // [roles-e] the wagons' shed, the trade road, the hall
+        WHEELWRIGHT, CARTER, PLANNER,
+        JOB }                                                                  // [labour] an opening of the town's labour market                                         // [roles-e] the wagons' shed, the trade road, the hall
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -62,6 +63,13 @@ final class InterviewPosts {
             if (key.startsWith("opening:")) {
                 try {
                     return new Post(Kind.OPENING, key, null, Integer.parseInt(key.substring(8)));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            if (key.startsWith("job:")) {                                      // [labour] an opening of the labour market
+                try {
+                    return new Post(Kind.JOB, key, null, Integer.parseInt(key.substring(4)));
                 } catch (NumberFormatException e) {
                     return null;
                 }
@@ -137,6 +145,7 @@ final class InterviewPosts {
                 case CARTER -> "carter";
                 case PLANNER -> "town planner";
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
+                case JOB -> LabourMarket.title(village, opening);                // [labour] "blacksmith at Bram's Tools"
             };
         }
 
@@ -147,6 +156,7 @@ final class InterviewPosts {
                 JobMarket.Opening o = JobMarket.opening(village, opening);
                 return o == null ? null : o.task();
             }
+            if (kind == Kind.JOB) return LabourMarket.tradeOf(village, opening);   // [labour]
             return trade;
         }
 
@@ -266,6 +276,7 @@ final class InterviewPosts {
             case WHEELWRIGHT -> Wheelwrights.fit(f, village);                                        // [roles-e] wood and iron to spare
             case CARTER -> Carters.fit(f, village);                                                  // [roles-e] a steady hand for the road
             case PLANNER -> TownPlanner.fit(f, village);                                             // [roles-e] a head for the town's plans
+            case JOB -> LabourMarket.openFor(village, p.opening());                                 // [labour] its applicants
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
                 // One of the town's own for a new workplace: not its elder, not a hand its own trade cannot spare.
@@ -452,6 +463,12 @@ final class InterviewPosts {
                 if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.STARGAZING) good.add("loves the night sky");
                 return Math.max(0, FireworksMaker.suits(f));
             }
+            case JOB -> {                                                   // [labour] as the employer weighs an applicant
+                int lv = t == null ? 0 : f.tradeLevel(t), kn = JobMarket.knacks(f, t);
+                if (lv > 0) good.add("level " + lv + " at " + t.label);
+                if (kn > 0) good.add(kn + (kn == 1 ? " knack" : " knacks") + " of the trade");
+                return t == null ? 0 : (int) Math.round(LabourMarket.score(f, t));
+            }
             case OPENING -> {
                 int lv = t == null ? 0 : f.tradeLevel(t), kn = JobMarket.knacks(f, t);
                 if (lv > 0) good.add("level " + lv + " at " + t.label);
@@ -553,6 +570,7 @@ final class InterviewPosts {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
                 yield o != null && o.state() == JobMarket.State.OPEN;
             }
+            case JOB -> LabourMarket.openFor(id, p.opening());              // [labour]
         };
     }
 
@@ -584,7 +602,7 @@ final class InterviewPosts {
             case WHEELWRIGHT -> Wheelwrights.holder(id);                    // [roles-e]
             case CARTER -> Carters.holder(id);
             case PLANNER -> TownPlanner.holder(id);
-            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, HEALER, OPENING -> null;
+            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, HEALER, OPENING, JOB -> null;   // [labour] JOB
         };
     }
 
@@ -726,6 +744,7 @@ final class InterviewPosts {
             case AUCTIONEER -> { return "calls the auctions"; }
             case MASTER -> { return "is the town's " + p.title(id) + ", and takes its apprentices"; }
             case OPENING -> { return ""; }
+            case JOB -> { return LabourMarket.interviewed(level, v, p.opening(), winner); }   // [labour] the panel's choice takes its place
         }
         return "";
     }

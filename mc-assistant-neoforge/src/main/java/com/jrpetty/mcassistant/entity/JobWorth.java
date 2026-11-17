@@ -509,7 +509,7 @@ public final class JobWorth {
             double perHand = p.trade == null ? 0.0 : st.val(p.trade, s.ref) * p.makes;
             double service = p.service * s.ref;
             double value = clamp(Math.sqrt(Math.max(0.0, perHand + service) / s.ref), VALUE_LO, VALUE_HI);
-            double scar = p.trade == null ? 1.0 : st.scar(p.trade);
+            double scar = p.trade == null ? 1.0 : scarOf(id, st, p.trade);          // [labour] the wage index where the market is live
             double factor = value * scar * p.difficulty();
             s.worth.put(p.key, new Worth(p, 0, 0, perHand, service, value, scar, p.difficulty(), factor,
                 Math.max(1, (int) Math.round(s.payLevel * UNIT * factor * JOURNEYMAN_HAND))));
@@ -534,7 +534,7 @@ public final class JobWorth {
             // wage, so two or three rounds settle it.
             Post farm = postFor(StationTask.FARM, null);
             double farmFactor = clamp(Math.sqrt(Math.max(0.0, st.val(StationTask.FARM, ref) * farm.makes) / ref), VALUE_LO, VALUE_HI)
-                * st.scar(StationTask.FARM) * farm.difficulty();
+                * scarOf(id, st, StationTask.FARM) * farm.difficulty();              // [labour]
             int farmRate = Math.max(1, (int) Math.round(payLevel * UNIT * farmFactor * JOURNEYMAN_HAND));
             Cost cost = null;
             for (int round = 0; round < 6; round++) {
@@ -562,7 +562,7 @@ public final class JobWorth {
                 double perHand = t == null ? 0.0 : st.val(t, ref) * p.makes;
                 double service = p.service * ref * tune;
                 double value = clamp(Math.sqrt(Math.max(0.0, perHand + service) / ref), VALUE_LO, VALUE_HI);
-                double scar = t == null ? 1.0 : st.scar(t);
+                double scar = t == null ? 1.0 : scarOf(id, st, t);                 // [labour] the wage index where the market is live
                 double factor = value * scar * p.difficulty();
                 made.add(new Worth(p, n, t == null ? 0 : target.getOrDefault(t, (double) n), perHand, service, value, scar,
                     p.difficulty(), factor, 0));
@@ -595,6 +595,14 @@ public final class JobWorth {
             BUILDING.remove(id);
             FARM_GUESS.remove(id);
         }
+    }
+
+    /**
+     * [labour] A trade's going rate on the scale: where the labour market is at work, the town's wage index (the terms its
+     * hands are actually paid on: LabourMarket.index) in place of how hard the trade is to fill; else its scarcity.
+     */
+    static double scarOf(@Nullable UUID id, State st, StationTask t) {
+        return id != null && LabourMarket.live(id) ? LabourMarket.index(id, t) : st.scar(t);
     }
 
     /** A wage between the living wage and the top of the scale. */
@@ -656,9 +664,10 @@ public final class JobWorth {
         int lv = f.veteranLevel();
         Worth w = s.worth.get(p.key);
         double k = skill(f, p, lv);
-        double raw = s.payLevel * UNIT * (w == null ? 1.0 : w.factor()) * k;
+        double fac = LabourMarket.factor(f, w, w == null ? 1.0 : w.factor());   // [labour] its own terms, where the market is live
+        double raw = s.payLevel * UNIT * fac * k;
         int r = (int) Math.round(raw);
-        int part = bound(s, raw);
+        int part = Math.max(bound(s, raw), LabourMarket.minimumWage(f.ownerId()));   // [labour] the council's minimum wage
         int teaching = 0;
         if (School.pay(f) > 0) {
             Worth tw = s.worth.get(TEACH);

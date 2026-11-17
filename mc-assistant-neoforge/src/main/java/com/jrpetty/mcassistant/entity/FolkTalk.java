@@ -499,6 +499,7 @@ public final class FolkTalk {
         if (!f.isBaby() && !levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
         if (!f.isBaby()) line(sb, "Interviews", Interviews.cardLine(f));      // [interviews] shortlisted; chosen, or not and why
+        if (!f.isBaby()) line(sb, "Work", LabourMarket.cardLine(f));          // [labour] its employer and terms, or out of work
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
         String horses = f.isBaby() ? null : Stables.card(f);
@@ -825,6 +826,7 @@ public final class FolkTalk {
             case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
             case "ownhands", "barehome", "chillyhome", "nowater", "stocked" -> HomeLife.moodWords(f, why, r);   // [home-making]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
+            case "laidoff", "newjob", "journeyman", "termsrise", "outofwork" -> LabourMarket.moodWords(f, why);   // [labour]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
             case "dined", "tipped" -> Dining.moodWords(f, why);                        // [dining]
             case "homecooking", "delicacy", "townfeast", "ownfeast", "blessed" -> TownWays.moodWords(f, why);   // [culture2]

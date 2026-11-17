@@ -587,6 +587,7 @@ public final class Annals {
         out.put("culture", Culture.report(level, v));            // [batchD] the banner, the motto, customs, theatre, music, pictures, plaques
         out.put("war", WarAndPeace.report(level, v));            // [war-peace] the War page: the war, the allies, the treaties
         out.put("jobmarket", JobMarket.report(level, id));         // the job market between towns: the Jobs page's other view
+        out.put("labour", LabourMarket.report(level, id));          // [labour] the town's labour market: the Jobs page's third view
         out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page

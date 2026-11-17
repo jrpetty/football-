@@ -392,7 +392,7 @@ public final class Interviews {
         iv.title = p.title(id);
         StationTask t = p.tradeFor(id);
         iv.trade = t == null ? "" : t.name();
-        iv.opening = p.opening();
+        iv.opening = p.kind() == InterviewPosts.Kind.OPENING ? p.opening() : -1;   // [labour] a labour-market opening is not a notice on the board
         iv.big = p.big();
         iv.setDay = day;
         long due = day + 1;
