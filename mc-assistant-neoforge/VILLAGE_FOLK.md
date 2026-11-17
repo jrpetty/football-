@@ -13193,7 +13193,9 @@ wage the market sets, and they choose.
 - **Wages set by the market.** An opening nobody applied for raises its employer's offer a sixteenth by the next morning
   (an eighth for the town's essential work); more than twice as many applicants as places lowers it three in the hundred;
   with no opening an offer eases back to the going rate, and the offer for a trade with hands over its share falls. Never
-  under the living wage or the council's minimum wage; never over what the employer can afford (a firm by its week's
+  under the living wage or the council's minimum wage (where the living wage is over what a job is worth, as in a young
+  hamlet, the offer is reckoned up from the living wage, which it pays whatever the job); never over what the employer
+  can afford (a firm by its week's
   margin a hand, a new firm a third over the worth; the town by its budget's pressure; its essential work up to twice the
   worth, out of the budget). A hand is paid on its own terms: the offer it was taken on at, raised at its weekly review to
   its employer's going offer, cut only by a firm losing money (a tenth a week). The town's **wage index** is the average of
@@ -13204,8 +13206,10 @@ wage the market sets, and they choose.
 - **Workers choose.** Each morning every grown folk on terms it could leave, and everybody out of work, weighs the openings
   it could take: the wage it would be paid there at its own level, the walk from home, the employer's name for good work,
   and its own liking for the trade (what it knows, what it cares for, its quirks; never a trade it fears). One in work
-  applies only for a tenth more than it has and its loyalty (three in the hundred a week of service, twelve at most). The
-  last farmer, the last guard and the elder stay where they are. The employer takes the best by skill and experience; with
+  applies only for a tenth more than it has and its loyalty (three in the hundred a week of service, twelve at most); one
+  at a trade with more hands than the town needs (its place not safe) takes an equal wage, or a little less, where it is
+  wanted, and so does a homesteader whose trade is over-full. The last farmer, the last guard and the elder stay where
+  they are. The employer takes the best by skill and experience; with
   two or more for a skilled place and the town holding interviews, it holds one at the hall (the post is "blacksmith at
   Bram's Tools"), and the panel chooses. One in work gives a day's notice and moves the next morning ("Ash gave notice at
   the watch: Bram's Tools offered 9 a day against 6"); its employer keeps a skilled hand (level ten) or its last at
@@ -13243,6 +13247,14 @@ wage the market sets, and they choose.
   [wage]` and `hire <firm>` for a player's firm (post an opening, take the best who applied), `/village labour minwage
   <coins>`; operators `morning` and `round`. A player takes work at the market's wages through the shifts (the Work tab):
   their pay follows the town's wages.
+
+Measured over ten days of a town left to itself (lab10): sixteen founders to thirty-five folk and twenty-four buildings,
+the census at nought drift every morning, the IOUs at most 337 coins against 440; from Market Opening Day (day five) four
+to twelve hands on terms and eleven or twelve their own masters, nobody out of work on any morning; one or two openings
+standing (a tailor, a courier, the pens), the tailor's offer up from 1.07 to 1.14 of the job's worth as it stood empty;
+on the tenth morning three applied to the fields for one place and its offer eased, a smelter giving notice for it. In a
+young hamlet every wage sits at the living wage (three to five coins), so the market moves its folk more than its pay: the
+pay moves once a town's work is worth more than its living.
 
 Smoke: `labour_stage` in tools/realworld/smoke.py, right after the firms stage (the Jobs page's labour view, a firm's
 place at interview). Tests: LabourGameTests (lab01 an opening and its applicant taken on; lab02 a guard moving to a better
