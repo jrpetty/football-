@@ -297,6 +297,7 @@ public class FolkAnimGameTests {
             f.discard();
             helper.runAtTickTime(30, () -> {
                 g.setNoAi(true);
+                workday(level, g);                     // [anim] its own working hour: loaded with a new id, its break falls elsewhere
                 Act a = FolkAction.deriveForTests(g);
                 helper.assertTrue(a == Act.SEW, "it works out it is at its loom again: " + a + " (" + g.offWorkWhy() + ")");
                 helper.assertTrue(g.stationTask() == StationTask.TAILOR, "its trade kept");
@@ -450,7 +451,8 @@ public class FolkAnimGameTests {
                 if (f.getTags().contains("folk_lineup") && FolkAction.now(f) == Act.SWIM) swimmer = f;
             }
             helper.assertTrue(swimmer != null, "a swimmer on the stage");
-            helper.assertTrue(swimmer.isInWater(), "the swimmer in water: " + swimmer.blockPosition().toShortString());
+            BlockPos chest = BlockPos.containing(swimmer.getX(), swimmer.getY() + 0.5, swimmer.getZ());
+            helper.assertTrue(level.getFluidState(chest).is(net.minecraft.tags.FluidTags.WATER), "the swimmer in water: " + chest.toShortString());
             helper.assertTrue(swimmer.getY() < o.getY(), "held at the water's top, below the floor: " + swimmer.getY());
             for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
                     all, e -> e.getTags().contains("folk_lineup"))) e.discard();
