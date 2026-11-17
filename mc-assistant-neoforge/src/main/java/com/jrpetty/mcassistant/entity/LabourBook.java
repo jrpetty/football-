@@ -157,9 +157,12 @@ public final class LabourBook extends SavedData {
         double m = 1.0;
         /** Mornings in a row it had an opening nobody applied for, and with more applicants than openings. */
         int unfilled, queued;
+        /** The last day it moved (once a day at most). */
+        long moved = -1;
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
+            t.putLong("Moved", moved);
             t.putString("Key", key);
             t.putDouble("M", m);
             t.putInt("Unfilled", unfilled);
@@ -173,6 +176,7 @@ public final class LabourBook extends SavedData {
             o.m = t.contains("M") ? t.getDouble("M") : 1.0;
             o.unfilled = t.getInt("Unfilled");
             o.queued = t.getInt("Queued");
+            o.moved = t.contains("Moved") ? t.getLong("Moved") : -1;
             return o;
         }
     }

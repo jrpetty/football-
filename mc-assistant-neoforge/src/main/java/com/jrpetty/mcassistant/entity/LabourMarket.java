@@ -809,16 +809,11 @@ public final class LabourMarket {
             int applied = 0;
             for (Application a : vac.apps) if (a.verdict != Verdict.WITHDRAWN) applied++;
             boolean ess = essential.contains(key);
-            if (day > vac.posted && vac.state == State.OPEN) {
-                if (applied == 0) {
-                    o.unfilled++;
-                    o.queued = 0;
-                    o.m *= ess ? STEP_UP_ESSENTIAL : STEP_UP;
-                } else if (applied >= 2 * vac.openings) {
-                    o.queued++;
-                    o.unfilled = 0;
-                    o.m *= STEP_DOWN;
-                }
+            if (day > vac.posted && vac.state == State.OPEN && o.moved < day && applied == 0) {
+                o.moved = day;
+                o.unfilled++;
+                o.queued = 0;
+                o.m *= ess ? STEP_UP_ESSENTIAL : STEP_UP;
             }
             o.m = clamp(o.m, M_LEAST, cap(level, id, vac.employer, t, ess));
             vac.openings = want.get(key);
@@ -1022,6 +1017,17 @@ public final class LabourMarket {
             for (Application a : vac.apps) if (a.verdict == Verdict.WAITING) apps.add(a);
             if (apps.isEmpty()) continue;
             apps.sort(Comparator.comparingDouble((Application a) -> -a.score).thenComparing(a -> a.folk));
+            // A queue at the door: more than twice the openings applied, and the employer offers less from now on (the
+            // places it fills today go at the wage it posted).
+            Offer o = offer(tw, id, vac.employer, t);
+            if (apps.size() >= 2 * vac.openings && o.moved < day) {
+                o.moved = day;
+                o.queued++;
+                o.unfilled = 0;
+                o.m = Math.max(M_LEAST, o.m * STEP_DOWN);
+                note(tw, day, vac.employerName + " had " + apps.size() + " applicants for " + JobMarket.words(vac.openings) + " place"
+                    + (vac.openings == 1 ? "" : "s") + ": its offer for " + JobMarket.noun(t) + "s eased to " + journeyman(id, t, o.m) + " a day");
+            }
             if (apps.size() >= 2 && interviewFor(level, v, tw, vac, apps, day)) continue;
             int slots = vac.openings;
             List<String> taken = new ArrayList<>();
@@ -1843,6 +1849,23 @@ public final class LabourMarket {
     public static List<String> newsForTests(UUID village) {
         LabourBook.Town tw = LabourBook.peek(village);
         return tw == null ? List.of() : new ArrayList<>(tw.news);
+    }
+
+    /** Tests: the posts of the interviews set in the town ("job:7"...). */
+    public static List<String> interviewsForTests(UUID village) {
+        List<String> out = new ArrayList<>();
+        for (InterviewBook.Interview iv : Interviews.coming(village)) out.add(iv.post);
+        return out;
+    }
+
+    /** Tests: the panel's choice for an opening, as the interview's end gives it. */
+    public static String interviewedForTests(ServerLevel level, Villages.Village v, int vacancy, VillageFolkEntity winner) {
+        return interviewed(level, v, vacancy, winner);
+    }
+
+    /** Tests: a firm wants a hand it could not find (Enterprise.hire found nobody). */
+    public static void firmShortForTests(UUID village, Business b) {
+        firmShort(village, b);
     }
 
     /** Tests: the book written out and read back, as the world's save would (save/load). */
