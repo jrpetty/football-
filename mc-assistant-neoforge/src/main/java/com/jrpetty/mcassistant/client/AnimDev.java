@@ -91,6 +91,8 @@ public final class AnimDev {
                 case "effects" -> effects = AnimConfig.Effects.valueOf(w[1].toUpperCase(Locale.ROOT));
                 case "perf" -> perf = true;
                 case "cape" -> cape = true;
+                case "ride" -> { FolkRenderer.RIDE_DROP[0] = Float.parseFloat(w[1]); FolkRenderer.RIDE_DROP[1] = Float.parseFloat(w[2]); }
+                case "drum" -> { for (int k = 0; k < 3; k++) FolkActionLayer.DRUM_AT[k] = Float.parseFloat(w[1 + k]); }
                 case "sack" -> { for (int k = 0; k < 5; k++) FolkActionLayer.SACK[k] = Float.parseFloat(w[1 + k]); }
                 case "swim" -> { FolkRenderer.SWIM_AT = Float.parseFloat(w[1]); FolkRenderer.SWIM_MID = Float.parseFloat(w[2]); }
                 default -> { }

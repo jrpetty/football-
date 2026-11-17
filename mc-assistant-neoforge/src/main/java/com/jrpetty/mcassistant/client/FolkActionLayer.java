@@ -93,6 +93,13 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         kit(Act.WATCH, () -> Items.IRON_SWORD, null);
         // The guard's blade (its own, or this one) stood point down before it on watch.
         grip(Act.WATCH, new float[]{0, 0, 0, -125, 45, -20, 1}, null);
+        // The spoon and the brewer's rod down into the pot, the broom's head down on the floor ahead, the sticks down on
+        // the drum's head, the blade levelled along the thrust (the game's grip holds them all blade up out of the fist).
+        grip(Act.STIR_POT, new float[]{0, 0, 0, -95, 0, -25, 1}, null);
+        grip(Act.BREW, new float[]{0, 0, 0, -95, 0, -25, 1}, null);
+        grip(Act.SWEEP, new float[]{0, 0, 0, -115, 0, -25, 1}, null);
+        grip(Act.DRUM, new float[]{0, 0, 0, -135, 0, -25, 0.6F}, new float[]{0, 0, 0, -135, 0, -25, 0.6F});
+        grip(Act.THRUST, new float[]{0, 0, 0, -50, 0, 0, 1}, null);
     }
 
     private final ItemInHandRenderer hands;
@@ -136,6 +143,7 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
             else if (folk.getMainHandItem().isEmpty() && folk.getOffhandItem().isEmpty()) load(pose, buffer, light, act == Act.STOCK, mainArm);
             return;
         }
+        if (act == Act.DRUM) drum(pose, buffer, light);
         if (!m[0].isEmpty() && folk.getMainHandItem().isEmpty()) hand(pose, buffer, light, folk, m[0], mainArm, k.size());
         if (!m[1].isEmpty() && folk.getOffhandItem().isEmpty()) hand(pose, buffer, light, folk, m[1], mainArm.getOpposite(), 1.0F);
     }
@@ -254,6 +262,22 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         items.renderStatic(s, ItemDisplayContext.FIXED, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose, buffer, folk.level(), folk.getId());
         pose.popPose();
     }
+
+    /** A drum slung at the waist, its head up under the sticks (a note block, small). */
+    private void drum(PoseStack pose, MultiBufferSource buffer, int light) {
+        pose.pushPose();
+        getParentModel().body().translateAndRotate(pose);
+        pose.translate(0.0F, DRUM_AT[0] / 16.0F, DRUM_AT[1] / 16.0F);
+        pose.scale(-1.0F, -1.0F, 1.0F);
+        pose.scale(DRUM_AT[2], DRUM_AT[2] * 0.8F, DRUM_AT[2]);
+        pose.translate(-0.5F, -0.5F, -0.5F);
+        net.minecraft.client.Minecraft.getInstance().getBlockRenderer().renderSingleBlock(net.minecraft.world.level.block.Blocks.NOTE_BLOCK.defaultBlockState(),
+            pose, buffer, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
+        pose.popPose();
+    }
+
+    /** The drum's height on the body and how far before it (pixels), and its size (blocks). */
+    static final float[] DRUM_AT = {9.0F, -6.0F, 0.42F};
 
     /** Where the sack hangs from the hand: across, down, back (pixels), its tilt (degrees) and its size. */
     static final float[] SACK = {0.5F, 7.5F, 3.5F, 8.0F, 1.1F};

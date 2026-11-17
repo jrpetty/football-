@@ -35,6 +35,7 @@ import java.util.List;
  *   /village anim befriend            (a player) the nearest folk thinks well of you (to see your emotes answered)
  *   /village anim friend [front]      (a player) a folk stood up beside you that thinks well of you (front: face to face)
  *   /village anim stage               the smoke's stage where you stand: a folk doing each act, in rows (VIEW lines)
+ *   /village anim crowd N             (ops) a crowd of N folk where you stand, at work and talk (for measuring)
  *   /village anim perf                (ops) time the folk's acts being worked out; again: the cost a folk a tick
  *   /village emote EMOTE [ANGLE]      (anybody) the player's own emote, as the wheel sends it, its turned camera at ANGLE
  *                                    degrees round from its front (90: side on) if asked; "wheel" opens the wheel
@@ -69,6 +70,12 @@ public final class AnimCommands {
                 .then(Commands.literal("friend").executes(ctx -> friend(ctx, false))
                     .then(Commands.literal("front").executes(ctx -> friend(ctx, true))))
                 .then(Commands.literal("stage").executes(AnimCommands::stage))
+                .then(Commands.literal("crowd").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("n", IntegerArgumentType.integer(1, 400)).executes(ctx -> {
+                        int n = AnimStage.crowd(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()), IntegerArgumentType.getInteger(ctx, "n"));
+                        ctx.getSource().sendSuccess(() -> Component.literal("A crowd of " + n + " folk"), false);
+                        return n;
+                    })))
                 .then(Commands.literal("perf").requires(src -> src.hasPermission(2)).executes(AnimCommands::perf))));
         // The player's own emotes, typed (the wheel and the talk screen send the same): anybody, at the same pace.
         event.getDispatcher().register(Commands.literal("village")

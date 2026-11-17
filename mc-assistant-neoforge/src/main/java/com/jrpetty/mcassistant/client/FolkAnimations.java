@@ -461,12 +461,16 @@ public final class FolkAnimations {
             .r(HEAD, 0, 38, -6, 0, 1.0F, 38, 8, 0, 2.6F, 38, -6, 0)
             .lean(0, 18, 1.3F, 20, 2.6F, 18)
             .done());
-        // The engineer: bent close over the works, a quick turn of the spanner, a look, another turn.
+        // The engineer: down on one knee by the works on the floor, bent close over it, a quick turn of the spanner, a look,
+        // another turn.
         put(Act.TINKER, loop(1.6F)
             .r(RA, 0, -56, -20, 0, 0.15F, -56, -20, 22, 0.3F, -56, -20, -10, 0.45F, -56, -20, 22, 0.6F, -56, -20, 0, 1.6F, -56, -20, 0)
             .r(LA, 0, -54, 22, 0, 1.6F, -54, 22, 0)
+            .r(RL, 0, -84, 6, 0, 1.6F, -84, 6, 0)
+            .r(LL, 0, 54, -4, 0, 1.6F, 54, -4, 0)
             .r(HEAD, 0, 30, 0, 0, 0.8F, 30, 0, 0, 1.0F, 22, 12, 0, 1.4F, 30, 0, 0, 1.6F, 30, 0, 0)
-            .lean(0, 22, 1.6F, 22)
+            .lean(0, 26, 1.6F, 26)
+            .low(0, 7, 1.6F, 7)
             .hit(0.45F).done());
         // The fireworks maker: the rocket upright in one hand, the powder tamped in with careful taps, held up and looked at.
         put(Act.FUSE, loop(2.6F)
@@ -602,7 +606,7 @@ public final class FolkAnimations {
             .r(HEAD, 0, 10, 0, 8, 0.25F, 4, 0, 8, 0.5F, 10, 0, 8, 0.75F, 4, 0, 8, 1.0F, 10, 0, 8)
             .low(0, 0, 0.25F, 0.5F, 0.5F, 0, 0.75F, 0.5F, 1.0F, 0)
             .hit(0.0F, 0.5F).done());
-        // The drum: both sticks, turn about, on the drum at the waist.
+        // The drum: both sticks, turn about, on the drum slung at the waist (FolkActionLayer draws the drum).
         put(Act.DRUM, loop(0.6F)
             .r(RA, 0, -80, -10, 0, 0.15F, -50, -10, 0, 0.3F, -80, -10, 0, 0.6F, -80, -10, 0)
             .r(LA, 0, -50, 10, 0, 0.3F, -80, 10, 0, 0.45F, -50, 10, 0, 0.6F, -50, 10, 0)
@@ -636,16 +640,21 @@ public final class FolkAnimations {
             .r(RA, 0, -10, 0, 0, 0.3F, -82, -6, 0, 0.6F, -80, 34, 10, 1.0F, -10, 0, 0)
             .lean(0, 0, 0.35F, 4, 0.6F, 8, 1.0F, 0)
             .done());
-        // Rowing: both oars pulled back with the body leaning into it, then forward again.
+        // Rowing: sat in the boat with its legs out before it, both oars pulled back with the body leaning into it, then
+        // forward again.
         put(Act.ROW, loop(1.6F)
             .r(RA, 0, -92, -6, 0, 0.8F, -28, -6, 10, 1.6F, -92, -6, 0)
             .r(LA, 0, -92, 6, 0, 0.8F, -28, 6, -10, 1.6F, -92, 6, 0)
+            .r(RL, 0, -80, 10, 0, 1.6F, -80, 10, 0)
+            .r(LL, 0, -80, -10, 0, 1.6F, -80, -10, 0)
             .lean(0, 16, 0.8F, -16, 1.6F, 16)
             .hit(1.0F).done());
-        // In the saddle: the reins in both hands, a bob with the horse's stride.
+        // In the saddle: astride (its legs down either side), the reins in both hands, a bob with the horse's stride.
         put(Act.RIDE, loop(0.7F)
             .r(RA, 0, -40, -14, 0, 0.35F, -44, -14, 0, 0.7F, -40, -14, 0)
             .r(LA, 0, -40, 14, 0, 0.35F, -44, 14, 0, 0.7F, -40, 14, 0)
+            .r(RL, 0, -45, 10, 18, 0.35F, -42, 10, 18, 0.7F, -45, 10, 18)
+            .r(LL, 0, -45, -10, -18, 0.35F, -42, -10, -18, 0.7F, -45, -10, -18)
             .low(0, 0, 0.35F, -0.8F, 0.7F, 0)
             .lean(0, 6, 0.7F, 6)
             .done());

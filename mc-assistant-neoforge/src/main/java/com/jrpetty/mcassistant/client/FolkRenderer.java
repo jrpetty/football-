@@ -161,6 +161,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     /** The swimmer's back at this height over its feet' place, and turned about this far up its body (blocks). */
     static float SWIM_AT = 1.15F, SWIM_MID = 0.95F;
+    /** [anim] How far a rider is set down onto its seat: on a horse (or another beast), in a boat (blocks). */
+    static final float[] RIDE_DROP = {0.6F, 0.45F};
 
     private static int trade(AssistantEntity folk) {
         return FolkModel.outfit(folk);                     // [caves] the cave dweller in its own (FolkModel.CAVE_OUTFIT)
@@ -342,7 +344,16 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         // Crouched in a hiding place (hide-and-seek: entity/Families): a little lower, its knees up.
         boolean crouched = folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING;
         boolean sat = folk.getPose() == net.minecraft.world.entity.Pose.SITTING || crouched;
-        if (sat) {
+        // [anim] In the saddle or a boat: sat on it, the seat under its hips (the game sets its feet on the seat), its legs
+        // astride or out in front (the act's clip).
+        net.minecraft.world.entity.Entity ride = folk.getVehicle();
+        float mounted = sat || ride == null ? 0.0F : ride instanceof net.minecraft.world.entity.vehicle.Boat ? RIDE_DROP[1]
+            : ride instanceof net.minecraft.world.entity.LivingEntity ? RIDE_DROP[0] : 0.0F;
+        if (mounted != 0.0F) {
+            sat = true;
+            pose.pushPose();
+            pose.translate(0.0F, -mounted * (folk.isBaby() ? 0.55F : 1.0F), 0.0F);
+        } else if (sat) {
             pose.pushPose();
             pose.translate(0.0F, crouched ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F, 0.0F);
         }

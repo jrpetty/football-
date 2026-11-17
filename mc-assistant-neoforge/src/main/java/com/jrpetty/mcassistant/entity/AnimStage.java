@@ -212,7 +212,7 @@ public final class AnimStage {
             BlockState bed = Blocks.BLUE_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.WEST);
             level.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 2);
             level.setBlock(head, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 2);
-            f.moveTo(head.getX() + 1.6, head.getY() + 0.6875, head.getZ() + 0.5, 90.0F, 0.0F);   // the body laid back from its feet to the pillow
+            f.moveTo(head.getX() + 1.95, head.getY() + 0.6875, head.getZ() + 0.5, 90.0F, 0.0F);   // the body laid back from its feet to the pillow ([anim] its head on it, not past it)
             turn(f, 90.0F);                                           // lying along the bed, its head on the pillow
             f.setPose(Pose.SLEEPING);
         }
@@ -220,6 +220,8 @@ public final class AnimStage {
             net.minecraft.world.entity.Entity mount = p.act() == Act.RIDE ? EntityType.HORSE.create(level) : EntityType.BOAT.create(level);
             if (mount != null) {
                 mount.moveTo(x, y, z, -90.0F, 0.0F);
+                mount.setYHeadRot(-90.0F);                            // [anim] the horse faced the way its rider does
+                if (mount instanceof net.minecraft.world.entity.LivingEntity le) le.setYBodyRot(-90.0F);
                 mount.addTag("folk_lineup");
                 if (mount instanceof Mob m) { m.setNoAi(true); m.setInvulnerable(true); }
                 level.addFreshEntity(mount);
@@ -240,6 +242,32 @@ public final class AnimStage {
         m.setInvulnerable(true);
         m.addTag("folk_lineup");
         level.addFreshEntity(m);
+    }
+
+    /** The acts a crowd is given: the work of the town and its talk, things done stood where it is. */
+    private static final Act[] CROWD = {Act.HAMMER, Act.CHOP, Act.SAW, Act.STIR_POT, Act.KNEAD, Act.SEW, Act.SWEEP, Act.TALK,
+        Act.LISTEN, Act.TALK, Act.COUNT_COINS, Act.WRITE, Act.HOE, Act.PICK, Act.CLAP, Act.DANCE, Act.EAT, Act.DRINK, Act.WATCH, Act.CHISEL};
+    private static final StationTask[] CROWD_TRADES = {StationTask.SMITH, StationTask.WOOD, StationTask.SHOP, StationTask.COOK,
+        StationTask.COOK, StationTask.TAILOR, StationTask.HAUL, StationTask.FARM, StationTask.STORE, StationTask.BANK, StationTask.BANK,
+        StationTask.CARTOGRAPHER, StationTask.FARM, StationTask.MINE, StationTask.NONE, StationTask.NONE, StationTask.FISH, StationTask.BREW,
+        StationTask.GUARD, StationTask.SHOP};
+
+    /**
+     * A crowd of folk where {@code at} is, for measuring what a town full of folk costs to draw (/village anim crowd N):
+     * so many folk in a square, two blocks apart, each at the work or the talk of the town, every one a showcase.
+     */
+    public static int crowd(ServerLevel level, BlockPos at, int n) {
+        int side = (int) Math.ceil(Math.sqrt(n)), made = 0;
+        for (int i = 0; i < n; i++) {
+            int k = i % CROWD.length;
+            VillageFolkEntity f = one(level, at.getX() + 0.5 + (i % side) * 2.0, at.getY(), at.getZ() + 0.5 + (i / side) * 2.0,
+                CROWD_TRADES[k], CROWD[k], i);
+            if (f == null) continue;
+            f.setCustomNameVisible(false);
+            turn(f, (i * 47) % 360);
+            made++;
+        }
+        return made;
     }
 
     /** A folk stood up facing the player, glad to see it (the player's emotes answered, for the pictures). */

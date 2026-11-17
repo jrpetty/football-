@@ -49,5 +49,17 @@ public final class EmotePlayerModel extends PlayerModel<AbstractClientPlayer> {
         cape.xRot = -body.xRot;
         cape.yRot = body.yRot;
         cape.zRot = -body.zRot;
+        // [anim] Sat or knelt low, the cape's hem would go through the ground under it: it lies back over the ground
+        // instead, swung out behind as far as it must (its length, sixteen pixels, from the shoulders; the game's cape
+        // layer hangs it six degrees back to start with).
+        float hang = 6.0F * net.minecraft.util.Mth.DEG_TO_RAD + body.xRot;     // how far back its hem hangs now
+        float room = (CAPE_FLOOR - body.y) / 16.0F;
+        if (room < 1.0F) {
+            float need = room <= -1.0F ? net.minecraft.util.Mth.PI : (float) Math.acos(room);
+            if (need > hang) cape.xRot -= need - hang;
+        }
     }
+
+    /** How far down (model pixels, the feet at 24) the cape's hem may come: a hair over the ground. */
+    private static final float CAPE_FLOOR = 23.4F;
 }
