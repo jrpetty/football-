@@ -66,6 +66,14 @@ public final class EmoteCape {
 
     public static boolean on() { return on; }
 
+    private static int ticks;
+
+    /** While it is on, players who come along (or a world joined after it was put on) are given it too. */
+    @SubscribeEvent
+    public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        if (on && ++ticks % 40 == 0) set(true);
+    }
+
     @SubscribeEvent
     public static void onClientCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("emotecape").requires(src -> src.hasPermission(2))

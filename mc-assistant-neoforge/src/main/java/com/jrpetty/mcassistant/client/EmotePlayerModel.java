@@ -33,7 +33,10 @@ public final class EmotePlayerModel extends PlayerModel<AbstractClientPlayer> {
         for (ModelPart part : limbs) part.resetPose();
         super.setupAnim(p, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         FolkAction.Seen s = PlayerEmotesClient.seen(p, ageInTicks);
-        if (s == null || crouching || riding) return;
+        if (s == null || crouching || riding) {
+            SWING.remove(p.getId());                                   // [anim] the cape's swing starts afresh next time
+            return;
+        }
         FolkAnimations.play(rig, s, ageInTicks, PlayerEmotesClient.style(p));
         hat.copyFrom(head);
         leftPants.copyFrom(leftLeg);
@@ -46,19 +49,34 @@ public final class EmotePlayerModel extends PlayerModel<AbstractClientPlayer> {
         cape.x = -body.x;
         cape.y = body.y;
         cape.z -= body.z;
-        cape.xRot = -body.xRot;
-        cape.yRot = body.yRot;
         cape.zRot = -body.zRot;
-        // [anim] Sat or knelt low, the cape's hem would go through the ground under it: it lies back over the ground
-        // instead, swung out behind as far as it must (its length, sixteen pixels, from the shoulders; the game's cape
-        // layer hangs it six degrees back to start with).
-        float hang = 6.0F * net.minecraft.util.Mth.DEG_TO_RAD + body.xRot;     // how far back its hem hangs now
+        // [anim] Cloth, not a board: as the body leans the cape falls part of the way back toward hanging straight down
+        // (bowed, it lies along the back and its hem drops behind the knees), and it comes after the body on a spring,
+        // a little late and swinging past, as the trunk turns in a dance or bends into a bow and up again.
+        float[] w = SWING.computeIfAbsent(p.getId(), k -> new float[]{-body.xRot * FOLLOW, 0.0F, body.yRot, 0.0F, ageInTicks});
+        float dt = net.minecraft.util.Mth.clamp((ageInTicks - w[4]) / 20.0F, 0.0F, 0.1F);
+        w[4] = ageInTicks;
+        w[1] += (STIFF * (-body.xRot * FOLLOW - w[0]) - DAMP * w[1]) * dt;
+        w[0] += w[1] * dt;
+        w[3] += (STIFF * (body.yRot - w[2]) - DAMP * w[3]) * dt;
+        w[2] += w[3] * dt;
+        cape.xRot = w[0];
+        cape.yRot = w[2];
+        // Sat or knelt low, the cape's hem would go through the ground under it: it lies back over the ground instead,
+        // swung out behind as far as it must (its length, sixteen pixels, from the shoulders; the game's cape layer
+        // hangs it six degrees back to start with).
+        float hang = 6.0F * net.minecraft.util.Mth.DEG_TO_RAD - cape.xRot;   // how far back its hem hangs now
         float room = (CAPE_FLOOR - body.y) / 16.0F;
         if (room < 1.0F) {
             float need = room <= -1.0F ? net.minecraft.util.Mth.PI : (float) Math.acos(room);
             if (need > hang) cape.xRot -= need - hang;
         }
     }
+
+    /** How much of the body's lean the cape takes, and its spring: how stiff, how damped (it swings a little past). */
+    private static final float FOLLOW = 0.6F, STIFF = 90.0F, DAMP = 9.0F;
+    /** Each emoting player's cape: its lean and how fast it is swinging, its turn and how fast, the time of the last frame. */
+    private static final java.util.Map<Integer, float[]> SWING = new java.util.HashMap<>();
 
     /** How far down (model pixels, the feet at 24) the cape's hem may come: a hair over the ground. */
     private static final float CAPE_FLOOR = 23.4F;
