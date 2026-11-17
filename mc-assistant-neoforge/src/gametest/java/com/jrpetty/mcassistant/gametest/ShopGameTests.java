@@ -154,8 +154,9 @@ public class ShopGameTests {
 
     /**
      * A cook with nothing in the stores but wheat and a crafting table bakes bread for the café's
-     * counter, three wheat a loaf by the game's recipe; and stops at the farmers' last twelve wheat, the
-     * seed for the fields, saying in its books what it is short of.
+     * counter, three wheat a loaf by the game's recipe; [supply] it bakes on to the last of the wheat (wheat is
+     * sown from its seed, and it is the farmers' wheat seed the stores keep back, untouched), saying in its books
+     * what it is short of.
      */
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sh02_cafe_bakes_bread")
     public static void sh02_cafe_bakes_bread(GameTestHelper helper) {
@@ -173,7 +174,7 @@ public class ShopGameTests {
             Villages.Village v = Villages.get(village);
             Villages.ageForTests(village, Villages.Age.STONE);
             emptyStores(level, village);
-            stores(level, heart, 4, 0, new ItemStack(Items.WHEAT, 30), new ItemStack(Items.CRAFTING_TABLE));
+            stores(level, heart, 4, 0, new ItemStack(Items.WHEAT, 30), new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.WHEAT_SEEDS, 12));
             Villages.forgetStock();
             cook.setJob(StationTask.COOK);
             String first = Cafe.cook(level, v, cook);
@@ -191,11 +192,12 @@ public class ShopGameTests {
             CompoundTag cafe = seller(Stockroom.inventoryReport(level, village), "cafe");
             CompoundTag r = row(cafe, "minecraft:bread");
             Kit.log("sh02 then: " + made + "; bread " + bread + ", wheat " + wheat + "; the café's books for bread: " + r);
-            helper.assertTrue(bread == 6 && wheat == 12, "it bakes on to the farmers' seed, and no further: bread " + bread + ", wheat " + wheat);
-            helper.assertTrue(r.getInt("onHand") == 6 && r.getInt("madeToday") == 6 && r.getInt("target") >= 12,
-                "the café's books: six on hand and made today, against the usual twelve");
-            helper.assertTrue(r.getString("short").contains("wheat") && r.getString("short").contains("seed"),
-                "and short of wheat, the rest being seed for the fields: " + r.getString("short"));
+            int seed = stock(level, village, s -> s.is(Items.WHEAT_SEEDS));
+            helper.assertTrue(bread == 10 && wheat == 0, "it bakes on to the last of the wheat: bread " + bread + ", wheat " + wheat);
+            helper.assertTrue(seed == 12, "the farmers' wheat seed untouched: " + seed);
+            helper.assertTrue(r.getInt("onHand") == 10 && r.getInt("madeToday") == 10 && r.getInt("target") >= 12,
+                "the café's books: ten on hand and made today, against the usual twelve");
+            helper.assertTrue(r.getString("short").contains("wheat"), "and short of wheat: " + r.getString("short"));
             helper.succeed();
         });
     }
