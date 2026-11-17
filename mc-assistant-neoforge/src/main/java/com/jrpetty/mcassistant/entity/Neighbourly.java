@@ -937,7 +937,9 @@ public final class Neighbourly {
             }
         }
         String what = gift.isEmpty() ? "" : Birthdays.a(gift);
-        if (!gift.isEmpty() && f.removeMatching(s -> ItemStack.isSameItemSameComponents(s, gift), 1) == 1) {
+        boolean has = !gift.isEmpty() && f.countCarried(s -> ItemStack.isSameItemSameComponents(s, gift)) > 0;   // [health] still in its pack
+        if (!has) what = "";                                    // [health] gone meanwhile: it says so, and promises nothing in hand
+        if (has && f.removeMatching(s -> ItemStack.isSameItemSameComponents(s, gift), 1) == 1) {
             ItemStack one = gift.copyWithCount(1);
             boolean food = one.get(DataComponents.FOOD) != null;
             ItemStack left = one;
