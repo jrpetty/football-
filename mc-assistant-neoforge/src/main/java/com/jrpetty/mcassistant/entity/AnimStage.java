@@ -228,7 +228,19 @@ public final class AnimStage {
                 f.startRiding(mount, true);
             }
         }
-        if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -1.8 : 1.3), y, z - 0.4);
+        if (p.act() == Act.SWIM) {
+            // [anim] A pool to swim in, the swimmer held at the water's top (it would sink to the floor of it, a showcase).
+            for (int dx = -2; dx <= 1; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dy = -3; dy <= -1; dy++) level.setBlock(BlockPos.containing(x + dx, y + dy, z + dz), Blocks.WATER.defaultBlockState(), 2);
+                }
+            }
+            f.setNoGravity(true);
+            f.setNoAi(true);
+            f.moveTo(x, y - 1.1, z, -90.0F, 0.0F);
+            turn(f, -90.0F);
+        }
+                if (p.act() == Act.MILK || p.act() == Act.LEAD) animal(level, EntityType.COW, x + (p.act() == Act.LEAD ? -1.8 : 1.3), y, z - 0.4);
         if (p.act() == Act.SHEAR || p.act() == Act.FEED) animal(level, p.act() == Act.SHEAR ? EntityType.SHEEP : EntityType.CHICKEN, x + 1.3, y, z);
         if (p.act() == Act.REPAIR) animal(level, EntityType.IRON_GOLEM, x + 1.7, y, z);
         return f;
