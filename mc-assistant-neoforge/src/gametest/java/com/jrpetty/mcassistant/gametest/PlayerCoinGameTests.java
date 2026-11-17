@@ -127,6 +127,7 @@ public class PlayerCoinGameTests {
         List<String> wrong = new ArrayList<>(), idle = new ArrayList<>();
         try {
             for (PlayerCoinPaths.Path path : paths) {
+                path.setup().run();                              // what the path finds there (a till with takings, rent waiting)
                 long c0 = CoinCensus.count(id), n0 = CoinCensus.netFlowPence(id);
                 int held0 = 0;
                 for (ServerPlayer p : players) held0 += Market.coinsHeld(p);

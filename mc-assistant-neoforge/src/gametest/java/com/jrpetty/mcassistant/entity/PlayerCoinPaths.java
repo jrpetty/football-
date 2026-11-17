@@ -24,7 +24,11 @@ public final class PlayerCoinPaths {
     private PlayerCoinPaths() {}
 
     /** A path: its name, whether it must move the player's coin (a path that only says no proves nothing), and the deed. */
-    public record Path(String name, boolean moves, Supplier<String> run) {}
+    public record Path(String name, boolean moves, Runnable setup, Supplier<String> run) {
+        Path(String name, boolean moves, Supplier<String> run) {
+            this(name, moves, () -> { }, run);
+        }
+    }
 
     private static long day(ServerLevel level) {
         return level.getDayTime() / 24000L;
@@ -42,8 +46,10 @@ public final class PlayerCoinPaths {
         String me = p.getUUID().toString();
         List<Path> out = new ArrayList<>();
         out.add(new Path("dice (six throws)", true, () -> {
+            // Thrown till the player is up or down on it (won and lost alike, each throw must be booked).
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < 6; i++) sb.append(Dealings.dice(f, p, "a game of dice for 2")).append(" / ");
+            int held = Market.coinsHeld(p);
+            for (int i = 0; i < 24 && Market.coinsHeld(p) == held; i++) sb.append(Dealings.dice(f, p, "a game of dice for 2")).append(" / ");
             return sb.toString();
         }));
         out.add(new Path("a feast on the player", true, () -> Dealings.sponsor(f, p)));
@@ -53,7 +59,7 @@ public final class PlayerCoinPaths {
             p.getInventory().add(new ItemStack(Items.STICK, 2));
             return Dealings.order(f, p, "make me a stone pickaxe");
         }));
-        out.add(new Path("a bulk order out of the stores", true, () -> Commerce.bulk(f, p, "I'd like to order 16 oak planks")));
+        out.add(new Path("a bulk order (bought out of what the stores can spare, else a deposit)", true, () -> Commerce.bulk(f, p, "I'd like to order 16 oak planks")));
         Ledger.note(id, "bulk/" + me, "");
         out.add(new Path("a bulk order's deposit", true, () -> {
             Ledger.note(id, "bulk/" + me, "");
@@ -152,6 +158,8 @@ public final class PlayerCoinPaths {
         }));
         out.add(new Path("a fine taken out of the pack (the hunters, the watch)", true, () -> "took " + PlayerLaw.take(p, id, 4)));
         out.add(new Path("a constable's wage for a case", true, () -> {
+            Market.intoStoresForTests(level, id, new ItemStack(Items.IRON_INGOT, 1));
+            Market.intoStoresForTests(level, id, new ItemStack(Items.GOLD_NUGGET, 4));
             String sworn = PlayerLaw.swearNow(level, v, p);
             PlayerLaw.caseClosed(level, v, 1, List.of(p.getUUID()));
             return sworn;
@@ -192,13 +200,11 @@ public final class PlayerCoinPaths {
             ServicePoints.Visit visit = new ServicePoints.Visit(level, v, ServiceRole.BANK, null, p, null, new CompoundTag());
             return BankCounter.change(visit, a).toString();
         }));
-        out.add(new Path("rent waiting collected at the counter", true, () -> {
-            Ledger.note(id, "rentdue/" + p.getUUID(), "6");
+        out.add(new Path("rent waiting collected at the counter", true, () -> Ledger.note(id, "rentdue/" + p.getUUID(), "6"), () -> {
             ServicePoints.Visit visit = new ServicePoints.Visit(level, v, ServiceRole.BANK, null, p, null, new CompoundTag());
             return BankCounter.collect(visit).toString();
         }));
-        out.add(new Path("rent waiting collected by word", true, () -> {
-            Ledger.note(id, "rentdue/" + p.getUUID(), "4");
+        out.add(new Path("rent waiting collected by word", true, () -> Ledger.note(id, "rentdue/" + p.getUUID(), "4"), () -> {
             p.teleportTo(v.centre().getX() + 0.5, v.centre().getY(), v.centre().getZ() + 0.5);
             return Homes.playerCollects(level, p);
         }));
@@ -207,8 +213,7 @@ public final class PlayerCoinPaths {
             if (st == null) st = new PlayerStalls.Stall(p.getUUID());
             st.till = 9;
             PlayerStalls.save(id, st);
-            return "paid " + PlayerStalls.payTill(level, id, p);
-        }));
+        }, () -> "paid " + PlayerStalls.payTill(level, id, p)));
         out.add(new Path("the mint at the market stall", true, () -> {
             p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT, 2));
             return MarketMaker.mintForPlayer(level, v, p);
