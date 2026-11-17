@@ -132,7 +132,10 @@ public final class Links {
             f.brain("cut " + cut + " sugar cane");
             return "cut " + cut + " sugar cane";
         }
-        if (bases >= CANE || edge.isEmpty() || f.countCarried(s -> s.is(Items.SUGAR_CANE)) < 1) return null;
+        // [supply] A longer row while the town's trades are short of sugar (a bakery's cakes and pies) or paper.
+        int row = CANE + Math.min(10, (InputWants.wanted(f.ownerId(), Items.SUGAR_CANE) + InputWants.wanted(f.ownerId(), Items.SUGAR)
+            + InputWants.wanted(f.ownerId(), Items.PAPER)) / 2);
+        if (bases >= row || edge.isEmpty() || f.countCarried(s -> s.is(Items.SUGAR_CANE)) < 1) return null;
         BlockPos g = edge.get(level.getRandom().nextInt(edge.size()));
         if (level.getBlockState(g).is(Blocks.FARMLAND)) level.setBlock(g, Blocks.DIRT.defaultBlockState(), 3);
         if (!Blocks.SUGAR_CANE.defaultBlockState().canSurvive(level, g.above())) return null;
@@ -156,7 +159,7 @@ public final class Links {
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return null;
         if (Market.stock(level, village, s -> s.is(Items.MILK_BUCKET)) + f.countCarried(s -> s.is(Items.MILK_BUCKET))
-                >= 3 + Kitchen.milkWanted(level, village)) return null;   // [kitchen] three more while the cook wants cheese
+                >= 3 + Kitchen.milkWanted(level, village) + InputWants.wanted(village, Items.MILK_BUCKET)) return null;   // [kitchen] three more while the cook wants cheese ([supply] and a bakery its cake)
         java.util.List<Cow> cows = level.getEntitiesOfClass(Cow.class, f.getBoundingBox().inflate(12), c -> c.isAlive() && !c.isBaby());
         if (cows.isEmpty()) return null;
         if (f.countCarried(s -> s.is(Items.BUCKET)) < 1) {
@@ -222,11 +225,13 @@ public final class Links {
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return null;
         java.util.function.Predicate<ItemStack> sand = s -> s.is(Items.SAND) || s.is(Items.RED_SAND);
-        if (!Masonry.glassShort(level, village)) return null;
-        if (f.countCarried(sand) >= 4) return null;
+        // [supply] A glassworks of the town's own short of sand: dug for the stores, to sell it, not for the town's furnace.
+        boolean forFirms = InputWants.wanted(village, Items.SAND) > Market.stock(level, village, sand);
+        if (!Masonry.glassShort(level, village) && !forFirms) return null;
+        if (f.countCarried(sand) >= 4 && !forFirms) return null;
         // Sand someone brought to the stores goes to the furnace before any is dug.
         int took = 0;
-        for (net.minecraft.world.item.Item kind : java.util.List.of(Items.SAND, Items.RED_SAND)) {
+        if (!forFirms) for (net.minecraft.world.item.Item kind : java.util.List.of(Items.SAND, Items.RED_SAND)) {
             int n = Math.min(16 - took, Market.stock(level, village, s -> s.is(kind)));
             if (n <= 0 || !Crafts.take(level, v, s -> s.is(kind), n)) continue;
             ItemStack left = f.insertItem(new ItemStack(kind, n));
@@ -278,9 +283,20 @@ public final class Links {
             }
         }
         if (dug == 0) return null;
+        if (forFirms) storeDug(level, v, f, sand);                                // [supply]
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("dug " + dug + " sand for glass");
         return "dug " + dug + " sand for glass";
+    }
+
+    /** [supply] What a smelter dug for the town's firms, out of its pack into the stores (the market buys it of the town's works). */
+    private static void storeDug(ServerLevel level, Villages.Village v, VillageFolkEntity f, java.util.function.Predicate<ItemStack> what) {
+        for (ItemStack s : f.getInventoryItems()) {
+            if (s.isEmpty() || !what.test(s)) continue;
+            ItemStack out = s.copy();
+            s.setCount(0);
+            Crafts.store(level, v, out);
+        }
     }
 
     // ------------------------------------------------------------------ stone, clay and torches
@@ -322,10 +338,12 @@ public final class Links {
     public static String clay(VillageFolkEntity f, ServerLevel level) {
         UUID village = f.ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
-        if (v == null || Masonry.shortOf(level, v, Items.BRICKS) <= 0) return null;
         java.util.function.Predicate<ItemStack> balls = s -> s.is(Items.CLAY_BALL);
-        if (f.countCarried(balls) >= 16) return null;
-        int n = Math.min(32, Market.stock(level, village, balls));
+        // [supply] A potter of the town's own short of clay: dug for the stores, to sell it, not for the town's bricks.
+        boolean forFirms = v != null && InputWants.wanted(village, Items.CLAY_BALL) > Market.stock(level, village, balls);
+        if (v == null || Masonry.shortOf(level, v, Items.BRICKS) <= 0 && !forFirms) return null;
+        if (f.countCarried(balls) >= 16 && !forFirms) return null;
+        int n = forFirms ? 0 : Math.min(32, Market.stock(level, village, balls));
         if (n > 0 && Crafts.take(level, v, balls, n)) {
             ItemStack left = f.insertItem(new ItemStack(Items.CLAY_BALL, n));
             if (!left.isEmpty()) Crafts.store(level, v, left);
@@ -357,6 +375,7 @@ public final class Links {
             }
         }
         if (dug == 0) return null;
+        if (forFirms) storeDug(level, v, f, balls);                               // [supply]
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("dug " + dug + " clay off the river bed for bricks");
         if (f.getRandom().nextInt(3) == 0) {
