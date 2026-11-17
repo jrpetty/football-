@@ -13173,3 +13173,80 @@ trade, the well-run one thriving and the dear one closed by its creditors; ent19
 makings and their maker's time at the going price, the bread dearer with the wheat. The long tests log every firm each day
 (its turns at the bench, what it made and sold, its price against the going price, its makings at the market, its hands)
 and the staples' prices; a farm opened in the last three days is not yet counted among the farms that should be selling.
+
+## The labour market (economy batch 2)
+
+Where a town's market is open, its folk no longer work where the elder's sums put them: they work for an employer, at a
+wage the market sets, and they choose.
+
+- **Employers.** Every firm (its folk's or a player's); the market (the storehouse's keepers and couriers, paid out of its
+  cash); the watch; and the town itself for every trade it still runs (the fields, the mines, the smithy, the shop...,
+  paid by the treasury). A producer on its own homestead, and a founder at its own firm, is its own master. The posts the
+  town fills by its own appointing (the bank, the infirmary, the caves, the ferry, the scouts...) are filled so, as
+  before. Public works draws its crews from the trades for a turn; poor relief pays those out of work; the mint is struck
+  at the market's counter.
+- **Openings.** Each morning every employer posts what it is short of: a firm the hands it wanted and found nobody for
+  (or lost to a better offer); the town, the market and the watch the hands each trade is under its share of the town,
+  and the first hand of a trade the town has grown into. An opening names the employer, the trade, the wage offered (a
+  journeyman's day, and as a multiple of what the job is worth here), the level it wants, whether it takes an apprentice,
+  and the hours (the watch: the night watch and the day's rounds).
+- **Wages set by the market.** An opening nobody applied for raises its employer's offer a sixteenth by the next morning
+  (an eighth for the town's essential work); more than twice as many applicants as places lowers it three in the hundred;
+  with no opening an offer eases back to the going rate, and the offer for a trade with hands over its share falls. Never
+  under the living wage or the council's minimum wage; never over what the employer can afford (a firm by its week's
+  margin a hand, a new firm a third over the worth; the town by its budget's pressure; its essential work up to twice the
+  worth, out of the budget). A hand is paid on its own terms: the offer it was taken on at, raised at its weekly review to
+  its employer's going offer, cut only by a firm losing money (a tenth a week). The town's **wage index** is the average of
+  the terms its hands are actually paid at each trade, smoothed day to day; it is the going rate the rest of the economy
+  reads (the pay scale, the posted rates, the rents, the notices to other towns, the players' shifts) where it used to read
+  how hard a trade was to fill. What a job is worth here (its value, how hard it is, the hand's skill) is the start and the
+  fallback.
+- **Workers choose.** Each morning every grown folk on terms it could leave, and everybody out of work, weighs the openings
+  it could take: the wage it would be paid there at its own level, the walk from home, the employer's name for good work,
+  and its own liking for the trade (what it knows, what it cares for, its quirks; never a trade it fears). One in work
+  applies only for a tenth more than it has and its loyalty (three in the hundred a week of service, twelve at most). The
+  last farmer, the last guard and the elder stay where they are. The employer takes the best by skill and experience; with
+  two or more for a skilled place and the town holding interviews, it holds one at the hall (the post is "blacksmith at
+  Bram's Tools"), and the panel chooses. One in work gives a day's notice and moves the next morning ("Ash gave notice at
+  the watch: Bram's Tools offered 9 a day against 6"); its employer keeps a skilled hand (level ten) or its last at
+  essential work with a counter-offer if it can afford to.
+- **Lay-offs and unemployment.** A firm struggling for want of takings lets its newest hand go, one every three days; a
+  town trade two hands over its share two mornings running lets its newest go (one a day, never its last, never the fields
+  in a famine or the watch in a raid); a hand whose workplace is gone, or whose firm closed when the town has no need of it,
+  is laid off. The chronicle has it, the folk remembers it and is low for a few days. Out of work, a folk draws poor relief
+  from the treasury each morning (half the living wage, while its purse and savings come to less than four days' living),
+  is taken on at once by any opening it fits (a round every half minute through the day), and after half a day with none
+  the town places it where it is shortest of hands. A long spell out of work weighs on its spirits.
+- **Skill and training.** A hand new to a trade (under level three) is taken on as an apprentice at three quarters of the
+  offer; beside a skilled hand of its employer (level ten) it is taught each morning, and at level five it is a journeyman
+  on the full offer ("Pip finished its apprenticeship at Bram's Tools: a journeyman blacksmith now, 7 a day"). Experience
+  raises what a hand is worth, so what it is offered and what it asks.
+- **A founder without the skill** takes on the most skilled hand at the trade the whole town has: a free one if there is
+  one, else one at work for another firm or the town, by outbidding its employer (what it is paid and half as much again
+  over a tenth, as far as the new firm can afford). The old firm posts an opening for its place.
+- **Essentials never starve.** An opening at the town's essential work (the fields or the water in a famine or with nobody
+  at them, the watch in a raid or with nobody on it) pays more out of the budget, and if nobody has taken it by the next
+  morning the elder calls a hand to it (one out of work first, else one from a trade over its share). The elder's orders
+  still move hands as before, the emergency lever.
+- **The council's minimum wage.** Once a week the council looks at it: with nearly everybody in work (under one in twenty
+  out), the budget easy, it sets one a fifth over the living wage; with one in seven out of work it lowers it a coin, and
+  drops it at the living wage. A player who leads the town sets it with `/village labour minwage <coins>`.
+- **The coin.** Wages move from tills, the market's cash and the treasury to the purses, relief from the treasury: coin
+  moves between accounts only, and the census stays at nought drift.
+- **Where you see it.** The city books' **Jobs** page has a third view, **Labour market**: in work, their own masters and
+  out of work, the living and minimum wage; every opening with its employer, trade, wage, level, applicants and how it
+  stands (the mouse over one gives each applicant, what it would be paid against what it has, and the verdict); the wage
+  index by trade against a week ago; the days (in work, out, openings, hired, notice, laid off, relief); the employers;
+  the latest hirings, notices, lay-offs and rises; who is out of work and why. A folk's card has a **Work** line ("Works
+  for Bram's Tools as a blacksmith (an apprentice) since day 9, 5 a day on its terms"; "Out of work (laid off by the
+  mines); on poor relief and looking for work"). Commands: `/village labour` (and `books`), `/village labour post <firm>
+  [wage]` and `hire <firm>` for a player's firm (post an opening, take the best who applied), `/village labour minwage
+  <coins>`; operators `morning` and `round`. A player takes work at the market's wages through the shifts (the Work tab):
+  their pay follows the town's wages.
+
+Smoke: `labour_stage` in tools/realworld/smoke.py, right after the firms stage (the Jobs page's labour view, a firm's
+place at interview). Tests: LabourGameTests (lab01 an opening and its applicant taken on; lab02 a guard moving to a better
+offer after its notice; lab03 the offer up while nobody comes, down with a queue, never under the living or the minimum
+wage; lab04 a lay-off and poor relief, the coin the same; lab05 an apprentice paid less and more as it grows; lab06 a
+founder outbidding another firm for a skilled hand; lab07 the fields staffed in a town with nobody in them; lab08 kept with
+the world; lab09 a firm's place at interview; lab10 ten days of a town under the labour market).
