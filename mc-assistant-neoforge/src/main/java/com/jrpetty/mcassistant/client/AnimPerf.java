@@ -24,7 +24,7 @@ public final class AnimPerf {
 
     private static final com.sun.management.ThreadMXBean MX = (com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean();
 
-    static long setupNs, clipNs, fxNs, renderNs, renderBytes;
+    static long setupNs, clipNs, fxNs, renderNs, renderBytes, batchNs;
     static int drawn, posed, clipped;
     private static long last, windowFrom, frameBytesFrom, frameBytes;
     private static final long[] TIMES = new long[4096];
@@ -60,10 +60,10 @@ public final class AnimPerf {
             mean /= n;
             com.mojang.logging.LogUtils.getLogger().info(String.format(java.util.Locale.ROOT,
                 "[anim-perf] frames %d fps %.1f frame ms mean %.2f p50 %.2f p95 %.2f p99 %.2f | folk drawn/frame %.1f posed %.1f clipped %.1f"
-                    + " | us/frame setupAnim %.1f clip %.1f effects %.1f folk render %.1f | KB/frame folk %.2f all %.1f",
+                    + " | us/frame setupAnim %.1f clip %.1f effects %.1f folk render %.1f batches drawn %.1f | KB/frame folk %.2f all %.1f",
                 frames, frames * 1e9 / (t - windowFrom), mean / 1e6, s[n / 2] / 1e6, s[(int) (n * 0.95)] / 1e6, s[(int) (n * 0.99)] / 1e6,
                 drawn / (double) frames, posed / (double) frames, clipped / (double) frames,
-                setupNs / 1e3 / frames, clipNs / 1e3 / frames, fxNs / 1e3 / frames, renderNs / 1e3 / frames,
+                setupNs / 1e3 / frames, clipNs / 1e3 / frames, fxNs / 1e3 / frames, renderNs / 1e3 / frames, batchNs / 1e3 / frames,
                 renderBytes / 1024.0 / frames, frameBytes / 1024.0 / frames));
             windowFrom = t;
             reset();
@@ -72,7 +72,7 @@ public final class AnimPerf {
 
     private static void reset() {
         frames = 0;
-        setupNs = clipNs = fxNs = renderNs = renderBytes = frameBytes = 0L;
+        setupNs = clipNs = fxNs = renderNs = renderBytes = frameBytes = batchNs = 0L;
         drawn = posed = clipped = 0;
     }
 }

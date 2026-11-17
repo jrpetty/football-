@@ -30,6 +30,8 @@ import java.util.Locale;
  *   effects NONE               the effects as if the client's config said so (ALL, SOME, NONE)
  *   perf                       the folk's cost each frame, logged every five seconds (client/AnimPerf)
  *   cape                       a test cape on every player (EmoteCape)
+ *   nobatch                    the folk drawn pass by pass as the game draws them (FolkBatch off), to measure
+ *   unbaked                    the outfit, dye and finery drawn as passes of their own, not baked into the folk's picture
  *   swim AT MID / sack X Y Z TILT SIZE    the swimmer's lie in the water, the sack's hang from the hand
  * </pre>
  *
@@ -50,6 +52,8 @@ public final class AnimDev {
     @Nullable
     static AnimConfig.Effects effects;
     private static boolean capeByFile;
+    /** Off: the folk drawn in their four passes, face, outfit, dye and finery (FolkFaces.dressed off), to measure. */
+    static boolean unbaked;
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -70,6 +74,8 @@ public final class AnimDev {
         for (int i = 0; i < GRIP.length; i++) GRIP[i] = null;
         effects = null;
         boolean perf = false, cape = false;
+        FolkBatch.enabled = true;
+        unbaked = false;
         for (int i = 0; i < lines.size(); i++) {
             String[] w = lines.get(i).trim().split("\\s+");
             if (w.length == 0 || w[0].isEmpty() || w[0].startsWith("#")) continue;
@@ -91,6 +97,8 @@ public final class AnimDev {
                 case "effects" -> effects = AnimConfig.Effects.valueOf(w[1].toUpperCase(Locale.ROOT));
                 case "perf" -> perf = true;
                 case "cape" -> cape = true;
+                case "nobatch" -> FolkBatch.enabled = false;
+                case "unbaked" -> unbaked = true;
                 case "ride" -> { FolkRenderer.RIDE_DROP[0] = Float.parseFloat(w[1]); FolkRenderer.RIDE_DROP[1] = Float.parseFloat(w[2]); }
                 case "drum" -> { for (int k = 0; k < 3; k++) FolkActionLayer.DRUM_AT[k] = Float.parseFloat(w[1 + k]); }
                 case "sack" -> { for (int k = 0; k < 5; k++) FolkActionLayer.SACK[k] = Float.parseFloat(w[1 + k]); }

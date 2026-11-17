@@ -119,7 +119,36 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     @Override
     public ResourceLocation getTextureLocation(VillageFolkEntity folk) {
+        // [anim] A grown folk in sight: its face, outfit, dye and finery in one picture, drawn in one pass (FolkFaces.dressed);
+        // the three passes (Outfit, Colours, Finery) draw only while that picture waits its turn.
+        com.jrpetty.mcassistant.entity.FolkAction.Seen seen = folk.animSeen();
+        seen.baked = false;
+        if (!folk.isInvisible() && !folk.isBaby() && !AnimDev.unbaked) {
+            int t = trade(folk);
+            int tier = folk.clientWealth();
+            ResourceLocation dressed = FolkFaces.dressed(folk, t, dyeOf(folk, t), tier >= 0 && tier < FINERY.length && FINERY[tier] != null ? tier : -1);
+            if (dressed != null) {
+                seen.baked = true;
+                return dressed;
+            }
+        }
         return FolkFaces.texture(folk);                    // [individual] its own face, built once and kept
+    }
+
+    /** The colour of a trade's dyed parts on this folk (opaque), or 0 for a trade with none. */
+    private static int dyeOf(VillageFolkEntity folk, int t) {
+        if (DYE[t] == null) return 0;
+        int rgb;
+        long id = folk.getUUID().getMostSignificantBits();
+        if ("guard".equals(FolkModel.TRADES[t])) {
+            rgb = BANNERS[Math.floorMod(Math.max(0, folk.clientBanner()), BANNERS.length)];
+        } else if ("none".equals(FolkModel.TRADES[t])) {
+            rgb = CLOAKS[(int) Math.floorMod(id ^ (id >>> 31), (long) CLOAKS.length)];
+        } else {
+            rgb = DYES[(int) Math.floorMod(id ^ (id >>> 29) ^ t * 7L, (long) DYES.length)];
+            rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
+        }
+        return 0xFF000000 | rgb;
     }
 
     /**
@@ -176,7 +205,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             renderColoredCutoutModel(getParentModel(), OUTFIT[trade(folk)], pose, buffer, light, folk, -1);
         }
     }
@@ -189,21 +218,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             int t = trade(folk);
             if (DYE[t] == null) return;
-            int rgb;
-            long id = folk.getUUID().getMostSignificantBits();
-            if ("guard".equals(FolkModel.TRADES[t])) {
-                rgb = BANNERS[Math.floorMod(Math.max(0, folk.clientBanner()), BANNERS.length)];
-            } else if ("none".equals(FolkModel.TRADES[t])) {
-                rgb = CLOAKS[(int) Math.floorMod(id ^ (id >>> 31), (long) CLOAKS.length)];
-            } else {
-                long bits = folk.getUUID().getMostSignificantBits();
-                rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];
-                rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
-            }
-            renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, 0xFF000000 | rgb);
+            int rgb = dyeOf(folk, t);
+            renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, rgb);
         }
     }
 
@@ -215,7 +234,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             int tier = folk.clientWealth();
             if (tier < 0 || tier >= FINERY.length || FINERY[tier] == null) return;
             renderColoredCutoutModel(getParentModel(), FINERY[tier], pose, buffer, light, folk, -1);
@@ -357,7 +376,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             pose.pushPose();
             pose.translate(0.0F, crouched ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F, 0.0F);
         }
-        super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
+        FolkBatch.folk();
+        super.render(folk, entityYaw, partialTick, pose, FolkBatch.around(buffer), packedLight);   // [anim] its passes batched
         if (sat) pose.popPose();
         QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 

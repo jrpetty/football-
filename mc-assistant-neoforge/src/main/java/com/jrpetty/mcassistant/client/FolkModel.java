@@ -249,6 +249,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private final byte[] kind;
     /** [anim] Its six parts, for the keyframe clips (FolkAnimations). */
     private final FolkAnimations.Rig rig;
+    private final ModelPart[] limbs;
     private static final byte KIND_OTHER = 0, KIND_UNDER_HAT = 1, KIND_UNDER_HOOD = 2, KIND_PIPE = 3, KIND_CANE_LEFT = 4,
         KIND_CANE_RIGHT = 5;
 
@@ -261,6 +262,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         this.rightLeg = root.getChild("right_leg");
         this.leftLeg = root.getChild("left_leg");
         this.rig = new FolkAnimations.Rig(head, body, rightArm, leftArm, rightLeg, leftLeg);   // [anim]
+        this.limbs = new ModelPart[]{head, body, rightArm, leftArm, rightLeg, leftLeg};
         this.worn = new ModelPart[WEARERS.length];
         this.wornBy = new String[WEARERS.length];
         this.onHead = new boolean[WEARERS.length];
@@ -516,7 +518,9 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public void setupAnim(VillageFolkEntity folk, float limbSwing, float limbSwingAmount,
                           float ageInTicks, float netHeadYaw, float headPitch) {
         long t0 = AnimPerf.now();                                      // [anim] measured (AnimDev's perf)
-        for (ModelPart part : allParts) part.resetPose();
+        // [anim] Only the six limbs are ever posed (their worn things hang from them as baked): put back as they were,
+        // not every one of the some two hundred parts, for every folk in sight, every frame.
+        for (ModelPart part : limbs) part.resetPose();
 
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
         int outfit = outfit(folk);

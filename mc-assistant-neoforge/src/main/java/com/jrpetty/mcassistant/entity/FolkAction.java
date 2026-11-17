@@ -150,6 +150,8 @@ public final class FolkAction {
         private int seq = -1, markSeq = -1;
         /** The effects' own (client/FolkEffects): the tick they last ran, where in its clip it was, and for which act. */
         public int fxTick = -1, fxAct;
+        /** Drawn this frame in one picture with its outfit, its dye and its finery baked in (client/FolkFaces.dressed). */
+        public boolean baked;
         public float fxSec = -1.0F;
         /** The game's own clock for a keyframe animation, started at each new act (as the warden's and the camel's are). */
         public final net.minecraft.world.entity.AnimationState state = new net.minecraft.world.entity.AnimationState();
