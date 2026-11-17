@@ -778,6 +778,17 @@ public final class Crafts {
         return bloom(level, v, hives.get(0), 6);
     }
 
+    /** [supply] Tests: a turn of the tailor's own work, and of the smith's. */
+    @Nullable
+    public static String tailorForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return tailor(level, v, f);
+    }
+
+    @Nullable
+    public static String smithForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return smith(level, v, f);
+    }
+
     /** Tests: a turn of the beekeeper's own work. */
     @Nullable
     public static String beekeepForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {

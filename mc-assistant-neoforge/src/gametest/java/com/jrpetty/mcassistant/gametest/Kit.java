@@ -83,6 +83,9 @@ final class Kit {
         // nought): with them a town of eleven held an auction (ent05's stall waited for market day) and fitted out boats.
         com.jrpetty.mcassistant.entity.Auctions.resetForTests();
         com.jrpetty.mcassistant.entity.Fleet.resetForTests();
+        com.jrpetty.mcassistant.entity.CropPlan.resetForTests();          // [supply]
+        com.jrpetty.mcassistant.entity.InputWants.resetForTests();        // [supply]
+        com.jrpetty.mcassistant.entity.FirmTrades.offForTests(false);     // [supply]
     }
 
     /**

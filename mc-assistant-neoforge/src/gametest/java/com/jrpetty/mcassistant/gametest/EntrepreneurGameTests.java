@@ -971,7 +971,10 @@ public class EntrepreneurGameTests {
     /** [supply] The wares whose comings and goings the long tests log each morning. */
     static final List<String> SUPPLY_WATCH = List.of("minecraft:wheat", "minecraft:bread", "minecraft:potato", "minecraft:baked_potato", "minecraft:carrot",
         "minecraft:hay_block", "minecraft:honeycomb", "minecraft:honey_bottle", "minecraft:string", "minecraft:leather", "minecraft:candle", "minecraft:white_wool",
-        "minecraft:iron_pickaxe", "minecraft:stone_pickaxe", "minecraft:iron_axe", "minecraft:iron_hoe", "minecraft:bucket", "minecraft:shears", "minecraft:wheat_seeds");
+        "minecraft:iron_pickaxe", "minecraft:stone_pickaxe", "minecraft:iron_axe", "minecraft:iron_hoe", "minecraft:bucket", "minecraft:shears", "minecraft:wheat_seeds",
+        "minecraft:clay_ball", "minecraft:sand", "minecraft:glass", "minecraft:sugar_cane", "minecraft:sugar", "minecraft:egg", "minecraft:milk_bucket",
+        "minecraft:paper", "minecraft:book", "minecraft:feather", "minecraft:brown_mushroom", "minecraft:beetroot", "minecraft:pumpkin", "minecraft:beef",
+        "minecraft:cooked_beef", "minecraft:glass_bottle", "minecraft:honey_bottle", "minecraft:rabbit_hide", "minecraft:cod", "minecraft:cookie", "minecraft:cake");
 
     static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded) {
         tenDays(helper, cx, tag, seeded, 10);
@@ -1089,6 +1092,8 @@ public class EntrepreneurGameTests {
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
                     for (String l : com.jrpetty.mcassistant.entity.SupplyTrace.dayLines(id, today - 1, SUPPLY_WATCH)) Kit.log(tag + " day " + dayNo + " SUPPLY " + l);   // [supply]
+                    if (MarketMaker.live(id)) Kit.log(tag + " day " + dayNo + " CROPS " + com.jrpetty.mcassistant.entity.CropPlan.line(level, id) + "| wanted: "
+                        + com.jrpetty.mcassistant.entity.InputWants.line(id) + " | left to firms: " + com.jrpetty.mcassistant.entity.FirmTrades.linesForTests(level, id));   // [supply]
                 }
                 if (ran >= days * 24000L) {
                     over[0] = true;

@@ -44,6 +44,12 @@ public final class FirmTrades {
         return wares(level, village).contains(key);
     }
 
+    /** Tests: the wares left to firms now, in a line. */
+    public static String linesForTests(ServerLevel level, UUID village) {
+        Set<String> w = wares(level, village);
+        return w.isEmpty() ? "none" : String.join(", ", new java.util.TreeSet<>(w)).replace("minecraft:", "");
+    }
+
     /** The wares the town's firms have taken up, looked at again every ten seconds. */
     static Set<String> wares(ServerLevel level, UUID village) {
         long now = level.getGameTime();
