@@ -418,21 +418,20 @@ public class FolkAnimGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos o = ground(helper, 3_310_000);
         helper.runAtTickTime(5, () -> {
-            int n = AnimStage.crowd(level, o.offset(-12, 0, -12), 100);
+            List<VillageFolkEntity> crowd = AnimStage.crowdOf(level, o.offset(-12, 0, -12), 100);
+            int n = crowd.size();
             helper.assertTrue(n == 100, "a crowd of a hundred: " + n);
             net.minecraft.world.phys.AABB all = new net.minecraft.world.phys.AABB(o).inflate(16, 4, 16);
             Set<Act> doing = EnumSet.noneOf(Act.class);
             int busy = 0;
-            for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, all)) {
-                if (!f.getTags().contains("folk_lineup")) continue;
+            for (VillageFolkEntity f : crowd) {
                 Act a = FolkAction.now(f);
                 if (a != Act.NONE) busy++;
                 doing.add(a);
             }
             helper.assertTrue(busy == 100, "every one of them at work or talk: " + busy);
             helper.assertTrue(doing.contains(Act.TALK) && doing.contains(Act.HAMMER) && doing.size() >= 15, "the town's work and its talk: " + doing);
-            for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
-                    all, e -> e.getTags().contains("folk_lineup"))) e.discard();
+            for (VillageFolkEntity f : crowd) f.discard();
             Kit.log("[VT] fan07 a crowd of " + n + ", " + doing.size() + " acts");
             helper.succeed();
         });

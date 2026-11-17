@@ -269,7 +269,13 @@ public final class AnimStage {
      * so many folk in a square, two blocks apart, each at the work or the talk of the town, every one a showcase.
      */
     public static int crowd(ServerLevel level, BlockPos at, int n) {
-        int side = (int) Math.ceil(Math.sqrt(n)), made = 0;
+        return crowdOf(level, at, n).size();
+    }
+
+    /** The crowd's folk, as stood up. */
+    public static List<VillageFolkEntity> crowdOf(ServerLevel level, BlockPos at, int n) {
+        int side = (int) Math.ceil(Math.sqrt(n));
+        List<VillageFolkEntity> made = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             int k = i % CROWD.length;
             VillageFolkEntity f = one(level, at.getX() + 0.5 + (i % side) * 2.0, at.getY(), at.getZ() + 0.5 + (i / side) * 2.0,
@@ -277,7 +283,7 @@ public final class AnimStage {
             if (f == null) continue;
             f.setCustomNameVisible(false);
             turn(f, (i * 47) % 360);
-            made++;
+            made.add(f);
         }
         return made;
     }
