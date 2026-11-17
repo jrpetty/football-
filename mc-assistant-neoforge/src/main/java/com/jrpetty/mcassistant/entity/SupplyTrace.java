@@ -44,8 +44,29 @@ public final class SupplyTrace {
         if (!on || village == null || k <= 0) return;
         VillageFolkEntity a = Accounts.actor();
         String who = how + " " + r.account().kind().name().toLowerCase(Locale.ROOT) + "/" + r.purpose().name().toLowerCase(Locale.ROOT)
-            + (a == null ? "" : " " + a.stationTask().name().toLowerCase(Locale.ROOT)) + " @" + IouBook.site();
+            + (a == null ? "" : " " + a.stationTask().name().toLowerCase(Locale.ROOT) + jobs(a)) + " @" + site();
         page(village, Stockroom.key(st)).merge("out: " + who, (long) k, Long::sum);
+    }
+
+    /** A withdrawal's reason: the craft queued after it ("[craft bread]"). */
+    private static String jobs(VillageFolkEntity a) {
+        for (Job j : a.queuedJobs()) if (j.type() == Job.Type.CRAFT) return " [craft " + j.arg() + "]";
+        return "";
+    }
+
+    private static final StackWalker WALKER = StackWalker.getInstance();
+    private static final java.util.Set<String> PLUMBING = java.util.Set.of(SupplyTrace.class.getName(), IouBook.class.getName(), Accounts.class.getName(),
+        MarketMaker.class.getName(), TownWork.class.getName(), Crafts.class.getName(), Market.class.getName(), Workshop.class.getName(),
+        Storekeeping.class.getName(), Sellers.class.getName());
+
+    /** The first places outside the money's plumbing that led here ("Cafe.cook:120<Crafts.now:88"). */
+    static String site() {
+        return WALKER.walk(st -> {
+            List<String> out = new ArrayList<>();
+            st.filter(f -> !PLUMBING.contains(f.getClassName()) && f.getClassName().startsWith("com.jrpetty"))
+                .limit(2).forEach(f -> out.add(f.getClassName().substring(f.getClassName().lastIndexOf('.') + 1) + "." + f.getMethodName() + ":" + f.getLineNumber()));
+            return out.isEmpty() ? "?" : String.join("<", out);
+        });
     }
 
     /** Into the market (a producer's output bought). */

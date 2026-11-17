@@ -406,6 +406,7 @@ public final class Enterprise {
             if (!plan.ok() && batch > 1) plan = FirmSupply.asFirm(() -> Bench.plan(level, v, one.getItem(), 1, hand));
             if (!plan.ok()) {
                 r.putString("short", Stockroom.nameOf(key) + ": short of " + plan.shortOf);
+                InputWants.want(v.id(), plan.missing, Math.max(1, plan.missingCount) * batch);   // [supply] the word to its producers
                 continue;
             }
             ItemStack out = Bench.make(level, v, plan, f, hand);
@@ -579,7 +580,10 @@ public final class Enterprise {
         double score = gap * price * (margin - 1) / (1 + firms);
         // [econ-1c] Nothing to make it of: a maker whose wares the market holds no makings for (no leather in the town for a
         // clothier) would open to stand idle. Only where the want is worth having is it looked into.
-        if (score > 0 && !t.resells() && !makeable(level, v, t)) score = 0;
+        if (score > 0 && !t.resells() && !makeable(level, v, t)) {
+            InputWants.shortFor(level, v, t, best, (int) Math.max(1, Math.min(16, Math.ceil(gap / 7))));   // [supply] the word to its producers
+            score = 0;
+        }
         // What a new firm might make in a week: half the score (a new entrant's capture), less its rent and the wages of any
         // hands beside the founder (the founder lives on what it makes).
         double rent7 = (t.stall() ? 30 : 60) * Wealth.standing(id) / 10.0 * 7 / 100.0;

@@ -5753,6 +5753,8 @@ public class VillageFolkEntity extends AssistantEntity {
         cullTick = tickCount;
         net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT,
             Fletchers.henFirst(server, ownerId()));               // [fletcher] an old hen first, while the fletcher wants feathers
+        // [supply] The town's trades short of leather (a clothier, a bookbinder): a cow past a breeding pair, for its hide.
+        if (one == null) one = InputWants.hideFor(server, ownerId(), z.center(), Math.max(8, Math.min(16, z.radius())));
         String word = one == null ? null : gameWord(one);
         if (word == null) return false;
         // The hunt does the killing (the blade, the drops swept into the pack); the meat, the hide and the wool

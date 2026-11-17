@@ -1224,7 +1224,7 @@ public final class FieldTools {
         for (BlockPos p : full) {
             ItemStack smoker = carried(f, FieldItems.BEE_SMOKER.get());
             if (smoker.isEmpty()) break;
-            boolean wantComb = Market.stock(level, v.id(), s -> s.is(Items.HONEYCOMB)) + comb < 6;
+            boolean wantComb = Market.stock(level, v.id(), s -> s.is(Items.HONEYCOMB)) + comb < 6 + InputWants.wanted(v.id(), Items.HONEYCOMB);   // [supply]
             boolean shears = f.countCarried(s -> s.is(Items.SHEARS)) > 0 || takeShears(level, v, f);
             boolean bottle = Crafts.bottle(level, v);
             if (shears && (wantComb || !bottle)) {

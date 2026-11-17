@@ -149,7 +149,7 @@ public final class Sellers {
     public static void sold(ServerLevel level, UUID village, Business firm, ItemStack what, int n, long pence) {
         if (village == null || what.isEmpty() || n <= 0) return;
         Businesses.sale(level, village, firm, what, Stockroom.key(what), n, pence, true);
-        SupplyTrace.note(village, Stockroom.key(what), "sold by " + firm.name + " @" + IouBook.site(), n);   // [supply]
+        SupplyTrace.note(village, Stockroom.key(what), "sold by " + firm.name + " @" + SupplyTrace.site(), n);   // [supply]
         MarketMaker.paidAtCounter(level, village, what, n);
         CompoundTag r = Enterprise.rec(village, firm.id);
         if (r != null) Accounts.add(r, "sales", n);

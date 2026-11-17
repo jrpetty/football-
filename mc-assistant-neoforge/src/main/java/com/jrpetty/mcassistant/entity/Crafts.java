@@ -559,7 +559,7 @@ public final class Crafts {
             return name(bed);
         }
         // String for the smith's bows and the fishers' rods, spun from the wool.
-        if (stock(level, v, s -> s.is(Items.STRING)) < 6 && have >= 4) {
+        if (stock(level, v, s -> s.is(Items.STRING)) < 6 + InputWants.wanted(v.id(), Items.STRING) && have >= 4) {   // [supply] and a chandler's call
             if (!take(level, v, wool, 1)) return null;
             ItemStack string = new ItemStack(Items.STRING, 4);
             store(level, v, string.copy());
@@ -720,7 +720,9 @@ public final class Crafts {
         for (BlockPos p : hives) {
             BlockState st = level.getBlockState(p);
             if (st.getValue(BeehiveBlock.HONEY_LEVEL) < BeehiveBlock.MAX_HONEY_LEVELS) continue;
-            boolean wantComb = stock(level, v, s -> s.is(Items.HONEYCOMB)) < 3 && hives.size() < MAX_HIVES;
+            boolean wantComb = stock(level, v, s -> s.is(Items.HONEYCOMB)) < 3 && hives.size() < MAX_HIVES
+                || stock(level, v, s -> s.is(Items.HONEYCOMB)) < InputWants.wanted(v.id(), Items.HONEYCOMB)   // [supply] a chandler's call for comb
+                || InputWants.combPays(level, v.id());                  // [supply] or the three combs fetch more than the honey and its bottle
             boolean shears = shears(level, v, f);
             ItemStack got;
             if (shears && (wantComb || !bottle(level, v))) {
