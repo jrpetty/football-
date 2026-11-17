@@ -918,6 +918,12 @@ public final class LabourMarket {
         return 10.0 * f.tradeLevel(t) + 4.0 * JobMarket.knacks(f, t) + Math.min(10, f.veteranLevel() / 2.0);
     }
 
+    static int handsAt(UUID village, StationTask t) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.stationTask() == t && !a.isBaby()) n++;
+        return n;
+    }
+
     /** The last hand at the town's essential work, who may not be taken from it. */
     static boolean lastAtEssential(UUID village, VillageFolkEntity f) {
         StationTask t = f.stationTask();
@@ -1247,7 +1253,8 @@ public final class LabourMarket {
                 String emp = employerOf(id, f);
                 if (!emp.startsWith("town:") && !emp.equals("market") && !emp.equals("watch")) continue;
                 if (essentialOpening(id, f.stationTask(), 2) || Fears.shuns(f, t) || lastAtEssential(id, f)) continue;
-                double o = over.computeIfAbsent(f.stationTask(), k -> Villages.share(id, k));
+                // A trade the town has no call for yet at its size counts every hand at it as spare.
+                double o = over.computeIfAbsent(f.stationTask(), k -> Villages.wants(id, k) ? Villages.share(id, k) : handsAt(id, k));
                 if (o >= 1.0) spare.add(f);
             }
             spare.sort(Comparator.comparingDouble((VillageFolkEntity f) -> -over.get(f.stationTask())).thenComparing(VillageFolkEntity::getUUID));
