@@ -973,7 +973,10 @@ public final class LabourMarket {
         Contract c = tw.contracts.get(f.getUUID());
         boolean out = f.stationTask() == StationTask.NONE;
         int now = out ? 0 : JobWorth.payOf(f).worthPart();
-        double u0 = out ? 0 : now * (1 + loyalty(c, Accounts.dayNow()) + SWITCH);
+        // A hand at a trade with more hands than the town needs (its place not safe) takes an equal wage (or a little less) where it is wanted;
+        // one in a safe place wants a tenth more and its loyalty.
+        boolean surplus = !out && Villages.overStaffed(village, f.stationTask());
+        double u0 = out ? 0 : surplus ? now * 0.9 : now * (1 + loyalty(c, Accounts.dayNow()) + SWITCH);
         Vacancy best = null;
         double bu = 0;
         int bw = 0;
