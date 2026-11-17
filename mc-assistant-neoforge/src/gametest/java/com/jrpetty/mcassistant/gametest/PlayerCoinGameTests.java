@@ -131,7 +131,7 @@ public class PlayerCoinGameTests {
                 long c0 = CoinCensus.count(id), n0 = CoinCensus.netFlowPence(id);
                 int held0 = 0;
                 for (ServerPlayer p : players) held0 += Market.coinsHeld(p);
-                CoinCensus.probe("before " + path.name());
+                CoinCensus.probe("the test's own setting for " + path.name() + " (what it put there by hand)");
                 String said;
                 try {
                     said = path.run().get();
