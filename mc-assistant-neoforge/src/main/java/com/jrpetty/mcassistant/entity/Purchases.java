@@ -540,6 +540,30 @@ public final class Purchases {
                 return best;
             }
             case TOOL -> {
+                // [supply] Once the town has its market, a tool by the work in it for the money, at the seller it would go to (a
+                // toolshop's stone pick at half a coin against the counter's iron one at seven), the poor minding the price
+                // most and the well-off hardly at all: every buyer took the best metal it could pay for, and a toolshop of the
+                // town's own folk sold nothing. A miner still takes the best metal (the deep ore wants it).
+                Villages.Village vv = Villages.get(village);
+                if (MarketMaker.live(village) && vv != null && buyer.stationTask() != StationTask.MINE) {
+                    double care = switch (Wealth.tier(buyer)) {
+                        case POOR -> 1.0;
+                        case GETTING_BY -> 0.8;
+                        case COMFORTABLE -> 0.6;
+                        case WELL_OFF -> 0.4;
+                        case WEALTHY -> 0.25;
+                    };
+                    ItemStack best = null;
+                    double bestScore = -1;
+                    for (ItemStack s : offer) {
+                        double p = priceEach(level, village, s, buyer);
+                        p = Math.min(p, Sellers.best(level, vv, s, buyer, p, 1, true).price());
+                        if (!canPay(buyer, p)) continue;
+                        double score = toolWork(s) / Math.pow(Math.max(0.05, p), care);
+                        if (score > bestScore) { bestScore = score; best = s; }
+                    }
+                    if (best != null) return best;
+                }
                 List<ItemStack> sorted = new ArrayList<>(offer);
                 sorted.sort(Comparator.comparingInt((ItemStack s) -> -(Toolrack.metal(s) * 200 + Toolrack.left(s))));
                 for (ItemStack s : sorted) if (canPay(buyer, priceEach(level, village, s, buyer))) return s;
@@ -556,6 +580,20 @@ public final class Purchases {
                 return best;
             }
         }
+    }
+
+    /** [supply] The work in a tool: the uses left in it, the quicker metals counting for more. */
+    static double toolWork(ItemStack s) {
+        double speed = switch (Toolrack.metal(s)) {
+            case 5 -> 9;
+            case 4 -> 8;
+            case 3 -> 6;
+            case 2 -> 4;
+            case 1 -> 12;
+            default -> 2;
+        };
+        int uses = s.isDamageableItem() ? s.getMaxDamage() - s.getDamageValue() : 100;
+        return Math.max(1, uses) * speed;
     }
 
     /** [supply] How much of a meal one of this is: a loaf or a baked potato one (five of hunger), a raw potato a fifth, a steak more. */
