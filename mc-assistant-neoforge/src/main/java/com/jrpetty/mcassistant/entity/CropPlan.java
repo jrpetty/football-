@@ -149,7 +149,8 @@ public final class CropPlan {
         if (plan.isEmpty() || !plan.containsKey(own)) return own;
         Map<Item, Double> now = fields(farmer.getUUID());
         double over = now.getOrDefault(own, 0.0) - plan.get(own);
-        if (over <= SLACK || farmer.getRandom().nextDouble() >= over / Math.max(0.01, now.getOrDefault(own, 0.0))) return own;
+        // Half of what is over its share at the most, a harvest: a field turns over in a few harvests, not all at once.
+        if (over <= SLACK || farmer.getRandom().nextDouble() >= Math.min(0.5, over / Math.max(0.01, now.getOrDefault(own, 0.0)))) return own;
         Item best = null;
         double most = SLACK;
         for (Map.Entry<Item, Double> e : plan.entrySet()) {

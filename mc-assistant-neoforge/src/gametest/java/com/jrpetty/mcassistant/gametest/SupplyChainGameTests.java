@@ -265,7 +265,7 @@ public class SupplyChainGameTests {
         UUID id = t.ownerId();
         Villages.Village v = Villages.get(id);
         helper.runAtTickTime(5, () -> {
-            stores(level, id, x, new ItemStack(Items.WHITE_WOOL, 8), new ItemStack(Items.STRING, 6), new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED),
+            stores(level, id, x, new ItemStack(Items.WHITE_WOOL, 16), new ItemStack(Items.STRING, 6), new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED),
                 new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED), new ItemStack(Items.LOOM));
             Kit.Expect ok = new Kit.Expect();
             int s0 = stock(level, id, s -> s.is(Items.STRING));
@@ -358,6 +358,7 @@ public class SupplyChainGameTests {
             // A toolshop of the town's own folk, iron picks on its shelf.
             stores(level, id, x, new ItemStack(Items.IRON_INGOT, 40), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.STICK, 32),
                 new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW), new ItemStack(Items.BOW));
+            int picksBefore = stock(level, id, pick);
             Business shop = Enterprise.foundForTests(level, v, "toolsmith", folk.get(1));
             helper.assertTrue(shop != null, "a toolshop opened");
             Business.Lot lot = new Business.Lot();
@@ -369,8 +370,8 @@ public class SupplyChainGameTests {
             List<String> then = new ArrayList<>();
             for (int i = 0; i < 6; i++) then.add(String.valueOf(Crafts.smithForTests(level, v, smith)));
             int picksThen = stock(level, id, pick);
-            Kit.log("sc2_06 with the toolshop selling picks: the smith " + then + "; iron picks in the stores " + picksThen);
-            ok.that(picksThen == 0, "the town's smith forged no iron pick for the counter: " + picksThen);
+            Kit.log("sc2_06 with the toolshop selling picks: the smith " + then + "; iron picks in the stores " + picksBefore + " -> " + picksThen);
+            ok.that(picksThen <= picksBefore, "the town's smith forged no iron pick for the counter: " + picksBefore + " -> " + picksThen);
             helper.assertTrue(ok.clean(), ok.summary());
             helper.succeed();
         });

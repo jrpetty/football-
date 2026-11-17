@@ -13173,3 +13173,65 @@ trade, the well-run one thriving and the dear one closed by its creditors; ent19
 makings and their maker's time at the going price, the bread dearer with the wheat. The long tests log every firm each day
 (its turns at the bench, what it made and sold, its price against the going price, its makings at the market, its hands)
 and the staples' prices; a farm opened in the last three days is not yet counted among the farms that should be selling.
+
+## Supply chains: the fields, the makings and the trades left to tradesmen (supply batch 2)
+
+Batch 1E's twenty-day town had firms but none that thrived, and it was supply, not pricing: a loaf is three wheat, and the
+town's wheat was never in its stores and dear; a chandler, a clothier could never open for want of comb, string or leather;
+and a toolshop sold nothing beside the town's own counter, which made every tool it did. A day-by-day look at where each
+ware came from and went (the long tests' supply log) showed why, and this is what was done.
+
+- **Where the wheat went.** The fields grew a hundred and twenty to two hundred sheaves a day, and the town took them as fast
+  as they came: the idle hands' bake at the stores (fifty to seventy a day, baked into the town's own bread), the town's
+  bakehouse and its café's cook, the ranch's feed troughs, the couriers stocking the kitchens' own chests; and once the
+  windmill stood, a farmer passing it with a load left its wheat there, unsold and unpaid for, and the market's wheat came
+  to nought. The stores also held the last twelve wheat back from every maker as "seed for the fields", when wheat is sown
+  from its seed.
+- **The farmers sow what pays** (CropPlan). A farmer sowed back whatever it had cut, and broke new ground in the mix of seed
+  it carried, so the fields stayed as the first farmers laid them out whatever the market paid. Once the market is open,
+  each crop is weighed by what a block of it brings in a harvest at the market's bid (a potato plant gives two or three and
+  one goes back in the ground; a wheat plant a sheaf and its seed with some to spare), and the town's ground is shared out
+  by that, the dearer the more, never under a tenth of it to any crop a farmer may grow. A farmer cutting a crop that has
+  more than its share of its fields sows the one shortest of its share in its place now and then, so the fields turn over a
+  harvest at a time: a bakery's call for wheat runs its price up, and wheat comes in a few days later; a glut of potatoes
+  moves ground out of potatoes. New ground goes to the crop furthest short of its share.
+- **Wheat to the market.** Once the market is open a farmer's wheat goes to the market first, to be paid for and bought by
+  the bakers; the market's own spare wheat still goes up to the mill. The stores keep the farmers' wheat seed back now (and
+  their beetroot seed), not the wheat.
+- **A basket that tires of a kind of food** (FoodBasket). A household tires of the same food, and now of the same kind of
+  food: the potato raw, baked and the carrot are all roots to it, and after a week of roots a loaf looks good, though a loaf
+  costs more for the same bellyful (in these towns a block of wheat feeds a fifth of what a block of potatoes does, and
+  bread is dear by it: a real thing, and why a loaf is a treat a household buys now and then, not every meal).
+- **The makings a firm wants reach the producers** (InputWants). A firm short of its makings at its bench, and a firm the
+  town has the call for but nothing to make it of (a clothier where there is no leather), say what they are short of and
+  how many, and the producers who can get it see it at their work:
+  - **honeycomb:** the beekeeper takes the comb from a full hive (shears) rather than bottle the honey; and once the market
+    is open it takes whichever pays, three combs or a bottle of honey less the bottle;
+  - **string:** the tailor spins a lock of wool into four lengths (the watch keeps the spiders' string as before);
+  - **leather:** the rancher culls a cow past a breeding pair for its hide and its beef, and breeds the herd back;
+  - **sand and clay:** the smelter digs them for the stores, for a glassworks or a potter to buy, not for its own furnace;
+  - **milk and sugar cane:** the rancher milks for a bakery's cakes; the farmers grow a longer row of cane while sugar or
+    paper is wanted;
+  - **wheat and the other crops:** by their price, which the want runs up (the crop plan above).
+  A want lapses a day or so after it is met.
+- **A trade left to its tradesmen** (FirmTrades). While a firm of the town's own folk makes a ware (it holds some, or has made
+  some in the last two days) and has the hands for it, the town's own makers make none of it for the counter: the shop's
+  bench and the café's kitchen, the smith at the anvil (the watch's arms are the town's own still), the tailor's boots, the
+  honey house's candles, the town's bakehouse, the idle hands' bake at the stores and a farmer's spare wheat (which goes to
+  market for the bakery). Buyers choose among what there is by price, the walk and the seller's name (Sellers.best). A firm
+  out of a ware for two days, or closed, and the town's makers take it up again.
+- **Every kind of firm and where its makings come from.** The toolsmith and the armourer: the miners' stone and the
+  smelters' iron. The carpenter: timber, the rancher's wool, leather for a frame. The clothier: the rancher's hides (on
+  demand). The weaver: the rancher's wool. The chandler: the beekeeper's comb and the tailor's string (on demand). The potter
+  and the glassworks: the smelter's clay and sand (on demand). The baker: the farmers' wheat (by its price), the rancher's
+  eggs and milk, cane for sugar; cocoa only from a trader. The butcher: the rancher's and the hunter's meat. The fishmonger:
+  its own catch. The café and the inn: the farmers' roots and beetroot, the cook's fire; mushrooms as the woods give them.
+  The tavern and the apothecary: the cellar's makings, the nether's wart. The greengrocer and the general store buy in. The
+  stationer: cane for paper, leather for a binding (on demand).
+
+Tests (SupplyChainGameTests): sc2_01 the fields follow the price (wheat dear, the field turns to wheat; cheap, back to
+roots); sc2_02 the town's cook leaves the bread to a bakery, and takes it up again when the bakery lets it go; sc2_03 comb
+taken when a chandler wants it; sc2_04 string spun when it is wanted; sc2_05 a cow culled for its hide when leather is
+wanted, never below a pair; sc2_06 the smith leaves the iron picks to a toolshop; sc2_07 a household that tires of roots
+buys a loaf. The long tests log each ware's comings and goings every morning (whose output, by trade; to whom, for what),
+the crop plan, the wants and the trades left to firms.
