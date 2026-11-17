@@ -530,6 +530,10 @@ public final class Purchases {
                     q *= FoodBasket.appeal(f.getUUID(), s);                // [econ-1d] a basket: a made meal valued, a change from yesterday
                     double p = priceEach(level, village, s, buyer);
                     if (vv != null) p = Math.min(p, Sellers.best(level, vv, s, buyer, p, 1, true).price());   // [econ-1d] at the seller it would go to
+                    // [supply] By what a bellyful of it costs: a raw potato is a fifth of a loaf's meal, and at a fifth of the loaf's
+                    // price it is no cheaper a meal. Weighed a piece against a piece, the poor lived on raw potatoes at a few pennies
+                    // and walked past the baker's bread and the café's baked potatoes alike.
+                    if (MarketMaker.live(village)) p = p / bellyful(s);
                     double score = q / Math.pow(Math.max(0.05, p), Math.max(0.1, care));
                     if (score > bestScore) { bestScore = score; best = s; }
                 }
@@ -552,6 +556,12 @@ public final class Purchases {
                 return best;
             }
         }
+    }
+
+    /** [supply] How much of a meal one of this is: a loaf or a baked potato one (five of hunger), a raw potato a fifth, a steak more. */
+    static double bellyful(ItemStack s) {
+        net.minecraft.world.food.FoodProperties fp = s.get(net.minecraft.core.component.DataComponents.FOOD);
+        return fp == null ? 1.0 : Math.max(0.2, Math.min(2.0, fp.nutrition() / 5.0));
     }
 
     /** So many of exactly this out of the shop's stock; for its food and its tool, out of the stores if the shop has none. */
