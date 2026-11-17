@@ -545,7 +545,8 @@ public final class Purchases {
                 // most and the well-off hardly at all: every buyer took the best metal it could pay for, and a toolshop of the
                 // town's own folk sold nothing. A miner still takes the best metal (the deep ore wants it).
                 Villages.Village vv = Villages.get(village);
-                if (MarketMaker.live(village) && vv != null && buyer.stationTask() != StationTask.MINE) {
+                boolean arms = buyer.stationTask() == StationTask.GUARD || offer.get(0).getItem() instanceof net.minecraft.world.item.SwordItem;
+                if (MarketMaker.live(village) && vv != null && buyer.stationTask() != StationTask.MINE && !arms) {
                     double care = switch (Wealth.tier(buyer)) {
                         case POOR -> 1.0;
                         case GETTING_BY -> 0.8;
