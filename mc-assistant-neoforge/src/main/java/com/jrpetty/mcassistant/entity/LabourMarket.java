@@ -103,6 +103,8 @@ public final class LabourMarket {
     static final double STEP_UP = 1.0625, STEP_UP_ESSENTIAL = 1.125, STEP_DOWN = 0.97, OVER_DOWN = 0.98, DRIFT = 0.25;
     /** An offer's bounds, as a multiple of the job's worth: the least, a town's most, essential work's, a new firm's. */
     static final double M_LEAST = 0.70, M_MOST = 1.60, M_ESSENTIAL = 2.0, M_NEW_FIRM = 1.30;
+    /** The most any wage index or offer goes to (where the living wage is far over what a job is worth, offers start high). */
+    static final double M_TOP = 4.0;
     /** An apprentice's share of the offer; below this level a hand is new to the trade; at this one a journeyman. */
     static final double APPRENTICE_SHARE = 0.75;
     static final int APPRENTICE_BELOW = 3, JOURNEYMAN = 5, MASTER_HAND = 10;
@@ -269,10 +271,10 @@ public final class LabourMarket {
         if (tw == null || t == StationTask.NONE) return 1.0;
         if (!tw.days.isEmpty()) {
             Double x = tw.days.get(tw.days.size() - 1).index.get(t.name());
-            if (x != null) return clamp(x, M_LEAST, M_ESSENTIAL);
+            if (x != null) return clamp(x, M_LEAST, M_TOP);
         }
         Offer o = tw.offers.get(employerFor(t) + "|" + t.name());
-        return o == null ? 1.0 : clamp(o.m, M_LEAST, M_ESSENTIAL);
+        return o == null ? 1.0 : clamp(o.m, M_LEAST, M_TOP);
     }
 
     /** The most this employer can offer for this trade, as a multiple of the job's worth. */
@@ -280,16 +282,32 @@ public final class LabourMarket {
         Business b = firmOf(village, employer);
         if (b != null) {
             long day = Businesses.today(level);
-            if (day - b.opened < 7) return M_NEW_FIRM;
+            if (day - b.opened < 7) return M_NEW_FIRM * Math.max(1.0, atFloor(village, t));
             Business.Day w = b.last(day, 7);
             double margin = (w.revenue - w.cogs - w.other - w.rent - w.taxes - w.interest) / 7.0 / 100.0;
             int hands = Math.max(1, Enterprise.hands(village, b).size());
             double base = journeyman(village, t, 1.0);
             return clamp(margin / hands / Math.max(1.0, base), M_LEAST, M_MOST);
         }
-        if (essential) return M_ESSENTIAL;
+        // The town's bounds are over what it pays at the least: where the living wage is above what a job is worth, an
+        // offer is reckoned from the living wage (it pays that whatever the job), and goes up from there.
+        double floor = Math.max(1.0, atFloor(village, t));
+        if (essential) return M_ESSENTIAL * floor;
         int pressure = TownBudget.pressure(village);
-        return pressure >= 2 ? 1.15 : pressure == 1 ? 1.35 : M_MOST;
+        return (pressure >= 2 ? 1.15 : pressure == 1 ? 1.35 : M_MOST) * floor;
+    }
+
+    /**
+     * The offer at which a journeyman at this trade is paid just the least wage here (the living wage, or the council's
+     * minimum): an employer raising its offer raises it from what it actually pays, not from a figure under the floor.
+     */
+    static double atFloor(UUID village, StationTask t) {
+        JobWorth.Scale s = JobWorth.scale(null, village);
+        JobWorth.Post p = JobWorth.wantedPost(t, village);
+        JobWorth.Worth w = s.worth(p.key);
+        double base = s.payLevel * JobWorth.UNIT * (w == null ? p.difficulty() : w.value() * w.difficulty()) * JobWorth.skillCurve(JOURNEYMAN);
+        int least = Math.max(1, minimumWage(village));
+        return base <= 0 ? 1.0 : least / base;
     }
 
     static Offer offer(LabourBook.Town tw, UUID village, String employer, StationTask t) {
@@ -940,6 +958,8 @@ public final class LabourMarket {
         if (f.stationTask() == StationTask.NONE) return true;
         if (APPOINTED.contains(f.stationTask()) || f.isElder()) return false;
         String emp = employerOf(village, f);
+        // One on its own homestead may give it up for a wage where its trade has more hands than the town needs.
+        if (emp.startsWith("own:")) return Villages.overStaffed(village, f.stationTask()) && !lastAtEssential(village, f);
         if (!onTerms(emp)) return false;
         if (Enterprise.keepsTrade(f) && !emp.startsWith("firm:")) return false;
         if (Hospitality.keepsTrade(f)) return false;
@@ -1024,7 +1044,8 @@ public final class LabourMarket {
                     o.moved = day;
                     o.unfilled++;
                     o.queued = 0;
-                    o.m = clamp(o.m * (vac.essential ? STEP_UP_ESSENTIAL : STEP_UP), M_LEAST, cap(level, id, vac.employer, t, vac.essential));
+                    o.m = clamp(Math.max(o.m, atFloor(id, t)) * (vac.essential ? STEP_UP_ESSENTIAL : STEP_UP), M_LEAST,
+                        Math.max(o.m, cap(level, id, vac.employer, t, vac.essential)));
                     vac.m = o.m;
                     vac.wage = journeyman(id, t, o.m);
                 }
@@ -1507,7 +1528,7 @@ public final class LabourMarket {
                 raw = o != null ? o.m : was;
             }
             double x = was == null ? raw : was + 0.5 * (raw - was);
-            d.index.put(k, Math.round(clamp(x, M_LEAST, M_ESSENTIAL) * 1000.0) / 1000.0);
+            d.index.put(k, Math.round(clamp(x, M_LEAST, M_TOP) * 1000.0) / 1000.0);
         }
         tw.days.add(d);
         while (tw.days.size() > LabourBook.KEEP_DAYS) tw.days.remove(0);
@@ -1766,7 +1787,7 @@ public final class LabourMarket {
         Offer o = offer(tw, village, "firm:" + b.id, t);
         if (coins > 0) {
             double base = Math.max(1, journeyman(village, t, 1.0));
-            o.m = clamp(coins / base, M_LEAST, M_ESSENTIAL);
+            o.m = clamp(coins / base, M_LEAST, M_TOP);
         }
         tw.firmWants.merge(b.id, 1, (a, c) -> Math.min(3, a + c));
         long day = level.getDayTime() / 24000L;
