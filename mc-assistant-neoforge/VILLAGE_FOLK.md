@@ -13214,6 +13214,19 @@ ware came from and went (the long tests' supply log) showed why, and this is wha
     paper is wanted;
   - **wheat and the other crops:** by their price, which the want runs up (the crop plan above).
   A want lapses a day or so after it is met.
+- **A firm's wares on the town's shelves are its own** (Bonded). A firm keeps what it makes in the town's stores, bonded in
+  its name. But a folk helping itself to its rations at the stores was charged the market's ask for whatever it took, and a
+  bakery's loaves went out as the market's: its books held twelve loaves its shelf no longer had, it never sold one, and the
+  market kept the money for its bread. Now what the stores hold of a ware is the market's own only past what the firms hold
+  of it; a take that runs into a firm's stock is the firm's sale, at the firm's price, into its till; and the town's counter
+  offers a ware against a firm's only while the market has some of its own.
+- **A meal by what a bellyful costs.** A household choosing its food weighed a piece against a piece: a raw potato (a fifth
+  of a meal) at a fifth of a loaf's price looked as good a buy as the loaf, and the poor lived on raw potatoes and walked
+  past the baker and the café alike. Once the market is open, a thing's price is weighed by how much of a meal it is.
+- **A tool by the work in it for the money.** Every buyer took the best metal it could pay for, so a toolshop's stone pick at
+  half a coin never sold beside the counter's iron one at seven. Once the market is open, a tool is weighed by the uses in it
+  (the quicker metals counting for more) against its price at the seller it would go to, the poor minding the price most and
+  the well-off hardly at all. A miner still takes the best metal (the deep ore wants it), and the watch its best blade.
 - **A trade left to its tradesmen** (FirmTrades). While a firm of the town's own folk makes a ware (it holds some, or has made
   some in the last two days) and has the hands for it, the town's own makers make none of it for the counter: the shop's
   bench and the café's kitchen, the smith at the anvil (the watch's arms are the town's own still), the tailor's boots, the
@@ -13233,5 +13246,5 @@ Tests (SupplyChainGameTests): sc2_01 the fields follow the price (wheat dear, th
 roots); sc2_02 the town's cook leaves the bread to a bakery, and takes it up again when the bakery lets it go; sc2_03 comb
 taken when a chandler wants it; sc2_04 string spun when it is wanted; sc2_05 a cow culled for its hide when leather is
 wanted, never below a pair; sc2_06 the smith leaves the iron picks to a toolshop; sc2_07 a household that tires of roots
-buys a loaf. The long tests log each ware's comings and goings every morning (whose output, by trade; to whom, for what),
+buys a loaf; sc2_08 a bakery's loaves taken off the shelf are its sale, the market's own loaves the market's. The long tests log each ware's comings and goings every morning (whose output, by trade; to whom, for what),
 the crop plan, the wants and the trades left to firms.
