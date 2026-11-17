@@ -747,6 +747,7 @@ public final class Heraldry {
         }
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
+        CoinCensus.playerIn(id, price);                               // [health]
         Economy.sold(id, price);
         ItemStack copy = item(level, id, d);
         if (!p.getInventory().add(copy)) p.drop(copy, false);

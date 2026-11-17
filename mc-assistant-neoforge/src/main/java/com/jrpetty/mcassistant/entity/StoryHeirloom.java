@@ -503,6 +503,7 @@ final class StoryHeirloom implements QuestStories.Story {
                 if (!moveOutOfStores(level, q, there, heirloom, p)) return "It's gone from our stores, I'm afraid.";
                 Market.payOut(p, price);
                 Ledger.addCoins(there.id(), price);
+                CoinCensus.playerIn(there.id(), price);                       // [health]
                 q.flags.put("recovered", "bought back from " + Villages.name(there.id()));
                 homeStep(q);
                 return price + " coins, and it's yours. A pretty thing. I hope it gets home.";

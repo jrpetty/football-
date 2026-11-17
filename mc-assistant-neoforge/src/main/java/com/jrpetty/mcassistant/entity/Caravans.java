@@ -486,6 +486,9 @@ public final class Caravans {
                 // Carried home to the seller. ([econ-trade] Home again there is nothing to pay: the load was bought at the
                 // other town, out of the purse. It used to be paid for here, into the other town's treasury, by nobody.)
                 t.purse += paidAll;
+                // [health] Out of this town for goods, into the other's caravan purse (counted there: CoinCensus.holders).
+                CoinCensus.flow(here.id(), CoinCensus.Flow.IMPORT, paidAll);
+                CoinCensus.flow(f.ownerId(), CoinCensus.Flow.EXPORT, paidAll);
             }
         }
         if (here != null && unloaded > 0) {

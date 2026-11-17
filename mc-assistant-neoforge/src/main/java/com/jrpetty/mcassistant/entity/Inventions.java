@@ -886,6 +886,7 @@ public final class Inventions extends SavedData {
         if (n <= 0) return "The scholars have all the sponsorship " + i.title + " can use.";
         if (!Civics.takeCoins(p, n)) return "You have not got " + n + " coins on you.";
         Ledger.addCoins(v.id(), n);
+        CoinCensus.playerIn(v.id(), n);                              // [health]
         t.putInt("sponsored", t.getInt("sponsored") + n * COIN);
         t.putInt("prog", t.getInt("prog") + n * COIN);
         Civics.sub(t, "patrons").putInt(p.getGameProfile().getName(), Civics.sub(t, "patrons").getInt(p.getGameProfile().getName()) + n);

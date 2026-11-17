@@ -1245,6 +1245,7 @@ public final class Library {
             if (paid > 0) {
                 Market.payOut(p, paid);
                 Ledger.addCoins(v.id(), paid);
+                CoinCensus.playerIn(v.id(), paid);                            // [health]
                 shelf.fines += paid;
             }
         }
@@ -1500,6 +1501,7 @@ public final class Library {
         if (!plan.ok() || !Bench.take(level, v, plan, f)) return "I've no paper or ink to spare for it: we're short of " + plan.shortOf + ".";
         Market.payOut(p, COPY_PRICE);
         Ledger.addCoins(id, COPY_PRICE);
+        CoinCensus.playerIn(id, COPY_PRICE);                          // [health]
         Economy.sold(id, COPY_PRICE);
         give(p, Archive.book(want.title, want.author, 1, want.pages));
         return "There - a fair copy of \"" + want.title + "\", yours to keep. " + COPY_PRICE + " coins, and money well spent.";

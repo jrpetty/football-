@@ -222,6 +222,26 @@ public final class CoinCensus {
         FLOWS.computeIfAbsent(village, k -> new EnumMap<>(Flow.class)).merge(f, coins, Long::sum);
     }
 
+    // ------------------------------------------------------------------ [health] the players' coin
+
+    /** [health] A player's coin into one of the town's holders (its treasury, a till, a folk's purse, the bank's vault). */
+    public static void playerIn(@Nullable UUID village, long coins) {
+        flow(village, Flow.PLAYER_IN, coins);
+    }
+
+    /** [health] Coin out of one of the town's holders into a player's pack. */
+    public static void playerOut(@Nullable UUID village, long coins) {
+        flow(village, Flow.PLAYER_OUT, coins);
+    }
+
+    /** [health] The town whose count holds this folk's purse: a visitor's, the town it is visiting; a folk's, its own. */
+    @Nullable
+    public static UUID purseTown(@Nullable VillageFolkEntity f) {
+        if (f == null) return null;
+        UUID visiting = Visitors.townOf(f);
+        return visiting != null ? visiting : f.ownerId();
+    }
+
     /** The flows since the last count: in minus out, in pennies. */
     public static long netFlowPence(UUID village) {
         long n = 0;
@@ -236,11 +256,14 @@ public final class CoinCensus {
         out.put("treasury", Ledger.coins(village) * 100L + Businesses.townPence(village));
         long purses = 0;
         java.util.Set<UUID> here = new java.util.HashSet<>();                       // [econ-1e]
+        long carried = 0;                                                           // [health]
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) {
             purses += f.purse() * 100L;
             here.add(f.getUUID());
+            if (f.trip() != null) carried += Math.max(0, f.trip().purse) * 100L;   // [health]
         }
         out.put("purses", purses);
+        out.put("carried by the town's caravans and wagons", carried);  // [health] a trip's purse: road money, takings going home
         out.put("purses of folk out of the loaded world", awayPence(village, here));   // [econ-1e] a cave team away, a wagon's crew
         out.put("put by for houses", Homes.savedTotal(village) * 100L);
         out.put("the bank's vault", Bank.cash(village) * 100L);
@@ -264,6 +287,11 @@ public final class CoinCensus {
         out.put("the statue fund", PublicFund.held(village) * 100L);
         out.put("held for a house going up", HousingMarket.escrowForTests(village) * 100L);
         out.put("haul contracts' escrow", HaulContracts.escrowed(village) * 100L);
+        // [health] The rent a player's tenants have paid, waiting for the player at the treasury (or the bank's round).
+        long rentDue = 0;
+        for (Map.Entry<String, String> e : Commerce.notesStarting(village, "rentdue/")) rentDue += Homes.parse(e.getValue()) * 100L;
+        out.put("players' rent waiting to be collected", rentDue);
+        out.put("bounties the watch holds", Outlaws.held(village) * 100L);   // [health] on outlaws' heads, and won, not yet claimed
         return out;
     }
 

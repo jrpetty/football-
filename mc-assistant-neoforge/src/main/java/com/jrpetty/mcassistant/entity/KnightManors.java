@@ -357,6 +357,7 @@ public final class KnightManors {
             + Market.coinsHeld(p) + ".";
         Market.payOut(p, GRAND_PRICE);
         Ledger.addCoins(village, GRAND_PRICE);
+        CoinCensus.playerIn(village, GRAND_PRICE);                    // [health]
         Economy.takings(village, GRAND_PRICE);
         // A larger footprint: the plot looked at again, the grant moved if it will not hold the bigger house.
         Villages.Village v = Villages.get(village);

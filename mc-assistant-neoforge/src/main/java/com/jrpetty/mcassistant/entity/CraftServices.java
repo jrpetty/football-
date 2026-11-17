@@ -197,6 +197,7 @@ public final class CraftServices {
             + ". You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                          // [health]
         Economy.sold(village, price);
         long day = level.getDayTime() / 24000L;
         ordersOf(village).put(p.getUUID(), new BrewOrder(p.getUUID(), path(b.potion()), day, price));
@@ -381,6 +382,7 @@ public final class CraftServices {
         for (Map.Entry<ResourceKey<Enchantment>, Integer> e : spell) reg.getHolder(e.getKey()).ifPresent(h -> held.enchant(h, e.getValue()));
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         f.swing(InteractionHand.MAIN_HAND);
@@ -451,6 +453,7 @@ public final class CraftServices {
         Dealings.give(p, honey);
         Market.payOut(p, price);
         Ledger.addCoins(v.id(), price);
+        CoinCensus.playerIn(v.id(), price);                           // [health]
         Economy.sold(v.id(), price);
         f.swing(InteractionHand.MAIN_HAND);
         return "None in the stores, but this hive's full: there, a bottle of honey fresh from it. " + price + coinsWord(price) + ", thank you.";
@@ -480,6 +483,7 @@ public final class CraftServices {
         price = priceOf(level, village, p, one, count);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         Stockroom.sold(level, village, Stockroom.Seller.STORES, one, count, price);

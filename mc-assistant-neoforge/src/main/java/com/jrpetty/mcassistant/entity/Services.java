@@ -455,6 +455,7 @@ public final class Services {
             Market.askLot(level, village, sample, count) * (title == Standing.Title.UNWELCOME ? 2 : 1)), Market.leastLot(level, village, sample, count));
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, price);

@@ -287,6 +287,7 @@ public final class OutdoorTalk {
         price = price(level, village, sample, count, unwelcome);
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                          // [health]
         Economy.sold(village, price);
         Budget.forget(village);
         Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, price);
@@ -419,6 +420,7 @@ public final class OutdoorTalk {
         if (coins < price) return name + " would be " + price + " coins" + (saddled ? ", saddle and all" : "") + ". You've " + coins + ".";
         Market.payOut(p, price);
         Ledger.addCoins(v.id(), price);
+        CoinCensus.playerIn(v.id(), price);                           // [health]
         Economy.sold(v.id(), price);
         h.setOwnerUUID(p.getUUID());
         h.removeTag(Stables.STEED);

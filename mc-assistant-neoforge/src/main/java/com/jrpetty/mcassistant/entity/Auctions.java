@@ -1135,19 +1135,37 @@ public final class Auctions {
         switch (lot.owner) {
             case TOWN -> {
                 Ledger.addCoins(v.id(), price);
+                if (won.player()) CoinCensus.playerIn(v.id(), price);   // [health] the player's held bid (its own coin till now) into the town
                 Economy.sold(v.id(), price);
                 Businesses.service(level, v.id(), Business.Type.AUCTION, item, item.getCount(), price * 100L, true);   // [business-books] the town's sale, its books
             }
             case PLAYER -> {
-                if (lot.ownerId != null) give(level, v.id(), lot.ownerId, price - TaxBook.toll(v.id(), price), ItemStack.EMPTY,   // [civic-land] the toll
-                    "your " + lot.name() + " sold at auction for " + price);
+                if (lot.ownerId != null) {
+                    int toll = TaxBook.toll(v.id(), price);
+                    give(level, v.id(), lot.ownerId, price - toll, ItemStack.EMPTY,   // [civic-land] the toll
+                        "your " + lot.name() + " sold at auction for " + price);
+                    // [health] Player to player: only the toll stays in the town; a folk's coin to a player leaves it.
+                    if (won.player()) CoinCensus.playerIn(v.id(), toll);
+                    else CoinCensus.playerOut(v.id(), price - toll);
+                } else {
+                    Ledger.addCoins(v.id(), price);                     // [health] no seller to pay: the treasury's, not lost
+                    if (won.player()) CoinCensus.playerIn(v.id(), price);
+                }
             }
             case MERCHANT -> {
-                if (lot.ownerId != null && level.getEntity(lot.ownerId) instanceof VillageFolkEntity m) m.earn(price - TaxBook.toll(v.id(), price));   // [civic-land]
+                int toll = TaxBook.toll(v.id(), price);
+                if (lot.ownerId != null && level.getEntity(lot.ownerId) instanceof VillageFolkEntity m) {
+                    m.earn(price - toll);   // [civic-land]
+                    if (won.player()) CoinCensus.playerIn(v.id(), toll + (v.id().equals(CoinCensus.purseTown(m)) ? price - toll : 0));   // [health]
+                } else {
+                    Ledger.addCoins(v.id(), price - toll);              // [health] the merchant gone: the treasury's, not lost
+                    if (won.player()) CoinCensus.playerIn(v.id(), price);
+                }
             }
             case FIRM -> {                                                  // [econ-1c] to the receiver, for its creditors
                 if (won.player()) {
                     Enterprise.stallSoldToPlayer(level, v.id(), stallOf(lot), price, won.by(), won.name());
+                    CoinCensus.playerIn(v.id(), price);                 // [health] into the receiver's till
                 } else {
                     Enterprise.stallSold(level, v.id(), stallOf(lot), price, folk, folk.displayNameCap());
                 }

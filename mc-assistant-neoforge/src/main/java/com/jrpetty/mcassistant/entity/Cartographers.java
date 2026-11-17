@@ -531,6 +531,7 @@ public final class Cartographers {
         Market.payOut(p, price);
         f.earn(price - 1);
         Ledger.addCoins(id, 1);
+        CoinCensus.playerIn(id, price);                              // [health]
         Economy.sold(id, price);
         List<Commission> all = commissions(id);
         all.add(new Commission(p.getUUID(), p.getName().getString(), b, "to the " + WAYS[b], day, price, "OPEN", -1));
@@ -662,6 +663,7 @@ public final class Cartographers {
         int treasury = Math.min(price, (int) Math.round(makings));
         if (treasury > 0) Ledger.addCoins(v.id(), treasury);
         f.earn(price - treasury);
+        CoinCensus.playerIn(v.id(), price);                          // [health]
         Economy.sold(v.id(), price);
         count(v.id(), "sold", 1);
         count(v.id(), "coin", price);

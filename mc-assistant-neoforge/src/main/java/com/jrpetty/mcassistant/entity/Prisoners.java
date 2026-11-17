@@ -1009,6 +1009,7 @@ public final class Prisoners {
         if (have < price) return pick.name + "'s release is " + price + " coins, and you've " + have + ".";
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
+        CoinCensus.playerIn(village, price);                         // [health]
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
         UUID home = pick.home;

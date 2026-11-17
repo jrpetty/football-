@@ -260,6 +260,19 @@ public final class Outlaws {
         return now;
     }
 
+    /** [health] The coin the watch holds for bounties (on outlaws' heads, and won and not yet claimed): counted by CoinCensus. */
+    static long held(UUID town) {
+        CompoundTag book = AfterWarBooks.outlaws().getCompound(town.toString());
+        long n = 0;
+        for (String k : book.getAllKeys()) {
+            CompoundTag r = book.getCompound(k);
+            n += Math.max(0, r.getInt("bounty"));
+            CompoundTag claims = r.getCompound("claims");
+            for (String c : claims.getAllKeys()) n += Math.max(0, claims.getInt(c));
+        }
+        return n;
+    }
+
     /** The bounty raised (out of the treasury), as far as the treasury runs. */
     static void raise(ServerLevel level, Villages.Village v, CompoundTag r, int by) {
         int took = Ledger.takeCoins(v.id(), Math.max(0, Math.min(by, Ledger.coins(v.id()) / 5)));
@@ -536,6 +549,7 @@ public final class Outlaws {
             bounty -= share;
             hunters.get(i).persona().remember(day, "we brought in " + name + ", the outlaw, and shared the bounty", 6);
         }
+        if (bounty > 0) Ledger.addCoins(h.town, bounty);                    // [health] no hunter to share it: back in the treasury, not lost
         int fine = fine(r);
         int paid = PlayerLaw.take(p, h.town, fine);
         String how;
@@ -648,7 +662,8 @@ public final class Outlaws {
         int have = Market.coinsHeld(p);
         if (have < owe) return "Your account is " + owe + " coins — the fine, and the bounty we put up for you — and you've " + have + ". Come back with it, or give yourself up.";
         Market.payOut(p, owe);
-        Ledger.addCoins(town, owe + r.getInt("bounty"));                  // the bounty the watch held back into the treasury too
+        Ledger.addCoins(town, owe + r.getInt("bounty"));
+        CoinCensus.playerIn(town, owe);                                    // [health] (the held bounty was counted: Outlaws.held)                  // the bounty the watch held back into the treasury too
         Police.log(town, level.getDayTime(), "fine", p.getName().getString() + " (an outlaw) paid " + owe + " and settled its account", f, owe);
         settle(town, p.getUUID(), r, day, "it paid " + owe + " coins at the watch house", CLEARS);
         Standing.stir(town, p.getUUID());
@@ -690,6 +705,7 @@ public final class Outlaws {
         if (have < price) return "The gift is " + price + " coins, and you've " + have + ". Come back when you have it.";
         Market.payOut(p, price);
         Ledger.addCoins(town, price + r.getInt("bounty"));
+        CoinCensus.playerIn(town, price);                                  // [health]
         settle(town, p.getUUID(), r, day, "the leader pardoned it for a gift of " + price + " coins to the town", 10);
         Villages.tell(town, day, "the leader pardoned " + name + " for a gift of " + price + " coins to the town");
         return "Then you're pardoned, " + name + ". The town is the richer for it, and you the wiser, I hope.";
@@ -716,6 +732,7 @@ public final class Outlaws {
         AfterWarBooks.changed();
         if (owed > 0) {
             Earnings.giveCoins(p, owed);
+            CoinCensus.playerOut(town, owed);                              // [health] out of the bounty the watch held
             Earnings.record(p, town, Earnings.Source.BOUNTY, owed, Villages.name(town) + "'s watch", "for bringing down " + String.join(" and ", who));
         }
         Police.log(town, level.getDayTime(), "bounty", p.getName().getString() + " (a player) claimed the bounty on " + String.join(", ", who), f, owed);
