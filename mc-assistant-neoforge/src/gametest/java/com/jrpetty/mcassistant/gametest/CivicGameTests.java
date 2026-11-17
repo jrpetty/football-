@@ -305,8 +305,12 @@ public class CivicGameTests {
         chestAt(level, v.centre().offset(3, 0, -3), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.LANTERN, 4));
         helper.runAtTickTime(20, () -> {
+            // [health] The town's own morning look first (on CI's timing it put the bridge itself before the test did): the
+            // test's call is then that same question, not a second one left open.
+            Kit.log("civ02 the town's own look: '" + Referendums.considerForTests(level, v) + "'");
             int q = Referendums.callForTests(level, v, BigWorks.Work.BRIDGE, day);
             helper.assertTrue(q > 0, "a bridge put to the town");
+            helper.assertTrue(Referendums.openForTests(id).size() == 1, "one question open: " + Referendums.openForTests(id));
             UUID by = Referendums.callerForTests(id, q);
             for (VillageFolkEntity f : folk) if (!f.getUUID().equals(by)) thrifty(f);
             Referendums.castAllForTests(level, v, q);

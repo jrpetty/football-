@@ -192,6 +192,7 @@ public class TownLodGameTests {
             UUID id = v.id();
             com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
             at[1] = com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll();
+            final long bad0 = com.jrpetty.mcassistant.entity.FolkNavigation.badLandings();
             each(helper, () -> {
                 long t = helper.getTick();
                 if (at[0] == 0) at[0] = t;
@@ -201,13 +202,21 @@ public class TownLodGameTests {
                     long travelled = com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll() - at[1];
                     Kit.log("lod03 walks travelled out of sight in a minute: " + travelled);
                     helper.assertTrue(travelled > 0, "out of sight, folk travel their walks");
+                    // [health] Every travel set its folk down clear and dry (looked at as each one ends). A folk seen in the
+                    // water at the minute's end walked there as anybody may (a field's water hole on its way across the
+                    // farm, on CI): not the travel's doing, so the water is the landings' check; a block is everybody's.
+                    long bad = com.jrpetty.mcassistant.entity.FolkNavigation.badLandings() - bad0;
+                    helper.assertTrue(bad == 0, bad + " travels ended in a block or the water, the last "
+                        + com.jrpetty.mcassistant.entity.FolkNavigation.lastBadLanding());
                     for (AssistantEntity a : Villages.folkOf(id)) {
                         // Its body in no block (feet on farmland or a path sit a little into the block below them);
                         // one sat on a bench or a seat is sat in it, as it should be.
                         if (a.isPassenger() || a.getPose() == net.minecraft.world.entity.Pose.SITTING || level.getBlockState(a.blockPosition()).getBlock() instanceof net.minecraft.world.level.block.StairBlock
                                 || level.getBlockState(a.blockPosition()).getBlock() instanceof net.minecraft.world.level.block.SlabBlock) continue;
-                        helper.assertTrue(level.noCollision(a, a.getBoundingBox().deflate(0.05)) && !a.isInWaterOrBubble(),
-                            a.getAssistantName() + " stands clear and dry at " + a.position() + " (feet in "
+                        if (a.isInWaterOrBubble()) Kit.log("lod03 " + a.getAssistantName() + " in the water at " + a.position() + ", travelling "
+                            + (a.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation n && n.travelling()));
+                        helper.assertTrue(level.noCollision(a, a.getBoundingBox().deflate(0.05)),
+                            a.getAssistantName() + " stands clear of every block at " + a.position() + " (feet in "
                                 + level.getBlockState(a.blockPosition()) + ", under it " + level.getBlockState(a.blockPosition().below())
                                 + ", travelling " + (a.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation n && n.travelling())
                                 + ", on ground " + a.onGround() + ", moving " + a.getDeltaMovement() + ")");
@@ -230,6 +239,48 @@ public class TownLodGameTests {
                 return true;
             });
         });
+    }
+
+    /**
+     * [health] A sleeping town's parked chunk requests survive a save however many there are: two and a half thousand
+     * (a town of forty, each folk's station asking for its square of chunks) written out to bytes as the game writes its
+     * saves and read back whole, in the new form and in the old (an owner's id before every chunk, near 125,000 bytes:
+     * past the 65,535 one saved string holds, so lost on every save before the ledger kept long notes in pieces).
+     */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "lod04_parked_saved")
+    public static void lod04_parked_saved(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        UUID town = UUID.randomUUID();
+        java.util.Random r = new java.util.Random(11);
+        java.util.List<TownLod.Parked> parked = new java.util.ArrayList<>();
+        for (int owner = 0; owner < 50; owner++) {
+            UUID who = new UUID(r.nextLong(), r.nextLong());
+            for (int k = 0; k < 50; k++) parked.add(new TownLod.Parked(who, net.minecraft.world.level.ChunkPos.asLong(r.nextInt(400000) - 200000, r.nextInt(400000) - 200000)));
+        }
+        StringBuilder old = new StringBuilder();
+        for (TownLod.Parked p : parked) {
+            if (old.length() > 0) old.append(',');
+            old.append(p.owner()).append('@').append(p.chunk());
+        }
+        Kit.log("lod04 " + parked.size() + " parked requests, the old note " + old.length() + " characters");
+        helper.assertTrue(old.length() > 65535, "the old note is past one saved string: " + old.length());
+        java.util.List<TownLod.Parked> back = TownLod.parkedAfterSaveForTests(town, parked, null, level.registryAccess());
+        helper.assertTrue(back.equals(parked), "every request back after a save: " + back.size() + " of " + parked.size());
+        java.util.List<TownLod.Parked> backOld = TownLod.parkedAfterSaveForTests(town, parked, old.toString(), level.registryAccess());
+        helper.assertTrue(backOld.equals(parked), "and the old note, read the old way: " + backOld.size() + " of " + parked.size());
+        // Any long note, not only this one: wide characters too (three bytes each in a save).
+        StringBuilder words = new StringBuilder();
+        for (int i = 0; i < 40000; i++) words.append(i % 2 == 0 ? "\u00e9" : "\u6728");
+        Ledger.note(town, "a long note", words.toString());
+        String wordsBack = Ledger.notesAfterSaveForTests(town, level.registryAccess()).get("a long note");
+        Ledger.forget(town, "a long note");
+        helper.assertTrue(words.toString().equals(wordsBack), "a long note of wide characters whole: "
+            + (wordsBack == null ? "none" : wordsBack.length() + " characters"));
+        Ledger.note(town, "short", "kept as it was");
+        String shortBack = Ledger.notesAfterSaveForTests(town, level.registryAccess()).get("short");
+        Ledger.forget(town, "short");
+        helper.assertTrue("kept as it was".equals(shortBack), "a short note as ever: " + shortBack);
+        helper.succeed();
     }
 
     /** The bread in the town's store chests themselves (not the kept count). */

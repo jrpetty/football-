@@ -226,6 +226,15 @@ public class VisitorsGameTests {
 
     // ============================================================ vp02: tourists
 
+    /** [health] A town's coin in pence, every holder the census counts but the visitors' purses. */
+    private static long townsOwnCoin(UUID id) {
+        long n = 0;
+        for (java.util.Map.Entry<String, Long> e : com.jrpetty.mcassistant.entity.CoinCensus.holders(id).entrySet()) {
+            if (!e.getKey().equals("visitors' purses")) n += e.getValue();
+        }
+        return n;
+    }
+
     /**
      * A town of renown (two great works and a museum): a tourist comes with a purse of its own, is not on the
      * roll, has the museum and the monument among its sights, spends at the café out of that purse into the
@@ -271,11 +280,11 @@ public class VisitorsGameTests {
             Visitors.arriveForTests(level, t);
             helper.assertTrue(chronicled(id, "a visitor from afar, came to see"), "the chronicle has it come");
             // [health] Into the town's coin: the counter's takings go to whoever keeps it (the storehouse's market till till the
-            // café opens, the café's own till after), not always the treasury (econ-1a): the town's census counts them all,
-            // and the visitor's purse is not on it.
-            long town0 = com.jrpetty.mcassistant.entity.CoinCensus.count(id);
+            // café opens, the café's own till after), not always the treasury (econ-1a). The census counts every holder, the
+            // visitors' purses among them: the town's own coin is all of it but those.
+            long town0 = townsOwnCoin(id);
             int spent = Tourists.roundForTests(level, t);
-            long town1 = com.jrpetty.mcassistant.entity.CoinCensus.count(id);
+            long town1 = townsOwnCoin(id);
             Kit.log("vp02 spent " + spent + " (purse " + purse + " -> " + t.purse() + "), the town's coin " + town0 + " -> " + town1
                 + "; " + com.jrpetty.mcassistant.entity.CoinCensus.page(id).replace('\n', ' '));
             helper.assertTrue(spent > 0 && t.purse() == purse - spent, "it spent at the café out of its own purse: " + spent);

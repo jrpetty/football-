@@ -147,6 +147,29 @@ public class FolkNavigation extends GroundPathNavigation {
         return travelTo != null && this.path != null && this.path == travelPath && !this.path.isDone();
     }
 
+    /** [health] Travels that ended with the folk in a block or in the water (should be none), and the last of them. */
+    private static long badLandings;
+    @Nullable private static String lastBadLanding;
+
+    /** [health] A travel's end looked at: the folk set down clear of every block, and dry. */
+    private void landed(BlockPos to) {
+        boolean clear = this.level.noCollision(this.mob, this.mob.getBoundingBox().deflate(0.05));
+        if (clear && !this.mob.isInWaterOrBubble()) return;
+        badLandings++;
+        lastBadLanding = (this.mob instanceof AssistantEntity a ? a.getAssistantName() : "a folk") + " at " + to.toShortString()
+            + (clear ? " in the water" : " in " + this.level.getBlockState(to));
+    }
+
+    /** [health] Tests: how many travels have ended in a block or the water, and the last such (or null). */
+    public static long badLandings() {
+        return badLandings;
+    }
+
+    @Nullable
+    public static String lastBadLanding() {
+        return lastBadLanding;
+    }
+
     /** How many walks have been travelled out of sight since the server started. */
     public static long travelledInAll() {
         return travelledInAll;
@@ -258,6 +281,7 @@ public class FolkNavigation extends GroundPathNavigation {
             if (FolkLod.standable(this.level, to)) {
                 this.mob.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
                 this.mob.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                landed(to);                                                     // [health] where travels end, for the tests
                 this.path.setNextNodeIndex(this.path.getNodeCount());
                 // Come to the edge of sight: the rest of the way is walked.
                 if (goal != null) {

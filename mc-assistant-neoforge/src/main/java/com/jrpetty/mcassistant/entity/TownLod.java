@@ -745,13 +745,7 @@ public final class TownLod {
             Map<String, Double> pending = readMap(p[6]);
             t.pending.putAll(pending);
             if (p.length > 7) readCounts(p[7], t.aside);       // [scale] older notes have none
-            String parked = Ledger.note(village, PARKED_NOTE);
-            for (String s : parked == null || parked.isEmpty() ? new String[0] : parked.split(",")) {
-                // [health] "owner@chunk@chunk..." (each owner once); older saves wrote "owner@chunk" for every chunk
-                String[] q = s.split("@");
-                UUID owner = UUID.fromString(q[0]);
-                for (int i = 1; i < q.length; i++) t.parked.add(new Parked(owner, Long.parseLong(q[i])));
-            }
+            t.parked.addAll(readParked(Ledger.note(village, PARKED_NOTE)));
         } catch (RuntimeException e) {
             LOG.warn("[MCA-LOD] {}: its sleeping state could not be read ({}); it starts awake", village, e.toString());
             return new Town();
@@ -782,17 +776,44 @@ public final class TownLod {
 
     /** The chunks a sleeping town let go (when it sleeps, and when a request is kept for it). */
     private static void saveParked(UUID village, Town t) {
-        // [health] Each owner written once with all its chunks (a town of forty folk parked some two thousand requests, and
-        // the note, an owner's id before every chunk, ran past what one saved string holds: Ledger now keeps long notes in
-        // pieces, and this one is a third of the size).
+        Ledger.note(village, PARKED_NOTE, writeParked(t.parked));
+    }
+
+    /**
+     * [health] The parked requests in words: each owner once with all its chunks, "owner@chunk@chunk,owner@chunk". A town
+     * of forty folk parked some two thousand, and the old note (an owner's id before every chunk) ran past what one saved
+     * string holds and was lost on every save: Ledger now keeps long notes in pieces, and this one is a third the size.
+     */
+    static String writeParked(List<Parked> parked) {
         Map<UUID, StringBuilder> by = new java.util.LinkedHashMap<>();
-        for (Parked p : t.parked) by.computeIfAbsent(p.owner(), k -> new StringBuilder(k.toString())).append('@').append(p.chunk());
-        StringBuilder parked = new StringBuilder();
+        for (Parked p : parked) by.computeIfAbsent(p.owner(), k -> new StringBuilder(k.toString())).append('@').append(p.chunk());
+        StringBuilder out = new StringBuilder();
         for (StringBuilder one : by.values()) {
-            if (!parked.isEmpty()) parked.append(',');
-            parked.append(one);
+            if (!out.isEmpty()) out.append(',');
+            out.append(one);
         }
-        Ledger.note(village, PARKED_NOTE, parked.toString());
+        return out.toString();
+    }
+
+    /** [health] The parked requests read back: this form, or the old one ("owner@chunk" for every chunk). */
+    static List<Parked> readParked(@Nullable String s) {
+        List<Parked> out = new ArrayList<>();
+        if (s == null || s.isEmpty()) return out;
+        for (String one : s.split(",")) {
+            String[] q = one.split("@");
+            UUID owner = UUID.fromString(q[0]);
+            for (int i = 1; i < q.length; i++) out.add(new Parked(owner, Long.parseLong(q[i])));
+        }
+        return out;
+    }
+
+    /** [health] Tests: the parked requests written and read back through the town's notes, saved as the game saves them. */
+    public static List<Parked> parkedAfterSaveForTests(UUID village, List<Parked> parked, @Nullable String asWritten,
+                                                       net.minecraft.core.HolderLookup.Provider registries) {
+        Ledger.note(village, PARKED_NOTE, asWritten != null ? asWritten : writeParked(parked));
+        List<Parked> back = readParked(Ledger.notesAfterSaveForTests(village, registries).get(PARKED_NOTE));
+        Ledger.forget(village, PARKED_NOTE);
+        return back;
     }
 
     static String write(Rates r) {

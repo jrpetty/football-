@@ -436,7 +436,26 @@ public class InventionsGameTests {
             BlockPos at = a.centre().offset(12, 0, 12);
             marks.set(new Zombie[]{ armoured(level, at), armoured(level, at.east(3)) });
         });
-        helper.runAtTickTime(20, () -> {
+        // [health] The rest once both zombies have had a tick of their own in the world (their iron counts only from their
+        // tick): on CI the test's first ticks waited on its chunks, its tick-8 and tick-20 steps ran in the one pass, and the
+        // blow fell on zombies of two points of armour that took nothing. Waited for, not assumed.
+        final int[] waited = { 0 };
+        final Runnable[] main = new Runnable[1];
+        Runnable ready = new Runnable() {
+            @Override public void run() {
+                Zombie[] m = marks.get();
+                boolean ticked = m != null && m[0].tickCount >= 2 && m[1].tickCount >= 2;
+                if (m != null && (m[0].isRemoved() || m[1].isRemoved())) {
+                    helper.fail("a zombie in iron went before the blow: " + m[0].getRemovalReason() + "/" + m[1].getRemovalReason()
+                        + " (alive " + m[0].isAlive() + "/" + m[1].isAlive() + ", ticks " + m[0].tickCount + "/" + m[1].tickCount + ")");
+                    return;
+                }
+                if (!ticked && waited[0]++ < 100) { helper.runAfterDelay(2, () -> this.run()); return; }   // a new entry each time
+                main[0].run();
+            }
+        };
+        helper.runAtTickTime(20, ready);
+        main[0] = () -> {
             UUID id = a.id();
             long day = level.getDayTime() / 24000L;
             Villages.ageForTests(id, Villages.Age.IRON);
@@ -535,12 +554,12 @@ public class InventionsGameTests {
             bows.longbows = 6;
             helper.assertTrue(ArmsEdge.volley(bows, 6) > 1.3 && lbWith >= lbWithout, "the longbows loose harder in the duel: "
                 + ArmsEdge.volley(bows, 6) + "; won " + lbWithout + " -> " + lbWith);
-        });
-        helper.runAtTickTime(60, () -> {
-            Campaigns.Campaign c = camp.get();
-            if (c != null) Campaigns.resetForTests();
-            helper.succeed();
-        });
+            helper.runAfterDelay(40, () -> {
+                Campaigns.Campaign cc = camp.get();
+                if (cc != null) Campaigns.resetForTests();
+                helper.succeed();
+            });
+        };
     }
 
     /** A zombie in a full suit of iron, standing still. */
