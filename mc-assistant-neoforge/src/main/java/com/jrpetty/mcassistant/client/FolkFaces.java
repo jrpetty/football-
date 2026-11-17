@@ -66,7 +66,10 @@ public final class FolkFaces {
     private static final int BUDGET = 4;
     private static final long STRETCH_NS = 12_000_000L;
 
-    private record Key(long look, int marks) {}
+    /** A picture: a folk's face and marks, and (dressed) its outfit, its dye's colour and its finery, or -1 for none. */
+    private record Key(long look, int marks, int outfit, int dye, int finery) {
+        Key(long look, int marks) { this(look, marks, -1, 0, -1); }
+    }
 
     private static final Map<Key, ResourceLocation> KEPT = new LinkedHashMap<>(64, 0.75F, true) {
         @Override
@@ -86,7 +89,25 @@ public final class FolkFaces {
     public static ResourceLocation texture(VillageFolkEntity folk) {
         long look = folk.clientLook();
         if (!Looks.known(look) || broken) return FolkLooks.skinTexture(folk);
-        Key key = new Key(look, folk.clientMarks() & PICTURE_MARKS);
+        ResourceLocation got = picture(new Key(look, folk.clientMarks() & PICTURE_MARKS));
+        return got != null ? got : FolkLooks.skinTexture(folk);
+    }
+
+    /**
+     * [anim] Its picture with its clothes painted in: its trade's outfit, the outfit's dyed parts in their colour (-1: none)
+     * and its finery (-1: none), laid over its face and skin as the renderer's passes would lay them (each pixel the
+     * outfit has replacing the one under it, as a cut-out pass does), so the folk is drawn in one pass instead of four.
+     * Null while it is not made yet (a few a frame): the caller draws the passes as before.
+     */
+    @Nullable
+    public static ResourceLocation dressed(VillageFolkEntity folk, int outfit, int dye, int finery) {
+        long look = folk.clientLook();
+        if (!Looks.known(look) || broken) return null;
+        return picture(new Key(look, folk.clientMarks() & PICTURE_MARKS, outfit, dye, finery));
+    }
+
+    @Nullable
+    private static ResourceLocation picture(Key key) {
         ResourceLocation got = KEPT.get(key);
         if (got != null) return got;
         long now = System.nanoTime();
@@ -94,15 +115,13 @@ public final class FolkFaces {
             stretchFrom = now;
             madeInStretch = 0;
         }
-        if (madeInStretch >= BUDGET) return FolkLooks.skinTexture(folk);
+        if (madeInStretch >= BUDGET) return null;
         madeInStretch++;
         try {
-            NativeImage img = new NativeImage(SIZE, SIZE, true);
             int[] px = compose(key.look(), key.marks());
-            if (px == null) {
-                img.close();
-                return FolkLooks.skinTexture(folk);
-            }
+            if (px == null) return null;
+            if (key.outfit() >= 0 && !dress(px, key)) return null;
+            NativeImage img = new NativeImage(SIZE, SIZE, true);
             for (int y = 0; y < SIZE; y++) {
                 for (int x = 0; x < SIZE; x++) img.setPixelRGBA(x, y, abgr(px[y * SIZE + x]));
             }
@@ -112,9 +131,65 @@ public final class FolkFaces {
             return loc;
         } catch (RuntimeException e) {
             broken = true;
-            return FolkLooks.skinTexture(folk);
+            return null;
         }
     }
+
+    /** The outfit, its dyed parts and the finery laid over the picture as cut-out passes lay them; false if one is missing. */
+    private static boolean dress(int[] px, Key key) {
+        String trade = FolkModel.TRADES[key.outfit()];
+        int[] outfit = image("textures/entity/folk/" + trade + ".png");
+        if (outfit == null) return false;
+        cutOut(px, outfit, -1);
+        if (key.dye() != 0) {
+            int[] dye = image("textures/entity/folk/" + trade + "_dye.png");
+            if (dye == null) return false;
+            cutOut(px, dye, key.dye());
+        }
+        if (key.finery() >= 0) {
+            int[] fine = image("textures/entity/folk/wealth_" + key.finery() + ".png");
+            if (fine == null) return false;
+            cutOut(px, fine, -1);
+        }
+        return true;
+    }
+
+    /** Each pixel of the layer a cut-out pass would draw (alpha a tenth and over), tinted, put in place of the one under it. */
+    private static void cutOut(int[] px, int[] layer, int tint) {
+        int tr = tint >>> 16 & 0xFF, tg = tint >>> 8 & 0xFF, tb = tint & 0xFF;
+        for (int i = 0; i < px.length; i++) {
+            int p = layer[i];
+            if ((p >>> 24) < 26) continue;
+            if (tint != -1) {
+                p = (p >>> 16 & 0xFF) * tr / 255 << 16 | (p >>> 8 & 0xFF) * tg / 255 << 8 | (p & 0xFF) * tb / 255;
+            }
+            px[i] = 0xFF000000 | p & 0xFFFFFF;
+        }
+    }
+
+    /** A picture of the mod's own as 0xAARRGGBB, read once and kept (null: not there). */
+    @Nullable
+    private static int[] image(String path) {
+        int[] got = IMAGES.get(path);
+        if (got != null) return got.length == 0 ? null : got;
+        int[] px = null;
+        Optional<Resource> res = Minecraft.getInstance().getResourceManager()
+            .getResource(ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, path));
+        if (res.isPresent()) {
+            try (InputStream in = res.get().open(); NativeImage img = NativeImage.read(in)) {
+                px = new int[SIZE * SIZE];
+                for (int y = 0; y < SIZE && y < img.getHeight(); y++) {
+                    for (int x = 0; x < SIZE && x < img.getWidth(); x++) px[y * SIZE + x] = argb(img.getPixelRGBA(x, y));
+                }
+            } catch (Exception e) {
+                px = null;
+            }
+        }
+        IMAGES.put(path, px == null ? new int[0] : px);
+        return px;
+    }
+
+    private static final Map<String, int[]> IMAGES = new HashMap<>();
 
     /** How many pictures are kept just now (for the debug overlay and the tests). */
     public static int kept() {

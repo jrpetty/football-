@@ -150,6 +150,8 @@ public final class FolkAction {
         private int seq = -1, markSeq = -1;
         /** The effects' own (client/FolkEffects): the tick they last ran, where in its clip it was, and for which act. */
         public int fxTick = -1, fxAct;
+        /** Drawn this frame in one picture with its outfit, its dye and its finery baked in (client/FolkFaces.dressed). */
+        public boolean baked;
         public float fxSec = -1.0F;
         /** The game's own clock for a keyframe animation, started at each new act (as the warden's and the camel's are). */
         public final net.minecraft.world.entity.AnimationState state = new net.minecraft.world.entity.AnimationState();
@@ -198,15 +200,33 @@ public final class FolkAction {
 
     /** From VillageFolkEntity.aiStep, server side, every tick (cheap: most ticks it does nothing). */
     public static void tick(VillageFolkEntity f) {
+        if (!measuring) {
+            tick0(f);
+            return;
+        }
+        long t0 = System.nanoTime();
+        tick0(f);
+        long d = System.nanoTime() - t0;
+        measuredNs += d;
+        measuredTicks++;
+        if (d > measuredMax) measuredMax = d;
+    }
+
+    private static void tick0(VillageFolkEntity f) {
         if (!(f.level() instanceof ServerLevel level)) return;
         State s = f.animState();
         fallen(f, s);
         if ((f.tickCount + f.getId()) % EVERY != 0) return;
         if (s.until != 0 && f.tickCount < s.until) return;   // a played act runs its course
         s.until = 0;
+        if (measuring) measuredDerives++;
         Act now = Guard_derive(f, level, s);
         set(f, s, now, false);
     }
+
+    /** What the work-out costs, measured while /village anim perf is on: time, folk-ticks, work-outs, the longest. */
+    public static boolean measuring;
+    public static long measuredNs, measuredTicks, measuredDerives, measuredMax;
 
     /** A hard fall (more than four blocks), landed: down, and up again. */
     private static void fallen(VillageFolkEntity f, State s) {

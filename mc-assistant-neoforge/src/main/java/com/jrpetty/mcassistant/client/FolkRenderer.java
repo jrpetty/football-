@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -113,14 +112,43 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new WatchLayer(this, new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [police] the sash, the coat, the badge
         this.addLayer(new ArmyLayer(this, context.getModelSet(), new WatchModel(context.bakeLayer(WatchModel.LAYER)), context.getItemInHandRenderer()));   // [war] the army's surcoat, cloak, sash
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
-        this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new FolkActionLayer.Held(this, context.getItemInHandRenderer()));   // [anim] the game's, with the act's grip
         this.addLayer(new FolkActionLayer(this, context.getItemInHandRenderer()));   // [anim] the act's tools in empty hands
         this.addLayer(new WagonClient.CrateLayer(this, context.getBlockRenderDispatcher()));   // [wagons] a crate to the wagon
     }
 
     @Override
     public ResourceLocation getTextureLocation(VillageFolkEntity folk) {
+        // [anim] A grown folk in sight: its face, outfit, dye and finery in one picture, drawn in one pass (FolkFaces.dressed);
+        // the three passes (Outfit, Colours, Finery) draw only while that picture waits its turn.
+        com.jrpetty.mcassistant.entity.FolkAction.Seen seen = folk.animSeen();
+        seen.baked = false;
+        if (!folk.isInvisible() && !folk.isBaby() && !AnimDev.unbaked) {
+            int t = trade(folk);
+            int tier = folk.clientWealth();
+            ResourceLocation dressed = FolkFaces.dressed(folk, t, dyeOf(folk, t), tier >= 0 && tier < FINERY.length && FINERY[tier] != null ? tier : -1);
+            if (dressed != null) {
+                seen.baked = true;
+                return dressed;
+            }
+        }
         return FolkFaces.texture(folk);                    // [individual] its own face, built once and kept
+    }
+
+    /** The colour of a trade's dyed parts on this folk (opaque), or 0 for a trade with none. */
+    private static int dyeOf(VillageFolkEntity folk, int t) {
+        if (DYE[t] == null) return 0;
+        int rgb;
+        long id = folk.getUUID().getMostSignificantBits();
+        if ("guard".equals(FolkModel.TRADES[t])) {
+            rgb = BANNERS[Math.floorMod(Math.max(0, folk.clientBanner()), BANNERS.length)];
+        } else if ("none".equals(FolkModel.TRADES[t])) {
+            rgb = CLOAKS[(int) Math.floorMod(id ^ (id >>> 31), (long) CLOAKS.length)];
+        } else {
+            rgb = DYES[(int) Math.floorMod(id ^ (id >>> 29) ^ t * 7L, (long) DYES.length)];
+            rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
+        }
+        return 0xFF000000 | rgb;
     }
 
     /**
@@ -145,6 +173,26 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         pose.scale(s * wide, s, s * wide);
     }
 
+    /**
+     * [anim] A swimmer laid flat in the water, face down and head up, as a player swims: the whole body turned forward
+     * about the middle of its back, at the water's top (where a folk treading water has its chest), blended in and out
+     * with the clip.
+     */
+    @Override
+    protected void setupRotations(VillageFolkEntity folk, PoseStack pose, float bob, float yBodyRot, float partialTick, float scale) {
+        super.setupRotations(folk, pose, bob, yBodyRot, partialTick, scale);
+        float swim = FolkAnimations.weight(folk.animSeen(), com.jrpetty.mcassistant.entity.FolkAction.Act.SWIM.ordinal(), folk.tickCount + partialTick);
+        if (swim <= 0.0F) return;
+        pose.translate(0.0F, SWIM_AT * swim, 0.0F);
+        pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0F * swim));
+        pose.translate(0.0F, -SWIM_MID * swim, 0.0F);
+    }
+
+    /** The swimmer's back at this height over its feet' place, and turned about this far up its body (blocks). */
+    static float SWIM_AT = 1.15F, SWIM_MID = 0.95F;
+    /** [anim] How far a rider is set down onto its seat: on a horse (or another beast), in a boat (blocks). */
+    static final float[] RIDE_DROP = {0.6F, 0.45F};
+
     private static int trade(AssistantEntity folk) {
         return FolkModel.outfit(folk);                     // [caves] the cave dweller in its own (FolkModel.CAVE_OUTFIT)
     }
@@ -157,7 +205,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             renderColoredCutoutModel(getParentModel(), OUTFIT[trade(folk)], pose, buffer, light, folk, -1);
         }
     }
@@ -170,21 +218,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             int t = trade(folk);
             if (DYE[t] == null) return;
-            int rgb;
-            long id = folk.getUUID().getMostSignificantBits();
-            if ("guard".equals(FolkModel.TRADES[t])) {
-                rgb = BANNERS[Math.floorMod(Math.max(0, folk.clientBanner()), BANNERS.length)];
-            } else if ("none".equals(FolkModel.TRADES[t])) {
-                rgb = CLOAKS[(int) Math.floorMod(id ^ (id >>> 31), (long) CLOAKS.length)];
-            } else {
-                long bits = folk.getUUID().getMostSignificantBits();
-                rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];
-                rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
-            }
-            renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, 0xFF000000 | rgb);
+            int rgb = dyeOf(folk, t);
+            renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, rgb);
         }
     }
 
@@ -196,7 +234,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || folk.isBaby()) return;
+            if (folk.isInvisible() || folk.isBaby() || folk.animSeen().baked) return;   // [anim] baked into its picture
             int tier = folk.clientWealth();
             if (tier < 0 || tier >= FINERY.length || FINERY[tier] == null) return;
             renderColoredCutoutModel(getParentModel(), FINERY[tier], pose, buffer, light, folk, -1);
@@ -310,15 +348,36 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     @Override
     public void render(VillageFolkEntity folk, float entityYaw, float partialTick,
                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
+        long t0 = AnimPerf.now(), b0 = AnimPerf.bytes();                // [anim] measured (AnimDev's perf)
+        render0(folk, entityYaw, partialTick, pose, buffer, packedLight);
+        if (AnimPerf.on) {
+            AnimPerf.renderNs += System.nanoTime() - t0;
+            AnimPerf.renderBytes += AnimPerf.bytes() - b0;
+            AnimPerf.drawn++;
+        }
+    }
+
+    private void render0(VillageFolkEntity folk, float entityYaw, float partialTick,
+                         PoseStack pose, MultiBufferSource buffer, int packedLight) {
         // Sat on a bench (entity/Park): the whole of it lowered onto the seat, its legs out in front.
         // Crouched in a hiding place (hide-and-seek: entity/Families): a little lower, its knees up.
         boolean crouched = folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING;
         boolean sat = folk.getPose() == net.minecraft.world.entity.Pose.SITTING || crouched;
-        if (sat) {
+        // [anim] In the saddle or a boat: sat on it, the seat under its hips (the game sets its feet on the seat), its legs
+        // astride or out in front (the act's clip).
+        net.minecraft.world.entity.Entity ride = folk.getVehicle();
+        float mounted = sat || ride == null ? 0.0F : ride instanceof net.minecraft.world.entity.vehicle.Boat ? RIDE_DROP[1]
+            : ride instanceof net.minecraft.world.entity.LivingEntity ? RIDE_DROP[0] : 0.0F;
+        if (mounted != 0.0F) {
+            sat = true;
+            pose.pushPose();
+            pose.translate(0.0F, -mounted * (folk.isBaby() ? 0.55F : 1.0F), 0.0F);
+        } else if (sat) {
             pose.pushPose();
             pose.translate(0.0F, crouched ? (folk.isBaby() ? -0.14F : -0.25F) : folk.isBaby() ? -0.32F : -0.6F, 0.0F);
         }
-        super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
+        FolkBatch.folk();
+        super.render(folk, entityYaw, partialTick, pose, FolkBatch.around(buffer), packedLight);   // [anim] its passes batched
         if (sat) pose.popPose();
         QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 

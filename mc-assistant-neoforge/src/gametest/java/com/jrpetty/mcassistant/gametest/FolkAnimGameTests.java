@@ -414,4 +414,53 @@ public class FolkAnimGameTests {
             helper.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ fan07: a crowd, and the swimmer's pool  [anim]
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "fan07_crowd")
+    public static void fan07_crowd(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos o = ground(helper, 3_310_000);
+        helper.runAtTickTime(5, () -> {
+            List<VillageFolkEntity> crowd = AnimStage.crowdOf(level, o.offset(-12, 0, -12), 100);
+            int n = crowd.size();
+            helper.assertTrue(n == 100, "a crowd of a hundred: " + n);
+            net.minecraft.world.phys.AABB all = new net.minecraft.world.phys.AABB(o).inflate(16, 4, 16);
+            Set<Act> doing = EnumSet.noneOf(Act.class);
+            int busy = 0;
+            for (VillageFolkEntity f : crowd) {
+                Act a = FolkAction.now(f);
+                if (a != Act.NONE) busy++;
+                doing.add(a);
+            }
+            helper.assertTrue(busy == 100, "every one of them at work or talk: " + busy);
+            helper.assertTrue(doing.contains(Act.TALK) && doing.contains(Act.HAMMER) && doing.size() >= 15, "the town's work and its talk: " + doing);
+            for (VillageFolkEntity f : crowd) f.discard();
+            Kit.log("[VT] fan07 a crowd of " + n + ", " + doing.size() + " acts");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "fan08_swimmer")
+    public static void fan08_swimmer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos o = ground(helper, 3_320_000);
+        Kit.hold(level, 3_320_000 + 12, Z + 80, 96);
+        helper.runAtTickTime(5, () -> {
+            AnimStage.stage(level, o);
+            net.minecraft.world.phys.AABB all = new net.minecraft.world.phys.AABB(o).expandTowards(32, 8, 170).inflate(4);
+            VillageFolkEntity swimmer = null;
+            for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, all)) {
+                if (f.getTags().contains("folk_lineup") && FolkAction.now(f) == Act.SWIM) swimmer = f;
+            }
+            helper.assertTrue(swimmer != null, "a swimmer on the stage");
+            BlockPos chest = BlockPos.containing(swimmer.getX(), swimmer.getY() + 0.5, swimmer.getZ());
+            helper.assertTrue(level.getFluidState(chest).is(net.minecraft.tags.FluidTags.WATER), "the swimmer in water: " + chest.toShortString());
+            helper.assertTrue(swimmer.getY() < o.getY(), "held at the water's top, below the floor: " + swimmer.getY());
+            for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
+                    all, e -> e.getTags().contains("folk_lineup"))) e.discard();
+            Kit.log("[VT] fan08 the swimmer in its pool at " + swimmer.getY());
+            helper.succeed();
+        });
+    }
 }

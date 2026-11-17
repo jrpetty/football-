@@ -12923,12 +12923,12 @@ with its foot and throws the spoil aside; the farmer chops the hoe into the row 
 bends to the crop with the sickle and gathers the stalks, waters the beds; the fisher draws the rod back, casts (a splash
 out on the water), waits with the tip twitching, strikes and reels in; the cook stirs the pot with steam coming off it,
 the baker kneads the dough (flour dust), the brewer stirs the cauldron with a long rod (bubbles, a witch's sparkle), the
-tailor draws the needle out the length of the thread, the carpenter saws, the mason taps a chisel into the stone, the
+tailor draws the needle out the length of the thread, the carpenter drives the frame saw upright through the plank in both hands, leaning into each stroke, the mason taps a chisel into the stone, the
 builder sets a block up in its place and beds it with two taps, the sweeper sweeps side to side, the courier carries a
-crate against its chest or a sack over its shoulder, the shopkeeper hands goods over the counter and counts coins one at
+crate against its chest or a sack over its shoulder (its hand up over the shoulder holding the neck, the weight down its back), the shopkeeper hands goods over the counter and counts coins one at
 a time, the banker counts and writes, the clerk and the innkeeper write at the desk, the teacher turns to point at the
 board, the healer bends over the bed winding a bandage, the elder preaches with its arms up, the guard stands with its
-blade before it watching round, the rancher milks (sat low), shears and feeds and leads, the beekeeper puffs smoke into
+blade stood point down before it, both hands on the pommel, watching round, the rancher milks (sat low), shears and feeds and leads, the beekeeper puffs smoke into
 the hive, the fletcher binds feathers to a shaft, the enchanter spreads its hands over the book (glyphs drift in), the
 smelter shovels coal into the furnace, the scout sweeps the horizon with a spyglass, the barkeep pours and wipes the
 counter, the waiter carries a tray, the cartographer draws along the ruler, the engineer turns a spanner at the works, the
@@ -12942,8 +12942,8 @@ sat down on a bench or a chair with its hands in its lap; asleep in bed (Zzz dri
 listening with its hands clasped and a nod (its head turned to whoever talks to it); a handshake (the winner and the chair
 at an interview, two quarrellers the warden makes peace between, a player and the folk it hires); cheering and clapping at
 a speech; the dance at a feast, a festival, a wedding; kneeling at a grave (a tear); praying at a vigil's close; the lute
-(notes) and the drum; tag and hopscotch for the children; a ladder climbed hand over hand; a gate pushed open; rowing a
-boat; riding; treading water; the watch's stance behind the shield and the thrust of the blade (a drawn bow is the game's
+(notes) and the drum (slung at the waist); tag and hopscotch for the children; a ladder climbed hand over hand; a gate pushed open; rowing a
+boat sat with its legs out; riding astride; swimming laid flat in the water with its head up, a breaststroke; the watch's stance behind the shield and the thrust of the blade (a drawn bow is the game's
 own pose); a hard fall, sat down hard and up again, dusting itself off; a wave, a bow, a shrug when it turns down a
 request, a salute, a point, "come on", a think with its hand to its chin, a quarrel (a finger jabbed, a hand on the hip),
 a protest, reading, sitting on the ground, lost and looking about.
@@ -12968,11 +12968,25 @@ heavy work, a handshake on a deal. It pops up, floats a touch and fades.
 paper, the broom, the smoker, the saw, the sickle and sheaf, the lute, the cup, the bandage, the spyglass; a crate held in
 both arms, a barrel lifted to the shelf, a sack over the shoulder. A hand that holds something keeps it.
 
+**Held the way the work holds it.** The game holds whatever is in a hand blade up and forward out of the fist; an act
+can turn it in the hand (its grip, the same for the folk's own tool and the one the act gives it): the guard's sword
+stood point down on watch, the spoon and the brewer's rod down into the pot, the broom's head down on the floor, the
+drumsticks down on the drum, the thrust's blade levelled, the frame saw upright with its blade along the stroke.
+
 **Cheap.** One int per folk on the wire (the act, a restart count, the mark and its count), sent only when it changes; the
 server looks at a folk's state once in five ticks, staggered, and the block scan round it only when it has moved. On the
 client the clips are read once into flat arrays and played with one kept vector: nothing is made a frame. The effects run
 once a tick for a folk the renderer is drawing anyway (a folk out of sight costs nothing), within the effects range only;
-faces within it too; the tools past thirty-two blocks are not drawn. The client's config (mc_assistant-client.toml) has
+faces within it too; the tools past thirty-two blocks are not drawn. Drawing a folk is the cost that matters with a town in sight, and two things keep it down. Its outfit, the outfit's
+dyed parts and its finery are painted into its own picture once (client/FolkFaces, with its face), so a grown folk is drawn
+in one pass where it took four; and every folk's passes go into batches a picture at a time, drawn once after the world's
+entities in their passes' order (client/FolkBatch), where the game drew each pass's batch as the next one began: some
+seven draws a folk, a thousand a frame for a crowd. Measured with a hundred and forty-four folk in sight, all at work or
+talk, on the software renderer the measuring machine has: 7 frames a second to 11 (143 ms a frame to 91), the folk's
+share of the frame from 77 ms to 39, what was made to draw them from 2.9 MB a frame to 1.8; in a founded town of a
+hundred and twenty, 13.6 frames a second to 15.6, the folk's share from 27 ms to 17. The pose itself (setupAnim and the
+clip) is about a millisecond a frame for all of them, the effects a tenth of that; on the server the acts' working out
+comes to a quarter to two thirds of a microsecond a folk a tick. The client's config (mc_assistant-client.toml) has
 `effects` (ALL, SOME: a third of them and half the range, NONE), `effectsRange` (24), `marks`, `faces` and `emoteCamera`.
 
 **For the player: emotes.** The player has fourteen emotes of its own, played on its own model for everybody on the server
@@ -12997,16 +13011,20 @@ once a day; one that cannot stand you shrugs it off. Hiring a folk for an advent
 
 Commands (ops and creative players): `/village anim` (what the nearest folk is doing), `/village anim list`,
 `/village anim play ACT [TICKS]`, `/village anim all ACT [TICKS]`, `/village anim mark MARK`, `/village anim stop`,
-`/village anim befriend`, `/village anim friend [front]` (a folk beside you, or face to face at arm's length, that likes
+`/village anim befriend`, `/village anim crowd N` (N folk where you stand, at the town's work and talk, for measuring), `/village anim perf` (ops: the acts' working out timed; again for its cost a folk a tick), `/village anim friend [front]` (a folk beside you, or face to face at arm's length, that likes
 you), `/village anim stage` (a folk doing every act, in rows, for pictures); anyone: `/village emote EMOTE [ANGLE]` (the
-turned camera held ANGLE degrees round from your front: 90 side on) and `/village emote wheel`. The smoke's `anim_stage` photographs the stage three folk at a time, the life of the town,
+turned camera held ANGLE degrees round from your front: 90 side on) and `/village emote wheel`. On the client, `/emotecape true|false` (ops) puts a test cape on every player it sees (an
+offline player has none) to watch the cape through the emotes: it falls part of the way back toward hanging straight as the
+body bows, comes after the body on a spring and swings past, and lies back over the ground when sat or knelt low. For
+working on the clips in a developer's own game, `-Dmcassistant.animdev=FILE` reads clips, grips and settings from a file
+as it changes, and its `perf` logs what the folk cost each frame (client/AnimDev, AnimPerf). The smoke's `anim_stage` photographs the stage three folk at a time, the life of the town,
 and all fourteen player emotes from the front three-quarter and side on beside a friend that answers, the handshake face
 to face side on, and the wheel.
 
 Tests: FolkAnimGameTests (fan01 every trade's work by its block and its tool, and the folk turned to its block; fan02 sleep,
 sit, eat, drink, talk, listen, the words of its own time, a fall; fan03 sent only on a change; fan04 saved and loaded none
 the worse; fan05 the player's emotes taken, kept to a pace, answered by opinion, a handshake remembered, a beckon followed;
-fan06 the stage); EmoteRulesTest (the answers, case by case).
+fan06 the stage; fan07 a crowd of a hundred, every one at work or talk; fan08 the stage's swimmer in its pool); EmoteRulesTest (the answers, case by case).
 ## A town that pays its way, and firms that can thrive (economy batch 1D)
 
 Batch 1C left two things a real economy would not have: a treasury whose IOUs to its market ran to twice what it could
