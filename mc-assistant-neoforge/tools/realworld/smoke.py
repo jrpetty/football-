@@ -1153,7 +1153,7 @@ def anim_stage(r, look, cx, cz):
         x, y, z, ax, ay, az = float(x), float(y), float(z), float(ax), float(ay), float(az)
         if re.match(r"row\d+$", name):
             continue                                   # the close pictures, three at a time, read better than the rows
-        look("anim-%s-%s" % (name, acts.replace(",", "-")[:60]), x, y + 0.3, z, ax, ay, az, wait=5)
+        look("anim-%s-%s" % (name, acts.replace(",", "-")[:60]), x, y + 0.3, z, ax, ay, az, wait=4)   # [health] the acts loop in 2-3 s
     say("alive after the folk's animations: %s" % client_alive())
     # The player's emotes, all fourteen, each from the front (a three-quarter) and side on, the camera turned round to
     # watch (/village emote EMOTE ANGLE); beside a folk it has made friends with, which answers in kind. The handshake
@@ -5796,6 +5796,38 @@ def mature():
         r.cmd("stop")
     except Exception:  # noqa: BLE001
         pass
+
+
+# [health] The run's clock. The client job has 200 minutes, building and starting the client and gathering the logs
+# included: the picture stages get SMOKE_MINUTES of them (170). The last stages (the war, after the war, the lands and the
+# map, the admin stage) always run: any other stage that would start past SMOKE_MINUTES less LAST_MINUTES is passed over,
+# said so in the log, so a run grown long loses a middle stage's pictures, never the last ones. Every stage's start is
+# logged with the minutes gone, so a slow stage shows.
+STARTED = time.time()
+SMOKE_MINUTES = float(os.environ.get("SMOKE_MINUTES", "170"))
+LAST_MINUTES = 30.0
+LAST_STAGES = ("war_stage", "war_after_stage", "borders_map_stage", "admin_stage")
+
+
+def minutes_gone():
+    return (time.time() - STARTED) / 60.0
+
+
+def _on_the_clock(name, fn):
+    def run(*args, **kwargs):
+        gone = minutes_gone()
+        if name not in LAST_STAGES and gone > SMOKE_MINUTES - LAST_MINUTES:
+            say("%s passed over: %.0f minutes gone, the last stages' %.0f kept" % (name, gone, LAST_MINUTES))
+            return None
+        say("%s at %.0f minutes" % (name, gone))
+        return fn(*args, **kwargs)
+    run.__name__ = name
+    return run
+
+
+for _name, _fn in list(globals().items()):
+    if _name.endswith("_stage") and callable(_fn) and _name != "_on_the_clock":
+        globals()[_name] = _on_the_clock(_name, _fn)
 
 
 if __name__ == "__main__":
