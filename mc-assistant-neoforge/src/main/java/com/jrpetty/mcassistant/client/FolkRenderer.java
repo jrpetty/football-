@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -113,7 +112,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new WatchLayer(this, new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [police] the sash, the coat, the badge
         this.addLayer(new ArmyLayer(this, context.getModelSet(), new WatchModel(context.bakeLayer(WatchModel.LAYER)), context.getItemInHandRenderer()));   // [war] the army's surcoat, cloak, sash
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
-        this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new FolkActionLayer.Held(this, context.getItemInHandRenderer()));   // [anim] the game's, with the act's grip
         this.addLayer(new FolkActionLayer(this, context.getItemInHandRenderer()));   // [anim] the act's tools in empty hands
         this.addLayer(new WagonClient.CrateLayer(this, context.getBlockRenderDispatcher()));   // [wagons] a crate to the wagon
     }
@@ -310,6 +309,17 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     @Override
     public void render(VillageFolkEntity folk, float entityYaw, float partialTick,
                        PoseStack pose, MultiBufferSource buffer, int packedLight) {
+        long t0 = AnimPerf.now(), b0 = AnimPerf.bytes();                // [anim] measured (AnimDev's perf)
+        render0(folk, entityYaw, partialTick, pose, buffer, packedLight);
+        if (AnimPerf.on) {
+            AnimPerf.renderNs += System.nanoTime() - t0;
+            AnimPerf.renderBytes += AnimPerf.bytes() - b0;
+            AnimPerf.drawn++;
+        }
+    }
+
+    private void render0(VillageFolkEntity folk, float entityYaw, float partialTick,
+                         PoseStack pose, MultiBufferSource buffer, int packedLight) {
         // Sat on a bench (entity/Park): the whole of it lowered onto the seat, its legs out in front.
         // Crouched in a hiding place (hide-and-seek: entity/Families): a little lower, its knees up.
         boolean crouched = folk.getPose() == net.minecraft.world.entity.Pose.CROUCHING;

@@ -46,10 +46,16 @@ public final class FolkEffects {
 
     /** From FolkRenderer.render: once a tick for each folk being drawn. */
     public static void tick(VillageFolkEntity f, double distSq) {
+        long t0 = AnimPerf.now();
+        tick0(f, distSq);
+        if (AnimPerf.on) AnimPerf.fxNs += System.nanoTime() - t0;
+    }
+
+    private static void tick0(VillageFolkEntity f, double distSq) {
         FolkAction.Seen s = f.animSeen();
         if (s.fxTick == f.tickCount) return;
         s.fxTick = f.tickCount;
-        AnimConfig.Effects how = AnimConfig.effects();
+        AnimConfig.Effects how = AnimDev.effects != null ? AnimDev.effects : AnimConfig.effects();
         if (how == AnimConfig.Effects.NONE || f.isInvisible()) return;
         int range = how == AnimConfig.Effects.SOME ? AnimConfig.range() / 2 : AnimConfig.range();
         if (distSq > (double) range * range) return;

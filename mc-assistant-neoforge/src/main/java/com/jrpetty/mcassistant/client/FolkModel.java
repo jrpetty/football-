@@ -515,6 +515,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     @Override
     public void setupAnim(VillageFolkEntity folk, float limbSwing, float limbSwingAmount,
                           float ageInTicks, float netHeadYaw, float headPitch) {
+        long t0 = AnimPerf.now();                                      // [anim] measured (AnimDev's perf)
         for (ModelPart part : allParts) part.resetPose();
 
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
@@ -613,6 +614,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
         FolkAnimations.apply(rig, folk, ageInTicks, rightMain, young, attackTime);    // [anim] what it is doing: its work, its life
         missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
+        if (AnimPerf.on) { AnimPerf.setupNs += System.nanoTime() - t0; AnimPerf.posed++; }   // [anim]
     }
 
     /**

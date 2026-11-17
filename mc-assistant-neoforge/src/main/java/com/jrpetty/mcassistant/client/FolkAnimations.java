@@ -269,15 +269,16 @@ public final class FolkAnimations {
             .r(HEAD, 0, 24, 0, 0, 0.55F, 14, 6, 0, 1.0F, 24, 0, 0, 1.2F, 24, 0, 0)
             .lean(0, 6, 1.2F, 6)
             .done());
-        // The carpenter: the saw pushed and drawn through the plank, the other hand holding the plank down.
-        put(Act.SAW, loop(0.8F)
-            .r(RA, 0, -54, -8, 0, 0.38F, -76, -8, 0, 0.8F, -54, -8, 0)
-            .p(RA, 0, 0, 0, 1.0F, 0.38F, 0, 0, -2.0F, 0.8F, 0, 0, 1.0F)
-            .r(LA, 0, -44, 30, 0, 0.4F, -46, 30, 0, 0.8F, -44, 30, 0)
-            .r(HEAD, 0, 30, 0, 0, 0.8F, 30, 0, 0)
-            .twist(0, 4, 0.38F, -5, 0.8F, 4)
-            .lean(0, 14, 0.38F, 18, 0.8F, 14)
-            .hit(0.38F).done());
+        // The carpenter: the frame saw upright on the plank in both hands, driven through the cut on the push with the
+        // weight going in behind it (a lean from the hips, the shoulders turning into the stroke) and drawn back again.
+        put(Act.SAW, loop(0.9F)
+            .r(RA, 0, -48, -18, 0, 0.45F, -70, -18, 0, 0.9F, -48, -18, 0)
+            .r(LA, 0, -44, 30, 0, 0.45F, -66, 30, 0, 0.9F, -44, 30, 0)
+            .r(HEAD, 0, 22, 0, 0, 0.45F, 26, 0, 0, 0.9F, 22, 0, 0)
+            .twist(0, 7, 0.45F, -5, 0.9F, 7)
+            .lean(0, 6, 0.45F, 17, 0.9F, 6)
+            .low(0, 0, 0.45F, 0.8F, 0.9F, 0)
+            .hit(0.45F).done());
         // The mason: the chisel held to the stone, the mallet tapping it in short sharp blows.
         put(Act.CHISEL, loop(0.9F)
             .r(LA, 0, -56, 26, 0, 0.45F, -56, 26, 0, 0.5F, -53, 26, 0, 0.9F, -56, 26, 0)
@@ -360,14 +361,16 @@ public final class FolkAnimations {
             .r(HEAD, 0, 0, 0, 0, 0.6F, -18, 0, 0, 1.3F, -14, 0, 0, 2.0F, 0, 0, 0, 2.5F, 6, -8, 0, 3.2F, 0, 0, 0)
             .lean(0, 0, 0.6F, -6, 1.3F, -5, 2.0F, 2, 3.2F, 0)
             .done());
-        // The guard on watch: both hands on the pommel of the blade stood point down before it, its eyes going slowly round.
+        // The guard on watch: its blade stood point down before it, both hands on the pommel (the left over the right), the
+        // feet a little apart, the weight shifting now and then, its eyes going slowly round.
         put(Act.WATCH, loop(6.0F)
-            .r(RA, 0, -74, -16, 0, 3.0F, -76, -16, 0, 6.0F, -74, -16, 0)
-            .r(LA, 0, -70, 30, 0, 3.0F, -72, 30, 0, 6.0F, -70, 30, 0)
+            .r(RA, 0, -34, -48, -10, 3.0F, -35, -48, -10, 6.0F, -34, -48, -10)
+            .r(LA, 0, -34, 48, 10, 3.0F, -35, 48, 10, 6.0F, -34, 48, 10)
             .r(HEAD, 0, -2, -30, 0, 1.5F, -2, -30, 0, 3.0F, -2, 30, 0, 4.5F, -2, 30, 0, 6.0F, -2, -30, 0)
             .twist(0, -3, 3.0F, 3, 6.0F, -3)
             .r(RL, 0, 0, 0, 4, 6.0F, 0, 0, 4)
             .r(LL, 0, 0, 0, -4, 6.0F, 0, 0, -4)
+            .low(0, 0, 2.6F, 0, 3.0F, 0.3F, 5.6F, 0.3F, 6.0F, 0)
             .done());
         // Milking: sat low at the cow's side, both hands pulling turn about.
         put(Act.MILK, loop(1.0F)
@@ -786,6 +789,38 @@ public final class FolkAnimations {
         CLIPS[a.ordinal()] = c;
     }
 
+    /** The clips as written here, for AnimDev to put back. */
+    private static final Clip[] OWN = CLIPS.clone();
+
+    static void restoreAll() {
+        System.arraycopy(OWN, 0, CLIPS, 0, CLIPS.length);
+    }
+
+    /** [anim] A clip written out in words (AnimDev's file: "r RA 0 -54 -8 0 0.4 ..."), in place of the act's own. */
+    static void rewrite(Act a, boolean loop, float length, List<String> lines) {
+        B b = new B(length, loop);
+        for (String line : lines) {
+            String[] w = line.trim().split("\\s+");
+            if (w.length < 2 || w[0].startsWith("#")) continue;
+            boolean part = w[0].equals("r") || w[0].equals("rl") || w[0].equals("p");
+            int from = part ? 2 : 1;
+            float[] k = new float[w.length - from];
+            for (int i = 0; i < k.length; i++) k[i] = Float.parseFloat(w[from + i]);
+            int bone = part ? java.util.Arrays.asList("HEAD", "BODY", "RA", "LA", "RL", "LL").indexOf(w[1]) : -1;
+            switch (w[0]) {
+                case "r" -> b.r(bone, k);
+                case "rl" -> b.rl(bone, k);
+                case "p" -> b.p(bone, k);
+                case "lean" -> b.lean(k);
+                case "low" -> b.low(k);
+                case "twist" -> b.twist(k);
+                case "hit" -> b.hit(k);
+                default -> { }
+            }
+        }
+        CLIPS[a.ordinal()] = b.done();
+    }
+
     // ------------------------------------------------------------------ putting a clip on a body
 
     /** The kept vector every key is worked out into (the render thread only). */
@@ -818,10 +853,12 @@ public final class FolkAnimations {
     public static void apply(Rig rig, VillageFolkEntity folk, float age, boolean rightHanded, boolean young, float attackTime) {
         FolkAction.Seen s = folk.animSeen();
         if (s.act == 0 && (s.prev == 0 || age - s.changed >= BLEND)) return;
+        long t0 = AnimPerf.now();
         Style st = style(folk, rightHanded, young);
         Act act = Act.of(s.act);
         st.keepMain = attackTime > 0.0F && (act == Act.THRUST || act == Act.BLOCK || act == Act.WATCH);
         play(rig, s, age, st);
+        if (AnimPerf.on) { AnimPerf.clipNs += System.nanoTime() - t0; AnimPerf.clipped++; }
     }
 
     /** Where in its clip a folk is at a tick (for the effects: the moment the hammer lands). */

@@ -32,6 +32,8 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
 
     private static final Kit[] KITS = new Kit[Act.values().length];
     private static final ItemStack[][] MADE = new ItemStack[Act.values().length][];
+    /** Each act's grips: grip(PoseStack...) below. */
+    private static final float[][][] GRIPS = new float[Act.values().length][][];
 
     private static void kit(Act a, Supplier<Item> main, Supplier<Item> off) { KITS[a.ordinal()] = new Kit(main, off, null, 1.0F); }
 
@@ -51,7 +53,7 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         kit(Act.STIR_POT, () -> Items.STICK, null);
         kit(Act.BREW, () -> Items.BLAZE_ROD, null);
         kit(Act.SEW, () -> Items.STRING, () -> Items.WHITE_CARPET);
-        kit(Act.SAW, () -> com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get(), null, 0.7F);
+        kit(Act.SAW, () -> com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get(), null, 0.85F);
         kit(Act.CHISEL, () -> Items.MACE, () -> Items.FLINT, 0.55F);
         kit(Act.BUILD, () -> Items.BRICKS, null, 0.8F);
         kit(Act.SWEEP, () -> Items.BRUSH, null, 1.5F);
@@ -88,6 +90,9 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         kit(Act.BLOCK, () -> Items.IRON_SWORD, () -> Items.SHIELD);
         kit(Act.READ, () -> Items.BOOK, null);
         kit(Act.MOURN, null, () -> Items.POPPY);
+        kit(Act.WATCH, () -> Items.IRON_SWORD, null);
+        // The guard's blade (its own, or this one) stood point down before it on watch.
+        grip(Act.WATCH, new float[]{0, 0, 0, -125, 45, -20, 1}, null);
     }
 
     private final ItemInHandRenderer hands;
@@ -144,8 +149,59 @@ public final class FolkActionLayer extends RenderLayer<VillageFolkEntity, FolkMo
         boolean left = arm == HumanoidArm.LEFT;
         pose.translate((left ? -1.0F : 1.0F) / 16.0F, 0.125F, -0.625F);
         if (size != 1.0F) pose.scale(size, size, size);
+        grip(pose, Act.of(folk.animSeen().act), arm == folk.getMainArm(), left);
         hands.renderItem(folk, s, left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, left, pose, buffer, light);
         pose.popPose();
+    }
+
+    /**
+     * How an act's tool sits in the hand, past the game's own way of holding it (a sword's blade up and forward out of the
+     * fist): {x, y, z in pixels, then turned about x, y, z in degrees, then its size}, turned about the grip itself. The saw
+     * upright with its blade along the stroke, the guard's own blade stood point down before it.
+     */
+
+    private static void grip(Act a, float[] main, float[] off) { GRIPS[a.ordinal()] = new float[][]{main, off}; }
+
+    /** The act's grip put on, for the main hand or the other (the left hand's the mirror of the right's). */
+    static void grip(PoseStack pose, Act a, boolean main, boolean left) {
+        float[][] dev = AnimDev.GRIP[a.ordinal()], own = GRIPS[a.ordinal()];
+        int h = main ? 0 : 1;
+        float[] g = dev != null && dev[h] != null ? dev[h] : own != null ? own[h] : null;
+        if (g == null) return;
+        float m = left ? -1.0F : 1.0F;
+        pose.translate(m * g[0] / 16.0F, g[1] / 16.0F, g[2] / 16.0F);
+        if (g[3] != 0.0F) pose.mulPose(Axis.XP.rotationDegrees(g[3]));
+        if (g[4] != 0.0F) pose.mulPose(Axis.YP.rotationDegrees(m * g[4]));
+        if (g[5] != 0.0F) pose.mulPose(Axis.ZP.rotationDegrees(m * g[5]));
+        if (g[6] != 1.0F && g[6] > 0.0F) pose.scale(g[6], g[6], g[6]);
+    }
+
+    /**
+     * The game's own layer for what a folk holds (ItemInHandLayer), with its act's grip: the guard's own sword stood point
+     * down before it on watch, its hands on the pommel, where the game would hold it out blade up.
+     */
+    public static final class Held extends net.minecraft.client.renderer.entity.layers.ItemInHandLayer<VillageFolkEntity, FolkModel> {
+        private final ItemInHandRenderer hands;
+
+        public Held(RenderLayerParent<VillageFolkEntity, FolkModel> parent, ItemInHandRenderer hands) {
+            super(parent, hands);
+            this.hands = hands;
+        }
+
+        @Override
+        protected void renderArmWithItem(net.minecraft.world.entity.LivingEntity e, ItemStack s, ItemDisplayContext ctx, HumanoidArm arm,
+                                         PoseStack pose, MultiBufferSource buffer, int light) {
+            if (s.isEmpty()) return;
+            pose.pushPose();
+            getParentModel().translateToHand(arm, pose);
+            pose.mulPose(Axis.XP.rotationDegrees(-90.0F));
+            pose.mulPose(Axis.YP.rotationDegrees(180.0F));
+            boolean left = arm == HumanoidArm.LEFT;
+            pose.translate((left ? -1.0F : 1.0F) / 16.0F, 0.125F, -0.625F);
+            if (e instanceof VillageFolkEntity f) grip(pose, Act.of(f.animSeen().act), arm == f.getMainArm(), left);
+            hands.renderItem(e, s, ctx, left, pose, buffer, light);
+            pose.popPose();
+        }
     }
 
     /**
