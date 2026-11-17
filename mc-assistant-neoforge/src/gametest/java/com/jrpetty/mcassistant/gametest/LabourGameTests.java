@@ -434,6 +434,7 @@ public class LabourGameTests {
             StationTask.GUARD, StationTask.GUARD, StationTask.GUARD, StationTask.GUARD);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
+        Kit.generousTerrain(level, x, Z);                                   // water for the fields
         Kit.Expect ok = new Kit.Expect();
         LabourMarket.morningNow(level, v);
         logOpenings("lab07", id);
@@ -478,14 +479,15 @@ public class LabourGameTests {
         int openBefore = LabourMarket.openingsForTests(id).size();
         int minBefore = LabourMarket.councilMinimum(id);
         Map<String, Double> idxBefore = LabourMarket.indexForTests(id);
-        String idx0 = idxBefore == null ? "-" : idxBefore.toString();
+        String idx0 = idxBefore == null ? "-" : new java.util.TreeMap<>(idxBefore).toString();
         LabourMarket.reloadForTests(level.registryAccess());
         Map<String, Double> idxAfter = LabourMarket.indexForTests(id);
         Kit.log("[VT] lab08 " + termsBefore + " / " + terms(ash) + "; openings " + openBefore + "; minimum " + minBefore);
         ok.that(termsBefore.equals(terms(ash)), "its terms the same: " + terms(ash));
         ok.that(openBefore > 0 && openBefore == LabourMarket.openingsForTests(id).size(), "the openings the same: " + openBefore);
         ok.that(minBefore > 0 && minBefore == LabourMarket.councilMinimum(id), "the minimum wage the same: " + minBefore);
-        ok.that(idx0.equals(idxAfter == null ? "-" : idxAfter.toString()), "the wage index the same");
+        String idx1 = idxAfter == null ? "-" : new java.util.TreeMap<>(idxAfter).toString();
+        ok.that(idx0.equals(idx1), "the wage index the same: " + idx0 + " / " + idx1);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }

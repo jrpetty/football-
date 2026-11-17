@@ -809,12 +809,6 @@ public final class LabourMarket {
             int applied = 0;
             for (Application a : vac.apps) if (a.verdict != Verdict.WITHDRAWN) applied++;
             boolean ess = essential.contains(key);
-            if (day > vac.posted && vac.state == State.OPEN && o.moved < day && applied == 0) {
-                o.moved = day;
-                o.unfilled++;
-                o.queued = 0;
-                o.m *= ess ? STEP_UP_ESSENTIAL : STEP_UP;
-            }
             o.m = clamp(o.m, M_LEAST, cap(level, id, vac.employer, t, ess));
             vac.openings = want.get(key);
             vac.essential = ess;
@@ -1015,7 +1009,21 @@ public final class LabourMarket {
             if (t == null) continue;
             List<Application> apps = new ArrayList<>();
             for (Application a : vac.apps) if (a.verdict == Verdict.WAITING) apps.add(a);
-            if (apps.isEmpty()) continue;
+            if (apps.isEmpty()) {
+                // Nobody came for it since it went up: the employer offers more from now on (an eighth for essential work).
+                boolean any = false;
+                for (Application a : vac.apps) any |= a.verdict != Verdict.WITHDRAWN;
+                Offer o = offer(tw, id, vac.employer, t);
+                if (!any && day > vac.posted && o.moved < day) {
+                    o.moved = day;
+                    o.unfilled++;
+                    o.queued = 0;
+                    o.m = clamp(o.m * (vac.essential ? STEP_UP_ESSENTIAL : STEP_UP), M_LEAST, cap(level, id, vac.employer, t, vac.essential));
+                    vac.m = o.m;
+                    vac.wage = journeyman(id, t, o.m);
+                }
+                continue;
+            }
             apps.sort(Comparator.comparingDouble((Application a) -> -a.score).thenComparing(a -> a.folk));
             // A queue at the door: more than twice the openings applied, and the employer offers less from now on (the
             // places it fills today go at the wage it posted).
@@ -1229,25 +1237,33 @@ public final class LabourMarket {
             if (vac.state != State.OPEN || !vac.essential || day <= vac.posted) continue;
             StationTask t = vac.task();
             if (t == null) continue;
-            VillageFolkEntity pick = null;
-            for (VillageFolkEntity f : grown(id)) if (outOfWork(f) && !Fears.shuns(f, t)) { pick = f; break; }
-            if (pick == null) {
-                double most = 1.0;
-                for (VillageFolkEntity f : grown(id)) {
-                    if (!about(f) || f.isElder() || f.stationTask() == t || f.stationTask() == StationTask.NONE) continue;
-                    String emp = employerOf(id, f);
-                    if (!emp.startsWith("town:") && !emp.equals("market") && !emp.equals("watch")) continue;
-                    if (essentialOpening(id, f.stationTask(), 2) || Fears.shuns(f, t)) continue;
-                    double over = Villages.share(id, f.stationTask());
-                    if (over >= most) { most = over; pick = f; }
+            // Those out of work first, then hands from the trades furthest over their share.
+            List<VillageFolkEntity> picks = new ArrayList<>();
+            for (VillageFolkEntity f : grown(id)) if (outOfWork(f) && !Fears.shuns(f, t)) picks.add(f);
+            List<VillageFolkEntity> spare = new ArrayList<>();
+            Map<StationTask, Double> over = new EnumMap<>(StationTask.class);
+            for (VillageFolkEntity f : grown(id)) {
+                if (!about(f) || f.isElder() || f.stationTask() == t || f.stationTask() == StationTask.NONE) continue;
+                String emp = employerOf(id, f);
+                if (!emp.startsWith("town:") && !emp.equals("market") && !emp.equals("watch")) continue;
+                if (essentialOpening(id, f.stationTask(), 2) || Fears.shuns(f, t) || lastAtEssential(id, f)) continue;
+                double o = over.computeIfAbsent(f.stationTask(), k -> Villages.share(id, k));
+                if (o >= 1.0) spare.add(f);
+            }
+            spare.sort(Comparator.comparingDouble((VillageFolkEntity f) -> -over.get(f.stationTask())).thenComparing(VillageFolkEntity::getUUID));
+            picks.addAll(spare);
+            int tries = 0;
+            for (VillageFolkEntity pick : picks) {
+                if (vac.openings <= 0 || tries++ >= 4) break;
+                if (move(level, v, tw, pick, vac.employer, t, vac.m, pick.tradeLevel(t) < APPRENTICE_BELOW, day, "the elder's call")) {
+                    vac.by = join(vac.by, pick.displayNameCap() + " (the elder's call)");
+                    vac.openings--;
+                    if (vac.openings <= 0) close(tw, vac, day, State.FILLED, "the elder's call");
+                    break;                                                   // one a morning for each opening
                 }
+                LOG.info("[MCA-LABOUR] {}: the elder's call for {} could not take {}: no ground for the work", Villages.name(id), t.name(), pick.displayNameCap());
             }
-            if (pick == null) continue;
-            if (move(level, v, tw, pick, vac.employer, t, vac.m, pick.tradeLevel(t) < APPRENTICE_BELOW, day, "the elder's call")) {
-                vac.by = join(vac.by, pick.displayNameCap() + " (the elder's call)");
-                vac.openings--;
-                if (vac.openings <= 0) close(tw, vac, day, State.FILLED, "the elder's call");
-            }
+            if (picks.isEmpty()) LOG.info("[MCA-LABOUR] {}: the elder's call for {}: nobody to spare", Villages.name(id), t.name());
         }
     }
 
