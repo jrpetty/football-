@@ -422,6 +422,7 @@ public final class Tidy {
 
     @Nullable
     private static BlockState flowerFromTheStores(ServerLevel level, Villages.Village v) {
+        if (TownBudget.oneCrew(v.id())) return null;                       // [capital] short of money: no flowers bought for the verges
         ItemStack got = Crafts.takeOne(level, v, s -> s.is(ItemTags.SMALL_FLOWERS));
         if (!got.isEmpty() && got.getItem() instanceof BlockItem bi) return bi.getBlock().defaultBlockState();
         // A bonemealed tuft of the meadow's own flowers.

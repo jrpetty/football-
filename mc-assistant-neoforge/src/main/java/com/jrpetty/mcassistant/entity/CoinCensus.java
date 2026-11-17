@@ -292,6 +292,8 @@ public final class CoinCensus {
         for (Map.Entry<String, String> e : Commerce.notesStarting(village, "rentdue/")) rentDue += Homes.parse(e.getValue()) * 100L;
         out.put("players' rent waiting to be collected", rentDue);
         out.put("bounties the watch holds", Outlaws.held(village) * 100L);   // [health] on outlaws' heads, and won, not yet claimed
+        out.put("the savings club's chest", FolkCredit.clubCash(village));   // [capital] the folk's savings not lent
+        out.put("coupons, rents and sales waiting for players at the hall", TownBonds.playersDue(village));   // [capital]
         return out;
     }
 

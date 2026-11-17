@@ -390,6 +390,42 @@ public final class Bank {
         saveHead(village, s);
     }
 
+    /** [capital] Coin out of the vault for the town's bonds or a player's loan (FolkCredit), as far as it may lend: coins. */
+    static int takeForCapital(UUID village, int coins) {
+        if (!open(village) || coins <= 0) return 0;
+        State s = state(village);
+        int k = Math.min(coins, lendable(s));
+        if (k <= 0) return 0;
+        s.cash -= k;
+        s.week.lent += k;
+        saveHead(village, s);
+        return k;
+    }
+
+    /** [capital] Coin back into the vault from the town's bonds or a player's loan (FolkCredit); a coupon is the bank's earnings. */
+    static void giveFromCapital(UUID village, int coins, boolean earned) {
+        if (coins <= 0) return;
+        State s = state(village);
+        s.cash += coins;
+        if (earned) s.week.earned += coins;
+        else s.week.repaid += coins;
+        saveHead(village, s);
+    }
+
+    /** [capital] The savings club folded into the bank the day it opens (FolkCredit.merge): each saver's balance onto its
+     *  account, the club's chest into the vault. */
+    static void absorbClub(UUID village, Map<UUID, Integer> balances, Map<UUID, String> names, int cash, long day) {
+        State s = state(village);
+        s.cash += cash;
+        for (Map.Entry<UUID, Integer> e : balances.entrySet()) {
+            if (e.getValue() <= 0) continue;
+            Account a = s.accounts.computeIfAbsent(e.getKey(), k -> new Account(k, false, names.getOrDefault(e.getKey(), "?"), day));
+            a.balance += e.getValue();
+            save(village, a);
+        }
+        saveHead(village, s);
+    }
+
     /** What the bank is worth to itself: the vault and what it is owed, less what it owes its savers. */
     static int equity(State s) {
         return s.cash + loansOut(s) - deposits(s);
@@ -1073,7 +1109,7 @@ public final class Bank {
         int pot = earned * POOL + s.poolCarry;
         int pool = pot / 100;
         s.poolCarry = pot % 100;
-        int pay = (int) Math.min(pool, total * DEPOSIT_BP / 10000L);
+        int pay = (int) Math.min(pool, total * FolkCredit.depositBp(village) / 10000L);   // [capital] the savers' rate follows the lending rate
         if (pay <= 0) return;
         List<Account> savers = new ArrayList<>();
         for (Account a : s.accounts.values()) if (a.balance > 0) savers.add(a);

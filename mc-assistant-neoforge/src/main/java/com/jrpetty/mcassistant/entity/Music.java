@@ -228,7 +228,7 @@ public final class Music {
             }
             // A note block lent out of the stores; [leisure] or, with none there, a lute.
             ItemStack lend = Crafts.stock(level, v, st -> st.is(Items.NOTE_BLOCK)) > 0 && Crafts.take(level, v, st -> st.is(Items.NOTE_BLOCK), 1)
-                ? new ItemStack(Items.NOTE_BLOCK) : Crafts.takeOne(level, v, Lutes::isLute);
+                ? new ItemStack(Items.NOTE_BLOCK) : TownBudget.oneCrew(v.id()) ? ItemStack.EMPTY : Crafts.takeOne(level, v, Lutes::isLute);   // [capital] no lute bought short
             if (lend.isEmpty()) continue;
             ItemStack left = f.insertItem(lend);
             if (!left.isEmpty()) {

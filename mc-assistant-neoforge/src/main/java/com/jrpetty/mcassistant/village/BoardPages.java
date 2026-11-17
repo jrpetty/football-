@@ -69,7 +69,9 @@ public final class BoardPages {
         // [business-books] Every business in the town and its books (BusinessesPage), after them.
         "Businesses",
         // [econ-1a] The storehouse as the town's market: its bid and ask, its stock and trades, the privatisation (MarketPage).
-        "Market" };
+        "Market",
+        // [capital] The town's capital: the savings club and its loans, the bourse, the land register, the bonds (CapitalPage).
+        "Capital" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -81,7 +83,7 @@ public final class BoardPages {
             "Folk", "Society", "Growth", "Homes", "School", "Interviews"),
         new Section("Economy", Items.EMERALD, "Money, what is made and sold, the prices, the jobs and the stores",
             "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
-            "Businesses", "Market"),                                                                           // [business-books] [econ-1a]
+            "Businesses", "Market", "Capital"),                                                                // [business-books] [econ-1a] [capital]
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",

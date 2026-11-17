@@ -371,6 +371,10 @@ public class CityScreen extends Screen {
                     List<Component> tip = MarketPage.draw(g, font, data.getCompound("market"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
+                case "Capital" -> {                                                    // [capital] savings and loans, the bourse, land, bonds (CapitalPage)
+                    List<Component> tip = CapitalPage.draw(g, font, data.getCompound("capital"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Taxes" -> {                                                      // [civic-land] the council's taxes, the unrest (TaxesPage)
                     List<Component> tip = TaxesPage.draw(g, font, data.getCompound("realm"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }

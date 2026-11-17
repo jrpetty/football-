@@ -1126,6 +1126,7 @@ public class EntrepreneurGameTests {
                     }
                     Kit.log(tag + " day " + dayNo + " budget: " + TownBudget.line(id));
                     Kit.log(tag + " day " + dayNo + " LABOUR " + com.jrpetty.mcassistant.entity.LabourMarket.line(id));   // [labour]
+                    if (MarketMaker.live(id)) Kit.log(tag + " day " + dayNo + " CAPITAL " + String.join(" | ", com.jrpetty.mcassistant.entity.CapitalReport.lines(level, id)));   // [capital]
                     if (daily != null) daily.accept(id, dayNo);
                     long today = level.getDayTime() / 24000L;
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
