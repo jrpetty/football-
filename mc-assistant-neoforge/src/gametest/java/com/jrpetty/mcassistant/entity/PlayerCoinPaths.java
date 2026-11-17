@@ -158,8 +158,7 @@ public final class PlayerCoinPaths {
         }));
         out.add(new Path("a fine taken out of the pack (the hunters, the watch)", true, () -> "took " + PlayerLaw.take(p, id, 4)));
         out.add(new Path("a constable's wage for a case", true, () -> {
-            Market.intoStoresForTests(level, id, new ItemStack(Items.IRON_INGOT, 1));
-            Market.intoStoresForTests(level, id, new ItemStack(Items.GOLD_NUGGET, 4));
+            p.getInventory().add(new ItemStack(com.jrpetty.mcassistant.item.PoliceItems.CONSTABLE_BADGE.get()));   // its own badge
             String sworn = PlayerLaw.swearNow(level, v, p);
             PlayerLaw.caseClosed(level, v, 1, List.of(p.getUUID()));
             return sworn;
