@@ -13244,6 +13244,16 @@ ware came from and went (the long tests' supply log) showed why, and this is wha
   The tavern and the apothecary: the cellar's makings, the nether's wart. The greengrocer and the general store buy in. The
   stationer: cane for paper, leather for a binding (on demand).
 
+- **Measured.** Twenty days of a town nobody seeded (EntrepreneurGameTests ent15), before and after. Before: a bakery and a
+  toolshop opened, both losing (the bakery's two hundred coins of takings nearly all its loaves sold over to the market,
+  none to a household; the toolshop sold nothing), none thriving. After, three runs: a bakery thriving in each (in one, two
+  hundred and thirty-nine loaves bought by households and eighty coins' profit; in another, two hundred and twenty loaves
+  and still thriving on the last day), a toolshop opened in each (still struggling: it is short of iron, which the town's
+  smith keeps by), a chandlery opened in one (on the comb and string the beekeeper and the tailor gathered for it), none
+  bankrupt; the census at nought drift every morning; the IOUs well within what the town can carry. The wheat is bought as
+  fast as it reaches the stores (a bakery at work takes it all), with a couple of hundred sheaves at a time still on their
+  way in from the farms' chests; its price stayed near a third of a coin.
+
 Tests (SupplyChainGameTests): sc2_01 the fields follow the price (wheat dear, the field turns to wheat; cheap, back to
 roots); sc2_02 the town's cook leaves the bread to a bakery, and takes it up again when the bakery lets it go; sc2_03 comb
 taken when a chandler wants it; sc2_04 string spun when it is wanted; sc2_05 a cow culled for its hide when leather is
