@@ -1250,15 +1250,15 @@ public class VillageGameTests {
         VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
         VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(), 0.0F);
         helper.assertTrue(a != null && b != null && c != null, "three folk of one village");
-        helper.runAtTickTime(20, () -> {
+        helper.runAtTickTime(32, () -> {
             java.util.UUID village = a.ownerId();
+            // [health] Made guards in the same tick as they are asked: a town of three with two guards is over-staffed at
+            // the watch, and its look at its trades (changedTrade) may send one of them to the fields between two ticks;
+            // asked on the town's rest day, that one is off duty at every hour (CI: one guard false at all three).
             a.setJob(StationTask.GUARD);
             b.setJob(StationTask.GUARD);
             a.setShift(AssistantEntity.Shift.ALWAYS);
             b.setShift(AssistantEntity.Shift.ALWAYS);
-        });
-        helper.runAtTickTime(32, () -> {
-            java.util.UUID village = a.ownerId();
             // The hour set and the sky brought up to it in the same tick as the guards are asked: the clock is the
             // whole server's, and another test may set it between two ticks.
             boolean[] w = new boolean[6];
