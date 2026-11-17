@@ -127,6 +127,8 @@ public final class Bakery {
             shortBy.put(b.what(), want <= 0 ? 0.0 : (want - have) / (double) want);
         }
         order.removeIf(b -> shortBy.get(b.what()) <= 0.0);
+        // [supply] What a bakery of the town's own folk bakes is its trade: the town's bakehouse bakes the rest.
+        order.removeIf(b -> FirmTrades.leftTo(level, id, Stockroom.key(new ItemStack(b.what()))));
         order.sort((a, b) -> Double.compare(shortBy.get(b.what()), shortBy.get(a.what())));
         return order;
     }

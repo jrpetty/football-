@@ -310,6 +310,10 @@ public final class Windmill {
 
     /** A farmer coming past the mill with a load of wheat on its back leaves it there. Returns how many. */
     static int passing(ServerLevel level, Villages.Village v, Ledger.Building b) {
+        // [supply] Once the town has its market, a farmer's wheat goes to the market first, to be paid for and bought by the
+        // bakers: left at a mill out by the fields it was nobody's sale, and the stores' wheat stood at nought while the
+        // town's bakery was short of it. The market's own spare wheat still goes up to the mill (carryUp).
+        if (MarketMaker.live(v.id())) return 0;
         BlockPos at = door(b);
         int n = 0;
         for (AssistantEntity a : Villages.folkOf(v.id())) {

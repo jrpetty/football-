@@ -313,6 +313,13 @@ public class FarmGoal extends Goal {
             if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) {
                 com.jrpetty.mcassistant.entity.FolkSkills.seedBack(folk, seed);
             }
+            // [supply] Sown back with what pays: now and then a crop over its share of the ground gives way to one short of it.
+            Item sow = seed == null ? null : com.jrpetty.mcassistant.entity.CropPlan.sowBack(assistant, seed, this::mayGrow,
+                it -> assistant.countMatching(s -> s.is(it)) > 0);
+            if (sow != null && sow != seed && PLANT.containsKey(sow) && assistant.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
+                && assistant.removeMatching(s -> s.is(sow), 1) == 1) {
+                assistant.level().setBlockAndUpdate(pos, PLANT.get(sow).defaultBlockState());
+            } else
             if (seed != null && assistant.level().getBlockState(pos.below()).is(Blocks.FARMLAND)
                 && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos, cropBlock.defaultBlockState());
@@ -377,6 +384,10 @@ public class FarmGoal extends Goal {
      */
     @Nullable
     private Item pickSeed() {
+        // [supply] Once the town has a market, new ground goes to the crop furthest short of its share by what it pays.
+        Item planned = com.jrpetty.mcassistant.entity.CropPlan.forNewGround(assistant, plantedByType, this::mayGrow,
+            it -> assistant.countMatching(s -> s.is(it)) > 0);
+        if (planned != null) return planned;
         long totalStock = 0;
         java.util.Map<Item, Integer> stock = new java.util.HashMap<>();
         for (Item type : PLANT.keySet()) {

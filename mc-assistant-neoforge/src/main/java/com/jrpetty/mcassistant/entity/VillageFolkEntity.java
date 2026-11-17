@@ -3070,6 +3070,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null || heart == null || peekJob() != null) return false;
         long now = level().getGameTime();
         if (!Villages.mayBake(village, now)) return false;
+        // [supply] A town with a bakery of its own folk leaves the baking to it: the wheat is the baker's to buy.
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl && FirmTrades.leftTo(sl, village, "minecraft:bread")) return false;
         int held = countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT));
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
         // [scale] The stores' wheat as a neighbour counted it a moment ago, rather than every chest searched again.
@@ -5758,6 +5760,8 @@ public class VillageFolkEntity extends AssistantEntity {
         cullTick = tickCount;
         net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT,
             Fletchers.henFirst(server, ownerId()));               // [fletcher] an old hen first, while the fletcher wants feathers
+        // [supply] The town's trades short of leather (a clothier, a bookbinder): a cow past a breeding pair, for its hide.
+        if (one == null) one = InputWants.hideFor(server, ownerId(), z.center(), Math.max(8, Math.min(16, z.radius())));
         String word = one == null ? null : gameWord(one);
         if (word == null) return false;
         // The hunt does the killing (the blade, the drops swept into the pack); the meat, the hide and the wool

@@ -117,6 +117,7 @@ public final class Apiary {
     @Nullable
     static String candles(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         if (!CraftScale.stands(v.id(), STRUCTURE)) return null;
+        if (FirmTrades.leftTo(level, v.id(), "candle")) return null;          // [supply] the chandler's trade
         int have = Crafts.stock(level, v, s -> s.is(Items.CANDLE));
         int comb = Crafts.have(level, v, f, s -> s.is(Items.HONEYCOMB)) - COMB_KEPT;
         int string = Crafts.have(level, v, f, s -> s.is(Items.STRING));

@@ -84,6 +84,9 @@ final class Kit {
         com.jrpetty.mcassistant.entity.Auctions.resetForTests();
         com.jrpetty.mcassistant.entity.Fleet.resetForTests();
         com.jrpetty.mcassistant.entity.LabourMarket.resetForTests();       // [labour] no test's labour market or its switches left over
+        com.jrpetty.mcassistant.entity.CropPlan.resetForTests();          // [supply]
+        com.jrpetty.mcassistant.entity.InputWants.resetForTests();        // [supply]
+        com.jrpetty.mcassistant.entity.FirmTrades.offForTests(false);     // [supply]
     }
 
     /**

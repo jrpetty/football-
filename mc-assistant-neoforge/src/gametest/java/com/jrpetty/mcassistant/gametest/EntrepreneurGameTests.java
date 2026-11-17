@@ -968,6 +968,44 @@ public class EntrepreneurGameTests {
         tenDays(helper, 1604000, "ent15", false, 20);
     }
 
+    /** [supply] The wares whose comings and goings the long tests log each morning. */
+    static final List<String> SUPPLY_WATCH = List.of("minecraft:wheat", "minecraft:bread", "minecraft:potato", "minecraft:baked_potato", "minecraft:carrot",
+        "minecraft:hay_block", "minecraft:honeycomb", "minecraft:honey_bottle", "minecraft:string", "minecraft:leather", "minecraft:candle", "minecraft:white_wool",
+        "minecraft:iron_pickaxe", "minecraft:stone_pickaxe", "minecraft:iron_axe", "minecraft:iron_hoe", "minecraft:bucket", "minecraft:shears", "minecraft:wheat_seeds",
+        "minecraft:clay_ball", "minecraft:sand", "minecraft:glass", "minecraft:sugar_cane", "minecraft:sugar", "minecraft:egg", "minecraft:milk_bucket",
+        "minecraft:paper", "minecraft:book", "minecraft:feather", "minecraft:brown_mushroom", "minecraft:beetroot", "minecraft:pumpkin", "minecraft:beef",
+        "minecraft:cooked_beef", "minecraft:glass_bottle", "minecraft:honey_bottle", "minecraft:rabbit_hide", "minecraft:cod", "minecraft:cookie", "minecraft:cake");
+
+    /** [supply] Where a town's stock of a thing is: its stores, the other chests about it (by the building they stand in), the folk's packs. */
+    static String whereIs(ServerLevel level, UUID id, Item it) {
+        Villages.Village v = Villages.get(id);
+        if (v == null) return "-";
+        java.util.Set<BlockPos> stores = new java.util.HashSet<>(Villages.storeChests(level, id));
+        int inStores = 0, packs = 0;
+        java.util.Map<String, Integer> other = new java.util.TreeMap<>();
+        BlockPos c = v.centre();
+        for (int cx = (c.getX() - 128) >> 4; cx <= (c.getX() + 128) >> 4; cx++) for (int cz = (c.getZ() - 128) >> 4; cz <= (c.getZ() + 128) >> 4; cz++) {
+            if (!level.hasChunk(cx, cz)) continue;
+            for (net.minecraft.world.level.block.entity.BlockEntity be : level.getChunk(cx, cz).getBlockEntities().values()) {
+                if (!(be instanceof Container box)) continue;
+                int n = 0;
+                for (int i = 0; i < box.getContainerSize(); i++) if (box.getItem(i).is(it)) n += box.getItem(i).getCount();
+                if (n == 0) continue;
+                if (stores.contains(be.getBlockPos())) { inStores += n; continue; }
+                String where = "?";
+                for (Ledger.Building b : Ledger.buildings(id)) if (b.anchor().distSqr(be.getBlockPos()) <= 144) { where = b.structure(); break; }
+                for (AssistantEntity e : Villages.folkOf(id)) {
+                    if (e instanceof VillageFolkEntity f && be.getBlockPos().equals(f.productionChest())) { where = f.stationTask().name().toLowerCase(Locale.ROOT) + "'s chest"; break; }
+                }
+                BlockPos d = be.getBlockPos().subtract(c);
+                where += "@" + d.getX() + "," + d.getZ() + "(" + be.getBlockState().getBlock().toString().replace("Block{minecraft:", "").replace("}", "") + ")";
+                other.merge(where, n, Integer::sum);
+            }
+        }
+        for (AssistantEntity e : Villages.folkOf(id)) if (e instanceof VillageFolkEntity f) packs += f.countCarried(s2 -> s2.is(it));
+        return "stores " + inStores + ", packs " + packs + ", elsewhere " + other;
+    }
+
     static void tenDays(GameTestHelper helper, int cx, String tag, boolean seeded) {
         tenDays(helper, cx, tag, seeded, 10);
     }
@@ -986,6 +1024,7 @@ public class EntrepreneurGameTests {
         MarketMaker.liveForTests(true);
         com.jrpetty.mcassistant.entity.IouBook.traceForTests(true);              // [econ-1d] each IOU's place in the code
         com.jrpetty.mcassistant.entity.CivicLand.liveForTests(true);             // [econ-1d] the council sits on the taxes, as in real play
+        com.jrpetty.mcassistant.entity.SupplyTrace.traceForTests(true);           // [supply] where each ware comes from and goes, day by day
         // [econ-1c] The game's own crop growth (a random tick speed of three, as in any world): the tests' server has it at
         // nought, and a town's fields never ripened in ten days, so its farms had nothing to sell. Put back at the end.
         var ticking = level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_RANDOMTICKING);
@@ -1076,7 +1115,7 @@ public class EntrepreneurGameTests {
                     if (MarketMaker.live(id)) {                                       // [econ-1e] the staples' prices
                         StringBuilder pr = new StringBuilder();
                         for (Item it : new Item[]{ Items.WHEAT, Items.CARROT, Items.POTATO, Items.BREAD, Items.BAKED_POTATO, Items.HAY_BLOCK, Items.COBBLESTONE,
-                            Items.OAK_PLANKS, Items.OAK_STAIRS, Items.IRON_INGOT, Items.LEATHER, Items.CANDLE }) {
+                            Items.OAK_PLANKS, Items.OAK_STAIRS, Items.IRON_INGOT, Items.LEATHER, Items.CANDLE, Items.HONEYCOMB, Items.STRING, Items.WHEAT_SEEDS }) {
                             ItemStack one = new ItemStack(it);
                             pr.append(String.format(Locale.ROOT, "%s ask %.2f going %.2f (x%.2f, worth %.2f, held %d); ", it.toString().replace("minecraft:", ""),
                                 MarketMaker.ask(level, id, one), com.jrpetty.mcassistant.entity.Market.askEach(level, id, one),
@@ -1091,12 +1130,17 @@ public class EntrepreneurGameTests {
                     long today = level.getDayTime() / 24000L;
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
+                    for (String l : com.jrpetty.mcassistant.entity.SupplyTrace.dayLines(id, today - 1, SUPPLY_WATCH)) Kit.log(tag + " day " + dayNo + " SUPPLY " + l);   // [supply]
+                    Kit.log(tag + " day " + dayNo + " WHEAT WHERE " + whereIs(level, id, Items.WHEAT) + " | BREAD WHERE " + whereIs(level, id, Items.BREAD) + " | POTATO WHERE " + whereIs(level, id, Items.POTATO));   // [supply]
+                    if (MarketMaker.live(id)) Kit.log(tag + " day " + dayNo + " CROPS " + com.jrpetty.mcassistant.entity.CropPlan.line(level, id) + "| wanted: "
+                        + com.jrpetty.mcassistant.entity.InputWants.line(id) + " | left to firms: " + com.jrpetty.mcassistant.entity.FirmTrades.linesForTests(level, id));   // [supply]
                 }
                 if (ran >= days * 24000L) {
                     over[0] = true;
                     server.tickRateManager().setTickRate(20.0F);
                     ticking.set(tickingWas, server);
                     com.jrpetty.mcassistant.entity.CivicLand.liveForTests(false);
+                    com.jrpetty.mcassistant.entity.SupplyTrace.traceForTests(false);   // [supply]
                     Kit.Expect ok = new Kit.Expect();
                     int folkNow = Villages.headcount(id), built = Ledger.buildings(id).size();
                     int food = Villages.stock(level, Villages.get(id).centre(), Villages.Task.FOOD, Villages.storesRadius(id));

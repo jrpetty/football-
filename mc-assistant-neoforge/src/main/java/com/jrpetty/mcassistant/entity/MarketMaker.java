@@ -544,14 +544,17 @@ public final class MarketMaker {
         if (!live(village)) {
             tally(village, "commons", k);
             Accounts.add(Accounts.sub(market(village), "commonsAll"), key, k);
+            SupplyTrace.out(village, st, k, "commons", r);                         // [supply]
             return;
         }
         if (r.account().kind() == Kind.FREE) {
             tally(village, "free: " + r.account().key(), k);
+            SupplyTrace.out(village, st, k, "free(" + r.account().key() + ")", r);   // [supply]
             return;
         }
         if (r.account().market() || r.account().kind() == Kind.COMMONS) {
             tally(village, "the market's own", k);
+            SupplyTrace.out(village, st, k, "market's own", r);                   // [supply]
             return;
         }
         // Already paid at a counter this tick.
@@ -562,6 +565,7 @@ public final class MarketMaker {
             PAID_NOW.put(now, paid - m);
             k -= (int) m;
             tally(village, "free: paid at a counter", m);
+            SupplyTrace.out(village, st, (int) m, "paid at a counter", r);       // [supply]
             if (k <= 0) return;
         }
         // A business's own stock, bonded in the stores in its name.
@@ -571,9 +575,30 @@ public final class MarketMaker {
                 Business.Lot lot = b.stock.get(key);
                 if (lot != null && lot.qty >= k) {
                     tally(village, "free: its own stock", k);
+                    SupplyTrace.out(village, st, k, "own stock(" + b.name + ")", r);   // [supply]
                     return;
                 }
             }
+        }
+        // [supply] A take that runs into a firm's bonded stock is the firm's sale, at its price, into its till (Bonded).
+        Object[] share = Bonded.firmsShare(level, village, st, k, r.account());
+        if (share != null) {
+            Business firm = (Business) share[0];
+            int m = (int) share[1];
+            long fp = Math.max(1, Math.round(Sellers.priceOf(level, village, firm, st.copyWithCount(1)) * 100 * m));
+            long fpaid = Accounts.debit(level, village, r.account(), fp, r.purpose(), m + " " + Businesses.nameOf(key).toLowerCase(Locale.ROOT) + " of " + firm.name);
+            cashIn(village, fpaid);
+            long got = cashOut(village, fp);
+            Businesses.sale(level, village, firm, st.copyWithCount(1), key, m, fp, false);
+            firm.till += got;
+            firm.account += fp - got;                                               // the market owes it the rest
+            CompoundTag fr = Enterprise.rec(village, firm.id);
+            if (fr != null) Accounts.add(fr, "sales", m);
+            tally(village, "a firm's, sold for it", m);
+            SupplyTrace.note(village, key, "taken of " + firm.name + " (its sale) " + kindWords(r.account()), m);
+            Businesses.dirty();
+            k -= m;
+            if (k <= 0) return;
         }
         double each = ask(level, village, st);
         long price = Math.max(1, Math.round(each * 100 * k));
@@ -582,6 +607,7 @@ public final class MarketMaker {
         cashIn(village, got);
         book(village, key, k, price, false);
         tally(village, "charged to " + kindWords(r.account()), k);
+        SupplyTrace.out(village, st, k, "charged", r);                            // [supply]
         booksOfBuyer(level, village, r.account(), key, k, price);
         // One record of the take, for a counter's sale this tick to reverse and a hand-back within the day to refund: the
         // same record, so what one gives back the other cannot give back again.
@@ -767,12 +793,13 @@ public final class MarketMaker {
         if (n <= 0) return;
         Business firm = Businesses.employer(village, f);
         if (firm != null && Enterprise.isFirm(firm) && !Enterprise.catches(village, firm)) {
-            if (Enterprise.makesItself(village, firm, key)) return;                  // [econ-1e] its bench's own wares: booked as made
+            if (Enterprise.makesItself(village, firm, key)) { SupplyTrace.in(village, s, n, "firm " + firm.name); return; }   // [econ-1e] its bench's own wares: booked as made [supply]
             firm = null;                                                              // [econ-1e] a maker firm's hand's work for the town: the town's
         }
-        if (firm != null && Businesses.sellsToStores(firm.type)) return;              // its business's making, booked there
+        if (firm != null && Businesses.sellsToStores(firm.type)) { SupplyTrace.in(village, s, n, trade.name().toLowerCase(Locale.ROOT) + " (" + firm.name + ")"); return; }   // its business's making, booked there [supply]
         if (firm != null && Enterprise.output(level, village, firm, s.copyWithCount((int) n))) return;   // [econ-1b] a firm keeps its catch to sell
         Account seller = firm != null && !firm.mirror() && !firm.id.equals("storehouse") ? Account.firm(firm) : Account.dept(Dept.WORKS);
+        SupplyTrace.in(village, s, n, trade.name().toLowerCase(Locale.ROOT));    // [supply]
         buy(level, village, seller, s, n, "brought in");
         OUTPUT_NOW.merge(village + "|" + key, n, Long::sum);
     }

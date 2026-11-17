@@ -568,6 +568,7 @@ public final class Stockroom {
         Map<String, Double> fill = new HashMap<>();
         for (Ware w : wares) {
             if (!w.made()) continue;
+            if (FirmTrades.leftTo(level, v.id(), w.key())) continue;          // [supply] a trade left to a firm of the town's own
             int target = target(level, v.id(), s, w);
             int have = Market.stock(level, v.id(), w.is())
                 + (s == Seller.SHOP ? ShopStock.held(level, v.id(), w.is()) : 0);   // [econ-store] its stockroom too

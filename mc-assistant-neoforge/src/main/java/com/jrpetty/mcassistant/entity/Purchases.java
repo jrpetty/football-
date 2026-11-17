@@ -530,12 +530,41 @@ public final class Purchases {
                     q *= FoodBasket.appeal(f.getUUID(), s);                // [econ-1d] a basket: a made meal valued, a change from yesterday
                     double p = priceEach(level, village, s, buyer);
                     if (vv != null) p = Math.min(p, Sellers.best(level, vv, s, buyer, p, 1, true).price());   // [econ-1d] at the seller it would go to
+                    // [supply] By what a bellyful of it costs: a raw potato is a fifth of a loaf's meal, and at a fifth of the loaf's
+                    // price it is no cheaper a meal. Weighed a piece against a piece, the poor lived on raw potatoes at a few pennies
+                    // and walked past the baker's bread and the café's baked potatoes alike.
+                    if (MarketMaker.live(village)) p = p / bellyful(s);
                     double score = q / Math.pow(Math.max(0.05, p), Math.max(0.1, care));
                     if (score > bestScore) { bestScore = score; best = s; }
                 }
                 return best;
             }
             case TOOL -> {
+                // [supply] Once the town has its market, a tool by the work in it for the money, at the seller it would go to (a
+                // toolshop's stone pick at half a coin against the counter's iron one at seven), the poor minding the price
+                // most and the well-off hardly at all: every buyer took the best metal it could pay for, and a toolshop of the
+                // town's own folk sold nothing. A miner still takes the best metal (the deep ore wants it).
+                Villages.Village vv = Villages.get(village);
+                boolean arms = buyer.stationTask() == StationTask.GUARD || offer.get(0).getItem() instanceof net.minecraft.world.item.SwordItem;
+                if (MarketMaker.live(village) && vv != null && buyer.stationTask() != StationTask.MINE && !arms) {
+                    double care = switch (Wealth.tier(buyer)) {
+                        case POOR -> 1.0;
+                        case GETTING_BY -> 0.8;
+                        case COMFORTABLE -> 0.6;
+                        case WELL_OFF -> 0.4;
+                        case WEALTHY -> 0.25;
+                    };
+                    ItemStack best = null;
+                    double bestScore = -1;
+                    for (ItemStack s : offer) {
+                        double p = priceEach(level, village, s, buyer);
+                        p = Math.min(p, Sellers.best(level, vv, s, buyer, p, 1, true).price());
+                        if (!canPay(buyer, p)) continue;
+                        double score = toolWork(s) / Math.pow(Math.max(0.05, p), care);
+                        if (score > bestScore) { bestScore = score; best = s; }
+                    }
+                    if (best != null) return best;
+                }
                 List<ItemStack> sorted = new ArrayList<>(offer);
                 sorted.sort(Comparator.comparingInt((ItemStack s) -> -(Toolrack.metal(s) * 200 + Toolrack.left(s))));
                 for (ItemStack s : sorted) if (canPay(buyer, priceEach(level, village, s, buyer))) return s;
@@ -552,6 +581,26 @@ public final class Purchases {
                 return best;
             }
         }
+    }
+
+    /** [supply] The work in a tool: the uses left in it, the quicker metals counting for more. */
+    static double toolWork(ItemStack s) {
+        double speed = switch (Toolrack.metal(s)) {
+            case 5 -> 9;
+            case 4 -> 8;
+            case 3 -> 6;
+            case 2 -> 4;
+            case 1 -> 12;
+            default -> 2;
+        };
+        int uses = s.isDamageableItem() ? s.getMaxDamage() - s.getDamageValue() : 100;
+        return Math.max(1, uses) * speed;
+    }
+
+    /** [supply] How much of a meal one of this is: a loaf or a baked potato one (five of hunger), a raw potato a fifth, a steak more. */
+    static double bellyful(ItemStack s) {
+        net.minecraft.world.food.FoodProperties fp = s.get(net.minecraft.core.component.DataComponents.FOOD);
+        return fp == null ? 1.0 : Math.max(0.2, Math.min(2.0, fp.nutrition() / 5.0));
     }
 
     /** So many of exactly this out of the shop's stock; for its food and its tool, out of the stores if the shop has none. */

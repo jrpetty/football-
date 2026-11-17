@@ -319,12 +319,13 @@ public final class TownWork {
                     if (st.isEmpty() || !what.test(st)) continue;
                     int k = Math.min(left, st.getCount());
                     Economy.storesOut(v.id(), st, k);                           // a maker's work, item by item
-                    MarketMaker.taken(level, v.id(), st, k);                    // [econ-1a] bought of the market, by whoever's account it is
+                    ItemStack one = st.copyWithCount(1);                        // [supply] (booked once it is off the shelf: Bonded)
                     if (f.blockEntity() instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) {
                         Storekeeping.bookOut(level, v.id(), null, st, k, null);   // the town's works, in its books
                     }
                     st.shrink(k);
                     if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+                    MarketMaker.taken(level, v.id(), one, k);                   // [econ-1a] bought of the market, by whoever's account it is
                     left -= k;
                 }
                 c.setChanged();

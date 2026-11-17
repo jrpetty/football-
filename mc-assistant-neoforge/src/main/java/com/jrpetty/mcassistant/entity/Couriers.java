@@ -226,6 +226,7 @@ public final class Couriers {
         boolean hungry = Market.hungry(village);
         Set<Long> chests = new HashSet<>();
 
+        java.util.Map<net.minecraft.world.item.Item, Integer> outOf = new java.util.HashMap<>();   // [supply] the stores' count, once a look
         // The production chests: the fullest first, the longest waiting of two as full.
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f)) continue;
@@ -237,23 +238,33 @@ public final class Couriers {
             if (!level.isLoaded(p) || !(level.getBlockEntity(p) instanceof Container box)) continue;
             int held = 0, food = 0;
             boolean room = false;
+            java.util.Map<net.minecraft.world.item.Item, Integer> lots = new java.util.HashMap<>();   // [supply]
             for (int i = 0; i < box.getContainerSize(); i++) {
                 ItemStack st = box.getItem(i);
                 if (st.isEmpty()) { room = true; continue; }
                 if (AssistantEntity.haulWeight(st) <= 0 || WorkStock.kit(level, p, st)) continue;   // [shops-homes] the kit stays
                 held += st.getCount();
                 if (st.get(net.minecraft.core.component.DataComponents.FOOD) != null) food += st.getCount();
+                lots.merge(st.getItem(), st.getCount(), Integer::sum);
             }
             boolean feed = hungry && food >= 4;
+            // [supply] What the stores are out of and the town's trades are short of (a bakery's wheat, sat in a farm's chest at
+            // the edge of its field while the stores held none): the storehouse sends for it first.
+            boolean wanted = false;
+            for (java.util.Map.Entry<net.minecraft.world.item.Item, Integer> e : lots.entrySet()) {
+                if (e.getValue() < 8 || InputWants.wanted(village, e.getKey()) <= 0 && !Bonded.firmsBuy(village, e.getKey())) continue;
+                int inStores = outOf.computeIfAbsent(e.getKey(), it -> Market.stock(level, village, s2 -> s2.is(it)));
+                if (inStores < 8) { wanted = true; break; }
+            }
             if (held < CHEST_WORTH && !feed && (room || held == 0)) { o.since.remove(key); continue; }
             Run r = new Run(o.nextId++, Kind.CHEST, key);
             r.at = p.immutable();
             r.folk = f.getUUID();
             r.folkName = f.displayNameCap();
             r.worth = held;
-            r.priority = feed ? 2 : 3;
+            r.priority = feed || wanted ? 2 : 3;
             r.queued = o.since.computeIfAbsent(key, k -> now);
-            r.what = f.displayNameCap() + "'s chest (" + held + (feed ? ", food for a hungry village" : "") + ")";
+            r.what = f.displayNameCap() + "'s chest (" + held + (feed ? ", food for a hungry village" : wanted ? ", what the stores are out of" : "") + ")";
             o.queue.add(r);
         }
         o.since.keySet().retainAll(chests);

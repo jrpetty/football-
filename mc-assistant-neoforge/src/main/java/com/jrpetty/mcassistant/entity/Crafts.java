@@ -472,6 +472,8 @@ public final class Crafts {
             if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD
                     && !WatchKit.ironForTheWatch(level, v, it)) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;
+            // [supply] A tool a toolshop of the town's own makes is left to it (the watch's arms are the town's own still).
+            if (FirmTrades.leftTo(level, v.id(), Stockroom.key(new ItemStack(it))) && !WatchKit.forTheWatch(level, v, it)) continue;
             Item metal = w.metal();
             int bars = stock(level, v, s -> s.is(metal));
             if (bars < w.bars() + (diamond ? 2 : 4)) continue;             // a few kept back for the village
@@ -557,7 +559,7 @@ public final class Crafts {
             return name(bed);
         }
         // String for the smith's bows and the fishers' rods, spun from the wool.
-        if (stock(level, v, s -> s.is(Items.STRING)) < 6 && have >= 4) {
+        if (stock(level, v, s -> s.is(Items.STRING)) < 6 + InputWants.wanted(v.id(), Items.STRING) && have >= 4) {   // [supply] and a chandler's call
             if (!take(level, v, wool, 1)) return null;
             ItemStack string = new ItemStack(Items.STRING, 4);
             store(level, v, string.copy());
@@ -600,6 +602,7 @@ public final class Crafts {
             if (!a.isBaby() && a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty()) barefoot++;
         }
         if (barefoot > stock(level, v, s -> s.is(Items.LEATHER_BOOTS)) && stock(level, v, s -> s.is(Items.LEATHER)) >= 4
+                && !FirmTrades.leftTo(level, v.id(), Stockroom.key(new ItemStack(Items.LEATHER_BOOTS)))   // [supply] the clothier's
                 && take(level, v, s -> s.is(Items.LEATHER), 4)) {
             ItemStack boots = new ItemStack(Items.LEATHER_BOOTS);
             boolean dyed = skill >= 10;
@@ -717,7 +720,9 @@ public final class Crafts {
         for (BlockPos p : hives) {
             BlockState st = level.getBlockState(p);
             if (st.getValue(BeehiveBlock.HONEY_LEVEL) < BeehiveBlock.MAX_HONEY_LEVELS) continue;
-            boolean wantComb = stock(level, v, s -> s.is(Items.HONEYCOMB)) < 3 && hives.size() < MAX_HIVES;
+            boolean wantComb = stock(level, v, s -> s.is(Items.HONEYCOMB)) < 3 && hives.size() < MAX_HIVES
+                || stock(level, v, s -> s.is(Items.HONEYCOMB)) < InputWants.wanted(v.id(), Items.HONEYCOMB)   // [supply] a chandler's call for comb
+                || InputWants.combPays(level, v.id());                  // [supply] or the three combs fetch more than the honey and its bottle
             boolean shears = shears(level, v, f);
             ItemStack got;
             if (shears && (wantComb || !bottle(level, v))) {
@@ -771,6 +776,22 @@ public final class Crafts {
         if (dipped != null) return dipped;
         // Between harvests: flowers round the hives.
         return bloom(level, v, hives.get(0), 6);
+    }
+
+    /** [supply] Tests: a lot into the stores, as a maker's work goes. */
+    public static void storeForTests(ServerLevel level, Villages.Village v, ItemStack s) {
+        store(level, v, s);
+    }
+
+    /** [supply] Tests: a turn of the tailor's own work, and of the smith's. */
+    @Nullable
+    public static String tailorForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return tailor(level, v, f);
+    }
+
+    @Nullable
+    public static String smithForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return smith(level, v, f);
     }
 
     /** Tests: a turn of the beekeeper's own work. */
@@ -967,8 +988,8 @@ public final class Crafts {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
                 Economy.storesOut(v.id(), s, 1);
-                MarketMaker.taken(level, v.id(), s, 1);                     // [econ-1a] bought of the market
                 ItemStack one = s.split(1);
+                MarketMaker.taken(level, v.id(), one, 1);                   // [econ-1a] bought of the market ([supply] once off the shelf)
                 c.setChanged();
                 return one;
             }
