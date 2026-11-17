@@ -580,6 +580,26 @@ public final class MarketMaker {
                 }
             }
         }
+        // [supply] A take that runs into a firm's bonded stock is the firm's sale, at its price, into its till (Bonded).
+        Object[] share = Bonded.firmsShare(level, village, st, k, r.account());
+        if (share != null) {
+            Business firm = (Business) share[0];
+            int m = (int) share[1];
+            long fp = Math.max(1, Math.round(Sellers.priceOf(level, village, firm, st.copyWithCount(1)) * 100 * m));
+            long fpaid = Accounts.debit(level, village, r.account(), fp, r.purpose(), m + " " + Businesses.nameOf(key).toLowerCase(Locale.ROOT) + " of " + firm.name);
+            cashIn(village, fpaid);
+            long got = cashOut(village, fp);
+            Businesses.sale(level, village, firm, st.copyWithCount(1), key, m, fp, false);
+            firm.till += got;
+            firm.account += fp - got;                                               // the market owes it the rest
+            CompoundTag fr = Enterprise.rec(village, firm.id);
+            if (fr != null) Accounts.add(fr, "sales", m);
+            tally(village, "a firm's, sold for it", m);
+            SupplyTrace.note(village, key, "taken of " + firm.name + " (its sale) " + kindWords(r.account()), m);
+            Businesses.dirty();
+            k -= m;
+            if (k <= 0) return;
+        }
         double each = ask(level, village, st);
         long price = Math.max(1, Math.round(each * 100 * k));
         String what = k + " " + Businesses.nameOf(key).toLowerCase(Locale.ROOT);

@@ -417,4 +417,42 @@ public class SupplyChainGameTests {
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
+
+    // ============================================================ sc2_08 a firm's loaves are its own
+
+    /**
+     * A bakery's four loaves on the town's shelves, bonded in its name: a folk helping itself to two at the stores buys them
+     * of the bakery, at the bakery's price, into its till (it had been charged the market's ask, and the market kept the
+     * money for the bakery's bread). Loaves of the market's own beside them, and a take of two is the market's.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sc2_08_bonded_loaves")
+    public static void sc2_08_bonded_loaves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 3116000;
+        List<VillageFolkEntity> folk = town(helper, level, x, 20, StationTask.COOK, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        UUID id = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(id);
+        stores(level, id, x, new ItemStack(Items.BREAD, 4));
+        Business bakery = Enterprise.foundForTests(level, v, "baker", folk.get(0));
+        helper.assertTrue(bakery != null, "a bakery opened");
+        Business.Lot lot = new Business.Lot();
+        lot.qty = 4;
+        lot.cost = 400;
+        bakery.stock.put("minecraft:bread", lot);
+        VillageFolkEntity buyer = folk.get(2);
+        Kit.Expect ok = new Kit.Expect();
+        long till0 = bakery.till + bakery.account, rev0 = bakery.allTime.revenue;
+        MarketMaker.takeForTests(level, v, buyer, null, com.jrpetty.mcassistant.entity.Accounts.Purpose.FOOD, s -> s.is(Items.BREAD), 2);
+        long till1 = bakery.till + bakery.account, rev1 = bakery.allTime.revenue;
+        Kit.log("sc2_08 two of the bakery's loaves taken: its lot " + lot.qty + ", its till and credit " + till0 + " -> " + till1 + ", revenue " + rev0 + " -> " + rev1
+            + ", bread in the stores " + stock(level, id, s -> s.is(Items.BREAD)));
+        ok.that(lot.qty == 2, "the two loaves were the bakery's: its lot 4 -> " + lot.qty);
+        ok.that(rev1 > rev0 && till1 > till0, "the bakery's sale, into its till: revenue " + rev0 + " -> " + rev1 + ", till " + till0 + " -> " + till1);
+        Crafts.storeForTests(level, v, new ItemStack(Items.BREAD, 3));            // three of the market's own beside them
+        MarketMaker.takeForTests(level, v, buyer, null, com.jrpetty.mcassistant.entity.Accounts.Purpose.FOOD, s -> s.is(Items.BREAD), 2);
+        Kit.log("sc2_08 two more taken with three of the market's own on the shelf: the bakery's lot " + lot.qty + ", revenue " + bakery.allTime.revenue);
+        ok.that(lot.qty == 2 && bakery.allTime.revenue == rev1, "the market's own loaves were the market's to sell: the bakery's lot " + lot.qty);
+        helper.assertTrue(ok.clean(), ok.summary());
+        helper.succeed();
+    }
 }

@@ -118,6 +118,10 @@ public final class Sellers {
         Offer best = new Offer(null, townEach, utility(townEach, going, dTown, reputation(id, null)));
         if (!MarketMaker.live(id) && !ANY_FOR_TESTS) return best;
         String key = Stockroom.key(one);
+        // [supply] The town's counter is an offer only while the market has some of its own: what is on the shelf past that is
+        // the firms', bonded in their names (Bonded), and the counter had been "selling" a bakery's loaves at its own price.
+        Offer town = best;
+        if (Bonded.firmsHeld(id, key) > 0 && Bonded.marketOwn(level, id, key) < n) best = new Offer(null, townEach, -Double.MAX_VALUE);
         for (Business b : Enterprise.open(id)) {
             BusinessTypes.BusinessType t = Enterprise.kindOf(id, b);
             if (t == null || !t.wares().contains(key)) continue;
@@ -132,7 +136,7 @@ public final class Sellers {
             double u = utility(p, going, d, reputation(id, b));
             if (u > best.utility()) best = new Offer(b, p, u);
         }
-        return best;
+        return best.firm() == null ? town : best;                                // [supply] (no firm had it: the counter as before)
     }
 
     private static volatile boolean ANY_FOR_TESTS;

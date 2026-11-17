@@ -778,6 +778,11 @@ public final class Crafts {
         return bloom(level, v, hives.get(0), 6);
     }
 
+    /** [supply] Tests: a lot into the stores, as a maker's work goes. */
+    public static void storeForTests(ServerLevel level, Villages.Village v, ItemStack s) {
+        store(level, v, s);
+    }
+
     /** [supply] Tests: a turn of the tailor's own work, and of the smith's. */
     @Nullable
     public static String tailorForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
@@ -983,8 +988,8 @@ public final class Crafts {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
                 Economy.storesOut(v.id(), s, 1);
-                MarketMaker.taken(level, v.id(), s, 1);                     // [econ-1a] bought of the market
                 ItemStack one = s.split(1);
+                MarketMaker.taken(level, v.id(), one, 1);                   // [econ-1a] bought of the market ([supply] once off the shelf)
                 c.setChanged();
                 return one;
             }

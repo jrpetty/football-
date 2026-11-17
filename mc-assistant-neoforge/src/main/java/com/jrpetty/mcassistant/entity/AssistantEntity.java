@@ -7848,11 +7848,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (fromStore == null) fromStore = new java.util.ArrayList<>();
                     fromStore.add(st.copyWithCount(taken));
                 }
-                if (isSettler() && level() instanceof net.minecraft.server.level.ServerLevel market) {
-                    MarketMaker.taken(market, ownerId(), st, taken);          // [econ-1a] bought of the town's market
-                }
+                ItemStack one = st.copyWithCount(1);                  // [supply] (booked once it is off the shelf: Bonded)
                 st.shrink(taken);
                 if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
+                if (isSettler() && level() instanceof net.minecraft.server.level.ServerLevel market) {
+                    MarketMaker.taken(market, ownerId(), one, taken);         // [econ-1a] bought of the town's market
+                }
                 moved += taken;
             }
             c.setChanged();
