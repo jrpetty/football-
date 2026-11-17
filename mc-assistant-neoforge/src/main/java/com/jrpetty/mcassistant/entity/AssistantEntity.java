@@ -6502,6 +6502,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private int consumableCraftTick = -100000;
 
+    /** [supply] Is there a bakery of the town's own folk baking (FirmTrades)? Then a farmer's spare wheat goes to market for it. */
+    private boolean bakerInTown() {
+        return ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+            && FirmTrades.leftTo(sl, ownerId(), "minecraft:bread");
+    }
+
     /**
      * The small stuff a trade burns through is worth MAKING, not asking for:
      * torches out of the coal already coming up the shaft, bread out of the
@@ -6519,7 +6525,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             many = lumps * 4;                         // [economy] as many as the coal in hand makes
         } else if (countStocked(s -> s.is(Items.WHEAT)) >= 3
             && (countFood() < 4
-                || (stationTask == StationTask.FARM && countStocked(s -> s.is(Items.WHEAT)) >= 9))) {
+                || (stationTask == StationTask.FARM && countStocked(s -> s.is(Items.WHEAT)) >= 9 && !bakerInTown()))) {
             // A field grows WHEAT, and wheat is not food: nothing eats it, the
             // village's larder does not count it, and no hungry hand is ever
             // sent it. Bread is the only thing it becomes. So a farmer bakes not

@@ -472,6 +472,8 @@ public final class Crafts {
             if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD
                     && !WatchKit.ironForTheWatch(level, v, it)) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;
+            // [supply] A tool a toolshop of the town's own makes is left to it (the watch's arms are the town's own still).
+            if (FirmTrades.leftTo(level, v.id(), Stockroom.key(new ItemStack(it))) && !WatchKit.forTheWatch(level, v, it)) continue;
             Item metal = w.metal();
             int bars = stock(level, v, s -> s.is(metal));
             if (bars < w.bars() + (diamond ? 2 : 4)) continue;             // a few kept back for the village
@@ -600,6 +602,7 @@ public final class Crafts {
             if (!a.isBaby() && a.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).isEmpty()) barefoot++;
         }
         if (barefoot > stock(level, v, s -> s.is(Items.LEATHER_BOOTS)) && stock(level, v, s -> s.is(Items.LEATHER)) >= 4
+                && !FirmTrades.leftTo(level, v.id(), Stockroom.key(new ItemStack(Items.LEATHER_BOOTS)))   // [supply] the clothier's
                 && take(level, v, s -> s.is(Items.LEATHER), 4)) {
             ItemStack boots = new ItemStack(Items.LEATHER_BOOTS);
             boolean dyed = skill >= 10;

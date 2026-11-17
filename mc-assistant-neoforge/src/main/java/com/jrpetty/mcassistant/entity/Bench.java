@@ -183,7 +183,9 @@ public final class Bench {
         k.add(new Kept(s -> s.is(Items.GOLD_INGOT), 27, "the mint's gold"));
         boolean beds = Market.bedsShort(id) > 0;
         k.add(new Kept(s -> s.is(ItemTags.WOOL), beds ? all : 3, beds ? "for the beds the houses wait on" : "the tailor's wool"));
-        for (Item seed : new Item[]{ Items.WHEAT, Items.POTATO, Items.CARROT, Items.BEETROOT }) {
+        // [supply] Wheat is sown from its seeds, not itself (and beetroot from its own): the keep held the last twelve wheat back
+        // from every maker as "seed", where it was the seed that wanted keeping.
+        for (Item seed : new Item[]{ Items.WHEAT_SEEDS, Items.POTATO, Items.CARROT, Items.BEETROOT_SEEDS }) {
             k.add(new Kept(s -> s.is(seed), 12, "seed for the fields"));
         }
         k.add(new Kept(s -> s.is(Items.STRING), 2, "the fishers' and the smith's string"));
@@ -214,9 +216,6 @@ public final class Bench {
                 int pile = 0;
                 for (Item it : in) pile += held.get(it);
                 left = FirmSupply.keep(v.id(), in.get(0), pile, left, left == Integer.MAX_VALUE);
-                // [econ-1e] Wheat is sown from its seeds, not itself: the seed keep's wheat held back from a paying bakery had it buy
-                // hay bales of the market and break them for the wheat (a quarter dearer, and the bales left on its shelf).
-                if (in.size() == 1 && in.get(0) == Items.WHEAT && "seed for the fields".equals(k.why())) left = 0;
             }
             for (Item it : in) {
                 why.put(it, k.why());

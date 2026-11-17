@@ -544,14 +544,17 @@ public final class MarketMaker {
         if (!live(village)) {
             tally(village, "commons", k);
             Accounts.add(Accounts.sub(market(village), "commonsAll"), key, k);
+            SupplyTrace.out(village, st, k, "commons", r);                         // [supply]
             return;
         }
         if (r.account().kind() == Kind.FREE) {
             tally(village, "free: " + r.account().key(), k);
+            SupplyTrace.out(village, st, k, "free(" + r.account().key() + ")", r);   // [supply]
             return;
         }
         if (r.account().market() || r.account().kind() == Kind.COMMONS) {
             tally(village, "the market's own", k);
+            SupplyTrace.out(village, st, k, "market's own", r);                   // [supply]
             return;
         }
         // Already paid at a counter this tick.
@@ -562,6 +565,7 @@ public final class MarketMaker {
             PAID_NOW.put(now, paid - m);
             k -= (int) m;
             tally(village, "free: paid at a counter", m);
+            SupplyTrace.out(village, st, (int) m, "paid at a counter", r);       // [supply]
             if (k <= 0) return;
         }
         // A business's own stock, bonded in the stores in its name.
@@ -571,6 +575,7 @@ public final class MarketMaker {
                 Business.Lot lot = b.stock.get(key);
                 if (lot != null && lot.qty >= k) {
                     tally(village, "free: its own stock", k);
+                    SupplyTrace.out(village, st, k, "own stock(" + b.name + ")", r);   // [supply]
                     return;
                 }
             }
@@ -582,6 +587,7 @@ public final class MarketMaker {
         cashIn(village, got);
         book(village, key, k, price, false);
         tally(village, "charged to " + kindWords(r.account()), k);
+        SupplyTrace.out(village, st, k, "charged", r);                            // [supply]
         booksOfBuyer(level, village, r.account(), key, k, price);
         // One record of the take, for a counter's sale this tick to reverse and a hand-back within the day to refund: the
         // same record, so what one gives back the other cannot give back again.
@@ -767,12 +773,13 @@ public final class MarketMaker {
         if (n <= 0) return;
         Business firm = Businesses.employer(village, f);
         if (firm != null && Enterprise.isFirm(firm) && !Enterprise.catches(village, firm)) {
-            if (Enterprise.makesItself(village, firm, key)) return;                  // [econ-1e] its bench's own wares: booked as made
+            if (Enterprise.makesItself(village, firm, key)) { SupplyTrace.in(village, s, n, "firm " + firm.name); return; }   // [econ-1e] its bench's own wares: booked as made [supply]
             firm = null;                                                              // [econ-1e] a maker firm's hand's work for the town: the town's
         }
-        if (firm != null && Businesses.sellsToStores(firm.type)) return;              // its business's making, booked there
+        if (firm != null && Businesses.sellsToStores(firm.type)) { SupplyTrace.in(village, s, n, trade.name().toLowerCase(Locale.ROOT) + " (" + firm.name + ")"); return; }   // its business's making, booked there [supply]
         if (firm != null && Enterprise.output(level, village, firm, s.copyWithCount((int) n))) return;   // [econ-1b] a firm keeps its catch to sell
         Account seller = firm != null && !firm.mirror() && !firm.id.equals("storehouse") ? Account.firm(firm) : Account.dept(Dept.WORKS);
+        SupplyTrace.in(village, s, n, trade.name().toLowerCase(Locale.ROOT));    // [supply]
         buy(level, village, seller, s, n, "brought in");
         OUTPUT_NOW.merge(village + "|" + key, n, Long::sum);
     }

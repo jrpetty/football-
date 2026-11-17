@@ -3069,6 +3069,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null || heart == null || peekJob() != null) return false;
         long now = level().getGameTime();
         if (!Villages.mayBake(village, now)) return false;
+        // [supply] A town with a bakery of its own folk leaves the baking to it: the wheat is the baker's to buy.
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl && FirmTrades.leftTo(sl, village, "minecraft:bread")) return false;
         int held = countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT));
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
         // [scale] The stores' wheat as a neighbour counted it a moment ago, rather than every chest searched again.
