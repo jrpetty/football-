@@ -994,6 +994,11 @@ public class EntrepreneurGameTests {
                 if (stores.contains(be.getBlockPos())) { inStores += n; continue; }
                 String where = "?";
                 for (Ledger.Building b : Ledger.buildings(id)) if (b.anchor().distSqr(be.getBlockPos()) <= 144) { where = b.structure(); break; }
+                for (AssistantEntity e : Villages.folkOf(id)) {
+                    if (e instanceof VillageFolkEntity f && be.getBlockPos().equals(f.productionChest())) { where = f.stationTask().name().toLowerCase(Locale.ROOT) + "'s chest"; break; }
+                }
+                BlockPos d = be.getBlockPos().subtract(c);
+                where += "@" + d.getX() + "," + d.getZ() + "(" + be.getBlockState().getBlock().toString().replace("Block{minecraft:", "").replace("}", "") + ")";
                 other.merge(where, n, Integer::sum);
             }
         }
@@ -1117,7 +1122,7 @@ public class EntrepreneurGameTests {
                     Kit.log(tag + " day " + dayNo + " IOU book yesterday: " + com.jrpetty.mcassistant.entity.IouBook.dayLine(id, today - 1));   // [econ-1d]
                     for (Villages.News n : Villages.news(id)) if (n.day() >= today - 1) Kit.log(tag + " news day " + (n.day() + 1) + ": " + n.text());
                     for (String l : com.jrpetty.mcassistant.entity.SupplyTrace.dayLines(id, today - 1, SUPPLY_WATCH)) Kit.log(tag + " day " + dayNo + " SUPPLY " + l);   // [supply]
-                    Kit.log(tag + " day " + dayNo + " WHEAT WHERE " + whereIs(level, id, Items.WHEAT) + " | BREAD WHERE " + whereIs(level, id, Items.BREAD));   // [supply]
+                    Kit.log(tag + " day " + dayNo + " WHEAT WHERE " + whereIs(level, id, Items.WHEAT) + " | BREAD WHERE " + whereIs(level, id, Items.BREAD) + " | POTATO WHERE " + whereIs(level, id, Items.POTATO));   // [supply]
                     if (MarketMaker.live(id)) Kit.log(tag + " day " + dayNo + " CROPS " + com.jrpetty.mcassistant.entity.CropPlan.line(level, id) + "| wanted: "
                         + com.jrpetty.mcassistant.entity.InputWants.line(id) + " | left to firms: " + com.jrpetty.mcassistant.entity.FirmTrades.linesForTests(level, id));   // [supply]
                 }
