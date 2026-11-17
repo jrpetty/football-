@@ -297,6 +297,9 @@ final class StoryCursedMine implements QuestStories.Story {
                 int cost = 10 + Villages.headcount(q.village);
                 int paid = QuestRewards.fromTreasury(level, q.village, cost);
                 if (paid >= cost / 2 && v != null) {
+                    // [health] The feast is the town's own stores on its own tables: the coin stays in the treasury (it was taken
+                    // out and paid to nobody: gone from the town by no booked way).
+                    Ledger.addCoins(q.village, paid);
                     Gatherings.sponsor(q.village, "the town, for the mine", day);
                     q.flags.put("marked", "a feast for the miners");
                     return "A feast! Tonight, on the town. The miners will drink your health.";

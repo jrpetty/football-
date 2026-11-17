@@ -52,6 +52,7 @@ public final class Hire {
         }
         Market.payOut(p, PRICE);
         f.earn(PRICE);
+        CoinCensus.playerIn(CoinCensus.purseTown(f), PRICE);          // [health]
         boolean more = f.isHired();
         long until = (more ? Math.max(f.hiredUntil, level.getGameTime()) : level.getGameTime()) + DAY;
         if (more) {

@@ -2508,6 +2508,8 @@ public final class WarAndPeace {
         Market.payOut(p, Diplomacy.PEACE_COST);
         Ledger.addCoins(village, Diplomacy.PEACE_COST / 2);
         Ledger.addCoins(o.id(), Diplomacy.PEACE_COST - Diplomacy.PEACE_COST / 2);
+        CoinCensus.playerIn(village, Diplomacy.PEACE_COST / 2);                          // [health]
+        CoinCensus.playerIn(o.id(), Diplomacy.PEACE_COST - Diplomacy.PEACE_COST / 2);    // [health]
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
         String text = makePeace(level, village, o.id(), day, terms(level, village, o.id()), "on " + name + "'s word", null);

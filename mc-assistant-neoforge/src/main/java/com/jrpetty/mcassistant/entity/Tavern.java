@@ -326,6 +326,7 @@ public final class Tavern {
         int share = barkeep == null ? 0 : price / ROUND_SHARE;
         if (share > 0) barkeep.earn(share);
         till(v.id(), price - share);
+        CoinCensus.playerIn(v.id(), price);                          // [health]
         book(v.id(), "tavern.rounds", 1);
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
@@ -426,6 +427,7 @@ public final class Tavern {
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, want), 1)) return new Inn.Let(barkeep, "That's all gone just now.", false);
         Market.payOut(p, q.total());
         till(village, q.total());
+        CoinCensus.playerIn(village, q.total());                     // [health]
         Stockroom.sold(level, village, Stockroom.Seller.TAVERN, one, 1, q.total());
         if (!p.getInventory().add(one.copy())) p.drop(one.copy(), false);
         if (barkeep != null) barkeep.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -458,6 +460,7 @@ public final class Tavern {
         p.getInventory().setChanged();
         Crafts.store(level, v, new ItemStack(Items.GLASS_BOTTLE, bottles));
         Dealings.giveCoins(p, paid);
+        CoinCensus.playerOut(v.id(), paid);                          // [health]
         book(v.id(), "tavern.bottles", bottles);
         if (barkeep != null) barkeep.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         return new Inn.Let(barkeep, bottles + " bottles back: " + paid + (paid == 1 ? " coin" : " coins") + " for you. The cook'll fill them again."

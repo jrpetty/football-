@@ -904,6 +904,7 @@ public final class ShiftTasks {
         int back = (int) Math.round(t.deposit * moved / (double) t.count);
         if (back > 0) Earnings.giveCoins(p, back);
         if (t.deposit - back > 0) Ledger.addCoins(s.village, t.deposit - back);       // what was not brought, kept by the stores
+        if (t.deposit - back > 0) CoinCensus.playerIn(s.village, t.deposit - back);   // [health] the held deposit (the player's till now) kept
         if (s.role == ShiftRole.SMELT) returnUnsmelted(level, p, s, t);
         level.playSound(null, t.to, SoundEvents.CHEST_CLOSE, SoundSource.BLOCKS, 0.5F, 1.0F);
         double units = s.role == ShiftRole.SMELT ? moved : 1.0 * moved / t.count;
@@ -1014,6 +1015,7 @@ public final class ShiftTasks {
         int back = (int) Math.round(t.deposit * covered / (double) Math.max(1, t.count));
         if (back > 0) Earnings.giveCoins(p, back);
         if (t.deposit - back > 0) Ledger.addCoins(s.village, t.deposit - back);
+        if (t.deposit - back > 0) CoinCensus.playerIn(s.village, t.deposit - back);   // [health]
         GAPS.remove(s.village);
         if (laid <= 0) {
             s.task = null;
@@ -1086,6 +1088,7 @@ public final class ShiftTasks {
                 if (p != null && refund > 0) Earnings.giveCoins(p, refund);
                 if (t.deposit - refund > 0) {
                     Ledger.addCoins(s.village, t.deposit - refund);
+                    CoinCensus.playerIn(s.village, t.deposit - refund);   // [health]
                     if (p != null) p.sendSystemMessage(Component.literal("The load wasn't delivered: the stores keep " + (t.deposit - refund)
                         + " coin of your deposit for what is missing.").withStyle(ChatFormatting.RED));
                 }

@@ -432,6 +432,7 @@ final class StoryHeirloom implements QuestStories.Story {
                         if (v == null || !moveOutOfStores(level, q, v, heirloom, p)) return "It's not in the stores any more…";
                         Market.payOut(p, price);
                         com.jrpetty.mcassistant.village.Ledger.addCoins(q.village, price);
+                        CoinCensus.playerIn(q.village, price);       // [health]
                         homeStep(q);
                         if (child != null) {
                             child.persona().feelFor(p.getUUID(), name, 30);

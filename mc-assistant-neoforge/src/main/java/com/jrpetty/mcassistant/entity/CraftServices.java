@@ -229,6 +229,7 @@ public final class CraftServices {
             saveOrders(village);
             int back = Ledger.takeCoins(village, o.paid());
             Dealings.giveCoins(p, back);
+            CoinCensus.playerOut(village, back);                     // [health]
             return "I'm sorry: the " + name + " never came right. Here's your " + back + coinsWord(back) + " back.";
         }
         return "Your " + name + " isn't off the stand yet. Come back in a while.";

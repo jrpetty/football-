@@ -290,6 +290,9 @@ public final class AdminActions {
                 int n = a.num(0, 0);
                 if (n >= 0) Ledger.addCoins(v.id(), n);
                 else n = -Ledger.takeCoins(v.id(), -n);
+                // [health] By decree: coin made (booked as minted) or done away with (as gone out of town), not drift.
+                if (n >= 0) com.jrpetty.mcassistant.entity.CoinCensus.flow(v.id(), com.jrpetty.mcassistant.entity.CoinCensus.Flow.MINT, n);
+                else com.jrpetty.mcassistant.entity.CoinCensus.flow(v.id(), com.jrpetty.mcassistant.entity.CoinCensus.Flow.UPKEEP, -n);
                 yield Done.ok("Treasury of " + Villages.name(v.id()) + ": " + (n >= 0 ? "+" : "") + n + " = " + Ledger.coins(v.id()),
                     (n >= 0 ? n + " coin was put into" : -n + " coin was taken from") + " the treasury");
             }
@@ -686,6 +689,7 @@ public final class AdminActions {
         ServerPlayer p = c.server().getPlayerList().getPlayerByName(name);
         if (p == null) return Done.no("No player called " + name + " is online.");
         int fromTreasury = Ledger.takeCoins(v.id(), n);
+        com.jrpetty.mcassistant.entity.CoinCensus.playerOut(v.id(), fromTreasury);   // [health] (the rest minted by decree, never the town's)
         int left = n;
         while (left > 0) {
             int k = Math.min(64, left);

@@ -475,6 +475,7 @@ public final class OutdoorTalk {
         }
         Market.payOut(p, GOLEM_FEE);
         f.earn(GOLEM_FEE);
+        CoinCensus.playerIn(CoinCensus.purseTown(f), GOLEM_FEE);      // [health]
         g.addTag(PLAYERS_GOLEM);
         g.setCustomName(Component.literal(p.getName().getString() + "'s golem"));
         f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

@@ -245,6 +245,7 @@ public final class ShopBusiness {
         Economy.spent(v.id(), paid);
         ItemStack coin = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
         if (!p.getInventory().add(coin)) p.drop(coin, false);
+        CoinCensus.playerOut(v.id(), paid);                          // [health]
         long day = level.getDayTime() / 24000L;
         makings(v.id(), day, paid);
         ShopDesk.receipt(level, v.id(), p.getUUID(), "Day " + day + ": supplied " + Goods.words(w.sample(), in) + " for " + paid);

@@ -2075,6 +2075,7 @@ public final class Pets {
             int reward = Math.min(PET_REWARD, thanks.purse());
             if (reward > 0 && thanks.spend(reward)) {
                 Earnings.giveCoins(finder, reward);
+                CoinCensus.playerOut(CoinCensus.purseTown(thanks), reward);   // [health]
                 Earnings.record(finder, village, Earnings.Source.TIPS, reward, thanks.displayNameCap(), "as a reward for bringing " + c.name + " home");
             }
         }
@@ -3147,6 +3148,7 @@ public final class Pets {
             if (Other.MERCHANT.equals(o.role())) {
                 if (o.merchant() != null && level.getEntity(o.merchant()) instanceof VillageFolkEntity m) {
                     m.earn(price);
+                    CoinCensus.playerIn(CoinCensus.purseTown(m), price);     // [health]
                     say(m, "A fine choice! Look after the little one.");
                 }
             } else {
@@ -3155,6 +3157,7 @@ public final class Pets {
                 if (mum != null) for (VillageFolkEntity m : grown(v.id(), mum)) if (payee == null) payee = m;
                 if (payee != null) {
                     payee.earn(price);
+                    CoinCensus.playerIn(CoinCensus.purseTown(payee), price); // [health]
                     payee.persona().feelFor(p.getUUID(), p.getName().getString(), 4);
                     say(payee, FolkTalk.pick(level.getRandom(), "Oh, " + p.getName().getString() + " — you'll give it a good home, I know.",
                         "Thank you! Bring it to visit its mother now and then."));

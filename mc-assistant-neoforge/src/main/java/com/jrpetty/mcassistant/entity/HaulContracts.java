@@ -154,6 +154,7 @@ public final class HaulContracts {
         if (s == null) return Villages.name(from) + "'s stores can't spare it all just now.";
         if (deposit > 0) Market.payOut(p, deposit);
         Ledger.note(from, "escrow/deposit/" + p.getUUID(), Integer.toString(deposit));
+        CoinCensus.playerIn(from, deposit);                                    // [health] the escrow is counted
         int left = n;
         while (left > 0) {
             int k = Math.min(left, one.getMaxStackSize());
@@ -199,8 +200,10 @@ public final class HaulContracts {
         int back = (int) Math.round(deposit * got / (double) n);
         if (deposit - back > 0) Ledger.addCoins(from, deposit - back);          // what never came: the neighbour keeps its worth
         Earnings.giveCoins(p, back);
+        CoinCensus.playerOut(from, back);                                      // [health]
         if (earned > 0) {
             Earnings.giveCoins(p, earned);
+            CoinCensus.playerOut(to, earned);                                  // [health]
             Earnings.record(p, to, Earnings.Source.CONTRACT, earned, Villages.name(to), "for hauling " + Goods.words(new ItemStack(item), got)
                 + " from " + Villages.name(from));
         }
@@ -259,7 +262,10 @@ public final class HaulContracts {
             if (ship != null) Shipments.lost(level, ship, saved, "its carrier, " + p.getName().getString() + ", never delivered it");
             int deposit = escrow(from, "escrow/deposit/" + p.getUUID());
             if (saved.isEmpty()) Ledger.addCoins(from, deposit);
-            else Earnings.giveCoins(p, deposit);
+            else {
+                Earnings.giveCoins(p, deposit);
+                CoinCensus.playerOut(from, deposit);                           // [health]
+            }
         }
         Earnings.data(p).remove("haul");
         p.sendSystemMessage(Component.literal("Your haul contract ran out: the fee went back to the town" + (t.getInt("leg") == 1 ? ", and the load to "

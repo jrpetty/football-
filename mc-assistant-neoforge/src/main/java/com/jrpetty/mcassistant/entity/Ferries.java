@@ -909,6 +909,7 @@ public final class Ferries {
             boolean paid = man != null && payCoin(player);
             if (paid) {
                 man.earn(FARE);
+                CoinCensus.playerIn(CoinCensus.purseTown(man), FARE);    // [health]
                 c.fares += FARE;
             } else {
                 c.free++;

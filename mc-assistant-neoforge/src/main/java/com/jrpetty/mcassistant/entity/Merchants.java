@@ -297,6 +297,7 @@ public final class Merchants {
         if (Market.coinsHeld(p) >= d.coins()) {
             Market.payOut(p, d.coins());
             f.earn(d.coins());
+            CoinCensus.playerIn(CoinCensus.purseTown(f), d.coins());      // [health]
         } else {
             int emeralds = 0;
             for (ItemStack s : p.getInventory().items) if (s.is(Items.EMERALD)) emeralds += s.getCount();
