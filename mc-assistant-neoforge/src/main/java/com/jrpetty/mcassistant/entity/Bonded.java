@@ -21,6 +21,16 @@ public final class Bonded {
 
     private Bonded() {}
 
+    /** Does an open maker firm of the town make something of this (the bakery's wheat)? Its last batch's makings, by its books. */
+    static boolean firmsBuy(UUID village, net.minecraft.world.item.Item it) {
+        String key = Stockroom.key(new ItemStack(it));
+        for (Business b : Enterprise.open(village)) {
+            Business.Line l = b.allTime.lines.get(key);
+            if (l != null && l.used > 0) return true;
+        }
+        return false;
+    }
+
     /** What the open firms of the town hold of a ware, in their books. */
     static long firmsHeld(UUID village, String key) {
         long n = 0;

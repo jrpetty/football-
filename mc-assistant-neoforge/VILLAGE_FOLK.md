@@ -13196,7 +13196,9 @@ ware came from and went (the long tests' supply log) showed why, and this is wha
   harvest at a time: a bakery's call for wheat runs its price up, and wheat comes in a few days later; a glut of potatoes
   moves ground out of potatoes. New ground goes to the crop furthest short of its share.
 - **Wheat to the market.** Once the market is open a farmer's wheat goes to the market first, to be paid for and bought by
-  the bakers; the market's own spare wheat still goes up to the mill. The stores keep the farmers' wheat seed back now (and
+  the bakers; the market's own spare wheat still goes up to the mill. A farm's chest at the edge of its field held a hundred
+  and fifty sheaves the market had paid for while the stores held none and the bakery was short: the storehouse now sends
+  a courier first for a chest holding what the stores are out of and a trade of the town wants (or a firm makes with). The stores keep the farmers' wheat seed back now (and
   their beetroot seed), not the wheat.
 - **A basket that tires of a kind of food** (FoodBasket). A household tires of the same food, and now of the same kind of
   food: the potato raw, baked and the carrot are all roots to it, and after a week of roots a loaf looks good, though a loaf
