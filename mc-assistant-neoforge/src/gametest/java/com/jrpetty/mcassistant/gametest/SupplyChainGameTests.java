@@ -90,8 +90,14 @@ public class SupplyChainGameTests {
         return folk;
     }
 
-    /** A chest of the town's stores by its heart, holding these (its old contents gone). */
+    /** A chest of the town's stores by its heart, holding these; every other chest of the stores emptied. */
     private static Container stores(ServerLevel level, UUID village, int x, ItemStack... goods) {
+        for (BlockPos p : Villages.storeChests(level, village)) {
+            if (level.getBlockEntity(p) instanceof Container c) {
+                c.clearContent();
+                c.setChanged();
+            }
+        }
         BlockPos at = Kit.surface(level, x + 8, Z + 8);
         level.setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());
         ZoneChests.mark(level, at);

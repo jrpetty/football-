@@ -183,7 +183,7 @@ public class ShopGameTests {
             Kit.log("sh02 the cook's first piece of work: " + first + "; bread " + bread + ", wheat " + wheat);
             helper.assertTrue(bread == 1 && wheat == 27, "a loaf baked out of three wheat");
             List<String> made = new ArrayList<>();
-            for (int i = 0; i < 9; i++) {
+            for (int i = 0; i < 10; i++) {                                  // [supply] (and a turn more, to find the wheat gone)
                 String m = Cafe.cook(level, v, cook);
                 if (m != null) made.add(m);
             }
