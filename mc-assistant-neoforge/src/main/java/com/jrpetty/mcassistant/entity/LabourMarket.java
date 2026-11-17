@@ -519,7 +519,7 @@ public final class LabourMarket {
             : f.displayNameCap() + " left " + oldName + " for " + newName + ": " + wage + " a day against " + oldWage;
         if (!how.isEmpty()) line += " (" + how + ")";
         note(tw, day, line);
-        Villages.tell(id, day, line);
+        if (newFirm == null || !oldEmp.isEmpty()) Villages.tell(id, day, line);   // (a firm's hiring tells it itself)
         f.persona().remember(day, oldEmp.isEmpty() ? "I was taken on at " + newName : "I left " + oldName + " for " + newName + ": better pay", 4);
         felt(f, day, 1);
         FolkTalk.speak(f, oldEmp.isEmpty()
@@ -1236,7 +1236,7 @@ public final class LabourMarket {
                 for (VillageFolkEntity f : grown(id)) {
                     if (!about(f) || f.isElder() || f.stationTask() == t || f.stationTask() == StationTask.NONE) continue;
                     String emp = employerOf(id, f);
-                    if (!emp.startsWith("town:") && !emp.equals("market")) continue;
+                    if (!emp.startsWith("town:") && !emp.equals("market") && !emp.equals("watch")) continue;
                     if (essentialOpening(id, f.stationTask(), 2) || Fears.shuns(f, t)) continue;
                     double over = Villages.share(id, f.stationTask());
                     if (over >= most) { most = over; pick = f; }

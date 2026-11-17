@@ -500,12 +500,11 @@ public class LabourGameTests {
     public static void lab09_interview(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 3016000;
-        List<VillageFolkEntity> folk = town(helper, level, x, 30, StationTask.SMITH, StationTask.NONE, StationTask.NONE, StationTask.FARM,
+        List<VillageFolkEntity> folk = town(helper, level, x, 30, StationTask.SMITH, StationTask.NONE, StationTask.NONE, StationTask.NONE,
             StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.GUARD, StationTask.GUARD);
-        VillageFolkEntity bram = folk.get(0), a = folk.get(1), c = folk.get(2);
+        VillageFolkEntity bram = folk.get(0);
         bram.tradeXpForTests(StationTask.SMITH, 20000);
-        a.tradeXpForTests(StationTask.SMITH, AssistantEntity.xpForLevel(6));
-        c.tradeXpForTests(StationTask.SMITH, AssistantEntity.xpForLevel(7));
+        for (int i = 1; i <= 3; i++) folk.get(i).tradeXpForTests(StationTask.SMITH, AssistantEntity.xpForLevel(5 + i));
         UUID id = bram.ownerId();
         Villages.Village v = Villages.get(id);
         Kit.Expect ok = new Kit.Expect();
@@ -528,7 +527,8 @@ public class LabourGameTests {
             for (String s : ivs) set |= s.startsWith("job:");
             ok.that(set && o != null && "INTERVIEW".equals(o[6]), "an interview set for the firm's place: " + ivs + " " + (o == null ? "-" : o[6]));
             if (o != null) {
-                VillageFolkEntity winner = Enterprise.hands(id, b).contains(c) ? a : c;
+                VillageFolkEntity winner = null;
+                for (int i = 1; i <= 3; i++) if (winner == null && !Enterprise.hands(id, b).contains(folk.get(i))) winner = folk.get(i);
                 String took = LabourMarket.interviewedForTests(level, v, (Integer) o[0], winner);
                 Kit.log("[VT] lab09 the panel chose " + winner.displayNameCap() + ": " + took);
                 ok.that(("firm:" + b.id).equals(LabourMarket.employerForTests(winner)), "the panel's choice took up the place: "
