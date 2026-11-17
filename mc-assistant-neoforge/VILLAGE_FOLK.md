@@ -13173,3 +13173,35 @@ trade, the well-run one thriving and the dear one closed by its creditors; ent19
 makings and their maker's time at the going price, the bread dearer with the wheat. The long tests log every firm each day
 (its turns at the bench, what it made and sold, its price against the going price, its makings at the market, its hands)
 and the staples' prices; a farm opened in the last three days is not yet counted among the farms that should be selling.
+
+### Health 315: a player's coin in the census, and the flakes of 0.315.0
+
+- **Every coin a player pays a town, or has of it, is booked.** The census was exact for the folk's own economy, but most of
+  a player's dealings booked nothing: a feast paid for, dice with a folk, an order, the treasury's bank and its loans, a
+  supply contract, an investment, a bid, an escort's pay, a stall's rent and its till, a fine, a pardon, a bounty, bail, a
+  constable's wage, a house bought, rent collected, the bank and its money changer, a hire, a map, a room, a round, a bill
+  at table and its tip, a ferry's fare, a busker's hat, a quest's reward, a haul contract's deposit and pay, a shift's tip
+  and deposit, a wagon's lot, the story quests' prices and bribes. Each now books "players paying in" or "paid out to
+  players" where the coin goes into or out of a holder the census counts (the treasury, a purse, a till, the vault, a fund,
+  an escrow). Three more holders are counted: the rent a player's tenants have paid, waiting for it; the bounties the watch
+  holds (on an outlaw's head, and won and not yet claimed); and the coin a caravan or a wagon carries on the road (a town's
+  caravan selling to another books the one's import and the other's export).
+- **Loopholes closed.** The treasury's bank paid its savers' interest, its investors' dividends and a charter's tenth by
+  taking the coin out of the treasury and onto the account, and paid it again when the account was drawn: it is a claim on
+  the treasury now, its coin there till drawn. A bid at the treasury's auction was taken out of the player's pack into
+  nowhere till the auction was settled (an outbid player was paid back out of the town's own coin): it is held in the
+  treasury. A bulk order not made in time gave its deposit back out of nothing: it comes out of the treasury it went into.
+  A constable away when its case closed had its wage taken and kept nowhere: it is owed, and paid with the next. An
+  outlaw caught with no hunter about to share its bounty lost it: back to the treasury. A knight's retinue's day's pay went
+  to nobody: into the man's purse. The admin's coin by decree is booked as minted, or as gone out of town.
+- **Only what is cooked can burn.** A green cook's burnt dish (one in ten) is made again from fresh makings; a cider poured,
+  a loaf taken ready off the shelf, burnt too, and with the house's only other bottle gone the order was struck. Only a dish
+  made at the stove now burns.
+- **A gardener never plants a present.** A folk with the gardening pastime planted the flower out of its pack, a keepsake or
+  the present it was carrying to a housewarming among them: it plants neither now, and a caller whose present has gone says
+  so rather than hand over nothing with thanks.
+- **A guard at the butts is not called away by a monster no longer there**, and a building taken up again with every block
+  laid wants no stone or timber for its windows, doors and lamps (the flats waited for ever for the ground's ninety-six).
+
+Tests (PlayerCoinGameTests): pc01 the treasury's dealings by talk, pc02 the law, pc03 the counters: each path driven with a
+player, the town's coin moving by exactly what was booked, and every path meant to move coin moving it.
