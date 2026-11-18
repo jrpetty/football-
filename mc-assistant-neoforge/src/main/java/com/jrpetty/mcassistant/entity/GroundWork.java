@@ -146,6 +146,28 @@ public final class GroundWork {
         return changed;
     }
 
+    // ------------------------------------------------------------------ the quay
+
+    /**
+     * A column of the town's ground standing over kept water (a river through the town, the sea at its shore) by two
+     * or more: its side over the water was a raw face of the dirt it was built up in. Faced in stone (sandstone where
+     * the town is on sand) from just under the water's top up to under the turf, as a bank stands, and the town's
+     * square ends in a stone quay. Only the ground's own earth is changed. Returns the blocks set.
+     */
+    static int quay(ServerLevel level, int x, int z, int target, int waterTop, Block surface) {
+        if (waterTop >= target - 1) return 0;
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        BlockState face = Terraform.under(surface, 4);
+        int changed = 0;
+        for (int y = waterTop - 1; y < target; y++) {
+            BlockState s = level.getBlockState(m.set(x, y, z));
+            if (!(s.is(BlockTags.DIRT) || s.is(BlockTags.SAND) || s.is(Blocks.GRAVEL) || s.is(Blocks.CLAY)) || s.is(face.getBlock())) continue;
+            level.setBlock(m, face, QUIET);
+            changed++;
+        }
+        return changed;
+    }
+
     // ------------------------------------------------------------------ trees, whole
 
     /** The logs and leaves a levelling took out of its columns, kept till their trees are felled and their crowns settled. */

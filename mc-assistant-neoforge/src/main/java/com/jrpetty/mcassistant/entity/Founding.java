@@ -765,6 +765,7 @@ public final class Founding extends SavedData {
                     Block top = own ? Terraform.top(s.tops[i]) : s.surface;
                     if (own) top = Terraform.edgeTop(top, s.surface);   // [build5] a cut edge turfed; [terra10] and a built-up one
                     int c = Terraform.shape(level, chunk, x, z, g.ground[i], g.target[i], levelled, top, s.felling);
+                    if (c >= 0) c += quayBeside(level, g, i, x, z, top);                // [terra10] a stone quay over kept water
                     if (c < 0 && levelled && s.blocked++ == 0) {
                         s.blockedFirst = Terraform.inTheWay(chunk, x, z, g.ground[i], g.target[i]) + " at " + x + "," + z;
                     }
@@ -776,6 +777,18 @@ public final class Founding extends SavedData {
         if (!s.felling.settle(level, deadline)) return;                    // [terra10] the trees cut into, felled whole
         if (s.cursor >= g.order.length && s.founded() && s.spawned >= s.count && makeGood(level, s, deadline)
                 && s.felling.settle(level, deadline)) finish(level, f, s);
+    }
+
+    /** [terra10] A column over kept water beside it by two or more faced in stone (GroundWork.quay). */
+    private static int quayBeside(ServerLevel level, FoundingPlan.Ground g, int i, int x, int z, Block top) {
+        int side = g.side, xi = i % side, zi = i / side, water = Integer.MAX_VALUE;
+        for (int[] n : new int[][]{ {1, 0}, {-1, 0}, {0, 1}, {0, -1} }) {
+            int xx = xi + n[0], zz = zi + n[1];
+            if (xx < 0 || zz < 0 || xx >= side || zz >= side) continue;
+            int j = zz * side + xx;
+            if (g.kind[j] == FoundingPlan.KEEP && g.fluid[j] != Integer.MIN_VALUE) water = Math.min(water, g.fluid[j]);
+        }
+        return water == Integer.MAX_VALUE ? 0 : GroundWork.quay(level, x, z, g.target[i], water, top);
     }
 
     /** The most times the square is looked over again for anything the levelling left wrong. */

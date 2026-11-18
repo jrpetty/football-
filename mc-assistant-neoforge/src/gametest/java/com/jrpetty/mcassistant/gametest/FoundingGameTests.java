@@ -263,8 +263,9 @@ public class FoundingGameTests {
      * block from it, terraces into the square) and, to the east, a low hollow running into the square
      * beside a lake well under the level (which once let the fill down to the lake's shore, terraces
      * again); with a pit and sand over a cave inside: when it is done every column of the square
-     * stands at the level, solid five deep, nothing wet or growing on it, and the tarn and the lake
-     * are both still there.
+     * stands at the level, solid five deep, nothing wet or growing on it, and the lake is still there.
+     * [terra10] The tarn, nine over the level three blocks past the edge, is let out: no bank that high
+     * so near could be walked, so the hill is cut to the edge's slope through it, and no water runs.
      */
     @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "f04_flat_by_water")
     public static void f04_flat_by_water(GameTestHelper helper) {
@@ -387,7 +388,15 @@ public class FoundingGameTests {
             expect.that(off == 0, "every column of the square at the level: " + off + " off," + first);
             expect.that(hollowBlocks == 0, "the square is solid five deep: " + hollowBlocks + " hollow");
             expect.that(wetOrGrowing == 0, "nothing wet or growing on it: " + wetOrGrowing + growing);
-            expect.that(!level.getFluidState(new BlockPos(tarnX, tarnY, tarnZ)).isEmpty(), "the tarn on the hill is still there");
+            int tarnNow = ground(level, tarnX, tarnZ);                     // [terra10] let out, the hill cut to the slope
+            boolean running = false;
+            for (int dx = -12; dx <= 12; dx++) for (int dz = -12; dz <= 12; dz++) for (int dy = -12; dy <= 12; dy++) {
+                net.minecraft.world.level.material.FluidState fs = level.getFluidState(new BlockPos(tarnX + dx, level0 + dy, tarnZ + dz));
+                if (!fs.isEmpty() && !fs.isSource()) running = true;
+            }
+            Kit.log("f04 the tarn's column now at y=" + tarnNow + " (the level y=" + level0 + ", its water was at y=" + tarnY + ")");
+            expect.that(level.getFluidState(new BlockPos(tarnX, tarnY, tarnZ)).isEmpty() && tarnNow - level0 <= 2 && !running,
+                "the tarn too high and near for a walkable bank is let out, its hill cut to the slope, and nothing runs: at y=" + tarnNow);
             expect.that(!level.getFluidState(new BlockPos(lakeX, base - 1, cz)).isEmpty(), "the lake is still there");
             if (expect.clean()) helper.succeed();
             else helper.fail(expect.summary());
