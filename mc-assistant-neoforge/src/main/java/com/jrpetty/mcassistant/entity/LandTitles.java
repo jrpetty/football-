@@ -28,7 +28,7 @@ import com.jrpetty.mcassistant.entity.Business.Stake;
  * homestead half its last week's profit or a let plot's rent, whichever is more), twelve weeks of it, and more in a
  * growing town (a tenth more for every tenth its folk grew by in the week, a fifth at most; a shrinking town less).
  * Each morning's reckoning moves the value three tenths of the way, so one good week does not double it. The town's
- * land index is what its plots are worth against what they were worth the week its market opened.
+ * land index is what the plots it had the week its market opened are worth now against what they were worth then.
  *
  * <p><b>Rents follow the land.</b> Once the market has been open a week, the town's house rents follow its land index:
  * the square root of it, never more than a twentieth up or down in a week, and never over a quarter above or under a
@@ -125,7 +125,12 @@ public final class LandTitles {
         for (String k : all.getAllKeys()) sum += all.getCompound(k).getLong("value");
         bk.putLong("sum", sum);
         bk.putInt("plots", all.size());
-        if (bk.getLong("base") <= 0 && sum > 0 && day - MarketMaker.openedDay(id) >= 7) bk.putLong("base", Math.max(1, sum / Math.max(1, all.size())));
+        // The index's base: each title's worth the week the market opened (the plots built since are not in it, so a
+        // street of new cottages does not read as land getting cheaper).
+        if (!bk.getBoolean("based") && sum > 0 && day - MarketMaker.openedDay(id) >= 7) {
+            bk.putBoolean("based", true);
+            for (String k : all.getAllKeys()) all.getCompound(k).putLong("base", Math.max(1, all.getCompound(k).getLong("value")));
+        }
         if (day % 7 == 0 && bk.getLong("rentOn") != day + 1) {
             bk.putLong("rentOn", day + 1);
             rents(id, day);
@@ -229,11 +234,15 @@ public final class LandTitles {
 
     /** The land index: a plot's worth today against the week the market opened (1 till then). */
     public static double index(UUID village) {
-        CompoundTag bk = book(village);
-        long base = bk.getLong("base");
-        int n = bk.getInt("plots");
-        if (base <= 0 || n <= 0) return 1.0;
-        return bk.getLong("sum") / (double) n / base;
+        CompoundTag all = titles(village);
+        long now = 0, then = 0;
+        for (String k : all.getAllKeys()) {
+            CompoundTag t = all.getCompound(k);
+            if (t.getLong("base") <= 0) continue;
+            now += t.getLong("value");
+            then += t.getLong("base");
+        }
+        return then <= 0 ? 1.0 : now / (double) then;
     }
 
     // ------------------------------------------------------------------ players
@@ -355,7 +364,9 @@ public final class LandTitles {
     }
 
     public static void baseForTests(UUID village, long base) {
-        book(village).putLong("base", base);
+        book(village).putBoolean("based", true);
+        CompoundTag all = titles(village);
+        for (String k : all.getAllKeys()) all.getCompound(k).putLong("base", base);
     }
 
     public static void rentsForTests(UUID village, long day) {

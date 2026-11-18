@@ -13454,8 +13454,8 @@ between holders the coin census counts, and a player can deal at every one of th
   has a title in the register, written up each morning from who holds it.
 - **What land is worth.** Twelve weeks of what it earns (a house its rent, a premises its firm's rent, a homestead half
   its profit or its rent; a homestead never under its title's worth), a tenth more for every tenth the town grew by in
-  the week (a fifth either way at most), each morning's reckoning moving it three tenths of the way. The land index is a
-  plot's worth against the week the market opened.
+  the week (a fifth either way at most), each morning's reckoning moving it three tenths of the way. The land index is
+  what the plots of the week the market opened are worth now against then (a street of new cottages is not cheaper land).
 - **Rents follow land, without a spiral.** A week after Market Opening Day the town's house rents follow the square root
   of the land index, a twentieth a week at most, within a quarter above and a sixth below. Rents are already reckoned on
   the field hand's wage, so with the wage index and the land both up a tenth in a fortnight the council holds rents
