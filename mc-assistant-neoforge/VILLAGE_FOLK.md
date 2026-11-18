@@ -13480,10 +13480,12 @@ its 39 columns unbuilt and then stacked 19 of them past their height. After: eve
 on the hillside lots, the square's walls whole and none too tall, ba03 nought gaps and nought too tall at both raisings.
 
 **After the second look** (the same audit): farmland four or more from water down from a fifth to a third of it (137 of
-611 before) to 3 of 655; the one great building with roof cells open is a storey still going up at the end of the
-fourth day (47 cells, against 110 to 153 before); the square's walls whole with an arch at each gateway; the levelled
-bowl with no pillars left standing in it. The fields are being fenced, a gate on each, as the stores' fences and boards
-allow (half of the 31 fields had their gate by the fourth day; the rest of their edges go up a dozen posts a visit).
+611 before) to 1 of 1,509, and the towns working more than twice the farmland; the one great building with roof cells
+open is a storey still going up at the end of the fourth day (47 to 70 cells, against 110 to 153 before); the square's
+walls whole with an arch at each gateway; the levelled bowl with no pillars left standing in it. The fields are being
+fenced, a gate on each, out of the stores' spare fences and boards (never what a building is waiting on, and no boards
+cut while one is going up): half the fields had their gate by the fourth day, the rest of their edges going up a dozen
+posts a visit as the stores allow.
 
 **Left as they are, with the reason.** The torches and flowers of the strewn meadow standing on the plan's streets
 where no street is paved yet (the road works' rounds take them up as they reach them). A square's wall stacked or
