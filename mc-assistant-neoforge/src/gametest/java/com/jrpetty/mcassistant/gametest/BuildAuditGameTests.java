@@ -108,6 +108,93 @@ public class BuildAuditGameTests {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(each);
     }
 
+    /**
+     * A town's builder puts up two houses on a hillside out past its town (one with its door uphill, one with its door
+     * down), the lots strewn with saplings, mushrooms, sugar cane, snow, tall grass and torches stuck in the ground, and
+     * a torch of a player's beside one: nothing of the litter left in the rooms or in a cell of the drawing, the floors
+     * held up to the ground all round, stone and not dirt for the footing's face, the hillside cut back from the walls,
+     * and the player's torch where the player left it.
+     */
+    @GameTest(template = "empty", timeoutTicks = 2000, batch = "ba02_hillside_lots")
+    public static void ba02_hillside_lots(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int cx = 3590000, cz = Z;
+        Kit.hold(level, cx, cz, 48);
+        Kit.prepare(level, cx, cz, 48);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        UUID id = hand.ownerId();
+        Villages.Village v = Villages.get(id);
+        // The hillside, well out past the town's reach: rising a block every two to the south.
+        int hx = cx, hz = cz + 170;
+        Kit.hold(level, hx, hz, 40);
+        Kit.prepare(level, hx, hz, 40);
+        int base = Kit.surface(level, hx, hz).getY();
+        RandomSource rnd = RandomSource.create(77);
+        for (int dx = -36; dx <= 36; dx++) {
+            for (int dz = -20; dz <= 20; dz++) {
+                int h = (dz + 20) / 2 + (dx % 7 == 0 ? 1 : 0);
+                for (int y = base; y < base + h; y++) {
+                    BlockState st = y == base + h - 1 ? Blocks.GRASS_BLOCK.defaultBlockState()
+                        : y >= base + h - 3 ? Blocks.DIRT.defaultBlockState() : Blocks.STONE.defaultBlockState();
+                    level.setBlock(new BlockPos(hx + dx, y, hz + dz), st, 2 | 16);
+                }
+                if (h > 0) level.setBlock(new BlockPos(hx + dx, base - 1, hz + dz), Blocks.DIRT.defaultBlockState(), 2 | 16);
+            }
+        }
+        // The litter, over every lot.
+        BlockState[] litter = { Blocks.OAK_SAPLING.defaultBlockState(), Blocks.BROWN_MUSHROOM.defaultBlockState(),
+            Blocks.TORCH.defaultBlockState(), Blocks.SUGAR_CANE.defaultBlockState(), Blocks.SHORT_GRASS.defaultBlockState(),
+            Blocks.SNOW.defaultBlockState(), Blocks.DEAD_BUSH.defaultBlockState(), Blocks.POPPY.defaultBlockState() };
+        for (int dx = -36; dx <= 36; dx++) {
+            for (int dz = -20; dz <= 20; dz++) {
+                if (rnd.nextInt(3) != 0) continue;
+                BlockPos top = Kit.surface(level, hx + dx, hz + dz);
+                level.setBlock(top, litter[rnd.nextInt(litter.length)], 2 | 16);
+            }
+        }
+        // A player's torch, by the downhill house's east wall.
+        BlockPos players = Kit.surface(level, hx - 20 + 7, hz);
+        level.setBlock(players, Blocks.TORCH.defaultBlockState(), 2 | 16);
+        com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, players, true);
+        Kit.stockForGrowth(level, v);
+        List<String> said = new ArrayList<>();
+        for (Direction facing : new Direction[]{ Direction.NORTH, Direction.SOUTH }) {
+            int ax = hx + (facing == Direction.NORTH ? 20 : -20);
+            BlockPos anchor = siteOn(level, "house", ax, hz, facing);
+            said.add(facing + " " + anchor.toShortString() + ": " + BuildGoal.buildNowForTests(hand, "house", anchor, facing, BuildWorldGameTests::stock));
+            Ledger.built(id, "house", anchor, facing);
+        }
+        TownBlocks.invalidate(id);
+        Report r = audit(level, v);
+        Kit.log("[VT] ba02 built " + said + "; " + r.counts);
+        for (Map.Entry<String, List<String>> e : r.examples.entrySet()) for (String s : e.getValue()) Kit.log("[VT] ba02   " + e.getKey() + ": " + s);
+        Kit.Expect expect = new Kit.Expect();
+        for (String k : BAR) expect.that(r.counts.getOrDefault(k, 0) == 0, k + " = " + r.counts.getOrDefault(k, 0));
+        expect.that(r.counts.getOrDefault("buildings", 0) == 2, "both houses stand");
+        expect.that(level.getBlockState(players).is(Blocks.TORCH), "the player's torch left where it was");
+        if (expect.clean()) helper.succeed(); else helper.fail(expect.summary());
+    }
+
+    /** The floor level a town gives a lot here (Villages.groundFor): the middle of nine heights, or the highest on a slope. */
+    static BlockPos siteOn(ServerLevel level, String structure, int x, int z, Direction facing) {
+        int[] half = BuildGoal.footprint(structure);
+        boolean turned = facing.getAxis() == Direction.Axis.X;
+        int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int dx : new int[]{ -hx, 0, hx }) {
+            for (int dz : new int[]{ -hz, 0, hz }) {
+                int h = BuildGoal.groundTop(level, x + dx, z + dz);
+                lo = Math.min(lo, h);
+                hi = Math.max(hi, h);
+            }
+        }
+        return new BlockPos(x, hi - lo <= 2 ? (lo + hi) / 2 : hi, z);
+    }
+
     /** The counts that must come to nothing. */
     static final String[] BAR = { "floating", "hollow_footing", "earth_inside", "plants_inside", "plant_in_cell",
         "door_blocked", "door_over_drop", "banked_wall", "dirt_face", "wall_gap" };

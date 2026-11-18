@@ -574,7 +574,7 @@ public class BuildWorldGameTests {
     }
 
     /** The pack filled for the cell the builder comes to (or, before it starts, with what it asks to have). */
-    private static void stock(AssistantEntity f, BuildGoal.Placement p) {
+    static void stock(AssistantEntity f, BuildGoal.Placement p) {   // [build5] shared with BuildAuditGameTests
         NonNullList<ItemStack> inv = f.getInventoryItems();
         for (int i = 0; i < inv.size(); i++) inv.set(i, ItemStack.EMPTY);
         if (p == null) {
