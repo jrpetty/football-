@@ -143,7 +143,7 @@ public final class Bakery {
         for (Bake b : shortest(level, v.id())) {
             int n = b.batch() * (b.what() != Items.CAKE ? InventionWorks.batchTimes(v.id(), milled) : 1);   // [tech-tree] dressed stones, the watermill
             Bench.Plan plan = Bench.plan(level, v, b.what(), n, hand);
-            if (plan.ok() && plan.made > 0) return new Object[]{ b, plan, hand };
+            if (plan.ok() && plan.made > 0 && leavesTheWheat(level, v, plan)) return new Object[]{ b, plan, hand };
         }
         return null;
     }
@@ -190,7 +190,7 @@ public final class Bakery {
                               boolean milled) {
         Bench.Hand hand = Bench.handOf(level, v, f, TownLook.BAKERY);
         Bench.Plan plan = Bench.plan(level, v, bake.what(), bake.batch() * (bake.what() != Items.CAKE ? InventionWorks.batchTimes(v.id(), milled) : 1), hand);   // [tech-tree]
-        if (!plan.ok()) return null;
+        if (!plan.ok() || !leavesTheWheat(level, v, plan)) return null;
         ItemStack made = Bench.make(level, v, plan, f, hand);
         if (made.isEmpty()) return null;
         Businesses.benchMade(level, v.id(), Business.Type.BAKERY, plan, made);   // [business-books] the batch costed in the bakery's books
@@ -200,6 +200,16 @@ public final class Bakery {
                 "Smell that? " + capital(Bench.words(made.getItem(), made.getCount())) + ".", "The café'll want these."));
         }
         return made;
+    }
+
+    /** [health320] The farmers' last twelve wheat stay in the stores (the pen's feed, a loaf for whoever has none): since the
+     *  makers' keep holds the seed back and not the wheat (Bench.keeps), the bakery keeps to it on its own, and a third
+     *  batch of bread took the stores from fifteen wheat to six. */
+    static final int WHEAT_KEPT = 12;
+
+    static boolean leavesTheWheat(ServerLevel level, Villages.Village v, Bench.Plan plan) {
+        int takes = plan.takes.getOrDefault(Items.WHEAT, 0);
+        return takes <= 0 || Market.stock(level, v.id(), s -> s.is(Items.WHEAT)) - takes >= WHEAT_KEPT;
     }
 
     /** A batch out of the oven, counted: the day's bakes, the idle hands' bread, the first lighting's news, the oven's

@@ -585,7 +585,8 @@ public class RoadsRanksGameTests {
             String doing = planner[0].offWorkWhy();
             if (doing.contains("post")) atTable[0] = true;
             if (!Long.toString(morning[0]).equals(Ledger.note(id, "planner.day"))) {
-                if (helper.getTick() % 200 == 0) Kit.log("re06 @" + helper.getTick() + " " + planner[0].displayNameCap() + ": '" + doing + "'");
+                if (helper.getTick() % 200 == 0) Kit.log("re06 @" + helper.getTick() + " " + planner[0].displayNameCap() + ": '" + doing + "'"
+                    + " (the town at " + com.jrpetty.mcassistant.entity.Assemblies.now(id) + ")");
                 return;
             }
             Kit.log("re06 set out (at its post's work seen: " + atTable[0] + "): " + history(id));
