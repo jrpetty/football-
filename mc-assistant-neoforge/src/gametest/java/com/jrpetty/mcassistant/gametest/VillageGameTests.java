@@ -2448,14 +2448,17 @@ public class VillageGameTests {
             if (st.is(Blocks.BRICKS)) bricks++;
             if (q.getY() == houseAt.getY() + 4 && !st.isAir()) upstairs++;
             if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) beds++;
-            if (st.is(Blocks.OAK_FENCE) || st.is(Blocks.OAK_FENCE_GATE)) fences++;
+            if (st.is(Blocks.OAK_FENCE) || st.is(Blocks.OAK_FENCE_GATE) || st.is(net.minecraft.tags.BlockTags.WALLS)) fences++;   // [city9] a fence or a low wall
         }
         Kit.log("t38 the house: grown " + com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) + ", " + bricks + " bricks, "
             + upstairs + " blocks on the new floor, " + beds + " bed blocks, " + fences + " fence posts; room " + roomBefore
             + " -> " + Villages.housing(village));
         helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) && upstairs >= 10 && beds >= 10,
             "the house gets its second storey, with more beds");
-        helper.assertTrue(bricks >= 15 && fences >= 10, "brick walls and a garden fence");
+        // [city9] The plot closed in its own way (CityPlots): a fence or a low wall, or left open.
+        boolean open = com.jrpetty.mcassistant.entity.CityPlots.edge(new com.jrpetty.mcassistant.village.Ledger.Building("house", houseAt, Direction.NORTH))
+            == com.jrpetty.mcassistant.entity.CityPlots.Edge.OPEN;
+        helper.assertTrue(bricks >= 15 && (open || fences >= 10), "brick walls and a garden fence or wall (" + fences + ", open " + open + ")");
         helper.assertTrue(Villages.housing(village) == roomBefore + 2, "more room in the village");
         // The waterfront.
         Kit.pond(level, heart.getX() - 26, heart.getZ(), 5);

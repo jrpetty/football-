@@ -182,6 +182,11 @@ public final class TownJobs {
      */
     static final String BENCH = "pastimes";
 
+    /** [city9] The streets' works: the paving, and the doors' ways and lamps (a works key, or a crew's "village/works"). */
+    static boolean streetsWork(String works) {
+        return works != null && (works.equals("streets") || works.equals("paving") || works.endsWith("/streets") || works.endsWith("/paving"));
+    }
+
     /** Works that wait for all the others. */
     static boolean least(String works) {
         return works.equals(LEAST) || works.equals(BENCH);
@@ -285,7 +290,10 @@ public final class TownJobs {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (a.isBaby()) continue;
             adults++;
-            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) busy++;
+            if (a instanceof VillageFolkEntity f && ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) {
+                if (!streetsWork(works) && streetsWork(ON.get(f.getUUID()))) continue;   // [city9] the streets' hands are on top of the eighth
+                busy++;
+            }
         }
         if (adults < SETTLED && !essential(works)) return null;      // a young village: its trades first
         // Never more than one hand in eight — unless hands are standing idle in trades with more
@@ -298,6 +306,10 @@ public final class TownJobs {
         // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
         // unmade and no child born for want of one.
         boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
+        // [city9] Nor the streets: a town of ninety had its hands all at its signs, beds and gardens, and four days on not a
+        // yard of street laid. The paving's hand and the doors' ways' are on top of the eighth (and not counted against the
+        // other works'), so the roads, the beds and the rest keep theirs.
+        if (streetsWork(works) && busy < cap + 2) extra = true;
         if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
@@ -313,6 +325,8 @@ public final class TownJobs {
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
             if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
             if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
+            // [city9] The streets' hands, past the eighth, are never a post's holder (its stints would wait on the streets).
+            if (streetsWork(works) && (f == Wheelwrights.holder(v.id()) || f == TownPlanner.holder(v.id()))) continue;
             if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a

@@ -52,8 +52,27 @@ public final class TownWork {
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
         TownDigs.tick(level, v);                    // [mine7] old stairs in the town filled in; the mine's portals and its path
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
+        CityWater.sweep(level, v);                  // [city9] no water left running off a building over the town's ground
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
         WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
+        streets(level, v, now);
+    }
+
+    /** [city9] The streets' own round, every three seconds (its hand walks on as it lays): the town's other works keep
+     *  their quarter of a minute. A town's streets at one round in fifteen seconds took a day to pave its square. */
+    private static final Map<UUID, Long> PAVED = new ConcurrentHashMap<>();
+    private static final long PAVE_EVERY = 60L;
+
+    public static void paving(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        if (now - PAVED.getOrDefault(v.id(), -100000L) < PAVE_EVERY && now >= PAVED.getOrDefault(v.id(), 0L)) return;
+        if (Villages.headcount(v.id()) < TownJobs.SETTLED) return;          // a young town: its trades first, its streets on the full round
+        streets(level, v, now);
+    }
+
+    private static void streets(ServerLevel level, Villages.Village v, long now) {
+        UUID id = v.id();
+        PAVED.put(id, now);
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;
@@ -61,12 +80,15 @@ public final class TownWork {
         int cursor = CURSOR.getOrDefault(id, 0);
         int done = 0;
         // A town sitting on a mountain of cobblestone paves its streets faster.
-        int budget = age.ordinal() >= Villages.Age.STONE.ordinal()
-            && Market.stock(level, id, s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)) > 512 ? 64 : 24;
+        int budget = 24;
+        CityStreets.beginRound();                   // [city9] the stores counted once a round
         for (int looked = 0; looked < 400 && done < budget; looked++) {
             int[] c = cells.get(Math.floorMod(cursor, cells.size()));
             int r = work(level, v, c[0], c[1], age);
-            if (r < 0) break;                       // a hand is on its way to it: the work waits there
+            // [city9] A hand on its way: the work waits there, but not for ever. A cell no hand gets to (shut in, up a bank)
+            // held up every street of a town of ninety for days; after a minute it is passed over till the next time round.
+            if (r < 0 && !CityStreets.givenUp(id, cursor, now)) break;
+            if (r >= 0) CityStreets.reached(id);
             cursor++;
             if (r > 0) done++;
         }
@@ -83,7 +105,7 @@ public final class TownWork {
                     if (square || TownPlan.isStreet(x, z)) out.add(new int[]{ x, z });
                 }
             }
-            out.sort(Comparator.comparingInt(c -> Math.max(Math.abs(c[0]), Math.abs(c[1]))));
+            CityStreets.order(out);                // [city9] in walking order: the square, the avenues, the ring, the lanes
             return out;
         });
     }
@@ -101,8 +123,12 @@ public final class TownWork {
         // Not up a hill or down a hole from the heart: those are somebody's to sort out by hand.
         if (Math.abs(top.getY() + 1 - v.centre().getY()) > 10) return 0;
         boolean square = TownPlan.isSquare(dx, dz);
+        if (square && CityGreen.bed(dx, dz)) return 0;                     // [city9] the square's greens are turf, not paving
         boolean avenue = !square && (Math.abs(dx) <= TownPlan.AVENUE || Math.abs(dz) <= TownPlan.AVENUE
             || ring(dx, dz));
+        // [city9] A side street is laid as the town comes to it: within a block of a building standing or going up (CityPlan),
+        // not as a grid of paths out over the empty meadow. The avenues and the ring street are the town's from the first.
+        if (!square && !avenue && !CityPlan.served(v, dx, dz, level.getGameTime())) return 0;
         boolean stoneAge = age.ordinal() >= Villages.Age.STONE.ordinal();
         boolean ironAge = age.ordinal() >= Villages.Age.IRON.ordinal();
         // A lamp post along the avenues and round the ring street.
@@ -114,7 +140,7 @@ public final class TownWork {
             // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
             if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
             if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2), top.above(3))) return 0;   // [integrity]
-            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
+            if (!TownJobs.atWork(level, v, "paving", top.above(), "putting up a lamp post")) return -1;   // [city9] the hand laying the street
             net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
             if (light == null) light = Masonry.light(level, v);
             if (light == null) return 0;
@@ -141,7 +167,7 @@ public final class TownWork {
                 && !level.getBlockState(top.above(2)).isSolid()) {
             if (Market.stock(level, v.id(), s -> s.is(Items.TORCH) || s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0) return 0;
             if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2))) return 0;              // [integrity]
-            if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a street light")) return -1;
+            if (!TownJobs.atWork(level, v, "paving", top.above(), "putting up a street light")) return -1;   // [city9]
             if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
                 if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return 0;
                 if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS), 1)
@@ -160,28 +186,8 @@ public final class TownWork {
             level.setBlockAndUpdate(top.above(2), Blocks.TORCH.defaultBlockState());
             return 1;
         }
-        if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return 0;
-        if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
-        if (!TownBlocks.mayPlace(level, v, top, TownBlocks.Why.ROAD)) return 0;                                    // [integrity] not a building's floor
-        BlockState paving = null;
-        if (square && stoneAge) {
-            Predicate<ItemStack> stone = ironAge ? s -> s.is(Items.STONE_BRICKS) : s -> s.is(Items.COBBLESTONE);
-            if (take(level, v, stone, 1)) paving = ironAge ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
-            else if (ironAge && take(level, v, s -> s.is(Items.COBBLESTONE), 1)) paving = Blocks.COBBLESTONE.defaultBlockState();
-        } else if (avenue && ironAge) {
-            if (take(level, v, s -> s.is(Items.COBBLESTONE), 1)) paving = Blocks.COBBLESTONE.defaultBlockState();
-        }
-        if (paving == null) {
-            if (ground.is(Blocks.DIRT_PATH)) return 0;
-            paving = Blocks.DIRT_PATH.defaultBlockState();
-        }
-        if (!TownJobs.atWork(level, v, "streets", top, paving.is(Blocks.DIRT_PATH) ? "laying the streets" : "paving the streets")) {
-            if (!paving.is(Blocks.DIRT_PATH)) give(level, v, new ItemStack(paving.getBlock().asItem()));   // the stone back, till a hand is there
-            return -1;
-        }
-        if (!above.isAir()) level.removeBlock(top.above(), false);   // the grass and flowers in the way
-        level.setBlockAndUpdate(top, paving);
-        return 1;
+        // [city9] Worn or paved in what the age lays (a path, gravel, cobbles, stone bricks), never at the builders' cost (CityStreets).
+        return CityStreets.pave(level, v, top, ground, above, square, avenue, age);
     }
 
     /**

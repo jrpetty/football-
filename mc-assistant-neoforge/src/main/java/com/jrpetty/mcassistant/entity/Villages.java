@@ -506,6 +506,11 @@ public final class Villages {
         ShopsHomes.resetAllForTests();                              // [shops-homes] counters, queues, lists, trips, homes' and workshops' stores
         Dining.resetForTests();                                     // [dining] the orders, the hands at work, the diners, the wash
         Palettes.resetForTests();
+        CityPlan.resetForTests();                                   // [city9] the walked streets
+        CityGreen.resetForTests();                                  // [city9] the square's greens
+        CityWater.resetForTests();                                  // [city9] the water swept
+        CityDress.resetForTests();                                  // [city9] the houses dressed
+        CityStreets.resetForTests();                                // [city9] the paving's waits
         Court.resetForTests();
         School.resetForTests();
         Annals.resetForTests();
@@ -3031,6 +3036,7 @@ public final class Villages {
                 if (project.equals("townhall")) places.add(0, seat);
             }
             int[] court = courtRect(villageId);
+            boolean offWalk = false;                                    // [city9] a lot passed over for its street (CityPlan)
             for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : places) {
                 if (valid >= 6) break;
                 index++;
@@ -3060,6 +3066,9 @@ public final class Villages {
                 // of chunks round a new village comes in over its first minute, and every lot
                 // looked at before that used to be written off for good.
                 if (!lotLoaded(level, x, z, hx, hz)) { waiting = true; continue; }
+                // [city9] Only where the street before its door is walked from the heart (CityPlan): never a lot over the
+                // water or up a cliff from the town, until a few looks have found nothing else (an island town).
+                if (!CityPlan.hungry(villageId) && !CityPlan.reaches(level, v, lot)) { offWalk = true; continue; }
                 // The great buildings (the hall above all: no Iron Age without one) want the most
                 // ground of anything, and on a mountainside found none flat to six blocks across
                 // twenty: a town of fifty-eight sat in the Stone Age for want of one. Missed on
@@ -3080,6 +3089,7 @@ public final class Villages {
                     site = new Site(ground, back, 0);
                 }
             }
+            CityPlan.looked(villageId, site != null, offWalk && !waiting);     // [city9]
             if (site != null) {
                 for (long cell : best.cells()) taken.add(cell);
             } else if (!waiting && free > 0) {

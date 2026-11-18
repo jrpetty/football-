@@ -13895,3 +13895,100 @@ What a town does now (entity/MineWorks, entity/MineDemand, entity/goal/WorksGoal
   works there (and who was sent for it). The status line adds "the works: the shaft to Y.., N of M levels open, K
   drifts". The city books' Caves page shows the same under "The mine". The last few things done in the works close
   the report ("Lately: Cotter: cutting a branch on the coal level: 6 of 6 cells").
+
+## A town that reads as a place: streets that are walked, blocks turned, greens and plots (city-9)
+
+[city9] A town is laid out to its plan (the square, the ring street, the avenues, the grid of streets and lots: *The
+town*), and its plan was drawn on paper: a perfect grid, every block of homes facing the same way in each quarter, every
+house fenced in the same box, a bare stone square, and lots taken wherever the arithmetic put them, a lake or a cliff
+between them and the town or not. Five changes make it read as a place that grew, still in order:
+
+- **Lots only on streets the town walks** (CityPlan). The plan's streets and the square are walked from the heart the way
+  a folk walks them: a block up (two where a step can be cut into the bank), three down, never into water (a bridge or a
+  causeway the town lays carries its street on), through a gate or a wooden door, an arch over a gate or a lamp's post
+  no bar. A building is offered a lot (Villages.siteFor, and a household's own
+  house in the housing market) only if the street before its door is reached that way, so no house goes up on the far
+  bank of a lake or the top of a cliff a street's length from the town. A town with nothing else left (an island, a
+  mountain top) takes one of the rest after twelve looks in a row that found nothing, and is particular again after it. Walked afresh every two minutes at most, and
+  only while a building is being sited (a few thousand columns, never on a folk's tick).
+- **Blocks turned here and there** (TownPlan). Every lot of a block touches a street on two sides. About two blocks of
+  homes in five (never the first ring round the square) are turned to their cross street, their four houses still back
+  to back in two pairs, so the roofs and the fronts along a street are not all one way. A lot keeps its way round from
+  one look to the next (the scatter is fixed); a building that stands keeps the way it was built.
+- **Side streets laid as the town comes to them** (TownWork, CityPlan.served). The avenues and the ring street are worn
+  and paved from the first; a side street's cell only once a building stands or is going up within a block of it (a lot
+  and a street and a lot), so a young town is not a grid of paths over the empty meadow, and its streets reach out a
+  block ahead of its houses.
+- **Greens on the square** (CityGreen). Once the town is settled and paving its square (the Stone Age), a hand at its
+  works lays a bed of turf three by three in each corner of the square (the paving lifted back into the stores, the
+  turf out of the stores' earth), plants an oak, a birch or a cherry in the middle (a tree whose crown stands up out of
+  folk's way: never a spruce or a dark oak) and a flower from the stores at each corner of the bed, one thing a visit.
+  Never in the courtyard before the board or where anything stands; only what the stores can spare (the saplings the
+  households' gardens and the avenues keep come first). A grown tree's leaves lower than three blocks over the square
+  are trimmed off, what they drop into the stores; the tree is never felled. The streets' paving leaves the beds alone.
+  `/village townlook` says how many of the four are planted.
+- **Each plot closed in its own way** (CityPlots, in Grow.garden). A house's garden used to be a fence all round and a
+  gate for every house, and two fences side by side between neighbours. Now each plot is settled once, by where it
+  stands: a fence with a gate (about two in five), a low wall of the stores' cobblestone (stone bricks from the Iron
+  Age) with a gap for the path (one in four), or left open to the street with a row of flowers along its front (the
+  rest). Where the neighbour's fence or wall already stands along a side, that side is left to it. The first house still
+  without its garden has it seen to on every round of the houses (in the Iron Age the round used to stop at the first
+  house still to be raised a storey, and the gardens past it waited for days).
+
+- **Streets that get laid** (CityStreets, TownWork, TownJobs). A town of ninety had not a yard of street after four
+  days: the streets' work went over its cells nearest the heart first, a whole ring at one distance after another, so its
+  hand crossed the town for every block; the one hand was shared with the doors' ways and lamps, which took it from door
+  to door; it was one hand in eight among a dozen works; and one cell it could not get to (shut in by the camp, up a
+  bank) held up every street behind it for good. Now the cells go in walking order (the square round, each avenue from
+  its gate outward, the ring street round, then the lanes one after another along their length, nearest first, each once
+  the town has come to it), so a hand lays a run where it stands; the streets have their own round every three seconds
+  once the town is settled (the rest of the town's works keep their quarter of a minute); the paving has its own hand,
+  which with the doors' ways' is on top of the town's one hand in eight and not counted against the other works' (never
+  a post's holder, the wheelwright or the planner, whose stints would wait on it); the street lamps go up by the hand
+  laying the street; no street is laid within three blocks of a building going up (its builders ease the ground round
+  it first); and a cell no hand reaches in a minute is passed over till the next time round. The surface
+  goes by the age: a path; gravel on the avenues and the ring from the Stone Age; cobbles there and gravel in the lanes
+  from the Iron Age; stone bricks on the avenues and the ring from the Diamond Age (the square cobbled, then in stone
+  bricks, as before). A cell is only laid again in something better (what comes up goes back to the stores), and the
+  stone only while the stores keep a builder's load of it besides; short of it, the next best, at worst a path.
+- **Water that stays put** (CityWater). The town's own water used to run where it liked: a town of the hills had its
+  allotments on a slope with the channel down their back over thin air, and the bucket poured into it every day ran
+  down the hillside between the houses. Now water goes in only where it will stay (firm under it, and firm, farmland,
+  water or its own basin on every side): the allotments' channel is first lined from the stores' cobblestone (bed and
+  open sides) and waits without stone; a building's own water (a fountain's spring may run into its own bowl) and a
+  farmer's water hole likewise. On the town's rounds, one building a visit, water in a building's water cells that would
+  not stay is taken up, so an older town's stream dries up ("the water running off the allotments was stopped").
+- **Each house its own** (CityDress). The houses go up to one drawing from one stock of wood. Once one stands the
+  town's hands (the gardens' hand) dress it once, by where it stands (and the same way again once it has its second
+  storey and its new roof): its roof kept, laid
+  again in another of the town's roofing woods (its look's list) that the stores have to spare, or in stone, the slate
+  look (cobblestone, stone bricks from the Iron Age); and its posts and beams kept, stripped to the bare wood, or in a
+  dark timber; two neighbours are seldom alike. Paid in planks or stone (a stair a block and a half, a slab half) and
+  logs of the wood, only while the stores keep a builder's load besides; what comes off goes back. Never a
+  player's house, a household's own, the founders' first, or one going up a storey; noted in the town's books once
+  done.
+
+Nothing that stands is moved or pulled down: the rules apply to new lots, new gardens and streets not yet laid; an older
+town's square gets its greens on the next rounds (only its open paving is lifted), its streets are laid where they are
+still earth, and its houses are dressed one a visit.
+
+**Measured** (CityLookGameTests ct01: a town of forty founded on a meadow cut by a channel of water three wide down the
+first street east of the square, and one on rolling hills, grown three days with a building put up through the plan
+every minute and a quarter, its own hands laying its streets, gardens and greens; the same test on the build before).
+Before: by the water 7 of 39 buildings stood on lots across the channel from the town (the smeltery, the workshop, the
+smithy, the inn and three houses), no block of homes turned, no green on the square. After: 0 of 36 across the water
+(the town grew on its own side), 8 of 20 homes turned to their cross street (8 of 24 on the hills), 2 of the square's
+greens planted in the three days, more plots closed in (fence, wall: 3 and 1 by the water, 5 and 2 on the hills, against
+3 and 0, 2 and 0). Unchanged: no works in the heart, no buildings off the streets on the hills. The streets (the same
+audit, the streets' cells within the town's reach laid by the third day): before 108 by the water and 259 on the hills
+(one or two in a hundred of them); after 1,527 and 1,916 (about a third: the avenues, the ring, the square and the lanes
+the town has come to). The trace (ct07, a town of sixteen in the Iron Age, half a day): 96 cells laid before, 573 after.
+The works stood by houses about as before (2 of 4, 1 of 3: the craft quarter's lots border the homes'), no farmland
+within a lot of a house, and no flowing water on the town's ground in either.
+
+Tests: CityLookGameTests ct01 (the audit, not required), ct02 (a lot over the water is not on the streets; over a bridge
+it is), ct03 (the square's greens laid out of the stores, none in the courtyard and no spruce; the low leaves trimmed,
+the crown kept), ct04 (a fence and gate, a low wall and an open plot; two fenced neighbours share their side, no fence
+doubled), ct05 (no water into a channel over nothing; lined, then watered; water running off taken up), ct06 (houses
+of one drawing dressed each their own, once), ct07 (not required: a trace of the streets laid by hand); TownPlanTest (some blocks turned, none by the square, every door on a
+street).

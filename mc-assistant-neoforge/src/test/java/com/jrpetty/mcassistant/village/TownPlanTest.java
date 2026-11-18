@@ -78,4 +78,22 @@ class TownPlanTest {
             }
         }
     }
+
+    @Test
+    @DisplayName("[city9] some blocks of homes are turned to their cross street, the rest face the main one, and never by the square")
+    void someBlocksAreTurned() {
+        int homes = 0, turned = 0;
+        for (TownPlan.Lot l : ordinary()) {
+            if (!l.use().equals("home")) continue;
+            homes++;
+            boolean alongX = Math.abs(l.x()) > Math.abs(l.z());
+            boolean facesX = l.back() == TownPlan.EAST || l.back() == TownPlan.WEST;
+            if (alongX != facesX) {
+                turned++;
+                assertTrue(l.distance() > TownPlan.RING + TownPlan.PERIOD - 2 || Math.min(Math.abs(l.x()), Math.abs(l.z())) > TownPlan.RING + TownPlan.STREET,
+                    "a block by the square is turned: " + l.x() + "," + l.z());
+            }
+        }
+        assertTrue(turned * 5 >= homes && turned * 2 <= homes, turned + " of " + homes + " home lots turned");
+    }
 }

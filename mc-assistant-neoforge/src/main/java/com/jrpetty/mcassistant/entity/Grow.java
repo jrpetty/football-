@@ -208,6 +208,16 @@ public final class Grow {
         if (age.ordinal() < Villages.Age.STONE.ordinal()) return 0;
         if (TownBudget.frugal(id)) return 0;                               // [capital] careful of its money: its gardens and makeovers wait
         int done = 0;
+        // [city9] The first house still without its garden has it seen to each round, before any storey goes up: in the
+        // Iron Age the round stopped at the first house still to be raised, and the gardens past it waited for days.
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b)) continue;
+            Set<Long> gardened = GARDENED.get(id);
+            if (gardened != null && gardened.contains(b.anchor().asLong())) continue;
+            done += garden(level, v, b, false);
+            break;
+        }
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
             if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: not the council's to rebuild or raise
@@ -251,12 +261,25 @@ public final class Grow {
         int n = 0;
         boolean unpaid = false;
         List<BlockPos> fences = new ArrayList<>();
+        // [city9] Each plot closed in its own way (CityPlots): a fence, a low wall of stone, or left open.
+        CityPlots.Edge edge = free ? CityPlots.Edge.FENCE : CityPlots.edge(b);
         ring:
         for (int a = -5; a <= 5; a++) {
             for (int c = -5; c <= 5; c++) {
                 if (Math.max(Math.abs(a), Math.abs(c)) != 5) continue;
+                if (edge == CityPlots.Edge.OPEN) break ring;                                   // [city9] no edge at all
                 BlockPos at = b.anchor().relative(right, a).relative(back, c).atY(y);
                 if (!plot(level, village, b, at)) continue;
+                if (!free && !(c == -5 && Math.abs(a) <= 1) && CityPlots.shared(level, at, b.anchor())) continue;   // [city9] the neighbour's edge
+                if (c == -5 && a == 0 && edge == CityPlots.Edge.WALL) continue;                 // [city9] a gap in a wall for the path
+                if (edge == CityPlots.Edge.WALL && !(c == -5 && Math.abs(a) == 1)) {             // [city9] a low wall of the stores' stone
+                    Block w = CityPlots.wall(level, v);
+                    if (w == null) { unpaid = true; break ring; }
+                    level.setBlock(at, w.defaultBlockState(), 3);
+                    fences.add(at);
+                    n++;
+                    continue;
+                }
                 if (c == -5 && a == 0) {
                     if (!free && !Crafts.wooden(level, v, Grow::isGate, 4)) { unpaid = true; break ring; }
                     level.setBlock(at, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, front), 3);
@@ -278,7 +301,9 @@ public final class Grow {
         int[][] beds = { { -3, -4 }, { -2, -4 }, { 2, -4 }, { 3, -4 }, { -4, -4 }, { 4, -4 } };
         for (int[] p : beds) {
             if (unpaid) break;
-            BlockPos at = b.anchor().relative(right, p[0]).relative(back, p[1]).atY(y);
+            // [city9] An open plot's flowers along its front by the street, where a fence would stand (the row before the
+            // house is its own ground, and the gate keeps flowers off it).
+            BlockPos at = b.anchor().relative(right, p[0]).relative(back, edge == CityPlots.Edge.OPEN ? -5 : p[1]).atY(y);
             if (!plot(level, village, b, at)) continue;
             boolean azalea = Math.abs(p[0]) == 4;
             BlockState plant;
