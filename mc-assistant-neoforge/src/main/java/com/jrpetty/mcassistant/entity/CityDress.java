@@ -64,6 +64,19 @@ public final class CityDress {
         return h;
     }
 
+    /** The board's line: how many of the town's houses are dressed, kept as built, or waiting (and why, the first). */
+    public static String line(UUID id) {
+        int dressed = 0, kept = 0, waiting = 0;
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (!house(b.structure())) continue;
+            String n = Ledger.note(id, noteKey(b));
+            if (n == null) waiting++;
+            else if (n.equals("kept")) kept++;
+            else dressed++;
+        }
+        return dressed + " dressed, " + kept + " kept as built, " + waiting + " to see to";
+    }
+
     /** Which roof this house has: 0 as built, 1 another of the town's roofing woods, 2 stone. */
     public static int roofChoice(BlockPos anchor) {
         return (int) Math.floorMod(mix(anchor, 0x51ED), 3L);

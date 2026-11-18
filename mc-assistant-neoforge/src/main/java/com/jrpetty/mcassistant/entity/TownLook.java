@@ -73,6 +73,7 @@ public final class TownLook {
         if (Raids.underAlarm(v.id()) || !level.isLoaded(v.centre())) return;
         Avenues.tick(level, v);
         CityGreen.tick(level, v);                     // [city9] the greens in the square's corners
+        CityDress.tick(level, v);                     // [city9] each house its own roof and timbers, out of the town's woods
         StreetFurniture.tick(level, v);
         Orchard.tick(level, v);
         Allotments.tick(level, v);
@@ -358,6 +359,8 @@ public final class TownLook {
         sb.append(" | avenues: ").append(Avenues.line(level, v));
         sb.append(" | furniture: ").append(StreetFurniture.line(level, v));
         sb.append(" | the square's greens: ").append(CityGreen.trees(level, v)).append(" of 4 planted");   // [city9]
+        sb.append(" | houses dressed: ").append(CityDress.line(v.id()));                                   // [city9]
+        sb.append(" | streets: ").append(CityStreets.state(v.id()));                                         // [city9]
         sb.append(" | allotments: ").append(Allotments.line(level, v));
         sb.append(" | orchard: ").append(Orchard.line(level, v));
         sb.append(" | windmill: ").append(Windmill.line(level, v));
