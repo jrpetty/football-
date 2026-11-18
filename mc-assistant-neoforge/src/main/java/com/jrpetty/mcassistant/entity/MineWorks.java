@@ -620,6 +620,8 @@ public final class MineWorks {
         BlockPos r = roomMiddle(w, l);
         List<Direction> ways = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
         java.util.Collections.rotate(ways, Math.floorMod(me.hashCode(), 4));          // each its own way first
+        Direction pinned = PIN.get(w.village);
+        if (pinned != null) { ways.remove(pinned); ways.add(0, pinned); }
         for (Direction d : ways) {
             int ox = r.getX() + 2 * d.getStepX(), oz = r.getZ() + 2 * d.getStepZ();
             boolean taken = false;
@@ -771,6 +773,12 @@ public final class MineWorks {
             d.blocked = false;
             save(w);
             return null;
+        }
+        // On a dog-leg whose way back is the edge of the ground: the dog-leg becomes the drift's way (a bend), and it is
+        // driven on in long runs again, not a block at a time.
+        if (way == dir && !onHeading && !fitsAhead(level, w, tip, head, 3) && d.bends < 2) {
+            d.heading = dir.get2DDataValue();
+            d.bends++;
         }
         if (way != dir) {
             d.turns++;
@@ -1605,6 +1613,13 @@ public final class MineWorks {
 
     // ------------------------------------------------------------------ tests
 
+    /** Tests: the way a new drift is started first, by village. */
+    private static final Map<UUID, Direction> PIN = new ConcurrentHashMap<>();
+
+    public static void pinForTests(UUID village, @Nullable Direction d) {
+        if (d == null) PIN.remove(village); else PIN.put(village, d);
+    }
+
     /** Tests: branches cut by a miner in another's drift. */
     public static volatile int JOINS;
 
@@ -1722,6 +1737,14 @@ public final class MineWorks {
     public static int[] shaftForTests(ServerLevel level, UUID village) {
         Works w = works(level, village);
         return w == null ? new int[]{ -1, 0, 0, 0 } : new int[]{ w.sunk, w.top, w.sx, w.sz, w.head ? 1 : 0, w.rooms };
+    }
+
+    /** Tests: each drift's path, as its letters. */
+    public static List<String> pathsForTests(ServerLevel level, UUID village) {
+        Works w = works(level, village);
+        List<String> out = new ArrayList<>();
+        if (w != null) for (Drift d : w.drifts) out.add(d.id + ":" + d.path + (d.blocked ? " blocked " + d.why : "") + " closed " + d.closed);
+        return out;
     }
 
     /** Tests: a step's cells. */
