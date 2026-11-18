@@ -262,6 +262,11 @@ public final class FoundingPlan {
     public static final byte OUTSIDE = 0, LAND = 1, BUILT = 2, WATER = 3, LAVA = 4, BOARD = 5;
     /** And what it becomes in the plan: a pond to fill, water to leave be, ground round a building to leave be. */
     public static final byte FILL = 6, KEEP = 7, PROTECT = 8;
+    /** [terra10] A hole with something in it anybody could have made: left exactly as it is, and nothing held to it. */
+    public static final byte HOLE = 9;
+    /** [terra10] Who could have made what is built in a column (bits of {@link Ground#made}): the world, an old mine's
+     *  rails and webs, the boards and lights a mine has (only with its rails or webs), anybody. */
+    public static final byte MADE_WORLD = 1, MADE_MINE = 2, MADE_TIMBER = 4, MADE_ANYBODY = 8;
 
     /** Nothing to hold to (the spreads below start from here). */
     private static final int NONE_LOW = Integer.MIN_VALUE / 4, NONE_HIGH = Integer.MAX_VALUE / 4;
@@ -284,6 +289,8 @@ public final class FoundingPlan {
         public final int[] ground, fluid;
         /** [terra10] The top of what is built in a column read as built (MIN_VALUE in any other). */
         public final int[] cover;
+        /** [terra10] Who could have made what is built in a column, as MADE_* bits. */
+        public final byte[] made;
         public final byte[] kind;
         /** The height each column is to be, once planned. */
         public int[] target;
@@ -305,6 +312,8 @@ public final class FoundingPlan {
         /** [terra10] Columns built over at the foot of a hole (an old mine's boards in a ravine), filled over; columns of
          *  shallow water, and of water wholly in the square, filled; columns of lava covered. */
         public int buried, shallows, lava;
+        /** [terra10] Columns of holes left as they are for something in them anybody could have made. */
+        public int keptHoles;
 
         public Ground(int outer) {
             this.outer = outer;
@@ -314,6 +323,7 @@ public final class FoundingPlan {
             this.fluid = new int[n];
             this.kind = new byte[n];
             this.cover = new int[n];
+            this.made = new byte[n];
             Arrays.fill(fluid, Integer.MIN_VALUE);
             Arrays.fill(cover, Integer.MIN_VALUE);
         }
@@ -505,7 +515,7 @@ public final class FoundingPlan {
             byte k = g.kind[i];
             int dx = g.dx(i), dz = g.dz(i);
             double r = reach(dx, dz);
-            if (k == OUTSIDE || k == KEEP || k == PROTECT || r > g.outer) {
+            if (k == OUTSIDE || k == KEEP || k == PROTECT || k == HOLE || r > g.outer) {
                 g.target[i] = g.ground[i];
                 continue;
             }
@@ -564,7 +574,12 @@ public final class FoundingPlan {
      * land, the ground round it held to its height, a block for every block out, and the founding dug the town down
      * into a funnel to it: half the square of a dark-forest town cut down eighty blocks to a few boards in a ravine.
      * Where the top of what is built stands {@link #BURIED} or more below the land round it (the middle of the land's
-     * heights within five), it is down a hole, not on the land: the hole is filled over it, the fill resting on its top.
+     * heights within five), it is down a hole, not on the land. If everything built in the hole is the world's own (raw
+     * ore, the stone of lava meeting water, a cave's crystals, moss and sculk, an old mine's rails and webs and the
+     * timbers with them), the hole is filled over it, the fill resting on its top. If anything in it is what anybody
+     * could have made (a chest, a bed, a door, a torch, boards with no mine's rails, glass, anything a player is known
+     * to have set down), the hole is left exactly as it is, its every column, and nothing is held to it: the town is
+     * levelled to its rim, a walled pit, and never dug down to it.
      */
     static void buriedInHoles(Ground g) {
         int side = g.side;
@@ -580,12 +595,50 @@ public final class FoundingPlan {
             }
             if (m < 8) continue;
             Arrays.sort(near, 0, m);
-            if (g.cover[i] > near[m / 2] - BURIED) continue;
-            g.kind[i] = LAND;
-            g.ground[i] = g.cover[i];
-            g.buried++;
+            int floor = near[m / 2] - BURIED;
+            if (g.cover[i] > floor) continue;
+            // The whole hole: every column round it standing as low (what is built in it by its top, the rest by its ground).
+            java.util.List<Integer> hole = new java.util.ArrayList<>();
+            java.util.Set<Integer> seen = new java.util.HashSet<>();
+            ArrayDeque<Integer> q = new ArrayDeque<>();
+            q.add(i);
+            seen.add(i);
+            byte made = 0;
+            boolean tooBig = false;
+            while (!q.isEmpty()) {
+                int j = q.poll();
+                hole.add(j);
+                if (g.kind[j] == BUILT) made |= g.made[j];
+                if (hole.size() > MOST_HOLE) { tooBig = true; break; }
+                int xj = j % side, zj = j / side;
+                int[] nb = { xj > 0 ? j - 1 : -1, xj < side - 1 ? j + 1 : -1, zj > 0 ? j - side : -1, zj < side - 1 ? j + side : -1 };
+                for (int k : nb) {
+                    if (k < 0 || seen.contains(k)) continue;
+                    byte kk = g.kind[k];
+                    int top = kk == BUILT && g.cover[k] != Integer.MIN_VALUE ? g.cover[k] : g.ground[k];
+                    if ((kk != LAND && kk != BUILT) || top > floor) continue;
+                    seen.add(k);
+                    q.add(k);
+                }
+            }
+            if (tooBig) continue;                                     // a valley, not a hole: what is built in it is on the land
+            boolean world = (made & MADE_ANYBODY) == 0 && ((made & MADE_TIMBER) == 0 || (made & MADE_MINE) != 0);
+            for (int j : hole) {
+                if (world) {
+                    if (g.kind[j] != BUILT) continue;
+                    g.kind[j] = LAND;                                 // filled over, the fill resting on its top
+                    g.ground[j] = g.cover[j];
+                    g.buried++;
+                } else {
+                    g.kind[j] = HOLE;                                 // left as it is, walls and all; nothing held to it
+                    g.keptHoles++;
+                }
+            }
         }
     }
+
+    /** [terra10] The most columns a hole can be: anything wider is a valley. */
+    public static final int MOST_HOLE = 4096;
 
     /**
      * [terra10] The water in the square that is left as a hole in the town: a swamp's pools and a river's or a beach's

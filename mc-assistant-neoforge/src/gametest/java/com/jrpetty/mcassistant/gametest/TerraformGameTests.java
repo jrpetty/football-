@@ -412,4 +412,80 @@ public class TerraformGameTests {
             else helper.fail(expect.summary());
         });
     }
+
+    /** A pit {@code half} out from its middle and {@code deep} deep, its floor's height returned. */
+    private static int pit(ServerLevel level, int x, int z, int half, int deep) {
+        int top = Kit.surface(level, x, z).getY() - 1, floor = top - deep;
+        for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
+            for (int y = floor + 1; y <= top + 16; y++) level.setBlock(new BlockPos(x + dx, y, z + dz), Blocks.AIR.defaultBlockState(), 2);
+        }
+        return floor;
+    }
+
+    /**
+     * tf08: never filled over, never dug down to. A player's camp at the foot of a deep pit in the square (a chest, a
+     * bed and a door) is left as it is, the pit open over it, and the square levelled to its rim rather than cut down
+     * to it; a block of raw copper at the foot of another pit is the world's own, and that pit is filled over it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "tf08_player_pit")
+    public static void tf08_player_pit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Founding.resetForTests(level.getServer());
+        level.setDayTime(1000);
+        int cx = X0 + 4000 * ALL.length + 8000, cz = Z;
+        int radius = FoundingPlan.coreRadius(FOLK), half = radius + FoundingPlan.BAND_MAX + 14;
+        Kit.hold(level, cx, cz, half + 16);
+        Kit.prepare(level, cx, cz, half + 16);
+        lay(level, "forest", cx, cz, half);
+        int bx = cx + 18, bz = cz - 20, rx = cx - 20, rz = cz + 25;
+        int bFloor = pit(level, bx, bz, 3, 14), rFloor = pit(level, rx, rz, 2, 14);
+        BlockPos chest = new BlockPos(bx - 2, bFloor + 1, bz), bed = new BlockPos(bx, bFloor + 1, bz + 1), door = new BlockPos(bx + 2, bFloor + 1, bz);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        level.setBlock(bed, Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(bed.north(), Blocks.RED_BED.defaultBlockState().setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        level.setBlock(door, Blocks.OAK_DOOR.defaultBlockState(), 3);
+        level.setBlock(door.above(), Blocks.OAK_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
+        BlockPos copper = new BlockPos(rx, rFloor + 1, rz);
+        level.setBlock(copper, Blocks.RAW_COPPER_BLOCK.defaultBlockState(), 3);
+        BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.log("[VT] tf08 the camp's pit floor y=" + bFloor + ", the copper's y=" + rFloor + "; the heart " + heart.toShortString());
+        Founding.Outcome o = Founding.foundNow(level, heart, FOLK, 0F, null);
+        helper.assertTrue(o.ok(), "founded: " + o.message());
+        helper.onEachTick(() -> {
+            if (Founding.near(level, heart, 8)) return;
+            TerraformAudit.Done d = TerraformAudit.near(heart, 40);
+            if (d == null) { helper.fail("the founding left nothing to audit"); return; }
+            int lv = d.level();
+            Kit.Expect expect = new Kit.Expect();
+            expect.that(level.getBlockState(chest).is(Blocks.CHEST) && level.getBlockState(bed).is(Blocks.RED_BED)
+                && level.getBlockState(bed.north()).is(Blocks.RED_BED) && level.getBlockState(door).is(Blocks.OAK_DOOR)
+                && level.getBlockState(door.above()).is(Blocks.OAK_DOOR), "the camp at the foot of the pit is untouched");
+            int open = 0;
+            for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
+                for (int y = bFloor + 3; y <= lv; y++) if (level.getBlockState(new BlockPos(bx + dx, y, bz + dz)).isAir()) open++;
+            }
+            int cells = 49 * (lv - bFloor - 2);
+            Kit.log("[VT] tf08 the camp's pit: " + open + " of " + cells + " cells over it open; the level y=" + lv);
+            expect.that(open == cells, "the pit over the camp is left open: " + open + " of " + cells);
+            int dug = 0;
+            String where = "";
+            for (int dx = -9; dx <= 9; dx++) for (int dz = -9; dz <= 9; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) < 5) continue;   // the pit and a ring round it
+                int x = bx + dx, z = bz + dz;
+                if (!FoundingPlan.levelled(x - heart.getX(), z - heart.getZ(), d.radius(), d.seed())) continue;
+                int y = com.jrpetty.mcassistant.entity.Terraform.groundY(level, x, z);
+                if (y != lv && dug++ == 0) where = x + "," + z + " at y=" + y;
+            }
+            expect.that(dug == 0, "the square is level to the pit's rim, not dug down to it: " + dug + " off (" + where + ")");
+            int cy = com.jrpetty.mcassistant.entity.Terraform.groundY(level, rx, rz);
+            Kit.log("[VT] tf08 the copper's pit now at y=" + cy);
+            expect.that(cy == lv, "the pit with the world's raw copper in it is filled to the level: y=" + cy);
+            if (expect.clean()) helper.succeed();
+            else helper.fail(expect.summary());
+        });
+    }
 }

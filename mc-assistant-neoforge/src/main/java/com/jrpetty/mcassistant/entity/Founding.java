@@ -706,8 +706,8 @@ public final class Founding extends SavedData {
                 + " let out of the square), {} left round buildings; {} columns to the camp, from column {}",
             g.order.length, (System.nanoTime() - t0) / 1_000_000L, g.filledPonds, g.keptWater, g.drained, g.protectedColumns,
             g.campIndex, s.cursor);
-        LOG.info("[MCA-FOUND] [terra10] {} columns built over down holes, {} of shallow or enclosed water filled, {} of lava covered",
-            g.buried, g.shallows, g.lava);
+        LOG.info("[MCA-FOUND] [terra10] {} columns built over down holes, {} of holes left for what is in them, {} of shallow or"
+            + " enclosed water filled, {} of lava covered", g.buried, g.keptHoles, g.shallows, g.lava);
         s.phase = SHAPE;
     }
 

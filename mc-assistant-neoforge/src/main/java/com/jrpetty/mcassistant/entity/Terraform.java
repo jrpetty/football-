@@ -208,7 +208,10 @@ public final class Terraform {
                 g.fluid[i] = surface;
                 g.ground[i] = y;
                 g.kind[i] = earth(bed) || growth(bed) ? (lava ? FoundingPlan.LAVA : FoundingPlan.WATER) : FoundingPlan.BUILT;
-                if (g.kind[i] == FoundingPlan.BUILT) g.cover[i] = y;                 // [terra10]
+                if (g.kind[i] == FoundingPlan.BUILT) {                               // [terra10]
+                    g.cover[i] = y;
+                    g.made[i] |= madeBy(chunk, m.setY(y), bed);
+                }
                 tops[i] = topOf(bed);
                 return;
             }
@@ -222,6 +225,7 @@ public final class Terraform {
             // Water in somebody's pool, a path, a floor, a wall: built. The earth under it is still
             // looked for, so the ground round it is held to that height.
             if (!built) g.cover[i] = y;                                          // [terra10] the top of what is built
+            g.made[i] |= madeBy(chunk, m, s);                                    // [terra10] and who could have made it
             built = true;
             y--;
         }
@@ -229,6 +233,30 @@ public final class Terraform {
         g.ground[i] = y;
         g.kind[i] = built ? FoundingPlan.BUILT : FoundingPlan.OUTSIDE;
         tops[i] = 0;
+    }
+
+    /**
+     * [terra10] Who could have made a block that is not earth, plant or water (FoundingPlan.MADE_*): the world (raw
+     * ore, the stone of lava meeting water, a cave's crystals, moss and sculk), an old mine (rails and cobwebs, and the
+     * boards, fences and lights that go with them only where a mine's rails or webs are), or anybody (everything
+     * else, and any block the town knows a player set down: PlayerBlocks).
+     */
+    static byte madeBy(LevelChunk chunk, BlockPos pos, BlockState s) {
+        if (chunk.getLevel() instanceof ServerLevel sl && PlayerBlocks.placed(sl, pos)) return FoundingPlan.MADE_ANYBODY;
+        if (s.is(Blocks.RAIL) || s.is(Blocks.POWERED_RAIL) || s.is(Blocks.DETECTOR_RAIL) || s.is(Blocks.COBWEB)) return FoundingPlan.MADE_MINE;
+        if (s.is(BlockTags.PLANKS) || s.is(BlockTags.WOODEN_FENCES) || s.is(BlockTags.LOGS) || s.is(Blocks.TORCH)
+                || s.is(Blocks.WALL_TORCH) || s.is(Blocks.LANTERN) || s.is(Blocks.CHAIN)) return FoundingPlan.MADE_TIMBER;
+        if (s.is(Blocks.RAW_IRON_BLOCK) || s.is(Blocks.RAW_COPPER_BLOCK) || s.is(Blocks.RAW_GOLD_BLOCK)
+                || s.is(Blocks.COBBLESTONE) || s.is(Blocks.MOSSY_COBBLESTONE) || s.is(Blocks.COBBLED_DEEPSLATE)
+                || s.is(Blocks.OBSIDIAN) || s.is(Blocks.CRYING_OBSIDIAN) || s.is(Blocks.BASALT) || s.is(Blocks.BLACKSTONE)
+                || s.is(Blocks.INFESTED_STONE) || s.is(Blocks.INFESTED_DEEPSLATE) || s.is(Blocks.INFESTED_COBBLESTONE)
+                || s.is(Blocks.AMETHYST_BLOCK) || s.is(Blocks.BUDDING_AMETHYST) || s.is(Blocks.AMETHYST_CLUSTER)
+                || s.is(Blocks.LARGE_AMETHYST_BUD) || s.is(Blocks.MEDIUM_AMETHYST_BUD) || s.is(Blocks.SMALL_AMETHYST_BUD)
+                || s.is(Blocks.MOSS_BLOCK) || s.is(Blocks.SCULK) || s.is(Blocks.SCULK_VEIN) || s.is(Blocks.SCULK_SENSOR)
+                || s.is(Blocks.SCULK_SHRIEKER) || s.is(Blocks.SCULK_CATALYST) || s.is(Blocks.DRIPSTONE_BLOCK)
+                || s.is(Blocks.POINTED_DRIPSTONE) || s.is(Blocks.GLOW_LICHEN) || s.is(Blocks.ICE)
+                || s.is(net.neoforged.neoforge.common.Tags.Blocks.STONES)) return FoundingPlan.MADE_WORLD;
+        return FoundingPlan.MADE_ANYBODY;
     }
 
     /** The top of the earth here, looking through trees, plants, snow and anything set on it. Loaded ground only. */
