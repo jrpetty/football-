@@ -71,6 +71,7 @@ public final class CityStreets {
         if (have >= want) return 0;
         if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
         if (!TownBlocks.mayPlace(level, v, top, TownBlocks.Why.ROAD)) return 0;                // [integrity] not a building's floor
+        if (bySite(v, top)) return 0;              // a building going up beside it: its builders ease the ground round it first
         // The best the stores can spare, down to the next grade up from what lies there.
         int lay = -1;
         for (int g = want; g > have; g--) {
@@ -149,6 +150,27 @@ public final class CityStreets {
 
     static void beginRound() {
         STOCK.clear();
+        SITES.clear();
+        SITES_READ = false;
+    }
+
+    /** The sites going up (anchor x, z and reach), read once a round. */
+    private static final List<int[]> SITES = new java.util.ArrayList<>();
+    private static boolean SITES_READ;
+
+    /** Is this cell within three blocks of a building going up? (A park's ground is cut and banked round it in steps,
+     *  and a street laid there first was a built thing in the way of the spade.) */
+    static boolean bySite(Villages.Village v, BlockPos at) {
+        if (!SITES_READ) {
+            SITES_READ = true;
+            for (java.util.Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
+                if (e.getKey().equals("fortify")) continue;
+                int[] g = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(e.getKey());
+                SITES.add(new int[]{ e.getValue().anchor().getX(), e.getValue().anchor().getZ(), Math.max(g[0], g[1]) + 3 });
+            }
+        }
+        for (int[] s : SITES) if (Math.abs(at.getX() - s[0]) <= s[2] && Math.abs(at.getZ() - s[1]) <= s[2]) return true;
+        return false;
     }
 
     /** The cells (offsets from the heart) in walking order: the avenues outward, the ring, the square, the side streets. */

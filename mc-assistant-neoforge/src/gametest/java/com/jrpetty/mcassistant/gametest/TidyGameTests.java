@@ -406,7 +406,8 @@ public class TidyGameTests {
         UUID village = f.ownerId();
         Villages.Village v = Villages.get(village);
         // (Boards for the fence post the dropped torch is set on: with none, the post is made of one of the trunk's logs.)
-        stores(level, heart, 2, new ItemStack(Items.DIRT, 32), new ItemStack(Items.OAK_SAPLING, 2), new ItemStack(Items.OAK_PLANKS, 8));
+        // [city9] Planks enough for the street lights' posts (the streets' hand puts them up now), so the logs are the trunk's.
+        stores(level, heart, 2, new ItemStack(Items.DIRT, 32), new ItemStack(Items.OAK_SAPLING, 2), new ItemStack(Items.OAK_PLANKS, 32));
         java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
             what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
         int cobbleBefore = stock.applyAsInt(it -> it.is(Items.COBBLESTONE));
