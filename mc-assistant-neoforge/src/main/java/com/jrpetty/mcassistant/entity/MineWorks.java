@@ -100,6 +100,7 @@ public final class MineWorks {
         final List<int[]> branches = new ArrayList<>();   // {anchor, side (1 clockwise, -1), cut, done}
         char closed = '-';          // '-' open; e edge, w water, l lava, c cave, j into another tunnel, r rock, m made
         int bends, turns;
+        int parent, pAnchor, pSide;  // a cross-cut: the drift and the branch it was driven on from (0: from the landing)
         boolean blocked;            // its last face met something: it turns next
         char why = 'e';             // what it met
 
@@ -216,6 +217,7 @@ public final class MineWorks {
                 if (j > 0) sb.append('+');
                 sb.append(b[0]).append('/').append(b[1]).append('/').append(b[2]).append('/').append(b[3]);
             }
+            sb.append(':').append(d.parent).append('/').append(d.pAnchor).append('/').append(d.pSide);
         }
         w.raw = sb.toString();
         Ledger.note(w.village, NOTE, w.raw);
@@ -260,6 +262,12 @@ public final class MineWorks {
                             String[] n = b.split("/");
                             d.branches.add(new int[]{ Integer.parseInt(n[0]), Integer.parseInt(n[1]), Integer.parseInt(n[2]), Integer.parseInt(n[3]) });
                         }
+                    }
+                    if (f.length > 12 && !f[12].isEmpty()) {
+                        String[] n = f[12].split("/");
+                        d.parent = Integer.parseInt(n[0]);
+                        d.pAnchor = Integer.parseInt(n[1]);
+                        d.pSide = Integer.parseInt(n[2]);
                     }
                     w.drifts.add(d);
                 }
@@ -608,6 +616,33 @@ public final class MineWorks {
                 return t;
             }
         }
+        // The landing's walls all taken: a cross-cut driven on from the end of a branch, every fourth branch along a drift,
+        // so the level is laid out in panels (parallel drifts sixteen apart, their branches meeting between them).
+        for (Drift p : here) {
+            for (int[] b : p.branches) {
+                if (b[3] == 0 || b[2] < p.branchLen(b[0]) || b[0] % (4 * BRANCH_EVERY) != 0 || b[0] >= p.path.length()) continue;
+                Direction along = dirOf(p.path.charAt(b[0]));
+                Direction o = b[1] > 0 ? along.getClockWise() : along.getCounterClockWise();
+                BlockPos end = p.cell(b[0], l.y()).relative(o, b[2]);
+                boolean taken = false;
+                for (Drift x : here) if (x.ox == end.getX() && x.oz == end.getZ()) { taken = true; break; }
+                if (taken || !fitsAhead(level, w, end, o, 3)) continue;
+                Drift n = new Drift();
+                n.id = w.nextId++;
+                n.level = l.id();
+                n.by = me;
+                n.ox = end.getX();
+                n.oz = end.getZ();
+                n.heading = o.get2DDataValue();
+                n.parent = p.id;
+                n.pAnchor = b[0];
+                n.pSide = b[1];
+                w.drifts.add(n);
+                save(w);
+                Task t = faceTask(level, w, l, n, f, now);
+                if (t != null) return t;
+            }
+        }
         // Anybody's branches; then a drift whose miner is not at its face.
         for (Drift d : here) {
             Task t = branchTask(level, w, l, d, f, now);
@@ -807,6 +842,17 @@ public final class MineWorks {
         List<BlockPos> cells = d.cells(l.y());
         for (int i = Math.min(k, cells.size() - 1); i >= 0; i--) out.add(cells.get(i));
         out.add(new BlockPos(d.ox, l.y(), d.oz));
+        Drift p = d.parent == 0 ? null : drift(w, d.parent);
+        if (p != null && p != d && d.pAnchor < p.path.length()) {
+            // A cross-cut: back along the branch it was driven on from, to its parent drift, and that drift's way up.
+            BlockPos root = p.cell(d.pAnchor, l.y());
+            Direction along = dirOf(p.path.charAt(d.pAnchor));
+            Direction o = d.pSide > 0 ? along.getClockWise() : along.getCounterClockWise();
+            int len = Math.max(Math.abs(d.ox - root.getX()), Math.abs(d.oz - root.getZ()));
+            for (int j = len - 1; j >= 1; j--) out.add(root.relative(o, j));
+            out.addAll(driftUp(w, l, p, d.pAnchor));
+            return out;
+        }
         out.addAll(roomUp(w, l));
         return out;
     }
