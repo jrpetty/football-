@@ -255,6 +255,16 @@ public class WorksGoal extends Goal {
         if (d < best - 0.2) { best = d; stuck = 0; } else stuck++;
         if (stuck > 80) {
             stuck = 0;
+            if (d > 144) {                                   // a long way off on open ground: no way there it can find
+                walking = null;
+                if (phase == Phase.WALK || phase == Phase.OUT) { route = List.of(); ri = 0; }
+                if (phase == Phase.WALK) {
+                    if (task != null && a instanceof VillageFolkEntity f) MineWorks.release(f.ownerId(), task, a.getUUID());
+                    task = null;
+                    finish("Can't find my way to the pithead.");
+                }
+                return phase != Phase.CUT;
+            }
             if (open(dest)) {
                 a.getNavigation().stop();
                 a.teleportTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);

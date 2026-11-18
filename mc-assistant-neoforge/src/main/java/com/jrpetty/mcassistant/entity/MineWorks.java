@@ -699,7 +699,8 @@ public final class MineWorks {
         boolean onHeading = dir == head;
         int straight = d.path.length() == 0 ? 0 : d.straight();
         Direction way = dir;
-        boolean blocked = d.blocked || !fitsAhead(level, w, tip, dir, 1);
+        boolean edge = !fitsAhead(level, w, tip, dir, 1);
+        boolean blocked = d.blocked || edge;
         if (blocked) {
             way = turn(level, w, d, tip, dir, head, true);
         } else if (d.path.length() > 2 && (onHeading ? straight >= d.segLen() : straight >= d.jogLen())) {
@@ -714,7 +715,7 @@ public final class MineWorks {
         }
         if (way != dir) {
             d.turns++;
-            if (blocked && onHeading && way != head) {                  // bent away for good at the edge
+            if (edge && onHeading && way != head) {                     // bent away for good at the edge; round water, lava or a cave, a dog-leg
                 d.heading = way.get2DDataValue();
                 d.bends++;
             }
@@ -1347,8 +1348,8 @@ public final class MineWorks {
         }
         BlockPos at = approach(w);
         if (!below(f) && f.blockPosition().distSqr(at) > 16) {
-            int tries = WALKS.merge(f.getUUID(), 1, Integer::sum);
-            if (tries <= 8) {
+            int tries = f.getNavigation().isDone() ? WALKS.merge(f.getUUID(), 1, Integer::sum) : WALKS.getOrDefault(f.getUUID(), 0);
+            if (tries <= 30) {
                 if (f.getNavigation().isDone()) f.walkTo(at, 1.1D);
                 f.brain("walking to the pithead");
                 return true;
