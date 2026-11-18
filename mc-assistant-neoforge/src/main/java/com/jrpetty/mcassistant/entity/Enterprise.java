@@ -1036,6 +1036,7 @@ public final class Enterprise {
                 for (VillageFolkEntity p : partnersFor(id, founder, skilledHand)) {
                     if (raised >= startup) break;
                     int c = (int) Math.min(partnerMoney(p), (startup - raised + 99) / 100);
+                    if (c > p.purse()) FolkCredit.drawOut(id, p, c - p.purse());   // [capital] its savings at the club
                     if (c <= 0 || !p.spend(c)) continue;
                     raised += c * 100L;
                     partners.add(new Stake(Holder.FOLK, p.getUUID(), p.displayNameCap(), 0));
