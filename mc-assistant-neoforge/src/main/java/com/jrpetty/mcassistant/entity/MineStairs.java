@@ -368,7 +368,8 @@ public final class MineStairs extends SavedData {
             BELOW.remove(id);
             // [mine-safety] Its way up first in the queue, and another goal still with its legs (a deposit to
             // stores it cannot walk to): that one lets go, and the climb begins.
-            if (OUT.equals(j.arg()) && !f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)) f.interject(null);
+            if (OUT.equals(j.arg()) && !f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)
+                && !f.running(com.jrpetty.mcassistant.entity.goal.WorksGoal.class)) f.interject(null);   // [mine8] walking up out of the works
             return;
         }
         if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
