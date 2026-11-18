@@ -13787,7 +13787,11 @@ What a town does now (entity/TownDigs, marked `[mine7]`):
   blocks round the stairs, a beast in them, or a miner still works a plot round them ("the old mine stairs at x, z were
   filled in and turfed over"). Only its own: MineStairs now keeps which village's folk cut each staircase (saved with
   the world); an older world's unmarked stairs count as the town's only inside its plan. A player's dig, a natural cave,
-  another town's stairs and the mine's own stairs are never filled. A miner on a stray plot goes to a face of the mine.
+  another town's stairs and the mine's own stairs are never filled. Then the pits round each sealed staircase (the
+  galleries and terraces a miner cut from the same plot, open to the sky, nine blocks round the head) are filled up to
+  the ground at the head and turfed (no deeper than six from the top: below that bridged over), only over the ground the
+  world made, never water, a building or anything put down, never with anybody there. A miner on a stray plot goes to a
+  face of the mine.
 - **The mine looks like a mine**: each staircase of the town's mine gets a timber portal over its head (two posts of
   stripped spruce either side of the first step, a beam across, a lantern hung under it, the way down clear), once, on
   open ground only; and a path two blocks wide is trodden from the town's edge out to the mine's first face (grass and
