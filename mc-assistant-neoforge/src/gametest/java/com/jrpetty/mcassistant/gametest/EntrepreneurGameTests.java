@@ -1022,6 +1022,7 @@ public class EntrepreneurGameTests {
         MinecraftServer server = level.getServer();
         Kit.reset(level);
         MarketMaker.liveForTests(true);
+        Enterprise.autoForTests(true);                                     // [capital] the firms' scan on, whatever a short test left it at
         com.jrpetty.mcassistant.entity.IouBook.traceForTests(true);              // [econ-1d] each IOU's place in the code
         com.jrpetty.mcassistant.entity.CivicLand.liveForTests(true);             // [econ-1d] the council sits on the taxes, as in real play
         com.jrpetty.mcassistant.entity.SupplyTrace.traceForTests(true);           // [supply] where each ware comes from and goes, day by day

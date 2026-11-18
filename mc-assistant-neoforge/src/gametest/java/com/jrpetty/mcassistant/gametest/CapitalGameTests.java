@@ -172,6 +172,7 @@ public class CapitalGameTests {
         ok.that(coinNow(id) == c0, "the town's coin the same at the end (" + c0 + " -> " + coinNow(id) + "): no coin made");
         String card = FolkTalk.card(folk.get(1));
         ok.that(card.contains("savings club"), "the folk's card says what it has at the club");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -214,6 +215,7 @@ public class CapitalGameTests {
         ok.that(lent > 0 && drained > full, "with its vault lent out the rate goes up: " + full + " -> " + drained);
         ok.that(good.rateBp == full, "the firm borrowed at the day's rate: " + good.rateBp);
         ok.that(FolkCredit.depositBp(id) * 100 / drained >= 39, "its savers paid two fifths of the lending rate: " + FolkCredit.depositBp(id));
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -264,6 +266,7 @@ public class CapitalGameTests {
         for (Tag t : CapitalReport.report(level, id).getCompound("bourse").getList("wiped", Tag.TAG_COMPOUND)) wiped |= ((CompoundTag) t).getString("firm").equals(b.name);
         ok.that(wiped, "its shareholders wiped out after its creditors, on the bourse");
         ok.that(coinNow(id) == c0, "the town's coin the same through the bankruptcy (" + c0 + " -> " + coinNow(id) + ")");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -324,6 +327,7 @@ public class CapitalGameTests {
         ok.that(Bourse.profitShare(level, id, "firm:" + b.id, hand, day(level)), "the firm kept its hand with a share in its profits");
         ok.that(Bourse.sharesForTests(b, hand.getUUID()) == 200, "two shares out of the founder's stake: " + Bourse.sharesForTests(b, hand.getUUID()));
         ok.that(FolkTalk.card(saver).contains("shares"), "the saver's card has its shares");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -393,6 +397,7 @@ public class CapitalGameTests {
         String col = TownBonds.playerCollects(p, id);
         Kit.log("[VT] cap05 " + col);
         ok.that(coinNow(id) - c1 == CoinCensus.netFlowPence(id) - f1n, "collected, booked");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -459,6 +464,7 @@ public class CapitalGameTests {
         TownBonds.morningForTests(level, v, d0 + 28);
         Kit.log("[VT] cap06 after repayment: " + TownBonds.line(id));
         ok.that(TownBonds.outstanding(id) < before, "repaid when the treasury can spare it: " + Businesses.pence(before) + " -> " + Businesses.pence(TownBonds.outstanding(id)));
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -508,6 +514,7 @@ public class CapitalGameTests {
         ok.that(wrong.isEmpty(), "every dealing booked in the census: " + wrong);
         ok.that(Bourse.sharesForTests(b, p.getUUID()) == 200, "the player holds two shares after buying five and selling three: " + Bourse.sharesForTests(b, p.getUUID()));
         ok.that(TownBonds.heldBy(id, p.getUUID()) == 1000, "and ten coins of the town's bonds");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -545,6 +552,7 @@ public class CapitalGameTests {
         Kit.log("[VT] cap08 after:  " + after);
         ok.that(before.equals(after), "the capital the same after a save and a load");
         ok.that(b.loan > 0 && TownBonds.outstanding(id) > 0 && Bourse.sharesForTests(b, folk.get(2).getUUID()) == 400, "with something in each part to keep");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
@@ -574,6 +582,7 @@ public class CapitalGameTests {
         for (BoardPages.Section s : BoardPages.SECTIONS) if (s.name().equals("Economy")) for (String pg : s.pages()) inEconomy |= pg.equals("Capital");
         ok.that(inEconomy, "in the Economy section");
         ok.that(!CapitalBook.daysForTests(id).isEmpty(), "the day's figures written in the day book");
+        Enterprise.autoForTests(true);
         helper.assertTrue(ok.clean(), ok.summary());
         helper.succeed();
     }
