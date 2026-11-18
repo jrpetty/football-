@@ -251,12 +251,25 @@ public final class Grow {
         int n = 0;
         boolean unpaid = false;
         List<BlockPos> fences = new ArrayList<>();
+        // [city9] Each plot closed in its own way (CityPlots): a fence, a low wall of stone, or left open.
+        CityPlots.Edge edge = free ? CityPlots.Edge.FENCE : CityPlots.edge(b);
         ring:
         for (int a = -5; a <= 5; a++) {
             for (int c = -5; c <= 5; c++) {
                 if (Math.max(Math.abs(a), Math.abs(c)) != 5) continue;
+                if (edge == CityPlots.Edge.OPEN) break ring;                                   // [city9] no edge at all
                 BlockPos at = b.anchor().relative(right, a).relative(back, c).atY(y);
                 if (!plot(level, village, b, at)) continue;
+                if (!free && !(c == -5 && Math.abs(a) <= 1) && CityPlots.shared(level, at, b.anchor())) continue;   // [city9] the neighbour's edge
+                if (c == -5 && a == 0 && edge == CityPlots.Edge.WALL) continue;                 // [city9] a gap in a wall for the path
+                if (edge == CityPlots.Edge.WALL && !(c == -5 && Math.abs(a) == 1)) {             // [city9] a low wall of the stores' stone
+                    Block w = CityPlots.wall(level, v);
+                    if (w == null) { unpaid = true; break ring; }
+                    level.setBlock(at, w.defaultBlockState(), 3);
+                    fences.add(at);
+                    n++;
+                    continue;
+                }
                 if (c == -5 && a == 0) {
                     if (!free && !Crafts.wooden(level, v, Grow::isGate, 4)) { unpaid = true; break ring; }
                     level.setBlock(at, Blocks.OAK_FENCE_GATE.defaultBlockState().setValue(FenceGateBlock.FACING, front), 3);

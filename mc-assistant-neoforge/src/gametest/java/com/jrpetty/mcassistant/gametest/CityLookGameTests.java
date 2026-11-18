@@ -43,6 +43,8 @@ import java.util.UUID;
  *     square's greens, the avenues' lamps. Self-contained (it walks the streets itself), so it runs on an older build
  *     for the before and after.</li>
  * <li><b>ct02</b>: a lot over the water is not on the town's streets until a bridge carries its street over.</li>
+ * <li><b>ct04</b>: each plot closed in its own way (a fence and a gate, a low wall, or open), and two fenced neighbours
+ *     sharing the side between them, not standing two fences side by side.</li>
  * <li><b>ct03</b>: the square's four corners laid to turf with a tree and flowers out of the stores, never in the
  *     courtyard; a grown tree's low leaves over the square trimmed, its crown kept.</li>
  * </ul>
@@ -437,6 +439,94 @@ public class CityLookGameTests {
             }
             helper.succeed();
         });
+    }
+
+    // ============================================================ ct04: the plots' edges
+
+    @GameTest(template = "empty", timeoutTicks = 400, batch = "ct04_plot_edges")
+    public static void ct04_plot_edges(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int cx = 3940000, cz = Z;
+        VillageFolkEntity first = founder(helper, cx, cz);
+        UUID id = first.ownerId();
+        Villages.Village v = Villages.get(id);
+        int y = Kit.surface(level, cx, cz).getY();
+        // Houses on the plan's lots, side by side as they stand: two fenced neighbours, one walled and one open.
+        int[] pairs = { 22, 47, 72, -33, -58, -83 };                     // the nearer of two lots side by side (22 and 33, ...)
+        int[] bands = { -22, -33, -47, -58, -72, -83, 22, 33, 47, 58, 72, 83 };
+        List<BlockPos> row = new ArrayList<>();
+        BlockPos fenceA = null, fenceB = null, walled = null, open = null;
+        for (int bz : bands) {
+            for (int px : pairs) {
+                BlockPos a = new BlockPos(cx + px, y, cz + bz), b = a.offset(TownPlan.LOT, 0, 0);
+                row.add(a);
+                row.add(b);
+                if (fenceA == null && edgeAt(a) == com.jrpetty.mcassistant.entity.CityPlots.Edge.FENCE
+                        && edgeAt(b) == com.jrpetty.mcassistant.entity.CityPlots.Edge.FENCE) { fenceA = a; fenceB = b; }
+            }
+        }
+        for (BlockPos p : row) {
+            if (p.equals(fenceA) || p.equals(fenceB)) continue;
+            if (walled == null && edgeAt(p) == com.jrpetty.mcassistant.entity.CityPlots.Edge.WALL) walled = p;
+            if (open == null && edgeAt(p) == com.jrpetty.mcassistant.entity.CityPlots.Edge.OPEN) open = p;
+        }
+        helper.assertTrue(fenceA != null && walled != null && open != null, "a row with each kind of plot");
+        BlockPos chest = Kit.surface(level, cx + 3, cz - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        ZoneChests.mark(level, chest);
+        Container box = (Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.OAK_FENCE, 64));
+        box.setItem(1, new ItemStack(Items.OAK_FENCE_GATE, 8));
+        box.setItem(2, new ItemStack(Items.COBBLESTONE, 64));
+        box.setItem(3, new ItemStack(Items.POPPY, 64));
+        box.setItem(4, new ItemStack(Items.OAK_PLANKS, 64));
+        Villages.forgetStores(id);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        Map<BlockPos, Ledger.Building> houses = new java.util.LinkedHashMap<>();
+        try {
+            for (BlockPos p : new BlockPos[]{ fenceA, fenceB, walled, open }) {
+                BuildGoal.stamp(level, "house", p, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+                Ledger.built(id, "house", p, Direction.NORTH);
+                houses.put(p, new Ledger.Building("house", p, Direction.NORTH));
+            }
+            for (Ledger.Building b : houses.values()) com.jrpetty.mcassistant.entity.Grow.garden(level, v, b, false);
+        } finally {
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        }
+        int[] fa = edges(level, fenceA), fb = edges(level, fenceB), wa = edges(level, walled), op = edges(level, open);
+        Kit.log("[VT] ct04 fenced " + java.util.Arrays.toString(fa) + " " + java.util.Arrays.toString(fb) + ", walled " + java.util.Arrays.toString(wa)
+            + ", open " + java.util.Arrays.toString(op) + " (fences, gates, walls, flowers)");
+        helper.assertTrue(fa[0] >= 30 && fa[1] == 1, "a fence all round the first plot, a gate in front");
+        helper.assertTrue(fb[0] >= 20 && fb[0] <= fa[0] - 8 && fb[1] == 1, "the next fenced plot shares the side between them (" + fb[0] + " posts)");
+        // Between the two: one line of fence, not two.
+        int east = fenceA.getX() + 5;                                   // the first plot's side; the next plot's is a block on
+        int doubled = 0;
+        for (int dz = -4; dz <= 4; dz++) {
+            if (level.getBlockState(new BlockPos(east, y, fenceA.getZ() + dz)).is(BlockTags.FENCES)
+                    && level.getBlockState(new BlockPos(east + 1, y, fenceA.getZ() + dz)).is(BlockTags.FENCES)) doubled++;
+        }
+        helper.assertTrue(doubled == 0, "no fence doubled along the shared side (" + doubled + ")");
+        helper.assertTrue(wa[2] >= 30 && wa[0] == 0 && wa[1] == 0, "a low wall of the stores' stone round the walled plot, no gate");
+        helper.assertTrue(op[0] == 0 && op[2] == 0 && op[3] >= 2, "the open plot has no edge, only its flowers");
+        helper.succeed();
+    }
+
+    static com.jrpetty.mcassistant.entity.CityPlots.Edge edgeAt(BlockPos p) {
+        return com.jrpetty.mcassistant.entity.CityPlots.edge(new Ledger.Building("house", p, Direction.NORTH));
+    }
+
+    /** Round a house's plot (its ring five out, and the ring inside it for flowers): fences, gates, walls, flowers. */
+    static int[] edges(ServerLevel level, BlockPos a) {
+        int[] n = new int[4];
+        for (int dx = -5; dx <= 5; dx++) for (int dz = -5; dz <= 5; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) < 4) continue;
+            BlockState st = level.getBlockState(a.offset(dx, 0, dz));
+            if (st.is(BlockTags.FENCE_GATES)) n[1]++;
+            else if (st.is(BlockTags.FENCES)) n[0]++;
+            else if (st.is(BlockTags.WALLS)) n[2]++;
+            else if (st.is(BlockTags.SMALL_FLOWERS)) n[3]++;
+        }
+        return n;
     }
 
     // ------------------------------------------------------------------ the ground
