@@ -13852,8 +13852,36 @@ between them and the town or not. Five changes make it read as a place that grew
   without its garden has it seen to on every round of the houses (in the Iron Age the round used to stop at the first
   house still to be raised a storey, and the gardens past it waited for days).
 
+- **Streets that get laid** (CityStreets, TownWork, TownJobs). A town of ninety had not a yard of street after four
+  days: the streets' work went over its cells nearest the heart first, a whole ring at one distance after another, so its
+  hand crossed the town for every block; the one hand was shared with the doors' ways and lamps, which took it from door
+  to door; it was one hand in eight among a dozen works; and one cell it could not get to (shut in by the camp, up a
+  bank) held up every street behind it for good. Now the cells go in walking order (the square round, each avenue from
+  its gate outward, the ring street round, then the lanes one after another along their length, nearest first, each once
+  the town has come to it), so a hand lays a run where it stands; the paving has its own hand, which with the doors'
+  may be past the eighth; and a cell no hand reaches in a minute is passed over till the next time round. The surface
+  goes by the age: a path; gravel on the avenues and the ring from the Stone Age; cobbles there and gravel in the lanes
+  from the Iron Age; stone bricks on the avenues and the ring from the Diamond Age (the square cobbled, then in stone
+  bricks, as before). A cell is only laid again in something better (what comes up goes back to the stores), and the
+  stone only while the stores keep a builder's load of it besides; short of it, the next best, at worst a path.
+- **Water that stays put** (CityWater). The town's own water used to run where it liked: a town of the hills had its
+  allotments on a slope with the channel down their back over thin air, and the bucket poured into it every day ran
+  down the hillside between the houses. Now water goes in only where it will stay (firm under it, and firm, farmland,
+  water or its own basin on every side): the allotments' channel is first lined from the stores' cobblestone (bed and
+  open sides) and waits without stone; a building's own water (a fountain's spring may run into its own bowl) and a
+  farmer's water hole likewise. On the town's rounds, one building a visit, water in a building's water cells that would
+  not stay is taken up, so an older town's stream dries up ("the water running off the allotments was stopped").
+- **Each house its own** (CityDress). The houses go up to one drawing from one stock of wood. Once one stands (in the
+  Iron Age, once it has its second storey) the town's hands dress it once, by where it stands: its roof kept, or laid
+  again in the town's second or third roofing wood (its look's list), and its posts and beams kept, stripped to the bare
+  wood, or in a dark timber; two neighbours are seldom alike. Paid in planks (a stair a plank and a half, a slab half)
+  and logs of the wood, only while the stores keep a builder's load besides; what comes off goes back. Never a
+  player's house, a household's own, the founders' first, or one going up a storey; noted in the town's books once
+  done.
+
 Nothing that stands is moved or pulled down: the rules apply to new lots, new gardens and streets not yet laid; an older
-town's square gets its greens on the next rounds (only its open paving is lifted).
+town's square gets its greens on the next rounds (only its open paving is lifted), its streets are laid where they are
+still earth, and its houses are dressed one a visit.
 
 **Measured** (CityLookGameTests ct01: a town of forty founded on a meadow cut by a channel of water three wide down the
 first street east of the square, and one on rolling hills, grown three days with a building put up through the plan
@@ -13867,4 +13895,6 @@ greens planted in the three days, more plots closed in (fence, wall: 3 and 1 by 
 Tests: CityLookGameTests ct01 (the audit, not required), ct02 (a lot over the water is not on the streets; over a bridge
 it is), ct03 (the square's greens laid out of the stores, none in the courtyard and no spruce; the low leaves trimmed,
 the crown kept), ct04 (a fence and gate, a low wall and an open plot; two fenced neighbours share their side, no fence
-doubled); TownPlanTest (some blocks turned, none by the square, every door on a street).
+doubled), ct05 (no water into a channel over nothing; lined, then watered; water running off taken up), ct06 (houses
+of one drawing dressed each their own, once); TownPlanTest (some blocks turned, none by the square, every door on a
+street).
