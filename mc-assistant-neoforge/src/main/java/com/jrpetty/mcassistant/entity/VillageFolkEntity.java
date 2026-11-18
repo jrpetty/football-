@@ -3972,6 +3972,10 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** Can this hand do anything about that particular want? */
     private boolean takeOn(net.minecraft.server.level.ServerLevel server, Villages.Need need) {
+        // [mine8] A miner of the works brings the stone, the coal and the iron up from its shift (MineDemand sends it where
+        // the town is short); sent to cut them round the pithead it broke into the stair and fell down the works.
+        if ((need.task() == Villages.Task.STONE || need.task() == Villages.Task.COAL || need.task() == Villages.Task.IRON)
+                && stationTask() == StationTask.MINE && MineWorks.handles(this)) return false;
         switch (need.task()) {
             case COAL -> {
                 // Only where there is some: a gather job sent to a place with none

@@ -132,6 +132,9 @@ public final class TownDigs {
         UUID village = f.ownerId();
         BlockPos heart = f.villageCentre();
         if (village == null || heart == null) return true;
+        // [mine8] Nor in a mine's ground that has its works: the shaft, the landings and the drifts lie under it, and a hand
+        // after stone at the surface there broke into the stair and fell down the works.
+        if (MineWorks.keepsOff(level, p)) return false;
         return !inTownGround(level, village, heart, p, 0);
     }
 

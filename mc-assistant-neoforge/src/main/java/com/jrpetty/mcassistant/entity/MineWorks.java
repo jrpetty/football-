@@ -975,6 +975,13 @@ public final class MineWorks {
         return p.getY() < w.top - 2 && (TownMine.inMine(v, p) || Math.max(Math.abs(p.getX() - w.sx), Math.abs(p.getZ() - w.sz)) <= 80);
     }
 
+    /** [mine8] Is this column in the ground of a town's mine whose works are laid out (no hand cuts stone or earth there)? */
+    public static boolean keepsOff(ServerLevel level, BlockPos p) {
+        if (!MineGround.anyMeets(p.getX(), p.getZ(), p.getX(), p.getZ())) return false;
+        Villages.Village v = MineGround.villageAt(level, p);
+        return v == null || Ledger.note(v.id(), NOTE) != null;
+    }
+
     /** [mine-safety] Is this spot down in a town's works (MineSafety.dug)? */
     static boolean dug(ServerLevel level, UUID village, BlockPos p) {
         Works w = works(level, village);
