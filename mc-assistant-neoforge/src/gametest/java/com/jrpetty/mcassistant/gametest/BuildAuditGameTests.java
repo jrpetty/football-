@@ -408,7 +408,7 @@ public class BuildAuditGameTests {
         r.counts.put("buildings", buildings);
         // The audit everyone uses: what stands on the roads, half built, foreign things in doorways.
         TownAudit.Report ta = TownAudit.check(level, v);
-        r.counts.put("on_roads", ta.measure("blocks_on_roads"));
+        r.counts.put("on_roads", (int) ta.measure("blocks_on_roads"));
         r.counts.put("half_built", ta.count(TownAudit.HALF_BUILT));
         r.counts.put("doorway_foreign", ta.count(TownAudit.FOREIGN));
         // The wall: a cross-section with none of its three cells built from the walkway down to the ground is a gap.
