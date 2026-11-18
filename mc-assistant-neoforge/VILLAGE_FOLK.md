@@ -13892,11 +13892,16 @@ Before: by the water 7 of 39 buildings stood on lots across the channel from the
 smithy, the inn and three houses), no block of homes turned, no green on the square. After: 0 of 36 across the water
 (the town grew on its own side), 8 of 20 homes turned to their cross street (8 of 24 on the hills), 2 of the square's
 greens planted in the three days, more plots closed in (fence, wall: 3 and 1 by the water, 5 and 2 on the hills, against
-3 and 0, 2 and 0). Unchanged: no works in the heart, no buildings off the streets on the hills.
+3 and 0, 2 and 0). Unchanged: no works in the heart, no buildings off the streets on the hills. The streets (the same
+audit, the streets' cells within the town's reach laid by the third day): before 108 by the water and 259 on the hills
+(one or two in a hundred of them); after 1,802 and 1,933 (about a third: the avenues, the ring, the square and the lanes
+the town has come to). The trace (ct07, a town of sixteen in the Iron Age, half a day): 96 cells laid before, 573 after.
+The works stood by houses about as before (2 of 4, 1 of 3: the craft quarter's lots border the homes'), no farmland
+within a lot of a house, and no flowing water on the town's ground in either.
 
 Tests: CityLookGameTests ct01 (the audit, not required), ct02 (a lot over the water is not on the streets; over a bridge
 it is), ct03 (the square's greens laid out of the stores, none in the courtyard and no spruce; the low leaves trimmed,
 the crown kept), ct04 (a fence and gate, a low wall and an open plot; two fenced neighbours share their side, no fence
 doubled), ct05 (no water into a channel over nothing; lined, then watered; water running off taken up), ct06 (houses
-of one drawing dressed each their own, once); TownPlanTest (some blocks turned, none by the square, every door on a
+of one drawing dressed each their own, once), ct07 (not required: a trace of the streets laid by hand); TownPlanTest (some blocks turned, none by the square, every door on a
 street).
