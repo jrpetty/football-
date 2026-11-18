@@ -474,6 +474,9 @@ public final class Quarters {
         out.put("smoky", smoky);
         out.put("parkside", parkside);
         out.put("mines", mines);
+        ListTag mineGround = new ListTag();                         // [mine7] the mine's ground, set aside for it (MineGround)
+        for (int[] q : MineGround.rectsFrom(id, v.centre())) mineGround.add(new net.minecraft.nbt.IntArrayTag(q));
+        out.put("mineGround", mineGround);
         CompoundTag c = new CompoundTag();
         for (Map.Entry<District, Integer> e : counts.entrySet()) c.putInt(e.getKey().label, e.getValue());
         out.put("counts", c);

@@ -4940,6 +4940,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (Bonds.overBorder(town, heart, p, FIELD_MOST)) continue;           // that side of the border is theirs
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST) || buildingNear(town, p, FIELD_MOST + 4)) continue;
                 if (CastleWall.fieldKeptOff(town, f[0], f[1], FIELD_MOST)) continue;   // [defence] off the town wall's ring
+                if (MineGround.anyMeets(p.getX() - FIELD_MOST - 1, p.getZ() - FIELD_MOST - 1, p.getX() + FIELD_MOST + 1, p.getZ() + FIELD_MOST + 1)) continue;   // [mine7] the mine's ground
                 if (soilField(p) || farmable(p)) return p;
             }
             return null;
@@ -5087,7 +5088,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || Villages.outsideTown(town, heart, p, keep)
                && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius))
                && !Bonds.overBorder(town, heart, p, keep)                  // never over the line toward a neighbour
-               && !VanillaVillages.within(level(), p.getX(), p.getZ(), keep + VanillaVillages.MARGIN);   // [emerald] nor the villagers' ground
+               && !VanillaVillages.within(level(), p.getX(), p.getZ(), keep + VanillaVillages.MARGIN)   // [emerald] nor the villagers' ground
+               && (trade == StationTask.MINE || !MineGround.anyMeets(p.getX() - keep, p.getZ() - keep, p.getX() + keep, p.getZ() + keep));   // [mine7] nor a mine's ground
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));

@@ -2906,6 +2906,8 @@ public final class Villages {
         int hx = turned ? lot.halfDeep() : lot.halfAcross();
         int hz = turned ? lot.halfAcross() : lot.halfDeep();
         if (lot.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.SQUARE) return false;
+        // [mine7] The mine's ground, this town's or a neighbour's: set aside for the mine for good.
+        if (MineGround.anyMeets(heart.getX() + lot.x() - hx, heart.getZ() + lot.z() - hz, heart.getX() + lot.x() + hx, heart.getZ() + lot.z() + hz)) return true;
         if (onFarmland(villageId, lot.x(), lot.z(), hx, hz)) return true;
         if (Railways.crosses(villageId, heart.getX() + lot.x() - hx, heart.getZ() + lot.z() - hz,
                 heart.getX() + lot.x() + hx, heart.getZ() + lot.z() + hz)) return true;   // [transport] a railway runs there
@@ -3083,6 +3085,13 @@ public final class Villages {
             } else if (!waiting && free > 0) {
                 LAPS.merge(villageId, 1, Integer::sum);         // a whole look and nothing: less particular next time
             }
+        }
+        // [mine7] Nothing goes up on a mine's ground (a manor's land, a shed or an office by the water, out past the plan).
+        if (site != null && !project.equals("fortify")) {
+            int[] fh = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
+            int fr = Math.max(fh[0], fh[1]) + 1;
+            BlockPos a = site.anchor();
+            if (MineGround.anyMeets(a.getX() - fr, a.getZ() - fr, a.getX() + fr, a.getZ() + fr)) site = null;
         }
         if (site != null) pending.put(project, site);
         return site;

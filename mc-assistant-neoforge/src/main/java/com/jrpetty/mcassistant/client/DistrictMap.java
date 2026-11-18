@@ -47,6 +47,9 @@ final class DistrictMap {
         return 0xFF000000 | (r << 16) | (gr << 8) | b;
     }
 
+    /** [mine7] The mine's ground on the map: a dark earth brown. */
+    private static final int MINE_GROUND = 0xFF6B5136;
+
     private static final String[] KEY = { "Square", "Market", "Crafts", "Homes", "Fields", "Outskirts" };
 
     private static void small(GuiGraphics g, Font font, String s, int x, int y, int colour) {
@@ -83,7 +86,14 @@ final class DistrictMap {
             reach = Math.max(reach, Math.max(Math.abs(b.getInt("dx")) + b.getInt("hx"), Math.abs(b.getInt("dz")) + b.getInt("hz")) + 4);
         }
         reach = Math.min(reach, TownPlan.reach() + 12);
+        // [mine7] Out to the mine's ground too, near enough to draw (MineGround).
+        ListTag ground = d.getList("mineGround", Tag.TAG_INT_ARRAY);
+        for (int i = 0; i < ground.size(); i++) {
+            int[] q = ground.getIntArray(i);
+            if (q.length == 4) reach = Math.max(reach, Math.min(TownPlan.reach() + 90, Math.max(Math.max(Math.abs(q[0]), Math.abs(q[2])), Math.max(Math.abs(q[1]), Math.abs(q[3]))) + 2));
+        }
         float k = size / (2.0F * reach + 1.0F);
+        List<Component> mineTip = null;
         int ox = x, oy = y;
         int cx = ox + size / 2, cy = oy + size / 2;
         g.fill(ox, oy, ox + size, oy + size, 0xFFB4BDA7);                       // the ground
@@ -96,11 +106,19 @@ final class DistrictMap {
             box(g, cx, cy, k, size, ox, oy, lot.x() - half, lot.z() - half, lot.x() + half, lot.z() + half,
                 pale(colour(dist.label), dist == Districts.District.FIELDS ? 0.45F : 0.28F));
         }
+        // [mine7] The mine's ground, set aside for it: hatched in the mine's brown.
+        for (int i = 0; i < ground.size(); i++) {
+            int[] q = ground.getIntArray(i);
+            if (q.length != 4) continue;
+            int[] r = box(g, cx, cy, k, size, ox, oy, q[0], q[1], q[2], q[3], MINE_GROUND);
+            if (r != null && mx >= r[0] && mx < r[2] && my >= r[1] && my < r[3] && mineTip == null) mineTip = List.of(Component.literal("The mine's ground"),
+                Component.literal("Set aside for the town's mine alone: nothing is built on it"));
+        }
         // The square.
         box(g, cx, cy, k, size, ox, oy, -TownPlan.PLAZA + 1, -TownPlan.PLAZA + 1, TownPlan.PLAZA - 1, TownPlan.PLAZA - 1,
             pale(colour("Square"), 0.5F));
         // The buildings.
-        List<Component> tip = null;
+        List<Component> tip = mineTip;
         for (CompoundTag b : buildings) {
             if (!b.contains("dx")) continue;
             int bx = b.getInt("dx"), bz = b.getInt("dz"), hx = Math.max(1, b.getInt("hx")), hz = Math.max(1, b.getInt("hz"));
@@ -155,6 +173,11 @@ final class DistrictMap {
         ky += 9;
         g.fill(kx + 2, ky + 2, kx + 5, ky + 5, 0xFFE8A030);
         small(g, font, "at work", kx + 10, ky, Ui.MUTED);
+        if (!ground.isEmpty()) {                                                // [mine7]
+            ky += 9;
+            g.fill(kx, ky, kx + 7, ky + 7, MINE_GROUND);
+            small(g, font, "the mine's ground", kx + 10, ky, Ui.MUTED);
+        }
         ky += 12;
         for (String line : new String[]{ d.getString("plan"), d.getString("park") }) {
             for (FormattedCharSequence s : TextCache.split(font, line, (int) ((w - size - 8) / 0.75F))) {

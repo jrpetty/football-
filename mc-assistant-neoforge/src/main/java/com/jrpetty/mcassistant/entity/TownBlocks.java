@@ -245,6 +245,7 @@ public final class TownBlocks {
             long d = dx * dx + dz * dz;
             if (d < bestD) { bestD = d; best = v; }
         }
+        if (best == null) best = MineGround.villageAt(level, pos);   // [mine7] the mine's ground out past the plan is the town's
         return best;
     }
 
@@ -303,6 +304,9 @@ public final class TownBlocks {
     private static boolean allowed(Level level, Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos ownAnchor) {
         // A building's own work, on its own building: any of its cells, its doorways and stairs included.
         if (why.own() && ownAnchor != null && h.owner != null && h.owner.building.anchor().equals(ownAnchor)) return !("pen".equals(h.owner.building.structure()) && CastleWall.onWall(v.id(), v.centre(), pos));   // [defence] a pen's fence never back into the wall's line
+        // [mine7] The mine's ground: the mine's own work, the way to it, the ground work and nature; a building already there
+        // mended and furnished as it stands; nothing new (MineGround).
+        if (MineGround.reserved(v.id(), pos.getX(), pos.getZ()) && !MineGround.allows(why, h.owner != null)) return false;
         Zone z = h.zone;
         switch (z) {
             case OPEN -> { return !onWallRing(v, pos, why); }

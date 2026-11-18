@@ -72,6 +72,7 @@ public final class LandTitles {
         double growth = growth(id, day);
         // The houses.
         for (Homes.Home h : Homes.homes(id).values()) {
+            if (MineGround.reserved(id, h.anchor.getX(), h.anchor.getZ())) continue;   // [mine7] no title on the mine's ground
             String key = "house:" + h.anchor.asLong();
             seen.add(key);
             CompoundTag t = Accounts.sub(all, key);
@@ -90,6 +91,7 @@ public final class LandTitles {
         // The firms' premises and the homesteads.
         for (Business b : Businesses.all(id)) {
             if (b.mirror() || "storehouse".equals(b.id)) continue;
+            if (b.at != null && MineGround.reserved(id, b.at.getX(), b.at.getZ())) continue;   // [mine7] nor on the mine's ground
             boolean home = Privatisation.producerType(b.type);
             if (!home && !Enterprise.isFirm(b)) continue;
             String key = "firm:" + b.id;

@@ -34,11 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Now the town's ground is the ground it will grow over: its whole plan (the square and three rings of
  * lots) with a margin, its farmland, its buildings and lines wherever they stand, and the frontage of its
- * roads. No village dig is made in it: the mine is opened beyond it and its faces never come back into it;
- * a hand sent for earth or stone looks for it outside the town; a miner whose plot lies in it moves out to a
- * face of the mine, or waits for one. A mine from an older world that lies in it is moved out, and the town
- * fills and turfs the stairs it left in its ground, a staircase at a time (only its own: the stairs its
- * miners cut, kept in MineStairs). Out at the mine each staircase gets a timber portal with a lantern, and a
+ * roads. No village dig is made in it, save on the mine's own ground (MineGround: set aside for the mine for
+ * good when it is opened, beyond the plan; an older world's mine set aside as it stands): a hand sent for
+ * earth or stone looks for it outside the town; a miner whose plot lies in it moves to a face of the mine,
+ * or waits for one. The town fills and turfs the stray stairs it left in its ground off the mine's ground, a
+ * staircase at a time (only its own: the stairs its miners cut, kept in MineStairs). Out at the mine each staircase gets a timber portal with a lantern, and a
  * path is trodden from the town's edge to it.
  */
 public final class TownDigs {
@@ -85,6 +85,12 @@ public final class TownDigs {
      * of all of it.
      */
     public static boolean inTownGround(ServerLevel level, @Nullable UUID village, BlockPos heart, BlockPos p, int margin) {
+        if (MineGround.reserved(village, p.getX(), p.getZ())) return false;   // the mine's own ground: its digs are the mine's
+        return inTownGroundRaw(level, village, heart, p, margin);
+    }
+
+    /** The town's ground, the mine's ground or not (as the mine's ground is set aside: MineGround.reserve). */
+    public static boolean inTownGroundRaw(ServerLevel level, @Nullable UUID village, BlockPos heart, BlockPos p, int margin) {
         if (inPlan(village, heart, p, margin)) return true;
         if (village == null) return false;
         if (TownMine.underTheTown(TownMine.builtGround(village, heart, level.getGameTime()), p, MARGIN + margin)) return true;
@@ -125,7 +131,6 @@ public final class TownDigs {
         UUID village = f.ownerId();
         BlockPos heart = f.villageCentre();
         if (village == null || heart == null) return true;
-        if (TownMine.inMine(village, p) && !inPlan(village, heart, p, 0)) return true;
         return !inTownGround(level, village, heart, p, 0);
     }
 
@@ -157,6 +162,7 @@ public final class TownDigs {
         if (now - LAST.getOrDefault(id, -100000L) < EVERY && now >= LAST.getOrDefault(id, -100000L)) return;
         LAST.put(id, now);
         try {
+            MineGround.ensure(level, v);                                 // an older world's mine: its ground set aside as it stands
             seal(level, v, FILL_A_LOOK);
             portals(level, v);
             path(level, v, PATH_A_LOOK);
@@ -306,7 +312,7 @@ public final class TownDigs {
             List<BlockPos> steps = MineStairs.steps(level, key);
             if (steps.size() < 2) continue;
             BlockPos head = steps.get(0);
-            if (!TownMine.inMine(id, head) || !ours(level, id, heart, key, head) || inTownGround(level, id, heart, head, 0)) continue;
+            if (!MineGround.reserved(id, head.getX(), head.getZ()) || !ours(level, id, heart, key, head)) continue;
             if (!Land.areaLoaded(level, head, 3)) continue;
             if (portal(level, v, steps)) put++;
         }

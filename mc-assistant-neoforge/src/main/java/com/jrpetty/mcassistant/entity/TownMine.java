@@ -25,7 +25,8 @@ import java.util.function.Predicate;
  * square seventeen blocks wide). Each miner works a face of it; the faces lie side by side, so their stairs
  * and galleries run into one another and the ground is dug out between them, down and across. A face
  * worked out is marked so, and its miner takes the next free one, a ring further out and away from the town:
- * the mine spreads as it is dug. A face the town has grown into is left alone for good. How deep each face
+ * the mine spreads as it is dug. [mine7] The faces it may spread over are set aside for it when it is opened, for good
+ * (MineGround): the town plans round them, and the mine works them however the town grows round it. How deep each face
  * goes is the age's and the ore's question (VillageFolkEntity.seekTheSeam): the iron, the coal when the age
  * is short of it, the diamonds only when the age wants them.
  */
@@ -54,9 +55,12 @@ public final class TownMine {
     @Nullable
     public static BlockPos site(ServerLevel level, UUID village, BlockPos heart, Predicate<BlockPos> stony) {
         BlockPos kept = kept(village);
-        // [mine7] A mine of an older world in the town's ground (its whole plan: the town grows over it) is moved out;
-        // the town fills in the stairs it left there (TownDigs.seal).
-        if (kept != null && !TownDigs.inPlan(village, heart, kept, PITCH / 2)) return kept;
+        // [mine7] Kept for good, wherever the town grows (its ground set aside: MineGround); an older world's mine set aside
+        // as it stands.
+        if (kept != null) {
+            if (!MineGround.has(village)) MineGround.reserve(level, village, heart, kept, true);
+            return kept;
+        }
         // [mine7] Beyond the town's whole plan, as it will grow (three rings of lots), with a margin: the mine was
         // opened just past the town of the day, and the town grew over its stairs.
         int near = Math.max(Math.max(NEAREST, Villages.townReach(village) + PITCH / 2 + 8), TownDigs.PLAN_REACH + TownDigs.MARGIN + PITCH / 2 + 2);
@@ -79,14 +83,9 @@ public final class TownMine {
             }
         }
         if (best == null) return null;                              // [mine7] nowhere fit loaded yet: the miners wait
-        if (kept != null) {                                         // [mine7] the old mine out of the town's way
-            Ledger.note(village, "mine.old", kept.getX() + "," + kept.getZ());
-            Ledger.note(village, "mine.spent", "");
-            Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was moved out of the town's way, from "
-                + kept.getX() + ", " + kept.getZ() + " to " + best.getX() + ", " + best.getZ());
-        }
         Ledger.note(village, "mine.site", best.getX() + "," + best.getZ());
-        if (kept == null) Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was opened, out at " + best.getX() + ", " + best.getZ());
+        Villages.tell(village, level.getDayTime() / 24000L, "the town's mine was opened, out at " + best.getX() + ", " + best.getZ());
+        MineGround.reserve(level, village, heart, best, false);   // [mine7] its whole ground set aside for it, for good
         return best;
     }
 
@@ -95,7 +94,8 @@ public final class TownMine {
         int r = PITCH / 2;
         if (!Villages.outsideTown(village, heart, top, r)) return false;
         if (Villages.onFarmland(village, heart, top, r)) return false;
-        if (TownDigs.inTownGround(level, village, heart, top, r)) return false;   // [mine7] the town's ground as it will grow
+        if (TownDigs.inTownGroundRaw(level, village, heart, top, r)) return false;   // [mine7] the town's ground as it will grow
+        if (MineGround.otherMeets(village, top.getX() - r, top.getZ() - r, top.getX() + r, top.getZ() + r)) return false;   // [mine7]
         if (Bonds.overBorder(village, heart, top, r)) return false;
         return level.getFluidState(top.below()).isEmpty() && level.getFluidState(top).isEmpty();
     }
@@ -160,8 +160,8 @@ public final class TownMine {
 
     /**
      * A face for this miner: the face it already works while it is still good; else the first face of the
-     * mine (ring by ring, the far side from the town first) that is not worked out, not another miner's, and
-     * fit (outside the town as it is now, off the farmland, with nothing of the town's built on it). Its middle
+     * mine (ring by ring, the far side from the town first) that is not worked out, not another miner's, on the
+     * mine's own ground ([mine7] MineGround), not under water, with nothing of the town's built on it. Its middle
      * at ground level; null when the mine has no face to give (none fit, or the ground not loaded).
      */
     @Nullable
@@ -186,11 +186,12 @@ public final class TownMine {
         if (mine != null) faces.add(0, mine);                         // its own face first, while it is good
         for (int[] c : faces) {
             if (spent.contains(key(c)) || taken.contains(key(c))) continue;
+            if (!MineGround.faceReserved(village, c[0], c[1])) continue;   // [mine7] only the mine's own ground, however the town grows
             BlockPos mid = centre(site, c);
             if (!level.hasChunk(mid.getX() >> 4, mid.getZ() >> 4)) continue;
             BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, mid);
-            if (!fit(level, village, heart, top)) continue;
-            if (underTheTown(built, top, PITCH / 2)) continue;       // something of the town's stands on it now
+            if (!level.getFluidState(top.below()).isEmpty() || !level.getFluidState(top).isEmpty()) continue;
+            if (underTheTown(built, top, PITCH / 2)) continue;       // something the town built there before its ground was set aside
             return top;
         }
         return null;
@@ -209,6 +210,19 @@ public final class TownMine {
             sb.append((int) (k >> 32)).append(':').append((int) k);
         }
         Ledger.note(village, "mine.spent", sb.toString());
+    }
+
+    /** [mine7] The faces worked out, as grid places round the first. */
+    public static List<int[]> spentFaces(UUID village) {
+        List<int[]> out = new ArrayList<>();
+        for (long k : spent(village)) out.add(new int[]{ (int) (k >> 32), (int) k });
+        return out;
+    }
+
+    /** [mine7] The grid place of the face this spot is in, round a first face here, or null outside the mine. */
+    @Nullable
+    public static int[] faceIndex(BlockPos site, BlockPos p) {
+        return faceOf(site, p);
     }
 
     private static Set<Long> spent(UUID village) {
@@ -269,10 +283,11 @@ public final class TownMine {
             if (!takes.test(r.vein().ore())) continue;
             int[] c = faceOf(site, r.vein().at());
             if (c == null || spent.contains(key(c)) || taken.contains(key(c))) continue;
+            if (!MineGround.faceReserved(village, c[0], c[1])) continue;   // [mine7] only the mine's own ground
             BlockPos mid = centre(site, c);
             if (!level.hasChunk(mid.getX() >> 4, mid.getZ() >> 4)) continue;
             BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, mid);
-            if (!fit(level, village, heart, top) || underTheTown(built, top, PITCH / 2)) continue;
+            if (underTheTown(built, top, PITCH / 2)) continue;
             int depth = Math.max(floor, Math.min(top.getY() - 8, r.vein().at().getY()));
             CaveDwellers.leadTaken(village, r.cave(), r.vein());
             Ledger.note(village, "mine.lead/" + c[0] + ":" + c[1], r.vein().ore() + "|" + day);
@@ -366,6 +381,8 @@ public final class TownMine {
         int d = (int) Math.round(Math.sqrt(site.atY(0).distSqr(heart.atY(0))));
         out.add("The mine: first face at " + site.getX() + ", " + site.getZ() + ", " + d + " blocks from the heart; "
             + spent(village).size() + " faces worked out.");
+        String ground = MineGround.line(village);                  // [mine7] its ground, set aside for it
+        if (ground != null) out.add("The mine's ground: " + ground.substring(ground.indexOf(':') + 1).trim() + ", set aside for the mine alone.");
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.MINE) continue;
             WorkZone z = f.workZone();
@@ -389,7 +406,7 @@ public final class TownMine {
     public static void forgetForTests(UUID village) {
         Ledger.note(village, "mine.site", "");
         Ledger.note(village, "mine.spent", "");
-        Ledger.note(village, "mine.old", "");   // [mine7]
+        MineGround.forgetForTests(village);   // [mine7]
         BUILT.remove(village);
         BUILT_AT.remove(village);
     }

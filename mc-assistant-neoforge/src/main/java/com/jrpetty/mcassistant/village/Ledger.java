@@ -354,6 +354,16 @@ public final class Ledger extends SavedData {
         if (on ? set.add(anchor.asLong()) : set.remove(anchor.asLong())) l.setDirty();
     }
 
+    /** [mine7] Tests: the register written out and read back in, as on a save and a load (the world's copy replaced). */
+    public static void reloadForTests() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        Ledger l = of();
+        if (server == null || l == null) return;
+        net.minecraft.core.HolderLookup.Provider reg = server.registryAccess();
+        Ledger back = load(l.save(new CompoundTag(), reg), reg);
+        server.overworld().getDataStorage().set(ID, back);
+    }
+
     @Nullable
     public static String note(UUID village, String key) {
         Ledger l = of();

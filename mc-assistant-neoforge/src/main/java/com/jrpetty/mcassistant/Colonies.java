@@ -124,6 +124,8 @@ public final class Colonies {
             int z = v.centre().getZ() + (int) Math.round(Math.sin(angle) * DISTANCE);
             BlockPos at = new BlockPos(x, v.centre().getY(), z);
             if (Villages.nearest(level, at, Villages.VILLAGE_RANGE * 2) != null) continue;
+            int pr = com.jrpetty.mcassistant.entity.TownDigs.PLAN_REACH + com.jrpetty.mcassistant.entity.TownDigs.MARGIN;   // [mine7] nor a town's mine's ground
+            if (com.jrpetty.mcassistant.entity.MineGround.anyMeets(x - pr, z - pr, x + pr, z + pr)) continue;
             // [emerald] Nor on (or beside) a village of the game's own villagers: theirs is theirs.
             if (com.jrpetty.mcassistant.entity.VanillaVillages.inTheWayOfFounding(level, at) != null) continue;
             TRIED.put(v.id(), tried + i + 1);

@@ -1582,6 +1582,8 @@ public final class VillageCommands {
                 Villages.stock(level, v.centre(), t, Villages.storesRadius(v.id())));
         }
         sb.append(". Built: ").append(Villages.builtList(v.id()));
+        String mineGround = com.jrpetty.mcassistant.entity.MineGround.line(v.id());              // [mine7]
+        if (mineGround != null) sb.append(". Mine: ").append(mineGround);
         sb.append(". Rank: ").append(Villages.rank(v.id()).label).append(" (next, ").append(Villages.nextRankNote(v.id())).append(")");
         sb.append(". Land: ").append(com.jrpetty.mcassistant.entity.Homeland.line(v.id()));
         sb.append(". Room for ").append(Villages.housing(v.id()));

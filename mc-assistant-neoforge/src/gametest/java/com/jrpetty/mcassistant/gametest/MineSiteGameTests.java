@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant.gametest;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Founding;
+import com.jrpetty.mcassistant.entity.MineGround;
 import com.jrpetty.mcassistant.entity.MineStairs;
 import com.jrpetty.mcassistant.entity.TownLod;
 import com.jrpetty.mcassistant.entity.TownDigs;
@@ -377,10 +378,11 @@ public class MineSiteGameTests {
     }
 
     /**
-     * An older world: the town's mine in its ground (sixty out), a miner on a plot in the middle of the town, its old
-     * stairs there (unmarked, as an older world's are), a staircase another town cut and a hole nobody recorded. The mine
-     * moves out beyond the plan, the miner with it; the town fills its own stairs and turfs them (not the others);
-     * marked stairs keep their mark over a save and a load.
+     * An older world: the town's mine opened in what is now its ground (sixty out), a miner on a stray plot of its own in
+     * the town off the mine's faces, stray stairs there (unmarked, as an older world's are), stairs on the mine's first
+     * face, a staircase another town cut and a hole nobody recorded. The mine stays where it is, its ground set aside as it
+     * stands; the stray miner goes to a face of the mine; the town fills and turfs its own stray stairs, not the mine's
+     * own, another town's or the unrecorded hole; marked stairs keep their mark over a save and a load.
      */
     @GameTest(template = "empty", timeoutTicks = 400, batch = "ms04_old_world")
     public static void ms04_old_world(GameTestHelper helper) {
@@ -393,12 +395,14 @@ public class MineSiteGameTests {
         BlockPos heart = a.villageCentre();
         Villages.Village vil = Villages.get(v);
         Ledger.note(v, "mine.site", (heart.getX() + 60) + "," + heart.getZ());
-        BlockPos oldPlot = heart.offset(30, 0, 30);
+        BlockPos oldPlot = heart.offset(-40, 0, 30);
         a.assignPlot(WorkZone.around(oldPlot, 8, heart.getY() - 3), "Old pit");
-        BlockPos h1 = oldPlot, h2 = heart.offset(-35, 0, 20), h3 = heart.offset(20, 0, -40);
+        miners.get(1).assignPlot(WorkZone.around(heart.offset(60, 0, 0), 8, heart.getY() - 3), "The first face");
+        BlockPos h1 = oldPlot, h2 = heart.offset(-35, 0, -20), h3 = heart.offset(20, 0, -40), h4 = heart.offset(62, 0, 2);
         List<BlockPos> ours = cutStairs(level, h1, 4, MineStairs.plotKey(h1));
         cutStairs(level, h2, 4, MineStairs.plotKey(h2));
         MineStairs.own(level, MineStairs.plotKey(h2), UUID.randomUUID());          // another town's
+        cutStairs(level, h4, 4, MineStairs.plotKey(h4));                            // the mine's own, on its first face
         for (int h = -3; h <= 0; h++) level.setBlock(h3.above(h), Blocks.AIR.defaultBlockState(), 2);   // nobody's hole
         // A save and a load: the mark is kept.
         UUID other = MineStairs.owner(level, MineStairs.plotKey(h2));
@@ -406,32 +410,179 @@ public class MineSiteGameTests {
         helper.assertTrue(other != null && other.equals(MineStairs.owner(level, MineStairs.plotKey(h2))), "the mark kept over a save and a load");
         helper.assertTrue(MineStairs.steps(level, MineStairs.plotKey(h1)).size() == 4, "the stairs kept over a save and a load");
 
-        // The miner moves out (its plot is in the town's ground), and the mine with it.
-        boolean moved = a.seekTheSeamForTests();
+        // The first look after the load: the mine's ground set aside as it stands; the mine not moved.
+        TownDigs.tick(level, vil);
         BlockPos site = TownMine.siteOf(v);
+        boolean firstFace = MineGround.reserved(v, heart.getX() + 60, heart.getZ());
+        boolean strayFree = !MineGround.reserved(v, h1.getX(), h1.getZ());
+        helper.assertTrue(site != null && site.getX() == heart.getX() + 60 && MineGround.has(v) && firstFace,
+            "the mine stays, its ground set aside as it stands: " + site + ", " + MineGround.faceCount(v) + " faces");
+        helper.assertTrue(strayFree, "the stray plot is not the mine's ground");
+        // The stray miner moves to a face of the mine; the first face's miner stays.
+        boolean moved = a.seekTheSeamForTests();
+        BlockPos firstAt = miners.get(1).workZone().center();
+        miners.get(1).seekTheSeamForTests();
         WorkZone z = a.workZone();
-        int d = site == null ? -1 : Math.max(Math.abs(site.getX() - heart.getX()), Math.abs(site.getZ() - heart.getZ()));
-        Kit.log("[VT] ms04 moved " + moved + ": the miner now at " + (z == null ? "no plot" : z.center().toShortString()) + ", the mine " + d
-            + " out (was 60), the old site noted " + Ledger.note(v, "mine.old"));
-        helper.assertTrue(d - TownMine.PITCH / 2 > TownDigs.PLAN_REACH + TownDigs.MARGIN, "the mine moved beyond the plan: " + d);
-        helper.assertTrue(z == null || !TownDigs.inTownGround(level, v, heart, z.center(), 0), "the miner off the town's ground");
-        // The miner's own run, if it tried one from the old pit, would not start.
-        helper.assertTrue(!TownDigs.mayRunFrom(miners.get(1), oldPlot), "no mine run from the town's ground");
+        Kit.log("[VT] ms04 an older world: the mine kept at " + site.getX() + "," + site.getZ() + " (" + MineGround.faceCount(v)
+            + " faces set aside); the stray miner moved " + moved + " to " + (z == null ? "no plot" : z.center().toShortString())
+            + "; the first face's miner at " + miners.get(1).workZone().center().toShortString());
+        helper.assertTrue(z == null || MineGround.reserved(v, z.center().getX(), z.center().getZ()), "the stray miner on the mine's ground, or waiting");
+        helper.assertTrue(miners.get(1).workZone().center().equals(firstAt), "the miner on the mine's first face is left there");
+        helper.assertTrue(!TownDigs.mayRunFrom(miners.get(1), oldPlot), "no mine run from a stray plot in the town's ground");
 
-        // The town fills in its own old stairs, over a look or two; not another town's, nor a hole nobody recorded.
+        // The town fills in its own stray stairs; not the mine's own, another town's, nor a hole nobody recorded.
         int laid = 0;
         for (int i = 0; i < 4; i++) laid += TownDigs.seal(level, vil, TownDigs.FILL_A_LOOK_FOR_TESTS);
         BlockPos top = ours.get(1).atY(h1.getY() - 1);
         boolean filled = true;
-        for (BlockPos s : ours) for (int y = s.getY(); y < h1.getY(); y++) filled &= !level.getBlockState(s.atY(y)).isAir();
+        for (BlockPos st : ours) for (int y = st.getY(); y < h1.getY(); y++) filled &= !level.getBlockState(st.atY(y)).isAir();
         boolean turf = level.getBlockState(top).is(Blocks.GRASS_BLOCK);
         boolean otherOpen = level.getBlockState(h2.offset(1, -1, 0)).isAir() && !MineStairs.steps(level, MineStairs.plotKey(h2)).isEmpty();
+        boolean minesOpen = level.getBlockState(h4.offset(1, -1, 0)).isAir() && !MineStairs.steps(level, MineStairs.plotKey(h4)).isEmpty();
         boolean holeOpen = level.getBlockState(h3.below()).isAir();
         boolean forgotten = MineStairs.steps(level, MineStairs.plotKey(h1)).isEmpty();
         Kit.log("[VT] ms04 sealed: " + laid + " blocks laid, filled " + filled + ", turfed " + turf + ", record let go " + forgotten
-            + "; another town's stairs left " + otherOpen + ", the unrecorded hole left " + holeOpen + "; sealed " + TownDigs.sealed(v));
-        helper.assertTrue(filled && turf && forgotten && laid > 0, "the town's own old stairs filled and turfed");
-        helper.assertTrue(otherOpen && holeOpen, "nothing filled that was not the town's own dig");
+            + "; the mine's own stairs left " + minesOpen + ", another town's left " + otherOpen + ", the unrecorded hole left " + holeOpen
+            + "; sealed " + TownDigs.sealed(v));
+        helper.assertTrue(filled && turf && forgotten && laid > 0, "the town's own stray stairs filled and turfed");
+        helper.assertTrue(minesOpen && otherOpen && holeOpen, "nothing filled that was the mine's or not the town's own dig");
+        helper.succeed();
+    }
+
+    /** The mine's ground is kept with the world: set aside when the mine is opened, the same after a save and a load. */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "ms06_ground_kept")
+    public static void ms06_ground_kept(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 3720000;
+        List<VillageFolkEntity> miners = town(level, x, 184, 1, StationTask.MINE);
+        UUID v = miners.get(0).ownerId();
+        BlockPos heart = miners.get(0).villageCentre();
+        BlockPos site = TownMine.site(level, v, heart, p -> false);
+        helper.assertTrue(site != null && MineGround.has(v), "the mine opened and its ground set aside");
+        int faces = MineGround.faceCount(v);
+        boolean way = MineGround.reserved(v, heart.getX() + (site.getX() - heart.getX()) * 100 / 107,
+            heart.getZ() + (site.getZ() - heart.getZ()) * 100 / 107);
+        boolean townFree = !MineGround.reserved(v, heart.getX() + 40, heart.getZ()) && !MineGround.meets(v, heart.getX() - TownDigs.PLAN_REACH,
+            heart.getZ() - TownDigs.PLAN_REACH, heart.getX() + TownDigs.PLAN_REACH, heart.getZ() + TownDigs.PLAN_REACH);
+        Ledger.reloadForTests();
+        MineGround.forgetCache();
+        int after = MineGround.faceCount(v);
+        boolean still = MineGround.reserved(v, site.getX(), site.getZ()) && MineGround.reserved(v, site.getX() + 9, site.getZ() + 9);
+        String status = com.jrpetty.mcassistant.VillageCommands.statusText(level, Villages.get(v));
+        Kit.log("[VT] ms06 the mine's ground: " + faces + " faces, the way to it " + way + ", clear of the plan " + townFree + "; after a save and a load "
+            + after + " faces, the first face still set aside " + still + "; status says " + status.contains("Mine: the mine's ground set aside"));
+        helper.assertTrue(faces >= 9 && townFree, "a mine's worth of faces set aside, none of the town's plan: " + faces);
+        helper.assertTrue(after == faces && still, "the same ground after a save and a load: " + after);
+        helper.assertTrue(status.contains("Mine: the mine's ground set aside"), "the status says so");
+        helper.succeed();
+    }
+
+    /**
+     * The planners keep off the mine's ground (an older world's mine, set aside in what is now the town's plan): no lot is
+     * offered on it, no building of any kind goes up on it, the gate refuses fields, walls, gardens, lamps and new
+     * buildings on it while the mine, the way to it and the ground work may; no land title is written on it.
+     */
+    @GameTest(template = "empty", timeoutTicks = 300, batch = "ms07_planners_keep_off")
+    public static void ms07_planners_keep_off(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 3724000;
+        com.jrpetty.mcassistant.entity.MarketMaker.liveForTests(true);
+        List<VillageFolkEntity> folk = town(level, x, 120, 3, StationTask.FARM);
+        for (VillageFolkEntity f : folk) f.keepTradeForTests();
+        UUID v = folk.get(0).ownerId();
+        BlockPos heart = folk.get(0).villageCentre();
+        Villages.Village vil = Villages.get(v);
+        Ledger.note(v, "mine.site", (heart.getX() + 50) + "," + heart.getZ());
+        TownDigs.tick(level, vil);
+        helper.assertTrue(MineGround.has(v), "the older world's mine set aside");
+        // The lots of the plan: every one over the mine's ground kept off.
+        int over = 0, keptOff = 0;
+        for (TownPlan.Lot lot : TownPlan.lots()) {
+            if (lot.kind() != TownPlan.Kind.LOT) continue;
+            int h = TownPlan.LOT / 2;
+            if (!MineGround.meets(v, heart.getX() + lot.x() - h, heart.getZ() + lot.z() - h, heart.getX() + lot.x() + h, heart.getZ() + lot.z() + h)) continue;
+            over++;
+            if (Villages.lotKeptOff(v, heart, lot)) keptOff++;
+        }
+        // Buildings asked for, one after another: none on it.
+        int sites = 0, onIt = 0;
+        for (String project : List.of("house", "house", "house", "house", "house", "house", "smithy", "workshop")) {
+            Villages.Site site = Villages.siteFor(level, v, project);
+            if (site == null) continue;
+            sites++;
+            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(project);
+            int r = Math.max(half[0], half[1]);
+            BlockPos an = site.anchor();
+            if (MineGround.meets(v, an.getX() - r, an.getZ() - r, an.getX() + r, an.getZ() + r)) onIt++;
+            Villages.privateSiteDone(v, project, false);                  // off the list, its lot kept spoken for: the next one
+        }
+        // The gate, on the mine's ground.
+        BlockPos g = Kit.surface(level, heart.getX() + 50, heart.getZ() + 3);
+        com.jrpetty.mcassistant.entity.TownBlocks.Why[] no = { com.jrpetty.mcassistant.entity.TownBlocks.Why.BUILD, com.jrpetty.mcassistant.entity.TownBlocks.Why.FIELD,
+            com.jrpetty.mcassistant.entity.TownBlocks.Why.WALL, com.jrpetty.mcassistant.entity.TownBlocks.Why.GARDEN, com.jrpetty.mcassistant.entity.TownBlocks.Why.LAMP,
+            com.jrpetty.mcassistant.entity.TownBlocks.Why.DECOR, com.jrpetty.mcassistant.entity.TownBlocks.Why.CIVIC };
+        int refused = 0;
+        for (var why : no) if (!com.jrpetty.mcassistant.entity.TownBlocks.allows(level, vil, g, why)) refused++;
+        boolean mineOk = com.jrpetty.mcassistant.entity.TownBlocks.allows(level, vil, g, com.jrpetty.mcassistant.entity.TownBlocks.Why.MINE)
+            && com.jrpetty.mcassistant.entity.TownBlocks.allows(level, vil, g, com.jrpetty.mcassistant.entity.TownBlocks.Why.ROAD);
+        // Land titles: a homestead whose ground is the mine's gets none.
+        List<com.jrpetty.mcassistant.entity.Business> homes = com.jrpetty.mcassistant.entity.Privatisation.ensureForTests(level, v);
+        long day = level.getDayTime() / 24000L;
+        com.jrpetty.mcassistant.entity.Business titled = null;
+        for (com.jrpetty.mcassistant.entity.Business b : com.jrpetty.mcassistant.entity.Businesses.all(v)) {
+            if (b.at == null || MineGround.reserved(v, b.at.getX(), b.at.getZ())) b.at = heart.offset(-60, 0, 0);
+        }
+        com.jrpetty.mcassistant.entity.LandTitles.morningForTests(level, vil, day);
+        for (com.jrpetty.mcassistant.entity.Business b : com.jrpetty.mcassistant.entity.Businesses.all(v))
+            if (com.jrpetty.mcassistant.entity.LandTitles.titleForTests(v, "firm:" + b.id) != null) { titled = b; break; }
+        boolean titleOff = false;
+        if (titled != null) {
+            titled.at = g;
+            com.jrpetty.mcassistant.entity.LandTitles.morningForTests(level, vil, day + 1);
+            titleOff = com.jrpetty.mcassistant.entity.LandTitles.titleForTests(v, "firm:" + titled.id) == null;
+        }
+        Kit.log("[VT] ms07 lots over the mine's ground " + over + ", kept off " + keptOff + "; sites " + sites + ", on it " + onIt
+            + "; the gate refused " + refused + " of " + no.length + ", the mine and the way allowed " + mineOk + "; homesteads " + homes.size()
+            + ", a title " + (titled != null) + ", gone once its ground is the mine's " + titleOff);
+        helper.assertTrue(over > 0 && keptOff == over, "every lot over the mine's ground kept off: " + keptOff + " of " + over);
+        helper.assertTrue(sites > 0 && onIt == 0, "no building sited on the mine's ground: " + onIt + " of " + sites);
+        helper.assertTrue(refused == no.length && mineOk, "the gate keeps the mine's ground for the mine: " + refused + "/" + no.length + ", " + mineOk);
+        helper.assertTrue(titled != null && titleOff, "no land title on the mine's ground");
+        com.jrpetty.mcassistant.entity.MarketMaker.liveForTests(false);
+        helper.succeed();
+    }
+
+    /**
+     * A town grown all round its mine (an older world's, set aside in what is now its plan; the town at its whole plan)
+     * still mines there: its miners are handed the mine's faces, run from them and cut there; the mine is not moved.
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "ms08_grown_round")
+    public static void ms08_grown_round(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 3728000;
+        List<VillageFolkEntity> miners = town(level, x, 184, 2, StationTask.MINE);
+        UUID v = miners.get(0).ownerId();
+        BlockPos heart = miners.get(0).villageCentre();
+        Ledger.note(v, "mine.site", (heart.getX() + 50) + "," + heart.getZ());
+        for (int i = 0; i < 46; i++) Villages.noteProject(v, "house", level.getGameTime());
+        TownMine.redraw(v);
+        BlockPos site = TownMine.site(level, v, heart, p -> false);
+        int inPlan = 0, handed = 0;
+        for (VillageFolkEntity m : miners) {
+            BlockPos face = TownMine.faceFor(level, m, heart, p -> false);
+            if (face == null) continue;
+            handed++;
+            m.assignPlot(WorkZone.around(face, 8, heart.getY() - 3), "Face");
+            if (TownDigs.inPlan(v, heart, face, 0)) inPlan++;
+        }
+        VillageFolkEntity m = miners.get(0);
+        BlockPos at = m.workZone().center();
+        boolean run = TownDigs.mayRunFrom(m, at), cut = TownDigs.mayCut(m, GatherGoal.Kind.STONE, at.below(2));
+        boolean kept = !m.seekTheSeamForTests() || m.workZone().center().equals(at);
+        Kit.log("[VT] ms08 grown to reach " + Villages.townReach(v) + ": the mine at " + site + ", " + handed + " faces handed out (" + inPlan
+            + " inside the plan); may run " + run + ", may cut " + cut + ", kept on its face " + kept);
+        helper.assertTrue(site != null && site.getX() == heart.getX() + 50, "the mine is not moved");
+        helper.assertTrue(handed == 2 && run && cut && kept, "the town grown round it still mines there");
         helper.succeed();
     }
 
