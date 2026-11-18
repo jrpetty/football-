@@ -194,6 +194,7 @@ public final class VillageCommands {
             // The ground of a town already standing levelled round it, as a founding at a board levels it (a town
             // the world founded, or one from before its ground was levelled). An operator, or the world's owner.
             .then(Commands.literal("level").executes(VillageCommands::levelGround))
+            .then(Commands.literal("groundcheck").requires(src -> src.hasPermission(2)).executes(VillageCommands::groundCheck))   // [terra10]
             // Which version of the mod is loaded: its number and the newest change in it.
             .then(Commands.literal("version").executes(ctx -> {
                 String v = "MC Assistant " + com.jrpetty.mcassistant.McAssistantMod.version() + " — "
@@ -693,6 +694,22 @@ public final class VillageCommands {
                                                         int x, int z) {
         int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         return new net.minecraft.core.BlockPos(x, y, z);
+    }
+
+    /** [terra10] /village groundcheck: the faults in the ground of the founding finished nearest here (entity/TerraformAudit). */
+    private static int groundCheck(CommandContext<CommandSourceStack> ctx) {
+        net.minecraft.server.level.ServerLevel level = ctx.getSource().getLevel();
+        net.minecraft.core.BlockPos here = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+        com.jrpetty.mcassistant.entity.TerraformAudit.Done d = com.jrpetty.mcassistant.entity.TerraformAudit.near(here, 400);
+        if (d == null) {
+            ctx.getSource().sendFailure(Component.literal("No founding has finished near here since the server started."));
+            return 0;
+        }
+        String line = "GROUND " + d.heart().getX() + " " + d.heart().getZ() + " y=" + d.level() + " r=" + d.radius() + ": "
+            + com.jrpetty.mcassistant.entity.TerraformAudit.line(com.jrpetty.mcassistant.entity.TerraformAudit.scan(level, d));
+        ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+        com.mojang.logging.LogUtils.getLogger().info("[MCA-FOUND] {}", line);
+        return 1;
     }
 
     private static int spawnAt(CommandContext<CommandSourceStack> ctx, int count) {

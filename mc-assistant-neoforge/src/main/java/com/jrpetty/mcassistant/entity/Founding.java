@@ -920,6 +920,9 @@ public final class Founding extends SavedData {
     /** All done: the ground let go, the village told, and the founding forgotten. */
     private static void finish(ServerLevel level, Founding f, Site s) {
         release(level, s);
+        if (s.ground != null && s.level != UNSET) {                       // [terra10] for the ground's audit
+            TerraformAudit.remember(new TerraformAudit.Done(s.heart, s.level, s.radius, s.outer, s.seed, s.surface, s.ground));
+        }
         f.sites.remove(s);
         f.setDirty();
         UUID id = s.village;
